@@ -5,6 +5,10 @@ on:
     branches: [sambassam]
     paths:
       - ".github/workflows/tmp-contract-diagnostic.yml"
+      - "tools/guards/_openapi-utils.mjs"
+      - "tools/guards/_openapi-utils.test.mjs"
+      - "services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml"
+      - "services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml"
       - "services/dsh/contracts/contract-registry.ts"
       - "tools/guards/backend-api-binding-gate.mjs"
       - "tools/guards/service-manifest-drift-gate.mjs"
@@ -12,6 +16,10 @@ on:
     branches: [master]
     paths:
       - ".github/workflows/tmp-contract-diagnostic.yml"
+      - "tools/guards/_openapi-utils.mjs"
+      - "tools/guards/_openapi-utils.test.mjs"
+      - "services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml"
+      - "services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml"
       - "services/dsh/contracts/contract-registry.ts"
       - "tools/guards/backend-api-binding-gate.mjs"
       - "tools/guards/service-manifest-drift-gate.mjs"
@@ -25,9 +33,9 @@ concurrency:
 
 jobs:
   remediate:
-    name: Repair contract authority
+    name: Repair contract parser and policy metadata
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     outputs:
       changed: ${{ steps.commit.outputs.changed }}
     steps:
@@ -37,76 +45,232 @@ jobs:
           ref: sambassam
           fetch-depth: 0
           persist-credentials: true
-      - name: Repair authority model
+      - name: Repair modular OpenAPI parsing and governed contracts
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
 
-          registry_path = Path('services/dsh/contracts/contract-registry.ts')
-          registry = registry_path.read_text(encoding='utf-8')
-          if '"STANDALONE_GENERATED"' not in registry:
-              registry = registry.replace('  "STANDALONE_MANUAL_TYPED_ADAPTER",\n', '  "STANDALONE_MANUAL_TYPED_ADAPTER",\n  "STANDALONE_GENERATED",\n', 1)
-          registry = re.sub(
-              r'(id: "dsh-catalog",[\s\S]*?clientStrategy:) "SECONDARY_GENERATED_SUBSET"',
-              r'\1 "STANDALONE_GENERATED"',
-              registry,
+          parser_path = Path('tools/guards/_openapi-utils.mjs')
+          parser = parser_path.read_text(encoding='utf-8')
+          replacement = r'''function parseParameterBlock(lines, startIndex) {
+            const startLine = lines[startIndex] ?? "";
+            const trimmedStart = startLine.trim();
+            if (!trimmedStart.startsWith("- ")) {
+              return { parameter: null, nextIndex: startIndex + 1 };
+            }
+
+            const parameter = { name: "", in: "", required: false };
+            const startIndent = leadingSpaces(startLine);
+            const cleanValue = (value) => String(value ?? "").trim().replace(/^['"]|['"]$/g, "");
+            const applyField = (text) => {
+              const match = String(text ?? "").trim().match(/^(name|in|required):\s*(.+)$/);
+              if (!match) return;
+              const [, key, rawValue] = match;
+              const value = cleanValue(rawValue);
+              if (key === "name") parameter.name = value;
+              if (key === "in") parameter.in = value;
+              if (key === "required") parameter.required = value === "true";
+            };
+
+            const firstItem = trimmedStart.slice(2).trim();
+            if (firstItem.startsWith("{") && firstItem.endsWith("}")) {
+              const body = firstItem.slice(1, -1);
+              for (const match of body.matchAll(/(?:^|,)\s*(name|in|required):\s*([^,}]+)/g)) {
+                applyField(`${match[1]}: ${match[2]}`);
+              }
+              return { parameter: parameter.name ? parameter : null, nextIndex: startIndex + 1 };
+            }
+            applyField(firstItem);
+
+            let i = startIndex + 1;
+            for (; i < lines.length; i += 1) {
+              const line = lines[i];
+              const trimmed = line.trim();
+              if (!trimmed) continue;
+              const indent = leadingSpaces(line);
+              if (indent <= startIndent) break;
+              applyField(trimmed);
+            }
+            return { parameter: parameter.name ? parameter : null, nextIndex: i };
+          }
+
+          const externalComponentParameterCache = new Map();
+
+          function componentParametersForFile(file) {
+            if (externalComponentParameterCache.has(file)) {
+              return externalComponentParameterCache.get(file);
+            }
+            const absolute = path.join(repoRoot, file);
+            const parsed = fs.existsSync(absolute)
+              ? parseComponentParameters(read(file).split(/\r?\n/))
+              : new Map();
+            externalComponentParameterCache.set(file, parsed);
+            return parsed;
+          }
+
+          function resolveParameterReference(reference, file, componentParameters) {
+            const localPrefix = "#/components/parameters/";
+            if (reference.startsWith(localPrefix)) {
+              return componentParameters.get(reference.slice(localPrefix.length)) ?? null;
+            }
+            const marker = "#/components/parameters/";
+            const markerIndex = reference.indexOf(marker);
+            if (markerIndex <= 0) return null;
+            const referencedPath = reference.slice(0, markerIndex);
+            const parameterName = reference.slice(markerIndex + marker.length);
+            const absolute = path.resolve(repoRoot, path.dirname(file), referencedPath);
+            const relative = toPosix(path.relative(repoRoot, absolute));
+            if (!relative || relative.startsWith("..")) return null;
+            return componentParametersForFile(relative).get(parameterName) ?? null;
+          }
+
+          function collectParameters(blockLines, componentParameters, file) {
+            const parameters = [];
+            for (let i = 0; i < blockLines.length; i += 1) {
+              const trimmed = blockLines[i].trim();
+              for (const match of trimmed.matchAll(/\$ref:\s*["']?([^"'\]\s}]+)["']?/g)) {
+                const parameter = resolveParameterReference(match[1], file, componentParameters);
+                if (parameter) parameters.push(parameter);
+              }
+              if (/^-\s*(?:name|in|required):/.test(trimmed) || /^-\s*\{/.test(trimmed)) {
+                const parsed = parseParameterBlock(blockLines, i);
+                if (parsed.parameter) parameters.push(parsed.parameter);
+                i = Math.max(i, parsed.nextIndex - 1);
+              }
+            }
+            const unique = new Map();
+            for (const parameter of parameters) {
+              const key = `${parameter.in}:${parameter.name}`;
+              if (!unique.has(key)) unique.set(key, parameter);
+            }
+            return [...unique.values()];
+          }
+
+          function parseOperationBlock'''
+          parser, count = re.subn(
+              r'function parseParameterBlock[\s\S]*?\n}\n\nfunction collectParameters[\s\S]*?\n}\n\nfunction parseOperationBlock',
+              replacement,
+              parser,
               count=1,
           )
-          registry = re.sub(
-              r'(id: "dsh-catalog-proposal-readback",[\s\S]*?clientStrategy:) "MANUAL_TYPED_ADAPTER"',
-              r'\1 "STANDALONE_MANUAL_TYPED_ADAPTER"',
-              registry,
-              count=1,
+          if count != 1 and 'externalComponentParameterCache' not in parser:
+              raise SystemExit('unable to replace OpenAPI parameter parser')
+          parser = parser.replace(
+              'parameters: collectParameters(blockLines, componentParameters),',
+              'parameters: collectParameters(blockLines, componentParameters, file),',
+              1,
           )
-          registry_path.write_text(registry, encoding='utf-8')
+          parser_path.write_text(parser, encoding='utf-8')
 
-          backend_path = Path('tools/guards/backend-api-binding-gate.mjs')
-          backend = backend_path.read_text(encoding='utf-8')
-          if 'const dshStandaloneStrategies' not in backend:
-              backend = backend.replace(
-                  'const dshStandaloneContracts = dshRegistry\n  .filter((entry) => entry.strategy === "STANDALONE_MANUAL_TYPED_ADAPTER")\n',
-                  'const dshStandaloneStrategies = new Set(["STANDALONE_MANUAL_TYPED_ADAPTER", "STANDALONE_GENERATED"]);\nconst dshStandaloneContracts = dshRegistry\n  .filter((entry) => dshStandaloneStrategies.has(entry.strategy))\n',
-                  1,
-              )
-          if 'services/wlt/contracts/jrn-038-cod-custody.openapi.yaml' not in backend:
-              backend = backend.replace(
-                  '      "services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml",\n',
-                  '      "services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml",\n      "services/wlt/contracts/jrn-038-cod-custody.openapi.yaml",\n',
-                  1,
-              )
-          if 'if (key === "/") continue;' not in backend:
-              backend = backend.replace(
-                  '      const key = routeKey(route);\n      if (!openApiRouteSet.has(key)) {\n',
-                  '      const key = routeKey(route);\n      if (key === "/") continue;\n      if (!openApiRouteSet.has(key)) {\n',
-                  1,
-              )
-          backend_path.write_text(backend, encoding='utf-8')
+          test_path = Path('tools/guards/_openapi-utils.test.mjs')
+          test = test_path.read_text(encoding='utf-8')
+          test = test.replace(
+              'import { parseOpenApiContractContent } from "./_openapi-utils.mjs";',
+              'import { parseOpenApiContract, parseOpenApiContractContent } from "./_openapi-utils.mjs";',
+              1,
+          )
+          marker = 'const modularOperations = parseOpenApiContract("services/dsh/contracts/dsh.openapi.yaml");'
+          if marker not in test:
+              test = test.replace(
+                  '  console.log("All parser tests PASSED!");',
+                  '''  const modularOperations = parseOpenApiContract("services/dsh/contracts/dsh.openapi.yaml");
+            const homeUpdate = modularOperations.find((item) => item.operationId === "updateOperatorHomeDiscoveryContent");
+            assert.ok(homeUpdate, "Should resolve modular home-discovery operation");
+            assert.ok(homeUpdate.parameters.some((parameter) => parameter.in === "path" && parameter.name === "kind"));
+            assert.ok(homeUpdate.parameters.some((parameter) => parameter.in === "path" && parameter.name === "itemId"));
+            const workforceRead = parseOpenApiContract("services/dsh/contracts/dsh.jrn-003-workforce-scopes.openapi.yaml")
+              .find((item) => item.operationId === "getWorkforceActorScopes");
+            assert.ok(workforceRead?.parameters.some((parameter) => parameter.in === "path" && parameter.name === "actorId"));
 
-          drift_path = Path('tools/guards/service-manifest-drift-gate.mjs')
-          drift = drift_path.read_text(encoding='utf-8')
-          if '"STANDALONE_GENERATED"' not in drift:
-              drift = drift.replace(
-                  'const generatedStrategies = new Set(["PRIMARY_GENERATED", "SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET"]);',
-                  'const generatedStrategies = new Set(["PRIMARY_GENERATED", "SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET", "STANDALONE_GENERATED"]);',
+            console.log("All parser tests PASSED!");''',
                   1,
               )
-          drift_path.write_text(drift, encoding='utf-8')
+          test_path.write_text(test, encoding='utf-8')
+
+          checkout_path = Path('services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml')
+          checkout = checkout_path.read_text(encoding='utf-8')
+          if 'name: X-Service-Caller' not in checkout:
+              checkout = checkout.replace(
+                  '      security: [{ serviceToken: [] }]\n      requestBody:',
+                  '''      security: [{ serviceToken: [] }]
+                  parameters:
+                    - name: Authorization
+                      in: header
+                      required: true
+                      schema: { type: string, minLength: 1 }
+                    - name: X-Service-Caller
+                      in: header
+                      required: true
+                      schema: { type: string, enum: [wlt] }
+                  requestBody:''',
+                  1,
+              )
+          checkout_path.write_text(checkout, encoding='utf-8')
+
+          wlt_path = Path('services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml')
+          wlt = wlt_path.read_text(encoding='utf-8')
+          settlement_anchor = '    post:\n      operationId: createWltEvidenceBackedSettlement\n'
+          if 'operationId: createWltEvidenceBackedSettlement\n      x-bthwani-mutation-approved:' not in wlt:
+              wlt = wlt.replace(
+                  settlement_anchor,
+                  settlement_anchor + '      x-bthwani-mutation-approved: true\n      x-bthwani-default-enabled: false\n',
+                  1,
+              )
+          settlement_block_start = wlt.index('  /wlt/settlements:\n')
+          settlement_block_end = wlt.index('  /wlt/settlements/{settlementId}/evidence:\n', settlement_block_start)
+          settlement_block = wlt[settlement_block_start:settlement_block_end]
+          if "'403':" not in settlement_block:
+              settlement_block = settlement_block.replace(
+                  "        '409': { $ref: '#/components/responses/Conflict' }\n",
+                  "        '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }\n        '409': { $ref: '#/components/responses/Conflict' }\n",
+                  1,
+              )
+              wlt = wlt[:settlement_block_start] + settlement_block + wlt[settlement_block_end:]
+
+          commissions_start = wlt.index('  /wlt/commissions:\n')
+          commissions_end = wlt.index('  /wlt/commissions/{commissionId}:\n', commissions_start)
+          commissions_block = wlt[commissions_start:commissions_end]
+          if 'name: Authorization' not in commissions_block:
+              commissions_block = commissions_block.replace(
+                  "        - $ref: '#/components/parameters/CorrelationId'\n",
+                  "        - $ref: '#/components/parameters/CorrelationId'\n        - name: Authorization\n          in: header\n          required: true\n          schema: { type: string, minLength: 1 }\n        - name: X-Service-Caller\n          in: header\n          required: true\n          schema: { type: string, enum: [dsh] }\n",
+                  1,
+              )
+          if 'operationId: createWltGovernedCommission\n      x-bthwani-mutation-approved:' not in commissions_block:
+              commissions_block = commissions_block.replace(
+                  '      operationId: createWltGovernedCommission\n',
+                  '      operationId: createWltGovernedCommission\n      x-bthwani-mutation-approved: false\n      x-bthwani-default-enabled: false\n',
+                  1,
+              )
+          post_index = commissions_block.index('    post:\n')
+          post_block = commissions_block[post_index:]
+          if "'403':" not in post_block:
+              post_block = post_block.replace(
+                  "        '409': { $ref: '#/components/responses/Conflict' }\n",
+                  "        '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }\n        '409': { $ref: '#/components/responses/Conflict' }\n",
+                  1,
+              )
+              commissions_block = commissions_block[:post_index] + post_block
+          wlt = wlt[:commissions_start] + commissions_block + wlt[commissions_end:]
+          wlt_path.write_text(wlt, encoding='utf-8')
           PY
-      - name: Commit authority repair
+      - name: Verify parser unit contract
+        run: node tools/guards/_openapi-utils.test.mjs
+      - name: Commit contract correctness repairs
         id: commit
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "bthwani-governance-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add services/dsh/contracts/contract-registry.ts tools/guards/backend-api-binding-gate.mjs tools/guards/service-manifest-drift-gate.mjs
+          git add tools/guards/_openapi-utils.mjs tools/guards/_openapi-utils.test.mjs services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml
           if git diff --cached --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git commit -m "fix(contracts): align standalone contract authority"
+          git commit -m "fix(contracts): resolve modular parameters and financial gates"
           for attempt in 1 2 3; do
             if git push origin HEAD:sambassam; then
               echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -135,6 +299,7 @@ jobs:
           set +e
           : > contract-diagnostic.log
           for command in \
+            "node tools/guards/_openapi-utils.test.mjs" \
             "pnpm run contracts:lint" \
             "pnpm run guard:api-binding" \
             "pnpm run guard:backend-api-binding" \
