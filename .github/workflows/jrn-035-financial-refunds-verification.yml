@@ -43,7 +43,7 @@ concurrency:
 jobs:
   verify:
     name: JRN-035 sovereign refund runtime and multi-surface proof
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 35
     services:
       postgres:
