@@ -32,8 +32,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-038-cod-custody-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-038-cod-custody-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   verify:
