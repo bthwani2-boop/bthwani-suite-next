@@ -7,7 +7,7 @@ import type {
   CouponFulfillmentMode,
   CouponRecord,
   CouponUpdatePayload,
-} from "../../../shared/marketing/coupons.types";
+} from "../../../shared/marketing/coupons.public";
 
 type CouponTermsEditorProps = {
   readonly coupon: CouponRecord;
