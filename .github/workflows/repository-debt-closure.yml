@@ -9,7 +9,20 @@ on:
       - "services/**/contracts/**"
       - "services/dsh/frontend/**"
       - "services/dsh/clients/**"
-      - "services/dsh/tsconfig.json"
+      - "services/dsh/tsconfig*.json"
+      - "tools/important-scripts/contracts-foundation.mjs"
+      - ".github/workflows/repository-debt-closure.yml"
+      - "pnpm-lock.yaml"
+      - "package.json"
+  pull_request:
+    branches: [master]
+    paths:
+      - "contracts/**"
+      - "core/**/contracts/**"
+      - "services/**/contracts/**"
+      - "services/dsh/frontend/**"
+      - "services/dsh/clients/**"
+      - "services/dsh/tsconfig*.json"
       - "tools/important-scripts/contracts-foundation.mjs"
       - ".github/workflows/repository-debt-closure.yml"
       - "pnpm-lock.yaml"
