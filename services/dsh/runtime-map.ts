@@ -9,6 +9,7 @@ export type DshRuntimeEvidenceState =
 export type DshRuntimeBinding = {
   readonly capabilityId: DshCapability["id"];
   readonly contractOperations: readonly string[];
+  /** Static source presence only; this is not runtime, database, or release proof. */
   readonly backendImplemented: boolean;
   readonly runtimeEvidence: string | null;
   readonly runtimeEvidenceCommitSha: string | null;
@@ -53,9 +54,10 @@ const historicalRuntimeEvidence: Partial<
 };
 
 /**
- * This map records implementation posture, not release approval.
- * Historical evidence paths are retained for traceability but cannot produce a
- * runtime PASS until the evidence is regenerated for the same immutable commit.
+ * This map records implementation posture, not release approval. Historical
+ * evidence paths are traceability only. Database and generated-client readiness
+ * remain false until their own same-commit gates publish machine-readable proof;
+ * source presence alone must never promote them.
  */
 export const DSH_RUNTIME_MAP = DSH_CAPABILITIES.map((capability) => {
   const runtimeEvidence = historicalRuntimeEvidence[capability.id] ?? null;
@@ -63,15 +65,15 @@ export const DSH_RUNTIME_MAP = DSH_CAPABILITIES.map((capability) => {
   return {
     capabilityId: capability.id,
     contractOperations: capability.contractOperations,
-    backendImplemented: true,
+    backendImplemented: capability.contractOperations.length > 0,
     runtimeEvidence,
     runtimeEvidenceCommitSha: null,
     evidenceState: runtimeEvidence ? "HISTORICAL_NOT_SAME_COMMIT" : "NONE",
     state: "experience-fix-required",
     runtimeBound: capability.runtimeBound,
     screensReady: false,
-    databaseReady: true,
-    generatedClientReady: true,
+    databaseReady: false,
+    generatedClientReady: false,
     sharedBrainReady: false,
     surfaceBindingApproved: false,
   } as const;
