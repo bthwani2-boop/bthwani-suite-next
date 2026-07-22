@@ -1,4 +1,5 @@
 JRN-029 remote proof trigger
 requested_at=2026-07-22
-execution_nonce=final-closure-2
+execution_nonce=pr-final-closure-1
+source_commit=6041eb56f46572cb956aa5ea3d692e4a3cae98c1
 scope=postgresql16,go-api,live-routes,sovereign-openapi,generated-client,shared-surfaces,negative-invariants
