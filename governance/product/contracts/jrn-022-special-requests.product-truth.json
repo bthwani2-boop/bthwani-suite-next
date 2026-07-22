@@ -1,0 +1,246 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_022_SPECIAL_REQUESTS",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Awnak errands and SHEIN assisted purchases require one governed journey from client intake through quote, WLT approval, operator execution, captain assignment and client readback.",
+    "affectedActors": ["client", "operator", "captain"],
+    "currentWorkaround": "The client could create a request but could not reliably list, approve, cancel or follow its lifecycle, while operator controls were primarily read-only.",
+    "frequency": "frequent",
+    "severity": "high",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-022",
+      "services/dsh/frontend/app-client/DshClientSurface.tsx",
+      "services/dsh/frontend/shared/special-requests/ClientSpecialRequestsScreen.tsx",
+      "services/dsh/frontend/shared/special-requests/OperatorSpecialRequestsWorkbench.tsx",
+      "services/dsh/backend/internal/specialrequests/service.go"
+    ]
+  },
+  "actors": [
+    {
+      "id": "client",
+      "role": "Owner of an Awnak errand or SHEIN assisted-purchase request",
+      "permittedActions": [
+        "create owned special request with an idempotency key",
+        "list and read owned requests",
+        "approve a prepared quote through the governed WLT handoff",
+        "cancel an eligible owned request"
+      ],
+      "forbiddenActions": [
+        "read another client request",
+        "set operator-only workflow stages",
+        "assign a captain",
+        "mutate WLT financial truth directly"
+      ]
+    },
+    {
+      "id": "operator",
+      "role": "Authorized special-request operations operator",
+      "permittedActions": [
+        "inspect the special-request queue",
+        "prepare a quote",
+        "apply valid expected-version transitions",
+        "assign an eligible request to a captain",
+        "record rejection and exception context"
+      ],
+      "forbiddenActions": [
+        "skip optimistic concurrency",
+        "dispatch SHEIN before ready_for_delivery",
+        "create a local-only request state",
+        "mutate WLT ledger or balance"
+      ]
+    },
+    {
+      "id": "captain",
+      "role": "Captain assigned to Awnak or SHEIN final-mile work",
+      "permittedActions": [
+        "receive an offered special-request assignment",
+        "identify Awnak and SHEIN final-mile service type",
+        "execute the governed delivery lifecycle"
+      ],
+      "forbiddenActions": [
+        "read unassigned special requests",
+        "change quote or payment state",
+        "bypass assignment acceptance rules"
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": ["client"],
+      "routesOrScreens": ["DshClientSurface special tab", "ClientSpecialRequestsScreen", "SheinForm", "AwnakForm"],
+      "operationIds": [],
+      "states": ["loading", "empty", "success", "offline", "forbidden", "conflict", "error", "submitted", "quote_pending", "customer_approval", "assigned", "in_progress", "completed", "cancelled", "rejected"],
+      "actions": ["create", "list", "refresh", "approve quote", "cancel", "read WLT session reference"]
+    },
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["operator"],
+      "routesOrScreens": ["SpecialOpsWorkbenchScreen", "OperatorSpecialRequestsWorkbench"],
+      "operationIds": [],
+      "states": ["loading", "empty", "success", "offline", "forbidden", "conflict", "error", "under_review", "needs_customer_input", "approved", "assigned", "in_progress", "completed", "cancelled", "rejected"],
+      "actions": ["inspect", "prepare quote", "transition", "assign captain", "read canonical result"]
+    },
+    {
+      "id": "app-captain",
+      "required": true,
+      "actors": ["captain"],
+      "routesOrScreens": ["captain inbox", "assignment execution"],
+      "operationIds": [],
+      "states": ["offered", "accepted", "assigned", "picked_up", "arrived_customer", "completed"],
+      "actions": ["recognize service type", "accept assignment", "execute delivery"]
+    },
+    {
+      "id": "app-partner",
+      "required": false,
+      "exclusionReason": "The registry assigns JRN-022 to client, captain and control-panel; partner stores do not own Awnak or SHEIN assisted-purchase truth.",
+      "actors": ["operator"],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": ["not_affected"],
+      "actions": []
+    },
+    {
+      "id": "app-field",
+      "required": false,
+      "exclusionReason": "Field workforce does not create, quote, approve or dispatch JRN-022 requests.",
+      "actors": ["operator"],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": ["not_affected"],
+      "actions": []
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["client", "operator", "captain"],
+      "routesOrScreens": ["client special-request routes", "operator special-request routes", "dispatch assignment route", "WLT approval handoff"],
+      "operationIds": [],
+      "states": ["authorized", "forbidden", "not_found", "conflict", "idempotent_replay", "wlt_unavailable", "dispatch_not_ready"],
+      "actions": ["validate ownership", "enforce stage transition", "create payment session", "create assignment", "return canonical readback"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["client", "operator"],
+      "routesOrScreens": ["dsh_special_requests", "special-request audit events", "dispatch linkage"],
+      "operationIds": [],
+      "states": ["transactional", "tenant_scoped", "versioned", "audited", "idempotent"],
+      "actions": ["persist request truth", "enforce constraints", "record workflow timestamps", "link WLT and dispatch references"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["client", "operator", "captain"],
+      "routesOrScreens": ["services/dsh/frontend/shared/special-requests", "services/dsh/frontend/shared/delivery/captain-inbox.mapper.ts"],
+      "operationIds": [],
+      "states": ["loading", "empty", "success", "offline", "forbidden", "conflict", "error"],
+      "actions": ["classify error", "bind generated contract", "enforce client actions", "refresh canonical readback", "map captain service type"]
+    }
+  ],
+  "outcome": {
+    "statement": "Each Awnak or SHEIN request has one versioned DSH lifecycle, one governed WLT payment handoff when quoted, one dispatch linkage and immediate readback on every affected surface.",
+    "primaryMetric": "successful special-request mutation readback rate",
+    "guardrailMetrics": [
+      "duplicate request count",
+      "invalid stage transition count",
+      "premature SHEIN dispatch count",
+      "DSH-originated financial mutation count",
+      "cross-client data leakage count"
+    ],
+    "baselineState": "Creation existed, but client lifecycle controls and operator execution actions were incomplete or disconnected.",
+    "targetState": "Client, operator and captain surfaces consume the same generated contract, backend state model and canonical readback.",
+    "observationWindow": "independent product, runtime, accessibility and financial-boundary review"
+  },
+  "acceptance": {
+    "criteria": [
+      "Client creation is idempotent and validates required SHEIN or Awnak data.",
+      "Client can list, refresh, approve an eligible quote and cancel an eligible owned request.",
+      "Operator can prepare a quote, apply an expected-version transition and assign an eligible captain.",
+      "SHEIN dispatch is rejected before ready_for_delivery with structured blocking reasons.",
+      "Captain inbox distinguishes Awnak and SHEIN final-mile assignments.",
+      "WLT remains the only financial truth owner and DSH stores references only.",
+      "Every mutation is followed by canonical DSH readback.",
+      "Binary media is not required by the current discovery model; product URL, structured item data and address references are the required request evidence. Any future attachment capability requires an approved media-owner extension."
+    ],
+    "failureStates": [
+      "frontend-only success",
+      "stale version overwrite",
+      "cross-client read",
+      "premature dispatch",
+      "missing WLT handoff",
+      "local surface business state",
+      "runtime mock truth"
+    ],
+    "requiredChecks": [
+      "JRN-022 full-stack static gate",
+      "targeted Go state-model tests",
+      "route registration tests",
+      "TypeScript typecheck",
+      "OpenAPI generated-client drift check",
+      "runtime client/operator/captain smoke",
+      "independent product acceptance",
+      "independent financial-boundary review"
+    ],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": [
+      "DSH owns operational request state while WLT owns payment truth.",
+      "Every operator mutation requires expectedVersion.",
+      "Every successful write is followed by canonical readback.",
+      "SHEIN cannot dispatch before purchase, inbound, sorting and readiness timestamps are complete.",
+      "Captain assignment retains the specialRequestId and requestType linkage."
+    ],
+    "negative": [
+      "No client can read or mutate another client request.",
+      "No surface can calculate or persist final financial truth.",
+      "No local array, mock or fallback can represent runtime request state.",
+      "No operator can bypass the workflow-stage model.",
+      "No captain can receive an unready SHEIN request."
+    ]
+  },
+  "owners": {
+    "productManager": "DSH Product Management",
+    "productOwner": "DSH Special Operations Product Owner",
+    "uxJourneyOwner": "DSH Multi-Surface Experience Owner",
+    "engineeringOwner": "DSH Full-Stack Engineering",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-022 code gaps without creating a second media subsystem, mutating WLT truth, deploying production or activating commercial SaaS.",
+    "fixedConstraints": [
+      "Repository mode is REMOTE_ONLY on sambassam.",
+      "DSH shared special-requests owns frontend business coordination.",
+      "WLT remains the sole financial truth owner.",
+      "No PR, merge, force push, release or production deployment is authorized."
+    ],
+    "variableScope": [
+      "Arabic operational wording",
+      "queue presentation density",
+      "non-financial status labels"
+    ],
+    "forbiddenScope": [
+      "WLT ledger mutation",
+      "parallel media truth",
+      "production deployment",
+      "commercial SaaS activation",
+      "self-approval of product acceptance"
+    ],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": [
+      "Independent product acceptance outcome",
+      "Runtime and visual verification outcome",
+      "Accessibility and weak-network device outcome",
+      "Independent WLT financial-boundary review outcome"
+    ]
+  }
+}
