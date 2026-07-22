@@ -1,0 +1,4 @@
+JRN-029 HTTP diagnostics
+requested_at=2026-07-22
+execution_nonce=http-isolation-1
+source_run=29937053608
