@@ -130,7 +130,7 @@ test("JRN-031 control panel composes complete governed workflow", () => {
   ], "governed administration screen");
   assertIncludesAll(roleQueue, ["AVAILABLE_PERMISSIONS", "AVAILABLE_SURFACES", '"control-panel"'], "role queue");
   assertIncludesAll(rollbackQueue, ["requestRollback", "اعتماد التراجع", "sourceApprovedBy"], "rollback queue");
-  assertIncludesAll(diagnostics, ["privacy-safe", "pendingRollbackCount", "recentRestrictedAuditCount"], "diagnostics panel");
+  assertIncludesAll(diagnostics, ["PII", "pendingRollbackCount", "recentRestrictedAuditCount"], "diagnostics panel");
   for (const source of [roleQueue, rollbackQueue, diagnostics]) {
     assert.ok(!source.includes("fetch("), "surface UI must not bypass the shared administration brain");
     assert.ok(!source.includes("axios"), "surface UI must not use a parallel HTTP client");
