@@ -90,7 +90,7 @@ export function usePlatformChangeWorkflowController(enabled: boolean) {
       runMutation("reject", id, () => rejectPlatformChangeSet(id, { reason })),
     apply: (id: string) =>
       runMutation("apply", id, () => applyPlatformChangeSet(id)),
-    rollback: (id: string) =>
-      runMutation("rollback", id, () => rollbackPlatformChangeSet(id)),
+    rollback: (id: string, reason: string) =>
+      runMutation("rollback", id, () => rollbackPlatformChangeSet(id, { reason })),
   };
 }
