@@ -126,6 +126,87 @@ replaceBetween(
 `,
 );
 
+replaceBetween(
+  'function collectSiblingContractOwnership(currentPathKeys) {',
+  '\nfunction readModuleEntry',
+  `function collectSiblingContractOwnership(currentPathKeys) {
+  const report = {
+    formatVersion: 2,
+    sovereignContract: 'services/dsh/contracts/dsh.openapi.yaml',
+    governedProjectionPaths: [],
+    orphanProjectionPaths: [],
+    projectionCollisions: [],
+    siblingContracts: {},
+  };
+  const current = new Set(currentPathKeys);
+  const projectionOwners = new Map();
+
+  for (const name of fs.readdirSync(contractsDirectory).sort()) {
+    if (!name.endsWith('.openapi.yaml') || name === 'dsh.openapi.yaml') continue;
+    const filePath = path.join(contractsDirectory, name);
+    if (!fs.statSync(filePath).isFile()) continue;
+    const text = readText(filePath);
+    const owner = text.match(/^x-bthwani-owner:\\s*(.+)$/m)?.[1]?.trim() ?? 'services/dsh';
+    const parentContract = text.match(/^x-bthwani-parent-contract:\\s*(.+)$/m)?.[1]?.trim() ?? null;
+    const contractRole = text.match(/^x-bthwani-contract-role:\\s*(.+)$/m)?.[1]?.trim() ?? 'governed-projection';
+    let structure;
+    try {
+      structure = parseContractStructure(text);
+    } catch {
+      const lines = text.split('\\n');
+      const pathsIndex = findTopLevelSection(lines, 'paths');
+      if (pathsIndex === -1) continue;
+      const end = findTopLevelSectionEnd(lines, pathsIndex);
+      structure = {
+        pathEntries: parseEntries(lines, pathsIndex + 1, end, 2, (key) => key.startsWith('/')),
+      };
+    }
+    const paths = structure.pathEntries.map((entry) => entry.key);
+    report.siblingContracts[name] = {
+      pathCount: paths.length,
+      owner,
+      parentContract,
+      contractRole,
+    };
+    for (const pathKey of paths) {
+      const owners = projectionOwners.get(pathKey) ?? [];
+      owners.push(name);
+      projectionOwners.set(pathKey, owners);
+      if (current.has(pathKey)) {
+        report.governedProjectionPaths.push({
+          path: pathKey,
+          projectionContract: name,
+        });
+      } else {
+        report.orphanProjectionPaths.push({
+          path: pathKey,
+          projectionContract: name,
+        });
+      }
+    }
+  }
+
+  for (const [pathKey, contracts] of projectionOwners) {
+    if (contracts.length > 1) {
+      report.projectionCollisions.push({
+        path: pathKey,
+        projectionContracts: contracts.sort(),
+      });
+    }
+  }
+
+  report.governedProjectionPaths.sort(
+    (a, b) => a.path.localeCompare(b.path) || a.projectionContract.localeCompare(b.projectionContract),
+  );
+  report.orphanProjectionPaths.sort(
+    (a, b) => a.path.localeCompare(b.path) || a.projectionContract.localeCompare(b.projectionContract),
+  );
+  report.projectionCollisions.sort((a, b) => a.path.localeCompare(b.path));
+  return report;
+}
+`,
+);
+
 const replacements = [
   ["if (includesAny(normalizedName, ['order', 'fulfillment'])) return 'orders';", "if (includesAny(normalizedName, ['order', 'fulfillment', 'pickup'])) return 'orders';"],
   ['structure = mergePreparationFragment(structure);', 'structure = mergeGovernedFragments(structure);'],
@@ -138,4 +219,4 @@ for (const [before, after] of replacements) {
 }
 
 fs.writeFileSync(libraryPath, source, 'utf8');
-console.log('Patched DSH OpenAPI modularization engine for governed fragments and inline references.');
+console.log('Patched DSH OpenAPI modularization engine for governed fragments, inline references, and contract projections.');
