@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches: [sambassam]
-    paths:
+    paths: &jrn030_paths
       - "services/dsh/backend/internal/partnerfleet/**"
       - "services/dsh/backend/internal/http/partner_fleet*.go"
       - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
@@ -26,13 +26,17 @@ on:
       - "governance/product/product-truth.schema.json"
       - "tools/guards/product-truth-gate.mjs"
       - ".github/workflows/jrn-030-partner-fleet-verification.yml"
+  pull_request:
+    branches: [master]
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths: *jrn030_paths
 
 permissions:
   contents: read
 
 concurrency:
-  group: jrn-030-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-030-${{ github.workflow }}-${{ github.event_name }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   verify:
@@ -82,13 +86,30 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Compile partner fleet backend and API composition root
+      - name: Verify Go formatting and compile API composition root
         working-directory: services/dsh/backend
         run: |
+          test -z "$(gofmt -l internal/partnerfleet internal/http/partner_fleet.go internal/http/partner_fleet_membership_routes.go internal/http/partner_fleet_operator.go internal/http/journeys_026_030_routes_test.go cmd/dsh-api/main.go)"
           go test ./internal/partnerfleet -run '^$'
           go test ./internal/http -run '^TestJourneys026To030ExposeGovernedRoutes$' -count=1
           go test ./cmd/dsh-api -run '^$'
           go build -o /tmp/dsh-api ./cmd/dsh-api
+
+      - name: Parse and verify strict OpenAPI contract
+        run: |
+          ruby -e '
+            require "yaml"
+            document = YAML.load_file(ARGV.fetch(0))
+            abort "expected OpenAPI 3.1.0" unless document["openapi"] == "3.1.0"
+            expected = %w[
+              ConnectionCode IssuedConnectionCode CaptainFleetMembership
+              OperatorStoreFleetMember OperatorPartnerFleetSnapshot
+            ]
+            schemas = document.dig("components", "schemas") || {}
+            missing = expected.reject { |name| schemas.key?(name) }
+            abort "missing schemas: #{missing.join(",")}" unless missing.empty?
+            abort "operator snapshot must be strict" unless schemas.dig("OperatorPartnerFleetSnapshot", "additionalProperties") == false
+          ' services/dsh/contracts/dsh.partner-fleet.openapi.yaml
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -152,3 +173,27 @@ jobs:
 
       - name: Verify Product Truth schema
         run: node tools/guards/product-truth-gate.mjs
+
+      - name: Build same-commit evidence manifest
+        run: |
+          mkdir -p /tmp/jrn-030-evidence
+          cat > /tmp/jrn-030-evidence/manifest.json <<JSON
+          {
+            "journey": "JRN-030",
+            "commitSha": "${GITHUB_SHA}",
+            "runId": "${GITHUB_RUN_ID}",
+            "runAttempt": "${GITHUB_RUN_ATTEMPT}",
+            "repository": "${GITHUB_REPOSITORY}",
+            "ref": "${GITHUB_REF}",
+            "database": "PostgreSQL 16",
+            "result": "all-gates-passed"
+          }
+          JSON
+
+      - name: Upload same-commit evidence manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-030-evidence-${{ github.sha }}
+          path: /tmp/jrn-030-evidence/manifest.json
+          if-no-files-found: error
+          retention-days: 30
