@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-040",
+  "journeyNameAr": "مجموعات تغييرات المنصة",
+  "status": "PENDING_INDEPENDENT_APPROVAL",
+  "truthOwner": "core/platform-control",
+  "scopeBoundary": "platform-change-control-plane",
+  "sharedBrainOwner": "services/dsh/frontend/shared/platform",
+  "operationalProblem": "تحتاج عمليات المنصة إلى تجميع تعديلات المتغيرات وأعلام الميزات في طلب واحد قابل للمراجعة، مع فرق وأثر واضحين، تحقق مسبق، فصل صانع القرار عن معتمده، تطبيق ذري، منع التعارض والتكرار، وتراجع يعيد الحالة الآمنة دون فقدان سجل التدقيق.",
+  "targetOutcome": "دورة تغيير سيادية من المسودة إلى التحقق والإرسال والاعتماد أو الرفض ثم التطبيق والتراجع، ترتبط بقاعدة PostgreSQL الحية وتعرض في لوحة التحكم تفاصيل العناصر ولقطات الشروط والمراجعات والأثر، وتحظر الأسرار والتغييرات المتعارضة.",
+  "actors": [
+    "platform-change-proposer",
+    "platform-change-reviewer",
+    "platform-change-applier",
+    "platform-change-rollback-operator",
+    "platform-auditor"
+  ],
+  "requiredSurfaces": ["control-panel"],
+  "impactedSurfaces": ["app-client", "app-partner", "app-captain", "app-field", "webapp", "website"],
+  "services": ["PLATFORM_CONTROL", "DSH_CONTROL_PANEL"],
+  "entities": ["platform_change_set", "platform_change_set_item", "platform_variable", "platform_feature_flag", "platform_audit_event"],
+  "states": {
+    "changeSet": ["draft", "validated", "submitted", "approved", "rejected", "applied", "rolled_back", "failed"]
+  },
+  "allowedActions": [
+    "list_change_sets",
+    "create_multi_item_draft",
+    "read_change_set_diff_and_expected_impact",
+    "validate_current_target_preconditions",
+    "submit_validated_change_set",
+    "independently_approve_or_reject_submitted_change_set",
+    "atomically_apply_approved_change_set",
+    "rollback_applied_change_set_with_reason",
+    "read_redacted_append_only_audit"
+  ],
+  "forbiddenActions": [
+    "direct_platform_mutation_outside_platform_control",
+    "submit_without_validation_snapshot",
+    "approve_or_reject_own_change_set",
+    "apply_stale_or_conflicting_change_set",
+    "repeat_apply_or_repeat_rollback",
+    "rollback_without_reason",
+    "store_secret_or_credential_values_in_change_sets",
+    "store_proposed_values_in_audit_payload",
+    "silently_ignore_scope_for_feature_flags",
+    "delete_or_rewrite_change_history"
+  ],
+  "negativeInvariants": [
+    "Every item declares target identity, owner, scope, value type, classification, expected revision, and proposed JSON value.",
+    "Validation captures the full current target state and revision atomically and reserves the target while the request is active.",
+    "Submit, approval, and apply fail when the target no longer matches the validation snapshot.",
+    "The proposer cannot approve or reject the same request even when holding reviewer permissions.",
+    "Apply is atomic across all items and advances each target revision exactly once.",
+    "Rollback requires an explicit reason, verifies the applied revision, and restores value plus owner, type, classification, status, and feature targeting metadata.",
+    "Sensitive classifications and secret-shaped JSON fields are rejected before persistence.",
+    "Audit payloads record target metadata and transitions while redacting proposed and prior values."
+  ],
+  "acceptanceCriteria": [
+    "The control panel lists change sets, creates drafts, and exposes reason, expected impact, rollback plan, actors, timestamps, and item-level before/proposed/revision detail.",
+    "Validation performs live revision checks and prevents another active change set from reserving the same target.",
+    "Maker-checker is enforced for both approval and rejection.",
+    "Apply and rollback use serializable transactions, target locks, optimistic revisions, and immutable audit events.",
+    "Rollback reasons are required by the API contract and user interface.",
+    "Variable and feature-flag metadata survive an apply-and-rollback cycle.",
+    "Targeted Go integration tests, OpenAPI and generated-client checks, frontend binding checks, product contract checks, and migration checks pass on one immutable branch commit."
+  ],
+  "independentApprovalsRequired": [
+    "product-manager",
+    "product-owner",
+    "independent-quality",
+    "application-security",
+    "release-production"
+  ]
+}
