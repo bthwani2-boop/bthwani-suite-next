@@ -1,5 +1,26 @@
 status=FAILED
+check=WLT HTTP owner compilation
 exit_code=1
-line=26
-command=( cd services/wlt/backend; go test ./internal/promotionfunding ./internal/shared; go test ./internal/http -run '^$' )
-tested_sha=d7760ade4911a07785d3d62a3d58827893622f5e
+command=bash -lc cd\ services/wlt/backend\ \&\&\ go\ test\ ./internal/http\ -run\ \'\^\$\' 
+tested_sha=02618ff0bf6ad3e7649633eb3f1d0666aa51ee74
+--- output tail ---
+# wlt-api/internal/payout
+internal/payout/jrn037_provider_process.go:135:74: input.OperatorID undefined (type string has no field or method OperatorID)
+internal/payout/jrn037_provider_process.go:162:58: input.OperatorID undefined (type string has no field or method OperatorID)
+internal/payout/jrn037_provider_process.go:192:24: assignment mismatch: 2 variables but failProviderDecline returns 1 value
+internal/payout/jrn037_provider_process.go:192:72: input.OperatorID undefined (type string has no field or method OperatorID)
+internal/payout/jrn037_provider_process.go:192:84: too many arguments in call to failProviderDecline
+	have (context.Context, *sql.DB, *PayoutRequest, unknown type, string, string)
+	want (context.Context, *sql.DB, string, error)
+internal/payout/jrn037_provider_process.go:200:61: input.OperatorID undefined (type string has no field or method OperatorID)
+internal/payout/jrn037_provider_process.go:200:73: too many arguments in call to markProviderResultUnknown
+	have (context.Context, *sql.DB, string, unknown type, string)
+	want (context.Context, *sql.DB, string, error)
+internal/payout/jrn037_provider_process.go:207:61: input.OperatorID undefined (type string has no field or method OperatorID)
+internal/payout/jrn037_provider_process.go:207:73: too many arguments in call to markProviderResultUnknown
+	have (context.Context, *sql.DB, string, unknown type, string)
+	want (context.Context, *sql.DB, string, error)
+internal/payout/jrn037_provider_process.go:225:10: input.OperatorID undefined (type string has no field or method OperatorID)
+internal/payout/jrn037_provider_process.go:225:10: too many errors
+FAIL	wlt-api/internal/http [build failed]
+FAIL
