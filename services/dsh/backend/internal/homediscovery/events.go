@@ -88,12 +88,25 @@ func RecordHomeContentEvent(ctx context.Context, db *sql.DB, input HomeContentEv
 	digest := sha256.Sum256([]byte(strings.Join([]string{
 		eventType, entityType, entityID, viewerRef,
 	}, "|")))
-	_, err = db.ExecContext(ctx, `INSERT INTO `+eventTable+`
+	result, err := db.ExecContext(ctx, `INSERT INTO `+eventTable+`
 		(id,entity_type,entity_id,surface,viewer_ref)
 		VALUES ($1,$2,$3,'app-client',$4)
 		ON CONFLICT DO NOTHING`,
 		fmt.Sprintf("home-%x", digest[:]), entityType, entityID, viewerRef,
 	)
+	if err != nil {
+		return err
+	}
+	inserted, err := result.RowsAffected()
+	if err != nil || inserted == 0 || entityType != "ticker" {
+		return err
+	}
+	metricColumn := "clicks"
+	if eventType == "impression" {
+		metricColumn = "impressions"
+	}
+	_, err = db.ExecContext(ctx, `UPDATE dsh_marketing_tickers SET `+metricColumn+`=`+metricColumn+`+1, updated_at=NOW()
+		WHERE id::TEXT=$1 AND deleted_at IS NULL`, entityID)
 	return err
 }
 
@@ -106,6 +119,23 @@ func resolvePublishableHomeEntity(
 	serviceAreaCode string,
 	audienceSegment string,
 ) (string, string, bool, error) {
+	if kind == "promos" && strings.HasPrefix(contentID, "ticker:") {
+		entityID := strings.TrimPrefix(contentID, "ticker:")
+		var publishable bool
+		err := db.QueryRowContext(ctx, `SELECT EXISTS (
+			SELECT 1 FROM dsh_marketing_tickers t
+			WHERE t.id::TEXT=$1
+			  AND t.deleted_at IS NULL
+			  AND t.status='published'
+			  AND (t.audience='all' OR (t.audience='client' AND $2='authenticated'))
+			  AND (
+			    t.open_hour IS NULL OR t.close_hour IS NULL OR
+			    (t.open_hour <= t.close_hour AND EXTRACT(HOUR FROM CURRENT_TIMESTAMP) >= t.open_hour AND EXTRACT(HOUR FROM CURRENT_TIMESTAMP) < t.close_hour) OR
+			    (t.open_hour > t.close_hour AND (EXTRACT(HOUR FROM CURRENT_TIMESTAMP) >= t.open_hour OR EXTRACT(HOUR FROM CURRENT_TIMESTAMP) < t.close_hour))
+			  )
+		)`, entityID, audienceSegment).Scan(&publishable)
+		return "ticker", entityID, publishable, err
+	}
 	if kind == "promos" && strings.HasPrefix(contentID, "campaign:") {
 		entityID := strings.TrimPrefix(contentID, "campaign:")
 		var publishable bool
@@ -120,14 +150,21 @@ func resolvePublishableHomeEntity(
 			  AND COALESCE(c.end_date,'') <> ''
 			  AND c.start_date <= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
 			  AND c.end_date >= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
+			  AND COALESCE(c.placement,'home') IN ('home','hero','feed','banner','floating')
 			  AND (
-			    c.target_type IS NULL OR c.target_type='' OR
+			    c.target_type IS NULL OR c.target_type='' OR c.target_type IN ('home','stores','search','custom') OR
 			    (c.target_type='store' AND s.id IS NOT NULL AND `+clientEligibleStorePredicate+`
 			      AND ($2='' OR s.city_code=$2)
 			      AND ($3='' OR s.service_area_code=$3)) OR
-			    (c.target_type='category' AND EXISTS (
+			    (c.target_type IN ('category','subcategory') AND EXISTS (
 			      SELECT 1 FROM dsh_catalog_domains d
-			      WHERE d.id=c.target_id AND d.is_active=TRUE AND d.is_client_visible=TRUE
+			      WHERE d.id::TEXT=c.target_id AND d.is_active=TRUE AND d.is_client_visible=TRUE
+			        AND d.is_manual_request=FALSE
+			      UNION ALL
+			      SELECT 1 FROM dsh_catalog_nodes n
+			      JOIN dsh_catalog_domains d ON d.id=n.domain_id
+			      WHERE n.id::TEXT=c.target_id AND n.is_active=TRUE AND n.is_client_visible=TRUE
+			        AND d.is_active=TRUE AND d.is_client_visible=TRUE AND d.is_manual_request=FALSE
 			    ))
 			  )
 		)`, entityID, cityCode, serviceAreaCode, audienceSegment).Scan(&publishable)
