@@ -1,0 +1,190 @@
+name: JRN-036 isolated exact-snapshot closure
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/jrn-036-isolated-closure-runner.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-036-isolated-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify immutable JRN-036 snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wlt_ci
+          POSTGRES_PASSWORD: wlt_ci_password
+          POSTGRES_DB: wlt_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U wlt_ci -d wlt_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: wlt_ci
+      PGPASSWORD: wlt_ci_password
+      PGDATABASE: wlt_ci
+      DATABASE_URL: postgres://wlt_ci:wlt_ci_password@localhost:5432/wlt_ci?sslmode=disable
+      WLT_BASE_URL: http://127.0.0.1:58083
+      WLT_SERVICE_TOKEN: jrn036-ci-service-token
+      SNAPSHOT_REF: verify/jrn-036-snapshot-20260722-v2
+    steps:
+      - name: Checkout immutable JRN-036 snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SNAPSHOT_REF }}
+          fetch-depth: 1
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/wlt/backend/go.mod
+          cache-dependency-path: |
+            services/wlt/backend/go.sum
+            services/dsh/backend/go.sum
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+
+      - name: Record exact snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD | tee /tmp/jrn036-snapshot-sha.txt
+          git status --short
+
+      - name: Produce canonical gofmt output
+        id: gofmt
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            services/wlt/backend/internal/cod/jrn036_governed_commission.go
+            services/wlt/backend/internal/cod/jrn036_governed_lifecycle.go
+            services/wlt/backend/internal/cod/jrn036_commission_query.go
+            services/wlt/backend/internal/cod/jrn036_governed_commission_test.go
+            services/wlt/backend/internal/settlement/jrn036_evidence_settlement.go
+            services/wlt/backend/internal/settlement/jrn036_evidence_settlement_test.go
+            services/wlt/backend/internal/http/server.go
+            services/dsh/backend/internal/http/finance_settlement_sources.go
+            services/dsh/backend/internal/http/finance_commission_governance.go
+            services/dsh/backend/internal/http/representative_finance_routes.go
+            services/dsh/backend/internal/wlt/commission_client.go
+            services/dsh/backend/internal/wlt/finance_proxy.go
+          )
+          gofmt -w "${files[@]}"
+          if git diff --quiet -- "${files[@]}"; then
+            echo 'changed=false' >> "${GITHUB_OUTPUT}"
+          else
+            echo 'changed=true' >> "${GITHUB_OUTPUT}"
+            git diff --name-only -- "${files[@]}" | tee /tmp/jrn036-gofmt-changed.txt
+          fi
+      - name: Upload canonical formatted Go files
+        if: steps.gofmt.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-036-canonical-gofmt-${{ github.run_id }}
+          path: |
+            services/wlt/backend/internal/cod/jrn036_governed_commission.go
+            services/wlt/backend/internal/cod/jrn036_governed_lifecycle.go
+            services/wlt/backend/internal/cod/jrn036_commission_query.go
+            services/wlt/backend/internal/cod/jrn036_governed_commission_test.go
+            services/wlt/backend/internal/settlement/jrn036_evidence_settlement.go
+            services/wlt/backend/internal/settlement/jrn036_evidence_settlement_test.go
+            services/wlt/backend/internal/http/server.go
+            services/dsh/backend/internal/http/finance_settlement_sources.go
+            services/dsh/backend/internal/http/finance_commission_governance.go
+            services/dsh/backend/internal/http/representative_finance_routes.go
+            services/dsh/backend/internal/wlt/commission_client.go
+            services/dsh/backend/internal/wlt/finance_proxy.go
+
+      - name: Product contract ownership and multi-surface invariants
+        run: |
+          node tools/guards/jrn-036-settlement-commission-gate.mjs
+          node --test tools/verification/jrn-036-surfaces.test.mjs
+
+      - name: Verify migration numbering and probe coverage
+        shell: pwsh
+        run: |
+          . ./infra/docker/scripts/wlt-migration-probes.ps1
+          $files = Get-ChildItem ./services/wlt/database/migrations -Filter '*.sql' | Sort-Object Name
+          Test-WltMigrationProbeCoverage -MigrationFiles $files
+
+      - name: Apply all WLT migrations and database invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in services/wlt/database/migrations/*.sql; do
+            echo "Applying ${migration}"
+            psql -v ON_ERROR_STOP=1 -f "${migration}"
+          done
+          psql -v ON_ERROR_STOP=1 -f services/wlt/database/tests/jrn-036-settlement-commission-invariants.sql
+
+      - name: Compile and test WLT governed finance packages
+        working-directory: services/wlt/backend
+        run: go test ./internal/cod ./internal/settlement ./internal/http
+      - name: Compile and test DSH finance proxy packages
+        working-directory: services/dsh/backend
+        run: go test ./internal/http ./internal/wlt
+
+      - name: Start WLT runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd services/wlt/backend
+            PORT=58083 \
+            DATABASE_URL="${DATABASE_URL}" \
+            WLT_MUTATIONS_ENABLED=true \
+            WLT_AUTH_MODE=service \
+            WLT_DSH_SERVICE_TOKEN="${WLT_SERVICE_TOKEN}" \
+            go run ./cmd/wlt-api
+          ) > /tmp/wlt-jrn036.log 2>&1 &
+          echo $! > /tmp/wlt-jrn036.pid
+      - name: Run live settlement commission refund and ledger lifecycle
+        run: bash tools/verification/jrn-036-runtime-smoke.sh
+      - name: Upload runtime and snapshot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-036-runtime-evidence-${{ github.run_id }}
+          path: |
+            /tmp/wlt-jrn036.log
+            /tmp/jrn036-snapshot-sha.txt
+          if-no-files-found: warn
+
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck DSH multi-surface finance bindings
+        run: pnpm --dir services/dsh typecheck
+      - name: Verify backend and frontend bindings
+        run: |
+          pnpm run guard:backend-api-binding
+          pnpm run guard:frontend-feature-binding
+
+      - name: Enforce committed canonical Go formatting
+        if: always()
+        shell: bash
+        run: |
+          if [[ '${{ steps.gofmt.outputs.changed }}' == 'true' ]]; then
+            echo 'JRN-036 Go files require canonical gofmt; download the formatted artifact and commit it.'
+            cat /tmp/jrn036-gofmt-changed.txt
+            exit 1
+          fi
