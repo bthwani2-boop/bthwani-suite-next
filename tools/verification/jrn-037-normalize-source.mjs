@@ -45,6 +45,44 @@ replaceExactly(
   `api POST "/wlt/payout-requests/$PAYOUT_ID/approve" "$REQUEST_KEY-approve" "$REQUEST_KEY-approve" '{"operatorId":"finance-maker-1"}' >/tmp/jrn037-approved.json\napi POST "/wlt/payout-requests/$PAYOUT_ID/process" "$REQUEST_KEY-process" "$REQUEST_KEY-process" '{"operatorId":"finance-processor-2"}' >/tmp/jrn037-processed.json\napi POST "/wlt/payout-requests/$PAYOUT_ID/complete" "$REQUEST_KEY-complete" "$REQUEST_KEY-complete" '{"operatorId":"finance-checker-3"}' >/tmp/jrn037-completed.json\n`,
 );
 
+const dshServerPath = "services/dsh/backend/internal/http/server.go";
+for (const [before, after] of [
+  [
+    `\tmux.HandleFunc("GET /dsh/captain/finance/payouts", protected.handleCaptainFinancePayouts)\n`,
+    `\tmux.HandleFunc("GET /dsh/captain/finance/payouts", protected.handleCaptainPayoutRequestsJRN037)\n`,
+  ],
+  [
+    `\tmux.HandleFunc("POST /dsh/captain/finance/payouts", protected.handleCaptainCreatePayout)\n`,
+    `\tmux.HandleFunc("POST /dsh/captain/finance/payouts", protected.handleCaptainCreatePayoutRequestJRN037)\n`,
+  ],
+  [
+    `\tmux.HandleFunc("GET /dsh/field/finance/payouts", protected.handleFieldFinancePayouts)\n`,
+    `\tmux.HandleFunc("GET /dsh/field/finance/payouts", protected.handleFieldPayoutRequestsJRN037)\n`,
+  ],
+  [
+    `\tmux.HandleFunc("POST /dsh/field/finance/payouts", protected.handleFieldCreatePayout)\n`,
+    `\tmux.HandleFunc("POST /dsh/field/finance/payouts", protected.handleFieldCreatePayoutRequestJRN037)\n`,
+  ],
+  [
+    `\tmux.HandleFunc("GET /dsh/field/finance/payout-destinations", protected.handleFieldListPayoutDestinations)\n`,
+    `\tmux.HandleFunc("GET /dsh/field/finance/payout-destinations", protected.handleFieldPayoutDestinationReadJRN037)\n`,
+  ],
+  [
+    `\tmux.HandleFunc("POST /dsh/field/finance/payout-destinations", protected.handleFieldCreatePayoutDestination)\n`,
+    `\tmux.HandleFunc("POST /dsh/field/finance/payout-destinations", protected.handleFieldPayoutDestinationUpsertJRN037)\n`,
+  ],
+  [
+    `\tmux.HandleFunc("PATCH /dsh/field/finance/payout-destinations/{destinationId}", protected.handleFieldUpdatePayoutDestination)\n`,
+    `\tmux.HandleFunc("PATCH /dsh/field/finance/payout-destinations/{destinationId}", protected.handleFieldPayoutDestinationUpsertJRN037)\n`,
+  ],
+  [
+    `\tmux.HandleFunc("DELETE /dsh/field/finance/payout-destinations/{destinationId}", protected.handleFieldDeletePayoutDestination)\n`,
+    `\tmux.HandleFunc("DELETE /dsh/field/finance/payout-destinations/{destinationId}", protected.handleFieldPayoutDestinationDeactivateJRN037)\n`,
+  ],
+]) {
+  replaceExactly(dshServerPath, before, after);
+}
+
 const goFiles = [
   "services/wlt/backend/internal/payout/jrn037_governed_payout.go",
   "services/wlt/backend/internal/payout/jrn037_governed_payout_test.go",
