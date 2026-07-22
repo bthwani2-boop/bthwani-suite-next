@@ -34,6 +34,10 @@ const slices = [
     assert.match(wltServer, /\/commit"[\s\S]*HandleCommit/);
     assert.match(wltServer, /\/release"[\s\S]*HandleRelease/);
     assert.match(wltServer, /\/reverse"[\s\S]*HandleReverse/);
+    assert.match(lifecycleHTTP, /reserveCouponFunding/);
+    assert.match(lifecycleHTTP, /commitCouponFunding/);
+    assert.match(lifecycleHTTP, /releaseCouponFunding/);
+    assert.match(lifecycleHTTP, /reverseCouponFunding/);
   }],
   ["FS-05..08 transition, monetary, tenant, idempotency and concurrency integrity", () => {
     assert.match(wltMigration, /DEFERRABLE INITIALLY DEFERRED/);
@@ -50,9 +54,12 @@ const slices = [
     assert.match(serviceAuth, /MISSING_TENANT_ID/);
   }],
   ["FS-09..12 outbox, recovery, reconciliation and operator read model", () => {
+    assert.match(couponsHTTP, /coupons\.ListFundingLifecycleDiagnostics/);
+    assert.match(couponsHTTP, /s\.wlt\.GetPromotionFundingReservation/);
+    assert.match(couponsHTTP, /coupons\.ReconcileFundingLifecycle/);
     assert.match(couponsHTTP, /"fundingLifecycle"/);
-    assert.match(lifecycleHTTP, /ListFundingLifecycleDiagnostics/);
-    assert.match(lifecycleHTTP, /GetPromotionFundingReservation/);
+    assert.match(diagnostics, /func ListFundingLifecycleDiagnostics/);
+    assert.match(diagnostics, /func ReconcileFundingLifecycle/);
     assert.match(couponTypes, /CouponFundingLifecycleRecord/);
     assert.match(couponTypes, /readonly fundingLifecycle/);
     assert.match(couponsController, /fundingLifecycle: response\.fundingLifecycle/);
