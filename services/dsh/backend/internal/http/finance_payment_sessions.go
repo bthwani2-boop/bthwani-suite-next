@@ -10,7 +10,10 @@ import (
 func requiredPaymentTenant(w http.ResponseWriter, r *http.Request) (string, bool) {
 	tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 	if tenantID == "" {
-		store.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required")
+		tenantID = strings.TrimSpace(r.URL.Query().Get("tenantId"))
+	}
+	if tenantID == "" {
+		store.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "tenantId is required")
 		return "", false
 	}
 	return tenantID, true
