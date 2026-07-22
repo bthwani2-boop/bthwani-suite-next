@@ -102,8 +102,20 @@ jobs:
         run: go test ./internal/wlt
 
       - name: Run protected HTTP Go tests
-        working-directory: services/dsh/backend
-        run: go test ./internal/http
+        run: |
+          set +e
+          (cd services/dsh/backend && go test ./internal/http) > "${RUNNER_TEMP}/jrn032-http.log" 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            tail -n 180 "${RUNNER_TEMP}/jrn032-http.log" > governance/evidence/JRN-032_HTTP_FAILURE.log
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add governance/evidence/JRN-032_HTTP_FAILURE.log
+            git commit -m "diagnostics(jrn-032): capture HTTP test failure [skip ci]" || true
+            git push origin HEAD:verify/jrn-032-final2-8e71db5
+            exit "$status"
+          fi
 
       - name: Typecheck DSH surfaces
         run: pnpm --dir services/dsh typecheck
@@ -140,6 +152,5 @@ jobs:
 
       - name: Record and push final JRN-032 evidence
         env:
-          JRN032_SOURCE_SHA: ca9d706a9e47fdf711e9babf1aa2aa0ddd4891d7
           JRN032_VERIFICATION_HEAD: verify/jrn-032-final2-8e71db5
         run: bash tools/scripts/jrn032-record-closure.sh
