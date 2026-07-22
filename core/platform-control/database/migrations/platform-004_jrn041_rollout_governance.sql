@@ -6,11 +6,7 @@ ALTER TABLE platform_rollouts
     CHECK (
         jsonb_typeof(target_scope_json) = 'object'
         AND target_scope_json <> '{}'::jsonb
-        AND NOT EXISTS (
-            SELECT 1
-            FROM jsonb_object_keys(target_scope_json) AS key
-            WHERE key NOT IN ('audience', 'audienceIds', 'city', 'regions', 'surface', 'surfaces')
-        )
+        AND (target_scope_json - ARRAY['audience', 'audienceIds', 'city', 'regions', 'surface', 'surfaces']::text[]) = '{}'::jsonb
         AND (
             NULLIF(BTRIM(target_scope_json ->> 'audience'), '') IS NOT NULL
             OR NULLIF(BTRIM(target_scope_json ->> 'city'), '') IS NOT NULL
@@ -33,10 +29,11 @@ ALTER TABLE platform_rollouts
                 AND jsonb_array_length(health_gate_json -> 'requiredServices') > 0
             )
         )
-        AND (
-            NOT (health_gate_json ? 'maxLatencyMs')
-            OR (health_gate_json ->> 'maxLatencyMs')::numeric > 0
-        )
+        AND CASE
+            WHEN NOT (health_gate_json ? 'maxLatencyMs') THEN TRUE
+            WHEN jsonb_typeof(health_gate_json -> 'maxLatencyMs') <> 'number' THEN FALSE
+            ELSE (health_gate_json ->> 'maxLatencyMs')::numeric > 0
+        END
     ) NOT VALID;
 
 ALTER TABLE platform_rollouts
