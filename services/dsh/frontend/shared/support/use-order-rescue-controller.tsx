@@ -4,11 +4,11 @@ import {
   fetchOrderRescueEvents,
   fetchOrderRescueCases,
   updateOrderRescueCase,
-  type DshCreateOrderRescueInput,
+  type DshCreateGovernedOrderRescueInput,
   type DshGovernedOrderRescueCase,
-  type DshOrderRescueEvent,
-  type DshOrderRescueStatus,
-  type DshUpdateOrderRescueInput,
+  type DshGovernedOrderRescueEvent,
+  type DshGovernedOrderRescueStatus,
+  type DshUpdateGovernedOrderRescueInput,
 } from "./order-rescue.api";
 import {
   clearSupportMutationAttempt,
@@ -33,7 +33,7 @@ export type OrderRescueEventState =
   | { readonly kind: "idle" }
   | { readonly kind: "loading" }
   | { readonly kind: "error"; readonly message: string }
-  | { readonly kind: "success"; readonly events: readonly DshOrderRescueEvent[] };
+  | { readonly kind: "success"; readonly events: readonly DshGovernedOrderRescueEvent[] };
 
 function resolveMessage(error: unknown): string {
   const classified = classifySupportError(error);
@@ -53,7 +53,7 @@ export function useOrderRescueController(authKind = "unauthenticated") {
   const [actionState, setActionState] = useState<OrderRescueActionState>({ kind: "idle" });
   const [eventState, setEventState] = useState<OrderRescueEventState>({ kind: "idle" });
 
-  const load = useCallback(async (statusFilter?: DshOrderRescueStatus) => {
+  const load = useCallback(async (statusFilter?: DshGovernedOrderRescueStatus) => {
     setListState({ kind: "loading" });
     try {
       const rescueCases = await fetchOrderRescueCases(statusFilter);
@@ -80,7 +80,7 @@ export function useOrderRescueController(authKind = "unauthenticated") {
     }
   }, []);
 
-  const createCase = useCallback(async (input: DshCreateOrderRescueInput): Promise<boolean> => {
+  const createCase = useCallback(async (input: DshCreateGovernedOrderRescueInput): Promise<boolean> => {
     const valueFingerprint = fingerprint(input);
     const attempt = await getOrCreateSupportMutationAttempt({
       scope: "operator",
@@ -108,9 +108,9 @@ export function useOrderRescueController(authKind = "unauthenticated") {
 
   const updateCase = useCallback(async (
     rescueCase: DshGovernedOrderRescueCase,
-    input: Omit<DshUpdateOrderRescueInput, "expectedStatus">,
+    input: Omit<DshUpdateGovernedOrderRescueInput, "expectedStatus">,
   ): Promise<boolean> => {
-    const governedInput: DshUpdateOrderRescueInput = {
+    const governedInput: DshUpdateGovernedOrderRescueInput = {
       ...input,
       expectedStatus: rescueCase.status,
     };
