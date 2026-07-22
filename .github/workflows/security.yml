@@ -42,12 +42,22 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Verify security policy
-        run: |
-          pnpm run guard:actions-pin
-          pnpm run guard:workflow-lint
-          pnpm run guard:workflow-security
-          pnpm run guard:opa-policies
+      - name: Verify immutable action pins
+        run: pnpm run guard:actions-pin
+      - name: Verify workflow syntax
+        run: pnpm run guard:workflow-lint
+      - name: Verify workflow security
+        run: pnpm run guard:workflow-security
+      - name: Verify OPA policies
+        run: pnpm run guard:opa-policies 2>&1 | tee opa-policies.log
+      - name: Preserve OPA policy failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: opa-policies-failure
+          path: opa-policies.log
+          if-no-files-found: error
+          retention-days: 7
 
   result:
     name: Security policy result
