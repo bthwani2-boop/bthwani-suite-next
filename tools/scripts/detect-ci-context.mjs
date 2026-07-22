@@ -46,14 +46,14 @@ export function classifyFiles(inputFiles, options = {}) {
   );
   const security = workflow || starts("governance/security/", "tools/security/");
 
-  const dsh = full || starts("services/dsh/");
-  const wlt = full || starts("services/wlt/");
-  const identity = full || starts("core/identity/");
-  const workforce = full || starts("core/workforce/");
-  const platform = full || starts("core/platform-control/");
-  const providers = full || starts("core/providers/");
+  const dsh = full || starts("services/dsh/backend/", "services/dsh/database/");
+  const wlt = full || starts("services/wlt/backend/", "services/wlt/database/");
+  const identity = full || starts("core/identity/backend/", "core/identity/database/");
+  const workforce = full || starts("core/workforce/backend/", "core/workforce/database/");
+  const platform = full || starts("core/platform-control/backend/", "core/platform-control/database/");
+  const providers = full || starts("core/providers/backend/", "core/providers/database/");
 
-  const frontend = full || workspaceManifest || starts("apps/", "shared/") || includes("/frontend/");
+  const frontend = full || workspaceManifest || starts("apps/", "shared/") || includes("/frontend/", "/clients/generated/");
   const contracts = full || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
   const database = full || includes("/database/", "/migrations/") || starts("infra/docker/");
   const runtime = full || starts("infra/") || has((file) =>
