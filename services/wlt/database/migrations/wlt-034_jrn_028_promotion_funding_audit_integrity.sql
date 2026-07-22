@@ -7,6 +7,19 @@
 -- whole transaction back when an idempotency-key collision suppresses or
 -- redirects the required event.
 
+-- Existing historical events are marked with transaction_id=0. They remain
+-- valid audit history but can never authorize a future reservation transition.
+-- New inserts inherit txid_current(), allowing the deferred trigger to prove
+-- that the state update and its event were committed by the same transaction.
+ALTER TABLE wlt_promotion_funding_events
+    ADD COLUMN IF NOT EXISTS transaction_id BIGINT;
+UPDATE wlt_promotion_funding_events
+SET transaction_id = 0
+WHERE transaction_id IS NULL;
+ALTER TABLE wlt_promotion_funding_events
+    ALTER COLUMN transaction_id SET DEFAULT txid_current(),
+    ALTER COLUMN transaction_id SET NOT NULL;
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_wlt_promotion_funding_event_transition
     ON wlt_promotion_funding_events(reservation_id, to_status);
 
@@ -25,6 +38,7 @@ BEGIN
         SELECT 1
         FROM wlt_promotion_funding_events event
         WHERE event.reservation_id = NEW.id
+          AND event.transaction_id = txid_current()
           AND event.from_status = OLD.status
           AND event.to_status = NEW.status
           AND event.event_type = NEW.status
@@ -38,7 +52,7 @@ BEGIN
 
     IF NOT matching_event_exists THEN
         RAISE EXCEPTION
-            'promotion funding transition % -> % requires a matching append-only event',
+            'promotion funding transition % -> % requires a same-transaction append-only event',
             OLD.status,
             NEW.status
             USING ERRCODE = '23514';
