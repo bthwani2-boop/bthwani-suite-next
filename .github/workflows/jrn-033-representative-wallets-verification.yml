@@ -86,7 +86,7 @@ jobs:
         working-directory: services/dsh/backend
         run: >-
           go test ./internal/http
-          -run 'Test(RepresentativeOwnWalletRoutesResolveAuthenticatedActor|RepresentativeOwnLedgerRoutesOverrideActorQuery|ControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback)$'
+          -run 'Test(RepresentativeOwnWalletRoutesResolveAuthenticatedActor|RepresentativeOwnLedgerRoutesOverrideActorQuery|ControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback|ControlPanelRepresentativeLedgerPinsActorAndNoStore)$'
           -count=1
 
       - name: Build affected financial owners
