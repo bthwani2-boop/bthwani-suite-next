@@ -11,14 +11,14 @@ permissions:
   contents: write
 
 concurrency:
-  group: jrn032-isolated-${{ github.sha }}
+  group: jrn032-http-diagnostic-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
   verify:
-    name: JRN-032 isolated canonical closure
+    name: JRN-032 protected HTTP diagnostic
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 20
     steps:
       - name: Checkout immutable JRN-032 verification source
         uses: actions/checkout@v4
@@ -27,88 +27,20 @@ jobs:
           fetch-depth: 1
           show-progress: false
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: "10.34.2"
-          run_install: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.17.0"
-          cache: pnpm
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
 
-      - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Register canonical JRN-032 OpenAPI paths
-        run: node tools/scripts/patch-jrn032-openapi.mjs
-
-      - name: Format governed Go files
-        run: |
-          gofmt -w \
-            services/dsh/backend/internal/analytics/analytics.go \
-            services/dsh/backend/internal/analytics/jrn032_window.go \
-            services/dsh/backend/internal/analytics/jrn032_preparation.go \
-            services/dsh/backend/internal/analytics/jrn032_people.go \
-            services/dsh/backend/internal/analytics/jrn032_drilldown.go \
-            services/dsh/backend/internal/analytics/jrn032_window_test.go \
-            services/dsh/backend/internal/analytics/jrn032_drilldown_test.go \
-            services/dsh/backend/internal/http/analytics.go \
-            services/dsh/backend/internal/http/jrn032_analytics.go \
-            services/dsh/backend/internal/http/jrn032_routes.go \
-            services/dsh/backend/internal/http/jrn032_routes_test.go \
-            services/dsh/backend/internal/http/delivery_proof_routes.go \
-            services/dsh/backend/internal/wlt/analytics_read.go \
-            services/dsh/backend/internal/wlt/analytics_read_test.go
-
-      - name: Compose OpenAPI and generate DSH client
-        run: |
-          set +e
-          pnpm --dir services/dsh openapi:compose > "${RUNNER_TEMP}/jrn032-openapi.log" 2>&1
-          status=$?
-          if [ "$status" -eq 0 ]; then
-            pnpm --dir services/dsh openapi:verify >> "${RUNNER_TEMP}/jrn032-openapi.log" 2>&1
-            status=$?
-          fi
-          set -e
-          if [ "$status" -ne 0 ]; then
-            tail -n 160 "${RUNNER_TEMP}/jrn032-openapi.log" > governance/evidence/JRN-032_OPENAPI_FAILURE.log
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add governance/evidence/JRN-032_OPENAPI_FAILURE.log
-            git commit -m "diagnostics(jrn-032): capture OpenAPI failure [skip ci]" || true
-            git push origin HEAD:verify/jrn-032-final2-8e71db5
-            exit "$status"
-          fi
-          sha256sum \
-            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
-            services/dsh/clients/generated/dsh-api.ts \
-            > "${RUNNER_TEMP}/jrn032-first.sha256"
-
-      - name: Run analytics Go tests
-        working-directory: services/dsh/backend
-        run: go test ./internal/analytics
-
-      - name: Run WLT boundary Go tests
-        working-directory: services/dsh/backend
-        run: go test ./internal/wlt
-
-      - name: Run protected HTTP Go tests
+      - name: Run protected HTTP tests and persist failure
         run: |
           set +e
           (cd services/dsh/backend && go test ./internal/http) > "${RUNNER_TEMP}/jrn032-http.log" 2>&1
           status=$?
           set -e
           if [ "$status" -ne 0 ]; then
-            tail -n 180 "${RUNNER_TEMP}/jrn032-http.log" > governance/evidence/JRN-032_HTTP_FAILURE.log
+            tail -n 220 "${RUNNER_TEMP}/jrn032-http.log" > governance/evidence/JRN-032_HTTP_FAILURE.log
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add governance/evidence/JRN-032_HTTP_FAILURE.log
@@ -116,41 +48,3 @@ jobs:
             git push origin HEAD:verify/jrn-032-final2-8e71db5
             exit "$status"
           fi
-
-      - name: Typecheck DSH surfaces
-        run: pnpm --dir services/dsh typecheck
-
-      - name: Typecheck control-panel runtime
-        run: pnpm --dir apps/control-panel/runtime typecheck
-
-      - name: Typecheck partner runtime
-        run: pnpm --dir apps/app-partner/runtime typecheck
-
-      - name: Run full-stack ownership guard
-        run: pnpm run guard:fullstack-boundary
-
-      - name: Run WLT financial ownership guard
-        run: pnpm run guard:wlt-financial-boundary
-
-      - name: Run repository contract lint
-        run: pnpm run contracts:lint
-
-      - name: Run focused DSH OpenAPI tests
-        run: pnpm --dir services/dsh openapi:test
-
-      - name: Build and validate Swagger publication
-        run: pnpm run swagger:build
-
-      - name: Verify deterministic generated artifacts
-        run: |
-          pnpm --dir services/dsh openapi:verify
-          sha256sum \
-            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
-            services/dsh/clients/generated/dsh-api.ts \
-            > "${RUNNER_TEMP}/jrn032-second.sha256"
-          diff -u "${RUNNER_TEMP}/jrn032-first.sha256" "${RUNNER_TEMP}/jrn032-second.sha256"
-
-      - name: Record and push final JRN-032 evidence
-        env:
-          JRN032_VERIFICATION_HEAD: verify/jrn-032-final2-8e71db5
-        run: bash tools/scripts/jrn032-record-closure.sh
