@@ -214,9 +214,11 @@ test('product truth and slice manifest close code without claiming release appro
   assert.equal(truth.journeyId, 'JRN-013');
   assert.equal(truth.owner, 'DSH');
   assert.equal(truth.truthOwnership.financialTruth, 'WLT');
-  assert.equal(truth.internalZeroGate, 'SOURCE_CODE_CLOSED');
-  assert.equal(truth.decision, 'READY_FOR_REVIEW');
-  assert.equal(truth.evidenceState.ciExecution, 'NOT_OBSERVED_FROM_CONNECTOR');
+  assert.equal(truth.internalZeroGate, 'AUTOMATED_CLOSURE_PASSED');
+  assert.equal(truth.decision, 'READY_FOR_INDEPENDENT_REVIEW');
+  assert.equal(truth.automatedEvidence.runId, 29882102801);
+  assert.equal(truth.evidenceState.targetedTests, 'PASSED');
+  assert.equal(truth.evidenceState.ciExecution, 'PASSED');
   assert.equal(truth.evidenceState.productionRelease, 'NOT_APPROVED');
   assert.ok(truth.negativeInvariants.includes('لا pickup قبل اكتمال العهدة الثنائية.'));
   assert.ok(truth.negativeInvariants.includes('لا يبقى pickup محجوبًا محليًا بعد أن يثبت DSH حل الاستثناء.'));

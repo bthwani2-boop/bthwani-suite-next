@@ -56,12 +56,14 @@ test("every JRN-013 slice points to existing code and proves its markers", async
   assert.deepEqual(failures, []);
 });
 
-test("JRN-013 code closure remains distinct from production approval", async () => {
+test("JRN-013 automated closure remains distinct from production approval", async () => {
   const manifest = await readManifest();
   const serialized = JSON.stringify(manifest);
   assert.doesNotMatch(serialized, /FIX_REQUIRED|DEFINED_NOT_PROVEN|NEEDS_EVIDENCE/);
   assert.match(serialized, /READY_FOR_INDEPENDENT_REVIEW/);
-  assert.equal(manifest.executionEvidence.ciRuns, "NOT_OBSERVED_FROM_CONNECTOR");
+  assert.equal(manifest.executionEvidence.ciRuns, "PASSED");
+  assert.equal(manifest.executionEvidence.ciRunId, 29882102801);
+  assert.equal(manifest.executionEvidence.verifiedHead, "b95f44dda9b0b4eb1a8ad59001a933ca13ccb53f");
   assert.equal(manifest.executionEvidence.runtimeDeviceQa, "PENDING");
   assert.ok(Array.isArray(manifest.independentReviewPending));
   assert.ok(manifest.independentReviewPending.length > 0);
@@ -69,8 +71,10 @@ test("JRN-013 code closure remains distinct from production approval", async () 
   const productTruth = JSON.parse(await readRepo(
     "governance/product/contracts/jrn-013-store-captain-handoff.product-truth.json",
   ));
-  assert.equal(productTruth.decision, "READY_FOR_REVIEW");
-  assert.equal(productTruth.internalZeroGate, "SOURCE_CODE_CLOSED");
+  assert.equal(productTruth.decision, "READY_FOR_INDEPENDENT_REVIEW");
+  assert.equal(productTruth.internalZeroGate, "AUTOMATED_CLOSURE_PASSED");
+  assert.equal(productTruth.evidenceState.targetedTests, "PASSED");
+  assert.equal(productTruth.evidenceState.ciExecution, "PASSED");
   assert.equal(productTruth.owner, "DSH");
   assert.equal(productTruth.truthOwnership.financialTruth, "WLT");
   assert.equal(productTruth.evidenceState.productionRelease, "NOT_APPROVED");
