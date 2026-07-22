@@ -36,7 +36,7 @@ func (c *Client) actorFinanceRequest(ctx context.Context, method, path string, b
 	} else if err := setRequiredMutationHeaders(
 		req,
 		correlationID,
-		deterministicMutationKey("actor-finance", method, path, correlationID),
+		deterministicMutationKey("actor-finance", method, path, string(body), correlationID),
 	); err != nil {
 		return 0, nil, fmt.Errorf("prepare WLT actor finance mutation: %w", err)
 	}
@@ -66,23 +66,51 @@ func (c *Client) FinanceWriteCodRecord(ctx context.Context, recordID, action, co
 	return c.actorFinanceRequest(ctx, http.MethodPost, "/wlt/cod-records/"+url.PathEscape(recordID)+"/"+action, []byte("{}"), correlationID)
 }
 
-func (c *Client) FinanceReadPayoutDestination(ctx context.Context, actorID, correlationID string) (int, []byte, error) {
+func governedPayoutActorType(actorType string) (string, error) {
+	actorType = strings.ToLower(strings.TrimSpace(actorType))
+	switch actorType {
+	case "partner", "captain", "field":
+		return actorType, nil
+	default:
+		return "", fmt.Errorf("unsupported payout actor type %q", actorType)
+	}
+}
+
+func (c *Client) FinanceReadPayoutDestination(ctx context.Context, actorType, actorID, correlationID string) (int, []byte, error) {
+	actorType, err := governedPayoutActorType(actorType)
+	if err != nil {
+		return 0, nil, err
+	}
+	actorID = strings.TrimSpace(actorID)
 	if actorID == "" {
 		return 0, nil, fmt.Errorf("actor id is required")
 	}
-	return c.actorFinanceRequest(ctx, http.MethodGet, "/wlt/payout-destinations/"+url.PathEscape(actorID), nil, correlationID)
+	path := "/wlt/payout-destinations/" + url.PathEscape(actorType) + "/" + url.PathEscape(actorID)
+	return c.actorFinanceRequest(ctx, http.MethodGet, path, nil, correlationID)
 }
 
-func (c *Client) FinanceUpsertPayoutDestination(ctx context.Context, actorID string, body []byte, correlationID string) (int, []byte, error) {
+func (c *Client) FinanceUpsertPayoutDestination(ctx context.Context, actorType, actorID string, body []byte, correlationID string) (int, []byte, error) {
+	actorType, err := governedPayoutActorType(actorType)
+	if err != nil {
+		return 0, nil, err
+	}
+	actorID = strings.TrimSpace(actorID)
 	if actorID == "" || len(body) == 0 {
 		return 0, nil, fmt.Errorf("actor id and payout destination body are required")
 	}
-	return c.actorFinanceRequest(ctx, http.MethodPut, "/wlt/payout-destinations/"+url.PathEscape(actorID), body, correlationID)
+	path := "/wlt/payout-destinations/" + url.PathEscape(actorType) + "/" + url.PathEscape(actorID)
+	return c.actorFinanceRequest(ctx, http.MethodPut, path, body, correlationID)
 }
 
-func (c *Client) FinanceDeactivatePayoutDestination(ctx context.Context, actorID, correlationID string) (int, []byte, error) {
+func (c *Client) FinanceDeactivatePayoutDestination(ctx context.Context, actorType, actorID, correlationID string) (int, []byte, error) {
+	actorType, err := governedPayoutActorType(actorType)
+	if err != nil {
+		return 0, nil, err
+	}
+	actorID = strings.TrimSpace(actorID)
 	if actorID == "" {
 		return 0, nil, fmt.Errorf("actor id is required")
 	}
-	return c.actorFinanceRequest(ctx, http.MethodPost, "/wlt/payout-destinations/"+url.PathEscape(actorID)+"/deactivate", []byte("{}"), correlationID)
+	path := "/wlt/payout-destinations/" + url.PathEscape(actorType) + "/" + url.PathEscape(actorID) + "/deactivate"
+	return c.actorFinanceRequest(ctx, http.MethodPost, path, []byte("{}"), correlationID)
 }
