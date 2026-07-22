@@ -21,6 +21,13 @@ test("routes workflow changes to workflow security", () => {
   assert.equal(result.wlt, false);
 });
 
+test("treats the contextual router itself as workflow policy", () => {
+  const result = classifyFiles(["tools/scripts/detect-ci-context.mjs"]);
+  assert.equal(result.workflow, true);
+  assert.equal(result.security, true);
+  assert.equal(result.policy, true);
+});
+
 test("routes infrastructure without product-wide verification", () => {
   const result = classifyFiles(["infra/docker/compose.runtime.yml"]);
   assert.equal(result.infrastructure, true);
@@ -39,11 +46,38 @@ test("treats shared DSH frontend changes as heavy cross-surface frontend work on
   assert.equal(result.journey_scope, "PROJECT-WIDE");
 });
 
-test("routes DSH backend changes to Go verification", () => {
+test("routes internal DSH logic changes to Go verification only", () => {
   const result = classifyFiles(["services/dsh/backend/internal/cart/cart.go"]);
   assert.equal(result.dsh, true);
+  assert.equal(result.contracts, false);
+  assert.equal(result.node, false);
   assert.equal(result.frontend, false);
   assert.equal(result.wlt, false);
+});
+
+test("routes DSH HTTP surface changes to Go and contract parity", () => {
+  const result = classifyFiles(["services/dsh/backend/internal/http/server.go"]);
+  assert.equal(result.dsh, true);
+  assert.equal(result.contracts, true);
+  assert.equal(result.node, true);
+  assert.equal(result.frontend, false);
+  assert.equal(result.heavy, false);
+  assert.equal(result.node_scope, "contracts");
+});
+
+test("routes DSH API composition changes to Go and contract parity", () => {
+  const result = classifyFiles(["services/dsh/backend/cmd/dsh-api/main.go"]);
+  assert.equal(result.dsh, true);
+  assert.equal(result.contracts, true);
+  assert.equal(result.node, true);
+});
+
+test("routes WLT HTTP surface changes to Go and contract parity", () => {
+  const result = classifyFiles(["services/wlt/backend/internal/http/server.go"]);
+  assert.equal(result.wlt, true);
+  assert.equal(result.contracts, true);
+  assert.equal(result.node, true);
+  assert.equal(result.dsh, false);
 });
 
 test("detects JRN-040 targeted platform verification", () => {
