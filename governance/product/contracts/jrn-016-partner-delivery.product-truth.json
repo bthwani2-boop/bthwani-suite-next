@@ -34,8 +34,8 @@
   "sliceClosureRegistry": "services/dsh/contracts/jrn-016-slice-closure.json",
   "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "qa", "governance", "ci"],
   "statusContext": "partner-delivery-governance",
-  "internalZeroGate": "PENDING_AUTOMATED_VERIFICATION",
+  "internalZeroGate": "PASS_TARGETED_CI",
   "openCodeGaps": [],
   "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "release-production"],
-  "decision": "IMPLEMENTED_PENDING_VERIFICATION"
+  "decision": "READY_FOR_REVIEW"
 }
