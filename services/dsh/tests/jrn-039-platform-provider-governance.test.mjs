@@ -71,7 +71,7 @@ test("JRN-039 provider reads and health never expose secret runtime truth", () =
   const panel = read("services/dsh/frontend/control-panel/platform/ProviderRegistryPanel.tsx");
 
   includesAll(model, [
-    'CredentialConfigured bool',
+    "CredentialConfigured bool",
     'Credentials          json.RawMessage `json:"-"`',
   ], "Providers secret-safe model");
   includesAll(service, [
@@ -94,4 +94,27 @@ test("JRN-039 provider reads and health never expose secret runtime truth", () =
     'hasServiceControlPanelPermission(identity, "providers", "provider:update")',
     "وضع القراءة فقط",
   ], "Provider Registry permission states");
+});
+
+test("JRN-039 canonical runtime smoke proves HTTP read, mutation, replay, conflict, restoration, and audit", () => {
+  const common = read("tools/scripts/platform-control-runtime/common.ps1");
+  const smoke = read("tools/scripts/platform-control-runtime/smoke.ps1");
+
+  includesAll(common, [
+    '"--profile", "platform"',
+    '"--profile", "providers"',
+    "Invoke-PlatformDatabaseMigrate -User \"providers_runtime\"",
+    "providers-api wlt-api dsh-api platform-control-api",
+  ], "Platform canonical runtime");
+  includesAll(smoke, [
+    "Invoke-Jrn039ProviderSmoke",
+    "/providers/health",
+    "/providers/readiness",
+    '"Idempotency-Key"',
+    "Assert-PlatformHttpFailureStatus -ExpectedStatus 409",
+    "provider source-of-truth read-back",
+    "provider state was not restored",
+    "providers_action_audit",
+    "provider audit payload exposed credentials",
+  ], "JRN-039 live runtime smoke");
 });
