@@ -188,7 +188,7 @@ jobs:
           /tmp/dsh-api > /tmp/dsh-jrn-029.log 2>&1 &
           api_pid=$!
           trap 'kill ${api_pid} || true; cat /tmp/dsh-jrn-029.log' EXIT
-          for attempt in $(seq 1 30); do
+          for _attempt in $(seq 1 30); do
             curl --fail --silent http://127.0.0.1:58080/dsh/health >/dev/null && break
             sleep 1
           done
@@ -242,7 +242,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          for attempt in 1 2 3; do
+          for _attempt in 1 2 3; do
             git fetch origin sambassam
             git reset --hard origin/sambassam
             pnpm install --frozen-lockfile
