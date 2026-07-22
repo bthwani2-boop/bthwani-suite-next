@@ -152,3 +152,12 @@ These targets require runtime telemetry evidence before production approval.
 - Database evidence proves atomic captured state + balanced ledger + DSH outbox.
 - App-client and control-panel visual evidence covers RTL, loading, offline, forbidden, conflict, unknown, failed, expired and captured states.
 - Independent product, financial, security and release decisions are attached. Production activation remains prohibited until those decisions exist.
+
+## CI evidence lifecycle
+
+- The verification workflow is read-only and must not commit evidence back to `sambassam`; repository-writing verification jobs create bot commits, approval loops and stale evidence.
+- Only a completed run whose tested SHA equals the candidate SHA can be used as automated evidence.
+- A receipt for an older SHA remains historical audit evidence and is explicitly superseded; it must never classify a newer candidate as failed or passed.
+- A run cancelled because a newer branch commit exists is not a failure. Verification continues on the newest candidate only.
+- Technical closure requires all four jobs to pass: structural guard, WLT/DSH backend, shared/surface TypeScript, and focused contracts/Product Truth.
+- Automated success does not grant independent product, finance, security, UX, release or production approval.
