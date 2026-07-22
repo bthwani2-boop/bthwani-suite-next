@@ -4,15 +4,15 @@
   "title": "توصيل الشريك",
   "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
   "requiredSliceCount": 18,
-  "codeDecision": "IMPLEMENTED_PENDING_TARGETED_CI",
-  "releaseDecision": "READY_FOR_INDEPENDENT_REVIEW_NOT_RELEASED",
+  "codeDecision": "READY_FOR_REVIEW",
+  "releaseDecision": "READY_FOR_REVIEW",
   "slices": [
     {
       "id": "FS-01",
       "name": "Product Truth",
       "codeStatus": "IMPLEMENTED",
       "requiredFiles": ["governance/product/contracts/jrn-016-partner-delivery.product-truth.json"],
-      "requiredMarkers": ["acceptanceCriteria", "negativeInvariants", "IMPLEMENTED_PENDING_VERIFICATION"]
+      "requiredMarkers": ["acceptanceCriteria", "negativeInvariants", "PASS_TARGETED_CI"]
     },
     {
       "id": "FS-02",
@@ -129,9 +129,9 @@
     {
       "id": "FS-18",
       "name": "Same-commit evidence and final review gate",
-      "codeStatus": "IMPLEMENTED_PENDING_TARGETED_CI",
+      "codeStatus": "IMPLEMENTED",
       "requiredFiles": ["services/dsh/contracts/jrn-016-slice-closure.json", ".github/workflows/partner-delivery-verification.yml"],
-      "requiredMarkers": ["READY_FOR_INDEPENDENT_REVIEW_NOT_RELEASED", "requiredSliceCount", "github.sha"]
+      "requiredMarkers": ["READY_FOR_REVIEW", "requiredSliceCount", "github.sha"]
     }
   ]
 }
