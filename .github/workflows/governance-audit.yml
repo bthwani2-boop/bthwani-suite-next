@@ -3,7 +3,7 @@ name: BThwani Governance Audit
 on:
   workflow_dispatch:
   push:
-    branches: [sambassam, bassam]
+    branches: [sambassam]
     paths:
       - "AGENTS.md"
       - "GEMINI.md"
