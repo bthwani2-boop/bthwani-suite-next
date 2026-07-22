@@ -1,0 +1,103 @@
+name: JRN-035 Financial Refunds Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - sambassam
+    paths:
+      - "governance/product/contracts/jrn-035-financial-refunds.product-truth.json"
+      - "services/wlt/contracts/jrn-035-refund-governance.json"
+      - "services/wlt/backend/internal/refund/**"
+      - "services/wlt/backend/internal/dshoutbox/**"
+      - "services/wlt/backend/internal/dshnotify/**"
+      - "services/wlt/backend/internal/http/server.go"
+      - "services/wlt/database/migrations/wlt-035_jrn_035_refund_governance.sql"
+      - "services/dsh/backend/internal/http/refund_finance_*"
+      - "services/dsh/backend/internal/http/financeproxy.go"
+      - "services/dsh/backend/internal/wlt/finance_proxy.go"
+      - "services/dsh/backend/internal/wlt/refund_proxy.go"
+      - "services/dsh/frontend/**/wlt-refund/**"
+      - "services/dsh/frontend/control-panel/finance/**"
+      - "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx"
+      - "services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx"
+      - "tools/verification/jrn-035-financial-refunds.test.mjs"
+      - ".github/workflows/jrn-035-financial-refunds-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-035-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-contracts:
+    name: Static journey contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+      - name: Verify JRN-035 cross-surface invariants
+        run: node --test tools/verification/jrn-035-financial-refunds.test.mjs
+      - name: Verify WLT financial ownership boundary
+        run: node tools/guards/wlt-financial-boundary-gate.mjs
+
+  wlt-go:
+    name: WLT Go compile and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/wlt/backend/go.mod
+          cache-dependency-path: services/wlt/backend/go.sum
+      - name: Enforce gofmt on changed WLT packages
+        shell: bash
+        run: |
+          diff="$(gofmt -d services/wlt/backend/internal/refund services/wlt/backend/internal/dshoutbox services/wlt/backend/internal/dshnotify services/wlt/backend/internal/http/server.go)"
+          test -z "$diff" || { printf '%s\n' "$diff"; exit 1; }
+      - name: Compile and test WLT refund boundary
+        working-directory: services/wlt/backend
+        run: go test ./internal/refund ./internal/dshoutbox ./internal/dshnotify ./internal/http
+
+  dsh-go:
+    name: DSH Go compile and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Enforce gofmt on changed DSH packages
+        shell: bash
+        run: |
+          diff="$(gofmt -d services/dsh/backend/internal/http/refund_finance_handlers.go services/dsh/backend/internal/http/refund_finance_routes.go services/dsh/backend/internal/http/financeproxy.go services/dsh/backend/internal/wlt/finance_proxy.go services/dsh/backend/internal/wlt/refund_proxy.go)"
+          test -z "$diff" || { printf '%s\n' "$diff"; exit 1; }
+      - name: Compile and test DSH refund proxy boundary
+        working-directory: services/dsh/backend
+        run: go test ./internal/http ./internal/wlt
+
+  dsh-typescript:
+    name: DSH TypeScript and bindings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck DSH multi-surface refund bindings
+        run: pnpm --dir services/dsh typecheck
+      - name: Verify backend and frontend API bindings
+        run: |
+          pnpm run guard:backend-api-binding
+          pnpm run guard:frontend-feature-binding
