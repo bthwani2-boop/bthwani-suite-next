@@ -27,6 +27,9 @@ type DeliveryAuditSummary struct {
 	DeadLetter     int `json:"deadLetter"`
 	PendingOutbox  int `json:"pendingOutbox"`
 	FailedOutbox   int `json:"failedOutbox"`
+	SentPush       int `json:"sentPush"`
+	PendingPush    int `json:"pendingPush"`
+	FailedPush     int `json:"failedPush"`
 }
 
 func validDeliveryOutcome(value string) bool {
@@ -120,6 +123,19 @@ func ListDeliveryAttempts(db *sql.DB, outcome string, limit int) ([]DeliveryAtte
 		FROM dsh_operational_outbox_events`).Scan(
 		&summary.PendingOutbox,
 		&summary.FailedOutbox,
+	); err != nil {
+		return nil, DeliveryAuditSummary{}, err
+	}
+	if err := db.QueryRow(`
+		SELECT
+			COUNT(*) FILTER (WHERE status = 'sent'),
+			COUNT(*) FILTER (WHERE status = 'pending'),
+			COUNT(*) FILTER (WHERE status = 'failed')
+		FROM dsh_notification_channel_deliveries
+		WHERE channel = 'push'`).Scan(
+		&summary.SentPush,
+		&summary.PendingPush,
+		&summary.FailedPush,
 	); err != nil {
 		return nil, DeliveryAuditSummary{}, err
 	}
