@@ -74,6 +74,9 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/cod-records", readGate(cod.HandleListCodRecords(db)))
 	mux.HandleFunc("POST /wlt/cod-records/{codRecordId}/collect", gate(serviceAuth(cod.HandleCollectCodSovereign(db))))
 	mux.HandleFunc("POST /wlt/cod-records/{codRecordId}/remit", gate(serviceAuth(cod.HandleRemitCodSovereign(db))))
+	mux.HandleFunc("GET /wlt/cod-reconciliation-cases", readGate(cod.HandleListCodReconciliationCases(db)))
+	mux.HandleFunc("POST /wlt/cod-reconciliation-cases/{caseId}/assign", gate(serviceAuth(cod.HandleAssignCodReconciliationCase(db))))
+	mux.HandleFunc("POST /wlt/cod-reconciliation-cases/{caseId}/resolve", gate(serviceAuth(cod.HandleResolveCodReconciliationCase(db))))
 	mux.HandleFunc("PUT /wlt/commission-policies", gate(serviceAuth(cod.HandleUpsertGovernedCommissionPolicy(db))))
 	mux.HandleFunc("POST /wlt/commissions", gate(serviceAuth(cod.HandleCreateGovernedCommission(db))))
 	mux.HandleFunc("GET /wlt/commissions/{commissionId}", readGate(cod.HandleGetGovernedCommission(db)))
@@ -94,7 +97,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	// untyped identifier because partner/captain/field identifiers can collide.
 	mux.HandleFunc("PUT /wlt/payout-destinations/{partnerId}", gate(serviceAuth(payout.HandleUpsertPayoutDestinationGoverned(db))))
 	mux.HandleFunc("GET /wlt/payout-destinations/{partnerId}", readGate(payout.HandleGetPayoutDestination(db)))
-	mux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePayoutDestination(db))))
+	mux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePayoutDestinationGoverned(db))))
 	mux.HandleFunc("PUT /wlt/payout-destinations/{actorType}/{actorId}", gate(serviceAuth(payout.HandleUpsertPayoutDestinationJRN037(db))))
 	mux.HandleFunc("GET /wlt/payout-destinations/{actorType}/{actorId}", readGate(payout.HandleGetPayoutDestinationJRN037(db)))
 	mux.HandleFunc("POST /wlt/payout-destinations/{actorType}/{actorId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePayoutDestinationJRN037(db))))
