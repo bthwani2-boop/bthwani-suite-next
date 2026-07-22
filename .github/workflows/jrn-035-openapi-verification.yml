@@ -1,0 +1,45 @@
+name: JRN-035 Refund OpenAPI Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - sambassam
+    paths:
+      - "services/wlt/contracts/jrn-035-refunds.openapi.yaml"
+      - "services/dsh/contracts/jrn-035-refunds.openapi.yaml"
+      - "tools/verification/jrn-035-openapi-contracts.test.mjs"
+      - ".github/workflows/jrn-035-openapi-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-035-openapi-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate-contract-clients:
+    name: Parse OpenAPI and generate TypeScript clients
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+      - name: Verify operation and privacy contracts
+        run: node --test tools/verification/jrn-035-openapi-contracts.test.mjs
+      - name: Generate WLT refund TypeScript contract
+        run: npx --yes openapi-typescript@7.10.1 services/wlt/contracts/jrn-035-refunds.openapi.yaml --output /tmp/jrn-035-wlt-refunds.generated.ts
+      - name: Generate DSH refund TypeScript contract
+        run: npx --yes openapi-typescript@7.10.1 services/dsh/contracts/jrn-035-refunds.openapi.yaml --output /tmp/jrn-035-dsh-refunds.generated.ts
+      - name: Assert generated operations exist
+        shell: bash
+        run: |
+          test -s /tmp/jrn-035-wlt-refunds.generated.ts
+          test -s /tmp/jrn-035-dsh-refunds.generated.ts
+          grep -q "createWltRefund" /tmp/jrn-035-wlt-refunds.generated.ts
+          grep -q "reconcileWltRefund" /tmp/jrn-035-wlt-refunds.generated.ts
+          grep -q "createDshFinanceRefund" /tmp/jrn-035-dsh-refunds.generated.ts
+          grep -q "getDshClientOrderRefundStatus" /tmp/jrn-035-dsh-refunds.generated.ts
+          grep -q "getDshPartnerOrderRefundStatus" /tmp/jrn-035-dsh-refunds.generated.ts
