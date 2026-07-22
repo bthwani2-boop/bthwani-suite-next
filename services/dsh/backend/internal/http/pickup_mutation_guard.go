@@ -22,9 +22,9 @@ import (
 const maxPickupMutationBodyBytes = 64 * 1024
 
 type pickupMutationRoute struct {
-	orderID        string
-	action         string
-	surface        string
+	orderID         string
+	action          string
+	surface         string
 	sessionRequired bool
 }
 
@@ -119,7 +119,7 @@ func copyPickupResponse(w http.ResponseWriter, captured *pickupCapturedResponse)
 	_, _ = w.Write(captured.body.Bytes())
 }
 
-func replayPickupMutationCommand(
+func replayOrRecoverPickupMutationCommand(
 	ctx context.Context,
 	conn *sql.Conn,
 	w http.ResponseWriter,
@@ -156,9 +156,14 @@ func replayPickupMutationCommand(
 		store.SendError(w, http.StatusConflict, "PICKUP_COMMAND_CONFLICT", "commandId is already bound to another pickup mutation")
 		return true, nil
 	}
-	if !completed || !responseStatus.Valid || !responseBody.Valid {
-		store.SendError(w, http.StatusConflict, "PICKUP_COMMAND_IN_PROGRESS", "pickup command is already being processed")
-		return true, nil
+	if !completed {
+		_, err := conn.ExecContext(ctx, `
+			DELETE FROM dsh_pickup_mutation_commands
+			WHERE command_id = $1 AND completed_at IS NULL`, commandID)
+		return false, err
+	}
+	if !responseStatus.Valid || !responseBody.Valid {
+		return false, errors.New("completed pickup command has no replayable response")
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(int(responseStatus.Int64))
@@ -178,6 +183,12 @@ func authorizePickupMutation(
 	}
 	_, ok := protected.requirePermission(w, r, "control-panel", PickupPermissionManage, "operator")
 	return ok
+}
+
+func deletePendingPickupCommand(ctx context.Context, conn *sql.Conn, commandID string) {
+	_, _ = conn.ExecContext(ctx, `
+		DELETE FROM dsh_pickup_mutation_commands
+		WHERE command_id = $1 AND completed_at IS NULL`, commandID)
 }
 
 // PickupMutationGuard makes commandId and expectedVersion authoritative for all
@@ -251,7 +262,7 @@ func PickupMutationGuard(
 			_, _ = conn.ExecContext(context.Background(), `SELECT pg_advisory_unlock(hashtextextended($1, 0))`, "pickup:"+route.orderID)
 		}()
 
-		replayed, err := replayPickupMutationCommand(ctx, conn, w, route, commandID, *envelope.ExpectedVersion)
+		replayed, err := replayOrRecoverPickupMutationCommand(ctx, conn, w, route, commandID, *envelope.ExpectedVersion)
 		if err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "pickup command receipt could not be read")
 			return
@@ -290,7 +301,7 @@ func PickupMutationGuard(
 			return
 		}
 		if affected, _ := result.RowsAffected(); affected == 0 {
-			replayed, err = replayPickupMutationCommand(ctx, conn, w, route, commandID, *envelope.ExpectedVersion)
+			replayed, err = replayOrRecoverPickupMutationCommand(ctx, conn, w, route, commandID, *envelope.ExpectedVersion)
 			if err != nil || !replayed {
 				store.SendError(w, http.StatusConflict, "PICKUP_COMMAND_CONFLICT", "pickup command could not be reserved")
 			}
@@ -305,7 +316,7 @@ func PickupMutationGuard(
 			status = http.StatusOK
 		}
 		if status < 200 || status >= 300 {
-			_, _ = conn.ExecContext(ctx, `DELETE FROM dsh_pickup_mutation_commands WHERE command_id = $1 AND completed_at IS NULL`, commandID)
+			deletePendingPickupCommand(ctx, conn, commandID)
 			copyPickupResponse(w, captured)
 			return
 		}
@@ -314,7 +325,7 @@ func PickupMutationGuard(
 			responseBody = []byte("{}")
 		}
 		if !json.Valid(responseBody) {
-			_, _ = conn.ExecContext(ctx, `DELETE FROM dsh_pickup_mutation_commands WHERE command_id = $1 AND completed_at IS NULL`, commandID)
+			deletePendingPickupCommand(ctx, conn, commandID)
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "pickup mutation returned an invalid response")
 			return
 		}
@@ -329,6 +340,7 @@ func PickupMutationGuard(
 			status,
 			string(responseBody),
 		); err != nil {
+			deletePendingPickupCommand(ctx, conn, commandID)
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "pickup command receipt could not be completed")
 			return
 		}
