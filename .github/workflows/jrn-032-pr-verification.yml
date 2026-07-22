@@ -2,7 +2,7 @@ name: JRN-032 Operational Analytics Verification
 
 on:
   pull_request:
-    branches: [master, sambassam]
+    branches: [master]
     paths:
       - ".github/workflows/jrn-032-pr-verification.yml"
       - "governance/evidence/JRN-032_VERIFICATION_TRIGGER.md"
@@ -14,6 +14,7 @@ on:
       - "services/dsh/backend/internal/http/jrn032_*"
       - "services/dsh/backend/internal/http/delivery_proof_routes.go"
       - "services/dsh/backend/internal/wlt/analytics_read*"
+      - "services/dsh/contracts/dsh.openapi.yaml"
       - "services/dsh/contracts/paths/analytics.paths.yaml"
       - "services/dsh/contracts/components/schemas/analytics.schemas.yaml"
       - "services/dsh/frontend/shared/analytics/**"
@@ -27,12 +28,11 @@ permissions:
   contents: write
 
 concurrency:
-  group: jrn-032-isolated-${{ github.event.pull_request.number || github.ref }}
+  group: jrn-032-immutable-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
   verify:
-    if: github.event_name == 'workflow_dispatch' || github.base_ref == 'sambassam'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -141,7 +141,7 @@ jobs:
           for item in registry["slices"]:
               if item["id"] in {"JRN-032-S16", "JRN-032-S18"}:
                   item["status"] = "verified_remote"
-          registry["formalDecision"] = "READY_FOR_INDEPENDENT_ACCEPTANCE"
+          registry["formalDecision"] = "TECHNICALLY_CLOSED_PENDING_INDEPENDENT_ACCEPTANCE"
           registry["remoteVerification"] = {
               "sourceSha": os.environ["VERIFIED_SOURCE_SHA"],
               "verificationHead": os.environ["VERIFIED_HEAD"],
@@ -170,7 +170,7 @@ jobs:
 - workflow_run_id: {os.environ['VERIFIED_RUN_ID']}
 - run_attempt: {os.environ['VERIFIED_RUN_ATTEMPT']}
 - verified_at: {verified_at}
-- technical_decision: READY_FOR_INDEPENDENT_ACCEPTANCE
+- technical_decision: TECHNICALLY_CLOSED_PENDING_INDEPENDENT_ACCEPTANCE
 
 ## Passed checks
 
