@@ -2,7 +2,7 @@
 
 import { type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
-import type { CouponFundingLifecycleRecord } from "../../../shared/marketing";
+import type { CouponFundingLifecycleRecord } from "../../../shared/marketing/coupons.types";
 
 type CouponFundingReconciliationPanelProps = {
   readonly records: readonly CouponFundingLifecycleRecord[];
