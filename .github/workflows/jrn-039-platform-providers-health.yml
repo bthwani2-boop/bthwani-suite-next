@@ -11,6 +11,8 @@ on:
       - "services/dsh/frontend/shared/session/control-panel-permissions.ts"
       - "services/dsh/frontend/control-panel/platform/**"
       - "services/dsh/tests/jrn-039-platform-provider-governance.test.mjs"
+      - "tools/scripts/platform-control-runtime.ps1"
+      - "tools/scripts/platform-control-runtime/**"
       - "infra/docker/compose.runtime.yml"
       - "infra/docker/env/runtime.env.example"
       - "governance/product-truth/JRN-039_PLATFORM_VARIABLES_PROVIDERS_HEALTH.md"
@@ -87,6 +89,30 @@ jobs:
             core/providers/backend/internal/providers/governed_update_integration_test.go)"
       - name: Verify cross-layer JRN-039 governance invariants
         run: node --test services/dsh/tests/jrn-039-platform-provider-governance.test.mjs
+      - name: Parse canonical PowerShell runtime scripts
+        shell: pwsh
+        run: |
+          $errors = $null
+          $tokens = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path "tools/scripts/platform-control-runtime.ps1"),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path "tools/scripts/platform-control-runtime/common.ps1"),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path "tools/scripts/platform-control-runtime/smoke.ps1"),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-List -Force
+            throw "JRN-039 PowerShell runtime syntax validation failed"
+          }
       - name: Compile and test Providers
         working-directory: core/providers/backend
         run: go test ./...
