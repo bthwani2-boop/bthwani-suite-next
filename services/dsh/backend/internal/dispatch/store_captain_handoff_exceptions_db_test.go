@@ -89,6 +89,18 @@ func TestPartnerHandoffShortageOpensGovernedExceptionDBIntegration(t *testing.T)
 		t.Fatalf("exception replay changed result: first=%+v replay=%+v", item, replay)
 	}
 
+	driftedInput := input
+	driftedInput.Note = "نفس المفتاح مع وصف مختلف يجب أن يرفض"
+	if _, err = ReportPartnerStoreCaptainHandoffException(
+		db,
+		fixture.OrderID,
+		fixture.StoreID,
+		"partner-handoff-actor",
+		driftedInput,
+	); !errors.Is(err, ErrConflict) {
+		t.Fatalf("partner payload drift error=%v want ErrConflict", err)
+	}
+
 	var reporterActorID, reporterRole string
 	if err = db.QueryRow(`
 		SELECT actor_id, actor_role
@@ -170,6 +182,20 @@ func TestCaptainHandoffMismatchAfterPartnerConfirmationBlocksPickupDBIntegration
 	}
 	if item.ReasonCode != ExceptionHandoffMismatch || item.Status != DeliveryExceptionOpen {
 		t.Fatalf("unexpected exception=%+v", item)
+	}
+
+	latitude := 15.3694
+	longitude := 44.1910
+	driftedInput := input
+	driftedInput.Latitude = &latitude
+	driftedInput.Longitude = &longitude
+	if _, err = ReportCaptainStoreCaptainHandoffException(
+		db,
+		fixture.AssignmentID,
+		fixture.CaptainID,
+		driftedInput,
+	); !errors.Is(err, ErrConflict) {
+		t.Fatalf("captain payload drift error=%v want ErrConflict", err)
 	}
 
 	var reporterActorID, reporterRole string
