@@ -31,7 +31,7 @@ permissions:
 
 concurrency:
   group: jrn-028-all-slices-sambassam
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   verify-and-publish:
