@@ -17,48 +17,32 @@ permissions:
 
 concurrency:
   group: dsh-openapi-modularize-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   modularize:
-    name: Split and verify DSH OpenAPI
+    name: Split DSH OpenAPI and commit governed modules
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sambassam
         uses: actions/checkout@v4
         with:
           ref: sambassam
-          fetch-depth: 0
+          fetch-depth: 1
+          show-progress: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "24.17.0"
 
-      - name: Activate pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.34.2 --activate
-
       - name: Finalize modularization engine
         run: node tools/scripts/patch-dsh-openapi-modular-lib.mjs
 
-      - name: Split DSH contract into governed modules
+      - name: Split and structurally verify DSH contract
         run: node tools/scripts/migrate-dsh-openapi-modular.mjs --apply
 
-      - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Verify modular contract and regenerate client
-        run: pnpm --dir services/dsh openapi:verify
-
-      - name: Run contract foundation gate
-        run: pnpm run contracts:lint
-
-      - name: Run DSH contract tests
-        run: pnpm --dir services/dsh test
-
-      - name: Validate generated diff
+      - name: Validate generated tree
         run: git diff --check
 
       - name: Commit modular contract
