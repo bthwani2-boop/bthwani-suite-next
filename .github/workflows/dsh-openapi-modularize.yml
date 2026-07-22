@@ -11,12 +11,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: jrn032-fullstack-guard-${{ github.sha }}
+  group: jrn032-wlt-boundary-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
   verify:
-    name: JRN-032 affected-surface ownership guard
+    name: JRN-032 WLT financial ownership guard
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
@@ -42,7 +42,5 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run affected-surface full-stack guard
-        env:
-          FULLSTACK_GUARD_INCLUDE: services/dsh/frontend/shared/analytics/,services/dsh/frontend/control-panel/analytics/,services/dsh/frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx,apps/control-panel/runtime/src/app/dsh/analytics/,apps/app-partner/runtime/src/jrn032-analytics.compile-contract.tsx
-        run: pnpm run guard:fullstack-boundary
+      - name: Run WLT financial ownership guard
+        run: pnpm run guard:wlt-financial-boundary
