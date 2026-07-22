@@ -114,11 +114,30 @@ jobs:
           END
           $$;
           SQL
-      - name: Execute real PostgreSQL fleet lifecycle
+      - name: Capture real PostgreSQL fleet lifecycle
+        id: lifecycle
         working-directory: services/dsh/backend
         env:
           DATABASE_URL: ${{ steps.postgres.outputs.database_url }}
-        run: go test ./internal/partnerfleet -run '^TestPartnerFleetLifecyclePostgres$' -count=1 -v
+        shell: bash
+        run: |
+          set +e
+          go test ./internal/partnerfleet -run '^TestPartnerFleetLifecyclePostgres$' -count=1 -v > /tmp/jrn030-lifecycle.log 2>&1
+          status=$?
+          cat /tmp/jrn030-lifecycle.log
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          exit 0
+      - name: Upload PostgreSQL lifecycle diagnostic
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: jrn-030-lifecycle-${{ github.sha }}
+          path: /tmp/jrn030-lifecycle.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Fail when PostgreSQL lifecycle failed
+        if: steps.lifecycle.outputs.status != '0'
+        run: exit 1
       - name: Run DSH API and verify governed runtime route
         working-directory: services/dsh/backend
         env:
