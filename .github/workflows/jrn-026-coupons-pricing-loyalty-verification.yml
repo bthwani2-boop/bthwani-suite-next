@@ -14,7 +14,8 @@ on:
       - "services/dsh/backend/internal/http/loyalty_policy.go"
       - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
       - "services/dsh/backend/internal/marketing/loyalty_policy.go"
-      - "services/dsh/backend/internal/wlt/**"
+      - "services/dsh/backend/internal/wlt/loyalty.go"
+      - "services/dsh/backend/internal/wlt/promotion_funding.go"
       - "services/dsh/backend/internal/wltoutbox/**"
       - "services/dsh/frontend/shared/marketing/**"
       - "services/dsh/frontend/shared/partner/partner-delivery-pricing.api.ts"
@@ -43,7 +44,8 @@ on:
       - "services/dsh/backend/internal/http/loyalty_policy.go"
       - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
       - "services/dsh/backend/internal/marketing/loyalty_policy.go"
-      - "services/dsh/backend/internal/wlt/**"
+      - "services/dsh/backend/internal/wlt/loyalty.go"
+      - "services/dsh/backend/internal/wlt/promotion_funding.go"
       - "services/dsh/backend/internal/wltoutbox/**"
       - "services/dsh/frontend/shared/marketing/**"
       - "services/dsh/frontend/shared/partner/partner-delivery-pricing.api.ts"
@@ -66,8 +68,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-026-${{ github.workflow }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: jrn-026-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
