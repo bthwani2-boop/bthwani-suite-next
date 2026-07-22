@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-014",
+  "branch": "sambassam",
+  "status": "PENDING_CI",
+  "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
+  "requiredSliceCount": 18,
+  "verifiedSliceCount": 17,
+  "zeroGate": false,
+  "checks": {
+    "backendDispatchTests": "PENDING",
+    "protectedHttpTests": "PENDING",
+    "fullStackIntegrityGate": "PENDING",
+    "targetedDispatchTests": "PENDING",
+    "contractRegistry": "PENDING",
+    "frontendTypecheck": "PENDING"
+  },
+  "rollback": {
+    "strategy": "Revert the closure commit and the governed dispatch migration as one release unit; do not partially restore legacy assignment writes.",
+    "dataSafety": "Retain dispatch decision rows for audit and disable new offers before rollback."
+  },
+  "nextJourneyStarted": false
+}
