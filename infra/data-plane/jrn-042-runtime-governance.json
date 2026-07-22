@@ -4,6 +4,14 @@
   "mode": "REMOTE_ONLY_CODE_AND_SAME_COMMIT_RUNTIME_EVIDENCE",
   "canonicalCompose": "infra/docker/compose.runtime.yml",
   "environmentExample": "infra/docker/env/runtime.env.example",
+  "verificationPolicy": {
+    "workflow": ".github/workflows/jrn-042-runtime-data-verification.yml",
+    "sourceRef": "sambassam",
+    "sourceCommit": "exact_triggering_sha",
+    "trigger": "workflow_dispatch_or_jrn_042_commit",
+    "requiredDecision": "fail_closed",
+    "protectedApprovals": "independent_and_not_self_issued"
+  },
   "approvedBindings": {
     "postgres": "127.0.0.1:55432",
     "minioApi": "127.0.0.1:59000",
