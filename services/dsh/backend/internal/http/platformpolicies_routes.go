@@ -30,7 +30,18 @@ func RegisterPlatformPolicyRoutes(
 	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/events", protected.handleListClientAddressPrivacyEvents)
 	mux.HandleFunc("POST /dsh/operator/privacy/client-addresses/anonymize", protected.handleAnonymizeExpiredClientAddresses)
 
-	// The following routes are now registered via registerUnifiedCatalogRoutes in catalog_unified_routes.go.
+	// JRN-029 unified operational policy closure. Existing zone/SLA/capacity
+	// compatibility routes remain registered by registerUnifiedCatalogRoutes.
+	mux.HandleFunc("GET /dsh/operator/platform/operational-profiles/{zoneId}", protected.handleGetOperationalProfile)
+	mux.HandleFunc("PUT /dsh/operator/platform/operational-profiles/{zoneId}", protected.handleUpsertOperationalProfile)
+	mux.HandleFunc("GET /dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes", protected.handleListOperationalDeliveryModes)
+	mux.HandleFunc("PUT /dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes/{fulfillmentMode}", protected.handleUpsertOperationalDeliveryMode)
+	mux.HandleFunc("POST /dsh/platform/operational-policy/evaluate", protected.handleEvaluateOperationalPolicy)
+	mux.HandleFunc("GET /dsh/operator/platform/operational-policy/audit", protected.handleListOperationalPolicyAudit)
+	mux.HandleFunc("POST /dsh/operator/platform/operational-policy/audit/{eventId}/rollback", protected.handleRollbackOperationalPolicy)
+
+	// The following routes are registered via registerUnifiedCatalogRoutes in
+	// catalog_unified_routes.go to preserve one compatibility owner.
 	// mux.HandleFunc("GET /dsh/operator/platform/zones", protected.handleListZones)
 	// mux.HandleFunc("POST /dsh/operator/platform/zones", protected.handleCreateZone)
 	// mux.HandleFunc("PATCH /dsh/operator/platform/zones/{zoneId}", protected.handleUpdateZone)
