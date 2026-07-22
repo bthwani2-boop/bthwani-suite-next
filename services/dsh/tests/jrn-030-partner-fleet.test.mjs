@@ -8,11 +8,13 @@ function read(path) {
 
 const courierCodes = read("services/dsh/backend/internal/partnerfleet/courier_codes.go");
 const listModel = read("services/dsh/backend/internal/partnerfleet/list.go");
+const disconnectModel = read("services/dsh/backend/internal/partnerfleet/membership_disconnect.go");
 const operatorModel = read("services/dsh/backend/internal/partnerfleet/operator.go");
 const partnerRoutes = read("services/dsh/backend/internal/http/partner_fleet.go");
 const operatorRoutes = read("services/dsh/backend/internal/http/partner_fleet_operator.go");
 const main = read("services/dsh/backend/cmd/dsh-api/main.go");
 const migration = read("services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql");
+const scopeMigration = read("services/dsh/database/migrations/dsh-089_store_team_actor_scope_uniqueness.sql");
 const api = read("services/dsh/frontend/shared/partner/partner-fleet.api.ts");
 const partnerSurface = read("services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx");
 const captainSurface = read("services/dsh/frontend/app-captain/account/PartnerFleetConnectionCard.tsx");
@@ -46,16 +48,29 @@ test("JRN-030 expires codes durably and prevents stale transitions", () => {
   assert.match(courierCodes, /RowsAffected/);
 });
 
-test("JRN-030 makes revoke atomic and auditable", () => {
+test("JRN-030 makes lifecycle mutations atomic, audited, and notified", () => {
   assert.match(courierCodes, /func RevokeCode[\s\S]*BeginTx/);
-  assert.match(courierCodes, /FOR UPDATE/);
   assert.match(courierCodes, /revoke_captain_connection_code/);
+  assert.match(courierCodes, /redeem_captain_connection_code/);
+  assert.match(disconnectModel, /captain_disconnect/);
+  assert.match(courierCodes, /partner_fleet_connection/);
+  assert.match(courierCodes, /partner_fleet_membership/);
+  assert.match(disconnectModel, /partner_fleet_membership/);
   assert.match(courierCodes, /tx\.Commit\(\)/);
 });
 
-test("JRN-030 prevents unintended multi-membership and cross-tenant partner access", () => {
-  assert.match(courierCodes, /WHERE identity_actor_id=\$1 AND id<>\$2/);
+test("JRN-030 allows multi-store membership but prevents duplicates inside one store", () => {
+  assert.match(courierCodes, /WHERE identity_actor_id=\$1 AND store_id=\$2 AND id<>\$3/);
+  assert.match(scopeMigration, /uq_dsh_store_team_members_store_identity_actor/);
+  assert.doesNotMatch(scopeMigration, /ON dsh_store_team_members \(identity_actor_id\)/);
   assert.match(courierCodes, /ErrAlreadyBound/);
+});
+
+test("JRN-030 uses canonical store display names and hides cross-tenant records", () => {
+  assert.match(listModel, /s\.display_name/);
+  assert.match(disconnectModel, /s\.display_name/);
+  assert.match(courierCodes, /SELECT display_name FROM dsh_stores/);
+  assert.doesNotMatch(listModel, /s\.name/);
   assert.match(partnerRoutes, /requestedStoreID != "" && requestedStoreID != storeID/);
   assert.match(partnerRoutes, /StatusNotFound/);
 });
