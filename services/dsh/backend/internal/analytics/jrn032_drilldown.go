@@ -3,6 +3,7 @@ package analytics
 import (
 	"database/sql"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -20,6 +21,13 @@ type OperationalRecord struct {
 type OperationalDrilldown struct {
 	Records  []OperationalRecord `json:"records"`
 	Metadata Metadata            `json:"metadata"`
+}
+
+func orderOperationsDetailURL(orderID string) string {
+	return fmt.Sprintf(
+		"/dsh/operations?workspace=live-orders&subGroup=queue&orderId=%s&panel=detail",
+		url.QueryEscape(strings.TrimSpace(orderID)),
+	)
 }
 
 func ListOrderDrilldown(db *sql.DB, window Window, storeID, status string, limit int) (OperationalDrilldown, error) {
@@ -57,7 +65,7 @@ func ListOrderDrilldown(db *sql.DB, window Window, storeID, status string, limit
 		if err := rows.Scan(&row.ID, &row.Status, &row.StoreID, &row.CreatedAt, &row.UpdatedAt); err != nil {
 			return out, err
 		}
-		row.DetailURL = fmt.Sprintf("/dsh/orders/%s", row.ID)
+		row.DetailURL = orderOperationsDetailURL(row.ID)
 		out.Records = append(out.Records, row)
 	}
 	return out, rows.Err()
