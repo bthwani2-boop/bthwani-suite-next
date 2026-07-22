@@ -11,6 +11,7 @@ import {
   type FinancePayoutRequest,
 } from "../../shared/finance-wlt-link/finance/finance.controller";
 import { GovernedSettlementPanel } from "./GovernedSettlementPanel";
+import { Jrn036CommissionGovernancePanel } from "./Jrn036CommissionGovernancePanel";
 
 type PayoutRequestsPanelProps = {
   readonly requests: readonly FinancePayoutRequest[];
@@ -109,6 +110,7 @@ export function PayoutRequestsPanel({ requests, reload }: PayoutRequestsPanelPro
   return (
     <>
       <GovernedSettlementPanel reload={reload} />
+      <Jrn036CommissionGovernancePanel />
       <Card style={{ padding: "1.5rem" }}>
         <Text role="titleMd" style={{ marginBottom: "0.5rem" }}>طلبات الصرف والتسويات الميدانية</Text>
         <Text role="body" tone="muted" style={{ marginBottom: "1rem" }}>
