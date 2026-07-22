@@ -262,3 +262,57 @@ components:
         resolutionAction: { type: [string, 'null'] }
         resolutionNote: { type: string }
         resolvedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CodCustodyMutationResult:
+      type: object
+      additionalProperties: false
+      required: [codRecord, custodyEvidence, replayed]
+      properties:
+        codRecord: { $ref: '#/components/schemas/CodRecord' }
+        custodyEvidence: { $ref: '#/components/schemas/CodCustodyEvidence' }
+        reconciliationCase:
+          anyOf:
+            - $ref: '#/components/schemas/CodReconciliationCase'
+            - type: 'null'
+        replayed: { type: boolean }
+    CodReconciliationCaseEnvelope:
+      type: object
+      additionalProperties: false
+      required: [codReconciliationCase]
+      properties:
+        codReconciliationCase:
+          $ref: '#/components/schemas/CodReconciliationCase'
+    Error:
+      type: object
+      additionalProperties: true
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+  responses:
+    InvalidRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing or invalid service authentication.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Actor or mutation gate forbids the operation.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: COD record was not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: State, evidence or idempotency conflict.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
