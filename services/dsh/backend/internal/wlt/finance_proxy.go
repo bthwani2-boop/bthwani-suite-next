@@ -47,12 +47,21 @@ func financeReadPathAllowed(path string) bool {
 
 var financeReadWalletAllowlist = map[string]struct{}{"client": {}, "partner": {}, "captain": {}, "field": {}}
 
+// FinanceReadWallet intentionally fails without tenant context. Representative
+// wallet reads must use FinanceReadWalletWithTenant with the tenant resolved by
+// Identity; retaining this method makes stale call sites fail closed at compile-
+// compatible runtime rather than silently issuing an unscoped financial read.
 func (c *Client) FinanceReadWallet(ctx context.Context, actorType, actorID, correlationID string) (int, []byte, error) {
+	return 0, nil, fmt.Errorf("WLT wallet tenant id is required; use FinanceReadWalletWithTenant")
+}
+
+func (c *Client) FinanceReadWalletWithTenant(ctx context.Context, actorType, actorID, correlationID, tenantID string) (int, []byte, error) {
 	if !c.Configured() { return 0, nil, fmt.Errorf("WLT integration is not configured") }
-	actorType = strings.ToLower(strings.TrimSpace(actorType)); actorID = strings.TrimSpace(actorID)
+	actorType = strings.ToLower(strings.TrimSpace(actorType)); actorID = strings.TrimSpace(actorID); tenantID = strings.TrimSpace(tenantID)
 	if _, ok := financeReadWalletAllowlist[actorType]; !ok { return 0, nil, fmt.Errorf("WLT wallet actor type %q is not allowlisted", actorType) }
 	if actorID == "" || len(actorID) > 200 { return 0, nil, fmt.Errorf("WLT wallet actor id must be non-empty and no longer than 200 characters") }
-	return c.financeReadRequest(ctx, "/wlt/wallets/"+url.PathEscape(actorType)+"/"+url.PathEscape(actorID), nil, correlationID, "")
+	if tenantID == "" { return 0, nil, fmt.Errorf("WLT wallet tenant id is required") }
+	return c.financeReadRequest(ctx, "/wlt/wallets/"+url.PathEscape(actorType)+"/"+url.PathEscape(actorID), nil, correlationID, tenantID)
 }
 
 func (c *Client) FinanceRead(ctx context.Context, path string, query url.Values, correlationID string) (int, []byte, error) {
