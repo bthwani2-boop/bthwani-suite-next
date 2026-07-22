@@ -6,7 +6,18 @@ import (
 )
 
 func TestJourney030ExposesGovernedPartnerFleetRoutes(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil)
+	router := http.NewServeMux()
+	server := newProtectedStoreServer(nil, nil, nil, nil)
+
+	// Core JRN-030 routes are registered directly from their production handlers
+	// so failures in unrelated journeys mounted by NewRouter cannot hide this
+	// journey's route ownership. The live API gate separately proves full-router
+	// composition and startup.
+	router.HandleFunc("POST /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code", server.handleIssuePartnerCourierConnectionCode)
+	router.HandleFunc("GET /dsh/partner/stores/{storeId}/courier-connections", server.handleListPartnerCourierConnections)
+	router.HandleFunc("POST /dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke", server.handleRevokePartnerCourierConnection)
+	router.HandleFunc("POST /dsh/captain/partner-fleet/connect", server.handleCaptainConnectPartnerFleet)
+	router.HandleFunc("GET /dsh/captain/partner-fleet/memberships", server.handleCaptainPartnerFleetMemberships)
 	RegisterPartnerFleetMembershipRoutes(router, nil, nil, nil, nil)
 	RegisterPartnerFleetOperatorRoutes(router, nil, nil, nil, nil)
 
