@@ -26,7 +26,10 @@ on:
       - "services/wlt/backend/internal/commercial/**"
       - "services/wlt/backend/internal/promotionfunding/**"
       - "services/wlt/backend/internal/shared/**"
+      - "services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql"
       - "services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql"
+      - "services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh"
+      - "services/wlt/contracts/wlt.promotion-funding.openapi.yaml"
       - "services/dsh/contracts/**"
       - "services/dsh/tests/jrn-026-*.test.mjs"
       - "services/dsh/tests/jrn-028-promotion-funding.test.mjs"
@@ -34,6 +37,7 @@ on:
       - "services/dsh/tsconfig.jrn-028.json"
       - "governance/product/contracts/JRN-026_COUPONS_DELIVERY_PRICING_LOYALTY.product-truth.json"
       - "governance/product/JRN-028_PROMOTION_FUNDING_PRODUCT_TRUTH.md"
+      - "governance/evidence/JRN-028_ALL_SLICES_CLOSURE.json"
       - "governance/product/product-truth.schema.json"
       - "tools/guards/product-truth-gate.mjs"
       - "tools/guards/dsh-openapi-modular-gate.mjs"
@@ -113,6 +117,9 @@ jobs:
           --health-retries 10
     env:
       PGPASSWORD: postgres
+      PGHOST: localhost
+      PGUSER: postgres
+      PGDATABASE: wlt_jrn_028
     steps:
       - name: Checkout repository state
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -146,19 +153,21 @@ jobs:
         run: |
           go test ./internal/coupons ./internal/wlt ./internal/promotionfundingoutbox
           go test ./internal/http -run '^$'
-      - name: Verify JRN-028 slice assertions and TypeScript surface
-        run: |
-          node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs
-          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-028.json --noEmit --pretty false
+      - name: Verify JRN-028 all eighteen slice assertions
+        run: node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs
+      - name: Verify JRN-028 TypeScript surface
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-028.json --noEmit --pretty false
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply WLT promotion funding schema and integrity controls
         run: |
-          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 -f services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql
-          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 -f services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql
+          psql -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql
+          psql -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql
       - name: Prove governed promotion funding tables exist
         run: |
-          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 -Atc "SELECT to_regclass('public.wlt_promotion_funding_reservations') IS NOT NULL" | grep -qx t
-          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 -Atc "SELECT to_regclass('public.wlt_promotion_funding_events') IS NOT NULL" | grep -qx t
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT to_regclass('public.wlt_promotion_funding_reservations') IS NOT NULL" | grep -qx t
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT to_regclass('public.wlt_promotion_funding_events') IS NOT NULL" | grep -qx t
+      - name: Verify JRN-028 database lifecycle and negative invariants
+        run: bash services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh
       - name: Verify repository whitespace
         run: git diff --check
