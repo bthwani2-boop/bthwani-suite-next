@@ -16,33 +16,51 @@ export type PickupWorkbenchScreenProps = {
 };
 
 export function PickupWorkbenchScreen() {
-  const { listState, loadList, extendWindow } = useOperatorPickupsController({
+  const {
+    listState,
+    loadList,
+    extendWindow,
+    rescheduleWindow,
+  } = useOperatorPickupsController({
     limit: 100,
     autoLoad: true,
   });
   const [actionFeedback, setActionFeedback] = React.useState<string | null>(null);
   const [actionPendingFor, setActionPendingFor] = React.useState<string | null>(null);
 
-  const handleExtend = React.useCallback(
-    async (orderId: string, version: number) => {
+  const handleWindowAction = React.useCallback(
+    async (orderId: string, version: number, mode: 'extend' | 'reschedule') => {
       setActionPendingFor(orderId);
       setActionFeedback(null);
       const newExpiry = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
-      const result = await extendWindow(
-        orderId,
-        version,
-        'تمديد تشغيلي موثق من لوحة التحكم',
-        newExpiry,
-      );
+      const result = mode === 'reschedule'
+        ? await rescheduleWindow(
+            orderId,
+            version,
+            'إعادة جدولة موثقة بعد عدم حضور العميل',
+            newExpiry,
+          )
+        : await extendWindow(
+            orderId,
+            version,
+            'تمديد تشغيلي موثق من لوحة التحكم',
+            newExpiry,
+          );
       setActionPendingFor(null);
       if (result.ok) {
-        setActionFeedback('تم تمديد نافذة الاستلام وقراءة الحالة المحدّثة من DSH.');
+        setActionFeedback(
+          mode === 'reschedule'
+            ? 'تمت إعادة فتح نافذة الاستلام. يجب على المتجر إصدار وإرسال رمز جديد للعميل.'
+            : 'تم تمديد نافذة الاستلام وقراءة الحالة المحدّثة من DSH.',
+        );
         await loadList();
         return;
       }
-      setActionFeedback(`تعذر تمديد النافذة: ${result.message}`);
+      setActionFeedback(
+        `${mode === 'reschedule' ? 'تعذرت إعادة الجدولة' : 'تعذر تمديد النافذة'}: ${result.message}`,
+      );
     },
-    [extendWindow, loadList],
+    [extendWindow, loadList, rescheduleWindow],
   );
 
   if (!listState.loaded && !listState.error) {
@@ -72,13 +90,13 @@ export function PickupWorkbenchScreen() {
       <Box gap={1}>
         <Text role="titleMd">إدارة جلسات الاستلام الذاتي</Text>
         <Text role="bodySm" tone="muted">
-          القراءة والتمديد فقط من صلاحيات المشغّل؛ إصدار الرمز والتحقق منه يبقيان داخل رحلة المتجر والعميل.
+          يراقب المشغّل الجلسات ويمدد النافذة النشطة أو يعيد جدولة جلسة عدم الحضور. إصدار الرمز والتحقق منه يبقيان لدى المتجر والعميل.
         </Text>
       </Box>
 
       <WebControlPanelRecommendation
         title="حدود التحكم السيادية"
-        reason="المشغّل يراقب جلسات الاستلام ويمدد النافذة عند وجود سبب تشغيلي. إشعار العميل وإصدار OTP والتحقق منه ليست إجراءات مشغّل."
+        reason="إعادة الجدولة تبطل الرمز السابق وتفتح نافذة جديدة فقط؛ لا تعرض رمزًا للمشغّل، ويجب على المتجر إرسال رمز جديد بعد الاستعادة."
         confidence="high"
         auditTag="PICKUP_OPERATOR_BOUNDARY"
       />
@@ -108,11 +126,24 @@ export function PickupWorkbenchScreen() {
             const consumed = Boolean(session.usedAt);
             const expired = !cancelled && !consumed && new Date(session.expiresAt).getTime() < Date.now();
             const pending = actionPendingFor === session.orderId;
-            const action = currentStatus === 'active' && !cancelled && !consumed
+            const actionMode = currentStatus === 'no_show'
+              ? 'reschedule'
+              : currentStatus === 'active' && !cancelled && !consumed
+                ? 'extend'
+                : null;
+            const action = actionMode
               ? {
-                  id: `extend-${session.id}`,
-                  label: pending ? 'جارٍ التمديد...' : 'تمديد ساعتين',
-                  onAction: () => void handleExtend(session.orderId, session.version),
+                  id: `${actionMode}-${session.id}`,
+                  label: pending
+                    ? 'جارٍ التنفيذ...'
+                    : actionMode === 'reschedule'
+                      ? 'إعادة جدولة ساعتين'
+                      : 'تمديد ساعتين',
+                  onAction: () => void handleWindowAction(
+                    session.orderId,
+                    session.version,
+                    actionMode,
+                  ),
                 }
               : undefined;
             const status = cancelled
@@ -122,17 +153,25 @@ export function PickupWorkbenchScreen() {
                 : expired
                   ? 'expired'
                   : currentStatus;
-            const statusTone = cancelled || expired
+            const statusTone = cancelled || expired || currentStatus === 'no_show'
               ? 'danger'
               : consumed
                 ? 'success'
                 : 'warning';
             const reason = cancelled
               ? `سبب الإلغاء: ${session.cancellationReason || 'إلغاء الطلب'}`
-              : `المحاولات: ${session.attemptCount}/${session.maxAttempts}`;
+              : currentStatus === 'no_show'
+                ? `سبب عدم الحضور: ${session.noShowReason || 'غير محدد'}`
+                : session.customerArrivedAt
+                  ? `وصل العميل: ${new Date(session.customerArrivedAt).toLocaleString('ar-SA')}`
+                  : session.customerNotifiedAt
+                    ? `أُشعر العميل: ${new Date(session.customerNotifiedAt).toLocaleString('ar-SA')}`
+                    : `المحاولات: ${session.attemptCount}/${session.maxAttempts}`;
             const sla = cancelled && session.cancelledAt
               ? `ألغي: ${new Date(session.cancelledAt).toLocaleString('ar-SA')}`
-              : `ينتهي: ${new Date(session.expiresAt).toLocaleString('ar-SA')}`;
+              : currentStatus === 'no_show' && session.noShowAt
+                ? `سُجل عدم الحضور: ${new Date(session.noShowAt).toLocaleString('ar-SA')}`
+                : `ينتهي: ${new Date(session.expiresAt).toLocaleString('ar-SA')}`;
             const rowProps: WebControlPanelDecisionRowProps = {
               entityId: session.id,
               entityLabel: `طلب: ${session.orderId} — عميل: ${session.clientId}`,
