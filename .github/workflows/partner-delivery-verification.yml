@@ -60,7 +60,7 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache: true
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Produce canonical JRN-016 Go formatting patch
+      - name: Check JRN-016 Go formatting
         shell: bash
         run: |
           set -euo pipefail
@@ -74,19 +74,9 @@ jobs:
             services/dsh/backend/internal/partnerdelivery/lifecycle_commands.go
             services/dsh/backend/internal/partnerdelivery/exception_commands.go
             services/dsh/backend/internal/partnerdelivery/jrn016_commands_db_test.go
+            services/dsh/backend/internal/partnerdelivery/partnerdelivery_db_test.go
           )
-          gofmt -w "${files[@]}"
-          git diff -- "${files[@]}" > jrn016-gofmt.patch
-      - name: Preserve canonical Go formatting patch
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jrn016-gofmt-${{ github.run_id }}
-          path: jrn016-gofmt.patch
-          retention-days: 3
-          if-no-files-found: error
-      - name: Reject Go formatting drift
-        run: test ! -s jrn016-gofmt.patch
+          test -z "$(gofmt -l "${files[@]}")"
       - name: Compile partner delivery and protected HTTP boundaries
         shell: bash
         run: |
@@ -101,23 +91,14 @@ jobs:
             psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null
           done
       - name: Prove command replay and exception evidence
-        id: database_closure
         shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           cd services/dsh/backend
           DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" \
             go test ./internal/partnerdelivery \
               -run '^(TestPartnerDeliveryCommandReplayDBIntegration|TestPartnerDeliveryExceptionEvidenceDBIntegration)$' \
-              -count=1 -v 2>&1 | tee ../../../jrn016-database-closure.log
-      - name: Preserve database closure diagnostics
-        if: failure() && steps.database_closure.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: jrn016-database-closure-${{ github.run_id }}
-          path: jrn016-database-closure.log
-          retention-days: 3
-          if-no-files-found: error
+              -count=1 -v
 
   contract-and-surfaces:
     name: JRN-016 contract and surfaces
@@ -139,19 +120,7 @@ jobs:
       - name: Validate contract registry and OpenAPI metadata
         run: pnpm run contracts:lint
       - name: Prove JRN-016 source bindings and slice registry
-        id: source_closure
-        shell: bash
-        run: |
-          set -o pipefail
-          node --test services/dsh/tests/jrn-016-partner-delivery-closure.test.mjs 2>&1 | tee jrn016-source-closure.log
-      - name: Preserve source closure diagnostics
-        if: failure() && steps.source_closure.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: jrn016-source-closure-${{ github.run_id }}
-          path: jrn016-source-closure.log
-          retention-days: 3
-          if-no-files-found: error
+        run: node --test services/dsh/tests/jrn-016-partner-delivery-closure.test.mjs
       - name: Typecheck DSH shared brain and all surfaces
         run: pnpm --dir services/dsh exec tsc -p tsconfig.json --noEmit --pretty false
       - name: Verify UI and full-stack boundaries
