@@ -26,7 +26,7 @@ configureIdentitySession(resolveIdentityApiBaseUrl());
 
 function AppContent() {
   const identity = useIdentitySession();
-  useDshMobilePushRegistration(identity.state.kind, "app-captain");
+  useDshMobilePushRegistration(identity.state.kind, "app-captain", "bthwani-captain-next");
 
   const logout = () => {
     void identity.logout();
