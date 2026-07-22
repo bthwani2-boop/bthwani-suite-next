@@ -5,7 +5,7 @@ import { colorRoles } from "@bthwani/ui-kit";
 import {
   useLoyaltyPolicyController,
   type LoyaltyEarningPolicy,
-} from "../../../shared/marketing";
+} from "../../../shared/marketing/loyalty-policy.public";
 
 type PolicyTermsDraft = {
   readonly policyId: string;
