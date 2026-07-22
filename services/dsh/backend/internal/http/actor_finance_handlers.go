@@ -162,7 +162,7 @@ func (s *protectedStoreServer) handleCaptainFinanceCommissions(w http.ResponseWr
 		return
 	}
 	query := url.Values{"captainId": {actor.ID}}
-	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -172,7 +172,7 @@ func (s *protectedStoreServer) handleCaptainFinancePayouts(w http.ResponseWriter
 		return
 	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {"captain"}}
-	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -182,7 +182,7 @@ type actorPayoutRequestBody struct {
 	IdempotencyKey   string `json:"idempotencyKey"`
 }
 
-func (s *protectedStoreServer) createActorPayout(w http.ResponseWriter, r *http.Request, actorID, actorType string) {
+func (s *protectedStoreServer) createActorPayout(w http.ResponseWriter, r *http.Request, actorID, actorType, tenantID string) {
 	var input actorPayoutRequestBody
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
 	decoder.DisallowUnknownFields()
@@ -201,7 +201,7 @@ func (s *protectedStoreServer) createActorPayout(w http.ResponseWriter, r *http.
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode payout request")
 		return
 	}
-	status, body, err := s.wlt.FinanceWrite(r.Context(), http.MethodPost, "/wlt/payout-requests", payload, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceWriteWithTenant(r.Context(), http.MethodPost, "/wlt/payout-requests", payload, r.Header.Get("X-Correlation-ID"), tenantID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -210,7 +210,7 @@ func (s *protectedStoreServer) handleCaptainCreatePayout(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	s.createActorPayout(w, r, actor.ID, "captain")
+	s.createActorPayout(w, r, actor.ID, "captain", actor.TenantID)
 }
 
 func (s *protectedStoreServer) handleFieldFinanceCommissions(w http.ResponseWriter, r *http.Request) {
