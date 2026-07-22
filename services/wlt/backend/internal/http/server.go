@@ -77,7 +77,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("PUT /wlt/commission-policies", gate(serviceAuth(cod.HandleUpsertGovernedCommissionPolicy(db))))
 	mux.HandleFunc("POST /wlt/commissions", gate(serviceAuth(cod.HandleCreateGovernedCommission(db))))
 	mux.HandleFunc("GET /wlt/commissions/{commissionId}", readGate(cod.HandleGetGovernedCommission(db)))
-	mux.HandleFunc("GET /wlt/commissions", readGate(cod.HandleListCommissions(db)))
+	mux.HandleFunc("GET /wlt/commissions", readGate(cod.HandleListGovernedCommissions(db)))
 	mux.HandleFunc("POST /wlt/commissions/{commissionId}/adjust", gate(serviceAuth(cod.HandleAdjustGovernedCommission(db))))
 	mux.HandleFunc("POST /wlt/commissions/{commissionId}/confirm", gate(serviceAuth(cod.HandleConfirmGovernedCommission(db))))
 	mux.HandleFunc("POST /wlt/commissions/{commissionId}/settle", gate(serviceAuth(cod.HandleSettleGovernedCommission(db))))
