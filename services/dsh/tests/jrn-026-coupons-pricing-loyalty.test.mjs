@@ -14,10 +14,13 @@ const wltOutboxWorker = read("services/dsh/backend/internal/wltoutbox/worker.go"
 const wltCommercial = read("services/wlt/backend/internal/commercial/commercial.go");
 const partnerController = read("services/dsh/frontend/shared/partner/use-delivery-pricing-controller.ts");
 const partnerCard = read("services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx");
+const partnerCourierScreen = read("services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx");
 const couponsDeck = read("services/dsh/frontend/control-panel/marketing/components/CouponsCommandDeck.tsx");
 const clientCheckout = read("services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx");
 
-test("JRN-026 lets the partner create the first governed delivery pricing policy", () => {
+test("JRN-026 mounts partner delivery pricing and lets the partner create the first policy", () => {
+  assert.match(partnerCourierScreen, /import \{ PartnerDeliveryPricingCard \} from '\.\/PartnerDeliveryPricingCard'/);
+  assert.match(partnerCourierScreen, /<PartnerDeliveryPricingCard storeId=\{storeId\} \/>/);
   assert.match(partnerController, /record: DeliveryPricingRecord \| null/);
   assert.match(partnerController, /expectedVersion: record\?\.version \?\? 0/);
   assert.doesNotMatch(partnerCard, /if \(!partnerPolicy\) return/);
