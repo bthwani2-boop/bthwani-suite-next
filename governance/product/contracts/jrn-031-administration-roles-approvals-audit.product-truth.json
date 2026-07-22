@@ -4,6 +4,7 @@
   "journeyNameAr": "الإدارة والأدوار والاعتمادات والتدقيق",
   "status": "PENDING_INDEPENDENT_APPROVAL",
   "truthOwner": "services/dsh",
+  "scopeBoundary": "platform-control-plane",
   "identityTruthOwner": "core/identity",
   "workforceTruthOwner": "core/workforce",
   "partnerLifecycleOwner": "services/dsh/frontend/control-panel/partners",
@@ -76,8 +77,11 @@
     "maker_self_approval",
     "beneficiary_approval",
     "original_checker_approving_rollback",
+    "broad_identity_role_bypass_of_operation_permissions",
+    "reading_approval_queues_without_checker_permission",
     "deleting_or_rewriting_audit_history",
     "storing_phone_document_session_or_secret_values_in_audit_detail",
+    "exposing_partner_review_notes_or_captain_license_number_in_administration_projection",
     "mutating_partner_lifecycle_or_captain_credentials_inside_administration_projection",
     "granting_administration_permission_outside_the_declared_surface_scope",
     "moving_identity_or_workforce_truth_into_dsh"
@@ -88,7 +92,9 @@
     "A rollback appends an inverse decision and never deletes the source approval or its audit trail.",
     "The administration audit table is append-only outside an explicit maintenance context and readback redacts non-allowlisted details.",
     "Administration diagnostics expose aggregate counts only and never return phone numbers, credentials, documents, session tokens, or secrets.",
-    "Identity authenticates the actor; DSH evaluates only approved active administration role projections scoped to control-panel.",
+    "Identity authenticates the actor, but a broad role label never authorizes an administration operation; exact control-panel permission or an approved active DSH role projection is required.",
+    "Role-definition, role-assignment, and rollback queues are readable only by their corresponding checker permissions.",
+    "Partner review notes and captain license numbers remain inside their sovereign owners and are absent from administration projections.",
     "Partner activation and captain credential mutations remain owned by their lifecycle and Workforce accreditation owners; administration only delegates navigation to those live owner surfaces."
   ],
   "acceptanceCriteria": [
@@ -96,6 +102,9 @@
     "Role definition and staff role changes use maker-checker approval with version conflict protection.",
     "Approved assignment or revocation decisions can be reversed only through a separate independently approved inverse request.",
     "Audit writes avoid raw reason or review-note values, audit readback is redacted, and update or delete is rejected by the database trigger.",
+    "Approval queues require role, staff, or rollback checker permissions and cannot be listed through administration.read alone.",
+    "The administration permission gate has no broad operator-role bypass and does not propagate phone PII.",
+    "Partner and captain administration projections omit partner review notes and captain license numbers.",
     "The control-panel shared administration brain binds roles, approvals, rollback, diagnostics, and audit to live DSH routes.",
     "The partner projection opens the governed partner lifecycle detail for activation or blocking and the captain projection opens Workforce for creation, update, documents, and license review.",
     "Targeted Go tests, TypeScript checks, route binding checks, contract checks, and migration checks pass on one immutable branch commit."
