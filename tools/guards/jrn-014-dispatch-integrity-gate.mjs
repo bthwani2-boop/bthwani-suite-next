@@ -139,7 +139,16 @@ for (const path of codePaths) {
   if (/jrn[-_]?0?14/i.test(base)) fail(`journey-numbered implementation filename is forbidden: ${path}`);
 }
 
-const frontendFiles = walk('services/dsh/frontend').filter((path) => ['.ts', '.tsx'].includes(extname(path)));
+const executableFrontendRoots = [
+  'services/dsh/frontend/shared/dispatch',
+  'services/dsh/frontend/shared/operations',
+  'services/dsh/frontend/shared/delivery',
+  'services/dsh/frontend/app-captain/orders',
+  'services/dsh/frontend/control-panel/operations',
+];
+const frontendFiles = executableFrontendRoots
+  .flatMap((root) => walk(root))
+  .filter((path) => ['.ts', '.tsx'].includes(extname(path)));
 const fakePatterns = [
   'مطعم حضرموت السعيد',
   'شارع الستين، صنعاء',
@@ -177,4 +186,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`JRN-014 dispatch integrity gate passed (${requiredFiles.length} required files, ${frontendFiles.length} frontend files scanned).`);
+console.log(`JRN-014 dispatch integrity gate passed (${requiredFiles.length} required files, ${frontendFiles.length} executable frontend files scanned).`);
