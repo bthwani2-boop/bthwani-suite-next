@@ -1,0 +1,95 @@
+name: JRN-029 Operational Policy Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "governance/product/contracts/jrn-029-zones-sla-capacity-delivery-modes.product-truth.json"
+      - "services/dsh/database/migrations/dsh-129_jrn029_operational_policy_closure.sql"
+      - "services/dsh/backend/internal/platformpolicies/jrn029*.go"
+      - "services/dsh/backend/internal/http/jrn029_operational_policy.go"
+      - "services/dsh/backend/internal/http/jrn_029_operational_policy_routes_test.go"
+      - "services/dsh/backend/internal/http/platformpolicies_routes.go"
+      - "services/dsh/frontend/shared/platform/jrn029-operational-policy.api.ts"
+      - "services/dsh/frontend/shared/platform/index.ts"
+      - "services/dsh/frontend/control-panel/platform/Jrn029OperationalPolicySection.tsx"
+      - "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx"
+      - "services/dsh/contracts/dsh.jrn-029.openapi.yaml"
+      - "services/dsh/tests/jrn-029-operational-policy.test.mjs"
+      - "services/dsh/tsconfig.jrn-029.json"
+      - ".github/workflows/jrn-029-operational-policy-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-029-operational-policy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Go decision routes and invariants
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/dsh/backend
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Set up Go from DSH module
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Verify JRN-029 decision and route surface
+        run: >-
+          go test
+          ./internal/platformpolicies
+          ./internal/http
+          -run 'TestJRN029'
+          -count=1
+
+      - name: Build affected backend owners
+        run: go build ./internal/platformpolicies ./internal/http
+
+  frontend:
+    name: Shared brain control panel and static closure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run JRN-029 full-stack static gate
+        run: node --test services/dsh/tests/jrn-029-operational-policy.test.mjs
+
+      - name: Typecheck JRN-029 ownership graph
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-029.json --noEmit --pretty false
+
+  governance:
+    name: Product Truth contract and repository hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Parse Product Truth and verify clean patches
+        run: |
+          node -e "const fs=require('fs'); const p='governance/product/contracts/jrn-029-zones-sla-capacity-delivery-modes.product-truth.json'; const x=JSON.parse(fs.readFileSync(p,'utf8')); if(x.owners.productAcceptanceDecision!=='PENDING') process.exit(1);"
+          git diff --check
