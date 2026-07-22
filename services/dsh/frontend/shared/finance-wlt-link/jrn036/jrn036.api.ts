@@ -94,6 +94,12 @@ function ownCommissionPath(actorType: Jrn036RepresentativeActorType): string {
   return `/dsh/${actorType}/me/finance/commissions`;
 }
 
+function newAdjustmentIdempotencyKey(commissionId: string): string {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return `commission-adjustment:${commissionId}:${uuid}`;
+  return `commission-adjustment:${commissionId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+}
+
 export async function fetchOwnJrn036Commissions(
   actorType: Jrn036RepresentativeActorType,
 ): Promise<readonly Jrn036Commission[]> {
@@ -133,12 +139,14 @@ async function commissionAction(
   commissionId: string,
   action: "adjust" | "confirm" | "settle" | "reject" | "reverse",
   body: Record<string, unknown>,
+  idempotencyKey?: string,
 ): Promise<Jrn036Commission> {
   const response = await request<{ readonly commission: Jrn036Commission }>(
     `/dsh/control-panel/finance/commissions/${encodeURIComponent(commissionId)}/${action}`,
     {
       method: "POST",
       body,
+      ...(idempotencyKey ? { idempotencyKey } : {}),
     },
   );
   return response.commission;
@@ -148,7 +156,15 @@ export const adjustJrn036Commission = (
   commissionId: string,
   deltaMinorUnits: number,
   reason: string,
-) => commissionAction(commissionId, "adjust", { deltaMinorUnits, reason });
+) => {
+  const idempotencyKey = newAdjustmentIdempotencyKey(commissionId);
+  return commissionAction(
+    commissionId,
+    "adjust",
+    { deltaMinorUnits, reason, idempotencyKey },
+    idempotencyKey,
+  );
+};
 
 export const confirmJrn036Commission = (commissionId: string) =>
   commissionAction(commissionId, "confirm", {});
