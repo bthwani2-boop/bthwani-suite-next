@@ -1,0 +1,145 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-018",
+  "title": "إثبات التسليم وإكمال الطلب",
+  "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
+  "requiredSliceCount": 18,
+  "codeDecision": "NEEDS_EVIDENCE",
+  "releaseDecision": "READY_FOR_REVIEW",
+  "slices": [
+    {
+      "id": "FS-01",
+      "name": "Product Truth and outcome",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["governance/product/contracts/jrn-018-delivery-proof-order-completion.product-truth.json"],
+      "requiredMarkers": ["WLT_DELIVERY_COMPLETION_HANDOFF_ONLY", "acceptanceCriteria", "negativeInvariants"]
+    },
+    {
+      "id": "FS-02",
+      "name": "Actors, permissions and affected surfaces",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/delivery_proof_completion.go", "services/dsh/frontend/control-panel/operations/DeliveryProofReviewScreen.tsx"],
+      "requiredMarkers": ["client", "captain", "operator", "OperationsPermissionManage"]
+    },
+    {
+      "id": "FS-03",
+      "name": "Proof states and allowed actions",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/delivery_proof.go", "services/dsh/frontend/shared/delivery-proof/delivery-proof.types.ts"],
+      "requiredMarkers": ["pending_review", "accepted", "rejected", "superseded"]
+    },
+    {
+      "id": "FS-04",
+      "name": "DSH and WLT ownership boundary",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["governance/product/contracts/jrn-018-delivery-proof-order-completion.product-truth.json", "services/dsh/backend/internal/dispatch/delivery_proof.go"],
+      "requiredMarkers": ["WLT_DELIVERY_COMPLETION_HANDOFF_ONLY", "enqueueJRN018WltCompletion", "EnqueueDeliveryCompleted"]
+    },
+    {
+      "id": "FS-05",
+      "name": "Database proof and PIN truth",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-117_jrn_018_delivery_proof_completion.sql", "services/dsh/database/migrations/dsh-118_jrn_018_delivery_proof_location_snapshot.sql"],
+      "requiredMarkers": ["dsh_delivery_verification_challenges", "dsh_delivery_proofs", "location_snapshot"]
+    },
+    {
+      "id": "FS-06",
+      "name": "Canonical delivery proof contract",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/dsh.delivery-proof-completion.openapi.yaml", "services/dsh/contracts/contract-registry.ts"],
+      "requiredMarkers": ["dsh-delivery-proof-completion", "issueClientDeliveryPin", "submitCaptainDeliveryProof"]
+    },
+    {
+      "id": "FS-07",
+      "name": "PIN issuance and verification",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/delivery_proof.go", "services/dsh/backend/internal/dispatch/delivery_proof_test.go"],
+      "requiredMarkers": ["randomDeliveryPIN", "hashDeliveryPIN", "ConstantTimeCompare", "failed_attempts"]
+    },
+    {
+      "id": "FS-08",
+      "name": "Idempotency, retry and optimistic review",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/delivery_proof.go", "services/dsh/frontend/shared/delivery-proof/delivery-proof.api.ts"],
+      "requiredMarkers": ["ErrIdempotencyConflict", "request_fingerprint", "expectedVersion", "idempotencyKey"]
+    },
+    {
+      "id": "FS-09",
+      "name": "Shared frontend delivery proof brain",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/shared/delivery-proof/index.ts", "services/dsh/frontend/shared/delivery-proof/use-delivery-proof-controller.ts"],
+      "requiredMarkers": ["useClientDeliveryPinController", "useCaptainDeliveryProofController", "useOperatorDeliveryProofReviewController"]
+    },
+    {
+      "id": "FS-10",
+      "name": "Captain, client and operator bindings",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx", "services/dsh/frontend/app-client/orders/ClientDeliveryProofPanel.tsx", "services/dsh/frontend/control-panel/operations/DeliveryProofReviewScreen.tsx"],
+      "requiredMarkers": ["رمز التسليم", "إثبات التسليم المقبول", "قبول وإكمال الطلب"]
+    },
+    {
+      "id": "FS-11",
+      "name": "Loading, offline, pending, rejected and accepted states",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/shared/delivery-proof/delivery-proof.types.ts", "services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx", "services/dsh/frontend/app-client/orders/ClientDeliveryProofPanel.tsx"],
+      "requiredMarkers": ["offline", "pending_review", "rejected", "accepted"]
+    },
+    {
+      "id": "FS-12",
+      "name": "Cross-surface readback",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/shared/delivery/delivery.actions.ts", "services/dsh/frontend/shared/dispatch/dispatch-tracking.api.ts", "services/dsh/frontend/control-panel/operations/OperationsHubScreen.tsx"],
+      "requiredMarkers": ["fetchCaptainDeliveryProof", "orderId", "proofs: DeliveryProofReviewScreen"]
+    },
+    {
+      "id": "FS-13",
+      "name": "Privacy, authorization and redaction",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/delivery_proof_completion.go", "services/dsh/backend/internal/http/delivery_proof_completion_test.go"],
+      "requiredMarkers": ["marshalClientDeliveryProof", "reviewedByActorId", "client response leaked"]
+    },
+    {
+      "id": "FS-14",
+      "name": "RTL, accessibility and weak-network recovery",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx", "services/dsh/frontend/app-client/orders/ClientDeliveryProofPanel.tsx"],
+      "requiredMarkers": ["إعادة المحاولة", "accessibilityLabel", "تحقق من الاتصال"]
+    },
+    {
+      "id": "FS-15",
+      "name": "Photo, signature, location, time and identity evidence",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/delivery_proof_completion.go", "services/dsh/database/migrations/dsh-118_jrn_018_delivery_proof_location_snapshot.sql", "services/dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx"],
+      "requiredMarkers": ["delivery_signature", "capturedAt", "captain", "توقيع العميل"]
+    },
+    {
+      "id": "FS-16",
+      "name": "Legacy direct-completion cleanup",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/delivery_proof_upload.go", "services/dsh/tests/jrn-018-delivery-proof-closure.test.mjs"],
+      "requiredMarkers": ["handleSubmitGovernedDeliveryProof", "dispatch.SubmitPoD("]
+    },
+    {
+      "id": "FS-17",
+      "name": "Targeted tests and CI",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/dispatch/delivery_proof_test.go", "services/dsh/backend/internal/http/delivery_proof_completion_test.go", "services/dsh/tests/jrn-018-delivery-proof-closure.test.mjs", "services/dsh/tsconfig.jrn-018.json", ".github/workflows/jrn-018-delivery-proof-verify.yml"],
+      "requiredMarkers": ["JRN-018 backend", "JRN-018 contract and surfaces", "JRN-018 governed frontend typecheck"]
+    },
+    {
+      "id": "FS-18",
+      "name": "Same-commit evidence and independent review gate",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/jrn-018-slice-closure.json", ".github/workflows/jrn-018-delivery-proof-verify.yml"],
+      "requiredMarkers": ["NEEDS_EVIDENCE", "requiredSliceCount", "github.sha", "independentReviewPending"]
+    }
+  ],
+  "independentReviewPending": [
+    "product-manager",
+    "product-owner",
+    "qa-device-accessibility",
+    "application-security",
+    "financial-control",
+    "release-production"
+  ]
+}
