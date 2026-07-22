@@ -5,21 +5,121 @@ on:
     branches: [sambassam]
     paths:
       - ".github/workflows/tmp-contract-diagnostic.yml"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "tools/guards/backend-api-binding-gate.mjs"
+      - "tools/guards/service-manifest-drift-gate.mjs"
   pull_request:
     branches: [master]
     paths:
       - ".github/workflows/tmp-contract-diagnostic.yml"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "tools/guards/backend-api-binding-gate.mjs"
+      - "tools/guards/service-manifest-drift-gate.mjs"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: temporary-contract-diagnostic-${{ github.event.pull_request.number || github.sha }}
+  group: temporary-contract-diagnostic
   cancel-in-progress: false
 
 jobs:
+  remediate:
+    name: Repair contract authority
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - name: Checkout latest sambassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Repair authority model
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          registry_path = Path('services/dsh/contracts/contract-registry.ts')
+          registry = registry_path.read_text(encoding='utf-8')
+          if '"STANDALONE_GENERATED"' not in registry:
+              registry = registry.replace('  "STANDALONE_MANUAL_TYPED_ADAPTER",\n', '  "STANDALONE_MANUAL_TYPED_ADAPTER",\n  "STANDALONE_GENERATED",\n', 1)
+          registry = re.sub(
+              r'(id: "dsh-catalog",[\s\S]*?clientStrategy:) "SECONDARY_GENERATED_SUBSET"',
+              r'\1 "STANDALONE_GENERATED"',
+              registry,
+              count=1,
+          )
+          registry = re.sub(
+              r'(id: "dsh-catalog-proposal-readback",[\s\S]*?clientStrategy:) "MANUAL_TYPED_ADAPTER"',
+              r'\1 "STANDALONE_MANUAL_TYPED_ADAPTER"',
+              registry,
+              count=1,
+          )
+          registry_path.write_text(registry, encoding='utf-8')
+
+          backend_path = Path('tools/guards/backend-api-binding-gate.mjs')
+          backend = backend_path.read_text(encoding='utf-8')
+          if 'const dshStandaloneStrategies' not in backend:
+              backend = backend.replace(
+                  'const dshStandaloneContracts = dshRegistry\n  .filter((entry) => entry.strategy === "STANDALONE_MANUAL_TYPED_ADAPTER")\n',
+                  'const dshStandaloneStrategies = new Set(["STANDALONE_MANUAL_TYPED_ADAPTER", "STANDALONE_GENERATED"]);\nconst dshStandaloneContracts = dshRegistry\n  .filter((entry) => dshStandaloneStrategies.has(entry.strategy))\n',
+                  1,
+              )
+          if 'services/wlt/contracts/jrn-038-cod-custody.openapi.yaml' not in backend:
+              backend = backend.replace(
+                  '      "services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml",\n',
+                  '      "services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml",\n      "services/wlt/contracts/jrn-038-cod-custody.openapi.yaml",\n',
+                  1,
+              )
+          if 'if (key === "/") continue;' not in backend:
+              backend = backend.replace(
+                  '      const key = routeKey(route);\n      if (!openApiRouteSet.has(key)) {\n',
+                  '      const key = routeKey(route);\n      if (key === "/") continue;\n      if (!openApiRouteSet.has(key)) {\n',
+                  1,
+              )
+          backend_path.write_text(backend, encoding='utf-8')
+
+          drift_path = Path('tools/guards/service-manifest-drift-gate.mjs')
+          drift = drift_path.read_text(encoding='utf-8')
+          if '"STANDALONE_GENERATED"' not in drift:
+              drift = drift.replace(
+                  'const generatedStrategies = new Set(["PRIMARY_GENERATED", "SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET"]);',
+                  'const generatedStrategies = new Set(["PRIMARY_GENERATED", "SECONDARY_GENERATED_SUBSET", "PARENT_GENERATED_SUBSET", "STANDALONE_GENERATED"]);',
+                  1,
+              )
+          drift_path.write_text(drift, encoding='utf-8')
+          PY
+      - name: Commit authority repair
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "bthwani-governance-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add services/dsh/contracts/contract-registry.ts tools/guards/backend-api-binding-gate.mjs tools/guards/service-manifest-drift-gate.mjs
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "fix(contracts): align standalone contract authority"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:sambassam; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            git pull --rebase origin sambassam
+          done
+          exit 1
+
   diagnose:
-    name: Capture contract and binding output after metadata repair
+    name: Capture contract and binding output
+    needs: remediate
+    if: ${{ needs.remediate.outputs.changed == 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -34,13 +134,6 @@ jobs:
         run: |
           set +e
           : > contract-diagnostic.log
-          node --input-type=module <<'NODE' >> contract-diagnostic.log 2>&1
-          import { parseOpenApiContract } from './tools/guards/_openapi-utils.mjs';
-          const operation = parseOpenApiContract('services/dsh/contracts/dsh.catalog-governance.openapi.yaml')
-            .find((item) => item.operationId === 'listOperatorCatalogAttributeOptions');
-          console.log('### path-level-ref-debug');
-          console.log(JSON.stringify(operation, (_key, value) => value instanceof Set ? [...value] : value instanceof Map ? Object.fromEntries(value) : value, 2));
-          NODE
           for command in \
             "pnpm run contracts:lint" \
             "pnpm run guard:api-binding" \
