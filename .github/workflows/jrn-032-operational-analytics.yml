@@ -26,7 +26,7 @@ permissions:
 
 concurrency:
   group: jrn-032-sambassam
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   verify-and-compose:
@@ -38,6 +38,36 @@ jobs:
         with:
           ref: sambassam
           fetch-depth: 0
+
+      - name: Publish observable run locator
+        env:
+          ACTIVE_EVENT_SHA: ${{ github.sha }}
+          ACTIVE_RUN_ID: ${{ github.run_id }}
+          ACTIVE_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          path = Path("governance/evidence/JRN-032_ACTIVE_RUN.json")
+          path.write_text(json.dumps({
+              "journeyId": "JRN-032",
+              "branch": "sambassam",
+              "eventSha": os.environ["ACTIVE_EVENT_SHA"],
+              "workflowRunId": int(os.environ["ACTIVE_RUN_ID"]),
+              "runAttempt": int(os.environ["ACTIVE_RUN_ATTEMPT"]),
+              "status": "running",
+              "publishedAt": datetime.now(timezone.utc).isoformat()
+          }, indent=2) + "\n", encoding="utf-8")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add governance/evidence/JRN-032_ACTIVE_RUN.json
+          git commit -m "ci(jrn-032): publish active verification run [skip ci]"
+          git pull --rebase origin sambassam
+          git push origin HEAD:sambassam
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -108,6 +138,7 @@ jobs:
         env:
           VERIFIED_EVENT_SHA: ${{ github.sha }}
           VERIFIED_RUN_ID: ${{ github.run_id }}
+          VERIFIED_RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
           python - <<'PY'
           import json
@@ -115,6 +146,7 @@ jobs:
           from datetime import datetime, timezone
           from pathlib import Path
 
+          verified_at = datetime.now(timezone.utc).isoformat()
           registry_path = Path("governance/evidence/JRN-032_SLICE_VERIFICATION.json")
           registry = json.loads(registry_path.read_text(encoding="utf-8"))
           for item in registry["slices"]:
@@ -124,7 +156,8 @@ jobs:
           registry["remoteVerification"] = {
               "eventSha": os.environ["VERIFIED_EVENT_SHA"],
               "workflowRunId": os.environ["VERIFIED_RUN_ID"],
-              "verifiedAt": datetime.now(timezone.utc).isoformat(),
+              "runAttempt": os.environ["VERIFIED_RUN_ATTEMPT"],
+              "verifiedAt": verified_at,
               "checks": [
                   "DSH OpenAPI composition and generation",
                   "Go analytics, WLT and HTTP tests",
@@ -138,6 +171,17 @@ jobs:
           }
           registry_path.write_text(json.dumps(registry, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
+          active_path = Path("governance/evidence/JRN-032_ACTIVE_RUN.json")
+          active_path.write_text(json.dumps({
+              "journeyId": "JRN-032",
+              "branch": "sambassam",
+              "eventSha": os.environ["VERIFIED_EVENT_SHA"],
+              "workflowRunId": int(os.environ["VERIFIED_RUN_ID"]),
+              "runAttempt": int(os.environ["VERIFIED_RUN_ATTEMPT"]),
+              "status": "passed",
+              "verifiedAt": verified_at
+          }, indent=2) + "\n", encoding="utf-8")
+
           evidence_path = Path("governance/evidence/JRN-032_REMOTE_EXECUTION_LOG.md")
           evidence_path.write_text(f"""# JRN-032 Remote Execution Log
 
@@ -145,7 +189,8 @@ jobs:
 - branch: sambassam
 - verified_event_sha: {os.environ['VERIFIED_EVENT_SHA']}
 - workflow_run_id: {os.environ['VERIFIED_RUN_ID']}
-- verified_at: {datetime.now(timezone.utc).isoformat()}
+- run_attempt: {os.environ['VERIFIED_RUN_ATTEMPT']}
+- verified_at: {verified_at}
 - implementation_decision: READY_FOR_INDEPENDENT_ACCEPTANCE
 
 ## Passed checks
@@ -169,15 +214,11 @@ jobs:
           PY
 
       - name: Commit composed contract and verification evidence
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if git diff --quiet; then
             echo "No generated or evidence changes to commit."
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "chore(jrn-032): compose contract and record remote verification [skip ci]"
           git pull --rebase origin sambassam
