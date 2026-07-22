@@ -42,7 +42,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/payment-sessions/{paymentSessionId}", readGate(reference.HandleGetPaymentSessionTrustedDsh(db)))
 	mux.HandleFunc("GET /wlt/payment-sessions/{paymentSessionId}/timeline", readGate(payment.HandleGetPaymentSessionTimeline(db)))
 
-	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/authorize", gate(serviceAuth(payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeSession(db)))))
+	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/authorize", gate(serviceAuth(payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeSessionSovereign(db)))))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/capture", gate(serviceAuth(payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureSessionSovereign(db)))))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/refresh-provider-status", gate(serviceAuth(payment.HandleGovernedPaymentOperation(db, "provider_status_refresh", payment.HandleRefreshProviderStatus(db)))))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/expire", gate(serviceAuth(payment.HandleTenantScopedPaymentSession(db, payment.HandleExpireSession(db)))))
