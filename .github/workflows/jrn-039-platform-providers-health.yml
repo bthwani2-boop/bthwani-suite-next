@@ -22,8 +22,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-039-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-039-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   verify:
