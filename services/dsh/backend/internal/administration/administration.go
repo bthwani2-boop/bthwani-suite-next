@@ -21,6 +21,9 @@ type Role struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	Permissions []string  `json:"permissions"`
+	Surfaces    []string  `json:"surfaces"`
+	Active      bool      `json:"active"`
+	Version     int       `json:"version"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
@@ -29,38 +32,71 @@ func ListRoles(db *sql.DB) ([]Role, error) {
 		return nil, ErrInvalid
 	}
 	rows, err := db.Query(`
-		SELECT id, name, COALESCE(description,''), permissions, created_at
-		FROM dsh_admin_roles ORDER BY name`)
+		SELECT id, name, COALESCE(description,''), permissions, surfaces,
+		       active, version, created_at
+		FROM dsh_admin_roles ORDER BY active DESC, name`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	out := make([]Role, 0)
 	for rows.Next() {
-		var r Role
-		var permissionsJSON []byte
-		if err := rows.Scan(&r.ID, &r.Name, &r.Description, &permissionsJSON, &r.CreatedAt); err != nil {
+		var role Role
+		var permissionsJSON, surfacesJSON []byte
+		if err := rows.Scan(
+			&role.ID, &role.Name, &role.Description, &permissionsJSON, &surfacesJSON,
+			&role.Active, &role.Version, &role.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
-		if err := json.Unmarshal(permissionsJSON, &r.Permissions); err != nil {
+		if err := json.Unmarshal(permissionsJSON, &role.Permissions); err != nil {
 			return nil, err
 		}
-		if r.Permissions == nil {
-			r.Permissions = []string{}
+		if err := json.Unmarshal(surfacesJSON, &role.Surfaces); err != nil {
+			return nil, err
 		}
-		out = append(out, r)
+		if role.Permissions == nil {
+			role.Permissions = []string{}
+		}
+		if role.Surfaces == nil {
+			role.Surfaces = []string{}
+		}
+		out = append(out, role)
 	}
 	return out, rows.Err()
 }
 
-// ActorHasPermission evaluates only approved DSH role assignments. It never
-// authenticates the actor and never expands access outside the DSH
+// AdministrationPermissionCandidates keeps legacy broad permissions working
+// while allowing least-privilege permissions for each governed operation.
+func AdministrationPermissionCandidates(action string) []string {
+	action = strings.TrimSpace(action)
+	if !strings.HasPrefix(action, "administration.") {
+		return nil
+	}
+	candidates := []string{action}
+	switch action {
+	case "administration.role.request", "administration.staff.request", "administration.rollback.request":
+		candidates = append(candidates, "administration.manage")
+	case "administration.role.approve", "administration.staff.approve", "administration.rollback.approve":
+		candidates = append(candidates, "administration.approve")
+	case "administration.audit.read", "administration.diagnostics.read":
+		candidates = append(candidates, "administration.read")
+	}
+	return candidates
+}
+
+// ActorHasPermission evaluates only approved, active DSH role assignments. It
+// never authenticates the actor and never expands access outside the DSH
 // administration action namespace.
 func ActorHasPermission(db *sql.DB, actorID string, action string) (bool, error) {
 	actorID = strings.TrimSpace(actorID)
-	action = strings.TrimSpace(action)
-	if db == nil || actorID == "" || action == "" || !strings.HasPrefix(action, "administration.") {
+	candidates := AdministrationPermissionCandidates(action)
+	if db == nil || actorID == "" || len(candidates) == 0 {
 		return false, ErrInvalid
+	}
+	candidate1, candidate2 := candidates[0], candidates[0]
+	if len(candidates) > 1 {
+		candidate2 = candidates[1]
 	}
 	var allowed bool
 	err := db.QueryRow(`
@@ -69,13 +105,14 @@ func ActorHasPermission(db *sql.DB, actorID string, action string) (bool, error)
 			FROM dsh_admin_staff_assignments assignment
 			JOIN dsh_admin_roles role ON role.id = assignment.role_id
 			WHERE assignment.actor_id = $1
-			  AND role.permissions ? $2
-		)`, actorID, action).Scan(&allowed)
+			  AND role.active = TRUE
+			  AND (role.permissions ? $2 OR role.permissions ? $3)
+		)`, actorID, candidate1, candidate2).Scan(&allowed)
 	return allowed, err
 }
 
 // StaffMember is an approved role-assignment projection. Writes are performed
-// only by ReviewStaffRoleAssignment after maker-checker approval.
+// only by ReviewStaffRoleAssignment or an independently approved rollback.
 type StaffMember struct {
 	ID         string    `json:"id"`
 	ActorID    string    `json:"actorId"`
@@ -94,6 +131,7 @@ func ListStaff(db *sql.DB) ([]StaffMember, error) {
 		       COALESCE(sa.assigned_by,''), sa.assigned_at
 		FROM dsh_admin_staff_assignments sa
 		JOIN dsh_admin_roles r ON r.id=sa.role_id
+		WHERE r.active = TRUE
 		ORDER BY sa.assigned_at DESC`)
 	if err != nil {
 		return nil, err
@@ -101,19 +139,20 @@ func ListStaff(db *sql.DB) ([]StaffMember, error) {
 	defer rows.Close()
 	out := make([]StaffMember, 0)
 	for rows.Next() {
-		var m StaffMember
-		if err := rows.Scan(&m.ID, &m.ActorID, &m.RoleID, &m.RoleName,
-			&m.AssignedBy, &m.AssignedAt); err != nil {
+		var member StaffMember
+		if err := rows.Scan(
+			&member.ID, &member.ActorID, &member.RoleID, &member.RoleName,
+			&member.AssignedBy, &member.AssignedAt,
+		); err != nil {
 			return nil, err
 		}
-		out = append(out, m)
+		out = append(out, member)
 	}
 	return out, rows.Err()
 }
 
 // PartnerActivation is retained as a read-only compatibility projection.
-// Partner lifecycle mutations are owned by the governed partner lifecycle,
-// not by the administration dashboard.
+// Partner lifecycle mutations are owned by the governed partner lifecycle.
 type PartnerActivation struct {
 	ID         string    `json:"id"`
 	PartnerID  string    `json:"partnerId"`
@@ -140,18 +179,21 @@ func ListPartnerActivations(db *sql.DB, status string) ([]PartnerActivation, err
 	defer rows.Close()
 	out := make([]PartnerActivation, 0)
 	for rows.Next() {
-		var a PartnerActivation
-		if err := rows.Scan(&a.ID, &a.PartnerID, &a.Status,
-			&a.ReviewedBy, &a.Notes, &a.CreatedAt, &a.UpdatedAt); err != nil {
+		var activation PartnerActivation
+		if err := rows.Scan(
+			&activation.ID, &activation.PartnerID, &activation.Status,
+			&activation.ReviewedBy, &activation.Notes,
+			&activation.CreatedAt, &activation.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
-		out = append(out, a)
+		out = append(out, activation)
 	}
 	return out, rows.Err()
 }
 
 // CaptainCredential is a read-only projection. Credential review is owned by
-// the workforce/captain accreditation journey and is not mutated by this area.
+// the Workforce/captain accreditation journey and is not mutated by this area.
 type CaptainCredential struct {
 	ID            string    `json:"id"`
 	CaptainID     string    `json:"captainId"`
@@ -178,23 +220,28 @@ func ListCaptainCredentials(db *sql.DB, status string) ([]CaptainCredential, err
 	defer rows.Close()
 	out := make([]CaptainCredential, 0)
 	for rows.Next() {
-		var c CaptainCredential
-		if err := rows.Scan(&c.ID, &c.CaptainID, &c.LicenseNumber, &c.VehicleType,
-			&c.Status, &c.ReviewedBy, &c.UpdatedAt); err != nil {
+		var credential CaptainCredential
+		if err := rows.Scan(
+			&credential.ID, &credential.CaptainID, &credential.LicenseNumber,
+			&credential.VehicleType, &credential.Status,
+			&credential.ReviewedBy, &credential.UpdatedAt,
+		); err != nil {
 			return nil, err
 		}
-		out = append(out, c)
+		out = append(out, credential)
 	}
 	return out, rows.Err()
 }
 
 type AdminAuditEntry struct {
-	ID        string    `json:"id"`
-	ActorID   string    `json:"actorId"`
-	Action    string    `json:"action"`
-	TargetID  string    `json:"targetId"`
-	Detail    string    `json:"detail"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID            string    `json:"id"`
+	ActorID       string    `json:"actorId"`
+	Action        string    `json:"action"`
+	TargetID      string    `json:"targetId"`
+	Detail        string    `json:"detail"`
+	Sensitivity   string    `json:"sensitivity"`
+	CorrelationID string    `json:"correlationId"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 func ListAdminAudit(db *sql.DB, actorID string, limit int) ([]AdminAuditEntry, error) {
@@ -206,7 +253,7 @@ func ListAdminAudit(db *sql.DB, actorID string, limit int) ([]AdminAuditEntry, e
 	}
 	rows, err := db.Query(`
 		SELECT id, actor_id, action, COALESCE(target_id,''),
-		       COALESCE(detail,''), created_at
+		       COALESCE(detail,''), sensitivity, COALESCE(correlation_id,''), created_at
 		FROM dsh_admin_audit
 		WHERE ($1='' OR actor_id=$1)
 		ORDER BY created_at DESC LIMIT $2`, strings.TrimSpace(actorID), limit)
@@ -216,12 +263,15 @@ func ListAdminAudit(db *sql.DB, actorID string, limit int) ([]AdminAuditEntry, e
 	defer rows.Close()
 	out := make([]AdminAuditEntry, 0)
 	for rows.Next() {
-		var e AdminAuditEntry
-		if err := rows.Scan(&e.ID, &e.ActorID, &e.Action,
-			&e.TargetID, &e.Detail, &e.CreatedAt); err != nil {
+		var entry AdminAuditEntry
+		if err := rows.Scan(
+			&entry.ID, &entry.ActorID, &entry.Action, &entry.TargetID,
+			&entry.Detail, &entry.Sensitivity, &entry.CorrelationID, &entry.CreatedAt,
+		); err != nil {
 			return nil, err
 		}
-		out = append(out, e)
+		entry.Detail = redactAuditDetail(entry.Detail)
+		out = append(out, entry)
 	}
 	return out, rows.Err()
 }
