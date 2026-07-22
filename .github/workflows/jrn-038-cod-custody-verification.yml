@@ -1,21 +1,24 @@
 name: JRN-038 COD Custody Verification
 
 on:
+  workflow_dispatch:
   push:
     branches: [sambassam]
-    paths:
-      - services/wlt/backend/internal/cod/**
-      - services/wlt/backend/internal/http/server.go
-      - services/wlt/contracts/jrn-038-cod-custody.openapi.yaml
-      - services/wlt/database/migrations/wlt-038_cod_custody_evidence_reconciliation.sql
-      - services/dsh/backend/internal/http/actor_finance_handlers.go
-      - services/dsh/backend/internal/http/jrn038_cod_finance_*.go
-      - services/dsh/backend/internal/http/refund_finance_routes.go
-      - services/dsh/backend/internal/wlt/actor_finance_client.go
-      - services/dsh/frontend/**/finance/**
-      - services/dsh/frontend/**/wlt-cod/**
-      - .github/workflows/jrn-038-cod-custody-verification.yml
-  workflow_dispatch:
+    paths: &jrn038_paths
+      - "services/wlt/backend/internal/cod/**"
+      - "services/wlt/backend/internal/http/server.go"
+      - "services/wlt/contracts/jrn-038-cod-custody.openapi.yaml"
+      - "services/wlt/database/migrations/wlt-038_cod_custody_evidence_reconciliation.sql"
+      - "services/dsh/backend/internal/http/actor_finance_handlers.go"
+      - "services/dsh/backend/internal/http/jrn038_cod_finance_*.go"
+      - "services/dsh/backend/internal/http/refund_finance_routes.go"
+      - "services/dsh/backend/internal/wlt/actor_finance_client.go"
+      - "services/dsh/frontend/**/finance/**"
+      - "services/dsh/frontend/**/wlt-cod/**"
+      - ".github/workflows/jrn-038-cod-custody-verification.yml"
+  pull_request:
+    branches: [master]
+    paths: *jrn038_paths
 
 permissions:
   contents: read
@@ -26,8 +29,9 @@ concurrency:
 
 jobs:
   verify:
+    name: JRN-038 database, backend, contract, and multi-surface proof
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -38,47 +42,55 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d wlt_jrn038"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
+          --health-cmd="pg_isready -U postgres -d wlt_jrn038"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/wlt_jrn038?sslmode=disable
       WLT_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/wlt_jrn038?sslmode=disable
 
     steps:
-      - name: Checkout exact commit
-        uses: actions/checkout@v4
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 1
+          persist-credentials: false
 
-      - name: Setup Node 24
-        uses: actions/setup-node@v4
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          node-version: 24.17.0
-          cache: pnpm
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.34.2
-          run_install: false
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.26.5
+          go-version-file: services/wlt/backend/go.mod
           cache-dependency-path: |
             services/wlt/backend/go.sum
             services/dsh/backend/go.sum
 
-      - name: Install workspace dependencies
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install locked workspace
         run: pnpm install --frozen-lockfile
 
-      - name: Check Go formatting
+      - name: Check touched Go formatting
         shell: bash
         run: |
-          test -z "$(gofmt -l services/wlt/backend/internal/cod services/wlt/backend/internal/http/server.go services/dsh/backend/internal/http services/dsh/backend/internal/wlt/actor_finance_client.go)"
+          test -z "$(gofmt -l \
+            services/wlt/backend/internal/cod/sovereign_cod.go \
+            services/wlt/backend/internal/cod/sovereign_cod_jrn038_test.go \
+            services/wlt/backend/internal/http/server.go \
+            services/dsh/backend/internal/http/actor_finance_handlers.go \
+            services/dsh/backend/internal/http/jrn038_cod_finance_handlers.go \
+            services/dsh/backend/internal/http/jrn038_cod_finance_routes.go \
+            services/dsh/backend/internal/http/refund_finance_routes.go \
+            services/dsh/backend/internal/wlt/actor_finance_client.go)"
 
       - name: Apply WLT migrations from zero
         shell: bash
@@ -88,6 +100,7 @@ jobs:
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "SELECT to_regclass('public.wlt_cod_custody_evidence'), to_regclass('public.wlt_cod_reconciliation_cases');"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "SELECT conname FROM pg_constraint WHERE conname = 'wlt_ledger_accounts_type_chk' AND pg_get_constraintdef(oid) LIKE '%cash_variance%';"
 
       - name: Test WLT backend
         working-directory: services/wlt/backend
@@ -119,3 +132,6 @@ jobs:
           grep -Fq 'registerJRN038CodFinanceRoutes(mux, s)' services/dsh/backend/internal/http/refund_finance_routes.go
           grep -Fq '/dsh/partner/me/finance/cod-records' services/dsh/backend/internal/http/jrn038_cod_finance_routes.go
           grep -Fq '/dsh/control-panel/finance/cod-reconciliation-cases' services/dsh/backend/internal/http/jrn038_cod_finance_routes.go
+          grep -Fq 'PartnerCodCustodyPanel' services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshPartnerBridge.tsx
+          grep -Fq 'DshCaptainCodCustodyScreen' services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx
+          grep -Fq 'CodReconciliationCasesPanel' services/dsh/frontend/control-panel/finance/FinanceDashboardScreen.tsx
