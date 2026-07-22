@@ -5,6 +5,10 @@ on:
     branches: [sambassam]
     paths:
       - "governance/evidence/JRN-029_GOFORMAT_TRIGGER.txt"
+  pull_request:
+    branches: [sambassam]
+    paths:
+      - "governance/evidence/JRN-029_GOFORMAT_TRIGGER.txt"
 
 permissions:
   contents: write
