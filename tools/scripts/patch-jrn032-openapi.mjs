@@ -6,6 +6,7 @@ const scriptPath = fileURLToPath(import.meta.url);
 const repositoryRoot = path.resolve(path.dirname(scriptPath), "../..");
 const rootPath = path.join(repositoryRoot, "services/dsh/contracts/dsh.openapi.yaml");
 const analyticsModulePath = path.join(repositoryRoot, "services/dsh/contracts/paths/analytics.paths.yaml");
+const analyticsSchemasPath = path.join(repositoryRoot, "services/dsh/contracts/components/schemas/analytics.schemas.yaml");
 const manifestPath = path.join(repositoryRoot, "services/dsh/contracts/dsh.modular.manifest.json");
 
 const pathIds = [
@@ -26,6 +27,23 @@ const responseSchemas = [
   "DshWltFinancialAnalyticsUnavailableResponse",
 ];
 
+const schemaGraph = [
+  "DshAnalyticsMetadata",
+  "DshPreparationSlaAnalyticsResponse",
+  "DshCaptainPerformanceRow",
+  "DshCaptainPerformanceAnalyticsResponse",
+  "DshFieldPerformanceRow",
+  "DshFieldPerformanceAnalyticsResponse",
+  "DshOperationalAnalyticsRecord",
+  "DshOperationalAnalyticsDrilldownResponse",
+  "WltAnalyticsAccountBalance",
+  "WltAnalyticsCurrencySummary",
+  "WltAnalyticsFinancialSummary",
+  "DshWltFinancialAnalyticsSnapshot",
+  "DshWltFinancialAnalyticsSnapshotResponse",
+  "DshWltFinancialAnalyticsUnavailableResponse",
+];
+
 const pathRefs = `  /dsh/operator/analytics/preparation-sla:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1preparation-sla"
   /dsh/operator/analytics/captains:
@@ -40,7 +58,7 @@ const pathRefs = `  /dsh/operator/analytics/preparation-sla:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1export.csv"
 `;
 
-const schemaRefs = responseSchemas
+const schemaRefs = schemaGraph
   .map((schemaName) => `    ${schemaName}:\n      $ref: "./components/schemas/analytics.schemas.yaml#/${schemaName}"`)
   .join("\n") + "\n";
 
@@ -49,6 +67,7 @@ const partnerSchemaAnchor = "    DshPartnerPerformanceResponse:\n";
 
 let root = await readFile(rootPath, "utf8");
 let analyticsModule = await readFile(analyticsModulePath, "utf8");
+let analyticsSchemas = await readFile(analyticsSchemasPath, "utf8");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 
 for (const pathId of pathIds) {
@@ -69,6 +88,15 @@ for (const schemaName of responseSchemas) {
   }
 }
 
+for (const schemaName of schemaGraph) {
+  const localRef = `#/${schemaName}`;
+  const canonicalRef = `../../dsh.openapi.yaml#/components/schemas/${schemaName}`;
+  analyticsSchemas = analyticsSchemas.replaceAll(localRef, canonicalRef);
+}
+if (analyticsSchemas.includes('$ref: "#/')) {
+  throw new Error("analytics schema module still contains root-relative internal references");
+}
+
 const missingPaths = pathIds.filter(
   (pathId) => !root.includes(`  /dsh/operator/analytics/${pathId}:`),
 );
@@ -82,13 +110,13 @@ if (missingPaths.length === pathIds.length) {
   root = root.replace(partnerPathAnchor, `${pathRefs}${partnerPathAnchor}`);
 }
 
-const missingSchemas = responseSchemas.filter(
+const missingSchemas = schemaGraph.filter(
   (schemaName) => !root.includes(`    ${schemaName}:`),
 );
-if (missingSchemas.length !== 0 && missingSchemas.length !== responseSchemas.length) {
+if (missingSchemas.length !== 0 && missingSchemas.length !== schemaGraph.length) {
   throw new Error(`partial JRN-032 schema registration detected: missing ${missingSchemas.join(", ")}`);
 }
-if (missingSchemas.length === responseSchemas.length) {
+if (missingSchemas.length === schemaGraph.length) {
   if (!root.includes(partnerSchemaAnchor)) {
     throw new Error("partner analytics schema anchor was not found in dsh.openapi.yaml");
   }
@@ -97,16 +125,17 @@ if (missingSchemas.length === responseSchemas.length) {
 
 manifest.pathCount = 275;
 manifest.operationIdCount = 322;
-manifest.componentCounts.schemas = 298;
+manifest.componentCounts.schemas = 306;
 manifest.pathDomains.analytics = 11;
-manifest.schemaDomains.analytics = 10;
+manifest.schemaDomains.analytics = 18;
 
 await Promise.all([
   writeFile(rootPath, root, "utf8"),
   writeFile(analyticsModulePath, analyticsModule, "utf8"),
+  writeFile(analyticsSchemasPath, analyticsSchemas, "utf8"),
   writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8"),
 ]);
 
 console.log(
-  `JRN-032 OpenAPI registered: ${pathIds.length} paths, ${responseSchemas.length} response schemas, canonical refs, and manifest counts.`,
+  `JRN-032 OpenAPI registered: ${pathIds.length} paths, ${schemaGraph.length} schemas, canonical references, and manifest counts.`,
 );
