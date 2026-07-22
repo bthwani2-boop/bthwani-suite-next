@@ -40,11 +40,18 @@ func TestJRN023NotificationGovernanceContractAndRuntimeAlignment(t *testing.T) {
 	migration := readNotificationGovernanceFixture(t, "../../../database/migrations/dsh-088_notification_delivery_policy.sql")
 
 	for _, snippet := range []string{
+		"/dsh/notifications/push-endpoints:",
+		"/dsh/notifications/push-endpoints/{deviceId}:",
 		"/dsh/operator/notifications/delivery-attempts:",
+		"operationId: upsertDshNotificationPushEndpoint",
+		"operationId: deactivateDshNotificationPushEndpoint",
 		"operationId: listDshNotificationDeliveryAttempts",
 		"DshNotificationPreferencePolicy:",
 		"DshPlatformNotificationPolicy:",
+		"DshNotificationPushEndpoint:",
+		"DshNotificationPushDeliveryAudit:",
 		"DshNotificationDeliveryAuditResponse:",
+		"required: [attempts, pushDeliveries, summary]",
 		"enum: [in_app, push]",
 		"enum: [sent, retry_scheduled, dead_letter]",
 	} {
@@ -62,9 +69,13 @@ func TestJRN023NotificationGovernanceContractAndRuntimeAlignment(t *testing.T) {
 
 	for _, snippet := range []string{
 		"id: \"dsh.notifications\"",
+		"upsertDshNotificationPushEndpoint",
+		"deactivateDshNotificationPushEndpoint",
 		"listDshNotificationDeliveryAttempts",
 		"channel-preferences",
 		"localized-templates",
+		"push-endpoint-lifecycle",
+		"push-provider-worker",
 		"retry-dead-letter",
 	} {
 		requireNotificationGovernanceSnippet(t, capabilities, snippet)
@@ -74,6 +85,9 @@ func TestJRN023NotificationGovernanceContractAndRuntimeAlignment(t *testing.T) {
 		"DshNotificationChannel = \"in_app\" | \"push\"",
 		"quietHoursStart?: string | undefined",
 		"deepLinkPattern: string",
+		"DshNotificationPushEndpoint",
+		"DshPushDeliveryAudit",
+		"pushDeliveries: readonly DshPushDeliveryAudit[]",
 		"DshNotificationDeliveryOutcome = \"sent\" | \"retry_scheduled\" | \"dead_letter\"",
 	} {
 		requireNotificationGovernanceSnippet(t, frontendTypes, snippet)
@@ -81,6 +95,7 @@ func TestJRN023NotificationGovernanceContractAndRuntimeAlignment(t *testing.T) {
 
 	for _, snippet := range []string{
 		"delivery_channels TEXT[]",
+		"dsh_notification_push_endpoints",
 		"dsh_notification_channel_deliveries",
 		"quiet_hours_start TIME",
 		"title_ar TEXT",
@@ -90,13 +105,25 @@ func TestJRN023NotificationGovernanceContractAndRuntimeAlignment(t *testing.T) {
 	}
 
 	router := NewRouter(nil, nil, nil, nil)
-	RegisterNotificationRoutes(router, nil, nil, nil, nil)
-	request, err := http.NewRequest(http.MethodGet, "/dsh/operator/notifications/delivery-attempts", nil)
-	if err != nil {
-		t.Fatal(err)
+	RegisterActorNotificationRoutes(router, nil, nil, nil, nil)
+
+	cases := []struct {
+		method  string
+		path    string
+		pattern string
+	}{
+		{http.MethodPut, "/dsh/notifications/push-endpoints", "PUT /dsh/notifications/push-endpoints"},
+		{http.MethodDelete, "/dsh/notifications/push-endpoints/device-1", "DELETE /dsh/notifications/push-endpoints/{deviceId}"},
+		{http.MethodGet, "/dsh/operator/notifications/delivery-attempts", "GET /dsh/operator/notifications/delivery-attempts"},
 	}
-	_, pattern := router.Handler(request)
-	if pattern != "GET /dsh/operator/notifications/delivery-attempts" {
-		t.Fatalf("expected governed delivery audit route, got %q", pattern)
+	for _, tc := range cases {
+		request, err := http.NewRequest(tc.method, tc.path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, pattern := router.Handler(request)
+		if pattern != tc.pattern {
+			t.Fatalf("expected governed route %q, got %q", tc.pattern, pattern)
+		}
 	}
 }
