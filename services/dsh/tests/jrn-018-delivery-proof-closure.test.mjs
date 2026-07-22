@@ -17,8 +17,8 @@ test('JRN-018 registry and product truth are governed', () => {
   requireMarkers('governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md', [
     'JRN-018',
     'إثبات التسليم وإكمال الطلب',
-    'OTP/PIN',
-    'حدث إكمال دائم إلى WLT',
+    'التحقق برمز OTP أو PIN',
+    'إرسال حدث إكمال دائم إلى WLT',
   ]);
   requireMarkers('governance/product/contracts/jrn-018-delivery-proof-order-completion.product-truth.json', [
     'WLT_DELIVERY_COMPLETION_HANDOFF_ONLY',
@@ -44,6 +44,11 @@ test('JRN-018 database owns PIN, proof, review, idempotency, and location eviden
     'location_recorded_at',
     "INTERVAL '15 minutes'",
   ]);
+  requireMarkers('services/dsh/database/migrations/dsh-119_jrn_018_delivery_pin_hardening.sql', [
+    "pin_hash LIKE '$2%'",
+    'idx_dsh_delivery_proofs_one_open_assignment',
+    'legacy fast hashes',
+  ]);
 });
 
 test('JRN-018 backend cannot complete through the legacy photo reference path', () => {
@@ -55,7 +60,10 @@ test('JRN-018 backend cannot complete through the legacy photo reference path', 
     'SubmitDeliveryProof',
     'ReviewDeliveryProof',
     'verifyDeliveryPIN',
+    'bcrypt.GenerateFromPassword',
+    'errDeliveryPINMismatch',
     'ErrIdempotencyConflict',
+    'ensureNoOpenDeliveryProof',
     'finalizeAcceptedDeliveryProof',
     'wltoutbox.EnqueueDeliveryCompleted',
   ]);
