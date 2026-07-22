@@ -31,6 +31,7 @@ on:
       - "services/dsh/tests/jrn-029-operational-policy.test.mjs"
       - "services/dsh/tsconfig.jrn-029.json"
       - "tools/scripts/integrate-jrn029-openapi.mjs"
+      - "tools/scripts/finalize-jrn029-openapi.mjs"
       - ".github/workflows/jrn-029-operational-policy-verification.yml"
   pull_request:
     branches: [master]
@@ -96,7 +97,7 @@ jobs:
 
       - name: Integrate JRN-029 into sovereign modular OpenAPI
         run: |
-          node tools/scripts/integrate-jrn029-openapi.mjs
+          node tools/scripts/finalize-jrn029-openapi.mjs
           pnpm --dir services/dsh openapi:verify
 
       - name: Verify sovereign contract and generated client contain JRN-029
