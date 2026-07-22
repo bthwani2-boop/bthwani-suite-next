@@ -50,7 +50,7 @@ test("JRN-033 WLT accepts only supported representative wallet actors", () => {
   ], "DSH WLT finance boundary");
 });
 
-test("JRN-033 self-service routes derive actor identity and do not accept actor ids", () => {
+test("JRN-033 self-service routes derive actor identity and operator routes pin actor scope", () => {
   const routes = read("services/dsh/backend/internal/http/representative_finance_routes.go");
   const registrar = read("services/dsh/backend/internal/http/catalog_unified_routes.go");
   assertIncludesAll(registrar, ["registerRepresentativeFinanceRoutes(mux, s)"], "protected route registrar");
@@ -67,6 +67,8 @@ test("JRN-033 self-service routes derive actor identity and do not accept actor 
     'GET /dsh/field/me/finance/wallet',
     'GET /dsh/field/me/finance/ledger-entries',
     'GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}',
+    'GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries',
+    'resolveControlPanelRepresentativeActor',
     'FinancePermissionRead',
     'Cache-Control", "private, no-store',
   ], "representative finance routes");
@@ -117,11 +119,16 @@ test("JRN-033 client partner captain and field surfaces bind wallet truth", () =
   assert.ok(!partner.includes("pendingAmountLabel"), "settlement pending amount must not be rendered as wallet available balance");
 });
 
-test("JRN-033 control panel lookup is explicit permission-scoped read-only finance", () => {
+test("JRN-033 control panel lookup loads a permission-scoped wallet and matching ledger", () => {
   const lookup = read("services/dsh/frontend/control-panel/finance/RepresentativeWalletLookup.tsx");
   const page = read("apps/control-panel/runtime/src/app/dsh/finance/page.tsx");
   assertIncludesAll(lookup, [
-    "/dsh/control-panel/finance/wallets/${actorType}/${encodeURIComponent(normalizedActorId)}",
+    "const representativeBase = `/dsh/control-panel/finance/wallets/${actorType}/${encodedActorId}`",
+    "`${representativeBase}/ledger-entries?limit=50`",
+    "Promise.allSettled",
+    "ledgerEntries",
+    "ledgerError",
+    "دفتر الممثل المرجعي",
     "قراءة فقط",
     "finance.read",
     "availableBalanceMinorUnits",
@@ -144,6 +151,8 @@ test("JRN-033 focused contract declares every wallet and ledger operation", () =
     "operationId: getDshFieldOwnWallet",
     "operationId: listDshFieldOwnLedgerEntries",
     "operationId: getDshRepresentativeWallet",
+    "operationId: listDshRepresentativeLedgerEntries",
+    "/dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries:",
     "enum: [client, partner, captain, field]",
     "private, no-store",
   ], "JRN-033 OpenAPI contract");
@@ -152,8 +161,10 @@ test("JRN-033 focused contract declares every wallet and ledger operation", () =
 test("JRN-033 contains no representative balance mutation route in the new boundary", () => {
   const routes = read("services/dsh/backend/internal/http/representative_finance_routes.go");
   const api = read("services/dsh/frontend/shared/finance-wlt-link/actor-wallet/actor-wallet.api.ts");
+  const lookup = read("services/dsh/frontend/control-panel/finance/RepresentativeWalletLookup.tsx");
   for (const forbidden of ["UpdateWallet", "SetBalance", "AdjustBalance", "AppendLedger", "POST /dsh/client/me/finance/wallet", "PATCH /dsh/control-panel/finance/wallets"]) {
     assert.ok(!routes.includes(forbidden), `new DSH finance boundary contains forbidden mutation token ${forbidden}`);
     assert.ok(!api.includes(forbidden), `shared actor wallet API contains forbidden mutation token ${forbidden}`);
+    assert.ok(!lookup.includes(forbidden), `operator wallet lookup contains forbidden mutation token ${forbidden}`);
   }
 });
