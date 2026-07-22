@@ -1,6 +1,11 @@
 import React from "react";
 import { Badge, Box, Button, ListItem, StateView, Surface, Text } from "@bthwani/ui-kit";
 import { useNotificationsController } from "./use-notifications-controller";
+import type {
+  DshNotificationChannel,
+  DshNotificationPreference,
+  DshUpdateNotificationPreferenceInput,
+} from "./notifications.types";
 
 export type ActorNotificationsPanelProps = {
   readonly authKind: string;
@@ -10,6 +15,37 @@ export type ActorNotificationsPanelProps = {
   readonly maxItems?: number;
   readonly onOpenActionUrl?: (actionUrl: string) => void;
 };
+
+function preferenceInput(
+  preference: DshNotificationPreference,
+  patch: Partial<DshUpdateNotificationPreferenceInput>,
+): DshUpdateNotificationPreferenceInput {
+  return {
+    topic: preference.topic,
+    enabled: preference.enabled,
+    channels: preference.channels,
+    quietHoursStart: preference.quietHoursStart,
+    quietHoursEnd: preference.quietHoursEnd,
+    locale: preference.locale,
+    timezone: preference.timezone || "Asia/Aden",
+    ...patch,
+  };
+}
+
+function toggledChannels(
+  current: readonly DshNotificationChannel[],
+  channel: DshNotificationChannel,
+): readonly DshNotificationChannel[] {
+  if (current.includes(channel)) {
+    const next = current.filter((item) => item !== channel);
+    return next.length > 0 ? next : ["in_app"];
+  }
+  return [...current, channel];
+}
+
+function channelLabel(channel: DshNotificationChannel): string {
+  return channel === "push" ? "Push" : "داخل التطبيق";
+}
 
 export function ActorNotificationsPanel({
   authKind,
@@ -84,21 +120,71 @@ export function ActorNotificationsPanel({
           <StateView title="لا توجد تفضيلات مخصصة" description="تستخدم الإشعارات إعدادات المنصة الافتراضية لهذا الممثل." />
         ) : (
           preferenceState.preferences.map((preference) => (
-            <ListItem
-              key={preference.topic}
-              title={preference.topic}
-              subtitle={preference.enabled ? "مفعّل لهذا الممثل" : "متوقف لهذا الممثل"}
-              meta={`آخر تحديث: ${new Date(preference.updatedAt).toLocaleString("ar-YE")}`}
-              trailing={(
+            <Surface key={preference.topic} tone="subtle" padding={3} gap={2}>
+              <Box layoutDirection="row" align="center" justify="space-between" gap={2}>
+                <Box gap={1}>
+                  <Text role="label" align="start">{preference.topic}</Text>
+                  <Text role="bodySm" tone="muted" align="start">
+                    {preference.enabled ? "مفعّل لهذا الممثل" : "متوقف لهذا الممثل"}
+                  </Text>
+                </Box>
                 <Button
                   label={preference.enabled ? "إيقاف" : "تفعيل"}
                   tone={preference.enabled ? "secondary" : "primary"}
                   size="sm"
                   fullWidth={false}
-                  onPress={() => { void savePreference(preference.topic, !preference.enabled); }}
+                  onPress={() => { void savePreference(preferenceInput(preference, { enabled: !preference.enabled })); }}
                 />
-              )}
-            />
+              </Box>
+
+              <Box layoutDirection="row" gap={2}>
+                {(["in_app", "push"] as const).map((channel) => (
+                  <Button
+                    key={channel}
+                    label={`${preference.channels.includes(channel) ? "✓ " : ""}${channelLabel(channel)}`}
+                    tone={preference.channels.includes(channel) ? "primary" : "secondary"}
+                    size="sm"
+                    fullWidth={false}
+                    onPress={() => {
+                      void savePreference(preferenceInput(preference, {
+                        channels: toggledChannels(preference.channels, channel),
+                      }));
+                    }}
+                  />
+                ))}
+              </Box>
+
+              <Box layoutDirection="row" gap={2}>
+                <Button
+                  label={preference.quietHoursStart ? "إلغاء وقت الهدوء" : "هدوء 22:00–07:00"}
+                  tone="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  onPress={() => {
+                    void savePreference(preferenceInput(preference, preference.quietHoursStart
+                      ? { quietHoursStart: undefined, quietHoursEnd: undefined }
+                      : { quietHoursStart: "22:00", quietHoursEnd: "07:00" }));
+                  }}
+                />
+                <Button
+                  label={preference.locale === "ar" ? "العربية" : "English"}
+                  tone="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  onPress={() => {
+                    void savePreference(preferenceInput(preference, {
+                      locale: preference.locale === "ar" ? "en" : "ar",
+                    }));
+                  }}
+                />
+              </Box>
+
+              <Text role="caption" tone="muted" align="start">
+                {preference.quietHoursStart && preference.quietHoursEnd
+                  ? `وقت الهدوء: ${preference.quietHoursStart}–${preference.quietHoursEnd} (${preference.timezone})`
+                  : `لا يوجد وقت هدوء (${preference.timezone})`}
+              </Text>
+            </Surface>
           ))
         )}
       </Box>
