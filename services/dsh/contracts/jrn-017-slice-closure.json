@@ -3,6 +3,15 @@
   "journeyId": "JRN-017",
   "title": "تنفيذ الكابتن والتتبع الحي",
   "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
+  "automatedEvidencePolicy": {
+    "workflow": ".github/workflows/jrn-017-live-tracking-verify.yml",
+    "commitBinding": "github.sha",
+    "requiredJobs": [
+      "JRN-017 backend and provider",
+      "JRN-017 contract and surfaces",
+      "JRN-017 governed frontend typecheck"
+    ]
+  },
   "requiredSliceCount": 18,
   "closedSliceCount": 18,
   "openSliceCount": 0,
