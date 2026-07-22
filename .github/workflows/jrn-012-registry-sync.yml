@@ -95,3 +95,5 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security؛
           git commit -m "governance(jrn-012): synchronize canonical closure state"
           git pull --rebase origin sambassam
           git push origin HEAD:sambassam
+
+# trigger-version: 2
