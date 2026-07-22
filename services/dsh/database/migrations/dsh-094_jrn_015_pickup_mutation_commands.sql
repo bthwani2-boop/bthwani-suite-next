@@ -19,6 +19,29 @@ SET no_show_at = COALESCE(no_show_at, used_at, updated_at),
     no_show_reason = COALESCE(NULLIF(BTRIM(no_show_reason), ''), 'legacy_no_show')
 WHERE status = 'no_show';
 
+CREATE OR REPLACE FUNCTION dsh_prepare_pickup_no_show_shape()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.status = 'no_show' THEN
+        NEW.no_show_at := COALESCE(NEW.no_show_at, NEW.used_at, NOW());
+        NEW.no_show_reason := COALESCE(NULLIF(BTRIM(NEW.no_show_reason), ''), 'recorded_by_partner');
+    ELSIF OLD.status = 'no_show' AND NEW.status <> 'no_show' THEN
+        NEW.no_show_at := NULL;
+        NEW.no_show_reason := NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_dsh_prepare_pickup_no_show_shape ON dsh_pickup_sessions;
+CREATE TRIGGER trg_dsh_prepare_pickup_no_show_shape
+BEFORE INSERT OR UPDATE OF status, used_at, no_show_at, no_show_reason
+ON dsh_pickup_sessions
+FOR EACH ROW
+EXECUTE FUNCTION dsh_prepare_pickup_no_show_shape();
+
 ALTER TABLE dsh_pickup_sessions
     DROP CONSTRAINT IF EXISTS dsh_pickup_sessions_no_show_shape_check;
 ALTER TABLE dsh_pickup_sessions
@@ -29,6 +52,49 @@ ALTER TABLE dsh_pickup_sessions
         OR
         (status <> 'no_show' AND no_show_at IS NULL AND no_show_reason IS NULL)
     );
+
+CREATE OR REPLACE FUNCTION dsh_project_pickup_lifecycle_audit()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.action = 'notify_customer' THEN
+        UPDATE dsh_pickup_sessions
+           SET customer_notified_at = NEW.created_at,
+               updated_at = GREATEST(updated_at, NEW.created_at)
+         WHERE order_id::text = NEW.entity_id;
+    ELSIF NEW.action = 'customer_arrived' THEN
+        UPDATE dsh_pickup_sessions
+           SET customer_arrived_at = NEW.created_at,
+               version = version + 1,
+               updated_at = GREATEST(updated_at, NEW.created_at)
+         WHERE order_id::text = NEW.entity_id
+           AND status = 'active';
+    ELSIF NEW.action = 'no_show' THEN
+        UPDATE dsh_pickup_sessions
+           SET no_show_at = NEW.created_at,
+               no_show_reason = COALESCE(NULLIF(BTRIM(NEW.reason), ''), no_show_reason),
+               updated_at = GREATEST(updated_at, NEW.created_at)
+         WHERE id = NEW.entity_id;
+    ELSIF NEW.action = 'reschedule' THEN
+        UPDATE dsh_pickup_sessions
+           SET rescheduled_at = NEW.created_at,
+               customer_notified_at = NULL,
+               customer_arrived_at = NULL,
+               no_show_at = NULL,
+               no_show_reason = NULL,
+               updated_at = GREATEST(updated_at, NEW.created_at)
+         WHERE id = NEW.entity_id;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_dsh_project_pickup_lifecycle_audit ON dsh_pickup_audit_events;
+CREATE TRIGGER trg_dsh_project_pickup_lifecycle_audit
+AFTER INSERT ON dsh_pickup_audit_events
+FOR EACH ROW
+EXECUTE FUNCTION dsh_project_pickup_lifecycle_audit();
 
 CREATE INDEX IF NOT EXISTS idx_dsh_pickup_sessions_active_expiry
     ON dsh_pickup_sessions(expires_at, updated_at DESC)
