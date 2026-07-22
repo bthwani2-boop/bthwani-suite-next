@@ -91,6 +91,7 @@ func requestStaffRoleChange(
 		SELECT $1, $2, r.id, $4, $5
 		FROM dsh_admin_roles r
 		WHERE r.id = $3
+		  AND r.active = TRUE
 		  AND (
 		    ($1 = 'staff_role_assignment' AND NOT EXISTS (
 		      SELECT 1 FROM dsh_admin_staff_assignments a
@@ -121,11 +122,11 @@ func requestStaffRoleChange(
 		return RoleAssignmentApproval{}, err
 	}
 
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail)
-		VALUES ($1, $2, $3, $4)`,
-		requestedBy, actionType+"_requested", targetActorID,
-		"role_id="+roleID+"; reason="+reason); err != nil {
+	if err := writeAdminAudit(ctx, tx, requestedBy, actionType+"_requested", targetActorID, map[string]string{
+		"role_id":         roleID,
+		"action_type":     actionType,
+		"reason_provided": "true",
+	}); err != nil {
 		return RoleAssignmentApproval{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -289,11 +290,12 @@ func ReviewStaffRoleAssignment(
 		return RoleAssignmentApproval{}, nil, err
 	}
 
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail)
-		VALUES ($1, $2, $3, $4)`,
-		checkerActorID, current.ActionType+"_"+decision, current.TargetActorID,
-		"approval_id="+approvalID+"; role_id="+current.RoleID+"; note="+reviewNote); err != nil {
+	if err := writeAdminAudit(ctx, tx, checkerActorID, current.ActionType+"_"+decision, current.TargetActorID, map[string]string{
+		"approval_id":  approvalID,
+		"role_id":      current.RoleID,
+		"decision":     decision,
+		"note_provided": boolText(reviewNote != ""),
+	}); err != nil {
 		return RoleAssignmentApproval{}, nil, err
 	}
 	if err := tx.Commit(); err != nil {
