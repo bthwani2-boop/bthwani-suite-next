@@ -4,17 +4,11 @@ on:
   workflow_dispatch:
   push:
     branches: [sambassam]
-    paths:
-      - "services/dsh/contracts/dsh.openapi.yaml"
-      - "services/dsh/contracts/paths/**"
-      - "services/dsh/contracts/components/**"
-      - "services/dsh/contracts/generated/dsh.bundle.openapi.yaml"
-      - "services/dsh/contracts/dsh.modular.manifest.json"
-      - "services/dsh/contracts/dsh.contract-ownership.json"
-      - "services/dsh/contracts/README.md"
+    paths: &openapi_paths
+      - "services/dsh/contracts/**"
+      - "services/dsh/clients/generated/dsh-api.ts"
       - "services/dsh/package.json"
       - "services/dsh/tests/dsh-openapi-modular.test.mjs"
-      - "services/dsh/clients/generated/dsh-api.ts"
       - "tools/scripts/dsh-openapi-modular-lib.mjs"
       - "tools/scripts/compose-dsh-openapi.mjs"
       - "tools/guards/dsh-openapi-modular-gate.mjs"
@@ -23,23 +17,7 @@ on:
       - ".github/workflows/dsh-openapi-modularize.yml"
   pull_request:
     branches: [master]
-    paths:
-      - "services/dsh/contracts/dsh.openapi.yaml"
-      - "services/dsh/contracts/paths/**"
-      - "services/dsh/contracts/components/**"
-      - "services/dsh/contracts/generated/dsh.bundle.openapi.yaml"
-      - "services/dsh/contracts/dsh.modular.manifest.json"
-      - "services/dsh/contracts/dsh.contract-ownership.json"
-      - "services/dsh/contracts/README.md"
-      - "services/dsh/package.json"
-      - "services/dsh/tests/dsh-openapi-modular.test.mjs"
-      - "services/dsh/clients/generated/dsh-api.ts"
-      - "tools/scripts/dsh-openapi-modular-lib.mjs"
-      - "tools/scripts/compose-dsh-openapi.mjs"
-      - "tools/guards/dsh-openapi-modular-gate.mjs"
-      - "tools/scripts/serve-swagger.mjs"
-      - "tools/scripts/build-swagger-static.mjs"
-      - ".github/workflows/dsh-openapi-modularize.yml"
+    paths: *openapi_paths
 
 permissions:
   contents: read
@@ -54,33 +32,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository state
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: "10.34.2"
-
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "24.17.0"
           cache: pnpm
-
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Verify modular contract and regenerate client
         run: pnpm --dir services/dsh openapi:verify
-
       - name: Run contract foundation gate
         run: pnpm run contracts:lint
-
       - name: Run focused DSH OpenAPI tests
         run: pnpm --dir services/dsh openapi:test
-
       - name: Build and validate Swagger publication
         run: pnpm run swagger:build
-
       - name: Reject generated artifact drift
         run: git diff --exit-code -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts
