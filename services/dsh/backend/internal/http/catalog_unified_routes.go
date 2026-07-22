@@ -74,6 +74,7 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	registerDeliveryProofRoutes(mux, s)
 	registerRepresentativeFinanceRoutes(mux, s)
 	registerRefundFinanceRoutes(mux, s)
+	registerCatalogApprovalRoutes(mux, s)
 
 	// JRN-011 canonical order-truth routes.
 	mux.HandleFunc("POST /dsh/client/order-truth", s.handleCreateOrderTruth)
