@@ -228,7 +228,7 @@ func validateSubscriptionPlan(
 	if product.Status != "active" || !wltProductMatchesPlan(product, plan) {
 		return nil, nil, errors.New("PLAN_TERMS_MISMATCH")
 	}
-	return plan, product, nil
+	return &plan, product, nil
 }
 
 func writeSubscriptionPlanValidationError(w http.ResponseWriter, err error) {

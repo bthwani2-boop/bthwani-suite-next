@@ -9,7 +9,9 @@ import (
 
 func (s *protectedStoreServer) handleGetOrderTruthDiagnostics(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionRead, "operator")
-	if !ok { return }
+	if !ok {
+		return
+	}
 	diagnostics, err := orders.LoadOrderTruthDiagnostics(s.db, actor.TenantID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load order truth diagnostics")

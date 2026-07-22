@@ -51,8 +51,8 @@ func (c *Client) GetPromotionFundingReservation(
 		}
 		_ = json.NewDecoder(response.Body).Decode(&apiError)
 		return nil, &CommercialHTTPError{
-			Status: response.StatusCode,
-			Code: strings.TrimSpace(apiError.Code),
+			Status:  response.StatusCode,
+			Code:    strings.TrimSpace(apiError.Code),
 			Message: strings.TrimSpace(apiError.Message),
 		}
 	}

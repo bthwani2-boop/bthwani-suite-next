@@ -64,9 +64,9 @@ func (s *administrationSupportServer) handleCreateRequest(w http.ResponseWriter,
 		return
 	}
 	var body struct {
-		TargetActorID  string `json:"targetActorId"`
-		Reason         string `json:"reason"`
-		DurationMinutes int   `json:"durationMinutes"`
+		TargetActorID   string `json:"targetActorId"`
+		Reason          string `json:"reason"`
+		DurationMinutes int    `json:"durationMinutes"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return

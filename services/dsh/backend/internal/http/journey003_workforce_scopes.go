@@ -182,9 +182,9 @@ func replaceWorkforceScopes(
 
 func loadWorkforceScopes(ctx context.Context, db *sql.DB, actorID, role string) (workforceScopeSnapshot, error) {
 	snapshot := workforceScopeSnapshot{
-		ActorID: actorID,
-		ActorRole: role,
-		StoreIDs: []string{},
+		ActorID:          actorID,
+		ActorRole:        role,
+		StoreIDs:         []string{},
 		ServiceAreaCodes: []string{},
 	}
 	rows, err := db.QueryContext(ctx, `

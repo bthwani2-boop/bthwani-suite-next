@@ -24,7 +24,7 @@ func (s *protectedStoreServer) handleCreateGovernedFieldVisit(w http.ResponseWri
 		return
 	}
 	var body struct {
-		VisitType     string                            `json:"visitType"`
+		VisitType     string                           `json:"visitType"`
 		StartLocation *fieldreadiness.LocationEvidence `json:"startLocation"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {

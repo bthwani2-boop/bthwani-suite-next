@@ -110,9 +110,9 @@ type CommercialSubscriptionCompensation struct {
 }
 
 type ClientCommercialBenefits struct {
-	LoyaltyAccount     *CommercialLoyaltyAccount              `json:"loyaltyAccount,omitempty"`
-	ActiveSubscription *CommercialSubscription                `json:"activeSubscription,omitempty"`
-	Compensation       *CommercialSubscriptionCompensation    `json:"compensation,omitempty"`
+	LoyaltyAccount     *CommercialLoyaltyAccount           `json:"loyaltyAccount,omitempty"`
+	ActiveSubscription *CommercialSubscription             `json:"activeSubscription,omitempty"`
+	Compensation       *CommercialSubscriptionCompensation `json:"compensation,omitempty"`
 }
 
 type CommercialSummary struct {

@@ -15,7 +15,7 @@ import (
 var (
 	ErrSubscriptionNotActive = errors.New("subscription is not active")
 	ErrSubscriptionExpired   = errors.New("subscription has expired")
-	ErrCancellationReason     = errors.New("subscription cancellation reason is required")
+	ErrCancellationReason    = errors.New("subscription cancellation reason is required")
 )
 
 type SubscriptionLifecycle struct {
@@ -134,19 +134,19 @@ type CancelSubscriptionLifecycleInput struct {
 }
 
 type SubscriptionCompensation struct {
-	ID                string  `json:"id"`
-	SubscriptionID    string  `json:"subscriptionId"`
-	ClientID          string  `json:"clientId"`
-	PaymentSessionID  string  `json:"paymentSessionId"`
-	Status            string  `json:"status"`
-	Reason            string  `json:"reason"`
-	RefundReference   *string `json:"refundReference,omitempty"`
-	AmountMinorUnits  int64   `json:"amountMinorUnits"`
-	Currency          string  `json:"currency"`
-	CorrelationID     string  `json:"correlationId"`
-	CreatedAt         string  `json:"createdAt"`
-	UpdatedAt         string  `json:"updatedAt"`
-	CompletedAt       *string `json:"completedAt,omitempty"`
+	ID               string  `json:"id"`
+	SubscriptionID   string  `json:"subscriptionId"`
+	ClientID         string  `json:"clientId"`
+	PaymentSessionID string  `json:"paymentSessionId"`
+	Status           string  `json:"status"`
+	Reason           string  `json:"reason"`
+	RefundReference  *string `json:"refundReference,omitempty"`
+	AmountMinorUnits int64   `json:"amountMinorUnits"`
+	Currency         string  `json:"currency"`
+	CorrelationID    string  `json:"correlationId"`
+	CreatedAt        string  `json:"createdAt"`
+	UpdatedAt        string  `json:"updatedAt"`
+	CompletedAt      *string `json:"completedAt,omitempty"`
 }
 
 func requiredLifecycleHeaders(r *http.Request) (string, string, bool) {
@@ -260,8 +260,8 @@ func appendActivationLoyaltyEntry(
 		return err
 	}
 	metadata, _ := json.Marshal(map[string]any{
-		"journeyId": "JRN-027",
-		"subscriptionId": subscriptionID,
+		"journeyId":              "JRN-027",
+		"subscriptionId":         subscriptionID,
 		"subscriptionPurchaseId": purchaseID,
 	})
 	_, err := tx.ExecContext(ctx, `INSERT INTO wlt_loyalty_entries
@@ -632,8 +632,8 @@ func ExpireDueSubscriptions(ctx context.Context, db *sql.DB, clientID, correlati
 }
 
 type ClientLifecycleBenefits struct {
-	LoyaltyAccount     *LoyaltyAccount          `json:"loyaltyAccount,omitempty"`
-	ActiveSubscription *SubscriptionLifecycle   `json:"activeSubscription,omitempty"`
+	LoyaltyAccount     *LoyaltyAccount           `json:"loyaltyAccount,omitempty"`
+	ActiveSubscription *SubscriptionLifecycle    `json:"activeSubscription,omitempty"`
 	Compensation       *SubscriptionCompensation `json:"compensation,omitempty"`
 }
 

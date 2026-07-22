@@ -50,7 +50,7 @@ func validatePromotionFundingTransitionResponse(
 		return fmt.Errorf("WLT promotion funding transition returned a different tenant")
 	}
 	expectedStatus := map[string]string{
-		"commit": "committed",
+		"commit":  "committed",
 		"release": "released",
 		"reverse": "reversed",
 	}[action]

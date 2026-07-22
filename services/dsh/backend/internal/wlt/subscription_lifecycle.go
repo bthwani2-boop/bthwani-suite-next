@@ -81,7 +81,7 @@ func (c *Client) CancelCommercialSubscription(
 	correlationID string,
 ) (*CommercialSubscription, *CommercialSubscriptionCompensation, error) {
 	var envelope struct {
-		Subscription CommercialSubscription             `json:"subscription"`
+		Subscription CommercialSubscription              `json:"subscription"`
 		Compensation *CommercialSubscriptionCompensation `json:"compensation,omitempty"`
 	}
 	if strings.TrimSpace(idempotencyKey) == "" {

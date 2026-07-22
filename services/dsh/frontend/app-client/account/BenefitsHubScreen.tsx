@@ -1,11 +1,11 @@
 import React from "react";
 import { Alert, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
 import { Header, ScrollScreen, StateView, Text, spacing, colorRoles } from "@bthwani/ui-kit";
-import {
-  useSubscriptionLifecycleController,
-  type ClientBenefitsPayload,
-  type SubscriptionPlanRecord,
-} from "../../shared/marketing";
+import { useSubscriptionLifecycleController } from "../../shared/marketing/use-subscription-lifecycle-controller";
+import type {
+  ClientBenefitsPayload,
+  SubscriptionPlanRecord,
+} from "../../shared/marketing/loyalty-subscriptions.types";
 
 export type BenefitsSection = "loyalty" | "subscription" | "offers";
 export type BenefitsHubScreenProps = { readonly initialSection?: BenefitsSection };
@@ -15,7 +15,7 @@ type BenefitRow = {
   readonly title: string;
   readonly subtitle: string;
   readonly badge?: string;
-  readonly helper?: string;
+  readonly helper?: string | undefined;
 };
 
 const LABELS: Record<BenefitsSection, string> = {

@@ -23,12 +23,12 @@ func (s *protectedStoreServer) handleIssueDeliveryPIN(w http.ResponseWriter, r *
 	}
 	store.SendJSON(w, http.StatusCreated, map[string]any{
 		"challenge": map[string]any{
-			"id": issued.Challenge.ID,
-			"orderId": issued.Challenge.OrderID,
+			"id":           issued.Challenge.ID,
+			"orderId":      issued.Challenge.OrderID,
 			"assignmentId": issued.Challenge.AssignmentID,
-			"expiresAt": issued.Challenge.ExpiresAt,
-			"maxAttempts": issued.Challenge.MaxAttempts,
-			"version": issued.Challenge.Version,
+			"expiresAt":    issued.Challenge.ExpiresAt,
+			"maxAttempts":  issued.Challenge.MaxAttempts,
+			"version":      issued.Challenge.Version,
 		},
 		"pin": issued.PIN,
 	})
@@ -259,21 +259,21 @@ func (s *protectedStoreServer) handleReviewOperatorDeliveryProof(w http.Response
 
 func marshalDeliveryProof(proof *dispatch.DeliveryProof, includeSensitive bool) map[string]any {
 	out := map[string]any{
-		"id": proof.ID,
+		"id":           proof.ID,
 		"assignmentId": proof.AssignmentID,
-		"orderId": proof.OrderID,
-		"captainId": proof.CaptainID,
-		"method": string(proof.Method),
-		"status": string(proof.Status),
-		"hasPhoto": proof.PhotoMediaRef != "",
+		"orderId":      proof.OrderID,
+		"captainId":    proof.CaptainID,
+		"method":       string(proof.Method),
+		"status":       string(proof.Status),
+		"hasPhoto":     proof.PhotoMediaRef != "",
 		"hasSignature": proof.SignatureMediaRef != "",
-		"capturedAt": proof.CapturedAt,
-		"submittedAt": proof.SubmittedAt,
-		"reviewedAt": proof.ReviewedAt,
+		"capturedAt":   proof.CapturedAt,
+		"submittedAt":  proof.SubmittedAt,
+		"reviewedAt":   proof.ReviewedAt,
 		"reviewReason": proof.ReviewReason,
-		"acceptedAt": proof.AcceptedAt,
-		"rejectedAt": proof.RejectedAt,
-		"version": proof.Version,
+		"acceptedAt":   proof.AcceptedAt,
+		"rejectedAt":   proof.RejectedAt,
+		"version":      proof.Version,
 	}
 	if includeSensitive {
 		out["photoMediaRef"] = proof.PhotoMediaRef
@@ -287,14 +287,14 @@ func marshalDeliveryProof(proof *dispatch.DeliveryProof, includeSensitive bool) 
 
 func marshalClientDeliveryProof(proof *dispatch.DeliveryProof) map[string]any {
 	return map[string]any{
-		"id": proof.ID,
-		"orderId": proof.OrderID,
-		"method": string(proof.Method),
-		"status": string(proof.Status),
-		"hasPhoto": proof.PhotoMediaRef != "",
+		"id":           proof.ID,
+		"orderId":      proof.OrderID,
+		"method":       string(proof.Method),
+		"status":       string(proof.Status),
+		"hasPhoto":     proof.PhotoMediaRef != "",
 		"hasSignature": proof.SignatureMediaRef != "",
-		"capturedAt": proof.CapturedAt,
-		"acceptedAt": proof.AcceptedAt,
+		"capturedAt":   proof.CapturedAt,
+		"acceptedAt":   proof.AcceptedAt,
 	}
 }
 

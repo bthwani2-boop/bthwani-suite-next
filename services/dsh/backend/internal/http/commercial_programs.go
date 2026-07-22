@@ -504,7 +504,28 @@ func (s *protectedStoreServer) handleGetClientBenefits(w http.ResponseWriter, r 
 			WLTSubscriptionReference: truth.ActiveSubscription.ID,
 			StartsAt:                 &truth.ActiveSubscription.StartsAt,
 			EndsAt:                   truth.ActiveSubscription.EndsAt,
+			CancelAtPeriodEnd:        truth.ActiveSubscription.CancelAtPeriodEnd,
+			CancelledAt:              truth.ActiveSubscription.CancelledAt,
+			CancellationReason:       truth.ActiveSubscription.CancellationReason,
+			CompensationStatus:       truth.ActiveSubscription.CompensationStatus,
+			CompensationReference:    truth.ActiveSubscription.CompensationReference,
+			AllowedActions:           truth.ActiveSubscription.AllowedActions,
 			Plan:                     plan,
+		}
+	}
+
+	if truth.Compensation != nil {
+		benefits.Compensation = &marketing.ClientSubscriptionCompensation{
+			ID:               truth.Compensation.ID,
+			SubscriptionID:   truth.Compensation.SubscriptionID,
+			Status:           truth.Compensation.Status,
+			Reason:           truth.Compensation.Reason,
+			RefundReference:  truth.Compensation.RefundReference,
+			AmountMinorUnits: truth.Compensation.AmountMinorUnits,
+			Currency:         truth.Compensation.Currency,
+			CreatedAt:        truth.Compensation.CreatedAt,
+			UpdatedAt:        truth.Compensation.UpdatedAt,
+			CompletedAt:      truth.Compensation.CompletedAt,
 		}
 	}
 

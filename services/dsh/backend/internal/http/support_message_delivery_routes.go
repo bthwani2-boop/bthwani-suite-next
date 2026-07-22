@@ -24,10 +24,10 @@ func decodeSupportAttachmentInput(w http.ResponseWriter, r *http.Request) (suppo
 	}
 	return support.MessageAttachmentInput{
 		MediaAssetID: body.MediaAssetID,
-		FileName: body.FileName,
-		MimeType: body.MimeType,
-		SizeBytes: body.SizeBytes,
-		IsInternal: body.IsInternal,
+		FileName:     body.FileName,
+		MimeType:     body.MimeType,
+		SizeBytes:    body.SizeBytes,
+		IsInternal:   body.IsInternal,
 	}, true
 }
 

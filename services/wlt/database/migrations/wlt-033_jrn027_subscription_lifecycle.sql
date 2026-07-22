@@ -5,8 +5,15 @@
 -- revenue truth. DSH stores only an operational projection and WLT references.
 
 ALTER TABLE wlt_commercial_products
-    ADD COLUMN IF NOT EXISTS activation_points BIGINT NOT NULL DEFAULT 0
-        CHECK (activation_points >= 0);
+    ADD COLUMN IF NOT EXISTS activation_points BIGINT NOT NULL DEFAULT 1
+        CHECK (activation_points > 0);
+
+ALTER TABLE wlt_commercial_products
+    ALTER COLUMN activation_points SET DEFAULT 1;
+
+UPDATE wlt_commercial_products
+SET activation_points = 1
+WHERE activation_points <= 0;
 
 ALTER TABLE wlt_client_subscriptions
     ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1
