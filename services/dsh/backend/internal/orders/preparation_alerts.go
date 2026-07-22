@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+// Alert mutations are exposed only through HTTP routes guarded by
+// OperationsPermissionManage; this domain layer receives the authorized actor.
 type PreparationAlertKind string
 
 type PreparationAlertStatus string
@@ -23,20 +25,20 @@ const (
 )
 
 type PreparationAlert struct {
-	ID                      string                 `json:"id"`
-	OrderID                 string                 `json:"orderId"`
-	StoreID                 string                 `json:"storeId"`
-	Kind                    PreparationAlertKind   `json:"kind"`
-	Status                  PreparationAlertStatus `json:"status"`
-	EstimateRevision        int                    `json:"estimateRevision"`
-	DetectedAt              time.Time              `json:"detectedAt"`
-	AcknowledgedByActorID   string                 `json:"acknowledgedByActorId"`
-	AcknowledgedAt          *time.Time             `json:"acknowledgedAt"`
-	ResolvedAt              *time.Time             `json:"resolvedAt"`
-	ResolutionReason        string                 `json:"resolutionReason"`
-	Version                 int                    `json:"version"`
-	CreatedAt               time.Time              `json:"createdAt"`
-	UpdatedAt               time.Time              `json:"updatedAt"`
+	ID                    string                 `json:"id"`
+	OrderID               string                 `json:"orderId"`
+	StoreID               string                 `json:"storeId"`
+	Kind                  PreparationAlertKind   `json:"kind"`
+	Status                PreparationAlertStatus `json:"status"`
+	EstimateRevision      int                    `json:"estimateRevision"`
+	DetectedAt            time.Time              `json:"detectedAt"`
+	AcknowledgedByActorID string                 `json:"acknowledgedByActorId"`
+	AcknowledgedAt        *time.Time             `json:"acknowledgedAt"`
+	ResolvedAt            *time.Time             `json:"resolvedAt"`
+	ResolutionReason      string                 `json:"resolutionReason"`
+	Version               int                    `json:"version"`
+	CreatedAt             time.Time              `json:"createdAt"`
+	UpdatedAt             time.Time              `json:"updatedAt"`
 }
 
 type RefreshPreparationAlertsResult struct {
@@ -154,7 +156,7 @@ func RefreshPreparationAlerts(
 		condition string
 	}{
 		{
-			kind: PreparationAlertOverdue,
+			kind:      PreparationAlertOverdue,
 			condition: `o.estimated_ready_at IS NOT NULL AND o.estimated_ready_at <= $1`,
 		},
 		{
