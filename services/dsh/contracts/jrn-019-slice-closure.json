@@ -4,7 +4,7 @@
   "title": "الإلغاء التشغيلي وتسليم الاسترداد",
   "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
   "requiredSliceCount": 18,
-  "codeDecision": "NEEDS_EVIDENCE",
+  "codeDecision": "READY_FOR_REVIEW",
   "releaseDecision": "NEEDS_EVIDENCE",
   "slices": [
     {
