@@ -29,7 +29,6 @@ func RegisterFieldReadinessRoutes(
 	mux.HandleFunc("PUT /dsh/field/visits/{visitId}/checks", protected.handleUpsertGovernedReadinessCheck)
 	mux.HandleFunc("GET /dsh/field/visits/{visitId}/checks", protected.handleListVisitChecks)
 	mux.HandleFunc("POST /dsh/field/stores/{storeId}/escalations", protected.handleCreateGovernedReadinessEscalation)
-	mux.HandleFunc("POST /dsh/field/stores/{storeId}/media/uploads", protected.handleFieldReadinessMediaUpload)
 	mux.HandleFunc("GET /dsh/operator/field-readiness/escalations", protected.handleListOperatorEscalations)
 	mux.HandleFunc("PATCH /dsh/operator/field-readiness/escalations/{escalationId}", protected.handleUpdateGovernedEscalation)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/onboarding-status", protected.handleGovernedPartnerOnboardingStatus)
