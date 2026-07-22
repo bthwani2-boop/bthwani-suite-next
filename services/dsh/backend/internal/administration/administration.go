@@ -87,7 +87,7 @@ func AdministrationPermissionCandidates(action string) []string {
 
 // ActorHasPermission evaluates only approved, active DSH role assignments. It
 // never authenticates the actor and never expands access outside the DSH
-// administration action namespace.
+// administration action namespace or the control-panel surface.
 func ActorHasPermission(db *sql.DB, actorID string, action string) (bool, error) {
 	actorID = strings.TrimSpace(actorID)
 	candidates := AdministrationPermissionCandidates(action)
@@ -106,6 +106,7 @@ func ActorHasPermission(db *sql.DB, actorID string, action string) (bool, error)
 			JOIN dsh_admin_roles role ON role.id = assignment.role_id
 			WHERE assignment.actor_id = $1
 			  AND role.active = TRUE
+			  AND role.surfaces ? 'control-panel'
 			  AND (role.permissions ? $2 OR role.permissions ? $3)
 		)`, actorID, candidate1, candidate2).Scan(&allowed)
 	return allowed, err
@@ -132,6 +133,7 @@ func ListStaff(db *sql.DB) ([]StaffMember, error) {
 		FROM dsh_admin_staff_assignments sa
 		JOIN dsh_admin_roles r ON r.id=sa.role_id
 		WHERE r.active = TRUE
+		  AND r.surfaces ? 'control-panel'
 		ORDER BY sa.assigned_at DESC`)
 	if err != nil {
 		return nil, err
