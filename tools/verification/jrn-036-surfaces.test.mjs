@@ -13,6 +13,8 @@ const partner = read("services/dsh/frontend/shared/finance-wlt-link/wlt/generate
 const captain = read("services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx");
 const field = read("services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx");
 const control = read("services/dsh/frontend/control-panel/finance/Jrn036CommissionGovernancePanel.tsx");
+const settlementApi = read("services/dsh/frontend/shared/finance-wlt-link/finance/finance-hub-runtime.api.ts");
+const settlementPanel = read("services/dsh/frontend/control-panel/finance/GovernedSettlementPanel.tsx");
 
 test("representative API is actor-owned and never accepts arbitrary actor ids", () => {
   assert.match(api, /\/dsh\/\$\{actorType\}\/me\/finance\/commissions/);
@@ -50,7 +52,7 @@ test("representative commission panel has loading, error, empty, retry, and life
   assert.doesNotMatch(representative, /amountMinorUnits\s*[=:]\s*Number/);
 });
 
-test("control-panel mutations are reasoned and state-gated", () => {
+test("control-panel commission mutations are reasoned and state-gated", () => {
   for (const required of [
     "upsertJrn036CommissionPolicy",
     "confirmJrn036Commission",
@@ -69,8 +71,30 @@ test("control-panel mutations are reasoned and state-gated", () => {
   }
 });
 
-test("all actionable controls carry explicit Arabic labels", () => {
-  const labels = [...control.matchAll(/<Button\s+label="([^"]+)"/g)].map((match) => match[1]);
-  assert.ok(labels.length >= 5, "expected labelled finance actions");
-  assert.equal(labels.some((label) => label.trim() === ""), false);
+test("settlement policy editor sends the complete strict contract", () => {
+  for (const required of [
+    "cycleDays",
+    "minimumNetMinorUnits",
+    "changeReason",
+    "سبب تغيير سياسة التسوية",
+    "حفظ إصدار سياسة التسوية في WLT",
+  ]) {
+    assert.equal(settlementPanel.includes(required), true, `missing settlement policy field/copy: ${required}`);
+    assert.equal(settlementApi.includes(required), true, `missing settlement API field: ${required}`);
+  }
+
+  const createFunction = settlementApi.slice(
+    settlementApi.indexOf("export async function createSettlementFromDeliveredOrders"),
+  );
+  assert.match(createFunction, /partnerId:\s*input\.partnerId/);
+  assert.match(createFunction, /periodStart:\s*input\.periodStart/);
+  assert.match(createFunction, /periodEnd:\s*input\.periodEnd/);
+  assert.doesNotMatch(createFunction, /currency:\s*input\.currency/);
+});
+
+test("all actionable controls carry explicit labels", () => {
+  const commissionLabels = [...control.matchAll(/<Button\s+label="([^"]+)"/g)].map((match) => match[1]);
+  const settlementLabels = [...settlementPanel.matchAll(/<Button[\s\S]*?label=\{?"([^"]+)"/g)].map((match) => match[1]);
+  assert.ok(commissionLabels.length >= 5, "expected labelled commission actions");
+  assert.equal([...commissionLabels, ...settlementLabels].some((label) => label.trim() === ""), false);
 });
