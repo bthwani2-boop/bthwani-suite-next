@@ -37,6 +37,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: jrn-042-${{ github.ref }}
@@ -154,6 +155,38 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Publish readable same-commit result
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATIC_RESULT: ${{ needs.static-governance.result }}
+          RUNTIME_RESULT: ${{ needs.six-service-runtime-dr.result }}
+        run: |
+          set -euo pipefail
+          state=failure
+          description="JRN-042 static or six-service DR proof failed"
+          if test "${STATIC_RESULT}" = "success" && test "${RUNTIME_RESULT}" = "success"; then
+            state=success
+            description="JRN-042 static and six-service DR proof passed"
+          fi
+          payload="$(STATE="${state}" DESCRIPTION="${description}" python - <<'PY'
+          import json
+          import os
+          print(json.dumps({
+              "state": os.environ["STATE"],
+              "context": "jrn-042/runtime-data",
+              "description": os.environ["DESCRIPTION"],
+              "target_url": f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+          }))
+          PY
+          )"
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            --data "${payload}"
       - name: Enforce JRN-042 result
         env:
           STATIC_RESULT: ${{ needs.static-governance.result }}
