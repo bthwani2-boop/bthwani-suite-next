@@ -3,6 +3,7 @@ import type { GovernedPartnerOrderItem } from '../shared/partner/partner.adapter
 import { DshPartnerRouteRenderer } from './DshPartnerRouteRenderer';
 import { OperationalOrderDecisionScreen } from './orders/OperationalOrderDecisionScreen';
 import { OperationalOrdersInboxScreen } from './orders/OperationalOrdersInboxScreen';
+import { PartnerDispatchTrackingScreen } from './orders/PartnerDispatchTrackingScreen';
 
 type LegacyRendererProps = React.ComponentProps<typeof DshPartnerRouteRenderer>;
 type Props = Omit<LegacyRendererProps, 'handleMarkReady' | 'partnerOrders' | 'refreshOrders'> & {
@@ -18,14 +19,27 @@ type Props = Omit<LegacyRendererProps, 'handleMarkReady' | 'partnerOrders' | 're
 export function DshPartnerOrderJourneyRenderer(props: Props): React.ReactElement {
   const activeOrder = props.partnerOrders.find((order) => order.id === props.activeOrderId)
     ?? props.partnerOrders[0];
+  const activeOrderId = activeOrder?.id ?? props.activeOrderId ?? props.initialOrderId;
 
   if (props.route === 'order-rejection') {
     return props.renderSurfaceShell(
       <OperationalOrderDecisionScreen
         order={activeOrder}
-        orderId={activeOrder?.id ?? props.activeOrderId ?? props.initialOrderId}
+        orderId={activeOrderId}
         refreshOrders={props.refreshOrders}
         onBack={props.openOrdersBoard}
+      />,
+    );
+  }
+
+  if (
+    props.route === 'support-screen'
+    && props.selectedSupportScreen === 'order-out-for-delivery'
+  ) {
+    return props.renderSurfaceShell(
+      <PartnerDispatchTrackingScreen
+        orderId={activeOrderId}
+        onBack={props.returnToSupportDirectory}
       />,
     );
   }
