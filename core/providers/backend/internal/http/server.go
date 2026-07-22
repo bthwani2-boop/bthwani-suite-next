@@ -94,8 +94,8 @@ type guardedHandler func(w http.ResponseWriter, r *http.Request, identity auth.I
 
 func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFunc {
 	return s.withIdentity(func(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-		if !identity.HasPermission("workforce", action, "all") && !identity.HasPermission("providers", action, "all") {
-			sendError(w, http.StatusForbidden, "FORBIDDEN", "provider permission is required")
+		if !identity.HasPermission("providers", action, "all") {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "providers service permission is required")
 			return
 		}
 		next(w, r, identity)
