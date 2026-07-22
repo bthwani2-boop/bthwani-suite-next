@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"dsh-api/internal/checkoutfinanceoutbox"
 )
@@ -16,6 +17,8 @@ const (
 	StatusCancelledNoDriver   OrderStatus = "cancelled_no_driver"
 	StatusFailedPayment       OrderStatus = "failed_payment"
 	StatusFailedDispatch      OrderStatus = "failed_dispatch"
+
+	maxCancellationReasonNoteLength = 1000
 )
 
 var ErrCancellationRequiresReview = errors.New("order cancellation requires operator review")
@@ -50,14 +53,20 @@ type CancellationInput struct {
 }
 
 func cancellationTarget(role, reasonCode string) OrderStatus {
-	if role == "client" {
+	switch role {
+	case "client":
 		return StatusCancelledByClient
-	}
-	if role == "partner" {
+	case "partner":
 		return StatusCancelledByStore
-	}
-	if role == "system" && reasonCode == "no_driver" {
-		return StatusCancelledNoDriver
+	case "system":
+		switch reasonCode {
+		case "no_driver":
+			return StatusCancelledNoDriver
+		case "payment_failed":
+			return StatusFailedPayment
+		case "dispatch_failed":
+			return StatusFailedDispatch
+		}
 	}
 	return StatusCancelledByOperator
 }
@@ -132,6 +141,9 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 	}
 	if input.ReasonCode == "other" && input.ReasonNote == "" {
 		return nil, fmt.Errorf("%w: reason note is required for other", ErrInvalid)
+	}
+	if utf8.RuneCountInString(input.ReasonNote) > maxCancellationReasonNoteLength {
+		return nil, fmt.Errorf("%w: reason note exceeds %d characters", ErrInvalid, maxCancellationReasonNoteLength)
 	}
 
 	tx, err := db.Begin()
@@ -272,16 +284,8 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 			OrderID:          &orderID,
 			ClientID:         clientID,
 			Reason:           input.ReasonCode + ": " + input.ReasonNote,
+			CorrelationID:    input.CorrelationID,
 		}); err != nil {
-			return nil, err
-		}
-		if _, err := tx.Exec(`
-			UPDATE dsh_checkout_financial_closure_outbox
-			SET correlation_id=$2
-			WHERE payment_session_id=$1 AND event_type='cancel_for_order'`,
-			paymentSessionID,
-			input.CorrelationID,
-		); err != nil {
 			return nil, err
 		}
 	}
