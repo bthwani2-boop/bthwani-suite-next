@@ -5,6 +5,7 @@ import type {
   DshDeliveryPinResponse,
   DshDeliveryProof,
   DshDeliveryProofError,
+  DshDeliveryProofErrorKind,
   DshDeliveryProofStatus,
   DshReviewDeliveryProofInput,
   DshSubmitDeliveryProofInput,
@@ -87,6 +88,14 @@ export async function rejectOperatorDeliveryProof(
   return data.proof;
 }
 
+function deliveryProofError(
+  kind: DshDeliveryProofErrorKind,
+  message: string,
+  code?: string,
+): DshDeliveryProofError {
+  return code ? { kind, code, message } : { kind, message };
+}
+
 export function classifyDeliveryProofError(error: unknown): DshDeliveryProofError {
   const typed = error as {
     readonly kind?: string;
@@ -111,10 +120,10 @@ export function classifyDeliveryProofError(error: unknown): DshDeliveryProofErro
   }
   const code = typed.code ?? bodyCode;
   const message = typed.message ?? bodyMessage ?? "تعذر تنفيذ عملية إثبات التسليم.";
-  if (typed.kind === "network") return { kind: "offline", code, message };
-  if (typed.status === 401 || typed.status === 403) return { kind: "permission_denied", code, message };
-  if (typed.status === 404) return { kind: "not_found", code, message };
-  if (typed.status === 409) return { kind: "conflict", code, message };
-  if (typed.status === 400 || typed.kind === "invalid_request") return { kind: "invalid", code, message };
-  return { kind: "error", code, message };
+  if (typed.kind === "network") return deliveryProofError("offline", message, code);
+  if (typed.status === 401 || typed.status === 403) return deliveryProofError("permission_denied", message, code);
+  if (typed.status === 404) return deliveryProofError("not_found", message, code);
+  if (typed.status === 409) return deliveryProofError("conflict", message, code);
+  if (typed.status === 400 || typed.kind === "invalid_request") return deliveryProofError("invalid", message, code);
+  return deliveryProofError("error", message, code);
 }
