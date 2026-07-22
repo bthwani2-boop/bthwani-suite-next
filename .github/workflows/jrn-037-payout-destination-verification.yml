@@ -1,0 +1,115 @@
+name: JRN-037 Payout Destination Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths: &jrn037_paths
+      - "governance/product/contracts/jrn-037-payouts-destinations.product-truth.json"
+      - "services/wlt/backend/internal/payout/**"
+      - "services/wlt/backend/internal/http/server.go"
+      - "services/wlt/database/migrations/wlt-091_jrn037_payout_destination_governance.sql"
+      - "services/wlt/database/migrations/wlt-092_jrn037_request_hash_scope.sql"
+      - "services/wlt/database/tests/jrn-037-payout-destination-invariants.sql"
+      - "services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml"
+      - "services/dsh/backend/internal/http/jrn037_payout_routes.go"
+      - "services/dsh/backend/internal/http/representative_finance_routes.go"
+      - "services/dsh/backend/internal/wlt/actor_finance_client.go"
+      - "services/dsh/backend/internal/wlt/finance_proxy.go"
+      - "services/dsh/frontend/shared/finance-wlt-link/jrn037/**"
+      - "services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshPartnerBridge.tsx"
+      - "services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx"
+      - "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx"
+      - "services/dsh/frontend/control-panel/finance/PayoutRequestsPanel.tsx"
+      - "infra/docker/financial-simulators/wiremock/mappings/payout-status-success.json"
+      - "tools/guards/jrn-037-payout-destination-gate.mjs"
+      - ".github/workflows/jrn-037-payout-destination-verification.yml"
+  pull_request:
+    branches: [master]
+    paths: *jrn037_paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-037-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: JRN-037 database, backend, contract, and multi-surface proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wlt_ci
+          POSTGRES_PASSWORD: wlt_ci_password
+          POSTGRES_DB: wlt_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U wlt_ci -d wlt_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: wlt_ci
+      PGPASSWORD: wlt_ci_password
+      PGDATABASE: wlt_ci
+      DATABASE_URL: postgres://wlt_ci:wlt_ci_password@localhost:5432/wlt_ci?sslmode=disable
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: services/wlt/backend/go.mod
+          cache-dependency-path: |
+            services/wlt/backend/go.sum
+            services/dsh/backend/go.sum
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: "10.34.2"
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Verify product, contract, ownership, and surface boundaries
+        run: node tools/guards/jrn-037-payout-destination-gate.mjs
+      - name: Apply all WLT migrations in lexical order
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in services/wlt/database/migrations/*.sql; do
+            psql -v ON_ERROR_STOP=1 -f "${migration}"
+          done
+      - name: Assert JRN-037 PostgreSQL invariants
+        run: psql -v ON_ERROR_STOP=1 -f services/wlt/database/tests/jrn-037-payout-destination-invariants.sql
+      - name: Verify Go formatting without rewriting source
+        run: |
+          test -z "$(gofmt -l services/wlt/backend/internal/payout/jrn037_governed_payout.go services/wlt/backend/internal/payout/jrn037_governed_payout_test.go services/wlt/backend/internal/payout/model_request.go services/wlt/backend/internal/payout/read_provider_proof.go services/wlt/backend/internal/http/server.go)"
+          test -z "$(gofmt -l services/dsh/backend/internal/http/jrn037_payout_routes.go services/dsh/backend/internal/http/representative_finance_routes.go services/dsh/backend/internal/wlt/actor_finance_client.go services/dsh/backend/internal/wlt/finance_proxy.go)"
+      - name: Compile and test WLT payout packages
+        working-directory: services/wlt/backend
+        run: go test ./internal/payout ./internal/http
+      - name: Compile and test DSH payout proxy packages
+        working-directory: services/dsh/backend
+        run: go test ./internal/http ./internal/wlt
+      - name: Typecheck DSH multi-surface payout bindings
+        run: pnpm --dir services/dsh typecheck
+      - name: Verify backend and frontend bindings
+        run: |
+          pnpm run guard:backend-api-binding
+          pnpm run guard:frontend-feature-binding
+      - name: Verify repository whitespace
+        run: git diff --check
