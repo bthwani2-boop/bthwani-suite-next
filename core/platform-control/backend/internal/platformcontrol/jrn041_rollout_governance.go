@@ -62,20 +62,6 @@ func validateRolloutTargetScope(scope map[string]any) error {
 	return nil
 }
 
-func (s *Service) ResumeRollout(
-	ctx context.Context,
-	id string,
-	actorID string,
-	roles []string,
-	correlationID string,
-) (Rollout, error) {
-	repository, err := s.requireRepository()
-	if err != nil {
-		return Rollout{}, err
-	}
-	return repository.ResumeRollout(ctx, id, actorID, roles, correlationID)
-}
-
 func (r *Repository) ResumeRollout(
 	ctx context.Context,
 	id string,
@@ -186,6 +172,7 @@ func (s *Service) GetRolloutRecoveryGuide(ctx context.Context, id string) (Rollo
 	}
 	guide.HealthState = s.Health(ctx).State
 	guide.CanAdvance = guide.Status == RolloutRunning && guide.HealthState == StateOperational
+	guide.CanResume = guide.Status == RolloutPaused && guide.HealthState == StateOperational
 	return guide, nil
 }
 
