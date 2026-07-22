@@ -34,6 +34,13 @@ jobs:
         run: |
           set +e
           : > contract-diagnostic.log
+          node --input-type=module <<'NODE' >> contract-diagnostic.log 2>&1
+          import { parseOpenApiContract } from './tools/guards/_openapi-utils.mjs';
+          const operation = parseOpenApiContract('services/dsh/contracts/dsh.catalog-governance.openapi.yaml')
+            .find((item) => item.operationId === 'listOperatorCatalogAttributeOptions');
+          console.log('### path-level-ref-debug');
+          console.log(JSON.stringify(operation, (_key, value) => value instanceof Set ? [...value] : value instanceof Map ? Object.fromEntries(value) : value, 2));
+          NODE
           for command in \
             "pnpm run contracts:lint" \
             "pnpm run guard:api-binding" \
