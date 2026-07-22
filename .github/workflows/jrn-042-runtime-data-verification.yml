@@ -40,8 +40,8 @@ permissions:
   statuses: write
 
 concurrency:
-  group: jrn-042-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-042-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   status-pending:
