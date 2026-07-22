@@ -2,19 +2,123 @@ openapi: 3.1.0
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: WLT JRN-038 COD Custody and Reconciliation
-  version: 1.0.0
+  version: 1.1.0
   description: >-
-    Canonical additive contract for evidence-backed COD collection, remittance,
-    double-entry linkage, variance detection, assignment, investigation and resolution.
+    Canonical additive contract for evidence-backed delivery collection, COD
+    compatibility, remittance, double-entry linkage, variance detection,
+    assignment, investigation and resolution.
 servers:
   - url: http://localhost:58083
 security:
   - DshServiceBearer: []
     DshServiceCaller: []
 paths:
+  /wlt/delivery-collections:
+    get:
+      operationId: listDeliveryCollections
+      summary: List delivery cash collections using the neutral modern resource name.
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/CaptainIdQuery'
+        - $ref: '#/components/parameters/PartnerIdQuery'
+        - $ref: '#/components/parameters/OrderIdQuery'
+      responses:
+        '200':
+          description: Matching delivery collections.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodRecordListEnvelope'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /wlt/delivery-collections/{codRecordId}:
+    get:
+      operationId: getDeliveryCollection
+      summary: Read one delivery collection.
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/CodRecordId'
+      responses:
+        '200':
+          description: Delivery collection found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodRecordEnvelope'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /wlt/delivery-collections/{codRecordId}/collect:
+    post:
+      operationId: collectDeliveryCollection
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/CodRecordId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectCodInput'
+      responses:
+        '200':
+          description: Collection committed atomically or replayed idempotently.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodCustodyMutationResult'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/delivery-collections/{codRecordId}/remit:
+    post:
+      operationId: remitDeliveryCollection
+      description: >-
+        Gated financial mutation. Returns 403 FEATURE_NOT_ENABLED unless
+        WLT_MUTATIONS_ENABLED=true; not enabled in the default runtime.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/CodRecordId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemitCodInput'
+      responses:
+        '200':
+          description: Remittance committed atomically or replayed idempotently.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodCustodyMutationResult'
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /wlt/cod-records/{codRecordId}/collect:
     post:
       operationId: collectCodCustody
+      description: >-
+        Legacy COD compatibility route for the same governed collection
+        transition. Disabled unless WLT_MUTATIONS_ENABLED=true.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/CodRecordId'
         - $ref: '#/components/parameters/CorrelationId'
@@ -40,6 +144,11 @@ paths:
   /wlt/cod-records/{codRecordId}/remit:
     post:
       operationId: remitCodCustody
+      description: >-
+        Legacy COD compatibility route for the same governed remittance
+        transition. Disabled unless WLT_MUTATIONS_ENABLED=true.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/CodRecordId'
         - $ref: '#/components/parameters/CorrelationId'
@@ -157,6 +266,16 @@ components:
       in: header
       name: X-Service-Caller
   parameters:
+    Authorization:
+      in: header
+      name: Authorization
+      required: true
+      schema: { type: string, minLength: 1 }
+    ServiceCaller:
+      in: header
+      name: X-Service-Caller
+      required: true
+      schema: { type: string, enum: [dsh] }
     CodRecordId:
       in: path
       name: codRecordId
@@ -177,6 +296,21 @@ components:
       name: Idempotency-Key
       required: true
       schema: { type: string, minLength: 3 }
+    CaptainIdQuery:
+      in: query
+      name: captainId
+      required: false
+      schema: { type: string, minLength: 1 }
+    PartnerIdQuery:
+      in: query
+      name: partnerId
+      required: false
+      schema: { type: string, minLength: 1 }
+    OrderIdQuery:
+      in: query
+      name: orderId
+      required: false
+      schema: { type: string, minLength: 1 }
   schemas:
     ActorType:
       type: string
@@ -214,6 +348,24 @@ components:
         amountMinorUnits: { type: integer, format: int64 }
         currency: { type: string }
         status: { type: string, enum: [pending_collection, collected, remitted] }
+        collectedAt: { type: [string, 'null'], format: date-time }
+        remittedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CodRecordEnvelope:
+      type: object
+      additionalProperties: false
+      required: [codRecord]
+      properties:
+        codRecord: { $ref: '#/components/schemas/CodRecord' }
+    CodRecordListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [codRecords]
+      properties:
+        codRecords:
+          type: array
+          items: { $ref: '#/components/schemas/CodRecord' }
     CodCustodyEvidence:
       type: object
       additionalProperties: false
