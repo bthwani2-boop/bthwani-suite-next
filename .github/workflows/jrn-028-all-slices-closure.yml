@@ -40,7 +40,6 @@ concurrency:
 
 jobs:
   normalize-contracts:
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -84,7 +83,7 @@ jobs:
 
   verify:
     needs: normalize-contracts
-    if: always() && (github.event_name == 'pull_request' || needs.normalize-contracts.outputs.changed == 'false')
+    if: always() && needs.normalize-contracts.result == 'success' && needs.normalize-contracts.outputs.changed == 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     services:
