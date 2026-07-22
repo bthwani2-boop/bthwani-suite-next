@@ -13,6 +13,10 @@ const visitScreen = read("services/dsh/frontend/app-field/escalation/DshFieldVis
 const queueScreen = read("services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx");
 const checklistScreen = read("services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx");
 const operatorScreen = read("services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx");
+const fieldSchemas = read("services/dsh/contracts/components/schemas/field.schemas.yaml");
+const fieldPaths = read("services/dsh/contracts/paths/field.paths.yaml");
+const generatedBundle = read("services/dsh/contracts/generated/dsh.bundle.openapi.yaml");
+const generatedClient = read("services/dsh/clients/generated/dsh-api.ts");
 
 test("JRN-024 routes every write through the governed backend boundary", () => {
   assert.match(routes, /handleCreateGovernedFieldVisit/);
@@ -54,6 +58,24 @@ test("JRN-024 keeps escalated-further cases blocking and operable", () => {
   assert.match(operatorScreen, /value: "escalated_further"/);
   assert.match(operatorScreen, /label="تصعيد أعلى"/);
   assert.match(operatorScreen, /label="حل التصعيد"/);
+});
+
+test("JRN-024 source and generated contracts require both GPS captures", () => {
+  assert.match(fieldSchemas, /DshCreateFieldVisitRequest:[\s\S]*required: \[startLocation\]/);
+  assert.match(fieldSchemas, /startLocation:[\s\S]*accuracyMeters:[\s\S]*capturedAt:[\s\S]*provider:/);
+  assert.match(fieldSchemas, /geofenceRadiusMeters:[\s\S]*completionGeofenceStatus:[\s\S]*storeLongitude:/);
+
+  const completePath = fieldPaths.slice(
+    fieldPaths.indexOf("/dsh/field/visits/{visitId}/complete:"),
+    fieldPaths.indexOf("/dsh/field/visits/{visitId}/checks:"),
+  );
+  assert.match(completePath, /requestBody:[\s\S]*required: \[completionLocation\]/);
+  assert.match(completePath, /completionLocation:[\s\S]*accuracyMeters:[\s\S]*capturedAt:[\s\S]*provider:/);
+
+  assert.match(generatedBundle, /DshCreateFieldVisitRequest:[\s\S]*required: \[startLocation\]/);
+  assert.match(generatedBundle, /completionLocation:/);
+  assert.match(generatedClient, /startLocation:/);
+  assert.match(generatedClient, /completionLocation:/);
 });
 
 test("JRN-024 affected React Native screens contain no inline style objects", () => {
