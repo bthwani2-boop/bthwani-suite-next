@@ -78,6 +78,10 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 	insertMember(secondStoreMember, secondStoreID, "موصل المتجر الثاني")
 	insertMember(inactiveMember, inactiveStoreID, "موصل متجر غير نشط")
 
+	if _, err := IssueCode(ctx, db, storeID, secondStoreMember, partnerActor, time.Hour); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected cross-store team-member issue to be hidden as not found, got %v", err)
+	}
+
 	issued1, err := IssueCode(ctx, db, storeID, member1, partnerActor, time.Hour)
 	if err != nil {
 		t.Fatalf("issue first code: %v", err)
@@ -167,6 +171,16 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 	if err != nil || len(memberships) != 0 {
 		t.Fatalf("disconnected captain must have no active identity binding: memberships=%#v err=%v", memberships, err)
 	}
+	var disconnectedLifecycle string
+	if err := db.QueryRowContext(ctx, `
+		SELECT invite_lifecycle
+		FROM dsh_store_team_members
+		WHERE id = $1`, member1).Scan(&disconnectedLifecycle); err != nil {
+		t.Fatal(err)
+	}
+	if disconnectedLifecycle != "captain_disconnected" {
+		t.Fatalf("expected captain_disconnected lifecycle, got %s", disconnectedLifecycle)
+	}
 
 	revoked, err := RevokeCode(ctx, db, storeID, issued2.Connection.ID, partnerActor, issued2.Connection.Version)
 	if err != nil {
@@ -205,15 +219,24 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 		t.Fatalf("expected inactive store to fail closed, got %v", err)
 	}
 
-	var actionCount int
-	if err := db.QueryRowContext(ctx, `
-		SELECT COUNT(*)
-		FROM dsh_store_team_member_actions
-		WHERE store_id = $1`, storeID).Scan(&actionCount); err != nil {
-		t.Fatal(err)
-	}
-	if actionCount < 5 {
-		t.Fatalf("expected audited issue/redeem/disconnect/revoke lifecycle, got %d actions", actionCount)
+	for _, action := range []string{
+		"issue_captain_connection_code",
+		"redeem_captain_connection_code",
+		"captain_disconnect",
+		"revoke_captain_connection_code",
+		"expire_captain_connection_code",
+	} {
+		var count int
+		if err := db.QueryRowContext(ctx, `
+			SELECT COUNT(*)
+			FROM dsh_store_team_member_actions
+			WHERE store_id IN ($1,$2)
+			  AND action_label = $3`, storeID, secondStoreID, action).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count == 0 {
+			t.Fatalf("expected audit action %s", action)
+		}
 	}
 
 	var notificationCount int
@@ -225,7 +248,20 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 		partnerActor, captainActor, otherCaptain).Scan(&notificationCount); err != nil {
 		t.Fatal(err)
 	}
-	if notificationCount < 10 {
+	if notificationCount < 13 {
 		t.Fatalf("expected complete partner/captain lifecycle notifications, got %d", notificationCount)
+	}
+
+	var partnerDisconnectNotifications int
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM dsh_notifications
+		WHERE actor_id = $1
+		  AND actor_type = 'partner'
+		  AND title = 'فك الكابتن عضوية أسطول المتجر'`, partnerActor).Scan(&partnerDisconnectNotifications); err != nil {
+		t.Fatal(err)
+	}
+	if partnerDisconnectNotifications != 2 {
+		t.Fatalf("expected partner notification for both disconnected memberships, got %d", partnerDisconnectNotifications)
 	}
 }
