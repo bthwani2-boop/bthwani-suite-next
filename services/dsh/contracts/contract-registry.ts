@@ -30,6 +30,7 @@ export type DshContractRegistration = {
     | "dsh-payment-sessions"
     | "dsh-settlement-commissions"
     | "dsh-payout-destinations"
+    | "dsh-cod-custody"
     | "dsh-marketing-commercial"
     | "dsh-partner-commercial"
     | "dsh-partner-fleet"
@@ -41,6 +42,7 @@ export type DshContractRegistration = {
     | "dsh-platform-policies"
     | "dsh-partner-support"
     | "dsh-support-governance"
+    | "dsh-support-message-delivery"
     | "dsh-notifications-governance"
     | "dsh-incident-governance"
     | "dsh-order-rescue"
@@ -213,6 +215,14 @@ export const DSH_CONTRACT_REGISTRY = [
     adapterOwner: "frontend/shared/finance-wlt-link/jrn037",
   },
   {
+    id: "dsh-cod-custody",
+    path: "contracts/dsh.jrn-038-cod-custody.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link/finance",
+  },
+  {
     id: "dsh-marketing-commercial",
     path: "contracts/dsh.marketing-commercial.openapi.yaml",
     state: "CONTRACT_ACTIVE",
@@ -295,6 +305,14 @@ export const DSH_CONTRACT_REGISTRY = [
   {
     id: "dsh-support-governance",
     path: "contracts/dsh.support-governance.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/support",
+  },
+  {
+    id: "dsh-support-message-delivery",
+    path: "contracts/dsh.support-message-delivery.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
