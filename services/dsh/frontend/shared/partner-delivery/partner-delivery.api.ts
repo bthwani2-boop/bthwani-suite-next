@@ -15,21 +15,17 @@ export type DshPartnerDeliveryStateResponse = {
   readonly stage: string;
 };
 
-// --- Client side (JRN-016 reference status, read-only) ----------------------
+function commandId(prefix: string, supplied?: string): string {
+  return supplied?.trim() || corrId(prefix);
+}
 
-export async function fetchClientPartnerDeliveryTask(
-  orderId: string,
-): Promise<DshPartnerDeliveryStateResponse> {
+export async function fetchClientPartnerDeliveryTask(orderId: string): Promise<DshPartnerDeliveryStateResponse> {
   return request<DshPartnerDeliveryStateResponse>(
     `/dsh/client/orders/${encodeURIComponent(orderId)}/partner-delivery`,
   );
 }
 
-// --- Partner (store courier) side ------------------------------------------
-
-export async function fetchPartnerDeliveryTask(
-  orderId: string,
-): Promise<DshPartnerDeliveryStateResponse> {
+export async function fetchPartnerDeliveryTask(orderId: string): Promise<DshPartnerDeliveryStateResponse> {
   return request<DshPartnerDeliveryStateResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/partner-delivery`,
   );
@@ -37,58 +33,68 @@ export async function fetchPartnerDeliveryTask(
 
 export async function assignPartnerDeliveryTask(
   orderId: string,
-  input: { readonly storeCourierId: string; readonly expectedVersion: number; readonly reason?: string },
+  input: {
+    readonly storeCourierId: string;
+    readonly expectedVersion: number;
+    readonly reason?: string;
+    readonly commandId?: string;
+  },
 ): Promise<DshPartnerDeliveryTaskResponse> {
+  const { commandId: suppliedCommandId, ...body } = input;
   return request<DshPartnerDeliveryTaskResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/partner-delivery/assign`,
-    {
-      method: "POST",
-      body: { ...input, commandId: corrId("assign-partner-delivery") },
-    },
+    { method: "POST", body: { ...body, commandId: commandId("assign-partner-delivery", suppliedCommandId) } },
   );
 }
 
 export async function markPartnerDeliveryPickedUp(
   orderId: string,
   expectedVersion: number,
+  suppliedCommandId?: string,
 ): Promise<DshPartnerDeliveryTaskResponse> {
   return request<DshPartnerDeliveryTaskResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/partner-delivery/pickup`,
-    { method: "POST", body: { expectedVersion, commandId: corrId("pd-pickup") } },
+    { method: "POST", body: { expectedVersion, commandId: commandId("pd-pickup", suppliedCommandId) } },
   );
 }
 
 export async function departPartnerDeliveryTask(
   orderId: string,
   expectedVersion: number,
+  suppliedCommandId?: string,
 ): Promise<DshPartnerDeliveryTaskResponse> {
   return request<DshPartnerDeliveryTaskResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/partner-delivery/depart`,
-    { method: "POST", body: { expectedVersion, commandId: corrId("pd-depart") } },
+    { method: "POST", body: { expectedVersion, commandId: commandId("pd-depart", suppliedCommandId) } },
   );
 }
 
 export async function arrivePartnerDeliveryTask(
   orderId: string,
   expectedVersion: number,
+  suppliedCommandId?: string,
 ): Promise<DshPartnerDeliveryTaskResponse> {
   return request<DshPartnerDeliveryTaskResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/partner-delivery/arrive`,
-    { method: "POST", body: { expectedVersion, commandId: corrId("pd-arrive") } },
+    { method: "POST", body: { expectedVersion, commandId: commandId("pd-arrive", suppliedCommandId) } },
   );
 }
 
 export async function submitPartnerDeliveryProof(
   orderId: string,
-  input: { readonly expectedVersion: number; readonly proofMethod: string; readonly proofReference: string },
+  input: {
+    readonly expectedVersion: number;
+    readonly proofMethod: string;
+    readonly proofReference: string;
+    readonly commandId?: string;
+  },
 ): Promise<DshPartnerDeliveryTaskResponse> {
+  const { commandId: suppliedCommandId, ...body } = input;
   return request<DshPartnerDeliveryTaskResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/partner-delivery/proof`,
-    { method: "POST", body: { ...input, commandId: corrId("pd-proof") } },
+    { method: "POST", body: { ...body, commandId: commandId("pd-proof", suppliedCommandId) } },
   );
 }
-
-// --- Operator side ---------------------------------------------------------
 
 export async function fetchOperatorPartnerDeliveries(params: {
   readonly storeId?: string;
@@ -109,8 +115,6 @@ export async function fetchOperatorPartnerDelivery(taskId: string): Promise<DshP
   return request<DshPartnerDeliveryTaskResponse>(`/dsh/operator/partner-deliveries/${encodeURIComponent(taskId)}`);
 }
 
-/** LiveOrders holds orderId, not the task id — resolves the task's current
- * version before raising an exception (optimistic-concurrency gated). */
 export async function fetchOperatorPartnerDeliveryByOrder(orderId: string): Promise<DshPartnerDeliveryTaskResponse> {
   return request<DshPartnerDeliveryTaskResponse>(
     `/dsh/operator/partner-deliveries/order/${encodeURIComponent(orderId)}`,
@@ -119,11 +123,17 @@ export async function fetchOperatorPartnerDeliveryByOrder(orderId: string): Prom
 
 export async function raisePartnerDeliveryException(
   orderId: string,
-  input: { readonly expectedVersion: number; readonly reason: string },
+  input: {
+    readonly expectedVersion: number;
+    readonly reason: string;
+    readonly evidenceReferences?: readonly string[];
+    readonly commandId?: string;
+  },
 ): Promise<DshPartnerDeliveryTaskResponse> {
+  const { commandId: suppliedCommandId, ...body } = input;
   return request<DshPartnerDeliveryTaskResponse>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/partner-delivery/exception`,
-    { method: "POST", body: { ...input, commandId: corrId("pd-exception") } },
+    { method: "POST", body: { ...body, commandId: commandId("pd-exception", suppliedCommandId) } },
   );
 }
 
