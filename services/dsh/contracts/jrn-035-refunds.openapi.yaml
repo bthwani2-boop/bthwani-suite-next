@@ -1,0 +1,426 @@
+openapi: 3.1.0
+info:
+  title: DSH Financial Refund Orchestration
+  version: 1.0.0
+  description: >-
+    JRN-035 DSH contract. DSH validates actor, permission, tenant and owned-order
+    scope, then delegates all financial truth to WLT. Client and partner reads
+    intentionally exclude provider and operator evidence.
+servers:
+  - url: http://localhost:58080
+security:
+  - bearerAuth: []
+paths:
+  /dsh/control-panel/finance/refunds:
+    get:
+      operationId: listDshFinanceRefunds
+      summary: List refunds for a trusted tenant and optional order
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/CorrelationHeaderOptional'
+        - name: orderId
+          in: query
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Canonical WLT refund list
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ControlPanelRefundListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+    post:
+      operationId: createDshFinanceRefund
+      summary: Request a partial or full remaining refund
+      parameters:
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateDshRefundRequest' }
+      responses:
+        '201':
+          description: Refund request created in WLT
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
+        '200':
+          description: Idempotent replay
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/control-panel/finance/refunds/{refundId}:
+    get:
+      operationId: getDshFinanceRefund
+      summary: Read one tenant-scoped canonical refund
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/CorrelationHeaderOptional'
+      responses:
+        '200':
+          description: Canonical WLT refund
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /dsh/control-panel/finance/refunds/{refundId}/approve:
+    post:
+      operationId: approveDshFinanceRefund
+      summary: Approve a requested refund as an independent operator
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecisionRequest' }
+      responses:
+        '200':
+          description: Approved refund
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /dsh/control-panel/finance/refunds/{refundId}/reject:
+    post:
+      operationId: rejectDshFinanceRefund
+      summary: Reject a requested refund as an independent operator
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecisionRequest' }
+      responses:
+        '200':
+          description: Rejected refund
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /dsh/control-panel/finance/refunds/{refundId}/complete:
+    post:
+      operationId: completeDshFinanceRefund
+      summary: Execute an approved refund through WLT and the provider
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        '200':
+          description: Provider-confirmed and ledger-posted refund
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
+        '202':
+          description: Provider result unknown; reconciliation is required and retry is forbidden
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProviderUnknownError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/control-panel/finance/refunds/{refundId}/reconcile:
+    post:
+      operationId: reconcileDshFinanceRefund
+      summary: Resolve an unknown provider result with evidence
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: '#/components/parameters/IdempotencyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReconcileRequest' }
+      responses:
+        '200':
+          description: Reconciled refund
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /dsh/control-panel/finance/refunds/{refundId}/audit:
+    get:
+      operationId: listDshFinanceRefundAudit
+      summary: Read operator, provider and lifecycle audit evidence
+      parameters:
+        - $ref: '#/components/parameters/RefundId'
+        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/CorrelationHeaderOptional'
+      responses:
+        '200':
+          description: Append-only WLT audit events
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditEnvelope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /dsh/client/orders/{orderId}/refunds:
+    get:
+      operationId: getDshClientOrderRefundStatus
+      summary: Read privacy-safe refund status for the authenticated client's owned order
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/CorrelationHeaderOptional'
+      responses:
+        '200':
+          description: Privacy-safe refund statuses
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrivacyRefundListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/partner/orders/{orderId}/refunds:
+    get:
+      operationId: getDshPartnerOrderRefundStatus
+      summary: Read privacy-safe refund status for an authenticated partner store order
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/CorrelationHeaderOptional'
+      responses:
+        '200':
+          description: Privacy-safe refund statuses
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrivacyRefundListEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    RefundId:
+      name: refundId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TenantHeader:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationHeader:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationHeaderOptional:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema: { type: string, minLength: 1 }
+    IdempotencyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 255 }
+  schemas:
+    RefundStatus:
+      type: string
+      enum: [requested, approved, processing, provider_unknown, completed, rejected, reversed]
+    ControlPanelRefund:
+      type: object
+      additionalProperties: false
+      required: [id, orderId, paymentSessionId, clientId, amountMinorUnits, currency, reason, status, requestedByOperatorId, eligibilityReference, resolvedAt, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        paymentSessionId: { type: string }
+        clientId: { type: string }
+        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        reason: { type: string }
+        status: { $ref: '#/components/schemas/RefundStatus' }
+        requestedByOperatorId: { type: string }
+        approvedByOperatorId: { type: string }
+        rejectedByOperatorId: { type: string }
+        decisionReason: { type: string }
+        eligibilityReference: { type: string }
+        providerReference: { type: string }
+        providerStatus: { type: string }
+        reconciliationCaseId: { type: string }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PrivacyRefund:
+      type: object
+      additionalProperties: false
+      description: Does not expose provider references, provider errors or operator identities.
+      required: [id, orderId, amountMinorUnits, currency, status, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        status: { $ref: '#/components/schemas/RefundStatus' }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateDshRefundRequest:
+      type: object
+      additionalProperties: false
+      required: [paymentSessionId, orderId, clientId, amountMinorUnits, reason, eligibilityReference]
+      properties:
+        paymentSessionId: { type: string, minLength: 1 }
+        orderId: { type: string, format: uuid }
+        clientId: { type: string, minLength: 1 }
+        amountMinorUnits:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Zero requests the full remaining refundable amount.
+        reason: { type: string, minLength: 1 }
+        eligibilityReference: { type: string, minLength: 1 }
+    DecisionRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1 }
+    ReconcileRequest:
+      type: object
+      additionalProperties: false
+      required: [resolutionAction, evidenceNote]
+      properties:
+        resolutionAction:
+          type: string
+          enum: [confirmed_success, confirmed_failed]
+        evidenceNote: { type: string, minLength: 1 }
+        providerReference: { type: string, minLength: 1 }
+      allOf:
+        - if:
+            properties:
+              resolutionAction: { const: confirmed_success }
+          then:
+            required: [providerReference]
+    RefundAuditEvent:
+      type: object
+      additionalProperties: false
+      required: [id, refundId, eventType, actorId, actorType, toStatus, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        refundId: { type: string }
+        eventType: { type: string }
+        actorId: { type: string }
+        actorType:
+          type: string
+          enum: [operator, service, provider, reconciler, system]
+        fromStatus: { type: string }
+        toStatus: { type: string }
+        reason: { type: string }
+        correlationId: { type: string }
+        createdAt: { type: string, format: date-time }
+    ControlPanelRefundEnvelope:
+      type: object
+      required: [refund]
+      properties:
+        refund: { $ref: '#/components/schemas/ControlPanelRefund' }
+        replayed: { type: boolean }
+    ControlPanelRefundListEnvelope:
+      type: object
+      required: [refunds]
+      properties:
+        refunds:
+          type: array
+          items: { $ref: '#/components/schemas/ControlPanelRefund' }
+    PrivacyRefundListEnvelope:
+      type: object
+      required: [refunds]
+      properties:
+        refunds:
+          type: array
+          items: { $ref: '#/components/schemas/PrivacyRefund' }
+    AuditEnvelope:
+      type: object
+      required: [auditEvents]
+      properties:
+        auditEvents:
+          type: array
+          items: { $ref: '#/components/schemas/RefundAuditEvent' }
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+    ProviderUnknownError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          properties:
+            code: { const: PROVIDER_RESULT_UNKNOWN }
+  responses:
+    BadRequest:
+      description: Invalid request or missing reconciliation evidence
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing or invalid actor session
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Permission, tenant, maker-checker or store scope denied
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Refund or owned order not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Amount reservation, lifecycle state or idempotency conflict
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    WltUnavailable:
+      description: DSH could not reach the canonical WLT financial service
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
