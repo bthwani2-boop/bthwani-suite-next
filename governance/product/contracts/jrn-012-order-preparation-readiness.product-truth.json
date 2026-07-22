@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.3.0",
+  "schemaVersion": "1.3.1",
   "journeyId": "JRN-012",
   "title": "قبول الطلب وتحضيره وجاهزيته",
   "status": "CODE_COMPLETE_READY_FOR_INDEPENDENT_REVIEW",
@@ -89,6 +89,8 @@
     "context": "jrn-012/order-preparation",
     "lastSuccessfulImplementationCommit": "281e3fc547957244f6bb3a706cc9690235fa9f9f",
     "lastSuccessfulWorkflowRunId": 29880510629,
+    "reverificationBaseCommit": "6675d1fb69cece6348367afaf6c70dedf41a7eda",
+    "reverificationReason": "shared OpenAPI and generated-client files changed after the previous closure evidence",
     "requiredOnFinalGovernanceCommit": true,
     "coveredGates": ["static", "postgresql", "go", "openapi-generation", "typescript", "wlt-financial-boundary"]
   },
