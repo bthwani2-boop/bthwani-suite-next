@@ -1,0 +1,73 @@
+name: Repository debt closure
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - "contracts/**"
+      - "core/**/contracts/**"
+      - "services/**/contracts/**"
+      - "services/dsh/frontend/**"
+      - "services/dsh/clients/**"
+      - "services/dsh/tsconfig.json"
+      - "tools/important-scripts/contracts-foundation.mjs"
+      - ".github/workflows/repository-debt-closure.yml"
+      - "pnpm-lock.yaml"
+      - "package.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract-foundation:
+    name: Contract foundation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate all OpenAPI contract metadata
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm contracts:lint 2>&1 | tee contract-foundation.log
+      - name: Preserve contract diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-contract-debt
+          path: contract-foundation.log
+          retention-days: 7
+
+  dsh-full-typecheck:
+    name: DSH full TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck all DSH frontend and clients
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm --dir services/dsh exec tsc -p tsconfig.json --noEmit --pretty false 2>&1 | tee dsh-full-typecheck.log
+      - name: Preserve TypeScript diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-dsh-typescript-debt
+          path: dsh-full-typecheck.log
+          retention-days: 7
