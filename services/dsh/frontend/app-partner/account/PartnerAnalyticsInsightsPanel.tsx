@@ -54,7 +54,7 @@ const periods: readonly { id: DshAnalyticsPeriod; label: string }[] = [
   { id: 'month', label: 'شهر' },
 ];
 
-export function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeName: string; canonicalStoreId: string }) {
+export function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeName: string; canonicalStoreId?: string }) {
   const theme = useTheme() as any;
   const [period, setPeriod] = React.useState<DshAnalyticsPeriod>('today');
   const [state, setState] = React.useState<PerformanceState>({ kind: 'loading' });
@@ -81,7 +81,7 @@ export function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeN
   }, [canonicalStoreId, period, reloadToken]);
 
   if (state.kind === 'loading') {
-    return <StateView loading title="جاري تحميل أداء المتجر…" description="تُقرأ المؤشرات من DSH ضمن نطاق المتجر الموثق." />;
+    return <StateView loading title="جاري تحميل أداء المتجر…" description="تُقرأ المؤشرات من DSH ضمن نطاق المتجر الموثق في الجلسة." />;
   }
 
   if (state.kind === 'error') {
@@ -130,7 +130,7 @@ export function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeN
           <AnalyticsInsightMetric label="الطلبات المرفوضة" value={performance.rejectedOrders.toLocaleString('ar')} tone="danger" icon="close-circle-outline" />
         </View>
       </Box>
-      <Text role="caption" tone="muted" align="start">معرّف النطاق التشغيلي: {canonicalStoreId}</Text>
+      <Text role="caption" tone="muted" align="start">النطاق التشغيلي: {canonicalStoreId ?? 'متجر الجلسة الموثق'}</Text>
     </Box>
   );
 }
