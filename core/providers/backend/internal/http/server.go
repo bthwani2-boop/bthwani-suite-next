@@ -28,6 +28,7 @@ func NewRouter(db *sql.DB, service *providers.Service, repo *providers.Repositor
 	mux.HandleFunc("PATCH /providers/{providerId}", s.operatorOnly("provider:update", s.updateProvider))
 	mux.HandleFunc("POST /providers/maps/search", s.mapConsumer(s.searchMaps))
 	mux.HandleFunc("POST /providers/maps/reverse", s.mapConsumer(s.reverseMap))
+	mux.HandleFunc("POST /providers/maps/route", s.mapConsumer(s.routeMaps))
 	return mux
 }
 
