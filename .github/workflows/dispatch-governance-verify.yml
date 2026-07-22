@@ -38,7 +38,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: dispatch-governance-${{ github.ref }}
@@ -46,7 +46,7 @@ concurrency:
 
 jobs:
   jrn013-contract-migration:
-    name: JRN-013 primary contract patch artifact
+    name: JRN-013 primary contract migration
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -55,71 +55,45 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: sambassam
-      - name: Prepare complete patch copies
+          fetch-depth: 0
+      - name: Patch and publish tracked JRN-013 artifacts
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p \
-            jrn013-patched/services/dsh/contracts \
-            jrn013-patched/services/dsh/clients/generated \
-            jrn013-patched/services/dsh/tests
-          cp services/dsh/contracts/dsh.openapi.yaml jrn013-patched/services/dsh/contracts/dsh.openapi.yaml
-          cp services/dsh/clients/generated/dsh-api.ts jrn013-patched/services/dsh/clients/generated/dsh-api.ts
-          cp services/dsh/tests/store-captain-handoff-closure.test.mjs jrn013-patched/services/dsh/tests/store-captain-handoff-closure.test.mjs
-          : > jrn013-migration.log
-      - name: Patch artifact copies
-        shell: bash
-        run: |
-          set -o pipefail
-          node <<'NODE' 2>&1 | tee -a jrn013-migration.log
+          git pull --rebase origin sambassam
+          node <<'NODE'
           const fs = require('node:fs');
-          const root = 'jrn013-patched/';
-          const failures = [];
 
-          function run(label, fn) {
-            try {
-              fn();
-              console.log(`PASS ${label}`);
-            } catch (error) {
-              failures.push(`${label}: ${error.message}`);
-              console.error(`FAIL ${label}: ${error.stack ?? error}`);
-            }
-          }
-
-          function patchYaml(relativePath) {
-            const path = root + relativePath;
+          function patchYaml(path) {
             let source = fs.readFileSync(path, 'utf8');
             const start = source.indexOf('    DshDeliveryExceptionReasonCode:');
             const end = source.indexOf('    DshDeliveryExceptionStatus:', start);
-            if (start < 0 || end < 0) throw new Error('reason schema not found');
+            if (start < 0 || end < 0) throw new Error(`${path}: reason schema not found`);
             let section = source.slice(start, end);
-            if (!section.includes('      - handoff_shortage')) {
-              section = section.replace('      - proof_unavailable\n', '      - proof_unavailable\n      - handoff_shortage\n');
+            if (!section.includes('        - handoff_shortage')) {
+              section = section.replace('        - proof_unavailable\n', '        - proof_unavailable\n        - handoff_shortage\n');
             }
-            if (!section.includes('      - handoff_mismatch')) {
-              section = section.replace('      - handoff_shortage\n', '      - handoff_shortage\n      - handoff_mismatch\n');
+            if (!section.includes('        - handoff_mismatch')) {
+              section = section.replace('        - handoff_shortage\n', '        - handoff_shortage\n        - handoff_mismatch\n');
             }
-            if (!section.includes('      - handoff_shortage') || !section.includes('      - handoff_mismatch')) {
-              throw new Error('unable to insert handoff reasons');
+            if (!section.includes('        - handoff_shortage') || !section.includes('        - handoff_mismatch')) {
+              throw new Error(`${path}: unable to align handoff reason enum`);
             }
-            source = source.slice(0, start) + section + source.slice(end);
-            fs.writeFileSync(path, source);
+            fs.writeFileSync(path, source.slice(0, start) + section + source.slice(end));
           }
 
-          function patchClient(relativePath) {
-            const path = root + relativePath;
+          function patchClient(path) {
             let source = fs.readFileSync(path, 'utf8');
             if (!source.includes('| "handoff_shortage"')) {
               source = source.replace('| "proof_unavailable" | "other";', '| "proof_unavailable" | "handoff_shortage" | "handoff_mismatch" | "other";');
             }
             if (!source.includes('| "handoff_shortage" | "handoff_mismatch" | "other";')) {
-              throw new Error('generated reason union was not aligned');
+              throw new Error(`${path}: generated reason union was not aligned`);
             }
             fs.writeFileSync(path, source);
           }
 
-          function patchAssertion(relativePath) {
-            const path = root + relativePath;
+          function patchAssertion(path) {
             let source = fs.readFileSync(path, 'utf8');
             source = source.replace(
               "  assert.doesNotMatch(screen, /actionId === 'resolve_issue'.*openPreparationIssueCount/s);",
@@ -128,25 +102,35 @@ jobs:
             fs.writeFileSync(path, source);
           }
 
-          run('primary OpenAPI', () => patchYaml('services/dsh/contracts/dsh.openapi.yaml'));
-          run('generated TypeScript client', () => patchClient('services/dsh/clients/generated/dsh-api.ts'));
-          run('closure assertion', () => patchAssertion('services/dsh/tests/store-captain-handoff-closure.test.mjs'));
-
-          if (failures.length > 0) {
-            console.error(JSON.stringify({ failures }, null, 2));
-            process.exitCode = 1;
-          }
+          patchYaml('services/dsh/contracts/dsh.openapi.yaml');
+          patchClient('services/dsh/clients/generated/dsh-api.ts');
+          patchAssertion('services/dsh/tests/store-captain-handoff-closure.test.mjs');
           NODE
-      - name: Upload JRN-013 patch artifact and diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jrn013-contract-patch-${{ github.run_id }}
-          path: |
-            jrn013-patched
-            jrn013-migration.log
-          if-no-files-found: error
-          retention-days: 2
+
+          grep -q -- '        - handoff_shortage' services/dsh/contracts/dsh.openapi.yaml
+          grep -q -- '        - handoff_mismatch' services/dsh/contracts/dsh.openapi.yaml
+          grep -q '"handoff_shortage" | "handoff_mismatch"' services/dsh/clients/generated/dsh-api.ts
+          grep -q "item\\.openPreparationIssueCount > 0" services/dsh/tests/store-captain-handoff-closure.test.mjs
+
+          if git diff --quiet; then
+            echo "JRN-013 tracked contract artifacts are already aligned."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            services/dsh/contracts/dsh.openapi.yaml \
+            services/dsh/clients/generated/dsh-api.ts \
+            services/dsh/tests/store-captain-handoff-closure.test.mjs
+          git commit -m "fix(jrn-013): align primary handoff exception contract"
+
+          for attempt in 1 2 3 4 5; do
+            git fetch origin sambassam
+            git rebase origin/sambassam
+            if git push origin HEAD:sambassam; then exit 0; fi
+          done
+          exit 1
 
   backend:
     name: DSH dispatch backend
