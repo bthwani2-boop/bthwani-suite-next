@@ -6,6 +6,12 @@ import {
 import type { ApprovalRecord, ApprovalStage } from "../partner/partner.types";
 import type { CatalogSubmission, CatalogSubmissionState } from "./catalog.types";
 
+type LiveApprovalRecord = ApprovalRecord & { readonly entityId?: string };
+
+function entityKey(record: ApprovalRecord): string {
+  return (record as LiveApprovalRecord).entityId || record.title;
+}
+
 function statusFor(stage: ApprovalStage): CatalogSubmission["status"] {
   if (stage === "rejected") return "rejected";
   if (["partner-approved", "marketing-approved", "catalog-adopted", "client-visible"].includes(stage)) {
@@ -17,7 +23,7 @@ function statusFor(stage: ApprovalStage): CatalogSubmission["status"] {
 function toSubmission(record: ApprovalRecord): CatalogSubmission {
   return {
     id: record.id,
-    storeId: record.entityId || record.title,
+    storeId: entityKey(record),
     revision: Math.max(1, (record.auditTrail?.length ?? 0) + 1),
     status: statusFor(record.stage),
     submittedBy: record.source,
@@ -61,7 +67,7 @@ export function useCatalogApprovalController(authSession: string) {
 
   const recordByStore = useMemo(() => {
     const map = new Map<string, ApprovalRecord>();
-    for (const record of records) map.set(record.entityId || record.title, record);
+    for (const record of records) map.set(entityKey(record), record);
     return map;
   }, [records]);
 
