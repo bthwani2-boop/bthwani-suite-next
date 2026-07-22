@@ -1,0 +1,154 @@
+name: Pickup Journey Verification
+run-name: Pickup journey verification · ${{ github.sha }}
+
+on:
+  push:
+    branches: ["sambassam"]
+    paths: &jrn015_paths
+      - ".github/workflows/pickup-journey-verification.yml"
+      - "services/dsh/backend/cmd/dsh-api/main.go"
+      - "services/dsh/backend/internal/http/pickup*.go"
+      - "services/dsh/backend/internal/pickup/**"
+      - "services/dsh/contracts/dsh.openapi.yaml"
+      - "services/dsh/contracts/fragments/pickup-recovery.fragment.yaml"
+      - "services/dsh/database/migrations/dsh-094_jrn_015_pickup_mutation_commands.sql"
+      - "services/dsh/frontend/shared/pickup/**"
+      - "services/dsh/frontend/app-client/DshClientSurface.tsx"
+      - "services/dsh/frontend/app-client/orders/PickupSessionScreen.tsx"
+      - "services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx"
+      - "services/dsh/frontend/control-panel/operations/PickupWorkbenchScreen.tsx"
+      - "services/dsh/tests/jrn-015-pickup-closure.test.mjs"
+      - "tools/scripts/compose-dsh-openapi.mjs"
+  pull_request:
+    paths: *jrn015_paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pickup-journey-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract-and-surfaces:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.17.0
+
+      - name: Enable pinned pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@10.34.2 --activate
+
+      - name: Install workspace dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Prove JRN-015 full-stack bindings
+        shell: bash
+        run: node --test services/dsh/tests/jrn-015-pickup-closure.test.mjs
+
+      - name: Compose and validate the DSH contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run openapi:compose:dsh
+          pnpm run contracts:lint
+
+      - name: Typecheck DSH shared brain and surfaces
+        shell: bash
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.json --noEmit
+
+      - name: Verify UI and full-stack boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run guard:ui-kit-boundary
+          pnpm run guard:fullstack-boundary
+
+  database-and-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: dsh_pickup
+          POSTGRES_USER: dsh_pickup
+          POSTGRES_PASSWORD: dsh_pickup
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_pickup -d dsh_pickup"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DSH_DATABASE_URL: postgres://dsh_pickup:dsh_pickup@localhost:55432/dsh_pickup?sslmode=disable
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: true
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Check focused Go formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            services/dsh/backend/cmd/dsh-api/main.go
+            services/dsh/backend/internal/http/pickup.go
+            services/dsh/backend/internal/http/pickup_mutation_guard.go
+            services/dsh/backend/internal/http/pickup_mutation_guard_test.go
+            services/dsh/backend/internal/http/pickup_path_context.go
+            services/dsh/backend/internal/pickup/partner_state.go
+            services/dsh/backend/internal/pickup/pickup.go
+            services/dsh/backend/internal/pickup/reschedule.go
+            services/dsh/backend/internal/pickup/reschedule_db_test.go
+          )
+          test -z "$(gofmt -l "${files[@]}")"
+
+      - name: Compile pickup boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd services/dsh/backend
+          go test ./internal/http ./internal/pickup ./cmd/dsh-api -run '^$' -count=1
+
+      - name: Prove pickup mutation route guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd services/dsh/backend
+          go test ./internal/http \
+            -run '^(TestMatchPickupMutationRoute|TestPickupMutationPathContextSetsOrderIDBeforeDelegation)$' \
+            -count=1 -v
+
+      - name: Apply DSH migrations from a clean database
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+            psql "$DSH_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file" >/dev/null
+          done
+
+      - name: Prove no-show rescheduling and OTP invalidation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd services/dsh/backend
+          DSH_REQUIRE_DB_TESTS=true DATABASE_URL="$DSH_DATABASE_URL" \
+            go test ./internal/pickup \
+              -run '^(TestRescheduleNoShowInvalidatesPreviousCodeDBIntegration|TestRescheduleRejectsActiveSessionDBIntegration)$' \
+              -count=1 -v
