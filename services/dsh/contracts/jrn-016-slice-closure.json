@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-016",
+  "title": "توصيل الشريك",
+  "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
+  "requiredSliceCount": 18,
+  "codeDecision": "IMPLEMENTED_PENDING_TARGETED_CI",
+  "releaseDecision": "READY_FOR_INDEPENDENT_REVIEW_NOT_RELEASED",
+  "slices": [
+    {
+      "id": "FS-01",
+      "name": "Product Truth",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["governance/product/contracts/jrn-016-partner-delivery.product-truth.json"],
+      "requiredMarkers": ["acceptanceCriteria", "negativeInvariants", "IMPLEMENTED_PENDING_VERIFICATION"]
+    },
+    {
+      "id": "FS-02",
+      "name": "Roles, permissions and surfaces",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/partner_delivery.go", "services/dsh/frontend/control-panel/operations/PartnerDeliveryWorkbenchScreen.tsx"],
+      "requiredMarkers": ["partner_delivery.read", "partner_delivery.manage", "requirePermission", "app-captain"]
+    },
+    {
+      "id": "FS-03",
+      "name": "States, ownership and allowed actions",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/partnerdelivery/partnerdelivery.go", "services/dsh/backend/internal/partnerdelivery/service.go"],
+      "requiredMarkers": ["StatusAssigned", "StatusDeparted", "StatusArrived", "StatusCompleted", "StatusException"]
+    },
+    {
+      "id": "FS-04",
+      "name": "DSH and WLT truth boundary",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["governance/product/contracts/jrn-016-partner-delivery.product-truth.json", "services/dsh/backend/internal/partnerdelivery/service.go"],
+      "requiredMarkers": ["WLT_REFERENCE_ONLY", "enqueueWltDeliveryCompletedNotification", "لا mutation مالية"]
+    },
+    {
+      "id": "FS-05",
+      "name": "Database truth, constraints and concurrency",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/database/migrations/dsh-116_partner_delivery_command_idempotency_and_exception_evidence.sql", "services/dsh/backend/internal/partnerdelivery/command_receipts.go", "services/dsh/backend/internal/partnerdelivery/jrn016_commands_db_test.go"],
+      "requiredMarkers": ["dsh_partner_delivery_command_receipts", "pg_advisory_lock", "exception_evidence_references", "ErrIdempotencyConflict"]
+    },
+    {
+      "id": "FS-06",
+      "name": "OpenAPI and canonical operation contracts",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/contracts/dsh.partner-delivery.openapi.yaml", "services/dsh/contracts/dsh.delivery-proof-media.openapi.yaml", "services/dsh/contracts/contract-registry.ts"],
+      "requiredMarkers": ["dsh-partner-delivery", "dsh-delivery-proof-media", "X-Command-ID", "evidenceReferences"]
+    },
+    {
+      "id": "FS-07",
+      "name": "Backend domain and HTTP behavior",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/partnerdelivery/lifecycle_commands.go", "services/dsh/backend/internal/partnerdelivery/exception_commands.go", "services/dsh/backend/internal/http/partner_delivery.go"],
+      "requiredMarkers": ["AssignCourierCommand", "SubmitProofCommand", "RaiseExceptionCommand", "IDEMPOTENCY_CONFLICT"]
+    },
+    {
+      "id": "FS-08",
+      "name": "Events, audit, retry and readback",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/partnerdelivery/service.go", "services/dsh/backend/internal/partnerdelivery/exception_commands.go", "services/dsh/backend/internal/partnerdelivery/command_receipts.go"],
+      "requiredMarkers": ["WriteAuditEvent", "enqueueEvent", "request_fingerprint", "return Get"]
+    },
+    {
+      "id": "FS-09",
+      "name": "Shared frontend brain",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/shared/partner-delivery/partner-delivery.api.ts", "services/dsh/frontend/shared/partner-delivery/use-partner-delivery-controller.tsx", "services/dsh/frontend/shared/partner-delivery/partner-delivery.types.ts"],
+      "requiredMarkers": ["commandFor", "classifyPartnerDeliveryError", "exceptionEvidenceReferences"]
+    },
+    {
+      "id": "FS-10",
+      "name": "Required surface binding",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx", "services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts", "services/dsh/frontend/control-panel/operations/PartnerDeliveryWorkbenchScreen.tsx"],
+      "requiredMarkers": ["usePartnerDeliveryActionsController", "fetchClientPartnerDeliveryTask", "useOperatorPartnerDeliveriesController"]
+    },
+    {
+      "id": "FS-11",
+      "name": "Visible operational states",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/control-panel/operations/PartnerDeliveryWorkbenchScreen.tsx", "services/dsh/frontend/app-partner/orders/PartnerFulfillmentActionsPanel.tsx"],
+      "requiredMarkers": ["loading", "offline", "recoverableError", "empty", "exception"]
+    },
+    {
+      "id": "FS-12",
+      "name": "Cross-surface integrity and read-after-write",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/shared/partner-delivery/use-partner-delivery-controller.tsx", "services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts", "services/dsh/backend/internal/http/partner_delivery_client.go"],
+      "requiredMarkers": ["fetchPartnerDeliveryTask", "fetchClientPartnerDeliveryTask", "marshalPartnerDeliveryTask"]
+    },
+    {
+      "id": "FS-13",
+      "name": "Security, ownership, isolation and audit",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/http/partner_delivery.go", "services/dsh/backend/internal/http/partner_delivery_client.go", "services/dsh/backend/internal/http/delivery_proof_upload.go"],
+      "requiredMarkers": ["partnerOrder", "requireActor", "requirePermission", "owner_actor_id", "partner_id"]
+    },
+    {
+      "id": "FS-14",
+      "name": "RTL, accessibility, weak network and recovery",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/control-panel/operations/PartnerDeliveryWorkbenchScreen.tsx", "services/dsh/frontend/shared/partner-delivery/use-partner-delivery-controller.tsx"],
+      "requiredMarkers": ["تعذر", "إعادة المحاولة", "network", "unavailable"]
+    },
+    {
+      "id": "FS-15",
+      "name": "Monitoring, diagnostics and support evidence",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/frontend/control-panel/operations/PartnerDeliveryWorkbenchScreen.tsx", "services/dsh/backend/internal/partnerdelivery/exception_commands.go"],
+      "requiredMarkers": ["مهام توصيل الشريك المباشرة", "سبب الاستثناء", "مراجع الأدلة", "exception_reported_at"]
+    },
+    {
+      "id": "FS-16",
+      "name": "Legacy cleanup and fleet separation",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": ["services/dsh/backend/internal/partnerdelivery/service.go", "governance/product/contracts/jrn-016-partner-delivery.product-truth.json", "services/dsh/frontend/control-panel/operations/PartnerDeliveryWorkbenchScreen.tsx"],
+      "requiredMarkers": ["dsh_assignments", "active bthwani-captain assignment", "فصل أسطول الشريك عن أسطول بثواني"]
+    },
+    {
+      "id": "FS-17",
+      "name": "Targeted verification and CI",
+      "codeStatus": "IMPLEMENTED",
+      "requiredFiles": [".github/workflows/partner-delivery-verification.yml", "services/dsh/tests/jrn-016-partner-delivery-closure.test.mjs", "services/dsh/backend/internal/partnerdelivery/jrn016_commands_db_test.go"],
+      "requiredMarkers": ["JRN-016 database and backend", "JRN-016 contract and surfaces", "TestPartnerDeliveryCommandReplayDBIntegration"]
+    },
+    {
+      "id": "FS-18",
+      "name": "Same-commit evidence and final review gate",
+      "codeStatus": "IMPLEMENTED_PENDING_TARGETED_CI",
+      "requiredFiles": ["services/dsh/contracts/jrn-016-slice-closure.json", ".github/workflows/partner-delivery-verification.yml"],
+      "requiredMarkers": ["READY_FOR_INDEPENDENT_REVIEW_NOT_RELEASED", "requiredSliceCount", "github.sha"]
+    }
+  ]
+}
