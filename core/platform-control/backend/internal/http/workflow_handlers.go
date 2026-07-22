@@ -25,7 +25,11 @@ func (s *server) publicHealth(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) publicReadiness(w http.ResponseWriter, r *http.Request) {
 	if err := s.service.Ready(r.Context()); err != nil {
-		sendJSON(w, http.StatusServiceUnavailable, map[string]any{"status": "not_ready", "service": "platform-control", "reason": "database_unavailable"})
+		sendJSON(w, http.StatusServiceUnavailable, map[string]any{
+			"status":  "not_ready",
+			"service": "platform-control",
+			"reason":  "database_unavailable",
+		})
 		return
 	}
 	sendJSON(w, http.StatusOK, map[string]any{"status": "ready", "service": "platform-control"})
@@ -34,55 +38,129 @@ func (s *server) publicReadiness(w http.ResponseWriter, r *http.Request) {
 func (s *server) getChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	_ = identity
 	changeSet, err := s.service.GetChangeSet(r.Context(), r.PathValue("id"))
-	if err != nil { sendPlatformError(w, err); return }
+	if err != nil {
+		sendPlatformError(w, err)
+		return
+	}
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
 func (s *server) createChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	var input platformcontrol.CreateChangeSetInput
-	if err := decodePlatformJSON(w, r, &input); err != nil { return }
-	changeSet, err := s.service.CreateChangeSet(r.Context(), identity.Subject, identity.Roles, correlationID(r), input)
-	if err != nil { sendPlatformError(w, err); return }
+	if err := decodePlatformJSON(w, r, &input); err != nil {
+		return
+	}
+	changeSet, err := s.service.CreateChangeSet(
+		r.Context(),
+		identity.Subject,
+		identity.Roles,
+		correlationID(r),
+		input,
+	)
+	if err != nil {
+		sendPlatformError(w, err)
+		return
+	}
 	sendJSON(w, http.StatusCreated, map[string]any{"changeSet": changeSet})
 }
 
 func (s *server) validateChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	changeSet, err := s.service.ValidateChangeSet(r.Context(), r.PathValue("id"), identity.Subject, identity.Roles, correlationID(r))
-	if err != nil { sendPlatformError(w, err); return }
+	changeSet, err := s.service.ValidateChangeSet(
+		r.Context(),
+		r.PathValue("id"),
+		identity.Subject,
+		identity.Roles,
+		correlationID(r),
+	)
+	if err != nil {
+		sendPlatformError(w, err)
+		return
+	}
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
 func (s *server) submitChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	changeSet, err := s.service.SubmitChangeSet(r.Context(), r.PathValue("id"), identity.Subject, identity.Roles, correlationID(r))
-	if err != nil { sendPlatformError(w, err); return }
+	changeSet, err := s.service.SubmitChangeSet(
+		r.Context(),
+		r.PathValue("id"),
+		identity.Subject,
+		identity.Roles,
+		correlationID(r),
+	)
+	if err != nil {
+		sendPlatformError(w, err)
+		return
+	}
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
 func (s *server) approveChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	changeSet, err := s.service.ApproveChangeSet(r.Context(), r.PathValue("id"), identity.Subject, identity.Roles, correlationID(r))
-	if err != nil { sendPlatformError(w, err); return }
+	changeSet, err := s.service.ApproveChangeSet(
+		r.Context(),
+		r.PathValue("id"),
+		identity.Subject,
+		identity.Roles,
+		correlationID(r),
+	)
+	if err != nil {
+		sendPlatformError(w, err)
+		return
+	}
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
 func (s *server) rejectChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	var input platformcontrol.RejectChangeSetInput
-	if err := decodePlatformJSON(w, r, &input); err != nil { return }
-	changeSet, err := s.service.RejectChangeSet(r.Context(), r.PathValue("id"), identity.Subject, identity.Roles, correlationID(r), input.Reason)
-	if err != nil { sendPlatformError(w, err); return }
+	if err := decodePlatformJSON(w, r, &input); err != nil {
+		return
+	}
+	changeSet, err := s.service.RejectChangeSet(
+		r.Context(),
+		r.PathValue("id"),
+		identity.Subject,
+		identity.Roles,
+		correlationID(r),
+		input.Reason,
+	)
+	if err != nil {
+		sendPlatformError(w, err)
+		return
+	}
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
 func (s *server) applyChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	changeSet, err := s.service.ApplyChangeSet(r.Context(), r.PathValue("id"), identity.Subject, identity.Roles, correlationID(r))
-	if err != nil { sendPlatformError(w, err); return }
+	changeSet, err := s.service.ApplyChangeSet(
+		r.Context(),
+		r.PathValue("id"),
+		identity.Subject,
+		identity.Roles,
+		correlationID(r),
+	)
+	if err != nil {
+		sendPlatformError(w, err)
+		return
+	}
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
 func (s *server) rollbackChangeSet(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	var input platformcontrol.RollbackChangeSetInput
-	if err := decodePlatformJSON(w, r, &input); err != nil { return }
-	changeSet, err := s.service.RollbackChangeSet(r.Context(), r.PathValue("id"), identity.Subject, identity.Roles, correlationID(r), input.Reason)
-	if err != nil { sendPlatformError(w, err); return }
+	if err := decodePlatformJSON(w, r, &input); err != nil {
+		return
+	}
+	changeSet, err := s.service.RollbackChangeSet(
+		r.Context(),
+		r.PathValue("id"),
+		identity.Subject,
+		identity.Roles,
+		correlationID(r),
+		input.Reason,
+	)
+	if err != nil {
+		sendPlatformError(w, err)
+		return
+	}
 	sendJSON(w, http.StatusOK, map[string]any{"changeSet": changeSet})
 }
 
