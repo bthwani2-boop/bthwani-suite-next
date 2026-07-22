@@ -46,8 +46,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-034-payments-${{ github.sha }}
-  cancel-in-progress: false
+  group: jrn-034-payments-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   structural:
