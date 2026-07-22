@@ -14,12 +14,12 @@ func TestClientCanSeeCaptainLocation(t *testing.T) {
 	}{
 		{status: dispatch.DeliveryAssigned, want: false},
 		{status: dispatch.DeliveryDriverAssigned, want: false},
-		{status: dispatch.DeliveryDriverArrivedStore, want: false},
+		{status: dispatch.DeliveryArrivedStore, want: false},
 		{status: dispatch.DeliveryPickedUp, want: true},
 		{status: dispatch.DeliveryArrivedCustomer, want: true},
 		{status: dispatch.DeliveryDelivered, want: false},
-		{status: dispatch.DeliveryReturningToStore, want: false},
-		{status: dispatch.DeliveryReturnedToStore, want: false},
+		{status: dispatch.DeliveryReturningStore, want: false},
+		{status: dispatch.DeliveryReturnedStore, want: false},
 	}
 
 	for _, tt := range tests {
