@@ -21,12 +21,12 @@ export type DshEscalationCategory =
   | "equipment_failure"
   | "other";
 
-/** GPS evidence submitted by the mobile device. */
+/** GPS evidence submitted by the mobile device and revalidated by DSH. */
 export type DshLocationEvidence = {
   readonly latitude: number;
   readonly longitude: number;
   readonly accuracyMeters: number;
-  readonly capturedAt: string; // ISO 8601
+  readonly capturedAt: string;
   readonly provider?: string;
   readonly deviceReference?: string;
   readonly isMocked?: boolean;
@@ -45,7 +45,6 @@ export type DshFieldVisit = {
   readonly completedAt?: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
-  // GPS evidence — present when location was captured
   readonly geofenceRadiusMeters?: number;
   readonly startLatitude?: number | null;
   readonly startLongitude?: number | null;
@@ -95,6 +94,7 @@ export type DshFieldWorkQueue = {
   readonly visits: readonly DshFieldVisit[];
   readonly escalations: readonly DshReadinessEscalation[];
 };
+
 export type DshOnboardingStatus = {
   readonly storeId: string;
   readonly totalVisits: number;
@@ -106,15 +106,11 @@ export type DshOnboardingStatus = {
 
 export type DshCreateVisitInput = {
   readonly visitType?: DshVisitType;
-  /** GPS evidence captured at visit start — required by the backend. */
+  /** Fresh device GPS evidence. Store coordinates are resolved by DSH only. */
   readonly startLocation: DshLocationEvidence;
-  /** Store's registered coordinates for geofence computation. */
-  readonly storeLatitude?: number;
-  readonly storeLongitude?: number;
 };
 
 export type DshCompleteVisitInput = {
-  /** GPS evidence captured at visit completion — required by the backend. */
   readonly completionLocation: DshLocationEvidence;
 };
 
@@ -136,7 +132,6 @@ export type DshUpdateEscalationInput = {
   readonly status: DshEscalationStatus;
   readonly resolutionNote?: string;
 };
-
 
 export const CHECK_TYPE_LABELS: Record<DshCheckType, string> = {
   location_verified: "التحقق من الموقع",
