@@ -1,0 +1,369 @@
+openapi: 3.0.3
+info:
+  title: BThwani DSH JRN-033 Representative Finance
+  version: 1.0.0
+  description: >-
+    Canonical actor-scoped wallet and ledger read contract. WLT remains the
+    financial truth owner; DSH resolves identity and authorizes reads.
+servers:
+  - url: http://localhost:58080
+security:
+  - bearerAuth: []
+paths:
+  /dsh/client/me/finance/wallet:
+    get:
+      operationId: getDshClientOwnWallet
+      tags: [representative-finance]
+      responses:
+        '200': { $ref: '#/components/responses/WalletResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/client/me/finance/ledger-entries:
+    get:
+      operationId: listDshClientOwnLedgerEntries
+      tags: [representative-finance]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/EntryType'
+      responses:
+        '200': { $ref: '#/components/responses/LedgerResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/partner/me/finance/wallet:
+    get:
+      operationId: getDshPartnerOwnWallet
+      tags: [representative-finance]
+      responses:
+        '200': { $ref: '#/components/responses/WalletResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/partner/me/finance/ledger-entries:
+    get:
+      operationId: listDshPartnerOwnLedgerEntries
+      tags: [representative-finance]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/EntryType'
+      responses:
+        '200': { $ref: '#/components/responses/LedgerResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/partner/me/finance/commissions:
+    get:
+      operationId: listDshPartnerOwnCommissions
+      tags: [representative-finance]
+      responses:
+        '200':
+          description: Partner-scoped commission references.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/partner/me/finance/payout-requests:
+    get:
+      operationId: listDshPartnerOwnPayoutRequests
+      tags: [representative-finance]
+      responses:
+        '200':
+          description: Partner-scoped payout references.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/captain/me/finance/wallet:
+    get:
+      operationId: getDshCaptainOwnWallet
+      tags: [representative-finance]
+      responses:
+        '200': { $ref: '#/components/responses/WalletResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/captain/me/finance/ledger-entries:
+    get:
+      operationId: listDshCaptainOwnLedgerEntries
+      tags: [representative-finance]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/EntryType'
+      responses:
+        '200': { $ref: '#/components/responses/LedgerResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/captain/me/finance/commissions:
+    get:
+      operationId: listDshCaptainOwnCommissions
+      tags: [representative-finance]
+      responses:
+        '200':
+          description: Captain-scoped commission references.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/captain/me/finance/payout-requests:
+    get:
+      operationId: listDshCaptainOwnPayoutRequests
+      tags: [representative-finance]
+      responses:
+        '200':
+          description: Captain-scoped payout requests.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+    post:
+      operationId: createDshCaptainOwnPayoutRequest
+      tags: [representative-finance]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 200 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PayoutRequestInput' }
+      responses:
+        '201':
+          description: Governed payout request created in WLT.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/field/me/finance/wallet:
+    get:
+      operationId: getDshFieldOwnWallet
+      tags: [representative-finance]
+      responses:
+        '200': { $ref: '#/components/responses/WalletResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/field/me/finance/ledger-entries:
+    get:
+      operationId: listDshFieldOwnLedgerEntries
+      tags: [representative-finance]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/EntryType'
+      responses:
+        '200': { $ref: '#/components/responses/LedgerResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/field/me/finance/commissions:
+    get:
+      operationId: listDshFieldOwnCommissions
+      tags: [representative-finance]
+      responses:
+        '200':
+          description: Field-scoped commission references.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/field/me/finance/payout-requests:
+    get:
+      operationId: listDshFieldOwnPayoutRequests
+      tags: [representative-finance]
+      responses:
+        '200':
+          description: Field-scoped payout requests.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+    post:
+      operationId: createDshFieldOwnPayoutRequest
+      tags: [representative-finance]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 200 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PayoutRequestInput' }
+      responses:
+        '201':
+          description: Governed payout request created in WLT.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/control-panel/finance/wallets/{actorType}/{actorId}:
+    get:
+      operationId: getDshRepresentativeWallet
+      tags: [representative-finance]
+      description: Requires finance.read. This is the only route in this contract that accepts an actor id.
+      parameters:
+        - name: actorType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [client, partner, captain, field]
+        - name: actorId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        '200': { $ref: '#/components/responses/WalletResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100, default: 30 }
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema: { type: string, maxLength: 500 }
+    EntryType:
+      name: entryType
+      in: query
+      required: false
+      schema: { type: string, maxLength: 80 }
+  responses:
+    WalletResponse:
+      description: WLT-owned representative wallet.
+      headers:
+        Cache-Control:
+          schema: { type: string, example: 'private, no-store' }
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [wallet]
+            properties:
+              wallet: { $ref: '#/components/schemas/RepresentativeWallet' }
+    LedgerResponse:
+      description: Actor-scoped ledger references from WLT.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [ledgerEntries]
+            properties:
+              ledgerEntries:
+                type: array
+                items: { $ref: '#/components/schemas/RepresentativeLedgerEntry' }
+    AuthError:
+      description: Authentication or authorization failed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ValidationError:
+      description: Invalid actor or request input.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    WltUnavailable:
+      description: WLT is not configured or unavailable.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+  schemas:
+    RepresentativeWallet:
+      type: object
+      required:
+        - id
+        - actorId
+        - actorType
+        - status
+        - currency
+        - availableBalanceMinorUnits
+        - pendingBalanceMinorUnits
+        - heldBalanceMinorUnits
+        - earnedTotalMinorUnits
+        - settledTotalMinorUnits
+        - paidTotalMinorUnits
+      properties:
+        id: { type: string }
+        actorId: { type: string }
+        actorType: { type: string, enum: [client, partner, captain, field] }
+        status: { type: string, enum: [active, suspended, frozen, closed] }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        availableBalanceMinorUnits: { type: integer, format: int64 }
+        pendingBalanceMinorUnits: { type: integer, format: int64 }
+        heldBalanceMinorUnits: { type: integer, format: int64 }
+        earnedTotalMinorUnits: { type: integer, format: int64 }
+        settledTotalMinorUnits: { type: integer, format: int64 }
+        paidTotalMinorUnits: { type: integer, format: int64 }
+        lastLedgerEntryAt: { type: string, format: date-time, nullable: true }
+        updatedAt: { type: string, format: date-time, nullable: true }
+    RepresentativeLedgerEntry:
+      type: object
+      required: [id, entryType, actorId, actorType, amountMinorUnits, currency, debitCredit, balanceAfter, createdAt]
+      properties:
+        id: { type: string }
+        entryType: { type: string }
+        actorId: { type: string }
+        actorType: { type: string, enum: [client, partner, captain, field] }
+        sourceType: { type: string }
+        sourceId: { type: string }
+        referenceId: { type: string }
+        referenceType: { type: string }
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        debitCredit: { type: string, enum: [debit, credit] }
+        balanceAfter: { type: integer, format: int64 }
+        description: { type: string }
+        createdAt: { type: string, format: date-time }
+    PayoutRequestInput:
+      type: object
+      required: [amountMinorUnits, currency]
+      properties:
+        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 200 }
+      additionalProperties: false
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+      additionalProperties: true
