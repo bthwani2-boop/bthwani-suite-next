@@ -144,6 +144,10 @@ test("JRN-022 product truth is schema-valid and remains independently approvable
   assert.equal(productTruth.owners.productOwnerApproval, "PENDING");
   assert.equal(productTruth.owners.productAcceptanceDecision, "PENDING");
   assert.ok(
+    productTruth.acceptance.criteria.some((criterion) => criterion.includes("refuse a prepared quote through the governed cancellation mutation")),
+    "quote refusal ownership must remain explicit",
+  );
+  assert.ok(
     productTruth.acceptance.criteria.some((criterion) => criterion.includes("Binary media is not required")),
     "media applicability decision must remain explicit",
   );
