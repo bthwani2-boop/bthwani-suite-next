@@ -7043,6 +7043,8 @@ components:
         - cash_collection_issue
         - weather_or_road_block
         - proof_unavailable
+        - handoff_shortage
+        - handoff_mismatch
         - other
 
     DshDeliveryExceptionStatus:

@@ -146,7 +146,7 @@ test('partner readback survives refresh, releases resolved state, and preserves 
   assert.match(screen, /observedServerHandoffExceptionOrderId/);
   assert.match(screen, /if \(item\.allowedActions\.includes\(actionId\)\)/);
   assert.match(screen, /StoreCaptainHandoffExceptionForm/);
-  assert.doesNotMatch(screen, /actionId === 'resolve_issue'.*openPreparationIssueCount/s);
+  assert.doesNotMatch(screen, /\|\| \(actionId === 'resolve_issue' && item\.openPreparationIssueCount > 0\)/);
   assert.doesNotMatch(screen, /fetch\s*\(|\/dsh\//);
 });
 

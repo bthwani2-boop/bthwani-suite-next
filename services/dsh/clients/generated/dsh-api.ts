@@ -4352,7 +4352,7 @@ export interface components {
             newCaptainId?: string;
         };
         /** @enum {string} */
-        DshDeliveryExceptionReasonCode: "customer_unreachable" | "recipient_refused" | "wrong_address" | "unsafe_location" | "vehicle_breakdown" | "accident" | "damaged_order" | "cash_collection_issue" | "weather_or_road_block" | "proof_unavailable" | "other";
+        DshDeliveryExceptionReasonCode: "customer_unreachable" | "recipient_refused" | "wrong_address" | "unsafe_location" | "vehicle_breakdown" | "accident" | "damaged_order" | "cash_collection_issue" | "weather_or_road_block" | "proof_unavailable" | "handoff_shortage" | "handoff_mismatch" | "other";
         /** @enum {string} */
         DshDeliveryExceptionStatus: "open" | "acknowledged" | "resolved";
         /** @enum {string} */
