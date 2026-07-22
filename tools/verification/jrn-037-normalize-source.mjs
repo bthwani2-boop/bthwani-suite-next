@@ -38,6 +38,13 @@ replaceExactly(
   `  const field = (key: DestinationTextField, placeholder: string, secure = false) => (\n`,
 );
 
+const runtimeSmokePath = "tools/verification/jrn-037-runtime-smoke.sh";
+replaceExactly(
+  runtimeSmokePath,
+  `echo '{"operatorId":"finance-maker-1"}' | api POST "/wlt/payout-requests/$PAYOUT_ID/approve" "$REQUEST_KEY-approve" "$REQUEST_KEY-approve" "$(cat)" >/tmp/jrn037-approved.json\necho '{"operatorId":"finance-processor-2"}' | api POST "/wlt/payout-requests/$PAYOUT_ID/process" "$REQUEST_KEY-process" "$REQUEST_KEY-process" "$(cat)" >/tmp/jrn037-processed.json\necho '{"operatorId":"finance-checker-3"}' | api POST "/wlt/payout-requests/$PAYOUT_ID/complete" "$REQUEST_KEY-complete" "$REQUEST_KEY-complete" "$(cat)" >/tmp/jrn037-completed.json\n`,
+  `api POST "/wlt/payout-requests/$PAYOUT_ID/approve" "$REQUEST_KEY-approve" "$REQUEST_KEY-approve" '{"operatorId":"finance-maker-1"}' >/tmp/jrn037-approved.json\napi POST "/wlt/payout-requests/$PAYOUT_ID/process" "$REQUEST_KEY-process" "$REQUEST_KEY-process" '{"operatorId":"finance-processor-2"}' >/tmp/jrn037-processed.json\napi POST "/wlt/payout-requests/$PAYOUT_ID/complete" "$REQUEST_KEY-complete" "$REQUEST_KEY-complete" '{"operatorId":"finance-checker-3"}' >/tmp/jrn037-completed.json\n`,
+);
+
 const goFiles = [
   "services/wlt/backend/internal/payout/jrn037_governed_payout.go",
   "services/wlt/backend/internal/payout/jrn037_governed_payout_test.go",
