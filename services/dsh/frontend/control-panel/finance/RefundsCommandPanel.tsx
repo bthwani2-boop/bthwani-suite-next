@@ -106,7 +106,7 @@ export function RefundsCommandPanel() {
   const busy = command.state.kind === "mutating" || refundsController.state.kind === "loading";
 
   return (
-    <div style={{ display: "grid", gap: "1rem" }}>
+    <div dir="rtl" aria-busy={busy} style={{ display: "grid", gap: "1rem" }}>
       <Card style={{ padding: "1.25rem", display: "grid", gap: "0.8rem" }}>
         <Text role="titleMd">بحث طلب وإنشاء استرداد</Text>
         <Text role="body" tone="muted">
@@ -124,26 +124,46 @@ export function RefundsCommandPanel() {
           <button type="button" disabled={busy || !orderId.trim()} onClick={() => void search()} style={{ ...buttonStyle, background: lightThemeColors.info, color: "white" }}>تحميل الاستردادات</button>
           <button type="button" disabled={busy || !paymentSessionId.trim() || !clientId.trim() || !reason.trim() || !eligibilityReference.trim()} onClick={() => void createRefund()} style={{ ...buttonStyle, background: lightThemeColors.success, color: "white" }}>إنشاء طلب استرداد</button>
         </div>
+        {busy ? (
+          <div role="status" aria-live="polite">
+            <Text role="body" tone="muted">جارٍ تنفيذ العملية المالية والتحقق من أحدث حالة…</Text>
+          </div>
+        ) : null}
       </Card>
 
       {command.state.kind === "error" ? (
-        <Card style={{ padding: "1rem", borderInlineStart: `4px solid ${lightThemeColors.danger}` }}>
-          <Text role="body">{command.state.message}</Text>
-        </Card>
+        <div role="alert" aria-live="assertive">
+          <Card style={{ padding: "1rem", borderInlineStart: `4px solid ${lightThemeColors.danger}` }}>
+            <Text role="body">{command.state.message}</Text>
+          </Card>
+        </div>
       ) : null}
       {command.state.kind === "provider_unknown" ? (
-        <Card style={{ padding: "1rem", borderInlineStart: `4px solid ${lightThemeColors.warning}` }}>
-          <Text role="titleSm">نتيجة المزود غير محسومة</Text>
-          <Text role="body" tone="muted">{command.state.message} لا تعِد التنفيذ؛ استخدم المصالحة أدناه بعد الحصول على دليل المزود.</Text>
-        </Card>
+        <div role="alert" aria-live="assertive">
+          <Card style={{ padding: "1rem", borderInlineStart: `4px solid ${lightThemeColors.warning}` }}>
+            <Text role="titleSm">نتيجة المزود غير محسومة</Text>
+            <Text role="body" tone="muted">{command.state.message} لا تعِد التنفيذ؛ استخدم المصالحة أدناه بعد الحصول على دليل المزود.</Text>
+          </Card>
+        </div>
       ) : null}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: "1rem" }}>
         <Card style={{ padding: "1rem", display: "grid", gap: "0.7rem", alignContent: "start" }}>
           <Text role="titleMd">الاستردادات المرتبطة بالطلب</Text>
-          {refundsController.state.kind === "error" ? <Text role="body">{refundsController.state.message}</Text> : null}
+          {refundsController.state.kind === "error" ? (
+            <div role="alert" aria-live="assertive">
+              <Text role="body">{refundsController.state.message}</Text>
+            </div>
+          ) : null}
           {refunds.length === 0 ? <Text role="body" tone="muted">لا توجد استردادات محمّلة.</Text> : refunds.map((refund) => (
-            <button key={refund.id} type="button" onClick={() => setSelectedRefundId(refund.id)} style={{ textAlign: "start", border: `1px solid ${selected?.id === refund.id ? lightThemeColors.info : lightThemeColors.borderColor}`, borderRadius: "0.6rem", padding: "0.8rem", background: "transparent", color: "inherit", cursor: "pointer" }}>
+            <button
+              key={refund.id}
+              type="button"
+              aria-pressed={selected?.id === refund.id}
+              aria-label={`اختيار الاسترداد ${refund.id}، ${refund.amountLabel} ${refund.currency}، ${refund.statusLabel}`}
+              onClick={() => setSelectedRefundId(refund.id)}
+              style={{ textAlign: "start", border: `1px solid ${selected?.id === refund.id ? lightThemeColors.info : lightThemeColors.borderColor}`, borderRadius: "0.6rem", padding: "0.8rem", background: "transparent", color: "inherit", cursor: "pointer" }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem" }}>
                 <strong>{refund.amountLabel} {refund.currency}</strong>
                 <Badge label={refund.statusLabel} tone={refundTone(refund)} />
@@ -169,7 +189,7 @@ export function RefundsCommandPanel() {
                 <button type="button" disabled={busy || selected.status !== "approved"} onClick={() => void execute()} style={{ ...buttonStyle, background: lightThemeColors.info, color: "white" }}>تنفيذ لدى المزود</button>
               </div>
               {selected.status === "provider_unknown" ? (
-                <div style={{ display: "grid", gap: "0.6rem", paddingTop: "0.5rem", borderTop: `1px solid ${lightThemeColors.borderColor}` }}>
+                <div role="region" aria-label="مصالحة النتيجة غير المحسومة" style={{ display: "grid", gap: "0.6rem", paddingTop: "0.5rem", borderTop: `1px solid ${lightThemeColors.borderColor}` }}>
                   <Text role="titleSm">مصالحة النتيجة غير المحسومة</Text>
                   <input aria-label="مرجع المزود" placeholder="مرجع المزود عند تأكيد النجاح" value={providerReference} onChange={(event) => setProviderReference(event.target.value)} style={inputStyle} />
                   <textarea aria-label="دليل المصالحة" placeholder="ملخص الدليل الخارجي" value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} style={{ ...inputStyle, minHeight: "5rem" }} />
@@ -179,10 +199,14 @@ export function RefundsCommandPanel() {
                   </div>
                 </div>
               ) : null}
-              <div style={{ display: "grid", gap: "0.35rem", paddingTop: "0.5rem", borderTop: `1px solid ${lightThemeColors.borderColor}` }}>
+              <div role="region" aria-label="سجل تدقيق الاسترداد" style={{ display: "grid", gap: "0.35rem", paddingTop: "0.5rem", borderTop: `1px solid ${lightThemeColors.borderColor}` }}>
                 <Text role="titleSm">سجل التدقيق</Text>
-                {audit.state.kind === "loading" ? <Text role="body">جارٍ التحميل...</Text> : null}
-                {audit.state.kind === "error" ? <Text role="body">{audit.state.message}</Text> : null}
+                {audit.state.kind === "loading" ? (
+                  <div role="status" aria-live="polite"><Text role="body">جارٍ تحميل سجل التدقيق...</Text></div>
+                ) : null}
+                {audit.state.kind === "error" ? (
+                  <div role="alert" aria-live="assertive"><Text role="body">{audit.state.message}</Text></div>
+                ) : null}
                 {audit.state.kind === "loaded" && audit.state.events.length === 0 ? <Text role="body" tone="muted">لا توجد أحداث.</Text> : null}
                 {audit.state.kind === "loaded" ? audit.state.events.map((event) => (
                   <div key={event.id} style={{ padding: "0.5rem", borderRadius: "0.4rem", background: lightThemeColors.surfaceInset }}>
