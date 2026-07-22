@@ -2,9 +2,9 @@ package http
 
 import "net/http"
 
-// registerJRN032AnalyticsRoutes binds the JRN-032 routes that are not already
-// owned by an earlier protected-route registration. The support analytics route
-// remains registered once in server.go by the governed support module.
+// registerJRN032AnalyticsRoutes binds only the analytics routes that are not
+// already owned by an earlier domain registration. Support analytics remains
+// in server.go, and partner performance remains in partner_self_routes.go.
 func registerJRN032AnalyticsRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/operator/analytics/platform", s.handlePlatformKpis)
 	mux.HandleFunc("GET /dsh/operator/analytics/orders", s.handleOrderAnalytics)
@@ -16,5 +16,4 @@ func registerJRN032AnalyticsRoutes(mux *http.ServeMux, s *protectedStoreServer) 
 	mux.HandleFunc("GET /dsh/operator/analytics/drill-down/orders", s.handleOrderAnalyticsDrilldown)
 	mux.HandleFunc("GET /dsh/operator/analytics/financial-snapshot", s.handleAnalyticsFinancialSnapshot)
 	mux.HandleFunc("GET /dsh/operator/analytics/export.csv", s.handleAnalyticsExportCSV)
-	mux.HandleFunc("GET /dsh/partner/analytics/performance", s.handlePartnerPerformance)
 }
