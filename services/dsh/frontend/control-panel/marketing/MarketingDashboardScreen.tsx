@@ -19,6 +19,7 @@ import { MarketingHomeDiscoveryPanel } from "./components/MarketingHomeDiscovery
 import { LoyaltyCommandDeck } from "./components/LoyaltyCommandDeck";
 import { SubscriptionsCommandDeck } from "./components/SubscriptionsCommandDeck";
 import { CouponsCommandDeck } from "./components/CouponsCommandDeck";
+import { CouponFundingReconciliationPanel } from "./components/CouponFundingReconciliationPanel";
 import { LoyaltyPolicyPanel } from "./components/LoyaltyPolicyPanel";
 
 function MainTabButton({ active, onClick, children }: { readonly active: boolean; readonly onClick: () => void; readonly children: ReactNode }) {
@@ -59,7 +60,7 @@ export function MarketingDashboardScreen() {
       {mainTab === "smart-bar" ? <TickerCommandDeck /> : null}
       {mainTab === "campaigns" ? <CampaignsCommandDeck /> : null}
       {mainTab === "partner-offers" ? <PartnerOffersCommandDeck /> : null}
-      {mainTab === "coupons" ? <CouponsCommandDeck /> : null}
+      {mainTab === "coupons" ? <><CouponsCommandDeck /><CouponFundingReconciliationPanel /></> : null}
       {mainTab === "loyalty" ? <><LoyaltyCommandDeck /><LoyaltyPolicyPanel /></> : null}
       {mainTab === "subscriptions" ? <SubscriptionsCommandDeck /> : null}
       {mainTab === "signals-measurement" ? <SignalsMeasurementCommandDeck /> : null}
