@@ -13,6 +13,8 @@ const loyaltyHTTP = read("services/dsh/backend/internal/http/loyalty_policy.go")
 const wltOutboxWorker = read("services/dsh/backend/internal/wltoutbox/worker.go");
 const wltCommercial = read("services/wlt/backend/internal/commercial/commercial.go");
 const partnerController = read("services/dsh/frontend/shared/partner/use-delivery-pricing-controller.ts");
+const partnerPublic = read("services/dsh/frontend/shared/partner/partner-delivery-pricing.public.ts");
+const partnerIndex = read("services/dsh/frontend/shared/partner/index.ts");
 const partnerCard = read("services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx");
 const partnerCourierScreen = read("services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx");
 const couponsDeck = read("services/dsh/frontend/control-panel/marketing/components/CouponsCommandDeck.tsx");
@@ -21,6 +23,11 @@ const clientCheckout = read("services/dsh/frontend/app-client/checkout/GovernedC
 test("JRN-026 mounts partner delivery pricing and lets the partner create the first policy", () => {
   assert.match(partnerCourierScreen, /import \{ PartnerDeliveryPricingCard \} from '\.\/PartnerDeliveryPricingCard'/);
   assert.match(partnerCourierScreen, /<PartnerDeliveryPricingCard storeId=\{storeId\} \/>/);
+  assert.match(partnerPublic, /usePartnerDeliveryPricingController/);
+  assert.match(partnerPublic, /findDeliveryPricing/);
+  assert.match(partnerCard, /partner-delivery-pricing\.public/);
+  assert.doesNotMatch(partnerCard, /use-delivery-pricing-controller/);
+  assert.doesNotMatch(partnerIndex, /\n\s*usePartnerDeliveryPricingController,\n/);
   assert.match(partnerController, /record: DeliveryPricingRecord \| null/);
   assert.match(partnerController, /expectedVersion: record\?\.version \?\? 0/);
   assert.doesNotMatch(partnerCard, /if \(!partnerPolicy\) return/);
