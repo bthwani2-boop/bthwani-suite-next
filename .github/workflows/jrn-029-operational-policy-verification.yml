@@ -174,9 +174,13 @@ jobs:
           $$;
           SQL
 
-      - name: Execute targeted and PostgreSQL lifecycle tests
+      - name: Execute platform policy PostgreSQL lifecycle tests
         working-directory: services/dsh/backend
-        run: go test ./internal/platformpolicies ./internal/http -run 'TestJRN029' -count=1 -v
+        run: go test ./internal/platformpolicies -run 'TestJRN029' -count=1 -v
+
+      - name: Execute HTTP JRN-029 tests
+        working-directory: services/dsh/backend
+        run: go test ./internal/http -run 'TestJRN029' -count=1 -v
 
       - name: Run DSH API and verify all governed routes are mounted
         working-directory: services/dsh/backend
