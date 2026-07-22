@@ -29,8 +29,9 @@ export type DshDeliveryExceptionReasonCode =
   | "handoff_shortage"
   | "handoff_mismatch";
 
-export type DshDeliveryException = Omit<GeneratedDshDeliveryException, "reasonCode"> & {
+export type DshDeliveryException = Omit<GeneratedDshDeliveryException, "reasonCode" | "orderId"> & {
   readonly reasonCode: DshDeliveryExceptionReasonCode;
+  readonly orderId: string;
 };
 
 export type DshReportDeliveryExceptionInput = Omit<

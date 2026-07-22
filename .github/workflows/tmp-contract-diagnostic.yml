@@ -5,6 +5,7 @@ on:
     branches: [sambassam]
     paths:
       - ".github/workflows/tmp-contract-diagnostic.yml"
+      - "tools/scripts/tmp-project-route-closure.py"
       - "tools/guards/_openapi-utils.mjs"
       - "tools/guards/_openapi-utils.test.mjs"
       - "services/**/contracts/**"
@@ -20,6 +21,7 @@ on:
     branches: [master]
     paths:
       - ".github/workflows/tmp-contract-diagnostic.yml"
+      - "tools/scripts/tmp-project-route-closure.py"
       - "tools/guards/_openapi-utils.mjs"
       - "tools/guards/_openapi-utils.test.mjs"
       - "services/**/contracts/**"
@@ -33,15 +35,88 @@ on:
       - "tools/guards/frontend-feature-binding-gate.mjs"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: temporary-contract-diagnostic-${{ github.event.pull_request.number || github.sha }}
+  group: temporary-contract-diagnostic
   cancel-in-progress: false
 
 jobs:
+  remediate:
+    name: Apply project route closure
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - name: Checkout latest sambassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Set up Go from DSH module
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Apply route and contract closure
+        run: python tools/scripts/tmp-project-route-closure.py
+      - name: Format and verify DSH
+        shell: bash
+        run: |
+          gofmt -w services/dsh/backend/internal/http/server.go \
+            services/dsh/backend/internal/http/governed_incidents.go \
+            services/dsh/backend/cmd/dsh-api/main.go
+          cd services/dsh/backend
+          go test ./... -count=1
+          go build ./...
+      - name: Verify contracts and bindings before push
+        shell: bash
+        run: |
+          node tools/guards/_openapi-utils.test.mjs
+          pnpm run contracts:lint
+          pnpm run guard:api-binding
+          pnpm run guard:backend-api-binding
+          pnpm run guard:service-manifest-drift
+          pnpm run guard:frontend-feature-binding
+      - name: Commit route closure
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "bthwani-governance-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add services/dsh/backend/internal/http/server.go \
+            services/dsh/backend/internal/http/governed_incidents.go \
+            services/dsh/backend/cmd/dsh-api/main.go \
+            services/dsh/contracts/paths/support.paths.yaml \
+            services/dsh/contracts/dsh.support-message-delivery.openapi.yaml \
+            services/dsh/contracts/dsh.jrn-038-cod-custody.openapi.yaml \
+            services/dsh/contracts/contract-registry.ts \
+            services/dsh/contracts/dsh.catalog.openapi.yaml \
+            services/wlt/contracts/jrn-038-cod-custody.openapi.yaml \
+            tools/guards/backend-api-binding-gate.mjs
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "fix(routes): align project runtime and contract authority"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:sambassam; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            git pull --rebase origin sambassam
+          done
+          exit 1
+
   diagnose:
     name: Capture contract and binding output
+    needs: remediate
+    if: ${{ needs.remediate.outputs.changed == 'false' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
