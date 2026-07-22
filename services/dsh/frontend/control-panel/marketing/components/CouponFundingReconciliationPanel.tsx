@@ -84,5 +84,5 @@ const styles: Record<string, CSSProperties> = {
   okBadge: { border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "999px", padding: "0.2rem 0.55rem", fontSize: "0.75rem" },
   alertBadge: { border: "1px solid currentColor", borderRadius: "999px", padding: "0.2rem 0.55rem", fontSize: "0.75rem", fontWeight: 700 },
   message: { margin: "0.35rem 0", fontWeight: 600 },
-  error: { margin: "0.35rem 0", color: colorRoles.statusDangerText, overflowWrap: "anywhere" },
+  error: { margin: "0.35rem 0", color: colorRoles.danger, overflowWrap: "anywhere" },
 };
