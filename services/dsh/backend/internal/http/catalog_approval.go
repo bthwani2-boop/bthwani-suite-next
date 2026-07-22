@@ -14,6 +14,13 @@ const (
 	CatalogApprovalPermissionManage = "catalog.approval.manage"
 )
 
+type catalogApprovalSubmissionMetadata struct {
+	MediaKey                string `json:"mediaKey,omitempty"`
+	CategoryID              string `json:"categoryId,omitempty"`
+	SupportsPickup          *bool  `json:"supportsPickup,omitempty"`
+	SupportsPartnerDelivery *bool  `json:"supportsPartnerDelivery,omitempty"`
+}
+
 func catalogApprovalOrigin(role string) (source, stage string, ok bool) {
 	switch role {
 	case "partner":
@@ -39,10 +46,10 @@ func (s *protectedStoreServer) handleCreateCatalogApproval(w http.ResponseWriter
 		return
 	}
 	var body struct {
-		EntityType string `json:"entityType"`
-		EntityID   string `json:"entityId"`
-		Title      string `json:"title"`
-		Metadata   any    `json:"metadata"`
+		EntityType string                             `json:"entityType"`
+		EntityID   string                             `json:"entityId"`
+		Title      string                             `json:"title"`
+		Metadata   *catalogApprovalSubmissionMetadata `json:"metadata"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
