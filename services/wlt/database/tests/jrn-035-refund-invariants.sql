@@ -79,11 +79,20 @@ BEGIN
   IF to_regclass('public.wlt_dsh_outbox_events_refund_event_idx') IS NULL THEN
     RAISE EXCEPTION 'JRN-035 durable refund readback index is missing';
   END IF;
+  IF to_regclass('public.wlt_refund_operation_receipts') IS NULL THEN
+    RAISE EXCEPTION 'JRN-035 mutation idempotency receipt table is missing';
+  END IF;
+  IF to_regclass('public.wlt_refund_operation_receipts_identity_uq') IS NULL THEN
+    RAISE EXCEPTION 'JRN-035 mutation idempotency identity index is missing';
+  END IF;
 END $$;
 
 DO $$
 DECLARE
   operation_definition TEXT;
+  receipt_operation_definition TEXT;
+  receipt_status_definition TEXT;
+  receipt_response_definition TEXT;
   refund_ref_definition TEXT;
 BEGIN
   SELECT pg_get_constraintdef(oid)
@@ -93,6 +102,43 @@ BEGIN
     AND conname = 'wlt_reconciliation_cases_operation_chk';
   IF operation_definition IS NULL OR operation_definition NOT LIKE '%refund%' THEN
     RAISE EXCEPTION 'JRN-035 reconciliation operation does not include refund: %', operation_definition;
+  END IF;
+
+  SELECT pg_get_constraintdef(oid)
+  INTO receipt_operation_definition
+  FROM pg_constraint
+  WHERE conrelid = 'wlt_refund_operation_receipts'::regclass
+    AND conname = 'wlt_refund_operation_receipts_operation_chk';
+  IF receipt_operation_definition IS NULL
+     OR receipt_operation_definition NOT LIKE '%create%'
+     OR receipt_operation_definition NOT LIKE '%approve%'
+     OR receipt_operation_definition NOT LIKE '%reject%'
+     OR receipt_operation_definition NOT LIKE '%complete%'
+     OR receipt_operation_definition NOT LIKE '%reconcile%' THEN
+    RAISE EXCEPTION 'JRN-035 receipt operations are incomplete: %', receipt_operation_definition;
+  END IF;
+
+  SELECT pg_get_constraintdef(oid)
+  INTO receipt_status_definition
+  FROM pg_constraint
+  WHERE conrelid = 'wlt_refund_operation_receipts'::regclass
+    AND conname = 'wlt_refund_operation_receipts_status_chk';
+  IF receipt_status_definition IS NULL
+     OR receipt_status_definition NOT LIKE '%processing%'
+     OR receipt_status_definition NOT LIKE '%completed%' THEN
+    RAISE EXCEPTION 'JRN-035 receipt lifecycle is incomplete: %', receipt_status_definition;
+  END IF;
+
+  SELECT pg_get_constraintdef(oid)
+  INTO receipt_response_definition
+  FROM pg_constraint
+  WHERE conrelid = 'wlt_refund_operation_receipts'::regclass
+    AND conname = 'wlt_refund_operation_receipts_response_chk';
+  IF receipt_response_definition IS NULL
+     OR receipt_response_definition NOT LIKE '%response_status%'
+     OR receipt_response_definition NOT LIKE '%response_body%'
+     OR receipt_response_definition NOT LIKE '%completed_at%' THEN
+    RAISE EXCEPTION 'JRN-035 completed receipt evidence constraint is incomplete: %', receipt_response_definition;
   END IF;
 
   SELECT pg_get_constraintdef(oid)
