@@ -9,6 +9,7 @@ import {
   type CouponFundingSource,
   type CouponRecord,
 } from "../../../shared/marketing";
+import { CouponFundingReconciliationPanel } from "./CouponFundingReconciliationPanel";
 
 type FundingEditorProps = {
   readonly coupon: CouponRecord;
@@ -156,6 +157,9 @@ export function CouponsCommandDeck() {
   const fundingPolicies = controller.state.kind === "success" || controller.state.kind === "empty"
     ? controller.state.fundingPolicies
     : {};
+  const fundingLifecycle = controller.state.kind === "success" || controller.state.kind === "empty"
+    ? controller.state.fundingLifecycle
+    : [];
 
   return (
     <section dir="rtl" style={styles.root}>
@@ -248,6 +252,13 @@ export function CouponsCommandDeck() {
           );
         })}
       </div>
+
+      <CouponFundingReconciliationPanel
+        records={fundingLifecycle}
+        loading={controller.state.kind === "loading"}
+        {...(controller.state.kind === "error" ? { error: controller.state.message } : {})}
+        onReload={() => { void controller.reload(); }}
+      />
     </section>
   );
 }
