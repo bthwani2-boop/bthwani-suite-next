@@ -81,6 +81,7 @@ jobs:
 
   evidence:
     name: Persist exact-SHA verification receipt
+    if: always()
     needs: [structural, wlt-go, dsh-go, typescript]
     runs-on: ubuntu-latest
     steps:
@@ -93,7 +94,15 @@ jobs:
           VERIFIED_SHA: ${{ github.sha }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
+          STRUCTURAL_RESULT: ${{ needs.structural.result }}
+          WLT_GO_RESULT: ${{ needs.wlt-go.result }}
+          DSH_GO_RESULT: ${{ needs.dsh-go.result }}
+          TYPESCRIPT_RESULT: ${{ needs.typescript.result }}
         run: |
+          OVERALL=FAIL
+          if [ "$STRUCTURAL_RESULT" = "success" ] && [ "$WLT_GO_RESULT" = "success" ] && [ "$DSH_GO_RESULT" = "success" ] && [ "$TYPESCRIPT_RESULT" = "success" ]; then
+            OVERALL=PASS
+          fi
           mkdir -p governance/evidence/jrn-034/ci
           cat > "governance/evidence/jrn-034/ci/${VERIFIED_SHA}.json" <<EOF
           {
@@ -102,19 +111,18 @@ jobs:
             "verifiedSha": "${VERIFIED_SHA}",
             "workflowRunId": "${RUN_ID}",
             "workflowRunAttempt": "${RUN_ATTEMPT}",
-            "result": "PASS",
-            "checks": [
-              "structural-journey-guard",
-              "wlt-go-test-all",
-              "dsh-go-test-all",
-              "wlt-typescript-typecheck",
-              "dsh-typescript-typecheck",
-              "control-panel-typescript-typecheck"
-            ],
+            "result": "${OVERALL}",
+            "jobs": {
+              "structural": "${STRUCTURAL_RESULT}",
+              "wltGo": "${WLT_GO_RESULT}",
+              "dshGo": "${DSH_GO_RESULT}",
+              "typescript": "${TYPESCRIPT_RESULT}"
+            },
             "productionEvidence": false,
             "independentApprovals": false
           }
           EOF
+          echo "OVERALL=${OVERALL}" >> "$GITHUB_ENV"
       - name: Commit verification receipt
         env:
           VERIFIED_SHA: ${{ github.sha }}
@@ -122,7 +130,7 @@ jobs:
           git config user.name "bthwani-ci"
           git config user.email "bthwani-ci@users.noreply.github.com"
           git add "governance/evidence/jrn-034/ci/${VERIFIED_SHA}.json"
-          git commit -m "evidence(jrn-034): record CI pass for ${VERIFIED_SHA}"
+          git commit -m "evidence(jrn-034): record CI ${OVERALL} for ${VERIFIED_SHA}"
           for attempt in 1 2 3; do
             git pull --rebase origin sambassam
             if git push origin HEAD:sambassam; then exit 0; fi
