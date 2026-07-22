@@ -23,6 +23,10 @@
   },
   "idempotency": {
     "creation": "tenant_id + payment_session_id + idempotency_key",
+    "mutations": "durable receipt before create approve reject complete and reconcile",
+    "replay": "same canonical payload returns stored status and body",
+    "changedPayload": "conflict before business handler or provider call",
+    "inProgress": "conflict without executing the business handler",
     "providerExecution": "stable provider_idempotency_key per refund",
     "ledger": "one refund_completed transaction per refund",
     "dshReadback": "one refunded event per refund"
@@ -36,6 +40,8 @@
     "maker approves or rejects own refund",
     "provider_unknown automatically retries provider",
     "completed without ledger and durable DSH readback",
-    "amount exceeds remaining refundable amount"
+    "amount exceeds remaining refundable amount",
+    "same mutation idempotency key reaches a handler with changed payload",
+    "completed mutation response is released before its replay receipt is durable"
   ]
 }
