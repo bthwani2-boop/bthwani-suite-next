@@ -1,5 +1,5 @@
 import React from "react";
-import { TextInput, View } from "react-native";
+import { StyleSheet, TextInput, View } from "react-native";
 import type { WltDshCodReference } from "@bthwani/wlt";
 import { Badge, Box, Button, KeyValueList, StateView, Text, useTheme } from "@bthwani/ui-kit";
 import { fetchPartnerCodRecords, remitPartnerCodRecord } from "./wlt-partner-cod.api";
@@ -21,6 +21,33 @@ function errorMessage(error: unknown): string {
 
 export function PartnerCodCustodyPanel() {
   const theme = useTheme() as any;
+  const styles = React.useMemo(
+    () => StyleSheet.create({
+      header: {
+        flexDirection: "row-reverse",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 8,
+      },
+      recordCard: {
+        borderWidth: 1,
+        borderColor: theme.line,
+        borderRadius: 12,
+        padding: 12,
+      },
+      input: {
+        borderWidth: 1,
+        borderColor: theme.line,
+        color: theme.text,
+        backgroundColor: theme.surfaceInset,
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 11,
+        textAlign: "right",
+      },
+    }),
+    [theme.line, theme.surfaceInset, theme.text],
+  );
   const [state, setState] = React.useState<PanelState>({ kind: "loading" });
   const [proofByRecord, setProofByRecord] = React.useState<Record<string, string>>({});
   const [busyRecordId, setBusyRecordId] = React.useState<string | null>(null);
@@ -73,7 +100,7 @@ export function PartnerCodCustodyPanel() {
 
   return (
     <Box gap={3}>
-      <View style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+      <View style={styles.header}>
         <Text role="bodyStrong">عهدة COD للطلبات</Text>
         <Badge label={`${collected.length} بانتظار التسليم`} tone={collected.length > 0 ? "warning" : "success"} />
       </View>
@@ -92,7 +119,7 @@ export function PartnerCodCustodyPanel() {
       {collected.map((record) => {
         const busy = busyRecordId === record.id;
         return (
-          <Box key={record.id} gap={3} style={{ borderWidth: 1, borderColor: theme.line, borderRadius: 12, padding: 12 }}>
+          <Box key={record.id} gap={3} style={styles.recordCard}>
             <Text role="bodyStrong">طلب #{record.orderId}</Text>
             <KeyValueList dense items={[
               { label: "العهدة", value: amountLabel(record.amountMinorUnits, record.currency), tone: "warning" },
@@ -103,7 +130,7 @@ export function PartnerCodCustodyPanel() {
               onChangeText={(value) => setProofByRecord((current) => ({ ...current, [record.id]: value }))}
               placeholder="رقم إيصال/مرجع استلام العهدة"
               editable={!busy}
-              style={{ borderWidth: 1, borderColor: theme.line, color: theme.text, backgroundColor: theme.surfaceInset, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, textAlign: "right" }}
+              style={styles.input}
             />
             <Button label={busy ? "جارٍ التسجيل..." : "تأكيد استلام وتسليم العهدة"} disabled={busy} onPress={() => void remit(record)} />
           </Box>
