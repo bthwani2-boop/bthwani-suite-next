@@ -1,5 +1,7 @@
+import { getIdentityAccessToken } from "@bthwani/core-identity";
+
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshAnalyticsPeriod,
   DshAnalyticsWindowInput,
@@ -36,6 +38,13 @@ function analyticsWindowValues(window: DshAnalyticsWindowInput): Record<string, 
     return { period: window.period };
   }
   return { from: window.from, to: window.to };
+}
+
+function resolveAnalyticsUrl(path: string): string | URL {
+  if (baseUrl.startsWith("/")) {
+    return `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
+  }
+  return new URL(path, baseUrl);
 }
 
 export async function fetchPlatformKpis(period: DshAnalyticsPeriod = "today"): Promise<DshPlatformKpis> {
@@ -113,4 +122,40 @@ export async function fetchFinancialAnalyticsSnapshot(): Promise<WltAnalyticsFin
 export function buildOperationalAnalyticsExportUrl(window: DshAnalyticsWindowInput): string {
   const normalizedBase = baseUrl.replace(/\/$/, "");
   return `${normalizedBase}/dsh/operator/analytics/export.csv${queryString(analyticsWindowValues(window))}`;
+}
+
+export async function fetchOperationalAnalyticsExport(window: DshAnalyticsWindowInput): Promise<Blob> {
+  const cookieMode = baseUrl.startsWith("/");
+  const token = cookieMode ? undefined : getIdentityAccessToken();
+  if (!cookieMode && !token) {
+    throw { kind: "http", status: 401, message: "missing identity access token" };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(
+      resolveAnalyticsUrl(`/dsh/operator/analytics/export.csv${queryString(analyticsWindowValues(window))}`),
+      {
+        method: "GET",
+        headers: {
+          Accept: "text/csv",
+          "X-Correlation-ID": corrId("analytics-export"),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        ...(cookieMode ? { credentials: "include" as const } : {}),
+        signal: AbortSignal.timeout(30000),
+      },
+    );
+  } catch (error) {
+    throw {
+      kind: "network",
+      message: error instanceof Error ? error.message : "analytics export network error",
+    };
+  }
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw { kind: "http", status: response.status, body };
+  }
+  return response.blob();
 }
