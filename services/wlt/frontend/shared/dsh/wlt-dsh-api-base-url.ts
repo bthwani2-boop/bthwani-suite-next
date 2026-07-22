@@ -5,25 +5,29 @@ declare const process:
 const FORBIDDEN_PORTS = new Set(["8080", "8081", "8082", "8083", "8084", "3000"]);
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
-/**
- * Single source of truth for the WLT API base URL used by WLT frontend adapters.
- * Reads from NEXT_PUBLIC_WLT_API_BASE_URL (web/Next.js) or
- * EXPO_PUBLIC_WLT_API_BASE_URL (mobile), falling back to the local dev default
- * on port 58083.
- */
+/** WLT transport owner for control-panel BFF and native direct runtimes. */
 export function resolveWltApiBaseUrl(): string {
+  if (
+    typeof process !== "undefined" &&
+    process.env?.["NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED"] === "true"
+  ) {
+    return "/api/wlt";
+  }
+
   if (typeof process !== "undefined" && process.env) {
     const configured =
-      process.env["NEXT_PUBLIC_WLT_API_BASE_URL"] ??
       process.env["EXPO_PUBLIC_WLT_API_BASE_URL"] ??
+      process.env["NEXT_PUBLIC_WLT_API_BASE_URL"] ??
       process.env["WLT_API_URL"];
-    if (configured && configured.trim().length > 0)
+    if (configured && configured.trim().length > 0) {
       return configured.trim().replace(/\/$/, "");
+    }
   }
   return "http://localhost:58083";
 }
 
 export function validateWltApiBaseUrl(url: string): boolean {
+  if (url.startsWith("/")) return url.length > 1;
   try {
     const parsed = new URL(url);
     if (parsed.hostname.length === 0) return false;
