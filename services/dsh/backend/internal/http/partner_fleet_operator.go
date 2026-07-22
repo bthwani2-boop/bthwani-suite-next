@@ -1,12 +1,32 @@
 package http
 
 import (
+	"database/sql"
 	"net/http"
 	"strings"
 
+	"dsh-api/internal/auth"
+	"dsh-api/internal/media"
 	"dsh-api/internal/partnerfleet"
 	"dsh-api/internal/store"
+	"dsh-api/internal/wlt"
 )
+
+// RegisterPartnerFleetOperatorRoutes mounts control-panel readback separately
+// from partner and captain mutations so RBAC ownership remains explicit.
+func RegisterPartnerFleetOperatorRoutes(
+	router *http.ServeMux,
+	db *sql.DB,
+	identityClient *auth.Client,
+	wltClient *wlt.Client,
+	mediaProvider *media.Provider,
+) {
+	server := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	router.HandleFunc(
+		"GET /dsh/operator/stores/{storeId}/partner-fleet",
+		server.handleOperatorPartnerFleetSnapshot,
+	)
+}
 
 // GET /dsh/operator/stores/{storeId}/partner-fleet
 func (s *protectedStoreServer) handleOperatorPartnerFleetSnapshot(w http.ResponseWriter, r *http.Request) {
