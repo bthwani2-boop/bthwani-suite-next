@@ -6,6 +6,7 @@ function read(path) {
   return readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
 }
 
+const auditModel = read("services/dsh/backend/internal/partnerfleet/audit.go");
 const courierCodes = read("services/dsh/backend/internal/partnerfleet/courier_codes.go");
 const redeemModel = read("services/dsh/backend/internal/partnerfleet/redeem.go");
 const listModel = read("services/dsh/backend/internal/partnerfleet/list.go");
@@ -53,7 +54,7 @@ test("JRN-030 expires codes durably and prevents stale transitions", () => {
   assert.match(redeemModel, /RowsAffected/);
 });
 
-test("JRN-030 makes lifecycle mutations atomic, audited, and notified", () => {
+test("JRN-030 makes lifecycle mutations atomic, audited, notified, and idempotent", () => {
   assert.match(courierCodes, /func RevokeCode[\s\S]*BeginTx/);
   assert.match(courierCodes, /revoke_captain_connection_code/);
   assert.match(redeemModel, /redeem_captain_connection_code/);
@@ -74,6 +75,17 @@ test("JRN-030 makes lifecycle mutations atomic, audited, and notified", () => {
     "expire_captain_connection_code",
   ]) {
     assert.ok(auditMigration.includes(`'${action}'`), `missing durable audit allow-list action ${action}`);
+  }
+  assert.match(auditModel, /return "jrn030:" \+ action \+ ":" \+ reference/);
+  for (const model of [courierCodes, redeemModel, listModel, disconnectModel]) {
+    assert.match(model, /idempotency_key/);
+    assert.match(model, /auditIdempotencyKey/);
+  }
+  for (const action of ["issue", "redeem", "revoke", "expire", "disconnect"]) {
+    assert.ok(
+      [courierCodes, redeemModel, listModel, disconnectModel].some((model) => model.includes(`auditIdempotencyKey("${action}"`)),
+      `missing scoped idempotency key for ${action}`,
+    );
   }
   assert.match(
     auditMigration,
