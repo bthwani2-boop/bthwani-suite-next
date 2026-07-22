@@ -1,10 +1,10 @@
 package http
 
 import (
+	"database/sql"
 	"net/http"
 	"strings"
 
-	"database/sql"
 	"dsh-api/internal/auth"
 	"dsh-api/internal/media"
 	"dsh-api/internal/store"
@@ -172,6 +172,25 @@ func (s *protectedStoreServer) handleListGovernedIncidentEvents(w http.ResponseW
 		items = append(items, marshalIncidentEvent(event))
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"events": items})
+}
+
+// RegisterGovernedIncidentRoutes makes the canonical support-owned incident
+// contract visible to the runtime router and static route/contract verification.
+// The legacy /dsh/operator/incidents aliases remain intercepted by the
+// middleware below and resolve to these same governed handlers.
+func RegisterGovernedIncidentRoutes(
+	mux *http.ServeMux,
+	db *sql.DB,
+	identityClient *auth.Client,
+	wltClient *wlt.Client,
+	mediaProvider *media.Provider,
+) {
+	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	mux.HandleFunc("GET /dsh/operator/support/incidents", protected.handleListGovernedIncidents)
+	mux.HandleFunc("POST /dsh/operator/support/incidents", protected.handleCreateGovernedIncident)
+	mux.HandleFunc("GET /dsh/operator/support/incidents/{incidentId}", protected.handleGetGovernedIncident)
+	mux.HandleFunc("PATCH /dsh/operator/support/incidents/{incidentId}", protected.handleUpdateGovernedIncident)
+	mux.HandleFunc("GET /dsh/operator/support/incidents/{incidentId}/events", protected.handleListGovernedIncidentEvents)
 }
 
 // GovernedIncidentMiddleware replaces the legacy incident CRUD at runtime and
