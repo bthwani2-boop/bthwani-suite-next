@@ -40,7 +40,7 @@ jobs:
           node-version: "24.17.0"
       - run: node tools/scripts/test-jrn-034-payments.mjs
 
-  wlt-go:
+  wlt_go:
     name: WLT Go tests
     runs-on: ubuntu-latest
     steps:
@@ -52,7 +52,7 @@ jobs:
       - run: go test ./...
         working-directory: services/wlt/backend
 
-  dsh-go:
+  dsh_go:
     name: DSH Go tests
     runs-on: ubuntu-latest
     steps:
@@ -82,7 +82,7 @@ jobs:
   evidence:
     name: Persist exact-SHA verification receipt
     if: always()
-    needs: [structural, wlt-go, dsh-go, typescript]
+    needs: [structural, wlt_go, dsh_go, typescript]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -95,8 +95,8 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           STRUCTURAL_RESULT: ${{ needs.structural.result }}
-          WLT_GO_RESULT: ${{ needs.wlt-go.result }}
-          DSH_GO_RESULT: ${{ needs.dsh-go.result }}
+          WLT_GO_RESULT: ${{ needs.wlt_go.result }}
+          DSH_GO_RESULT: ${{ needs.dsh_go.result }}
           TYPESCRIPT_RESULT: ${{ needs.typescript.result }}
         run: |
           OVERALL=FAIL
@@ -130,6 +130,7 @@ jobs:
           git config user.name "bthwani-ci"
           git config user.email "bthwani-ci@users.noreply.github.com"
           git add "governance/evidence/jrn-034/ci/${VERIFIED_SHA}.json"
+          if git diff --cached --quiet; then exit 0; fi
           git commit -m "evidence(jrn-034): record CI ${OVERALL} for ${VERIFIED_SHA}"
           for attempt in 1 2 3; do
             git pull --rebase origin sambassam
