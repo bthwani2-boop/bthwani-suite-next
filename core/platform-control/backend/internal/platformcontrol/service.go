@@ -79,7 +79,7 @@ func (s *Service) RuntimeSnapshot(ctx context.Context) RuntimeSnapshot {
 	}
 	return RuntimeSnapshot{
 		Status:         status,
-		Revision:       "platform-control-p3-progressive-delivery",
+		Revision:       "platform-control-jrn040-jrn041-governed-delivery",
 		GeneratedAt:    generatedAt,
 		VariablesState: StateOperational,
 		FlagsState:     StateOperational,
@@ -90,7 +90,7 @@ func (s *Service) RuntimeSnapshot(ctx context.Context) RuntimeSnapshot {
 		ServicesState:  healthState,
 		Evidence: []string{
 			"platform-control PostgreSQL store attached",
-			"maker-checker change sets, optimistic concurrency, audit, apply and rollback are active",
+			"JRN-040 change sets use immutable validation snapshots, maker-checker review, target reservation, optimistic concurrency, redacted audit, atomic apply and reasoned rollback",
 			"service posture is computed from live health probes",
 			rolloutEvidence,
 		},
@@ -142,7 +142,7 @@ func (s *Service) ChangeSets(ctx context.Context) ([]ChangeSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	return repository.ChangeSets(ctx)
+	return repository.ChangeSetsGoverned(ctx)
 }
 
 func (s *Service) GetChangeSet(ctx context.Context, id string) (ChangeSet, error) {
@@ -150,18 +150,15 @@ func (s *Service) GetChangeSet(ctx context.Context, id string) (ChangeSet, error
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	return repository.GetChangeSet(ctx, id)
+	return repository.GetChangeSetGoverned(ctx, id)
 }
 
 func (s *Service) CreateChangeSet(ctx context.Context, actorID string, roles []string, correlationID string, input CreateChangeSetInput) (ChangeSet, error) {
-	if err := validateCreateInput(input); err != nil {
-		return ChangeSet{}, err
-	}
 	repository, err := s.requireRepository()
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	return repository.CreateChangeSet(ctx, actorID, roles, correlationID, input)
+	return repository.CreateChangeSetGoverned(ctx, actorID, roles, correlationID, input)
 }
 
 func (s *Service) ValidateChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
@@ -169,7 +166,7 @@ func (s *Service) ValidateChangeSet(ctx context.Context, id, actorID string, rol
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	return repository.ValidateChangeSet(ctx, id, actorID, roles, correlationID)
+	return repository.ValidateChangeSetGoverned(ctx, id, actorID, roles, correlationID)
 }
 
 func (s *Service) SubmitChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
@@ -177,7 +174,7 @@ func (s *Service) SubmitChangeSet(ctx context.Context, id, actorID string, roles
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	return repository.SubmitChangeSet(ctx, id, actorID, roles, correlationID)
+	return repository.SubmitChangeSetGoverned(ctx, id, actorID, roles, correlationID)
 }
 
 func (s *Service) ApproveChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
@@ -185,7 +182,7 @@ func (s *Service) ApproveChangeSet(ctx context.Context, id, actorID string, role
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	return repository.ApproveChangeSet(ctx, id, actorID, roles, correlationID)
+	return repository.ApproveChangeSetGoverned(ctx, id, actorID, roles, correlationID)
 }
 
 func (s *Service) RejectChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID, reason string) (ChangeSet, error) {
@@ -193,7 +190,7 @@ func (s *Service) RejectChangeSet(ctx context.Context, id, actorID string, roles
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	return repository.RejectChangeSet(ctx, id, actorID, roles, correlationID, reason)
+	return repository.RejectChangeSetGoverned(ctx, id, actorID, roles, correlationID, reason)
 }
 
 func (s *Service) ApplyChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
@@ -201,13 +198,13 @@ func (s *Service) ApplyChangeSet(ctx context.Context, id, actorID string, roles 
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	return repository.ApplyChangeSet(ctx, id, actorID, roles, correlationID)
+	return repository.ApplyChangeSetGoverned(ctx, id, actorID, roles, correlationID)
 }
 
-func (s *Service) RollbackChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID string) (ChangeSet, error) {
+func (s *Service) RollbackChangeSet(ctx context.Context, id, actorID string, roles []string, correlationID, reason string) (ChangeSet, error) {
 	repository, err := s.requireRepository()
 	if err != nil {
 		return ChangeSet{}, err
 	}
-	return repository.RollbackChangeSet(ctx, id, actorID, roles, correlationID)
+	return repository.RollbackChangeSetGoverned(ctx, id, actorID, roles, correlationID, reason)
 }
