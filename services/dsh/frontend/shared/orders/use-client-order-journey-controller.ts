@@ -14,7 +14,11 @@ import {
   isTerminalOrderTruth,
   type OrderTruth,
 } from '../order-truth';
-import { fetchClientOrderTracking, classifyDispatchError } from '../dispatch/dispatch.api';
+import { classifyDispatchError } from '../dispatch/dispatch.api';
+import {
+  fetchClientLiveTracking,
+  type DshLiveTrackingProjection,
+} from '../dispatch/dispatch-tracking.api';
 import type { DshDispatchAssignment } from '../dispatch/dispatch.types';
 import { fetchClientPartnerDeliveryTask, classifyPartnerDeliveryError } from '../partner-delivery/partner-delivery.api';
 import type { DshPartnerDeliveryTask } from '../partner-delivery/partner-delivery.types';
@@ -30,6 +34,7 @@ export type ClientOrderJourneyState =
       readonly openPreparationIssueCount: number;
       readonly pendingCustomerDecisionCount: number;
       readonly assignment: DshDispatchAssignment | null;
+      readonly liveTracking: DshLiveTrackingProjection | null;
       readonly partnerDeliveryTask: DshPartnerDeliveryTask | null;
     };
 
@@ -45,8 +50,9 @@ function orderErrorMessage(error: unknown): string {
 
 /**
  * Shared client journey controller. The order itself is always read from the
- * JRN-011 actor-scoped order-truth endpoint. Preparation, issues and dispatch
- * remain separate operational projections and cannot override order truth.
+ * JRN-011 actor-scoped order-truth endpoint. Preparation, issues, dispatch and
+ * JRN-017 live tracking remain separate read-only projections and cannot
+ * override order truth.
  */
 export function useClientOrderJourneyController(orderId: string) {
   const [state, setState] = React.useState<ClientOrderJourneyState>({ kind: 'loading' });
@@ -64,6 +70,7 @@ export function useClientOrderJourneyController(orderId: string) {
         fetchOrderPreparationIssues(orderId),
       ]);
       let assignment: DshDispatchAssignment | null = null;
+      let liveTracking: DshLiveTrackingProjection | null = null;
       let partnerDeliveryTask: DshPartnerDeliveryTask | null = null;
       if (order.fulfillmentMode === 'partner_delivery') {
         try {
@@ -76,9 +83,11 @@ export function useClientOrderJourneyController(orderId: string) {
             return;
           }
         }
-      } else {
+      } else if (order.fulfillmentMode === 'bthwani_delivery') {
         try {
-          assignment = await fetchClientOrderTracking(orderId);
+          const response = await fetchClientLiveTracking(orderId);
+          assignment = response.assignment;
+          liveTracking = response.tracking;
         } catch (trackingError) {
           const classified = classifyDispatchError(trackingError);
           if (classified.kind !== 'not_found') {
@@ -86,7 +95,10 @@ export function useClientOrderJourneyController(orderId: string) {
               setState({ kind: 'error', message: 'لا تملك صلاحية عرض تتبع هذا الطلب.' });
               return;
             }
-            if (classified.kind === 'offline') assignment = null;
+            if (classified.kind === 'offline') {
+              assignment = null;
+              liveTracking = null;
+            }
           }
         }
       }
@@ -98,6 +110,7 @@ export function useClientOrderJourneyController(orderId: string) {
         openPreparationIssueCount: issueList.openCount,
         pendingCustomerDecisionCount: issueList.pendingCustomerDecisionCount,
         assignment,
+        liveTracking,
         partnerDeliveryTask,
       });
     } catch (error) {
