@@ -5,36 +5,43 @@
   "problem": {
     "statement": "Partner couriers must bind to an authenticated captain identity through a short-lived one-time code without leaking tenant data or creating a second local fleet truth.",
     "affectedActors": ["partner-operator", "captain", "control-panel-operator"],
-    "currentWorkaround": "The capability existed, but current-head closure lacked operator readback, durable expiry readback, atomic revoke auditing, and explicit active-store eligibility.",
+    "currentWorkaround": "The pre-closure implementation had partner and captain mutations but lacked complete operator readback, visible partner connection history, durable audited expiry, strict response schemas, and full same-commit PostgreSQL proof.",
     "frequency": "continuous",
     "severity": "critical",
     "evidenceState": "QUALITATIVE",
     "evidenceReferences": [
       "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
       "services/dsh/backend/internal/partnerfleet/courier_codes.go",
+      "services/dsh/backend/internal/partnerfleet/redeem.go",
       "services/dsh/backend/internal/partnerfleet/list.go",
+      "services/dsh/backend/internal/partnerfleet/membership_disconnect.go",
       "services/dsh/backend/internal/partnerfleet/operator.go",
+      "services/dsh/backend/internal/partnerfleet/partnerfleet_db_test.go",
       "services/dsh/backend/internal/http/partner_fleet.go",
+      "services/dsh/backend/internal/http/partner_fleet_membership_routes.go",
       "services/dsh/backend/internal/http/partner_fleet_operator.go",
       "services/dsh/frontend/shared/partner/partner-fleet.api.ts",
+      "services/dsh/frontend/shared/partner/use-partner-fleet-controller.ts",
       "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx",
       "services/dsh/frontend/app-captain/account/PartnerFleetConnectionCard.tsx",
       "services/dsh/frontend/control-panel/partners/stores/OperatorPartnerFleetPanel.tsx",
-      "services/dsh/contracts/dsh.partner-fleet.openapi.yaml"
+      "services/dsh/contracts/dsh.partner-fleet.openapi.yaml",
+      "services/dsh/tests/jrn-030-partner-fleet.test.mjs",
+      ".github/workflows/jrn-030-partner-fleet-verification.yml"
     ]
   },
   "actors": [
     {
       "id": "partner-operator",
       "role": "Owns courier team records and one-time connection-code lifecycle for the authenticated store.",
-      "permittedActions": ["issue one-time code", "list owned-store connections", "revoke pending owned-store code"],
+      "permittedActions": ["issue one-time code", "list owned-store connections", "revoke pending owned-store code", "observe expiry redemption and disconnect outcomes"],
       "forbiddenActions": ["read another store fleet", "see stored code hash", "bind a captain directly", "revoke another tenant connection"]
     },
     {
       "id": "captain",
-      "role": "Consumes a one-time code and owns the decision to disconnect the resulting membership.",
-      "permittedActions": ["redeem valid code", "list own memberships", "disconnect own membership"],
-      "forbiddenActions": ["redeem expired or revoked code", "bind another captain", "read another captain memberships", "connect to an inactive store"]
+      "role": "Consumes a one-time code and owns the decision to disconnect each resulting store membership.",
+      "permittedActions": ["redeem valid code", "list own memberships across stores", "disconnect own membership"],
+      "forbiddenActions": ["redeem expired or revoked code", "bind another captain", "read another captain memberships", "connect to an inactive store", "hold duplicate memberships in one store"]
     },
     {
       "id": "control-panel-operator",
@@ -50,15 +57,15 @@
       "actors": ["partner-operator"],
       "routesOrScreens": ["PartnerTeamManagementScreen"],
       "states": ["loading", "ready", "empty", "error", "pending", "redeemed", "revoked", "expired", "version-conflict"],
-      "actions": ["issue code", "revoke pending code", "reload authoritative state"]
+      "actions": ["issue code", "list authoritative connection lifecycle", "revoke pending code", "reload authoritative state"]
     },
     {
       "id": "app-captain",
       "required": true,
       "actors": ["captain"],
       "routesOrScreens": ["PartnerFleetConnectionCard"],
-      "states": ["loading", "empty", "active", "error", "expired", "ineligible", "already-bound"],
-      "actions": ["redeem code", "list memberships", "disconnect membership", "refresh"]
+      "states": ["loading", "empty", "active", "paused", "error", "expired", "ineligible", "already-bound", "version-conflict"],
+      "actions": ["redeem code", "list memberships across stores", "disconnect one membership", "refresh"]
     },
     {
       "id": "control-panel",
@@ -74,7 +81,7 @@
       "actors": ["partner-operator", "captain", "control-panel-operator"],
       "routesOrScreens": ["partner-fleet.api.ts", "usePartnerFleetController"],
       "states": ["loading", "success", "error", "conflict"],
-      "actions": ["call sovereign DSH routes", "carry versions", "avoid local fleet truth"]
+      "actions": ["call sovereign DSH routes", "carry optimistic versions", "remove superseded pending projections", "avoid local fleet truth"]
     },
     {
       "id": "backend",
@@ -89,36 +96,40 @@
         "disconnectDshCaptainPartnerFleetMembership",
         "getDshOperatorPartnerFleetSnapshot"
       ],
-      "states": ["pending", "redeemed", "revoked", "expired", "active", "disconnected", "version-conflict", "forbidden"],
-      "actions": ["enforce role and store scope", "enforce active-store eligibility", "hash code", "lock mutations", "audit issue redeem revoke disconnect", "return redacted operator readback"]
+      "states": ["pending", "redeemed", "revoked", "expired", "active", "paused", "version-conflict", "forbidden"],
+      "actions": ["enforce role and store scope", "enforce active-store eligibility", "hash code", "lock mutations", "audit issue redeem revoke expire disconnect", "notify partner and captain", "return redacted operator readback"]
     },
     {
       "id": "database",
       "required": true,
       "actors": ["partner-operator", "captain", "control-panel-operator"],
-      "routesOrScreens": ["dsh_partner_courier_connection_codes", "dsh_store_team_members", "dsh_store_team_member_actions"],
-      "states": ["transactional", "versioned", "audited", "tenant-scoped", "single-use"],
-      "actions": ["store digest only", "enforce one pending code", "persist expiry", "prevent duplicate identity binding", "retain audit"]
+      "routesOrScreens": ["dsh_partner_courier_connection_codes", "dsh_store_team_members", "dsh_store_team_member_actions", "dsh_notifications"],
+      "states": ["transactional", "versioned", "audited", "tenant-scoped", "single-use", "store-scoped-multi-membership"],
+      "actions": ["store digest only", "enforce one pending code", "persist and audit expiry", "prevent duplicate identity binding inside one store", "permit governed multi-store membership", "retain audit and notifications"]
     }
   ],
   "outcome": {
-    "statement": "Partner, captain, and operator surfaces observe one versioned DSH fleet truth while code material remains secret and every lifecycle mutation is scoped and recoverable.",
+    "statement": "Partner, captain, and operator surfaces observe one versioned DSH fleet truth while code material remains secret and every lifecycle mutation is scoped, audited, notified, and recoverable.",
     "primaryMetric": "jrn_030_authoritative_fleet_bindings_with_readback",
-    "guardrailMetrics": ["cross_tenant_fleet_access", "plaintext_code_persisted", "expired_code_redeemed", "stale_version_overwrite", "unbound_operator_mutation"],
-    "baselineState": "Partner and captain flows existed but operator readback and several lifecycle integrity controls were incomplete at the current head.",
-    "targetState": "All required surfaces use the same DSH state, all mutations are scoped and audited, expiry is durable, and current-head gates verify the implementation.",
-    "observationWindow": "Every JRN-030 change, pull request, runtime smoke, and release review."
+    "guardrailMetrics": ["cross_tenant_fleet_access", "plaintext_code_persisted", "expired_code_redeemed", "stale_version_overwrite", "duplicate_same_store_membership", "unbound_operator_mutation"],
+    "baselineState": "Partner and captain flows existed but operator readback, partner-visible connection state, and several lifecycle integrity controls were incomplete at the current head.",
+    "targetState": "All required surfaces use the same DSH state; all lifecycle transitions are scoped, versioned, audited, and notified; typed contracts and PostgreSQL proof run on one commit.",
+    "observationWindow": "Every JRN-030 change, runtime smoke, pull-request review, and release review."
   },
   "acceptance": {
     "criteria": [
-      "Only an authenticated partner for the owned store can issue or revoke a code.",
+      "Only an authenticated partner for the owned store can issue list or revoke a code.",
+      "Partner surfaces visibly render pending redeemed revoked and expired connection states.",
       "Only an authenticated captain can redeem a valid pending code or disconnect an owned membership.",
+      "A captain may hold memberships in multiple stores but cannot hold duplicate memberships inside one store.",
       "Plaintext codes are returned once and never persisted.",
-      "Expired codes become durably expired and cannot be redeemed.",
+      "Expired codes become durably expired, create an audit action and partner notification, and cannot be redeemed.",
       "Inactive stores and ineligible courier records fail closed.",
-      "Optimistic versions protect revoke, redeem, and disconnect transitions.",
+      "Optimistic versions protect revoke redeem and disconnect transitions.",
+      "Disconnect pauses the member, records captain_disconnected lifecycle, revokes the redeemed connection, and notifies both actors.",
       "Control panel readback is redacted and requires partners.read or operator authority.",
-      "Targeted Go, TypeScript, contract, binding, and Product Truth checks pass on the same commit."
+      "OpenAPI responses are typed and do not expose code hashes or plaintext outside issuance.",
+      "Targeted Go TypeScript contract binding Product Truth and PostgreSQL checks pass on the same commit."
     ],
     "failureStates": [
       "cross-store partner access",
@@ -126,7 +137,9 @@
       "plaintext or hash leakage",
       "expired or revoked code redemption",
       "inactive-store binding",
-      "unaudited revoke",
+      "duplicate captain membership inside one store",
+      "unaudited issue redeem revoke expiry or disconnect",
+      "missing lifecycle notification",
       "stale overwrite",
       "local surface fleet truth",
       "closure evidence references an older commit"
@@ -134,12 +147,13 @@
     "requiredChecks": [
       "JRN-030 backend package compilation",
       "JRN-030 governed route registration",
+      "JRN-030 PostgreSQL lifecycle and tenant-isolation test",
       "JRN-030 TypeScript surface verification",
       "JRN-030 binding and negative-invariant tests",
-      "DSH partner-fleet OpenAPI verification",
+      "DSH partner-fleet OpenAPI parse and schema verification",
       "Product Truth schema verification",
-      "runtime and visual evidence",
-      "independent product QA security and release review"
+      "runtime API route evidence",
+      "visual evidence and independent product QA security and release review"
     ],
     "runtimeEvidenceRequired": true,
     "visualEvidenceRequired": true
@@ -149,18 +163,22 @@
       "DSH owns partner fleet membership truth.",
       "Identity authenticates actors while DSH authorizes store and team scope.",
       "Every surface reads the same persisted membership and connection lifecycle.",
-      "Every mutation is versioned, tenant-scoped, and audited."
+      "Every mutation is versioned tenant-scoped audited and notified.",
+      "Captain identity uniqueness is scoped to one store so governed multi-store membership remains possible."
     ],
     "negative": [
       "no plaintext code persistence",
       "no code hash exposure",
       "no cross-tenant partner access",
       "no cross-captain membership access",
+      "no duplicate captain membership inside one store",
       "no inactive-store binding",
       "no expired or revoked code reuse",
+      "no unaudited lifecycle transition",
+      "no missing partner or captain notification for successful binding and disconnect",
       "no stale overwrite",
       "no operator mutation through the readback surface",
-      "no final production closure without independent approvals and runtime evidence"
+      "no final production closure without independent approvals runtime evidence and visual evidence"
     ]
   },
   "owners": {
@@ -173,7 +191,7 @@
     "productAcceptanceDecision": "PENDING"
   },
   "execution": {
-    "appetite": "Close all JRN-030 technical slices on GitHub Remote without granting independent product, QA, security, release, or production approval.",
+    "appetite": "Close all JRN-030 technical slices on GitHub Remote without granting independent product QA security release or production approval.",
     "fixedConstraints": [
       "GitHub Remote sambassam is the only execution truth",
       "DSH remains the sole fleet membership owner",
