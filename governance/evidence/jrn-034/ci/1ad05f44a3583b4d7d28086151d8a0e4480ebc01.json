@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "journeyId": "JRN-034",
+  "verifiedSha": "1ad05f44a3583b4d7d28086151d8a0e4480ebc01",
+  "workflowRunId": "29918791314",
+  "workflowRunAttempt": "1",
+  "result": "FAIL",
+  "jobs": {
+    "structural": "success",
+    "wltGo": "success",
+    "dshGo": "failure",
+    "typescript": "failure"
+  },
+  "productionEvidence": false,
+  "independentApprovals": false
+}
