@@ -1,33 +1,33 @@
-name: JRN-036 settlement and commission verification
+name: JRN-036 Settlement and Commission Verification
 
 on:
   workflow_dispatch:
   push:
     branches: [sambassam]
     paths: &jrn036_paths
-      - 'governance/product/contracts/jrn-036-settlements-commissions.product-truth.json'
-      - 'infra/docker/scripts/wlt-migration-probes.ps1'
-      - 'services/wlt/backend/internal/cod/**'
-      - 'services/wlt/backend/internal/settlement/**'
-      - 'services/wlt/backend/internal/http/server.go'
-      - 'services/wlt/database/migrations/wlt-090_jrn036_settlement_commission_governance.sql'
-      - 'services/wlt/database/tests/jrn-036-settlement-commission-invariants.sql'
-      - 'services/dsh/backend/internal/http/finance_settlement_sources.go'
-      - 'services/dsh/backend/internal/http/finance_commission_governance.go'
-      - 'services/dsh/backend/internal/http/representative_finance_routes.go'
-      - 'services/dsh/backend/internal/wlt/commission_client.go'
-      - 'services/dsh/backend/internal/wlt/finance_proxy.go'
-      - 'services/dsh/frontend/shared/finance-wlt-link/jrn036/**'
-      - 'services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx'
-      - 'services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx'
-      - 'services/dsh/frontend/app-partner/**'
-      - 'services/dsh/frontend/control-panel/finance/**'
-      - 'services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml'
-      - 'tools/guards/jrn-036-settlement-commission-gate.mjs'
-      - 'tools/verification/jrn-036-**'
-      - '.github/workflows/jrn-036-settlement-commission-verification.yml'
+      - "governance/product/contracts/jrn-036-settlements-commissions.product-truth.json"
+      - "infra/docker/scripts/wlt-migration-probes.ps1"
+      - "services/wlt/backend/internal/cod/**"
+      - "services/wlt/backend/internal/settlement/**"
+      - "services/wlt/backend/internal/http/server.go"
+      - "services/wlt/database/migrations/wlt-090_jrn036_settlement_commission_governance.sql"
+      - "services/wlt/database/tests/jrn-036-settlement-commission-invariants.sql"
+      - "services/dsh/backend/internal/http/finance_settlement_sources.go"
+      - "services/dsh/backend/internal/http/finance_commission_governance.go"
+      - "services/dsh/backend/internal/http/representative_finance_routes.go"
+      - "services/dsh/backend/internal/wlt/commission_client.go"
+      - "services/dsh/backend/internal/wlt/finance_proxy.go"
+      - "services/dsh/frontend/shared/finance-wlt-link/jrn036/**"
+      - "services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx"
+      - "services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx"
+      - "services/dsh/frontend/app-partner/**"
+      - "services/dsh/frontend/control-panel/finance/**"
+      - "services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml"
+      - "tools/guards/jrn-036-settlement-commission-gate.mjs"
+      - "tools/verification/jrn-036-**"
+      - ".github/workflows/jrn-036-settlement-commission-verification.yml"
   pull_request:
-    branches: [sambassam]
+    branches: [master]
     paths: *jrn036_paths
 
 permissions:
@@ -38,23 +38,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  static-contracts:
-    name: Product contract and surface invariants
+  verify:
+    name: JRN-036 PostgreSQL runtime, sovereign finance, and multi-surface proof
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-      - name: Product, contract, migration and ownership boundary gate
-        run: node tools/guards/jrn-036-settlement-commission-gate.mjs
-      - name: Multi-surface states and actor-isolation tests
-        run: node --test tools/verification/jrn-036-surfaces.test.mjs
-
-  wlt-runtime:
-    name: PostgreSQL migration and live WLT HTTP lifecycle
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     services:
       postgres:
         image: postgres:16-alpine
@@ -71,7 +58,7 @@ jobs:
           --health-retries=20
     env:
       PGHOST: localhost
-      PGPORT: '5432'
+      PGPORT: "5432"
       PGUSER: wlt_ci
       PGPASSWORD: wlt_ci_password
       PGDATABASE: wlt_ci
@@ -79,11 +66,32 @@ jobs:
       WLT_BASE_URL: http://127.0.0.1:58083
       WLT_SERVICE_TOKEN: jrn036-ci-service-token
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v6
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: services/wlt/backend/go.mod
-          cache-dependency-path: services/wlt/backend/go.sum
+          cache-dependency-path: |
+            services/wlt/backend/go.sum
+            services/dsh/backend/go.sum
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: "10.34.2"
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Verify product, contract, migration, and ownership boundaries
+        run: |
+          node tools/guards/jrn-036-settlement-commission-gate.mjs
+          node --test tools/verification/jrn-036-surfaces.test.mjs
       - name: Verify WLT migration numbering and probe coverage
         shell: pwsh
         run: |
@@ -95,101 +103,44 @@ jobs:
         run: |
           set -euo pipefail
           for migration in services/wlt/database/migrations/*.sql; do
-            echo "Applying ${migration}"
             psql -v ON_ERROR_STOP=1 -f "${migration}"
           done
       - name: Assert JRN-036 PostgreSQL invariants
         run: psql -v ON_ERROR_STOP=1 -f services/wlt/database/tests/jrn-036-settlement-commission-invariants.sql
+      - name: Verify Go formatting without rewriting source
+        run: |
+          test -z "$(gofmt -l services/wlt/backend/internal/cod/jrn036_governed_commission.go services/wlt/backend/internal/cod/jrn036_governed_lifecycle.go services/wlt/backend/internal/cod/jrn036_commission_query.go services/wlt/backend/internal/cod/jrn036_governed_commission_test.go services/wlt/backend/internal/settlement/jrn036_evidence_settlement.go services/wlt/backend/internal/settlement/jrn036_evidence_settlement_test.go services/wlt/backend/internal/http/server.go)"
+          test -z "$(gofmt -l services/dsh/backend/internal/http/finance_settlement_sources.go services/dsh/backend/internal/http/finance_commission_governance.go services/dsh/backend/internal/http/representative_finance_routes.go services/dsh/backend/internal/wlt/commission_client.go services/dsh/backend/internal/wlt/finance_proxy.go)"
+      - name: Compile and test WLT governed finance packages
+        working-directory: services/wlt/backend
+        run: go test ./internal/cod ./internal/settlement ./internal/http
+      - name: Compile and test DSH finance proxy packages
+        working-directory: services/dsh/backend
+        run: go test ./internal/http ./internal/wlt
       - name: Start WLT runtime
         shell: bash
         run: |
           set -euo pipefail
           (
             cd services/wlt/backend
-            PORT=58083 \
-            DATABASE_URL="${DATABASE_URL}" \
-            WLT_MUTATIONS_ENABLED=true \
-            WLT_AUTH_MODE=service \
-            WLT_DSH_SERVICE_TOKEN="${WLT_SERVICE_TOKEN}" \
-            go run ./cmd/wlt-api
+            PORT=58083 DATABASE_URL="${DATABASE_URL}" WLT_MUTATIONS_ENABLED=true WLT_AUTH_MODE=service WLT_DSH_SERVICE_TOKEN="${WLT_SERVICE_TOKEN}" go run ./cmd/wlt-api
           ) > /tmp/wlt-jrn036.log 2>&1 &
           echo $! > /tmp/wlt-jrn036.pid
       - name: Run evidence-backed settlement and commission lifecycle
         run: bash tools/verification/jrn-036-runtime-smoke.sh
-      - name: Upload WLT runtime evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jrn-036-wlt-runtime-${{ github.run_id }}
-          path: /tmp/wlt-jrn036.log
-          if-no-files-found: warn
-
-  wlt-go:
-    name: WLT Go format compile and tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: services/wlt/backend/go.mod
-          cache-dependency-path: services/wlt/backend/go.sum
-      - name: Enforce gofmt on JRN-036 WLT code
-        shell: bash
-        run: |
-          diff="$(gofmt -d \
-            services/wlt/backend/internal/cod/jrn036_governed_commission.go \
-            services/wlt/backend/internal/cod/jrn036_governed_lifecycle.go \
-            services/wlt/backend/internal/cod/jrn036_commission_query.go \
-            services/wlt/backend/internal/cod/jrn036_governed_commission_test.go \
-            services/wlt/backend/internal/settlement/jrn036_evidence_settlement.go \
-            services/wlt/backend/internal/settlement/jrn036_evidence_settlement_test.go \
-            services/wlt/backend/internal/http/server.go)"
-          test -z "${diff}" || { printf '%s\n' "${diff}"; exit 1; }
-      - name: Compile and test WLT governed finance packages
-        working-directory: services/wlt/backend
-        run: go test ./internal/cod ./internal/settlement ./internal/http
-
-  dsh-go:
-    name: DSH Go format compile and tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: services/dsh/backend/go.mod
-          cache-dependency-path: services/dsh/backend/go.sum
-      - name: Enforce gofmt on JRN-036 DSH code
-        shell: bash
-        run: |
-          diff="$(gofmt -d \
-            services/dsh/backend/internal/http/finance_settlement_sources.go \
-            services/dsh/backend/internal/http/finance_commission_governance.go \
-            services/dsh/backend/internal/http/representative_finance_routes.go \
-            services/dsh/backend/internal/wlt/commission_client.go \
-            services/dsh/backend/internal/wlt/finance_proxy.go)"
-          test -z "${diff}" || { printf '%s\n' "${diff}"; exit 1; }
-      - name: Compile and test DSH finance proxy packages
-        working-directory: services/dsh/backend
-        run: go test ./internal/http ./internal/wlt
-
-  dsh-typescript:
-    name: DSH TypeScript and accessible multi-surface bindings
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.34.2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Install locked workspace
-        run: pnpm install --frozen-lockfile
       - name: Typecheck DSH multi-surface finance bindings
         run: pnpm --dir services/dsh typecheck
       - name: Verify backend and frontend bindings
         run: |
           pnpm run guard:backend-api-binding
           pnpm run guard:frontend-feature-binding
+      - name: Upload WLT runtime evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: jrn-036-wlt-runtime-${{ github.run_id }}
+          path: /tmp/wlt-jrn036.log
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Verify repository whitespace
+        run: git diff --check
