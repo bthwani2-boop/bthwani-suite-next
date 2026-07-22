@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -87,8 +88,31 @@ func (s *protectedStoreServer) handleListCoupons(w http.ResponseWriter, r *http.
 	for _, item := range items {
 		fundingPolicies[item.ID] = couponFundingPolicy(item)
 	}
+
+	fundingLifecycle, err := coupons.ListFundingLifecycleDiagnostics(s.db, 50)
+	if err != nil {
+		writeCouponError(w, err)
+		return
+	}
+	reconciliationContext, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	for index := range fundingLifecycle {
+		item := &fundingLifecycle[index]
+		if s.wlt == nil || item.WLTReservationID == "" || item.TenantID == "" {
+			coupons.ReconcileFundingLifecycle(item, nil, errors.New("WLT readback is unavailable"))
+			continue
+		}
+		reservation, readErr := s.wlt.GetPromotionFundingReservation(
+			reconciliationContext,
+			item.WLTReservationID,
+			item.TenantID,
+		)
+		coupons.ReconcileFundingLifecycle(item, reservation, readErr)
+	}
+
 	store.SendJSON(w, http.StatusOK, map[string]any{
 		"coupons": items, "fundingPolicies": fundingPolicies,
+		"fundingLifecycle": fundingLifecycle,
 	})
 }
 
