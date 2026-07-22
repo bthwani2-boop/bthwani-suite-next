@@ -1,0 +1,24 @@
+{
+  "journeyId": "JRN-028",
+  "status": "FAILED",
+  "testedSha": "d7760ade4911a07785d3d62a3d58827893622f5e",
+  "verifiedBranchHeadBeforeProof": "d7760ade4911a07785d3d62a3d58827893622f5e",
+  "workflowRunId": "29937125826",
+  "workflowRunAttempt": "1",
+  "generatedAtUtc": "2026-07-22T16:15:55Z",
+  "verifier": "tools/verification/jrn-028-all-slices.sh",
+  "slices": "FS-01..FS-18",
+  "governedPathDrift": false,
+  "checks": {
+    "wltGo": "FAILED",
+    "dshGo": "FAILED",
+    "sliceAssertions": "FAILED",
+    "typeScript": "FAILED",
+    "postgresLifecycle": "FAILED",
+    "postgresNegativeInvariants": "FAILED",
+    "concurrency": "FAILED",
+    "productTruth": "FAILED",
+    "openApi": "FAILED",
+    "whitespace": "FAILED"
+  }
+}

@@ -1,0 +1,5 @@
+status=FAILED
+exit_code=1
+line=26
+command=( cd services/wlt/backend; go test ./internal/promotionfunding ./internal/shared; go test ./internal/http -run '^$' )
+tested_sha=d7760ade4911a07785d3d62a3d58827893622f5e
