@@ -65,10 +65,10 @@
     },
     {
       "id": "FS-09",
-      "name": "Partner and captain exception commands with lifecycle-independent replay",
+      "name": "Partner and captain exception commands with lifecycle-independent exact replay",
       "codeStatus": "CLOSED",
       "requiredFiles": ["services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions.go", "services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions_db_test.go"],
-      "requiredMarkers": ["ReportPartnerStoreCaptainHandoffException", "ReportCaptainStoreCaptainHandoffException", "findPartnerHandoffExceptionReplay", "findCaptainHandoffExceptionReplay", "partner replay after lifecycle closure", "captain replay after lifecycle closure"]
+      "requiredMarkers": ["ReportPartnerStoreCaptainHandoffException", "ReportCaptainStoreCaptainHandoffException", "findPartnerHandoffExceptionReplay", "findCaptainHandoffExceptionReplay", "validateHandoffExceptionPayload", "partner payload drift error", "captain payload drift error", "partner replay after lifecycle closure", "captain replay after lifecycle closure"]
     },
     {
       "id": "FS-10",
@@ -86,17 +86,17 @@
     },
     {
       "id": "FS-12",
-      "name": "Persistent partner exception readback and action suppression",
+      "name": "Persistent partner exception readback action suppression and resolution release",
       "codeStatus": "CLOSED",
-      "requiredFiles": ["services/dsh/backend/internal/http/partner_order_workboard.go", "services/dsh/frontend/shared/partner/partner.adapters.ts", "services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx"],
-      "requiredMarkers": ["OpenStoreCaptainHandoffExceptionID", "openStoreCaptainHandoffExceptionId", "exposes handoff while custody exception is active", "استثناء عهدة قيد مراجعة العمليات"]
+      "requiredFiles": ["services/dsh/backend/internal/http/partner_order_workboard.go", "services/dsh/frontend/shared/partner/partner.adapters.ts", "services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx", "services/dsh/frontend/app-partner/orders/OperationalOrdersInboxScreen.tsx"],
+      "requiredMarkers": ["OpenStoreCaptainHandoffExceptionID", "openStoreCaptainHandoffExceptionId", "exposes handoff while custody exception is active", "استثناء عهدة قيد مراجعة العمليات", "observedServerHandoffExceptionOrderId", "if (item.allowedActions.includes(actionId))"]
     },
     {
       "id": "FS-13",
-      "name": "Persistent captain exception readback and fail-closed pickup",
+      "name": "Persistent captain exception readback fail-closed pickup and resolution release",
       "codeStatus": "CLOSED",
       "requiredFiles": ["services/dsh/frontend/shared/dispatch/use-store-captain-handoff-exception.ts", "services/dsh/frontend/app-captain/orders/OperationalCaptainExecutionScreen.tsx"],
-      "requiredMarkers": ["fetchCaptainDeliveryException", "setReadback({ kind: \"blocked\"", "setInterval", "readbackBlocksPickup", "الاستلام محجوب"]
+      "requiredMarkers": ["fetchCaptainDeliveryException", "setReadback({ kind: \"blocked\"", "clearResolvedLocalState", "setInterval", "readbackBlocksPickup", "الاستلام محجوب"]
     },
     {
       "id": "FS-14",
