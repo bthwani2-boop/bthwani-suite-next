@@ -1,18 +1,22 @@
 openapi: 3.1.0
 x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-owner: services/dsh
+x-bthwani-journey: JRN-031
 info:
   title: DSH Administration Governance API
-  version: 1.2.0
-  description: JRN-031 maker-checker administration contract.
+  version: 2.0.0
+  description: Governed roles, maker-checker approvals, append-only audit, rollback, and privacy-safe diagnostics.
 servers:
   - url: /dsh
+security:
+  - bearerAuth: []
 paths:
   /operator/admin/roles:
     get:
       operationId: listDshAdministrationRoles
       responses:
         "200":
-          description: Approved administrative roles.
+          description: Approved surface-scoped administrative roles.
           content:
             application/json:
               schema:
@@ -21,8 +25,7 @@ paths:
                 properties:
                   roles:
                     type: array
-                    items:
-                      $ref: "#/components/schemas/Role"
+                    items: { $ref: "#/components/schemas/Role" }
   /operator/admin/roles/requests:
     post:
       operationId: requestDshAdministrationRoleDefinition
@@ -31,8 +34,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/RoleDefinitionRequestInput"
+            schema: { $ref: "#/components/schemas/RoleDefinitionRequestInput" }
       responses:
         "202":
           description: Pending role-definition request created.
@@ -42,18 +44,13 @@ paths:
                 type: object
                 required: [request]
                 properties:
-                  request:
-                    $ref: "#/components/schemas/RoleDefinitionRequest"
+                  request: { $ref: "#/components/schemas/RoleDefinitionRequest" }
         "409": { description: Role exists or an equivalent request is pending. }
   /operator/admin/role-requests:
     get:
       operationId: listDshAdministrationRoleDefinitionRequests
       parameters:
-        - in: query
-          name: status
-          required: false
-          schema:
-            $ref: "#/components/schemas/ApprovalStatus"
+        - $ref: "#/components/parameters/ApprovalStatus"
       responses:
         "200":
           description: Role-definition approval queue.
@@ -65,23 +62,18 @@ paths:
                 properties:
                   requests:
                     type: array
-                    items:
-                      $ref: "#/components/schemas/RoleDefinitionRequest"
+                    items: { $ref: "#/components/schemas/RoleDefinitionRequest" }
   /operator/admin/role-requests/{requestId}/review:
     post:
       operationId: reviewDshAdministrationRoleDefinitionRequest
       description: Creates a role only after an independent checker approves the pending request.
       parameters:
-        - in: path
-          name: requestId
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/RequestId"
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/ApprovalReviewInput"
+            schema: { $ref: "#/components/schemas/ApprovalReviewInput" }
       responses:
         "200":
           description: Role-definition request reviewed.
@@ -91,8 +83,7 @@ paths:
                 type: object
                 required: [request]
                 properties:
-                  request:
-                    $ref: "#/components/schemas/RoleDefinitionRequest"
+                  request: { $ref: "#/components/schemas/RoleDefinitionRequest" }
                   role:
                     oneOf:
                       - $ref: "#/components/schemas/Role"
@@ -113,23 +104,18 @@ paths:
                 properties:
                   staff:
                     type: array
-                    items:
-                      $ref: "#/components/schemas/StaffAssignment"
+                    items: { $ref: "#/components/schemas/StaffAssignment" }
   /operator/admin/staff/{staffId}/roles:
     post:
       operationId: requestDshStaffRoleChange
-      description: Creates a pending maker-checker request for either assignment or revocation; it never mutates the approved assignment directly.
+      description: Creates a pending maker-checker request for assignment or revocation; it never mutates the approved assignment directly.
       parameters:
-        - in: path
-          name: staffId
-          required: true
-          schema: { type: string, minLength: 1 }
+        - $ref: "#/components/parameters/StaffId"
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/RoleChangeRequestInput"
+            schema: { $ref: "#/components/schemas/RoleChangeRequestInput" }
       responses:
         "202":
           description: Pending role-change approval request created.
@@ -139,19 +125,14 @@ paths:
                 type: object
                 required: [approval]
                 properties:
-                  approval:
-                    $ref: "#/components/schemas/RoleAssignmentApproval"
+                  approval: { $ref: "#/components/schemas/RoleAssignmentApproval" }
         "403": { description: Self-change or authorization is forbidden. }
         "409": { description: Requested assignment state is no longer valid or an equivalent request is pending. }
   /operator/admin/approvals:
     get:
       operationId: listDshRoleAssignmentApprovals
       parameters:
-        - in: query
-          name: status
-          required: false
-          schema:
-            $ref: "#/components/schemas/ApprovalStatus"
+        - $ref: "#/components/parameters/ApprovalStatus"
       responses:
         "200":
           description: Staff role-change approval queue.
@@ -163,23 +144,18 @@ paths:
                 properties:
                   approvals:
                     type: array
-                    items:
-                      $ref: "#/components/schemas/RoleAssignmentApproval"
+                    items: { $ref: "#/components/schemas/RoleAssignmentApproval" }
   /operator/admin/approvals/{approvalId}/review:
     post:
       operationId: reviewDshStaffRoleChange
-      description: Applies an assignment or revocation only when checker differs from maker and beneficiary.
+      description: Applies assignment or revocation only when checker differs from maker and beneficiary.
       parameters:
-        - in: path
-          name: approvalId
-          required: true
-          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/ApprovalId"
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/ApprovalReviewInput"
+            schema: { $ref: "#/components/schemas/ApprovalReviewInput" }
       responses:
         "200":
           description: Role-change request reviewed and applied only when approved.
@@ -189,15 +165,168 @@ paths:
                 type: object
                 required: [approval]
                 properties:
-                  approval:
-                    $ref: "#/components/schemas/RoleAssignmentApproval"
+                  approval: { $ref: "#/components/schemas/RoleAssignmentApproval" }
                   assignment:
                     oneOf:
                       - $ref: "#/components/schemas/StaffAssignment"
                       - type: "null"
         "403": { description: Self-approval is forbidden. }
         "409": { description: Version, lifecycle, or role-state conflict. }
+  /operator/admin/approvals/{approvalId}/rollback-requests:
+    post:
+      operationId: requestDshAdministrationDecisionRollback
+      description: Appends a pending inverse decision without deleting the source approval or audit history.
+      parameters:
+        - $ref: "#/components/parameters/ApprovalId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 5, maxLength: 1000 }
+      responses:
+        "202":
+          description: Rollback request accepted for independent review.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [request]
+                properties:
+                  request: { $ref: "#/components/schemas/RollbackRequest" }
+        "403": { description: Beneficiary cannot request a self-affecting rollback. }
+        "409": { description: A pending rollback already exists or source state is no longer valid. }
+  /operator/admin/rollback-requests:
+    get:
+      operationId: listDshAdministrationRollbackRequests
+      parameters:
+        - $ref: "#/components/parameters/ApprovalStatus"
+      responses:
+        "200":
+          description: Governed rollback request queue.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [requests]
+                properties:
+                  requests:
+                    type: array
+                    items: { $ref: "#/components/schemas/RollbackRequest" }
+  /operator/admin/rollback-requests/{requestId}/review:
+    post:
+      operationId: reviewDshAdministrationDecisionRollback
+      description: Applies the inverse action only when checker differs from rollback maker, beneficiary, and original checker.
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApprovalReviewInput" }
+      responses:
+        "200":
+          description: Rollback reviewed and inverse role state applied only when approved.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [request]
+                properties:
+                  request: { $ref: "#/components/schemas/RollbackRequest" }
+                  assignment:
+                    oneOf:
+                      - $ref: "#/components/schemas/StaffAssignment"
+                      - type: "null"
+        "403": { description: Independent checker rule violated. }
+        "409": { description: Version or role-state conflict. }
+  /operator/admin/diagnostics:
+    get:
+      operationId: getDshAdministrationDiagnostics
+      description: Returns aggregate operational counts only and never PII, credentials, documents, tokens, or secrets.
+      responses:
+        "200":
+          description: Privacy-safe administration diagnostics.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [diagnostics]
+                properties:
+                  diagnostics: { $ref: "#/components/schemas/AdministrationDiagnostics" }
+  /operator/admin/partners:
+    get:
+      operationId: listDshAdministrationPartnerActivationProjections
+      description: Read-only projection; activation and blocking remain owned by the partner lifecycle route.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: Partner activation projections. }
+  /operator/admin/captains:
+    get:
+      operationId: listDshAdministrationCaptainCredentialProjections
+      description: Read-only projection; credential creation and update remain owned by Workforce.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: Captain credential projections. }
+  /operator/admin/audit:
+    get:
+      operationId: listDshAdministrationAudit
+      description: Returns append-only audit events with allowlisted, redacted metadata only.
+      parameters:
+        - name: actorId
+          in: query
+          required: false
+          schema: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: Redacted administration audit.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [audit]
+                properties:
+                  audit:
+                    type: array
+                    items: { $ref: "#/components/schemas/AuditEntry" }
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    ApprovalStatus:
+      name: status
+      in: query
+      required: false
+      schema: { $ref: "#/components/schemas/ApprovalStatus" }
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ApprovalId:
+      name: approvalId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    StaffId:
+      name: staffId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
   schemas:
     ApprovalStatus:
       type: string
@@ -208,78 +337,92 @@ components:
         - administration.read
         - administration.manage
         - administration.approve
+        - administration.role.request
+        - administration.role.approve
+        - administration.staff.request
+        - administration.staff.approve
+        - administration.audit.read
+        - administration.diagnostics.read
+        - administration.rollback.request
+        - administration.rollback.approve
+    AdministrationSurface:
+      type: string
+      enum: [control-panel, app-client, app-partner, app-captain, app-field, webapp, website]
     RoleChangeAction:
       type: string
-      enum:
-        - staff_role_assignment
-        - staff_role_revocation
+      enum: [staff_role_assignment, staff_role_revocation]
     Role:
       type: object
-      required: [id, name, description, permissions, createdAt]
+      additionalProperties: false
+      required: [id, name, description, permissions, surfaces, active, version, createdAt]
       properties:
         id: { type: string, format: uuid }
-        name: { type: string }
+        name: { type: string, pattern: "^[a-z][a-z0-9-]{2,79}$" }
         description: { type: string }
-        permissions:
-          type: array
-          uniqueItems: true
-          items:
-            $ref: "#/components/schemas/AdministrationPermission"
-        createdAt: { type: string, format: date-time }
-    RoleDefinitionRequestInput:
-      type: object
-      additionalProperties: false
-      required: [name, description, permissions, reason]
-      properties:
-        name:
-          type: string
-          pattern: "^[a-z][a-z0-9-]{2,79}$"
-        description: { type: string, maxLength: 500 }
         permissions:
           type: array
           minItems: 1
           uniqueItems: true
-          items:
-            $ref: "#/components/schemas/AdministrationPermission"
-        reason: { type: string, minLength: 5 }
+          items: { $ref: "#/components/schemas/AdministrationPermission" }
+        surfaces:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          contains: { const: control-panel }
+          items: { $ref: "#/components/schemas/AdministrationSurface" }
+        active: { type: boolean }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+    RoleDefinitionRequestInput:
+      type: object
+      additionalProperties: false
+      required: [name, description, permissions, surfaces, reason]
+      properties:
+        name: { type: string, pattern: "^[a-z][a-z0-9-]{2,79}$" }
+        description: { type: string, maxLength: 1000 }
+        permissions:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/AdministrationPermission" }
+        surfaces:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          contains: { const: control-panel }
+          items: { $ref: "#/components/schemas/AdministrationSurface" }
+        reason: { type: string, minLength: 5, maxLength: 1000 }
     RoleDefinitionRequest:
       type: object
-      required:
-        - id
-        - roleName
-        - description
-        - permissions
-        - requestedBy
-        - reason
-        - status
-        - reviewedBy
-        - reviewNote
-        - version
-        - createdAt
-        - updatedAt
+      additionalProperties: false
+      required: [id, roleName, description, permissions, surfaces, requestedBy, reason, status, reviewedBy, reviewNote, version, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         roleName: { type: string }
         description: { type: string }
         permissions:
           type: array
+          minItems: 1
           uniqueItems: true
-          items:
-            $ref: "#/components/schemas/AdministrationPermission"
+          items: { $ref: "#/components/schemas/AdministrationPermission" }
+        surfaces:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          contains: { const: control-panel }
+          items: { $ref: "#/components/schemas/AdministrationSurface" }
         requestedBy: { type: string }
         reason: { type: string, minLength: 5 }
-        status:
-          $ref: "#/components/schemas/ApprovalStatus"
+        status: { $ref: "#/components/schemas/ApprovalStatus" }
         reviewedBy: { type: string }
         reviewNote: { type: string }
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        reviewedAt:
-          type: [string, "null"]
-          format: date-time
+        reviewedAt: { type: [string, "null"], format: date-time }
     StaffAssignment:
       type: object
+      additionalProperties: false
       required: [id, actorId, roleId, roleName, assignedBy, assignedAt]
       properties:
         id: { type: string, format: uuid }
@@ -294,51 +437,82 @@ components:
       required: [roleId, actionType, reason]
       properties:
         roleId: { type: string, format: uuid }
-        actionType:
-          $ref: "#/components/schemas/RoleChangeAction"
-        reason: { type: string, minLength: 5 }
+        actionType: { $ref: "#/components/schemas/RoleChangeAction" }
+        reason: { type: string, minLength: 5, maxLength: 1000 }
     ApprovalReviewInput:
       type: object
       additionalProperties: false
       required: [decision, reviewNote, expectedVersion]
       properties:
-        decision:
-          type: string
-          enum: [approved, rejected]
-        reviewNote: { type: string }
+        decision: { type: string, enum: [approved, rejected] }
+        reviewNote: { type: string, maxLength: 1000 }
         expectedVersion: { type: integer, minimum: 1 }
     RoleAssignmentApproval:
       type: object
-      required:
-        - id
-        - actionType
-        - targetActorId
-        - roleId
-        - roleName
-        - requestedBy
-        - reason
-        - status
-        - reviewedBy
-        - reviewNote
-        - version
-        - createdAt
-        - updatedAt
+      additionalProperties: false
+      required: [id, actionType, targetActorId, roleId, roleName, requestedBy, reason, status, reviewedBy, reviewNote, version, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
-        actionType:
-          $ref: "#/components/schemas/RoleChangeAction"
+        actionType: { $ref: "#/components/schemas/RoleChangeAction" }
         targetActorId: { type: string }
         roleId: { type: string, format: uuid }
         roleName: { type: string }
         requestedBy: { type: string }
         reason: { type: string, minLength: 5 }
-        status:
-          $ref: "#/components/schemas/ApprovalStatus"
+        status: { $ref: "#/components/schemas/ApprovalStatus" }
         reviewedBy: { type: string }
         reviewNote: { type: string }
         version: { type: integer, minimum: 1 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        reviewedAt:
-          type: [string, "null"]
-          format: date-time
+        reviewedAt: { type: [string, "null"], format: date-time }
+    RollbackRequest:
+      type: object
+      additionalProperties: false
+      required: [id, sourceApprovalId, sourceActionType, inverseActionType, targetActorId, roleId, roleName, requestedBy, reason, status, reviewedBy, reviewNote, version, createdAt, updatedAt, sourceApprovedBy]
+      properties:
+        id: { type: string, format: uuid }
+        sourceApprovalId: { type: string, format: uuid }
+        sourceActionType: { $ref: "#/components/schemas/RoleChangeAction" }
+        inverseActionType: { $ref: "#/components/schemas/RoleChangeAction" }
+        targetActorId: { type: string }
+        roleId: { type: string, format: uuid }
+        roleName: { type: string }
+        requestedBy: { type: string }
+        reason: { type: string, minLength: 5 }
+        status: { $ref: "#/components/schemas/ApprovalStatus" }
+        reviewedBy: { type: string }
+        reviewNote: { type: string }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        reviewedAt: { type: [string, "null"], format: date-time }
+        sourceApprovedBy: { type: string }
+    AdministrationDiagnostics:
+      type: object
+      additionalProperties: false
+      required: [status, activeRoleCount, approvedAssignmentCount, pendingRoleDefinitionCount, pendingRoleAssignmentCount, pendingRollbackCount, recentRestrictedAuditCount, generatedAt]
+      properties:
+        status: { type: string, enum: [healthy, attention] }
+        activeRoleCount: { type: integer, minimum: 0 }
+        approvedAssignmentCount: { type: integer, minimum: 0 }
+        pendingRoleDefinitionCount: { type: integer, minimum: 0 }
+        pendingRoleAssignmentCount: { type: integer, minimum: 0 }
+        pendingRollbackCount: { type: integer, minimum: 0 }
+        recentRestrictedAuditCount: { type: integer, minimum: 0 }
+        generatedAt: { type: string, format: date-time }
+    AuditEntry:
+      type: object
+      additionalProperties: false
+      required: [id, actorId, action, targetId, detail, sensitivity, correlationId, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        actorId: { type: string }
+        action: { type: string }
+        targetId: { type: string }
+        detail:
+          type: string
+          description: Redacted allowlisted metadata only; never raw reason, review note, phone, credential, document, token, or secret.
+        sensitivity: { type: string, enum: [internal, restricted] }
+        correlationId: { type: string }
+        createdAt: { type: string, format: date-time }
