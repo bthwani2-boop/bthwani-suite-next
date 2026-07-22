@@ -7,6 +7,7 @@ import {
   usePlatformNotificationConfigController,
 } from "../../shared/notifications";
 import type {
+  DshNotificationChannel,
   DshNotificationDeliveryAttempt,
   DshNotificationDeliveryOutcome,
   DshPlatformNotificationConfig,
@@ -24,6 +25,20 @@ function outcomeTone(outcome: DshNotificationDeliveryOutcome): "success" | "warn
   return "warning";
 }
 
+function splitValues(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseChannels(value: string): DshNotificationChannel[] {
+  const channels = splitValues(value).filter(
+    (item): item is DshNotificationChannel => item === "in_app" || item === "push",
+  );
+  return channels.length > 0 ? channels : ["in_app"];
+}
+
 export function PlatformNotificationConfigScreen() {
   const { state, reload, save } = usePlatformNotificationConfigController("authenticated");
   const deliveryAudit = useNotificationDeliveryAuditController("authenticated");
@@ -31,6 +46,13 @@ export function PlatformNotificationConfigScreen() {
   const [topic, setTopic] = React.useState("");
   const [actorTypes, setActorTypes] = React.useState("");
   const [description, setDescription] = React.useState("");
+  const [defaultChannels, setDefaultChannels] = React.useState("in_app");
+  const [titleAr, setTitleAr] = React.useState("");
+  const [bodyAr, setBodyAr] = React.useState("");
+  const [titleEn, setTitleEn] = React.useState("");
+  const [bodyEn, setBodyEn] = React.useState("");
+  const [variables, setVariables] = React.useState("");
+  const [deepLinkPattern, setDeepLinkPattern] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveMessage, setSaveMessage] = React.useState<string | null>(null);
 
@@ -39,6 +61,28 @@ export function PlatformNotificationConfigScreen() {
     setTopic(row.topic);
     setActorTypes(row.actorTypes.join(", "));
     setDescription(row.description);
+    setDefaultChannels(row.defaultChannels.join(", "));
+    setTitleAr(row.titleAr);
+    setBodyAr(row.bodyAr);
+    setTitleEn(row.titleEn);
+    setBodyEn(row.bodyEn);
+    setVariables(row.variables.join(", "));
+    setDeepLinkPattern(row.deepLinkPattern);
+    setSaveMessage(null);
+  }
+
+  function resetEditor() {
+    setEditingConfig(null);
+    setTopic("");
+    setActorTypes("");
+    setDescription("");
+    setDefaultChannels("in_app");
+    setTitleAr("");
+    setBodyAr("");
+    setTitleEn("");
+    setBodyEn("");
+    setVariables("");
+    setDeepLinkPattern("");
     setSaveMessage(null);
   }
 
@@ -48,16 +92,27 @@ export function PlatformNotificationConfigScreen() {
       setSaveMessage("الموضوع مطلوب قبل الحفظ.");
       return;
     }
-
-    const resolvedActorTypes = actorTypes
-      .split(",")
-      .map((actorType) => actorType.trim())
-      .filter(Boolean);
+    if (!titleAr.trim() || !bodyAr.trim()) {
+      setSaveMessage("العنوان والنص العربيان مطلوبان لضمان fallback تشغيلي.");
+      return;
+    }
 
     setIsSaving(true);
     setSaveMessage(null);
     try {
-      await save(resolvedTopic, resolvedActorTypes, nextEnabled, description.trim());
+      await save({
+        topic: resolvedTopic,
+        actorTypes: splitValues(actorTypes),
+        isEnabled: nextEnabled,
+        description: description.trim(),
+        defaultChannels: parseChannels(defaultChannels),
+        titleAr: titleAr.trim(),
+        bodyAr: bodyAr.trim(),
+        titleEn: titleEn.trim(),
+        bodyEn: bodyEn.trim(),
+        variables: splitValues(variables),
+        deepLinkPattern: deepLinkPattern.trim(),
+      });
       setSaveMessage("تم حفظ إعداد الإشعار.");
       setEditingConfig(null);
     } catch {
@@ -74,7 +129,7 @@ export function PlatformNotificationConfigScreen() {
 
   return (
     <ScrollScreen>
-      <Header title="إعدادات الإشعارات" subtitle="إدارة سياسات الإشعار وتدقيق التسليم وإعادة المحاولة" />
+      <Header title="إعدادات الإشعارات" subtitle="إدارة الاستهداف والقنوات والقوالب والروابط وتدقيق التسليم" />
       <Box style={styles.container}>
         {state.configs.length === 0 ? (
           <StateView title="لا توجد إعدادات" description="لم يتم تهيئة أي إشعارات منصة بعد." />
@@ -87,6 +142,8 @@ export function PlatformNotificationConfigScreen() {
                 header: "الحالة",
                 render: (row) => <Badge label={row.isEnabled ? "مفعّل" : "معطّل"} tone={row.isEnabled ? "success" : "neutral"} />,
               },
+              { key: "actors", header: "الممثلون", render: (row) => <Text role="bodySm">{row.actorTypes.join(", ") || "الكل"}</Text> },
+              { key: "channels", header: "القنوات", render: (row) => <Text role="bodySm">{row.defaultChannels.join(", ")}</Text> },
               { key: "description", header: "الوصف", render: (row) => <Text role="bodySm">{row.description}</Text> },
               { key: "updatedBy", header: "عُدِّل من", render: (row) => <Text role="bodySm">{row.updatedBy}</Text> },
               {
@@ -104,14 +161,21 @@ export function PlatformNotificationConfigScreen() {
           <Text role="label" style={styles.editorTitle}>
             {editingConfig ? `تعديل ${editingConfig.topic}` : "تهيئة إشعار منصة"}
           </Text>
-          <TextField label="الموضوع" value={topic} onChangeText={setTopic} placeholder="order_update" />
-          <TextField label="أنواع الممثلين" value={actorTypes} onChangeText={setActorTypes} placeholder="client, partner, captain" />
-          <TextField label="الوصف" value={description} onChangeText={setDescription} multiline numberOfLines={3} />
+          <TextField label="الموضوع" value={topic} onChangeText={setTopic} placeholder="order.status_changed" />
+          <TextField label="أنواع الممثلين" value={actorTypes} onChangeText={setActorTypes} placeholder="client, partner, captain, field" />
+          <TextField label="القنوات الافتراضية" value={defaultChannels} onChangeText={setDefaultChannels} placeholder="in_app, push" />
+          <TextField label="الوصف" value={description} onChangeText={setDescription} multiline numberOfLines={2} />
+          <TextField label="العنوان العربي" value={titleAr} onChangeText={setTitleAr} placeholder="تم تحديث طلبك" />
+          <TextField label="النص العربي" value={bodyAr} onChangeText={setBodyAr} multiline numberOfLines={3} placeholder="تغيرت حالة الطلب إلى {{status}}" />
+          <TextField label="English title" value={titleEn} onChangeText={setTitleEn} placeholder="Your order was updated" />
+          <TextField label="English body" value={bodyEn} onChangeText={setBodyEn} multiline numberOfLines={3} placeholder="Order status changed to {{status}}" />
+          <TextField label="متغيرات القالب" value={variables} onChangeText={setVariables} placeholder="status, entityId" />
+          <TextField label="نمط الرابط العميق" value={deepLinkPattern} onChangeText={setDeepLinkPattern} placeholder="/orders/{{entityId}}" />
           {saveMessage ? <Text role="bodySm" tone="muted" style={styles.editorTitle}>{saveMessage}</Text> : null}
           <Box style={styles.actions}>
             <Button label="حفظ مفعّل" loading={isSaving} disabled={isSaving} fullWidth={false} onPress={() => { void handleSave(true); }} />
             <Button label="حفظ معطّل" tone="secondary" loading={isSaving} disabled={isSaving} fullWidth={false} onPress={() => { void handleSave(false); }} />
-            {editingConfig ? <Button label="إلغاء" tone="ghost" fullWidth={false} onPress={() => setEditingConfig(null)} /> : null}
+            {editingConfig ? <Button label="إلغاء" tone="ghost" fullWidth={false} onPress={resetEditor} /> : null}
           </Box>
         </Box>
 
