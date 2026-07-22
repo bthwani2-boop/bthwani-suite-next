@@ -111,6 +111,9 @@ func TestRepresentativeOwnLedgerRoutesOverrideActorQuery(t *testing.T) {
 	if strings.Contains(gotQuery, "other") || strings.Contains(gotQuery, "actorType=field") {
 		t.Fatalf("frontend actor query must not pass through, got %q", gotQuery)
 	}
+	if rec.Header().Get("Cache-Control") != "private, no-store" {
+		t.Fatalf("expected no-store ledger response, got %q", rec.Header().Get("Cache-Control"))
+	}
 }
 
 func TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback(t *testing.T) {
@@ -137,5 +140,43 @@ func TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback(
 	router.ServeHTTP(invalidRec, invalid)
 	if invalidRec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 for unsupported actor, got %d: %s", invalidRec.Code, invalidRec.Body.String())
+	}
+}
+
+func TestControlPanelRepresentativeLedgerPinsActorAndNoStore(t *testing.T) {
+	var gotPath string
+	var gotQuery string
+	router := representativeFinanceRouter(t, "operator", "operator-1", func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		_, _ = w.Write([]byte(`{"ledgerEntries":[]}`))
+	})
+
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/dsh/control-panel/finance/wallets/partner/partner-8/ledger-entries?actorId=other&actorType=field&entryType=settlement&limit=25",
+		nil,
+	)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if gotPath != "/wlt/ledger/entries" {
+		t.Fatalf("expected WLT ledger route, got %q", gotPath)
+	}
+	if !strings.Contains(gotQuery, "actorId=partner-8") || !strings.Contains(gotQuery, "actorType=partner") {
+		t.Fatalf("expected path-scoped partner identity, got %q", gotQuery)
+	}
+	if strings.Contains(gotQuery, "other") || strings.Contains(gotQuery, "actorType=field") {
+		t.Fatalf("query actor override must be ignored, got %q", gotQuery)
+	}
+	if !strings.Contains(gotQuery, "entryType=settlement") || !strings.Contains(gotQuery, "limit=25") {
+		t.Fatalf("expected allowlisted ledger filters, got %q", gotQuery)
+	}
+	if rec.Header().Get("Cache-Control") != "private, no-store" {
+		t.Fatalf("expected no-store operator ledger response, got %q", rec.Header().Get("Cache-Control"))
 	}
 }
