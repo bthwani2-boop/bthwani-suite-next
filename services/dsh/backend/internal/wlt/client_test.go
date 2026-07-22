@@ -277,7 +277,7 @@ func TestFinanceReadWalletEscapesActorIDSegment(t *testing.T) {
 
 func TestFinanceReadWalletRejectsUnknownActorType(t *testing.T) {
 	c := NewClient("https://wlt.internal", "test-service-token")
-	_, _, err := c.FinanceReadWallet(context.Background(), "captain", "captain-1", "corr-1")
+	_, _, err := c.FinanceReadWallet(context.Background(), "operator", "operator-1", "corr-1")
 	if err == nil || !strings.Contains(err.Error(), "not allowlisted") {
 		t.Fatalf("expected not-allowlisted error, got: %v", err)
 	}
