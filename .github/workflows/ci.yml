@@ -1,0 +1,76 @@
+name: BThwani Repository CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam, bassam]
+    paths:
+      - "AGENTS.md"
+      - "GEMINI.md"
+      - ".agents/**"
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - "governance/**"
+      - "tools/guards/**"
+      - "tools/scripts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "AGENTS.md"
+      - "GEMINI.md"
+      - ".agents/**"
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - "governance/**"
+      - "tools/guards/**"
+      - "tools/scripts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Repository governance and CI integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify canonical governance
+        run: |
+          pnpm run guard:governance-schema
+          pnpm run guard:agent-governance
+          pnpm run guard:authority-separation
+          pnpm run guard:saas-governance
+          pnpm run guard:guard-registry
+          pnpm run guard:sdlc
+          pnpm run guard:cleanup-policy
+      - name: Verify repository action integrity
+        run: |
+          pnpm run guard:actions-pin
+          pnpm run guard:workflow-lint
+      - name: Verify repository whitespace
+        run: git diff --check
+
+  result:
+    name: BThwani Repository CI result
+    needs: [verify]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce CI result
+        env:
+          VERIFY_RESULT: ${{ needs.verify.result }}
+        run: test "${VERIFY_RESULT}" = "success"
