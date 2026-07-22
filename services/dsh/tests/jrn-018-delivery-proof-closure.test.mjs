@@ -6,6 +6,10 @@ function read(path) {
   return fs.readFileSync(path, 'utf8');
 }
 
+function readJson(path) {
+  return JSON.parse(read(path));
+}
+
 function requireMarkers(path, markers) {
   const content = read(path);
   for (const marker of markers) {
@@ -25,8 +29,27 @@ test('JRN-018 registry and product truth are governed', () => {
     'client_issue_or_refresh_delivery_pin',
     'captain_retry_rejected_proof',
     'system_enqueue_wlt_delivery_completed_once',
+    'CLOSED_WITH_AUTOMATED_EVIDENCE',
     'independentReviewPending',
   ]);
+});
+
+test('JRN-018 closes every registered slice with automated evidence', () => {
+  const closure = readJson('services/dsh/contracts/jrn-018-slice-closure.json');
+  assert.equal(closure.journeyId, 'JRN-018');
+  assert.equal(closure.requiredSliceCount, 18);
+  assert.equal(closure.closedSliceCount, 18);
+  assert.equal(closure.openSliceCount, 0);
+  assert.equal(closure.slices.length, 18);
+  assert.equal(closure.codeDecision, 'CLOSED_WITH_AUTOMATED_EVIDENCE');
+  assert.ok(closure.slices.every((slice) => slice.codeStatus === 'CLOSED_WITH_AUTOMATED_EVIDENCE'));
+  assert.equal(new Set(closure.slices.map((slice) => slice.id)).size, 18);
+  assert.deepEqual(
+    closure.slices.map((slice) => slice.id),
+    Array.from({ length: 18 }, (_, index) => `FS-${String(index + 1).padStart(2, '0')}`),
+  );
+  assert.equal(closure.automatedEvidence.sameCommitRequired, true);
+  assert.ok(Array.isArray(closure.independentReviewPending));
 });
 
 test('JRN-018 database owns PIN, proof, review, idempotency, and location evidence', () => {
