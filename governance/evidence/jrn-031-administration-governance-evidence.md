@@ -22,6 +22,7 @@ The journey was executed remotely on `sambassam` under:
 - `governance/prompting/unified-operational-journey-execution-command.md`
 - `governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md`
 - `governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json`
+- `governance/approvals/jrn-031-independent-approvals.json`
 
 No local repository state was used as execution evidence.
 
@@ -94,10 +95,11 @@ No local repository state was used as execution evidence.
 
 - `services/dsh/contracts/dsh.administration.openapi.yaml`
 - `governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json`
+- `governance/approvals/jrn-031-independent-approvals.json`
 - `services/dsh/tests/jrn-031-administration-maker-checker.test.mjs`
 - `services/dsh/tests/jrn-031-administration-governance.test.mjs`
 - `services/dsh/tsconfig.jrn-031.json`
-- `.github/workflows/jrn-031-administration-governance.yml`
+- `.github/workflows/ci.yml`
 
 ## Verified gates
 
@@ -117,7 +119,7 @@ The full remote verification run `29920877185` completed with `success` and pass
 12. JRN-031 product-truth validation.
 13. Final all-gates verdict.
 
-Temporary diagnostic and one-shot verification workflows were removed after the successful verdict. The permanent JRN-031 verification workflow remains in the repository.
+Temporary diagnostic and one-shot verification workflows were removed after the successful verdict. Permanent verification is consolidated in `.github/workflows/ci.yml`.
 
 ## Independent approvals still required
 
