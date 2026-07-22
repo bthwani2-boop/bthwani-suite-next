@@ -1,0 +1,254 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_025_CAMPAIGNS_TICKERS_PARTNER_OFFERS",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Marketing campaigns, news tickers and partner-submitted offers require one governed DSH lifecycle with explicit targeting, scheduling, review, client visibility, measurement and multi-surface readback.",
+    "affectedActors": ["client", "partner", "operator"],
+    "currentWorkaround": "The repository contains separate campaign, ticker and partner-offer capabilities, but campaign scheduling fields are not fully mutable, offer transitions are not explicitly constrained, and the client surface only sees manually authored home content rather than the canonical approved offer projection.",
+    "frequency": "continuous",
+    "severity": "high",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-025",
+      "services/dsh/backend/internal/marketing/marketing.go",
+      "services/dsh/backend/internal/marketing/ticker.go",
+      "services/dsh/backend/internal/marketing/partner_offers.go",
+      "services/dsh/backend/internal/homediscovery/repository.go",
+      "services/dsh/frontend/shared/marketing/use-marketing-controller.tsx"
+    ]
+  },
+  "actors": [
+    {
+      "id": "operator",
+      "role": "Authorized marketing operator",
+      "permittedActions": [
+        "create and edit campaign drafts",
+        "schedule and activate eligible campaigns",
+        "pause complete cancel and archive campaigns",
+        "create publish pause and archive tickers",
+        "review approve reject pause and archive partner offers",
+        "read canonical impressions clicks and audit evidence"
+      ],
+      "forbiddenActions": [
+        "publish an ineligible target",
+        "publish a rejected or expired offer",
+        "overwrite a newer commercial version",
+        "hard delete auditable marketing truth",
+        "calculate or persist WLT financial truth"
+      ]
+    },
+    {
+      "id": "partner",
+      "role": "Owner of a client-visible store submitting a commercial offer",
+      "permittedActions": [
+        "submit an offer for the authenticated owned store",
+        "list and read offers for the owned store",
+        "read rejection reason and canonical review state"
+      ],
+      "forbiddenActions": [
+        "submit an offer for another store",
+        "self-publish or self-approve an offer",
+        "change operator review state",
+        "bypass coupon or store visibility gates"
+      ]
+    },
+    {
+      "id": "client",
+      "role": "Viewer of eligible active campaigns tickers and partner offers",
+      "permittedActions": [
+        "read currently eligible marketing projections",
+        "open governed campaign and offer targets",
+        "emit deduplicated impression and click events"
+      ],
+      "forbiddenActions": [
+        "read draft paused rejected archived expired or ineligible marketing content",
+        "mutate campaign ticker or partner-offer truth",
+        "submit another actor identity in measurement events"
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["operator"],
+      "routesOrScreens": ["Marketing Command Deck", "CampaignsCommandDeck", "News ticker deck", "Partner offer review queue", "Signals measurement deck"],
+      "operationIds": [],
+      "states": ["loading", "empty", "success", "forbidden", "conflict", "invalid", "offline", "error", "draft", "active", "paused", "completed", "cancelled", "inbound", "review", "marketing-ready", "published", "rejected", "archived"],
+      "actions": ["create", "edit", "schedule", "activate", "pause", "complete", "reject with reason", "archive", "refresh", "inspect metrics"]
+    },
+    {
+      "id": "app-partner",
+      "required": true,
+      "actors": ["partner"],
+      "routesOrScreens": ["PromotionsScreen", "owned partner-offer list and submission form"],
+      "operationIds": [],
+      "states": ["loading", "empty", "success", "forbidden", "offline", "error", "inbound", "review", "marketing-ready", "published", "paused", "rejected", "archived"],
+      "actions": ["submit", "list owned", "refresh", "read review reason"]
+    },
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": ["client"],
+      "routesOrScreens": ["HomeDiscoveryRoute", "HomePromoSection", "HomeHeroBannerSection"],
+      "operationIds": [],
+      "states": ["loading", "empty", "success", "service_unavailable", "offline", "error", "eligible", "scheduled", "expired"],
+      "actions": ["view eligible projection", "open target", "record impression", "record click", "retry"]
+    },
+    {
+      "id": "app-captain",
+      "required": false,
+      "exclusionReason": "JRN-025 registry scope is operator, partner and client; captain operational notifications remain owned by JRN-023.",
+      "actors": ["operator"],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": ["not_affected"],
+      "actions": []
+    },
+    {
+      "id": "app-field",
+      "required": false,
+      "exclusionReason": "Field readiness and store quality remain owned by JRN-024 and do not own campaign or partner-offer publication truth.",
+      "actors": ["operator"],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": ["not_affected"],
+      "actions": []
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["operator", "partner", "client"],
+      "routesOrScreens": ["operator marketing routes", "partner marketing routes", "home-discovery projection", "home-discovery event ingestion"],
+      "operationIds": [],
+      "states": ["authorized", "forbidden", "not_found", "invalid", "conflict", "target_gate_failed", "scheduled", "active", "expired"],
+      "actions": ["enforce lifecycle", "enforce ownership", "validate target", "validate schedule", "project eligible content", "persist audit and measurement"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["operator", "partner", "client"],
+      "routesOrScreens": ["dsh_marketing_campaigns", "dsh_marketing_tickers", "dsh_partner_offers", "dsh_marketing_audit_events", "dsh_marketing_impressions", "dsh_marketing_clicks"],
+      "operationIds": [],
+      "states": ["versioned", "audited", "soft_archived", "schedule_constrained", "target_bound", "measured"],
+      "actions": ["persist canonical truth", "enforce constraints", "prevent stale writes", "retain audit history", "index active projections"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["operator", "partner", "client"],
+      "routesOrScreens": ["services/dsh/frontend/shared/marketing", "services/dsh/frontend/shared/home-discovery"],
+      "operationIds": [],
+      "states": ["loading", "empty", "success", "forbidden", "conflict", "offline", "error"],
+      "actions": ["bind API contracts", "classify errors", "refresh canonical readback", "map marketing projections", "emit measurement events"]
+    }
+  ],
+  "outcome": {
+    "statement": "Every campaign ticker and partner offer has one auditable DSH lifecycle, and only currently eligible approved content is projected to the client with measurable impressions and clicks.",
+    "primaryMetric": "eligible marketing projection readback rate",
+    "guardrailMetrics": [
+      "illegal transition count",
+      "stale version conflict count",
+      "expired content exposure count",
+      "ineligible target exposure count",
+      "cross-store partner-offer submission count",
+      "hard-deleted marketing entity count"
+    ],
+    "baselineState": "Core entities and operator routes exist, but scheduling mutation, strict offer transitions and canonical client offer projection are incomplete.",
+    "targetState": "Operator, partner and client surfaces consume the same versioned marketing truth and eligible home-discovery projection with audit and measurement evidence.",
+    "observationWindow": "targeted static, database, runtime, accessibility and independent product review"
+  },
+  "acceptance": {
+    "criteria": [
+      "Campaign schedule audience placement and target are mutable through the governed operator API.",
+      "Campaign and partner-offer writes reject stale expected versions.",
+      "Campaign and partner-offer lifecycle transitions are explicit and fail closed.",
+      "Activation or publication revalidates target visibility and schedule eligibility.",
+      "Partner submission is always bound to the authenticated owned store.",
+      "Rejection requires a non-empty reason and archive is soft and terminal.",
+      "Home discovery projects only active in-window client-eligible campaigns and published in-window partner offers.",
+      "Client impressions and clicks are accepted only for currently publishable projected content.",
+      "Operator and partner mutations refresh canonical API readback.",
+      "No local mock or static array represents runtime campaign or offer truth."
+    ],
+    "failureStates": [
+      "frontend-only success",
+      "stale overwrite",
+      "illegal lifecycle jump",
+      "expired client exposure",
+      "ineligible target exposure",
+      "cross-store offer submission",
+      "hard deletion",
+      "local runtime truth"
+    ],
+    "requiredChecks": [
+      "product-truth schema validation",
+      "targeted Go marketing lifecycle tests",
+      "targeted database migration checks",
+      "route registration tests",
+      "OpenAPI contract and generated-client drift check",
+      "TypeScript marketing surface typecheck",
+      "client home-discovery runtime smoke",
+      "partner offer submission and operator review runtime smoke",
+      "independent product acceptance",
+      "accessibility and weak-network review"
+    ],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": [
+      "Marketing owns campaign ticker and partner-offer truth while home discovery owns only the client read projection.",
+      "Every commercial mutation retains audit actor correlation and before or after state.",
+      "Every stale version is rejected rather than overwritten.",
+      "Only client-visible stores and catalog targets may be published.",
+      "Client exposure is constrained by publication state and active schedule window."
+    ],
+    "negative": [
+      "No partner can submit for a store resolved from request input.",
+      "No rejected archived paused expired or out-of-window entity is client visible.",
+      "No campaign or offer can skip its governed transition graph.",
+      "No hard delete removes marketing audit history.",
+      "No DSH marketing component creates WLT ledger balance settlement or payment truth."
+    ]
+  },
+  "owners": {
+    "productManager": "DSH Growth Product Management",
+    "productOwner": "DSH Marketing Operations Product Owner",
+    "uxJourneyOwner": "DSH Multi-Surface Experience Owner",
+    "engineeringOwner": "DSH Full-Stack Engineering",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-025 code and contract gaps without creating a second home-content owner, mutating WLT truth, deploying production or activating commercial SaaS.",
+    "fixedConstraints": [
+      "Repository mode is REMOTE_ONLY on sambassam.",
+      "Marketing remains the canonical owner of campaigns tickers and partner offers.",
+      "Home discovery is a read model and measurement ingress only.",
+      "No PR merge force push release or production deployment is authorized."
+    ],
+    "variableScope": [
+      "Arabic operational wording",
+      "campaign and offer card presentation",
+      "non-financial metric labels"
+    ],
+    "forbiddenScope": [
+      "WLT financial mutation",
+      "duplicate marketing owner",
+      "production deployment",
+      "commercial SaaS activation",
+      "self-approval of product acceptance"
+    ],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": [
+      "Independent product acceptance outcome",
+      "Runtime and visual verification outcome",
+      "Accessibility and weak-network device outcome",
+      "Production telemetry outcome"
+    ]
+  }
+}
