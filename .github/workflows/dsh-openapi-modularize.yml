@@ -13,6 +13,7 @@ on:
       - "services/dsh/contracts/dsh.contract-ownership.json"
       - "services/dsh/contracts/README.md"
       - "services/dsh/package.json"
+      - "services/dsh/tests/dsh-openapi-modular.test.mjs"
       - "services/dsh/clients/generated/dsh-api.ts"
       - "tools/scripts/dsh-openapi-modular-lib.mjs"
       - "tools/scripts/compose-dsh-openapi.mjs"
@@ -31,6 +32,7 @@ on:
       - "services/dsh/contracts/dsh.contract-ownership.json"
       - "services/dsh/contracts/README.md"
       - "services/dsh/package.json"
+      - "services/dsh/tests/dsh-openapi-modular.test.mjs"
       - "services/dsh/clients/generated/dsh-api.ts"
       - "tools/scripts/dsh-openapi-modular-lib.mjs"
       - "tools/scripts/compose-dsh-openapi.mjs"
@@ -74,10 +76,10 @@ jobs:
       - name: Run contract foundation gate
         run: pnpm run contracts:lint
 
-      - name: Run DSH contract tests
+      - name: Run focused DSH OpenAPI tests
         run: |
           set -o pipefail
-          pnpm --dir services/dsh test 2>&1 | tee dsh-openapi-contract-tests.log
+          pnpm --dir services/dsh openapi:test 2>&1 | tee dsh-openapi-contract-tests.log
 
       - name: Upload DSH verification diagnostics
         if: always()
