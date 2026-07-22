@@ -78,6 +78,11 @@ func marshalPickupSession(s *pickup.PickupSession) map[string]any {
 		"status":             s.Status,
 		"cancelledAt":        s.CancelledAt,
 		"cancellationReason": s.CancellationReason,
+		"customerNotifiedAt": s.CustomerNotifiedAt,
+		"customerArrivedAt":  s.CustomerArrivedAt,
+		"noShowAt":           s.NoShowAt,
+		"noShowReason":       s.NoShowReason,
+		"rescheduledAt":      s.RescheduledAt,
 		"version":            s.Version,
 		"createdAt":          s.CreatedAt,
 		"updatedAt":          s.UpdatedAt,
@@ -186,7 +191,12 @@ func (s *protectedStoreServer) handlePickupNotify(w http.ResponseWriter, r *http
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": ownedOrder.ID, "notified": true, "session": marshalPickupSession(session)})
+	refreshed, err := pickup.GetByOrderID(s.db, ownedOrder.ID)
+	if err != nil {
+		writePickupError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": ownedOrder.ID, "notified": true, "session": marshalPickupSession(refreshed)})
 }
 
 func (s *protectedStoreServer) handlePickupCustomerArrived(w http.ResponseWriter, r *http.Request) {
@@ -207,7 +217,12 @@ func (s *protectedStoreServer) handlePickupCustomerArrived(w http.ResponseWriter
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": ownedOrder.ID, "customerArrived": true})
+	refreshed, err := pickup.GetByOrderID(s.db, ownedOrder.ID)
+	if err != nil {
+		writePickupError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"orderId": ownedOrder.ID, "customerArrived": true, "session": marshalPickupSession(refreshed)})
 }
 
 func (s *protectedStoreServer) issuePickupOtpInternal(w http.ResponseWriter, r *http.Request, orderID, clientID, actorID, actorRole, correlationID string) (string, *pickup.PickupSession, bool) {
@@ -271,7 +286,12 @@ func (s *protectedStoreServer) handlePickupNoShow(w http.ResponseWriter, r *http
 		writePickupError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
+	refreshed, err := pickup.Get(s.db, session.ID)
+	if err != nil {
+		writePickupError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(refreshed)})
 }
 
 func (s *protectedStoreServer) handleListOperatorPickups(w http.ResponseWriter, r *http.Request) {
