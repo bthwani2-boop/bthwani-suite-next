@@ -1,42 +1,42 @@
-name: JRN-042 runtime data migrations and recovery verification
+name: JRN-042 Runtime Data Migrations and Recovery Verification
 
 on:
   workflow_dispatch:
   push:
     branches: [sambassam]
     paths: &jrn042_paths
-      - 'governance/product/contracts/jrn-042-runtime-data-migrations-backup.product-truth.json'
-      - 'infra/data-plane/jrn-042-runtime-governance.json'
-      - 'infra/data-plane/postgres/init/**'
-      - 'infra/docker/compose.runtime.yml'
-      - 'infra/docker/compose.observability.yml'
-      - 'infra/docker/env/runtime.env.example'
-      - 'infra/docker/scripts/schema-migration-runner.ps1'
-      - 'infra/docker/scripts/invoke-runtime-database-migrations.ps1'
-      - 'infra/docker/scripts/backup-runtime.ps1'
-      - 'infra/docker/scripts/restore-runtime.ps1'
-      - 'infra/docker/scripts/restore-verify-runtime.ps1'
-      - 'core/identity/database/migrations/**'
-      - 'core/workforce/database/migrations/**'
-      - 'core/providers/backend/**'
-      - 'core/providers/contracts/providers.openapi.yaml'
-      - 'core/providers/clients/generated/providers-api.ts'
-      - 'core/providers/database/migrations/**'
-      - 'core/platform-control/database/migrations/**'
-      - 'services/dsh/backend/internal/*outbox/**'
-      - 'services/dsh/database/migrations/**'
-      - 'services/wlt/backend/internal/dshoutbox/**'
-      - 'services/wlt/database/migrations/**'
-      - 'tools/scripts/run-jrn-042-runtime-data.ps1'
-      - 'tools/scripts/test-runtime-backup-restore.ps1'
-      - 'tools/verification/jrn-042-runtime-data.test.mjs'
-      - '.github/workflows/jrn-042-runtime-data-verification.yml'
+      - "governance/product/contracts/jrn-042-runtime-data-migrations-backup.product-truth.json"
+      - "infra/data-plane/jrn-042-runtime-governance.json"
+      - "infra/data-plane/postgres/init/**"
+      - "infra/docker/compose.runtime.yml"
+      - "infra/docker/compose.observability.yml"
+      - "infra/docker/env/runtime.env.example"
+      - "infra/docker/scripts/schema-migration-runner.ps1"
+      - "infra/docker/scripts/invoke-runtime-database-migrations.ps1"
+      - "infra/docker/scripts/backup-runtime.ps1"
+      - "infra/docker/scripts/restore-runtime.ps1"
+      - "infra/docker/scripts/restore-verify-runtime.ps1"
+      - "core/identity/database/migrations/**"
+      - "core/workforce/database/migrations/**"
+      - "core/providers/backend/**"
+      - "core/providers/contracts/providers.openapi.yaml"
+      - "core/providers/clients/generated/providers-api.ts"
+      - "core/providers/database/migrations/**"
+      - "core/platform-control/database/migrations/**"
+      - "services/dsh/backend/internal/*outbox/**"
+      - "services/dsh/database/migrations/**"
+      - "services/wlt/backend/internal/dshoutbox/**"
+      - "services/wlt/database/migrations/**"
+      - "tools/scripts/run-jrn-042-runtime-data.ps1"
+      - "tools/scripts/test-runtime-backup-restore.ps1"
+      - "tools/verification/jrn-042-runtime-data.test.mjs"
+      - ".github/workflows/jrn-042-runtime-data-verification.yml"
   pull_request:
-    branches: [sambassam]
+    branches: [master]
     paths: *jrn042_paths
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: jrn-042-${{ github.ref }}
@@ -49,40 +49,38 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout exact triggering commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           ref: ${{ github.sha }}
           fetch-depth: 0
-
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
-          version: 10.34.2
-
+          version: "10.34.2"
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 24.17.0
+          node-version: "24.17.0"
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
-
+      - name: Set up Providers Go toolchain
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: core/providers/backend/go.mod
+          cache-dependency-path: core/providers/backend/go.sum
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
-
       - name: Run JRN-042 governance tests
         run: node --test tools/verification/jrn-042-runtime-data.test.mjs
-
       - name: Verify Providers contract and generated readiness binding
-        shell: bash
         run: |
-          set -euo pipefail
           grep -q '^  /providers/readiness:' core/providers/contracts/providers.openapi.yaml
           grep -q 'operationId: getExternalProviderReadiness' core/providers/contracts/providers.openapi.yaml
           grep -q '^    RuntimeReadinessResponse:' core/providers/contracts/providers.openapi.yaml
           grep -q '"/providers/readiness"' core/providers/clients/generated/providers-api.ts
           grep -q 'getExternalProviderReadiness' core/providers/clients/generated/providers-api.ts
           test "$(grep -c '/readiness || exit 1' infra/docker/compose.runtime.yml)" -ge 6
-
       - name: Parse PowerShell closure and recovery commands
         shell: pwsh
         run: |
@@ -99,41 +97,18 @@ jobs:
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors) | Out-Null
-            if ($errors.Count -gt 0) {
-              $errors | Format-List | Out-String | Write-Error
-              throw "PowerShell parse failed: $file"
-            }
+            if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Error; throw "PowerShell parse failed: $file" }
           }
-
       - name: Validate canonical compose graphs
-        shell: bash
         run: |
-          set -euo pipefail
-          docker compose --env-file infra/docker/env/runtime.env.example \
-            -f infra/docker/compose.runtime.yml \
-            --profile identity --profile workforce --profile dsh --profile wlt \
-            --profile providers --profile platform --profile media config --quiet
-          docker compose --env-file infra/docker/env/runtime.env.example \
-            -f infra/docker/compose.runtime.yml \
-            -f infra/docker/compose.observability.yml \
-            --profile observability config --quiet
-
-      - name: Set up Providers Go toolchain
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: core/providers/backend/go.mod
-          cache-dependency-path: core/providers/backend/go.sum
-
-      - name: Enforce Providers formatting and readiness test
-        shell: bash
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile workforce --profile dsh --profile wlt --profile providers --profile platform --profile media config --quiet
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml -f infra/docker/compose.observability.yml --profile observability config --quiet
+      - name: Verify Providers formatting and readiness tests
         run: |
-          set -euo pipefail
-          diff="$(gofmt -d core/providers/backend/internal/http/server.go core/providers/backend/internal/http/readiness_test.go)"
-          test -z "$diff" || { printf '%s\n' "$diff"; exit 1; }
+          test -z "$(gofmt -l core/providers/backend/internal/http/server.go core/providers/backend/internal/http/readiness_test.go)"
           cd core/providers/backend
           go test ./internal/http ./internal/providers
-
-      - name: Verify no repository diff was produced
+      - name: Verify repository remains unchanged
         run: git diff --exit-code
 
   six-service-runtime-dr:
@@ -143,11 +118,11 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout exact triggering commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           ref: ${{ github.sha }}
           fetch-depth: 0
-
       - name: Execute full JRN-042 isolated runtime closure
         shell: pwsh
         env:
@@ -159,107 +134,30 @@ jobs:
             -Posture Local `
             -ForceDisasterRecovery `
             -Cleanup
-
       - name: Upload same-commit runtime evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: jrn-042-runtime-data-${{ github.sha }}
           path: artifacts/jrn-042-runtime-data-evidence.json
           if-no-files-found: warn
           retention-days: 14
-
       - name: Capture failure diagnostics
         if: failure()
-        shell: bash
         run: |
           docker ps -a || true
-          docker compose --env-file infra/docker/env/runtime.env.example \
-            -f infra/docker/compose.runtime.yml \
-            --profile identity --profile workforce --profile dsh --profile wlt \
-            --profile providers --profile platform --profile media logs --tail=200 || true
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml --profile identity --profile workforce --profile dsh --profile wlt --profile providers --profile platform --profile media logs --tail=200 || true
 
-  record-remote-result:
-    name: Record executor diagnostic on sambassam
-    if: ${{ always() && github.event_name != 'pull_request' && github.ref_name == 'sambassam' }}
+  result:
+    name: JRN-042 Runtime Data result
     needs: [static-governance, six-service-runtime-dr]
+    if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
-      - name: Checkout current target branch
-        uses: actions/checkout@v4
-        with:
-          ref: sambassam
-          fetch-depth: 0
-
-      - name: Download same-commit runtime evidence when available
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: jrn-042-runtime-data-${{ github.sha }}
-          path: artifacts/jrn-042-downloaded
-
-      - name: Build bounded diagnostic record
-        shell: python
+      - name: Enforce JRN-042 result
         env:
-          SOURCE_COMMIT_SHA: ${{ github.sha }}
           STATIC_RESULT: ${{ needs.static-governance.result }}
           RUNTIME_RESULT: ${{ needs.six-service-runtime-dr.result }}
-          WORKFLOW_RUN_ID: ${{ github.run_id }}
-          WORKFLOW_RUN_ATTEMPT: ${{ github.run_attempt }}
-          REPOSITORY: ${{ github.repository }}
         run: |
-          import datetime
-          import json
-          import os
-          from pathlib import Path
-
-          evidence_candidates = list(Path('artifacts/jrn-042-downloaded').glob('**/*.json'))
-          runtime_evidence = None
-          if evidence_candidates:
-              runtime_evidence = json.loads(evidence_candidates[0].read_text(encoding='utf-8-sig'))
-
-          static_result = os.environ['STATIC_RESULT']
-          runtime_result = os.environ['RUNTIME_RESULT']
-          decision = 'PASS' if static_result == 'success' and runtime_result == 'success' else 'FAIL'
-          record = {
-              'schemaVersion': 1,
-              'journeyId': 'JRN-042',
-              'evidenceClass': 'EXECUTOR_REMOTE_DIAGNOSTIC_NOT_INDEPENDENT_APPROVAL',
-              'repository': os.environ['REPOSITORY'],
-              'branch': 'sambassam',
-              'sourceCommitSha': os.environ['SOURCE_COMMIT_SHA'],
-              'workflowRunId': os.environ['WORKFLOW_RUN_ID'],
-              'workflowRunAttempt': os.environ['WORKFLOW_RUN_ATTEMPT'],
-              'recordedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-              'staticResult': static_result,
-              'runtimeDisasterRecoveryResult': runtime_result,
-              'decision': decision,
-              'runtimeEvidence': runtime_evidence,
-              'protectedApprovals': 'PENDING',
-              'releaseState': 'NOT_RELEASED',
-              'productionState': 'NOT_DEPLOYED',
-              'saasActivationState': 'NOT_ACTIVATED',
-          }
-          output = Path('governance/evidence/JRN-042_REMOTE_RUNTIME_RESULT.json')
-          output.parent.mkdir(parents=True, exist_ok=True)
-          output.write_text(json.dumps(record, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-
-      - name: Commit diagnostic record without self-approval
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add governance/evidence/JRN-042_REMOTE_RUNTIME_RESULT.json
-          git commit -m 'test(jrn-042): record remote runtime diagnostic [skip ci]'
-          for attempt in 1 2 3 4; do
-            git fetch origin sambassam
-            if git rebase origin/sambassam && git push origin HEAD:sambassam; then
-              exit 0
-            fi
-            git rebase --abort 2>/dev/null || true
-            sleep $((attempt * 2))
-          done
-          echo 'Unable to publish JRN-042 diagnostic after bounded retries.' >&2
-          exit 1
+          test "${STATIC_RESULT}" = "success"
+          test "${RUNTIME_RESULT}" = "success"
