@@ -1,0 +1,81 @@
+name: JRN-034 Payments Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/jrn-034-payments-verification.yml"
+      - "governance/product/contracts/jrn-034-payments-payment-sessions.product-truth.json"
+      - "governance/runbooks/JRN-034_PAYMENT_SESSIONS.md"
+      - "services/wlt/backend/**"
+      - "services/wlt/database/migrations/**"
+      - "services/wlt/contracts/wlt.payments.openapi.yaml"
+      - "services/wlt/frontend/shared/dsh/**payment-session**"
+      - "services/wlt/frontend/shared/dsh/use-wlt-dsh-payment-controller.tsx"
+      - "services/dsh/backend/**"
+      - "services/dsh/contracts/dsh.payment-sessions.openapi.yaml"
+      - "services/dsh/frontend/control-panel/finance/PaymentSessionOperationsScreen.tsx"
+      - "services/dsh/frontend/shared/finance-wlt-link/payment/**"
+      - "apps/control-panel/runtime/src/app/dsh/finance/payment-sessions/**"
+      - "infra/docker/scripts/wlt-migration-probes.ps1"
+      - "contracts/master.openapi.yaml"
+      - "tools/scripts/test-jrn-034-payments.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-034-payments-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  structural:
+    name: Structural journey guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+      - run: node tools/scripts/test-jrn-034-payments.mjs
+
+  wlt-go:
+    name: WLT Go tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/wlt/backend/go.mod
+          cache-dependency-path: services/wlt/backend/go.sum
+      - run: go test ./...
+        working-directory: services/wlt/backend
+
+  dsh-go:
+    name: DSH Go tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - run: go test ./...
+        working-directory: services/dsh/backend
+
+  typescript:
+    name: Shared and surface typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.34.2 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir services/wlt typecheck
+      - run: pnpm --dir services/dsh typecheck
+      - run: pnpm --dir apps/control-panel/runtime typecheck
