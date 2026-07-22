@@ -50,15 +50,20 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Run canonical governance gates
-        run: |
-          pnpm run guard:governance-schema
-          pnpm run guard:agent-governance
-          pnpm run guard:authority-separation
-          pnpm run guard:saas-governance
-          pnpm run guard:guard-registry
-          pnpm run guard:sdlc
-          pnpm run guard:cleanup-policy
+      - name: Verify governance schemas
+        run: pnpm run guard:governance-schema
+      - name: Verify agent governance
+        run: pnpm run guard:agent-governance
+      - name: Verify authority separation
+        run: pnpm run guard:authority-separation
+      - name: Verify SaaS governance boundary
+        run: pnpm run guard:saas-governance
+      - name: Verify guard registry and CI policy
+        run: pnpm run guard:guard-registry
+      - name: Verify SDLC contracts
+        run: pnpm run guard:sdlc
+      - name: Verify cleanup policy
+        run: pnpm run guard:cleanup-policy
 
   workflow-policy:
     name: Verify workflow policy
@@ -71,11 +76,12 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Run immutable workflow gates
-        run: |
-          pnpm run guard:workflow-lint
-          pnpm run guard:workflow-security
-          pnpm run guard:actions-pin
+      - name: Verify workflow syntax
+        run: pnpm run guard:workflow-lint
+      - name: Verify workflow security
+        run: pnpm run guard:workflow-security
+      - name: Verify immutable action pins
+        run: pnpm run guard:actions-pin
 
   result:
     name: Governance audit result
