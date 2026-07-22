@@ -2,22 +2,22 @@ package homediscovery
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 )
 
 type HomeContentEventInput struct {
-	EventType        string `json:"eventType"`
-	ContentKind      string `json:"contentKind"`
-	ContentID        string `json:"contentId"`
-	ViewerRef        string `json:"viewerRef"`
-	CityCode         string `json:"cityCode,omitempty"`
-	ServiceAreaCode  string `json:"serviceAreaCode,omitempty"`
-	AudienceSegment  string `json:"audienceSegment"`
+	EventType       string `json:"eventType"`
+	ContentKind     string `json:"contentKind"`
+	ContentID       string `json:"contentId"`
+	ViewerRef       string `json:"viewerRef"`
+	CityCode        string `json:"cityCode,omitempty"`
+	ServiceAreaCode string `json:"serviceAreaCode,omitempty"`
+	AudienceSegment string `json:"audienceSegment"`
 }
 
 func HandleHomeContentEvent(db *sql.DB) http.HandlerFunc {
@@ -71,21 +71,98 @@ func RecordHomeContentEvent(ctx context.Context, db *sql.DB, input HomeContentEv
 		return fmt.Errorf("invalid audienceSegment")
 	}
 
-	var sourceTable, entityType, eventTable string
+	entityType, entityID, publishable, err := resolvePublishableHomeEntity(
+		ctx, db, kind, contentID, cityCode, serviceAreaCode, audienceSegment,
+	)
+	if err != nil {
+		return err
+	}
+	if !publishable {
+		return fmt.Errorf("content not publishable for context")
+	}
+
+	eventTable := "dsh_marketing_clicks"
+	if eventType == "impression" {
+		eventTable = "dsh_marketing_impressions"
+	}
+	digest := sha256.Sum256([]byte(strings.Join([]string{
+		eventType, entityType, entityID, viewerRef,
+	}, "|")))
+	_, err = db.ExecContext(ctx, `INSERT INTO `+eventTable+`
+		(id,entity_type,entity_id,surface,viewer_ref)
+		VALUES ($1,$2,$3,'app-client',$4)
+		ON CONFLICT DO NOTHING`,
+		fmt.Sprintf("home-%x", digest[:]), entityType, entityID, viewerRef,
+	)
+	return err
+}
+
+func resolvePublishableHomeEntity(
+	ctx context.Context,
+	db *sql.DB,
+	kind string,
+	contentID string,
+	cityCode string,
+	serviceAreaCode string,
+	audienceSegment string,
+) (string, string, bool, error) {
+	if kind == "promos" && strings.HasPrefix(contentID, "campaign:") {
+		entityID := strings.TrimPrefix(contentID, "campaign:")
+		var publishable bool
+		err := db.QueryRowContext(ctx, `SELECT EXISTS (
+			SELECT 1 FROM dsh_marketing_campaigns c
+			LEFT JOIN dsh_stores s ON c.target_type='store' AND s.id::TEXT=c.target_id
+			WHERE c.id::TEXT=$1
+			  AND c.archived_at IS NULL
+			  AND c.status='active'
+			  AND (c.audience='all' OR (c.audience='client' AND $4='authenticated'))
+			  AND COALESCE(c.start_date,'') <> ''
+			  AND COALESCE(c.end_date,'') <> ''
+			  AND c.start_date <= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
+			  AND c.end_date >= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
+			  AND (
+			    c.target_type IS NULL OR c.target_type='' OR
+			    (c.target_type='store' AND s.id IS NOT NULL AND `+clientEligibleStorePredicate+`
+			      AND ($2='' OR s.city_code=$2)
+			      AND ($3='' OR s.service_area_code=$3)) OR
+			    (c.target_type='category' AND EXISTS (
+			      SELECT 1 FROM dsh_catalog_domains d
+			      WHERE d.id=c.target_id AND d.is_active=TRUE AND d.is_client_visible=TRUE
+			    ))
+			  )
+		)`, entityID, cityCode, serviceAreaCode, audienceSegment).Scan(&publishable)
+		return "campaign", entityID, publishable, err
+	}
+	if kind == "promos" && strings.HasPrefix(contentID, "partner-offer:") {
+		entityID := strings.TrimPrefix(contentID, "partner-offer:")
+		var publishable bool
+		err := db.QueryRowContext(ctx, `SELECT EXISTS (
+			SELECT 1 FROM dsh_partner_offers o
+			JOIN dsh_stores s ON s.id=o.store_id
+			WHERE o.id::TEXT=$1
+			  AND o.archived_at IS NULL
+			  AND o.status='published'
+			  AND (o.eligibility='all' OR (o.eligibility='client' AND $4='authenticated'))
+			  AND o.active_from_date <> ''
+			  AND o.active_to_date <> ''
+			  AND o.active_from_date <= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
+			  AND o.active_to_date >= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
+			  AND `+clientEligibleStorePredicate+`
+			  AND ($2='' OR s.city_code=$2)
+			  AND ($3='' OR s.service_area_code=$3)
+		)`, entityID, cityCode, serviceAreaCode, audienceSegment).Scan(&publishable)
+		return "partner_offer", entityID, publishable, err
+	}
+
+	var sourceTable, entityType string
 	switch kind {
 	case "banners":
 		sourceTable, entityType = "dsh_home_banners", "banner"
 	case "promos":
 		sourceTable, entityType = "dsh_home_promos", "promo"
 	default:
-		return fmt.Errorf("invalid content kind")
+		return "", "", false, fmt.Errorf("invalid content kind")
 	}
-	if eventType == "impression" {
-		eventTable = "dsh_marketing_impressions"
-	} else {
-		eventTable = "dsh_marketing_clicks"
-	}
-
 	var publishable bool
 	query := `SELECT EXISTS (
 		SELECT 1 FROM ` + sourceTable + ` c
@@ -129,26 +206,6 @@ func RecordHomeContentEvent(ctx context.Context, db *sql.DB, input HomeContentEv
 			)
 		  )
 	)`
-	if err := db.QueryRowContext(
-		ctx,
-		query,
-		contentID,
-		cityCode,
-		serviceAreaCode,
-		audienceSegment,
-		kind,
-	).Scan(&publishable); err != nil {
-		return err
-	}
-	if !publishable {
-		return fmt.Errorf("content not publishable for context")
-	}
-
-	_, err := db.ExecContext(ctx, `INSERT INTO `+eventTable+`
-		(id,entity_type,entity_id,surface,viewer_ref)
-		VALUES ($1,$2,$3,'app-client',$4)
-		ON CONFLICT DO NOTHING`,
-		fmt.Sprintf("home-%s-%d", eventType, time.Now().UnixNano()), entityType, contentID, viewerRef,
-	)
-	return err
+	err := db.QueryRowContext(ctx, query, contentID, cityCode, serviceAreaCode, audienceSegment, kind).Scan(&publishable)
+	return entityType, contentID, publishable, err
 }
