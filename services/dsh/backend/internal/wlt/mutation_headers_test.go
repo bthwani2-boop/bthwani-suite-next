@@ -99,7 +99,7 @@ func TestActorFinanceMutationRejectsMissingCorrelation(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	if _, _, err := client.FinanceWriteCodRecord(context.Background(), "cod-1", "collect", ""); err == nil {
+	if _, _, err := client.FinanceWriteCodRecord(context.Background(), "cod-1", "collect", []byte(`{"proofReference":"proof-1"}`), ""); err == nil {
 		t.Fatal("expected missing correlation to fail")
 	}
 	if called {
