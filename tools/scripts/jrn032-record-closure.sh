@@ -27,6 +27,7 @@ registry["remoteVerification"] = {
     "verifiedAt": verified_at,
     "checks": [
         "canonical OpenAPI root composition",
+        "canonical analytics path-to-schema references",
         "modular manifest counts and analytics domain registration",
         "generated DSH bundle and TypeScript client",
         "Go analytics WLT and HTTP tests",
@@ -53,8 +54,8 @@ Path("governance/evidence/JRN-032_FINAL_REMOTE_VERIFICATION.md").write_text(
 
 ## Passed technical checks
 
-- Canonical OpenAPI root composition and modular manifest alignment.
-- Generated DSH bundle and TypeScript client.
+- Canonical OpenAPI root composition and analytics path-to-schema references.
+- Modular manifest alignment and generated DSH bundle/client.
 - Analytics, WLT read-only boundary, and protected HTTP route tests.
 - DSH, control-panel, and partner TypeScript typechecks.
 - Full-stack and financial ownership guards.
@@ -77,6 +78,7 @@ git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git add \
   services/dsh/contracts/dsh.openapi.yaml \
   services/dsh/contracts/dsh.modular.manifest.json \
+  services/dsh/contracts/paths/analytics.paths.yaml \
   services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
   services/dsh/clients/generated/dsh-api.ts \
   services/dsh/backend/internal/analytics \
