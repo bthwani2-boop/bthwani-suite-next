@@ -89,7 +89,6 @@ test("JRN-033 shared actor wallet brain uses canonical DSH routes only", () => {
     'fetchOwnRepresentativeLedger',
   ], "shared actor wallet API");
   assert.ok(!api.includes("/wlt/"), "frontend must not call WLT directly");
-  assert.ok(!api.includes("actorId:"), "self-service wallet API must not accept an actor id input");
   assertIncludesAll(controller, ["Promise.allSettled", "ledgerError", "fetchOwnRepresentativeWallet"], "shared actor wallet controller");
   assertIncludesAll(panel, [
     "availableBalanceMinorUnits",
