@@ -23,17 +23,20 @@ on:
       - "services/dsh/frontend/shared/partner/index.ts"
       - "services/dsh/frontend/shared/partner/partner-delivery-pricing.api.ts"
       - "services/dsh/frontend/shared/partner/partner-delivery-pricing.public.ts"
+      - "services/dsh/frontend/shared/partner/operator-delivery-pricing.public.ts"
       - "services/dsh/frontend/shared/partner/use-delivery-pricing-controller.ts"
       - "services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx"
       - "services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx"
       - "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx"
       - "services/dsh/frontend/control-panel/marketing/**"
+      - "services/dsh/frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx"
+      - "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx"
       - "services/wlt/backend/internal/commercial/**"
       - "services/wlt/backend/internal/promotionfunding/**"
       - "services/wlt/backend/internal/shared/**"
       - "services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql"
       - "services/dsh/contracts/**"
-      - "services/dsh/tests/jrn-026-coupons-pricing-loyalty.test.mjs"
+      - "services/dsh/tests/jrn-026-*.test.mjs"
       - "services/dsh/tests/jrn-028-promotion-funding.test.mjs"
       - "services/dsh/tsconfig.jrn-026.json"
       - "services/dsh/tsconfig.jrn-028.json"
@@ -42,6 +45,8 @@ on:
       - "governance/evidence/JRN-026_REMOTE_SLICE_EXECUTION.md"
       - "governance/product/product-truth.schema.json"
       - "tools/guards/product-truth-gate.mjs"
+      - "tools/guards/dsh-openapi-modular-gate.mjs"
+      - "tools/scripts/dsh-openapi-modular-lib.mjs"
       - ".github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml"
   pull_request:
     branches: [master]
@@ -63,17 +68,20 @@ on:
       - "services/dsh/frontend/shared/partner/index.ts"
       - "services/dsh/frontend/shared/partner/partner-delivery-pricing.api.ts"
       - "services/dsh/frontend/shared/partner/partner-delivery-pricing.public.ts"
+      - "services/dsh/frontend/shared/partner/operator-delivery-pricing.public.ts"
       - "services/dsh/frontend/shared/partner/use-delivery-pricing-controller.ts"
       - "services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx"
       - "services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx"
       - "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx"
       - "services/dsh/frontend/control-panel/marketing/**"
+      - "services/dsh/frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx"
+      - "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx"
       - "services/wlt/backend/internal/commercial/**"
       - "services/wlt/backend/internal/promotionfunding/**"
       - "services/wlt/backend/internal/shared/**"
       - "services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql"
       - "services/dsh/contracts/**"
-      - "services/dsh/tests/jrn-026-coupons-pricing-loyalty.test.mjs"
+      - "services/dsh/tests/jrn-026-*.test.mjs"
       - "services/dsh/tests/jrn-028-promotion-funding.test.mjs"
       - "services/dsh/tsconfig.jrn-026.json"
       - "services/dsh/tsconfig.jrn-028.json"
@@ -82,6 +90,8 @@ on:
       - "governance/evidence/JRN-026_REMOTE_SLICE_EXECUTION.md"
       - "governance/product/product-truth.schema.json"
       - "tools/guards/product-truth-gate.mjs"
+      - "tools/guards/dsh-openapi-modular-gate.mjs"
+      - "tools/scripts/dsh-openapi-modular-lib.mjs"
       - ".github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml"
 
 permissions:
@@ -153,13 +163,16 @@ jobs:
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-026.json --noEmit --pretty false
 
       - name: Verify JRN-026 governed bindings and negative invariants
-        run: node --test services/dsh/tests/jrn-026-coupons-pricing-loyalty.test.mjs
+        run: node --test services/dsh/tests/jrn-026-*.test.mjs
 
       - name: Verify JRN-026 Product Truth contract
         run: node tools/guards/product-truth-gate.mjs
 
-      - name: Verify DSH modular OpenAPI composition
-        run: pnpm --dir services/dsh openapi:verify
+      - name: Verify DSH modular OpenAPI source truth
+        run: node tools/guards/dsh-openapi-modular-gate.mjs
+
+      - name: Verify generated DSH API client
+        run: pnpm --dir services/dsh openapi:generate
 
   verify-jrn-028:
     name: JRN-028 promotion funding full-stack proof
