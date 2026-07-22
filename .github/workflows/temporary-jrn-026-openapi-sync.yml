@@ -1,0 +1,64 @@
+name: Temporary JRN-026 OpenAPI Sync
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/temporary-jrn-026-openapi-sync.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: temporary-jrn-026-openapi-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout latest sambassam
+        uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Rebuild modular contract truth and generated client
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --rebase origin sambassam
+          node --input-type=module -e "import { migrateDshOpenApi } from './tools/scripts/dsh-openapi-modular-lib.mjs'; console.log(JSON.stringify(migrateDshOpenApi()));"
+          pnpm --dir services/dsh openapi:generate
+          pnpm --dir services/dsh openapi:test
+          git diff --check
+
+      - name: Commit deterministic OpenAPI synchronization
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add services/dsh/contracts services/dsh/clients/generated/dsh-api.ts services/dsh/package.json package.json
+          if git diff --cached --quiet; then
+            echo "OpenAPI artifacts already synchronized."
+            exit 0
+          fi
+          git commit -m "fix(jrn-026): synchronize DSH OpenAPI artifacts"
+          git pull --rebase origin sambassam
+          git push origin HEAD:sambassam
