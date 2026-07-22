@@ -102,7 +102,11 @@ jobs:
           temporary_workflow=".github/workflows/jrn-028-all-slices-closure.yml"
           proof_file="governance/evidence/JRN-028_VERIFIED_SNAPSHOT.json"
           failure_file="governance/evidence/JRN-028_LAST_FAILURE.txt"
+          bundle_file="services/dsh/contracts/generated/dsh.bundle.openapi.yaml"
+          client_file="services/dsh/clients/generated/dsh-api.ts"
           cp "$failure_file" /tmp/JRN-028_LAST_FAILURE.txt 2>/dev/null || true
+          cp "$bundle_file" /tmp/JRN-028-dsh.bundle.openapi.yaml
+          cp "$client_file" /tmp/JRN-028-dsh-api.ts
 
           governed_paths=(
             services/dsh/backend/internal/coupons
@@ -146,7 +150,9 @@ jobs:
             fi
 
             git checkout -B sambassam origin/sambassam
-            mkdir -p governance/evidence
+            mkdir -p governance/evidence "$(dirname "$bundle_file")" "$(dirname "$client_file")"
+            cp /tmp/JRN-028-dsh.bundle.openapi.yaml "$bundle_file"
+            cp /tmp/JRN-028-dsh-api.ts "$client_file"
             if [[ "$final_status" == "success" ]]; then
               rm -f "$failure_file" "$temporary_workflow"
             else
@@ -185,7 +191,7 @@ jobs:
           }
           JSON
 
-            git add -A "$proof_file" "$failure_file" "$temporary_workflow"
+            git add -A "$proof_file" "$failure_file" "$temporary_workflow" "$bundle_file" "$client_file"
             git commit -m "docs(jrn-028): publish all-slice verification $status_label [skip ci]"
             if git push origin HEAD:sambassam; then
               published=true
