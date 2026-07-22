@@ -5,6 +5,7 @@ on:
     branches: [sambassam]
     paths:
       - ".github/workflows/tmp-contract-binding-diagnostic.yml"
+      - "contracts/master.openapi.yaml"
       - "services/dsh/contracts/**"
       - "services/wlt/contracts/**"
       - "core/identity/contracts/**"
