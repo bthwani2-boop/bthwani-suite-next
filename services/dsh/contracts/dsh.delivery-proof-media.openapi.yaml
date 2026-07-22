@@ -10,7 +10,9 @@ info:
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-runtime-dependency: true
-x-bthwani-canonical-parent: services/dsh/contracts/dsh.openapi.yaml
+x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 servers:
   - url: http://localhost:58080
 paths:
@@ -70,6 +72,11 @@ paths:
           in: header
           required: false
           schema: { type: string, minLength: 1, maxLength: 128 }
+        - name: X-Command-ID
+          in: header
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 160 }
+          description: Stable command identity retained across network retries.
       requestBody:
         required: true
         content:
@@ -149,7 +156,7 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorEnvelope" }
     Conflict:
-      description: Actor ownership, version, or delivery state conflicts with the request.
+      description: Actor ownership, command identity, version, or delivery state conflicts with the request.
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorEnvelope" }
