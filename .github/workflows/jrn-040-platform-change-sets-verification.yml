@@ -1,24 +1,27 @@
-name: JRN-040 platform change sets verification
+name: JRN-040 Platform Change Sets Verification
 
 on:
+  workflow_dispatch:
   push:
     branches: [sambassam]
-    paths:
-      - 'core/platform-control/backend/internal/platformcontrol/jrn040_**'
-      - 'core/platform-control/backend/internal/platformcontrol/model.go'
-      - 'core/platform-control/backend/internal/platformcontrol/service.go'
-      - 'core/platform-control/backend/internal/platformcontrol/repository_integration_test.go'
-      - 'core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go'
-      - 'core/platform-control/backend/internal/http/workflow_handlers.go'
-      - 'core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml'
-      - 'core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts'
-      - 'core/platform-control/database/migrations/platform-005_jrn040_change_set_validation.sql'
-      - 'services/dsh/frontend/shared/platform/**'
-      - 'services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx'
-      - 'governance/product/contracts/jrn-040-platform-change-sets.product-truth.json'
-      - 'tools/guards/jrn-040-platform-change-sets-gate.mjs'
-      - '.github/workflows/jrn-040-platform-change-sets-verification.yml'
-  workflow_dispatch:
+    paths: &jrn040_paths
+      - "core/platform-control/backend/internal/platformcontrol/jrn040_**"
+      - "core/platform-control/backend/internal/platformcontrol/model.go"
+      - "core/platform-control/backend/internal/platformcontrol/service.go"
+      - "core/platform-control/backend/internal/platformcontrol/repository_integration_test.go"
+      - "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go"
+      - "core/platform-control/backend/internal/http/workflow_handlers.go"
+      - "core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml"
+      - "core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts"
+      - "core/platform-control/database/migrations/platform-005_jrn040_change_set_validation.sql"
+      - "services/dsh/frontend/shared/platform/**"
+      - "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
+      - "governance/product/contracts/jrn-040-platform-change-sets.product-truth.json"
+      - "tools/guards/jrn-040-platform-change-sets-gate.mjs"
+      - ".github/workflows/jrn-040-platform-change-sets-verification.yml"
+  pull_request:
+    branches: [master]
+    paths: *jrn040_paths
 
 permissions:
   contents: read
@@ -29,6 +32,7 @@ concurrency:
 
 jobs:
   verify:
+    name: JRN-040 database, backend, contract, and control-panel proof
     runs-on: ubuntu-latest
     timeout-minutes: 25
     services:
@@ -49,47 +53,43 @@ jobs:
       DATABASE_URL: postgres://platform:platform@localhost:55440/platform?sslmode=disable
       PGPASSWORD: platform
     steps:
-      - name: Checkout exact branch commit
-        uses: actions/checkout@v4
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: core/platform-control/backend/go.mod
           cache-dependency-path: core/platform-control/backend/go.sum
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
-          version: 10.34.2
-      - name: Set up Node
-        uses: actions/setup-node@v4
+          version: "10.34.2"
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 24.17.0
+          node-version: "24.17.0"
           cache: pnpm
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
       - name: Apply platform-control migrations
         run: |
           for migration in core/platform-control/database/migrations/*.sql; do
-            psql -h localhost -p 55440 -U platform -d platform -v ON_ERROR_STOP=1 -f "$migration"
+            psql -h localhost -p 55440 -U platform -d platform -v ON_ERROR_STOP=1 -f "${migration}"
           done
-      - name: Go format gate
+      - name: Verify Go formatting without rewriting source
         run: |
-          files=$(gofmt -l \
-            core/platform-control/backend/internal/platformcontrol/jrn040_change_set_read_create.go \
-            core/platform-control/backend/internal/platformcontrol/jrn040_change_set_workflow.go \
-            core/platform-control/backend/internal/platformcontrol/jrn040_change_set_apply_rollback.go \
-            core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go \
-            core/platform-control/backend/internal/platformcontrol/repository_integration_test.go \
-            core/platform-control/backend/internal/platformcontrol/model.go \
-            core/platform-control/backend/internal/platformcontrol/service.go \
-            core/platform-control/backend/internal/http/workflow_handlers.go)
-          test -z "$files" || { echo "$files"; exit 1; }
-      - name: Targeted Go tests
+          files=$(gofmt -l core/platform-control/backend/internal/platformcontrol/jrn040_change_set_read_create.go core/platform-control/backend/internal/platformcontrol/jrn040_change_set_workflow.go core/platform-control/backend/internal/platformcontrol/jrn040_change_set_apply_rollback.go core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go core/platform-control/backend/internal/platformcontrol/repository_integration_test.go core/platform-control/backend/internal/platformcontrol/model.go core/platform-control/backend/internal/platformcontrol/service.go core/platform-control/backend/internal/http/workflow_handlers.go)
+          test -z "${files}" || { echo "${files}"; exit 1; }
+      - name: Run targeted Go tests
         working-directory: core/platform-control/backend
         run: go test ./internal/platformcontrol ./internal/http
-      - name: Platform-control generated contract typecheck
-        run: pnpm --filter @bthwani/core-platform-control typecheck
-      - name: Control-panel binding typecheck
-        run: pnpm --filter @bthwani/control-panel typecheck
-      - name: JRN-040 contract and binding gate
+      - name: Typecheck generated contract and control-panel binding
+        run: |
+          pnpm --filter @bthwani/core-platform-control typecheck
+          pnpm --filter @bthwani/control-panel typecheck
+      - name: Verify JRN-040 contract and binding gate
         run: node tools/guards/jrn-040-platform-change-sets-gate.mjs
+      - name: Verify repository whitespace
+        run: git diff --check
