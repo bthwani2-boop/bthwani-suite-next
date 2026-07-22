@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Partner Fleet Connection API
-  version: 0.4.0
-  description: Partner-store courier connection codes and authenticated captain fleet memberships, including governed disconnect and operator readback.
+  version: 0.5.0
+  description: Partner-store courier connection codes and authenticated captain fleet memberships, including governed disconnect and redacted operator readback.
 x-bthwani-owner: services/dsh
 x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -25,13 +25,13 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              properties:
-                expiresInHours: { type: integer, minimum: 1, maximum: 48, default: 24 }
+            schema: { $ref: '#/components/schemas/IssueConnectionCodeRequest' }
       responses:
-        '201': { $ref: '#/components/responses/ObjectResponse' }
+        '201':
+          description: One-time plaintext code plus its persisted redacted connection projection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IssueConnectionCodeResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
@@ -46,7 +46,11 @@ paths:
       parameters:
         - $ref: '#/components/parameters/StoreId'
       responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '200':
+          description: Authoritative connection lifecycle for the authenticated partner store.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConnectionListResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
@@ -65,14 +69,13 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [expectedVersion]
-              properties:
-                expectedVersion: { type: integer, minimum: 1 }
+            schema: { $ref: '#/components/schemas/ExpectedVersionRequest' }
       responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '200':
+          description: Revoked connection projection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConnectionResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
@@ -87,14 +90,13 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [code]
-              properties:
-                code: { type: string, minLength: 8, maxLength: 16 }
+            schema: { $ref: '#/components/schemas/ConnectCaptainRequest' }
       responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '200':
+          description: Activated captain membership.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MembershipResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
@@ -108,7 +110,11 @@ paths:
       tags: [DshPartnerFleet]
       security: [{ bearerAuth: [] }]
       responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '200':
+          description: All memberships owned by the authenticated captain across stores.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MembershipListResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/captain/partner-fleet/memberships/{teamMemberId}/disconnect:
@@ -125,15 +131,13 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [storeId, expectedVersion]
-              properties:
-                storeId: { type: string, minLength: 1 }
-                expectedVersion: { type: integer, minimum: 1 }
+            schema: { $ref: '#/components/schemas/DisconnectMembershipRequest' }
       responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '200':
+          description: Paused membership after authenticated captain disconnect.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MembershipResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
@@ -147,7 +151,11 @@ paths:
       parameters:
         - $ref: '#/components/parameters/StoreId'
       responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '200':
+          description: Redacted operational snapshot. Plaintext codes and code hashes are never returned.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OperatorPartnerFleetSnapshot' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
@@ -162,21 +170,159 @@ components:
       required: true
       schema: { type: string, minLength: 1 }
   responses:
-    ObjectResponse:
-      description: Governed partner fleet object.
-      content:
-        application/json:
-          schema: { type: object, additionalProperties: true }
     ErrorResponse:
       description: Governed error response.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
   schemas:
+    IssueConnectionCodeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        expiresInHours: { type: integer, minimum: 1, maximum: 48, default: 24 }
+    ExpectedVersionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+    ConnectCaptainRequest:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 8
+          maxLength: 16
+          pattern: '^[A-Z0-9-]+$'
+    DisconnectMembershipRequest:
+      allOf:
+        - $ref: '#/components/schemas/ExpectedVersionRequest'
+        - type: object
+          additionalProperties: false
+          required: [storeId]
+          properties:
+            storeId: { type: string, minLength: 1 }
+    ConnectionStatus:
+      type: string
+      enum: [pending, redeemed, revoked, expired]
+    ConnectionCode:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - storeId
+        - teamMemberId
+        - codeLast4
+        - status
+        - expiresAt
+        - createdByActorId
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, minLength: 1 }
+        storeId: { type: string, minLength: 1 }
+        teamMemberId: { type: string, minLength: 1 }
+        codeLast4: { type: string, minLength: 4, maxLength: 4 }
+        status: { $ref: '#/components/schemas/ConnectionStatus' }
+        expiresAt: { type: string, minLength: 1 }
+        createdByActorId: { type: string, minLength: 1 }
+        redeemedByCaptainActorId: { type: string, minLength: 1 }
+        redeemedAt: { type: string, minLength: 1 }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, minLength: 1 }
+        updatedAt: { type: string, minLength: 1 }
+    IssuedConnectionCode:
+      type: object
+      additionalProperties: false
+      required: [connection, code]
+      properties:
+        connection: { $ref: '#/components/schemas/ConnectionCode' }
+        code:
+          type: string
+          minLength: 8
+          maxLength: 16
+          pattern: '^[A-Z0-9-]+$'
+          description: Returned once. The server persists only a SHA-256 digest and the last four characters.
+    CaptainFleetMembership:
+      type: object
+      additionalProperties: false
+      required: [teamMemberId, storeId, storeName, courierName, status, branchAssignment, deliveryAssignment, version]
+      properties:
+        teamMemberId: { type: string, minLength: 1 }
+        storeId: { type: string, minLength: 1 }
+        storeName: { type: string, minLength: 1 }
+        courierName: { type: string, minLength: 1 }
+        status: { type: string, minLength: 1 }
+        branchAssignment: { type: string }
+        deliveryAssignment: { type: string }
+        version: { type: integer, minimum: 1 }
+    OperatorStoreFleetMember:
+      type: object
+      additionalProperties: false
+      required: [teamMemberId, storeId, courierName, status, branchAssignment, deliveryAssignment, version]
+      properties:
+        teamMemberId: { type: string, minLength: 1 }
+        storeId: { type: string, minLength: 1 }
+        courierName: { type: string, minLength: 1 }
+        status: { type: string, minLength: 1 }
+        captainActorId: { type: string, minLength: 1 }
+        branchAssignment: { type: string }
+        deliveryAssignment: { type: string }
+        version: { type: integer, minimum: 1 }
+    IssueConnectionCodeResponse:
+      type: object
+      additionalProperties: false
+      required: [issued]
+      properties:
+        issued: { $ref: '#/components/schemas/IssuedConnectionCode' }
+    ConnectionListResponse:
+      type: object
+      additionalProperties: false
+      required: [connections]
+      properties:
+        connections:
+          type: array
+          items: { $ref: '#/components/schemas/ConnectionCode' }
+    ConnectionResponse:
+      type: object
+      additionalProperties: false
+      required: [connection]
+      properties:
+        connection: { $ref: '#/components/schemas/ConnectionCode' }
+    MembershipListResponse:
+      type: object
+      additionalProperties: false
+      required: [memberships]
+      properties:
+        memberships:
+          type: array
+          items: { $ref: '#/components/schemas/CaptainFleetMembership' }
+    MembershipResponse:
+      type: object
+      additionalProperties: false
+      required: [membership]
+      properties:
+        membership: { $ref: '#/components/schemas/CaptainFleetMembership' }
+    OperatorPartnerFleetSnapshot:
+      type: object
+      additionalProperties: false
+      required: [storeId, connections, members]
+      properties:
+        storeId: { type: string, minLength: 1 }
+        connections:
+          type: array
+          items: { $ref: '#/components/schemas/ConnectionCode' }
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/OperatorStoreFleetMember' }
     Error:
       type: object
       additionalProperties: false
       required: [code, message]
       properties:
-        code: { type: string }
-        message: { type: string }
+        code: { type: string, minLength: 1 }
+        message: { type: string, minLength: 1 }
