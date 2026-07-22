@@ -16,15 +16,18 @@ const (
 	maxDispatchLocationBodyBytes = 64 << 10
 	maxLocationSampleAge         = 10 * time.Minute
 	maxLocationFutureSkew        = 30 * time.Second
+	minLocationSampleInterval    = 5 * time.Second
+	maxLocationAccuracyMeters    = 100.0
 )
 
 type dispatchLocationTimestampDecision string
 
 const (
-	locationTimestampAccepted   dispatchLocationTimestampDecision = "accepted"
-	locationTimestampStale      dispatchLocationTimestampDecision = "stale"
-	locationTimestampFuture     dispatchLocationTimestampDecision = "future"
-	locationTimestampOutOfOrder dispatchLocationTimestampDecision = "out_of_order"
+	locationTimestampAccepted    dispatchLocationTimestampDecision = "accepted"
+	locationTimestampStale       dispatchLocationTimestampDecision = "stale"
+	locationTimestampFuture      dispatchLocationTimestampDecision = "future"
+	locationTimestampOutOfOrder  dispatchLocationTimestampDecision = "out_of_order"
+	locationTimestampTooFrequent dispatchLocationTimestampDecision = "too_frequent"
 )
 
 func validateDispatchLocationTimestamp(recordedAt, now time.Time, previous *time.Time) dispatchLocationTimestampDecision {
@@ -36,15 +39,26 @@ func validateDispatchLocationTimestamp(recordedAt, now time.Time, previous *time
 	if recordedAt.After(now.Add(maxLocationFutureSkew)) {
 		return locationTimestampFuture
 	}
-	if previous != nil && !recordedAt.After(previous.UTC()) {
-		return locationTimestampOutOfOrder
+	if previous != nil {
+		previousUTC := previous.UTC()
+		if !recordedAt.After(previousUTC) {
+			return locationTimestampOutOfOrder
+		}
+		if recordedAt.Sub(previousUTC) < minLocationSampleInterval {
+			return locationTimestampTooFrequent
+		}
 	}
 	return locationTimestampAccepted
 }
 
-// handlePushDispatchLocationGoverned validates sample freshness and monotonic
-// ordering before delegating to the canonical dispatch handler. The request
-// body is restored so decode/auth/error mapping remain owned by dispatch.go.
+func validateDispatchLocationAccuracy(accuracyMeters *float64) bool {
+	return accuracyMeters != nil && *accuracyMeters > 0 && *accuracyMeters <= maxLocationAccuracyMeters
+}
+
+// handlePushDispatchLocationGoverned validates sample freshness, monotonic
+// ordering, minimum frequency, and GPS accuracy before delegating to the
+// canonical dispatch handler. The request body is restored so decode/auth and
+// persistence remain owned by dispatch.go.
 func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "captain")
 	if !ok {
@@ -59,14 +73,19 @@ func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.Respons
 	r.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 
 	var body struct {
-		RecordedAt string `json:"recordedAt"`
+		RecordedAt     string   `json:"recordedAt"`
+		AccuracyMeters *float64 `json:"accuracyMeters"`
 	}
 	if err := json.Unmarshal(bodyBytes, &body); err != nil {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid location request body")
 		return
 	}
+	if !validateDispatchLocationAccuracy(body.AccuracyMeters) {
+		store.SendError(w, http.StatusUnprocessableEntity, "LOCATION_ACCURACY_UNACCEPTABLE", "accuracyMeters must be greater than 0 and at most 100")
+		return
+	}
 	if body.RecordedAt == "" {
-		s.handlePushDispatchLocation(w, r)
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "recordedAt is required")
 		return
 	}
 
@@ -106,6 +125,9 @@ func (s *protectedStoreServer) handlePushDispatchLocationGoverned(w http.Respons
 		return
 	case locationTimestampOutOfOrder:
 		store.SendError(w, http.StatusConflict, "LOCATION_SAMPLE_OUT_OF_ORDER", "location sample must be newer than the stored sample")
+		return
+	case locationTimestampTooFrequent:
+		store.SendError(w, http.StatusTooManyRequests, "LOCATION_SAMPLE_TOO_FREQUENT", "location samples must be at least 5 seconds apart")
 		return
 	}
 
