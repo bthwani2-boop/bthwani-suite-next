@@ -66,6 +66,7 @@ func main() {
 	dshHttp.RegisterFieldReadinessRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerFleetMembershipRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterSupportMessageDeliveryRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterOrderRescueRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOrderJourneyRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOrderCancellationRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPickupRecoveryRoutes(router, db, identityClient, wltClient, mediaProvider)
@@ -106,7 +107,7 @@ func main() {
 		go partnerwltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		log.Println("[dsh-api] WLT readback, outbox and payout reconciliation workers enabled")
 	} else {
-		log.Println("[dsh-api] WLT workers disabled: DSH_WLT_BASE_URL and WLT_DSH_SERVICE_TOKEN are required")
+		log.Println("[dsh-api] WLT workers disabled: DSH_WLT_API_BASE_URL and WLT_DSH_SERVICE_TOKEN are required")
 	}
 
 	server := &http.Server{
