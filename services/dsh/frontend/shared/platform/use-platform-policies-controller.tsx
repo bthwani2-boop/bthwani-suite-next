@@ -323,7 +323,14 @@ export function useOperationalPolicyEditor(onSaved: () => Promise<void>) {
 
   const saveZone = useCallback((
     current: DshZone | null,
-    input: DshCreateZoneInput & { readonly reason: string },
+    input: {
+      readonly id?: string;
+      readonly name: string;
+      readonly cityCode: string;
+      readonly description: string;
+      readonly isActive: boolean;
+      readonly reason: string;
+    },
   ) => execute(async () => {
     if (current) {
       await updateZone(current.id, {
