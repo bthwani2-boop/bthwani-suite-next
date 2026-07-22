@@ -194,4 +194,12 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 	mux.HandleFunc("POST /dsh/field/me/finance/payout-requests", s.handleSubmitFieldMePayoutRequest)
 
 	mux.HandleFunc("GET /dsh/control-panel/finance/wallets/{actorType}/{actorId}", s.handleControlPanelRepresentativeWallet)
+	mux.HandleFunc("GET /dsh/control-panel/finance/settlements/{settlementId}/evidence", s.handleFinanceSettlementEvidence)
+	mux.HandleFunc("PUT /dsh/control-panel/finance/commission-policies", s.handleUpsertFinanceCommissionPolicy)
+	mux.HandleFunc("GET /dsh/control-panel/finance/commissions/{commissionId}", s.handleFinanceCommissionDetail)
+	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/adjust", s.handleAdjustFinanceCommission)
+	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/confirm", s.handleConfirmFinanceCommission)
+	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/settle", s.handleSettleFinanceCommission)
+	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/reject", s.handleRejectFinanceCommission)
+	mux.HandleFunc("POST /dsh/control-panel/finance/commissions/{commissionId}/reverse", s.handleReverseFinanceCommission)
 }
