@@ -32,6 +32,7 @@ import {
 } from '../../shared/order-truth';
 import { DELIVERY_STATUS_LABELS } from '../../shared/dispatch';
 import type { DshPartnerDeliveryTaskStatus } from '../../shared/partner-delivery/partner-delivery.types';
+import { ClientLiveTrackingCard } from './ClientLiveTrackingCard';
 import { ClientPreparationDecisionPanel } from './ClientPreparationDecisionPanel';
 import { useClientOrderJourneyController } from './useClientOrderJourneyController';
 
@@ -257,6 +258,7 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
     openPreparationIssueCount,
     pendingCustomerDecisionCount,
     assignment,
+    liveTracking,
     partnerDeliveryTask,
   } = state;
   const summary = toOrderTruthSummary(order);
@@ -383,6 +385,10 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
             </View>
           )}
         </Surface>
+
+        {order.fulfillmentMode === 'bthwani_delivery' ? (
+          <ClientLiveTrackingCard tracking={liveTracking} />
+        ) : null}
 
         <Surface tone="raised" gap={3}>
           <Text role="titleSm">أصناف الطلب المثبتة</Text>
