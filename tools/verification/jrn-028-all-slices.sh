@@ -35,7 +35,7 @@ run_check() {
 
 run_check "WLT sovereign promotion-funding domain and handlers" bash -lc "cd services/wlt/backend && go test ./internal/promotionfunding ./internal/shared"
 run_check "DSH funding projection, WLT adapter and durable outbox" bash -lc "cd services/dsh/backend && go test ./internal/coupons ./internal/wlt ./internal/promotionfundingoutbox"
-run_check "FS-01 through FS-18 routes, structure and ownership assertions" node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs
+run_check "FS-01 through FS-18 routes, structure, contracts and ownership assertions" node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs
 run_check "governed TypeScript surface" pnpm --dir services/dsh exec tsc -p tsconfig.jrn-028.json --noEmit --pretty false
 run_check "WLT promotion-funding base schema" psql -X -q -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql
 run_check "WLT JRN-028 audit-integrity controls" psql -X -q -v ON_ERROR_STOP=1 -f services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql
@@ -44,9 +44,7 @@ run_check "reserve, commit, release, reverse and negative database invariants" b
 run_check "concurrent transition serialization" bash services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh
 run_check "Product Truth gate" node tools/guards/product-truth-gate.mjs
 run_check "compose canonical DSH OpenAPI bundle" pnpm --dir services/dsh openapi:compose
-run_check "generate canonical DSH API client" pnpm --dir services/dsh openapi:generate
 run_check "canonical DSH modular OpenAPI gate" node tools/guards/dsh-openapi-modular-gate.mjs
-run_check "generated contract cleanliness" git diff --exit-code -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts
 run_check "repository whitespace" git diff --check
 
 rm -f "$failure_file"
