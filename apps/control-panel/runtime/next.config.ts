@@ -1,28 +1,75 @@
 import type { NextConfig } from "next";
 
+function configuredOrigin(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
+const configuredApiOrigins = [
+  process.env.NEXT_PUBLIC_DSH_API_BASE_URL,
+  process.env.NEXT_PUBLIC_WLT_API_BASE_URL,
+  process.env.NEXT_PUBLIC_IDENTITY_API_BASE_URL,
+  process.env.NEXT_PUBLIC_WORKFORCE_API_BASE_URL,
+  process.env.NEXT_PUBLIC_PLATFORM_CONTROL_API_BASE_URL,
+  process.env.NEXT_PUBLIC_PROVIDERS_API_BASE_URL,
+]
+  .map(configuredOrigin)
+  .filter((origin): origin is string => Boolean(origin));
+
+const developmentConnectSources =
+  process.env.NODE_ENV === "production"
+    ? []
+    : ["http://localhost:*", "http://127.0.0.1:*", "ws:", "wss:"];
+const developmentScriptSources =
+  process.env.NODE_ENV === "production" ? [] : ["'unsafe-eval'"];
+
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline' ${developmentScriptSources.join(" ")}`.trim(),
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: http: https:",
+  "font-src 'self' data:",
+  "media-src 'self' data: blob: http: https:",
+  `connect-src 'self' ${[...configuredApiOrigins, ...developmentConnectSources].join(" ")}`.trim(),
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: contentSecurityPolicy },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()",
+  },
+];
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  // Tamagui packages use a "react-native" export condition in their package.json,
-  // which Turbopack was resolving instead of "browser", causing it to load
-  // native JS files that import from react-native (which has Flow syntax
-  // that Turbopack's parser cannot handle).
-  // transpilePackages ensures Next.js processes these packages so that
-  // the resolveAlias (react-native → react-native-web) applies inside them.
   transpilePackages: ["tamagui", "@tamagui/core", "@tamagui/config", "@bthwani/ui-kit"],
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: securityHeaders,
+      },
+    ];
+  },
   turbopack: {
     resolveAlias: {
       "react-native": "react-native-web",
-      // @expo/vector-icons/Ionicons pulls in expo-font → expo-modules-core →
-      // TurboModuleRegistry (native-only) and loads .ttf font files — none of
-      // which Turbopack can handle on web. Stub it out so the dependency chain
-      // is never entered. Icons render as nothing on the web control panel.
-      // Note: Turbopack on Windows does not support absolute paths in resolveAlias,
-      // so we use a relative path from the project root (next.config.ts location).
       "@expo/vector-icons/Ionicons": "./stubs/ionicons-stub.js",
       "@react-native-community/netinfo": "./stubs/netinfo-stub.js",
-      // Shared DSH mobile surfaces import expo-image-picker. The control panel
-      // must resolve that package to the browser adapter instead of bundling the
-      // native Expo TypeScript source, which Turbopack cannot classify.
       "expo-image-picker": "./stubs/expo-image-picker-web.js",
     },
   },
