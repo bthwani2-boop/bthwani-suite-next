@@ -65,9 +65,13 @@ func TestJRN029PostgresLifecycle(t *testing.T) {
 	_, err = db.Exec(`
 		INSERT INTO dsh_stores (
 			id, slug, display_name, status, city_code, service_area_code,
-			serviceability_status, is_visible, visibility_status
+			serviceability_status, is_visible, partner_readiness,
+			catalog_approval_status, marketing_visibility
 		)
-		VALUES ($1, $2, $3, 'active', $4, $4, 'serviceable', TRUE, 'visible')`,
+		VALUES (
+			$1, $2, $3, 'active', $4, $4, 'serviceable', TRUE,
+			'ready', 'approved', 'visible'
+		)`,
 		storeID, storeID, "JRN-029 Store", cityCode,
 	)
 	if err != nil {
