@@ -18,10 +18,10 @@ const (
 )
 
 type partnerDeliveryMutationBody struct {
-	ExpectedVersion   int      `json:"expectedVersion"`
-	CommandID         string   `json:"commandId"`
-	CorrelationID     string   `json:"correlationId"`
-	Reason            string   `json:"reason"`
+	ExpectedVersion    int      `json:"expectedVersion"`
+	CommandID          string   `json:"commandId"`
+	CorrelationID      string   `json:"correlationId"`
+	Reason             string   `json:"reason"`
 	EvidenceReferences []string `json:"evidenceReferences"`
 }
 
