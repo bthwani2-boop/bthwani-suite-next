@@ -11,7 +11,7 @@ import {
 import {
   fetchOperatorPartnerFleetSnapshot,
   type DshOperatorPartnerFleetSnapshot,
-} from "../../../shared/partner";
+} from "../../../shared/partner/partner-fleet.api";
 
 export type OperatorPartnerFleetPanelProps = {
   readonly storeId: string;
