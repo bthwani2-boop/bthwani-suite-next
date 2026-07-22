@@ -74,10 +74,23 @@ jobs:
           cache: false
       - name: Test DSH dispatch and protected HTTP
         working-directory: services/dsh/backend
-        run: go test ./internal/dispatch ./internal/http ./internal/mapproviders
+        run: |
+          set -o pipefail
+          go test ./internal/dispatch ./internal/http ./internal/mapproviders 2>&1 | tee ../../../jrn-017-dsh-go-test.log
       - name: Test governed routing provider
         working-directory: core/providers/backend
-        run: go test ./internal/providers ./internal/http
+        run: |
+          set -o pipefail
+          go test ./internal/providers ./internal/http 2>&1 | tee ../../../jrn-017-providers-go-test.log
+      - name: Upload backend verification logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-017-backend-logs-${{ github.sha }}
+          path: |
+            jrn-017-dsh-go-test.log
+            jrn-017-providers-go-test.log
+          if-no-files-found: warn
 
   contract-surfaces:
     name: JRN-017 contract and surfaces
@@ -115,4 +128,13 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
       - name: Typecheck JRN-017 shared brain and surfaces
-        run: pnpm exec tsc -p services/dsh/tsconfig.jrn-017.json --noEmit
+        run: |
+          set -o pipefail
+          pnpm exec tsc -p services/dsh/tsconfig.jrn-017.json --noEmit 2>&1 | tee jrn-017-typescript.log
+      - name: Upload frontend verification log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-017-frontend-log-${{ github.sha }}
+          path: jrn-017-typescript.log
+          if-no-files-found: warn
