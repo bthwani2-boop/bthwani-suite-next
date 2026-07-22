@@ -1,25 +1,5 @@
 import type { NextConfig } from "next";
 
-function configuredOrigin(value: string | undefined): string | null {
-  if (!value) return null;
-  try {
-    return new URL(value).origin;
-  } catch {
-    return null;
-  }
-}
-
-const configuredApiOrigins = [
-  process.env.NEXT_PUBLIC_DSH_API_BASE_URL,
-  process.env.NEXT_PUBLIC_WLT_API_BASE_URL,
-  process.env.NEXT_PUBLIC_IDENTITY_API_BASE_URL,
-  process.env.NEXT_PUBLIC_WORKFORCE_API_BASE_URL,
-  process.env.NEXT_PUBLIC_PLATFORM_CONTROL_API_BASE_URL,
-  process.env.NEXT_PUBLIC_PROVIDERS_API_BASE_URL,
-]
-  .map(configuredOrigin)
-  .filter((origin): origin is string => Boolean(origin));
-
 const developmentConnectSources =
   process.env.NODE_ENV === "production"
     ? []
@@ -34,7 +14,7 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob: http: https:",
   "font-src 'self' data:",
   "media-src 'self' data: blob: http: https:",
-  `connect-src 'self' ${[...configuredApiOrigins, ...developmentConnectSources].join(" ")}`.trim(),
+  `connect-src 'self' ${developmentConnectSources.join(" ")}`.trim(),
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
@@ -56,6 +36,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  env: {
+    // Compile-time transport switch consumed only by shared frontend resolvers.
+    // Upstream service URLs remain server-only inside src/server/bff-proxy.ts.
+    NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED: "true",
+  },
   transpilePackages: ["tamagui", "@tamagui/core", "@tamagui/config", "@bthwani/ui-kit"],
   async headers() {
     return [
