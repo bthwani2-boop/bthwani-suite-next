@@ -1,9 +1,13 @@
 -- JRN-025: campaigns, tickers and partner-offer lifecycle closure.
--- Adds optimistic concurrency, schedule constraints and projection indexes while
+-- Adds optimistic concurrency, schedule and regional-targeting constraints while
 -- preserving soft-archive and audit history.
 
 ALTER TABLE dsh_marketing_campaigns
   ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE dsh_marketing_campaigns
+  ADD COLUMN IF NOT EXISTS target_city_code TEXT;
+ALTER TABLE dsh_marketing_campaigns
+  ADD COLUMN IF NOT EXISTS target_service_area_code TEXT;
 
 ALTER TABLE dsh_marketing_campaigns
   DROP CONSTRAINT IF EXISTS dsh_marketing_campaigns_audience_chk;
@@ -30,8 +34,21 @@ ALTER TABLE dsh_marketing_campaigns
   ADD CONSTRAINT dsh_marketing_campaigns_placement_chk
   CHECK (placement IS NULL OR placement IN ('home','hero','feed','floating','banner','store-card'));
 
+ALTER TABLE dsh_marketing_campaigns
+  DROP CONSTRAINT IF EXISTS dsh_marketing_campaigns_region_chk;
+ALTER TABLE dsh_marketing_campaigns
+  ADD CONSTRAINT dsh_marketing_campaigns_region_chk
+  CHECK (
+    (target_city_code IS NULL OR target_city_code ~ '^[A-Za-z0-9._:-]{1,64}$')
+    AND (target_service_area_code IS NULL OR target_service_area_code ~ '^[A-Za-z0-9._:-]{1,64}$')
+  );
+
 CREATE INDEX IF NOT EXISTS idx_dsh_marketing_campaigns_active_window
   ON dsh_marketing_campaigns (status, start_date, end_date)
+  WHERE archived_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_dsh_marketing_campaigns_region
+  ON dsh_marketing_campaigns (target_city_code, target_service_area_code, status)
   WHERE archived_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_dsh_marketing_campaigns_version
