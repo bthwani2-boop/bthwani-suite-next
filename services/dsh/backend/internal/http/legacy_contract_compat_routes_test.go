@@ -18,6 +18,8 @@ func TestRegisterLegacyContractCompatibilityRoutesRegistersExactMethods(t *testi
 		{method: http.MethodPut, path: "/dsh/stores/store-1/images/logo"},
 		{method: http.MethodPut, path: "/dsh/partner/catalog/product-proposals/proposal-1"},
 		{method: http.MethodPut, path: "/dsh/field/partners/partner-1/catalog/product-proposals/proposal-1"},
+		{method: http.MethodGet, path: "/dsh/partner/me/finance/cod-records"},
+		{method: http.MethodPost, path: "/dsh/partner/me/finance/cod-records/record-1/remit"},
 		{method: http.MethodPost, path: "/dsh/operator/workforce/media/uploads"},
 		{method: http.MethodPost, path: "/dsh/operator/admin/roles"},
 		{method: http.MethodPost, path: "/dsh/operator/admin/partners/partner-1/activate"},
