@@ -128,8 +128,12 @@ export function CodReconciliationCasesPanel() {
                     aria-label={`قرار قضية COD ${item.id}`}
                     value={actions[item.id] ?? "confirmed_variance"}
                     options={RESOLUTION_OPTIONS}
-                    onChange={(value) => setActions((current) => ({ ...current, [item.id]: value as CodResolutionAction }))}
-                    disabled={!assigned || busy}
+                    onChange={(value) => {
+                      if (assigned && !busy) {
+                        setActions((current) => ({ ...current, [item.id]: value as CodResolutionAction }));
+                      }
+                    }}
+                    style={{ opacity: assigned && !busy ? 1 : 0.55, pointerEvents: assigned && !busy ? "auto" : "none" }}
                   />
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
