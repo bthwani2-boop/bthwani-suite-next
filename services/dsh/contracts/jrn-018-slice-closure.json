@@ -4,7 +4,7 @@
   "title": "إثبات التسليم وإكمال الطلب",
   "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
   "requiredSliceCount": 18,
-  "codeDecision": "NEEDS_EVIDENCE",
+  "codeDecision": "READY_FOR_REVIEW",
   "releaseDecision": "READY_FOR_REVIEW",
   "slices": [
     {
@@ -37,31 +37,31 @@
     },
     {
       "id": "FS-05",
-      "name": "Database proof and PIN truth",
+      "name": "Database proof, location and hardened PIN truth",
       "codeStatus": "IMPLEMENTED",
-      "requiredFiles": ["services/dsh/database/migrations/dsh-117_jrn_018_delivery_proof_completion.sql", "services/dsh/database/migrations/dsh-118_jrn_018_delivery_proof_location_snapshot.sql"],
-      "requiredMarkers": ["dsh_delivery_verification_challenges", "dsh_delivery_proofs", "location_snapshot"]
+      "requiredFiles": ["services/dsh/database/migrations/dsh-117_jrn_018_delivery_proof_completion.sql", "services/dsh/database/migrations/dsh-118_jrn_018_delivery_proof_location_snapshot.sql", "services/dsh/database/migrations/dsh-119_jrn_018_delivery_pin_hardening.sql"],
+      "requiredMarkers": ["dsh_delivery_verification_challenges", "dsh_delivery_proofs", "dsh_snapshot_delivery_proof_location", "idx_dsh_delivery_proofs_one_open_assignment"]
     },
     {
       "id": "FS-06",
       "name": "Canonical delivery proof contract",
       "codeStatus": "IMPLEMENTED",
       "requiredFiles": ["services/dsh/contracts/dsh.delivery-proof-completion.openapi.yaml", "services/dsh/contracts/contract-registry.ts"],
-      "requiredMarkers": ["dsh-delivery-proof-completion", "issueClientDeliveryPin", "submitCaptainDeliveryProof"]
+      "requiredMarkers": ["dsh-delivery-proof-completion", "issueClientDeliveryPin", "submitCaptainDeliveryProof", "DeliveryEvidenceKind"]
     },
     {
       "id": "FS-07",
-      "name": "PIN issuance and verification",
+      "name": "PIN issuance, bcrypt storage and persisted failed attempts",
       "codeStatus": "IMPLEMENTED",
       "requiredFiles": ["services/dsh/backend/internal/dispatch/delivery_proof.go", "services/dsh/backend/internal/dispatch/delivery_proof_test.go"],
-      "requiredMarkers": ["randomDeliveryPIN", "hashDeliveryPIN", "ConstantTimeCompare", "failed_attempts"]
+      "requiredMarkers": ["randomDeliveryPIN", "bcrypt.GenerateFromPassword", "CompareHashAndPassword", "failed_attempts", "errDeliveryPINMismatch"]
     },
     {
       "id": "FS-08",
       "name": "Idempotency, retry and optimistic review",
       "codeStatus": "IMPLEMENTED",
       "requiredFiles": ["services/dsh/backend/internal/dispatch/delivery_proof.go", "services/dsh/frontend/shared/delivery-proof/delivery-proof.api.ts"],
-      "requiredMarkers": ["ErrIdempotencyConflict", "request_fingerprint", "expectedVersion", "idempotencyKey"]
+      "requiredMarkers": ["ErrIdempotencyConflict", "request_fingerprint", "expectedVersion", "idempotencyKey", "fingerprintCapturedAt"]
     },
     {
       "id": "FS-09",
@@ -117,7 +117,7 @@
       "name": "Legacy direct-completion cleanup",
       "codeStatus": "IMPLEMENTED",
       "requiredFiles": ["services/dsh/backend/internal/http/delivery_proof_upload.go", "services/dsh/tests/jrn-018-delivery-proof-closure.test.mjs"],
-      "requiredMarkers": ["handleSubmitGovernedDeliveryProof", "dispatch.SubmitPoD("]
+      "requiredMarkers": ["handleSubmitGovernedDeliveryProof", "cannot complete through the legacy photo reference path"]
     },
     {
       "id": "FS-17",
@@ -131,9 +131,14 @@
       "name": "Same-commit evidence and independent review gate",
       "codeStatus": "IMPLEMENTED",
       "requiredFiles": ["services/dsh/contracts/jrn-018-slice-closure.json", ".github/workflows/jrn-018-delivery-proof-verify.yml"],
-      "requiredMarkers": ["NEEDS_EVIDENCE", "requiredSliceCount", "github.sha", "independentReviewPending"]
+      "requiredMarkers": ["READY_FOR_REVIEW", "requiredSliceCount", "github.sha", "independentReviewPending"]
     }
   ],
+  "automatedEvidence": {
+    "workflow": "JRN-018 Delivery Proof Verification",
+    "requiredJobs": ["JRN-018 backend", "JRN-018 contract and surfaces", "JRN-018 governed frontend typecheck"],
+    "sameCommitRequired": true
+  },
   "independentReviewPending": [
     "product-manager",
     "product-owner",
