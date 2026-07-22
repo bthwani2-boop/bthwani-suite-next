@@ -24,6 +24,31 @@ on:
       - "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx"
       - "services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx"
       - "tools/verification/jrn-035-financial-refunds.test.mjs"
+      - "governance/evidence/.jrn-035-final-validation-trigger"
+      - ".github/workflows/jrn-035-financial-refunds-verification.yml"
+  pull_request:
+    branches:
+      - sambassam
+    paths:
+      - "governance/product/contracts/jrn-035-financial-refunds.product-truth.json"
+      - "services/wlt/contracts/jrn-035-refund-governance.json"
+      - "services/wlt/backend/internal/refund/**"
+      - "services/wlt/backend/internal/dshoutbox/**"
+      - "services/wlt/backend/internal/dshnotify/**"
+      - "services/wlt/backend/internal/http/server.go"
+      - "services/wlt/database/migrations/wlt-037_jrn_035_refund_governance.sql"
+      - "services/wlt/database/tests/jrn-035-refund-invariants.sql"
+      - "infra/docker/scripts/wlt-migration-probes.ps1"
+      - "services/dsh/backend/internal/http/refund_finance_*"
+      - "services/dsh/backend/internal/http/financeproxy.go"
+      - "services/dsh/backend/internal/wlt/finance_proxy.go"
+      - "services/dsh/backend/internal/wlt/refund_proxy.go"
+      - "services/dsh/frontend/**/wlt-refund/**"
+      - "services/dsh/frontend/control-panel/finance/**"
+      - "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx"
+      - "services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx"
+      - "tools/verification/jrn-035-financial-refunds.test.mjs"
+      - "governance/evidence/.jrn-035-final-validation-trigger"
       - ".github/workflows/jrn-035-financial-refunds-verification.yml"
 
 permissions:
@@ -48,7 +73,7 @@ jobs:
         run: node tools/guards/wlt-financial-boundary-gate.mjs
 
   wlt-database:
-    name: WLT PostgreSQL migration and invariants
+    name: WLT PostgreSQL runtime, migration and invariants
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -70,8 +95,14 @@ jobs:
       PGUSER: wlt_ci
       PGPASSWORD: wlt_ci_password
       PGDATABASE: wlt_ci
+      DATABASE_URL: postgres://wlt_ci:wlt_ci_password@localhost:5432/wlt_ci?sslmode=disable
+      WLT_REQUIRE_DB_TESTS: "true"
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: services/wlt/backend/go.mod
+          cache-dependency-path: services/wlt/backend/go.sum
       - name: Verify migration numbering and probe coverage
         shell: pwsh
         run: |
@@ -88,6 +119,9 @@ jobs:
           done
       - name: Assert JRN-035 database invariants
         run: psql -v ON_ERROR_STOP=1 -f services/wlt/database/tests/jrn-035-refund-invariants.sql
+      - name: Execute provider, ledger, reconciliation and outbox runtime evidence
+        working-directory: services/wlt/backend
+        run: go test ./internal/refund -run '^TestGovernedRefundRuntime' -count=1 -v
 
   wlt-go:
     name: WLT Go compile and tests
