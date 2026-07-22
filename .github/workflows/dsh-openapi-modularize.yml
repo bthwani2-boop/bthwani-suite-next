@@ -6,6 +6,11 @@ on:
     branches: [sambassam]
     paths:
       - ".github/workflows/dsh-openapi-modularize.yml"
+      - "tools/scripts/dsh-openapi-modular-lib.mjs"
+      - "tools/scripts/patch-dsh-openapi-modular-lib.mjs"
+      - "tools/scripts/migrate-dsh-openapi-modular.mjs"
+      - "tools/scripts/compose-dsh-openapi.mjs"
+      - "tools/guards/dsh-openapi-modular-gate.mjs"
 
 permissions:
   contents: write
