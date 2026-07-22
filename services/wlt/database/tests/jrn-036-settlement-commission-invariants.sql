@@ -11,7 +11,8 @@ BEGIN
     'wlt_jrn036_commission_policy_versions',
     'wlt_jrn036_commission_evidence',
     'wlt_jrn036_commission_adjustments',
-    'wlt_jrn036_audit_events'
+    'wlt_jrn036_audit_events',
+    'wlt_jrn036_mutation_receipts'
   ] LOOP
     IF to_regclass('public.' || required_table) IS NULL THEN
       RAISE EXCEPTION 'missing JRN-036 table %', required_table;
@@ -67,6 +68,22 @@ BEGIN
 
   IF to_regclass('public.wlt_jrn036_commission_adjustments_commission_created_idx') IS NULL THEN
     RAISE EXCEPTION 'missing adjustment history ordering index';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'wlt_jrn036_mutation_receipts_pkey'
+      AND contype = 'p'
+  ) THEN
+    RAISE EXCEPTION 'mutation receipt idempotency key must be the primary key';
+  END IF;
+
+  IF to_regclass('public.wlt_jrn036_mutation_receipts_aggregate_idx') IS NULL THEN
+    RAISE EXCEPTION 'missing mutation receipt aggregate index';
+  END IF;
+
+  IF to_regclass('public.wlt_jrn036_mutation_receipts_request_hash_idx') IS NULL THEN
+    RAISE EXCEPTION 'missing mutation receipt request-hash diagnostics index';
   END IF;
 END $$;
 
