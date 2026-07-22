@@ -7,6 +7,8 @@
 - `journey`: `JRN-026 — القسائم وتسعير التوصيل وسياسات الولاء`
 - `mode`: `fullstack unified multi-surface`
 - `current_decision`: `READY_FOR_INDEPENDENT_REVIEW`
+- `verification_workflow_blob`: `48765746599f5570b8e16874703cda43c71c7773`
+- `verification_concurrency`: `event/ref serialized; cancel-in-progress=false`
 
 ## Executed code corrections
 
