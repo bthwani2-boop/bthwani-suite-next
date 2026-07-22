@@ -39,9 +39,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Synchronize JRN-024 contract on the latest branch head
+        id: synchronize
         shell: bash
         run: |
           set -euo pipefail
+          exec > >(tee jrn-024-contract-sync.log) 2>&1
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
@@ -112,3 +114,12 @@ jobs:
 
           echo "Unable to push JRN-024 synchronization after five latest-head retries." >&2
           exit 1
+
+      - name: Upload contract synchronization diagnostics
+        if: failure() && steps.synchronize.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-024-contract-sync-diagnostics
+          path: jrn-024-contract-sync.log
+          if-no-files-found: error
+          retention-days: 3
