@@ -3,6 +3,14 @@
   "compilerOptions": {
     "outDir": "dist-jrn-026"
   },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/partner/partner-delivery-pricing.api.ts",
+    "frontend/shared/partner/use-delivery-pricing-controller.ts",
+    "frontend/app-partner/store/PartnerDeliveryPricingCard.tsx"
+  ],
   "exclude": [
     "node_modules",
     "dist",
