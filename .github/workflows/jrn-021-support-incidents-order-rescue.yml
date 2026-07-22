@@ -1,0 +1,83 @@
+name: JRN-021 Support Incidents Order Rescue Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/support/**"
+      - "services/dsh/backend/internal/http/**"
+      - "services/dsh/backend/cmd/dsh-api/main.go"
+      - "services/dsh/database/migrations/dsh-098_jrn_021_incident_governance.sql"
+      - "services/dsh/database/migrations/dsh-099_jrn_021_order_rescue.sql"
+      - "services/dsh/frontend/shared/support/**"
+      - "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx"
+      - "services/dsh/contracts/dsh.support-governance.openapi.yaml"
+      - "services/dsh/contracts/dsh.incident-governance.openapi.yaml"
+      - "services/dsh/contracts/dsh.order-rescue.openapi.yaml"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "services/dsh/tests/jrn-021-support-incidents-order-rescue.test.mjs"
+      - "governance/product/contracts/jrn-021-support-incidents-order-rescue.product-truth.json"
+      - ".github/workflows/jrn-021-support-incidents-order-rescue.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "services/dsh/backend/internal/support/**"
+      - "services/dsh/backend/internal/http/**"
+      - "services/dsh/backend/cmd/dsh-api/main.go"
+      - "services/dsh/database/migrations/dsh-098_jrn_021_incident_governance.sql"
+      - "services/dsh/database/migrations/dsh-099_jrn_021_order_rescue.sql"
+      - "services/dsh/frontend/shared/support/**"
+      - "services/dsh/frontend/control-panel/operations/OrderRescueScreen.tsx"
+      - "services/dsh/contracts/dsh.support-governance.openapi.yaml"
+      - "services/dsh/contracts/dsh.incident-governance.openapi.yaml"
+      - "services/dsh/contracts/dsh.order-rescue.openapi.yaml"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "services/dsh/tests/jrn-021-support-incidents-order-rescue.test.mjs"
+      - "governance/product/contracts/jrn-021-support-incidents-order-rescue.product-truth.json"
+      - ".github/workflows/jrn-021-support-incidents-order-rescue.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-021-${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: JRN-021 targeted full-stack verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository state
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify governed support, incident, and rescue backend
+        working-directory: services/dsh/backend
+        run: go test ./internal/support ./internal/http
+
+      - name: Verify DSH shared brain and control-panel types
+        run: pnpm --dir services/dsh typecheck
+
+      - name: Verify JRN-021 contracts, runtime bindings, and product truth
+        run: node --test services/dsh/tests/jrn-021-support-incidents-order-rescue.test.mjs
