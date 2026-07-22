@@ -28,10 +28,13 @@ import { SupportTicketScreen } from "./support/SupportTicketScreen";
 import { TicketDetailScreen } from "./support/TicketDetailScreen";
 import { SheinForm } from "../shared/shein/SheinForm";
 import { AwnakForm } from "../shared/awnak/AwnakForm";
-import { useSpecialRequestsController } from "../shared/special-requests/use-special-requests-controller";
+import {
+  ClientSpecialRequestsScreen,
+  useSpecialRequestsController,
+} from "../shared/special-requests";
 import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
 
-type ClientTab = "home" | "stores" | "orders" | "profile" | "cart";
+type ClientTab = "home" | "stores" | "orders" | "special" | "profile" | "cart";
 type ProfileRoute =
   | "profile"
   | "appearance"
@@ -50,6 +53,12 @@ const NAV_ITEMS: BottomNavItem[] = [
     activeIcon: <Icon name="person" size={22} color={colorRoles.brandAction} />,
   },
   {
+    id: "special",
+    label: "طلبات خاصة",
+    icon: <Icon name="sparkles-outline" size={22} color={colorRoles.brandStructure} />,
+    activeIcon: <Icon name="sparkles" size={22} color={colorRoles.brandAction} />,
+  },
+  {
     id: "orders",
     label: "طلباتي",
     icon: <Icon name="bag-outline" size={22} color={colorRoles.brandStructure} />,
@@ -64,7 +73,12 @@ const NAV_ITEMS: BottomNavItem[] = [
 ];
 
 function isClientTab(value: string): value is ClientTab {
-  return value === "home" || value === "stores" || value === "orders" || value === "profile" || value === "cart";
+  return value === "home"
+    || value === "stores"
+    || value === "orders"
+    || value === "special"
+    || value === "profile"
+    || value === "cart";
 }
 
 export function DshClientSurface() {
@@ -123,6 +137,11 @@ export function DshClientSurface() {
     setActiveTab("cart");
   }, []);
 
+  const openSpecialRequestList = useCallback(() => {
+    setActiveSpecialRequest(null);
+    setActiveTab("special");
+  }, []);
+
   const goBack = useCallback(() => {
     if (showNotifications) {
       setShowNotifications(false);
@@ -130,6 +149,7 @@ export function DshClientSurface() {
     }
     if (activeSpecialRequest !== null) {
       setActiveSpecialRequest(null);
+      setActiveTab("special");
       return true;
     }
     if (activePickupOrderId !== null) {
@@ -148,7 +168,7 @@ export function DshClientSurface() {
       setSelectedStoreId(null);
       return true;
     }
-    if (activeTab === "stores") {
+    if (activeTab === "stores" || activeTab === "special") {
       setActiveTab("home");
       return true;
     }
@@ -210,7 +230,8 @@ export function DshClientSurface() {
           <OrderTrackingScreen orderId={activeOrderId} onBack={() => setActiveOrderId(null)} />
         ) : activeSpecialRequest === "shein" ? (
           <SheinForm
-            onBack={() => setActiveSpecialRequest(null)}
+            onBack={openSpecialRequestList}
+            onViewRequests={openSpecialRequestList}
             onSubmit={(data) => specialRequestController.submit({
               requestType: "SHEIN_ASSISTED_PURCHASE",
               idempotencyKey: generateSpecialRequestIdempotencyKey(),
@@ -219,7 +240,8 @@ export function DshClientSurface() {
           />
         ) : activeSpecialRequest === "awnak" ? (
           <AwnakForm
-            onBack={() => setActiveSpecialRequest(null)}
+            onBack={openSpecialRequestList}
+            onViewRequests={openSpecialRequestList}
             onSubmit={(data) => specialRequestController.submit({
               requestType: "AWNAK_ERRAND",
               idempotencyKey: generateSpecialRequestIdempotencyKey(),
@@ -237,6 +259,12 @@ export function DshClientSurface() {
               if (nodeId === "node-awnak") setActiveSpecialRequest("awnak");
             }}
             onMarketingAction={openHomeMarketingAction}
+          />
+        ) : activeTab === "special" ? (
+          <ClientSpecialRequestsScreen
+            onBack={() => setActiveTab("home")}
+            onCreateShein={() => setActiveSpecialRequest("shein")}
+            onCreateAwnak={() => setActiveSpecialRequest("awnak")}
           />
         ) : activeTab === "stores" ? (
           selectedStoreId === null ? (
