@@ -4,6 +4,8 @@ import { Button, Screen, StateView, Text, colorRoles, spacing } from "@bthwani/u
 import {
   canClientApproveSpecialRequestQuote,
   canClientCancelSpecialRequest,
+  clientCancellationActionLabel,
+  isClientQuoteDecisionPending,
   specialRequestStatusLabel,
   specialRequestTypeLabel,
 } from "./special-requests.actions";
@@ -120,6 +122,8 @@ export function ClientSpecialRequestsScreen({
               const isBusy = busyRequestId === request.id;
               const canApprove = canClientApproveSpecialRequestQuote(request);
               const canCancel = canClientCancelSpecialRequest(request);
+              const quoteDecisionPending = isClientQuoteDecisionPending(request);
+              const cancellationLabel = clientCancellationActionLabel(request);
 
               return (
                 <View key={request.id} style={styles.card}>
@@ -150,7 +154,9 @@ export function ClientSpecialRequestsScreen({
                       ) : null}
                       {canCancel ? (
                         <Button
-                          label={isBusy ? "جاري الإلغاء..." : "إلغاء الطلب"}
+                          label={isBusy
+                            ? quoteDecisionPending ? "جاري رفض العرض..." : "جاري الإلغاء..."
+                            : cancellationLabel}
                           tone="danger"
                           disabled={isBusy}
                           onPress={() => void cancelRequest(request)}
