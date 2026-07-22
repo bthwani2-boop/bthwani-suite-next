@@ -54,6 +54,7 @@ const services = [
     name: "WLT",
     openapi: "services/wlt/contracts/wlt.openapi.yaml",
     additionalOpenapi: [
+      "services/wlt/contracts/wlt.payments.openapi.yaml",
       "services/wlt/contracts/wlt.commercial.openapi.yaml",
       "services/wlt/contracts/wlt.commercial-summary.openapi.yaml",
       "services/wlt/contracts/wlt.promotion-funding.openapi.yaml",
