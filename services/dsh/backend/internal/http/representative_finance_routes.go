@@ -36,7 +36,7 @@ func writeRepresentativeFinanceResponse(w http.ResponseWriter, status int, body 
 func (s *protectedStoreServer) handleOwnRepresentativeWallet(w http.ResponseWriter, r *http.Request, actorType string) {
 	actor, ok := s.requireActor(w, r, actorType)
 	if !ok { return }
-	status, body, err := s.wlt.FinanceReadWallet(r.Context(), actorType, actor.ID, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceReadWalletWithTenant(r.Context(), actorType, actor.ID, r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -47,7 +47,7 @@ func (s *protectedStoreServer) handleOwnRepresentativeLedger(w http.ResponseWrit
 	for _, key := range []string{"entryType", "limit", "cursor"} {
 		if value := strings.TrimSpace(r.URL.Query().Get(key)); value != "" { query.Set(key, value) }
 	}
-	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -55,7 +55,7 @@ func (s *protectedStoreServer) handleOwnRepresentativeCommissions(w http.Respons
 	actor, ok := s.requireActor(w, r, actorType)
 	if !ok { return }
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -63,7 +63,7 @@ func (s *protectedStoreServer) handleOwnRepresentativePayoutRequests(w http.Resp
 	actor, ok := s.requireActor(w, r, actorType)
 	if !ok { return }
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -93,22 +93,24 @@ func resolveControlPanelRepresentativeActor(w http.ResponseWriter, r *http.Reque
 }
 
 func (s *protectedStoreServer) handleControlPanelRepresentativeWallet(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok { return }
+	operator, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
 	actorType, actorID, ok := resolveControlPanelRepresentativeActor(w, r)
 	if !ok { return }
-	status, body, err := s.wlt.FinanceReadWallet(r.Context(), actorType, actorID, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceReadWalletWithTenant(r.Context(), actorType, actorID, r.Header.Get("X-Correlation-ID"), operator.TenantID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleControlPanelRepresentativeLedger(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok { return }
+	operator, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok { return }
 	actorType, actorID, ok := resolveControlPanelRepresentativeActor(w, r)
 	if !ok { return }
 	query := url.Values{"actorId": {actorID}, "actorType": {actorType}}
 	for _, key := range []string{"entryType", "limit", "cursor"} {
 		if value := strings.TrimSpace(r.URL.Query().Get(key)); value != "" { query.Set(key, value) }
 	}
-	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), operator.TenantID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
