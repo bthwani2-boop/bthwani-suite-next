@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button, Card, Text, lightThemeColors } from "@bthwani/ui-kit";
+import { Button, Card, Text } from "@bthwani/ui-kit";
 import { CpSelect, CpTextInput } from "@bthwani/control-panel/components";
 import {
   assignCodReconciliationCase,
@@ -10,6 +10,7 @@ import {
   type CodReconciliationCase,
   type CodResolutionAction,
 } from "../../shared/finance-wlt-link/finance/cod-reconciliation.api";
+import styles from "./CodReconciliationCasesPanel.module.css";
 
 const RESOLUTION_OPTIONS = [
   { value: "confirmed_variance", label: "تأكيد الفرق" },
@@ -86,68 +87,88 @@ export function CodReconciliationCasesPanel() {
   const resolvedCases = cases?.filter((item) => item.status === "resolved") ?? [];
 
   return (
-    <Card style={{ padding: "1.5rem", marginTop: "1rem" }}>
-      <Text role="titleMd" style={{ marginBottom: "0.5rem" }}>مصالحة فروقات COD</Text>
-      <Text role="body" tone="muted" style={{ marginBottom: "1rem" }}>
-        يقارن WLT المبلغ المتوقع بالمبلغ المستلم فعليًا. أي فرق يفتح قضية مستقلة للإسناد والتحقيق والقرار مع الاحتفاظ بإثبات العهدة والقيد المحاسبي.
-      </Text>
-      {error ? <Text role="body" tone="danger" style={{ marginBottom: "0.75rem" }}>{error}</Text> : null}
-      {activeCases.length === 0 ? (
-        <Text role="body" tone="muted">لا توجد فروقات COD مفتوحة حاليًا. القضايا المحسومة: {resolvedCases.length}.</Text>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          {activeCases.map((item) => {
-            const busy = busyCaseId === item.id;
-            const note = notes[item.id] ?? "";
-            const assigned = item.status === "investigating";
-            return (
-              <Card key={item.id} style={{ padding: "1rem", borderInlineStart: `4px solid ${item.differenceMinorUnits < 0 ? lightThemeColors.danger : lightThemeColors.warning}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
-                  <div>
-                    <Text role="body" style={{ fontWeight: "bold" }}>قضية {item.id}</Text>
-                    <Text role="caption" tone="muted">سجل COD: {item.codRecordId} · إثبات: {item.custodyEvidenceId}</Text>
-                  </div>
-                  <Text role="body" tone={item.differenceMinorUnits < 0 ? "danger" : "warning"} style={{ fontWeight: "bold" }}>
-                    الفرق: {amount(item.differenceMinorUnits, item.currency)}
-                  </Text>
-                </div>
-                <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
-                  <Text role="caption" tone="muted">المتوقع: {amount(item.expectedAmountMinorUnits, item.currency)}</Text>
-                  <Text role="caption" tone="muted">الفعلي: {amount(item.actualAmountMinorUnits, item.currency)}</Text>
-                  <Text role="caption" tone="muted">الحالة: {item.status}</Text>
-                  <Text role="caption" tone="muted">المشغل: {item.assignedToOperatorId ?? "—"}</Text>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 1fr) minmax(180px, 240px)", gap: "0.75rem", marginTop: "0.75rem" }}>
-                  <CpTextInput
-                    placeholder={assigned ? "ملاحظة قرار المصالحة" : "ملاحظة التحقيق"}
-                    value={note}
-                    onChange={(value) => setNotes((current) => ({ ...current, [item.id]: value }))}
-                    aria-label={`ملاحظة قضية COD ${item.id}`}
-                  />
-                  <CpSelect
-                    aria-label={`قرار قضية COD ${item.id}`}
-                    value={actions[item.id] ?? "confirmed_variance"}
-                    options={RESOLUTION_OPTIONS}
-                    onChange={(value) => {
-                      if (assigned && !busy) {
-                        setActions((current) => ({ ...current, [item.id]: value as CodResolutionAction }));
-                      }
-                    }}
-                    style={{ opacity: assigned && !busy ? 1 : 0.55, pointerEvents: assigned && !busy ? "auto" : "none" }}
-                  />
-                </div>
-                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
-                  {!assigned ? (
-                    <Button label={busy ? "جارٍ الإسناد..." : "إسناد القضية لنفسي"} tone="secondary" disabled={busy} onPress={() => void assign(item.id)} />
-                  ) : (
-                    <Button label={busy ? "جارٍ الحسم..." : "تسجيل قرار المصالحة"} tone="primary" disabled={busy || note.trim().length === 0} onPress={() => void resolve(item.id)} />
-                  )}
-                </div>
-              </Card>
-            );
-          })}
+    <div className={styles.panel}>
+      <Card>
+        <div className={styles.heading}>
+          <Text role="titleMd">مصالحة فروقات COD</Text>
         </div>
-      )}
-    </Card>
+        <div className={styles.description}>
+          <Text role="body" tone="muted">
+            يقارن WLT المبلغ المتوقع بالمبلغ المستلم فعليًا. أي فرق يفتح قضية مستقلة للإسناد والتحقيق والقرار مع الاحتفاظ بإثبات العهدة والقيد المحاسبي.
+          </Text>
+        </div>
+        {error ? (
+          <div className={styles.error} role="alert">
+            <Text role="body" tone="danger">{error}</Text>
+          </div>
+        ) : null}
+        {activeCases.length === 0 ? (
+          <div className={styles.emptyState}>
+            <Text role="body" tone="muted">لا توجد فروقات COD مفتوحة حاليًا. القضايا المحسومة: {resolvedCases.length}.</Text>
+          </div>
+        ) : (
+          <div className={styles.caseList}>
+            {activeCases.map((item) => {
+              const busy = busyCaseId === item.id;
+              const note = notes[item.id] ?? "";
+              const assigned = item.status === "investigating";
+              const caseClassName = item.differenceMinorUnits < 0
+                ? `${styles.caseCard} ${styles.caseCardShortage}`
+                : styles.caseCard;
+              return (
+                <div key={item.id} className={caseClassName}>
+                  <Card>
+                    <div className={styles.caseTopRow}>
+                      <div className={styles.caseIdentity}>
+                        <Text role="body">قضية {item.id}</Text>
+                        <Text role="caption" tone="muted">سجل COD: {item.codRecordId} · إثبات: {item.custodyEvidenceId}</Text>
+                      </div>
+                      <div className={styles.difference}>
+                        <Text role="body" tone={item.differenceMinorUnits < 0 ? "danger" : "warning"}>
+                          الفرق: {amount(item.differenceMinorUnits, item.currency)}
+                        </Text>
+                      </div>
+                    </div>
+                    <div className={styles.facts}>
+                      <Text role="caption" tone="muted">المتوقع: {amount(item.expectedAmountMinorUnits, item.currency)}</Text>
+                      <Text role="caption" tone="muted">الفعلي: {amount(item.actualAmountMinorUnits, item.currency)}</Text>
+                      <Text role="caption" tone="muted">الحالة: {item.status}</Text>
+                      <Text role="caption" tone="muted">المشغل: {item.assignedToOperatorId ?? "—"}</Text>
+                    </div>
+                    <div className={styles.formGrid}>
+                      <CpTextInput
+                        placeholder={assigned ? "ملاحظة قرار المصالحة" : "ملاحظة التحقيق"}
+                        value={note}
+                        onChange={(value) => setNotes((current) => ({ ...current, [item.id]: value }))}
+                        aria-label={`ملاحظة قضية COD ${item.id}`}
+                      />
+                      <div className={!assigned || busy ? styles.selectDisabled : undefined} aria-disabled={!assigned || busy}>
+                        <CpSelect
+                          aria-label={`قرار قضية COD ${item.id}`}
+                          value={actions[item.id] ?? "confirmed_variance"}
+                          options={RESOLUTION_OPTIONS}
+                          onChange={(value) => {
+                            if (assigned && !busy) {
+                              setActions((current) => ({ ...current, [item.id]: value as CodResolutionAction }));
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className={styles.actions}>
+                      {!assigned ? (
+                        <Button label={busy ? "جارٍ الإسناد..." : "إسناد القضية لنفسي"} tone="secondary" disabled={busy} onPress={() => void assign(item.id)} />
+                      ) : (
+                        <Button label={busy ? "جارٍ الحسم..." : "تسجيل قرار المصالحة"} tone="primary" disabled={busy || note.trim().length === 0} onPress={() => void resolve(item.id)} />
+                      )}
+                    </div>
+                  </Card>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+    </div>
   );
 }
