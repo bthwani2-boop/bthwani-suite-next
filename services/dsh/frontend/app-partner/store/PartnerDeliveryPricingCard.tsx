@@ -2,9 +2,9 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Card, Text, TextField, spacing } from "@bthwani/ui-kit";
 import {
-  findDeliveryPricing,
-  usePartnerDeliveryPricingController,
-} from "../../shared/partner/use-delivery-pricing-controller";
+  findGovernedDeliveryPricing,
+  useGovernedPartnerDeliveryPricingController,
+} from "../../shared/partner";
 
 export type PartnerDeliveryPricingCardProps = {
   readonly storeId: string;
@@ -15,8 +15,8 @@ function formatFee(value: number): string {
 }
 
 export function PartnerDeliveryPricingCard({ storeId }: PartnerDeliveryPricingCardProps) {
-  const controller = usePartnerDeliveryPricingController(storeId);
-  const partnerPolicy = findDeliveryPricing(controller.records, "partner_delivery");
+  const controller = useGovernedPartnerDeliveryPricingController(storeId);
+  const partnerPolicy = findGovernedDeliveryPricing(controller.records, "partner_delivery");
   const [feeYer, setFeeYer] = React.useState("");
   const [reason, setReason] = React.useState("");
 
