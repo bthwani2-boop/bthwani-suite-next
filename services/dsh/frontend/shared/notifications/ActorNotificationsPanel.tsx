@@ -1,4 +1,5 @@
 import React from "react";
+import { Linking } from "react-native";
 import { Badge, Box, Button, ListItem, StateView, Surface, Text } from "@bthwani/ui-kit";
 import { useNotificationsController } from "./use-notifications-controller";
 import type {
@@ -13,6 +14,7 @@ export type ActorNotificationsPanelProps = {
   readonly emptyTitle?: string;
   readonly emptyDescription?: string;
   readonly maxItems?: number;
+  readonly appScheme?: string;
   readonly onOpenActionUrl?: (actionUrl: string) => void;
 };
 
@@ -47,12 +49,39 @@ function channelLabel(channel: DshNotificationChannel): string {
   return channel === "push" ? "Push" : "داخل التطبيق";
 }
 
+function resolveSafeNotificationUrl(actionUrl: string, appScheme: string): string | null {
+  const value = actionUrl.trim();
+  const scheme = appScheme.trim().replace(/:\/\/$/, "");
+  if (!value || !scheme) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  if (value.startsWith(`${scheme}://`)) return value;
+  if (value.includes(":")) return null;
+  return `${scheme}://${value.replace(/^\/+/, "")}`;
+}
+
+async function openNotificationAction(
+  actionUrl: string,
+  appScheme: string | undefined,
+  onOpenActionUrl: ((actionUrl: string) => void) | undefined,
+): Promise<void> {
+  if (!actionUrl.trim()) return;
+  if (onOpenActionUrl) {
+    onOpenActionUrl(actionUrl);
+    return;
+  }
+  if (!appScheme) return;
+  const resolvedUrl = resolveSafeNotificationUrl(actionUrl, appScheme);
+  if (!resolvedUrl || !(await Linking.canOpenURL(resolvedUrl))) return;
+  await Linking.openURL(resolvedUrl);
+}
+
 export function ActorNotificationsPanel({
   authKind,
   title = "الإشعارات",
   emptyTitle = "لا توجد إشعارات",
   emptyDescription = "ستظهر هنا إشعارات هذا الممثل عند وصولها.",
   maxItems,
+  appScheme,
   onOpenActionUrl,
 }: ActorNotificationsPanelProps) {
   const {
@@ -103,7 +132,7 @@ export function ActorNotificationsPanel({
               trailing={<Badge label={notification.isRead ? notification.topic : "جديد"} tone={notification.isRead ? "neutral" : "action"} />}
               onPress={() => {
                 void markRead(notification.id);
-                if (notification.actionUrl) onOpenActionUrl?.(notification.actionUrl);
+                void openNotificationAction(notification.actionUrl, appScheme, onOpenActionUrl);
               }}
             />
           ))}
