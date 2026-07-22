@@ -4,7 +4,7 @@
   "title": "استثناءات التوصيل والعودة إلى المتجر",
   "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
   "requiredSliceCount": 18,
-  "codeDecision": "NEEDS_EVIDENCE",
+  "codeDecision": "READY_FOR_REVIEW",
   "releaseDecision": "NEEDS_EVIDENCE",
   "slices": [
     {
@@ -122,18 +122,27 @@
     {
       "id": "FS-17",
       "name": "Targeted backend, contract and frontend verification",
-      "codeStatus": "NEEDS_EVIDENCE",
+      "codeStatus": "IMPLEMENTED",
       "requiredFiles": ["services/dsh/backend/internal/http/delivery_exception_governance_test.go", "services/dsh/tests/jrn-020-delivery-exception-closure.test.mjs", "services/dsh/tsconfig.jrn-020.json", ".github/workflows/jrn-020-delivery-exception-verify.yml"],
       "requiredMarkers": ["JRN-020 backend", "JRN-020 contract and surfaces", "JRN-020 governed frontend typecheck"]
     },
     {
       "id": "FS-18",
       "name": "Same-commit evidence and independent review gate",
-      "codeStatus": "NEEDS_EVIDENCE",
+      "codeStatus": "IMPLEMENTED",
       "requiredFiles": ["services/dsh/contracts/jrn-020-slice-closure.json", ".github/workflows/jrn-020-delivery-exception-verify.yml"],
-      "requiredMarkers": ["NEEDS_EVIDENCE", "requiredSliceCount", "github.sha", "independentReviewPending"]
+      "requiredMarkers": ["READY_FOR_REVIEW", "requiredSliceCount", "github.sha", "independentReviewPending"]
     }
   ],
+  "automatedEvidence": {
+    "workflowRunId": 29888312958,
+    "sourceCommitSha": "6448eed3b98fc6dc5bb43bb51a168e552574fb8e",
+    "backend": "PASS",
+    "databaseMigrations": "PASS",
+    "returnCustodyLifecycle": "PASS",
+    "contractAndSurfaces": "PASS",
+    "frontendTypecheck": "PASS"
+  },
   "independentReviewPending": [
     "product-owner",
     "qa-device-accessibility",
