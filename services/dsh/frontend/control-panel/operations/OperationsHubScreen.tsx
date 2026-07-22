@@ -38,6 +38,9 @@ const LiveOrdersScreen = React.lazy(() =>
 const PickupWorkbenchScreen = React.lazy(() =>
   import('./PickupWorkbenchScreen').then((module) => ({ default: module.PickupWorkbenchScreen })),
 );
+const DeliveryProofReviewScreen = React.lazy(() =>
+  import('./DeliveryProofReviewScreen').then((module) => ({ default: module.DeliveryProofReviewScreen })),
+);
 const DispatchAssignmentScreen = React.lazy(() =>
   import('./DispatchAssignmentScreen').then((module) => ({ default: module.DispatchAssignmentScreen })),
 );
@@ -96,6 +99,7 @@ const SCREEN_RENDERERS: Readonly<Record<CanonicalOperationsGroupId, GroupScreenC
     bySubGroup: {
       partner_delivery: LiveOrdersScreen,
       pickup: PickupWorkbenchScreen,
+      proofs: DeliveryProofReviewScreen,
     },
   },
   'dispatch-capacity': {
