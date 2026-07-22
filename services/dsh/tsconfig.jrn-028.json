@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.jrn-020-030.json",
+  "compilerOptions": {
+    "outDir": "dist-jrn-028"
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/marketing/coupons.types.ts",
+    "frontend/shared/marketing/marketing.api.ts",
+    "frontend/shared/marketing/use-coupons-controller.ts",
+    "frontend/shared/marketing/index.ts",
+    "frontend/control-panel/marketing/components/CouponFundingReconciliationPanel.tsx",
+    "frontend/control-panel/marketing/components/CouponsCommandDeck.tsx",
+    "frontend/control-panel/marketing/MarketingDashboardScreen.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-jrn-020-030",
+    "dist-jrn-028"
+  ]
+}
