@@ -1,81 +1,176 @@
 {
-  "schemaVersion": "1.0.0",
-  "journeyId": "JRN-040",
-  "journeyNameAr": "مجموعات تغييرات المنصة",
-  "status": "PENDING_INDEPENDENT_APPROVAL",
-  "truthOwner": "core/platform-control",
-  "scopeBoundary": "platform-change-control-plane",
-  "sharedBrainOwner": "services/dsh/frontend/shared/platform",
-  "contractAuthority": {
-    "authoritativeOpenApi": "core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml",
-    "generatedClient": "core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts",
-    "aggregateCompatibilityContract": "core/platform-control/contracts/platform-control.openapi.yaml"
+  "schemaVersion": 1,
+  "capabilityId": "JRN_040_PLATFORM_CHANGE_SETS",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Platform operations need one governed multi-item change request for variables and feature flags with explicit impact, validation snapshots, independent review, atomic apply, conflict prevention, rollback and redacted audit evidence.",
+    "affectedActors": ["platform-change-proposer", "platform-change-reviewer", "platform-change-applier", "platform-change-rollback-operator", "platform-auditor", "platform-control-service"],
+    "currentWorkaround": "Individual platform mutations and partial workflow components exist, but the product contract, authoritative API, generated client, database protections and control-panel workflow were not governed by one schema-valid truth record.",
+    "frequency": "occasional",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-040",
+      "core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml",
+      "core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts",
+      "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_workflow.go",
+      "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_apply_rollback.go",
+      "core/platform-control/database/migrations/platform-006_jrn040_sensitive_change_boundary.sql",
+      "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
+    ]
   },
-  "operationalProblem": "تحتاج عمليات المنصة إلى تجميع تعديلات المتغيرات وأعلام الميزات في طلب واحد قابل للمراجعة، مع فرق وأثر واضحين، تحقق مسبق، فصل صانع القرار عن معتمده، تطبيق ذري، منع التعارض والتكرار، وتراجع يعيد الحالة الآمنة دون فقدان سجل التدقيق.",
-  "targetOutcome": "دورة تغيير سيادية من المسودة إلى التحقق والإرسال والاعتماد أو الرفض ثم التطبيق والتراجع، ترتبط بقاعدة PostgreSQL الحية وتعرض في لوحة التحكم تفاصيل العناصر ولقطات الشروط والمراجعات والأثر، وتحظر الأسرار والتغييرات المتعارضة.",
   "actors": [
-    "platform-change-proposer",
-    "platform-change-reviewer",
-    "platform-change-applier",
-    "platform-change-rollback-operator",
-    "platform-auditor"
+    {
+      "id": "platform-change-proposer",
+      "role": "Authorized maker who creates validates and submits a governed platform change set",
+      "permittedActions": ["list_change_sets", "create_multi_item_draft", "read_change_set_diff_and_expected_impact", "validate_current_target_preconditions", "submit_validated_change_set"],
+      "forbiddenActions": ["approve_or_reject_own_change_set", "submit_without_validation_snapshot", "direct_platform_mutation_outside_platform_control"]
+    },
+    {
+      "id": "platform-change-reviewer",
+      "role": "Independent checker who approves or rejects a submitted change set",
+      "permittedActions": ["read_change_set_diff_and_expected_impact", "independently_approve_or_reject_submitted_change_set", "read_redacted_append_only_audit"],
+      "forbiddenActions": ["approve_or_reject_own_change_set", "delete_or_rewrite_change_history"]
+    },
+    {
+      "id": "platform-change-applier",
+      "role": "Authorized operator applying an approved current change set",
+      "permittedActions": ["atomically_apply_approved_change_set", "read_redacted_append_only_audit"],
+      "forbiddenActions": ["apply_stale_or_conflicting_change_set", "repeat_apply_or_repeat_rollback", "direct_platform_mutation_outside_platform_control"]
+    },
+    {
+      "id": "platform-change-rollback-operator",
+      "role": "Authorized operator restoring a captured safe baseline",
+      "permittedActions": ["rollback_applied_change_set_with_reason", "read_redacted_append_only_audit"],
+      "forbiddenActions": ["rollback_without_reason", "repeat_apply_or_repeat_rollback", "delete_or_rewrite_change_history"]
+    },
+    {
+      "id": "platform-auditor",
+      "role": "Authorized reader of immutable redacted platform change evidence",
+      "permittedActions": ["list_change_sets", "read_change_set_diff_and_expected_impact", "read_redacted_append_only_audit"],
+      "forbiddenActions": ["store_proposed_values_in_audit_payload", "delete_or_rewrite_change_history"]
+    },
+    {
+      "id": "platform-control-service",
+      "role": "Sole owner of validation reservation workflow persistence atomic application rollback and audit",
+      "permittedActions": ["validate_current_target_preconditions", "atomically_apply_approved_change_set", "rollback_applied_change_set_with_reason", "read_redacted_append_only_audit"],
+      "forbiddenActions": ["store_secret_or_credential_values_in_change_sets", "snapshot_existing_sensitive_target_values", "silently_ignore_scope_for_feature_flags", "store_proposed_values_in_audit_payload"]
+    }
   ],
-  "requiredSurfaces": ["control-panel"],
-  "impactedSurfaces": ["app-client", "app-partner", "app-captain", "app-field", "webapp", "website"],
-  "services": ["PLATFORM_CONTROL", "DSH_CONTROL_PANEL"],
-  "entities": ["platform_change_set", "platform_change_set_item", "platform_variable", "platform_feature_flag", "platform_audit_event"],
-  "states": {
-    "changeSet": ["draft", "validated", "submitted", "approved", "rejected", "applied", "rolled_back", "failed"]
+  "surfaces": [
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["platform-change-proposer", "platform-change-reviewer", "platform-change-applier", "platform-change-rollback-operator", "platform-auditor"],
+      "routesOrScreens": ["PlatformChangeWorkflowPanel", "platform change workflow workspace"],
+      "operationIds": ["listPlatformChangeSetsJRN040", "getPlatformChangeSetJRN040", "createPlatformChangeSetJRN040", "validatePlatformChangeSetJRN040", "submitPlatformChangeSetJRN040", "approvePlatformChangeSetJRN040", "rejectPlatformChangeSetJRN040", "applyPlatformChangeSetJRN040", "rollbackPlatformChangeSetJRN040"],
+      "states": ["loading", "empty", "draft", "validated", "submitted", "approved", "rejected", "applied", "rolled_back", "failed", "forbidden", "conflict", "offline", "error"],
+      "actions": ["list", "create draft", "inspect item diff", "validate", "submit", "approve", "reject with reason", "apply", "rollback with reason", "refresh canonical readback"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["platform-control-service", "platform-change-proposer", "platform-change-reviewer", "platform-change-applier", "platform-change-rollback-operator", "platform-auditor"],
+      "routesOrScreens": ["platform-control JRN-040 HTTP routes", "strict service boundary", "PostgreSQL repository"],
+      "operationIds": ["listPlatformChangeSetsJRN040", "getPlatformChangeSetJRN040", "createPlatformChangeSetJRN040", "validatePlatformChangeSetJRN040", "submitPlatformChangeSetJRN040", "approvePlatformChangeSetJRN040", "rejectPlatformChangeSetJRN040", "applyPlatformChangeSetJRN040", "rollbackPlatformChangeSetJRN040"],
+      "states": ["draft", "validated", "submitted", "approved", "rejected", "applied", "rolled_back", "failed", "target_conflict", "version_conflict", "maker_checker_violation", "sensitive_value_forbidden"],
+      "actions": ["authorize", "validate", "reserve target", "enforce maker checker", "apply atomically", "restore baseline", "audit", "read back"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["platform-control-service"],
+      "routesOrScreens": ["platform_change_sets", "platform_change_set_items", "platform_variables", "platform_feature_flags", "platform_audit_events"],
+      "operationIds": [],
+      "states": ["serializable", "revision_checked", "target_reserved", "sensitive_rejected", "baseline_captured", "auditable"],
+      "actions": ["enforce status", "reject sensitive classification", "reject existing sensitive target", "retain validation snapshot", "apply atomically", "restore captured metadata"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["platform-change-proposer", "platform-change-reviewer", "platform-change-applier", "platform-change-rollback-operator", "platform-auditor"],
+      "routesOrScreens": ["services/dsh/frontend/shared/platform/platform-control.api.ts", "services/dsh/frontend/shared/platform/use-platform-change-workflow-controller.tsx"],
+      "operationIds": ["listPlatformChangeSetsJRN040", "getPlatformChangeSetJRN040", "createPlatformChangeSetJRN040", "validatePlatformChangeSetJRN040", "submitPlatformChangeSetJRN040", "approvePlatformChangeSetJRN040", "rejectPlatformChangeSetJRN040", "applyPlatformChangeSetJRN040", "rollbackPlatformChangeSetJRN040"],
+      "states": ["idle", "loading", "success", "forbidden", "conflict", "validation_failed", "offline", "error"],
+      "actions": ["call generated client", "map canonical state", "classify errors", "disable illegal transitions", "refresh after mutation"]
+    },
+    {
+      "id": "app-client",
+      "required": false,
+      "exclusionReason": "Customers consume resulting configuration but do not operate platform change sets.",
+      "actors": ["platform-auditor"],
+      "states": ["excluded"],
+      "actions": []
+    },
+    {
+      "id": "app-partner",
+      "required": false,
+      "exclusionReason": "Partners consume resulting configuration but do not operate platform change sets.",
+      "actors": ["platform-auditor"],
+      "states": ["excluded"],
+      "actions": []
+    },
+    {
+      "id": "app-captain",
+      "required": false,
+      "exclusionReason": "Captains consume resulting configuration but do not operate platform change sets.",
+      "actors": ["platform-auditor"],
+      "states": ["excluded"],
+      "actions": []
+    },
+    {
+      "id": "app-field",
+      "required": false,
+      "exclusionReason": "Field operators consume resulting configuration but do not operate platform change sets.",
+      "actors": ["platform-auditor"],
+      "states": ["excluded"],
+      "actions": []
+    }
+  ],
+  "outcome": {
+    "statement": "Platform changes move through one maker-checker lifecycle with live precondition snapshots, atomic apply, revision-safe rollback and immutable redacted audit evidence.",
+    "primaryMetric": "governed platform change sets completed without conflict secret exposure or audit loss",
+    "guardrailMetrics": ["maker-checker violation count", "stale apply count", "sensitive value persistence count", "rollback without reason count", "audit redaction failure count", "repeat apply or rollback count"],
+    "baselineState": "Change-set implementation exists but its product truth used a deprecated incompatible schema and lacked one permanent full-stack verification path.",
+    "targetState": "The schema-valid product truth, authoritative OpenAPI, generated client, strict service boundary, PostgreSQL protections and control-panel workflow agree on one governed lifecycle.",
+    "observationWindow": "targeted static database Go HTTP OpenAPI generated-client TypeScript control-panel security governance CI and independent review"
   },
-  "allowedActions": [
-    "list_change_sets",
-    "create_multi_item_draft",
-    "read_change_set_diff_and_expected_impact",
-    "validate_current_target_preconditions",
-    "submit_validated_change_set",
-    "independently_approve_or_reject_submitted_change_set",
-    "atomically_apply_approved_change_set",
-    "rollback_applied_change_set_with_reason",
-    "read_redacted_append_only_audit"
-  ],
-  "forbiddenActions": [
-    "direct_platform_mutation_outside_platform_control",
-    "submit_without_validation_snapshot",
-    "approve_or_reject_own_change_set",
-    "apply_stale_or_conflicting_change_set",
-    "repeat_apply_or_repeat_rollback",
-    "rollback_without_reason",
-    "store_secret_or_credential_values_in_change_sets",
-    "snapshot_existing_sensitive_target_values",
-    "store_proposed_values_in_audit_payload",
-    "silently_ignore_scope_for_feature_flags",
-    "delete_or_rewrite_change_history"
-  ],
-  "negativeInvariants": [
-    "Every item declares target identity, owner, scope, value type, classification, expected revision, and proposed JSON value.",
-    "Validation captures the full current target state and revision atomically and reserves the target while the request is active.",
-    "Submit, approval, and apply fail when the target no longer matches the validation snapshot.",
-    "The proposer cannot approve or reject the same request even when holding reviewer permissions.",
-    "Apply is atomic across all items and advances each target revision exactly once.",
-    "Rollback requires an explicit reason, verifies the applied revision, and restores value plus owner, type, classification, status, and feature targeting metadata.",
-    "Sensitive classifications, existing sensitive targets, and secret-shaped JSON fields are rejected before any change-set snapshot can be persisted.",
-    "Audit payloads record target metadata and transitions while redacting proposed and prior values."
-  ],
-  "acceptanceCriteria": [
-    "The control panel lists change sets, creates drafts, and exposes reason, expected impact, rollback plan, actors, timestamps, and item-level before/proposed/revision detail.",
-    "Validation performs live revision checks and prevents another active change set from reserving the same target.",
-    "Maker-checker is enforced for both approval and rejection.",
-    "Apply and rollback use serializable transactions, target locks, optimistic revisions, and immutable audit events.",
-    "Rollback reasons are required by the API contract and user interface.",
-    "Variable and feature-flag metadata survive an apply-and-rollback cycle.",
-    "Sensitive existing targets cannot enter the request or its validation snapshots.",
-    "Targeted Go integration tests, authoritative OpenAPI and generated-client checks, frontend binding checks, product contract checks, and migration checks pass on one immutable branch commit."
-  ],
-  "independentApprovalsRequired": [
-    "product-manager",
-    "product-owner",
-    "independent-quality",
-    "application-security",
-    "release-production"
-  ]
+  "acceptance": {
+    "criteria": [
+      "The control panel lists change sets and exposes reason impact rollback plan actors timestamps and item-level before proposed and revision detail.",
+      "Validation captures current target state and revision and prevents another active request from reserving the same target.",
+      "Maker-checker separation is enforced for approval and rejection.",
+      "Apply and rollback use serializable transactions target locks optimistic revisions and immutable audit events.",
+      "Rollback reasons are required by the API contract service boundary and user interface.",
+      "Variable and feature-flag metadata survive an apply-and-rollback cycle.",
+      "Sensitive classifications existing sensitive targets and secret-shaped proposed JSON are rejected before persistence.",
+      "Authoritative OpenAPI generated client shared controller control-panel binding migrations and targeted tests pass on one immutable commit."
+    ],
+    "failureStates": ["missing validation snapshot", "maker-checker bypass", "target conflict", "version conflict", "sensitive value accepted", "partial apply", "rollback without reason", "metadata loss", "audit value leakage", "frontend-only success"],
+    "requiredChecks": ["product truth schema", "JRN-040 static gate", "PostgreSQL migration application", "database sensitive-boundary tests", "platform-control Go tests", "HTTP workflow tests", "OpenAPI parse", "generated-client typecheck", "shared controller typecheck", "control-panel binding typecheck", "workflow security", "independent product security QA release and production review"],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": ["Platform Control exclusively owns change-set persistence and mutation.", "Every item declares target identity owner scope value type classification expected revision and proposed JSON value.", "Validation reserves targets and captures a current revision snapshot.", "Apply is atomic across all items and advances each target revision exactly once.", "Rollback restores value owner type classification status and feature targeting metadata.", "Audit records transitions and target metadata without proposed or prior values."],
+    "negative": ["No direct platform mutation occurs outside Platform Control.", "No proposer approves or rejects the same request.", "No stale or conflicting request is applied.", "No rollback occurs without an explicit reason.", "No secret credential sensitive target or secret-shaped JSON enters a change set.", "No change history is deleted or rewritten.", "No implementation actor self-approves protected product release or production closure."]
+  },
+  "owners": {
+    "productManager": "Platform Runtime Product Management",
+    "productOwner": "Platform Change Operations Product Owner",
+    "uxJourneyOwner": "Control Panel Platform Operations Experience Owner",
+    "engineeringOwner": "Platform Control Full-Stack Engineering",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-040 product contract code data API shared frontend and CI gaps without deploying production or self-approving protected evidence.",
+    "fixedConstraints": ["Repository mode is REMOTE_ONLY on sambassam.", "Platform Control remains the sole owner of platform change mutations.", "Maker-checker and sensitive-value boundaries remain fail-closed.", "No PR merge force push release production deployment or SaaS activation is authorized.", "Independent product security QA release and risk approvals cannot be self-issued by engineering."],
+    "variableScope": ["Arabic operational wording", "non-secret diagnostics", "control-panel layout", "focused test grouping"],
+    "forbiddenScope": ["direct DSH platform mutation", "frontend-owned change truth", "committed secrets", "production deployment", "commercial SaaS activation", "fake runtime evidence", "self-approval of protected gates"],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": ["Independent product manager approval outcome", "Independent product owner approval outcome", "Live runtime database outcome", "Visual accessibility and weak-network outcome", "Independent security QA release and production outcomes"]
+  }
 }
