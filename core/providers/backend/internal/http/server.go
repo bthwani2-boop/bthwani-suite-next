@@ -23,6 +23,7 @@ func NewRouter(db *sql.DB, service *providers.Service, repo *providers.Repositor
 	s := &server{db: db, service: service, repo: repo, auth: authClient}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /providers/health", s.health)
+	mux.HandleFunc("GET /providers/readiness", s.readiness)
 	mux.HandleFunc("GET /providers", s.operatorOnly("provider:read", s.listProviders))
 	mux.HandleFunc("GET /providers/{providerId}", s.operatorOnly("provider:read", s.getProvider))
 	mux.HandleFunc("PATCH /providers/{providerId}", s.operatorOnly("provider:update", s.updateProvider))
@@ -74,6 +75,17 @@ func (s *server) health(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendJSON(w, http.StatusOK, resp)
+}
+
+func (s *server) readiness(w http.ResponseWriter, r *http.Request) {
+	if s.db == nil || s.db.PingContext(r.Context()) != nil {
+		sendJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"status": "not_ready",
+			"reason": "database_unavailable",
+		})
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 
 // ---- auth guards ----
