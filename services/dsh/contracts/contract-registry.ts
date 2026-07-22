@@ -137,6 +137,7 @@ export const DSH_CONTRACT_REGISTRY = [
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "PARENT_GENERATED_SUBSET",
+    generatedClient: "clients/generated/dsh-api.ts",
     adapterOwner: "frontend/shared/partner",
   },
   {
