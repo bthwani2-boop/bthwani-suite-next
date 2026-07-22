@@ -31,6 +31,10 @@ func financeReadPathAllowed(path string) bool {
 		parts := strings.Split(rest, "/")
 		return (len(parts) == 1 || (len(parts) == 2 && parts[1] == "audit")) && strings.TrimSpace(parts[0]) != ""
 	}
+	if rest, ok := strings.CutPrefix(path, "/wlt/payout-requests/"); ok {
+		parts := strings.Split(rest, "/")
+		return (len(parts) == 1 || (len(parts) == 2 && parts[1] == "audit")) && strings.TrimSpace(parts[0]) != ""
+	}
 	for _, prefix := range []string{"/wlt/reconciliation-cases/", "/wlt/commissions/"} {
 		if rest, ok := strings.CutPrefix(path, prefix); ok { return rest != "" && !strings.Contains(rest, "/") }
 	}
@@ -95,7 +99,7 @@ func (c *Client) FinanceWriteWithTenant(ctx context.Context, method, path string
 func financeWritePathAllowed(path string) bool {
 	if path == "/wlt/payout-requests" || path == "/wlt/refunds" { return true }
 	for prefix, actions := range map[string]map[string]struct{}{
-		"/wlt/payout-requests/": {"approve": {}, "reject": {}, "process": {}, "complete": {}, "fail": {}},
+		"/wlt/payout-requests/": {"approve": {}, "reject": {}, "process": {}, "complete": {}, "fail": {}, "reconcile": {}},
 		"/wlt/reconciliation-cases/": {"assign": {}, "resolve": {}},
 		"/wlt/refunds/": {"approve": {}, "reject": {}, "complete": {}, "reconcile": {}},
 	} {
