@@ -14,6 +14,7 @@ on:
       - "services/wlt/backend/internal/dshnotify/**"
       - "services/wlt/backend/internal/http/server.go"
       - "services/wlt/database/migrations/wlt-037_jrn_035_refund_governance.sql"
+      - "services/wlt/database/migrations/wlt-092_jrn_035_refund_operation_idempotency.sql"
       - "services/wlt/database/tests/jrn-035-refund-invariants.sql"
       - "infra/docker/scripts/wlt-migration-probes.ps1"
       - "services/dsh/backend/internal/http/refund_finance_*"
