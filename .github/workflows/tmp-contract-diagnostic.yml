@@ -1,0 +1,55 @@
+name: Temporary Contract Diagnostic
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-contract-diagnostic.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/tmp-contract-diagnostic.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: temporary-contract-diagnostic-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: Capture contract and binding output
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Capture contract diagnostics
+        shell: bash
+        run: |
+          set +e
+          : > contract-diagnostic.log
+          for command in \
+            "pnpm run contracts:lint" \
+            "pnpm run guard:api-binding" \
+            "pnpm run guard:backend-api-binding" \
+            "pnpm run guard:service-manifest-drift" \
+            "pnpm run guard:frontend-feature-binding"; do
+            echo "### ${command}" >> contract-diagnostic.log
+            bash -lc "${command}" >> contract-diagnostic.log 2>&1
+            echo "exit=$?" >> contract-diagnostic.log
+            echo >> contract-diagnostic.log
+          done
+          exit 0
+      - name: Upload contract diagnostic
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: contract-diagnostic
+          path: contract-diagnostic.log
+          if-no-files-found: error
+          retention-days: 1
