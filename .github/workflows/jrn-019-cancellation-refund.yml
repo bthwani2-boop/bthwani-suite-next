@@ -22,6 +22,26 @@ on:
       - 'services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx'
       - 'services/dsh/frontend/control-panel/operations/OrderJourneyOperatorIntervention.tsx'
       - 'services/dsh/tests/jrn-019-cancellation-refund-closure.test.mjs'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/jrn-019-cancellation-refund.yml'
+      - 'services/dsh/backend/internal/http/order_cancellations.go'
+      - 'services/dsh/backend/internal/http/order_cancellations_compatibility_test.go'
+      - 'services/dsh/backend/internal/orders/**'
+      - 'services/dsh/backend/internal/checkoutfinanceoutbox/**'
+      - 'services/dsh/backend/internal/wlt/**'
+      - 'services/dsh/backend/internal/pickup/**'
+      - 'services/dsh/backend/internal/partnerdelivery/**'
+      - 'services/dsh/backend/cmd/dsh-api/main.go'
+      - 'services/dsh/database/migrations/dsh-090_order_cancellation_refund_lifecycle.sql'
+      - 'services/dsh/database/migrations/dsh-091_pickup_cancellation_state.sql'
+      - 'services/dsh/frontend/shared/orders/**'
+      - 'services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx'
+      - 'services/dsh/frontend/app-partner/orders/OperationalOrderDecisionScreen.tsx'
+      - 'services/dsh/frontend/control-panel/operations/OrderJourneyOperatorIntervention.tsx'
+      - 'services/dsh/tests/jrn-019-cancellation-refund-closure.test.mjs'
 
 permissions:
   contents: read
