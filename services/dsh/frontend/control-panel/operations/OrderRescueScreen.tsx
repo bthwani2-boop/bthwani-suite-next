@@ -13,7 +13,7 @@ import {
 import {
   useOrderRescueController,
   type DshGovernedOrderRescueCase,
-  type DshOrderRescueStatus,
+  type DshGovernedOrderRescueStatus,
 } from '../../shared/support';
 
 export type OrderRescueScreenProps = {
@@ -21,7 +21,7 @@ export type OrderRescueScreenProps = {
   subGroup?: string;
 };
 
-const STATUS_LABELS: Readonly<Record<DshOrderRescueStatus, string>> = {
+const STATUS_LABELS: Readonly<Record<DshGovernedOrderRescueStatus, string>> = {
   open: 'مفتوحة',
   investigating: 'قيد التحقيق',
   action_required: 'تحتاج إجراء',
@@ -29,7 +29,7 @@ const STATUS_LABELS: Readonly<Record<DshOrderRescueStatus, string>> = {
   closed: 'مغلقة',
 };
 
-function statusTone(status: DshOrderRescueStatus): 'neutral' | 'warning' | 'success' | 'danger' {
+function statusTone(status: DshGovernedOrderRescueStatus): 'neutral' | 'warning' | 'success' | 'danger' {
   if (status === 'resolved' || status === 'closed') return 'success';
   if (status === 'action_required') return 'danger';
   if (status === 'investigating') return 'warning';
@@ -71,7 +71,7 @@ export function OrderRescueScreen({ hubHref, subGroup }: OrderRescueScreenProps)
 
   const updateStatus = React.useCallback(async (
     rescueCase: DshGovernedOrderRescueCase,
-    status: DshOrderRescueStatus,
+    status: DshGovernedOrderRescueStatus,
   ) => {
     const note = operatorNote.trim();
     const resolving = status === 'resolved' || status === 'closed';
