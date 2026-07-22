@@ -88,11 +88,31 @@ func TestJRN040ConflictStaleSnapshotAndMetadataRollback(t *testing.T) {
 INSERT INTO platform_variables
   (variable_key, owner_service, value_type, classification, scope_type, scope_id, value_json, revision, status)
 VALUES
-  ('JRN040_TARGET', 'legacy-owner', 'integer', 'public', 'global', '', '5'::jsonb, 1, 'inactive')`); err != nil {
-		t.Fatalf("seed variable: %v", err)
+  ('JRN040_TARGET', 'legacy-owner', 'integer', 'public', 'global', '', '5'::jsonb, 1, 'inactive'),
+  ('JRN040_SECRET', 'vault', 'json', 'secret', 'global', '', '{"credential":"redacted"}'::jsonb, 1, 'active')`); err != nil {
+		t.Fatalf("seed variables: %v", err)
 	}
 
 	service := NewService(NewRepository(db))
+	if _, err := service.CreateChangeSet(ctx, "maker", nil, "secret-target", CreateChangeSetInput{
+		Title:            "must not snapshot secret",
+		Reason:           "negative proof",
+		ImpactAssessment: "must fail before persistence",
+		RollbackPlan:     "not applicable",
+		Items: []CreateChangeSetItemInput{{
+			TargetType:       ChangeTargetVariable,
+			TargetKey:        "JRN040_SECRET",
+			OwnerService:     "vault",
+			ScopeType:        "global",
+			ValueType:        "json",
+			Classification:   "internal",
+			ExpectedRevision: 1,
+			ProposedValue:    json.RawMessage(`{"enabled":false}`),
+		}},
+	}); !errors.Is(err, ErrSensitiveValue) {
+		t.Fatalf("expected existing sensitive target rejection, got %v", err)
+	}
+
 	create := func(title string, expectedRevision int64) ChangeSet {
 		changeSet, createErr := service.CreateChangeSet(ctx, "maker", []string{"platform-operator"}, title, CreateChangeSetInput{
 			Title:            title,
