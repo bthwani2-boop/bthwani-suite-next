@@ -10,6 +10,9 @@ const serviceAuth = read("services/wlt/backend/internal/shared/serviceauth.go");
 const dshReadback = read("services/dsh/backend/internal/wlt/promotion_funding_read.go");
 const diagnostics = read("services/dsh/backend/internal/coupons/funding_diagnostics.go");
 const couponsHTTP = read("services/dsh/backend/internal/http/coupons.go");
+const couponTypes = read("services/dsh/frontend/shared/marketing/coupons.types.ts");
+const couponsController = read("services/dsh/frontend/shared/marketing/use-coupons-controller.ts");
+const couponsDeck = read("services/dsh/frontend/control-panel/marketing/components/CouponsCommandDeck.tsx");
 const panel = read("services/dsh/frontend/control-panel/marketing/components/CouponFundingReconciliationPanel.tsx");
 const dashboard = read("services/dsh/frontend/control-panel/marketing/MarketingDashboardScreen.tsx");
 
@@ -29,8 +32,14 @@ const slices = [
     assert.match(couponsHTTP, /ListFundingLifecycleDiagnostics/);
     assert.match(couponsHTTP, /GetPromotionFundingReservation/);
     assert.match(couponsHTTP, /"fundingLifecycle"/);
+    assert.match(couponTypes, /CouponFundingLifecycleRecord/);
+    assert.match(couponTypes, /readonly fundingLifecycle/);
+    assert.match(couponsController, /fundingLifecycle: response\.fundingLifecycle/);
+    assert.match(couponsDeck, /<CouponFundingReconciliationPanel/);
+    assert.match(couponsDeck, /records=\{fundingLifecycle\}/);
     assert.match(panel, /مصالحة تمويل العروض/);
-    assert.match(dashboard, /CouponFundingReconciliationPanel/);
+    assert.doesNotMatch(panel, /createDshRawHttpClient/);
+    assert.doesNotMatch(dashboard, /CouponFundingReconciliationPanel/);
   }],
   ["FS-13..16 safety, privacy and recovery", () => {
     assert.match(diagnostics, /wlt_unavailable/);
