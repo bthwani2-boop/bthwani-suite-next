@@ -8,6 +8,7 @@ import type {
   DshNotificationPreference,
   DshNotificationPushEndpoint,
   DshPlatformNotificationConfig,
+  DshPushDeliveryAudit,
   DshUpdateNotificationPreferenceInput,
   DshUpsertNotificationPushEndpointInput,
   DshUpsertPlatformNotificationConfigInput,
@@ -73,6 +74,7 @@ export async function fetchNotificationDeliveryAttempts(
   limit = 100,
 ): Promise<{
   attempts: DshNotificationDeliveryAttempt[];
+  pushDeliveries: DshPushDeliveryAudit[];
   summary: DshNotificationDeliveryAuditSummary;
 }> {
   const query = new URLSearchParams({ limit: String(limit) });
