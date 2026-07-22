@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, StateView, Text, type StateTone } from '@bthwani/ui-kit';
+import { Box, Button, StateView, Text, TextField, type StateTone } from '@bthwani/ui-kit';
 import { WebControlPanelKpiStrip, WebControlPanelDecisionRow } from '@bthwani/ui-kit/web';
 import { buildOperationsHref } from '../operations/operations-registry';
 import type { OperationsFocusParams } from '../operations/operations.types';
@@ -345,79 +345,77 @@ export function OperatorSpecialRequestsWorkbench({ requestType, title, stageLabe
                 ))}
               </select>
             </label>
-            <label>
-              المشغّل المسؤول
-              <input
-                value={form.assignedOperatorId}
-                onChange={(event) => updateForm('assignedOperatorId', event.target.value)}
-                disabled={pendingAction !== null}
-              />
-            </label>
-            <label>
-              سبب الرفض أو الملاحظة الحاكمة
-              <input
-                value={form.rejectionReason}
-                onChange={(event) => updateForm('rejectionReason', event.target.value)}
-                disabled={pendingAction !== null}
-              />
-            </label>
-            <button type="button" onClick={() => void handleTransition()} disabled={pendingAction !== null}>
-              {pendingAction === 'transition' ? 'جارٍ تطبيق الانتقال...' : 'تطبيق الانتقال وقراءة النتيجة'}
-            </button>
+            <TextField
+              label="المشغّل المسؤول"
+              value={form.assignedOperatorId}
+              onChangeText={(value) => updateForm('assignedOperatorId', value)}
+              disabled={pendingAction !== null}
+            />
+            <TextField
+              label="سبب الرفض أو الملاحظة الحاكمة"
+              value={form.rejectionReason}
+              onChangeText={(value) => updateForm('rejectionReason', value)}
+              disabled={pendingAction !== null}
+            />
+            <Button
+              label={pendingAction === 'transition' ? 'جارٍ تطبيق الانتقال...' : 'تطبيق الانتقال وقراءة النتيجة'}
+              tone="primary"
+              loading={pendingAction === 'transition'}
+              disabled={pendingAction !== null}
+              onPress={() => void handleTransition()}
+            />
           </Box>
 
           <Box gap={2}>
             <Text role="titleSm">عرض السعر وموافقة العميل</Text>
-            <label>
-              القيمة بالوحدة الصغرى
-              <input
-                type="number"
-                min={1}
-                value={form.estimatedAmountMinorUnits}
-                onChange={(event) => updateForm('estimatedAmountMinorUnits', event.target.value)}
-                disabled={pendingAction !== null}
-              />
-            </label>
-            <label>
-              العملة
-              <input
-                value={form.currency}
-                onChange={(event) => updateForm('currency', event.target.value)}
-                disabled={pendingAction !== null}
-              />
-            </label>
-            <button type="button" onClick={() => void handleQuote()} disabled={pendingAction !== null}>
-              {pendingAction === 'quote' ? 'جارٍ إرسال العرض...' : 'إرسال العرض للعميل'}
-            </button>
+            <TextField
+              label="القيمة بالوحدة الصغرى"
+              value={form.estimatedAmountMinorUnits}
+              keyboardType="numeric"
+              onChangeText={(value) => updateForm('estimatedAmountMinorUnits', value)}
+              disabled={pendingAction !== null}
+            />
+            <TextField
+              label="العملة"
+              value={form.currency}
+              autoCapitalize="characters"
+              onChangeText={(value) => updateForm('currency', value)}
+              disabled={pendingAction !== null}
+            />
+            <Button
+              label={pendingAction === 'quote' ? 'جارٍ إرسال العرض...' : 'إرسال العرض للعميل'}
+              tone="primary"
+              loading={pendingAction === 'quote'}
+              disabled={pendingAction !== null}
+              onPress={() => void handleQuote()}
+            />
           </Box>
 
           <Box gap={2}>
             <Text role="titleSm">إسناد الكابتن</Text>
-            <label>
-              معرّف الكابتن
-              <input
-                value={form.captainId}
-                onChange={(event) => updateForm('captainId', event.target.value)}
-                disabled={pendingAction !== null || Boolean(selectedRequest.dispatchAssignmentId)}
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => void handleDispatch()}
+            <TextField
+              label="معرّف الكابتن"
+              value={form.captainId}
+              onChangeText={(value) => updateForm('captainId', value)}
               disabled={pendingAction !== null || Boolean(selectedRequest.dispatchAssignmentId)}
-            >
-              {selectedRequest.dispatchAssignmentId
+            />
+            <Button
+              label={selectedRequest.dispatchAssignmentId
                 ? 'تم إنشاء الإسناد'
                 : pendingAction === 'dispatch'
                   ? 'جارٍ إنشاء الإسناد...'
                   : 'إسناد الطلب للكابتن'}
-            </button>
+              tone={selectedRequest.dispatchAssignmentId ? 'success' : 'primary'}
+              loading={pendingAction === 'dispatch'}
+              disabled={pendingAction !== null || Boolean(selectedRequest.dispatchAssignmentId)}
+              onPress={() => void handleDispatch()}
+            />
           </Box>
 
           <Text role="bodySm">الإجراءات المتاحة: {selectedRequest.allowedActions?.join('، ') || 'تتحقق عند التنفيذ من الباك إند'}</Text>
           <Text role="bodySm">أسباب الحظر: {selectedRequest.blockingReasons?.join('، ') || 'لا يوجد سبب حظر معلن'}</Text>
           <Text role="bodySm">الاستثناء: {selectedRequest.rejectionReason || 'لا يوجد'}</Text>
-          {feedback ? <p role="status">{feedback}</p> : null}
+          {feedback ? <Text role="bodySm" tone="secondary">{feedback}</Text> : null}
         </Box>
       ) : null}
     </Box>
