@@ -1,0 +1,160 @@
+name: JRN-042 providers readiness contract one-shot
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - '.github/workflows/jrn-042-contract-oneshot.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jrn-042-contract-one-shot
+  cancel-in-progress: false
+
+jobs:
+  apply-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout latest sambassam
+        uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+
+      - name: Patch canonical Providers contract and generated client
+        shell: python
+        run: |
+          from pathlib import Path
+
+          contract_path = Path('core/providers/contracts/providers.openapi.yaml')
+          contract = contract_path.read_text(encoding='utf-8')
+          contract = contract.replace('version: 0.3.0', 'version: 0.4.0', 1)
+          if '  /providers/readiness:' not in contract:
+              marker = '\n  /providers:\n'
+              readiness = '''
+  /providers/readiness:
+    get:
+      operationId: getExternalProviderReadiness
+      summary: Return database-backed runtime readiness for the Providers service.
+      description: Readiness is reported only when the service can reach its sovereign PostgreSQL database. External provider configuration does not affect process readiness.
+      tags: [ExternalProviderHealth]
+      responses:
+        "200":
+          description: Providers runtime is ready to serve database-backed requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeReadinessResponse"
+        "503":
+          description: Providers runtime is not ready because its sovereign database is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeReadinessResponse"
+'''
+              if marker not in contract:
+                  raise SystemExit('providers path marker is missing')
+              contract = contract.replace(marker, '\n' + readiness + marker, 1)
+          if '    RuntimeReadinessResponse:' not in contract:
+              marker = '\n    ExternalProvider:\n'
+              schema = '''
+    RuntimeReadinessResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        reason:
+          type: string
+          enum: [database_unavailable]
+'''
+              if marker not in contract:
+                  raise SystemExit('provider schema marker is missing')
+              contract = contract.replace(marker, '\n' + schema + marker, 1)
+          contract_path.write_text(contract, encoding='utf-8')
+
+          client_path = Path('core/providers/clients/generated/providers-api.ts')
+          client = client_path.read_text(encoding='utf-8')
+          if '"/providers/readiness"' not in client:
+              marker = '  "/providers": {'
+              path_block = '''  "/providers/readiness": {
+    parameters: { query?: never; header?: never; path?: never; cookie?: never };
+    get: operations["getExternalProviderReadiness"];
+    put?: never; post?: never; delete?: never; options?: never; head?: never; patch?: never; trace?: never;
+  };
+'''
+              if marker not in client:
+                  raise SystemExit('generated providers path marker is missing')
+              client = client.replace(marker, path_block + marker, 1)
+          if 'RuntimeReadinessResponse' not in client:
+              marker = '    ExternalProvider: {'
+              schema_block = '''    RuntimeReadinessResponse: {
+      status: "ready" | "not_ready";
+      reason?: "database_unavailable";
+    };
+'''
+              if marker not in client:
+                  raise SystemExit('generated providers schema marker is missing')
+              client = client.replace(marker, schema_block + marker, 1)
+          if 'getExternalProviderReadiness:' not in client:
+              marker = '  listProviders: EmptyRequest & {'
+              operation_block = '''  getExternalProviderReadiness: EmptyRequest & {
+    parameters: EmptyParameters;
+    responses: {
+      200: JsonResponse<components["schemas"]["RuntimeReadinessResponse"]>;
+      503: JsonResponse<components["schemas"]["RuntimeReadinessResponse"]>;
+    };
+  };
+'''
+              if marker not in client:
+                  raise SystemExit('generated operation marker is missing')
+              client = client.replace(marker, operation_block + marker, 1)
+          client_path.write_text(client, encoding='utf-8')
+
+      - name: Verify canonical contract and generated binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '^  /providers/readiness:' core/providers/contracts/providers.openapi.yaml
+          grep -q 'operationId: getExternalProviderReadiness' core/providers/contracts/providers.openapi.yaml
+          grep -q '"/providers/readiness"' core/providers/clients/generated/providers-api.ts
+          grep -q 'getExternalProviderReadiness' core/providers/clients/generated/providers-api.ts
+
+      - name: Set up Providers Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: core/providers/backend/go.mod
+          cache-dependency-path: core/providers/backend/go.sum
+
+      - name: Test Providers readiness handler
+        working-directory: core/providers/backend
+        run: go test ./internal/http ./internal/providers
+
+      - name: Commit contract closure to sambassam
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add core/providers/contracts/providers.openapi.yaml core/providers/clients/generated/providers-api.ts
+          if git diff --cached --quiet; then
+            echo 'Providers readiness contract already applied.'
+            exit 0
+          fi
+          git commit -m 'feat(jrn-042): contract providers runtime readiness [skip ci]'
+          for attempt in 1 2 3 4; do
+            git fetch origin sambassam
+            git rebase origin/sambassam
+            if git push origin HEAD:sambassam; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((attempt * 2))
+          done
+          echo 'Unable to push contract closure after bounded retries.' >&2
+          exit 1
