@@ -1,23 +1,26 @@
-name: JRN-041 progressive rollout verification
+name: JRN-041 Progressive Rollout Verification
 
 on:
+  workflow_dispatch:
   push:
     branches: [sambassam]
-    paths:
-      - 'governance/product/contracts/jrn-041-progressive-rollout-rollback.product-truth.json'
-      - 'governance/runbooks/JRN-041_PROGRESSIVE_ROLLOUT_RECOVERY.md'
-      - 'governance/evidence/JRN-041_SLICE_EXECUTION_LOG.md'
-      - 'core/platform-control/backend/internal/platformcontrol/**'
-      - 'core/platform-control/backend/internal/http/**'
-      - 'core/platform-control/database/migrations/platform-004_jrn041_rollout_governance.sql'
-      - 'core/platform-control/contracts/jrn-041-progressive-rollout.openapi.yaml'
-      - 'core/platform-control/service.manifest.ts'
-      - 'services/dsh/frontend/shared/platform/**'
-      - 'services/dsh/frontend/control-panel/platform/**'
-      - 'services/dsh/tsconfig.jrn-041.json'
-      - 'tools/guards/jrn-041-progressive-rollout-gate.mjs'
-      - '.github/workflows/jrn-041-progressive-rollout-verification.yml'
-  workflow_dispatch:
+    paths: &jrn041_paths
+      - "governance/product/contracts/jrn-041-progressive-rollout-rollback.product-truth.json"
+      - "governance/runbooks/JRN-041_PROGRESSIVE_ROLLOUT_RECOVERY.md"
+      - "governance/evidence/JRN-041_SLICE_EXECUTION_LOG.md"
+      - "core/platform-control/backend/internal/platformcontrol/**"
+      - "core/platform-control/backend/internal/http/**"
+      - "core/platform-control/database/migrations/platform-004_jrn041_rollout_governance.sql"
+      - "core/platform-control/contracts/jrn-041-progressive-rollout.openapi.yaml"
+      - "core/platform-control/service.manifest.ts"
+      - "services/dsh/frontend/shared/platform/**"
+      - "services/dsh/frontend/control-panel/platform/**"
+      - "services/dsh/tsconfig.jrn-041.json"
+      - "tools/guards/jrn-041-progressive-rollout-gate.mjs"
+      - ".github/workflows/jrn-041-progressive-rollout-verification.yml"
+  pull_request:
+    branches: [master]
+    paths: *jrn041_paths
 
 permissions:
   contents: read
@@ -27,39 +30,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  static-and-compile:
+  verify:
+    name: JRN-041 PostgreSQL rollout, rollback, contract, and surface proof
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - name: Checkout exact branch commit
-        uses: actions/checkout@v4
-      - name: Set up Go from Platform Control module
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: core/platform-control/backend/go.mod
-          cache-dependency-path: core/platform-control/backend/go.sum
-      - name: Platform Control unit and HTTP compile tests
-        working-directory: core/platform-control/backend
-        run: go test ./internal/platformcontrol ./internal/http
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.34.2
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Install workspace dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Focused control-panel rollout typecheck
-        run: pnpm exec tsc -p services/dsh/tsconfig.jrn-041.json --noEmit
-      - name: Product contract boundary and binding gate
-        run: node tools/guards/jrn-041-progressive-rollout-gate.mjs
-
-  postgres-journey:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16-alpine
@@ -78,23 +52,42 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/platform_control?sslmode=disable
       PGPASSWORD: postgres
     steps:
-      - name: Checkout exact branch commit
-        uses: actions/checkout@v4
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - name: Set up Go from Platform Control module
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: core/platform-control/backend/go.mod
           cache-dependency-path: core/platform-control/backend/go.sum
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: "10.34.2"
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Compile and test Platform Control owners
+        working-directory: core/platform-control/backend
+        run: go test ./internal/platformcontrol ./internal/http
+      - name: Typecheck focused control-panel rollout graph
+        run: pnpm exec tsc -p services/dsh/tsconfig.jrn-041.json --noEmit
+      - name: Verify product contract, boundary, and bindings
+        run: node tools/guards/jrn-041-progressive-rollout-gate.mjs
       - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply Platform Control migrations in order
         run: |
           for migration in core/platform-control/database/migrations/*.sql; do
-            echo "Applying ${migration}"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+            psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 -f "${migration}"
           done
       - name: Run governed rollout lifecycle against PostgreSQL 16
         working-directory: core/platform-control/backend
         run: go test ./internal/platformcontrol -run TestGovernedProgressiveRolloutJourney -count=1 -v
+      - name: Verify repository whitespace
+        run: git diff --check
