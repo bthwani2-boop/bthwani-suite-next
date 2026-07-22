@@ -86,7 +86,7 @@ if (typeof targetBranch !== "string" || targetBranch.length === 0) {
     ".github/workflows/security.yml",
     ".github/workflows/governance-audit.yml",
     ".github/workflows/dsh-operational-closure-ci.yml",
-    ".github/workflows/lian-fullstack-ci.yml",
+    ".github/workflows/jrn-040-platform-change-sets-verification.yml",
   ];
 
   for (const workflowFile of criticalWorkflows) {
