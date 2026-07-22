@@ -1,5 +1,6 @@
 export type DshNotificationChannel = "in_app" | "push";
 export type DshNotificationLocale = "ar" | "en";
+export type DshNotificationPushPlatform = "android" | "ios";
 
 export type DshNotification = {
   readonly id: string;
@@ -35,6 +36,26 @@ export type DshUpdateNotificationPreferenceInput = {
   readonly quietHoursEnd?: string | undefined;
   readonly locale: DshNotificationLocale;
   readonly timezone: string;
+};
+
+export type DshNotificationPushEndpoint = {
+  readonly id: string;
+  readonly actorId: string;
+  readonly actorType: string;
+  readonly provider: "expo";
+  readonly deviceId: string;
+  readonly platform: DshNotificationPushPlatform;
+  readonly active: boolean;
+  readonly lastSeenAt: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+export type DshUpsertNotificationPushEndpointInput = {
+  readonly provider: "expo";
+  readonly endpointToken: string;
+  readonly deviceId: string;
+  readonly platform: DshNotificationPushPlatform;
 };
 
 export type DshPlatformNotificationConfig = {
@@ -91,6 +112,9 @@ export type DshNotificationDeliveryAuditSummary = {
   readonly deadLetter: number;
   readonly pendingOutbox: number;
   readonly failedOutbox: number;
+  readonly sentPush: number;
+  readonly pendingPush: number;
+  readonly failedPush: number;
 };
 
 export type DshNotificationsState =
