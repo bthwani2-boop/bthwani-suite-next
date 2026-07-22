@@ -14,7 +14,7 @@ const inputStyle = {
   border: `1px solid ${lightThemeColors.borderColor}`,
   borderRadius: "0.5rem",
   padding: "0.7rem",
-  background: lightThemeColors.backgroundColor,
+  background: lightThemeColors.backgroundAlt,
   color: lightThemeColors.color,
 } as const;
 
@@ -138,7 +138,7 @@ export function RefundsCommandPanel() {
         </Card>
       ) : null}
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(300px,1fr) minmax(320px,1.2fr)", gap: "1rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))", gap: "1rem" }}>
         <Card style={{ padding: "1rem", display: "grid", gap: "0.7rem", alignContent: "start" }}>
           <Text role="titleMd">الاستردادات المرتبطة بالطلب</Text>
           {refundsController.state.kind === "error" ? <Text role="body">{refundsController.state.message}</Text> : null}
@@ -185,7 +185,7 @@ export function RefundsCommandPanel() {
                 {audit.state.kind === "error" ? <Text role="body">{audit.state.message}</Text> : null}
                 {audit.state.kind === "loaded" && audit.state.events.length === 0 ? <Text role="body" tone="muted">لا توجد أحداث.</Text> : null}
                 {audit.state.kind === "loaded" ? audit.state.events.map((event) => (
-                  <div key={event.id} style={{ padding: "0.5rem", borderRadius: "0.4rem", background: lightThemeColors.surfaceColor }}>
+                  <div key={event.id} style={{ padding: "0.5rem", borderRadius: "0.4rem", background: lightThemeColors.surfaceInset }}>
                     <Text role="body">{event.eventType}: {event.fromStatus ?? "—"} ← {event.toStatus}</Text>
                     <Text role="caption" tone="muted">{event.actorType} · {event.createdAt} · {event.reason ?? "بدون ملاحظة"}</Text>
                   </div>
