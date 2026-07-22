@@ -1,4 +1,0 @@
-journey=JRN-031
-requested_by=remote_operational_closure
-workflow=.github/workflows/jrn-031-administration-governance.yml
-product_truth=governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json
