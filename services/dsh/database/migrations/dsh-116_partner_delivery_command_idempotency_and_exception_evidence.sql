@@ -11,12 +11,14 @@ ALTER TABLE dsh_partner_delivery_tasks
 ALTER TABLE dsh_partner_delivery_tasks
     DROP CONSTRAINT IF EXISTS chk_dsh_partner_delivery_exception_reason;
 
+-- Enforce the invariant for all new or changed rows without inventing a reason
+-- for legacy exception rows that predate JRN-016 evidence persistence.
 ALTER TABLE dsh_partner_delivery_tasks
     ADD CONSTRAINT chk_dsh_partner_delivery_exception_reason
     CHECK (
         status <> 'exception'
         OR (exception_reason IS NOT NULL AND btrim(exception_reason) <> '')
-    );
+    ) NOT VALID;
 
 ALTER TABLE dsh_partner_delivery_tasks
     DROP CONSTRAINT IF EXISTS chk_dsh_partner_delivery_exception_evidence_array;
