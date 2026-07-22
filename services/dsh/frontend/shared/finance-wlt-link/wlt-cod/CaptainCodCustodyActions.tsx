@@ -1,5 +1,5 @@
 import React from "react";
-import { TextInput, View } from "react-native";
+import { StyleSheet, TextInput, View } from "react-native";
 import { Badge, Box, Button, KeyValueList, StateView, Text, useTheme } from "@bthwani/ui-kit";
 import type { WltDshCodReference } from "@bthwani/wlt";
 import {
@@ -35,6 +35,33 @@ function amountLabel(amountMinorUnits: number, currency: string): string {
 
 export function CaptainCodCustodyActions({ records, onMutated }: CaptainCodCustodyActionsProps) {
   const theme = useTheme() as any;
+  const styles = React.useMemo(
+    () => StyleSheet.create({
+      recordCard: {
+        borderWidth: 1,
+        borderColor: theme.line,
+        borderRadius: 12,
+        padding: 12,
+      },
+      recordHeader: {
+        flexDirection: "row-reverse",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+      },
+      input: {
+        borderWidth: 1,
+        borderColor: theme.line,
+        color: theme.text,
+        backgroundColor: theme.surfaceInset,
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 11,
+        textAlign: "right",
+      },
+    }),
+    [theme.line, theme.surfaceInset, theme.text],
+  );
   const actionable = records.filter((record) => record.status === "pending_collection" || record.status === "collected");
   const [actualByRecord, setActualByRecord] = React.useState<Record<string, string>>({});
   const [proofByRecord, setProofByRecord] = React.useState<Record<string, string>>({});
@@ -118,8 +145,8 @@ export function CaptainCodCustodyActions({ records, onMutated }: CaptainCodCusto
         const busy = state.kind === "submitting" && state.recordId === record.id;
         const collectionPending = record.status === "pending_collection";
         return (
-          <Box key={record.id} gap={3} style={{ borderWidth: 1, borderColor: theme.line, borderRadius: 12, padding: 12 }}>
-            <View style={{ flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <Box key={record.id} gap={3} style={styles.recordCard}>
+            <View style={styles.recordHeader}>
               <Text role="bodyStrong">طلب #{record.orderId}</Text>
               <Badge label={collectionPending ? "إثبات تحصيل" : "تسليم عهدة"} tone={collectionPending ? "info" : "warning"} />
             </View>
@@ -137,7 +164,7 @@ export function CaptainCodCustodyActions({ records, onMutated }: CaptainCodCusto
                 placeholder="المبلغ المستلم فعليًا بالوحدة الرئيسية"
                 keyboardType="decimal-pad"
                 editable={!busy}
-                style={{ borderWidth: 1, borderColor: theme.line, color: theme.text, backgroundColor: theme.surfaceInset, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, textAlign: "right" }}
+                style={styles.input}
               />
             ) : null}
             <TextInput
@@ -145,7 +172,7 @@ export function CaptainCodCustodyActions({ records, onMutated }: CaptainCodCusto
               onChangeText={(value) => setProofByRecord((current) => ({ ...current, [record.id]: value }))}
               placeholder={collectionPending ? "مرجع إثبات التحصيل" : "رقم إيصال/مرجع تسليم العهدة"}
               editable={!busy}
-              style={{ borderWidth: 1, borderColor: theme.line, color: theme.text, backgroundColor: theme.surfaceInset, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11, textAlign: "right" }}
+              style={styles.input}
             />
             <Button
               label={busy ? "جارٍ التسجيل..." : collectionPending ? "تأكيد التحصيل" : "تأكيد تسليم العهدة"}
