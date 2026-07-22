@@ -7,6 +7,8 @@ import type {
   DshNotificationDeliveryOutcome,
   DshNotificationPreference,
   DshPlatformNotificationConfig,
+  DshUpdateNotificationPreferenceInput,
+  DshUpsertPlatformNotificationConfigInput,
 } from "./notifications.types";
 
 const { req: request } = createDshRawHttpClient(resolveDshApiBaseUrl(), "notif");
@@ -28,12 +30,11 @@ export async function fetchNotificationPreferences(): Promise<{ preferences: Dsh
 }
 
 export async function updateNotificationPreferences(
-  topic: string,
-  enabled: boolean
+  input: DshUpdateNotificationPreferenceInput,
 ): Promise<{ preference: DshNotificationPreference }> {
   return request("/dsh/notifications/preferences", {
     method: "PUT",
-    body: JSON.stringify({ topic, enabled }),
+    body: JSON.stringify(input),
   });
 }
 
@@ -42,14 +43,11 @@ export async function fetchPlatformNotificationConfigs(): Promise<{ configs: Dsh
 }
 
 export async function upsertPlatformNotificationConfig(
-  topic: string,
-  actorTypes: string[],
-  isEnabled: boolean,
-  description: string
+  input: DshUpsertPlatformNotificationConfigInput,
 ): Promise<{ config: DshPlatformNotificationConfig }> {
   return request("/dsh/operator/notifications/config", {
     method: "PUT",
-    body: JSON.stringify({ topic, actorTypes, isEnabled, description }),
+    body: JSON.stringify(input),
   });
 }
 
