@@ -3,16 +3,16 @@ go: downloading github.com/lib/pq v1.12.3
 go: downloading golang.org/x/image v0.44.0
 go: downloading golang.org/x/crypto v0.51.0
 go: downloading github.com/minio/minio-go/v7 v7.2.1
+go: downloading gopkg.in/ini.v1 v1.67.2
 go: downloading github.com/cespare/xxhash/v2 v2.3.0
-go: downloading github.com/klauspost/compress v1.18.6
 go: downloading github.com/dustin/go-humanize v1.0.1
+go: downloading github.com/klauspost/compress v1.18.6
 go: downloading github.com/klauspost/crc32 v1.3.0
 go: downloading github.com/minio/crc64nvme v1.1.1
 go: downloading github.com/minio/md5-simd v1.1.2
 go: downloading github.com/zeebo/xxh3 v1.1.0
 go: downloading go.yaml.in/yaml/v3 v3.0.4
 go: downloading golang.org/x/net v0.53.0
-go: downloading gopkg.in/ini.v1 v1.67.2
 go: downloading golang.org/x/sys v0.44.0
 go: downloading github.com/klauspost/cpuid/v2 v2.2.11
 go: downloading github.com/rs/xid v1.6.0
@@ -24,29 +24,29 @@ panic: pattern "GET /dsh/operator/analytics/support" (registered at /Users/runne
 	GET /dsh/operator/analytics/support matches the same requests as GET /dsh/operator/analytics/support [recovered, repanicked]
 
 goroutine 25 [running]:
-testing.tRunner.func1.2({0x1017dff40, 0x53c14932d7b0})
+testing.tRunner.func1.2({0x10193bf40, 0x24254b3b17b0})
 	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/testing/testing.go:1974 +0x1a0
 testing.tRunner.func1()
 	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/testing/testing.go:1977 +0x318
-panic({0x1017dff40?, 0x53c14932d7b0?})
+panic({0x10193bf40?, 0x24254b3b17b0?})
 	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/runtime/panic.go:860 +0x12c
 net/http.(*ServeMux).register(...)
 	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/net/http/server.go:2882
-net/http.(*ServeMux).HandleFunc(0x33?, {0x10128c99f?, 0x53c14932d6e0?}, 0x53c1492d7818?)
+net/http.(*ServeMux).HandleFunc(0x33?, {0x1013e899f?, 0x24254b3b16e0?}, 0x24254b363818?)
 	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/net/http/server.go:2856 +0x74
-dsh-api/internal/http.registerJRN032AnalyticsRoutes(0x53c1491c2180, 0x53c1490f5c60)
+dsh-api/internal/http.registerJRN032AnalyticsRoutes(0x24254b1d0180, 0x24254b183c60)
 	/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/backend/internal/http/jrn032_routes.go:11 +0x170
-dsh-api/internal/http.registerDeliveryProofRoutes(0x53c1491c2180, 0x53c1490f5c60)
+dsh-api/internal/http.registerDeliveryProofRoutes(0x24254b1d0180, 0x24254b183c60)
 	/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/backend/internal/http/delivery_proof_routes.go:17 +0x2cc
-dsh-api/internal/http.registerUnifiedCatalogRoutes(0x53c1491c2180, 0x53c1490f5c60)
+dsh-api/internal/http.registerUnifiedCatalogRoutes(0x24254b1d0180, 0x24254b183c60)
 	/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/backend/internal/http/catalog_unified_routes.go:74 +0x24
 dsh-api/internal/http.NewRouter(0x0, 0x0, 0x0, 0x0)
 	/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/backend/internal/http/server.go:307 +0x56c0
-dsh-api/internal/http.TestCommercialProgramRoutesRegistered(0x53c149300d88)
+dsh-api/internal/http.TestCommercialProgramRoutesRegistered(0x24254b38ad88)
 	/Users/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/backend/internal/http/commercial_program_routes_test.go:9 +0x38
-testing.tRunner(0x53c149300d88, 0x1018a1788)
+testing.tRunner(0x24254b38ad88, 0x1019fd788)
 	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/testing/testing.go:2036 +0xc4
 created by testing.(*T).Run in goroutine 1
 	/Users/runner/hostedtoolcache/go/1.26.4/arm64/src/testing/testing.go:2101 +0x3a8
-FAIL	dsh-api/internal/http	0.042s
+FAIL	dsh-api/internal/http	0.044s
 FAIL
