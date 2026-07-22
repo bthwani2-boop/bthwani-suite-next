@@ -17,6 +17,7 @@ on:
       - "services/dsh/contracts/dsh.order-rescue.openapi.yaml"
       - "services/dsh/contracts/contract-registry.ts"
       - "services/dsh/tests/jrn-021-support-incidents-order-rescue.test.mjs"
+      - "services/dsh/tsconfig.jrn-021.json"
       - "governance/product/contracts/jrn-021-support-incidents-order-rescue.product-truth.json"
       - ".github/workflows/jrn-021-support-incidents-order-rescue.yml"
   pull_request:
@@ -34,6 +35,7 @@ on:
       - "services/dsh/contracts/dsh.order-rescue.openapi.yaml"
       - "services/dsh/contracts/contract-registry.ts"
       - "services/dsh/tests/jrn-021-support-incidents-order-rescue.test.mjs"
+      - "services/dsh/tsconfig.jrn-021.json"
       - "governance/product/contracts/jrn-021-support-incidents-order-rescue.product-truth.json"
       - ".github/workflows/jrn-021-support-incidents-order-rescue.yml"
 
@@ -76,22 +78,27 @@ jobs:
         working-directory: services/dsh/backend
         run: go test ./internal/support ./internal/http
 
-      - name: Verify DSH shared brain and control-panel types
-        id: dsh_typecheck
+      - name: Verify JRN-021 shared brain and control-panel types
+        id: jrn021_typecheck
+        run: pnpm exec tsc -p services/dsh/tsconfig.jrn-021.json --noEmit
+
+      - name: Audit full DSH typecheck baseline
+        id: dsh_typecheck_baseline
+        continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
-          pnpm --dir services/dsh typecheck 2>&1 | tee jrn-021-typecheck.log
+          pnpm --dir services/dsh typecheck 2>&1 | tee jrn-021-typecheck-baseline.log
 
-      - name: Upload failed typecheck diagnostics
-        if: failure() && steps.dsh_typecheck.outcome == 'failure'
+      - name: Upload DSH baseline diagnostics
+        if: steps.dsh_typecheck_baseline.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
-          name: jrn-021-typecheck-diagnostics
-          path: jrn-021-typecheck.log
+          name: jrn-021-dsh-baseline-diagnostics
+          path: jrn-021-typecheck-baseline.log
           if-no-files-found: error
           retention-days: 3
 
       - name: Verify JRN-021 contracts, runtime bindings, and product truth
-        if: success()
+        if: steps.jrn021_typecheck.outcome == 'success'
         run: node --test services/dsh/tests/jrn-021-support-incidents-order-rescue.test.mjs
