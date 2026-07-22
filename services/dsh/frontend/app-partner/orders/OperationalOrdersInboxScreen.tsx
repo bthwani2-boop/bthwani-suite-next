@@ -46,6 +46,8 @@ export function OperationalOrdersInboxScreen({
   const [expandedFulfillmentOrderId, setExpandedFulfillmentOrderId] = React.useState<string | null>(null);
   const [estimateOrderId, setEstimateOrderId] = React.useState<string | null>(null);
   const [issueOrderId, setIssueOrderId] = React.useState<string | null>(null);
+  const observedServerHandoffExceptionOrderId = React.useRef<string | null>(null);
+
   const expandedFulfillmentOrder = React.useMemo(
     () => items.find((item) => item.id === expandedFulfillmentOrderId) ?? null,
     [expandedFulfillmentOrderId, items],
@@ -70,29 +72,40 @@ export function OperationalOrdersInboxScreen({
       setEstimateOrderId(null);
     }
     if (issueOrderId && !issueOrder) setIssueOrderId(null);
-    if (
-      handoffExceptionOrder
-      && handoffException.state.kind !== 'success'
-      && (
-        handoffExceptionOrder.openStoreCaptainHandoffExceptionId !== ''
-        || (
-          handoffExceptionOrder.storeCaptainHandoffStatus !== 'awaiting_partner'
-          && handoffExceptionOrder.storeCaptainHandoffStatus !== 'partner_confirmed'
-        )
-      )
-    ) {
-      handoffException.cancel();
-    }
   }, [
     expandedFulfillmentOrder,
     expandedFulfillmentOrderId,
     estimateOrder,
     estimateOrderId,
-    handoffException,
-    handoffExceptionOrder,
     issueOrder,
     issueOrderId,
   ]);
+
+  React.useEffect(() => {
+    if (!handoffExceptionOrder) return;
+
+    if (handoffException.state.kind === 'success') {
+      if (handoffExceptionOrder.openStoreCaptainHandoffExceptionId !== '') {
+        observedServerHandoffExceptionOrderId.current = handoffExceptionOrder.id;
+        return;
+      }
+      if (observedServerHandoffExceptionOrderId.current === handoffExceptionOrder.id) {
+        observedServerHandoffExceptionOrderId.current = null;
+        handoffException.cancel();
+      }
+      return;
+    }
+
+    if (
+      handoffExceptionOrder.openStoreCaptainHandoffExceptionId !== ''
+      || (
+        handoffExceptionOrder.storeCaptainHandoffStatus !== 'awaiting_partner'
+        && handoffExceptionOrder.storeCaptainHandoffStatus !== 'partner_confirmed'
+      )
+    ) {
+      handoffException.cancel();
+    }
+  }, [handoffException, handoffExceptionOrder]);
 
   const handleOrderAction = React.useCallback((actionId: OrderHubAction, orderId: string) => {
     const item = items.find((candidate) => candidate.id === orderId);
@@ -111,9 +124,7 @@ export function OperationalOrdersInboxScreen({
       return;
     }
     if (actionId === 'report_issue' || actionId === 'resolve_issue') {
-      const allowed = item.allowedActions.includes(actionId)
-        || (actionId === 'resolve_issue' && item.openPreparationIssueCount > 0);
-      if (allowed) setIssueOrderId(orderId);
+      if (item.allowedActions.includes(actionId)) setIssueOrderId(orderId);
       else onNavigateAction('details', orderId);
       return;
     }
