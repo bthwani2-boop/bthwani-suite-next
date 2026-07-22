@@ -13,7 +13,10 @@ const paths = {
   handoffDomain: 'services/dsh/backend/internal/dispatch/store_captain_handoff.go',
   idempotencyDomain: 'services/dsh/backend/internal/dispatch/store_captain_handoff_idempotency.go',
   exceptionDomain: 'services/dsh/backend/internal/dispatch/store_captain_handoff_exceptions.go',
+  resolutionTests: 'services/dsh/backend/internal/dispatch/store_captain_handoff_resolution_db_test.go',
   routes: 'services/dsh/backend/internal/http/order_journey_routes.go',
+  server: 'services/dsh/backend/internal/http/server.go',
+  main: 'services/dsh/backend/cmd/dsh-api/main.go',
   workboard: 'services/dsh/backend/internal/http/partner_order_workboard.go',
   baseContract: 'services/dsh/contracts/dsh.openapi.yaml',
   contract: 'services/dsh/contracts/dsh.store-captain-handoff.openapi.yaml',
@@ -82,6 +85,8 @@ test('backend enforces idempotency, early-pickup prevention, and exception block
 
 test('runtime routes and OpenAPI contracts have single operation ownership', () => {
   const routes = read(paths.routes);
+  const server = read(paths.server);
+  const main = read(paths.main);
   const baseContract = read(paths.baseContract);
   const contract = read(paths.contract);
   const registry = read(paths.contractRegistry);
@@ -94,10 +99,14 @@ test('runtime routes and OpenAPI contracts have single operation ownership', () 
     assert.ok(contract.includes(route), `contract route missing: ${route}`);
   }
 
+  assert.match(server, /handleConfirmPartnerStoreCaptainHandoff/);
+  assert.match(server, /handleGovernedUpdateDeliveryStatus/);
+  assert.match(main, /RegisterOrderJourneyRoutes/);
   assert.match(contract, /confirmPartnerStoreCaptainHandoff/);
   assert.match(contract, /reportPartnerStoreCaptainHandoffException/);
   assert.match(contract, /reportCaptainStoreCaptainHandoffException/);
   assert.match(contract, /x-bthwani-parent-operation/);
+  assert.equal((contract.match(/^  \/dsh\//gm) ?? []).length, 3);
   assert.doesNotMatch(contract, /operationId: updateCaptainDeliveryStatusWithCustodyGuard/);
   assert.match(baseContract, /\/dsh\/captain\/dispatch\/assignments\/\{assignmentId\}\/status:/);
   assert.match(baseContract, /operationId: updateDshDeliveryStatus/);
@@ -165,8 +174,9 @@ test('partner and captain surfaces consume only shared custody commands', () => 
   assert.match(captainScreen, /handoffExceptionEnabled/);
 });
 
-test('operator and client consume the same DSH lifecycle truth', () => {
+test('operator resolutions execute and client consumes the same DSH lifecycle truth', () => {
   const operator = read(paths.operatorScreen);
+  const resolutions = read(paths.resolutionTests);
   const client = read(paths.clientController);
 
   assert.match(operator, /handoff_shortage/);
@@ -174,6 +184,11 @@ test('operator and client consume the same DSH lifecycle truth', () => {
   assert.match(operator, /استثناءات عهدة/);
   assert.match(operator, /السماح باستكمال العهدة/);
   assert.match(operator, /resolveDeliveryExceptionReassignCaptain/);
+  assert.match(resolutions, /TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration/);
+  assert.match(resolutions, /TestHandoffExceptionReassignmentSupersedesCustodyDBIntegration/);
+  assert.match(resolutions, /ConfirmStoreCaptainHandoffIdempotent/);
+  assert.match(resolutions, /DeliveryPickedUp/);
+  assert.match(resolutions, /oldHandoffStatus != "superseded"/);
 
   assert.match(client, /fetchClientOrderTruthDetail/);
   assert.match(client, /fetchClientOrderTracking/);
@@ -209,5 +224,7 @@ test('verification workflow covers source, type, boundaries, database, and backe
   assert.match(workflow, /guard:ui-kit-boundary/);
   assert.match(workflow, /guard:fullstack-boundary/);
   assert.match(workflow, /Apply DSH migrations from a clean database/);
-  assert.match(workflow, /Prove custody, replay, reassignment, and exception invariants/);
+  assert.match(workflow, /TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration/);
+  assert.match(workflow, /TestHandoffExceptionReassignmentSupersedesCustodyDBIntegration/);
+  assert.match(workflow, /Prove custody, replay, reassignment, exception, and operator resolution invariants/);
 });
