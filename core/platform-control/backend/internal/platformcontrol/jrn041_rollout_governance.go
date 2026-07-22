@@ -2,6 +2,7 @@ package platformcontrol
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 )
@@ -82,17 +83,53 @@ func (r *Repository) ResumeRollout(
 	actorRoles []string,
 	correlationID string,
 ) (Rollout, error) {
-	return r.updateRolloutStatus(
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return Rollout{}, err
+	}
+	defer tx.Rollback()
+
+	rollout, err := lockRollout(ctx, tx, id)
+	if err != nil {
+		return Rollout{}, err
+	}
+	if rollout.Status != RolloutPaused {
+		return Rollout{}, ErrInvalidTransition
+	}
+	if _, err := tx.ExecContext(ctx, `
+UPDATE platform_rollouts
+SET status = $2, paused_at = NULL, updated_by_actor_id = $3,
+    updated_at = NOW(), version = version + 1
+WHERE id = $1::uuid`, id, RolloutRunning, actorID); err != nil {
+		return Rollout{}, err
+	}
+	if err := insertAudit(
 		ctx,
-		id,
+		tx,
+		rollout.ChangeSetID,
+		"rollout_resumed",
 		actorID,
 		actorRoles,
+		string(RolloutRunning),
+		rollout.ID,
 		correlationID,
-		[]RolloutStatus{RolloutPaused},
-		RolloutRunning,
-		"started_at",
-		"rollout_resumed",
-	)
+		map[string]any{
+			"status":            rollout.Status,
+			"currentPercentage": rollout.CurrentPercentage,
+			"flagRevision":      rollout.FlagRevision,
+		},
+		map[string]any{
+			"status":            RolloutRunning,
+			"currentPercentage": rollout.CurrentPercentage,
+			"flagRevision":      rollout.FlagRevision,
+		},
+	); err != nil {
+		return Rollout{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Rollout{}, err
+	}
+	return r.GetRollout(ctx, id)
 }
 
 func (r *Repository) RecordRolloutHealthGateFailure(
@@ -109,9 +146,9 @@ func (r *Repository) RecordRolloutHealthGateFailure(
 	}
 	defer tx.Rollback()
 
-	reason := "health gate blocked rollout advance"
+	reason := fmt.Sprintf("rollout %s health gate blocked advance", rollout.ID)
 	if gateErr != nil {
-		reason = gateErr.Error()
+		reason = fmt.Sprintf("rollout %s: %s", rollout.ID, gateErr.Error())
 	}
 	if err := insertAudit(
 		ctx,
@@ -121,7 +158,7 @@ func (r *Repository) RecordRolloutHealthGateFailure(
 		actorID,
 		actorRoles,
 		"health_blocked",
-		rollout.ID,
+		reason,
 		correlationID,
 		map[string]any{
 			"status":            rollout.Status,
