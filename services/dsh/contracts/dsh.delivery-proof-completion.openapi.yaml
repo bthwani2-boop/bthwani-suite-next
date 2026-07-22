@@ -81,6 +81,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/AssignmentId'
         - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/StandardIdempotencyKey'
       requestBody:
         required: true
         content:
@@ -89,9 +90,13 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required: [file, idempotencyKey]
+              required: [file, evidenceKind, idempotencyKey]
               properties:
-                file: { type: string, format: binary }
+                file:
+                  type: string
+                  format: binary
+                  description: Governed image containing either the delivery scene or the recipient signature.
+                evidenceKind: { $ref: '#/components/schemas/DeliveryEvidenceKind' }
                 method: { $ref: '#/components/schemas/DeliveryProofMethod' }
                 pin: { type: string, pattern: '^[0-9]{6}$' }
                 idempotencyKey: { type: string, minLength: 8, maxLength: 160 }
@@ -247,8 +252,17 @@ components:
       in: header
       required: false
       schema: { type: string, minLength: 8, maxLength: 160 }
+    StandardIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, minLength: 8, maxLength: 160 }
 
   schemas:
+    DeliveryEvidenceKind:
+      type: string
+      enum: [photo, signature]
+      description: Classifies the multipart image so DSH binds it to the correct governed media purpose.
     DeliveryProofMethod:
       type: string
       enum: [otp_pin, photo, signature, composite]
