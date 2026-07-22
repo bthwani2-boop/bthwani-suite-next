@@ -21,6 +21,19 @@ export function canClientApproveSpecialRequestQuote(request: DshSpecialRequestRe
     && !request.wltPaymentSessionId;
 }
 
+/**
+ * A client refusing a prepared quote uses the governed cancellation mutation.
+ * The terminal `rejected` status remains operator-owned for operational refusal;
+ * this keeps one client termination path and prevents a second financial truth.
+ */
+export function isClientQuoteDecisionPending(request: DshSpecialRequestResponse): boolean {
+  return canClientApproveSpecialRequestQuote(request);
+}
+
+export function clientCancellationActionLabel(request: DshSpecialRequestResponse): string {
+  return isClientQuoteDecisionPending(request) ? "رفض العرض" : "إلغاء الطلب";
+}
+
 export function specialRequestTypeLabel(request: DshSpecialRequestResponse): string {
   return request.requestType === "SHEIN_ASSISTED_PURCHASE" ? "طلب شي إن" : "طلب عونك";
 }
