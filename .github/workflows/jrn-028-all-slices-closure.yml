@@ -1,0 +1,198 @@
+name: JRN-028 All Slices Closure
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/coupons/**"
+      - "services/dsh/backend/internal/http/coupon_funding_lifecycle.go"
+      - "services/dsh/backend/internal/http/coupons.go"
+      - "services/dsh/backend/internal/wlt/**"
+      - "services/dsh/backend/internal/promotionfundingoutbox/**"
+      - "services/dsh/frontend/shared/marketing/**"
+      - "services/dsh/frontend/control-panel/marketing/components/CouponFundingReconciliationPanel.tsx"
+      - "services/dsh/frontend/control-panel/marketing/components/CouponsCommandDeck.tsx"
+      - "services/wlt/backend/internal/promotionfunding/**"
+      - "services/wlt/backend/internal/shared/serviceauth.go"
+      - "services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql"
+      - "services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql"
+      - "services/wlt/database/tests/jrn-028-promotion-funding-*.sh"
+      - "services/wlt/contracts/wlt.promotion-funding.openapi.yaml"
+      - "services/dsh/contracts/**"
+      - "services/dsh/tests/jrn-028-promotion-funding.test.mjs"
+      - "services/dsh/tsconfig.jrn-028.json"
+      - "governance/product/JRN-028_PROMOTION_FUNDING_PRODUCT_TRUTH.md"
+      - "governance/evidence/JRN-028_ALL_SLICES_CLOSURE.json"
+      - "tools/verification/jrn-028-all-slices.sh"
+      - ".github/workflows/jrn-028-all-slices-closure.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jrn-028-all-slices-sambassam
+  cancel-in-progress: false
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: wlt_jrn_028
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d wlt_jrn_028"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: localhost
+      PGUSER: postgres
+      PGDATABASE: wlt_jrn_028
+    steps:
+      - name: Checkout exact remote snapshot
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            services/wlt/backend/go.sum
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install verification dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Execute FS-01 through FS-18 verifier
+        id: verify
+        continue-on-error: true
+        run: bash tools/verification/jrn-028-all-slices.sh
+
+      - name: Publish immutable verification result
+        if: always()
+        shell: bash
+        env:
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+        run: |
+          set -Eeuo pipefail
+          temporary_workflow=".github/workflows/jrn-028-all-slices-closure.yml"
+          proof_file="governance/evidence/JRN-028_VERIFIED_SNAPSHOT.json"
+          failure_file="governance/evidence/JRN-028_LAST_FAILURE.txt"
+          cp "$failure_file" /tmp/JRN-028_LAST_FAILURE.txt 2>/dev/null || true
+
+          governed_paths=(
+            services/dsh/backend/internal/coupons
+            services/dsh/backend/internal/http/coupon_funding_lifecycle.go
+            services/dsh/backend/internal/http/coupons.go
+            services/dsh/backend/internal/wlt
+            services/dsh/backend/internal/promotionfundingoutbox
+            services/dsh/frontend/shared/marketing
+            services/dsh/frontend/control-panel/marketing/components/CouponFundingReconciliationPanel.tsx
+            services/dsh/frontend/control-panel/marketing/components/CouponsCommandDeck.tsx
+            services/wlt/backend/internal/promotionfunding
+            services/wlt/backend/internal/shared/serviceauth.go
+            services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql
+            services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql
+            services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh
+            services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh
+            services/wlt/contracts/wlt.promotion-funding.openapi.yaml
+            services/dsh/contracts
+            services/dsh/clients/generated/dsh-api.ts
+            services/dsh/tests/jrn-028-promotion-funding.test.mjs
+            services/dsh/tsconfig.jrn-028.json
+            governance/product/JRN-028_PROMOTION_FUNDING_PRODUCT_TRUTH.md
+            governance/evidence/JRN-028_ALL_SLICES_CLOSURE.json
+            tools/verification/jrn-028-all-slices.sh
+            tools/guards/product-truth-gate.mjs
+            tools/guards/dsh-openapi-modular-gate.mjs
+            "$temporary_workflow"
+          )
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          published=false
+          final_status="$VERIFY_OUTCOME"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin sambassam
+            current_head="$(git rev-parse origin/sambassam)"
+            final_status="$VERIFY_OUTCOME"
+            if ! git diff --quiet "$GITHUB_SHA" "$current_head" -- "${governed_paths[@]}"; then
+              final_status="stale"
+            fi
+
+            git checkout -B sambassam origin/sambassam
+            mkdir -p governance/evidence
+            if [[ "$final_status" == "success" ]]; then
+              rm -f "$failure_file" "$temporary_workflow"
+            else
+              git checkout "$GITHUB_SHA" -- "$temporary_workflow"
+              cp /tmp/JRN-028_LAST_FAILURE.txt "$failure_file" 2>/dev/null || printf 'status=%s\ntested_sha=%s\n' "$final_status" "$GITHUB_SHA" > "$failure_file"
+            fi
+
+            status_label="FAILED"
+            [[ "$final_status" == "success" ]] && status_label="PASSED"
+            [[ "$final_status" == "stale" ]] && status_label="STALE"
+            generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            cat > "$proof_file" <<JSON
+          {
+            "journeyId": "JRN-028",
+            "status": "$status_label",
+            "testedSha": "$GITHUB_SHA",
+            "verifiedBranchHeadBeforeProof": "$current_head",
+            "workflowRunId": "$GITHUB_RUN_ID",
+            "workflowRunAttempt": "$GITHUB_RUN_ATTEMPT",
+            "generatedAtUtc": "$generated_at",
+            "verifier": "tools/verification/jrn-028-all-slices.sh",
+            "slices": "FS-01..FS-18",
+            "governedPathDrift": $([[ "$final_status" == "stale" ]] && echo true || echo false),
+            "checks": {
+              "wltGo": "$status_label",
+              "dshGo": "$status_label",
+              "sliceAssertions": "$status_label",
+              "typeScript": "$status_label",
+              "postgresLifecycle": "$status_label",
+              "postgresNegativeInvariants": "$status_label",
+              "concurrency": "$status_label",
+              "productTruth": "$status_label",
+              "openApi": "$status_label",
+              "whitespace": "$status_label"
+            }
+          }
+          JSON
+
+            git add -A "$proof_file" "$failure_file" "$temporary_workflow"
+            git commit -m "docs(jrn-028): publish all-slice verification $status_label [skip ci]"
+            if git push origin HEAD:sambassam; then
+              published=true
+              break
+            fi
+            sleep 2
+          done
+
+          [[ "$published" == "true" ]]
+          [[ "$final_status" == "success" ]]
