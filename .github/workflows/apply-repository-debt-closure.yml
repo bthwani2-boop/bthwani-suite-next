@@ -6,6 +6,11 @@ on:
     paths:
       - "tools/important-scripts/close-repository-debt.mjs"
       - ".github/workflows/apply-repository-debt-closure.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "tools/important-scripts/close-repository-debt.mjs"
+      - ".github/workflows/apply-repository-debt-closure.yml"
   workflow_dispatch:
 
 permissions:
@@ -24,7 +29,11 @@ jobs:
           node-version: 24.17.0
       - name: Apply guarded repository repairs
         run: node tools/important-scripts/close-repository-debt.mjs
+      - name: Show proposed repairs on pull request
+        if: github.event_name == 'pull_request'
+        run: git diff --stat && git diff --check
       - name: Commit and push repaired files
+        if: github.event_name != 'pull_request'
         shell: bash
         run: |
           if git diff --quiet; then
