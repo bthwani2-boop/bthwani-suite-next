@@ -20,8 +20,8 @@ on:
       - "services/dsh/frontend/shared/platform/index.ts"
       - "services/dsh/frontend/control-panel/platform/Jrn029OperationalPolicySection.tsx"
       - "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx"
-      - "services/dsh/contracts/**"
-      - "services/dsh/clients/generated/dsh-api.ts"
+      - "services/dsh/contracts/paths/platform-policies.paths.yaml"
+      - "services/dsh/contracts/components/schemas/platform-policies.schemas.yaml"
       - "services/dsh/tests/jrn-029-operational-policy.test.mjs"
       - "services/dsh/tsconfig.jrn-029.json"
       - "tools/scripts/integrate-jrn029-openapi.mjs"
@@ -35,8 +35,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: jrn-029-${{ github.workflow }}-${{ github.run_id }}
-  cancel-in-progress: false
+  group: jrn-029-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
