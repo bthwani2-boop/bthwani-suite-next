@@ -66,6 +66,12 @@ jobs:
         uses: ./.github/actions/setup-node-workspace
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Verify JRN-040 governed source inventory
+        run: |
+          test -f core/platform-control/backend/internal/platformcontrol/jrn040_strict_boundary.go
+          test -f core/platform-control/backend/internal/platformcontrol/jrn040_strict_boundary_test.go
+          test -f core/platform-control/backend/internal/platformcontrol/jrn040_database_sensitive_guard_test.go
+          test -f core/platform-control/database/migrations/platform-006_jrn040_sensitive_change_boundary.sql
       - name: Apply governed platform migrations
         run: |
           for migration in core/platform-control/database/migrations/platform-*.sql; do
@@ -73,8 +79,17 @@ jobs:
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
           done
       - name: Run targeted Go tests
+        id: go_tests
         working-directory: core/platform-control/backend
-        run: go test ./internal/platformcontrol ./internal/http -count=1
+        run: go test ./internal/platformcontrol ./internal/http -count=1 2>&1 | tee jrn040-go-tests.log
+      - name: Preserve JRN-040 Go test failure diagnostics
+        if: steps.go_tests.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: jrn-040-go-tests-failure
+          path: core/platform-control/backend/jrn040-go-tests.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Build platform-control owners
         working-directory: core/platform-control/backend
         run: go build ./internal/platformcontrol ./internal/http
