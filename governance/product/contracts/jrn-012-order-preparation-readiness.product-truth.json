@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.2.0",
+  "schemaVersion": "1.3.0",
   "journeyId": "JRN-012",
   "title": "قبول الطلب وتحضيره وجاهزيته",
   "status": "CODE_COMPLETE_READY_FOR_INDEPENDENT_REVIEW",
@@ -87,10 +87,16 @@
   },
   "verification": {
     "context": "jrn-012/order-preparation",
-    "successfulImplementationCommit": "2a73559864baadc2f4e1df12649d19d35810331c",
-    "successfulWorkflowRunId": 29880166347,
-    "requiredOnGovernanceCommit": true,
+    "lastSuccessfulImplementationCommit": "281e3fc547957244f6bb3a706cc9690235fa9f9f",
+    "lastSuccessfulWorkflowRunId": 29880510629,
+    "requiredOnFinalGovernanceCommit": true,
     "coveredGates": ["static", "postgresql", "go", "openapi-generation", "typescript", "wlt-financial-boundary"]
+  },
+  "approvalTracking": {
+    "issueNumber": 103,
+    "issuePath": "https://github.com/bthwani2-boop/bthwani-suite-next/issues/103",
+    "evidenceFile": "governance/evidence/JRN-012_FINAL_TECHNICAL_CLOSURE.md",
+    "rule": "independent approvals must be recorded before CLOSED_WITH_EVIDENCE"
   },
   "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "finance-boundary", "accessibility", "qa", "governance", "ci"],
   "codeZeroGate": "PASSED",
