@@ -2,13 +2,13 @@
   "formatVersion": 1,
   "entryContract": "services/dsh/contracts/dsh.openapi.yaml",
   "generatedBundle": "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
-  "pathCount": 263,
-  "operationIdCount": 310,
+  "pathCount": 269,
+  "operationIdCount": 316,
   "componentCounts": {
     "securitySchemes": 1,
     "parameters": 4,
     "responses": 6,
-    "schemas": 282
+    "schemas": 290
   },
   "pathDomains": {
     "field": 28,
@@ -16,7 +16,7 @@
     "discovery": 2,
     "home-discovery": 4,
     "workforce": 1,
-    "misc": 29,
+    "misc": 35,
     "operator": 20,
     "partner": 50,
     "captain": 8,
@@ -31,7 +31,7 @@
     "preparation-handoff": 11
   },
   "schemaDomains": {
-    "common": 84,
+    "common": 92,
     "analytics": 4,
     "store": 11,
     "cart-serviceability": 11,
