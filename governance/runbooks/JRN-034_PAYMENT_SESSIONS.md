@@ -13,12 +13,14 @@
 | --- | --- | --- |
 | `WLT_MUTATIONS_ENABLED=true` | WLT runtime/release | All financial mutations fail closed when absent or false. |
 | `WLT_DSH_SERVICE_TOKEN` | WLT + DSH secrets | Internal reads and mutations reject callers when missing or mismatched. |
-| `WLT_PROVIDER_BASE_URL` and provider credentials | WLT runtime | Authorize, capture and status refresh fail without calling a fallback mock. |
+| `WLT_FINANCIAL_PROVIDER_MODE` | WLT runtime/release | Required. Only `sandbox` or an explicitly authorized local `mock` is accepted; `production` remains blocked. |
+| `WLT_FINANCIAL_PROVIDER_BASE_URL` and provider credentials | WLT runtime | Required for sandbox. Authorize, capture and status refresh fail without a configured provider endpoint. |
+| `WLT_ALLOW_MOCK_PROVIDER=true` | local development only | Required in addition to `mode=mock`; absence prevents synthetic payment success even when compose supplies a mock mode default. Never set in an approved release environment. |
 | `WLT_PROVIDER_WEBHOOK_SECRET` | WLT + provider | Webhook returns `WEBHOOK_NOT_CONFIGURED`; unsigned events are never accepted. |
 | `EXPO_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED=true` | approved app-client release only | Official provider payment stays hidden/disabled by default. |
 | `NEXT_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED=true` | approved web release only | Same fail-closed behavior for web surfaces. |
 
-Do not place provider credentials or `WLT_DSH_SERVICE_TOKEN` in any `NEXT_PUBLIC_*` or `EXPO_PUBLIC_*` variable.
+Do not place provider credentials or `WLT_DSH_SERVICE_TOKEN` in any `NEXT_PUBLIC_*` or `EXPO_PUBLIC_*` variable. `WLT_ALLOW_MOCK_PROVIDER` is a local simulation switch, not a release feature flag.
 
 ## Provider webhook contract
 
@@ -47,6 +49,7 @@ Secret rotation must use an approved overlap procedure at the provider edge. The
 4. A `captured` session is valid only when `capture_ledger_transaction_id` points to one balanced `payment_captured` ledger transaction.
 5. COD collection always uses the COD record flow; the payment-session COD collection route intentionally returns `USE_COD_RECORD_FLOW`.
 6. DSH projection delay does not change WLT truth. Replay the WLT outbox, not the provider charge.
+7. A local mock provider is never evidence of financial correctness, provider readiness, release readiness or production acceptance.
 
 ## Operator workflow for unknown provider result
 
@@ -133,15 +136,16 @@ These targets require runtime telemetry evidence before production approval.
 
 1. Set `WLT_MUTATIONS_ENABLED=false` to stop new financial mutations while keeping reads available.
 2. Disable `EXPO_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED` and `NEXT_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED` in the next approved surface release.
-3. Preserve payment sessions, receipts, events, reconciliation, ledger and outbox rows. Never delete or rewrite financial evidence during rollback.
-4. Revert application code only after stopping mutations. Do not roll back an applied additive migration by dropping the new tables or columns.
-5. Reconcile every operation that was `in_progress` or `provider_result_unknown` at containment time using provider status evidence.
-6. Resume mutations only after financial control, security and release owners approve the recovery evidence.
+3. Remove `WLT_ALLOW_MOCK_PROVIDER` from any environment where it was used for local simulation.
+4. Preserve payment sessions, receipts, events, reconciliation, ledger and outbox rows. Never delete or rewrite financial evidence during rollback.
+5. Revert application code only after stopping mutations. Do not roll back an applied additive migration by dropping the new tables or columns.
+6. Reconcile every operation that was `in_progress` or `provider_result_unknown` at containment time using provider status evidence.
+7. Resume mutations only after financial control, security and release owners approve the recovery evidence.
 
 ## Verification before release
 
 - Product-truth schema and journey structural guard pass.
-- WLT and DSH Go tests pass on the exact candidate SHA.
+- WLT payment and provider packages plus DSH boundary tests pass on the exact candidate SHA.
 - WLT, DSH and control-panel TypeScript checks pass on the exact candidate SHA.
 - Migration applies to an empty database and an upgraded database; the migration ledger probe recognizes `wlt-036`.
 - Provider sandbox proves authorize, capture, exact replay, ambiguous timeout, status refresh, signed webhook, stale/invalid signature rejection and event replay conflict.
