@@ -78,7 +78,8 @@ test('JRN-015 binds client, partner and operator surfaces to the shared pickup b
   assert.match(api, /pk-reschedule/);
   assert.match(controller, /rescheduleWindow/);
   assert.match(clientSurface, /PickupSessionScreen/);
-  assert.match(clientSurface, /\/orders\/\(\[\^\/\]\+\)\/pickup/);
+  assert.match(clientSurface, /pickupMatch/);
+  assert.match(clientSurface, /setActivePickupOrderId/);
   assert.match(clientScreen, /useClientPickupSessionController/);
   assert.match(partnerPanel, /usePickupActionsController/);
   assert.match(partnerPanel, /customerArrived/);
