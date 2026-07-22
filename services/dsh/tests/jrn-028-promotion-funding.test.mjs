@@ -7,6 +7,7 @@ const read = (path) => fs.readFileSync(path, "utf8");
 const wltMigration = read("services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql");
 const integrityProof = read("services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh");
 const concurrencyProof = read("services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh");
+const verifier = read("tools/verification/jrn-028-all-slices.sh");
 const wltJSON = read("services/wlt/backend/internal/promotionfunding/reservation_json.go");
 const serviceAuth = read("services/wlt/backend/internal/shared/serviceauth.go");
 const dshReadback = read("services/dsh/backend/internal/wlt/promotion_funding_read.go");
@@ -18,7 +19,6 @@ const couponsDeck = read("services/dsh/frontend/control-panel/marketing/componen
 const panel = read("services/dsh/frontend/control-panel/marketing/components/CouponFundingReconciliationPanel.tsx");
 const dashboard = read("services/dsh/frontend/control-panel/marketing/MarketingDashboardScreen.tsx");
 const productTruth = read("governance/product/JRN-028_PROMOTION_FUNDING_PRODUCT_TRUTH.md");
-const workflow = read(".github/workflows/jrn-026-coupons-pricing-loyalty-verification.yml");
 const closure = JSON.parse(read("governance/evidence/JRN-028_ALL_SLICES_CLOSURE.json"));
 
 const slices = [
@@ -68,8 +68,10 @@ const slices = [
   ["FS-17 contract and duplicate-owner hygiene", () => {
     assert.match(productTruth, /Manual control-panel commit, release, and reverse actions are intentionally absent/);
     assert.match(productTruth, /The control panel compares DSH projection with an authenticated WLT readback/);
-    assert.match(workflow, /Verify Product Truth and modular OpenAPI/);
-    assert.match(workflow, /git diff --exit-code/);
+    assert.match(verifier, /product-truth-gate\.mjs/);
+    assert.match(verifier, /dsh-openapi-modular-gate\.mjs/);
+    assert.match(verifier, /openapi:generate/);
+    assert.match(verifier, /git diff --exit-code/);
     assert.doesNotMatch(panel, /fetch\s*\(/);
   }],
   ["FS-18 exact-head integrated zero-gate and closure record", () => {
@@ -78,9 +80,9 @@ const slices = [
     assert.deepEqual(closure.slices.map((slice) => slice.id), Array.from({ length: 18 }, (_, index) => `FS-${String(index + 1).padStart(2, "0")}`));
     assert.ok(closure.slices.every((slice) => slice.status === "CLOSED_BY_EXACT_HEAD_GATE"));
     assert.deepEqual(closure.openCodeGaps, []);
-    assert.match(workflow, /Verify JRN-028 database lifecycle and negative invariants/);
-    assert.match(workflow, /Verify JRN-028 concurrent transition serialization/);
-    assert.match(workflow, /Verify repository whitespace/);
+    assert.match(verifier, /jrn-028-promotion-funding-integrity\.sh/);
+    assert.match(verifier, /jrn-028-promotion-funding-concurrency\.sh/);
+    assert.match(verifier, /git diff --check/);
     assert.match(productTruth, /does not self-issue independent Finance, Security, QA, Release, or Production approval/);
   }],
 ];
