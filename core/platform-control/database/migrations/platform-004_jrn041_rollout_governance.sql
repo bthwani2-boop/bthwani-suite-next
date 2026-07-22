@@ -46,9 +46,35 @@ ALTER TABLE platform_rollouts
         AND (status NOT IN ('aborted', 'rolled_back') OR current_percentage BETWEEN 0 AND 100)
     ) NOT VALID;
 
+CREATE OR REPLACE FUNCTION platform_prevent_paused_rollout_advance()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF OLD.status = 'paused'
+       AND (
+           NEW.current_step_index IS DISTINCT FROM OLD.current_step_index
+           OR NEW.current_percentage IS DISTINCT FROM OLD.current_percentage
+           OR NEW.flag_revision IS DISTINCT FROM OLD.flag_revision
+       ) THEN
+        RAISE EXCEPTION 'paused rollout % must be resumed before advance', OLD.id
+            USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_platform_rollout_paused_advance_guard ON platform_rollouts;
+CREATE TRIGGER trg_platform_rollout_paused_advance_guard
+BEFORE UPDATE OF status, current_step_index, current_percentage, flag_revision ON platform_rollouts
+FOR EACH ROW
+EXECUTE FUNCTION platform_prevent_paused_rollout_advance();
+
 COMMENT ON CONSTRAINT platform_rollout_target_scope_governed ON platform_rollouts IS
     'JRN-041 rollout scope must use an explicit governed audience, region, city or surface selector.';
 COMMENT ON CONSTRAINT platform_rollout_health_gate_governed ON platform_rollouts IS
     'JRN-041 every rollout must require OPERATIONAL health before progression.';
 COMMENT ON CONSTRAINT platform_rollout_terminal_state_consistency ON platform_rollouts IS
     'JRN-041 lifecycle timestamps and completed percentage must match the persisted rollout status.';
+COMMENT ON FUNCTION platform_prevent_paused_rollout_advance() IS
+    'JRN-041 defense in depth: a paused rollout cannot change step, percentage or flag revision until an explicit resume.';
