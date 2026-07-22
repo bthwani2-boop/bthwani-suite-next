@@ -1,0 +1,32 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "outDir": "dist-jrn-040",
+    "module": "ESNext",
+    "jsx": "react-jsx",
+    "types": ["node", "react", "react-dom"],
+    "paths": {
+      "@bthwani/ui-kit": ["shared/ui-kit/src/index.ts"],
+      "@bthwani/ui-kit/web": ["shared/ui-kit/src/web.ts"],
+      "@bthwani/ui-kit/tokens": ["shared/ui-kit/src/tokens/index.ts"],
+      "@bthwani/app-shell": ["shared/app-shell/src/index.ts"],
+      "@bthwani/control-panel/components": ["apps/control-panel/runtime/src/components/index.ts"],
+      "@bthwani/control-panel/shell": ["apps/control-panel/runtime/src/shell/index.ts"],
+      "@bthwani/core-platform-control": ["core/platform-control/clients/generated/platform-control-api.ts"],
+      "@dsh-cp/*": ["services/dsh/frontend/control-panel/*"],
+      "@dsh-shared/*": ["services/dsh/frontend/shared/*"],
+      "react-native": ["apps/app-client/runtime/node_modules/react-native"]
+    }
+  },
+  "include": [
+    "../../core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts",
+    "frontend/**/*.d.ts",
+    "frontend/shared/platform/platform-control.api.ts",
+    "frontend/shared/platform/use-platform-change-workflow-controller.tsx",
+    "frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
+  ],
+  "exclude": ["node_modules", "dist", "dist-jrn-040"]
+}
