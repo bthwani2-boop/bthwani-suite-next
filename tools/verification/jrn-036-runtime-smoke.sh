@@ -134,8 +134,11 @@ jq -e '
 ' <<<"${settlement_evidence}" >/dev/null
 
 conflicting_settlement_body=${settlement_body/10000/11000}
-conflict_status=$(curl --silent --show-error --output /tmp/jrn036-settlement-conflict.json --write-out '%{http_code}' \
-  -X POST "${auth_headers[@]}" \
+conflict_status=$(curl --silent --show-error \
+  --output /tmp/jrn036-settlement-conflict.json \
+  --write-out '%{http_code}' \
+  -X POST \
+  "${auth_headers[@]}" \
   -H "X-Correlation-ID: corr-settlement-conflict-jrn036-ci" \
   -H "Idempotency-Key: settlement-jrn036-ci" \
   --data "${conflicting_settlement_body}" \
@@ -162,6 +165,31 @@ json_request PUT "/wlt/commission-policies" \
   "corr-commission-policy-jrn036-ci" "" "${commission_policy_body}" \
   | jq -e '.commissionPolicy.version == 1 and .commissionPolicy.fixedAmountMinorUnits == 2000' >/dev/null
 
+# The governed route must reject any caller-supplied financial result. The
+# source may provide evidence and a gross basis only; WLT owns the amount.
+caller_amount_body='{
+  "beneficiaryActorId":"field-jrn036-rejected",
+  "beneficiaryActorType":"field",
+  "sourceType":"field_visit",
+  "sourceId":"visit-jrn036-rejected",
+  "commissionType":"field_visit_fee",
+  "grossBasisMinorUnits":0,
+  "currency":"YER",
+  "amountMinorUnits":999999,
+  "idempotencyKey":"commission-jrn036-rejected"
+}'
+caller_amount_status=$(curl --silent --show-error \
+  --output /tmp/jrn036-caller-amount.json \
+  --write-out '%{http_code}' \
+  -X POST \
+  "${auth_headers[@]}" \
+  -H "X-Correlation-ID: corr-caller-amount-jrn036-ci" \
+  -H "Idempotency-Key: commission-jrn036-rejected" \
+  --data "${caller_amount_body}" \
+  "${base_url}/wlt/commissions")
+test "${caller_amount_status}" = "400"
+jq -e '.code == "INVALID_REQUEST"' /tmp/jrn036-caller-amount.json >/dev/null
+
 commission_body='{
   "beneficiaryActorId":"field-jrn036-ci",
   "beneficiaryActorType":"field",
@@ -186,11 +214,24 @@ adjustment_body='{
   "deltaMinorUnits":500,
   "reason":"verified quality bonus",
   "operatorId":"operator-jrn036-ci",
-  "idempotencyKey":"adjustment-jrn036-ci"
+  "idempotencyKey":"adjustment-jrn036-ci-a"
 }'
 json_request POST "/wlt/commissions/${commission_id}/adjust" \
-  "corr-adjustment-jrn036-ci" "adjustment-jrn036-ci" "${adjustment_body}" \
+  "corr-adjustment-a-jrn036-ci" "adjustment-jrn036-ci-a" "${adjustment_body}" \
   | jq -e '.commission.amountMinorUnits == 2500 and .commission.status == "pending"' >/dev/null
+
+# Exact retry with the same idempotency key must not move the wallet twice.
+json_request POST "/wlt/commissions/${commission_id}/adjust" \
+  "corr-adjustment-a-repeat-jrn036-ci" "adjustment-jrn036-ci-a" "${adjustment_body}" \
+  | jq -e '.commission.amountMinorUnits == 2500 and .commission.status == "pending"' >/dev/null
+
+# A later, legitimate adjustment may have the same delta/reason/operator but a
+# new idempotency identity. It must create a second ledger transaction rather
+# than colliding with the first adjustment's financial reference.
+adjustment_body_b=${adjustment_body/adjustment-jrn036-ci-a/adjustment-jrn036-ci-b}
+json_request POST "/wlt/commissions/${commission_id}/adjust" \
+  "corr-adjustment-b-jrn036-ci" "adjustment-jrn036-ci-b" "${adjustment_body_b}" \
+  | jq -e '.commission.amountMinorUnits == 3000 and .commission.status == "pending"' >/dev/null
 
 json_request POST "/wlt/commissions/${commission_id}/confirm" \
   "corr-confirm-jrn036-ci" "" '{"operatorId":"operator-jrn036-ci"}' \
@@ -201,7 +242,8 @@ json_request POST "/wlt/commissions/${commission_id}/settle" \
   | jq -e '.commission.status == "settled"' >/dev/null
 
 json_request POST "/wlt/commissions/${commission_id}/reverse" \
-  "corr-reverse-jrn036-ci" "" '{"operatorId":"operator-jrn036-ci","reason":"runtime reversal proof"}' \
+  "corr-reverse-jrn036-ci" "" \
+  '{"operatorId":"operator-jrn036-ci","reason":"runtime reversal proof"}' \
   | jq -e '.commission.status == "reversed" and .commission.resolutionNote == "runtime reversal proof"' >/dev/null
 
 commission_detail=$(curl --fail-with-body --silent --show-error \
@@ -210,10 +252,13 @@ commission_detail=$(curl --fail-with-body --silent --show-error \
   "${base_url}/wlt/commissions/${commission_id}")
 jq -e '
   .commission.status == "reversed" and
+  .commission.amountMinorUnits == 3000 and
   .evidence.policyVersion == 1 and
   .evidence.calculatedAmountMinorUnits == 2000 and
-  (.adjustments | length) == 1 and
-  .adjustments[0].deltaMinorUnits == 500
+  (.adjustments | length) == 2 and
+  .adjustments[0].deltaMinorUnits == 500 and
+  .adjustments[1].deltaMinorUnits == 500 and
+  .adjustments[0].id != .adjustments[1].id
 ' <<<"${commission_detail}" >/dev/null
 
 wallet_response=$(curl --fail-with-body --silent --show-error \
@@ -231,23 +276,36 @@ DO $$
 DECLARE
   unbalanced_count bigint;
   audit_count bigint;
+  adjustment_ledger_count bigint;
 BEGIN
   SELECT COUNT(*) INTO unbalanced_count
   FROM (
-    SELECT transaction_id
-    FROM wlt_ledger_entries
-    GROUP BY transaction_id
-    HAVING SUM(CASE WHEN debit_credit = 'debit' THEN amount_minor_units ELSE -amount_minor_units END) <> 0
+    SELECT ledger_transaction_id
+    FROM wlt_ledger_lines
+    GROUP BY ledger_transaction_id
+    HAVING SUM(
+      CASE
+        WHEN debit_credit = 'debit' THEN amount_minor_units
+        ELSE -amount_minor_units
+      END
+    ) <> 0
   ) AS unbalanced;
   IF unbalanced_count <> 0 THEN
     RAISE EXCEPTION 'found % unbalanced ledger transactions', unbalanced_count;
   END IF;
 
+  SELECT COUNT(*) INTO adjustment_ledger_count
+  FROM wlt_ledger_transactions
+  WHERE reference_type = 'commission_adjustment';
+  IF adjustment_ledger_count <> 2 THEN
+    RAISE EXCEPTION 'expected 2 independent adjustment ledger transactions, found %', adjustment_ledger_count;
+  END IF;
+
   SELECT COUNT(*) INTO audit_count
   FROM wlt_jrn036_audit_events
   WHERE correlation_id LIKE 'corr-%-jrn036-ci';
-  IF audit_count < 7 THEN
-    RAISE EXCEPTION 'expected at least 7 JRN-036 audit events, found %', audit_count;
+  IF audit_count < 8 THEN
+    RAISE EXCEPTION 'expected at least 8 JRN-036 audit events, found %', audit_count;
   END IF;
 END $$;
 SQL
