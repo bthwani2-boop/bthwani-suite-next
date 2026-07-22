@@ -17,12 +17,16 @@ const wltCommercial = read("services/wlt/backend/internal/commercial/commercial.
 const partnerController = read("services/dsh/frontend/shared/partner/use-delivery-pricing-controller.ts");
 const partnerPublic = read("services/dsh/frontend/shared/partner/partner-delivery-pricing.public.ts");
 const operatorPublic = read("services/dsh/frontend/shared/partner/operator-delivery-pricing.public.ts");
+const loyaltyController = read("services/dsh/frontend/shared/marketing/use-loyalty-policy-controller.ts");
+const loyaltyPublic = read("services/dsh/frontend/shared/marketing/loyalty-policy.public.ts");
 const partnerIndex = read("services/dsh/frontend/shared/partner/index.ts");
 const partnerCard = read("services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx");
 const partnerCourierScreen = read("services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx");
 const operatorPanel = read("services/dsh/frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx");
 const partnerDetailScreen = read("services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx");
 const couponsDeck = read("services/dsh/frontend/control-panel/marketing/components/CouponsCommandDeck.tsx");
+const loyaltyPanel = read("services/dsh/frontend/control-panel/marketing/components/LoyaltyPolicyPanel.tsx");
+const marketingDashboard = read("services/dsh/frontend/control-panel/marketing/MarketingDashboardScreen.tsx");
 const clientCheckout = read("services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx");
 
 test("JRN-026 mounts partner delivery pricing and lets the partner create the first policy", () => {
@@ -88,7 +92,16 @@ test("JRN-026 protects coupon terms, funding ownership, and maker-checker activa
   assert.match(couponsDeck, /تمويله يُحجز ويُلتزم ويُعكس في WLT/);
 });
 
-test("JRN-026 governs loyalty earning policies and delegates financial entries to WLT", () => {
+test("JRN-026 mounts editable loyalty policies and delegates financial entries to WLT", () => {
+  assert.match(marketingDashboard, /<LoyaltyCommandDeck \/><LoyaltyPolicyPanel \/>/);
+  assert.match(loyaltyPublic, /useLoyaltyPolicyController/);
+  assert.match(loyaltyPanel, /loyalty-policy\.public/);
+  assert.match(loyaltyPanel, /policy\.status === "draft" \|\| policy\.status === "paused"/);
+  assert.match(loyaltyPanel, /controller\.updateTerms\(policy, terms\)/);
+  assert.match(loyaltyPanel, /تعديل الشروط/);
+  assert.match(loyaltyPanel, /حفظ الشروط/);
+  assert.match(loyaltyController, /const updateTerms = useCallback/);
+  assert.match(loyaltyController, /expectedVersion: policy\.version/);
   assert.match(loyaltyPolicy, /ErrActiveLoyaltyPolicyImmutable/);
   assert.match(loyaltyPolicy, /ErrLoyaltyPolicySelfApproval/);
   assert.match(loyaltyPolicy, /current\.Status == "active" && termsChanged/);
