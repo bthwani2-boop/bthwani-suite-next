@@ -51,8 +51,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-026-028-${{ github.workflow }}-${{ github.event_name }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: jrn-026-028-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify-jrn-026:
