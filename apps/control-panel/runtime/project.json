@@ -10,6 +10,12 @@
         "command": "pnpm --dir apps/control-panel/runtime typecheck"
       }
     },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node --test apps/control-panel/runtime/tests/*.test.mjs"
+      }
+    },
     "build": {
       "executor": "nx:run-commands",
       "options": {
