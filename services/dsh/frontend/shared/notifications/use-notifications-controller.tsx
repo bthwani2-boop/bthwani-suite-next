@@ -135,7 +135,12 @@ export function useNotificationDeliveryAuditController(authKind: string) {
     try {
       const data = await fetchNotificationDeliveryAttempts(nextOutcome, 100);
       setOutcome(nextOutcome);
-      setState({ kind: "success", attempts: data.attempts, summary: data.summary });
+      setState({
+        kind: "success",
+        attempts: data.attempts,
+        pushDeliveries: data.pushDeliveries,
+        summary: data.summary,
+      });
     } catch (err) {
       setState({ kind: "error", message: resolveMessage(err) });
     }
