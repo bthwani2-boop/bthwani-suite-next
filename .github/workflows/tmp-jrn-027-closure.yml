@@ -96,10 +96,43 @@ jobs:
           go test ./internal/http ./internal/marketing ./internal/wlt -count=1
           go build ./internal/http ./internal/marketing ./internal/wlt
 
-      - name: Verify DSH OpenAPI and shared frontend
+      - name: Verify DSH OpenAPI
+        shell: bash
         run: |
-          pnpm --dir services/dsh openapi:test
-          pnpm --dir services/dsh typecheck
+          set +e
+          pnpm --dir services/dsh openapi:test > /tmp/jrn027-openapi.log 2>&1
+          status=$?
+          cat /tmp/jrn027-openapi.log
+          if [ "$status" -ne 0 ]; then
+            mkdir -p governance/evidence
+            cp /tmp/jrn027-openapi.log governance/evidence/JRN-027_OPENAPI_FAILURE.log
+            git config user.name "bthwani-journey-closure"
+            git config user.email "actions@users.noreply.github.com"
+            git add governance/evidence/JRN-027_OPENAPI_FAILURE.log
+            git commit -m "chore(jrn-027): capture OpenAPI diagnostic [skip ci]"
+            git pull --rebase origin sambassam
+            git push origin HEAD:sambassam
+            exit "$status"
+          fi
+
+      - name: Verify shared frontend
+        shell: bash
+        run: |
+          set +e
+          pnpm --dir services/dsh typecheck > /tmp/jrn027-typecheck.log 2>&1
+          status=$?
+          cat /tmp/jrn027-typecheck.log
+          if [ "$status" -ne 0 ]; then
+            mkdir -p governance/evidence
+            cp /tmp/jrn027-typecheck.log governance/evidence/JRN-027_TYPECHECK_FAILURE.log
+            git config user.name "bthwani-journey-closure"
+            git config user.email "actions@users.noreply.github.com"
+            git add governance/evidence/JRN-027_TYPECHECK_FAILURE.log
+            git commit -m "chore(jrn-027): capture TypeScript diagnostic [skip ci]"
+            git pull --rebase origin sambassam
+            git push origin HEAD:sambassam
+            exit "$status"
+          fi
 
       - name: Verify repository diff
         run: git diff --check
