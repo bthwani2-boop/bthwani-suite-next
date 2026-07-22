@@ -31,8 +31,9 @@ type MarketingTargetFields = {
 export type CampaignCreatePayload = {
   readonly title: string;
   readonly description?: string | undefined;
-  readonly startDate: string;
-  readonly endDate: string;
+  /** Required by the governed UI and enforced by the backend contract. */
+  readonly startDate?: string | undefined;
+  readonly endDate?: string | undefined;
 } & MarketingTargetFields;
 
 export const fetchCampaigns = () =>
