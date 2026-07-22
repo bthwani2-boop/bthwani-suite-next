@@ -44,6 +44,16 @@ replaceExactly(
   `echo '{"operatorId":"finance-maker-1"}' | api POST "/wlt/payout-requests/$PAYOUT_ID/approve" "$REQUEST_KEY-approve" "$REQUEST_KEY-approve" "$(cat)" >/tmp/jrn037-approved.json\necho '{"operatorId":"finance-processor-2"}' | api POST "/wlt/payout-requests/$PAYOUT_ID/process" "$REQUEST_KEY-process" "$REQUEST_KEY-process" "$(cat)" >/tmp/jrn037-processed.json\necho '{"operatorId":"finance-checker-3"}' | api POST "/wlt/payout-requests/$PAYOUT_ID/complete" "$REQUEST_KEY-complete" "$REQUEST_KEY-complete" "$(cat)" >/tmp/jrn037-completed.json\n`,
   `api POST "/wlt/payout-requests/$PAYOUT_ID/approve" "$REQUEST_KEY-approve" "$REQUEST_KEY-approve" '{"operatorId":"finance-maker-1"}' >/tmp/jrn037-approved.json\napi POST "/wlt/payout-requests/$PAYOUT_ID/process" "$REQUEST_KEY-process" "$REQUEST_KEY-process" '{"operatorId":"finance-processor-2"}' >/tmp/jrn037-processed.json\napi POST "/wlt/payout-requests/$PAYOUT_ID/complete" "$REQUEST_KEY-complete" "$REQUEST_KEY-complete" '{"operatorId":"finance-checker-3"}' >/tmp/jrn037-completed.json\n`,
 );
+replaceExactly(
+  runtimeSmokePath,
+  `[[ "$CONFLICT_STATUS" = "409" ]]\n`,
+  `[[ "$CONFLICT_STATUS" = "409" ]]\n[[ "$(cat /tmp/jrn037-conflict.json | json_field code)" = "IDEMPOTENCY_CONFLICT" ]]\n`,
+);
+replaceExactly(
+  runtimeSmokePath,
+  `[[ "$CROSS_STATUS" = "403" ]]\n`,
+  `[[ "$CROSS_STATUS" = "403" ]]\n[[ "$(cat /tmp/jrn037-cross.json | json_field code)" = "PAYOUT_DESTINATION_FORBIDDEN" ]]\n`,
+);
 
 const dshServerPath = "services/dsh/backend/internal/http/server.go";
 for (const [before, after] of [
