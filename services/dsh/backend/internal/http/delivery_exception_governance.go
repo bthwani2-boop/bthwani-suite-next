@@ -1,12 +1,16 @@
 package http
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"strings"
 
+	"dsh-api/internal/auth"
 	"dsh-api/internal/dispatch"
+	"dsh-api/internal/media"
 	"dsh-api/internal/store"
+	"dsh-api/internal/wlt"
 )
 
 func validateDeliveryExceptionReportNote(note string) error {
@@ -32,6 +36,53 @@ func validateDeliveryExceptionResolutionState(item *dispatch.DeliveryException) 
 	default:
 		return fmt.Errorf("%w: unsupported delivery exception state", dispatch.ErrConflict)
 	}
+}
+
+func deliveryExceptionPathID(path, prefix, suffix string) (string, bool) {
+	if !strings.HasPrefix(path, prefix) || !strings.HasSuffix(path, suffix) {
+		return "", false
+	}
+	id := strings.TrimSuffix(strings.TrimPrefix(path, prefix), suffix)
+	if id == "" || strings.Contains(id, "/") {
+		return "", false
+	}
+	return id, true
+}
+
+// DeliveryExceptionGovernanceMiddleware intercepts only the two JRN-020
+// mutation routes whose acceptance rules are stricter than the legacy router.
+// All other traffic is delegated unchanged to the existing unified router.
+func DeliveryExceptionGovernanceMiddleware(
+	db *sql.DB,
+	identityClient *auth.Client,
+	wltClient *wlt.Client,
+	mediaProvider *media.Provider,
+	next http.Handler,
+) http.Handler {
+	governed := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			if assignmentID, ok := deliveryExceptionPathID(
+				r.URL.Path,
+				"/dsh/captain/dispatch/assignments/",
+				"/exceptions",
+			); ok {
+				r.SetPathValue("assignmentId", assignmentID)
+				governed.handleReportDeliveryExceptionGoverned(w, r)
+				return
+			}
+			if exceptionID, ok := deliveryExceptionPathID(
+				r.URL.Path,
+				"/dsh/operator/delivery-exceptions/",
+				"/resolve",
+			); ok {
+				r.SetPathValue("exceptionId", exceptionID)
+				governed.handleResolveDeliveryExceptionGoverned(w, r)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // handleReportDeliveryExceptionGoverned keeps the domain primitive unchanged
