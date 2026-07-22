@@ -47,32 +47,35 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client
 	}
 	defer tx.Rollback()
 
+	if claimed.AmountMinorUnits <= 0 || claimed.Currency == "" {
+		return nil, fmt.Errorf("captured session %s has invalid accounting amount/currency", claimed.ID)
+	}
+	lines := []ledger.LedgerLine{
+		{AccountType: "provider_clearing", DebitCredit: "debit", AmountMinorUnits: claimed.AmountMinorUnits, Currency: claimed.Currency},
+		{AccountType: "platform_payable", DebitCredit: "credit", AmountMinorUnits: claimed.AmountMinorUnits, Currency: claimed.Currency},
+	}
+	ledgerTransactionID, err := ledger.PostLedgerTransaction(ctx, tx, "payment_captured", "payment_session", claimed.ID, lines, ledger.Actor{ID: "wlt", Type: "service"})
+	if err != nil {
+		return nil, fmt.Errorf("post capture ledger transaction: %w", err)
+	}
+
 	const q = `
 		UPDATE wlt_payment_sessions
-		SET status = 'captured', provider_reference = $2, captured_at = NOW(), updated_at = NOW()
+		SET status = 'captured', provider_reference = $2, captured_at = NOW(),
+		    capture_ledger_transaction_id = $3, last_provider_status = 'captured',
+		    updated_at = NOW()
 		WHERE id = $1 AND status = 'capture_pending'
 		RETURNING id, checkout_intent_id, special_request_id,
 		          tenant_id,
 		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
-	s, err := scanSession(tx.QueryRowContext(ctx, q, sessionID, result.ProviderReference))
+	s, err := scanSession(tx.QueryRowContext(ctx, q, sessionID, result.ProviderReference, ledgerTransactionID))
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("session %s was no longer capture_pending when finalizing capture", sessionID)
 	}
 	if err != nil {
 		return nil, err
-	}
-	if s.AmountMinorUnits <= 0 || s.Currency == "" {
-		return nil, fmt.Errorf("captured session %s has invalid accounting amount/currency", s.ID)
-	}
-
-	lines := []ledger.LedgerLine{
-		{AccountType: "provider_clearing", DebitCredit: "debit", AmountMinorUnits: s.AmountMinorUnits, Currency: s.Currency},
-		{AccountType: "platform_payable", DebitCredit: "credit", AmountMinorUnits: s.AmountMinorUnits, Currency: s.Currency},
-	}
-	if _, err := ledger.PostLedgerTransaction(ctx, tx, "payment_captured", "payment_session", s.ID, lines, ledger.Actor{ID: "wlt", Type: "service"}); err != nil {
-		return nil, fmt.Errorf("post capture ledger transaction: %w", err)
 	}
 	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.TenantID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
 		return nil, err
