@@ -159,7 +159,7 @@ func (s *protectedStoreServer) handleFieldListPayoutDestinations(w http.Response
 	if !ok {
 		return
 	}
-	status, body, err := s.wlt.FinanceReadPayoutDestination(r.Context(), actor.ID, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceReadPayoutDestination(r.Context(), "field", actor.ID, r.Header.Get("X-Correlation-ID"))
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -173,7 +173,7 @@ func (s *protectedStoreServer) upsertFieldPayoutDestination(w http.ResponseWrite
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payout destination body is invalid")
 		return
 	}
-	status, responseBody, err := s.wlt.FinanceUpsertPayoutDestination(r.Context(), actor.ID, body, r.Header.Get("X-Correlation-ID"))
+	status, responseBody, err := s.wlt.FinanceUpsertPayoutDestination(r.Context(), "field", actor.ID, body, r.Header.Get("X-Correlation-ID"))
 	writeWltActorFinanceResponse(w, status, responseBody, err)
 }
 
@@ -190,6 +190,6 @@ func (s *protectedStoreServer) handleFieldDeletePayoutDestination(w http.Respons
 	if !ok {
 		return
 	}
-	status, body, err := s.wlt.FinanceDeactivatePayoutDestination(r.Context(), actor.ID, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.FinanceDeactivatePayoutDestination(r.Context(), "field", actor.ID, r.Header.Get("X-Correlation-ID"))
 	writeWltActorFinanceResponse(w, status, body, err)
 }
