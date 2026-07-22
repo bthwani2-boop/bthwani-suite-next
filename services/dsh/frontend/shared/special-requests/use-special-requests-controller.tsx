@@ -11,9 +11,12 @@ import {
   updateOperatorSpecialRequest,
 } from "./special-requests.api";
 import type {
+  ClassifiedSpecialRequestError,
   DshCreateSpecialRequest,
   DshSpecialRequestResponse,
   DshUpdateSpecialRequest,
+  SpecialRequestStatus,
+  SpecialRequestType,
 } from "./special-requests.types";
 import {
   beginSubmit,
@@ -24,6 +27,20 @@ import {
 } from "./special-requests.controller-core";
 import { specialRequestIdleState, specialRequestListLoadState } from "./special-requests.states";
 import type { DshSpecialRequestState, DshSpecialRequestListLoadState } from "./special-requests.states";
+
+function listLoadStateForError(error: ClassifiedSpecialRequestError): DshSpecialRequestListLoadState {
+  switch (error.kind) {
+    case "network":
+    case "unavailable":
+      return "offline";
+    case "forbidden":
+      return "forbidden";
+    case "conflict":
+      return "conflict";
+    default:
+      return "error";
+  }
+}
 
 /**
  * Client-side controller: create / cancel / approve-quote a single special
@@ -89,8 +106,8 @@ export function useSpecialRequestsController() {
 
 export type UseOperatorSpecialRequestsControllerParams = {
   readonly limit?: number;
-  readonly requestType?: string;
-  readonly status?: string;
+  readonly requestType?: SpecialRequestType;
+  readonly status?: SpecialRequestStatus;
   readonly workflowStage?: string;
   readonly autoLoad?: boolean;
 };
@@ -126,11 +143,8 @@ export function useOperatorSpecialRequestsController(
       setTotal(result.total ?? 0);
       setOffset(nextOffset);
       setLoadState(specialRequestListLoadState(nextRequests));
-    } catch (error: any) {
-      if (error?.status === 403) setLoadState("forbidden");
-      else if (error?.status === 409) setLoadState("conflict");
-      else if (!globalThis.navigator?.onLine || error?.message?.includes('Network')) setLoadState("offline");
-      else setLoadState("error");
+    } catch (error) {
+      setLoadState(listLoadStateForError(classifySpecialRequestError(error)));
     }
   }, [limit, requestType, status, workflowStage]);
 
@@ -147,7 +161,8 @@ export function useOperatorSpecialRequestsController(
       const request = await fetchOperatorSpecialRequest(id);
       patchLocal(request);
       return request;
-    } catch {
+    } catch (error) {
+      setLoadState(listLoadStateForError(classifySpecialRequestError(error)));
       return undefined;
     }
   }, [patchLocal]);
