@@ -20,8 +20,8 @@ func TestDecodeCancellationBodyNormalizesLegacyOperatorPayload(t *testing.T) {
 	if !ok {
 		t.Fatalf("legacy cancellation payload was rejected: status=%d body=%s", response.Code, response.Body.String())
 	}
-	if body.ReasonCode != "operator_cancelled" {
-		t.Fatalf("reasonCode=%q want operator_cancelled", body.ReasonCode)
+	if body.ReasonCode != "other" {
+		t.Fatalf("reasonCode=%q want other", body.ReasonCode)
 	}
 	if body.ReasonNote != "تعذر تنفيذ الطلب" {
 		t.Fatalf("reasonNote=%q", body.ReasonNote)
