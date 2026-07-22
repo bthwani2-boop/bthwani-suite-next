@@ -19,9 +19,7 @@ type jrn037PayoutRequestBody struct {
 
 func correlationForActorMutation(r *http.Request, fallback string) string {
 	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
-	if correlationID == "" {
-		correlationID = strings.TrimSpace(fallback)
-	}
+	if correlationID == "" { correlationID = strings.TrimSpace(fallback) }
 	return correlationID
 }
 
@@ -45,16 +43,12 @@ func (s *protectedStoreServer) handleJRN037ActorPayoutDestinationUpsert(w http.R
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payout destination body is invalid")
 		return
 	}
-	// The authenticated DSH actor is the only owner authority. Any owner fields
-	// supplied by an untrusted surface are removed before forwarding to WLT.
 	delete(object, "ownerActorId")
 	delete(object, "ownerActorType")
 	delete(object, "partnerId")
 	delete(object, "actorId")
 	delete(object, "actorType")
-	if _, exists := object["operatorId"]; !exists {
-		object["operatorId"] = actor.ID
-	}
+	if _, exists := object["operatorId"]; !exists { object["operatorId"] = actor.ID }
 	body, err = json.Marshal(object)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode payout destination")
@@ -115,56 +109,26 @@ func (s *protectedStoreServer) handleJRN037ActorPayoutCreate(w http.ResponseWrit
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
-func (s *protectedStoreServer) handlePartnerPayoutDestinationRead(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutDestinationRead(w, r, "partner")
-}
-func (s *protectedStoreServer) handlePartnerPayoutDestinationUpsert(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutDestinationUpsert(w, r, "partner")
-}
-func (s *protectedStoreServer) handlePartnerPayoutDestinationDeactivate(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutDestinationDeactivate(w, r, "partner")
-}
-func (s *protectedStoreServer) handlePartnerPayoutRequests(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutList(w, r, "partner")
-}
-func (s *protectedStoreServer) handlePartnerCreatePayoutRequest(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutCreate(w, r, "partner")
-}
+func (s *protectedStoreServer) handlePartnerPayoutDestinationRead(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutDestinationRead(w, r, "partner") }
+func (s *protectedStoreServer) handlePartnerPayoutDestinationUpsert(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutDestinationUpsert(w, r, "partner") }
+func (s *protectedStoreServer) handlePartnerPayoutDestinationDeactivate(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutDestinationDeactivate(w, r, "partner") }
+func (s *protectedStoreServer) handlePartnerPayoutRequests(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutList(w, r, "partner") }
+func (s *protectedStoreServer) handlePartnerCreatePayoutRequest(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutCreate(w, r, "partner") }
 
-func (s *protectedStoreServer) handleCaptainPayoutDestinationRead(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutDestinationRead(w, r, "captain")
-}
-func (s *protectedStoreServer) handleCaptainPayoutDestinationUpsert(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutDestinationUpsert(w, r, "captain")
-}
-func (s *protectedStoreServer) handleCaptainPayoutDestinationDeactivate(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutDestinationDeactivate(w, r, "captain")
-}
-func (s *protectedStoreServer) handleCaptainPayoutRequestsJRN037(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutList(w, r, "captain")
-}
-func (s *protectedStoreServer) handleCaptainCreatePayoutRequestJRN037(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutCreate(w, r, "captain")
-}
+func (s *protectedStoreServer) handleCaptainPayoutDestinationRead(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutDestinationRead(w, r, "captain") }
+func (s *protectedStoreServer) handleCaptainPayoutDestinationUpsert(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutDestinationUpsert(w, r, "captain") }
+func (s *protectedStoreServer) handleCaptainPayoutDestinationDeactivate(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutDestinationDeactivate(w, r, "captain") }
+func (s *protectedStoreServer) handleCaptainPayoutRequestsJRN037(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutList(w, r, "captain") }
+func (s *protectedStoreServer) handleCaptainCreatePayoutRequestJRN037(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutCreate(w, r, "captain") }
 
-func (s *protectedStoreServer) handleFieldPayoutDestinationReadJRN037(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutDestinationRead(w, r, "field")
-}
-func (s *protectedStoreServer) handleFieldPayoutDestinationUpsertJRN037(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutDestinationUpsert(w, r, "field")
-}
-func (s *protectedStoreServer) handleFieldPayoutDestinationDeactivateJRN037(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutDestinationDeactivate(w, r, "field")
-}
-func (s *protectedStoreServer) handleFieldPayoutRequestsJRN037(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutList(w, r, "field")
-}
-func (s *protectedStoreServer) handleFieldCreatePayoutRequestJRN037(w http.ResponseWriter, r *http.Request) {
-	s.handleJRN037ActorPayoutCreate(w, r, "field")
-}
+func (s *protectedStoreServer) handleFieldPayoutDestinationReadJRN037(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutDestinationRead(w, r, "field") }
+func (s *protectedStoreServer) handleFieldPayoutDestinationUpsertJRN037(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutDestinationUpsert(w, r, "field") }
+func (s *protectedStoreServer) handleFieldPayoutDestinationDeactivateJRN037(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutDestinationDeactivate(w, r, "field") }
+func (s *protectedStoreServer) handleFieldPayoutRequestsJRN037(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutList(w, r, "field") }
+func (s *protectedStoreServer) handleFieldCreatePayoutRequestJRN037(w http.ResponseWriter, r *http.Request) { s.handleJRN037ActorPayoutCreate(w, r, "field") }
 
 func (s *protectedStoreServer) handleReconcileFinancePayoutRequestJRN037(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "dsh.finance.payout.manage"); !ok { return }
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator"); !ok { return }
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 16*1024))
 	if err != nil || len(body) == 0 || !json.Valid(body) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "reconciliation body is invalid")
@@ -175,7 +139,7 @@ func (s *protectedStoreServer) handleReconcileFinancePayoutRequestJRN037(w http.
 }
 
 func (s *protectedStoreServer) handleFinancePayoutAuditJRN037(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "dsh.finance.payout.read"); !ok { return }
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok { return }
 	status, body, err := s.wlt.FinanceRead(r.Context(), "/wlt/payout-requests/"+url.PathEscape(r.PathValue("payoutId"))+"/audit", nil, r.Header.Get("X-Correlation-ID"))
 	writeWltActorFinanceResponse(w, status, body, err)
 }
