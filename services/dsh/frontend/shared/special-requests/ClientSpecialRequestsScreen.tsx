@@ -124,7 +124,7 @@ export function ClientSpecialRequestsScreen({
               return (
                 <View key={request.id} style={styles.card}>
                   <View style={styles.cardHeader}>
-                    <Text role="headingXs" style={styles.rtlText}>{specialRequestTypeLabel(request)}</Text>
+                    <Text role="titleSm" style={styles.rtlText}>{specialRequestTypeLabel(request)}</Text>
                     <Text style={styles.statusText}>{specialRequestStatusLabel(request)}</Text>
                   </View>
                   <Text style={styles.secondaryText}>المرجع: {request.id}</Text>
