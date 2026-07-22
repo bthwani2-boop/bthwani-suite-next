@@ -50,6 +50,16 @@ function validateDocument(documentRelative, schemaRelative, label) {
   return document;
 }
 
+function appendSchemaErrors(relative, label, validator) {
+  for (const error of validator.errors ?? []) {
+    violations.push({
+      file: relative,
+      line: 0,
+      message: `${label}_SCHEMA_VIOLATION ${error.instancePath || "/"} ${error.message}`,
+    });
+  }
+}
+
 function markerForAuthorityPath(authorityPath) {
   const full = path.join(repoRoot, authorityPath);
   if (fs.existsSync(full) && fs.statSync(full).isDirectory()) return `${authorityPath}/**`;
@@ -78,26 +88,50 @@ const repositoryEnforcement = validateDocument(enforcementRelative, "governance/
 const saasGovernance = validateDocument(saasRelative, "governance/saas/saas-governance.schema.json", "SAAS_GOVERNANCE");
 readJson("tools/guards/guard-manifest.json", "GUARD_MANIFEST");
 
-const productSchemaRelative = "governance/product/product-truth.schema.json";
-const productValidator = compileSchema(productSchemaRelative);
+const canonicalProductSchema = "governance/product/product-truth.schema.json";
+const compatibilityProductSchema = "governance/product/product-truth.compatibility.schema.json";
+const canonicalProductValidator = compileSchema(canonicalProductSchema);
+const compatibilityProductValidator = compileSchema(compatibilityProductSchema);
 const productContractsDir = path.join(repoRoot, "governance/product/contracts");
+
 if (!fs.existsSync(productContractsDir)) {
   violations.push({ file: "governance/product/contracts", line: 0, message: "MISSING_PRODUCT_TRUTH_CONTRACTS_DIRECTORY" });
-} else if (productValidator) {
+} else if (canonicalProductValidator && compatibilityProductValidator) {
   const contractFiles = fs.readdirSync(productContractsDir).filter((name) => name.endsWith(".product-truth.json")).sort();
-  if (!contractFiles.includes("TEMPLATE.product-truth.json")) violations.push({ file: "governance/product/contracts", line: 0, message: "MISSING_PRODUCT_TRUTH_TEMPLATE" });
+  if (!contractFiles.includes("TEMPLATE.product-truth.json")) {
+    violations.push({ file: "governance/product/contracts", line: 0, message: "MISSING_PRODUCT_TRUTH_TEMPLATE" });
+  }
+
   const capabilityIds = new Set();
+  const compatibilityJourneyIds = new Set();
   for (const fileName of contractFiles) {
     const relative = `governance/product/contracts/${fileName}`;
     const contract = readJson(relative, "PRODUCT_TRUTH_CONTRACT");
     if (!contract) continue;
-    if (!productValidator(contract)) {
-      for (const error of productValidator.errors ?? []) violations.push({ file: relative, line: 0, message: `PRODUCT_TRUTH_SCHEMA_VIOLATION ${error.instancePath || "/"} ${error.message}` });
+
+    const canonical = contract.schemaVersion === 1;
+    const validator = canonical ? canonicalProductValidator : compatibilityProductValidator;
+    const label = canonical ? "PRODUCT_TRUTH" : "PRODUCT_TRUTH_COMPATIBILITY";
+    if (!validator(contract)) {
+      appendSchemaErrors(relative, label, validator);
       continue;
     }
-    if (capabilityIds.has(contract.capabilityId)) violations.push({ file: relative, line: 0, message: `DUPLICATE_PRODUCT_CAPABILITY_ID ${contract.capabilityId}` });
+
+    if (!canonical) {
+      if (compatibilityJourneyIds.has(contract.journeyId)) {
+        violations.push({ file: relative, line: 0, message: `DUPLICATE_COMPATIBILITY_JOURNEY_ID ${contract.journeyId}` });
+      }
+      compatibilityJourneyIds.add(contract.journeyId);
+      continue;
+    }
+
+    if (capabilityIds.has(contract.capabilityId)) {
+      violations.push({ file: relative, line: 0, message: `DUPLICATE_PRODUCT_CAPABILITY_ID ${contract.capabilityId}` });
+    }
     capabilityIds.add(contract.capabilityId);
-    if (contract.owners.productManager === contract.owners.productOwner) violations.push({ file: relative, line: 0, message: "PRODUCT_MANAGER_AND_PRODUCT_OWNER_MUST_BE_SEPARATE" });
+    if (contract.owners.productManager === contract.owners.productOwner) {
+      violations.push({ file: relative, line: 0, message: "PRODUCT_MANAGER_AND_PRODUCT_OWNER_MUST_BE_SEPARATE" });
+    }
 
     const actorIds = new Set();
     for (const actor of contract.actors) {
@@ -111,9 +145,15 @@ if (!fs.existsSync(productContractsDir)) {
     for (const surface of contract.surfaces) {
       if (surfaceIds.has(surface.id)) violations.push({ file: relative, line: 0, message: `DUPLICATE_PRODUCT_SURFACE ${surface.id}` });
       surfaceIds.add(surface.id);
-      for (const actorId of surface.actors) if (!actorIds.has(actorId)) violations.push({ file: relative, line: 0, message: `SURFACE_REFERENCES_UNKNOWN_ACTOR ${surface.id} -> ${actorId}` });
-      if (surface.required && ["app-client", "app-partner", "app-captain", "app-field", "control-panel"].includes(surface.id) && !surface.routesOrScreens?.length) violations.push({ file: relative, line: 0, message: `REQUIRED_UI_SURFACE_HAS_NO_ROUTE_OR_SCREEN ${surface.id}` });
-      if (surface.required && surface.id === "backend" && !surface.operationIds?.length) violations.push({ file: relative, line: 0, message: "REQUIRED_BACKEND_SURFACE_HAS_NO_OPERATION_ID" });
+      for (const actorId of surface.actors) {
+        if (!actorIds.has(actorId)) violations.push({ file: relative, line: 0, message: `SURFACE_REFERENCES_UNKNOWN_ACTOR ${surface.id} -> ${actorId}` });
+      }
+      if (surface.required && ["app-client", "app-partner", "app-captain", "app-field", "control-panel"].includes(surface.id) && !surface.routesOrScreens?.length) {
+        violations.push({ file: relative, line: 0, message: `REQUIRED_UI_SURFACE_HAS_NO_ROUTE_OR_SCREEN ${surface.id}` });
+      }
+      if (surface.required && surface.id === "backend" && !surface.operationIds?.length) {
+        violations.push({ file: relative, line: 0, message: "REQUIRED_BACKEND_SURFACE_HAS_NO_OPERATION_ID" });
+      }
     }
   }
 }
@@ -146,7 +186,9 @@ if (authority) {
     if (!fs.existsSync(registeredPath)) violations.push({ file: document.path, line: 0, message: "REGISTERED_AUTHORITY_PATH_MISSING" });
 
     const marker = markerForAuthorityPath(document.path);
-    if (decisionIndex && !decisionIndex.includes(document.path) && !decisionIndex.includes(marker)) violations.push({ file: decisionIndexRelative, line: 0, message: `INDEX_MISSING_REGISTERED_AUTHORITY ${document.path}` });
+    if (decisionIndex && !decisionIndex.includes(document.path) && !decisionIndex.includes(marker)) {
+      violations.push({ file: decisionIndexRelative, line: 0, message: `INDEX_MISSING_REGISTERED_AUTHORITY ${document.path}` });
+    }
 
     if (document.classification === "ACTIVE_CANONICAL" && document.path.endsWith(".md") && document.path !== "AGENTS.md" && fs.existsSync(registeredPath)) {
       const content = fs.readFileSync(registeredPath, "utf8");
@@ -154,18 +196,26 @@ if (authority) {
     }
   }
 
-  if (roots.length !== 1 || roots[0] !== authority.rootAuthority) violations.push({ file: authorityRelative, line: 0, message: `ROOT_AUTHORITY_MISMATCH ${JSON.stringify(roots)}` });
+  if (roots.length !== 1 || roots[0] !== authority.rootAuthority) {
+    violations.push({ file: authorityRelative, line: 0, message: `ROOT_AUTHORITY_MISMATCH ${JSON.stringify(roots)}` });
+  }
 
-  const activeRanks = authority.documents.filter((document) => ["ROOT_AUTHORITY", "ACTIVE_CANONICAL", "CONDITIONAL_CANONICAL"].includes(document.classification)).map((document) => rankById.get(document.precedenceId));
-  const lowerRanks = authority.documents.filter((document) => ["DERIVED_SUPPORT", "HISTORICAL_REFERENCE"].includes(document.classification)).map((document) => rankById.get(document.precedenceId));
-  if (activeRanks.length && lowerRanks.length && Math.min(...lowerRanks) <= Math.max(...activeRanks)) violations.push({ file: authorityRelative, line: 0, message: "DERIVED_OR_HISTORICAL_AUTHORITY_OUTRANKS_ACTIVE_AUTHORITY" });
+  const activeRanks = authority.documents
+    .filter((document) => ["ROOT_AUTHORITY", "ACTIVE_CANONICAL", "CONDITIONAL_CANONICAL"].includes(document.classification))
+    .map((document) => rankById.get(document.precedenceId));
+  const lowerRanks = authority.documents
+    .filter((document) => ["DERIVED_SUPPORT", "HISTORICAL_REFERENCE"].includes(document.classification))
+    .map((document) => rankById.get(document.precedenceId));
+  if (activeRanks.length && lowerRanks.length && Math.min(...lowerRanks) <= Math.max(...activeRanks)) {
+    violations.push({ file: authorityRelative, line: 0, message: "DERIVED_OR_HISTORICAL_AUTHORITY_OUTRANKS_ACTIVE_AUTHORITY" });
+  }
 
   for (const requiredPath of [
     "governance/contracts",
     "governance/agents",
     "governance/skills",
     "governance/guards",
-    "governance/product/product-truth.schema.json",
+    canonicalProductSchema,
     "governance/saas",
     "tools/guards/guard-manifest.json",
   ]) {
@@ -202,13 +252,17 @@ if (decisions) {
   for (const scope of ["product", "runtime", "visual", "qa", "security", "finance", "isolation", "governance", "ci", "release", "production"]) {
     if (!conditionalScopes.has(scope)) violations.push({ file: decisionRelative, line: 0, message: `CLOSURE_CONDITIONAL_SCOPE_MISSING ${scope}` });
   }
-  for (const classId of ["fail", "blocked", "pending"]) if (!(decisions.closureRules.forbiddenOpenClasses ?? []).includes(classId)) violations.push({ file: decisionRelative, line: 0, message: `CLOSURE_FORBIDDEN_OPEN_CLASS_MISSING ${classId}` });
+  for (const classId of ["fail", "blocked", "pending"]) {
+    if (!(decisions.closureRules.forbiddenOpenClasses ?? []).includes(classId)) violations.push({ file: decisionRelative, line: 0, message: `CLOSURE_FORBIDDEN_OPEN_CLASS_MISSING ${classId}` });
+  }
 }
 
 if (saasGovernance && decisions) {
   const canonicalIds = new Set(decisions.canonicalDecisions.map((entry) => entry.id));
   if (!canonicalIds.has(saasGovernance.canonicalDecision)) violations.push({ file: saasRelative, line: 0, message: `SAAS_DECISION_NOT_CANONICAL ${saasGovernance.canonicalDecision}` });
-  if (saasGovernance.commercialActivationState === "BLOCKED_BY_POLICY" && ["PASS", "CLOSED_WITH_EVIDENCE"].includes(saasGovernance.canonicalDecision)) violations.push({ file: saasRelative, line: 0, message: "SAAS_BLOCKED_STATE_CANNOT_PASS_OR_CLOSE" });
+  if (saasGovernance.commercialActivationState === "BLOCKED_BY_POLICY" && ["PASS", "CLOSED_WITH_EVIDENCE"].includes(saasGovernance.canonicalDecision)) {
+    violations.push({ file: saasRelative, line: 0, message: "SAAS_BLOCKED_STATE_CANNOT_PASS_OR_CLOSE" });
+  }
 }
 
 if (guards && guardAssurance) {
@@ -256,7 +310,9 @@ if (repositoryEnforcement) {
 }
 
 for (const [label, registry] of [["AGENT", agents], ["SKILL", skills], ["GUARD", guards], ["FRONTEND_BINDING", frontendBindings]]) {
-  if (registry?.entries && new Set(registry.entries.map((entry) => entry.id)).size !== registry.entries.length) violations.push({ file: `<${label.toLowerCase()}-registry>`, line: 0, message: `${label}_DUPLICATE_ID` });
+  if (registry?.entries && new Set(registry.entries.map((entry) => entry.id)).size !== registry.entries.length) {
+    violations.push({ file: `<${label.toLowerCase()}-registry>`, line: 0, message: `${label}_DUPLICATE_ID` });
+  }
 }
 
 fail(guardId, violations);
