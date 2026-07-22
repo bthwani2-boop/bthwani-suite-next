@@ -11,7 +11,7 @@ export type DshNotification = {
   readonly actionUrl: string;
   readonly isRead: boolean;
   readonly createdAt: string;
-  readonly readAt?: string;
+  readonly readAt?: string | undefined;
 };
 
 export type DshNotificationPreference = {
@@ -20,8 +20,8 @@ export type DshNotificationPreference = {
   readonly topic: string;
   readonly enabled: boolean;
   readonly channels: readonly DshNotificationChannel[];
-  readonly quietHoursStart?: string;
-  readonly quietHoursEnd?: string;
+  readonly quietHoursStart?: string | undefined;
+  readonly quietHoursEnd?: string | undefined;
   readonly locale: DshNotificationLocale;
   readonly timezone: string;
   readonly updatedAt: string;
@@ -31,8 +31,8 @@ export type DshUpdateNotificationPreferenceInput = {
   readonly topic: string;
   readonly enabled: boolean;
   readonly channels: readonly DshNotificationChannel[];
-  readonly quietHoursStart?: string;
-  readonly quietHoursEnd?: string;
+  readonly quietHoursStart?: string | undefined;
+  readonly quietHoursEnd?: string | undefined;
   readonly locale: DshNotificationLocale;
   readonly timezone: string;
 };
