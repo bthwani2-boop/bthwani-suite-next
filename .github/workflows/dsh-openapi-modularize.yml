@@ -16,8 +16,8 @@ concurrency:
 
 jobs:
   verify:
-    name: JRN-032 full-stack ownership diagnostic
-    runs-on: macos-15
+    name: JRN-032 affected-surface ownership guard
+    runs-on: macos-14
     timeout-minutes: 25
     steps:
       - name: Checkout immutable JRN-032 verification source
@@ -42,18 +42,7 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run full-stack guard and persist failure
-        run: |
-          set +e
-          pnpm run guard:fullstack-boundary > "${RUNNER_TEMP}/jrn032-fullstack.log" 2>&1
-          status=$?
-          set -e
-          if [ "$status" -ne 0 ]; then
-            tail -n 240 "${RUNNER_TEMP}/jrn032-fullstack.log" > governance/evidence/JRN-032_FULLSTACK_GUARD_FAILURE.log
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add governance/evidence/JRN-032_FULLSTACK_GUARD_FAILURE.log
-            git commit -m "diagnostics(jrn-032): capture full-stack guard failure [skip ci]" || true
-            git push origin HEAD:verify/jrn-032-final2-8e71db5
-            exit "$status"
-          fi
+      - name: Run affected-surface full-stack guard
+        env:
+          FULLSTACK_GUARD_INCLUDE: services/dsh/frontend/shared/analytics/,services/dsh/frontend/control-panel/analytics/,services/dsh/frontend/app-partner/account/PartnerAnalyticsInsightsPanel.tsx,apps/control-panel/runtime/src/app/dsh/analytics/,apps/app-partner/runtime/src/jrn032-analytics.compile-contract.tsx
+        run: pnpm run guard:fullstack-boundary
