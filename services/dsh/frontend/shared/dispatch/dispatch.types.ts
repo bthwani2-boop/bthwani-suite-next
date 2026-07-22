@@ -33,9 +33,19 @@ export type DshDeliveryException = Omit<GeneratedDshDeliveryException, "reasonCo
   readonly reasonCode: DshDeliveryExceptionReasonCode;
 };
 
-export type DshReportDeliveryExceptionInput = Omit<GeneratedDshReportDeliveryExceptionInput, "reasonCode"> & {
+export type DshReportDeliveryExceptionInput = Omit<
+  GeneratedDshReportDeliveryExceptionInput,
+  "reasonCode" | "note"
+> & {
   readonly reasonCode: DshDeliveryExceptionReasonCode;
+  readonly note: string;
 };
+
+export type DshDeliveryExceptionResolutionAction =
+  | "retry_same_captain"
+  | "reassign_captain"
+  | "return_to_store"
+  | "cancel_order";
 
 export type DshPartnerDispatchReference = components["schemas"]["DshPartnerDispatchReference"];
 
