@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TextInput } from 'react-native';
-import { Button, Screen, StateView, Text, colorRoles, spacing } from '@bthwani/ui-kit';
+import React, { useState } from "react";
+import { View, StyleSheet, ScrollView, TextInput } from "react-native";
+import { Button, Screen, StateView, Text, colorRoles, spacing } from "@bthwani/ui-kit";
 
 export type AwnakFormSubmitInput = {
   readonly itemType: string;
@@ -11,14 +11,15 @@ export type AwnakFormSubmitInput = {
 
 type Props = {
   onBack: () => void;
+  onViewRequests?: () => void;
   onSubmit: (data: AwnakFormSubmitInput) => Promise<boolean>;
 };
 
-export function AwnakForm({ onBack, onSubmit }: Props) {
-  const [itemType, setItemType] = useState('');
-  const [pickupAddress, setPickupAddress] = useState('');
-  const [dropoffAddress, setDropoffAddress] = useState('');
-  const [notes, setNotes] = useState('');
+export function AwnakForm({ onBack, onViewRequests, onSubmit }: Props) {
+  const [itemType, setItemType] = useState("");
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [dropoffAddress, setDropoffAddress] = useState("");
+  const [notes, setNotes] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -29,9 +30,9 @@ export function AwnakForm({ onBack, onSubmit }: Props) {
       <Screen padded>
         <StateView
           title="تم استلام الطلب"
-          description="تم استلام طلب عونك بنجاح وسيقوم أحد مندوبينا بالتواصل معك."
-          actionLabel="العودة للرئيسية"
-          onActionPress={onBack}
+          description="تم استلام طلب عونك بنجاح. تابع العرض وإسناد الكابتن وحالة التسليم من طلباتك الخاصة."
+          actionLabel="متابعة الطلب"
+          onActionPress={onViewRequests ?? onBack}
         />
       </Screen>
     );
@@ -41,7 +42,7 @@ export function AwnakForm({ onBack, onSubmit }: Props) {
     <Screen padded>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
         <Text role="headingSm" style={styles.title}>طلب مشوار عونك</Text>
-        
+
         <View style={styles.formGroup}>
           <TextInput
             placeholder="ماذا تريدنا أن نوصل لك؟ (مثال: أوراق، طرد صغير)"
@@ -98,10 +99,10 @@ export function AwnakForm({ onBack, onSubmit }: Props) {
                 if (ok) {
                   setSubmitted(true);
                 } else {
-                  setSubmitError('تعذر إرسال طلب عونك. تحقق من الاتصال ثم حاول مرة أخرى.');
+                  setSubmitError("تعذر إرسال طلب عونك. تحقق من الاتصال ثم حاول مرة أخرى.");
                 }
               } catch {
-                setSubmitError('تعذر إرسال طلب عونك. تحقق من الاتصال ثم حاول مرة أخرى.');
+                setSubmitError("تعذر إرسال طلب عونك. تحقق من الاتصال ثم حاول مرة أخرى.");
               } finally {
                 setIsSubmitting(false);
               }
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: spacing[6],
-    textAlign: 'right',
+    textAlign: "right",
   },
   formGroup: {
     gap: spacing[4],
@@ -136,13 +137,13 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
-    writingDirection: 'rtl',
+    writingDirection: "rtl",
   },
   textArea: {
     minHeight: 96,
   },
   actions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing[3],
   },
   actionButton: {
@@ -151,6 +152,6 @@ const styles = StyleSheet.create({
   errorText: {
     color: colorRoles.danger,
     marginTop: spacing[3],
-    textAlign: 'right',
+    textAlign: "right",
   },
 });
