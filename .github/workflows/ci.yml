@@ -16,12 +16,13 @@ on:
         required: false
         type: string
       runtime_proof:
-        description: Start the full local runtime and execute smoke proof
+        description: Start the full runtime and execute smoke proof
         required: true
         default: false
         type: boolean
-  push:
-    branches: [sambassam]
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "AGENTS.md"
       - "GEMINI.md"
@@ -39,8 +40,8 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "nx.json"
-  pull_request:
-    branches: [sambassam, master]
+  push:
+    branches: [master]
     paths:
       - "AGENTS.md"
       - "GEMINI.md"
@@ -68,7 +69,7 @@ concurrency:
 
 jobs:
   context:
-    name: Detect affected CI context
+    name: Detect affected scope
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -113,22 +114,15 @@ jobs:
         id: scope
         shell: bash
         env:
-          EVENT_NAME: ${{ github.event_name }}
           EVENT_BEFORE: ${{ github.event.before }}
-          PR_ACTION: ${{ github.event.action }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_HEAD_REF: ${{ github.head_ref }}
           DISPATCH_MODE: ${{ inputs.mode }}
           DISPATCH_JOURNEY: ${{ inputs.journey }}
         run: |
           set -euo pipefail
           HEAD_SHA="${PR_HEAD_SHA:-${GITHUB_SHA}}"
-          if [[ "${EVENT_NAME}" == "pull_request" && "${PR_HEAD_REF}" == "sambassam" && "${PR_ACTION}" == "synchronize" ]]; then
-            BASE_SHA="$(git rev-parse "${HEAD_SHA}^")"
-          else
-            BASE_SHA="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
-          fi
+          BASE_SHA="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
           if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
             BASE_SHA="$(git rev-parse "${HEAD_SHA}^" 2>/dev/null || printf '%s' "${HEAD_SHA}")"
           fi
@@ -148,14 +142,11 @@ jobs:
           echo "- Heavy checks: ${{ steps.scope.outputs.heavy }}" >> "$GITHUB_STEP_SUMMARY"
 
   policy:
-    name: Verify affected governance, workflow, and infrastructure policy
+    name: Verify affected policy
     needs: [context]
     if: ${{ needs.context.outputs.policy == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    concurrency:
-      group: policy-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -194,9 +185,6 @@ jobs:
     if: ${{ needs.context.outputs.node == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    concurrency:
-      group: node-${{ github.event.pull_request.number || github.ref }}-${{ needs.context.outputs.node_scope }}
-      cancel-in-progress: true
     steps:
       - name: Checkout immutable source history
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -228,7 +216,7 @@ jobs:
           NX_BASE: ${{ needs.context.outputs.base_sha }}
           NX_HEAD: ${{ needs.context.outputs.head_sha }}
         run: pnpm run affected:build -- --base="${NX_BASE}" --head="${NX_HEAD}"
-      - name: Run only the detected journey gates
+      - name: Run only detected journey gates
         if: ${{ needs.context.outputs.journey == 'true' && needs.context.outputs.journey_scope != '' }}
         shell: pwsh
         env:
@@ -254,9 +242,6 @@ jobs:
     if: ${{ needs.context.outputs.dsh == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 40
-    concurrency:
-      group: dsh-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -279,9 +264,6 @@ jobs:
     if: ${{ needs.context.outputs.wlt == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 40
-    concurrency:
-      group: wlt-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -304,9 +286,6 @@ jobs:
     if: ${{ needs.context.outputs.identity == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    concurrency:
-      group: identity-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -329,9 +308,6 @@ jobs:
     if: ${{ needs.context.outputs.workforce == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    concurrency:
-      group: workforce-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -354,9 +330,6 @@ jobs:
     if: ${{ needs.context.outputs.platform == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 40
-    concurrency:
-      group: platform-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
     services:
       postgres:
         image: postgres:16-alpine
@@ -404,9 +377,6 @@ jobs:
     if: ${{ needs.context.outputs.providers == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    concurrency:
-      group: providers-${{ github.event.pull_request.number || github.ref }}
-      cancel-in-progress: true
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -429,9 +399,6 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    concurrency:
-      group: runtime-${{ inputs.journey || github.sha }}
-      cancel-in-progress: true
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -450,10 +417,10 @@ jobs:
         shell: pwsh
         run: pnpm run runtime:full:down
 
-  contextual_result:
-    name: BThwani Contextual CI result
+  result:
+    name: BThwani CI result
     needs: [context, policy, node_affected, dsh, wlt, identity, workforce, platform, providers, runtime_proof]
-    if: ${{ always() && !cancelled() }}
+    if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -491,48 +458,3 @@ jobs:
             fi
           done
           exit "${failed}"
-
-  repository_result:
-    name: BThwani Repository CI result
-    needs: [contextual_result]
-    if: ${{ always() && !cancelled() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - run: test "${{ needs.contextual_result.result }}" = "success"
-
-  workflow_security_result:
-    name: BThwani Workflow Security result
-    needs: [contextual_result]
-    if: ${{ always() && !cancelled() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - run: test "${{ needs.contextual_result.result }}" = "success"
-
-  governance_result:
-    name: BThwani Governance Audit result
-    needs: [contextual_result]
-    if: ${{ always() && !cancelled() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - run: test "${{ needs.contextual_result.result }}" = "success"
-
-  dsh_operational_result:
-    name: DSH Operational Closure CI result
-    needs: [contextual_result]
-    if: ${{ always() && !cancelled() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - run: test "${{ needs.contextual_result.result }}" = "success"
-
-  jrn043_release_result:
-    name: JRN-043 SDLC Governance CI Release result
-    needs: [contextual_result]
-    if: ${{ always() && !cancelled() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - run: test "${{ needs.contextual_result.result }}" = "success"
