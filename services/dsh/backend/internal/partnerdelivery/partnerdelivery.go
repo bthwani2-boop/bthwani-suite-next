@@ -7,6 +7,7 @@ package partnerdelivery
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"time"
 )
@@ -16,6 +17,7 @@ var (
 	ErrInvalid               = errors.New("invalid partner delivery input")
 	ErrConflict              = errors.New("partner delivery state conflict")
 	ErrVersionConflict       = errors.New("partner delivery task version conflict")
+	ErrIdempotencyConflict   = errors.New("partner delivery command idempotency conflict")
 	ErrNotReadyForAssignment = errors.New("order is not ready for partner delivery assignment")
 	ErrCourierIneligible     = errors.New("store courier is not eligible for assignment")
 	ErrAlreadyAssigned       = errors.New("order already has an active dispatch assignment or partner delivery task")
@@ -36,41 +38,55 @@ const (
 
 // PartnerDeliveryTask mirrors dsh_partner_delivery_tasks' columns.
 type PartnerDeliveryTask struct {
-	ID             string
-	OrderID        string
-	StoreID        string
-	BranchID       string
-	StoreCourierID string
-	Status         Status
-	AssignedAt     *time.Time
-	PickedUpAt     *time.Time
-	DepartedAt     *time.Time
-	ArrivedAt      *time.Time
-	ProofMethod    *string
-	ProofReference *string
-	CompletedAt    *time.Time
-	Version        int
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID                          string
+	OrderID                     string
+	StoreID                     string
+	BranchID                    string
+	StoreCourierID              string
+	Status                      Status
+	AssignedAt                  *time.Time
+	PickedUpAt                  *time.Time
+	DepartedAt                  *time.Time
+	ArrivedAt                   *time.Time
+	ProofMethod                 *string
+	ProofReference              *string
+	CompletedAt                 *time.Time
+	ExceptionReason             *string
+	ExceptionEvidenceReferences []string
+	ExceptionReportedAt         *time.Time
+	Version                     int
+	CreatedAt                   time.Time
+	UpdatedAt                   time.Time
 }
 
 const taskColumns = `
 	id, order_id::text, store_id, branch_id, store_courier_id, status,
 	assigned_at, picked_up_at, departed_at, arrived_at,
 	proof_method, proof_reference, completed_at,
+	exception_reason, exception_evidence_references, exception_reported_at,
 	version, created_at, updated_at
 `
 
 func scanTask(scan func(...any) error) (*PartnerDeliveryTask, error) {
 	var t PartnerDeliveryTask
+	var evidenceJSON []byte
 	err := scan(
 		&t.ID, &t.OrderID, &t.StoreID, &t.BranchID, &t.StoreCourierID, &t.Status,
 		&t.AssignedAt, &t.PickedUpAt, &t.DepartedAt, &t.ArrivedAt,
 		&t.ProofMethod, &t.ProofReference, &t.CompletedAt,
+		&t.ExceptionReason, &evidenceJSON, &t.ExceptionReportedAt,
 		&t.Version, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
+	}
+	if len(evidenceJSON) > 0 {
+		if err := json.Unmarshal(evidenceJSON, &t.ExceptionEvidenceReferences); err != nil {
+			return nil, err
+		}
+	}
+	if t.ExceptionEvidenceReferences == nil {
+		t.ExceptionEvidenceReferences = []string{}
 	}
 	return &t, nil
 }
