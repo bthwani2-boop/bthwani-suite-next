@@ -21,6 +21,23 @@ type DeliveryAttempt struct {
 	CorrelationID string     `json:"correlationId"`
 }
 
+type PushDeliveryAudit struct {
+	ID                string     `json:"id"`
+	NotificationID    string     `json:"notificationId"`
+	ActorID           string     `json:"actorId"`
+	ActorType         string     `json:"actorType"`
+	Topic             string     `json:"topic"`
+	Status            string     `json:"status"`
+	AttemptCount      int        `json:"attemptCount"`
+	NextRetryAt       time.Time  `json:"nextRetryAt"`
+	ProviderMessageID string     `json:"providerMessageId"`
+	LastError         string     `json:"lastError"`
+	SentAt           *time.Time `json:"sentAt,omitempty"`
+	FailedAt         *time.Time `json:"failedAt,omitempty"`
+	CreatedAt        time.Time  `json:"createdAt"`
+	UpdatedAt        time.Time  `json:"updatedAt"`
+}
+
 type DeliveryAuditSummary struct {
 	Sent           int `json:"sent"`
 	RetryScheduled int `json:"retryScheduled"`
@@ -140,6 +157,63 @@ func ListDeliveryAttempts(db *sql.DB, outcome string, limit int) ([]DeliveryAtte
 		return nil, DeliveryAuditSummary{}, err
 	}
 	return items, summary, nil
+}
+
+func ListPushDeliveryAudit(db *sql.DB, limit int) ([]PushDeliveryAudit, error) {
+	if db == nil {
+		return nil, ErrInvalid
+	}
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	rows, err := db.Query(`
+		SELECT d.id::text,
+		       n.id::text,
+		       n.actor_id,
+		       n.actor_type,
+		       n.topic,
+		       d.status,
+		       d.attempt_count,
+		       d.next_retry_at,
+		       COALESCE(d.provider_message_id, ''),
+		       COALESCE(d.last_error, ''),
+		       d.sent_at,
+		       d.failed_at,
+		       d.created_at,
+		       d.updated_at
+		FROM dsh_notification_channel_deliveries d
+		JOIN dsh_notifications n ON n.id = d.notification_id
+		WHERE d.channel = 'push'
+		ORDER BY d.updated_at DESC, d.id DESC
+		LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]PushDeliveryAudit, 0)
+	for rows.Next() {
+		var item PushDeliveryAudit
+		if err := rows.Scan(
+			&item.ID,
+			&item.NotificationID,
+			&item.ActorID,
+			&item.ActorType,
+			&item.Topic,
+			&item.Status,
+			&item.AttemptCount,
+			&item.NextRetryAt,
+			&item.ProviderMessageID,
+			&item.LastError,
+			&item.SentAt,
+			&item.FailedAt,
+			&item.CreatedAt,
+			&item.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }
 
 func itoa(value int) string {
