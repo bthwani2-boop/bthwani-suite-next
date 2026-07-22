@@ -1,11 +1,12 @@
-import { read } from "./_guard-utils.mjs";
+import path from "node:path";
+import { read, repoRoot, toPosix } from "./_guard-utils.mjs";
 
 export const HTTP_METHODS = new Set(["get", "post", "put", "patch", "delete", "options"]);
 
 function unquote(value) {
   const trimmed = value.trim();
   if (
-    (trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
     (trimmed.startsWith("'") && trimmed.endsWith("'"))
   ) {
     return trimmed.slice(1, -1);
@@ -71,19 +72,19 @@ function parseParameterBlock(lines, startIndex) {
 
 function parseComponentParameters(lines) {
   const parameters = new Map();
-  const parametersStart = lines.findIndex((line) => line === "  parameters:");
+  const parametersStart = lines.findIndex((line) => /^\s{2}parameters:\s*$/.test(line));
   if (parametersStart === -1) return parameters;
 
   for (let i = parametersStart + 1; i < lines.length; i++) {
-    const componentMatch = lines[i].match(/^    ([A-Za-z0-9_-]+):\s*$/);
+    const componentMatch = lines[i].match(/^\s{4}([A-Za-z0-9_-]+):\s*$/);
     if (!componentMatch) {
-      if (/^  [A-Za-z0-9_-]+:\s*$/.test(lines[i])) break;
+      if (/^\s{2}[A-Za-z0-9_-]+:\s*$/.test(lines[i])) break;
       continue;
     }
 
     const block = [lines[i]];
     for (let j = i + 1; j < lines.length; j++) {
-      if (/^    [A-Za-z0-9_-]+:\s*$/.test(lines[j]) || /^  [A-Za-z0-9_-]+:\s*$/.test(lines[j])) break;
+      if (/^\s{4}[A-Za-z0-9_-]+:\s*$/.test(lines[j]) || /^\s{2}[A-Za-z0-9_-]+:\s*$/.test(lines[j])) break;
       block.push(lines[j]);
     }
 
@@ -142,23 +143,18 @@ function parseOperationBlock({ file, apiPath, method, startLine, blockLines, com
     hasSecurity: false,
   };
 
-  for (let i = 0; i < blockLines.length; i++) {
-    const line = blockLines[i];
+  for (const line of blockLines) {
     const trimmed = line.trim();
-
     const operationMatch = trimmed.match(/^operationId:\s*(.+?)\s*$/);
     if (operationMatch) operation.operationId = parseScalar(operationMatch[1]);
 
     const extensionMatch = trimmed.match(/^(x-[A-Za-z0-9_-]+):\s*(.+?)\s*$/);
     if (extensionMatch) operation.extensions.set(extensionMatch[1], parseScalar(extensionMatch[2]));
 
-    if (/^security:\s*/.test(trimmed)) {
-      operation.hasSecurity = trimmed !== "security: []";
-    }
+    if (/^security:\s*/.test(trimmed)) operation.hasSecurity = trimmed !== "security: []";
 
     const responseMatch = trimmed.match(/^["']?([1-5][0-9][0-9])["']?\s*:/);
     if (responseMatch) operation.responses.add(responseMatch[1]);
-
   }
 
   return operation;
@@ -169,6 +165,7 @@ export function parseOpenApiContractContent(content, file = "test.yaml") {
   const componentParameters = parseComponentParameters(lines);
   const operations = [];
   let currentPath = null;
+  let currentPathIndent = -1;
   let currentPathBlock = [];
   let currentMethod = null;
   let currentStartLine = 0;
@@ -184,42 +181,111 @@ export function parseOpenApiContractContent(content, file = "test.yaml") {
       blockLines: currentBlock,
       componentParameters,
     }));
+    currentMethod = null;
+    currentBlock = [];
+  }
+
+  function closePath() {
+    flushOperation();
+    currentPath = null;
+    currentPathIndent = -1;
+    currentPathBlock = [];
   }
 
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
-    const pathMatch = line.match(/^  (["']?\/[^"']*["']?)\s*:/);
+    const pathMatch = line.match(/^(\s*)(["']?\/[^"']*["']?)\s*:/);
     if (pathMatch) {
-      flushOperation();
-      currentPath = unquote(pathMatch[1]);
+      closePath();
+      currentPath = unquote(pathMatch[2]);
+      currentPathIndent = pathMatch[1].length;
       currentPathBlock = [line];
-      currentMethod = null;
-      currentBlock = [];
       continue;
     }
 
-    if (currentPath) {
-      const methodMatch = line.match(/^    ([a-z]+)\s*:/);
-      if (methodMatch && HTTP_METHODS.has(methodMatch[1])) {
-        flushOperation();
-        currentMethod = methodMatch[1];
-        currentStartLine = index + 1;
-        currentBlock = [...currentPathBlock, line];
-        continue;
-      }
+    if (!currentPath) continue;
+    const trimmed = line.trim();
+    const indent = countIndent(line);
+    if (trimmed && !trimmed.startsWith("#") && indent <= currentPathIndent) {
+      closePath();
+      continue;
+    }
+
+    const methodMatch = line.match(new RegExp(`^\\s{${currentPathIndent + 2}}([a-z]+)\\s*:`));
+    if (methodMatch && HTTP_METHODS.has(methodMatch[1])) {
+      flushOperation();
+      currentMethod = methodMatch[1];
+      currentStartLine = index + 1;
+      currentBlock = [...currentPathBlock, line];
+      continue;
     }
 
     if (currentMethod) currentBlock.push(line);
-    if (currentPath && !currentMethod) currentPathBlock.push(line);
+    else currentPathBlock.push(line);
   }
 
-  flushOperation();
+  closePath();
   return operations;
 }
 
-export function parseOpenApiContract(file) {
+function decodeJsonPointerPath(pointer) {
+  let value = pointer.replace(/^paths\//, "");
+  value = value.replace(/~1/g, "/").replace(/~0/g, "~");
+  return value.startsWith("/") ? value : `/${value}`;
+}
+
+function parseExternalPathItemRefs(file, content, visited) {
+  const lines = content.split(/\r?\n/);
+  const operations = [];
+
+  for (let index = 0; index < lines.length; index++) {
+    const pathMatch = lines[index].match(/^(\s*)(["']?\/[^"']*["']?)\s*:/);
+    if (!pathMatch) continue;
+    const declaredPath = unquote(pathMatch[2]);
+    const pathIndent = pathMatch[1].length;
+    let refValue = "";
+
+    for (let cursor = index + 1; cursor < lines.length; cursor++) {
+      const line = lines[cursor];
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith("#") && countIndent(line) <= pathIndent) break;
+      const refMatch = trimmed.match(/^\$ref:\s*["']?([^"']+)["']?\s*$/);
+      if (refMatch) {
+        refValue = refMatch[1];
+        break;
+      }
+    }
+
+    if (!refValue || refValue.startsWith("#/")) continue;
+    const [referenceFile, pointer = ""] = refValue.split("#", 2);
+    if (!referenceFile) continue;
+    const resolved = toPosix(path.relative(repoRoot, path.resolve(repoRoot, path.dirname(file), referenceFile)));
+    const targetPath = pointer.startsWith("/") ? decodeJsonPointerPath(pointer.slice(1)) : declaredPath;
+    const referencedOperations = parseOpenApiContract(resolved, visited);
+    for (const operation of referencedOperations) {
+      if (operation.path === targetPath || operation.path === declaredPath) operations.push(operation);
+    }
+  }
+
+  return operations;
+}
+
+export function parseOpenApiContract(file, visited = new Set()) {
+  if (visited.has(file)) return [];
+  const nextVisited = new Set(visited);
+  nextVisited.add(file);
   const content = read(file);
-  return parseOpenApiContractContent(content, file);
+  const operations = [
+    ...parseOpenApiContractContent(content, file),
+    ...parseExternalPathItemRefs(file, content, nextVisited),
+  ];
+
+  const deduplicated = new Map();
+  for (const operation of operations) {
+    const key = `${operation.method} ${operation.path}`;
+    if (!deduplicated.has(key)) deduplicated.set(key, operation);
+  }
+  return [...deduplicated.values()];
 }
 
 export function operationKey(operation) {
