@@ -11,13 +11,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: jrn032-isolated-master-runner
+  group: jrn032-isolated-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
   verify:
     name: JRN-032 isolated canonical closure
-    runs-on: ubuntu-latest
+    runs-on: macos-14
     timeout-minutes: 60
     steps:
       - name: Checkout immutable JRN-032 verification source
