@@ -125,8 +125,7 @@ export async function upsertJrn036CommissionPolicy(
 ): Promise<unknown> {
   return request("/dsh/control-panel/finance/commission-policies", {
     method: "PUT",
-    body: JSON.stringify(input),
-    headers: { "Content-Type": "application/json" },
+    body: input,
   });
 }
 
@@ -139,8 +138,7 @@ async function commissionAction(
     `/dsh/control-panel/finance/commissions/${encodeURIComponent(commissionId)}/${action}`,
     {
       method: "POST",
-      body: JSON.stringify(body),
-      headers: { "Content-Type": "application/json" },
+      body,
     },
   );
   return response.commission;
