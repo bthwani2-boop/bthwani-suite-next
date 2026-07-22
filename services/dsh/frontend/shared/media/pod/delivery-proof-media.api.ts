@@ -41,6 +41,7 @@ async function uploadAndSubmitDeliveryProof(
   invalidSessionMessage: string,
   rejectionMessage: string,
   photo: CapturedDeliveryProofPhoto,
+  commandId?: string,
 ): Promise<void> {
   if (!photo.uri.trim()) throw new Error('صورة إثبات التسليم مطلوبة.');
 
@@ -51,6 +52,7 @@ async function uploadAndSubmitDeliveryProof(
 
   const form = new FormData();
   await appendPhoto(form, photo);
+  const correlationId = corrId(correlationPrefix);
 
   let response: Response;
   try {
@@ -58,7 +60,8 @@ async function uploadAndSubmitDeliveryProof(
       method: 'POST',
       headers: {
         Accept: 'application/json',
-        'X-Correlation-ID': corrId(correlationPrefix),
+        'X-Correlation-ID': correlationId,
+        ...(commandId?.trim() ? { 'X-Command-ID': commandId.trim() } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: form,
@@ -92,6 +95,7 @@ export async function uploadAndSubmitCaptainDeliveryProof(
 export async function uploadAndSubmitPartnerDeliveryProof(
   orderId: string,
   photo: CapturedDeliveryProofPhoto,
+  commandId?: string,
 ): Promise<void> {
   const normalizedOrderId = orderId.trim();
   if (!normalizedOrderId) throw new Error('لا يوجد طلب صالح لرفع الإثبات.');
@@ -101,5 +105,6 @@ export async function uploadAndSubmitPartnerDeliveryProof(
     'جلسة الشريك غير صالحة.',
     'رفض DSH إثبات توصيل المتجر.',
     photo,
+    commandId,
   );
 }
