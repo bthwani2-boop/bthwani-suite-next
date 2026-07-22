@@ -56,6 +56,11 @@ BEGIN
     WHERE tgname = 'wlt_jrn037_payout_transition_trigger' AND NOT tgisinternal
   ) THEN missing := array_append(missing, 'wlt_jrn037_payout_transition_trigger'); END IF;
 
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgname = 'wlt_jrn037_single_reconciliation_claim_trigger' AND NOT tgisinternal
+  ) THEN missing := array_append(missing, 'wlt_jrn037_single_reconciliation_claim_trigger'); END IF;
+
   IF EXISTS (
     SELECT 1 FROM pg_indexes
     WHERE schemaname = 'public' AND indexname = 'wlt_payout_requests_request_hash_uidx'
