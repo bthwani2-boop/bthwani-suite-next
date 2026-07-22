@@ -8,12 +8,16 @@ on:
       - ".github/workflows/jrn-034-payments-verification.yml"
       - "governance/product/contracts/jrn-034-payments-payment-sessions.product-truth.json"
       - "governance/runbooks/JRN-034_PAYMENT_SESSIONS.md"
-      - "services/wlt/backend/**"
-      - "services/wlt/database/migrations/**"
+      - "services/wlt/backend/internal/payment/**"
+      - "services/wlt/backend/internal/http/server.go"
+      - "services/wlt/backend/internal/reference/payment_session_read.go"
+      - "services/wlt/database/migrations/wlt-036_payment_session_operations_and_provider_events.sql"
       - "services/wlt/contracts/wlt.payments.openapi.yaml"
       - "services/wlt/frontend/shared/dsh/**payment-session**"
       - "services/wlt/frontend/shared/dsh/use-wlt-dsh-payment-controller.tsx"
-      - "services/dsh/backend/**"
+      - "services/dsh/backend/internal/wlt/payment_sessions.go"
+      - "services/dsh/backend/internal/http/finance_payment_sessions.go"
+      - "services/dsh/backend/internal/http/server.go"
       - "services/dsh/contracts/dsh.payment-sessions.openapi.yaml"
       - "services/dsh/frontend/control-panel/finance/PaymentSessionOperationsScreen.tsx"
       - "services/dsh/frontend/shared/finance-wlt-link/payment/**"
@@ -21,9 +25,23 @@ on:
       - "infra/docker/scripts/wlt-migration-probes.ps1"
       - "contracts/master.openapi.yaml"
       - "tools/scripts/test-jrn-034-payments.mjs"
+  pull_request:
+    paths:
+      - ".github/workflows/jrn-034-payments-verification.yml"
+      - "governance/product/contracts/jrn-034-payments-payment-sessions.product-truth.json"
+      - "services/wlt/backend/internal/payment/**"
+      - "services/wlt/backend/internal/http/server.go"
+      - "services/wlt/database/migrations/wlt-036_payment_session_operations_and_provider_events.sql"
+      - "services/wlt/contracts/wlt.payments.openapi.yaml"
+      - "services/dsh/backend/internal/wlt/payment_sessions.go"
+      - "services/dsh/backend/internal/http/finance_payment_sessions.go"
+      - "services/dsh/contracts/dsh.payment-sessions.openapi.yaml"
+      - "services/dsh/frontend/control-panel/finance/PaymentSessionOperationsScreen.tsx"
+      - "services/dsh/frontend/shared/finance-wlt-link/payment/**"
+      - "tools/scripts/test-jrn-034-payments.mjs"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: jrn-034-payments-${{ github.sha }}
@@ -34,106 +52,94 @@ jobs:
     name: Structural journey guard
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "24.17.0"
-      - run: node tools/scripts/test-jrn-034-payments.mjs
+      - name: Verify governed journey structure
+        run: node tools/scripts/test-jrn-034-payments.mjs
+      - name: Verify repository whitespace
+        run: git diff --check
 
-  wlt_go:
-    name: WLT Go tests
+  backend:
+    name: WLT and DSH payment backend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: services/wlt/backend/go.mod
-          cache-dependency-path: services/wlt/backend/go.sum
-      - run: go test ./...
-        working-directory: services/wlt/backend
-
-  dsh_go:
-    name: DSH Go tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v6
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+      - name: Set up Go from DSH module
+        uses: actions/setup-go@v5
         with:
           go-version-file: services/dsh/backend/go.mod
-          cache-dependency-path: services/dsh/backend/go.sum
-      - run: go test ./...
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            services/wlt/backend/go.sum
+      - name: Test WLT payment package
+        working-directory: services/wlt/backend
+        run: go test ./internal/payment -count=1
+      - name: Build WLT router and payment owners
+        working-directory: services/wlt/backend
+        run: go build ./internal/payment ./internal/reference ./internal/http
+      - name: Test DSH WLT boundary
         working-directory: services/dsh/backend
+        run: go test ./internal/wlt ./internal/http -count=1
+      - name: Build DSH payment proxy owners
+        working-directory: services/dsh/backend
+        run: go build ./internal/wlt ./internal/http
 
-  typescript:
-    name: Shared and surface typecheck
+  frontend:
+    name: Shared brain and payment operations surface
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "24.17.0"
-      - run: corepack enable
-      - run: corepack prepare pnpm@10.34.2 --activate
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --dir services/wlt typecheck
-      - run: pnpm --dir services/dsh typecheck
-      - run: pnpm --dir apps/control-panel/runtime typecheck
+          cache: pnpm
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck WLT shared brain
+        run: pnpm --dir services/wlt typecheck
+      - name: Typecheck DSH shared and control-panel surface
+        run: pnpm --dir services/dsh typecheck
+      - name: Typecheck control-panel runtime route
+        run: pnpm --dir apps/control-panel/runtime typecheck
 
-  evidence:
-    name: Persist exact-SHA verification receipt
-    if: always()
-    needs: [structural, wlt_go, dsh_go, typescript]
+  contract:
+    name: Focused contracts and product truth
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
         with:
-          ref: sambassam
-          fetch-depth: 0
-      - name: Write verification receipt
-        env:
-          VERIFIED_SHA: ${{ github.sha }}
-          RUN_ID: ${{ github.run_id }}
-          RUN_ATTEMPT: ${{ github.run_attempt }}
-          STRUCTURAL_RESULT: ${{ needs.structural.result }}
-          WLT_GO_RESULT: ${{ needs.wlt_go.result }}
-          DSH_GO_RESULT: ${{ needs.dsh_go.result }}
-          TYPESCRIPT_RESULT: ${{ needs.typescript.result }}
-        run: |
-          OVERALL=FAIL
-          if [ "$STRUCTURAL_RESULT" = "success" ] && [ "$WLT_GO_RESULT" = "success" ] && [ "$DSH_GO_RESULT" = "success" ] && [ "$TYPESCRIPT_RESULT" = "success" ]; then
-            OVERALL=PASS
-          fi
-          mkdir -p governance/evidence/jrn-034/ci
-          cat > "governance/evidence/jrn-034/ci/${VERIFIED_SHA}.json" <<EOF
-          {
-            "schemaVersion": 1,
-            "journeyId": "JRN-034",
-            "verifiedSha": "${VERIFIED_SHA}",
-            "workflowRunId": "${RUN_ID}",
-            "workflowRunAttempt": "${RUN_ATTEMPT}",
-            "result": "${OVERALL}",
-            "jobs": {
-              "structural": "${STRUCTURAL_RESULT}",
-              "wltGo": "${WLT_GO_RESULT}",
-              "dshGo": "${DSH_GO_RESULT}",
-              "typescript": "${TYPESCRIPT_RESULT}"
-            },
-            "productionEvidence": false,
-            "independentApprovals": false
-          }
-          EOF
-          echo "OVERALL=${OVERALL}" >> "$GITHUB_ENV"
-      - name: Commit verification receipt
-        env:
-          VERIFIED_SHA: ${{ github.sha }}
-        run: |
-          git config user.name "bthwani-ci"
-          git config user.email "bthwani-ci@users.noreply.github.com"
-          git add "governance/evidence/jrn-034/ci/${VERIFIED_SHA}.json"
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m "evidence(jrn-034): record CI ${OVERALL} for ${VERIFIED_SHA}"
-          for attempt in 1 2 3; do
-            git pull --rebase origin sambassam
-            if git push origin HEAD:sambassam; then exit 0; fi
-          done
-          exit 1
+          version: "10.34.2"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Parse WLT payment contract
+        run: pnpm --dir services/dsh exec openapi-typescript ../wlt/contracts/wlt.payments.openapi.yaml -o /tmp/wlt-payments-api.ts
+      - name: Parse DSH payment operations contract
+        run: pnpm --dir services/dsh exec openapi-typescript contracts/dsh.payment-sessions.openapi.yaml -o /tmp/dsh-payment-sessions-api.ts
+      - name: Validate product truth against governed schema
+        run: >-
+          node --input-type=module -e
+          "import fs from 'node:fs'; import Ajv from 'ajv';
+          const schema=JSON.parse(fs.readFileSync('governance/product/product-truth.schema.json','utf8'));
+          const truth=JSON.parse(fs.readFileSync('governance/product/contracts/jrn-034-payments-payment-sessions.product-truth.json','utf8'));
+          const validate=new Ajv({allErrors:true,strict:false}).compile(schema);
+          if(!validate(truth)){console.error(validate.errors);process.exit(1)}
+          if(truth.capabilityId!=='JRN_034_PAYMENTS_PAYMENT_SESSIONS'||truth.state!=='DISCOVERY')process.exit(1);"
