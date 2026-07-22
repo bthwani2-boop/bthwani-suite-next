@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: jrn-024-contract-sync-sambassam
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   synchronize:
