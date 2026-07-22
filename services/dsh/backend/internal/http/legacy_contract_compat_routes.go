@@ -26,6 +26,12 @@ func RegisterLegacyContractCompatibilityRoutes(
 	mux.HandleFunc("PUT /dsh/partner/catalog/product-proposals/{proposalId}", protected.handleUpdatePartnerProductProposalAtomic)
 	mux.HandleFunc("PUT /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}", protected.handleUpdateFieldProductProposalAtomic)
 
+	// JRN-038 partner finance compatibility remains actor- and tenant-bound.
+	// The handlers verify partner ownership before forwarding to WLT, which
+	// remains the sole owner of COD financial truth.
+	mux.HandleFunc("GET /dsh/partner/me/finance/cod-records", protected.handlePartnerFinanceCodRecords)
+	mux.HandleFunc("POST /dsh/partner/me/finance/cod-records/{recordId}/remit", protected.handlePartnerRemitCod)
+
 	// Retired direct mutations: callers must use actor-scoped or maker-checker
 	// routes. These remain explicit only to fail closed for stale clients.
 	mux.HandleFunc("POST /dsh/operator/workforce/media/uploads", retiredGovernedRoute)
