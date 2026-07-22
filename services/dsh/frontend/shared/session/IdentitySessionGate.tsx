@@ -104,6 +104,46 @@ function IdentityAccessPanel({
     }
   };
 
+  const devUsernameForRole = (role: DshSurfaceRole): string => {
+    switch (role) {
+      case "client":
+        return "client";
+      case "captain":
+        return "captain";
+      case "field":
+        return "field";
+      case "partner":
+        return "bthwani";
+      case "operator":
+        return "operator";
+      default:
+        return role;
+    }
+  };
+
+  const handleDevQuickLogin = async () => {
+    const devUser = devUsernameForRole(requiredRole);
+    const candidatePasswords = [devUser, "password123", "password", "bthwani123"];
+
+    setSubmitting(true);
+    setFeedback("");
+    setUsername(devUser);
+    setPassword(devUser);
+
+    for (const pass of candidatePasswords) {
+      try {
+        await login(devUser, pass);
+        return;
+      } catch {
+        // Try next candidate
+      }
+    }
+
+    setPassword("");
+    setFeedback(`تم إدخال حساب المطور (${devUser}). أدخل كلمة المرور للدخول.`);
+    setSubmitting(false);
+  };
+
   return (
     <View style={styles.accessRoot}>
       <Card style={styles.accessCard}>
@@ -191,6 +231,15 @@ function IdentityAccessPanel({
             />
           </View>
         )}
+
+        <View style={styles.devAccessRow}>
+          <Button
+            label={submitting ? "جاري الدخول السريع..." : "⚡ دخول سريع (مطور)"}
+            tone="ghost"
+            disabled={submitting}
+            onPress={handleDevQuickLogin}
+          />
+        </View>
 
         {feedback ? <Text role="caption" style={styles.feedback}>{feedback}</Text> : null}
       </Card>
@@ -291,5 +340,9 @@ const styles = StyleSheet.create({
   feedback: {
     textAlign: "right",
     color: colorRoles.brandStructure,
+  },
+  devAccessRow: {
+    alignItems: "center",
+    marginTop: spacing[1],
   },
 });
