@@ -1,0 +1,4 @@
+journey=JRN-031
+runner=macos-14
+postgres=16
+mode=full_remote_verification
