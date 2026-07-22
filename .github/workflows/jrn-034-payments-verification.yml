@@ -1,4 +1,4 @@
-name: JRN-034 Payments Verification
+name: JRN-034 Payments Verification — Frozen Candidate
 
 on:
   workflow_dispatch:
