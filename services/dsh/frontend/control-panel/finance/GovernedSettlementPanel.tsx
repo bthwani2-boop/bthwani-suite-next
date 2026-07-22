@@ -32,6 +32,9 @@ export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps
   const [partnerId, setPartnerId] = useState("");
   const [feeBasisPoints, setFeeBasisPoints] = useState("0");
   const [currency, setCurrency] = useState("YER");
+  const [cycleDays, setCycleDays] = useState("7");
+  const [minimumNetMinorUnits, setMinimumNetMinorUnits] = useState("0");
+  const [changeReason, setChangeReason] = useState("");
   const [periodStart, setPeriodStart] = useState(monthStartIso());
   const [periodEnd, setPeriodEnd] = useState(todayIso());
   const [policyReadyForPartner, setPolicyReadyForPartner] = useState<string | null>(null);
@@ -40,14 +43,42 @@ export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps
   const [error, setError] = useState(false);
 
   const parsedFee = Number(feeBasisPoints);
+  const parsedCycleDays = Number(cycleDays);
+  const parsedMinimumNet = Number(minimumNetMinorUnits);
   const policyValid = useMemo(
-    () => partnerId.trim().length > 0 && Number.isInteger(parsedFee) && parsedFee >= 0 && parsedFee <= 10000 && currency.trim().length > 0,
-    [partnerId, parsedFee, currency],
+    () =>
+      partnerId.trim().length > 0 &&
+      Number.isInteger(parsedFee) &&
+      parsedFee >= 0 &&
+      parsedFee <= 10000 &&
+      currency.trim().length > 0 &&
+      Number.isInteger(parsedCycleDays) &&
+      parsedCycleDays >= 1 &&
+      parsedCycleDays <= 366 &&
+      Number.isSafeInteger(parsedMinimumNet) &&
+      parsedMinimumNet >= 0 &&
+      changeReason.trim().length > 0,
+    [
+      changeReason,
+      currency,
+      parsedCycleDays,
+      parsedFee,
+      parsedMinimumNet,
+      partnerId,
+    ],
   );
   const settlementValid = useMemo(
-    () => policyReadyForPartner === partnerId.trim() && periodStart.length === 10 && periodEnd.length === 10 && periodEnd >= periodStart,
+    () =>
+      policyReadyForPartner === partnerId.trim() &&
+      periodStart.length === 10 &&
+      periodEnd.length === 10 &&
+      periodEnd >= periodStart,
     [policyReadyForPartner, partnerId, periodStart, periodEnd],
   );
+
+  const invalidateSavedPolicy = useCallback(() => {
+    setPolicyReadyForPartner(null);
+  }, []);
 
   const savePolicy = useCallback(async () => {
     if (!policyValid) return;
@@ -60,6 +91,9 @@ export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps
         feeBasisPoints: parsedFee,
         currency: currency.trim(),
         status: "active",
+        cycleDays: parsedCycleDays,
+        minimumNetMinorUnits: parsedMinimumNet,
+        changeReason: changeReason.trim(),
       });
       setMessage(resultMessage(result));
       setError(!result.ok);
@@ -67,7 +101,15 @@ export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps
     } finally {
       setBusy(null);
     }
-  }, [currency, parsedFee, partnerId, policyValid]);
+  }, [
+    changeReason,
+    currency,
+    parsedCycleDays,
+    parsedFee,
+    parsedMinimumNet,
+    partnerId,
+    policyValid,
+  ]);
 
   const createSettlement = useCallback(async () => {
     if (!settlementValid) return;
@@ -79,7 +121,6 @@ export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps
         partnerId: partnerId.trim(),
         periodStart,
         periodEnd,
-        currency: currency.trim(),
       });
       setMessage(resultMessage(result));
       setError(!result.ok);
@@ -87,39 +128,95 @@ export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps
     } finally {
       setBusy(null);
     }
-  }, [currency, partnerId, periodEnd, periodStart, reload, settlementValid]);
+  }, [partnerId, periodEnd, periodStart, reload, settlementValid]);
 
   return (
     <Card style={{ padding: "1.5rem", marginBottom: "1rem" }}>
-      <Text role="titleMd" style={{ marginBottom: "0.5rem" }}>إنشاء تسوية محكومة من الأوامر المسلمة</Text>
+      <Text role="titleMd" style={{ marginBottom: "0.5rem" }}>
+        إنشاء تسوية محكومة من الأوامر المسلمة
+      </Text>
       <Text role="body" tone="muted" style={{ marginBottom: "1rem" }}>
-        لا تُقبل مبالغ gross أو fee أو net من الواجهة. DSH يجمع أوامر الشريك بحالة delivered، وWLT يطبق سياسة fee ويحجز orderId ضد التسوية المكررة.
+        لا تُقبل مبالغ gross أو fee أو net من الواجهة. DSH يجمع أوامر الشريك بحالة delivered، وWLT يطبق إصدار السياسة الفعّال والاستردادات المكتملة ويحجز orderId ضد التسوية المكررة.
       </Text>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.75rem" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "0.75rem",
+        }}
+      >
         <CpTextInput
           aria-label="معرف الشريك للتسوية"
           placeholder="Partner ID"
           value={partnerId}
           onChange={(value) => {
             setPartnerId(value);
-            setPolicyReadyForPartner(null);
+            invalidateSavedPolicy();
           }}
         />
         <CpTextInput
           aria-label="عمولة المنصة بالنقاط الأساسية"
           placeholder="Fee basis points (مثال 1000 = 10%)"
           value={feeBasisPoints}
-          onChange={setFeeBasisPoints}
+          onChange={(value) => {
+            setFeeBasisPoints(value);
+            invalidateSavedPolicy();
+          }}
         />
-        <CpTextInput aria-label="عملة التسوية" placeholder="Currency" value={currency} onChange={setCurrency} />
-        <CpTextInput aria-label="بداية فترة التسوية" placeholder="YYYY-MM-DD" value={periodStart} onChange={setPeriodStart} />
-        <CpTextInput aria-label="نهاية فترة التسوية" placeholder="YYYY-MM-DD" value={periodEnd} onChange={setPeriodEnd} />
+        <CpTextInput
+          aria-label="عملة سياسة التسوية"
+          placeholder="Currency"
+          value={currency}
+          onChange={(value) => {
+            setCurrency(value);
+            invalidateSavedPolicy();
+          }}
+        />
+        <CpTextInput
+          aria-label="دورة التسوية بالأيام"
+          placeholder="Cycle days"
+          value={cycleDays}
+          onChange={(value) => {
+            setCycleDays(value);
+            invalidateSavedPolicy();
+          }}
+        />
+        <CpTextInput
+          aria-label="الحد الأدنى لصافي التسوية بالوحدات الصغرى"
+          placeholder="Minimum net minor units"
+          value={minimumNetMinorUnits}
+          onChange={(value) => {
+            setMinimumNetMinorUnits(value);
+            invalidateSavedPolicy();
+          }}
+        />
+        <CpTextInput
+          aria-label="سبب تغيير سياسة التسوية"
+          placeholder="سبب تغيير السياسة"
+          value={changeReason}
+          onChange={(value) => {
+            setChangeReason(value);
+            invalidateSavedPolicy();
+          }}
+        />
+        <CpTextInput
+          aria-label="بداية فترة التسوية"
+          placeholder="YYYY-MM-DD"
+          value={periodStart}
+          onChange={setPeriodStart}
+        />
+        <CpTextInput
+          aria-label="نهاية فترة التسوية"
+          placeholder="YYYY-MM-DD"
+          value={periodEnd}
+          onChange={setPeriodEnd}
+        />
       </div>
 
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "1rem" }}>
         <Button
-          label={busy === "policy" ? "جارٍ حفظ السياسة…" : "حفظ سياسة fee في WLT"}
+          label={busy === "policy" ? "جارٍ حفظ السياسة…" : "حفظ إصدار سياسة التسوية في WLT"}
           tone="secondary"
           disabled={!policyValid || busy !== null}
           onPress={savePolicy}
@@ -134,12 +231,20 @@ export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps
 
       {policyReadyForPartner === partnerId.trim() ? (
         <Text role="caption" tone="success" style={{ marginTop: "0.75rem" }}>
-          سياسة الشريك محفوظة لهذه الجلسة. يمكن الآن إنشاء التسوية.
+          حُفظ إصدار السياسة مع سبب التغيير. يمكن الآن إنشاء التسوية من الأدلة التشغيلية فقط.
         </Text>
       ) : null}
       {message ? (
-        <Card style={{ padding: "0.75rem", marginTop: "0.75rem", borderLeft: `4px solid ${error ? lightThemeColors.danger : lightThemeColors.success}` }}>
-          <Text role="body" tone={error ? "danger" : "success"}>{message}</Text>
+        <Card
+          style={{
+            padding: "0.75rem",
+            marginTop: "0.75rem",
+            borderLeft: `4px solid ${error ? lightThemeColors.danger : lightThemeColors.success}`,
+          }}
+        >
+          <Text role="body" tone={error ? "danger" : "success"}>
+            {message}
+          </Text>
         </Card>
       ) : null}
     </Card>
