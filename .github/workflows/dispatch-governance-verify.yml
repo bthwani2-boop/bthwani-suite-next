@@ -110,6 +110,17 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
       - name: Verify contract registry
-        run: pnpm contracts:lint
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm contracts:lint 2>&1 | tee dispatch-contracts.log
+      - name: Upload contract diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dispatch-contracts-${{ github.run_id }}
+          path: dispatch-contracts.log
+          if-no-files-found: error
+          retention-days: 14
       - name: Typecheck DSH
         run: pnpm --dir services/dsh typecheck
