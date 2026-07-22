@@ -23,7 +23,8 @@ const slices = [
   }],
   ["FS-05..08 sovereign financial integrity", () => {
     assert.match(wltMigration, /DEFERRABLE INITIALLY DEFERRED/);
-    assert.match(wltMigration, /requires a matching append-only event/);
+    assert.match(wltMigration, /same-transaction append-only event/);
+    assert.match(wltMigration, /transaction_id = txid_current\(\)/);
     assert.match(wltMigration, /reservation_id, to_status/);
     assert.doesNotMatch(wltJSON, /IdempotencyKey\s+string/);
     assert.match(serviceAuth, /MISSING_TENANT_ID/);
