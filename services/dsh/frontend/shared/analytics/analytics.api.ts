@@ -2,6 +2,7 @@ import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshAnalyticsPeriod,
+  DshAnalyticsWindowInput,
   DshPlatformKpis,
   DshOrderAnalytics,
   DshDeliveryAnalytics,
@@ -30,6 +31,13 @@ function queryString(values: Record<string, string | number | undefined>): strin
   return query ? `?${query}` : "";
 }
 
+function analyticsWindowValues(window: DshAnalyticsWindowInput): Record<string, string | undefined> {
+  if (window.period) {
+    return { period: window.period };
+  }
+  return { from: window.from, to: window.to };
+}
+
 export async function fetchPlatformKpis(period: DshAnalyticsPeriod = "today"): Promise<DshPlatformKpis> {
   return request<DshPlatformKpis>(`/dsh/operator/analytics/platform?period=${period}`);
 }
@@ -55,39 +63,39 @@ export async function fetchPartnerPerformance(period: DshAnalyticsPeriod = "toda
 }
 
 export async function fetchPreparationSlaAnalytics(
-  period: DshAnalyticsPeriod,
+  window: DshAnalyticsWindowInput,
   storeId?: string,
 ): Promise<DshPreparationSlaAnalytics> {
   return request<DshPreparationSlaAnalytics>(
-    `/dsh/operator/analytics/preparation-sla${queryString({ period, storeId })}`,
+    `/dsh/operator/analytics/preparation-sla${queryString({ ...analyticsWindowValues(window), storeId })}`,
   );
 }
 
 export async function fetchCaptainPerformanceAnalytics(
-  period: DshAnalyticsPeriod,
+  window: DshAnalyticsWindowInput,
   limit = 25,
 ): Promise<DshCaptainPerformanceAnalytics> {
   return request<DshCaptainPerformanceAnalytics>(
-    `/dsh/operator/analytics/captains${queryString({ period, limit })}`,
+    `/dsh/operator/analytics/captains${queryString({ ...analyticsWindowValues(window), limit })}`,
   );
 }
 
 export async function fetchFieldPerformanceAnalytics(
-  period: DshAnalyticsPeriod,
+  window: DshAnalyticsWindowInput,
   limit = 25,
 ): Promise<DshFieldPerformanceAnalytics> {
   return request<DshFieldPerformanceAnalytics>(
-    `/dsh/operator/analytics/field${queryString({ period, limit })}`,
+    `/dsh/operator/analytics/field${queryString({ ...analyticsWindowValues(window), limit })}`,
   );
 }
 
 export async function fetchOrderAnalyticsDrilldown(
-  period: DshAnalyticsPeriod,
+  window: DshAnalyticsWindowInput,
   filters: { storeId?: string; status?: string; limit?: number } = {},
 ): Promise<DshOperationalAnalyticsDrilldown> {
   return request<DshOperationalAnalyticsDrilldown>(
     `/dsh/operator/analytics/drill-down/orders${queryString({
-      period,
+      ...analyticsWindowValues(window),
       storeId: filters.storeId,
       status: filters.status,
       limit: filters.limit ?? 25,
@@ -102,7 +110,7 @@ export async function fetchFinancialAnalyticsSnapshot(): Promise<WltAnalyticsFin
   return envelope.financialSnapshot;
 }
 
-export function buildOperationalAnalyticsExportUrl(period: DshAnalyticsPeriod): string {
+export function buildOperationalAnalyticsExportUrl(window: DshAnalyticsWindowInput): string {
   const normalizedBase = baseUrl.replace(/\/$/, "");
-  return `${normalizedBase}/dsh/operator/analytics/export.csv?period=${encodeURIComponent(period)}`;
+  return `${normalizedBase}/dsh/operator/analytics/export.csv${queryString(analyticsWindowValues(window))}`;
 }
