@@ -203,3 +203,16 @@ func (s *protectedStoreServer) handleReverseFinanceCommission(w http.ResponseWri
 	}
 	s.proxyGovernedCommissionLifecycle(w, r, actor.ID, "reverse", map[string]any{"reason": reason})
 }
+
+// GET /dsh/control-panel/finance/settlements/{settlementId}/evidence
+func (s *protectedStoreServer) handleFinanceSettlementEvidence(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+		return
+	}
+	settlementID := strings.TrimSpace(r.PathValue("settlementId"))
+	if settlementID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "settlementId is required")
+		return
+	}
+	s.proxyFinanceRead(w, r, "/wlt/settlements/"+url.PathEscape(settlementID)+"/evidence", nil)
+}
