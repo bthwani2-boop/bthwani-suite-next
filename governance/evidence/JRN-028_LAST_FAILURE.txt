@@ -1,26 +1,206 @@
 status=FAILED
-check=WLT HTTP owner compilation
+check=FS-01 through FS-18 routes, structure and ownership assertions
 exit_code=1
-command=bash -lc cd\ services/wlt/backend\ \&\&\ go\ test\ ./internal/http\ -run\ \'\^\$\' 
-tested_sha=0ce30c791ab4337dae5db55cbb38fb26376ed0c9
+command=node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs 
+tested_sha=eb8ea7d31fee8366badbd774d9cad9b9d65f81bd
 --- output tail ---
-# wlt-api/internal/payout
-internal/payout/jrn037_provider_process.go:135:74: input.OperatorID undefined (type string has no field or method OperatorID)
-internal/payout/jrn037_provider_process.go:162:58: input.OperatorID undefined (type string has no field or method OperatorID)
-internal/payout/jrn037_provider_process.go:192:24: assignment mismatch: 2 variables but failProviderDecline returns 1 value
-internal/payout/jrn037_provider_process.go:192:72: input.OperatorID undefined (type string has no field or method OperatorID)
-internal/payout/jrn037_provider_process.go:192:84: too many arguments in call to failProviderDecline
-	have (context.Context, *sql.DB, *PayoutRequest, unknown type, string, string)
-	want (context.Context, *sql.DB, string, error)
-internal/payout/jrn037_provider_process.go:200:61: input.OperatorID undefined (type string has no field or method OperatorID)
-internal/payout/jrn037_provider_process.go:200:73: too many arguments in call to markProviderResultUnknown
-	have (context.Context, *sql.DB, string, unknown type, string)
-	want (context.Context, *sql.DB, string, error)
-internal/payout/jrn037_provider_process.go:207:61: input.OperatorID undefined (type string has no field or method OperatorID)
-internal/payout/jrn037_provider_process.go:207:73: too many arguments in call to markProviderResultUnknown
-	have (context.Context, *sql.DB, string, unknown type, string)
-	want (context.Context, *sql.DB, string, error)
-internal/payout/jrn037_provider_process.go:225:10: input.OperatorID undefined (type string has no field or method OperatorID)
-internal/payout/jrn037_provider_process.go:225:10: too many errors
-FAIL	wlt-api/internal/http [build failed]
-FAIL
+    '\n' +
+    'func fundingCorrelation(correlationID, fallback string) string {\n' +
+    '\tif value := strings.TrimSpace(correlationID); value != "" {\n' +
+    '\t\treturn value\n' +
+    '\t}\n' +
+    '\treturn strings.TrimSpace(fallback)\n' +
+    '}\n' +
+    '\n' +
+    'func fundingTenant(requested string, projection *coupons.FundingProjection) string {\n' +
+    '\tif value := strings.TrimSpace(requested); value != "" {\n' +
+    '\t\treturn value\n' +
+    '\t}\n' +
+    '\tif projection == nil {\n' +
+    '\t\treturn ""\n' +
+    '\t}\n' +
+    '\treturn strings.TrimSpace(projection.TenantID)\n' +
+    '}\n' +
+    '\n' +
+    'func (s *protectedStoreServer) reserveCouponFunding(\n' +
+    '\tctx context.Context,\n' +
+    '\ttenantID string,\n' +
+    '\tcheckoutIntentID string,\n' +
+    '\tcorrelationID string,\n' +
+    ') (*coupons.FundingProjection, error) {\n' +
+    '\tprojection, err := coupons.PrepareFundingForIntent(ctx, s.db, checkoutIntentID)\n' +
+    '\tif err != nil || projection == nil {\n' +
+    '\t\treturn projection, err\n' +
+    '\t}\n' +
+    '\ttenantID = fundingTenant(tenantID, projection)\n' +
+    '\tif tenantID == "" {\n' +
+    '\t\treturn nil, fmt.Errorf("coupon funding tenant is required")\n' +
+    '\t}\n' +
+    '\tif projection.Status == "reserved" && projection.WLTReservationID != "" {\n' +
+    '\t\tif projection.TenantID != "" && projection.TenantID != tenantID {\n' +
+    '\t\t\treturn nil, fmt.Errorf("coupon funding tenant mismatch")\n' +
+    '\t\t}\n' +
+    '\t\treturn projection, nil\n' +
+    '\t}\n' +
+    '\tcorrelationID = fundingCorrelation(correlationID, checkoutIntentID)\n' +
+    '\treservation, err := s.wlt.ReservePromotionFunding(ctx, wltclient.ReservePromotionFundingInput{\n' +
+    '\t\tTenantID:                 tenantID,\n' +
+    '\t\tExternalReference:        "dsh-coupon-redemption:" + projection.RedemptionID,\n' +
+    '\t\tCheckoutIntentID:         projection.CheckoutIntentID,\n' +
+    '\t\tCouponRedemptionID:       projection.RedemptionID,\n' +
+    '\t\tCouponID:                 projection.CouponID,\n' +
+    '\t\tClientID:                 projection.ClientActorID,\n' +
+    '\t\tPartnerID:                projection.PartnerID,\n' +
+    '\t\tPlatformFundedMinorUnits: projection.PlatformFundedMinorUnits,\n' +
+    '\t\tPartnerFundedMinorUnits:  projection.PartnerFundedMinorUnits,\n' +
+    '\t\tTotalDiscountMinorUnits:  projection.TotalDiscountMinorUnits,\n' +
+    '\t\tCurrency:                 projection.Currency,\n' +
+    '\t}, "dsh-promotion-funding:"+projection.RedemptionID, correlationID)\n' +
+    '\tif err != nil {\n' +
+    '\t\t_ = coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "wlt_reserve_failed")\n' +
+    '\t\treturn nil, err\n' +
+    '\t}\n' +
+    '\tif reservation.TenantID != tenantID ||\n' +
+    '\t\treservation.CheckoutIntentID != projection.CheckoutIntentID ||\n' +
+    '\t\treservation.CouponRedemptionID != projection.RedemptionID ||\n' +
+    '\t\treservation.CouponID != projection.CouponID ||\n' +
+    '\t\treservation.ClientID != projection.ClientActorID ||\n' +
+    '\t\treservation.TotalDiscountMinorUnits != projection.TotalDiscountMinorUnits ||\n' +
+    '\t\treservation.PlatformFundedMinorUnits != projection.PlatformFundedMinorUnits ||\n' +
+    '\t\treservation.PartnerFundedMinorUnits != projection.PartnerFundedMinorUnits ||\n' +
+    '\t\treservation.Currency != projection.Currency {\n' +
+    '\t\t_ = coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "wlt_reserve_mismatch")\n' +
+    '\t\treturn nil, fmt.Errorf("WLT promotion funding response does not match DSH reservation")\n' +
+    '\t}\n' +
+    '\tif err := coupons.AttachWLTReservation(ctx, s.db, projection.RedemptionID, reservation.ID, tenantID); err != nil {\n' +
+    '\t\t_, _ = s.wlt.ReleasePromotionFunding(ctx, reservation.ID, wltclient.PromotionFundingTransitionInput{\n' +
+    '\t\t\tTenantID: tenantID,\n' +
+    '\t\t\tReason:   "dsh_projection_attach_failed",\n' +
+    '\t\t}, "dsh-promotion-funding-release:"+projection.RedemptionID+":attach", correlationID)\n' +
+    '\t\t_ = coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "dsh_projection_attach_failed")\n' +
+    '\t\treturn nil, err\n' +
+    '\t}\n' +
+    '\tprojection.TenantID = tenantID\n' +
+    '\tprojection.WLTReservationID = reservation.ID\n' +
+    '\tprojection.Status = "reserved"\n' +
+    '\treturn projection, nil\n' +
+    '}\n' +
+    '\n' +
+    'func (s *protectedStoreServer) releaseCouponFunding(\n' +
+    '\tctx context.Context,\n' +
+    '\ttenantID string,\n' +
+    '\tcheckoutIntentID string,\n' +
+    '\treason string,\n' +
+    '\tcorrelationID string,\n' +
+    ') error {\n' +
+    '\tprojection, err := coupons.FundingByIntent(ctx, s.db, checkoutIntentID)\n' +
+    '\tif err != nil || projection == nil {\n' +
+    '\t\treturn err\n' +
+    '\t}\n' +
+    '\ttenantID = fundingTenant(tenantID, projection)\n' +
+    '\tif projection.WLTReservationID == "" || projection.Status == "released" || projection.Status == "reversed" {\n' +
+    '\t\treturn nil\n' +
+    '\t}\n' +
+    '\tif tenantID == "" {\n' +
+    '\t\treturn fmt.Errorf("coupon funding tenant is missing")\n' +
+    '\t}\n' +
+    '\tif projection.Status == "committed" {\n' +
+    '\t\treturn fmt.Errorf("committed coupon funding cannot be released")\n' +
+    '\t}\n' +
+    '\tcorrelationID = fundingCorrelation(correlationID, checkoutIntentID)\n' +
+    '\treservation, err := s.wlt.ReleasePromotionFunding(ctx, projection.WLTReservationID, wltclient.PromotionFundingTransitionInput{\n' +
+    '\t\tTenantID: tenantID,\n' +
+    '\t\tReason:   strings.TrimSpace(reason),\n' +
+    '\t}, "dsh-promotion-funding-release:"+projection.RedemptionID+":"+strings.TrimSpace(reason), correlationID)\n' +
+    '\tif err != nil {\n' +
+    '\t\treturn err\n' +
+    '\t}\n' +
+    '\tif reservation.Status != "released" || reservation.TenantID != tenantID {\n' +
+    '\t\treturn fmt.Errorf("WLT promotion funding release response is invalid")\n' +
+    '\t}\n' +
+    '\treturn coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "released")\n' +
+    '}\n' +
+    '\n' +
+    'func (s *protectedStoreServer) commitCouponFunding(\n' +
+    '\tctx context.Context,\n' +
+    '\ttenantID string,\n' +
+    '\tcheckoutIntentID string,\n' +
+    '\torderID string,\n' +
+    '\tcorrelationID string,\n' +
+    ') error {\n' +
+    '\tprojection, err := coupons.FundingByIntent(ctx, s.db, checkoutIntentID)\n' +
+    '\tif err != nil || projection == nil {\n' +
+    '\t\treturn err\n' +
+    '\t}\n' +
+    '\ttenantID = fundingTenant(tenantID, projection)\n' +
+    '\tif projection.WLTReservationID == "" || tenantID == "" {\n' +
+    '\t\treturn fmt.Errorf("coupon funding reservation or tenant is missing")\n' +
+    '\t}\n' +
+    '\tif projection.Status == "committed" {\n' +
+    '\t\treturn nil\n' +
+    '\t}\n' +
+    '\tcorrelationID = fundingCorrelation(correlationID, orderID)\n' +
+    '\treservation, err := s.wlt.CommitPromotionFunding(ctx, projection.WLTReservationID, wltclient.PromotionFundingTransitionInput{\n' +
+    '\t\tTenantID: tenantID,\n' +
+    '\t\tOrderID:  orderID,\n' +
+    '\t}, "dsh-promotion-funding-commit:"+projection.RedemptionID, correlationID)\n' +
+    '\tif err != nil {\n' +
+    '\t\treturn err\n' +
+    '\t}\n' +
+    '\tif reservation.Status != "committed" || reservation.TenantID != tenantID || reservation.OrderID == nil || *reservation.OrderID != orderID {\n' +
+    '\t\treturn fmt.Errorf("WLT promotion funding commit response is invalid")\n' +
+    '\t}\n' +
+    '\treturn coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "committed")\n' +
+    '}\n' +
+    '\n' +
+    'func (s *protectedStoreServer) reverseCouponFunding(\n' +
+    '\tctx context.Context,\n' +
+    '\ttenantID string,\n' +
+    '\tcheckoutIntentID string,\n' +
+    '\torderID string,\n' +
+    '\treason string,\n' +
+    '\tcorrelationID string,\n' +
+    ') error {\n' +
+    '\tprojection, err := coupons.FundingByIntent(ctx, s.db, checkoutIntentID)\n' +
+    '\tif err != nil || projection == nil {\n' +
+    '\t\treturn err\n' +
+    '\t}\n' +
+    '\ttenantID = fundingTenant(tenantID, projection)\n' +
+    '\tif projection.WLTReservationID == "" || projection.Status == "reversed" {\n' +
+    '\t\treturn nil\n' +
+    '\t}\n' +
+    '\tif tenantID == "" {\n' +
+    '\t\treturn fmt.Errorf("coupon funding tenant is missing")\n' +
+    '\t}\n' +
+    '\tif projection.Status != "committed" {\n' +
+    '\t\treturn fmt.Errorf("only committed coupon funding can be reversed")\n' +
+    '\t}\n' +
+    '\tcorrelationID = fundingCorrelation(correlationID, orderID)\n' +
+    '\treservation, err := s.wlt.ReversePromotionFunding(ctx, projection.WLTReservationID, wltclient.PromotionFundingTransitionInput{\n' +
+    '\t\tTenantID: tenantID,\n' +
+    '\t\tOrderID:  orderID,\n' +
+    '\t\tReason:   strings.TrimSpace(reason),\n' +
+    '\t}, "dsh-promotion-funding-reverse:"+projection.RedemptionID, correlationID)\n' +
+    '\tif err != nil {\n' +
+    '\t\treturn err\n' +
+    '\t}\n' +
+    '\tif reservation.Status != "reversed" || reservation.TenantID != tenantID {\n' +
+    '\t\treturn fmt.Errorf("WLT promotion funding reversal response is invalid")\n' +
+    '\t}\n' +
+    '\treturn coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "reversed")\n' +
+    '}\n'
+  
+      at TestContext.<anonymous> (file:///home/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/tests/jrn-028-promotion-funding.test.mjs:54:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1306:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:897:18)
+      at Test.postRun (node:internal/test_runner/test:1447:19)
+      at Test.run (node:internal/test_runner/test:1372:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:897:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'package http\n\nimport (\n\t"context"\n\t"fmt"\n\t"strings"\n\n\t"dsh-api/internal/coupons"\n\twltclient "dsh-api/internal/wlt"\n)\n\nfunc fundingCorrelation(correlationID, fallback string) string {\n\tif value := strings.TrimSpace(correlationID); value != "" {\n\t\treturn value\n\t}\n\treturn strings.TrimSpace(fallback)\n}\n\nfunc fundingTenant(requested string, projection *coupons.FundingProjection) string {\n\tif value := strings.TrimSpace(requested); value != "" {\n\t\treturn value\n\t}\n\tif projection == nil {\n\t\treturn ""\n\t}\n\treturn strings.TrimSpace(projection.TenantID)\n}\n\nfunc (s *protectedStoreServer) reserveCouponFunding(\n\tctx context.Context,\n\ttenantID string,\n\tcheckoutIntentID string,\n\tcorrelationID string,\n) (*coupons.FundingProjection, error) {\n\tprojection, err := coupons.PrepareFundingForIntent(ctx, s.db, checkoutIntentID)\n\tif err != nil || projection == nil {\n\t\treturn projection, err\n\t}\n\ttenantID = fundingTenant(tenantID, projection)\n\tif tenantID == "" {\n\t\treturn nil, fmt.Errorf("coupon funding tenant is required")\n\t}\n\tif projection.Status == "reserved" && projection.WLTReservationID != "" {\n\t\tif projection.TenantID != "" && projection.TenantID != tenantID {\n\t\t\treturn nil, fmt.Errorf("coupon funding tenant mismatch")\n\t\t}\n\t\treturn projection, nil\n\t}\n\tcorrelationID = fundingCorrelation(correlationID, checkoutIntentID)\n\treservation, err := s.wlt.ReservePromotionFunding(ctx, wltclient.ReservePromotionFundingInput{\n\t\tTenantID:                 tenantID,\n\t\tExternalReference:        "dsh-coupon-redemption:" + projection.RedemptionID,\n\t\tCheckoutIntentID:         projection.CheckoutIntentID,\n\t\tCouponRedemptionID:       projection.RedemptionID,\n\t\tCouponID:                 projection.CouponID,\n\t\tClientID:                 projection.ClientActorID,\n\t\tPartnerID:                projection.PartnerID,\n\t\tPlatformFundedMinorUnits: projection.PlatformFundedMinorUnits,\n\t\tPartnerFundedMinorUnits:  projection.PartnerFundedMinorUnits,\n\t\tTotalDiscountMinorUnits:  projection.TotalDiscountMinorUnits,\n\t\tCurrency:                 projection.Currency,\n\t}, "dsh-promotion-funding:"+projection.RedemptionID, correlationID)\n\tif err != nil {\n\t\t_ = coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "wlt_reserve_failed")\n\t\treturn nil, err\n\t}\n\tif reservation.TenantID != tenantID ||\n\t\treservation.CheckoutIntentID != projection.CheckoutIntentID ||\n\t\treservation.CouponRedemptionID != projection.RedemptionID ||\n\t\treservation.CouponID != projection.CouponID ||\n\t\treservation.ClientID != projection.ClientActorID ||\n\t\treservation.TotalDiscountMinorUnits != projection.TotalDiscountMinorUnits ||\n\t\treservation.PlatformFundedMinorUnits != projection.PlatformFundedMinorUnits ||\n\t\treservation.PartnerFundedMinorUnits != projection.PartnerFundedMinorUnits ||\n\t\treservation.Currency != projection.Currency {\n\t\t_ = coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "wlt_reserve_mismatch")\n\t\treturn nil, fmt.Errorf("WLT promotion funding response does not match DSH reservation")\n\t}\n\tif err := coupons.AttachWLTReservation(ctx, s.db, projection.RedemptionID, reservation.ID, tenantID); err != nil {\n\t\t_, _ = s.wlt.ReleasePromotionFunding(ctx, reservation.ID, wltclient.PromotionFundingTransitionInput{\n\t\t\tTenantID: tenantID,\n\t\t\tReason:   "dsh_projection_attach_failed",\n\t\t}, "dsh-promotion-funding-release:"+projection.RedemptionID+":attach", correlationID)\n\t\t_ = coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "dsh_projection_attach_failed")\n\t\treturn nil, err\n\t}\n\tprojection.TenantID = tenantID\n\tprojection.WLTReservationID = reservation.ID\n\tprojection.Status = "reserved"\n\treturn projection, nil\n}\n\nfunc (s *protectedStoreServer) releaseCouponFunding(\n\tctx context.Context,\n\ttenantID string,\n\tcheckoutIntentID string,\n\treason string,\n\tcorrelationID string,\n) error {\n\tprojection, err := coupons.FundingByIntent(ctx, s.db, checkoutIntentID)\n\tif err != nil || projection == nil {\n\t\treturn err\n\t}\n\ttenantID = fundingTenant(tenantID, projection)\n\tif projection.WLTReservationID == "" || projection.Status == "released" || projection.Status == "reversed" {\n\t\treturn nil\n\t}\n\tif tenantID == "" {\n\t\treturn fmt.Errorf("coupon funding tenant is missing")\n\t}\n\tif projection.Status == "committed" {\n\t\treturn fmt.Errorf("committed coupon funding cannot be released")\n\t}\n\tcorrelationID = fundingCorrelation(correlationID, checkoutIntentID)\n\treservation, err := s.wlt.ReleasePromotionFunding(ctx, projection.WLTReservationID, wltclient.PromotionFundingTransitionInput{\n\t\tTenantID: tenantID,\n\t\tReason:   strings.TrimSpace(reason),\n\t}, "dsh-promotion-funding-release:"+projection.RedemptionID+":"+strings.TrimSpace(reason), correlationID)\n\tif err != nil {\n\t\treturn err\n\t}\n\tif reservation.Status != "released" || reservation.TenantID != tenantID {\n\t\treturn fmt.Errorf("WLT promotion funding release response is invalid")\n\t}\n\treturn coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "released")\n}\n\nfunc (s *protectedStoreServer) commitCouponFunding(\n\tctx context.Context,\n\ttenantID string,\n\tcheckoutIntentID string,\n\torderID string,\n\tcorrelationID string,\n) error {\n\tprojection, err := coupons.FundingByIntent(ctx, s.db, checkoutIntentID)\n\tif err != nil || projection == nil {\n\t\treturn err\n\t}\n\ttenantID = fundingTenant(tenantID, projection)\n\tif projection.WLTReservationID == "" || tenantID == "" {\n\t\treturn fmt.Errorf("coupon funding reservation or tenant is missing")\n\t}\n\tif projection.Status == "committed" {\n\t\treturn nil\n\t}\n\tcorrelationID = fundingCorrelation(correlationID, orderID)\n\treservation, err := s.wlt.CommitPromotionFunding(ctx, projection.WLTReservationID, wltclient.PromotionFundingTransitionInput{\n\t\tTenantID: tenantID,\n\t\tOrderID:  orderID,\n\t}, "dsh-promotion-funding-commit:"+projection.RedemptionID, correlationID)\n\tif err != nil {\n\t\treturn err\n\t}\n\tif reservation.Status != "committed" || reservation.TenantID != tenantID || reservation.OrderID == nil || *reservation.OrderID != orderID {\n\t\treturn fmt.Errorf("WLT promotion funding commit response is invalid")\n\t}\n\treturn coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "committed")\n}\n\nfunc (s *protectedStoreServer) reverseCouponFunding(\n\tctx context.Context,\n\ttenantID string,\n\tcheckoutIntentID string,\n\torderID string,\n\treason string,\n\tcorrelationID string,\n) error {\n\tprojection, err := coupons.FundingByIntent(ctx, s.db, checkoutIntentID)\n\tif err != nil || projection == nil {\n\t\treturn err\n\t}\n\ttenantID = fundingTenant(tenantID, projection)\n\tif projection.WLTReservationID == "" || projection.Status == "reversed" {\n\t\treturn nil\n\t}\n\tif tenantID == "" {\n\t\treturn fmt.Errorf("coupon funding tenant is missing")\n\t}\n\tif projection.Status != "committed" {\n\t\treturn fmt.Errorf("only committed coupon funding can be reversed")\n\t}\n\tcorrelationID = fundingCorrelation(correlationID, orderID)\n\treservation, err := s.wlt.ReversePromotionFunding(ctx, projection.WLTReservationID, wltclient.PromotionFundingTransitionInput{\n\t\tTenantID: tenantID,\n\t\tOrderID:  orderID,\n\t\tReason:   strings.TrimSpace(reason),\n\t}, "dsh-promotion-funding-reverse:"+projection.RedemptionID, correlationID)\n\tif err != nil {\n\t\treturn err\n\t}\n\tif reservation.Status != "reversed" || reservation.TenantID != tenantID {\n\t\treturn fmt.Errorf("WLT promotion funding reversal response is invalid")\n\t}\n\treturn coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "reversed")\n}\n',
+    expected: /ListFundingLifecycleDiagnostics/,
+    operator: 'match',
+    diff: 'simple'
+  }
