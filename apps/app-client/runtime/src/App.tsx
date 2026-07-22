@@ -27,7 +27,7 @@ configureIdentitySession(resolveIdentityApiBaseUrl());
 
 function AppContent() {
   const identity = useIdentitySession();
-  useDshMobilePushRegistration(identity.state.kind, "app-client");
+  useDshMobilePushRegistration(identity.state.kind, "app-client", "bthwani-client-next");
 
   return (
     <View style={styles.root}>
