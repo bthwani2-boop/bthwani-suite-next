@@ -34,7 +34,7 @@ jobs:
       - name: Verify JRN-030 Go formatting
         working-directory: services/dsh/backend
         run: |
-          unformatted="$({ find internal/partnerfleet -type f -name '*.go' -print0 | xargs -0 gofmt -l; gofmt -l internal/http/partner_fleet.go internal/http/partner_fleet_membership_routes.go internal/http/partner_fleet_operator.go internal/http/journeys_026_030_routes_test.go; })"
+          unformatted="$({ find internal/partnerfleet -type f -name '*.go' -print0 | xargs -0 gofmt -l; gofmt -l internal/http/partner_fleet.go internal/http/partner_fleet_membership_routes.go internal/http/partner_fleet_operator.go internal/http/jrn030_partner_fleet_routes_test.go; })"
           if [[ -n "${unformatted}" ]]; then
             printf 'Unformatted JRN-030 Go files:\n%s\n' "${unformatted}"
             exit 1
@@ -42,9 +42,9 @@ jobs:
       - name: Compile JRN-030 partner-fleet package
         working-directory: services/dsh/backend
         run: go test ./internal/partnerfleet -run '^$'
-      - name: Verify governed JRN-026..030 route composition
+      - name: Verify governed JRN-030 route composition
         working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJourneys026To030ExposeGovernedRoutes$' -count=1
+        run: go test ./internal/http -run '^TestJourney030ExposesGovernedPartnerFleetRoutes$' -count=1
       - name: Compile and build DSH API composition root
         working-directory: services/dsh/backend
         run: |
@@ -97,7 +97,7 @@ jobs:
       - name: Verify JRN-030 Go formatting
         working-directory: services/dsh/backend
         run: |
-          unformatted="$({ find internal/partnerfleet -type f -name '*.go' -print0 | xargs -0 gofmt -l; gofmt -l internal/http/partner_fleet.go internal/http/partner_fleet_membership_routes.go internal/http/partner_fleet_operator.go internal/http/journeys_026_030_routes_test.go; })"
+          unformatted="$({ find internal/partnerfleet -type f -name '*.go' -print0 | xargs -0 gofmt -l; gofmt -l internal/http/partner_fleet.go internal/http/partner_fleet_membership_routes.go internal/http/partner_fleet_operator.go internal/http/jrn030_partner_fleet_routes_test.go; })"
           if [[ -n "${unformatted}" ]]; then
             printf 'Unformatted JRN-030 Go files:\n%s\n' "${unformatted}"
             exit 1
@@ -105,9 +105,9 @@ jobs:
       - name: Compile JRN-030 partner-fleet package
         working-directory: services/dsh/backend
         run: go test ./internal/partnerfleet -run '^$'
-      - name: Verify governed JRN-026..030 route composition
+      - name: Verify governed JRN-030 route composition
         working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJourneys026To030ExposeGovernedRoutes$' -count=1
+        run: go test ./internal/http -run '^TestJourney030ExposesGovernedPartnerFleetRoutes$' -count=1
       - name: Compile and build DSH API composition root
         working-directory: services/dsh/backend
         run: |
