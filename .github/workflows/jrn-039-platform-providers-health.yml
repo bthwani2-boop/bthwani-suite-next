@@ -8,6 +8,7 @@ on:
       - "core/platform-control/**"
       - "core/providers/**"
       - "services/dsh/frontend/shared/platform/**"
+      - "services/dsh/frontend/shared/session/control-panel-permissions.ts"
       - "services/dsh/frontend/control-panel/platform/**"
       - "infra/docker/compose.runtime.yml"
       - "infra/docker/env/runtime.env.example"
