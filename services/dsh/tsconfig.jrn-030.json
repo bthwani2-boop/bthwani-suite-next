@@ -1,7 +1,20 @@
 {
   "extends": "./tsconfig.jrn-020-030.json",
   "compilerOptions": {
-    "outDir": "dist-jrn-030"
+    "outDir": "dist-jrn-030",
+    "module": "ESNext",
+    "jsx": "react-jsx",
+    "types": ["node", "react", "react-dom"],
+    "paths": {
+      "@bthwani/ui-kit": ["shared/ui-kit/src/index.ts"],
+      "@bthwani/ui-kit/web": ["shared/ui-kit/src/web.ts"],
+      "@bthwani/ui-kit/tokens": ["shared/ui-kit/src/tokens/index.ts"],
+      "@bthwani/app-shell": ["shared/app-shell/src/index.ts"],
+      "@bthwani/control-panel/components": ["apps/control-panel/runtime/src/components/index.ts"],
+      "@bthwani/control-panel/shell": ["apps/control-panel/runtime/src/shell/index.ts"],
+      "@dsh-shared/*": ["services/dsh/frontend/shared/*"],
+      "react-native": ["apps/app-client/runtime/node_modules/react-native"]
+    }
   },
   "include": [
     "frontend/**/*.d.ts",
@@ -9,7 +22,8 @@
     "frontend/shared/_kernel/**/*.tsx",
     "frontend/shared/partner/partner-fleet.api.ts",
     "frontend/shared/partner/use-partner-fleet-controller.ts",
-    "frontend/shared/partner/index.ts",
+    "frontend/shared/partner/operator-delivery-pricing.ts",
+    "frontend/shared/partner/operator-delivery-pricing.public.ts",
     "frontend/app-partner/team/partner-team.types.ts",
     "frontend/app-partner/team/usePartnerTeamModel.ts",
     "frontend/app-partner/team/PartnerTeamManagementScreen.tsx",
@@ -17,10 +31,5 @@
     "frontend/control-panel/partners/stores/OperatorPartnerFleetPanel.tsx",
     "frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx"
   ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "dist-jrn-020-030",
-    "dist-jrn-030"
-  ]
+  "exclude": ["node_modules", "dist", "dist-jrn-020-030", "dist-jrn-030"]
 }
