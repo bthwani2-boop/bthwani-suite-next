@@ -1,0 +1,34 @@
+name: JRN-031 Go Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - "governance/evidence/.jrn-031-go-diagnostic-trigger"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    name: Administration Go compile and tests
+    runs-on: macos-14
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact branch head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: false
+
+      - name: Run focused Go tests with compact diagnostics
+        working-directory: services/dsh/backend
+        shell: bash
+        run: |
+          set -o pipefail
+          go test ./internal/administration ./internal/http -run 'Test(Journey031ExposesGovernedAdministrationRoutes|RequestStaffRoleAssignmentRejectsInvalidInput|RequestStaffRoleAssignmentRejectsSelfAssignment|ReviewStaffRoleAssignmentRejectsInvalidDecision|ReviewStaffRoleAssignmentRequiresVersion|RejectedRoleAssignmentRequiresReviewNote|NormalizeRoleDefinitionRequiresControlPanelAndNormalizesScope|AdministrationPermissionCandidatesPreserveLegacyFallback|InverseRoleAction|AuditRedactionDropsSensitiveValues)$' -count=1 2>&1 | tail -n 120
+          go build ./internal/administration ./internal/http 2>&1 | tail -n 120
