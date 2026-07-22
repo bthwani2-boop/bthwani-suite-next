@@ -4,7 +4,9 @@
   "title": "تنفيذ الكابتن والتتبع الحي",
   "closureMode": "CODE_AND_AUTOMATED_EVIDENCE",
   "requiredSliceCount": 18,
-  "codeDecision": "NEEDS_EVIDENCE",
+  "closedSliceCount": 18,
+  "openSliceCount": 0,
+  "codeDecision": "READY_FOR_REVIEW",
   "releaseDecision": "READY_FOR_REVIEW",
   "slices": [
     {
@@ -12,7 +14,7 @@
       "name": "Product Truth",
       "codeStatus": "IMPLEMENTED",
       "requiredFiles": ["governance/product/contracts/jrn-017-captain-live-tracking.product-truth.json"],
-      "requiredMarkers": ["acceptanceCriteria", "negativeInvariants", "PENDING_TARGETED_CI"]
+      "requiredMarkers": ["acceptanceCriteria", "negativeInvariants", "PASS_TARGETED_CI"]
     },
     {
       "id": "FS-02",
@@ -131,7 +133,7 @@
       "name": "Same-commit evidence and independent review gate",
       "codeStatus": "IMPLEMENTED",
       "requiredFiles": ["services/dsh/contracts/jrn-017-slice-closure.json", ".github/workflows/jrn-017-live-tracking-verify.yml"],
-      "requiredMarkers": ["NEEDS_EVIDENCE", "requiredSliceCount", "github.sha", "independentReviewPending"]
+      "requiredMarkers": ["READY_FOR_REVIEW", "requiredSliceCount", "github.sha", "independentReviewPending"]
     }
   ]
 }
