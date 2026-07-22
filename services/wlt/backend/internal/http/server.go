@@ -48,18 +48,18 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/expire", gate(serviceAuth(payment.HandleTenantScopedPaymentSession(db, payment.HandleExpireSession(db)))))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/cod-collect", gate(serviceAuth(payment.HandleCodCollectionViaPaymentSessionBlocked(db))))
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/cancel-for-order", gate(serviceAuth(payment.HandleTenantScopedPaymentSession(db, payment.HandleGovernedSessionCancellation(db)))))
-	// Provider callbacks authenticate with a dedicated HMAC secret rather than
-	// the DSH service token. The mutation feature gate still fails closed.
 	mux.HandleFunc("POST /wlt/provider/webhooks/payment", gate(payment.HandlePaymentProviderWebhook(db)))
 
-	mux.HandleFunc("POST /wlt/refunds", gate(serviceAuth(refund.HandleCreateGovernedRefund(db))))
-	mux.HandleFunc("GET /wlt/refunds/{refundId}", readGate(refund.HandleGetGovernedRefund(db)))
-	mux.HandleFunc("GET /wlt/refunds", readGate(refund.HandleListGovernedRefunds(db)))
-	mux.HandleFunc("GET /wlt/refunds/{refundId}/audit", readGate(refund.HandleListGovernedRefundAudit(db)))
-	mux.HandleFunc("POST /wlt/refunds/{refundId}/approve", gate(serviceAuth(refund.HandleApproveGovernedRefund(db))))
-	mux.HandleFunc("POST /wlt/refunds/{refundId}/complete", gate(serviceAuth(refund.HandleCompleteGovernedRefund(db))))
-	mux.HandleFunc("POST /wlt/refunds/{refundId}/reject", gate(serviceAuth(refund.HandleRejectGovernedRefund(db))))
-	mux.HandleFunc("POST /wlt/refunds/{refundId}/reconcile", gate(serviceAuth(refund.HandleReconcileGovernedRefund(db))))
+	// Refund routes are service-authenticated and tenant-scoped. The trusted
+	// X-Tenant-ID must own the referenced refund before any read or mutation.
+	mux.HandleFunc("POST /wlt/refunds", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleCreateGovernedRefund(db)))))
+	mux.HandleFunc("GET /wlt/refunds/{refundId}", readGate(refund.RequireTenantScope(db, refund.HandleGetGovernedRefund(db))))
+	mux.HandleFunc("GET /wlt/refunds", readGate(refund.RequireTenantScope(db, refund.HandleListGovernedRefunds(db))))
+	mux.HandleFunc("GET /wlt/refunds/{refundId}/audit", readGate(refund.RequireTenantScope(db, refund.HandleListGovernedRefundAudit(db))))
+	mux.HandleFunc("POST /wlt/refunds/{refundId}/approve", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleApproveGovernedRefund(db)))))
+	mux.HandleFunc("POST /wlt/refunds/{refundId}/complete", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleCompleteGovernedRefund(db)))))
+	mux.HandleFunc("POST /wlt/refunds/{refundId}/reject", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleRejectGovernedRefund(db)))))
+	mux.HandleFunc("POST /wlt/refunds/{refundId}/reconcile", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleReconcileGovernedRefund(db)))))
 
 	mux.HandleFunc("GET /wlt/settlements/summary", readGate(settlement.HandleGetSettlementSummaryGoverned(db)))
 	mux.HandleFunc("POST /wlt/settlements", gate(serviceAuth(settlement.HandleCreateEvidenceBackedSettlement(db))))
@@ -162,6 +162,7 @@ func requireInternalFinancialRead(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
+
 func requireMutationServiceAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
@@ -170,6 +171,7 @@ func requireMutationServiceAuth(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
+
 func newMutationGate(mutationsEnabled bool) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		if mutationsEnabled {
