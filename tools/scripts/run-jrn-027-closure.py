@@ -51,6 +51,14 @@ subprocess.run(
     check=True,
 )
 
+# GetSubscriptionPlan returns a value. The canonical lifecycle passes a pointer
+# to initialization helpers without weakening the marketing package API.
+replace_once(
+    "tools/templates/jrn027_subscription_purchases.go",
+    "\treturn plan, product, nil\n",
+    "\treturn &plan, product, nil\n",
+)
+
 # Converge on the existing subscription_purchases.go as the sole DSH lifecycle
 # owner. This removes the duplicate implementation identified by integrated
 # HTTP compilation while preserving all JRN-027 lifecycle behavior.
