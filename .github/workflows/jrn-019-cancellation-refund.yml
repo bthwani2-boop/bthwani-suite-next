@@ -47,8 +47,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-019-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-019-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   cancellation-refund-guard:
