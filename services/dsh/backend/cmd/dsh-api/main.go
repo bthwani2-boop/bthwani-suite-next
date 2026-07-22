@@ -77,8 +77,9 @@ func main() {
 	dshHttp.RegisterAdministrationRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterWorkforceScopeRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterWorkforceEmployeeMediaRoute(router, db, identityClient, wltClient, mediaProvider)
+	operationalPolicyGuardedRouter := dshHttp.OperationalPolicyEffectsMiddleware(db, router)
 	pickupGuardedRouter := dshHttp.PickupMutationPathContext(
-		dshHttp.PickupMutationGuard(db, identityClient, wltClient, mediaProvider, router),
+		dshHttp.PickupMutationGuard(db, identityClient, wltClient, mediaProvider, operationalPolicyGuardedRouter),
 	)
 	deliveryExceptionGovernedRouter := dshHttp.DeliveryExceptionGovernanceMiddleware(
 		db,
