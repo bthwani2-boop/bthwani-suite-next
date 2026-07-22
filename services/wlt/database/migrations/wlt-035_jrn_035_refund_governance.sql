@@ -51,7 +51,6 @@ ALTER TABLE wlt_refunds
   DROP CONSTRAINT IF EXISTS wlt_refunds_amount_positive_chk;
 ALTER TABLE wlt_refunds
   ADD CONSTRAINT wlt_refunds_amount_positive_chk CHECK (amount_minor_units > 0) NOT VALID;
-ALTER TABLE wlt_refunds VALIDATE CONSTRAINT wlt_refunds_amount_positive_chk;
 
 ALTER TABLE wlt_refunds
   DROP CONSTRAINT IF EXISTS wlt_refunds_maker_checker_chk;
@@ -100,6 +99,12 @@ ALTER TABLE wlt_reconciliation_cases
 ALTER TABLE wlt_reconciliation_cases
   ADD CONSTRAINT wlt_reconciliation_cases_operation_chk
   CHECK (operation IN ('authorize','capture','refund'));
+
+ALTER TABLE wlt_refunds
+  DROP CONSTRAINT IF EXISTS wlt_refunds_reconciliation_case_fk;
+ALTER TABLE wlt_refunds
+  ADD CONSTRAINT wlt_refunds_reconciliation_case_fk
+  FOREIGN KEY (reconciliation_case_id) REFERENCES wlt_reconciliation_cases(id) NOT VALID;
 
 ALTER TABLE wlt_dsh_outbox_events
   ADD COLUMN IF NOT EXISTS order_id TEXT,
