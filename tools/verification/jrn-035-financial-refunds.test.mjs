@@ -13,6 +13,7 @@ const paths = {
   contract: "services/wlt/contracts/jrn-035-refund-governance.json",
   migration: "services/wlt/database/migrations/wlt-037_jrn_035_refund_governance.sql",
   core: "services/wlt/backend/internal/refund/governed_refund.go",
+  durableCompletion: "services/wlt/backend/internal/refund/governed_refund_durable_completion.go",
   tenantGuard: "services/wlt/backend/internal/refund/tenant_guard.go",
   router: "services/wlt/backend/internal/http/server.go",
   outbox: "services/wlt/backend/internal/dshoutbox/dshoutbox.go",
@@ -71,8 +72,16 @@ test("WLT claims provider once and commits ledger plus durable DSH event", () =>
     /AccountType: "provider_clearing", DebitCredit: "credit"/,
     /dshoutbox\.EnqueueRefund/, /refund_completed/,
   ]);
+  mustContain(paths.durableCompletion, [
+    /ErrRefundOutcomePersistence/,
+    /CompleteGovernedRefundWithProviderDurable/,
+    /current\.Status != "processing"/,
+    /markGovernedRefundProviderUnknown/,
+    /markGovernedRefundProviderFailure/,
+    /REFUND_OUTCOME_PERSISTENCE_FAILED/,
+  ]);
   mustContain(paths.tenantGuard, [/X-Tenant-ID/, /SELECT tenant_id FROM wlt_refunds/, /TENANT_MISMATCH/]);
-  mustContain(paths.router, [/refund\.RequireTenantScope/, /HandleReconcileGovernedRefund/, /HandleListGovernedRefundAudit/]);
+  mustContain(paths.router, [/refund\.RequireTenantScope/, /HandleCompleteGovernedRefundDurable/, /HandleReconcileGovernedRefund/, /HandleListGovernedRefundAudit/]);
   mustContain(paths.outbox, [/EventTypeRefunded/, /func EnqueueRefund/, /refund_reference/]);
   mustContain(paths.worker, [/NotifyEvent/, /RefundReference/]);
 });
