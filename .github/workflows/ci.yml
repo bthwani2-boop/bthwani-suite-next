@@ -453,7 +453,7 @@ jobs:
   contextual_result:
     name: BThwani Contextual CI result
     needs: [context, policy, node_affected, dsh, wlt, identity, workforce, platform, providers, runtime_proof]
-    if: always()
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -495,7 +495,7 @@ jobs:
   repository_result:
     name: BThwani Repository CI result
     needs: [contextual_result]
-    if: always()
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -504,7 +504,7 @@ jobs:
   workflow_security_result:
     name: BThwani Workflow Security result
     needs: [contextual_result]
-    if: always()
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -513,7 +513,7 @@ jobs:
   governance_result:
     name: BThwani Governance Audit result
     needs: [contextual_result]
-    if: always()
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -522,7 +522,7 @@ jobs:
   dsh_operational_result:
     name: DSH Operational Closure CI result
     needs: [contextual_result]
-    if: always()
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -531,7 +531,7 @@ jobs:
   jrn043_release_result:
     name: JRN-043 SDLC Governance CI Release result
     needs: [contextual_result]
-    if: always()
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
