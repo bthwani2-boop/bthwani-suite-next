@@ -135,6 +135,10 @@ jobs:
            ORDER BY indexname;
           SQL
 
+      - name: Execute JRN-030 PostgreSQL lifecycle proof
+        working-directory: services/dsh/backend
+        run: go test ./internal/partnerfleet -run '^TestPartnerFleetLifecyclePostgres$' -count=1 -v
+
       - name: Run DSH API and verify governed route runtime
         working-directory: services/dsh/backend
         run: |
