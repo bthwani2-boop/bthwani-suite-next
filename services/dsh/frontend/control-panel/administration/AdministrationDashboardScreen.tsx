@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CpButton,
   CpKpiCard,
@@ -39,12 +40,26 @@ function statePanel(state: CountableState, loadingTitle: string) {
 }
 
 export function AdministrationDashboardScreen() {
+  const router = useRouter();
   const [tab, setTab] = useState<AdminMainTabId>("overview");
   const roles = useAdministrationRolesController("authenticated");
   const staff = useStaffController("authenticated");
   const partners = usePartnerActivationReadController("authenticated");
   const captains = useCaptainCredentialController("authenticated");
   const audit = useAdminAuditController("authenticated");
+
+  const openPartnerOwner = (partnerId?: string) => {
+    router.push(partnerId ? `/dsh/partners/${encodeURIComponent(partnerId)}` : "/dsh/partners");
+  };
+
+  const openCaptainOwner = (captainId?: string) => {
+    const params = new URLSearchParams({
+      view: captainId ? "detail" : "create",
+      kind: "captain",
+    });
+    if (captainId) params.set("actorId", captainId);
+    router.push(`/dsh/hr?${params.toString()}`);
+  };
 
   const renderOverview = () => (
     <section style={styles.sectionStack}>
@@ -86,6 +101,8 @@ export function AdministrationDashboardScreen() {
               <CpTableHeaderCell>الدور</CpTableHeaderCell>
               <CpTableHeaderCell>الوصف</CpTableHeaderCell>
               <CpTableHeaderCell>الصلاحيات</CpTableHeaderCell>
+              <CpTableHeaderCell>الأسطح</CpTableHeaderCell>
+              <CpTableHeaderCell>الحالة/النسخة</CpTableHeaderCell>
               <CpTableHeaderCell>تاريخ الإنشاء</CpTableHeaderCell>
             </tr>
           </thead>
@@ -95,6 +112,8 @@ export function AdministrationDashboardScreen() {
                 <CpTableCell>{role.name}</CpTableCell>
                 <CpTableCell>{role.description || "—"}</CpTableCell>
                 <CpTableCell>{role.permissions.length > 0 ? role.permissions.join("، ") : "لا توجد صلاحيات مرتبطة"}</CpTableCell>
+                <CpTableCell>{role.surfaces.length > 0 ? role.surfaces.join("، ") : "—"}</CpTableCell>
+                <CpTableCell>{role.active ? "فعال" : "غير فعال"} · v{role.version}</CpTableCell>
                 <CpTableCell>{role.createdAt}</CpTableCell>
               </tr>
             ))}
@@ -137,19 +156,47 @@ export function AdministrationDashboardScreen() {
       </article>
 
       <article style={styles.card}>
-        <h2 style={styles.heading}>إسقاطات الاعتماد المالكة لرحلات أخرى</h2>
+        <div style={styles.ownerHeader}>
+          <div>
+            <h2 style={styles.heading}>تفعيل الشركاء أو حظرهم</h2>
+            <span>التنفيذ يتم داخل مالك دورة حياة الشريك مع بوابات الجاهزية والنسخة والسبب.</span>
+          </div>
+          <CpButton onClick={() => openPartnerOwner()}>فتح طابور الشركاء</CpButton>
+        </div>
         {statePanel(partners.state, "جارٍ تحميل الشركاء…")}
-        {statePanel(captains.state, "جارٍ تحميل الكباتن…")}
+        {partners.state.kind === "success" && partners.state.data.length === 0 ? (
+          <CpStatePanel role="status" title="لا توجد إسقاطات شركاء متاحة حاليًا." />
+        ) : null}
         {partners.state.kind === "success" ? partners.state.data.map((item) => (
           <div key={item.id} style={styles.readOnlyRow}>
-            <strong>{item.partnerId}</strong>
-            <span>{administrationStatusLabel(item.status)}</span>
+            <div style={styles.rowText}>
+              <strong>{item.partnerId}</strong>
+              <span>{administrationStatusLabel(item.status)}</span>
+            </div>
+            <CpButton onClick={() => openPartnerOwner(item.partnerId)}>فتح التفعيل/الحظر</CpButton>
           </div>
         )) : null}
+      </article>
+
+      <article style={styles.card}>
+        <div style={styles.ownerHeader}>
+          <div>
+            <h2 style={styles.heading}>بيانات اعتماد الكابتن</h2>
+            <span>الإنشاء والتحديث ورفع الوثائق واعتماد الرخصة يتم في Workforce، لا في إسقاط DSH.</span>
+          </div>
+          <CpButton onClick={() => openCaptainOwner()}>إنشاء ملف كابتن</CpButton>
+        </div>
+        {statePanel(captains.state, "جارٍ تحميل الكباتن…")}
+        {captains.state.kind === "success" && captains.state.data.length === 0 ? (
+          <CpStatePanel role="status" title="لا توجد إسقاطات اعتماد كباتن متاحة حاليًا." />
+        ) : null}
         {captains.state.kind === "success" ? captains.state.data.map((item) => (
           <div key={item.id} style={styles.readOnlyRow}>
-            <strong>{item.captainId}</strong>
-            <span>{administrationStatusLabel(item.status)}</span>
+            <div style={styles.rowText}>
+              <strong>{item.captainId}</strong>
+              <span>{administrationStatusLabel(item.status)} · {item.vehicleType || "بلا مركبة"}</span>
+            </div>
+            <CpButton onClick={() => openCaptainOwner(item.captainId)}>فتح ملف الاعتماد</CpButton>
           </div>
         )) : null}
       </article>
@@ -178,7 +225,9 @@ export function AdministrationDashboardScreen() {
               <CpTableHeaderCell>المنفذ</CpTableHeaderCell>
               <CpTableHeaderCell>العملية</CpTableHeaderCell>
               <CpTableHeaderCell>الهدف</CpTableHeaderCell>
-              <CpTableHeaderCell>التفاصيل</CpTableHeaderCell>
+              <CpTableHeaderCell>الحساسية</CpTableHeaderCell>
+              <CpTableHeaderCell>مرجع الارتباط</CpTableHeaderCell>
+              <CpTableHeaderCell>التفاصيل المنقحة</CpTableHeaderCell>
             </tr>
           </thead>
           <tbody>
@@ -188,6 +237,8 @@ export function AdministrationDashboardScreen() {
                 <CpTableCell>{entry.actorId}</CpTableCell>
                 <CpTableCell>{entry.action}</CpTableCell>
                 <CpTableCell>{entry.targetId || "—"}</CpTableCell>
+                <CpTableCell>{entry.sensitivity}</CpTableCell>
+                <CpTableCell>{entry.correlationId || "—"}</CpTableCell>
                 <CpTableCell>{entry.detail || "—"}</CpTableCell>
               </tr>
             ))}
@@ -261,11 +312,23 @@ const styles = WebStyleSheet.create({
     margin: 0,
     fontSize: "1rem",
   },
+  ownerHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "1rem",
+    flexWrap: "wrap",
+  },
   readOnlyRow: {
     display: "flex",
     justifyContent: "space-between",
+    alignItems: "center",
     gap: "1rem",
     padding: "0.75rem",
     borderBlockEnd: "1px solid var(--card-border, currentColor)",
+  },
+  rowText: {
+    display: "grid",
+    gap: "0.25rem",
   },
 });
