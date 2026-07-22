@@ -103,6 +103,7 @@ JSON
 CREATED=$(api POST "/wlt/payout-requests" "$REQUEST_KEY" "$REQUEST_KEY" "$CREATE_BODY")
 PAYOUT_ID=$(printf '%s' "$CREATED" | json_field payoutRequest.id)
 [[ "$(printf '%s' "$CREATED" | json_field payoutRequest.status)" = "pending" ]]
+[[ "$(printf '%s' "$CREATED" | json_field payoutRequest.payoutDestinationId)" = "$DESTINATION_ID" ]]
 
 REPLAY=$(api POST "/wlt/payout-requests" "$REQUEST_KEY-replay" "$REQUEST_KEY-replay" "$CREATE_BODY")
 [[ "$(printf '%s' "$REPLAY" | json_field payoutRequest.id)" = "$PAYOUT_ID" ]]
@@ -118,11 +119,12 @@ CONFLICT_STATUS=$(curl --silent --show-error --output /tmp/jrn037-conflict.json 
   --header "Content-Type: application/json" \
   --data "$CONFLICT_BODY")
 [[ "$CONFLICT_STATUS" = "409" ]]
+[[ "$(json_field code </tmp/jrn037-conflict.json)" = "IDEMPOTENCY_CONFLICT" ]]
 
-echo '{"operatorId":"finance-maker-1"}' | api POST "/wlt/payout-requests/$PAYOUT_ID/approve" "$REQUEST_KEY-approve" "$REQUEST_KEY-approve" "$(cat)" >/tmp/jrn037-approved.json
-echo '{"operatorId":"finance-processor-2"}' | api POST "/wlt/payout-requests/$PAYOUT_ID/process" "$REQUEST_KEY-process" "$REQUEST_KEY-process" "$(cat)" >/tmp/jrn037-processed.json
-echo '{"operatorId":"finance-checker-3"}' | api POST "/wlt/payout-requests/$PAYOUT_ID/complete" "$REQUEST_KEY-complete" "$REQUEST_KEY-complete" "$(cat)" >/tmp/jrn037-completed.json
-[[ "$(cat /tmp/jrn037-completed.json | json_field payoutRequest.status)" = "completed" ]]
+api POST "/wlt/payout-requests/$PAYOUT_ID/approve" "$REQUEST_KEY-approve" "$REQUEST_KEY-approve" '{"operatorId":"finance-maker-1"}' >/tmp/jrn037-approved.json
+api POST "/wlt/payout-requests/$PAYOUT_ID/process" "$REQUEST_KEY-process" "$REQUEST_KEY-process" '{"operatorId":"finance-processor-2"}' >/tmp/jrn037-processed.json
+api POST "/wlt/payout-requests/$PAYOUT_ID/complete" "$REQUEST_KEY-complete" "$REQUEST_KEY-complete" '{"operatorId":"finance-checker-3"}' >/tmp/jrn037-completed.json
+[[ "$(json_field payoutRequest.status </tmp/jrn037-completed.json)" = "completed" ]]
 
 CROSS_BODY=$(cat <<JSON
 {
@@ -144,6 +146,7 @@ CROSS_STATUS=$(curl --silent --show-error --output /tmp/jrn037-cross.json --writ
   --header "Content-Type: application/json" \
   --data "$CROSS_BODY")
 [[ "$CROSS_STATUS" = "403" ]]
+[[ "$(json_field code </tmp/jrn037-cross.json)" = "PAYOUT_DESTINATION_FORBIDDEN" ]]
 
 UNKNOWN_BODY=$(cat <<JSON
 {
@@ -170,6 +173,7 @@ WHERE id = '$UNKNOWN_ID' AND status = 'provider_pending';
 SQL
 RECONCILED=$(api POST "/wlt/payout-requests/$UNKNOWN_ID/reconcile" "$UNKNOWN_KEY-reconcile" "$UNKNOWN_KEY-reconcile" '{"operatorId":"finance-reconciler-6"}')
 [[ "$(printf '%s' "$RECONCILED" | json_field payoutRequest.status)" = "processing" ]]
+[[ "$(printf '%s' "$RECONCILED" | json_field payoutRequest.reconciliationStatus)" = "resolved_success" ]]
 UNKNOWN_COMPLETED=$(api POST "/wlt/payout-requests/$UNKNOWN_ID/complete" "$UNKNOWN_KEY-complete" "$UNKNOWN_KEY-complete" '{"operatorId":"finance-checker-7"}')
 [[ "$(printf '%s' "$UNKNOWN_COMPLETED" | json_field payoutRequest.status)" = "completed" ]]
 
