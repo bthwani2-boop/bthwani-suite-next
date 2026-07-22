@@ -56,81 +56,89 @@ jobs:
         with:
           ref: sambassam
           fetch-depth: 0
-      - name: Patch and publish tracked JRN-013 artifacts
+      - name: Patch and publish temporary integration ref
         shell: bash
         run: |
-          set -euo pipefail
-          git pull --rebase origin sambassam
-          node <<'NODE'
-          const fs = require('node:fs');
+          set -o pipefail
+          {
+            set -euo pipefail
+            git pull --rebase origin sambassam
+            node <<'NODE'
+            const fs = require('node:fs');
 
-          function patchYaml(path) {
-            let source = fs.readFileSync(path, 'utf8');
-            const start = source.indexOf('    DshDeliveryExceptionReasonCode:');
-            const end = source.indexOf('    DshDeliveryExceptionStatus:', start);
-            if (start < 0 || end < 0) throw new Error(`${path}: reason schema not found`);
-            let section = source.slice(start, end);
-            if (!section.includes('        - handoff_shortage')) {
-              section = section.replace('        - proof_unavailable\n', '        - proof_unavailable\n        - handoff_shortage\n');
+            function patchYaml(path) {
+              let source = fs.readFileSync(path, 'utf8');
+              const start = source.indexOf('    DshDeliveryExceptionReasonCode:');
+              const end = source.indexOf('    DshDeliveryExceptionStatus:', start);
+              if (start < 0 || end < 0) throw new Error(`${path}: reason schema not found`);
+              let section = source.slice(start, end);
+              if (!section.includes('        - handoff_shortage')) {
+                section = section.replace('        - proof_unavailable\n', '        - proof_unavailable\n        - handoff_shortage\n');
+              }
+              if (!section.includes('        - handoff_mismatch')) {
+                section = section.replace('        - handoff_shortage\n', '        - handoff_shortage\n        - handoff_mismatch\n');
+              }
+              if (!section.includes('        - handoff_shortage') || !section.includes('        - handoff_mismatch')) {
+                throw new Error(`${path}: unable to align handoff reason enum`);
+              }
+              fs.writeFileSync(path, source.slice(0, start) + section + source.slice(end));
             }
-            if (!section.includes('        - handoff_mismatch')) {
-              section = section.replace('        - handoff_shortage\n', '        - handoff_shortage\n        - handoff_mismatch\n');
+
+            function patchClient(path) {
+              let source = fs.readFileSync(path, 'utf8');
+              if (!source.includes('| "handoff_shortage"')) {
+                source = source.replace('| "proof_unavailable" | "other";', '| "proof_unavailable" | "handoff_shortage" | "handoff_mismatch" | "other";');
+              }
+              if (!source.includes('| "handoff_shortage" | "handoff_mismatch" | "other";')) {
+                throw new Error(`${path}: generated reason union was not aligned`);
+              }
+              fs.writeFileSync(path, source);
             }
-            if (!section.includes('        - handoff_shortage') || !section.includes('        - handoff_mismatch')) {
-              throw new Error(`${path}: unable to align handoff reason enum`);
+
+            function patchAssertion(path) {
+              let source = fs.readFileSync(path, 'utf8');
+              source = source.replace(
+                "  assert.doesNotMatch(screen, /actionId === 'resolve_issue'.*openPreparationIssueCount/s);",
+                "  assert.doesNotMatch(screen, /\\|\\| \\(actionId === 'resolve_issue' && item\\.openPreparationIssueCount > 0\\)/);",
+              );
+              fs.writeFileSync(path, source);
             }
-            fs.writeFileSync(path, source.slice(0, start) + section + source.slice(end));
-          }
 
-          function patchClient(path) {
-            let source = fs.readFileSync(path, 'utf8');
-            if (!source.includes('| "handoff_shortage"')) {
-              source = source.replace('| "proof_unavailable" | "other";', '| "proof_unavailable" | "handoff_shortage" | "handoff_mismatch" | "other";');
-            }
-            if (!source.includes('| "handoff_shortage" | "handoff_mismatch" | "other";')) {
-              throw new Error(`${path}: generated reason union was not aligned`);
-            }
-            fs.writeFileSync(path, source);
-          }
+            patchYaml('services/dsh/contracts/dsh.openapi.yaml');
+            patchClient('services/dsh/clients/generated/dsh-api.ts');
+            patchAssertion('services/dsh/tests/store-captain-handoff-closure.test.mjs');
+            NODE
 
-          function patchAssertion(path) {
-            let source = fs.readFileSync(path, 'utf8');
-            source = source.replace(
-              "  assert.doesNotMatch(screen, /actionId === 'resolve_issue'.*openPreparationIssueCount/s);",
-              "  assert.doesNotMatch(screen, /\\|\\| \\(actionId === 'resolve_issue' && item\\.openPreparationIssueCount > 0\\)/);",
-            );
-            fs.writeFileSync(path, source);
-          }
+            grep -q -- '        - handoff_shortage' services/dsh/contracts/dsh.openapi.yaml
+            grep -q -- '        - handoff_mismatch' services/dsh/contracts/dsh.openapi.yaml
+            grep -q '"handoff_shortage" | "handoff_mismatch"' services/dsh/clients/generated/dsh-api.ts
+            grep -q "item\\.openPreparationIssueCount > 0" services/dsh/tests/store-captain-handoff-closure.test.mjs
 
-          patchYaml('services/dsh/contracts/dsh.openapi.yaml');
-          patchClient('services/dsh/clients/generated/dsh-api.ts');
-          patchAssertion('services/dsh/tests/store-captain-handoff-closure.test.mjs');
-          NODE
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            if ! git diff --quiet; then
+              git add \
+                services/dsh/contracts/dsh.openapi.yaml \
+                services/dsh/clients/generated/dsh-api.ts \
+                services/dsh/tests/store-captain-handoff-closure.test.mjs
+              git commit -m "fix(jrn-013): align primary handoff exception contract"
+            fi
 
-          grep -q -- '        - handoff_shortage' services/dsh/contracts/dsh.openapi.yaml
-          grep -q -- '        - handoff_mismatch' services/dsh/contracts/dsh.openapi.yaml
-          grep -q '"handoff_shortage" | "handoff_mismatch"' services/dsh/clients/generated/dsh-api.ts
-          grep -q "item\\.openPreparationIssueCount > 0" services/dsh/tests/store-captain-handoff-closure.test.mjs
-
-          if git diff --quiet; then
-            echo "JRN-013 tracked contract artifacts are already aligned."
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            services/dsh/contracts/dsh.openapi.yaml \
-            services/dsh/clients/generated/dsh-api.ts \
-            services/dsh/tests/store-captain-handoff-closure.test.mjs
-          git commit -m "fix(jrn-013): align primary handoff exception contract"
-
-          for attempt in 1 2 3 4 5; do
             git fetch origin sambassam
             git rebase origin/sambassam
-            if git push origin HEAD:sambassam; then exit 0; fi
-          done
-          exit 1
+            git push --force origin HEAD:refs/heads/automation/jrn-013-contract-patch
+            git rev-parse HEAD > jrn013-patch-head.txt
+          } 2>&1 | tee jrn013-migration.log
+      - name: Upload migration diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn013-migration-${{ github.run_id }}
+          path: |
+            jrn013-migration.log
+            jrn013-patch-head.txt
+          if-no-files-found: warn
+          retention-days: 2
 
   backend:
     name: DSH dispatch backend
