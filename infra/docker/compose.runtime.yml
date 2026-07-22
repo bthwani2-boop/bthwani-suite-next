@@ -112,7 +112,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/identity/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/identity/readiness || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -142,7 +142,7 @@ services:
       identity-api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8086/workforce/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8086/workforce/readiness || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -171,7 +171,7 @@ services:
       identity-api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8087/providers/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8087/providers/readiness || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -199,7 +199,7 @@ services:
       identity-api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8088/platform/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8088/platform/readiness || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 8
@@ -233,7 +233,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8083/wlt/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8083/wlt/readiness || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -273,7 +273,7 @@ services:
       minio-init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/dsh/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/dsh/readiness || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
