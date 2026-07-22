@@ -1,0 +1,381 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Delivery Exceptions and Return-to-Store API
+  version: 1.0.0
+  description: >
+    Canonical JRN-020 operational contract for reporting delivery exceptions,
+    acknowledging operational ownership, resolving retry/reassignment/return/cancellation,
+    returning custody to the store, and cross-surface readback. DSH owns operational
+    state only. Any cancellation financial effect is delegated to the governed WLT handoff.
+
+x-bthwani-owner: services/dsh
+x-bthwani-journey: JRN-020
+x-bthwani-truth-owner: services/dsh/backend/internal/dispatch/delivery_exceptions.go
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-adapter-owner: frontend/shared/dispatch/dispatch.api.ts
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-boundary: WLT_OWNS_ALL_FINANCIAL_MUTATION
+
+paths:
+  /dsh/captain/dispatch/assignments/{assignmentId}/exceptions:
+    parameters:
+      - $ref: '#/components/parameters/AssignmentId'
+    post:
+      operationId: reportCaptainDeliveryException
+      summary: Report a delivery exception with mandatory operational evidence.
+      tags: [DshDeliveryExceptions]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportDeliveryExceptionRequest' }
+      responses:
+        '201':
+          description: Exception recorded and delivery completion blocked pending operations review.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryExceptionResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    get:
+      operationId: getCaptainDeliveryException
+      summary: Read the captain-visible current exception and operations decision.
+      tags: [DshDeliveryExceptions]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Current exception returned.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryExceptionResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /dsh/operator/delivery-exceptions:
+    get:
+      operationId: listOperatorDeliveryExceptions
+      summary: List delivery exceptions by governed lifecycle status and severity.
+      tags: [DshDeliveryExceptions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/DeliveryExceptionStatus' }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+      responses:
+        '200':
+          description: Exceptions returned newest and highest severity first.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [exceptions]
+                properties:
+                  exceptions:
+                    type: array
+                    items: { $ref: '#/components/schemas/DeliveryException' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge:
+    parameters:
+      - $ref: '#/components/parameters/ExceptionId'
+    post:
+      operationId: acknowledgeOperatorDeliveryException
+      summary: Assign operational review responsibility to the authenticated operator.
+      tags: [DshDeliveryExceptions]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AcknowledgeDeliveryExceptionRequest' }
+      responses:
+        '200':
+          description: Exception acknowledged and responsibility recorded.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryExceptionResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/operator/delivery-exceptions/{exceptionId}/resolve:
+    parameters:
+      - $ref: '#/components/parameters/ExceptionId'
+    post:
+      operationId: resolveOperatorDeliveryException
+      summary: Resolve an acknowledged exception using one governed operational action.
+      description: >
+        The exception must first be acknowledged to record operational responsibility.
+        cancel_order delegates financial consequences through the governed order cancellation
+        handoff; this operation never creates a DSH refund, ledger entry, or balance mutation.
+      tags: [DshDeliveryExceptions]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResolveDeliveryExceptionRequest' }
+      responses:
+        '200':
+          description: Resolution applied or idempotently replayed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryExceptionResponse' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/captain/dispatch/assignments/{assignmentId}/return-to-store/arrive:
+    parameters:
+      - $ref: '#/components/parameters/AssignmentId'
+    post:
+      operationId: arriveCaptainReturnToStore
+      summary: Record captain arrival at the store with returned custody.
+      tags: [DshDeliveryExceptions]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Return marked as arrived and awaiting partner receipt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryExceptionResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/partner/orders/{orderId}/return-to-store:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      operationId: getPartnerReturnToStore
+      summary: Read the partner-visible return custody state for an owned order.
+      tags: [DshDeliveryExceptions]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Return custody state returned.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryExceptionResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /dsh/partner/orders/{orderId}/return-to-store/accept:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      operationId: acceptPartnerReturnToStore
+      summary: Confirm store receipt of the returned order and close delivery custody.
+      tags: [DshDeliveryExceptions]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Store custody confirmed and delivery assignment completed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryExceptionResponse' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    AssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ExceptionId:
+      name: exceptionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    DeliveryExceptionReasonCode:
+      type: string
+      enum:
+        - customer_unreachable
+        - recipient_refused
+        - wrong_address
+        - unsafe_location
+        - vehicle_breakdown
+        - accident
+        - damaged_order
+        - cash_collection_issue
+        - weather_or_road_block
+        - proof_unavailable
+        - handoff_shortage
+        - handoff_mismatch
+        - other
+
+    DeliveryExceptionStatus:
+      type: string
+      enum: [open, acknowledged, resolved]
+
+    DeliveryExceptionSeverity:
+      type: string
+      enum: [medium, high, critical]
+
+    DeliveryExceptionResolutionAction:
+      type: string
+      enum: [retry_same_captain, reassign_captain, return_to_store, cancel_order]
+
+    ReportDeliveryExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode, note, correlationId]
+      properties:
+        reasonCode: { $ref: '#/components/schemas/DeliveryExceptionReasonCode' }
+        note: { type: string, minLength: 5, maxLength: 1000 }
+        correlationId: { type: string, minLength: 1, maxLength: 200 }
+        latitude: { type: number, format: double, minimum: -90, maximum: 90, nullable: true }
+        longitude: { type: number, format: double, minimum: -180, maximum: 180, nullable: true }
+
+    AcknowledgeDeliveryExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+
+    ResolveDeliveryExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, action, note]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        action: { $ref: '#/components/schemas/DeliveryExceptionResolutionAction' }
+        note: { type: string, minLength: 5, maxLength: 1000 }
+        newCaptainId:
+          type: string
+          minLength: 1
+          description: Required only when action is reassign_captain.
+
+    DeliveryException:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenantId
+        - assignmentId
+        - orderId
+        - captainId
+        - reasonCode
+        - note
+        - deliveryStatusAtReport
+        - severity
+        - status
+        - correlationId
+        - reportedAt
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string }
+        assignmentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        captainId: { type: string }
+        reasonCode: { $ref: '#/components/schemas/DeliveryExceptionReasonCode' }
+        note: { type: string, minLength: 5, maxLength: 1000 }
+        deliveryStatusAtReport:
+          type: string
+          enum: [driver_assigned, driver_arrived_store, picked_up, arrived_customer]
+        severity: { $ref: '#/components/schemas/DeliveryExceptionSeverity' }
+        status: { $ref: '#/components/schemas/DeliveryExceptionStatus' }
+        correlationId: { type: string }
+        reportedLatitude: { type: number, format: double, nullable: true }
+        reportedLongitude: { type: number, format: double, nullable: true }
+        reportedAt: { type: string, format: date-time }
+        acknowledgedAt: { type: string, format: date-time, nullable: true }
+        acknowledgedByActorId: { type: string, nullable: true }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+        resolvedByActorId: { type: string, nullable: true }
+        resolutionAction:
+          allOf: [{ $ref: '#/components/schemas/DeliveryExceptionResolutionAction' }]
+          nullable: true
+        resolutionNote: { type: string, nullable: true }
+        replacementAssignmentId: { type: string, format: uuid, nullable: true }
+        replacementCaptainId: { type: string, nullable: true }
+        returnStartedAt: { type: string, format: date-time, nullable: true }
+        returnArrivedAt: { type: string, format: date-time, nullable: true }
+        returnedAt: { type: string, format: date-time, nullable: true }
+        returnAcceptedByActorId: { type: string, nullable: true }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    DeliveryExceptionResponse:
+      type: object
+      additionalProperties: false
+      required: [exception]
+      properties:
+        exception: { $ref: '#/components/schemas/DeliveryException' }
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+  responses:
+    InvalidRequest:
+      description: Request validation failed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthenticated:
+      description: Authentication is required.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: The authenticated actor cannot perform this operation.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Assignment, exception, order, or return state was not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Optimistic version or lifecycle state conflict.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
