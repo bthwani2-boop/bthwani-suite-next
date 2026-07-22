@@ -1,4 +1,4 @@
-# Permanent targeted gate for JRN-026 coupons, delivery pricing, and loyalty policies.
+# Permanent targeted gates for governed coupons, pricing, loyalty, and promotion funding.
 name: JRN-026 Coupons Pricing Loyalty Verification
 
 on:
@@ -15,7 +15,8 @@ on:
       - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
       - "services/dsh/backend/internal/marketing/loyalty_policy.go"
       - "services/dsh/backend/internal/wlt/loyalty.go"
-      - "services/dsh/backend/internal/wlt/promotion_funding.go"
+      - "services/dsh/backend/internal/wlt/promotion_funding*.go"
+      - "services/dsh/backend/internal/promotionfundingoutbox/**"
       - "services/dsh/backend/internal/wltoutbox/**"
       - "services/dsh/frontend/shared/marketing/**"
       - "services/dsh/frontend/shared/partner/index.ts"
@@ -27,10 +28,15 @@ on:
       - "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx"
       - "services/dsh/frontend/control-panel/marketing/**"
       - "services/wlt/backend/internal/commercial/**"
+      - "services/wlt/backend/internal/promotionfunding/**"
+      - "services/wlt/backend/internal/shared/**"
+      - "services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql"
       - "services/dsh/contracts/**"
       - "services/dsh/tests/jrn-026-coupons-pricing-loyalty.test.mjs"
+      - "services/dsh/tests/jrn-028-promotion-funding.test.mjs"
       - "services/dsh/tsconfig.jrn-026.json"
       - "governance/product/contracts/JRN-026_COUPONS_DELIVERY_PRICING_LOYALTY.product-truth.json"
+      - "governance/product/JRN-028_PROMOTION_FUNDING_PRODUCT_TRUTH.md"
       - "governance/evidence/JRN-026_REMOTE_SLICE_EXECUTION.md"
       - "governance/product/product-truth.schema.json"
       - "tools/guards/product-truth-gate.mjs"
@@ -47,7 +53,8 @@ on:
       - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
       - "services/dsh/backend/internal/marketing/loyalty_policy.go"
       - "services/dsh/backend/internal/wlt/loyalty.go"
-      - "services/dsh/backend/internal/wlt/promotion_funding.go"
+      - "services/dsh/backend/internal/wlt/promotion_funding*.go"
+      - "services/dsh/backend/internal/promotionfundingoutbox/**"
       - "services/dsh/backend/internal/wltoutbox/**"
       - "services/dsh/frontend/shared/marketing/**"
       - "services/dsh/frontend/shared/partner/index.ts"
@@ -59,10 +66,15 @@ on:
       - "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx"
       - "services/dsh/frontend/control-panel/marketing/**"
       - "services/wlt/backend/internal/commercial/**"
+      - "services/wlt/backend/internal/promotionfunding/**"
+      - "services/wlt/backend/internal/shared/**"
+      - "services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql"
       - "services/dsh/contracts/**"
       - "services/dsh/tests/jrn-026-coupons-pricing-loyalty.test.mjs"
+      - "services/dsh/tests/jrn-028-promotion-funding.test.mjs"
       - "services/dsh/tsconfig.jrn-026.json"
       - "governance/product/contracts/JRN-026_COUPONS_DELIVERY_PRICING_LOYALTY.product-truth.json"
+      - "governance/product/JRN-028_PROMOTION_FUNDING_PRODUCT_TRUTH.md"
       - "governance/evidence/JRN-026_REMOTE_SLICE_EXECUTION.md"
       - "governance/product/product-truth.schema.json"
       - "tools/guards/product-truth-gate.mjs"
@@ -72,8 +84,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-026-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-026-028-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   verify:
@@ -126,3 +138,122 @@ jobs:
 
       - name: Verify DSH modular OpenAPI composition
         run: pnpm --dir services/dsh openapi:verify
+
+  verify-jrn-028:
+    name: JRN-028 promotion funding full-stack proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: wlt_jrn_028
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d wlt_jrn_028"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+    steps:
+      - name: Checkout repository state
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            services/wlt/backend/go.sum
+
+      - name: Compile and test sovereign WLT promotion funding
+        working-directory: services/wlt/backend
+        run: |
+          go test ./internal/promotionfunding ./internal/shared
+          go test ./internal/http -run '^$'
+
+      - name: Compile and test DSH projection, reconciliation, and outbox
+        working-directory: services/dsh/backend
+        run: |
+          go test ./internal/coupons ./internal/wlt ./internal/promotionfundingoutbox
+          go test ./internal/http -run '^$'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify JRN-028 slices and TypeScript surfaces
+        run: |
+          node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs
+          pnpm --dir services/dsh typecheck
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Apply WLT promotion funding schema and integrity controls
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 -f services/wlt/database/migrations/wlt-032_promotion_funding_ledger.sql
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 -f services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql
+
+      - name: Prove audited transition commits
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 <<'SQL'
+          INSERT INTO wlt_promotion_funding_reservations (
+            tenant_id,external_reference,checkout_intent_id,coupon_redemption_id,
+            coupon_id,client_id,platform_funded_minor_units,
+            partner_funded_minor_units,total_discount_minor_units,currency,
+            status,idempotency_key,correlation_id
+          ) VALUES ('tenant-1','dsh:ok','checkout-ok','redemption-ok','coupon-1','client-1',600,400,1000,'YER','reserved','reserve-ok','corr-ok');
+          BEGIN;
+          UPDATE wlt_promotion_funding_reservations
+             SET status='committed',order_id='order-ok',committed_at=NOW(),updated_at=NOW()
+           WHERE external_reference='dsh:ok';
+          INSERT INTO wlt_promotion_funding_events (
+            reservation_id,event_type,from_status,to_status,order_id,
+            idempotency_key,correlation_id
+          )
+          SELECT id,'committed','reserved','committed','order-ok','commit-ok','corr-ok'
+            FROM wlt_promotion_funding_reservations
+           WHERE external_reference='dsh:ok';
+          COMMIT;
+          SQL
+
+      - name: Prove unaudited transition rolls back
+        shell: bash
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 <<'SQL'
+          INSERT INTO wlt_promotion_funding_reservations (
+            tenant_id,external_reference,checkout_intent_id,coupon_redemption_id,
+            coupon_id,client_id,platform_funded_minor_units,
+            partner_funded_minor_units,total_discount_minor_units,currency,
+            status,idempotency_key,correlation_id
+          ) VALUES ('tenant-1','dsh:blocked','checkout-blocked','redemption-blocked','coupon-1','client-1',1000,0,1000,'YER','reserved','reserve-blocked','corr-blocked');
+          SQL
+
+          if psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 <<'SQL'
+          BEGIN;
+          UPDATE wlt_promotion_funding_reservations
+             SET status='committed',order_id='order-blocked',committed_at=NOW(),updated_at=NOW()
+           WHERE external_reference='dsh:blocked';
+          COMMIT;
+          SQL
+          then
+            echo "Unaudited promotion-funding transition was accepted." >&2
+            exit 1
+          fi
+
+          test "$(psql -At -h localhost -U postgres -d wlt_jrn_028 -c "SELECT status FROM wlt_promotion_funding_reservations WHERE external_reference='dsh:blocked'")" = "reserved"
