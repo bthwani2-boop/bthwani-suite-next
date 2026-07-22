@@ -7,10 +7,14 @@ on:
     paths: &jrn033_runtime_paths
       - "core/identity/backend/internal/identity/repository.go"
       - "services/wlt/backend/internal/wallet/**"
-      - "services/wlt/database/migrations/**"
+      - "services/wlt/backend/internal/ledger/**"
+      - "services/wlt/database/migrations/wlt-038_jrn_033_representative_finance_tenancy.sql"
       - "services/wlt/database/seeds/local/wlt-000_financial_references.local.sql"
       - "services/wlt/database/seeds/local/wlt-033_representative_wallets.local.sql"
+      - "infra/docker/scripts/wlt-migration-probes.ps1"
       - "services/dsh/backend/internal/http/representative_finance_routes.go"
+      - "services/dsh/backend/internal/http/field_finance.go"
+      - "services/dsh/backend/internal/http/actor_finance_handlers.go"
       - "services/dsh/backend/internal/wlt/finance_proxy.go"
       - "tools/scripts/test-jrn-033-representative-wallets-runtime.ps1"
       - "infra/docker/compose.runtime.yml"
@@ -30,7 +34,7 @@ concurrency:
 
 jobs:
   runtime:
-    name: Canonical Identity DSH WLT runtime matrix
+    name: Canonical Identity DSH WLT tenant runtime matrix
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -44,7 +48,7 @@ jobs:
       - name: Start DSH BFF against the migrated WLT runtime
         shell: pwsh
         run: ./infra/docker/scripts/runtime.ps1 -Action up -Profiles identity,dsh,wlt
-      - name: Run authenticated representative wallet matrix
+      - name: Run authenticated tenant-bound representative wallet matrix
         id: runtime-matrix
         shell: pwsh
         run: |
