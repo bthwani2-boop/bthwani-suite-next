@@ -57,8 +57,8 @@ func TestRescheduleNoShowInvalidatesPreviousCodeDBIntegration(t *testing.T) {
 	if rescheduled.AttemptCount != 0 || rescheduled.UsedAt != nil || rescheduled.VerificationMethod != nil {
 		t.Fatalf("rescheduled session was not reset: attempts=%d usedAt=%v method=%v", rescheduled.AttemptCount, rescheduled.UsedAt, rescheduled.VerificationMethod)
 	}
-	if !rescheduled.ExpiresAt.Equal(newExpiry) {
-		t.Fatalf("expiresAt=%s, want %s", rescheduled.ExpiresAt, newExpiry)
+	if delta := rescheduled.ExpiresAt.Sub(newExpiry); delta < -time.Millisecond || delta > time.Millisecond {
+		t.Fatalf("expiresAt=%s, want %s within PostgreSQL timestamp precision", rescheduled.ExpiresAt, newExpiry)
 	}
 
 	if _, err := service.VerifyOtp(ctx, fixture.orderID, oldCode, "partner-1", "partner", "old-code"); !errors.Is(err, ErrInvalidCode) {
