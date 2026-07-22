@@ -1,0 +1,254 @@
+openapi: 3.1.0
+info:
+  title: BThwani JRN-041 Progressive Rollout and Recovery API
+  version: 1.0.0
+  description: Governed progressive feature-flag rollout, explicit pause/resume, health-gated advancement, abort, rollback and recovery guidance.
+x-bthwani-owner: core/platform-control
+x-bthwani-journey: JRN-041
+x-bthwani-contract-state: CONTRACT_ACTIVE
+servers:
+  - url: http://localhost:58084
+paths:
+  /platform/v1/rollouts:
+    get:
+      operationId: listPlatformRollouts
+      tags: [PlatformRollouts]
+      responses:
+        "200":
+          description: Canonical rollout list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rollouts]
+                properties:
+                  rollouts:
+                    type: array
+                    items: { $ref: "#/components/schemas/PlatformRollout" }
+    post:
+      operationId: createPlatformRollout
+      tags: [PlatformRollouts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreatePlatformRolloutInput" }
+      responses:
+        "201": { $ref: "#/components/responses/RolloutResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
+        "422": { $ref: "#/components/responses/PlatformError" }
+  /platform/v1/rollouts/{id}:
+    get:
+      operationId: getPlatformRollout
+      tags: [PlatformRollouts]
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
+      responses:
+        "200": { $ref: "#/components/responses/RolloutResponse" }
+        "404": { $ref: "#/components/responses/PlatformError" }
+  /platform/v1/rollouts/{id}/recovery:
+    get:
+      operationId: getPlatformRolloutRecovery
+      tags: [PlatformRollouts]
+      summary: Return canonical legal actions and the approved recovery plan for one rollout.
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
+      responses:
+        "200":
+          description: Recovery guidance derived from persisted rollout and change-set truth.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [recovery]
+                properties:
+                  recovery: { $ref: "#/components/schemas/PlatformRolloutRecoveryGuide" }
+        "404": { $ref: "#/components/responses/PlatformError" }
+  /platform/v1/rollouts/{id}/advance:
+    post:
+      operationId: advancePlatformRollout
+      tags: [PlatformRollouts]
+      summary: Advance a running rollout only after its configured health gate succeeds.
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
+      responses:
+        "200": { $ref: "#/components/responses/RolloutResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
+  /platform/v1/rollouts/{id}/pause:
+    post:
+      operationId: pausePlatformRollout
+      tags: [PlatformRollouts]
+      summary: Pause a running rollout without changing percentage or flag revision.
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
+      responses:
+        "200": { $ref: "#/components/responses/RolloutResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
+  /platform/v1/rollouts/{id}/resume:
+    post:
+      operationId: resumePlatformRollout
+      tags: [PlatformRollouts]
+      summary: Resume a paused rollout after health evaluation without advancing percentage.
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
+      responses:
+        "200": { $ref: "#/components/responses/RolloutResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
+  /platform/v1/rollouts/{id}/abort:
+    post:
+      operationId: abortPlatformRollout
+      tags: [PlatformRollouts]
+      summary: Abort a running or paused rollout and restore its captured flag baseline.
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
+      responses:
+        "200": { $ref: "#/components/responses/RolloutResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
+  /platform/v1/rollouts/{id}/rollback:
+    post:
+      operationId: rollbackPlatformRollout
+      tags: [PlatformRollouts]
+      summary: Roll back a completed rollout and restore its captured flag baseline.
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
+      responses:
+        "200": { $ref: "#/components/responses/RolloutResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    RolloutId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    RolloutStatus:
+      type: string
+      enum: [running, paused, completed, aborted, rolled_back, failed]
+    PlatformControlState:
+      type: string
+      enum: [FIX_REQUIRED, PARTIALLY_BOUND, UNKNOWN_HEALTH, ROLLBACK_UNAVAILABLE, CONTRACT_REQUIRED, READ_ONLY_BOUND, OPERATIONAL]
+    RolloutTargetScope:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        audience: { type: string, minLength: 1 }
+        audienceIds:
+          type: array
+          minItems: 1
+          items: { type: string, minLength: 1 }
+        city: { type: string, minLength: 1 }
+        regions:
+          type: array
+          minItems: 1
+          items: { type: string, minLength: 1 }
+        surface: { type: string, minLength: 1 }
+        surfaces:
+          type: array
+          minItems: 1
+          items: { type: string, minLength: 1 }
+      anyOf:
+        - required: [audience]
+        - required: [audienceIds]
+        - required: [city]
+        - required: [regions]
+        - required: [surface]
+        - required: [surfaces]
+    RolloutHealthGate:
+      type: object
+      required: [requiredState]
+      additionalProperties: false
+      properties:
+        requiredState:
+          const: OPERATIONAL
+        requiredServices:
+          type: array
+          minItems: 1
+          items: { type: string, minLength: 1 }
+        maxLatencyMs:
+          type: integer
+          minimum: 1
+    CreatePlatformRolloutInput:
+      type: object
+      required: [changeSetId, featureFlagKey, targetScope, steps, healthGate]
+      additionalProperties: false
+      properties:
+        changeSetId: { type: string, format: uuid }
+        featureFlagKey: { type: string, minLength: 1 }
+        targetScope: { $ref: "#/components/schemas/RolloutTargetScope" }
+        steps:
+          type: array
+          minItems: 1
+          items: { type: integer, minimum: 1, maximum: 100 }
+          description: Strictly increasing percentages whose final item is 100; enforced by the service and database lifecycle.
+        healthGate: { $ref: "#/components/schemas/RolloutHealthGate" }
+    PlatformRollout:
+      type: object
+      required: [id, changeSetId, featureFlagKey, status, targetScope, steps, currentStepIndex, currentPercentage, healthGate, baselineEnabled, baselineTargeting, flagRevision, createdByActorId, updatedByActorId, version, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        changeSetId: { type: string, format: uuid }
+        featureFlagKey: { type: string }
+        status: { $ref: "#/components/schemas/RolloutStatus" }
+        targetScope: { $ref: "#/components/schemas/RolloutTargetScope" }
+        steps:
+          type: array
+          items: { type: integer }
+        currentStepIndex: { type: integer, minimum: -1 }
+        currentPercentage: { type: integer, minimum: 0, maximum: 100 }
+        healthGate: { $ref: "#/components/schemas/RolloutHealthGate" }
+        baselineEnabled: { type: boolean }
+        baselineTargeting: { type: object, additionalProperties: true }
+        flagRevision: { type: integer, minimum: 1 }
+        createdByActorId: { type: string }
+        updatedByActorId: { type: string }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time }
+        pausedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time }
+        abortedAt: { type: string, format: date-time }
+        rolledBackAt: { type: string, format: date-time }
+    PlatformRolloutRecoveryGuide:
+      type: object
+      required: [rolloutId, changeSetId, featureFlagKey, status, healthState, currentPercentage, canAdvance, canPause, canResume, canAbort, canRollback, recommendedAction, rollbackPlan, recoverySteps, requiredPermission]
+      properties:
+        rolloutId: { type: string, format: uuid }
+        changeSetId: { type: string, format: uuid }
+        featureFlagKey: { type: string }
+        status: { $ref: "#/components/schemas/RolloutStatus" }
+        healthState: { $ref: "#/components/schemas/PlatformControlState" }
+        currentPercentage: { type: integer, minimum: 0, maximum: 100 }
+        canAdvance: { type: boolean }
+        canPause: { type: boolean }
+        canResume: { type: boolean }
+        canAbort: { type: boolean }
+        canRollback: { type: boolean }
+        recommendedAction: { type: string }
+        rollbackPlan: { type: string }
+        recoverySteps:
+          type: array
+          items: { type: string }
+        requiredPermission: { const: "platform:rollouts:manage" }
+    PlatformError:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+  responses:
+    RolloutResponse:
+      description: Canonical rollout readback.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [rollout]
+            properties:
+              rollout: { $ref: "#/components/schemas/PlatformRollout" }
+    PlatformError:
+      description: Governed platform-control error.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/PlatformError" }
+security:
+  - bearerAuth: []
