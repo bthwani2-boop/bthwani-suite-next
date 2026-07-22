@@ -54,7 +54,9 @@ test('compose uses loopback, persistence and isolated DSNs', () => {
   const compose = read(composePath);
   assert.match(compose, /127\.0\.0\.1:\$\{BTHWANI_POSTGRES_PORT:-55432\}:5432/);
   assert.match(compose, /bthwani-postgres-runtime-data:\/var\/lib\/postgresql\/data/);
-  assert.doesNotMatch(compose, /\bmongo\b/i);
+  assert.match(compose, /^  mongo:\s*"forbidden"\s*$/m);
+  assert.doesNotMatch(compose, /^  mongo:\s*$/m);
+  assert.doesNotMatch(compose, /^  mongodb:\s*$/m);
   for (const [, service, database, owner, port] of expected) {
     assert.match(compose, new RegExp(`\\n  ${service}:`));
     assert.match(compose, new RegExp(`127\\.0\\.0\\.1:\\$\\{[^}]+:-${port}\\}`));
