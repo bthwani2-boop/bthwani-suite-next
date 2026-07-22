@@ -105,6 +105,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	// Dispatch & Captain Delivery Lifecycle
 	mux.HandleFunc("POST /dsh/operator/dispatch/assignments", protected.handleCreateGovernedDispatchAssignment)
 	mux.HandleFunc("GET /dsh/operator/dispatch/assignments", protected.handleListGovernedOperatorDispatchAssignments)
+	mux.HandleFunc("GET /dsh/operator/dispatch/tracking-alerts", protected.handleListDispatchTrackingAlerts)
 	mux.HandleFunc("GET /dsh/captain/dispatch/assignments", protected.handleListGovernedCaptainDispatchAssignments)
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/accept", protected.handleAcceptGovernedDispatchAssignment)
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/decline", protected.handleDeclineGovernedDispatchAssignment)
@@ -123,8 +124,8 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/operator/delivery-exceptions", protected.handleListOperatorDeliveryExceptions)
 	mux.HandleFunc("POST /dsh/operator/delivery-exceptions/{exceptionId}/acknowledge", protected.handleAcknowledgeDeliveryException)
 	mux.HandleFunc("POST /dsh/operator/delivery-exceptions/{exceptionId}/resolve", protected.handleResolveDeliveryException)
-	mux.HandleFunc("GET /dsh/client/orders/{orderId}/tracking", protected.handleGetClientTracking)
-	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/dispatch-tracking", protected.handleGetPartnerDispatchTracking)
+	mux.HandleFunc("GET /dsh/client/orders/{orderId}/tracking", protected.handleGetClientLiveTracking)
+	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/dispatch-tracking", protected.handleGetPartnerDispatchTrackingReference)
 
 	// Special Requests (Shein, Awnak)
 	mux.HandleFunc("POST /dsh/client/special-requests", protected.handleCreateSpecialRequest)
