@@ -100,3 +100,17 @@ test("all required surfaces bind canonical states and commands", () => {
   mustContain(paths.clientOrders, [/OrderRefundStatusCard/, /surface="client"/]);
   mustContain(paths.partnerOrders, [/OrderRefundStatusCard/, /surface="partner"/]);
 });
+
+test("refund loading errors selections and unknown outcomes are accessible", () => {
+  mustContain(paths.controlPanel, [
+    /dir="rtl"/, /aria-busy=\{busy\}/, /role="status" aria-live="polite"/,
+    /role="alert" aria-live="assertive"/, /aria-pressed=\{selected\?\.id === refund\.id\}/,
+    /role="region" aria-label="مصالحة النتيجة غير المحسومة"/,
+    /role="region" aria-label="سجل تدقيق الاسترداد"/,
+  ]);
+  mustContain(paths.mobileCard, [
+    /accessibilityRole="progressbar"/, /accessibilityLiveRegion="polite"/,
+    /accessibilityRole="alert"/, /accessibilityLiveRegion="assertive"/,
+    /accessibilityLabel=\{`\$\{refund\.amountLabel\} \$\{refund\.currency\}، \$\{refund\.statusLabel\}`\}/,
+  ]);
+});
