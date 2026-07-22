@@ -2,6 +2,7 @@
 
 import {
   Badge,
+  Button,
   Card,
   DataTable,
   Header,
@@ -32,6 +33,10 @@ const HEALTH_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> 
   unknown: "neutral",
   not_configured: "neutral",
 };
+
+function credentialLabel(configured: boolean): string {
+  return configured ? "مهيأة في الخادم" : "غير مهيأة";
+}
 
 export function ProviderRegistryPanel() {
   const registry = useProviderRegistryController(true);
@@ -67,7 +72,7 @@ export function ProviderRegistryPanel() {
     <ScrollScreen>
       <Header
         title="سجل مزودي المنصة"
-        subtitle="قراءة سيادية لحالة المزودين وصحتهم؛ الأسرار والتعديلات تبقى خلف الباك إند ودورة التغيير."
+        subtitle="قراءة وتحديث محكومان من خدمة providers؛ قيم الاعتماد لا تُعاد إلى المتصفح ولا تظهر في سجل التدقيق."
       />
 
       {mapsProvider ? (
@@ -100,7 +105,7 @@ export function ProviderRegistryPanel() {
               },
               {
                 key: "lastHealthStatus",
-                header: "الصحة",
+                header: "الصحة الحية",
                 render: (row) => (
                   <Badge
                     label={row.lastHealthStatus}
@@ -109,9 +114,43 @@ export function ProviderRegistryPanel() {
                 ),
               },
               {
+                key: "credentialConfigured",
+                header: "بيانات الاعتماد",
+                render: (row) => (
+                  <Badge
+                    label={credentialLabel(row.credentialConfigured)}
+                    tone={row.credentialConfigured ? "success" : "warning"}
+                  />
+                ),
+              },
+              {
                 key: "healthMessage",
                 header: "تفاصيل الصحة",
                 render: (row) => row.healthMessage ?? "—",
+              },
+              {
+                key: "actions",
+                header: "الإجراءات",
+                render: (row) => {
+                  const mutationLoading =
+                    registry.mutationState.kind === "loading" &&
+                    registry.mutationState.providerId === row.providerId;
+                  return (
+                    <View style={styles.actions}>
+                      <Button
+                        label="التفاصيل"
+                        disabled={mutationLoading}
+                        onPress={() => void registry.selectProvider(row.providerId)}
+                      />
+                      <Button
+                        label={row.active ? "تعطيل" : "تفعيل"}
+                        loading={mutationLoading}
+                        disabled={mutationLoading}
+                        onPress={() => void registry.setProviderActive(row.providerId, !row.active)}
+                      />
+                    </View>
+                  );
+                },
               },
             ]}
             rows={providers as readonly (ProviderRegistryItem & Record<string, unknown>)[]}
@@ -120,10 +159,67 @@ export function ProviderRegistryPanel() {
         )}
       </View>
 
+      {registry.detailState.kind === "loading" ? (
+        <View style={styles.section}>
+          <StateView title="جاري تحميل تفاصيل المزود…" />
+        </View>
+      ) : null}
+
+      {registry.detailState.kind === "error" ? (
+        <View style={styles.section}>
+          <StateView
+            tone="danger"
+            title="تعذر تحميل تفاصيل المزود"
+            description={registry.detailState.message}
+          />
+        </View>
+      ) : null}
+
+      {registry.detailState.kind === "success" ? (
+        <View style={styles.section}>
+          <Text role="titleSm">تفاصيل المزود المحدد</Text>
+          <Card>
+            <View style={styles.detail}>
+              <Text>المعرّف: {registry.detailState.provider.providerId}</Text>
+              <Text>الرمز: {registry.detailState.provider.code}</Text>
+              <Text>النوع: {registry.detailState.provider.kind}</Text>
+              <Text>الحالة: {registry.detailState.provider.active ? "نشط" : "غير نشط"}</Text>
+              <Text>
+                بيانات الاعتماد: {credentialLabel(registry.detailState.provider.credentialConfigured)}
+              </Text>
+              <Text>
+                مفاتيح الإعدادات العامة: {Object.keys(registry.detailState.provider.parameters ?? {}).sort().join("، ") || "لا يوجد"}
+              </Text>
+              <Text>آخر تحديث: {registry.detailState.provider.updatedAt}</Text>
+            </View>
+          </Card>
+        </View>
+      ) : null}
+
+      {registry.mutationState.kind === "error" ? (
+        <View style={styles.section}>
+          <StateView
+            tone="danger"
+            title="تعذر تحديث المزود"
+            description={registry.mutationState.message}
+          />
+        </View>
+      ) : null}
+
+      {registry.mutationState.kind === "success" ? (
+        <View style={styles.section}>
+          <StateView
+            tone="success"
+            title="تم تحديث حالة المزود"
+            description="تمت الكتابة في خدمة providers ثم أُعيدت قراءة السجل والصحة من المصدر التشغيلي."
+          />
+        </View>
+      ) : null}
+
       <Card>
         <View style={styles.notice}>
           <Text role="caption">
-            تعديل المزودين محجوب حتى يمر عبر Change Workflow يحتوي تحققًا، واعتمادًا مستقلاً، وتدقيقًا، وقراءة راجعة، وهدف تراجع. لا يتم حفظ أسرار أو تغييرات داخل الواجهة.
+            التفعيل والتعطيل يمران عبر صلاحية provider:update ويُسجّلان في التدقيق. قيم credentials كتابية فقط داخل العقد ولا تُعرض أو تُحفظ محليًا في الواجهة. إعدادات الدفع تبقى ضمن حدود WLT المالية.
           </Text>
         </View>
       </Card>
@@ -131,7 +227,7 @@ export function ProviderRegistryPanel() {
       <StateView
         tone="info"
         title="الحد المالي لـ WLT"
-        description="مزود الدفع يخضع لحدود WLT. DSH لا يمتلك الحقيقة المالية ولا يعدّل بيانات الدفع مباشرة."
+        description="مزود الدفع يخضع لحدود WLT. DSH لا يمتلك الحقيقة المالية ولا يعدّل بيانات الدفع أو التسويات."
       />
     </ScrollScreen>
   );
@@ -140,4 +236,6 @@ export function ProviderRegistryPanel() {
 const styles = StyleSheet.create({
   section: { margin: spacing[4], gap: spacing[2] },
   notice: { padding: spacing[3] },
+  detail: { padding: spacing[3], gap: spacing[2] },
+  actions: { gap: spacing[1] },
 });
