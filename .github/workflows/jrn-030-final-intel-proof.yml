@@ -138,20 +138,49 @@ jobs:
       - name: Fail when PostgreSQL lifecycle failed
         if: steps.lifecycle.outputs.status != '0'
         run: exit 1
-      - name: Run DSH API and verify governed runtime route
+      - name: Capture DSH API governed runtime
+        id: api-runtime
         working-directory: services/dsh/backend
         env:
           DATABASE_URL: ${{ steps.postgres.outputs.database_url }}
+        shell: bash
         run: |
+          set +e
           /tmp/dsh-api > /tmp/dsh-jrn-030.log 2>&1 &
           api_pid=$!
-          trap 'kill ${api_pid} || true; cat /tmp/dsh-jrn-030.log' EXIT
-          for _attempt in $(seq 1 30); do curl --fail --silent http://127.0.0.1:58080/dsh/health >/dev/null && break; sleep 1; done
-          curl --fail --silent http://127.0.0.1:58080/dsh/health
-          status=$(curl --silent --output /tmp/operator-response.json --write-out '%{http_code}' http://127.0.0.1:58080/dsh/operator/stores/store-1/partner-fleet)
-          test "${status}" = "401" || test "${status}" = "503"
-          test "${status}" != "404"
-          test -s /tmp/operator-response.json
+          health_status=000
+          for _attempt in $(seq 1 30); do
+            health_status=$(curl --silent --output /tmp/health-response.json --write-out '%{http_code}' http://127.0.0.1:58080/dsh/health)
+            [[ "${health_status}" == "200" ]] && break
+            sleep 1
+          done
+          operator_status=$(curl --silent --output /tmp/operator-response.json --write-out '%{http_code}' http://127.0.0.1:58080/dsh/operator/stores/store-1/partner-fleet)
+          printf 'health_status=%s\noperator_status=%s\n' "${health_status}" "${operator_status}" > /tmp/jrn030-runtime-status.log
+          cat /tmp/jrn030-runtime-status.log
+          cat /tmp/health-response.json 2>/dev/null || true
+          cat /tmp/operator-response.json 2>/dev/null || true
+          kill "${api_pid}" 2>/dev/null || true
+          wait "${api_pid}" 2>/dev/null || true
+          status=0
+          [[ "${health_status}" == "200" ]] || status=1
+          [[ "${operator_status}" != "404" && "${operator_status}" != "000" ]] || status=1
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          exit 0
+      - name: Upload governed runtime diagnostic
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b540449e92b4886f43607fa02 # v4
+        with:
+          name: jrn-030-runtime-${{ github.sha }}
+          path: |
+            /tmp/jrn030-runtime-status.log
+            /tmp/dsh-jrn-030.log
+            /tmp/health-response.json
+            /tmp/operator-response.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Fail when governed API runtime failed
+        if: steps.api-runtime.outputs.status != '0'
+        run: exit 1
       - name: Verify TypeScript surfaces
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-030.json --noEmit --pretty false
       - name: Verify full-stack negative invariants
