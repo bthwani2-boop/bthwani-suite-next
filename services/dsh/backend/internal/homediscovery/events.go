@@ -146,6 +146,8 @@ func resolvePublishableHomeEntity(
 			  AND c.archived_at IS NULL
 			  AND c.status='active'
 			  AND (c.audience='all' OR (c.audience='client' AND $4='authenticated'))
+			  AND (COALESCE(c.target_city_code,'')='' OR c.target_city_code=$2)
+			  AND (COALESCE(c.target_service_area_code,'')='' OR c.target_service_area_code=$3)
 			  AND COALESCE(c.start_date,'') <> ''
 			  AND COALESCE(c.end_date,'') <> ''
 			  AND c.start_date <= TO_CHAR(CURRENT_DATE,'YYYY-MM-DD')
