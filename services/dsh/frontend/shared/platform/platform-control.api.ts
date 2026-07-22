@@ -1,6 +1,12 @@
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import { resolvePlatformControlApiBaseUrl } from "../_kernel/platform-control-api-base-url";
 import type { components } from "@bthwani/core-platform-control";
+import type {
+  CreatePlatformChangeSetInput,
+  PlatformChangeSet,
+  RejectPlatformChangeSetInput,
+  RollbackPlatformChangeSetInput,
+} from "@bthwani/core-platform-control/clients/generated/jrn-040-platform-change-sets-api";
 
 export type PlatformControlState = components["schemas"]["PlatformControlState"];
 export type PlatformRuntimeSnapshot = components["schemas"]["PlatformRuntimeSnapshot"];
@@ -10,10 +16,8 @@ export type PlatformFeatureFlag = components["schemas"]["PlatformFeatureFlag"];
 export type PlatformServicePosture = components["schemas"]["PlatformServicePosture"];
 export type PlatformHealthSnapshot = components["schemas"]["PlatformHealthSnapshot"];
 export type PlatformAuditEvent = components["schemas"]["PlatformAuditEvent"];
-export type PlatformChangeSet = components["schemas"]["PlatformChangeSet"];
+export type { CreatePlatformChangeSetInput, PlatformChangeSet, RejectPlatformChangeSetInput, RollbackPlatformChangeSetInput };
 export type PlatformRollout = components["schemas"]["PlatformRollout"];
-export type CreatePlatformChangeSetInput = components["schemas"]["CreatePlatformChangeSetInput"];
-export type RejectPlatformChangeSetInput = components["schemas"]["RejectPlatformChangeSetInput"];
 type GeneratedCreatePlatformRolloutInput = components["schemas"]["CreatePlatformRolloutInput"];
 export type CreatePlatformRolloutInput = Omit<GeneratedCreatePlatformRolloutInput, "healthGate"> & {
   healthGate: Record<string, unknown>;
@@ -89,7 +93,7 @@ export function createPlatformChangeSet(input: CreatePlatformChangeSetInput): Pr
 
 function transitionPlatformChangeSet(
   id: string,
-  transition: "validate" | "submit" | "approve" | "apply" | "rollback",
+  transition: "validate" | "submit" | "approve" | "apply",
 ): Promise<{ changeSet: PlatformChangeSet }> {
   return request<{ changeSet: PlatformChangeSet }>(
     `/platform/v1/change-sets/${encodeURIComponent(id)}/${transition}`,
@@ -113,8 +117,14 @@ export function applyPlatformChangeSet(id: string): Promise<{ changeSet: Platfor
   return transitionPlatformChangeSet(id, "apply");
 }
 
-export function rollbackPlatformChangeSet(id: string): Promise<{ changeSet: PlatformChangeSet }> {
-  return transitionPlatformChangeSet(id, "rollback");
+export function rollbackPlatformChangeSet(
+  id: string,
+  input: RollbackPlatformChangeSetInput,
+): Promise<{ changeSet: PlatformChangeSet }> {
+  return request<{ changeSet: PlatformChangeSet }>(
+    `/platform/v1/change-sets/${encodeURIComponent(id)}/rollback`,
+    { method: "POST", body: input },
+  );
 }
 
 export function rejectPlatformChangeSet(
