@@ -34,35 +34,44 @@ test("JRN-025 product truth is schema-valid and remains independently approvable
   );
 });
 
-test("JRN-025 database migration enforces concurrency and schedule invariants", () => {
+test("JRN-025 database migration enforces concurrency, schedule, region and offer invariants", () => {
   const migration = read("services/dsh/database/migrations/dsh-101_jrn_025_marketing_lifecycle.sql");
   assertIncludesAll(migration, [
     "ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1",
+    "ADD COLUMN IF NOT EXISTS target_city_code TEXT",
+    "ADD COLUMN IF NOT EXISTS target_service_area_code TEXT",
     "dsh_marketing_campaigns_schedule_chk",
     "dsh_marketing_campaigns_placement_chk",
+    "dsh_marketing_campaigns_region_chk",
     "idx_dsh_marketing_campaigns_active_window",
+    "idx_dsh_marketing_campaigns_region",
+    "dsh_partner_offers_eligibility_chk",
     "dsh_partner_offers_schedule_chk",
     "dsh_partner_offers_rejection_reason_chk",
     "idx_dsh_partner_offers_client_projection",
   ], "JRN-025 migration");
 });
 
-test("JRN-025 campaign backend owns schedule, target and versioned lifecycle", () => {
+test("JRN-025 campaign backend owns schedule, region, target and versioned lifecycle", () => {
   const backend = read("services/dsh/backend/internal/marketing/marketing.go");
   const http = read("services/dsh/backend/internal/http/marketing.go");
   assertIncludesAll(backend, [
-    "ExpectedVersion int",
+    "ExpectedVersion       int",
     "ErrCommercialVersionConflict",
     "validateCampaignActivationWindow",
+    "validateCampaignRegion",
     "campaignTransitionAllowed",
+    "TargetCityCode",
+    "TargetServiceAreaCode",
     "version=version+1",
     "WriteVisibilityGateCheck",
     "next.Audience != \"all\" && next.Audience != \"client\"",
   ], "campaign backend");
   assertIncludesAll(http, [
-    "ExpectedVersion int    `json:\"expectedVersion\"`",
-    "StartDate       string `json:\"startDate\"`",
-    "Placement       string `json:\"placement\"`",
+    "ExpectedVersion       int     `json:\"expectedVersion\"`",
+    "TargetCityCode        *string `json:\"targetCityCode\"`",
+    "TargetServiceAreaCode *string `json:\"targetServiceAreaCode\"`",
+    "Placement             string  `json:\"placement\"`",
     '"VERSION_CONFLICT"',
   ], "campaign HTTP adapter");
 });
@@ -77,6 +86,7 @@ test("JRN-025 partner offers follow one legal review graph", () => {
     'return to == "review" || to == "rejected"',
     'case "marketing-ready":',
     'return to == "published" || to == "rejected"',
+    "partnerOfferEligibilities",
     "validateCampaignActivationWindow",
     "ErrRejectionReasonRequired",
     "ErrCouponLinkRequired",
@@ -104,6 +114,8 @@ test("JRN-025 governed campaign UI edits all registered campaign fields", () => 
   const deck = read("services/dsh/frontend/control-panel/marketing/components/CampaignsCommandDeck.tsx");
   assertIncludesAll(controller, [
     "expectedVersion: campaign.version",
+    "targetCityCode",
+    "targetServiceAreaCode",
     "await load()",
     "candidate?.status === 409",
     "لا يوجد اتصال",
@@ -114,6 +126,8 @@ test("JRN-025 governed campaign UI edits all registered campaign fields", () => 
     "endDate",
     "audience",
     "placement",
+    "targetCityCode",
+    "targetServiceAreaCode",
     "targetType",
     "targetId",
     "الإصدار {campaign.version}",
@@ -122,16 +136,21 @@ test("JRN-025 governed campaign UI edits all registered campaign fields", () => 
   assert.ok(!deck.includes("useCampaignsController("), "campaign deck must not bind the legacy non-versioned controller");
 });
 
-test("JRN-025 client sees only eligible marketing projections", () => {
+test("JRN-025 client sees only eligible tickers, campaigns and partner offers", () => {
   const projection = read("services/dsh/backend/internal/homediscovery/marketing_projection.go");
   const handler = read("services/dsh/backend/internal/homediscovery/handler.go");
   const events = read("services/dsh/backend/internal/homediscovery/events.go");
   assertIncludesAll(projection, [
     "ListMarketingPromos",
+    "listTickerPromos",
+    "t.status='published'",
     "c.status='active'",
     "o.status='published'",
     "CURRENT_DATE",
     "clientEligibleStorePredicate",
+    "target_city_code",
+    "target_service_area_code",
+    "ticker:",
     "campaign:",
     "partner-offer:",
     "AudienceSegment",
@@ -143,21 +162,27 @@ test("JRN-025 client sees only eligible marketing projections", () => {
   ], "home discovery handler");
   assertIncludesAll(events, [
     "resolvePublishableHomeEntity",
+    'strings.HasPrefix(contentID, "ticker:")',
     'strings.HasPrefix(contentID, "campaign:")',
     'strings.HasPrefix(contentID, "partner-offer:")',
+    "target_city_code",
+    "target_service_area_code",
     "sha256.Sum256",
+    'return "ticker"',
     '"partner_offer"',
     "CONTENT_NOT_PUBLISHABLE",
   ], "marketing measurement ingress");
 });
 
-test("JRN-025 OpenAPI exposes schedule, version and conflict semantics", () => {
+test("JRN-025 OpenAPI exposes schedule, region, version and conflict semantics", () => {
   const schemas = read("services/dsh/contracts/components/schemas/marketing-commercial.schemas.yaml");
   const paths = read("services/dsh/contracts/paths/marketing-commercial.paths.yaml");
   assertIncludesAll(schemas, [
     "required: [title, startDate, endDate]",
     "required: [expectedVersion]",
     "version: { type: integer, minimum: 1 }",
+    "targetCityCode:",
+    "targetServiceAreaCode:",
     "audience: { type: string, enum: [all, client] }",
     "placement: { type: string, enum: [home, hero, feed, floating, banner, store-card] }",
   ], "marketing OpenAPI schemas");
