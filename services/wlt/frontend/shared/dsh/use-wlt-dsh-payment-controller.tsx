@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 
-declare const process:
-  | { readonly env?: Readonly<Record<string, string | undefined>> }
-  | undefined;
+type RuntimeGlobal = typeof globalThis & {
+  readonly process?: {
+    readonly env?: Readonly<Record<string, string | undefined>>;
+  };
+};
 
 export type PaymentMethodKey = "cod" | "wallet" | "mixed" | "official_wallet";
 
@@ -28,10 +30,12 @@ export type WltDshPaymentController = {
 };
 
 function readProviderPaymentsEnabled(): boolean {
-  if (typeof process === "undefined" || !process.env) return false;
+  const runtimeProcess = (globalThis as RuntimeGlobal).process;
+  const env = runtimeProcess?.env;
+  if (!env) return false;
   return (
-    process.env["EXPO_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED"] === "true" ||
-    process.env["NEXT_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED"] === "true"
+    env["EXPO_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED"] === "true" ||
+    env["NEXT_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED"] === "true"
   );
 }
 
