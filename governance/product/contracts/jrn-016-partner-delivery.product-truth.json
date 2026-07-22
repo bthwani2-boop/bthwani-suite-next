@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-016",
+  "title": "توصيل الشريك",
+  "owner": "services/dsh",
+  "truthOwner": "DSH",
+  "financialBoundary": "WLT_REFERENCE_ONLY",
+  "surfaces": ["app-partner", "app-client", "control-panel"],
+  "excludedSurfaces": {
+    "app-captain": "Partner-owned fleet tasks must never enter BThwani captain dispatch.",
+    "app-field": "Field acquisition and auditing do not execute delivery lifecycle mutations."
+  },
+  "goal": "تشغيل توصيل الطلب بواسطة موصل تابع للمتجر من الإسناد حتى الإثبات، مع قراءة راجعة للعميل والمشغل، واستثناءات موثقة، ودون خلط مع أسطول بثواني.",
+  "acceptanceCriteria": [
+    "لا تنشأ المهمة إلا لطلب partner_delivery جاهز للاستلام.",
+    "لا يسند إلا عضو فريق نشط بدور courier تابع لمتجر الطلب.",
+    "كل mutation يحمل commandId ثابتًا ويحمي من الإعادة والتعارض.",
+    "تسجل مراحل الاستلام والمغادرة والوصول في DSH وتقرأها الأسطح المتأثرة.",
+    "لا يغلق الطلب إلا بعد إثبات تسليم حقيقي مسجل في تخزين الوسائط المحكوم.",
+    "يسجل الاستثناء سببه ومراجع أدلته ووقته داخل حقيقة المهمة والتدقيق.",
+    "تعرض لوحة التحكم قائمة المهام والتفاصيل والاستثناءات من DSH Runtime.",
+    "لا يدخل طلب partner_delivery في dsh_assignments أو صندوق كباتن بثواني."
+  ],
+  "negativeInvariants": [
+    "لا commandId شكلي غير مرتبط بمخزن replay دائم.",
+    "لا إسنادين نشطين أو خلط بين موصل المتجر وكابتن بثواني لنفس الطلب.",
+    "لا انتقال حالة يتجاوز الاستلام أو المغادرة أو الوصول.",
+    "لا نجاح UI دون أثر خلفي وقراءة راجعة.",
+    "لا proofReference وهمي أو بيانات demo داخل Runtime.",
+    "لا استثناء بلا سبب تشغيلي مثبت.",
+    "لا mutation مالية أو ledger أو تسوية داخل DSH.",
+    "لا ادعاء إغلاق إنتاجي دون مراجعات المنتج وQA والأمن والإطلاق المستقلة."
+  ],
+  "sliceClosureRegistry": "services/dsh/contracts/jrn-016-slice-closure.json",
+  "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "qa", "governance", "ci"],
+  "statusContext": "partner-delivery-governance",
+  "internalZeroGate": "PENDING_AUTOMATED_VERIFICATION",
+  "openCodeGaps": [],
+  "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "release-production"],
+  "decision": "IMPLEMENTED_PENDING_VERIFICATION"
+}
