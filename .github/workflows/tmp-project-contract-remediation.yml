@@ -8,6 +8,13 @@ on:
       - "services/dsh/contracts/contract-registry.ts"
       - "tools/guards/backend-api-binding-gate.mjs"
       - "tools/guards/service-manifest-drift-gate.mjs"
+  pull_request:
+    branches: [master]
+    paths:
+      - ".github/workflows/tmp-project-contract-remediation.yml"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "tools/guards/backend-api-binding-gate.mjs"
+      - "tools/guards/service-manifest-drift-gate.mjs"
 
 permissions:
   contents: write
@@ -73,22 +80,22 @@ jobs:
               "proposal readback standalone strategy",
           )
           checkout_entry = '''  {
-  id: "dsh-checkout",
-  path: "contracts/dsh.jrn-010-checkout.openapi.yaml",
-  state: "CONTRACT_ACTIVE",
-  runtimeDependency: true,
-  clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-  adapterOwner: "frontend/shared/checkout",
-},
+    id: "dsh-checkout",
+    path: "contracts/dsh.jrn-010-checkout.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/checkout",
+  },
 '''
           operational_entry = checkout_entry + '''  {
-  id: "dsh-operational-policy",
-  path: "contracts/dsh.jrn-029.openapi.yaml",
-  state: "CONTRACT_ACTIVE",
-  runtimeDependency: true,
-  clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-  adapterOwner: "frontend/shared/platform",
-},
+    id: "dsh-operational-policy",
+    path: "contracts/dsh.jrn-029.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/platform",
+  },
 '''
           if 'id: "dsh-operational-policy"' not in registry:
               if checkout_entry not in registry:
@@ -96,30 +103,30 @@ jobs:
               registry = registry.replace(checkout_entry, operational_entry, 1)
 
           payment_entry = '''  {
-  id: "dsh-payment-sessions",
-  path: "contracts/dsh.payment-sessions.openapi.yaml",
-  state: "CONTRACT_ACTIVE",
-  runtimeDependency: true,
-  clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-  adapterOwner: "frontend/shared/finance-wlt-link",
-},
+    id: "dsh-payment-sessions",
+    path: "contracts/dsh.payment-sessions.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link",
+  },
 '''
           finance_entries = payment_entry + '''  {
-  id: "dsh-representative-finance",
-  path: "contracts/jrn-033-representative-finance.openapi.yaml",
-  state: "CONTRACT_ACTIVE",
-  runtimeDependency: true,
-  clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-  adapterOwner: "frontend/shared/finance-wlt-link",
-},
+    id: "dsh-representative-finance",
+    path: "contracts/jrn-033-representative-finance.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link",
+  },
   {
-  id: "dsh-refunds",
-  path: "contracts/jrn-035-refunds.openapi.yaml",
-  state: "CONTRACT_ACTIVE",
-  runtimeDependency: true,
-  clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-  adapterOwner: "frontend/shared/finance-wlt-link",
-},
+    id: "dsh-refunds",
+    path: "contracts/jrn-035-refunds.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/finance-wlt-link",
+  },
 '''
           if 'id: "dsh-representative-finance"' not in registry:
               if payment_entry not in registry:
