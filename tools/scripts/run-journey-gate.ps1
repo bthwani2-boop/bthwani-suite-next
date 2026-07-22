@@ -49,8 +49,9 @@ function Run-Step {
   Write-Host "[ RUN ] $Name" -ForegroundColor Cyan
   $global:LASTEXITCODE = 0
   try {
-    & $Block
-    if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "exit $LASTEXITCODE" }
+    & $Block 2>&1 | ForEach-Object { Write-Host $_ }
+    $nativeExitCode = $global:LASTEXITCODE
+    if ($nativeExitCode -ne 0) { throw "exit $nativeExitCode" }
     Write-Host "[ OK  ] $Name" -ForegroundColor Green
     return $true
   }
