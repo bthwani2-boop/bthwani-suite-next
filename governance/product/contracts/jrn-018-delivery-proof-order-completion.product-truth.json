@@ -28,7 +28,7 @@
   ],
   "acceptanceCriteria": [
     "لا ينشأ PIN إلا لعميل الطلب عندما تكون مهمة الكابتن المقبولة في arrived_customer.",
-    "يخزن PIN كـhash بمدة صلاحية ومحاولات محدودة ولا يظهر للكابتن أو المشغل.",
+    "يخزن PIN باستخدام bcrypt بمدة صلاحية ومحاولات محدودة ولا يظهر للكابتن أو المشغل.",
     "كل إثبات يحمل idempotencyKey ويمنع إعادة التنفيذ أو اختلاف الحمولة تحت المفتاح نفسه.",
     "يثبت الإثبات هوية الكابتن ووقت الالتقاط والموقع عند توفره ومراجع الصورة أو التوقيع المحكومة.",
     "PIN صالح يقبل الإثبات تلقائيًا؛ الإثبات البديل يدخل pending_review ولا يغلق الطلب قبل قرار المشغل.",
@@ -40,9 +40,10 @@
   ],
   "negativeInvariants": [
     "لا إكمال للطلب بمجرد مرجع نصي أو صورة غير مسجلة في dsh_media_refs.",
-    "لا تخزين PIN بصيغته الصريحة ولا إعادة كشفه بعد استجابة الإصدار.",
+    "لا تخزين PIN بصيغته الصريحة ولا استخدام تجزئة سريعة قابلة للتخمين ولا إعادة كشفه بعد استجابة الإصدار.",
     "لا قبول إثبات من كابتن غير مالك للإسناد أو قبل arrived_customer.",
     "لا تجاوز لمراجعة الإثبات البديل ولا قبول ذاتي بواسطة الكابتن.",
+    "لا أكثر من إثبات مراجعة مفتوح لنفس الإسناد.",
     "لا حدث WLT قبل قبول الإثبات ولا أكثر من حدث إكمال لنفس الطلب.",
     "لا mutation مالية أو احتساب COD أو ledger أو settlement داخل DSH.",
     "لا عرض PIN أو موقع دقيق أو مراجع وسائط غير مصرح بها على سطح العميل.",
@@ -52,15 +53,8 @@
   "sliceClosureRegistry": "services/dsh/contracts/jrn-018-slice-closure.json",
   "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "finance", "qa", "governance", "ci"],
   "statusContext": "delivery-proof-order-completion-governance",
-  "internalZeroGate": "TARGET_READY_FOR_REVIEW",
-  "openCodeGaps": [
-    "delivery proof database lifecycle",
-    "PIN challenge and verification",
-    "manual review routes",
-    "client and operator proof readback",
-    "shared frontend proof controller",
-    "captain PIN and review states"
-  ],
+  "internalZeroGate": "PASSED_AUTOMATED_CODE_GATE",
+  "openCodeGaps": [],
   "independentReviewPending": ["product-manager", "product-owner", "qa-device-accessibility", "application-security", "financial-control", "release-production"],
-  "decision": "FIX_REQUIRED"
+  "decision": "READY_FOR_REVIEW"
 }
