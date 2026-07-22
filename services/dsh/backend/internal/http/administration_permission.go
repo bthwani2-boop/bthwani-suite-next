@@ -9,10 +9,10 @@ import (
 	"dsh-api/internal/store"
 )
 
-// requireAdministrationPermission combines Identity authentication with the
-// approved DSH administration assignment projection. Identity remains the
-// session authority; DSH grants only administration.* actions that survived
-// maker-checker approval. Any lookup failure is fail-closed.
+// requireAdministrationPermission combines Identity authentication with exact
+// control-panel permissions or an approved DSH administration assignment.
+// Identity remains the session authority; a broad role label never bypasses
+// operation authorization. Any lookup failure is fail-closed.
 func (s *protectedStoreServer) requireAdministrationPermission(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -29,14 +29,9 @@ func (s *protectedStoreServer) requireAdministrationPermission(
 	}
 
 	actor := store.StoreActor{
-		ID:        identity.Subject,
-		Role:      "permission:" + action,
-		TenantID:  identity.TenantID,
-		PhoneE164: identity.PhoneE164,
-	}
-	if identity.HasRole("operator") {
-		actor.Role = "operator"
-		return actor, true
+		ID:       identity.Subject,
+		Role:     "permission:" + action,
+		TenantID: identity.TenantID,
 	}
 	candidates := administration.AdministrationPermissionCandidates(action)
 	for _, permission := range identity.Permissions {
