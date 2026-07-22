@@ -27,18 +27,8 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Set up Node
-        uses: actions/setup-node@1e60f620b9541d50d90e69e0a8a2a71b33e15566 # v4
-        with:
-          node-version: 24.17.0
-          cache: pnpm
-      - name: Activate locked pnpm
-        shell: bash
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.34.2 --activate
-      - name: Install locked workspace
-        run: pnpm install --frozen-lockfile
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
       - name: Verify broken imports
         run: pnpm guard:no-broken-imports
       - name: Typecheck control panel
