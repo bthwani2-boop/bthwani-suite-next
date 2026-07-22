@@ -14,5 +14,10 @@ export type GovernedCampaignWritePayload = {
   readonly targetId?: string | undefined;
   readonly audience?: string | undefined;
   readonly placement?: string | undefined;
-  readonly expectedVersion: number;
+  /**
+   * Required by the governed controller and enforced by the backend. Optional at
+   * the transport type boundary only so retired callers still compile and fail
+   * closed with VERSION_CONFLICT rather than bypassing optimistic concurrency.
+   */
+  readonly expectedVersion?: number | undefined;
 };
