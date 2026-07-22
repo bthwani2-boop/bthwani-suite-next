@@ -19,6 +19,7 @@ var (
 	ErrAlreadyBound      = errors.New("courier identity is already bound")
 	ErrVersionConflict   = errors.New("courier connection code version conflict")
 	ErrCourierIneligible = errors.New("courier team member is ineligible")
+	ErrStoreIneligible   = errors.New("store is ineligible for partner fleet binding")
 )
 
 const codeAlphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
@@ -52,6 +53,10 @@ type CaptainFleetMembership struct {
 	BranchAssignment   string `json:"branchAssignment"`
 	DeliveryAssignment string `json:"deliveryAssignment"`
 	Version            int    `json:"version"`
+}
+
+type queryRower interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
 }
 
 func normalizeCode(value string) string {
@@ -88,6 +93,21 @@ func nullableString(value sql.NullString) *string {
 	return &v
 }
 
+func ensureStoreEligible(ctx context.Context, q queryRower, storeID string) error {
+	var status string
+	err := q.QueryRowContext(ctx, `SELECT status FROM dsh_stores WHERE id = $1`, storeID).Scan(&status)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if status != "active" {
+		return ErrStoreIneligible
+	}
+	return nil
+}
+
 const connectionSelectCols = `id::TEXT, store_id, team_member_id, code_last4, status,
 	expires_at::TEXT, created_by_actor_id, redeemed_by_captain_actor_id,
 	redeemed_at::TEXT, version, created_at::TEXT, updated_at::TEXT`
@@ -106,7 +126,10 @@ func scanConnection(row interface{ Scan(dest ...any) error }) (ConnectionCode, e
 }
 
 func IssueCode(ctx context.Context, db *sql.DB, storeID, teamMemberID, actorID string, ttl time.Duration) (IssuedConnectionCode, error) {
-	if strings.TrimSpace(storeID) == "" || strings.TrimSpace(teamMemberID) == "" || strings.TrimSpace(actorID) == "" {
+	storeID = strings.TrimSpace(storeID)
+	teamMemberID = strings.TrimSpace(teamMemberID)
+	actorID = strings.TrimSpace(actorID)
+	if storeID == "" || teamMemberID == "" || actorID == "" {
 		return IssuedConnectionCode{}, ErrInvalid
 	}
 	if ttl <= 0 {
@@ -126,6 +149,10 @@ func IssueCode(ctx context.Context, db *sql.DB, storeID, teamMemberID, actorID s
 		return IssuedConnectionCode{}, err
 	}
 	defer tx.Rollback()
+
+	if err := ensureStoreEligible(ctx, tx, storeID); err != nil {
+		return IssuedConnectionCode{}, err
+	}
 
 	var role, status, identityActorID string
 	err = tx.QueryRowContext(ctx, `
@@ -176,29 +203,58 @@ func IssueCode(ctx context.Context, db *sql.DB, storeID, teamMemberID, actorID s
 }
 
 func RevokeCode(ctx context.Context, db *sql.DB, storeID, codeID, actorID string, expectedVersion int) (ConnectionCode, error) {
+	storeID = strings.TrimSpace(storeID)
+	codeID = strings.TrimSpace(codeID)
+	actorID = strings.TrimSpace(actorID)
 	if storeID == "" || codeID == "" || actorID == "" || expectedVersion <= 0 {
 		return ConnectionCode{}, ErrInvalid
 	}
-	var result ConnectionCode
-	var redeemedAt sql.NullString
-	err := db.QueryRowContext(ctx, `
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return ConnectionCode{}, err
+	}
+	defer tx.Rollback()
+
+	var teamMemberID, codeStatus, memberStatus string
+	var version int
+	err = tx.QueryRowContext(ctx, `
+		SELECT c.team_member_id, c.status, c.version, m.status
+		FROM dsh_partner_courier_connection_codes c
+		JOIN dsh_store_team_members m ON m.id = c.team_member_id AND m.store_id = c.store_id
+		WHERE c.id::text = $1 AND c.store_id = $2
+		FOR UPDATE`, codeID, storeID).Scan(&teamMemberID, &codeStatus, &version, &memberStatus)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ConnectionCode{}, ErrNotFound
+	}
+	if err != nil {
+		return ConnectionCode{}, err
+	}
+	if codeStatus != "pending" || version != expectedVersion {
+		return ConnectionCode{}, ErrVersionConflict
+	}
+
+	connection, err := scanConnection(tx.QueryRowContext(ctx, `
 		UPDATE dsh_partner_courier_connection_codes
 		SET status='revoked',revoked_at=NOW(),version=version+1,updated_at=NOW()
-		WHERE id=$1 AND store_id=$2 AND status='pending' AND version=$3
-		RETURNING `+connectionSelectCols, codeID, storeID, expectedVersion).Scan(
-		&result.ID, &result.StoreID, &result.TeamMemberID, &result.CodeLast4,
-		&result.Status, &result.ExpiresAt, &result.CreatedByActorID,
-		&result.RedeemedByCaptainActorID, &redeemedAt, &result.Version,
-		&result.CreatedAt, &result.UpdatedAt,
-	)
+		WHERE id::text=$1 AND store_id=$2 AND status='pending' AND version=$3
+		RETURNING `+connectionSelectCols, codeID, storeID, expectedVersion))
 	if errors.Is(err, sql.ErrNoRows) {
 		return ConnectionCode{}, ErrVersionConflict
 	}
 	if err != nil {
 		return ConnectionCode{}, err
 	}
-	result.RedeemedAt = nullableString(redeemedAt)
-	return result, nil
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO dsh_store_team_member_actions
+			(member_id,store_id,action_label,from_status,to_status,actor_id)
+		VALUES ($1,$2,'revoke_captain_connection_code',$3,$3,$4)`, teamMemberID, storeID, memberStatus, actorID); err != nil {
+		return ConnectionCode{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return ConnectionCode{}, err
+	}
+	return connection, nil
 }
 
 func FormatCodeForDisplay(code string) string {
@@ -210,8 +266,9 @@ func FormatCodeForDisplay(code string) string {
 }
 
 func RedeemCode(ctx context.Context, db *sql.DB, captainActorID, plainCode string) (CaptainFleetMembership, error) {
+	captainActorID = strings.TrimSpace(captainActorID)
 	normalized := normalizeCode(plainCode)
-	if strings.TrimSpace(captainActorID) == "" || len(normalized) < 8 {
+	if captainActorID == "" || len(normalized) < 8 {
 		return CaptainFleetMembership{}, ErrInvalid
 	}
 	tx, err := db.BeginTx(ctx, nil)
@@ -236,16 +293,37 @@ func RedeemCode(ctx context.Context, db *sql.DB, captainActorID, plainCode strin
 	if status != "pending" {
 		return CaptainFleetMembership{}, ErrInvalid
 	}
-	if time.Now().UTC().After(expiresAt) {
+	if !expiresAt.After(time.Now().UTC()) {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE dsh_partner_courier_connection_codes
+			SET status='expired',version=version+1,updated_at=NOW()
+			WHERE id::text=$1 AND status='pending'`, connectionID); err != nil {
+			return CaptainFleetMembership{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return CaptainFleetMembership{}, err
+		}
 		return CaptainFleetMembership{}, ErrExpired
+	}
+	if err := ensureStoreEligible(ctx, tx, storeID); err != nil {
+		return CaptainFleetMembership{}, err
 	}
 
 	var role, memberStatus, existingActor, courierName, branch, deliveryAssignment string
+	var memberVersion int
 	err = tx.QueryRowContext(ctx, `
-		SELECT role,status,identity_actor_id,name,branch_assignment,delivery_assignment
+		SELECT role,status,identity_actor_id,name,branch_assignment,delivery_assignment,version
 		FROM dsh_store_team_members
 		WHERE id=$1 AND store_id=$2
-		FOR UPDATE`, memberID, storeID).Scan(&role, &memberStatus, &existingActor, &courierName, &branch, &deliveryAssignment)
+		FOR UPDATE`, memberID, storeID).Scan(
+		&role,
+		&memberStatus,
+		&existingActor,
+		&courierName,
+		&branch,
+		&deliveryAssignment,
+		&memberVersion,
+	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return CaptainFleetMembership{}, ErrNotFound
 	}
@@ -259,32 +337,62 @@ func RedeemCode(ctx context.Context, db *sql.DB, captainActorID, plainCode strin
 		return CaptainFleetMembership{}, ErrAlreadyBound
 	}
 
-	if _, err := tx.ExecContext(ctx, `
-		UPDATE dsh_store_team_members
-		SET identity_actor_id=$1,status='active',version=version+1,updated_at=NOW()
-		WHERE id=$2 AND store_id=$3`, captainActorID, memberID, storeID); err != nil {
+	var otherMemberID string
+	err = tx.QueryRowContext(ctx, `
+		SELECT id::text
+		FROM dsh_store_team_members
+		WHERE identity_actor_id=$1 AND id<>$2
+		LIMIT 1`, captainActorID, memberID).Scan(&otherMemberID)
+	if err == nil {
+		return CaptainFleetMembership{}, ErrAlreadyBound
+	}
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return CaptainFleetMembership{}, err
 	}
-	if _, err := tx.ExecContext(ctx, `
+
+	result, err := tx.ExecContext(ctx, `
+		UPDATE dsh_store_team_members
+		SET identity_actor_id=$1,status='active',invite_lifecycle='captain_code_redeemed',version=version+1,updated_at=NOW()
+		WHERE id=$2 AND store_id=$3 AND version=$4`, captainActorID, memberID, storeID, memberVersion)
+	if err != nil {
+		return CaptainFleetMembership{}, err
+	}
+	if affected, _ := result.RowsAffected(); affected != 1 {
+		return CaptainFleetMembership{}, ErrVersionConflict
+	}
+
+	result, err = tx.ExecContext(ctx, `
 		UPDATE dsh_partner_courier_connection_codes
 		SET status='redeemed',redeemed_by_captain_actor_id=$1,redeemed_at=NOW(),version=version+1,updated_at=NOW()
-		WHERE id=$2`, captainActorID, connectionID); err != nil {
+		WHERE id::text=$2 AND status='pending'`, captainActorID, connectionID)
+	if err != nil {
+		return CaptainFleetMembership{}, err
+	}
+	if affected, _ := result.RowsAffected(); affected != 1 {
+		return CaptainFleetMembership{}, ErrVersionConflict
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE dsh_partner_courier_connection_codes
+		SET status='revoked',revoked_at=NOW(),version=version+1,updated_at=NOW()
+		WHERE team_member_id=$1 AND id::text<>$2 AND status='pending'`, memberID, connectionID); err != nil {
 		return CaptainFleetMembership{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_store_team_member_actions
 			(member_id,store_id,action_label,from_status,to_status,actor_id)
-		VALUES ($1,$2,'captain_connect',$3,'active',$4)`, memberID, storeID, memberStatus, captainActorID); err != nil {
+		VALUES ($1,$2,'redeem_captain_connection_code',$3,'active',$4)`, memberID, storeID, memberStatus, captainActorID); err != nil {
+		return CaptainFleetMembership{}, err
+	}
+
+	var storeName string
+	if err := tx.QueryRowContext(ctx, `SELECT name FROM dsh_stores WHERE id=$1`, storeID).Scan(&storeName); err != nil {
 		return CaptainFleetMembership{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return CaptainFleetMembership{}, err
 	}
 
-	var storeName string
-	if err := db.QueryRowContext(ctx, `SELECT name FROM dsh_stores WHERE id=$1`, storeID).Scan(&storeName); err != nil {
-		return CaptainFleetMembership{}, err
-	}
 	return CaptainFleetMembership{
 		TeamMemberID:       memberID,
 		StoreID:            storeID,
@@ -293,5 +401,6 @@ func RedeemCode(ctx context.Context, db *sql.DB, captainActorID, plainCode strin
 		Status:             "active",
 		BranchAssignment:   branch,
 		DeliveryAssignment: deliveryAssignment,
+		Version:            memberVersion + 1,
 	}, nil
 }
