@@ -14,18 +14,18 @@ type OperationalProfile struct {
 }
 
 type UpsertOperationalProfileInput struct {
-	ZoneID                   string  `json:"zoneId"`
-	SlaCategory              string  `json:"slaCategory"`
-	MaxPrepMins              int     `json:"maxPrepMins"`
-	MaxAssignmentMins        int     `json:"maxAssignmentMins"`
-	MaxDeliveryMins          int     `json:"maxDeliveryMins"`
-	ExpectedSlaVersion       int     `json:"expectedSlaVersion"`
-	MaxConcurrentOrders      int     `json:"maxConcurrentOrders"`
-	MaxCaptainsOnline        int     `json:"maxCaptainsOnline"`
-	ThrottleThreshold        float64 `json:"throttleThreshold"`
-	IsPaused                 bool    `json:"isPaused"`
-	PauseReason              string  `json:"pauseReason"`
-	ExpectedCapacityVersion  int     `json:"expectedCapacityVersion"`
+	ZoneID                  string  `json:"zoneId"`
+	SlaCategory             string  `json:"slaCategory"`
+	MaxPrepMins             int     `json:"maxPrepMins"`
+	MaxAssignmentMins       int     `json:"maxAssignmentMins"`
+	MaxDeliveryMins         int     `json:"maxDeliveryMins"`
+	ExpectedSlaVersion      int     `json:"expectedSlaVersion"`
+	MaxConcurrentOrders     int     `json:"maxConcurrentOrders"`
+	MaxCaptainsOnline       int     `json:"maxCaptainsOnline"`
+	ThrottleThreshold       float64 `json:"throttleThreshold"`
+	IsPaused                bool    `json:"isPaused"`
+	PauseReason             string  `json:"pauseReason"`
+	ExpectedCapacityVersion int     `json:"expectedCapacityVersion"`
 }
 
 func GetOperationalProfile(ctx context.Context, db *sql.DB, zoneID string, category string) (OperationalProfile, error) {
@@ -210,13 +210,13 @@ func upsertOperationalSLA(
 	}
 	item.Configured = true
 	payload := map[string]any{
-		"id": item.RuleID,
-		"zoneId": input.ZoneID,
-		"category": item.Category,
-		"maxPrepMins": item.MaxPrepMins,
+		"id":                item.RuleID,
+		"zoneId":            input.ZoneID,
+		"category":          item.Category,
+		"maxPrepMins":       item.MaxPrepMins,
 		"maxAssignmentMins": item.MaxAssignmentMins,
-		"maxDeliveryMins": item.MaxDeliveryMins,
-		"version": item.Version,
+		"maxDeliveryMins":   item.MaxDeliveryMins,
+		"version":           item.Version,
 	}
 	if err := insertEvent(ctx, tx, "sla_rule", item.RuleID, action, mutation, fromVersion, item.Version, payload); err != nil {
 		return item, err
@@ -321,14 +321,14 @@ func upsertOperationalCapacity(
 	}
 	item.Configured = true
 	payload := map[string]any{
-		"id": item.ConfigID,
-		"zoneId": input.ZoneID,
+		"id":                  item.ConfigID,
+		"zoneId":              input.ZoneID,
 		"maxConcurrentOrders": item.MaxConcurrentOrders,
-		"maxCaptainsOnline": item.MaxCaptainsOnline,
-		"throttleThreshold": item.ThrottleThreshold,
-		"isPaused": item.IsPaused,
-		"pauseReason": item.PauseReason,
-		"version": item.Version,
+		"maxCaptainsOnline":   item.MaxCaptainsOnline,
+		"throttleThreshold":   item.ThrottleThreshold,
+		"isPaused":            item.IsPaused,
+		"pauseReason":         item.PauseReason,
+		"version":             item.Version,
 	}
 	if err := insertEvent(ctx, tx, "capacity_config", item.ConfigID, action, mutation, fromVersion, item.Version, payload); err != nil {
 		return item, err

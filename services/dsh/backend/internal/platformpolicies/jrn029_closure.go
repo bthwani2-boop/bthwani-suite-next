@@ -53,10 +53,10 @@ type OperationalSLA struct {
 }
 
 type OperationalCapacity struct {
-	Configured         bool    `json:"configured"`
-	ConfigID           string  `json:"configId,omitempty"`
-	MaxConcurrentOrders int    `json:"maxConcurrentOrders,omitempty"`
-	MaxCaptainsOnline   int    `json:"maxCaptainsOnline,omitempty"`
+	Configured          bool    `json:"configured"`
+	ConfigID            string  `json:"configId,omitempty"`
+	MaxConcurrentOrders int     `json:"maxConcurrentOrders,omitempty"`
+	MaxCaptainsOnline   int     `json:"maxCaptainsOnline,omitempty"`
 	ThrottleThreshold   float64 `json:"throttleThreshold,omitempty"`
 	IsPaused            bool    `json:"isPaused"`
 	PauseReason         string  `json:"pauseReason,omitempty"`
@@ -73,21 +73,21 @@ type OperationalEffects struct {
 }
 
 type OperationalDecision struct {
-	ZoneID             string                 `json:"zoneId"`
-	ServiceAreaCode    string                 `json:"serviceAreaCode"`
-	FulfillmentMode    string                 `json:"fulfillmentMode"`
-	Decision           string                 `json:"decision"`
-	Serviceable        bool                   `json:"serviceable"`
-	ReasonCodes        []string               `json:"reasonCodes"`
-	AllowedActions     []string               `json:"allowedActions"`
-	ActiveStores       int                    `json:"activeStores"`
-	PressureRatio      float64                `json:"pressureRatio"`
-	SLA                OperationalSLA         `json:"sla"`
-	Capacity           OperationalCapacity    `json:"capacity"`
-	ModePolicy         *DeliveryModePolicy    `json:"modePolicy,omitempty"`
-	Effects            OperationalEffects     `json:"effects"`
-	PolicyVersions     map[string]int         `json:"policyVersions"`
-	EvaluatedAt        time.Time              `json:"evaluatedAt"`
+	ZoneID          string              `json:"zoneId"`
+	ServiceAreaCode string              `json:"serviceAreaCode"`
+	FulfillmentMode string              `json:"fulfillmentMode"`
+	Decision        string              `json:"decision"`
+	Serviceable     bool                `json:"serviceable"`
+	ReasonCodes     []string            `json:"reasonCodes"`
+	AllowedActions  []string            `json:"allowedActions"`
+	ActiveStores    int                 `json:"activeStores"`
+	PressureRatio   float64             `json:"pressureRatio"`
+	SLA             OperationalSLA      `json:"sla"`
+	Capacity        OperationalCapacity `json:"capacity"`
+	ModePolicy      *DeliveryModePolicy `json:"modePolicy,omitempty"`
+	Effects         OperationalEffects  `json:"effects"`
+	PolicyVersions  map[string]int      `json:"policyVersions"`
+	EvaluatedAt     time.Time           `json:"evaluatedAt"`
 }
 
 type OperationalEvaluationInput struct {
@@ -100,36 +100,36 @@ type OperationalEvaluationInput struct {
 }
 
 type operationalSnapshot struct {
-	Zone            Zone
-	ActiveStores    int
-	SLA             OperationalSLA
-	Capacity        OperationalCapacity
-	ModePolicy      *DeliveryModePolicy
-	Input           OperationalEvaluationInput
+	Zone         Zone
+	ActiveStores int
+	SLA          OperationalSLA
+	Capacity     OperationalCapacity
+	ModePolicy   *DeliveryModePolicy
+	Input        OperationalEvaluationInput
 }
 
 type PolicyAuditEvent struct {
-	ID             string          `json:"id"`
-	AggregateType  string          `json:"aggregateType"`
-	AggregateID    string          `json:"aggregateId"`
-	Action         string          `json:"action"`
-	ActorID        string          `json:"actorId"`
-	ActorSurface   string          `json:"actorSurface"`
-	CorrelationID  string          `json:"correlationId,omitempty"`
-	Reason         string          `json:"reason"`
-	FromVersion    *int            `json:"fromVersion,omitempty"`
-	ToVersion      int             `json:"toVersion"`
-	Payload        json.RawMessage `json:"payload"`
-	CreatedAt      time.Time       `json:"createdAt"`
+	ID            string          `json:"id"`
+	AggregateType string          `json:"aggregateType"`
+	AggregateID   string          `json:"aggregateId"`
+	Action        string          `json:"action"`
+	ActorID       string          `json:"actorId"`
+	ActorSurface  string          `json:"actorSurface"`
+	CorrelationID string          `json:"correlationId,omitempty"`
+	Reason        string          `json:"reason"`
+	FromVersion   *int            `json:"fromVersion,omitempty"`
+	ToVersion     int             `json:"toVersion"`
+	Payload       json.RawMessage `json:"payload"`
+	CreatedAt     time.Time       `json:"createdAt"`
 }
 
 type RollbackPolicyInput struct {
-	EventID               string `json:"eventId"`
+	EventID                string `json:"eventId"`
 	ExpectedCurrentVersion int    `json:"expectedCurrentVersion"`
 }
 
 type RollbackResult struct {
-	TargetEventID  string `json:"targetEventId"`
+	TargetEventID string `json:"targetEventId"`
 	AggregateType string `json:"aggregateType"`
 	AggregateID   string `json:"aggregateId"`
 	FromVersion   int    `json:"fromVersion"`
@@ -361,8 +361,8 @@ func BuildOperationalDecision(snapshot operationalSnapshot) OperationalDecision 
 		Capacity:        snapshot.Capacity,
 		ModePolicy:      snapshot.ModePolicy,
 		PolicyVersions: map[string]int{
-			"zone": snapshot.Zone.Version,
-			"sla": snapshot.SLA.Version,
+			"zone":     snapshot.Zone.Version,
+			"sla":      snapshot.SLA.Version,
 			"capacity": snapshot.Capacity.Version,
 		},
 		EvaluatedAt: time.Now().UTC(),
@@ -504,8 +504,8 @@ func RollbackPolicyEvent(
 		result := RollbackResult{
 			TargetEventID: event.ID,
 			AggregateType: event.AggregateType,
-			AggregateID: event.AggregateID,
-			FromVersion: input.ExpectedCurrentVersion,
+			AggregateID:   event.AggregateID,
+			FromVersion:   input.ExpectedCurrentVersion,
 		}
 		var restored any
 		switch event.AggregateType {

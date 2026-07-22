@@ -176,7 +176,7 @@ func TestJRN029PostgresLifecycle(t *testing.T) {
 	}
 
 	rollback, err := RollbackPolicyEvent(ctx, db, RollbackPolicyInput{
-		EventID:               initialCapacityEventID,
+		EventID:                initialCapacityEventID,
 		ExpectedCurrentVersion: pausedProfile.Capacity.Version,
 	}, mutation("rollback-capacity", "restore pre-pause capacity snapshot"))
 	if err != nil {
