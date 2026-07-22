@@ -1,6 +1,9 @@
 package catalogapproval
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestCatalogApprovalTransitionGraph(t *testing.T) {
 	valid := [][2]string{
@@ -46,5 +49,31 @@ func TestPartnerQueueStagesExcludeInternalPublicationStages(t *testing.T) {
 		if !partnerQueueStages[stage] {
 			t.Fatalf("partner queue should expose owned stage %s", stage)
 		}
+	}
+}
+
+func TestTenantScopeFailsClosedBeforeDatabaseAccess(t *testing.T) {
+	_, err := Create(nil, CreateInput{
+		EntityType:   "product",
+		OwnerActorID: "actor-1",
+		Source:       "app-partner",
+		Stage:        "partner-submitted",
+		Title:        "Product approval",
+	})
+	if !errors.Is(err, ErrInvalid) {
+		t.Fatalf("Create without tenant must fail with ErrInvalid, got %v", err)
+	}
+
+	if _, err := Get(nil, "", "record-1"); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("Get without tenant must fail with ErrInvalid, got %v", err)
+	}
+	if _, err := List(nil, "", "", "", "", 10); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("List without tenant must fail with ErrInvalid, got %v", err)
+	}
+	if _, err := ListPartnerQueue(nil, "", "actor-1", 10); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("ListPartnerQueue without tenant must fail with ErrInvalid, got %v", err)
+	}
+	if _, err := Transition(nil, "", "record-1", "partner-review", "operator", "review"); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("Transition without tenant must fail with ErrInvalid, got %v", err)
 	}
 }
