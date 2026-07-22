@@ -3,7 +3,6 @@ package dispatch
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/subtle"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -13,9 +12,14 @@ import (
 
 	"dsh-api/internal/orders"
 	"dsh-api/internal/wltoutbox"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
-var ErrIdempotencyConflict = errors.New("delivery proof idempotency conflict")
+var (
+	ErrIdempotencyConflict = errors.New("delivery proof idempotency conflict")
+	errDeliveryPINMismatch = errors.New("delivery PIN mismatch")
+)
 
 type DeliveryProofMethod string
 type DeliveryProofStatus string
@@ -138,9 +142,12 @@ func IssueDeliveryPIN(db *sql.DB, orderID, clientID string) (*IssuedDeliveryPIN,
 	if err != nil {
 		return nil, err
 	}
+	pinHash, err := hashDeliveryPIN(assignmentID, pin)
+	if err != nil {
+		return nil, err
+	}
 	now := time.Now().UTC()
 	expiresAt := now.Add(deliveryPINLifetime)
-	pinHash := hashDeliveryPIN(assignmentID, pin)
 
 	var challenge DeliveryVerificationChallenge
 	err = tx.QueryRow(`
@@ -190,10 +197,12 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	}
 
 	capturedAt := time.Now().UTC()
+	fingerprintCapturedAt := time.Time{}
 	if input.CapturedAt != nil {
 		capturedAt = input.CapturedAt.UTC()
+		fingerprintCapturedAt = capturedAt
 	}
-	fingerprint := deliveryProofFingerprint(assignmentID, captainID, input, capturedAt)
+	fingerprint := deliveryProofFingerprint(assignmentID, captainID, input, fingerprintCapturedAt)
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -224,6 +233,9 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	if err = ensureNoOpenDeliveryException(tx, assignmentID); err != nil {
 		return nil, err
 	}
+	if err = ensureNoOpenDeliveryProof(tx, assignmentID); err != nil {
+		return nil, err
+	}
 	if input.PhotoMediaRef != "" {
 		if err = validateDeliveryProofMedia(tx, input.PhotoMediaRef, captainID, "delivery_proof"); err != nil {
 			return nil, err
@@ -240,6 +252,12 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 	if input.Method == DeliveryProofOTP || input.Method == DeliveryProofComposite {
 		challengeID, err = verifyDeliveryPIN(tx, assignmentID, input.PIN)
 		if err != nil {
+			if errors.Is(err, errDeliveryPINMismatch) {
+				if commitErr := tx.Commit(); commitErr != nil {
+					return nil, commitErr
+				}
+				return nil, fmt.Errorf("%w: delivery PIN is invalid", ErrConflict)
+			}
 			return nil, err
 		}
 		status = DeliveryProofAccepted
@@ -254,14 +272,18 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 			return nil, err
 		}
 	} else {
-		if _, err = tx.Exec(`
+		result, updateErr := tx.Exec(`
 			UPDATE dsh_deliveries
 			SET pod_method=$1, pod_reference=COALESCE(NULLIF($2,''),NULLIF($3,'')),
-			    pod_review_status='pending_review', updated_at=NOW()
-			WHERE assignment_id=$4::uuid AND captain_id=$5`,
-			string(input.Method), input.PhotoMediaRef, input.SignatureMediaRef, assignmentID, captainID,
-		); err != nil {
-			return nil, err
+			    delivery_proof_id=$4::uuid, pod_review_status='pending_review', updated_at=NOW()
+			WHERE assignment_id=$5::uuid AND captain_id=$6 AND status='arrived_customer'`,
+			string(input.Method), input.PhotoMediaRef, input.SignatureMediaRef, proof.ID, assignmentID, captainID,
+		)
+		if updateErr != nil {
+			return nil, updateErr
+		}
+		if affected, _ := result.RowsAffected(); affected != 1 {
+			return nil, fmt.Errorf("%w: delivery moved before proof submission", ErrConflict)
 		}
 	}
 	if err = tx.Commit(); err != nil {
@@ -284,8 +306,7 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 	}
 	defer tx.Rollback()
 
-	proof, fingerprint, err := scanDeliveryProofRow(tx.QueryRow(deliveryProofSelectSQL()+` WHERE p.id=$1::uuid FOR UPDATE`, proofID))
-	_ = fingerprint
+	proof, _, err := scanDeliveryProofRow(tx.QueryRow(deliveryProofSelectSQL()+` WHERE p.id=$1::uuid FOR UPDATE`, proofID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -300,29 +321,41 @@ func ReviewDeliveryProof(db *sql.DB, proofID, operatorID string, input ReviewDel
 	}
 
 	if !input.Accept {
-		_, err = tx.Exec(`
+		result, updateErr := tx.Exec(`
 			UPDATE dsh_delivery_proofs
 			SET status='rejected', reviewed_at=NOW(), reviewed_by_actor_id=$2,
 			    review_reason=$3, rejected_at=NOW(), version=version+1, updated_at=NOW()
-			WHERE id=$1::uuid AND version=$4`, proofID, operatorID, input.Reason, input.ExpectedVersion)
-		if err != nil {
-			return nil, err
+			WHERE id=$1::uuid AND version=$4 AND status IN ('submitted','pending_review')`,
+			proofID, operatorID, input.Reason, input.ExpectedVersion,
+		)
+		if updateErr != nil {
+			return nil, updateErr
+		}
+		if affected, _ := result.RowsAffected(); affected != 1 {
+			return nil, fmt.Errorf("%w: delivery proof review lost its expected version", ErrConflict)
 		}
 		_, err = tx.Exec(`
 			UPDATE dsh_deliveries
 			SET pod_review_status='rejected', updated_at=NOW()
-			WHERE assignment_id=$1::uuid AND status='arrived_customer'`, proof.AssignmentID)
+			WHERE assignment_id=$1::uuid AND delivery_proof_id=$2::uuid AND status='arrived_customer'`,
+			proof.AssignmentID, proof.ID,
+		)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		_, err = tx.Exec(`
+		result, updateErr := tx.Exec(`
 			UPDATE dsh_delivery_proofs
 			SET status='accepted', reviewed_at=NOW(), reviewed_by_actor_id=$2,
 			    review_reason=$3, accepted_at=NOW(), version=version+1, updated_at=NOW()
-			WHERE id=$1::uuid AND version=$4`, proofID, operatorID, input.Reason, input.ExpectedVersion)
-		if err != nil {
-			return nil, err
+			WHERE id=$1::uuid AND version=$4 AND status IN ('submitted','pending_review')`,
+			proofID, operatorID, input.Reason, input.ExpectedVersion,
+		)
+		if updateErr != nil {
+			return nil, updateErr
+		}
+		if affected, _ := result.RowsAffected(); affected != 1 {
+			return nil, fmt.Errorf("%w: delivery proof review lost its expected version", ErrConflict)
 		}
 		proof.Status = DeliveryProofAccepted
 		proof.ReviewedByActorID = operatorID
@@ -377,6 +410,9 @@ func GetOperatorDeliveryProof(db *sql.DB, proofID string) (*DeliveryProof, error
 }
 
 func ListOperatorDeliveryProofs(db *sql.DB, status DeliveryProofStatus, limit int) ([]DeliveryProof, error) {
+	if status != "" && !isDeliveryProofStatus(status) {
+		return nil, fmt.Errorf("%w: unsupported delivery proof status", ErrInvalid)
+	}
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
@@ -402,6 +438,15 @@ func ListOperatorDeliveryProofs(db *sql.DB, status DeliveryProofStatus, limit in
 		proofs = append(proofs, *proof)
 	}
 	return proofs, rows.Err()
+}
+
+func isDeliveryProofStatus(status DeliveryProofStatus) bool {
+	switch status {
+	case DeliveryProofSubmitted, DeliveryProofPendingReview, DeliveryProofAccepted, DeliveryProofRejected, DeliveryProofSuperseded:
+		return true
+	default:
+		return false
+	}
 }
 
 func validateDeliveryProofInput(input SubmitDeliveryProofInput) error {
@@ -437,6 +482,21 @@ func validateDeliveryProofInput(input SubmitDeliveryProofInput) error {
 	return nil
 }
 
+func ensureNoOpenDeliveryProof(tx *sql.Tx, assignmentID string) error {
+	var exists bool
+	if err := tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM dsh_delivery_proofs
+			WHERE assignment_id=$1::uuid AND status IN ('submitted','pending_review')
+		)`, assignmentID).Scan(&exists); err != nil {
+		return err
+	}
+	if exists {
+		return fmt.Errorf("%w: a delivery proof is already pending review", ErrConflict)
+	}
+	return nil
+}
+
 func validateDeliveryProofMedia(tx *sql.Tx, mediaRef, captainID, purpose string) error {
 	var exists bool
 	if err := tx.QueryRow(`
@@ -454,9 +514,6 @@ func validateDeliveryProofMedia(tx *sql.Tx, mediaRef, captainID, purpose string)
 }
 
 func verifyDeliveryPIN(tx *sql.Tx, assignmentID, pin string) (string, error) {
-	if len(pin) != deliveryPINLength {
-		return "", fmt.Errorf("%w: delivery PIN is invalid", ErrConflict)
-	}
 	var id, storedHash string
 	var expiresAt time.Time
 	var failedAttempts, maxAttempts int
@@ -475,15 +532,34 @@ func verifyDeliveryPIN(tx *sql.Tx, assignmentID, pin string) (string, error) {
 	if consumedAt.Valid || time.Now().UTC().After(expiresAt) || failedAttempts >= maxAttempts {
 		return "", fmt.Errorf("%w: delivery PIN expired or locked", ErrConflict)
 	}
-	candidate := hashDeliveryPIN(assignmentID, pin)
-	if subtle.ConstantTimeCompare([]byte(candidate), []byte(storedHash)) != 1 {
-		_, _ = tx.Exec(`
+	validFormat := isSixDigitPIN(pin)
+	matches := validFormat && bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(assignmentID+":"+pin)) == nil
+	if !matches {
+		result, updateErr := tx.Exec(`
 			UPDATE dsh_delivery_verification_challenges
 			SET failed_attempts=failed_attempts+1, version=version+1, updated_at=NOW()
-			WHERE id=$1::uuid`, id)
-		return "", fmt.Errorf("%w: delivery PIN is invalid", ErrConflict)
+			WHERE id=$1::uuid AND failed_attempts < max_attempts AND consumed_at IS NULL`, id)
+		if updateErr != nil {
+			return "", updateErr
+		}
+		if affected, _ := result.RowsAffected(); affected != 1 {
+			return "", fmt.Errorf("%w: delivery PIN expired or locked", ErrConflict)
+		}
+		return "", errDeliveryPINMismatch
 	}
 	return id, nil
+}
+
+func isSixDigitPIN(pin string) bool {
+	if len(pin) != deliveryPINLength {
+		return false
+	}
+	for _, digit := range pin {
+		if digit < '0' || digit > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func insertDeliveryProof(
@@ -533,15 +609,20 @@ func finalizeAcceptedDeliveryProof(tx *sql.Tx, current *Assignment, proof *Deliv
 	if proofReference == "" {
 		proofReference = proof.VerificationChallengeID
 	}
-	if _, err := tx.Exec(`
+	deliveryResult, err := tx.Exec(`
 		UPDATE dsh_deliveries
 		SET status='delivered', pod_method=$1, pod_reference=$2, delivery_proof_id=$3::uuid,
 		    pod_review_status='accepted', pod_verified_at=NOW(), updated_at=NOW()
 		WHERE assignment_id=$4::uuid AND captain_id=$5 AND status='arrived_customer'`,
-		string(proof.Method), proofReference, proof.ID, proof.AssignmentID, captainID); err != nil {
+		string(proof.Method), proofReference, proof.ID, proof.AssignmentID, captainID,
+	)
+	if err != nil {
 		return err
 	}
-	result, err := tx.Exec(`
+	if affected, _ := deliveryResult.RowsAffected(); affected != 1 {
+		return fmt.Errorf("%w: delivery completion lost its expected state", ErrConflict)
+	}
+	assignmentResult, err := tx.Exec(`
 		UPDATE dsh_assignments
 		SET status='completed', completed_at=NOW(), updated_at=NOW(),
 		    last_latitude=NULL, last_longitude=NULL, location_recorded_at=NULL
@@ -549,15 +630,19 @@ func finalizeAcceptedDeliveryProof(tx *sql.Tx, current *Assignment, proof *Deliv
 	if err != nil {
 		return err
 	}
-	if affected, _ := result.RowsAffected(); affected != 1 {
+	if affected, _ := assignmentResult.RowsAffected(); affected != 1 {
 		return fmt.Errorf("%w: assignment completion lost its expected state", ErrConflict)
 	}
 	if proof.VerificationChallengeID != "" {
-		if _, err = tx.Exec(`
+		challengeResult, challengeErr := tx.Exec(`
 			UPDATE dsh_delivery_verification_challenges
 			SET consumed_at=COALESCE(consumed_at,NOW()), version=version+1, updated_at=NOW()
-			WHERE id=$1::uuid`, proof.VerificationChallengeID); err != nil {
-			return err
+			WHERE id=$1::uuid AND consumed_at IS NULL`, proof.VerificationChallengeID)
+		if challengeErr != nil {
+			return challengeErr
+		}
+		if affected, _ := challengeResult.RowsAffected(); affected != 1 {
+			return fmt.Errorf("%w: delivery PIN was already consumed", ErrConflict)
 		}
 	}
 	return enqueueJRN018WltCompletion(tx, current.OrderID, captainID)
@@ -655,9 +740,12 @@ func randomDeliveryPIN() (string, error) {
 	return fmt.Sprintf("%06d", value.Int64()), nil
 }
 
-func hashDeliveryPIN(assignmentID, pin string) string {
-	sum := sha256.Sum256([]byte(assignmentID + ":" + pin))
-	return fmt.Sprintf("%x", sum[:])
+func hashDeliveryPIN(assignmentID, pin string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(assignmentID+":"+pin), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("hash delivery PIN: %w", err)
+	}
+	return string(hash), nil
 }
 
 func deliveryProofFingerprint(assignmentID, captainID string, input SubmitDeliveryProofInput, capturedAt time.Time) string {
@@ -668,6 +756,10 @@ func deliveryProofFingerprint(assignmentID, captainID string, input SubmitDelive
 	if input.CapturedLongitude != nil {
 		lng = fmt.Sprintf("%.7f", *input.CapturedLongitude)
 	}
+	capturedAtToken := ""
+	if !capturedAt.IsZero() {
+		capturedAtToken = capturedAt.UTC().Format(time.RFC3339Nano)
+	}
 	raw := strings.Join([]string{
 		assignmentID,
 		captainID,
@@ -677,7 +769,7 @@ func deliveryProofFingerprint(assignmentID, captainID string, input SubmitDelive
 		input.SignatureMediaRef,
 		lat,
 		lng,
-		capturedAt.UTC().Format(time.RFC3339Nano),
+		capturedAtToken,
 	}, "|")
 	sum := sha256.Sum256([]byte(raw))
 	return fmt.Sprintf("%x", sum[:])
