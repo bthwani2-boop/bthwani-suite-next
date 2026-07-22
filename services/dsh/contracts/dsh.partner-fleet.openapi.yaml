@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Partner Fleet Connection API
-  version: 0.3.0
-  description: Partner-store courier connection codes and authenticated captain fleet memberships, including governed disconnect.
+  version: 0.4.0
+  description: Partner-store courier connection codes and authenticated captain fleet memberships, including governed disconnect and operator readback.
 x-bthwani-owner: services/dsh
 x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -139,6 +139,19 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/stores/{storeId}/partner-fleet:
+    get:
+      operationId: getDshOperatorPartnerFleetSnapshot
+      tags: [DshPartnerFleet]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/StoreId'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer }
