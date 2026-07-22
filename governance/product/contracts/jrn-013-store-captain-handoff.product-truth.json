@@ -71,6 +71,13 @@
     "targeted source database and CI gates"
   ],
   "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "finance-boundary", "qa", "governance", "ci"],
+  "verificationRequest": {
+    "requestedAt": "2026-07-22",
+    "sourceBranch": "sambassam",
+    "sourceHead": "dfd8bf7a29d55b28065371078dbf7efe42bf12e3",
+    "verificationBranch": "verification/jrn-013-final-closure-20260722",
+    "mode": "ISOLATED_AUTOMATED_FINAL_CLOSURE"
+  },
   "evidenceState": {
     "sourceCode": "CLOSED",
     "sourceClosureManifest": "REGISTERED",
