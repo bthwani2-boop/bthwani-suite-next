@@ -1,11 +1,11 @@
 # Registered one-shot final proof for the JRN-029 technical closure.
-# Trigger revision: execute the registered workflow after branch registration.
+# Isolated verification branch execution.
 name: JRN-029 Final Closure Proof
 
 on:
   workflow_dispatch:
   push:
-    branches: [sambassam]
+    branches: [sambassam, "verify/jrn-029-final-20260722"]
     paths:
       - ".github/workflows/jrn-029-final-closure.yml"
 
