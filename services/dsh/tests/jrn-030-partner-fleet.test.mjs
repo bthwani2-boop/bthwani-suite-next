@@ -16,6 +16,7 @@ const operatorRoutes = read("services/dsh/backend/internal/http/partner_fleet_op
 const main = read("services/dsh/backend/cmd/dsh-api/main.go");
 const migration = read("services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql");
 const scopeMigration = read("services/dsh/database/migrations/dsh-089_store_team_actor_scope_uniqueness.sql");
+const auditMigration = read("services/dsh/database/migrations/dsh-933_jrn030_partner_fleet_action_audit.sql");
 const api = read("services/dsh/frontend/shared/partner/partner-fleet.api.ts");
 const partnerController = read("services/dsh/frontend/shared/partner/use-partner-fleet-controller.ts");
 const partnerSurface = read("services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx");
@@ -64,6 +65,22 @@ test("JRN-030 makes lifecycle mutations atomic, audited, and notified", () => {
   assert.match(disconnectModel, /partner_fleet_membership/);
   assert.match(disconnectModel, /partner_fleet_connection/);
   assert.match(redeemModel, /tx\.Commit\(\)/);
+
+  for (const action of [
+    "issue_captain_connection_code",
+    "redeem_captain_connection_code",
+    "captain_disconnect",
+    "revoke_captain_connection_code",
+    "expire_captain_connection_code",
+  ]) {
+    assert.ok(auditMigration.includes(`'${action}'`), `missing durable audit allow-list action ${action}`);
+  }
+  assert.match(
+    auditMigration,
+    /NEW\.action_label IN \([\s\S]*'pause'[\s\S]*\) AND NEW\.from_status IS NOT DISTINCT FROM NEW\.to_status/,
+  );
+  assert.match(auditMigration, /Fleet lifecycle events represent security and membership facts/);
+  assert.match(auditMigration, /RETURN NEW;/);
 });
 
 test("JRN-030 allows multi-store membership but prevents duplicates inside one store", () => {
