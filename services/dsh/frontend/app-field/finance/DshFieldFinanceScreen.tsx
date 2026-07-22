@@ -1,8 +1,8 @@
 // app-field — DshFieldFinanceScreen
 // Displays the authenticated field agent's own financial data from DSH.
 // Never reads financial truth from WLT directly or via partnerId enumeration.
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import React from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import {
   Badge,
   Button,
@@ -13,6 +13,7 @@ import {
   Header,
 } from '@bthwani/ui-kit';
 import { useFieldFinanceController } from '../../shared/finance-wlt-link/field-finance';
+import { PayoutDestinationPanel } from '../../shared/finance-wlt-link/jrn037';
 
 type DshFieldFinanceScreenProps = {
   readonly onBack: () => void;
@@ -20,16 +21,6 @@ type DshFieldFinanceScreenProps = {
 
 function formatAmount(minorUnits: number, currency: string): string {
   return `${(minorUnits / 100).toFixed(2)} ${currency}`;
-}
-
-function parseAmountMinorUnits(input: string): number | null {
-  const normalized = input.trim().replace(',', '.');
-  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return null;
-  const [wholePart, fractionPart = ''] = normalized.split('.');
-  const whole = Number(wholePart);
-  const fraction = Number(fractionPart.padEnd(2, '0'));
-  const minorUnits = whole * 100 + fraction;
-  return Number.isSafeInteger(minorUnits) && minorUnits > 0 ? minorUnits : null;
 }
 
 function commissionStatusLabel(status: string): string {
@@ -46,19 +37,6 @@ function commissionStatusLabel(status: string): string {
   return map[status] ?? status;
 }
 
-function payoutStatusLabel(status: string): string {
-  const map: Record<string, string> = {
-    requested: 'مطلوب',
-    pending: 'قيد المراجعة',
-    approved: 'معتمد',
-    processing: 'قيد التنفيذ',
-    completed: 'مكتمل',
-    failed: 'فشل',
-    rejected: 'مرفوض',
-  };
-  return map[status] ?? status;
-}
-
 function commissionStatusTone(
   status: string,
 ): 'action' | 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
@@ -70,16 +48,14 @@ function commissionStatusTone(
 
 export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
   const controller = useFieldFinanceController();
-  const { state, submittingPayout, submitPayoutError, submitPayoutRequest } = controller;
-  const [payoutAmountInput, setPayoutAmountInput] = useState('');
-  const [inputError, setInputError] = useState<string | null>(null);
+  const { state } = controller;
 
   if (state.kind === 'idle' || state.kind === 'loading') {
     return (
       <StateView
         loading
         title="جارٍ تحميل البيانات المالية"
-        description="نجلب محفظتك ودفتر الحركة وعمولاتك وطلبات الصرف من محرك WLT."
+        description="نجلب محفظتك ودفتر الحركة وعمولاتك من محرك WLT."
       />
     );
   }
@@ -100,26 +76,9 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
     wallet,
     ledgerEntries,
     commissions,
-    payoutRequests,
     ledgerError,
     commissionsError,
-    payoutRequestsError,
   } = state;
-
-  const handleSubmitPayout = async () => {
-    const amountMinorUnits = parseAmountMinorUnits(payoutAmountInput);
-    if (amountMinorUnits === null) {
-      setInputError('أدخل مبلغًا موجبًا بدقة لا تتجاوز منزلتين عشريتين.');
-      return;
-    }
-    if (amountMinorUnits > wallet.availableBalanceMinorUnits) {
-      setInputError('المبلغ المطلوب أكبر من الرصيد المتاح.');
-      return;
-    }
-    setInputError(null);
-    const ok = await submitPayoutRequest(amountMinorUnits, wallet.currency);
-    if (ok) setPayoutAmountInput('');
-  };
 
   return (
     <View style={styles.root}>
@@ -127,7 +86,7 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
         <Button label="رجوع" tone="ghost" size="sm" fullWidth={false} onPress={onBack} />
       </View>
       <Header
-        title="المحفظة والعمولات"
+        title="المحفظة والعمولات والصرف"
         subtitle="بياناتك المالية الشخصية فقط — مصدرها WLT"
       />
 
@@ -178,6 +137,13 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
 
         <Button label="تحديث" tone="secondary" size="sm" onPress={controller.refresh} />
 
+        <PayoutDestinationPanel
+          actorType="field"
+          currency={wallet.currency}
+          title="وجهة صرف المندوب وطلبات الدفع"
+          embedded
+        />
+
         <Text role="titleSm" style={styles.sectionTitle}>دفتر الحركة المرجعي</Text>
         {ledgerError ? (
           <StateView
@@ -215,35 +181,6 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
           ))
         )}
 
-        <View style={styles.card}>
-          <Text role="titleMd" style={styles.rtl}>طلب صرف جديد</Text>
-          <Text role="caption" tone="muted" style={styles.rtl}>
-            الرصيد المتاح: {formatAmount(wallet.availableBalanceMinorUnits, wallet.currency)}
-          </Text>
-          <TextInput
-            value={payoutAmountInput}
-            onChangeText={(value) => {
-              setPayoutAmountInput(value);
-              setInputError(null);
-            }}
-            keyboardType="decimal-pad"
-            placeholder={`المبلغ (${wallet.currency})`}
-            style={styles.input}
-            textAlign="right"
-            editable={!submittingPayout}
-          />
-          {inputError ? <Text role="caption" tone="danger" style={styles.rtl}>{inputError}</Text> : null}
-          {submitPayoutError ? (
-            <Text role="caption" tone="danger" style={styles.rtl}>{submitPayoutError}</Text>
-          ) : null}
-          <Button
-            label={submittingPayout ? 'جارٍ الإرسال...' : 'إرسال طلب الصرف'}
-            tone="primary"
-            disabled={submittingPayout || payoutAmountInput.trim() === '' || wallet.availableBalanceMinorUnits <= 0}
-            onPress={() => void handleSubmitPayout()}
-          />
-        </View>
-
         <Text role="titleSm" style={styles.sectionTitle}>العمولات</Text>
         {commissionsError ? (
           <StateView tone="danger" title="تعذر تحميل العمولات" description={commissionsError} />
@@ -260,29 +197,6 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
                 <Text role="caption" tone="muted" style={styles.rtl}>
                   المصدر: {commission.sourceType}
                 </Text>
-              ) : null}
-            </View>
-          ))
-        )}
-
-        <Text role="titleSm" style={styles.sectionTitle}>طلبات الصرف</Text>
-        {payoutRequestsError ? (
-          <StateView tone="danger" title="تعذر تحميل طلبات الصرف" description={payoutRequestsError} />
-        ) : payoutRequests.length === 0 ? (
-          <StateView tone="neutral" title="لا توجد طلبات صرف" />
-        ) : (
-          payoutRequests.map((payout) => (
-            <View key={payout.id} style={styles.card}>
-              <View style={styles.rowBetween}>
-                <Text role="bodyStrong">{formatAmount(payout.amountMinorUnits, payout.currency)}</Text>
-                <Badge
-                  label={payoutStatusLabel(payout.status)}
-                  tone={payout.status === 'completed' ? 'success' : payout.status === 'failed' || payout.status === 'rejected' ? 'danger' : 'action'}
-                />
-              </View>
-              <Text role="caption" tone="muted" style={styles.rtl}>{payout.requestedAt}</Text>
-              {payout.failureReason ? (
-                <Text role="caption" tone="danger" style={styles.rtl}>{payout.failureReason}</Text>
               ) : null}
             </View>
           ))
@@ -311,12 +225,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   divider: { height: 1, backgroundColor: colorRoles.borderSubtle },
-  input: {
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    borderRadius: 8,
-    padding: spacing[3],
-  },
   rowBetween: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
