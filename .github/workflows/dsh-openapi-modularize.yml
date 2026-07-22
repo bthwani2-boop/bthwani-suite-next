@@ -48,8 +48,82 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Execute deterministic JRN-032 closure
+      - name: Register canonical JRN-032 OpenAPI paths
+        run: node tools/scripts/patch-jrn032-openapi.mjs
+
+      - name: Format governed Go files
+        run: |
+          gofmt -w \
+            services/dsh/backend/internal/analytics/analytics.go \
+            services/dsh/backend/internal/analytics/jrn032_window.go \
+            services/dsh/backend/internal/analytics/jrn032_preparation.go \
+            services/dsh/backend/internal/analytics/jrn032_people.go \
+            services/dsh/backend/internal/analytics/jrn032_drilldown.go \
+            services/dsh/backend/internal/analytics/jrn032_window_test.go \
+            services/dsh/backend/internal/analytics/jrn032_drilldown_test.go \
+            services/dsh/backend/internal/http/analytics.go \
+            services/dsh/backend/internal/http/jrn032_analytics.go \
+            services/dsh/backend/internal/http/jrn032_routes.go \
+            services/dsh/backend/internal/http/jrn032_routes_test.go \
+            services/dsh/backend/internal/http/delivery_proof_routes.go \
+            services/dsh/backend/internal/wlt/analytics_read.go \
+            services/dsh/backend/internal/wlt/analytics_read_test.go
+
+      - name: Compose OpenAPI and generate DSH client
+        run: |
+          pnpm --dir services/dsh openapi:verify
+          shasum -a 256 \
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+            services/dsh/clients/generated/dsh-api.ts \
+            > "${RUNNER_TEMP}/jrn032-first.sha256"
+
+      - name: Run analytics Go tests
+        working-directory: services/dsh/backend
+        run: go test ./internal/analytics
+
+      - name: Run WLT boundary Go tests
+        working-directory: services/dsh/backend
+        run: go test ./internal/wlt
+
+      - name: Run protected HTTP Go tests
+        working-directory: services/dsh/backend
+        run: go test ./internal/http
+
+      - name: Typecheck DSH surfaces
+        run: pnpm --dir services/dsh typecheck
+
+      - name: Typecheck control-panel runtime
+        run: pnpm --dir apps/control-panel/runtime typecheck
+
+      - name: Typecheck partner runtime
+        run: pnpm --dir apps/app-partner/runtime typecheck
+
+      - name: Run full-stack ownership guard
+        run: pnpm run guard:fullstack-boundary
+
+      - name: Run WLT financial ownership guard
+        run: pnpm run guard:wlt-financial-boundary
+
+      - name: Run repository contract lint
+        run: pnpm run contracts:lint
+
+      - name: Run focused DSH OpenAPI tests
+        run: pnpm --dir services/dsh openapi:test
+
+      - name: Build and validate Swagger publication
+        run: pnpm run swagger:build
+
+      - name: Verify deterministic generated artifacts
+        run: |
+          pnpm --dir services/dsh openapi:verify
+          shasum -a 256 \
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+            services/dsh/clients/generated/dsh-api.ts \
+            > "${RUNNER_TEMP}/jrn032-second.sha256"
+          diff -u "${RUNNER_TEMP}/jrn032-first.sha256" "${RUNNER_TEMP}/jrn032-second.sha256"
+
+      - name: Record and push final JRN-032 evidence
         env:
           JRN032_SOURCE_SHA: ca9d706a9e47fdf711e9babf1aa2aa0ddd4891d7
           JRN032_VERIFICATION_HEAD: verify/jrn-032-final2-8e71db5
-        run: bash tools/scripts/jrn032-final-verify.sh
+        run: bash tools/scripts/jrn032-record-closure.sh
