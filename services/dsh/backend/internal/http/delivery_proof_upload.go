@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"dsh-api/internal/dispatch"
 	"dsh-api/internal/media"
 	"dsh-api/internal/partnerdelivery"
 	"dsh-api/internal/store"
@@ -70,65 +69,11 @@ func (s *protectedStoreServer) removeDeliveryProofObject(r *http.Request, mediaR
 	}
 }
 
+// Compatibility endpoint for clients that still post to /pod. It delegates to
+// the governed JRN-018 command and can no longer mark an order delivered from
+// an arbitrary reference string.
 func (s *protectedStoreServer) handleSubmitDispatchPoDWithMedia(w http.ResponseWriter, r *http.Request) {
-	if !isMultipartRequest(r) {
-		s.handleSubmitDispatchPoD(w, r)
-		return
-	}
-
-	actor, ok := s.requireActor(w, r, "captain")
-	if !ok {
-		return
-	}
-	assignmentID := strings.TrimSpace(r.PathValue("assignmentId"))
-	if assignmentID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "assignmentId is required")
-		return
-	}
-
-	var eligible bool
-	if err := s.db.QueryRowContext(r.Context(), `
-		SELECT EXISTS (
-			SELECT 1
-			FROM dsh_assignments a
-			JOIN dsh_deliveries d ON d.assignment_id = a.id
-			WHERE a.id = $1::uuid
-			  AND a.captain_id = $2
-			  AND a.status = 'accepted'
-			  AND d.status = 'arrived_customer'
-		)`, assignmentID, actor.ID).Scan(&eligible); err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to verify delivery proof ownership")
-		return
-	}
-	if !eligible {
-		store.SendError(w, http.StatusConflict, "DISPATCH_STATE_CONFLICT", "proof upload requires the authenticated captain at arrived_customer state")
-		return
-	}
-
-	upload, uploaded := s.uploadDeliveryProofObject(w, r, "dsh-delivery-proofs", actor.ID)
-	if !uploaded {
-		return
-	}
-
-	var mediaRef string
-	if err := s.db.QueryRowContext(r.Context(), `
-		INSERT INTO dsh_media_refs
-			(storage_key, owner_actor_id, owner_actor_role, purpose, content_type, original_filename)
-		VALUES ($1,$2,'captain','delivery_proof',$3,$4)
-		RETURNING media_ref`, upload.storageKey, actor.ID, upload.contentType, upload.fileName).Scan(&mediaRef); err != nil {
-		s.removeDeliveryProofObject(r, "", upload.storageKey)
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register delivery proof")
-		return
-	}
-
-	assignment, err := dispatch.SubmitPoD(s.db, assignmentID, actor.ID, dispatch.PoDInput{
-		Method:    "photo",
-		Reference: mediaRef,
-	})
-	if err != nil {
-		s.removeDeliveryProofObject(r, mediaRef, upload.storageKey)
-	}
-	s.writeDispatchResult(w, http.StatusOK, assignment, err)
+	s.handleSubmitGovernedDeliveryProof(w, r)
 }
 
 func (s *protectedStoreServer) handlePartnerDeliveryProofWithMedia(w http.ResponseWriter, r *http.Request) {
