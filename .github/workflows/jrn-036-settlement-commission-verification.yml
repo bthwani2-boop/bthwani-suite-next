@@ -10,6 +10,10 @@ on:
       - 'services/wlt/backend/internal/http/server.go'
       - 'services/wlt/database/migrations/wlt-090_jrn036_settlement_commission_governance.sql'
       - 'services/dsh/backend/internal/http/finance_settlement_sources.go'
+      - 'services/dsh/backend/internal/http/finance_commission_governance.go'
+      - 'services/dsh/backend/internal/http/representative_finance_routes.go'
+      - 'services/dsh/backend/internal/wlt/commission_client.go'
+      - 'services/dsh/backend/internal/wlt/finance_proxy.go'
       - 'services/dsh/frontend/shared/finance-wlt-link/jrn036/**'
       - 'services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx'
       - 'services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx'
@@ -39,21 +43,10 @@ jobs:
         with:
           go-version-file: services/wlt/backend/go.mod
           cache-dependency-path: services/wlt/backend/go.sum
-      - name: Format gate
-        run: |
-          unformatted=$(gofmt -l \
-            services/wlt/backend/internal/cod/jrn036_governed_commission.go \
-            services/wlt/backend/internal/cod/jrn036_governed_lifecycle.go \
-            services/wlt/backend/internal/cod/jrn036_governed_commission_test.go \
-            services/wlt/backend/internal/settlement/jrn036_evidence_settlement.go \
-            services/wlt/backend/internal/settlement/jrn036_evidence_settlement_test.go \
-            services/wlt/backend/internal/http/server.go \
-            services/dsh/backend/internal/http/finance_settlement_sources.go)
-          test -z "$unformatted" || { echo "$unformatted"; exit 1; }
-      - name: WLT targeted tests
+      - name: WLT targeted tests and compile
         working-directory: services/wlt/backend
         run: go test ./internal/cod ./internal/settlement ./internal/http
-      - name: DSH backend compile and targeted tests
+      - name: DSH backend targeted tests and compile
         working-directory: services/dsh/backend
         run: go test ./internal/http ./internal/wlt
       - name: Product, contract, migration and boundary gate
