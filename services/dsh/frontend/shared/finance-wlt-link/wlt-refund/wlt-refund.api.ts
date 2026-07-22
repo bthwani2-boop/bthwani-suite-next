@@ -11,9 +11,6 @@ import type {
   RefundReconciliationInput,
 } from "./wlt-refund.types";
 
-// WLT owns the financial truth. Every browser/native surface reaches it only
-// through DSH, where actor, tenant, permission and privacy boundaries are
-// applied before the request crosses the service boundary.
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "wlt-refund");
 
 type WltRefundRaw = {
@@ -40,6 +37,10 @@ type WltRefundRaw = {
 };
 
 type RefundEnvelope = { readonly refund: WltRefundRaw; readonly replayed?: boolean };
+type RefundMutationEnvelope = Partial<RefundEnvelope> & {
+  readonly code?: string;
+  readonly message?: string;
+};
 type RefundListEnvelope = { readonly refunds: readonly WltRefundRaw[] };
 type RefundAuditEnvelope = { readonly auditEvents: readonly DshWltRefundAuditEvent[] };
 
@@ -87,6 +88,9 @@ function mapStatusLabel(status: DshWltRefundStatus): string {
 }
 
 function toView(raw: WltRefundRaw): DshWltRefundView {
+  if (!raw || typeof raw.id !== "string" || typeof raw.status !== "string") {
+    throw { code: "INVALID_REFUND_RESPONSE", message: "أعاد الخادم استجابة استرداد غير مكتملة." };
+  }
   const status = normalizeStatus(raw.status);
   return {
     id: raw.id,
@@ -197,15 +201,25 @@ export function rejectDshWltRefund(refundId: string, input: RefundDecisionInput,
 }
 
 export async function completeDshWltRefund(refundId: string, idempotencyKey: string): Promise<DshWltRefundResult<DshWltRefundView>> {
-  return asResult(async () => {
-    const body = await request<RefundEnvelope>(`/dsh/control-panel/finance/refunds/${encodeURIComponent(refundId)}/complete`, {
+  try {
+    const body = await request<RefundMutationEnvelope>(`/dsh/control-panel/finance/refunds/${encodeURIComponent(refundId)}/complete`, {
       method: "POST",
       body: {},
       idempotencyKey,
       correlationId: corrId("refund-complete"),
     });
-    return toView(body.refund);
-  });
+    if (body.refund) return { ok: true, value: toView(body.refund) };
+    if (body.code === "PROVIDER_RESULT_UNKNOWN") {
+      return {
+        ok: false,
+        kind: "provider_unknown",
+        message: body.message ?? "لم تُحسم نتيجة المزود، وتم فتح مصالحة مالية.",
+      };
+    }
+    return { ok: false, kind: "error", message: body.message ?? "أعاد الخادم نتيجة تنفيذ غير مكتملة." };
+  } catch (error) {
+    return { ok: false, ...classifyFailure(error) };
+  }
 }
 
 export async function reconcileDshWltRefund(
