@@ -38,7 +38,7 @@ func DisconnectCaptainMembership(
 	err = tx.QueryRowContext(ctx, `
 		SELECT m.id::TEXT,
 		       m.store_id,
-		       s.name,
+		       s.display_name,
 		       m.name,
 		       m.status,
 		       COALESCE(m.branch_assignment, ''),
