@@ -94,3 +94,29 @@ jobs:
           SELECT id,'committed','reserved','committed','order-ok','commit-ok','corr-ok' FROM wlt_promotion_funding_reservations WHERE external_reference='dsh:ok';
           COMMIT;
           SQL
+
+      - name: Prove unaudited transition is rolled back
+        shell: bash
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 <<'SQL'
+          INSERT INTO wlt_promotion_funding_reservations (
+            tenant_id,external_reference,checkout_intent_id,coupon_redemption_id,
+            coupon_id,client_id,platform_funded_minor_units,
+            partner_funded_minor_units,total_discount_minor_units,currency,
+            status,idempotency_key,correlation_id
+          ) VALUES ('tenant-1','dsh:blocked','checkout-blocked','redemption-blocked','coupon-1','client-1',1000,0,1000,'YER','reserved','reserve-blocked','corr-blocked');
+          SQL
+
+          if psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 <<'SQL'
+          BEGIN;
+          UPDATE wlt_promotion_funding_reservations
+             SET status='committed',order_id='order-blocked',committed_at=NOW(),updated_at=NOW()
+           WHERE external_reference='dsh:blocked';
+          COMMIT;
+          SQL
+          then
+            echo "Unaudited promotion-funding transition was accepted." >&2
+            exit 1
+          fi
+
+          test "$(psql -At -h localhost -U postgres -d wlt_jrn_028 -c "SELECT status FROM wlt_promotion_funding_reservations WHERE external_reference='dsh:blocked'")" = "reserved"
