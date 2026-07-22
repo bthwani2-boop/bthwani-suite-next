@@ -1,13 +1,15 @@
 import fs from "node:fs";
 
+const contractFile = "core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml";
+const generatedClientFile = "core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts";
 const requiredFiles = [
   "governance/product/contracts/jrn-040-platform-change-sets.product-truth.json",
   "core/platform-control/database/migrations/platform-005_jrn040_change_set_validation.sql",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_read_create.go",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_workflow.go",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_apply_rollback.go",
-  "core/platform-control/contracts/platform-control.openapi.yaml",
-  "core/platform-control/clients/generated/platform-control-api.ts",
+  contractFile,
+  generatedClientFile,
   "services/dsh/frontend/shared/platform/platform-control.api.ts",
   "services/dsh/frontend/shared/platform/use-platform-change-workflow-controller.tsx",
   "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx",
@@ -68,27 +70,31 @@ if (failures.length === 0) {
     "PLATFORM_SENSITIVE_VALUE_FORBIDDEN",
     "PLATFORM_ROLLBACK_REASON_REQUIRED",
   ]);
-  requireText("core/platform-control/contracts/platform-control.openapi.yaml", [
+  requireText(contractFile, [
     "RollbackPlatformChangeSetInput",
     "preconditionSnapshot",
     "validatedRevision",
     "itemValidatedAt",
+    "maxItems: 50",
   ]);
-  requireText("core/platform-control/clients/generated/platform-control-api.ts", [
+  requireText(generatedClientFile, [
     "RollbackPlatformChangeSetInput",
     "preconditionSnapshot",
     "validatedRevision",
     "itemValidatedAt",
+    "CreatePlatformChangeSetItemInput",
   ]);
   requireText("services/dsh/frontend/shared/platform/platform-control.api.ts", [
     "RollbackPlatformChangeSetInput",
     "rollbackPlatformChangeSet",
+    "body: input",
   ]);
   requireText("services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx", [
     "تفاصيل الطلب والفرق المتوقع",
     "سبب التراجع الإلزامي",
     "preconditionSnapshot",
     "proposedValue",
+    "draftItems",
   ]);
 }
 
