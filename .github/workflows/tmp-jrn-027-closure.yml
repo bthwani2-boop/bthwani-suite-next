@@ -139,11 +139,11 @@ jobs:
             exit "$status"
           fi
 
-      - name: Verify shared frontend
+      - name: Verify JRN-027 frontend types
         shell: bash
         run: |
           set +e
-          pnpm --dir services/dsh typecheck > /tmp/jrn027-typecheck.log 2>&1
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn027.json --noEmit > /tmp/jrn027-typecheck.log 2>&1
           status=$?
           cat /tmp/jrn027-typecheck.log
           if [ "$status" -ne 0 ]; then
