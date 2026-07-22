@@ -11,9 +11,12 @@ on:
       - "services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql"
       - "services/dsh/frontend/shared/administration/**"
       - "services/dsh/frontend/control-panel/administration/**"
+      - "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx"
+      - "services/dsh/frontend/control-panel/hr/CaptainDetailView.tsx"
       - "apps/control-panel/runtime/src/app/dsh/administration/page.tsx"
-      - "services/dsh/contracts/jrn-031-administration.openapi.yaml"
+      - "services/dsh/contracts/dsh.administration.openapi.yaml"
       - "services/dsh/tests/jrn-031-administration-governance.test.mjs"
+      - "services/dsh/tests/jrn-031-administration-maker-checker.test.mjs"
       - "services/dsh/tsconfig.jrn-031.json"
       - "governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json"
       - ".github/workflows/jrn-031-administration-governance.yml"
@@ -25,9 +28,12 @@ on:
       - "services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql"
       - "services/dsh/frontend/shared/administration/**"
       - "services/dsh/frontend/control-panel/administration/**"
+      - "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx"
+      - "services/dsh/frontend/control-panel/hr/CaptainDetailView.tsx"
       - "apps/control-panel/runtime/src/app/dsh/administration/page.tsx"
-      - "services/dsh/contracts/jrn-031-administration.openapi.yaml"
+      - "services/dsh/contracts/dsh.administration.openapi.yaml"
       - "services/dsh/tests/jrn-031-administration-governance.test.mjs"
+      - "services/dsh/tests/jrn-031-administration-maker-checker.test.mjs"
       - "services/dsh/tsconfig.jrn-031.json"
       - "governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json"
       - ".github/workflows/jrn-031-administration-governance.yml"
@@ -88,14 +94,17 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run JRN-031 full-stack governance guard
-        run: node --test services/dsh/tests/jrn-031-administration-governance.test.mjs
+      - name: Run JRN-031 governance guards
+        run: >-
+          node --test
+          services/dsh/tests/jrn-031-administration-maker-checker.test.mjs
+          services/dsh/tests/jrn-031-administration-governance.test.mjs
 
       - name: Typecheck the JRN-031 ownership graph
         run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-031.json --noEmit --pretty false
 
   contract:
-    name: Focused contract and product truth
+    name: Canonical contract and product truth
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact commit
@@ -115,8 +124,8 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Parse focused OpenAPI through the repository generator
-        run: pnpm --dir services/dsh exec openapi-typescript contracts/jrn-031-administration.openapi.yaml -o /tmp/jrn-031-administration-api.ts
+      - name: Parse canonical OpenAPI through the repository generator
+        run: pnpm --dir services/dsh exec openapi-typescript contracts/dsh.administration.openapi.yaml -o /tmp/jrn-031-administration-api.ts
 
       - name: Validate product truth JSON and repository whitespace
         run: |
