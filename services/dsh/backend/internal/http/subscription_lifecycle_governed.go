@@ -284,7 +284,7 @@ func validateGovernedSubscriptionPlan(
 	if product.Status != "active" || !wltProductMatchesPlan(product, plan) {
 		return nil, nil, errors.New("PLAN_TERMS_MISMATCH")
 	}
-	return plan, product, nil
+	return &plan, product, nil
 }
 
 func writeGovernedSubscriptionValidationError(w http.ResponseWriter, err error) {
@@ -658,8 +658,8 @@ func (s *protectedStoreServer) handleCancelGovernedSubscription(w http.ResponseW
 	}
 	updatedRows, _ := result.RowsAffected()
 	store.SendJSON(w, http.StatusOK, map[string]any{
-		"subscription": subscription,
-		"compensation": compensation,
+		"subscription":         subscription,
+		"compensation":         compensation,
 		"updatedPurchaseCount": updatedRows,
 	})
 }

@@ -447,10 +447,22 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1client~1special-requests~1{requestId}~1cancel"
   /dsh/client/special-requests/{requestId}/approve-quote:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1client~1special-requests~1{requestId}~1approve-quote"
+  /dsh/client/special-requests/{requestId}/information-exchange:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1client~1special-requests~1{requestId}~1information-exchange"
+  /dsh/client/special-requests/{requestId}/information-response:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1client~1special-requests~1{requestId}~1information-response"
+  /dsh/client/special-requests/{requestId}/execution:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1client~1special-requests~1{requestId}~1execution"
   /dsh/operator/special-requests:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1special-requests"
   /dsh/operator/special-requests/{requestId}:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}"
+  /dsh/operator/special-requests/{requestId}/information-exchange:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}~1information-exchange"
+  /dsh/operator/special-requests/{requestId}/information-request:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}~1information-request"
+  /dsh/operator/special-requests/{requestId}/execution:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}~1execution"
   /dsh/operator/special-requests/{requestId}/dispatch:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}~1dispatch"
   /dsh/partner/orders/{orderId}/partner-delivery:
@@ -1045,6 +1057,22 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestListResponse"
     DshUpdateSpecialRequest:
       $ref: "./components/schemas/common.schemas.yaml#/DshUpdateSpecialRequest"
+    DshSpecialRequestInformationExchange:
+      $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestInformationExchange"
+    DshSpecialRequestInformationExchangeResponse:
+      $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestInformationExchangeResponse"
+    DshSpecialRequestInformationMutationResponse:
+      $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestInformationMutationResponse"
+    DshRequestSpecialRequestInformation:
+      $ref: "./components/schemas/common.schemas.yaml#/DshRequestSpecialRequestInformation"
+    DshRespondSpecialRequestInformation:
+      $ref: "./components/schemas/common.schemas.yaml#/DshRespondSpecialRequestInformation"
+    DshSpecialRequestExecutionException:
+      $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestExecutionException"
+    DshSpecialRequestExecution:
+      $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestExecution"
+    DshSpecialRequestExecutionResponse:
+      $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestExecutionResponse"
     DshPartnerDeliveryTaskStatus:
       $ref: "./components/schemas/partner.schemas.yaml#/DshPartnerDeliveryTaskStatus"
     DshPartnerDeliveryTask:
