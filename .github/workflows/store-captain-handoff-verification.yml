@@ -49,7 +49,7 @@ permissions:
 
 concurrency:
   group: store-captain-handoff-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   source-contract-and-surfaces:
