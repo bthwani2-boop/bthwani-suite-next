@@ -2,8 +2,14 @@ package providers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -14,19 +20,65 @@ type Operator struct {
 }
 
 type Service struct {
-	repo *Repository
+	repo               *Repository
+	healthClient       *http.Client
+	now                func() time.Time
+	allowedHealthHosts map[string]struct{}
 }
 
 func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+	return &Service{
+		repo: repo,
+		healthClient: &http.Client{
+			Timeout: 4 * time.Second,
+			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		},
+		now:                time.Now,
+		allowedHealthHosts: parseAllowedHealthHosts(os.Getenv("PROVIDERS_HEALTH_PROBE_ALLOWED_HOSTS")),
+	}
+}
+
+func parseAllowedHealthHosts(raw string) map[string]struct{} {
+	hosts := map[string]struct{}{}
+	for _, value := range strings.Split(raw, ",") {
+		host := strings.ToLower(strings.TrimSpace(value))
+		if host != "" {
+			hosts[host] = struct{}{}
+		}
+	}
+	return hosts
+}
+
+func providerForRead(provider ExternalProvider) ExternalProvider {
+	provider.CredentialConfigured = credentialsConfigured(provider.Credentials)
+	provider.Credentials = nil
+	return provider
+}
+
+func credentialsConfigured(credentials json.RawMessage) bool {
+	trimmed := strings.TrimSpace(string(credentials))
+	return trimmed != "" && trimmed != "null" && trimmed != "{}"
 }
 
 func (s *Service) ListProviders(ctx context.Context, op Operator) ([]ExternalProvider, error) {
-	return s.repo.ListProviders(ctx)
+	providers, err := s.repo.ListProviders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for index := range providers {
+		providers[index] = providerForRead(providers[index])
+	}
+	return providers, nil
 }
 
 func (s *Service) GetProvider(ctx context.Context, id string, op Operator) (ExternalProvider, error) {
-	return s.repo.GetProvider(ctx, id)
+	provider, err := s.repo.GetProvider(ctx, id)
+	if err != nil {
+		return ExternalProvider{}, err
+	}
+	return providerForRead(provider), nil
 }
 
 func (s *Service) UpdateProvider(ctx context.Context, id string, input UpdateProviderInput, op Operator, correlationID string) (ExternalProvider, error) {
@@ -41,11 +93,15 @@ func (s *Service) UpdateProvider(ctx context.Context, id string, input UpdatePro
 	}
 
 	if err := s.repo.RecordAudit(ctx, op.ActorID, op.Role, id,
-		"provider.configured", before, after, "", correlationID); err != nil {
+		"provider.configured", providerForRead(before), providerForRead(after), "", correlationID); err != nil {
 		log.Printf("[providers] RecordAudit error in UpdateProvider: %v", err)
 	}
 
-	return after, nil
+	return providerForRead(after), nil
+}
+
+type healthProbeParameters struct {
+	HealthURL string `json:"healthUrl"`
 }
 
 func (s *Service) GetHealth(ctx context.Context) (ExternalProviderHealthResponse, error) {
@@ -54,38 +110,85 @@ func (s *Service) GetHealth(ctx context.Context) (ExternalProviderHealthResponse
 		return ExternalProviderHealthResponse{}, err
 	}
 
-	// Map each distinct kind to its most active provider state
-	statusMap := map[string]ExternalProviderStatus{}
-	messageMap := map[string]string{}
-
-	// Initialize default kinds
 	kinds := []string{"sms", "maps", "payment", "push", "email", "storage", "search", "fraud"}
-	for _, k := range kinds {
-		statusMap[k] = "not_configured"
-		messageMap[k] = "No provider configured for this service"
+	items := make([]ExternalProviderHealthItem, 0, len(kinds))
+	for _, kind := range kinds {
+		items = append(items, s.healthForKind(ctx, kind, list))
 	}
+	return ExternalProviderHealthResponse{Providers: items}, nil
+}
 
-	for _, p := range list {
-		if p.Active {
-			statusMap[p.Kind] = "healthy"
-			messageMap[p.Kind] = fmt.Sprintf("Active provider: %s", p.Code)
-		} else if statusMap[p.Kind] == "not_configured" {
-			statusMap[p.Kind] = "degraded"
-			messageMap[p.Kind] = fmt.Sprintf("Provider %s is inactive", p.Code)
+func (s *Service) healthForKind(ctx context.Context, kind string, providers []ExternalProvider) ExternalProviderHealthItem {
+	checkedAt := s.now().UTC()
+	hasConfigured := false
+	hasActive := false
+	bestStatus := StatusNotConfigured
+	message := "No provider configured for this service"
+
+	for _, provider := range providers {
+		if provider.Kind != kind {
+			continue
+		}
+		hasConfigured = true
+		if !provider.Active {
+			continue
+		}
+		hasActive = true
+		status, probeMessage := s.probeProviderHealth(ctx, provider)
+		if status == StatusHealthy {
+			return ExternalProviderHealthItem{Kind: kind, Status: string(status), CheckedAt: checkedAt, Message: probeMessage}
+		}
+		if bestStatus != StatusDegraded || status == StatusDegraded {
+			bestStatus = status
+			message = probeMessage
 		}
 	}
 
-	items := []ExternalProviderHealthItem{}
-	for _, k := range kinds {
-		items = append(items, ExternalProviderHealthItem{
-			Kind:      k,
-			Status:    string(statusMap[k]),
-			CheckedAt: time.Now(),
-			Message:   messageMap[k],
-		})
+	if !hasConfigured {
+		return ExternalProviderHealthItem{Kind: kind, Status: string(StatusNotConfigured), CheckedAt: checkedAt, Message: message}
+	}
+	if !hasActive {
+		return ExternalProviderHealthItem{Kind: kind, Status: string(StatusDegraded), CheckedAt: checkedAt, Message: "Configured providers are inactive"}
+	}
+	return ExternalProviderHealthItem{Kind: kind, Status: string(bestStatus), CheckedAt: checkedAt, Message: message}
+}
+
+func (s *Service) probeProviderHealth(ctx context.Context, provider ExternalProvider) (ExternalProviderStatus, string) {
+	var parameters healthProbeParameters
+	if len(provider.Parameters) > 0 {
+		if err := json.Unmarshal(provider.Parameters, &parameters); err != nil {
+			return StatusDegraded, "Provider health probe configuration is invalid"
+		}
+	}
+	probeURL := strings.TrimSpace(parameters.HealthURL)
+	if probeURL == "" {
+		return StatusDegraded, "Active provider has no governed health probe"
+	}
+	parsed, err := url.Parse(probeURL)
+	if err != nil || parsed.Hostname() == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") || parsed.User != nil {
+		return StatusDegraded, "Provider health probe URL is invalid"
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if _, allowed := s.allowedHealthHosts[host]; !allowed {
+		return StatusDegraded, "Provider health probe host is not allowlisted"
 	}
 
-	return ExternalProviderHealthResponse{Providers: items}, nil
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, parsed.String(), nil)
+	if err != nil {
+		return StatusDegraded, "Provider health probe request is invalid"
+	}
+	request.Header.Set("Accept", "application/json")
+	request.Header.Set("User-Agent", "bthwani-providers-health/1")
+	response, err := s.healthClient.Do(request)
+	if err != nil {
+		return StatusDown, "Provider health probe failed"
+	}
+	defer response.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4096))
+	if response.StatusCode >= http.StatusOK && response.StatusCode < http.StatusMultipleChoices {
+		return StatusHealthy, fmt.Sprintf("Active provider %s passed its health probe", provider.Code)
+	}
+	return StatusDown, fmt.Sprintf("Active provider %s health probe returned HTTP %d", provider.Code, response.StatusCode)
 }
 
 type ExternalProviderStatus string
