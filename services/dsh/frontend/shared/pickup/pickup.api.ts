@@ -115,6 +115,16 @@ export async function extendPickupWindow(
   );
 }
 
+export async function reschedulePickupWindow(
+  orderId: string,
+  input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
+): Promise<DshPickupSessionResponse> {
+  return request<DshPickupSessionResponse>(
+    `/dsh/operator/pickups/${encodeURIComponent(orderId)}/reschedule`,
+    { method: "POST", body: { ...input, commandId: corrId("pk-reschedule") } },
+  );
+}
+
 function classified(
   kind: ClassifiedPickupError["kind"],
   code: PickupErrorCode | undefined,
