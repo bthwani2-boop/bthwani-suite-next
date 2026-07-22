@@ -55,7 +55,7 @@ function commissionTypeLabel(type: string): string {
     platform_fee: "عمولة منصة",
     cod_fee: "عمولة تحصيل نقدي",
   };
-  return map[type] ?? type || "عمولة تشغيلية";
+  return (map[type] ?? type) || "عمولة تشغيلية";
 }
 
 export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
