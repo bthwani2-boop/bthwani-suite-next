@@ -70,6 +70,7 @@ func main() {
 	dshHttp.RegisterPartnerFleetMembershipRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerFleetOperatorRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterSupportMessageDeliveryRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterGovernedIncidentRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOrderRescueRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOrderJourneyRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterOrderCancellationRoutes(router, db, identityClient, wltClient, mediaProvider)
@@ -89,14 +90,7 @@ func main() {
 		mediaProvider,
 		pickupGuardedRouter,
 	)
-	governedIncidentRouter := dshHttp.GovernedIncidentMiddleware(
-		db,
-		identityClient,
-		wltClient,
-		mediaProvider,
-		deliveryExceptionGovernedRouter,
-	)
-	handler := dshHttp.CorsMiddleware(authMode, governedIncidentRouter)
+	handler := dshHttp.CorsMiddleware(authMode, deliveryExceptionGovernedRouter)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
 	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)
