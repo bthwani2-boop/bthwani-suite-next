@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TextInput } from 'react-native';
-import { Button, Screen, StateView, Text, colorRoles, spacing } from '@bthwani/ui-kit';
+import React, { useState } from "react";
+import { View, StyleSheet, ScrollView, TextInput } from "react-native";
+import { Button, Screen, StateView, Text, colorRoles, spacing } from "@bthwani/ui-kit";
 
 export type SheinFormSubmitInput = {
   readonly productUrl: string;
@@ -12,15 +12,16 @@ export type SheinFormSubmitInput = {
 
 type Props = {
   onBack: () => void;
+  onViewRequests?: () => void;
   onSubmit: (data: SheinFormSubmitInput) => Promise<boolean>;
 };
 
-export function SheinForm({ onBack, onSubmit }: Props) {
-  const [productUrl, setProductUrl] = useState('');
-  const [size, setSize] = useState('');
-  const [color, setColor] = useState('');
-  const [quantity, setQuantity] = useState('1');
-  const [notes, setNotes] = useState('');
+export function SheinForm({ onBack, onViewRequests, onSubmit }: Props) {
+  const [productUrl, setProductUrl] = useState("");
+  const [size, setSize] = useState("");
+  const [color, setColor] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [notes, setNotes] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -31,9 +32,9 @@ export function SheinForm({ onBack, onSubmit }: Props) {
       <Screen padded>
         <StateView
           title="تم استلام الطلب"
-          description="تم استلام طلب شي ان بنجاح وسنقوم بالتواصل معك قريباً."
-          actionLabel="العودة للرئيسية"
-          onActionPress={onBack}
+          description="تم استلام طلب شي إن بنجاح. تابع العرض وحالة الشراء والتوصيل من طلباتك الخاصة."
+          actionLabel="متابعة الطلب"
+          onActionPress={onViewRequests ?? onBack}
         />
       </Screen>
     );
@@ -42,15 +43,17 @@ export function SheinForm({ onBack, onSubmit }: Props) {
   return (
     <Screen padded>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.container}>
-        <Text role="headingSm" style={styles.title}>طلب من شي ان (SHEIN)</Text>
-        
+        <Text role="headingSm" style={styles.title}>طلب من شي إن (SHEIN)</Text>
+
         <View style={styles.formGroup}>
           <TextInput
-            placeholder="أدخل رابط المنتج من تطبيق شي ان"
+            placeholder="أدخل رابط المنتج من تطبيق شي إن"
             value={productUrl}
             onChangeText={setProductUrl}
             style={styles.input}
             textAlign="right"
+            autoCapitalize="none"
+            keyboardType="url"
           />
           <TextInput
             placeholder="مثال: M, L, 38"
@@ -98,7 +101,7 @@ export function SheinForm({ onBack, onSubmit }: Props) {
             onPress={async () => {
               const parsedQuantity = Number.parseInt(quantity, 10);
               if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-                setSubmitError('أدخل كمية صحيحة قبل إرسال الطلب.');
+                setSubmitError("أدخل كمية صحيحة قبل إرسال الطلب.");
                 return;
               }
               setIsSubmitting(true);
@@ -114,10 +117,10 @@ export function SheinForm({ onBack, onSubmit }: Props) {
                 if (ok) {
                   setSubmitted(true);
                 } else {
-                  setSubmitError('تعذر إرسال طلب شي ان. تحقق من الاتصال ثم حاول مرة أخرى.');
+                  setSubmitError("تعذر إرسال طلب شي إن. تحقق من الاتصال ثم حاول مرة أخرى.");
                 }
               } catch {
-                setSubmitError('تعذر إرسال طلب شي ان. تحقق من الاتصال ثم حاول مرة أخرى.');
+                setSubmitError("تعذر إرسال طلب شي إن. تحقق من الاتصال ثم حاول مرة أخرى.");
               } finally {
                 setIsSubmitting(false);
               }
@@ -138,7 +141,7 @@ const styles = StyleSheet.create({
   },
   title: {
     marginBottom: spacing[6],
-    textAlign: 'right',
+    textAlign: "right",
   },
   formGroup: {
     gap: spacing[4],
@@ -152,13 +155,13 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
-    writingDirection: 'rtl',
+    writingDirection: "rtl",
   },
   textArea: {
     minHeight: 96,
   },
   actions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing[3],
   },
   actionButton: {
@@ -167,6 +170,6 @@ const styles = StyleSheet.create({
   errorText: {
     color: colorRoles.danger,
     marginTop: spacing[3],
-    textAlign: 'right',
+    textAlign: "right",
   },
 });
