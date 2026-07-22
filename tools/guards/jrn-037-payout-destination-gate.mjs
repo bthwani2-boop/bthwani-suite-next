@@ -61,6 +61,12 @@ requireIncludes("services/wlt/database/migrations/wlt-092_jrn037_request_hash_sc
   "DROP INDEX IF EXISTS wlt_payout_requests_request_hash_uidx",
   "wlt_payout_requests_request_hash_idx",
 ]);
+requireIncludes("services/wlt/database/migrations/wlt-093_jrn037_payout_destination_reference.sql", [
+  "wlt_payout_requests_destination_fk",
+  "FOREIGN KEY (payout_destination_id)",
+  "ON DELETE RESTRICT",
+  "VALIDATE CONSTRAINT",
+]);
 
 const backend = requireIncludes("services/wlt/backend/internal/payout/jrn037_governed_payout.go", [
   "normalizeGovernedOwner",
@@ -71,9 +77,12 @@ const backend = requireIncludes("services/wlt/backend/internal/payout/jrn037_gov
   "HandleReconcilePayoutRequestJRN037",
   "MAKER_CHECKER_VIOLATION",
   "HELD_BALANCE_MISMATCH",
+  "RECONCILIATION_IN_PROGRESS",
+  "RowsAffected",
   "/financial/payout/status/",
   "wlt_jrn037_payout_reconciliations",
   "HandleListPayoutAuditJRN037",
+  "created_at::text",
 ]);
 if (!/input\.PayoutDestinationID[\s\S]*input\.AmountMinorUnits[\s\S]*input\.Currency/.test(backend)) {
   failures.push("payout request hash must bind destination, amount and currency");
@@ -109,6 +118,14 @@ requireIncludes("services/dsh/backend/internal/http/representative_finance_route
   "/dsh/control-panel/finance/payout-requests/{payoutId}/audit",
   "/dsh/control-panel/finance/payout-requests/{payoutId}/reconcile",
 ]);
+requireIncludes("services/dsh/backend/internal/http/server.go", [
+  '"GET /dsh/captain/finance/payouts", protected.handleCaptainPayoutRequestsJRN037',
+  '"POST /dsh/captain/finance/payouts", protected.handleCaptainCreatePayoutRequestJRN037',
+  '"GET /dsh/field/finance/payouts", protected.handleFieldPayoutRequestsJRN037',
+  '"POST /dsh/field/finance/payouts", protected.handleFieldCreatePayoutRequestJRN037',
+  '"GET /dsh/field/finance/payout-destinations", protected.handleFieldPayoutDestinationReadJRN037',
+  '"POST /dsh/field/finance/payout-destinations", protected.handleFieldPayoutDestinationUpsertJRN037',
+]);
 
 requireIncludes("services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml", [
   "operationId: upsertWltTypedPayoutDestination",
@@ -129,6 +146,7 @@ requireIncludes("services/dsh/frontend/shared/finance-wlt-link/jrn037/payout.api
   "payoutDestinationId",
 ]);
 requireIncludes("services/dsh/frontend/shared/finance-wlt-link/jrn037/PayoutDestinationPanel.tsx", [
+  "DestinationTextField",
   "البيانات الحساسة مشفرة في WLT",
   "أضف وجهة صرف أولاً",
   "الأموال ما زالت محجوزة",
@@ -154,8 +172,21 @@ requireIncludes("services/dsh/frontend/control-panel/finance/PayoutRequestsPanel
 ]);
 requireIncludes("services/wlt/database/tests/jrn-037-payout-destination-invariants.sql", [
   "one active destination per typed owner index",
+  "wlt_payout_requests_destination_fk",
   "wlt_jrn037_payout_transition_trigger",
   "unsupported owner actor type was accepted",
+]);
+requireIncludes("tools/verification/jrn-037-runtime-smoke.sh", [
+  "PAYOUT_DESTINATION_FORBIDDEN",
+  "payoutDestination.id",
+  "provider_result_unknown",
+  "reconcile",
+  "wlt_jrn037_payout_reconciliations",
+  "JRN-037 runtime smoke passed",
+]);
+requireIncludes("infra/docker/financial-simulators/wiremock/mappings/payout-status-success.json", [
+  "/financial/payout/status/",
+  '"status": "processed"',
 ]);
 
 if (failures.length > 0) {
