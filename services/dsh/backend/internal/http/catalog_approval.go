@@ -112,18 +112,13 @@ func (s *protectedStoreServer) handleListPartnerCatalogApprovals(w http.Response
 }
 
 // GET /dsh/catalog-approvals/{recordId}
+// Full metadata and audit are restricted to the governed control-panel reader.
 func (s *protectedStoreServer) handleGetCatalogApproval(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "operator", "partner")
+	_, ok := s.requirePermission(w, r, "control-panel", CatalogApprovalPermissionRead, "operator")
 	if !ok {
 		return
 	}
-	var rec catalogapproval.Record
-	var err error
-	if actor.Role == "partner" {
-		rec, err = catalogapproval.GetOwned(s.db, r.PathValue("recordId"), actor.ID)
-	} else {
-		rec, err = catalogapproval.Get(s.db, r.PathValue("recordId"))
-	}
+	rec, err := catalogapproval.Get(s.db, r.PathValue("recordId"))
 	if errors.Is(err, catalogapproval.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "catalog approval record not found")
 		return
