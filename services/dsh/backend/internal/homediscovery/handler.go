@@ -53,6 +53,12 @@ func HandleHomeDiscovery(db *sql.DB) http.HandlerFunc {
 			sendError(w, http.StatusServiceUnavailable, "PROMOS_UNAVAILABLE", "promos unavailable")
 			return
 		}
+		marketingPromos, err := ListMarketingPromos(ctx, db, query)
+		if err != nil {
+			sendError(w, http.StatusServiceUnavailable, "MARKETING_PROJECTION_UNAVAILABLE", "marketing projection unavailable")
+			return
+		}
+		promos = append(marketingPromos, promos...)
 
 		categories, err := ListCategories(ctx, db)
 		if err != nil {
