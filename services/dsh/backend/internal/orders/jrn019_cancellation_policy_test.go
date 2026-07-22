@@ -9,8 +9,8 @@ func TestSystemCancellationReasonsMapToExplicitTerminalStates(t *testing.T) {
 		want       OrderStatus
 	}{
 		{name: "no driver", reasonCode: "no_driver", want: StatusCancelledNoDriver},
-		{name: "payment failed", reasonCode: "payment_failed", want: StatusFailedPayment},
-		{name: "dispatch failed", reasonCode: "dispatch_failed", want: StatusFailedDispatch},
+		{name: "payment failed", reasonCode: "payment_issue", want: StatusFailedPayment},
+		{name: "dispatch failed", reasonCode: "operational_failure", want: StatusFailedDispatch},
 	}
 
 	for _, test := range tests {
