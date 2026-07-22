@@ -3,17 +3,23 @@ import fs from "node:fs";
 const productTruthFile = "governance/product/contracts/jrn-040-platform-change-sets.product-truth.json";
 const contractFile = "core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml";
 const generatedClientFile = "core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts";
+const httpProofFile = "core/platform-control/backend/internal/http/jrn040_workflow_handlers_test.go";
 const requiredFiles = [
   productTruthFile,
   "core/platform-control/database/migrations/platform-005_jrn040_change_set_validation.sql",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_read_create.go",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_workflow.go",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_apply_rollback.go",
+  "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go",
+  "core/platform-control/backend/internal/platformcontrol/repository_integration_test.go",
+  "core/platform-control/backend/internal/http/workflow_handlers.go",
+  httpProofFile,
   contractFile,
   generatedClientFile,
   "services/dsh/frontend/shared/platform/platform-control.api.ts",
   "services/dsh/frontend/shared/platform/use-platform-change-workflow-controller.tsx",
   "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx",
+  ".github/workflows/jrn-040-platform-change-sets-verification.yml",
 ];
 
 const failures = [];
@@ -69,11 +75,23 @@ if (failures.length === 0) {
     "valuesRedacted",
     "maxGovernedChangeSetItems",
   ]);
+  requireText("core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go", [
+    "ErrTargetConflict",
+    "ErrVersionConflict",
+    "ErrSensitiveValue",
+    "restore legacy metadata",
+  ]);
   requireText("core/platform-control/backend/internal/http/workflow_handlers.go", [
     "RollbackChangeSetInput",
     "PLATFORM_TARGET_CONFLICT",
     "PLATFORM_SENSITIVE_VALUE_FORBIDDEN",
     "PLATFORM_ROLLBACK_REASON_REQUIRED",
+  ]);
+  requireText(httpProofFile, [
+    "PLATFORM_ROLLBACK_REASON_REQUIRED",
+    "PLATFORM_SENSITIVE_VALUE_FORBIDDEN",
+    "PLATFORM_TARGET_CONFLICT",
+    "PLATFORM_MAKER_CHECKER_VIOLATION",
   ]);
   requireText(contractFile, [
     "RollbackPlatformChangeSetInput",
@@ -100,6 +118,12 @@ if (failures.length === 0) {
     "preconditionSnapshot",
     "proposedValue",
     "draftItems",
+  ]);
+  requireText(".github/workflows/jrn-040-platform-change-sets-verification.yml", [
+    "cancel-in-progress: true",
+    "Run targeted Go tests",
+    "Typecheck generated contract and control-panel binding",
+    "Verify JRN-040 contract and binding gate",
   ]);
 }
 
