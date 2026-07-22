@@ -6,6 +6,21 @@ on:
     paths:
       - "tools/scripts/close-jrn-027-remaining-slices.py"
       - ".github/workflows/tmp-jrn-027-closure.yml"
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened]
+    paths:
+      - "governance/product/contracts/jrn-027-subscriptions-commercial-benefits.product-truth.json"
+      - "services/dsh/backend/**"
+      - "services/dsh/contracts/**"
+      - "services/dsh/database/migrations/dsh-103_jrn_027_subscription_lifecycle.sql"
+      - "services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx"
+      - "services/dsh/frontend/shared/marketing/**"
+      - "services/wlt/backend/**"
+      - "services/wlt/contracts/wlt.commercial.openapi.yaml"
+      - "services/wlt/database/migrations/wlt-033_jrn027_subscription_lifecycle.sql"
+      - "tools/scripts/close-jrn-027-remaining-slices.py"
+      - ".github/workflows/tmp-jrn-027-closure.yml"
   workflow_dispatch:
 
 permissions:
@@ -82,6 +97,7 @@ jobs:
         run: git diff --check
 
       - name: Commit verified JRN-027 closure
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         run: |
           git config user.name "bthwani-journey-closure"
           git config user.email "actions@users.noreply.github.com"
