@@ -266,6 +266,22 @@ type TransitionInput struct {
 	CorrelationID  string `json:"-"`
 }
 
+func completedTransitionMatches(current *Reservation, target string, input TransitionInput) bool {
+	if current == nil || current.Status != target {
+		return false
+	}
+	switch target {
+	case "committed":
+		return current.OrderID != nil && *current.OrderID == input.OrderID
+	case "released":
+		return current.ReleaseReason == input.Reason
+	case "reversed":
+		return current.OrderID != nil && *current.OrderID == input.OrderID && current.ReversalReason == input.Reason
+	default:
+		return false
+	}
+}
+
 func transition(ctx context.Context, db *sql.DB, reservationID, target string, input TransitionInput) (*Reservation, error) {
 	input.TenantID = strings.TrimSpace(input.TenantID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
@@ -299,6 +315,9 @@ func transition(ctx context.Context, db *sql.DB, reservationID, target string, i
 		return nil, err
 	}
 	if current.Status == target {
+		if !completedTransitionMatches(current, target, input) {
+			return nil, ErrConflict
+		}
 		return current, tx.Commit()
 	}
 	allowed := (current.Status == "reserved" && (target == "committed" || target == "released")) ||
