@@ -11,7 +11,7 @@ const mustContain = (path, patterns) => {
 const paths = {
   productTruth: "governance/product/contracts/jrn-035-financial-refunds.product-truth.json",
   contract: "services/wlt/contracts/jrn-035-refund-governance.json",
-  migration: "services/wlt/database/migrations/wlt-035_jrn_035_refund_governance.sql",
+  migration: "services/wlt/database/migrations/wlt-037_jrn_035_refund_governance.sql",
   core: "services/wlt/backend/internal/refund/governed_refund.go",
   tenantGuard: "services/wlt/backend/internal/refund/tenant_guard.go",
   router: "services/wlt/backend/internal/http/server.go",
@@ -56,7 +56,10 @@ test("database persists amount, audit, provider and readback evidence", () => {
     /requested_by_operator_id/, /approved_by_operator_id/, /provider_idempotency_key/,
     /provider_unknown/, /wlt_refund_audit_events/, /wlt_reconciliation_cases_operation_chk/,
     /wlt_dsh_outbox_events_refund_event_idx/, /partially_refunded/, /wlt_refunds_maker_checker_chk/,
+    /NEW\.amount_minor_units <= 0 OR NEW\.amount_minor_units > v_amount/,
+    /wlt_sync_refund_provider_reference/,
   ]);
+  assert.doesNotMatch(read(paths.migration), /NEW\.amount_minor_units := v_amount/);
   assert.doesNotMatch(read(paths.migration), /CREATE UNIQUE INDEX[^;]*payment_session_id\s*\)\s*WHERE status IN \('requested','approved'\)/s);
 });
 
