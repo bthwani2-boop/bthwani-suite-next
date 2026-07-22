@@ -29,9 +29,9 @@ BEGIN
       USING ERRCODE = '23514';
   END IF;
 
-  -- Preserve the legacy suppression rule only for UI status commands. Fleet
-  -- lifecycle events represent security and membership facts independently of
-  -- whether the team-member status changed in that exact transaction.
+  -- Preserve the legacy suppression rule only for UI status commands.
+  -- Fleet lifecycle events represent security and membership facts independently
+  -- of whether the team-member status changed in that exact transaction.
   IF NEW.action_label IN (
     'pause',
     'activate',
