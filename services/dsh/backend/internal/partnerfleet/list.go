@@ -8,10 +8,11 @@ import (
 )
 
 type expiredConnectionProjection struct {
-	TeamMemberID     string
-	CreatedByActorID string
-	CourierName      string
-	MemberStatus     string
+	ConnectionID      string
+	TeamMemberID      string
+	CreatedByActorID  string
+	CourierName       string
+	MemberStatus      string
 }
 
 func expirePendingStoreCodes(ctx context.Context, db *sql.DB, storeID string) error {
@@ -29,7 +30,8 @@ func expirePendingStoreCodes(ctx context.Context, db *sql.DB, storeID string) er
 		  AND connection.status = 'pending'
 		  AND connection.expires_at <= NOW()
 		  AND member.id = connection.team_member_id
-		RETURNING connection.team_member_id,
+		RETURNING connection.id::TEXT,
+		          connection.team_member_id,
 		          connection.created_by_actor_id,
 		          member.name,
 		          member.status`, storeID)
@@ -40,7 +42,7 @@ func expirePendingStoreCodes(ctx context.Context, db *sql.DB, storeID string) er
 	expired := make([]expiredConnectionProjection, 0)
 	for rows.Next() {
 		var item expiredConnectionProjection
-		if err := rows.Scan(&item.TeamMemberID, &item.CreatedByActorID, &item.CourierName, &item.MemberStatus); err != nil {
+		if err := rows.Scan(&item.ConnectionID, &item.TeamMemberID, &item.CreatedByActorID, &item.CourierName, &item.MemberStatus); err != nil {
 			rows.Close()
 			return err
 		}
@@ -57,9 +59,9 @@ func expirePendingStoreCodes(ctx context.Context, db *sql.DB, storeID string) er
 	for _, item := range expired {
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO dsh_store_team_member_actions
-				(member_id, store_id, action_label, from_status, to_status, actor_id)
-			VALUES ($1, $2, 'expire_captain_connection_code', $3, $3, 'system')`,
-			item.TeamMemberID, storeID, item.MemberStatus); err != nil {
+				(member_id, store_id, action_label, from_status, to_status, actor_id, idempotency_key)
+			VALUES ($1, $2, 'expire_captain_connection_code', $3, $3, 'system', $4)`,
+			item.TeamMemberID, storeID, item.MemberStatus, auditIdempotencyKey("expire", item.ConnectionID)); err != nil {
 			return err
 		}
 		if _, err := tx.ExecContext(ctx, `
