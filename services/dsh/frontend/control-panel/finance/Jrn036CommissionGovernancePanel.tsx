@@ -39,7 +39,7 @@ const inputStyle = {
   padding: "0.65rem",
   borderRadius: "0.5rem",
   border: `1px solid ${lightThemeColors.borderColor}`,
-  background: lightThemeColors.surfaceColor,
+  background: lightThemeColors.surface,
 };
 
 function formatMoney(amountMinorUnits: number, currency: string): string {
@@ -78,480 +78,232 @@ function validatePolicy(policy: Jrn036CommissionPolicyInput): string | null {
 
 export function Jrn036CommissionGovernancePanel() {
   const [commissions, setCommissions] = useState<readonly Jrn036Commission[]>([]);
+  const [selectedCommissionId, setSelectedCommissionId] = useState("");
+  const [busyAction, setBusyAction] = useState<BusyAction>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [busy, setBusy] = useState<BusyAction>(null);
-  const [savingPolicy, setSavingPolicy] = useState(false);
+  const [operatorNote, setOperatorNote] = useState("");
+  const [adjustedAmountMinorUnits, setAdjustedAmountMinorUnits] = useState("");
+  const [actorType, setActorType] = useState<Jrn036RepresentativeActorType>("field");
+  const [actorId, setActorId] = useState("");
   const [policy, setPolicy] = useState<Jrn036CommissionPolicyInput>({
-    policyId: "field-visit-default",
-    commissionType: "field_visit_fee",
-    sourceType: "field_visit",
-    beneficiaryActorType: "field",
-    calculationType: "fixed",
-    fixedAmountMinorUnits: 1000,
+    policyId: "",
+    commissionType: "order_commission",
+    sourceType: "order",
+    calculationType: "percentage",
     basisPoints: 0,
+    fixedAmountMinorUnits: 0,
     minimumAmountMinorUnits: 0,
     maximumAmountMinorUnits: null,
     currency: "YER",
-    status: "active",
+    active: true,
     changeReason: "",
   });
 
-  const policyError = useMemo(() => validatePolicy(policy), [policy]);
-
-  const load = useCallback(async () => {
+  const loadCommissions = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await request<{ readonly commissions: Jrn036Commission[] }>(
-        "/dsh/control-panel/finance/commissions?limit=100",
+      const query = actorId.trim()
+        ? `?actorType=${encodeURIComponent(actorType)}&actorId=${encodeURIComponent(actorId.trim())}`
+        : "";
+      const body = await request<{ readonly commissions?: readonly Jrn036Commission[] }>(
+        `/dsh/control-panel/finance/jrn036/commissions${query}`,
       );
-      setCommissions(response.commissions ?? []);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "تعذر تحميل العمولات.");
+      const next = body.commissions ?? [];
+      setCommissions(next);
+      setSelectedCommissionId((current) => current || next[0]?.id || "");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "تعذر تحميل العمولات.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [actorId, actorType]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadCommissions();
+  }, [loadCommissions]);
 
-  const run = useCallback(
-    async (
-      commission: Jrn036Commission,
-      action: "confirm" | "settle" | "reject" | "reverse" | "adjust",
-    ) => {
-      setBusy({ commissionId: commission.id, action });
+  const selectedCommission = useMemo(
+    () => commissions.find((commission) => commission.id === selectedCommissionId) ?? null,
+    [commissions, selectedCommissionId],
+  );
+
+  const execute = useCallback(
+    async (commissionId: string, action: string, operation: () => Promise<Jrn036Commission>) => {
+      setBusyAction({ commissionId, action });
       setError(null);
       setNotice(null);
       try {
-        if (action === "confirm") await confirmJrn036Commission(commission.id);
-        if (action === "settle") await settleJrn036Commission(commission.id);
-        if (action === "reject") {
-          const reason = window.prompt("سبب رفض العمولة:")?.trim();
-          if (!reason) return;
-          await rejectJrn036Commission(commission.id, reason);
-        }
-        if (action === "reverse") {
-          const reason = window.prompt("سبب عكس العمولة المسوّاة:")?.trim();
-          if (!reason) return;
-          await reverseJrn036Commission(commission.id, reason);
-        }
-        if (action === "adjust") {
-          const rawDelta = window
-            .prompt("قيمة التعديل بالوحدات الصغرى؛ استخدم قيمة سالبة للخصم:")
-            ?.trim();
-          const reason = window.prompt("سبب التعديل:")?.trim();
-          const deltaMinorUnits = Number(rawDelta);
-          if (!reason || !Number.isSafeInteger(deltaMinorUnits) || deltaMinorUnits === 0) {
-            setError("قيمة التعديل يجب أن تكون عددًا صحيحًا غير صفري مع سبب إلزامي.");
-            return;
-          }
-          await adjustJrn036Commission(commission.id, deltaMinorUnits, reason);
-        }
-        setNotice("تم تنفيذ الإجراء وتحديث الحقيقة المالية من WLT.");
-        await load();
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "تعذر تنفيذ الإجراء المالي.");
+        const updated = await operation();
+        setCommissions((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+        setNotice("تم تنفيذ الإجراء المالي المحكوم بنجاح.");
+      } catch (actionError) {
+        setError(actionError instanceof Error ? actionError.message : "تعذر تنفيذ الإجراء المالي.");
       } finally {
-        setBusy(null);
+        setBusyAction(null);
       }
     },
-    [load],
+    [],
   );
 
-  const savePolicy = useCallback(async () => {
+  const submitPolicy = useCallback(async () => {
     const validationError = validatePolicy(policy);
-    setError(validationError);
-    setNotice(null);
-    if (validationError) return;
-
-    setSavingPolicy(true);
-    try {
-      await upsertJrn036CommissionPolicy({
-        ...policy,
-        policyId: policy.policyId.trim(),
-        commissionType: policy.commissionType.trim(),
-        sourceType: policy.sourceType.trim(),
-        currency: policy.currency.trim().toUpperCase(),
-        changeReason: policy.changeReason.trim(),
-      });
-      setNotice("تم حفظ إصدار سياسة العمولة في WLT مع سبب التغيير.");
-      setPolicy((current) => ({ ...current, changeReason: "" }));
-      await load();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "تعذر حفظ سياسة العمولة.");
-    } finally {
-      setSavingPolicy(false);
+    if (validationError) {
+      setError(validationError);
+      return;
     }
-  }, [load, policy]);
+    setError(null);
+    setNotice(null);
+    try {
+      await upsertJrn036CommissionPolicy(policy);
+      setNotice("تم حفظ سياسة العمولة المحكومة.");
+    } catch (policyError) {
+      setError(policyError instanceof Error ? policyError.message : "تعذر حفظ سياسة العمولة.");
+    }
+  }, [policy]);
 
   return (
-    <Card style={{ padding: "1.5rem", marginBottom: "1rem" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: "1rem",
-          flexWrap: "wrap",
-        }}
-      >
-        <div>
-          <Text role="titleMd">حوكمة العمولات — JRN-036</Text>
-          <Text role="body" tone="muted">
-            WLT يحسب القيمة من الدليل وإصدار السياسة. تعرض القائمة آخر 100 سجل حاكم دون حساب محلي.
-          </Text>
-        </div>
-        <Button
-          label={loading ? "جارٍ التحديث…" : "تحديث"}
-          tone="secondary"
-          disabled={loading}
-          onPress={() => void load()}
-        />
-      </div>
-
-      {error ? (
-        <Card
-          style={{
-            padding: "0.75rem",
-            marginTop: "1rem",
-            borderLeft: `4px solid ${lightThemeColors.danger}`,
-          }}
-        >
-          <Text role="body" tone="danger">
-            {error}
-          </Text>
-        </Card>
-      ) : null}
-      {notice ? (
-        <Card
-          style={{
-            padding: "0.75rem",
-            marginTop: "1rem",
-            borderLeft: `4px solid ${lightThemeColors.success}`,
-          }}
-        >
-          <Text role="body" tone="success">
-            {notice}
-          </Text>
-        </Card>
-      ) : null}
-
-      <Card style={{ padding: "1rem", marginTop: "1rem" }}>
-        <Text role="body" style={{ fontWeight: "bold" }}>
-          إصدار سياسة عمولة جديد
+    <div dir="rtl" style={{ display: "grid", gap: "1rem" }}>
+      <Card style={{ padding: "1rem" }}>
+        <Text role="titleMd">حوكمة عمولات الرحلة 036</Text>
+        <Text role="body" tone="muted">
+          إدارة سياسات العمولة، التأكيد، التعديل، التسوية، الرفض والعكس عبر DSH مع بقاء الحقيقة المالية في WLT.
         </Text>
-        <Text role="caption" tone="muted">
-          يُحفظ كل تعديل كإصدار مستقل. لا يُفعّل زر الحفظ حتى تصبح الصيغة المالية كاملة وصالحة.
-        </Text>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "0.75rem",
-            marginTop: "0.75rem",
-          }}
-        >
-          <label>
-            <Text role="caption">معرف السياسة</Text>
-            <input
-              aria-label="معرف سياسة العمولة"
-              value={policy.policyId}
-              onChange={(event) => setPolicy({ ...policy, policyId: event.target.value })}
-              style={inputStyle}
-            />
-          </label>
-          <label>
-            <Text role="caption">نوع العمولة</Text>
-            <input
-              aria-label="نوع العمولة"
-              value={policy.commissionType}
-              onChange={(event) => setPolicy({ ...policy, commissionType: event.target.value })}
-              style={inputStyle}
-            />
-          </label>
-          <label>
-            <Text role="caption">نوع المصدر</Text>
-            <input
-              aria-label="نوع مصدر العمولة"
-              value={policy.sourceType}
-              onChange={(event) => setPolicy({ ...policy, sourceType: event.target.value })}
-              style={inputStyle}
-            />
-          </label>
-          <label>
-            <Text role="caption">المستفيد</Text>
-            <select
-              aria-label="نوع مستفيد العمولة"
-              value={policy.beneficiaryActorType}
-              onChange={(event) =>
-                setPolicy({
-                  ...policy,
-                  beneficiaryActorType: event.target.value as Jrn036RepresentativeActorType,
-                })
-              }
-              style={inputStyle}
-            >
-              <option value="partner">شريك</option>
-              <option value="captain">كابتن</option>
-              <option value="field">ميداني</option>
-            </select>
-          </label>
-          <label>
-            <Text role="caption">طريقة الحساب</Text>
-            <select
-              aria-label="طريقة حساب العمولة"
-              value={policy.calculationType}
-              onChange={(event) =>
-                setPolicy({
-                  ...policy,
-                  calculationType: event.target.value as "fixed" | "basis_points",
-                })
-              }
-              style={inputStyle}
-            >
-              <option value="fixed">ثابت</option>
-              <option value="basis_points">نقاط أساس</option>
-            </select>
-          </label>
-          <label>
-            <Text role="caption">القيمة الثابتة</Text>
-            <input
-              aria-label="قيمة العمولة الثابتة بالوحدات الصغرى"
-              type="number"
-              min={0}
-              value={policy.fixedAmountMinorUnits}
-              disabled={policy.calculationType !== "fixed"}
-              onChange={(event) =>
-                setPolicy({ ...policy, fixedAmountMinorUnits: Number(event.target.value) })
-              }
-              style={inputStyle}
-            />
-          </label>
-          <label>
-            <Text role="caption">نقاط الأساس</Text>
-            <input
-              aria-label="نقاط أساس العمولة"
-              type="number"
-              min={0}
-              max={10000}
-              value={policy.basisPoints}
-              disabled={policy.calculationType !== "basis_points"}
-              onChange={(event) =>
-                setPolicy({ ...policy, basisPoints: Number(event.target.value) })
-              }
-              style={inputStyle}
-            />
-          </label>
-          <label>
-            <Text role="caption">الحد الأدنى</Text>
-            <input
-              aria-label="الحد الأدنى للعمولة"
-              type="number"
-              min={0}
-              value={policy.minimumAmountMinorUnits}
-              onChange={(event) =>
-                setPolicy({ ...policy, minimumAmountMinorUnits: Number(event.target.value) })
-              }
-              style={inputStyle}
-            />
-          </label>
-          <label>
-            <Text role="caption">الحد الأعلى — اختياري</Text>
-            <input
-              aria-label="الحد الأعلى للعمولة"
-              type="number"
-              min={0}
-              value={policy.maximumAmountMinorUnits ?? ""}
-              onChange={(event) =>
-                setPolicy({
-                  ...policy,
-                  maximumAmountMinorUnits:
-                    event.target.value.trim() === "" ? null : Number(event.target.value),
-                })
-              }
-              style={inputStyle}
-            />
-          </label>
-          <label>
-            <Text role="caption">العملة</Text>
-            <input
-              aria-label="عملة سياسة العمولة"
-              value={policy.currency}
-              onChange={(event) => setPolicy({ ...policy, currency: event.target.value })}
-              style={inputStyle}
-            />
-          </label>
-          <label>
-            <Text role="caption">الحالة</Text>
-            <select
-              aria-label="حالة سياسة العمولة"
-              value={policy.status}
-              onChange={(event) =>
-                setPolicy({ ...policy, status: event.target.value as "active" | "inactive" })
-              }
-              style={inputStyle}
-            >
-              <option value="active">فعالة</option>
-              <option value="inactive">غير فعالة</option>
-            </select>
-          </label>
-          <label>
-            <Text role="caption">سبب التغيير</Text>
-            <input
-              aria-label="سبب تغيير سياسة العمولة"
-              value={policy.changeReason}
-              onChange={(event) => setPolicy({ ...policy, changeReason: event.target.value })}
-              style={inputStyle}
-            />
-          </label>
-        </div>
-        {policyError ? (
-          <Text role="caption" tone="danger" style={{ marginTop: "0.75rem" }}>
-            {policyError}
-          </Text>
-        ) : null}
-        <div style={{ marginTop: "0.75rem" }}>
-          <Button
-            label={savingPolicy ? "جارٍ حفظ إصدار السياسة…" : "حفظ إصدار السياسة"}
-            tone="primary"
-            disabled={savingPolicy || policyError !== null}
-            onPress={() => void savePolicy()}
+      </Card>
+
+      {error ? <Card style={{ padding: "1rem" }}><Text role="body" tone="danger">{error}</Text></Card> : null}
+      {notice ? <Card style={{ padding: "1rem" }}><Text role="body" tone="success">{notice}</Text></Card> : null}
+
+      <Card style={{ padding: "1rem", display: "grid", gap: "0.75rem" }}>
+        <Text role="titleSm">فلترة العمولات حسب الممثل</Text>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem" }}>
+          <select
+            aria-label="نوع الممثل"
+            value={actorType}
+            onChange={(event) => setActorType(event.target.value as Jrn036RepresentativeActorType)}
+            style={inputStyle}
+          >
+            <option value="field">مندوب ميداني</option>
+            <option value="captain">كابتن</option>
+          </select>
+          <input
+            aria-label="معرف الممثل"
+            value={actorId}
+            onChange={(event) => setActorId(event.target.value)}
+            placeholder="actor-id"
+            style={inputStyle}
           />
+          <Button label="تحديث" tone="secondary" onPress={() => void loadCommissions()} />
         </div>
       </Card>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.75rem",
-          marginTop: "1rem",
-        }}
-      >
-        {loading ? (
-          <Text role="body" tone="muted">
-            جارٍ تحميل العمولات…
-          </Text>
-        ) : null}
-        {!loading && commissions.length === 0 ? (
-          <Text role="body" tone="muted">
-            لا توجد عمولات مسجلة.
-          </Text>
-        ) : null}
+      <Card style={{ padding: "1rem", display: "grid", gap: "0.75rem" }}>
+        <Text role="titleSm">قائمة العمولات</Text>
+        {loading ? <Text role="body">جارٍ تحميل العمولات...</Text> : null}
+        {!loading && commissions.length === 0 ? <Text role="body" tone="muted">لا توجد عمولات مطابقة.</Text> : null}
         {commissions.map((commission) => {
-          const meta = STATUS_META[commission.status] ?? {
-            label: commission.status,
-            tone: "neutral" as const,
-          };
-          const disabled = busy !== null;
+          const meta = STATUS_META[commission.status] ?? { label: commission.status, tone: "neutral" as const };
           return (
-            <Card
+            <button
               key={commission.id}
+              type="button"
+              onClick={() => setSelectedCommissionId(commission.id)}
               style={{
-                padding: "1rem",
-                borderLeft: `4px solid ${
-                  commission.status === "settled"
-                    ? lightThemeColors.success
-                    : commission.status === "rejected" || commission.status === "reversed"
-                      ? lightThemeColors.danger
-                      : lightThemeColors.warning
-                }`,
+                ...inputStyle,
+                cursor: "pointer",
+                textAlign: "right",
+                borderColor: selectedCommissionId === commission.id ? lightThemeColors.primary : lightThemeColors.borderColor,
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  gap: "1rem",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "0.5rem",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <Text role="body" style={{ fontWeight: "bold" }}>
-                      {commission.id}
-                    </Text>
-                    <Badge label={meta.label} tone={meta.tone} />
-                  </div>
-                  <Text role="caption">
-                    {commission.beneficiaryActorType}: {commission.beneficiaryActorId}
-                  </Text>
-                  <Text role="caption">
-                    المصدر: {commission.sourceType}/{commission.sourceId}
-                  </Text>
-                  <Text role="caption">
-                    النوع: {commission.commissionType} · القيمة:{" "}
-                    {formatMoney(commission.amountMinorUnits, commission.currency)}
-                  </Text>
-                  <Text role="caption">
-                    السياسة: {commission.commissionPolicyId ?? "غير متاحة"} · آخر تحديث:{" "}
-                    {commission.updatedAt || commission.createdAt}
-                  </Text>
-                  {commission.resolutionNote ? (
-                    <Text role="caption" tone="danger">
-                      السبب: {commission.resolutionNote}
-                    </Text>
-                  ) : null}
-                </div>
-                <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                  {commission.status === "pending" ? (
-                    <Button
-                      label="تأكيد"
-                      tone="success"
-                      disabled={disabled}
-                      onPress={() => void run(commission, "confirm")}
-                    />
-                  ) : null}
-                  {commission.status === "confirmed" ? (
-                    <Button
-                      label="تسوية"
-                      tone="primary"
-                      disabled={disabled}
-                      onPress={() => void run(commission, "settle")}
-                    />
-                  ) : null}
-                  {commission.status === "pending" ? (
-                    <Button
-                      label="رفض"
-                      tone="danger"
-                      disabled={disabled}
-                      onPress={() => void run(commission, "reject")}
-                    />
-                  ) : null}
-                  {commission.status === "settled" ? (
-                    <Button
-                      label="عكس"
-                      tone="danger"
-                      disabled={disabled}
-                      onPress={() => void run(commission, "reverse")}
-                    />
-                  ) : null}
-                  {commission.status === "pending" || commission.status === "confirmed" ? (
-                    <Button
-                      label="تعديل"
-                      tone="secondary"
-                      disabled={disabled}
-                      onPress={() => void run(commission, "adjust")}
-                    />
-                  ) : null}
-                </div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "center" }}>
+                <span>{commission.actorType} · {commission.actorId}</span>
+                <Badge label={meta.label} tone={meta.tone} />
               </div>
-            </Card>
+              <div>{formatMoney(commission.amountMinorUnits, commission.currency)}</div>
+            </button>
           );
         })}
-      </div>
-    </Card>
+      </Card>
+
+      {selectedCommission ? (
+        <Card style={{ padding: "1rem", display: "grid", gap: "0.75rem" }}>
+          <Text role="titleSm">إجراءات العمولة المحددة</Text>
+          <Text role="body">{selectedCommission.id} · {formatMoney(selectedCommission.amountMinorUnits, selectedCommission.currency)}</Text>
+          <textarea
+            aria-label="ملاحظة المشغل"
+            value={operatorNote}
+            onChange={(event) => setOperatorNote(event.target.value)}
+            placeholder="ملاحظة الإجراء"
+            style={{ ...inputStyle, minHeight: "5rem" }}
+          />
+          <input
+            aria-label="المبلغ المعدل بالوحدات الصغرى"
+            value={adjustedAmountMinorUnits}
+            onChange={(event) => setAdjustedAmountMinorUnits(event.target.value)}
+            placeholder="adjusted amount minor units"
+            inputMode="numeric"
+            style={inputStyle}
+          />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            <Button
+              label="تأكيد"
+              tone="primary"
+              disabled={Boolean(busyAction)}
+              onPress={() => void execute(selectedCommission.id, "confirm", () => confirmJrn036Commission(selectedCommission.id, operatorNote))}
+            />
+            <Button
+              label="تعديل"
+              tone="secondary"
+              disabled={Boolean(busyAction) || !Number.isSafeInteger(Number(adjustedAmountMinorUnits))}
+              onPress={() => void execute(selectedCommission.id, "adjust", () => adjustJrn036Commission(selectedCommission.id, Number(adjustedAmountMinorUnits), operatorNote))}
+            />
+            <Button
+              label="تسوية"
+              tone="secondary"
+              disabled={Boolean(busyAction)}
+              onPress={() => void execute(selectedCommission.id, "settle", () => settleJrn036Commission(selectedCommission.id, operatorNote))}
+            />
+            <Button
+              label="رفض"
+              tone="danger"
+              disabled={Boolean(busyAction)}
+              onPress={() => void execute(selectedCommission.id, "reject", () => rejectJrn036Commission(selectedCommission.id, operatorNote))}
+            />
+            <Button
+              label="عكس"
+              tone="danger"
+              disabled={Boolean(busyAction)}
+              onPress={() => void execute(selectedCommission.id, "reverse", () => reverseJrn036Commission(selectedCommission.id, operatorNote))}
+            />
+          </div>
+        </Card>
+      ) : null}
+
+      <Card style={{ padding: "1rem", display: "grid", gap: "0.75rem" }}>
+        <Text role="titleSm">سياسة العمولة</Text>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: "0.75rem" }}>
+          <input aria-label="معرف السياسة" value={policy.policyId} onChange={(event) => setPolicy((current) => ({ ...current, policyId: event.target.value }))} placeholder="policy-id" style={inputStyle} />
+          <input aria-label="نوع العمولة" value={policy.commissionType} onChange={(event) => setPolicy((current) => ({ ...current, commissionType: event.target.value }))} placeholder="commission type" style={inputStyle} />
+          <input aria-label="نوع المصدر" value={policy.sourceType} onChange={(event) => setPolicy((current) => ({ ...current, sourceType: event.target.value }))} placeholder="source type" style={inputStyle} />
+          <select aria-label="نوع الحساب" value={policy.calculationType} onChange={(event) => setPolicy((current) => ({ ...current, calculationType: event.target.value as Jrn036CommissionPolicyInput["calculationType"] }))} style={inputStyle}>
+            <option value="percentage">نسبة</option>
+            <option value="fixed">ثابت</option>
+          </select>
+          <input aria-label="نقاط الأساس" type="number" value={policy.basisPoints} onChange={(event) => setPolicy((current) => ({ ...current, basisPoints: Number(event.target.value) }))} style={inputStyle} />
+          <input aria-label="القيمة الثابتة" type="number" value={policy.fixedAmountMinorUnits} onChange={(event) => setPolicy((current) => ({ ...current, fixedAmountMinorUnits: Number(event.target.value) }))} style={inputStyle} />
+          <input aria-label="الحد الأدنى" type="number" value={policy.minimumAmountMinorUnits} onChange={(event) => setPolicy((current) => ({ ...current, minimumAmountMinorUnits: Number(event.target.value) }))} style={inputStyle} />
+          <input aria-label="الحد الأعلى" type="number" value={policy.maximumAmountMinorUnits ?? ""} onChange={(event) => setPolicy((current) => ({ ...current, maximumAmountMinorUnits: event.target.value ? Number(event.target.value) : null }))} style={inputStyle} />
+          <input aria-label="العملة" value={policy.currency} onChange={(event) => setPolicy((current) => ({ ...current, currency: event.target.value }))} style={inputStyle} />
+          <input aria-label="سبب التغيير" value={policy.changeReason} onChange={(event) => setPolicy((current) => ({ ...current, changeReason: event.target.value }))} placeholder="change reason" style={inputStyle} />
+        </div>
+        <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <input type="checkbox" checked={policy.active} onChange={(event) => setPolicy((current) => ({ ...current, active: event.target.checked }))} />
+          <span>السياسة فعالة</span>
+        </label>
+        <Button label="حفظ السياسة" tone="primary" onPress={() => void submitPolicy()} />
+      </Card>
+    </div>
   );
 }
