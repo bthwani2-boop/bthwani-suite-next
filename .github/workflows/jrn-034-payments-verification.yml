@@ -1,4 +1,4 @@
-name: JRN-034 Payments Verification — Immutable Ubuntu Candidate
+name: JRN-034 Payments Verification — Immutable Ubuntu Diagnostics
 
 on:
   workflow_dispatch:
@@ -50,7 +50,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-034-payments-ubuntu-${{ github.ref }}
+  group: jrn-034-payments-ubuntu-diagnostics-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -110,9 +110,28 @@ jobs:
       - name: Test DSH WLT payment boundary
         working-directory: services/dsh/backend
         run: go test ./internal/wlt -count=1
-      - name: Build DSH payment proxy and router
-        working-directory: services/dsh/backend
-        run: go build ./internal/wlt ./internal/http
+      - name: Capture DSH payment proxy and router build diagnostics
+        id: dsh_build
+        shell: bash
+        run: |
+          set +e
+          cd services/dsh/backend
+          go build ./internal/wlt ./internal/http > "$GITHUB_WORKSPACE/jrn034-dsh-build.log" 2>&1
+          status=$?
+          cat "$GITHUB_WORKSPACE/jrn034-dsh-build.log"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Upload DSH build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-034-dsh-build-diagnostics-${{ github.sha }}
+          path: jrn034-dsh-build.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce DSH build result
+        if: steps.dsh_build.outputs.status != '0'
+        run: exit 1
 
   frontend:
     name: Shared brain and payment operations surface
