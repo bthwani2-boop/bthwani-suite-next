@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 
 	"dsh-api/internal/coupons"
 )
@@ -48,6 +49,28 @@ var partnerOfferTypes = map[string]bool{"discount": true, "free-delivery": true,
 var partnerOfferStatuses = map[string]bool{
 	"inbound": true, "review": true, "marketing-ready": true, "published": true,
 	"paused": true, "rejected": true, "archived": true,
+}
+
+func partnerOfferTransitionAllowed(from, to string) bool {
+	if from == to {
+		return true
+	}
+	switch from {
+	case "inbound":
+		return to == "review" || to == "rejected"
+	case "review":
+		return to == "marketing-ready" || to == "rejected"
+	case "marketing-ready":
+		return to == "published" || to == "rejected"
+	case "published":
+		return to == "paused"
+	case "paused":
+		return to == "published"
+	case "rejected", "archived":
+		return false
+	default:
+		return false
+	}
 }
 
 var partnerOfferSelectCols = `id::TEXT, title, partner_name, store_id::TEXT, store_label,
@@ -131,7 +154,11 @@ type CreatePartnerOfferInput struct {
 }
 
 func CreatePartnerOffer(db *sql.DB, in CreatePartnerOfferInput) (PartnerOffer, error) {
-	if strings.TrimSpace(in.Title) == "" || strings.TrimSpace(in.ValueLabel) == "" || strings.TrimSpace(in.StoreID) == "" {
+	in.Title = strings.TrimSpace(in.Title)
+	in.ValueLabel = strings.TrimSpace(in.ValueLabel)
+	in.StoreID = strings.TrimSpace(in.StoreID)
+	in.Eligibility = strings.TrimSpace(in.Eligibility)
+	if in.Title == "" || in.ValueLabel == "" || in.StoreID == "" {
 		return PartnerOffer{}, ErrInvalid
 	}
 	if in.OfferType == "" {
@@ -152,9 +179,9 @@ func CreatePartnerOffer(db *sql.DB, in CreatePartnerOfferInput) (PartnerOffer, e
 			offer_type,status,source,value_label,eligibility,created_by,created_by_surface)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'inbound','partner',$9,$10,$11,$12)
 		RETURNING `+partnerOfferSelectCols,
-		strings.TrimSpace(in.Title), in.PartnerName, in.StoreID, in.StoreLabel,
-		in.ProductID, in.ProductLabel, in.Category, in.OfferType,
-		strings.TrimSpace(in.ValueLabel), in.Eligibility, in.CreatedBy, in.CreatedBySurface))
+		in.Title, strings.TrimSpace(in.PartnerName), in.StoreID, strings.TrimSpace(in.StoreLabel),
+		strings.TrimSpace(in.ProductID), strings.TrimSpace(in.ProductLabel), strings.TrimSpace(in.Category), in.OfferType,
+		in.ValueLabel, in.Eligibility, in.CreatedBy, in.CreatedBySurface))
 	if err != nil {
 		return PartnerOffer{}, err
 	}
@@ -200,6 +227,9 @@ func UpdatePartnerOffer(db *sql.DB, id string, in UpdatePartnerOfferInput) (Part
 	}
 	if in.Eligibility != nil {
 		next.Eligibility = strings.TrimSpace(*in.Eligibility)
+		if next.Eligibility == "" {
+			return PartnerOffer{}, ErrInvalid
+		}
 	}
 	if in.ActiveFromDate != nil {
 		next.ActiveFromDate = strings.TrimSpace(*in.ActiveFromDate)
@@ -217,13 +247,23 @@ func UpdatePartnerOffer(db *sql.DB, id string, in UpdatePartnerOfferInput) (Part
 		next.CouponID = strings.TrimSpace(*in.CouponID)
 	}
 	if in.Status != nil {
-		if !partnerOfferStatuses[*in.Status] {
-			return PartnerOffer{}, ErrInvalid
+		if !partnerOfferStatuses[*in.Status] || !partnerOfferTransitionAllowed(before.Status, *in.Status) {
+			return PartnerOffer{}, ErrInvalidTransition
 		}
 		next.Status = *in.Status
 	}
 	if next.Status == "rejected" && next.RejectionReason == "" {
 		return PartnerOffer{}, ErrRejectionReasonRequired
+	}
+	if next.ActiveFromDate != "" || next.ActiveToDate != "" {
+		if validateCampaignDates(next.ActiveFromDate, next.ActiveToDate) != nil {
+			return PartnerOffer{}, ErrInvalid
+		}
+	}
+	if next.Status == "marketing-ready" || next.Status == "published" {
+		if validateCampaignActivationWindow(next.ActiveFromDate, next.ActiveToDate, time.Now()) != nil {
+			return PartnerOffer{}, ErrInvalid
+		}
 	}
 	if next.Status == "published" {
 		passed, reason, gateErr := ValidateTarget(db, "store", before.StoreID)
