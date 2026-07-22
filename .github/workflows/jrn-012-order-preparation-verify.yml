@@ -36,7 +36,7 @@ on:
       - "services/dsh/tsconfig.jrn-012.json"
 
 permissions:
-  contents: read
+  contents: write
   statuses: write
 
 concurrency:
@@ -217,6 +217,94 @@ jobs:
           path: jrn012-typecheck.log
           retention-days: 3
           if-no-files-found: warn
+
+  sync-canonical-registry:
+    name: Synchronize JRN-012 canonical registry state
+    if: success() && github.actor != 'github-actions[bot]'
+    needs:
+      - static-slice-closure
+      - go-lifecycle
+      - database-invariants
+      - contract-typescript-binding
+    runs-on: ubuntu-latest
+    env:
+      VERIFIED_COMMIT: ${{ github.sha }}
+      VERIFIED_RUN_ID: ${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sambassam
+          fetch-depth: 0
+      - name: Apply verified registry projection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          path = Path('governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace(
+              '| JRN-012 | قبول الطلب وتحضيره وجاهزيته | DSH | NEEDS_EVIDENCE |',
+              '| JRN-012 | قبول الطلب وتحضيره وجاهزيته | DSH | READY_FOR_REVIEW |',
+          )
+          verified_commit = os.environ['VERIFIED_COMMIT']
+          verified_run_id = os.environ['VERIFIED_RUN_ID']
+          block = f'''### JRN-012 — قبول الطلب وتحضيره وجاهزيته
+
+tracking_status: READY_FOR_REVIEW
+decision: READY_FOR_REVIEW
+last_verified_commit: `{verified_commit}`
+workflow_run_id: `{verified_run_id}`
+status_context: `jrn-012/order-preparation`
+technical_slices: `FS-01..FS-18 COMPLETE`
+owner_services: `DSH`
+required_surfaces: `app-partner`, `app-client`, `app-captain`, `control-panel`, `dsh-backend`, `dsh-postgresql`, `wlt-boundary`
+excluded_surfaces: `app-field`, `webapp`, `website` — لا تملك خطوة تشغيلية في قبول الطلب أو تحضيره.
+applicable_evidence_scopes: `product`, `static`, `database`, `backend`, `contract`, `frontend`, `security`, `finance-boundary`, `accessibility`, `governance`, `ci`, `release`
+open_code_gaps: `[]`
+approval_tracking_issue: `#103`
+independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security؛ Finance boundary؛ Release/Production.
+
+الأسطح المرشحة: `app-partner`, `app-client`, `app-captain`, `control-panel`.
+
+- سجل عمل الطلبات المملوك للخادم وallowedActions السيادية.
+- قبول الطلب أو رفضه مع السبب والصلاحية.
+- بدء التحضير وتثبيت وقت التجهيز المتوقع.
+- تعديل تقدير التجهيز مع السبب وسجل النسخ.
+- العناصر الناقصة والاستبدالات وقرار العميل ومشاكل الطلب.
+- مخاطر SLA والتنبيه الدائم والإقرار والتصعيد التشغيلي.
+- إعلان الجاهزية ومنع الإعلان في حالة غير صالحة أو مع مشكلة مفتوحة.
+- إظهار الجاهزية والمشكلات للشريك والكابتن والعميل والمشغل من حقيقة DSH واحدة.
+- التدقيق وoutbox وحدود WLT دون حساب مالي في DSH.
+- سجل الشرائح: `services/dsh/contracts/jrn-012-slice-closure.json`.
+- Product Truth: `governance/product/contracts/jrn-012-order-preparation-readiness.product-truth.json`.
+- دليل الإغلاق التقني: `governance/evidence/JRN-012_FINAL_TECHNICAL_CLOSURE.md`.
+- بوابة نفس الالتزام: `jrn-012/order-preparation`.
+- جميع الشرائح الوظيفية و`FS-01..FS-18` مغلقة تقنيًا؛ الموافقات البشرية المستقلة فقط متبقية قبل `CLOSED_WITH_EVIDENCE`.
+'''
+          pattern = re.compile(r'### JRN-012 — قبول الطلب وتحضيره وجاهزيته\n.*?(?=\n### JRN-013 —)', re.S)
+          text, count = pattern.subn(block.rstrip(), text)
+          if count != 1:
+              raise SystemExit(f'expected one JRN-012 block, replaced {count}')
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit registry projection
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md; then
+            echo "Registry already synchronized"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md
+          git commit -m "governance(jrn-012): synchronize verified registry state"
+          git pull --rebase origin sambassam
+          git push origin HEAD:sambassam
 
   publish-verification-status:
     name: FS-17/18 publish governed closure
