@@ -1,0 +1,6 @@
+JRN-033 FINAL REMOTE VERIFICATION
+repository_mode=REMOTE_ONLY
+branch=sambassam
+scope=wallets+ledger+tenant-isolation+multi-surface+runtime+visual
+truth_owner=WLT
+triggered_at=2026-07-22
