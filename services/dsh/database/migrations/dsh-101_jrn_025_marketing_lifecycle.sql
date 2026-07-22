@@ -39,6 +39,12 @@ CREATE INDEX IF NOT EXISTS idx_dsh_marketing_campaigns_version
   WHERE archived_at IS NULL;
 
 ALTER TABLE dsh_partner_offers
+  DROP CONSTRAINT IF EXISTS dsh_partner_offers_eligibility_chk;
+ALTER TABLE dsh_partner_offers
+  ADD CONSTRAINT dsh_partner_offers_eligibility_chk
+  CHECK (eligibility IN ('all','client'));
+
+ALTER TABLE dsh_partner_offers
   DROP CONSTRAINT IF EXISTS dsh_partner_offers_schedule_chk;
 ALTER TABLE dsh_partner_offers
   ADD CONSTRAINT dsh_partner_offers_schedule_chk
