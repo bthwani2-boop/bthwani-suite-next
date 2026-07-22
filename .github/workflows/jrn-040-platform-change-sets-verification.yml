@@ -1,7 +1,6 @@
 name: JRN-040 Platform Change Sets Verification
 
 on:
-  workflow_dispatch:
   push:
     branches: [sambassam]
     paths: &jrn040_paths
@@ -28,8 +27,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-040-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: jrn-040-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   verify:
