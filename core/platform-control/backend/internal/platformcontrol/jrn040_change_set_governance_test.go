@@ -73,10 +73,14 @@ func TestJRN040ConflictStaleSnapshotAndMetadataRollback(t *testing.T) {
 		t.Skip("DATABASE_URL is required for platform-control integration tests")
 	}
 	db, err := sql.Open("postgres", databaseURL)
-	if err != nil { t.Fatalf("open database: %v", err) }
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
 	defer db.Close()
 	ctx := context.Background()
-	if err := db.PingContext(ctx); err != nil { t.Fatalf("ping database: %v", err) }
+	if err := db.PingContext(ctx); err != nil {
+		t.Fatalf("ping database: %v", err)
+	}
 	resetPlatformTables(t, db)
 	defer resetPlatformTables(t, db)
 
@@ -89,24 +93,34 @@ VALUES
 	}
 
 	service := NewService(NewRepository(db))
-	create := func(title string) ChangeSet {
+	create := func(title string, expectedRevision int64) ChangeSet {
 		changeSet, createErr := service.CreateChangeSet(ctx, "maker", []string{"platform-operator"}, title, CreateChangeSetInput{
-			Title: title, Reason: "reason", ImpactAssessment: "impact", RollbackPlan: "restore",
+			Title:            title,
+			Reason:           "reason",
+			ImpactAssessment: "impact",
+			RollbackPlan:     "restore",
 			Items: []CreateChangeSetItemInput{{
-				TargetType: ChangeTargetVariable, TargetKey: "JRN040_TARGET", OwnerService: "new-owner",
-				ScopeType: "global", ValueType: "integer", Classification: "internal",
-				ExpectedRevision: 1, ProposedValue: json.RawMessage(`7`),
+				TargetType:       ChangeTargetVariable,
+				TargetKey:        "JRN040_TARGET",
+				OwnerService:     "new-owner",
+				ScopeType:        "global",
+				ValueType:        "integer",
+				Classification:   "internal",
+				ExpectedRevision: expectedRevision,
+				ProposedValue:    json.RawMessage(`7`),
 			}},
 		})
-		if createErr != nil { t.Fatalf("create %s: %v", title, createErr) }
+		if createErr != nil {
+			t.Fatalf("create %s: %v", title, createErr)
+		}
 		return changeSet
 	}
 
-	first := create("first")
+	first := create("first", 1)
 	if _, err := service.ValidateChangeSet(ctx, first.ID, "maker", nil, "first"); err != nil {
 		t.Fatalf("validate first: %v", err)
 	}
-	second := create("second")
+	second := create("second", 1)
 	if _, err := service.ValidateChangeSet(ctx, second.ID, "maker", nil, "second"); !errors.Is(err, ErrTargetConflict) {
 		t.Fatalf("expected active target conflict, got %v", err)
 	}
@@ -137,7 +151,7 @@ VALUES
 		t.Fatalf("rollback did not restore metadata: owner=%s type=%s class=%s status=%s value=%s revision=%d", owner, valueType, classification, status, string(valueRaw), revision)
 	}
 
-	stale := create("stale")
+	stale := create("stale", revision)
 	if _, err := service.ValidateChangeSet(ctx, stale.ID, "maker", nil, "stale"); err != nil {
 		t.Fatalf("validate stale candidate: %v", err)
 	}
