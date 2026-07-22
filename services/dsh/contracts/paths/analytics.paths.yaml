@@ -84,6 +84,7 @@
   get:
     operationId: getDshPreparationSlaAnalytics
     summary: Preparation timing and SLA compliance derived from accepted and ready timestamps.
+    description: Use period or the from/to pair, never both. Date values are inclusive calendar dates; date-time values are exact instants.
     tags: [DshAnalytics]
     security:
       - bearerAuth: []
@@ -93,10 +94,16 @@
         schema: { type: string, enum: [today, week, month], default: today }
       - name: from
         in: query
-        schema: { type: string, format: date-time }
+        schema:
+          oneOf:
+            - { type: string, format: date }
+            - { type: string, format: date-time }
       - name: to
         in: query
-        schema: { type: string, format: date-time }
+        schema:
+          oneOf:
+            - { type: string, format: date }
+            - { type: string, format: date-time }
       - name: storeId
         in: query
         schema: { type: string }
@@ -114,6 +121,7 @@
   get:
     operationId: getDshCaptainPerformanceAnalytics
     summary: Captain assignment acceptance and completion performance.
+    description: Use period or the from/to pair, never both. Date values are inclusive calendar dates; date-time values are exact instants.
     tags: [DshAnalytics]
     security:
       - bearerAuth: []
@@ -123,10 +131,16 @@
         schema: { type: string, enum: [today, week, month], default: today }
       - name: from
         in: query
-        schema: { type: string, format: date-time }
+        schema:
+          oneOf:
+            - { type: string, format: date }
+            - { type: string, format: date-time }
       - name: to
         in: query
-        schema: { type: string, format: date-time }
+        schema:
+          oneOf:
+            - { type: string, format: date }
+            - { type: string, format: date-time }
       - name: limit
         in: query
         schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
@@ -144,6 +158,7 @@
   get:
     operationId: getDshFieldPerformanceAnalytics
     summary: Field visit completion and escalation performance.
+    description: Use period or the from/to pair, never both. Date values are inclusive calendar dates; date-time values are exact instants.
     tags: [DshAnalytics]
     security:
       - bearerAuth: []
@@ -153,10 +168,16 @@
         schema: { type: string, enum: [today, week, month], default: today }
       - name: from
         in: query
-        schema: { type: string, format: date-time }
+        schema:
+          oneOf:
+            - { type: string, format: date }
+            - { type: string, format: date-time }
       - name: to
         in: query
-        schema: { type: string, format: date-time }
+        schema:
+          oneOf:
+            - { type: string, format: date }
+            - { type: string, format: date-time }
       - name: limit
         in: query
         schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
@@ -174,6 +195,7 @@
   get:
     operationId: getDshOrderAnalyticsDrilldown
     summary: Read-only drill-down from analytics to source order records.
+    description: Use period or the from/to pair, never both. Date values are inclusive calendar dates; date-time values are exact instants.
     tags: [DshAnalytics]
     security:
       - bearerAuth: []
@@ -183,10 +205,16 @@
         schema: { type: string, enum: [today, week, month], default: today }
       - name: from
         in: query
-        schema: { type: string, format: date-time }
+        schema:
+          oneOf:
+            - { type: string, format: date }
+            - { type: string, format: date-time }
       - name: to
         in: query
-        schema: { type: string, format: date-time }
+        schema:
+          oneOf:
+            - { type: string, format: date }
+            - { type: string, format: date-time }
       - name: storeId
         in: query
         schema: { type: string }
@@ -231,6 +259,7 @@
   get:
     operationId: exportDshOperationalAnalyticsCsv
     summary: Export the governed operational analytics window as CSV.
+    description: Uses the same filters and permission as the JSON reads. Use period or the from/to pair, never both.
     tags: [DshAnalytics]
     security:
       - bearerAuth: []
@@ -240,10 +269,16 @@
         schema: { type: string, enum: [today, week, month], default: today }
       - name: from
         in: query
-        schema: { type: string, format: date-time }
+        schema:
+          oneOf:
+            - { type: string, format: date }
+            - { type: string, format: date-time }
       - name: to
         in: query
-        schema: { type: string, format: date-time }
+        schema:
+          oneOf:
+            - { type: string, format: date }
+            - { type: string, format: date-time }
       - name: storeId
         in: query
         schema: { type: string }
