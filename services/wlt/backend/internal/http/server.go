@@ -50,16 +50,18 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/payment-sessions/{paymentSessionId}/cancel-for-order", gate(serviceAuth(payment.HandleTenantScopedPaymentSession(db, payment.HandleGovernedSessionCancellation(db)))))
 	mux.HandleFunc("POST /wlt/provider/webhooks/payment", gate(payment.HandlePaymentProviderWebhook(db)))
 
-	// Refund routes are service-authenticated and tenant-scoped. The trusted
-	// X-Tenant-ID must own the referenced refund before any read or mutation.
-	mux.HandleFunc("POST /wlt/refunds", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleCreateGovernedRefund(db)))))
+	// Refund routes are service-authenticated, tenant-scoped and mutation-
+	// idempotent. The receipt wrapper claims Idempotency-Key before the business
+	// handler, replays the exact stored response and blocks changed payloads or
+	// concurrent duplicates from reaching provider/ledger side effects.
+	mux.HandleFunc("POST /wlt/refunds", gate(serviceAuth(refund.RequireTenantScope(db, refund.RequireMutationIdempotency(db, "create", refund.HandleCreateGovernedRefund(db))))))
 	mux.HandleFunc("GET /wlt/refunds/{refundId}", readGate(refund.RequireTenantScope(db, refund.HandleGetGovernedRefund(db))))
 	mux.HandleFunc("GET /wlt/refunds", readGate(refund.RequireTenantScope(db, refund.HandleListGovernedRefunds(db))))
 	mux.HandleFunc("GET /wlt/refunds/{refundId}/audit", readGate(refund.RequireTenantScope(db, refund.HandleListGovernedRefundAudit(db))))
-	mux.HandleFunc("POST /wlt/refunds/{refundId}/approve", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleApproveGovernedRefund(db)))))
-	mux.HandleFunc("POST /wlt/refunds/{refundId}/complete", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleCompleteGovernedRefundDurable(db)))))
-	mux.HandleFunc("POST /wlt/refunds/{refundId}/reject", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleRejectGovernedRefund(db)))))
-	mux.HandleFunc("POST /wlt/refunds/{refundId}/reconcile", gate(serviceAuth(refund.RequireTenantScope(db, refund.HandleReconcileGovernedRefund(db)))))
+	mux.HandleFunc("POST /wlt/refunds/{refundId}/approve", gate(serviceAuth(refund.RequireTenantScope(db, refund.RequireMutationIdempotency(db, "approve", refund.HandleApproveGovernedRefund(db))))))
+	mux.HandleFunc("POST /wlt/refunds/{refundId}/complete", gate(serviceAuth(refund.RequireTenantScope(db, refund.RequireMutationIdempotency(db, "complete", refund.HandleCompleteGovernedRefundDurable(db))))))
+	mux.HandleFunc("POST /wlt/refunds/{refundId}/reject", gate(serviceAuth(refund.RequireTenantScope(db, refund.RequireMutationIdempotency(db, "reject", refund.HandleRejectGovernedRefund(db))))))
+	mux.HandleFunc("POST /wlt/refunds/{refundId}/reconcile", gate(serviceAuth(refund.RequireTenantScope(db, refund.RequireMutationIdempotency(db, "reconcile", refund.HandleReconcileGovernedRefund(db))))))
 
 	mux.HandleFunc("GET /wlt/settlements/summary", readGate(settlement.HandleGetSettlementSummaryGoverned(db)))
 	mux.HandleFunc("POST /wlt/settlements", gate(serviceAuth(settlement.HandleCreateEvidenceBackedSettlement(db))))
