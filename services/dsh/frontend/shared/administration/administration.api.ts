@@ -11,6 +11,9 @@ import type {
   DshRoleChangeAction,
   DshRoleDefinitionRequest,
   DshAdministrationApprovalStatus,
+  DshAdministrationSurface,
+  DshAdministrationRollbackRequest,
+  DshAdministrationDiagnostics,
 } from "./administration.types";
 
 const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "adm");
@@ -21,6 +24,7 @@ export const requestRoleDefinition = (body: {
   name: string;
   description: string;
   permissions: readonly string[];
+  surfaces: readonly DshAdministrationSurface[];
   reason: string;
 }) => req<{ request: DshRoleDefinitionRequest }>("/dsh/operator/admin/roles/requests", {
   method: "POST",
@@ -64,6 +68,28 @@ export const reviewRoleAssignmentApproval = (
   `/dsh/operator/admin/approvals/${approvalId}/review`,
   { method: "POST", body: JSON.stringify(body) },
 );
+
+export const requestDecisionRollback = (approvalId: string, reason: string) =>
+  req<{ request: DshAdministrationRollbackRequest }>(
+    `/dsh/operator/admin/approvals/${approvalId}/rollback-requests`,
+    { method: "POST", body: JSON.stringify({ reason }) },
+  );
+
+export const fetchRollbackRequests = (status: DshAdministrationApprovalStatus | "" = "pending") =>
+  req<{ requests: DshAdministrationRollbackRequest[] }>(
+    `/dsh/operator/admin/rollback-requests${status ? `?status=${status}` : ""}`,
+  );
+
+export const reviewRollbackRequest = (
+  requestId: string,
+  body: { decision: "approved" | "rejected"; reviewNote: string; expectedVersion: number },
+) => req<{ request: DshAdministrationRollbackRequest; assignment: DshStaffMember | null }>(
+  `/dsh/operator/admin/rollback-requests/${requestId}/review`,
+  { method: "POST", body: JSON.stringify(body) },
+);
+
+export const fetchAdministrationDiagnostics = () =>
+  req<{ diagnostics: DshAdministrationDiagnostics }>("/dsh/operator/admin/diagnostics");
 
 export const fetchPartnerActivations = (status?: string) =>
   req<{ activations: DshPartnerActivation[] }>(`/dsh/operator/admin/partners${status ? `?status=${status}` : ""}`);
