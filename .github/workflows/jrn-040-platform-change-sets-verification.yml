@@ -1,0 +1,108 @@
+name: JRN-040 Platform Change Sets Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "core/platform-control/**"
+      - "services/dsh/frontend/shared/platform/**"
+      - "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
+      - "services/dsh/tsconfig.jrn-040.json"
+      - "governance/product/contracts/jrn-040-platform-change-sets.product-truth.json"
+      - "tools/guards/jrn-040-platform-change-sets-gate.mjs"
+      - ".github/workflows/jrn-040-platform-change-sets-verification.yml"
+  pull_request:
+    branches: [sambassam, master]
+    paths:
+      - "core/platform-control/**"
+      - "services/dsh/frontend/shared/platform/**"
+      - "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
+      - "services/dsh/tsconfig.jrn-040.json"
+      - "governance/product/contracts/jrn-040-platform-change-sets.product-truth.json"
+      - "tools/guards/jrn-040-platform-change-sets-gate.mjs"
+      - ".github/workflows/jrn-040-platform-change-sets-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-040-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify JRN-040 governed platform changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: platform
+          POSTGRES_PASSWORD: platform
+          POSTGRES_DB: platform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U platform -d platform"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://platform:platform@localhost:5432/platform?sslmode=disable
+      PGPASSWORD: platform
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Go from platform-control module
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: core/platform-control/backend/go.mod
+          cache-dependency-path: core/platform-control/backend/go.sum
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply governed platform migrations
+        run: |
+          for migration in core/platform-control/database/migrations/platform-*.sql; do
+            echo "Applying ${migration}"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Run targeted Go tests
+        working-directory: core/platform-control/backend
+        run: go test ./internal/platformcontrol ./internal/http -count=1
+      - name: Build platform-control owners
+        working-directory: core/platform-control/backend
+        run: go build ./internal/platformcontrol ./internal/http
+      - name: Typecheck generated contract and control-panel binding
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false
+      - name: Parse JRN-040 OpenAPI contract
+        run: >-
+          pnpm --dir services/dsh exec openapi-typescript
+          ../../core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml
+          -o /tmp/jrn-040-platform-change-sets-api.ts
+      - name: Verify JRN-040 contract and binding gate
+        run: node tools/guards/jrn-040-platform-change-sets-gate.mjs
+      - name: Verify immutable diff hygiene
+        run: git diff --check
+
+  result:
+    name: JRN-040 verification result
+    needs: [verify]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Enforce JRN-040 verification result
+        env:
+          VERIFY_RESULT: ${{ needs.verify.result }}
+        run: |
+          if [ "${VERIFY_RESULT}" != "success" ]; then
+            echo "JRN-040 verification failed: ${VERIFY_RESULT}"
+            exit 1
+          fi
+          echo "JRN-040 verification passed."
