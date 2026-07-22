@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "journeyId": "JRN-013",
   "journeyName": "تسليم العهدة من المتجر إلى الكابتن",
-  "closureMode": "CODE_AND_TARGETED_SOURCE_EVIDENCE",
+  "closureMode": "CODE_AND_AUTOMATED_EXECUTION_EVIDENCE",
   "requiredSliceCount": 18,
   "codeDecision": "CLOSED",
   "releaseDecision": "READY_FOR_INDEPENDENT_REVIEW",
@@ -12,7 +12,7 @@
       "name": "Product truth and ownership boundaries",
       "codeStatus": "CLOSED",
       "requiredFiles": ["governance/product/contracts/jrn-013-store-captain-handoff.product-truth.json"],
-      "requiredMarkers": ["JRN-013", "custodyLifecycle", "financialTruth", "READY_FOR_REVIEW"]
+      "requiredMarkers": ["JRN-013", "custodyLifecycle", "financialTruth", "READY_FOR_INDEPENDENT_REVIEW"]
     },
     {
       "id": "FS-02",
@@ -137,7 +137,10 @@
   "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "finance-boundary", "release-production"],
   "executionEvidence": {
     "sourceClosure": "REGISTERED",
-    "ciRuns": "NOT_OBSERVED_FROM_CONNECTOR",
+    "ciRuns": "PASSED",
+    "ciRunId": 29882102801,
+    "verifiedHead": "b95f44dda9b0b4eb1a8ad59001a933ca13ccb53f",
+    "verifiedMergeCommit": "6053052c04e929f07813744c84c18e2e4335cd89",
     "runtimeDeviceQa": "PENDING"
   }
 }
