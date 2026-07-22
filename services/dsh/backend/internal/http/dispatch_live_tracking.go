@@ -119,7 +119,7 @@ func buildLiveTrackingProjection(
 	allowCoordinates bool,
 ) map[string]any {
 	now := time.Now().UTC()
-	assignmentProjection := marshalDispatchAssignment(assignment)
+	assignmentProjection := marshalDispatchAssignment(*assignment)
 	tracking := map[string]any{
 		"locationVisibility": "hidden_until_pickup",
 		"location":           nil,
