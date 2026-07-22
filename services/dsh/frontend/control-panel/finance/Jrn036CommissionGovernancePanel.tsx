@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge, Button, Card, Text, lightThemeColors } from "@bthwani/ui-kit";
 import { resolveDshApiBaseUrl } from "../../shared/finance-wlt-link/_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../../shared/finance-wlt-link/_kernel/dsh-http-request";
@@ -34,6 +34,14 @@ const STATUS_META: Record<
   reversed: { label: "معكوسة", tone: "danger" },
 };
 
+const inputStyle = {
+  width: "100%",
+  padding: "0.65rem",
+  borderRadius: "0.5rem",
+  border: `1px solid ${lightThemeColors.borderColor}`,
+  background: lightThemeColors.surfaceColor,
+};
+
 function formatMoney(amountMinorUnits: number, currency: string): string {
   return `${(amountMinorUnits / 100).toLocaleString("ar-YE", {
     minimumFractionDigits: 2,
@@ -41,18 +49,47 @@ function formatMoney(amountMinorUnits: number, currency: string): string {
   })} ${currency}`;
 }
 
+function validatePolicy(policy: Jrn036CommissionPolicyInput): string | null {
+  if (!policy.policyId.trim()) return "معرف السياسة مطلوب.";
+  if (!policy.commissionType.trim()) return "نوع العمولة مطلوب.";
+  if (!policy.sourceType.trim()) return "نوع المصدر مطلوب.";
+  if (!policy.currency.trim()) return "العملة مطلوبة.";
+  if (!policy.changeReason.trim()) return "سبب تغيير السياسة مطلوب.";
+  if (!Number.isSafeInteger(policy.minimumAmountMinorUnits) || policy.minimumAmountMinorUnits < 0) {
+    return "الحد الأدنى يجب أن يكون عددًا صحيحًا غير سالب.";
+  }
+  if (
+    policy.maximumAmountMinorUnits !== null &&
+    policy.maximumAmountMinorUnits !== undefined &&
+    (!Number.isSafeInteger(policy.maximumAmountMinorUnits) ||
+      policy.maximumAmountMinorUnits < policy.minimumAmountMinorUnits)
+  ) {
+    return "الحد الأعلى يجب أن يكون عددًا صحيحًا لا يقل عن الحد الأدنى.";
+  }
+  if (policy.calculationType === "fixed") {
+    if (!Number.isSafeInteger(policy.fixedAmountMinorUnits) || policy.fixedAmountMinorUnits <= 0) {
+      return "القيمة الثابتة يجب أن تكون عددًا صحيحًا موجبًا.";
+    }
+  } else if (!Number.isInteger(policy.basisPoints) || policy.basisPoints < 1 || policy.basisPoints > 10000) {
+    return "نقاط الأساس يجب أن تكون بين 1 و10000.";
+  }
+  return null;
+}
+
 export function Jrn036CommissionGovernancePanel() {
   const [commissions, setCommissions] = useState<readonly Jrn036Commission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<BusyAction>(null);
+  const [savingPolicy, setSavingPolicy] = useState(false);
   const [policy, setPolicy] = useState<Jrn036CommissionPolicyInput>({
-    policyId: "delivery-captain-default",
-    commissionType: "delivery_fee",
-    sourceType: "delivery",
-    beneficiaryActorType: "captain",
+    policyId: "field-visit-default",
+    commissionType: "field_visit_fee",
+    sourceType: "field_visit",
+    beneficiaryActorType: "field",
     calculationType: "fixed",
-    fixedAmountMinorUnits: 0,
+    fixedAmountMinorUnits: 1000,
     basisPoints: 0,
     minimumAmountMinorUnits: 0,
     maximumAmountMinorUnits: null,
@@ -60,6 +97,8 @@ export function Jrn036CommissionGovernancePanel() {
     status: "active",
     changeReason: "",
   });
+
+  const policyError = useMemo(() => validatePolicy(policy), [policy]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,6 +126,7 @@ export function Jrn036CommissionGovernancePanel() {
     ) => {
       setBusy({ commissionId: commission.id, action });
       setError(null);
+      setNotice(null);
       try {
         if (action === "confirm") await confirmJrn036Commission(commission.id);
         if (action === "settle") await settleJrn036Commission(commission.id);
@@ -106,9 +146,13 @@ export function Jrn036CommissionGovernancePanel() {
             ?.trim();
           const reason = window.prompt("سبب التعديل:")?.trim();
           const deltaMinorUnits = Number(rawDelta);
-          if (!reason || !Number.isSafeInteger(deltaMinorUnits) || deltaMinorUnits === 0) return;
+          if (!reason || !Number.isSafeInteger(deltaMinorUnits) || deltaMinorUnits === 0) {
+            setError("قيمة التعديل يجب أن تكون عددًا صحيحًا غير صفري مع سبب إلزامي.");
+            return;
+          }
           await adjustJrn036Commission(commission.id, deltaMinorUnits, reason);
         }
+        setNotice("تم تنفيذ الإجراء وتحديث الحقيقة المالية من WLT.");
         await load();
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "تعذر تنفيذ الإجراء المالي.");
@@ -120,17 +164,28 @@ export function Jrn036CommissionGovernancePanel() {
   );
 
   const savePolicy = useCallback(async () => {
-    setError(null);
+    const validationError = validatePolicy(policy);
+    setError(validationError);
+    setNotice(null);
+    if (validationError) return;
+
+    setSavingPolicy(true);
     try {
-      if (!policy.changeReason.trim()) {
-        setError("سبب تغيير السياسة مطلوب.");
-        return;
-      }
-      await upsertJrn036CommissionPolicy(policy);
+      await upsertJrn036CommissionPolicy({
+        ...policy,
+        policyId: policy.policyId.trim(),
+        commissionType: policy.commissionType.trim(),
+        sourceType: policy.sourceType.trim(),
+        currency: policy.currency.trim().toUpperCase(),
+        changeReason: policy.changeReason.trim(),
+      });
+      setNotice("تم حفظ إصدار سياسة العمولة في WLT مع سبب التغيير.");
       setPolicy((current) => ({ ...current, changeReason: "" }));
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "تعذر حفظ سياسة العمولة.");
+    } finally {
+      setSavingPolicy(false);
     }
   }, [load, policy]);
 
@@ -147,7 +202,7 @@ export function Jrn036CommissionGovernancePanel() {
         <div>
           <Text role="titleMd">حوكمة العمولات — JRN-036</Text>
           <Text role="body" tone="muted">
-            WLT يحسب القيمة من الدليل والسياسة. تعرض القائمة آخر 100 سجل حاكم دون حساب محلي.
+            WLT يحسب القيمة من الدليل وإصدار السياسة. تعرض القائمة آخر 100 سجل حاكم دون حساب محلي.
           </Text>
         </div>
         <Button
@@ -171,10 +226,26 @@ export function Jrn036CommissionGovernancePanel() {
           </Text>
         </Card>
       ) : null}
+      {notice ? (
+        <Card
+          style={{
+            padding: "0.75rem",
+            marginTop: "1rem",
+            borderLeft: `4px solid ${lightThemeColors.success}`,
+          }}
+        >
+          <Text role="body" tone="success">
+            {notice}
+          </Text>
+        </Card>
+      ) : null}
 
       <Card style={{ padding: "1rem", marginTop: "1rem" }}>
         <Text role="body" style={{ fontWeight: "bold" }}>
           إصدار سياسة عمولة جديد
+        </Text>
+        <Text role="caption" tone="muted">
+          يُحفظ كل تعديل كإصدار مستقل. لا يُفعّل زر الحفظ حتى تصبح الصيغة المالية كاملة وصالحة.
         </Text>
         <div
           style={{
@@ -187,30 +258,34 @@ export function Jrn036CommissionGovernancePanel() {
           <label>
             <Text role="caption">معرف السياسة</Text>
             <input
+              aria-label="معرف سياسة العمولة"
               value={policy.policyId}
               onChange={(event) => setPolicy({ ...policy, policyId: event.target.value })}
-              style={{ width: "100%", padding: "0.65rem" }}
+              style={inputStyle}
             />
           </label>
           <label>
             <Text role="caption">نوع العمولة</Text>
             <input
+              aria-label="نوع العمولة"
               value={policy.commissionType}
               onChange={(event) => setPolicy({ ...policy, commissionType: event.target.value })}
-              style={{ width: "100%", padding: "0.65rem" }}
+              style={inputStyle}
             />
           </label>
           <label>
             <Text role="caption">نوع المصدر</Text>
             <input
+              aria-label="نوع مصدر العمولة"
               value={policy.sourceType}
               onChange={(event) => setPolicy({ ...policy, sourceType: event.target.value })}
-              style={{ width: "100%", padding: "0.65rem" }}
+              style={inputStyle}
             />
           </label>
           <label>
             <Text role="caption">المستفيد</Text>
             <select
+              aria-label="نوع مستفيد العمولة"
               value={policy.beneficiaryActorType}
               onChange={(event) =>
                 setPolicy({
@@ -218,7 +293,7 @@ export function Jrn036CommissionGovernancePanel() {
                   beneficiaryActorType: event.target.value as Jrn036RepresentativeActorType,
                 })
               }
-              style={{ width: "100%", padding: "0.65rem" }}
+              style={inputStyle}
             >
               <option value="partner">شريك</option>
               <option value="captain">كابتن</option>
@@ -228,6 +303,7 @@ export function Jrn036CommissionGovernancePanel() {
           <label>
             <Text role="caption">طريقة الحساب</Text>
             <select
+              aria-label="طريقة حساب العمولة"
               value={policy.calculationType}
               onChange={(event) =>
                 setPolicy({
@@ -235,7 +311,7 @@ export function Jrn036CommissionGovernancePanel() {
                   calculationType: event.target.value as "fixed" | "basis_points",
                 })
               }
-              style={{ width: "100%", padding: "0.65rem" }}
+              style={inputStyle}
             >
               <option value="fixed">ثابت</option>
               <option value="basis_points">نقاط أساس</option>
@@ -244,45 +320,107 @@ export function Jrn036CommissionGovernancePanel() {
           <label>
             <Text role="caption">القيمة الثابتة</Text>
             <input
+              aria-label="قيمة العمولة الثابتة بالوحدات الصغرى"
               type="number"
+              min={0}
               value={policy.fixedAmountMinorUnits}
+              disabled={policy.calculationType !== "fixed"}
               onChange={(event) =>
                 setPolicy({ ...policy, fixedAmountMinorUnits: Number(event.target.value) })
               }
-              style={{ width: "100%", padding: "0.65rem" }}
+              style={inputStyle}
             />
           </label>
           <label>
             <Text role="caption">نقاط الأساس</Text>
             <input
+              aria-label="نقاط أساس العمولة"
               type="number"
+              min={0}
+              max={10000}
               value={policy.basisPoints}
-              onChange={(event) => setPolicy({ ...policy, basisPoints: Number(event.target.value) })}
-              style={{ width: "100%", padding: "0.65rem" }}
+              disabled={policy.calculationType !== "basis_points"}
+              onChange={(event) =>
+                setPolicy({ ...policy, basisPoints: Number(event.target.value) })
+              }
+              style={inputStyle}
             />
           </label>
           <label>
             <Text role="caption">الحد الأدنى</Text>
             <input
+              aria-label="الحد الأدنى للعمولة"
               type="number"
+              min={0}
               value={policy.minimumAmountMinorUnits}
               onChange={(event) =>
                 setPolicy({ ...policy, minimumAmountMinorUnits: Number(event.target.value) })
               }
-              style={{ width: "100%", padding: "0.65rem" }}
+              style={inputStyle}
             />
+          </label>
+          <label>
+            <Text role="caption">الحد الأعلى — اختياري</Text>
+            <input
+              aria-label="الحد الأعلى للعمولة"
+              type="number"
+              min={0}
+              value={policy.maximumAmountMinorUnits ?? ""}
+              onChange={(event) =>
+                setPolicy({
+                  ...policy,
+                  maximumAmountMinorUnits:
+                    event.target.value.trim() === "" ? null : Number(event.target.value),
+                })
+              }
+              style={inputStyle}
+            />
+          </label>
+          <label>
+            <Text role="caption">العملة</Text>
+            <input
+              aria-label="عملة سياسة العمولة"
+              value={policy.currency}
+              onChange={(event) => setPolicy({ ...policy, currency: event.target.value })}
+              style={inputStyle}
+            />
+          </label>
+          <label>
+            <Text role="caption">الحالة</Text>
+            <select
+              aria-label="حالة سياسة العمولة"
+              value={policy.status}
+              onChange={(event) =>
+                setPolicy({ ...policy, status: event.target.value as "active" | "inactive" })
+              }
+              style={inputStyle}
+            >
+              <option value="active">فعالة</option>
+              <option value="inactive">غير فعالة</option>
+            </select>
           </label>
           <label>
             <Text role="caption">سبب التغيير</Text>
             <input
+              aria-label="سبب تغيير سياسة العمولة"
               value={policy.changeReason}
               onChange={(event) => setPolicy({ ...policy, changeReason: event.target.value })}
-              style={{ width: "100%", padding: "0.65rem" }}
+              style={inputStyle}
             />
           </label>
         </div>
+        {policyError ? (
+          <Text role="caption" tone="danger" style={{ marginTop: "0.75rem" }}>
+            {policyError}
+          </Text>
+        ) : null}
         <div style={{ marginTop: "0.75rem" }}>
-          <Button label="حفظ إصدار السياسة" tone="primary" onPress={() => void savePolicy()} />
+          <Button
+            label={savingPolicy ? "جارٍ حفظ إصدار السياسة…" : "حفظ إصدار السياسة"}
+            tone="primary"
+            disabled={savingPolicy || policyError !== null}
+            onPress={() => void savePolicy()}
+          />
         </div>
       </Card>
 
@@ -318,7 +456,9 @@ export function Jrn036CommissionGovernancePanel() {
                 borderLeft: `4px solid ${
                   commission.status === "settled"
                     ? lightThemeColors.success
-                    : lightThemeColors.warning
+                    : commission.status === "rejected" || commission.status === "reversed"
+                      ? lightThemeColors.danger
+                      : lightThemeColors.warning
                 }`,
               }}
             >
@@ -332,7 +472,14 @@ export function Jrn036CommissionGovernancePanel() {
                 }}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "0.5rem",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
                     <Text role="body" style={{ fontWeight: "bold" }}>
                       {commission.id}
                     </Text>
@@ -345,7 +492,12 @@ export function Jrn036CommissionGovernancePanel() {
                     المصدر: {commission.sourceType}/{commission.sourceId}
                   </Text>
                   <Text role="caption">
-                    القيمة: {formatMoney(commission.amountMinorUnits, commission.currency)} · السياسة: {commission.commissionPolicyId ?? "غير متاحة"}
+                    النوع: {commission.commissionType} · القيمة:{" "}
+                    {formatMoney(commission.amountMinorUnits, commission.currency)}
+                  </Text>
+                  <Text role="caption">
+                    السياسة: {commission.commissionPolicyId ?? "غير متاحة"} · آخر تحديث:{" "}
+                    {commission.updatedAt || commission.createdAt}
                   </Text>
                   {commission.resolutionNote ? (
                     <Text role="caption" tone="danger">
