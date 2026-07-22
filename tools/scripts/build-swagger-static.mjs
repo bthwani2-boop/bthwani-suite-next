@@ -15,7 +15,7 @@ const specs = [
   { input: "core/platform-control/contracts/platform-control.openapi.yaml", name: "Core - Platform Control API" },
   { input: "core/providers/contracts/providers.openapi.yaml", name: "Core - Providers API" },
   { input: "core/workforce/contracts/workforce.openapi.yaml", name: "Core - Workforce API" },
-  { input: "services/dsh/contracts/dsh.openapi.yaml", name: "Services - DSH API" },
+  { input: "services/dsh/contracts/generated/dsh.bundle.openapi.yaml", name: "Services - DSH API" },
   { input: "services/dsh/contracts/dsh.partner-onboarding.openapi.yaml", name: "Services - DSH Partner Onboarding" },
   { input: "services/dsh/contracts/dsh.delivery-proof-media.openapi.yaml", name: "Services - DSH Delivery Proof Media API" },
   { input: "services/dsh/contracts/dsh.catalog.openapi.yaml", name: "Services - DSH Catalog API" },
