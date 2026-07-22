@@ -94,7 +94,16 @@ jobs:
         working-directory: core/platform-control/backend
         run: go build ./internal/platformcontrol ./internal/http
       - name: Typecheck generated contract and control-panel binding
-        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false
+        id: typecheck
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false 2>&1 | tee jrn040-typecheck.log
+      - name: Preserve JRN-040 typecheck failure diagnostics
+        if: steps.typecheck.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: jrn-040-typecheck-failure
+          path: jrn040-typecheck.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Parse JRN-040 OpenAPI contract
         run: >-
           pnpm --dir services/dsh exec openapi-typescript
