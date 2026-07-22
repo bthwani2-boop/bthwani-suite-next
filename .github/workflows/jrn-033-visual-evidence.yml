@@ -5,9 +5,11 @@ on:
   push:
     branches: [sambassam]
     paths: &jrn033_visual_paths
+      - "governance/evidence/jrn-033-final-verification-trigger.txt"
       - "services/dsh/frontend/shared/finance-wlt-link/actor-wallet/**"
       - "services/dsh/frontend/control-panel/finance/RepresentativeWalletLookup.tsx"
       - "services/dsh/frontend/control-panel/finance/Jrn033VisualEvidenceScreen.tsx"
+      - "services/dsh/tests/jrn-033-visual-evidence-governance.test.mjs"
       - "apps/control-panel/runtime/src/app/dsh/layout.tsx"
       - "apps/control-panel/runtime/src/app/dsh/finance/jrn-033-visual-evidence/page.tsx"
       - ".github/workflows/jrn-033-visual-evidence.yml"
@@ -43,6 +45,8 @@ jobs:
           cache: pnpm
       - name: Install locked workspace
         run: pnpm install --frozen-lockfile
+      - name: Verify visual evidence governance
+        run: node --test services/dsh/tests/jrn-033-visual-evidence-governance.test.mjs
       - name: Typecheck evidence route and actual wallet components
         run: |
           pnpm --dir services/dsh exec tsc -p tsconfig.jrn-033.json --noEmit --pretty false
