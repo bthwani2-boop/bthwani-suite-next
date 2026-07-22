@@ -1,0 +1,362 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Delivery Proof Completion API
+  version: 1.0.0
+  description: >
+    JRN-018 actor-owned proof-of-delivery contract. DSH owns proof and order
+    completion state. WLT receives only the durable delivery_completed handoff
+    and remains the sole owner of financial truth.
+x-bthwani-owner: services/dsh
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-adapter-owner: frontend/shared/delivery-proof
+
+paths:
+  /dsh/client/orders/{orderId}/delivery-pin:
+    post:
+      operationId: issueClientDeliveryPin
+      tags: [DshDeliveryProof]
+      summary: Issue or rotate the authenticated order client's short-lived delivery PIN.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '201':
+          description: Challenge issued. The clear PIN is returned only in this client-owned response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryPinResponse'
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/client/orders/{orderId}/delivery-proof:
+    get:
+      operationId: getClientAcceptedDeliveryProof
+      tags: [DshDeliveryProof]
+      summary: Read the redacted accepted proof summary for the authenticated order client.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Redacted accepted proof summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [proof]
+                properties:
+                  proof: { $ref: '#/components/schemas/ClientDeliveryProof' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof:
+    get:
+      operationId: getCaptainDeliveryProof
+      tags: [DshDeliveryProof]
+      summary: Read the latest proof submitted by the authenticated assignment captain.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+      responses:
+        '200':
+          description: Latest captain-owned proof.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [proof]
+                properties:
+                  proof: { $ref: '#/components/schemas/DeliveryProof' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: submitCaptainDeliveryProof
+      tags: [DshDeliveryProof]
+      summary: Submit an idempotent PIN, photo, signature, or composite proof.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AssignmentId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubmitDeliveryProofRequest' }
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, idempotencyKey]
+              properties:
+                file: { type: string, format: binary }
+                method: { $ref: '#/components/schemas/DeliveryProofMethod' }
+                pin: { type: string, pattern: '^[0-9]{6}$' }
+                idempotencyKey: { type: string, minLength: 8, maxLength: 160 }
+                latitude: { type: number, minimum: -90, maximum: 90 }
+                longitude: { type: number, minimum: -180, maximum: 180 }
+                capturedAt: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Proof accepted or queued for operator review.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [proof]
+                properties:
+                  proof: { $ref: '#/components/schemas/DeliveryProof' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/operator/delivery-proofs:
+    get:
+      operationId: listOperatorDeliveryProofs
+      tags: [DshDeliveryProof]
+      summary: List proof records for operations review.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/DeliveryProofStatus' }
+      responses:
+        '200':
+          description: Proof queue.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [proofs]
+                properties:
+                  proofs:
+                    type: array
+                    items: { $ref: '#/components/schemas/DeliveryProof' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /dsh/operator/delivery-proofs/{proofId}:
+    get:
+      operationId: getOperatorDeliveryProof
+      tags: [DshDeliveryProof]
+      summary: Read full operational evidence for one proof.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ProofId'
+      responses:
+        '200':
+          description: Full proof evidence.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [proof]
+                properties:
+                  proof: { $ref: '#/components/schemas/DeliveryProof' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /dsh/operator/delivery-proofs/{proofId}/accept:
+    post:
+      operationId: acceptOperatorDeliveryProof
+      tags: [DshDeliveryProof]
+      summary: Accept a pending exceptional proof and complete the order exactly once.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ProofId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewDeliveryProofRequest' }
+      responses:
+        '200':
+          description: Proof accepted and completion committed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [proof]
+                properties:
+                  proof: { $ref: '#/components/schemas/DeliveryProof' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /dsh/operator/delivery-proofs/{proofId}/reject:
+    post:
+      operationId: rejectOperatorDeliveryProof
+      tags: [DshDeliveryProof]
+      summary: Reject a pending proof while leaving the assignment at arrived_customer for retry.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ProofId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewDeliveryProofRequest' }
+      responses:
+        '200':
+          description: Proof rejected and retry enabled.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [proof]
+                properties:
+                  proof: { $ref: '#/components/schemas/DeliveryProof' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AssignmentId:
+      name: assignmentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ProofId:
+      name: proofId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: X-Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, minLength: 8, maxLength: 160 }
+
+  schemas:
+    DeliveryProofMethod:
+      type: string
+      enum: [otp_pin, photo, signature, composite]
+    DeliveryProofStatus:
+      type: string
+      enum: [submitted, pending_review, accepted, rejected, superseded]
+    DeliveryPinChallenge:
+      type: object
+      required: [id, orderId, assignmentId, expiresAt, maxAttempts, version]
+      properties:
+        id: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        assignmentId: { type: string, format: uuid }
+        expiresAt: { type: string, format: date-time }
+        maxAttempts: { type: integer, minimum: 1, maximum: 10 }
+        version: { type: integer, minimum: 1 }
+    DeliveryPinResponse:
+      type: object
+      required: [challenge, pin]
+      properties:
+        challenge: { $ref: '#/components/schemas/DeliveryPinChallenge' }
+        pin: { type: string, pattern: '^[0-9]{6}$' }
+    SubmitDeliveryProofRequest:
+      type: object
+      required: [method, idempotencyKey]
+      properties:
+        method: { $ref: '#/components/schemas/DeliveryProofMethod' }
+        pin: { type: string, pattern: '^[0-9]{6}$' }
+        photoMediaRef: { type: string, nullable: true }
+        signatureMediaRef: { type: string, nullable: true }
+        capturedLatitude: { type: number, minimum: -90, maximum: 90, nullable: true }
+        capturedLongitude: { type: number, minimum: -180, maximum: 180, nullable: true }
+        capturedAt: { type: string, format: date-time, nullable: true }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 160 }
+    ReviewDeliveryProofRequest:
+      type: object
+      required: [expectedVersion, reason]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        reason: { type: string, minLength: 5, maxLength: 500 }
+    DeliveryProof:
+      type: object
+      required: [id, assignmentId, orderId, captainId, method, status, hasPhoto, hasSignature, capturedAt, submittedAt, version]
+      properties:
+        id: { type: string, format: uuid }
+        assignmentId: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        captainId: { type: string }
+        method: { $ref: '#/components/schemas/DeliveryProofMethod' }
+        status: { $ref: '#/components/schemas/DeliveryProofStatus' }
+        hasPhoto: { type: boolean }
+        hasSignature: { type: boolean }
+        photoMediaRef: { type: string, nullable: true }
+        signatureMediaRef: { type: string, nullable: true }
+        capturedLatitude: { type: number, nullable: true }
+        capturedLongitude: { type: number, nullable: true }
+        capturedAt: { type: string, format: date-time }
+        submittedAt: { type: string, format: date-time }
+        reviewedAt: { type: string, format: date-time, nullable: true }
+        reviewedByActorId: { type: string, nullable: true }
+        reviewReason: { type: string, nullable: true }
+        acceptedAt: { type: string, format: date-time, nullable: true }
+        rejectedAt: { type: string, format: date-time, nullable: true }
+        version: { type: integer, minimum: 1 }
+    ClientDeliveryProof:
+      type: object
+      required: [id, orderId, method, status, hasPhoto, hasSignature, capturedAt]
+      properties:
+        id: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        method: { $ref: '#/components/schemas/DeliveryProofMethod' }
+        status:
+          type: string
+          const: accepted
+        hasPhoto: { type: boolean }
+        hasSignature: { type: boolean }
+        capturedAt: { type: string, format: date-time }
+        acceptedAt: { type: string, format: date-time, nullable: true }
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+
+  responses:
+    InvalidRequest:
+      description: Invalid delivery proof request.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthenticated:
+      description: Authentication required.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Actor is not allowed to access this proof.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Order, assignment, challenge, or proof was not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: State, PIN, version, or idempotency conflict.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
