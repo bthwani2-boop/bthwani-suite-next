@@ -72,10 +72,10 @@
     },
     {
       "id": "FS-10",
-      "name": "Authenticated HTTP exception routes",
+      "name": "Authenticated runtime route wiring",
       "codeStatus": "CLOSED",
-      "requiredFiles": ["services/dsh/backend/internal/http/store_captain_handoff_exceptions.go", "services/dsh/backend/internal/http/order_journey_routes.go"],
-      "requiredMarkers": ["handleReportCaptainStoreCaptainHandoffException", "handleReportPartnerStoreCaptainHandoffException", "/handoff-exceptions", "/captain-handoff/exceptions"]
+      "requiredFiles": ["services/dsh/backend/internal/http/store_captain_handoff_exceptions.go", "services/dsh/backend/internal/http/order_journey_routes.go", "services/dsh/backend/internal/http/server.go", "services/dsh/backend/cmd/dsh-api/main.go"],
+      "requiredMarkers": ["handleReportCaptainStoreCaptainHandoffException", "handleReportPartnerStoreCaptainHandoffException", "/handoff-exceptions", "/captain-handoff/exceptions", "handleGovernedUpdateDeliveryStatus", "handleConfirmPartnerStoreCaptainHandoff", "RegisterOrderJourneyRoutes"]
     },
     {
       "id": "FS-11",
@@ -107,10 +107,10 @@
     },
     {
       "id": "FS-15",
-      "name": "Operator exception queue and decisions",
+      "name": "Operator exception queue and executable resolutions",
       "codeStatus": "CLOSED",
-      "requiredFiles": ["services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx"],
-      "requiredMarkers": ["handoff_shortage", "handoff_mismatch", "استثناءات عهدة", "السماح باستكمال العهدة", "resolveDeliveryExceptionReassignCaptain"]
+      "requiredFiles": ["services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx", "services/dsh/backend/internal/dispatch/store_captain_handoff_resolution_db_test.go"],
+      "requiredMarkers": ["handoff_shortage", "handoff_mismatch", "استثناءات عهدة", "السماح باستكمال العهدة", "resolveDeliveryExceptionReassignCaptain", "TestHandoffExceptionRetrySameCaptainReleasesCustodyGuardDBIntegration", "TestHandoffExceptionReassignmentSupersedesCustodyDBIntegration"]
     },
     {
       "id": "FS-16",
@@ -131,7 +131,7 @@
       "name": "Targeted source database and CI gates",
       "codeStatus": "CLOSED",
       "requiredFiles": ["services/dsh/tests/store-captain-handoff-closure.test.mjs", "services/dsh/tests/jrn-013-slice-closure.test.mjs", ".github/workflows/store-captain-handoff-verification.yml"],
-      "requiredMarkers": ["custody database truth has dual confirmation", "registers exactly FS-01 through FS-18", "Verify all registered custody slices", "Prove custody, replay, reassignment, and exception invariants", "Typecheck DSH shared brain and surfaces"]
+      "requiredMarkers": ["custody database truth has dual confirmation", "registers exactly FS-01 through FS-18", "Verify all registered custody slices", "Prove custody, replay, reassignment, exception, and operator resolution invariants", "Typecheck DSH shared brain and surfaces"]
     }
   ],
   "independentReviewPending": ["product-owner", "qa-device-accessibility", "security", "finance-boundary", "release-production"],
