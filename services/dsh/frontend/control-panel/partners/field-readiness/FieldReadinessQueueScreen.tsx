@@ -152,7 +152,7 @@ export function FieldReadinessQueueScreen() {
                 {followUpOpen ? (
                   <Box style={styles.resolveForm}>
                     <Text role="bodyStrong">
-                      {followUp.status === "resolved" ? "توثيق حل التصعيد" : "توثيق سبب التصعيد الأعلى"}
+                      {followUp?.status === "resolved" ? "توثيق حل التصعيد" : "توثيق سبب التصعيد الأعلى"}
                     </Text>
                     <TextField
                       label="ملاحظة المتابعة"
@@ -164,7 +164,7 @@ export function FieldReadinessQueueScreen() {
                     <Box style={styles.formActions}>
                       <Button
                         label={actionState.kind === "submitting" ? "جاري الحفظ…" : "تأكيد الإجراء"}
-                        tone={followUp.status === "resolved" ? "success" : "danger"}
+                        tone={followUp?.status === "resolved" ? "success" : "danger"}
                         disabled={resolutionNote.trim().length < 5 || actionState.kind === "submitting"}
                         onPress={submitFollowUp}
                       />
