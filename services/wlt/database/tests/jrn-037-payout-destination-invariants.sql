@@ -28,6 +28,15 @@ BEGIN
   ) THEN missing := array_append(missing, 'wlt_payout_requests.payout_destination_id'); END IF;
 
   IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints
+    WHERE table_schema = 'public'
+      AND table_name = 'wlt_payout_requests'
+      AND constraint_name = 'wlt_payout_requests_destination_fk'
+      AND constraint_type = 'FOREIGN KEY'
+  ) THEN missing := array_append(missing, 'wlt_payout_requests_destination_fk'); END IF;
+
+  IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'wlt_payout_requests' AND column_name = 'reconciliation_status' AND column_default ILIKE '%not_required%'
   ) THEN missing := array_append(missing, 'wlt_payout_requests.reconciliation_status'); END IF;
