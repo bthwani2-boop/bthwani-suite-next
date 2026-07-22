@@ -1,16 +1,22 @@
 import fs from "node:fs";
 
 const productTruthFile = "governance/product/contracts/jrn-040-platform-change-sets.product-truth.json";
+const validationMigrationFile = "core/platform-control/database/migrations/platform-005_jrn040_change_set_validation.sql";
+const sensitiveBoundaryMigrationFile = "core/platform-control/database/migrations/platform-006_jrn040_sensitive_change_boundary.sql";
 const contractFile = "core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml";
 const generatedClientFile = "core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts";
+const databaseProofFile = "core/platform-control/backend/internal/platformcontrol/jrn040_database_sensitive_guard_test.go";
 const httpProofFile = "core/platform-control/backend/internal/http/jrn040_workflow_handlers_test.go";
+const workflowFile = ".github/workflows/jrn-040-platform-change-sets-verification.yml";
 const requiredFiles = [
   productTruthFile,
-  "core/platform-control/database/migrations/platform-005_jrn040_change_set_validation.sql",
+  validationMigrationFile,
+  sensitiveBoundaryMigrationFile,
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_read_create.go",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_workflow.go",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_apply_rollback.go",
   "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_governance_test.go",
+  databaseProofFile,
   "core/platform-control/backend/internal/platformcontrol/repository_integration_test.go",
   "core/platform-control/backend/internal/http/workflow_handlers.go",
   httpProofFile,
@@ -19,7 +25,7 @@ const requiredFiles = [
   "services/dsh/frontend/shared/platform/platform-control.api.ts",
   "services/dsh/frontend/shared/platform/use-platform-change-workflow-controller.tsx",
   "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx",
-  ".github/workflows/jrn-040-platform-change-sets-verification.yml",
+  workflowFile,
 ];
 
 const failures = [];
@@ -50,11 +56,17 @@ if (failures.length === 0) {
     if (!truth.forbiddenActions.includes(invariant)) failures.push(`product-truth:forbidden:${invariant}`);
   }
 
-  requireText("core/platform-control/database/migrations/platform-005_jrn040_change_set_validation.sql", [
+  requireText(validationMigrationFile, [
     "validated_value_json",
     "validated_revision",
     "validated_at",
     "idx_platform_change_set_items_target_reservation",
+  ]);
+  requireText(sensitiveBoundaryMigrationFile, [
+    "platform_jrn040_reject_sensitive_change_set_item",
+    "sensitive",
+    "confidential",
+    "existing sensitive platform variable cannot enter a change set",
   ]);
   requireText("core/platform-control/backend/internal/platformcontrol/jrn040_change_set_workflow.go", [
     "ensureNoActiveTargetConflict",
@@ -80,6 +92,10 @@ if (failures.length === 0) {
     "ErrVersionConflict",
     "ErrSensitiveValue",
     "restore legacy metadata",
+  ]);
+  requireText(databaseProofFile, [
+    "expected database to reject a sensitive change-set classification",
+    "expected database to reject an existing confidential target",
   ]);
   requireText("core/platform-control/backend/internal/http/workflow_handlers.go", [
     "RollbackChangeSetInput",
@@ -119,8 +135,11 @@ if (failures.length === 0) {
     "proposedValue",
     "draftItems",
   ]);
-  requireText(".github/workflows/jrn-040-platform-change-sets-verification.yml", [
-    "cancel-in-progress: true",
+  requireText(workflowFile, [
+    "group: jrn-040-${{ github.sha }}",
+    "cancel-in-progress: false",
+    "jrn040_database_sensitive_guard_test.go",
+    "platform-006_jrn040_sensitive_change_boundary.sql",
     "Run targeted Go tests",
     "Typecheck generated contract and control-panel binding",
     "Verify JRN-040 contract and binding gate",
