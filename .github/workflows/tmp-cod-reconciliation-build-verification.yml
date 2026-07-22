@@ -1,0 +1,43 @@
+name: Temporary COD Reconciliation Build Verification
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-cod-reconciliation-build-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: temporary-cod-reconciliation-build-verification
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Build control panel finance surface
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@1e60f620b9541d50d90e69e0a8a2a71b33e15566 # v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - name: Activate locked pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.2 --activate
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Verify broken imports
+        run: pnpm guard:no-broken-imports
+      - name: Typecheck control panel
+        run: pnpm --dir apps/control-panel/runtime typecheck
+      - name: Build control panel
+        run: pnpm --dir apps/control-panel/runtime build
