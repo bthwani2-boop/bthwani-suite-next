@@ -1,0 +1,113 @@
+name: JRN-033 Representative Wallet Visual Evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths: &jrn033_visual_paths
+      - "services/dsh/frontend/shared/finance-wlt-link/actor-wallet/**"
+      - "services/dsh/frontend/control-panel/finance/RepresentativeWalletLookup.tsx"
+      - "services/dsh/frontend/control-panel/finance/Jrn033VisualEvidenceScreen.tsx"
+      - "apps/control-panel/runtime/src/app/dsh/layout.tsx"
+      - "apps/control-panel/runtime/src/app/dsh/finance/jrn-033-visual-evidence/page.tsx"
+      - ".github/workflows/jrn-033-visual-evidence.yml"
+  pull_request:
+    branches: [master]
+    paths: *jrn033_visual_paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-033-visual-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  visual:
+    name: Actual component visual-state evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: "10.34.2"
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+      - name: Install locked workspace
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck evidence route and actual wallet components
+        run: |
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-033.json --noEmit --pretty false
+          pnpm --dir apps/control-panel/runtime typecheck
+      - name: Start environment-gated control-panel evidence route
+        shell: bash
+        run: |
+          mkdir -p /tmp/jrn-033-visual
+          NEXT_PUBLIC_JRN_033_VISUAL_EVIDENCE=1 \
+          NEXT_PUBLIC_DSH_API_BASE_URL=/api/dsh \
+          nohup pnpm --dir apps/control-panel/runtime dev --port 13000 \
+            > /tmp/jrn-033-visual/control-panel.log 2>&1 &
+          echo $! > /tmp/jrn-033-visual/control-panel.pid
+          for attempt in $(seq 1 60); do
+            if curl -fsS "http://127.0.0.1:13000/dsh/finance/jrn-033-visual-evidence?mode=success" > /tmp/jrn-033-visual/page.html; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/jrn-033-visual/control-panel.log
+          exit 1
+      - name: Capture success empty frozen error and loading states
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          test -n "$chrome" || { echo "No supported headless Chrome binary on runner"; exit 1; }
+          mkdir -p visual-evidence/jrn-033
+          for mode in success empty frozen error loading; do
+            budget=4500
+            if [ "$mode" = "loading" ]; then budget=1200; fi
+            "$chrome" \
+              --headless=new \
+              --no-sandbox \
+              --disable-gpu \
+              --hide-scrollbars \
+              --window-size=1440,1800 \
+              --virtual-time-budget="$budget" \
+              --screenshot="visual-evidence/jrn-033/${mode}.png" \
+              "http://127.0.0.1:13000/dsh/finance/jrn-033-visual-evidence?mode=${mode}"
+            test -s "visual-evidence/jrn-033/${mode}.png"
+            bytes=$(stat -c%s "visual-evidence/jrn-033/${mode}.png")
+            test "$bytes" -gt 10000 || { echo "${mode}.png is too small: ${bytes}"; exit 1; }
+          done
+          sha256sum visual-evidence/jrn-033/*.png > visual-evidence/jrn-033/SHA256SUMS
+          printf '%s\n' \
+            'JRN-033 visual evidence uses actual ActorWalletPanel and RepresentativeWalletLookup components.' \
+            'Fixtures are visual-state data only; Docker runtime workflow owns live financial evidence.' \
+            "source_sha=${GITHUB_SHA}" \
+            "workflow_run=${GITHUB_RUN_ID}" \
+            > visual-evidence/jrn-033/README.txt
+      - name: Upload immutable visual evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: jrn-033-visual-evidence-${{ github.sha }}
+          path: |
+            visual-evidence/jrn-033
+            /tmp/jrn-033-visual/control-panel.log
+          if-no-files-found: error
+          retention-days: 30
+      - name: Stop control-panel evidence runtime
+        if: always()
+        shell: bash
+        run: |
+          if [ -f /tmp/jrn-033-visual/control-panel.pid ]; then
+            kill "$(cat /tmp/jrn-033-visual/control-panel.pid)" 2>/dev/null || true
+          fi
