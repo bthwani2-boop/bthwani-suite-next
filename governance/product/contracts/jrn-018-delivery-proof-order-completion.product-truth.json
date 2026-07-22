@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "journeyId": "JRN-018",
   "title": "إثبات التسليم وإكمال الطلب",
   "owner": "services/dsh",
@@ -48,13 +48,17 @@
     "لا mutation مالية أو احتساب COD أو ledger أو settlement داخل DSH.",
     "لا عرض PIN أو موقع دقيق أو مراجع وسائط غير مصرح بها على سطح العميل.",
     "لا fallback أو mock أو proofReference وهمي داخل Runtime.",
-    "لا ادعاء CLOSED_WITH_EVIDENCE دون مراجعات المنتج وQA والأمن والمالية والإطلاق المستقلة."
+    "لا ادعاء إغلاق إطلاق إنتاجي دون مراجعات المنتج وQA والأمن والمالية والإطلاق المستقلة."
   ],
   "sliceClosureRegistry": "services/dsh/contracts/jrn-018-slice-closure.json",
   "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "finance", "qa", "governance", "ci"],
   "statusContext": "delivery-proof-order-completion-governance",
   "internalZeroGate": "PASSED_AUTOMATED_CODE_GATE",
+  "requiredSliceCount": 18,
+  "closedSliceCount": 18,
+  "openSliceCount": 0,
   "openCodeGaps": [],
   "independentReviewPending": ["product-manager", "product-owner", "qa-device-accessibility", "application-security", "financial-control", "release-production"],
-  "decision": "READY_FOR_REVIEW"
+  "decision": "CLOSED_WITH_AUTOMATED_EVIDENCE",
+  "releaseDecision": "READY_FOR_INDEPENDENT_REVIEW"
 }
