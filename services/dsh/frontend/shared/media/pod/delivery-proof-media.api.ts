@@ -10,8 +10,11 @@ export type CapturedDeliveryProofPhoto = {
   readonly mimeType?: string;
 };
 
+export type CaptainDeliveryEvidenceKind = 'photo' | 'signature';
+
 export type CaptainDeliveryProofSubmission = {
   readonly pin?: string;
+  readonly evidenceKind?: CaptainDeliveryEvidenceKind;
   readonly capturedLatitude?: number;
   readonly capturedLongitude?: number;
   readonly capturedAt?: string;
@@ -32,7 +35,7 @@ async function appendPhoto(form: FormData, photo: CapturedDeliveryProofPhoto): P
 
   if (typeof Blob !== 'undefined' && /^(blob:|data:|https?:)/i.test(photo.uri)) {
     const response = await fetch(photo.uri);
-    if (!response.ok) throw new Error('تعذر قراءة صورة إثبات التسليم.');
+    if (!response.ok) throw new Error('تعذر قراءة وسائط إثبات التسليم.');
     const blob = await response.blob();
     form.append('file', blob, fileName);
     return;
@@ -94,9 +97,10 @@ export async function uploadAndSubmitCaptainDeliveryProof(
 ): Promise<DshDeliveryProof> {
   const normalizedAssignmentId = assignmentId.trim();
   const pin = submission.pin?.trim() ?? '';
+  const evidenceKind = submission.evidenceKind ?? 'photo';
   const idempotencyKey = submission.idempotencyKey?.trim() || corrId('captain-delivery-proof');
   if (!normalizedAssignmentId) throw new Error('لا توجد مهمة نشطة لرفع الإثبات.');
-  if (!photo && !/^\d{6}$/.test(pin)) throw new Error('أدخل رمز التسليم أو التقط صورة إثبات.');
+  if (!photo && !/^\d{6}$/.test(pin)) throw new Error('أدخل رمز التسليم أو التقط وسائط إثبات.');
 
   if (!photo) {
     return submitCaptainDeliveryProof(normalizedAssignmentId, {
@@ -116,7 +120,8 @@ export async function uploadAndSubmitCaptainDeliveryProof(
 
   const form = new FormData();
   await appendPhoto(form, photo);
-  form.append('method', pin ? 'composite' : 'photo');
+  form.append('evidenceKind', evidenceKind);
+  form.append('method', pin ? 'composite' : evidenceKind);
   form.append('idempotencyKey', idempotencyKey);
   form.append('capturedAt', submission.capturedAt ?? new Date().toISOString());
   if (pin) form.append('pin', pin);
