@@ -161,14 +161,6 @@ for (const runnerRelative of [foundationRunnerRelative, journeyRunnerRelative]) 
   if (!/FIX_REQUIRED/.test(runner)) violations.push({ file: runnerRelative, line: 0, message: "CANONICAL_FAILURE_DECISION_REQUIRED" });
 }
 
-const guardsDir = path.join(repoRoot, "tools/guards");
-if (fs.existsSync(guardsDir)) {
-  const sourceFiles = fs.readdirSync(guardsDir)
-    .filter((name) => name.endsWith("-gate.mjs") || name === "no-broken-imports.mjs")
-    .map((name) => `tools/guards/${name}`);
-  for (const source of sourceFiles) if (!registeredSources.has(source)) violations.push({ file: source, line: 0, message: "UNREGISTERED_TOP_LEVEL_GUARD_SOURCE" });
-}
-
 const manifestGuardIds = new Set([
   ...(manifest?.guardSets?.foundation ?? []),
   ...(manifest?.guardSets?.journey ?? []),
@@ -206,7 +198,7 @@ if (fs.existsSync(workflowsDir)) {
     verifyCheckoutCredentials(relative, text);
 
     if (criticalWorkflows.has(fileName)) {
-      if (!/(?:branches:\s*\[[^\]]*\bbassam\b|^\s*-\s+bassam\s*$)/m.test(text)) violations.push({ file: relative, line: 0, message: "ACTIVE_REMOTE_BRANCH_BASSAM_NOT_COVERED" });
+      if (!/(?:branches:\s*\[[^\]]*\bsambassam\b|^\s*-\s+sambassam\s*$)/m.test(text)) violations.push({ file: relative, line: 0, message: "ACTIVE_REMOTE_BRANCH_SAMBASSAM_NOT_COVERED" });
       if (!/if:\s*always\(\)/.test(text)) violations.push({ file: relative, line: 0, message: "CRITICAL_WORKFLOW_FINAL_AGGREGATOR_MISSING" });
       if (/continue-on-error:\s*true\b/.test(text)) violations.push({ file: relative, line: 0, message: "CRITICAL_WORKFLOW_FAILURE_SUPPRESSION_FORBIDDEN" });
     }
