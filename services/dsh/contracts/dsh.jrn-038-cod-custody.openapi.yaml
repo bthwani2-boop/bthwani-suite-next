@@ -1,0 +1,66 @@
+openapi: 3.1.0
+info:
+  title: DSH JRN-038 COD Custody Proxy API
+  version: 1.0.0
+  description: Surface-scoped DSH proxy routes for WLT-owned COD custody and reconciliation truth.
+x-bthwani-owner: services/dsh
+x-bthwani-journey: JRN-038
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-runtime-dependency: true
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+servers:
+  - url: http://localhost:58080
+security:
+  - bearerAuth: []
+paths:
+  /dsh/control-panel/finance/cod-reconciliation-cases:
+    get:
+      operationId: listDshControlPanelCodReconciliationCases
+      responses:
+        '200': { description: WLT COD reconciliation cases }
+        '403': { description: Missing finance read permission }
+        '502': { description: WLT unavailable }
+  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign:
+    post:
+      operationId: assignDshControlPanelCodReconciliationCase
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+      responses:
+        '200': { description: COD case assignment readback }
+        '403': { description: Missing finance manage permission }
+        '409': { description: Assignment conflict }
+        '502': { description: WLT unavailable }
+  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve:
+    post:
+      operationId: resolveDshControlPanelCodReconciliationCase
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+      responses:
+        '200': { description: COD case resolution readback }
+        '403': { description: Missing finance manage permission }
+        '409': { description: Resolution conflict }
+        '502': { description: WLT unavailable }
+  /dsh/partner/me/finance/cod-records:
+    get:
+      operationId: listDshPartnerCodRecords
+      responses:
+        '200': { description: Partner-owned COD records }
+        '403': { description: Actor is not a partner }
+        '502': { description: WLT unavailable }
+  /dsh/partner/me/finance/cod-records/{recordId}/remit:
+    post:
+      operationId: remitDshPartnerCodRecord
+      parameters:
+        - $ref: '#/components/parameters/RecordId'
+      responses:
+        '200': { description: Partner COD remittance readback }
+        '403': { description: Actor is not the owning partner }
+        '409': { description: Invalid custody transition }
+        '502': { description: WLT unavailable }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    CaseId: { name: caseId, in: path, required: true, schema: { type: string, minLength: 1 } }
+    RecordId: { name: recordId, in: path, required: true, schema: { type: string, minLength: 1 } }
