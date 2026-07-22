@@ -43,8 +43,9 @@ run_check "governed promotion-funding tables" bash -lc "psql -X -q -v ON_ERROR_S
 run_check "reserve, commit, release, reverse and negative database invariants" bash services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh
 run_check "concurrent transition serialization" bash services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh
 run_check "Product Truth gate" node tools/guards/product-truth-gate.mjs
+run_check "compose canonical DSH OpenAPI bundle" pnpm --dir services/dsh openapi:compose
+run_check "generate canonical DSH API client" pnpm --dir services/dsh openapi:generate
 run_check "canonical DSH modular OpenAPI gate" node tools/guards/dsh-openapi-modular-gate.mjs
-run_check "generated DSH API client" pnpm --dir services/dsh openapi:generate
 run_check "generated contract cleanliness" git diff --exit-code -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts
 run_check "repository whitespace" git diff --check
 
