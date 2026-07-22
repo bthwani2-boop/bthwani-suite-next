@@ -8,6 +8,8 @@ async function source(relativePath) {
 
 test('JRN-019 owns canonical actor routes and compatibility normalization', async () => {
   const routes = await source('../backend/internal/http/order_cancellations.go');
+  const server = await source('../backend/internal/http/server.go');
+  const main = await source('../backend/cmd/dsh-api/main.go');
 
   for (const path of [
     '/dsh/client/orders/{orderId}/cancel',
@@ -21,6 +23,8 @@ test('JRN-019 owns canonical actor routes and compatibility normalization', asyn
   assert.match(routes, /body\.ReasonCode = "other"/);
   assert.match(routes, /body\.ReasonNote = body\.Reason/);
   assert.doesNotMatch(routes, /operator_cancelled/);
+  assert.match(server, /POST \/dsh\/operator\/orders\/\{orderId\}\/cancel/);
+  assert.match(main, /RegisterOrderCancellationRoutes\(router/);
 });
 
 test('JRN-019 cancellation policy has governed role and terminal-state mapping', async () => {
@@ -39,6 +43,7 @@ test('JRN-019 durable DSH to WLT handoff preserves command identity', async () =
   const outbox = await source('../backend/internal/checkoutfinanceoutbox/checkoutfinanceoutbox.go');
   const worker = await source('../backend/internal/checkoutfinanceoutbox/worker.go');
   const client = await source('../backend/internal/wlt/cancel_for_order.go');
+  const main = await source('../backend/cmd/dsh-api/main.go');
 
   assert.match(outbox, /CorrelationID\s+string/);
   assert.match(outbox, /reason, correlation_id/);
@@ -48,6 +53,7 @@ test('JRN-019 durable DSH to WLT handoff preserves command identity', async () =
   assert.match(client, /setRequiredMutationHeaders/);
   assert.match(client, /missing refund id/);
   assert.match(client, /requested payment session/);
+  assert.match(main, /checkoutfinanceoutbox\.RunWorker\(outboxCtx, db, wltClient/);
 });
 
 test('JRN-019 projects only WLT references and releases dependent work', async () => {
