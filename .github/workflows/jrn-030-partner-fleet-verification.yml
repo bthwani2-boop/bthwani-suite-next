@@ -5,28 +5,9 @@ on:
   workflow_dispatch:
   push:
     branches: [sambassam]
-    paths:
-      - "services/dsh/backend/internal/partnerfleet/**"
-      - "services/dsh/backend/internal/http/partner_fleet*.go"
-      - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
-      - "services/dsh/backend/cmd/dsh-api/main.go"
-      - "services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql"
-      - "services/dsh/database/migrations/dsh-089_store_team_actor_scope_uniqueness.sql"
-      - "services/dsh/frontend/shared/partner/partner-fleet.api.ts"
-      - "services/dsh/frontend/shared/partner/use-partner-fleet-controller.ts"
-      - "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx"
-      - "services/dsh/frontend/app-captain/account/PartnerFleetConnectionCard.tsx"
-      - "services/dsh/frontend/control-panel/partners/stores/OperatorPartnerFleetPanel.tsx"
-      - "services/dsh/frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx"
-      - "services/dsh/contracts/dsh.partner-fleet.openapi.yaml"
-      - "services/dsh/tests/jrn-030-partner-fleet.test.mjs"
-      - "services/dsh/tsconfig.jrn-030.json"
-      - "governance/product/contracts/JRN-030_PARTNER_FLEET_CONNECTION.product-truth.json"
-      - "governance/evidence/JRN-030_REMOTE_SLICE_EXECUTION.md"
-      - "governance/evidence/JRN-030_TECHNICAL_CLOSURE_2026-07-22.md"
-      - "governance/product/product-truth.schema.json"
-      - "tools/guards/product-truth-gate.mjs"
-      - ".github/workflows/jrn-030-partner-fleet-verification.yml"
+  pull_request:
+    branches: [master]
+    types: [synchronize]
 
 permissions:
   contents: read
@@ -36,8 +17,47 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  detect-relevant-change:
+    name: Detect latest JRN-030 change
+    runs-on: ubuntu-latest
+    outputs:
+      relevant: ${{ steps.detect.outputs.relevant }}
+    steps:
+      - name: Checkout repository state
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 10
+
+      - name: Detect JRN-030 paths in the triggering commit
+        id: detect
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            echo "relevant=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          base="${BEFORE_SHA:-}"
+          if [[ -z "${base}" || "${base}" == "0000000000000000000000000000000000000000" ]]; then
+            base="HEAD^"
+          fi
+          git diff --name-only "${base}" "${GITHUB_SHA}" > /tmp/jrn-030-changed-paths.txt
+          cat /tmp/jrn-030-changed-paths.txt
+
+          if grep -Eq '^((services/dsh/backend/internal/partnerfleet/)|(services/dsh/backend/internal/http/partner_fleet.*\.go$)|(services/dsh/backend/internal/http/journeys_026_030_routes_test\.go$)|(services/dsh/backend/cmd/dsh-api/main\.go$)|(services/dsh/database/migrations/dsh-059_partner_courier_connection_codes\.sql$)|(services/dsh/database/migrations/dsh-089_store_team_actor_scope_uniqueness\.sql$)|(services/dsh/frontend/shared/partner/partner-fleet\.api\.ts$)|(services/dsh/frontend/shared/partner/use-partner-fleet-controller\.ts$)|(services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen\.tsx$)|(services/dsh/frontend/app-captain/account/PartnerFleetConnectionCard\.tsx$)|(services/dsh/frontend/control-panel/partners/stores/OperatorPartnerFleetPanel\.tsx$)|(services/dsh/frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel\.tsx$)|(services/dsh/contracts/dsh\.partner-fleet\.openapi\.yaml$)|(services/dsh/tests/jrn-030-partner-fleet\.test\.mjs$)|(services/dsh/tsconfig\.jrn-030\.json$)|(governance/product/contracts/JRN-030_PARTNER_FLEET_CONNECTION\.product-truth\.json$)|(governance/evidence/JRN-030_REMOTE_SLICE_EXECUTION\.md$)|(governance/evidence/JRN-030_TECHNICAL_CLOSURE_2026-07-22\.md$)|(governance/product/product-truth\.schema\.json$)|(tools/guards/product-truth-gate\.mjs$)|(\.github/workflows/jrn-030-partner-fleet-verification\.yml$))' /tmp/jrn-030-changed-paths.txt; then
+            echo "relevant=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "relevant=false" >> "${GITHUB_OUTPUT}"
+          fi
+
   verify:
     name: JRN-030 same-commit full-stack proof
+    needs: detect-relevant-change
+    if: needs.detect-relevant-change.outputs.relevant == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
