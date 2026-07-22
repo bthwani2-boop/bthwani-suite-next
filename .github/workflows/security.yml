@@ -1,0 +1,67 @@
+name: BThwani Security Policy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - "governance/**"
+      - "tools/guards/**"
+      - "tools/scripts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+  pull_request:
+    branches: [sambassam, master]
+    paths:
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - "governance/**"
+      - "tools/guards/**"
+      - "tools/scripts/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-policy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflow-security:
+    name: Verify immutable workflow security
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify security policy
+        run: |
+          pnpm run guard:actions-pin
+          pnpm run guard:workflow-lint
+          pnpm run guard:workflow-security
+          pnpm run guard:opa-policies
+
+  result:
+    name: Security policy result
+    needs: [workflow-security]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Enforce security result
+        env:
+          SECURITY_RESULT: ${{ needs.workflow-security.result }}
+        run: |
+          if [ "${SECURITY_RESULT}" != "success" ]; then
+            echo "Security policy failed: ${SECURITY_RESULT}"
+            exit 1
+          fi
+          echo "Security policy passed."
