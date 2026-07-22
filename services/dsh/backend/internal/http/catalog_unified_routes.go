@@ -102,6 +102,7 @@ func (s *protectedStoreServer) handleUpdateCatalogPlatformPolicyAtomic(w http.Re
 // called by NewRouter, so independent bounded registrars are composed here.
 func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	registerDeliveryProofRoutes(mux, s)
+	registerRepresentativeFinanceRoutes(mux, s)
 
 	// JRN-011 canonical order-truth routes. Legacy /orders routes remain for
 	// compatibility while all new shared clients consume these governed paths.
