@@ -1,0 +1,110 @@
+name: JRN-031 Administration Governance Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "services/dsh/backend/internal/administration/**"
+      - "services/dsh/backend/internal/http/administration*.go"
+      - "services/dsh/backend/internal/http/journey_031_routes_test.go"
+      - "services/dsh/database/migrations/dsh-131_jrn031_governed_administration_closure.sql"
+      - "services/dsh/frontend/shared/administration/**"
+      - "services/dsh/frontend/control-panel/administration/**"
+      - "apps/control-panel/runtime/src/app/dsh/administration/page.tsx"
+      - "services/dsh/contracts/jrn-031-administration.openapi.yaml"
+      - "services/dsh/tests/jrn-031-administration-governance.test.mjs"
+      - "services/dsh/tsconfig.jrn-031.json"
+      - "governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json"
+      - ".github/workflows/jrn-031-administration-governance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-031-administration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Approval rollback audit and route model
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/dsh/backend
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Set up Go from DSH module
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Run JRN-031 targeted tests
+        run: >-
+          go test
+          ./internal/administration
+          ./internal/http
+          -run 'Test(Journey031ExposesGovernedAdministrationRoutes|RequestStaffRoleAssignmentRejectsInvalidInput|RequestStaffRoleAssignmentRejectsSelfAssignment|ReviewStaffRoleAssignmentRejectsInvalidDecision|ReviewStaffRoleAssignmentRequiresVersion|RejectedRoleAssignmentRequiresReviewNote|NormalizeRoleDefinitionRequiresControlPanelAndNormalizesScope|AdministrationPermissionCandidatesPreserveLegacyFallback|InverseRoleAction|AuditRedactionDropsSensitiveValues)$'
+          -count=1
+
+      - name: Build affected backend owners
+        run: go build ./internal/administration ./internal/http
+
+  frontend:
+    name: Shared brain and governed control-panel surface
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run JRN-031 full-stack governance guard
+        run: node --test services/dsh/tests/jrn-031-administration-governance.test.mjs
+
+      - name: Typecheck the JRN-031 ownership graph
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-031.json --noEmit --pretty false
+
+  contract:
+    name: Focused contract and product truth
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Parse focused OpenAPI through the repository generator
+        run: pnpm --dir services/dsh exec openapi-typescript contracts/jrn-031-administration.openapi.yaml -o /tmp/jrn-031-administration-api.ts
+
+      - name: Validate product truth JSON and repository whitespace
+        run: |
+          node -e "const fs=require('fs'); const p='governance/product/contracts/jrn-031-administration-roles-approvals-audit.product-truth.json'; const x=JSON.parse(fs.readFileSync(p,'utf8')); if(x.journeyId!=='JRN-031'||x.status!=='PENDING_INDEPENDENT_APPROVAL') process.exit(1)"
+          git diff --check
