@@ -60,7 +60,7 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache: true
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Check JRN-016 Go formatting
+      - name: Produce canonical JRN-016 Go formatting patch
         shell: bash
         run: |
           set -euo pipefail
@@ -75,7 +75,18 @@ jobs:
             services/dsh/backend/internal/partnerdelivery/exception_commands.go
             services/dsh/backend/internal/partnerdelivery/jrn016_commands_db_test.go
           )
-          test -z "$(gofmt -l "${files[@]}")"
+          gofmt -w "${files[@]}"
+          git diff -- "${files[@]}" > jrn016-gofmt.patch
+      - name: Preserve canonical Go formatting patch
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn016-gofmt-${{ github.run_id }}
+          path: jrn016-gofmt.patch
+          retention-days: 3
+          if-no-files-found: error
+      - name: Reject Go formatting drift
+        run: test ! -s jrn016-gofmt.patch
       - name: Compile partner delivery and protected HTTP boundaries
         shell: bash
         run: |
@@ -119,7 +130,19 @@ jobs:
       - name: Validate contract registry and OpenAPI metadata
         run: pnpm run contracts:lint
       - name: Prove JRN-016 source bindings and slice registry
-        run: node --test services/dsh/tests/jrn-016-partner-delivery-closure.test.mjs
+        id: source_closure
+        shell: bash
+        run: |
+          set -o pipefail
+          node --test services/dsh/tests/jrn-016-partner-delivery-closure.test.mjs 2>&1 | tee jrn016-source-closure.log
+      - name: Preserve source closure diagnostics
+        if: failure() && steps.source_closure.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn016-source-closure-${{ github.run_id }}
+          path: jrn016-source-closure.log
+          retention-days: 3
+          if-no-files-found: error
       - name: Typecheck DSH shared brain and all surfaces
         run: pnpm --dir services/dsh exec tsc -p tsconfig.json --noEmit --pretty false
       - name: Verify UI and full-stack boundaries
