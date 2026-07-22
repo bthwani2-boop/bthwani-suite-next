@@ -4,6 +4,25 @@
 -- transition is not considered complete unless the corresponding evidence and
 -- double-entry ledger transaction commit in the same database transaction.
 
+ALTER TABLE wlt_ledger_accounts
+  DROP CONSTRAINT IF EXISTS wlt_ledger_accounts_type_chk;
+
+ALTER TABLE wlt_ledger_accounts
+  ADD CONSTRAINT wlt_ledger_accounts_type_chk CHECK (
+    account_type IN (
+      'wallet',
+      'platform_revenue',
+      'platform_payable',
+      'provider_clearing',
+      'cash_in_transit',
+      'cash_variance',
+      'platform_commission_receivable'
+    )
+  );
+
+COMMENT ON CONSTRAINT wlt_ledger_accounts_type_chk ON wlt_ledger_accounts IS
+  'Closed WLT chart subset including COD cash in transit and explicit expected-versus-actual variance.';
+
 CREATE TABLE IF NOT EXISTS wlt_cod_custody_evidence (
   id                           text PRIMARY KEY DEFAULT ('wcde_' || gen_random_uuid()::text),
   cod_record_id                text NOT NULL REFERENCES wlt_cod_records(id) ON DELETE RESTRICT,
