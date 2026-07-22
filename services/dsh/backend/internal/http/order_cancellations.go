@@ -59,9 +59,10 @@ func decodeCancellationBody(w http.ResponseWriter, r *http.Request) (orderCancel
 
 	// `/cancel` is retained as an explicit compatibility alias. Normalize its
 	// historical `{reason}` body into the canonical cancellation command instead
-	// of invoking the former parallel cancellation implementation.
+	// of invoking the former parallel cancellation implementation. `other` is
+	// valid for every human cancellation role and requires the preserved note.
 	if body.ReasonCode == "" && body.Reason != "" {
-		body.ReasonCode = "operator_cancelled"
+		body.ReasonCode = "other"
 		if body.ReasonNote == "" {
 			body.ReasonNote = body.Reason
 		}
