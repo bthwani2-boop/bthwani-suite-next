@@ -2,7 +2,7 @@ name: JRN-032 Final Operational Analytics Verification
 
 on:
   pull_request:
-    branches: [master]
+    branches: [verify/jrn-032-ci-base-8f2d3e7]
   workflow_dispatch:
 
 permissions:
@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Checkout immutable verification branch
+      - name: Checkout immutable verification head
         uses: actions/checkout@v4
         with:
-          ref: verify/jrn-032-final-8f2d3e7
+          ref: verify/jrn-032-ci-run-8f2d3e7
           fetch-depth: 0
 
       - name: Set up pnpm
@@ -65,7 +65,7 @@ jobs:
       - name: Verify and generate DSH OpenAPI
         run: pnpm --dir services/dsh openapi:verify
 
-      - name: Materialize contract and formatting on snapshot
+      - name: Materialize contract and formatting on verification head
         run: |
           if git diff --quiet; then
             echo "No materialized changes required."
@@ -74,8 +74,8 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -A
             git commit -m "chore(jrn-032): materialize final contract and formatting [skip ci]"
-            git pull --rebase origin verify/jrn-032-final-8f2d3e7
-            git push origin HEAD:verify/jrn-032-final-8f2d3e7
+            git pull --rebase origin verify/jrn-032-ci-run-8f2d3e7
+            git push origin HEAD:verify/jrn-032-ci-run-8f2d3e7
           fi
 
       - name: Test analytics backend
@@ -140,8 +140,9 @@ jobs:
 
 - repository_mode: REMOTE_ONLY
 - source_branch: sambassam
-- immutable_verification_branch: verify/jrn-032-final-8f2d3e7
-- verified_source_sha: {os.environ['VERIFIED_SOURCE_SHA']}
+- immutable_source_sha: {os.environ['VERIFIED_SOURCE_SHA']}
+- verification_base: verify/jrn-032-ci-base-8f2d3e7
+- verification_head: verify/jrn-032-ci-run-8f2d3e7
 - workflow_run_id: {os.environ['VERIFIED_RUN_ID']}
 - run_attempt: {os.environ['VERIFIED_RUN_ATTEMPT']}
 - verified_at: {verified_at}
@@ -170,5 +171,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add governance/evidence/JRN-032_SLICE_VERIFICATION.json governance/evidence/JRN-032_FINAL_REMOTE_VERIFICATION.md
           git commit -m "docs(jrn-032): record final remote verification [skip ci]"
-          git pull --rebase origin verify/jrn-032-final-8f2d3e7
-          git push origin HEAD:verify/jrn-032-final-8f2d3e7
+          git pull --rebase origin verify/jrn-032-ci-run-8f2d3e7
+          git push origin HEAD:verify/jrn-032-ci-run-8f2d3e7
