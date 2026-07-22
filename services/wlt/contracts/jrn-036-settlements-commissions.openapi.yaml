@@ -1,24 +1,20 @@
 openapi: 3.0.3
 info:
-  title: WLT JRN-036 Governed Settlements and Commissions
-  version: 1.0.0
+  title: WLT JRN-036 Settlements and Commissions
+  version: 1.1.0
   description: >-
-    Internal DSH-to-WLT financial contract. DSH supplies immutable operational
-    evidence and actor identities only. WLT owns policies, amounts, refunds,
-    wallet effects, ledger effects, adjustments, lifecycle and audit.
+    Governed WLT-owned settlement, commission, policy, evidence, adjustment,
+    and lifecycle contracts. DSH supplies operational evidence and actor
+    identity only. Every financial mutation requires an Idempotency-Key and
+    stores an atomic canonical response for safe replay.
 servers:
   - url: http://localhost:58083
 security:
   - DshServiceToken: []
-tags:
-  - name: Settlements
-  - name: Commissions
 paths:
   /wlt/settlements:
     post:
-      tags: [Settlements]
       operationId: createWltEvidenceBackedSettlement
-      summary: Create one refund-aware settlement from verified DSH evidence
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -30,7 +26,7 @@ paths:
               $ref: '#/components/schemas/CreateSettlementRequest'
       responses:
         '201':
-          description: Settlement calculated by WLT
+          description: Settlement calculated by WLT from verified DSH sources and completed refunds
           content:
             application/json:
               schema:
@@ -41,14 +37,13 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/settlements/{settlementId}/evidence:
     get:
-      tags: [Settlements]
       operationId: listWltSettlementEvidence
       parameters:
         - $ref: '#/components/parameters/SettlementId'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
         '200':
-          description: Immutable source and refund evidence
+          description: Immutable operational and refund evidence used in the settlement
           content:
             application/json:
               schema:
@@ -60,7 +55,6 @@ paths:
                     items: { $ref: '#/components/schemas/SettlementEvidence' }
   /wlt/settlement-policies/{partnerId}:
     put:
-      tags: [Settlements]
       operationId: upsertWltSettlementPolicy
       parameters:
         - $ref: '#/components/parameters/PartnerId'
@@ -72,10 +66,11 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/SettlementPolicyInput' }
       responses:
-        '200': { description: New immutable policy version }
+        '200':
+          description: Append-only policy version created, or original version replayed for an exact retry
+        '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commission-policies:
     put:
-      tags: [Commissions]
       operationId: upsertWltCommissionPolicy
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -86,20 +81,32 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/CommissionPolicyInput' }
       responses:
-        '200': { description: New immutable policy version }
+        '200':
+          description: Append-only commission policy version created, or original version replayed for an exact retry
+        '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions:
     get:
-      tags: [Commissions]
       operationId: listWltGovernedCommissions
       parameters:
-        - { name: sourceId, in: query, schema: { type: string } }
-        - { name: beneficiaryActorId, in: query, schema: { type: string } }
-        - { name: beneficiaryActorType, in: query, schema: { $ref: '#/components/schemas/RepresentativeActorType' } }
-        - { name: status, in: query, schema: { $ref: '#/components/schemas/CommissionStatus' } }
-        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 100 } }
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: sourceId
+          in: query
+          schema: { type: string }
+        - name: beneficiaryActorId
+          in: query
+          schema: { type: string }
+        - name: beneficiaryActorType
+          in: query
+          schema: { $ref: '#/components/schemas/RepresentativeActorType' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/CommissionStatus' }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
       responses:
         '200':
-          description: Scoped or operator-authorized commission list
+          description: WLT-owned commission records
           content:
             application/json:
               schema:
@@ -110,11 +117,7 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/Commission' }
     post:
-      tags: [Commissions]
       operationId: createWltGovernedCommission
-      description: >-
-        Calculates the commission from the active retained WLT policy. The
-        request deliberately has no amountMinorUnits property.
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -125,7 +128,7 @@ paths:
             schema: { $ref: '#/components/schemas/CreateCommissionRequest' }
       responses:
         '201':
-          description: Policy-calculated commission
+          description: Commission calculated from an active WLT policy
           content:
             application/json:
               schema:
@@ -136,20 +139,18 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions/{commissionId}:
     get:
-      tags: [Commissions]
       operationId: getWltGovernedCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
         '200':
-          description: Commission with exact evidence and adjustments
+          description: Commission with policy evidence and reasoned adjustments
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CommissionDetail' }
   /wlt/commissions/{commissionId}/adjust:
     post:
-      tags: [Commissions]
       operationId: adjustWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -164,48 +165,58 @@ paths:
               additionalProperties: false
               required: [deltaMinorUnits, reason, operatorId]
               properties:
-                deltaMinorUnits: { type: integer, not: { const: 0 } }
+                deltaMinorUnits: { type: integer, not: { enum: [0] } }
                 reason: { type: string, minLength: 1 }
                 operatorId: { type: string, minLength: 1 }
+                idempotencyKey: { type: string, minLength: 1 }
       responses:
-        '200': { description: Adjusted commission and balanced wallet/ledger effect }
+        '200':
+          description: Reasoned adjustment applied atomically
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions/{commissionId}/confirm:
     post:
-      tags: [Commissions]
       operationId: confirmWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/LifecycleAction' }
-      responses: { '200': { description: Pending commission confirmed } }
+      responses:
+        '200': { description: Pending commission confirmed or original response replayed }
+        '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions/{commissionId}/settle:
     post:
-      tags: [Commissions]
       operationId: settleWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/LifecycleAction' }
-      responses: { '200': { description: Confirmed commission settled } }
+      responses:
+        '200': { description: Confirmed commission settled or original response replayed }
+        '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions/{commissionId}/reject:
     post:
-      tags: [Commissions]
       operationId: rejectWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/ReasonedLifecycleAction' }
-      responses: { '200': { description: Pending commission rejected with reversal } }
+      responses:
+        '200': { description: Pending commission rejected with reason or original response replayed }
+        '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions/{commissionId}/reverse:
     post:
-      tags: [Commissions]
       operationId: reverseWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
         - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/ReasonedLifecycleAction' }
-      responses: { '200': { description: Settled commission reversed with balanced ledger effect } }
+      responses:
+        '200': { description: Settled commission reversed with reason or original response replayed }
+        '409': { $ref: '#/components/responses/Conflict' }
 components:
   securitySchemes:
     DshServiceToken:
@@ -221,7 +232,7 @@ components:
       name: Idempotency-Key
       in: header
       required: true
-      schema: { type: string, minLength: 1 }
+      schema: { type: string, minLength: 1, maxLength: 200 }
     SettlementId:
       name: settlementId
       in: path
