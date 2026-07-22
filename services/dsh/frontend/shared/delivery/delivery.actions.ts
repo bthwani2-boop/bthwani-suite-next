@@ -115,15 +115,32 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
     setRoute('pod-submission');
   }, [activeAssignmentId, captainRuntimeId, setCaptainPodState, setRoute]);
 
-  const confirmPodSubmission = React.useCallback(async () => {
-    if (!captainRuntimeId || !activeAssignmentId || !captainPodPhotoUri) {
+  const confirmPodSubmission = React.useCallback(async (pin = '') => {
+    const normalizedPin = pin.trim();
+    if (!captainRuntimeId || !activeAssignmentId || (!captainPodPhotoUri && !/^\d{6}$/.test(normalizedPin))) {
       setCaptainPodState('error');
       return;
     }
     setCaptainPodState('loading');
     try {
-      await uploadAndSubmitCaptainDeliveryProof(activeAssignmentId, { uri: captainPodPhotoUri });
+      const proof = await uploadAndSubmitCaptainDeliveryProof(
+        activeAssignmentId,
+        captainPodPhotoUri ? { uri: captainPodPhotoUri } : undefined,
+        { pin: normalizedPin, capturedAt: new Date().toISOString() },
+      );
       await Promise.resolve(refreshInbox());
+      if (proof.status === 'pending_review' || proof.status === 'submitted') {
+        setCaptainPodState('pending_review');
+        return;
+      }
+      if (proof.status === 'rejected') {
+        setCaptainPodState('rejected');
+        return;
+      }
+      if (proof.status !== 'accepted') {
+        setCaptainPodState('error');
+        return;
+      }
       setCaptainPodState('success');
       setInboxState('delivered');
       setActiveOrderExpanded(false);
