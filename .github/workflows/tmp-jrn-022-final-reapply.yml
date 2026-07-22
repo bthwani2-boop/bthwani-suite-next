@@ -1,0 +1,93 @@
+name: Temporary JRN-022 Final Reapply
+
+on:
+  pull_request:
+    branches: [sambassam]
+    paths:
+      - ".github/workflows/tmp-jrn-022-final-reapply.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tmp-jrn-022-final-reapply-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  reapply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest reapply branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore and apply verified JRN-022 patcher
+        run: |
+          git show 84f4cdf221bce690b4a0b42ea452b34d3b7af429:tools/scripts/close-jrn-022-backend-contract-slices.py > tools/scripts/close-jrn-022-backend-contract-slices.py
+          python3 tools/scripts/close-jrn-022-backend-contract-slices.py
+
+      - name: Format and verify backend
+        shell: bash
+        run: |
+          set -o pipefail
+          gofmt -w \
+            services/dsh/backend/internal/specialrequests/information_exchange.go \
+            services/dsh/backend/internal/specialrequests/information_exchange_test.go \
+            services/dsh/backend/internal/specialrequests/execution.go \
+            services/dsh/backend/internal/specialrequests/workflow_stages.go \
+            services/dsh/backend/internal/http/specialrequests_information.go \
+            services/dsh/backend/internal/http/specialrequests_execution.go \
+            services/dsh/backend/internal/http/specialrequests.go \
+            services/dsh/backend/internal/http/server.go \
+            services/dsh/backend/internal/http/jrn_022_special_requests_routes_test.go \
+            services/dsh/backend/internal/http/dispatch.go \
+            services/dsh/backend/internal/dispatch/delivery_exceptions.go \
+            services/dsh/backend/internal/dispatch/delivery_exceptions_special_requests.go
+          cd services/dsh/backend
+          go test ./internal/specialrequests ./internal/http ./internal/dispatch -run 'Test(JRN022SpecialRequestRoutes|CanonicalSpecialRequestStagesAreKnownToService|DefaultWorkflowStageMatchesCustomerAndDeliveryReadback|InformationExchangeValidationAndCanonicalStage)$' -count=1
+          go build ./internal/http ./internal/dispatch ./internal/specialrequests
+
+      - name: Rebuild governed manifest and generated client
+        run: |
+          node -e "import('./tools/scripts/dsh-openapi-modular-lib.mjs').then((m) => m.migrateDshOpenApi())"
+          pnpm --dir services/dsh openapi:generate
+          pnpm --dir services/dsh openapi:test
+          git diff --check
+
+      - name: Commit verified latest-base result
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref || github.ref_name }}
+        run: |
+          git config user.name "bthwani-journey-closure"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout HEAD -- \
+            .github/workflows/tmp-jrn-022-final-reapply.yml \
+            .github/workflows/tmp-jrn-022-backend-contract-closure.yml \
+            .github/workflows/jrn-022-special-requests-verification.yml
+          git add -A
+          git commit -m "feat(jrn-022): reapply remaining backend closure on latest base [skip ci]"
+          git pull --rebase origin "$HEAD_REF"
+          git push origin "HEAD:$HEAD_REF"
