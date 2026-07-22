@@ -5,11 +5,12 @@
   "scripts": {
     "openapi:compose": "node ../../tools/scripts/compose-dsh-openapi.mjs",
     "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts",
+    "openapi:test": "node --test tests/dsh-openapi-modular.test.mjs",
+    "openapi:verify": "node ../../tools/guards/dsh-openapi-modular-gate.mjs && pnpm run openapi:generate",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json",
     "test": "node --test tests/*.test.mjs",
-    "lint": "pnpm --dir ../.. run guard:fullstack-boundary",
-    "openapi:verify": "node ../../tools/guards/dsh-openapi-modular-gate.mjs && pnpm run openapi:generate"
+    "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
   },
   "peerDependencies": {
     "react": "19.2.3"
