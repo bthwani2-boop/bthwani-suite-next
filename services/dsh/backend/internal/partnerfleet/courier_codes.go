@@ -154,12 +154,12 @@ func IssueCode(ctx context.Context, db *sql.DB, storeID, teamMemberID, actorID s
 		return IssuedConnectionCode{}, err
 	}
 
-	var role, status, identityActorID string
+	var role, status, identityActorID, courierName string
 	err = tx.QueryRowContext(ctx, `
-		SELECT role,status,identity_actor_id
+		SELECT role,status,identity_actor_id,name
 		FROM dsh_store_team_members
 		WHERE id=$1 AND store_id=$2
-		FOR UPDATE`, teamMemberID, storeID).Scan(&role, &status, &identityActorID)
+		FOR UPDATE`, teamMemberID, storeID).Scan(&role, &status, &identityActorID, &courierName)
 	if errors.Is(err, sql.ErrNoRows) {
 		return IssuedConnectionCode{}, ErrNotFound
 	}
@@ -196,6 +196,16 @@ func IssueCode(ctx context.Context, db *sql.DB, storeID, teamMemberID, actorID s
 		VALUES ($1,$2,'issue_captain_connection_code',$3,$3,$4)`, teamMemberID, storeID, status, actorID); err != nil {
 		return IssuedConnectionCode{}, err
 	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO dsh_notifications
+			(actor_id, actor_type, topic, title, body, action_url)
+		VALUES ($1, 'partner', 'partner_fleet_connection',
+		        'تم إصدار رمز ربط للكابتن',
+		        $2,
+		        '/team')`,
+		actorID, "تم إصدار رمز ربط آمن للموصل "+courierName+" وينتهي تلقائيًا في الموعد المحدد."); err != nil {
+		return IssuedConnectionCode{}, err
+	}
 	if err := tx.Commit(); err != nil {
 		return IssuedConnectionCode{}, err
 	}
@@ -216,14 +226,14 @@ func RevokeCode(ctx context.Context, db *sql.DB, storeID, codeID, actorID string
 	}
 	defer tx.Rollback()
 
-	var teamMemberID, codeStatus, memberStatus string
+	var teamMemberID, codeStatus, memberStatus, courierName string
 	var version int
 	err = tx.QueryRowContext(ctx, `
-		SELECT c.team_member_id, c.status, c.version, m.status
+		SELECT c.team_member_id, c.status, c.version, m.status, m.name
 		FROM dsh_partner_courier_connection_codes c
 		JOIN dsh_store_team_members m ON m.id = c.team_member_id AND m.store_id = c.store_id
 		WHERE c.id::text = $1 AND c.store_id = $2
-		FOR UPDATE`, codeID, storeID).Scan(&teamMemberID, &codeStatus, &version, &memberStatus)
+		FOR UPDATE`, codeID, storeID).Scan(&teamMemberID, &codeStatus, &version, &memberStatus, &courierName)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ConnectionCode{}, ErrNotFound
 	}
@@ -249,6 +259,16 @@ func RevokeCode(ctx context.Context, db *sql.DB, storeID, codeID, actorID string
 		INSERT INTO dsh_store_team_member_actions
 			(member_id,store_id,action_label,from_status,to_status,actor_id)
 		VALUES ($1,$2,'revoke_captain_connection_code',$3,$3,$4)`, teamMemberID, storeID, memberStatus, actorID); err != nil {
+		return ConnectionCode{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO dsh_notifications
+			(actor_id, actor_type, topic, title, body, action_url)
+		VALUES ($1, 'partner', 'partner_fleet_connection',
+		        'تم سحب رمز ربط الكابتن',
+		        $2,
+		        '/team')`,
+		actorID, "تم سحب رمز الربط المعلق للموصل "+courierName+" ولن يمكن استخدامه."); err != nil {
 		return ConnectionCode{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -277,13 +297,13 @@ func RedeemCode(ctx context.Context, db *sql.DB, captainActorID, plainCode strin
 	}
 	defer tx.Rollback()
 
-	var connectionID, storeID, memberID, status string
+	var connectionID, storeID, memberID, status, createdByActorID string
 	var expiresAt time.Time
 	err = tx.QueryRowContext(ctx, `
-		SELECT id::TEXT,store_id,team_member_id,status,expires_at
+		SELECT id::TEXT,store_id,team_member_id,status,expires_at,created_by_actor_id
 		FROM dsh_partner_courier_connection_codes
 		WHERE code_hash=$1
-		FOR UPDATE`, hashCode(normalized)).Scan(&connectionID, &storeID, &memberID, &status, &expiresAt)
+		FOR UPDATE`, hashCode(normalized)).Scan(&connectionID, &storeID, &memberID, &status, &expiresAt, &createdByActorID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return CaptainFleetMembership{}, ErrNotFound
 	}
@@ -386,7 +406,27 @@ func RedeemCode(ctx context.Context, db *sql.DB, captainActorID, plainCode strin
 	}
 
 	var storeName string
-	if err := tx.QueryRowContext(ctx, `SELECT name FROM dsh_stores WHERE id=$1`, storeID).Scan(&storeName); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT display_name FROM dsh_stores WHERE id=$1`, storeID).Scan(&storeName); err != nil {
+		return CaptainFleetMembership{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO dsh_notifications
+			(actor_id, actor_type, topic, title, body, action_url)
+		VALUES ($1, 'captain', 'partner_fleet_membership',
+		        'تم ربطك بأسطول الشريك',
+		        $2,
+		        '/account/partner-fleet')`,
+		captainActorID, "تم تفعيل عضويتك كموصل لمتجر "+storeName+"."); err != nil {
+		return CaptainFleetMembership{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO dsh_notifications
+			(actor_id, actor_type, topic, title, body, action_url)
+		VALUES ($1, 'partner', 'partner_fleet_connection',
+		        'تم ربط الكابتن بأسطول المتجر',
+		        $2,
+		        '/team')`,
+		createdByActorID, "استهلك الكابتن رمز الربط وأصبحت عضوية "+courierName+" نشطة."); err != nil {
 		return CaptainFleetMembership{}, err
 	}
 	if err := tx.Commit(); err != nil {
