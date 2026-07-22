@@ -1,5 +1,5 @@
 import React from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Button, Card, Text, TextField, spacing } from "@bthwani/ui-kit";
 import {
   findDeliveryPricing,
@@ -21,21 +21,22 @@ export function PartnerDeliveryPricingCard({ storeId }: PartnerDeliveryPricingCa
   const [reason, setReason] = React.useState("");
 
   React.useEffect(() => {
-    if (partnerPolicy) setFeeYer(String(partnerPolicy.feeMinorUnits / 100));
+    setFeeYer(partnerPolicy ? String(partnerPolicy.feeMinorUnits / 100) : "");
   }, [partnerPolicy]);
 
   const save = React.useCallback(async () => {
-    if (!partnerPolicy) return;
     const fee = Number(feeYer);
     if (!Number.isFinite(fee) || fee < 0 || !reason.trim()) return;
     const succeeded = await controller.save(partnerPolicy, {
       feeMinorUnits: Math.round(fee * 100),
       currency: "YER",
-      status: partnerPolicy.status === "archived" ? "paused" : partnerPolicy.status,
+      status: partnerPolicy?.status === "archived" ? "paused" : partnerPolicy?.status ?? "active",
       reason: reason.trim(),
     });
     if (succeeded) setReason("");
   }, [controller, feeYer, partnerPolicy, reason]);
+
+  const canEdit = controller.state.kind === "success" || controller.state.kind === "empty";
 
   return (
     <Card padding={3} gap={3} tone="info">
@@ -51,13 +52,21 @@ export function PartnerDeliveryPricingCard({ storeId }: PartnerDeliveryPricingCa
           <Button label="إعادة المحاولة" tone="secondary" onPress={() => void controller.reload()} />
         </>
       ) : null}
-      {controller.state.kind === "empty" ? <Text role="bodySm" tone="warning">لا توجد سياسة تسعير مهيأة لهذا المتجر.</Text> : null}
+      {controller.state.kind === "empty" ? (
+        <Text role="bodySm" tone="warning">لا توجد سياسة تسعير مهيأة. أدخل الرسوم والسبب لإنشاء سياسة توصيل المتجر.</Text>
+      ) : null}
 
-      {partnerPolicy ? (
-        <View style={{ gap: spacing[2] }}>
-          <Text role="caption" tone="muted" align="start">
-            السعر الحالي: {formatFee(partnerPolicy.feeMinorUnits)} ر.ي · الحالة: {partnerPolicy.status} · الإصدار: {partnerPolicy.version}
-          </Text>
+      {canEdit ? (
+        <View style={styles.editor}>
+          {partnerPolicy ? (
+            <Text role="caption" tone="muted" align="start">
+              السعر الحالي: {formatFee(partnerPolicy.feeMinorUnits)} ر.ي · الحالة: {partnerPolicy.status} · الإصدار: {partnerPolicy.version}
+            </Text>
+          ) : (
+            <Text role="caption" tone="muted" align="start">
+              ستُنشأ السياسة بحالة نشطة وبإصدار أول بعد الحفظ الناجح.
+            </Text>
+          )}
           <TextField
             label="رسوم توصيل المتجر بالريال اليمني"
             value={feeYer}
@@ -71,9 +80,13 @@ export function PartnerDeliveryPricingCard({ storeId }: PartnerDeliveryPricingCa
             placeholder="مثال: تحديث تكلفة التوصيل داخل النطاق"
           />
           <Button
-            label={controller.mutationLoading ? "جاري الحفظ…" : "حفظ سياسة التوصيل"}
+            label={controller.mutationLoading
+              ? "جاري الحفظ…"
+              : partnerPolicy
+                ? "حفظ سياسة التوصيل"
+                : "إنشاء سياسة التوصيل"}
             tone="brand"
-            disabled={controller.mutationLoading || !reason.trim()}
+            disabled={controller.mutationLoading || !feeYer.trim() || !reason.trim()}
             onPress={() => void save()}
           />
           {controller.mutationError ? <Text role="caption" tone="danger">{controller.mutationError}</Text> : null}
@@ -82,3 +95,9 @@ export function PartnerDeliveryPricingCard({ storeId }: PartnerDeliveryPricingCa
     </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  editor: {
+    gap: spacing[2],
+  },
+});
