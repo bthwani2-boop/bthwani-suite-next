@@ -7,8 +7,20 @@ ALTER TABLE dsh_admin_roles
   ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT TRUE,
   ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1 CHECK (version > 0);
 
+ALTER TABLE dsh_admin_roles
+  DROP CONSTRAINT IF EXISTS dsh_admin_roles_surfaces_scope;
+ALTER TABLE dsh_admin_roles
+  ADD CONSTRAINT dsh_admin_roles_surfaces_scope
+  CHECK (jsonb_typeof(surfaces) = 'array' AND surfaces ? 'control-panel');
+
 ALTER TABLE dsh_admin_role_definition_requests
   ADD COLUMN IF NOT EXISTS surfaces JSONB NOT NULL DEFAULT '["control-panel"]'::jsonb;
+
+ALTER TABLE dsh_admin_role_definition_requests
+  DROP CONSTRAINT IF EXISTS dsh_admin_role_definition_surfaces_scope;
+ALTER TABLE dsh_admin_role_definition_requests
+  ADD CONSTRAINT dsh_admin_role_definition_surfaces_scope
+  CHECK (jsonb_typeof(surfaces) = 'array' AND surfaces ? 'control-panel');
 
 CREATE TABLE IF NOT EXISTS dsh_admin_rollback_requests (
   id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -27,7 +39,12 @@ CREATE TABLE IF NOT EXISTS dsh_admin_rollback_requests (
   reviewed_at          TIMESTAMPTZ,
   CHECK (reviewed_by IS NULL OR reviewed_by <> requested_by),
   CHECK (requested_by <> target_actor_id),
-  CHECK (reviewed_by IS NULL OR reviewed_by <> target_actor_id)
+  CHECK (reviewed_by IS NULL OR reviewed_by <> target_actor_id),
+  CHECK (
+    (status = 'pending' AND reviewed_by IS NULL AND reviewed_at IS NULL)
+    OR
+    (status IN ('approved','rejected') AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)
+  )
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_admin_rollback_pending_source
