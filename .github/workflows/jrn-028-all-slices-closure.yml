@@ -41,8 +41,6 @@ concurrency:
 jobs:
   normalize-contracts:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     outputs:
       changed: ${{ steps.normalize.outputs.changed }}
     steps:
@@ -51,7 +49,7 @@ jobs:
         with:
           ref: sambassam
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
       - name: Set up pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
@@ -72,14 +70,19 @@ jobs:
           pnpm --dir services/dsh openapi:generate
           if git diff --quiet -- services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts
-          git commit -m "chore(jrn-028): regenerate canonical DSH contract outputs"
-          git push origin HEAD:sambassam
-          echo "changed=true" >> "$GITHUB_OUTPUT"
+      - name: Upload regenerated canonical contracts
+        if: steps.normalize.outputs.changed == 'true'
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: jrn-028-canonical-contracts
+          path: |
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+            services/dsh/clients/generated/dsh-api.ts
+          if-no-files-found: error
+          retention-days: 1
 
   verify:
     needs: normalize-contracts
