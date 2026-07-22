@@ -16,6 +16,8 @@ import {
   useProviderRegistryController,
   type ProviderRegistryItem,
 } from "../../shared/platform";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
+import { useControlPanelSession } from "../../shared/session/control-panel-session";
 import { MapsProviderInspector } from "./MapsProviderInspector";
 
 const STATUS_TONE: Record<string, "success" | "warning" | "danger" | "neutral"> = {
@@ -38,12 +40,11 @@ function credentialLabel(configured: boolean): string {
   return configured ? "مهيأة في الخادم" : "غير مهيأة";
 }
 
-export type ProviderRegistryPanelProps = {
-  readonly canRead: boolean;
-  readonly canUpdate: boolean;
-};
-
-export function ProviderRegistryPanel({ canRead, canUpdate }: ProviderRegistryPanelProps) {
+export function ProviderRegistryPanel() {
+  const { state: sessionState } = useControlPanelSession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canRead = hasServiceControlPanelPermission(identity, "providers", "provider:read");
+  const canUpdate = hasServiceControlPanelPermission(identity, "providers", "provider:update");
   const registry = useProviderRegistryController(canRead);
 
   if (!canRead) {
