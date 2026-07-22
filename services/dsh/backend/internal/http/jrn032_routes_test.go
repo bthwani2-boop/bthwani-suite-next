@@ -6,9 +6,18 @@ import (
 	"testing"
 )
 
+func assertRegisteredRoute(t *testing.T, mux *http.ServeMux, route string) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, route, nil)
+	_, pattern := mux.Handler(req)
+	if pattern == "" {
+		t.Fatalf("route %s is not registered", route)
+	}
+}
+
 func TestJRN032AnalyticsRoutesRegistered(t *testing.T) {
-	mux := NewRouter(nil, nil, nil, nil)
-	routes := []string{
+	operatorMux := NewRouter(nil, nil, nil, nil)
+	operatorRoutes := []string{
 		"/dsh/operator/analytics/platform",
 		"/dsh/operator/analytics/orders",
 		"/dsh/operator/analytics/delivery",
@@ -20,15 +29,14 @@ func TestJRN032AnalyticsRoutesRegistered(t *testing.T) {
 		"/dsh/operator/analytics/drill-down/orders",
 		"/dsh/operator/analytics/financial-snapshot",
 		"/dsh/operator/analytics/export.csv",
-		"/dsh/partner/analytics/performance",
 	}
-	for _, route := range routes {
-		req := httptest.NewRequest(http.MethodGet, route, nil)
-		_, pattern := mux.Handler(req)
-		if pattern == "" {
-			t.Errorf("route %s is not registered", route)
-		}
+	for _, route := range operatorRoutes {
+		assertRegisteredRoute(t, operatorMux, route)
 	}
+
+	partnerMux := http.NewServeMux()
+	RegisterPartnerSelfRoutes(partnerMux, nil, nil, nil, nil)
+	assertRegisteredRoute(t, partnerMux, "/dsh/partner/analytics/performance")
 }
 
 func TestNamedAnalyticsPeriodRejectsUnknownValues(t *testing.T) {
