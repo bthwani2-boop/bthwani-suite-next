@@ -1,5 +1,5 @@
 import React from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Box, MobileScrollView, StateView, TopBar, useTheme } from "@bthwani/ui-kit";
 import type { WltDshCodReference } from "@bthwani/wlt";
 import {
@@ -18,6 +18,13 @@ export type DshCaptainCodCustodyScreenProps = {
 
 export function DshCaptainCodCustodyScreen({ onBack }: DshCaptainCodCustodyScreenProps) {
   const theme = useTheme() as any;
+  const styles = React.useMemo(
+    () => StyleSheet.create({
+      root: { flex: 1, backgroundColor: theme.surface },
+      content: { paddingBottom: 120 },
+    }),
+    [theme.surface],
+  );
   const [refreshToken, setRefreshToken] = React.useState(0);
   const [state, setState] = React.useState<ScreenState>({ kind: "loading" });
 
@@ -40,9 +47,9 @@ export function DshCaptainCodCustodyScreen({ onBack }: DshCaptainCodCustodyScree
   const refresh = React.useCallback(() => setRefreshToken((value) => value + 1), []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.surface }}>
+    <View style={styles.root}>
       <TopBar title="عهدة COD والمصالحة" subtitle="التحصيل، الإثبات، التسليم والقيد المحاسبي من WLT" {...(onBack ? { onBack } : {})} />
-      <MobileScrollView fill padding={4} gap={4} contentContainerStyle={{ paddingBottom: 120 }}>
+      <MobileScrollView fill padding={4} gap={4} contentContainerStyle={styles.content}>
         {state.kind === "loading" ? (
           <StateView tone="info" title="جاري تحميل العهدة النقدية..." loading />
         ) : null}
