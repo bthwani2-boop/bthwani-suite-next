@@ -158,6 +158,34 @@ test("JRN-033 focused contract declares every wallet and ledger operation", () =
   ], "JRN-033 OpenAPI contract");
 });
 
+test("JRN-033 runtime evidence aligns Identity subjects with WLT wallets and negative checks", () => {
+  const identity = read("core/identity/backend/internal/identity/repository.go");
+  const seed = read("services/wlt/database/seeds/local/wlt-033_representative_wallets.local.sql");
+  const runtime = read("tools/scripts/test-jrn-033-representative-wallets-runtime.ps1");
+  const actors = [
+    ["client", "client-local-001"],
+    ["partner", "partner-local-001"],
+    ["captain", "captain-local-001"],
+    ["field", "field-local-001"],
+  ];
+  for (const [actorType, actorId] of actors) {
+    assert.ok(identity.includes(`"${actorId}"`), `Identity bootstrap is missing ${actorId}`);
+    assert.ok(seed.includes(`'${actorId}'`), `WLT runtime seed is missing ${actorId}`);
+    assert.ok(seed.includes(`'${actorType}'`), `WLT runtime seed is missing ${actorType}`);
+    assert.ok(runtime.includes(`"${actorId}"`), `runtime matrix is missing ${actorId}`);
+  }
+  assertIncludesAll(runtime, [
+    "anonymous wallet read",
+    "partner reading client wallet",
+    "client using operator wallet lookup",
+    "unsupported representative actor",
+    "suspended wallet lookup",
+    "frozen wallet lookup",
+    "internal WLT wallet route was readable without service authentication",
+    "JRN-033 representative wallet runtime matrix: PASS",
+  ], "JRN-033 runtime matrix");
+});
+
 test("JRN-033 contains no representative balance mutation route in the new boundary", () => {
   const routes = read("services/dsh/backend/internal/http/representative_finance_routes.go");
   const api = read("services/dsh/frontend/shared/finance-wlt-link/actor-wallet/actor-wallet.api.ts");
