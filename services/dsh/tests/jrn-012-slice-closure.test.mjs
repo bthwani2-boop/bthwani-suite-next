@@ -91,7 +91,10 @@ test("JRN-012 code closure remains distinct from release and production approval
   assert.equal(productTruth.decision, "READY_FOR_REVIEW");
   assert.equal(productTruth.owner, "DSH");
   assert.equal(productTruth.truthOwnership.financialTruth, "WLT");
-  assert.equal(productTruth.codeZeroGate, "IMPLEMENTED");
+  assert.equal(productTruth.codeClosure, "CLOSED_WITH_SAME_COMMIT_CI_EVIDENCE");
+  assert.equal(productTruth.codeZeroGate, "PASSED");
+  assert.equal(productTruth.verification.context, "jrn-012/order-preparation");
+  assert.deepEqual(productTruth.openCodeGaps, []);
   assert.equal(productTruth.releaseGate, "PENDING_INDEPENDENT_APPROVALS");
   assert.ok(productTruth.operationalSupport.rollback.length > 0);
 });
