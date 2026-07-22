@@ -1,0 +1,29 @@
+name: JRN-013 Source Diagnostics
+
+on:
+  pull_request:
+    paths:
+      - "governance/product/contracts/jrn-013-store-captain-handoff.product-truth.json"
+      - "services/dsh/tests/store-captain-handoff-closure.test.mjs"
+      - "services/dsh/tests/jrn-013-slice-closure.test.mjs"
+      - "services/dsh/tests/jrn-013-primary-contract-sync.test.mjs"
+      - ".github/workflows/jrn-013-source-diagnostics.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+      - name: Run main custody closure test
+        run: node --test services/dsh/tests/store-captain-handoff-closure.test.mjs
+      - name: Run slice manifest closure test
+        run: node --test services/dsh/tests/jrn-013-slice-closure.test.mjs
+      - name: Run primary contract synchronization test
+        run: node --test services/dsh/tests/jrn-013-primary-contract-sync.test.mjs
