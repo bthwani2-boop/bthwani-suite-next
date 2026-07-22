@@ -2,13 +2,14 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
-import {
-  useCouponsController,
-  type CouponDiscountType,
-  type CouponFundingPolicy,
-  type CouponFundingSource,
-  type CouponRecord,
-} from "../../../shared/marketing";
+import { useCouponsController } from "../../../shared/marketing/use-coupons-controller";
+import type {
+  CouponDiscountType,
+  CouponFundingPolicy,
+  CouponFundingSource,
+  CouponRecord,
+  CouponUpdatePayload,
+} from "../../../shared/marketing/coupons.types";
 import { CouponFundingReconciliationPanel } from "./CouponFundingReconciliationPanel";
 import { CouponTermsEditor } from "./CouponTermsEditor";
 
@@ -18,11 +19,7 @@ type FundingEditorProps = {
   readonly loading: boolean;
   readonly onSave: (
     coupon: CouponRecord,
-    payload: {
-      readonly fundingSource: CouponFundingSource;
-      readonly platformShareBps: number;
-      readonly fundingPartnerId?: string;
-    },
+    payload: Omit<CouponUpdatePayload, "expectedVersion">,
   ) => Promise<boolean>;
 };
 
