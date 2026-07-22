@@ -14,6 +14,7 @@
     "sameCommitWorkflowRunsState": "NOT_PROVEN"
   },
   "requiredCheckNames": [
+    "BThwani Contextual CI result",
     "JRN-043 SDLC Governance CI Release result",
     "BThwani Repository CI result",
     "BThwani Workflow Security result",
