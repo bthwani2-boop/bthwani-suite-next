@@ -5,12 +5,17 @@ on:
     branches: [sambassam]
     paths:
       - "governance/evidence/JRN-024_CONTRACT_SYNC_TRIGGER.md"
+  pull_request:
+    branches: [master]
+    paths:
+      - "governance/evidence/JRN-024_CONTRACT_SYNC_TRIGGER.md"
 
 permissions:
   contents: write
 
 jobs:
   synchronize:
+    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'sambassam'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout target branch
