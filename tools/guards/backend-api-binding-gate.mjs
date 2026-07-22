@@ -1,48 +1,46 @@
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
 import { fail, lineNumber, repoRoot, read } from "./_guard-utils.mjs";
 import { operationKey, parseOpenApiContract } from "./_openapi-utils.mjs";
+import { cleanupGoRouteExtractor, extractGoRoutes, routeKey } from "./lib/go-route-extractor.mjs";
 
 const guardId = "backend-api-binding-gate";
 const violations = [];
+const registryFile = "services/dsh/contracts/contract-registry.ts";
+const dshPrimary = "services/dsh/contracts/dsh.openapi.yaml";
 
-const runtimeContractStrategies = new Set([
-  "PRIMARY_GENERATED",
-  "MANUAL_TYPED_ADAPTER",
-  "STANDALONE_MANUAL_TYPED_ADAPTER",
-]);
-
-function registeredDshRuntimeContracts() {
-  const registryFile = "services/dsh/contracts/contract-registry.ts";
+function registeredDshContracts() {
   const source = read(registryFile);
-  const files = [];
+  const entries = [];
   const entryPattern = /\{[\s\S]*?path:\s*["'](contracts\/[^"']+\.openapi\.yaml)["'][\s\S]*?clientStrategy:\s*["']([^"']+)["'][\s\S]*?\n\s*\},/g;
   for (const match of source.matchAll(entryPattern)) {
-    const strategy = match[2];
-    if (runtimeContractStrategies.has(strategy)) {
-      files.push(`services/dsh/${match[1]}`);
-    }
+    entries.push({
+      file: `services/dsh/${match[1]}`,
+      strategy: match[2],
+    });
   }
-  if (files.length === 0) {
+  if (entries.length === 0) {
     violations.push({
       file: registryFile,
       line: 0,
-      message: "DSH_RUNTIME_CONTRACT_REGISTRY_EMPTY: no runtime-owned DSH contracts were discovered",
+      message: "DSH_RUNTIME_CONTRACT_REGISTRY_EMPTY: no DSH contracts were discovered",
     });
   }
-  return [...new Set(files)];
+  return entries;
 }
 
-const dshContracts = registeredDshRuntimeContracts();
-const dshPrimary = "services/dsh/contracts/dsh.openapi.yaml";
+const dshRegistry = registeredDshContracts();
+const dshRegisteredFiles = new Set(dshRegistry.map((entry) => entry.file));
+const dshStandaloneContracts = dshRegistry
+  .filter((entry) => entry.strategy === "STANDALONE_MANUAL_TYPED_ADAPTER")
+  .map((entry) => entry.file);
 
 const dshClientAddressContract = "services/dsh/contracts/dsh.client-address.openapi.yaml";
-if (!dshContracts.includes(dshClientAddressContract)) {
+if (!dshRegisteredFiles.has(dshClientAddressContract)) {
   violations.push({
-    file: "services/dsh/contracts/contract-registry.ts",
+    file: registryFile,
     line: 0,
-    message: `DSH_CLIENT_ADDRESS_CONTRACT_UNREGISTERED: ${dshClientAddressContract} must stay registered as a runtime-owned DSH contract`,
+    message: `DSH_CLIENT_ADDRESS_CONTRACT_UNREGISTERED: ${dshClientAddressContract} must stay registered`,
   });
 }
 
@@ -50,10 +48,8 @@ const services = [
   {
     name: "DSH",
     openapi: dshPrimary,
-    additionalOpenapi: dshContracts.filter((file) => file !== dshPrimary),
+    additionalOpenapi: dshStandaloneContracts,
     router: "services/dsh/backend/internal/http/server.go",
-    // DSH registers routes on the shared mux across the whole package, not
-    // only in server.go; every non-test file must stay visible to the gate.
     routerDir: "services/dsh/backend/internal/http",
   },
   {
@@ -95,9 +91,6 @@ const gatedWltMutationRoutes = new Set([
   "POST /wlt/commercial/subscriptions",
 ]);
 
-// Mutation scopes whose approval was explicitly granted by governance
-// (wlt-financial-boundary-gate enforces the same truth); every other gated
-// mutation must stay x-bthwani-mutation-approved: false.
 const approvedWltMutationScopes = new Set(["POST /wlt/settlements"]);
 
 const wltFinancialReadRoutes = new Set([
@@ -124,86 +117,6 @@ function operationFile(service, operation) {
   return operation.contractFile ?? service.openapi;
 }
 
-function parseGoStringLiteral(source, quoteIndex) {
-  const quote = source[quoteIndex];
-  let value = "";
-  for (let index = quoteIndex + 1; index < source.length; index += 1) {
-    const char = source[index];
-    if (quote === "`") {
-      if (char === "`") return { value, end: index + 1 };
-      value += char;
-      continue;
-    }
-    if (char === "\\") {
-      value += source[index + 1] ?? "";
-      index += 1;
-      continue;
-    }
-    if (char === quote) return { value, end: index + 1 };
-    value += char;
-  }
-  return null;
-}
-
-function extractGoRoutes(file) {
-  const fullPath = path.join(repoRoot, file);
-  if (!fs.existsSync(fullPath)) return [];
-  const source = read(file);
-  const routes = [];
-  const keys = new Set();
-
-  for (const call of ["mux.HandleFunc(", "mux.Handle("]) {
-    let searchIndex = 0;
-    while (searchIndex < source.length) {
-      const callIndex = source.indexOf(call, searchIndex);
-      if (callIndex === -1) break;
-      searchIndex = callIndex + call.length;
-      const relativeQuote = source.slice(searchIndex).search(/["'`]/);
-      if (relativeQuote === -1) continue;
-      const literalIndex = searchIndex + relativeQuote;
-      const literal = parseGoStringLiteral(source, literalIndex);
-      if (!literal) continue;
-      const routeMatch = literal.value.match(/^([A-Z]+)\s+(\/\S+)$/);
-      if (!routeMatch) continue;
-      const route = {
-        method: routeMatch[1],
-        path: routeMatch[2].replace(/\/$/, ""),
-        line: lineNumber(source, callIndex),
-      };
-      const key = `${route.method} ${route.path}`;
-      if (!keys.has(key)) {
-        keys.add(key);
-        routes.push(route);
-      }
-    }
-  }
-
-  try {
-    const extractorPath = path.join(repoRoot, "tools/guards/extract_routes.go");
-    const relativeFilePath = path.relative(repoRoot, fullPath).replace(/\\/g, "/");
-    const stdout = execSync(`go run "${extractorPath}" "${relativeFilePath}"`, {
-      cwd: repoRoot,
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    for (const route of JSON.parse(stdout.toString())) {
-      if (!route.method || !route.path) continue;
-      const normalized = route.path.replace(/\/$/, "");
-      const key = `${route.method} ${normalized}`;
-      if (keys.has(key)) continue;
-      keys.add(key);
-      routes.push({
-        method: route.method,
-        path: normalized,
-        line: lineNumber(source, Math.max(0, source.indexOf(key))),
-      });
-    }
-  } catch {
-    // Literal extraction remains the fail-safe layer.
-  }
-
-  return routes;
-}
-
 function serviceGoRoutes(service) {
   const files = [service.router];
   if (service.routerDir) {
@@ -216,11 +129,12 @@ function serviceGoRoutes(service) {
       }
     }
   }
+
   const routes = [];
   const keys = new Set();
   for (const file of files) {
     for (const route of extractGoRoutes(file)) {
-      const key = `${route.method} ${route.path}`;
+      const key = routeKey(route);
       if (keys.has(key)) continue;
       keys.add(key);
       routes.push({ ...route, file });
@@ -256,6 +170,7 @@ function validateOperationIds(service, operations) {
         line: operation.line,
         message: `DUPLICATE_OPERATION_ID: "${operation.operationId}" already appears in ${operationFile(service, previous)} at line ${previous.line}`,
       });
+      continue;
     }
     seen.set(operation.operationId, operation);
   }
@@ -346,49 +261,54 @@ function validateWltOperation(service, operation) {
 
 const openApiRoutesByService = new Map();
 
-for (const service of services) {
-  const contracts = contractFiles(service);
-  for (const contract of contracts) {
-    if (!fs.existsSync(path.join(repoRoot, contract))) {
-      violations.push({ file: contract, line: 0, message: `REGISTERED_CONTRACT_NOT_FOUND: ${contract}` });
+try {
+  for (const service of services) {
+    const contracts = contractFiles(service);
+    for (const contract of contracts) {
+      if (!fs.existsSync(path.join(repoRoot, contract))) {
+        violations.push({ file: contract, line: 0, message: `REGISTERED_CONTRACT_NOT_FOUND: ${contract}` });
+      }
+    }
+
+    const operations = contracts
+      .filter((contract) => fs.existsSync(path.join(repoRoot, contract)))
+      .flatMap((contractFile) =>
+        parseOpenApiContract(contractFile).map((operation) => ({ ...operation, contractFile })),
+      );
+    openApiRoutesByService.set(service.name, operations);
+    validateOperationIds(service, operations);
+
+    const openApiRouteSet = new Set(operations.map(operationKey));
+    const goRoutes = serviceGoRoutes(service);
+    const goRouteSet = new Set(goRoutes.map(routeKey));
+
+    for (const route of goRoutes) {
+      const key = routeKey(route);
+      if (!openApiRouteSet.has(key)) {
+        violations.push({
+          file: route.file,
+          line: route.line,
+          message: `FORBIDDEN_ROUTE: Route "${key}" is registered in Go but not documented in: ${contracts.join(", ")}`,
+        });
+      }
+    }
+
+    for (const operation of operations) {
+      const key = operationKey(operation);
+      validatePathParameters(service, operation);
+      validateInternalServiceRoute(service, operation);
+      validateWltOperation(service, operation);
+      if (!goRouteSet.has(key)) {
+        violations.push({
+          file: operationFile(service, operation),
+          line: operation.line,
+          message: `MISSING_IMPLEMENTATION: Route "${key}" is not registered in ${service.router}`,
+        });
+      }
     }
   }
-  const operations = contracts
-    .filter((contract) => fs.existsSync(path.join(repoRoot, contract)))
-    .flatMap((contractFile) =>
-      parseOpenApiContract(contractFile).map((operation) => ({ ...operation, contractFile })),
-    );
-  openApiRoutesByService.set(service.name, operations);
-  validateOperationIds(service, operations);
-
-  const openApiRouteSet = new Set(operations.map(operationKey));
-  const goRoutes = serviceGoRoutes(service);
-  const goRouteSet = new Set(goRoutes.map((route) => `${route.method} ${route.path}`));
-
-  for (const route of goRoutes) {
-    const key = `${route.method} ${route.path}`;
-    if (!openApiRouteSet.has(key)) {
-      violations.push({
-        file: route.file,
-        line: route.line,
-        message: `FORBIDDEN_ROUTE: Route "${key}" is registered in Go but not documented in: ${contracts.join(", ")}`,
-      });
-    }
-  }
-
-  for (const operation of operations) {
-    const key = operationKey(operation);
-    validatePathParameters(service, operation);
-    validateInternalServiceRoute(service, operation);
-    validateWltOperation(service, operation);
-    if (!goRouteSet.has(key)) {
-      violations.push({
-        file: operationFile(service, operation),
-        line: operation.line,
-        message: `MISSING_IMPLEMENTATION: Route "${key}" is not registered in ${service.router}`,
-      });
-    }
-  }
+} finally {
+  cleanupGoRouteExtractor();
 }
 
 function verifyOutboundCall(targetService, method, pathValue, sourceFile, line) {
