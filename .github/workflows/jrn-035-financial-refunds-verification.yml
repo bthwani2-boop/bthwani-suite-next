@@ -25,6 +25,7 @@ on:
       - "services/dsh/frontend/control-panel/finance/**"
       - "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx"
       - "services/dsh/frontend/app-partner/orders/GovernedPartnerOrdersScreen.tsx"
+      - "tools/guards/jrn-035-wlt-refund-boundary-gate.mjs"
       - "tools/verification/jrn-035-financial-refunds.test.mjs"
       - "tools/verification/jrn-035-openapi-contracts.test.mjs"
       - "governance/evidence/.jrn-035-final-validation-trigger"
@@ -95,8 +96,8 @@ jobs:
         run: node --test tools/verification/jrn-035-financial-refunds.test.mjs
       - name: Verify JRN-035 OpenAPI and privacy invariants
         run: node --test tools/verification/jrn-035-openapi-contracts.test.mjs
-      - name: Verify WLT financial ownership boundary
-        run: node tools/guards/wlt-financial-boundary-gate.mjs
+      - name: Verify JRN-035 WLT sovereignty boundary
+        run: node tools/guards/jrn-035-wlt-refund-boundary-gate.mjs
       - name: Generate typed WLT and DSH refund contracts
         run: |
           pnpm dlx openapi-typescript@7.10.1 services/wlt/contracts/jrn-035-refunds.openapi.yaml --output /tmp/jrn-035-wlt-refunds.generated.ts
