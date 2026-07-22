@@ -93,7 +93,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate DSH modular OpenAPI and client
-        run: pnpm --dir services/dsh openapi:verify
+        run: pnpm --dir services/dsh openapi:generate
 
       - name: Upload generated contract artifacts
         uses: actions/upload-artifact@v4
@@ -104,6 +104,9 @@ jobs:
             services/dsh/clients/generated/dsh-api.ts
           if-no-files-found: error
           retention-days: 3
+
+      - name: Verify generated DSH modular contract
+        run: pnpm --dir services/dsh openapi:verify
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
