@@ -104,6 +104,91 @@ CREATE TABLE IF NOT EXISTS wlt_jrn037_payout_reconciliations (
 CREATE INDEX IF NOT EXISTS wlt_jrn037_payout_reconciliation_request_idx
   ON wlt_jrn037_payout_reconciliations(payout_request_id, created_at DESC);
 
+-- Existing sovereign transition handlers already update the payout row and
+-- wallet/ledger in one transaction. This trigger appends the corresponding
+-- audit/outbox evidence in that same transaction, including legacy transition
+-- handlers that predate JRN-037. It cannot release or move funds itself.
+CREATE OR REPLACE FUNCTION wlt_jrn037_capture_payout_transition()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  event_name text;
+  transition_actor_id text;
+  transition_actor_type text;
+  transition_correlation text;
+BEGIN
+  IF NEW.status IS NOT DISTINCT FROM OLD.status THEN
+    RETURN NEW;
+  END IF;
+
+  event_name := CASE NEW.status
+    WHEN 'approved' THEN 'payout.approved'
+    WHEN 'rejected' THEN 'payout.rejected'
+    WHEN 'provider_pending' THEN 'payout.provider_pending'
+    WHEN 'provider_result_unknown' THEN 'payout.provider_unknown'
+    WHEN 'processing' THEN 'payout.processing'
+    WHEN 'completed' THEN 'payout.completed'
+    WHEN 'failed' THEN 'payout.failed'
+    ELSE NULL
+  END;
+
+  IF event_name IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  transition_actor_id := COALESCE(
+    NULLIF(NEW.completed_by_operator_id, ''),
+    NULLIF(NEW.failed_by_operator_id, ''),
+    NULLIF(NEW.processed_by_operator_id, ''),
+    NULLIF(NEW.rejected_by_operator_id, ''),
+    NULLIF(NEW.approved_by_operator_id, ''),
+    NULLIF(NEW.operator_id, ''),
+    NEW.beneficiary_actor_id
+  );
+  transition_actor_type := CASE
+    WHEN transition_actor_id = NEW.beneficiary_actor_id THEN NEW.beneficiary_actor_type
+    ELSE 'operator'
+  END;
+  transition_correlation := COALESCE(NULLIF(NEW.idempotency_key, ''), 'payout:' || NEW.id || ':' || NEW.status);
+
+  IF NEW.status = 'provider_result_unknown' AND NEW.reconciliation_status = 'not_required' THEN
+    NEW.reconciliation_status := 'required';
+  END IF;
+
+  INSERT INTO wlt_jrn037_payout_audit_events
+    (aggregate_type, aggregate_id, action, actor_id, actor_type, reason, correlation_id, metadata)
+  VALUES (
+    'payout_request', NEW.id, event_name, transition_actor_id, transition_actor_type,
+    COALESCE(NEW.failure_reason, ''), transition_correlation,
+    jsonb_build_object(
+      'previousStatus', OLD.status,
+      'status', NEW.status,
+      'payoutDestinationId', NEW.payout_destination_id,
+      'providerReference', COALESCE(NEW.provider_reference, ''),
+      'providerStatus', COALESCE(NEW.provider_status, '')
+    )
+  );
+
+  INSERT INTO wlt_jrn037_payout_outbox
+    (payout_request_id, event_type, recipient_actor_id, recipient_actor_type, payload, correlation_id)
+  VALUES (
+    NEW.id, event_name, NEW.beneficiary_actor_id, NEW.beneficiary_actor_type,
+    jsonb_build_object('status', NEW.status, 'amountMinorUnits', NEW.amount_minor_units, 'currency', NEW.currency),
+    transition_correlation
+  )
+  ON CONFLICT (payout_request_id, event_type) DO NOTHING;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS wlt_jrn037_payout_transition_trigger ON wlt_payout_requests;
+CREATE TRIGGER wlt_jrn037_payout_transition_trigger
+BEFORE UPDATE OF status ON wlt_payout_requests
+FOR EACH ROW
+EXECUTE FUNCTION wlt_jrn037_capture_payout_transition();
+
 COMMENT ON TABLE wlt_jrn037_payout_audit_events IS
   'Append-only JRN-037 audit for destination, payout and reconciliation lifecycle changes.';
 COMMENT ON TABLE wlt_jrn037_payout_outbox IS
