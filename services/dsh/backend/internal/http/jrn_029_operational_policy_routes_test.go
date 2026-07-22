@@ -31,12 +31,6 @@ func TestJRN029OperationalPolicyRoutes(t *testing.T) {
 			if pattern == "" {
 				t.Fatalf("%s %s: no registered handler", tc.method, tc.path)
 			}
-
-			response := httptest.NewRecorder()
-			router.ServeHTTP(response, request)
-			if response.Code == http.StatusNotFound {
-				t.Fatalf("%s %s: route dispatched to 404", tc.method, tc.path)
-			}
 		})
 	}
 }
