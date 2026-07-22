@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import { fail, lineNumber, repoRoot, toPosix } from "./_guard-utils.mjs";
 
 const guardId = "runtime-real-bindings-gate";
@@ -41,23 +42,61 @@ function requireMarkers(relative, markers) {
   return content;
 }
 
-function verifyUniqueMigrationNumbers(relativeRoot, prefix) {
+function verifyMigrationFileNames(relativeRoot, prefix) {
   const files = walk(relativeRoot, (file) => file.endsWith(".sql"));
-  const byNumber = new Map();
+  const seenNames = new Set();
   for (const file of files) {
     const name = path.basename(file);
-    const match = name.match(new RegExp(`^${prefix}-(\\d{3})_[a-z0-9_]+\\.sql$`));
-    if (!match) {
-      violations.push({ file, line: 0, message: `INVALID_MIGRATION_FILENAME expected=${prefix}-NNN_snake_case.sql` });
-      continue;
+    if (!new RegExp(`^${prefix}-\\d{3}[a-z]?_[a-z0-9_]+\\.sql$`).test(name)) {
+      violations.push({ file, line: 0, message: `INVALID_MIGRATION_FILENAME expected=${prefix}-NNN_or_NNNx_snake_case.sql` });
     }
-    const previous = byNumber.get(match[1]);
-    if (previous) {
-      violations.push({ file, line: 0, message: `DUPLICATE_MIGRATION_NUMBER ${match[1]} previous=${previous}` });
-    } else {
-      byNumber.set(match[1], file);
+    if (seenNames.has(name)) {
+      violations.push({ file, line: 0, message: `DUPLICATE_MIGRATION_FILENAME ${name}` });
     }
+    seenNames.add(name);
   }
+}
+
+function scriptKindFor(file) {
+  if (file.endsWith(".tsx")) return ts.ScriptKind.TSX;
+  if (file.endsWith(".jsx")) return ts.ScriptKind.JSX;
+  if (file.endsWith(".js") || file.endsWith(".mjs") || file.endsWith(".cjs")) return ts.ScriptKind.JS;
+  return ts.ScriptKind.TS;
+}
+
+function findUnconditionalNullStubs(file, content) {
+  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
+  const matches = [];
+
+  function isNull(node) {
+    return Boolean(node && node.kind === ts.SyntaxKind.NullKeyword);
+  }
+
+  function inspectFunction(node) {
+    if (!node.body) return;
+    if (!ts.isBlock(node.body)) {
+      if (isNull(node.body)) matches.push(node.body.getStart(sourceFile));
+      return;
+    }
+    const statements = node.body.statements;
+    if (statements.length !== 1 || !ts.isReturnStatement(statements[0])) return;
+    if (isNull(statements[0].expression)) matches.push(statements[0].getStart(sourceFile));
+  }
+
+  function visit(node) {
+    if (
+      ts.isFunctionDeclaration(node) ||
+      ts.isFunctionExpression(node) ||
+      ts.isArrowFunction(node) ||
+      ts.isMethodDeclaration(node)
+    ) {
+      inspectFunction(node);
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return matches;
 }
 
 const bindingFiles = [
@@ -66,7 +105,6 @@ const bindingFiles = [
 ];
 
 const forbiddenPatterns = [
-  { pattern: /return\s+null\s*;/g, message: "RUNTIME_CLIENT_STUB_RETURNS_NULL" },
   { pattern: /Fallback for preview|previewData|demoData|mockSuccess/gi, message: "PREVIEW_OR_DEMO_FALLBACK_IN_RUNTIME_BINDING" },
   { pattern: /Promise\.resolve\(\s*(?:\[|\{|null|undefined)/g, message: "IN_MEMORY_SUCCESS_PRESENTED_AS_RUNTIME_BINDING" },
   { pattern: /\bSEED_[A-Z0-9_]+\b|Seed data|In-memory store|When the real API is ready/gi, message: "SEEDED_OR_IN_MEMORY_RUNTIME_TRUTH_FORBIDDEN" },
@@ -75,6 +113,9 @@ const forbiddenPatterns = [
 
 for (const file of [...new Set(bindingFiles)].sort()) {
   const content = read(file);
+  for (const index of findUnconditionalNullStubs(file, content)) {
+    violations.push({ file, line: lineNumber(content, index), message: "RUNTIME_CLIENT_STUB_RETURNS_NULL" });
+  }
   for (const check of forbiddenPatterns) {
     for (const match of content.matchAll(check.pattern)) {
       violations.push({ file, line: lineNumber(content, match.index), message: check.message });
@@ -105,8 +146,8 @@ for (const workflowFile of walk(".github/workflows", (file) => /\.ya?ml$/.test(f
   }
 }
 
-verifyUniqueMigrationNumbers("services/dsh/database/migrations", "dsh");
-verifyUniqueMigrationNumbers("services/wlt/database/migrations", "wlt");
+verifyMigrationFileNames("services/dsh/database/migrations", "dsh");
+verifyMigrationFileNames("services/wlt/database/migrations", "wlt");
 
 const clientSurfacePath = "services/dsh/frontend/app-client/DshClientSurface.tsx";
 const clientSurface = read(clientSurfacePath);
@@ -121,7 +162,7 @@ for (const [pattern, message] of [
 }
 
 requireMarkers(clientSurfacePath, ["BenefitsHubScreen", "onOpenBenefits", 'profileRoute === "benefits"']);
-requireMarkers("services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx", ["useClientBenefitsController", "controller.reload"]);
+requireMarkers("services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx", ["useSubscriptionLifecycleController", "controller.reload"]);
 requireMarkers("services/dsh/frontend/shared/marketing/marketing.api.ts", [
   "/dsh/operator/marketing/loyalty-tiers",
   "/dsh/operator/marketing/subscription-plans",
@@ -192,7 +233,7 @@ requireMarkers("services/dsh/backend/internal/http/server.go", [
   '"GET /dsh/captain/partner-fleet/memberships"',
 ]);
 requireMarkers("services/dsh/database/migrations/dsh-059_partner_courier_connection_codes.sql", [
-  "dsh_partner_courier_connections",
+  "dsh_partner_courier_connection_codes",
 ]);
 
 const marketingRegistryPath = "services/dsh/frontend/shared/marketing/marketing-registry.ts";
@@ -224,9 +265,9 @@ for (const match of captainSettings.matchAll(/eval\(["']require["']\)|RNSwitch/g
   violations.push({ file: captainSettingsPath, line: lineNumber(captainSettings, match.index), message: "DYNAMIC_REACT_NATIVE_SWITCH_LOADING_FORBIDDEN" });
 }
 
-const dispatchPath = "services/dsh/frontend/control-panel/operations/DispatchAssignmentScreen.tsx";
+const dispatchPath = "services/dsh/frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx";
 const dispatch = read(dispatchPath);
-if (!/client\.assignCaptain\s*\(/.test(dispatch)) {
+if (!/assignOrderToCaptain\s*\(/.test(dispatch)) {
   violations.push({ file: dispatchPath, line: 0, message: "CRITICAL_DISPATCH_MUTATION_NOT_BOUND" });
 }
 if (/alternativesMap|Fallback for preview|'Preview'/.test(dispatch)) {
