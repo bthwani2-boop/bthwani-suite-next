@@ -44,6 +44,7 @@
       "wlt-financial-boundary",
       "runtime-real-bindings",
       "live-cross-journey-integrity",
+      "jrn-031-closure",
       "jrn-036-settlement-commission",
       "jrn-037-payout-destination",
       "jrn-040-platform-change-sets",
