@@ -7,113 +7,99 @@
 - `target_branch`: `sambassam`
 - `governing_command`: `governance/prompting/unified-operational-journey-execution-command.md`
 - `journey_registry`: `governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#JRN-033`
-- `initial_observed_branch_head`: `10a281093f571595300b5245e9d427a4dc71dd16`
-- `latest_jrn_033_implementation_anchor_before_this_report`: `02455f718da1cc06c24bda2556fa62d84834585e`
-- `verification_concurrency_fix_sha`: `6c4ec4fe46a2dd2915037af1d7b3f4fe10497cd4`
+- `reviewed_verification_snapshot`: `3c335621c2b8358abd9ede69d1e72311627bddd0`
 - `execution_date`: `2026-07-22`
 - `mode`: `fullstack unified multi-surface`
 
-The branch was concurrently receiving other journey commits. Every overlapping file was re-read before replacement and concurrent finance exports/routes were preserved.
+The branch received concurrent journey commits throughout execution. Every overlapping finance file was re-read before replacement, and changes from JRN-034 through JRN-040 were preserved. Commits after the reviewed snapshot were compared; none changed a JRN-033-owned file.
 
-## Product and financial boundary
+## Financial and SaaS boundary
 
-- WLT remains the sole owner of wallet balances and ledger truth.
-- DSH is an authenticated and authorized BFF; it does not expose a representative balance mutation route.
-- Self-service wallet and ledger routes derive the actor from the authenticated identity, not from a frontend actor identifier.
-- Operator wallet and ledger lookups require `finance.read`, validate `client|partner|captain|field`, and pin ledger scope from path parameters.
-- Representative wallet and ledger responses use `Cache-Control: private, no-store` and `Pragma: no-cache`.
-- Frontends do not call internal WLT financial routes directly.
-- Existing payout/reconciliation write boundaries remain separate from representative wallet reads.
+- WLT remains the sole owner of wallet balances and representative ledger truth.
+- DSH is an authenticated and authorized BFF only; no representative balance mutation route exists in DSH or the frontends.
+- Self-service routes derive both actor identity and tenant from the bearer session resolved by Identity.
+- Operator wallet and ledger lookup requires `finance.read` and remains inside the operator tenant resolved by Identity.
+- Browser path, query, body, or tenant headers cannot select the WLT tenant.
+- WLT wallet and actor-ledger reads reject missing `X-Tenant-ID`.
+- Cross-tenant wallet lookup is hidden as `NOT_FOUND`; cross-tenant actor-ledger lookup returns an empty collection.
+- Representative finance responses use `Cache-Control: private, no-store` and `Pragma: no-cache`.
+- Frontends call canonical DSH routes only and never call internal WLT financial routes directly.
 
 ## Sequential slice closure
 
 | Slice | Implementation state | Evidence paths |
 |---|---|---|
-| Product truth and acceptance boundary | Implemented; approvals intentionally pending | `governance/product/contracts/jrn-033-representative-wallets.product-truth.json` |
-| WLT wallet actor validation | Implemented for client, partner, captain and field | `services/wlt/backend/internal/wallet/handler.go`, `handler_test.go` |
-| DSH-to-WLT wallet read allowlist | Implemented with normalization, actor-id validation and segment escaping | `services/dsh/backend/internal/wlt/finance_proxy.go`, `client_test.go`, `representative_wallet_test.go` |
-| Authenticated DSH BFF routes | Implemented for own wallet/ledger on all four actors | `services/dsh/backend/internal/http/representative_finance_routes.go` |
-| Operator wallet and ledger lookup | Implemented with `finance.read`, actor validation and no-store output | `services/dsh/backend/internal/http/representative_finance_routes.go`, `representative_finance_routes_test.go` |
+| Product truth and acceptance boundary | Implemented; independent approvals intentionally pending | `governance/product/contracts/jrn-033-representative-wallets.product-truth.json` |
+| WLT representative actor validation | Implemented for client, partner, captain and field | `services/wlt/backend/internal/wallet/handler.go`, `handler_test.go` |
+| Tenant-bound WLT wallet repository | Implemented | `services/wlt/backend/internal/wallet/repository.go` |
+| Tenant-bound WLT actor ledger | Implemented | `services/wlt/backend/internal/ledger/ledger.go` |
+| Database tenant migration and indexes | Implemented and registered in migration probes | `services/wlt/database/migrations/wlt-038_jrn_033_representative_finance_tenancy.sql`, `infra/docker/scripts/wlt-migration-probes.ps1` |
+| Identity-aligned local runtime truth | Implemented for all four actors and cross-tenant negative evidence | `services/wlt/database/seeds/local/wlt-033_representative_wallets.local.sql` |
+| DSH-to-WLT wallet boundary | Tenant-aware, normalized, validated and segment-escaped | `services/dsh/backend/internal/wlt/finance_proxy.go`, `client_test.go` |
+| Authenticated DSH self-service routes | Actor and tenant scoped for all four actors | `services/dsh/backend/internal/http/representative_finance_routes.go` |
+| Operator wallet and ledger lookup | `finance.read`, path-pinned actor and Identity tenant | `services/dsh/backend/internal/http/representative_finance_routes.go`, `representative_finance_routes_test.go` |
+| Legacy field and captain finance bridges | Tenant propagation added without removing later COD/payout work | `services/dsh/backend/internal/http/field_finance.go`, `actor_finance_handlers.go`, `field_finance_test.go` |
+| General control-panel finance proxy | Browser tenant forwarding removed; Identity tenant used | `services/dsh/backend/internal/http/financeproxy.go` |
 | Client surface | Wallet and ledger panel bound in My Space | `services/dsh/frontend/app-client/account/MySpaceScreen.tsx` |
-| Partner surface | WLT-owned wallet bound; hardcoded partner fallback and settlement-as-wallet drift removed | `services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshPartnerBridge.tsx` |
-| Captain surface | Wallet/ledger made primary finance view while COD references remain available | `services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx` |
-| Field surface | Canonical `/me` routes, wallet totals, ledger, commissions and governed payout requests | `services/dsh/frontend/shared/finance-wlt-link/field-finance`, `services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx` |
-| Control-panel surface | Representative wallet and matching ledger lookup bound into finance page | `services/dsh/frontend/control-panel/finance/RepresentativeWalletLookup.tsx`, `apps/control-panel/runtime/src/app/dsh/finance/page.tsx` |
-| Shared sovereign frontend brain | Reusable actor wallet API, controller and stateful panel | `services/dsh/frontend/shared/finance-wlt-link/actor-wallet` |
-| Focused API contract | Implemented for all actor wallet/ledger routes and operator lookups | `services/dsh/contracts/jrn-033-representative-finance.openapi.yaml` |
-| Automated verification definition | Implemented for Go ownership/scoping, TypeScript, static boundary, OpenAPI and product truth | `.github/workflows/jrn-033-representative-wallets-verification.yml` |
+| Partner surface | WLT-owned wallet bound; hardcoded actor and settlement-as-wallet drift absent | `services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshPartnerBridge.tsx` |
+| Captain surface | Wallet and ledger primary view with COD references retained | `services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx` |
+| Field surface | Wallet totals, ledger, commissions and governed payouts | `services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx`, `services/dsh/frontend/shared/finance-wlt-link/field-finance` |
+| Control-panel surface | Read-only wallet lookup and matching representative ledger | `services/dsh/frontend/control-panel/finance/RepresentativeWalletLookup.tsx` |
+| Shared frontend brain | Reusable actor wallet API, controller and stateful panel | `services/dsh/frontend/shared/finance-wlt-link/actor-wallet` |
+| Focused API contract | Wallet and ledger operations for every required surface | `services/dsh/contracts/jrn-033-representative-finance.openapi.yaml` |
+| Tenancy contract | Trusted Identity tenant and cross-tenant behavior declared | `services/dsh/contracts/jrn-033-representative-finance-tenancy.contract.json` |
+| Authenticated runtime matrix | Implemented for positive and negative evidence | `tools/scripts/test-jrn-033-representative-wallets-runtime.ps1` |
+| Runtime workflow | Canonical Identity + DSH + WLT Docker verification and WLT-unavailable test | `.github/workflows/jrn-033-runtime-verification.yml` |
+| Visual evidence surface | Actual wallet components, environment gated | `services/dsh/frontend/control-panel/finance/Jrn033VisualEvidenceScreen.tsx`, `apps/control-panel/runtime/src/app/dsh/finance/jrn-033-visual-evidence/page.tsx` |
+| Visual evidence workflow | Five hashed PNG states and immutable artifact | `.github/workflows/jrn-033-visual-evidence.yml` |
+| Static closure workflow | Go, TypeScript, contracts, governance, tenancy and whitespace | `.github/workflows/jrn-033-representative-wallets-verification.yml` |
 
-## Changed paths
+## Runtime matrix coverage
 
-- `.github/workflows/jrn-033-representative-wallets-verification.yml`
-- `apps/control-panel/runtime/src/app/dsh/finance/page.tsx`
-- `governance/product/contracts/jrn-033-representative-wallets.product-truth.json`
-- `services/dsh/backend/internal/http/catalog_unified_routes.go`
-- `services/dsh/backend/internal/http/representative_finance_routes.go`
-- `services/dsh/backend/internal/http/representative_finance_routes_test.go`
-- `services/dsh/backend/internal/wlt/client_test.go`
-- `services/dsh/backend/internal/wlt/finance_proxy.go`
-- `services/dsh/backend/internal/wlt/representative_wallet_test.go`
-- `services/dsh/contracts/jrn-033-representative-finance.openapi.yaml`
-- `services/dsh/frontend/app-captain/account/DshCaptainFinanceScreen.tsx`
-- `services/dsh/frontend/app-client/account/MySpaceScreen.tsx`
-- `services/dsh/frontend/app-field/finance/DshFieldFinanceScreen.tsx`
-- `services/dsh/frontend/control-panel/finance/RepresentativeWalletLookup.tsx`
-- `services/dsh/frontend/control-panel/finance/index.ts`
-- `services/dsh/frontend/shared/finance-wlt-link/actor-wallet/ActorWalletPanel.tsx`
-- `services/dsh/frontend/shared/finance-wlt-link/actor-wallet/actor-wallet.api.ts`
-- `services/dsh/frontend/shared/finance-wlt-link/actor-wallet/index.ts`
-- `services/dsh/frontend/shared/finance-wlt-link/actor-wallet/use-actor-wallet-controller.ts`
-- `services/dsh/frontend/shared/finance-wlt-link/field-finance/field-finance.api.ts`
-- `services/dsh/frontend/shared/finance-wlt-link/field-finance/use-field-finance-controller.ts`
-- `services/dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshPartnerBridge.tsx`
-- `services/dsh/tests/jrn-033-representative-wallets-governance.test.mjs`
-- `services/dsh/tsconfig.jrn-033.json`
-- `services/wlt/backend/internal/wallet/handler.go`
-- `services/wlt/backend/internal/wallet/handler_test.go`
+The runtime matrix authenticates the local Identity users for client, partner, captain, field and operator, then verifies:
 
-## Verification defined in repository
+1. Every representative reads only their own tenant-bound WLT wallet and ledger.
+2. Available balances are real seeded WLT values, not frontend derivations.
+3. Operator lookup reads the same wallet and matching ledger with `finance.read`.
+4. Query attempts to override actor id or type are ignored.
+5. Anonymous, cross-role and unauthorized operator requests are rejected.
+6. Unsupported representative actor types are rejected.
+7. A wallet in `other-tenant` is hidden and its ledger does not leak.
+8. Suspended and frozen wallet states remain visible to the authorized operator.
+9. Direct browser-style WLT wallet reads are rejected.
+10. DSH returns `WLT_UNAVAILABLE` when WLT is stopped and recovers after WLT restarts.
 
-The JRN-033 workflow executes:
+## Visual evidence boundary
 
-1. `go test ./internal/wallet -count=1` in WLT.
-2. DSH WLT wallet boundary tests for every representative actor type.
-3. DSH route tests for authenticated self-scoping, operator permission fallback, path-pinned actor scope and no-store responses.
-4. Go build of affected DSH financial packages.
-5. Static ownership and route guard across all surfaces.
-6. Focused TypeScript typecheck using `services/dsh/tsconfig.jrn-033.json`.
-7. Focused OpenAPI generation/parsing.
-8. Product-truth validation against `governance/product/product-truth.schema.json`.
-9. Repository whitespace verification.
+The visual evidence route is unavailable unless `NEXT_PUBLIC_JRN_033_VISUAL_EVIDENCE=1`. It renders the actual `ActorWalletPanel` for client, partner, captain and field plus the actual operator lookup component. The workflow captures `success`, `empty`, `frozen`, `error` and `loading` PNG files, verifies their size, writes SHA-256 hashes and uploads them for 30 days. Fixture data is used only for visual-state evidence; Docker runtime owns live financial evidence.
 
-## Remote workflow observations
+## Final remote verification runs
 
-- Earlier JRN-033 runs on shared branch-ref concurrency groups were cancelled before jobs began when later finance journey commits arrived.
-- The workflow concurrency policy was corrected at `6c4ec4fe46a2dd2915037af1d7b3f4fe10497cd4` to use `${{ github.sha }}` with `cancel-in-progress: false`, preserving verification per commit.
-- JRN-033 workflow run `29919146590` / run number `109` was created for that SHA.
-- Its three jobs are currently queued: `Focused contract and product truth`, `WLT ownership and DSH actor scoping`, and `Shared brain and all representative surfaces`.
-- The repository has multiple unrelated workflows queued on the same branch head, so queued state is recorded as infrastructure evidence, not interpreted as pass or test failure.
-- A queued or cancelled workflow is not treated as successful closure evidence.
+Reviewed snapshot: `3c335621c2b8358abd9ede69d1e72311627bddd0`
 
-## Evidence still required
+- Static/contract/compile run: `29929911369` — run number `561` — currently `queued`.
+- Canonical Docker runtime run: `29929914174` — run number `278` — currently `queued`.
+- Actual component visual evidence run: `29929911285` — run number `32` — currently `queued`.
 
-- Successful remote JRN-033 workflow jobs on the reviewed implementation SHA.
-- Runtime DSH-to-WLT smoke evidence using authenticated client, partner, captain, field and operator identities.
-- Negative runtime evidence for cross-actor access, unsupported actor type, missing `finance.read`, WLT unavailable and frozen/suspended wallet states.
-- Visual evidence for client, partner, captain, field and control-panel loading, success, empty, partial and error states.
-- Independent financial-control review confirming WLT ownership, ledger lineage, no balance mutation in DSH/frontends and read/manage separation.
+The repository currently has a large number of unrelated journey workflows queued on the same branch. The connector does not expose workflow cancellation or direct `workflow_dispatch`, so obsolete runs cannot be removed remotely from this execution. A queued run is infrastructure evidence only and is not treated as a pass or failure.
+
+## Independent evidence still external
+
+- Independent financial-control approval.
 - Independent product acceptance and explicit PM/PO approvals.
-- Production telemetry remains outside this execution and no deployment was authorized.
+- Release and production telemetry; no deployment was authorized.
+
+Engineering cannot issue those approvals on behalf of their owners. The product-truth contract therefore remains `DISCOVERY` with approval fields `PENDING`; this is intentional and prevents false closure.
 
 ## Decision
 
-`NEEDS_EVIDENCE`
+`IMPLEMENTED_AWAITING_REMOTE_RUNNER_AND_INDEPENDENT_APPROVAL`
 
-The implementation, contracts, tests and multi-surface bindings are present on `sambassam`. The journey must not be labeled `CLOSED_WITH_EVIDENCE` until the remote workflow, runtime, visual and independent financial/product evidence above are attached to the reviewed final SHA.
+All code, database, contract, tenant-isolation, multi-surface, runtime-test and visual-evidence work for JRN-033 is implemented on `sambassam`. `CLOSED_WITH_EVIDENCE` is blocked only until the three immutable runs above complete successfully and independent financial/product owners record their decisions.
 
 ## Unauthorized actions not performed
 
-- No pull request was created or merged.
+- No pull request was created or merged for this execution.
 - No force push was performed.
 - No tag or release was created.
 - No production deployment or provider activation was performed.
