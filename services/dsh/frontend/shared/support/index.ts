@@ -4,6 +4,9 @@ export { useOperatorTicketController, useSupportTicketController, useTicketDetai
 export { useGovernedSupportIncidentController as useSupportIncidentController } from "./use-governed-incident-controller";
 export type { IncidentEventState } from "./use-governed-incident-controller";
 export * from "./incident-governance.api";
+export { useOrderRescueController } from "./use-order-rescue-controller";
+export type { OrderRescueActionState, OrderRescueEventState, OrderRescueListState } from "./use-order-rescue-controller";
+export * from "./order-rescue.api";
 export { usePartnerSupportController } from "./use-partner-support-controller";
 export type { PartnerSupportControllerState, PartnerSupportDetailState } from "./use-partner-support-controller";
 export * from "./actor-support.api";
