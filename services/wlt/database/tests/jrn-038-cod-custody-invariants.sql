@@ -59,6 +59,11 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_trigger
+    WHERE tgname = 'wlt_jrn038_cod_custody_evidence_immutable_trigger' AND NOT tgisinternal
+  ) THEN missing := array_append(missing, 'custody evidence immutability trigger'); END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger
     WHERE tgname = 'wlt_jrn038_cod_reconciliation_audit_trigger' AND NOT tgisinternal
   ) THEN missing := array_append(missing, 'reconciliation audit capture trigger'); END IF;
 
@@ -122,6 +127,18 @@ BEGIN
     (record_id, 'collection', 10000, 9500, -500, 'YER', 'proof-jrn038-valid',
      'captain-jrn038', 'captain', 'corr-jrn038-valid', 'idem-jrn038-valid', 'ledger-jrn038-valid')
   RETURNING id INTO evidence_id;
+
+  BEGIN
+    UPDATE wlt_cod_custody_evidence
+    SET note = 'tampered'
+    WHERE id = evidence_id;
+    RAISE EXCEPTION 'JRN-038 invariant failure: custody evidence mutation was accepted';
+  EXCEPTION
+    WHEN raise_exception THEN
+      IF SQLERRM = 'JRN-038 invariant failure: custody evidence mutation was accepted' THEN
+        RAISE;
+      END IF;
+  END;
 
   INSERT INTO wlt_cod_reconciliation_cases
     (cod_record_id, custody_evidence_id, expected_amount_minor_units,
