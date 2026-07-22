@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: jrn-030-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: jrn-030-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   verify:
