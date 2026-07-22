@@ -1,4 +1,4 @@
-name: JRN-034 Payments Verification — Immutable Candidate
+name: JRN-034 Payments Verification — Immutable Candidate Diagnostics
 
 on:
   workflow_dispatch:
@@ -85,9 +85,28 @@ jobs:
       - name: Test WLT payment and provider packages
         working-directory: services/wlt/backend
         run: go test ./internal/payment ./internal/provider -count=1
-      - name: Build WLT router and payment owners
-        working-directory: services/wlt/backend
-        run: go build ./internal/payment ./internal/provider ./internal/reference ./internal/http
+      - name: Capture WLT router and payment-owner build diagnostics
+        id: wlt_build
+        shell: bash
+        run: |
+          set +e
+          cd services/wlt/backend
+          go build ./internal/payment ./internal/provider ./internal/reference ./internal/http > "$GITHUB_WORKSPACE/jrn034-wlt-build.log" 2>&1
+          status=$?
+          cat "$GITHUB_WORKSPACE/jrn034-wlt-build.log"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Upload WLT build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jrn-034-wlt-build-diagnostics-${{ github.sha }}
+          path: jrn034-wlt-build.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce WLT build result
+        if: steps.wlt_build.outputs.status != '0'
+        run: exit 1
       - name: Test DSH WLT payment boundary
         working-directory: services/dsh/backend
         run: go test ./internal/wlt -count=1
