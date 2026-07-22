@@ -1,10 +1,11 @@
 openapi: 3.0.3
 info:
   title: BThwani DSH JRN-033 Representative Finance
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     Canonical actor-scoped wallet and ledger read contract. WLT remains the
-    financial truth owner; DSH resolves identity and authorizes reads.
+    financial truth owner; DSH resolves self-service identity and applies
+    finance.read to explicit operator lookups.
 servers:
   - url: http://localhost:58080
 security:
@@ -59,11 +60,7 @@ paths:
       operationId: listDshPartnerOwnCommissions
       tags: [representative-finance]
       responses:
-        '200':
-          description: Partner-scoped commission references.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -72,11 +69,7 @@ paths:
       operationId: listDshPartnerOwnPayoutRequests
       tags: [representative-finance]
       responses:
-        '200':
-          description: Partner-scoped payout references.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -107,11 +100,7 @@ paths:
       operationId: listDshCaptainOwnCommissions
       tags: [representative-finance]
       responses:
-        '200':
-          description: Captain-scoped commission references.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -120,11 +109,7 @@ paths:
       operationId: listDshCaptainOwnPayoutRequests
       tags: [representative-finance]
       responses:
-        '200':
-          description: Captain-scoped payout requests.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -132,21 +117,11 @@ paths:
       operationId: createDshCaptainOwnPayoutRequest
       tags: [representative-finance]
       parameters:
-        - name: Idempotency-Key
-          in: header
-          required: true
-          schema: { type: string, minLength: 8, maxLength: 200 }
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/PayoutRequestInput' }
+        $ref: '#/components/requestBodies/PayoutRequestBody'
       responses:
-        '201':
-          description: Governed payout request created in WLT.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '201': { $ref: '#/components/responses/ReferenceItemResponse' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
@@ -178,11 +153,7 @@ paths:
       operationId: listDshFieldOwnCommissions
       tags: [representative-finance]
       responses:
-        '200':
-          description: Field-scoped commission references.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -191,11 +162,7 @@ paths:
       operationId: listDshFieldOwnPayoutRequests
       tags: [representative-finance]
       responses:
-        '200':
-          description: Field-scoped payout requests.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -203,21 +170,11 @@ paths:
       operationId: createDshFieldOwnPayoutRequest
       tags: [representative-finance]
       parameters:
-        - name: Idempotency-Key
-          in: header
-          required: true
-          schema: { type: string, minLength: 8, maxLength: 200 }
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/PayoutRequestInput' }
+        $ref: '#/components/requestBodies/PayoutRequestBody'
       responses:
-        '201':
-          description: Governed payout request created in WLT.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '201': { $ref: '#/components/responses/ReferenceItemResponse' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
@@ -226,20 +183,31 @@ paths:
     get:
       operationId: getDshRepresentativeWallet
       tags: [representative-finance]
-      description: Requires finance.read. This is the only route in this contract that accepts an actor id.
+      description: Requires finance.read and returns a no-store WLT-owned wallet.
       parameters:
-        - name: actorType
-          in: path
-          required: true
-          schema:
-            type: string
-            enum: [client, partner, captain, field]
-        - name: actorId
-          in: path
-          required: true
-          schema: { type: string, minLength: 1, maxLength: 200 }
+        - $ref: '#/components/parameters/ActorTypePath'
+        - $ref: '#/components/parameters/ActorIdPath'
       responses:
         '200': { $ref: '#/components/responses/WalletResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+  /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries:
+    get:
+      operationId: listDshRepresentativeLedgerEntries
+      tags: [representative-finance]
+      description: >-
+        Requires finance.read. Actor scope is taken from the path; actorId and
+        actorType query overrides are ignored by the implementation.
+      parameters:
+        - $ref: '#/components/parameters/ActorTypePath'
+        - $ref: '#/components/parameters/ActorIdPath'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/EntryType'
+      responses:
+        '200': { $ref: '#/components/responses/LedgerResponse' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
@@ -251,6 +219,18 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
+    ActorTypePath:
+      name: actorType
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [client, partner, captain, field]
+    ActorIdPath:
+      name: actorId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
     Limit:
       name: limit
       in: query
@@ -266,12 +246,25 @@ components:
       in: query
       required: false
       schema: { type: string, maxLength: 80 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+  requestBodies:
+    PayoutRequestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PayoutRequestInput' }
   responses:
     WalletResponse:
       description: WLT-owned representative wallet.
       headers:
         Cache-Control:
           schema: { type: string, example: 'private, no-store' }
+        Pragma:
+          schema: { type: string, example: 'no-cache' }
       content:
         application/json:
           schema:
@@ -281,6 +274,11 @@ components:
               wallet: { $ref: '#/components/schemas/RepresentativeWallet' }
     LedgerResponse:
       description: Actor-scoped ledger references from WLT.
+      headers:
+        Cache-Control:
+          schema: { type: string, example: 'private, no-store' }
+        Pragma:
+          schema: { type: string, example: 'no-cache' }
       content:
         application/json:
           schema:
@@ -290,6 +288,16 @@ components:
               ledgerEntries:
                 type: array
                 items: { $ref: '#/components/schemas/RepresentativeLedgerEntry' }
+    ReferenceCollectionResponse:
+      description: Actor-scoped finance references owned by WLT.
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
+    ReferenceItemResponse:
+      description: Governed WLT reference item.
+      content:
+        application/json:
+          schema: { type: object, additionalProperties: true }
     AuthError:
       description: Authentication or authorization failed.
       content:
