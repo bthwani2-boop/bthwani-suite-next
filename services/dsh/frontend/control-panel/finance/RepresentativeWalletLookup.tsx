@@ -66,12 +66,11 @@ export function RepresentativeWalletLookup() {
     setState({ kind: "loading" });
 
     const encodedActorId = encodeURIComponent(normalizedActorId);
+    const representativeBase = `/dsh/control-panel/finance/wallets/${actorType}/${encodedActorId}`;
     const [walletResult, ledgerResult] = await Promise.allSettled([
-      request<{ readonly wallet: RepresentativeWallet }>(
-        `/dsh/control-panel/finance/wallets/${actorType}/${encodedActorId}`,
-      ),
+      request<{ readonly wallet: RepresentativeWallet }>(representativeBase),
       request<{ readonly ledgerEntries: RepresentativeLedgerEntry[] }>(
-        `/dsh/control-panel/finance/ledger/entries?actorType=${actorType}&actorId=${encodedActorId}&limit=50`,
+        `${representativeBase}/ledger-entries?limit=50`,
       ),
     ]);
 
@@ -190,7 +189,7 @@ export function RepresentativeWalletLookup() {
                 <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
                   <thead>
                     <tr style={{ borderBottom: `1px solid ${lightThemeColors.borderColor}` }}>
-                      {['التاريخ', 'نوع القيد', 'الاتجاه', 'المبلغ', 'الرصيد بعد القيد', 'المرجع'].map((label) => (
+                      {["التاريخ", "نوع القيد", "الاتجاه", "المبلغ", "الرصيد بعد القيد", "المرجع"].map((label) => (
                         <th key={label} style={{ padding: "0.65rem", textAlign: "right" }}><Text role="caption" tone="muted">{label}</Text></th>
                       ))}
                     </tr>
