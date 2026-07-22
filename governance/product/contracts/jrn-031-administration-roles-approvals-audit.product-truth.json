@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-031",
+  "journeyNameAr": "الإدارة والأدوار والاعتمادات والتدقيق",
+  "status": "PENDING_INDEPENDENT_APPROVAL",
+  "truthOwner": "services/dsh",
+  "identityTruthOwner": "core/identity",
+  "workforceTruthOwner": "core/workforce",
+  "sharedBrainOwner": "services/dsh/frontend/shared/administration",
+  "operationalProblem": "تحتاج الإدارة إلى صلاحيات دقيقة مرتبطة بالعملية والسطح، وإلى فصل منشئ القرار عن معتمده ومستفيده، مع سجل تدقيق غير قابل للتعديل وتراجع محكوم لا يحذف التاريخ ولا ينقل حقيقة الهوية أو القوى العاملة إلى DSH.",
+  "targetOutcome": "إدارة أدوار وإسنادات قابلة للتدقيق والتراجع، تمر جميع طفراتها الحساسة عبر Maker-Checker، وتعرض تشخيصات تشغيلية منقحة من البيانات الحساسة، بينما تبقى تهيئة الشريك واعتماد الكابتن قراءات مملوكة لرحلاتها الأصلية.",
+  "actors": [
+    "operator-role-maker",
+    "operator-role-checker",
+    "operator-auditor",
+    "role-beneficiary"
+  ],
+  "requiredSurfaces": [
+    "control-panel"
+  ],
+  "impactedSurfaces": [
+    "app-client",
+    "app-partner",
+    "app-captain",
+    "app-field",
+    "webapp",
+    "website"
+  ],
+  "services": [
+    "DSH_ADMINISTRATION_PROJECTION",
+    "IDENTITY_AUTHENTICATION_TRUTH",
+    "WORKFORCE_PROFILE_TRUTH"
+  ],
+  "entities": [
+    "administration_role",
+    "role_definition_request",
+    "staff_role_assignment",
+    "role_assignment_approval",
+    "decision_rollback_request",
+    "administration_audit_entry"
+  ],
+  "states": {
+    "approval": [
+      "pending",
+      "approved",
+      "rejected"
+    ],
+    "role": [
+      "active",
+      "inactive"
+    ],
+    "diagnostics": [
+      "healthy",
+      "attention"
+    ]
+  },
+  "allowedActions": [
+    "request_surface_scoped_role_definition",
+    "independently_approve_or_reject_role_definition",
+    "request_staff_role_assignment_or_revocation",
+    "independently_approve_or_reject_role_change",
+    "request_inverse_action_for_approved_role_decision",
+    "independently_approve_or_reject_rollback",
+    "read_append_only_redacted_administration_audit",
+    "read_aggregate_privacy_safe_administration_diagnostics",
+    "read_partner_activation_and_captain_credential_projections_without_mutating_owner_truth"
+  ],
+  "forbiddenActions": [
+    "direct_role_creation_without_approval",
+    "direct_staff_role_assignment_or_revocation",
+    "maker_self_approval",
+    "beneficiary_approval",
+    "original_checker_approving_rollback",
+    "deleting_or_rewriting_audit_history",
+    "storing_phone_document_session_or_secret_values_in_audit_detail",
+    "mutating_partner_lifecycle_or_captain_credentials_from_administration",
+    "granting_administration_permission_outside_the_declared_surface_scope",
+    "moving_identity_or_workforce_truth_into_dsh"
+  ],
+  "negativeInvariants": [
+    "Every role definition, assignment, revocation, and rollback request has a reason and an optimistic version.",
+    "Maker, beneficiary, and checker are distinct for role assignments; rollback checker is also distinct from the original decision checker.",
+    "A rollback appends an inverse decision and never deletes the source approval or its audit trail.",
+    "The administration audit table is append-only outside an explicit maintenance context and readback redacts non-allowlisted details.",
+    "Administration diagnostics expose aggregate counts only and never return phone numbers, credentials, documents, session tokens, or secrets.",
+    "Identity authenticates the actor; DSH evaluates only approved active administration role projections scoped to control-panel.",
+    "Partner activation and captain credential mutations remain owned by their lifecycle and accreditation journeys."
+  ],
+  "acceptanceCriteria": [
+    "Role definitions persist normalized operation permissions and explicit surface scope with control-panel mandatory.",
+    "Role definition and staff role changes use maker-checker approval with version conflict protection.",
+    "Approved assignment or revocation decisions can be reversed only through a separate independently approved inverse request.",
+    "Audit writes avoid raw reason or review-note values, audit readback is redacted, and update or delete is rejected by the database trigger.",
+    "The control-panel shared administration brain binds roles, approvals, rollback, diagnostics, and audit to live DSH routes.",
+    "Targeted Go tests, TypeScript checks, route binding checks, contract checks, and migration checks pass on one immutable branch commit."
+  ],
+  "independentApprovalsRequired": [
+    "product-manager",
+    "product-owner",
+    "independent-quality",
+    "application-security",
+    "release-production"
+  ]
+}
