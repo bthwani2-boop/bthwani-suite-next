@@ -1,0 +1,118 @@
+name: JRN-017 Captain Live Tracking Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [sambassam]
+    paths:
+      - "core/providers/backend/internal/providers/routes.go"
+      - "core/providers/backend/internal/providers/routes_test.go"
+      - "core/providers/backend/internal/http/routes.go"
+      - "core/providers/backend/internal/http/server.go"
+      - "services/dsh/backend/internal/dispatch/**"
+      - "services/dsh/backend/internal/http/dispatch*.go"
+      - "services/dsh/backend/internal/mapproviders/**"
+      - "services/dsh/database/migrations/dsh-039_dispatch_captain_location.sql"
+      - "services/dsh/contracts/dsh.live-tracking.openapi.yaml"
+      - "services/dsh/contracts/jrn-017-slice-closure.json"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "services/dsh/frontend/shared/dispatch/**"
+      - "services/dsh/frontend/shared/delivery/**"
+      - "services/dsh/frontend/shared/orders/**"
+      - "services/dsh/frontend/app-captain/orders/**"
+      - "services/dsh/frontend/app-client/orders/**"
+      - "services/dsh/frontend/app-partner/orders/PartnerDispatchTrackingScreen.tsx"
+      - "services/dsh/frontend/app-partner/DshPartnerOrderJourneyRenderer.tsx"
+      - "services/dsh/frontend/control-panel/dashboard/**"
+      - "services/dsh/tests/jrn-017-live-tracking-closure.test.mjs"
+      - "services/dsh/tsconfig.jrn-017.json"
+      - "governance/product/contracts/jrn-017-captain-live-tracking.product-truth.json"
+      - ".github/workflows/jrn-017-live-tracking-verify.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "core/providers/backend/internal/providers/routes.go"
+      - "core/providers/backend/internal/providers/routes_test.go"
+      - "core/providers/backend/internal/http/routes.go"
+      - "core/providers/backend/internal/http/server.go"
+      - "services/dsh/backend/internal/dispatch/**"
+      - "services/dsh/backend/internal/http/dispatch*.go"
+      - "services/dsh/backend/internal/mapproviders/**"
+      - "services/dsh/database/migrations/dsh-039_dispatch_captain_location.sql"
+      - "services/dsh/contracts/dsh.live-tracking.openapi.yaml"
+      - "services/dsh/contracts/jrn-017-slice-closure.json"
+      - "services/dsh/contracts/contract-registry.ts"
+      - "services/dsh/frontend/shared/dispatch/**"
+      - "services/dsh/frontend/shared/delivery/**"
+      - "services/dsh/frontend/shared/orders/**"
+      - "services/dsh/frontend/app-captain/orders/**"
+      - "services/dsh/frontend/app-client/orders/**"
+      - "services/dsh/frontend/app-partner/orders/PartnerDispatchTrackingScreen.tsx"
+      - "services/dsh/frontend/app-partner/DshPartnerOrderJourneyRenderer.tsx"
+      - "services/dsh/frontend/control-panel/dashboard/**"
+      - "services/dsh/tests/jrn-017-live-tracking-closure.test.mjs"
+      - "services/dsh/tsconfig.jrn-017.json"
+      - "governance/product/contracts/jrn-017-captain-live-tracking.product-truth.json"
+      - ".github/workflows/jrn-017-live-tracking-verify.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-017-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  backend-provider:
+    name: JRN-017 backend and provider
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.5"
+          cache: false
+      - name: Test DSH dispatch and protected HTTP
+        working-directory: services/dsh/backend
+        run: go test ./internal/dispatch ./internal/http ./internal/mapproviders
+      - name: Test governed routing provider
+        working-directory: core/providers/backend
+        run: go test ./internal/providers ./internal/http
+
+  contract-surfaces:
+    name: JRN-017 contract and surfaces
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+      - name: Verify static full-stack closure
+        run: node --test services/dsh/tests/jrn-017-live-tracking-closure.test.mjs
+      - name: Verify slice count and same-commit contract markers
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const closure = JSON.parse(fs.readFileSync('services/dsh/contracts/jrn-017-slice-closure.json', 'utf8'));
+          if (closure.journeyId !== 'JRN-017' || closure.requiredSliceCount !== 18 || closure.slices.length !== 18) process.exit(1);
+          if (!fs.readFileSync('services/dsh/contracts/dsh.live-tracking.openapi.yaml', 'utf8').includes('x-bthwani-contract-state: CONTRACT_ACTIVE')) process.exit(1);
+          if (!fs.readFileSync('services/dsh/contracts/contract-registry.ts', 'utf8').includes('id: "dsh-live-tracking"')) process.exit(1);
+          console.log(`jrn-017/captain-live-tracking verified on ${process.env.GITHUB_SHA}`);
+          NODE
+
+  frontend-typecheck:
+    name: JRN-017 governed frontend typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10.34.2"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck JRN-017 shared brain and surfaces
+        run: pnpm exec tsc -p services/dsh/tsconfig.jrn-017.json --noEmit
