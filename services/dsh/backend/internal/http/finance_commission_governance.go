@@ -96,7 +96,8 @@ func (s *protectedStoreServer) handleUpsertFinanceCommissionPolicy(w http.Respon
 
 // GET /dsh/control-panel/finance/commissions/{commissionId}
 func (s *protectedStoreServer) handleFinanceCommissionDetail(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok {
 		return
 	}
 	commissionID := strings.TrimSpace(r.PathValue("commissionId"))
@@ -104,7 +105,7 @@ func (s *protectedStoreServer) handleFinanceCommissionDetail(w http.ResponseWrit
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commissionId is required")
 		return
 	}
-	s.proxyFinanceRead(w, r, "/wlt/commissions/"+url.PathEscape(commissionID), nil)
+	s.proxyFinanceRead(w, r, "/wlt/commissions/"+url.PathEscape(commissionID), nil, actor.TenantID)
 }
 
 // POST /dsh/control-panel/finance/commissions/{commissionId}/adjust
@@ -213,7 +214,8 @@ func (s *protectedStoreServer) handleReverseFinanceCommission(w http.ResponseWri
 
 // GET /dsh/control-panel/finance/settlements/{settlementId}/evidence
 func (s *protectedStoreServer) handleFinanceSettlementEvidence(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok {
 		return
 	}
 	settlementID := strings.TrimSpace(r.PathValue("settlementId"))
@@ -221,5 +223,5 @@ func (s *protectedStoreServer) handleFinanceSettlementEvidence(w http.ResponseWr
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "settlementId is required")
 		return
 	}
-	s.proxyFinanceRead(w, r, "/wlt/settlements/"+url.PathEscape(settlementID)+"/evidence", nil)
+	s.proxyFinanceRead(w, r, "/wlt/settlements/"+url.PathEscape(settlementID)+"/evidence", nil, actor.TenantID)
 }
