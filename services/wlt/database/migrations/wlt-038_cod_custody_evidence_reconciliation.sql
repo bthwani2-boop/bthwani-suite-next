@@ -59,6 +59,20 @@ CREATE TABLE IF NOT EXISTS wlt_cod_custody_evidence (
 CREATE INDEX IF NOT EXISTS wlt_cod_custody_evidence_record_created_idx
   ON wlt_cod_custody_evidence(cod_record_id, created_at DESC);
 
+CREATE OR REPLACE FUNCTION wlt_jrn038_reject_custody_evidence_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RAISE EXCEPTION 'WLT COD custody evidence is immutable';
+END
+$$;
+
+DROP TRIGGER IF EXISTS wlt_jrn038_cod_custody_evidence_immutable_trigger ON wlt_cod_custody_evidence;
+CREATE TRIGGER wlt_jrn038_cod_custody_evidence_immutable_trigger
+BEFORE UPDATE OR DELETE ON wlt_cod_custody_evidence
+FOR EACH ROW EXECUTE FUNCTION wlt_jrn038_reject_custody_evidence_mutation();
+
 CREATE TABLE IF NOT EXISTS wlt_cod_reconciliation_cases (
   id                           text PRIMARY KEY DEFAULT ('wcrc_' || gen_random_uuid()::text),
   cod_record_id                text NOT NULL REFERENCES wlt_cod_records(id) ON DELETE RESTRICT,
@@ -104,7 +118,7 @@ CREATE TABLE IF NOT EXISTS wlt_cod_reconciliation_audit_events (
   metadata               jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at             timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT wlt_cod_reconciliation_audit_event_chk
-    CHECK (event_type IN ('opened', 'assigned', 'reassigned', 'resolved'))
+    CHECK (event_type IN ('opened', 'assigned', 'reassigned', 'investigation_updated', 'resolved'))
 );
 
 CREATE INDEX IF NOT EXISTS wlt_cod_reconciliation_audit_case_created_idx
@@ -126,6 +140,9 @@ BEGIN
     audit_actor_id := NEW.resolved_by_operator_id;
   ELSIF NEW.assigned_to_operator_id IS DISTINCT FROM OLD.assigned_to_operator_id THEN
     audit_event_type := CASE WHEN OLD.assigned_to_operator_id IS NULL THEN 'assigned' ELSE 'reassigned' END;
+    audit_actor_id := NEW.assigned_to_operator_id;
+  ELSIF NEW.investigation_note IS DISTINCT FROM OLD.investigation_note THEN
+    audit_event_type := 'investigation_updated';
     audit_actor_id := NEW.assigned_to_operator_id;
   ELSE
     RETURN NEW;
@@ -173,4 +190,4 @@ COMMENT ON TABLE wlt_cod_custody_evidence IS
 COMMENT ON TABLE wlt_cod_reconciliation_cases IS
   'COD-specific expected-vs-actual variance workflow with assignment, investigation and resolution truth.';
 COMMENT ON TABLE wlt_cod_reconciliation_audit_events IS
-  'Append-only custody reconciliation audit trail for opening, assignment, reassignment and resolution.';
+  'Append-only custody reconciliation audit trail for opening, assignment, investigation and resolution.';
