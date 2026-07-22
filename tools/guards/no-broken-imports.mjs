@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import {
   existsResolved,
   fail,
-  findImportSpecifiers,
   lineNumber,
   listCodeFiles,
   loadTsconfigAliases,
@@ -23,10 +23,47 @@ function aliasExists(alias) {
   return fs.existsSync(abs);
 }
 
+function scriptKindFor(file) {
+  if (file.endsWith(".tsx")) return ts.ScriptKind.TSX;
+  if (file.endsWith(".jsx")) return ts.ScriptKind.JSX;
+  if (file.endsWith(".js") || file.endsWith(".mjs") || file.endsWith(".cjs")) return ts.ScriptKind.JS;
+  return ts.ScriptKind.TS;
+}
+
+function findParsedImportSpecifiers(file, content) {
+  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindFor(file));
+  const specs = [];
+
+  function addSpecifier(node) {
+    if (node && ts.isStringLiteralLike(node)) {
+      specs.push({ specifier: node.text, index: node.getStart(sourceFile) });
+    }
+  }
+
+  function visit(node) {
+    if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+      addSpecifier(node.moduleSpecifier);
+    } else if (
+      ts.isImportEqualsDeclaration(node) &&
+      ts.isExternalModuleReference(node.moduleReference)
+    ) {
+      addSpecifier(node.moduleReference.expression);
+    } else if (ts.isCallExpression(node) && node.arguments.length === 1) {
+      const isRequire = ts.isIdentifier(node.expression) && node.expression.text === "require";
+      const isDynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
+      if (isRequire || isDynamicImport) addSpecifier(node.arguments[0]);
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return specs;
+}
+
 for (const file of listCodeFiles()) {
   if (file.endsWith("next-env.d.ts")) continue;
   const content = read(file);
-  for (const item of findImportSpecifiers(content)) {
+  for (const item of findParsedImportSpecifiers(file, content)) {
     const spec = item.specifier;
 
     if (spec.startsWith(".")) {
