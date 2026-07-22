@@ -14,16 +14,16 @@ func TestHTTPPushProviderSendsGovernedPayload(t *testing.T) {
 	var received PushMessage
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			t.Fatalf("expected POST, got %s", r.Method)
+			t.Errorf("expected POST, got %s", r.Method)
 		}
 		if got := r.Header.Get("Idempotency-Key"); got != "delivery-1" {
-			t.Fatalf("expected idempotency key delivery-1, got %q", got)
+			t.Errorf("expected idempotency key delivery-1, got %q", got)
 		}
 		if got := r.Header.Get("Authorization"); got != "Bearer provider-token" {
-			t.Fatalf("expected provider bearer token, got %q", got)
+			t.Errorf("expected provider bearer token, got %q", got)
 		}
 		if err := json.NewDecoder(r.Body).Decode(&received); err != nil {
-			t.Fatalf("decode request: %v", err)
+			t.Errorf("decode request: %v", err)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"messageId":"provider-message-1"}`))
