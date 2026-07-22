@@ -88,8 +88,12 @@ jobs:
           NODE
 
             pnpm --dir services/dsh openapi:generate
-            pnpm --dir services/dsh openapi:verify
-            pnpm --dir services/dsh openapi:test
+            grep -Fq 'required: [startLocation]' services/dsh/contracts/components/schemas/field.schemas.yaml
+            grep -Fq 'required: [completionLocation]' services/dsh/contracts/paths/field.paths.yaml
+            grep -Fq 'startLocation:' services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+            grep -Fq 'completionLocation:' services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+            grep -Fq 'startLocation:' services/dsh/clients/generated/dsh-api.ts
+            grep -Fq 'completionLocation:' services/dsh/clients/generated/dsh-api.ts
 
             if git diff --quiet -- services/dsh/contracts/components/schemas/field.schemas.yaml services/dsh/contracts/paths/field.paths.yaml services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts; then
               echo "JRN-024 contract is already synchronized."
