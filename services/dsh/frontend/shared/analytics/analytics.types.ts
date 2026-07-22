@@ -2,6 +2,10 @@ import type { components } from "../../../clients/generated/dsh-api";
 
 export type DshAnalyticsPeriod = "today" | "week" | "month";
 
+export type DshAnalyticsWindowInput =
+  | { period: DshAnalyticsPeriod; from?: never; to?: never }
+  | { period?: never; from: string; to: string };
+
 export type DshPlatformKpis = components["schemas"]["DshPlatformKpisResponse"];
 export type DshOrderStatusCount = components["schemas"]["DshOrderStatusCount"];
 export type DshOrderAnalytics = components["schemas"]["DshOrderAnalyticsResponse"];
