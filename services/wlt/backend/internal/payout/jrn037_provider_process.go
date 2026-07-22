@@ -81,14 +81,14 @@ func (destination payoutProviderDestination) validateForProvider() error {
 
 func destinationProviderPayload(destination payoutProviderDestination) map[string]any {
 	return map[string]any{
-		"id":                   destination.ID,
-		"type":                 destination.SettlementPreference,
-		"beneficiaryName":      destination.BeneficiaryName,
-		"bankName":             destination.BankName,
-		"bankBranch":           destination.BankBranch,
-		"accountNumber":        destination.AccountNumber,
-		"iban":                 destination.IBAN,
-		"payoutMobileNumber":   destination.MobileNumber,
+		"id":                 destination.ID,
+		"type":               destination.SettlementPreference,
+		"beneficiaryName":    destination.BeneficiaryName,
+		"bankName":           destination.BankName,
+		"bankBranch":         destination.BankBranch,
+		"accountNumber":      destination.AccountNumber,
+		"iban":               destination.IBAN,
+		"payoutMobileNumber": destination.MobileNumber,
 	}
 }
 
@@ -97,7 +97,7 @@ func destinationProviderPayload(destination payoutProviderDestination) map[strin
 // provider call and are never serialized in the HTTP response or audit data.
 func HandleProcessPayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		input, ok := decodeRequiredOperator(w, r)
+		operatorID, ok := decodeRequiredOperator(w, r)
 		if !ok {
 			return
 		}
@@ -132,7 +132,7 @@ func HandleProcessPayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "INVALID_STATUS", "only approved payout requests can be processed")
 			return
 		}
-		if req.ApprovedByOperatorID == "" || req.ApprovedByOperatorID == input.OperatorID {
+		if req.ApprovedByOperatorID == "" || req.ApprovedByOperatorID == operatorID {
 			shared.SendError(w, http.StatusForbidden, "MAKER_CHECKER_VIOLATION", "payout processor must differ from approver")
 			return
 		}
@@ -159,7 +159,7 @@ func HandleProcessPayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 			    operator_id = $2,
 			    provider_status = 'pending',
 			    provider_processed_at = now()
-			WHERE id = $1 AND status = 'approved'`, req.ID, input.OperatorID)
+			WHERE id = $1 AND status = 'approved'`, req.ID, operatorID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to claim payout provider submission")
 			return
@@ -177,8 +177,8 @@ func HandleProcessPayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 			r.Context(),
 			"/financial/payout/process",
 			map[string]any{
-				"payoutId":            req.ID,
-				"beneficiaryActorId":  req.BeneficiaryActorID,
+				"payoutId":             req.ID,
+				"beneficiaryActorId":   req.BeneficiaryActorID,
 				"beneficiaryActorType": req.BeneficiaryActorType,
 				"amountMinorUnits":     req.AmountMinorUnits,
 				"currency":             req.Currency,
@@ -189,23 +189,23 @@ func HandleProcessPayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 		if providerErr != nil {
 			var cleanDecline provider.Error
 			if errors.As(providerErr, &cleanDecline) && cleanDecline.StatusCode >= 400 && cleanDecline.StatusCode < 500 {
-				failed, failErr := failProviderDecline(r.Context(), db, req, input.OperatorID, cleanDecline.Code, cleanDecline.Message)
-				if failErr != nil {
+				if failErr := failProviderDecline(r.Context(), db, req.ID, providerErr); failErr != nil {
 					shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist provider payout decline")
 					return
 				}
-				shared.SendJSON(w, http.StatusOK, PayoutRequestResponse{PayoutRequest: failed})
+				shared.SendProviderError(w, providerErr)
 				return
 			}
-			markProviderResultUnknown(r.Context(), db, req.ID, input.OperatorID, providerErr.Error())
+			markProviderResultUnknown(r.Context(), db, req.ID, providerErr)
 			shared.SendProviderError(w, providerErr)
 			return
 		}
 
 		providerStatus := strings.ToLower(strings.TrimSpace(providerResult.Status))
 		if providerResult.ProviderReference == "" || (providerStatus != "processed" && providerStatus != "succeeded") {
-			markProviderResultUnknown(r.Context(), db, req.ID, input.OperatorID, "provider response missing successful proof")
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_INVALID_RESPONSE", "payout provider response is missing successful proof")
+			invalidResponseErr := errors.New("provider response missing successful proof")
+			markProviderResultUnknown(r.Context(), db, req.ID, invalidResponseErr)
+			shared.SendError(w, http.StatusBadGateway, "PROVIDER_INVALID_RESPONSE", invalidResponseErr.Error())
 			return
 		}
 
@@ -222,10 +222,10 @@ func HandleProcessPayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 			req.ID,
 			providerResult.ProviderReference,
 			providerStatus,
-			input.OperatorID,
+			operatorID,
 		)
 		if err != nil {
-			markProviderResultUnknown(r.Context(), db, req.ID, input.OperatorID, "provider proof could not be persisted")
+			markProviderResultUnknown(r.Context(), db, req.ID, errors.New("provider proof could not be persisted"))
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist provider payout proof")
 			return
 		}
