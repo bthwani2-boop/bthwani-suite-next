@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"time"
 )
+
+var ErrInvalidInput = errors.New("invalid provider input")
 
 type Operator struct {
 	ActorID string
@@ -62,6 +65,62 @@ func credentialsConfigured(credentials json.RawMessage) bool {
 	return trimmed != "" && trimmed != "null" && trimmed != "{}"
 }
 
+func decodeJSONObject(raw json.RawMessage) (map[string]json.RawMessage, error) {
+	var object map[string]json.RawMessage
+	if len(raw) == 0 || json.Unmarshal(raw, &object) != nil || object == nil {
+		return nil, ErrInvalidInput
+	}
+	return object, nil
+}
+
+func normalizedProviderKey(key string) string {
+	replacer := strings.NewReplacer("_", "", "-", "", ".", "", " ", "")
+	return strings.ToLower(replacer.Replace(strings.TrimSpace(key)))
+}
+
+func parameterKeyContainsSecret(key string) bool {
+	normalized := normalizedProviderKey(key)
+	for _, sensitive := range []string{
+		"secret",
+		"password",
+		"credential",
+		"credentials",
+		"token",
+		"apikey",
+		"privatekey",
+		"authkey",
+		"accountsid",
+	} {
+		if normalized == sensitive || strings.HasSuffix(normalized, sensitive) {
+			return true
+		}
+	}
+	return false
+}
+
+func validateUpdateProviderInput(input UpdateProviderInput) error {
+	if input.Active == nil && input.Credentials == nil && input.Parameters == nil {
+		return ErrInvalidInput
+	}
+	if input.Credentials != nil {
+		if _, err := decodeJSONObject(*input.Credentials); err != nil {
+			return err
+		}
+	}
+	if input.Parameters != nil {
+		parameters, err := decodeJSONObject(*input.Parameters)
+		if err != nil {
+			return err
+		}
+		for key := range parameters {
+			if parameterKeyContainsSecret(key) {
+				return ErrInvalidInput
+			}
+		}
+	}
+	return nil
+}
+
 func (s *Service) ListProviders(ctx context.Context, op Operator) ([]ExternalProvider, error) {
 	providers, err := s.repo.ListProviders(ctx)
 	if err != nil {
@@ -82,6 +141,10 @@ func (s *Service) GetProvider(ctx context.Context, id string, op Operator) (Exte
 }
 
 func (s *Service) UpdateProvider(ctx context.Context, id string, input UpdateProviderInput, op Operator, correlationID string) (ExternalProvider, error) {
+	if err := validateUpdateProviderInput(input); err != nil {
+		return ExternalProvider{}, err
+	}
+
 	before, err := s.repo.GetProvider(ctx, id)
 	if err != nil {
 		return ExternalProvider{}, err
