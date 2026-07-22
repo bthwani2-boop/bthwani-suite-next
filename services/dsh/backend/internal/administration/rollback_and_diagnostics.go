@@ -104,23 +104,23 @@ func redactAuditDetail(detail string) string {
 }
 
 type RollbackRequest struct {
-	ID                  string     `json:"id"`
-	SourceApprovalID    string     `json:"sourceApprovalId"`
-	SourceActionType    string     `json:"sourceActionType"`
-	InverseActionType   string     `json:"inverseActionType"`
-	TargetActorID       string     `json:"targetActorId"`
-	RoleID              string     `json:"roleId"`
-	RoleName            string     `json:"roleName"`
-	RequestedBy         string     `json:"requestedBy"`
-	Reason              string     `json:"reason"`
-	Status              string     `json:"status"`
-	ReviewedBy          string     `json:"reviewedBy"`
-	ReviewNote          string     `json:"reviewNote"`
-	Version             int        `json:"version"`
-	CreatedAt           time.Time  `json:"createdAt"`
-	UpdatedAt           time.Time  `json:"updatedAt"`
-	ReviewedAt          *time.Time `json:"reviewedAt,omitempty"`
-	SourceApprovedBy    string     `json:"sourceApprovedBy"`
+	ID               string     `json:"id"`
+	SourceApprovalID string     `json:"sourceApprovalId"`
+	SourceActionType string     `json:"sourceActionType"`
+	InverseActionType string    `json:"inverseActionType"`
+	TargetActorID    string     `json:"targetActorId"`
+	RoleID           string     `json:"roleId"`
+	RoleName         string     `json:"roleName"`
+	RequestedBy      string     `json:"requestedBy"`
+	Reason           string     `json:"reason"`
+	Status           string     `json:"status"`
+	ReviewedBy       string     `json:"reviewedBy"`
+	ReviewNote       string     `json:"reviewNote"`
+	Version          int        `json:"version"`
+	CreatedAt        time.Time  `json:"createdAt"`
+	UpdatedAt        time.Time  `json:"updatedAt"`
+	ReviewedAt       *time.Time `json:"reviewedAt,omitempty"`
+	SourceApprovedBy string     `json:"sourceApprovedBy"`
 }
 
 func inverseRoleAction(actionType string) (string, error) {
@@ -175,12 +175,12 @@ func RequestDecisionRollback(
 	}
 	defer tx.Rollback()
 
-	var sourceAction, targetActorID, roleID, sourceApprovedBy string
+	var sourceAction, targetActorID, roleID string
 	err = tx.QueryRowContext(ctx, `
-		SELECT action_type, target_actor_id, role_id::TEXT, COALESCE(reviewed_by,'')
+		SELECT action_type, target_actor_id, role_id::TEXT
 		FROM dsh_admin_approval_requests
 		WHERE id = $1 AND status = 'approved'
-		FOR SHARE`, sourceApprovalID).Scan(&sourceAction, &targetActorID, &roleID, &sourceApprovedBy)
+		FOR SHARE`, sourceApprovalID).Scan(&sourceAction, &targetActorID, &roleID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return RollbackRequest{}, ErrNotFound
 	}
@@ -195,13 +195,15 @@ func RequestDecisionRollback(
 		return RollbackRequest{}, err
 	}
 
-	request, err := scanRollbackRequest(tx.QueryRowContext(ctx, rollbackSelect+`
-		WHERE rr.id = (
+	request, err := scanRollbackRequest(tx.QueryRowContext(ctx, `
+		WITH inserted AS (
 			INSERT INTO dsh_admin_rollback_requests
 				(source_approval_id, inverse_action_type, target_actor_id, role_id, requested_by, reason)
 			VALUES ($1, $2, $3, $4, $5, $6)
 			RETURNING id
-		)`, sourceApprovalID, inverseAction, targetActorID, roleID, requestedBy, reason))
+		)`+rollbackSelect+`
+		JOIN inserted ON inserted.id = rr.id`,
+		sourceApprovalID, inverseAction, targetActorID, roleID, requestedBy, reason))
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "duplicate key") {
 			return RollbackRequest{}, ErrApprovalConflict
@@ -219,7 +221,6 @@ func RequestDecisionRollback(
 	if err := tx.Commit(); err != nil {
 		return RollbackRequest{}, err
 	}
-	request.SourceApprovedBy = sourceApprovedBy
 	return request, nil
 }
 
@@ -329,14 +330,16 @@ func ReviewDecisionRollback(
 		affected = &member
 	}
 
-	reviewed, err := scanRollbackRequest(tx.QueryRowContext(ctx, rollbackSelect+`
-		WHERE rr.id = (
+	reviewed, err := scanRollbackRequest(tx.QueryRowContext(ctx, `
+		WITH updated AS (
 			UPDATE dsh_admin_rollback_requests
 			SET status = $2, reviewed_by = $3, review_note = $4,
 			    reviewed_at = NOW(), updated_at = NOW(), version = version + 1
 			WHERE id = $1 AND status = 'pending' AND version = $5
 			RETURNING id
-		)`, requestID, decision, checkerActorID, reviewNote, expectedVersion))
+		)`+rollbackSelect+`
+		JOIN updated ON updated.id = rr.id`,
+		requestID, decision, checkerActorID, reviewNote, expectedVersion))
 	if errors.Is(err, sql.ErrNoRows) {
 		return RollbackRequest{}, nil, ErrApprovalConflict
 	}
@@ -366,14 +369,14 @@ func boolText(value bool) string {
 }
 
 type AdministrationDiagnostics struct {
-	Status                         string    `json:"status"`
-	ActiveRoleCount                int       `json:"activeRoleCount"`
-	ApprovedAssignmentCount        int       `json:"approvedAssignmentCount"`
-	PendingRoleDefinitionCount     int       `json:"pendingRoleDefinitionCount"`
-	PendingRoleAssignmentCount     int       `json:"pendingRoleAssignmentCount"`
-	PendingRollbackCount           int       `json:"pendingRollbackCount"`
-	RecentRestrictedAuditCount     int       `json:"recentRestrictedAuditCount"`
-	GeneratedAt                    time.Time `json:"generatedAt"`
+	Status                     string    `json:"status"`
+	ActiveRoleCount            int       `json:"activeRoleCount"`
+	ApprovedAssignmentCount    int       `json:"approvedAssignmentCount"`
+	PendingRoleDefinitionCount int       `json:"pendingRoleDefinitionCount"`
+	PendingRoleAssignmentCount int       `json:"pendingRoleAssignmentCount"`
+	PendingRollbackCount       int       `json:"pendingRollbackCount"`
+	RecentRestrictedAuditCount int       `json:"recentRestrictedAuditCount"`
+	GeneratedAt                time.Time `json:"generatedAt"`
 }
 
 func GetAdministrationDiagnostics(ctx context.Context, db *sql.DB) (AdministrationDiagnostics, error) {
