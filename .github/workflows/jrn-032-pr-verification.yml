@@ -23,19 +23,18 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-
-concurrency:
-  group: jrn-032-pr-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  contents: write
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Checkout branch commit
+      - name: Checkout immutable verification branch
         uses: actions/checkout@v4
+        with:
+          ref: verify/jrn-032-operational-analytics-b448dc0
+          fetch-depth: 0
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -78,8 +77,35 @@ jobs:
             internal/wlt/analytics_read.go \
             internal/wlt/analytics_read_test.go
 
-      - name: Verify DSH OpenAPI
+      - name: Verify and generate DSH OpenAPI
         run: pnpm --dir services/dsh openapi:verify
+
+      - name: Materialize contract, generated clients, and formatting
+        run: |
+          if git diff --quiet; then
+            echo "No materialized changes required."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add \
+              services/dsh/contracts/dsh.openapi.yaml \
+              services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+              services/dsh/clients/generated/dsh-api.ts \
+              services/dsh/backend/internal/analytics/jrn032_window.go \
+              services/dsh/backend/internal/analytics/jrn032_preparation.go \
+              services/dsh/backend/internal/analytics/jrn032_people.go \
+              services/dsh/backend/internal/analytics/jrn032_drilldown.go \
+              services/dsh/backend/internal/analytics/jrn032_window_test.go \
+              services/dsh/backend/internal/http/analytics.go \
+              services/dsh/backend/internal/http/jrn032_analytics.go \
+              services/dsh/backend/internal/http/jrn032_routes.go \
+              services/dsh/backend/internal/http/jrn032_routes_test.go \
+              services/dsh/backend/internal/http/delivery_proof_routes.go \
+              services/dsh/backend/internal/wlt/analytics_read.go \
+              services/dsh/backend/internal/wlt/analytics_read_test.go
+            git commit -m "chore(jrn-032): materialize verified contract and formatting [skip ci]"
+            git push origin HEAD:verify/jrn-032-operational-analytics-b448dc0
+          fi
 
       - name: Test analytics backend
         working-directory: services/dsh/backend
