@@ -7,6 +7,7 @@ DECLARE
   v_actor_id text := 'jrn-023-' || replace(gen_random_uuid()::text, '-', '');
   v_topic text := 'jrn-023.policy.' || replace(gen_random_uuid()::text, '-', '');
   v_notification_id uuid := gen_random_uuid();
+  v_push_token text := 'ExponentPushToken[' || replace(gen_random_uuid()::text, '-', '') || ']';
   v_invalid boolean := false;
   v_duplicate boolean := false;
   v_count integer;
@@ -123,6 +124,77 @@ BEGIN
     'jrn-023-test'
   );
 
+  v_invalid := false;
+  BEGIN
+    INSERT INTO dsh_platform_notification_config (
+      topic, actor_types, is_enabled, default_channels
+    ) VALUES (
+      v_topic || '.invalid-actor',
+      ARRAY['unknown']::text[],
+      true,
+      ARRAY['in_app']::text[]
+    );
+  EXCEPTION WHEN check_violation THEN
+    v_invalid := true;
+  END;
+  IF NOT v_invalid THEN
+    RAISE EXCEPTION 'unsupported platform notification actor type was accepted';
+  END IF;
+
+  INSERT INTO dsh_notification_push_endpoints (
+    actor_id,
+    actor_type,
+    provider,
+    endpoint_token,
+    device_id,
+    platform
+  ) VALUES (
+    v_actor_id,
+    'client',
+    'expo',
+    v_push_token,
+    'device-primary',
+    'android'
+  );
+
+  v_duplicate := false;
+  BEGIN
+    INSERT INTO dsh_notification_push_endpoints (
+      actor_id, actor_type, provider, endpoint_token, device_id, platform
+    ) VALUES (
+      v_actor_id || '-other',
+      'client',
+      'expo',
+      v_push_token,
+      'device-other',
+      'android'
+    );
+  EXCEPTION WHEN unique_violation THEN
+    v_duplicate := true;
+  END;
+  IF NOT v_duplicate THEN
+    RAISE EXCEPTION 'push provider token was accepted for two actors';
+  END IF;
+
+  v_invalid := false;
+  BEGIN
+    INSERT INTO dsh_notification_push_endpoints (
+      actor_id, actor_type, provider, endpoint_token, device_id, platform
+    ) VALUES (
+      v_actor_id || '-invalid-platform',
+      'client',
+      'expo',
+      v_push_token || '-other',
+      'device-invalid',
+      'web'
+    );
+  EXCEPTION WHEN check_violation THEN
+    v_invalid := true;
+  END;
+  IF NOT v_invalid THEN
+    RAISE EXCEPTION 'unsupported push endpoint platform was accepted';
+  END IF;
+
   INSERT INTO dsh_notifications (
     id,
     actor_id,
@@ -174,6 +246,18 @@ BEGIN
     RAISE EXCEPTION 'notification/channel idempotency uniqueness was not enforced';
   END IF;
 
+  INSERT INTO dsh_notification_channel_deliveries (
+    notification_id,
+    channel,
+    status,
+    attempt_count
+  ) VALUES (
+    v_notification_id,
+    'push',
+    'pending',
+    0
+  );
+
   SELECT count(*) INTO v_count
   FROM information_schema.columns
   WHERE table_schema = current_schema()
@@ -193,6 +277,18 @@ BEGIN
     );
   IF v_count <> 7 THEN
     RAISE EXCEPTION 'platform notification template columns are incomplete: %', v_count;
+  END IF;
+
+  SELECT count(*) INTO v_count
+  FROM information_schema.columns
+  WHERE table_schema = current_schema()
+    AND table_name = 'dsh_notification_push_endpoints'
+    AND column_name IN (
+      'actor_id', 'actor_type', 'provider', 'endpoint_token',
+      'device_id', 'platform', 'active', 'last_seen_at'
+    );
+  IF v_count <> 8 THEN
+    RAISE EXCEPTION 'push endpoint columns are incomplete: %', v_count;
   END IF;
 
   SELECT count(*) INTO v_count
