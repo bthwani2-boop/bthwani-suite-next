@@ -23,7 +23,7 @@
 ```yaml
 repository_mode: REMOTE_ONLY
 repository: bthwani2-boop/bthwani-suite-next
-target_ref: sambassam
+target_ref: <ضع اسم الفرع المستهدف أو استخدم الفرع الحالي>
 base_ref: master
 
 journey_registry:
