@@ -1,0 +1,71 @@
+name: JRN-040 platform change sets verification
+
+on:
+  push:
+    branches: [sambassam]
+    paths:
+      - 'core/platform-control/backend/internal/platformcontrol/jrn040_**'
+      - 'core/platform-control/backend/internal/platformcontrol/model.go'
+      - 'core/platform-control/backend/internal/platformcontrol/service.go'
+      - 'core/platform-control/backend/internal/platformcontrol/repository_integration_test.go'
+      - 'core/platform-control/backend/internal/http/workflow_handlers.go'
+      - 'core/platform-control/contracts/platform-control.openapi.yaml'
+      - 'core/platform-control/clients/generated/platform-control-api.ts'
+      - 'core/platform-control/database/migrations/platform-005_jrn040_change_set_validation.sql'
+      - 'services/dsh/frontend/shared/platform/**'
+      - 'services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx'
+      - 'governance/product/contracts/jrn-040-platform-change-sets.product-truth.json'
+      - 'tools/guards/jrn-040-platform-change-sets-gate.mjs'
+      - '.github/workflows/jrn-040-platform-change-sets-verification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jrn-040-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: platform
+          POSTGRES_PASSWORD: platform
+          POSTGRES_DB: platform
+        ports:
+          - 55440:5432
+        options: >-
+          --health-cmd "pg_isready -U platform -d platform"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://platform:platform@localhost:55440/platform?sslmode=disable
+      PGPASSWORD: platform
+    steps:
+      - name: Checkout exact branch commit
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: core/platform-control/backend/go.mod
+          cache-dependency-path: core/platform-control/backend/go.sum
+      - name: Apply platform-control migrations
+        run: |
+          for migration in core/platform-control/database/migrations/*.sql; do
+            psql -h localhost -p 55440 -U platform -d platform -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Go format gate
+        run: |
+          files=$(gofmt -l core/platform-control/backend/internal/platformcontrol core/platform-control/backend/internal/http)
+          test -z "$files" || { echo "$files"; exit 1; }
+      - name: Targeted Go tests
+        working-directory: core/platform-control/backend
+        run: go test ./internal/platformcontrol ./internal/http
+      - name: JRN-040 contract and binding gate
+        run: node tools/guards/jrn-040-platform-change-sets-gate.mjs
