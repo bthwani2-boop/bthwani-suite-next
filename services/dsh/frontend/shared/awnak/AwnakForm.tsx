@@ -48,21 +48,21 @@ export function AwnakForm({ onBack, onViewRequests, onSubmit }: Props) {
             placeholder="مثال: أوراق أو طرد صغير"
             value={itemType}
             onChangeText={setItemType}
-            error={submitError && !itemType.trim() ? "نوع الغرض مطلوب" : undefined}
+            {...(submitError && !itemType.trim() ? { error: "نوع الغرض مطلوب" } : {})}
           />
           <TextField
             label="مرجع موقع الاستلام"
             placeholder="من أين نستلم الغرض؟"
             value={pickupAddress}
             onChangeText={setPickupAddress}
-            error={submitError && !pickupAddress.trim() ? "مرجع الاستلام مطلوب" : undefined}
+            {...(submitError && !pickupAddress.trim() ? { error: "مرجع الاستلام مطلوب" } : {})}
           />
           <TextField
             label="مرجع موقع التسليم"
             placeholder="إلى أين نوصل الغرض؟"
             value={dropoffAddress}
             onChangeText={setDropoffAddress}
-            error={submitError && !dropoffAddress.trim() ? "مرجع التسليم مطلوب" : undefined}
+            {...(submitError && !dropoffAddress.trim() ? { error: "مرجع التسليم مطلوب" } : {})}
           />
           <TextField
             label="ملاحظات العميل"

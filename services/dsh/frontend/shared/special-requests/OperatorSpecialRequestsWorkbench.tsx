@@ -12,7 +12,6 @@ import type {
   DshSpecialRequestResponse,
   DshUpdateSpecialRequest,
   SpecialRequestDetailBundle,
-  SpecialRequestStatus,
 } from './special-requests.types';
 
 export type OperatorSpecialRequestsWorkbenchProps = {
@@ -27,8 +26,10 @@ export type OperatorSpecialRequestsWorkbenchProps = {
 
 type FailureCopy = { title: string; description: string; tone: StateTone };
 
+type OperatorMutableStatus = NonNullable<DshUpdateSpecialRequest['status']>;
+
 type OperatorForm = {
-  status: SpecialRequestStatus;
+  status: OperatorMutableStatus;
   workflowStage: string;
   estimatedAmountMinorUnits: string;
   currency: string;
@@ -38,7 +39,7 @@ type OperatorForm = {
   informationQuestion: string;
 };
 
-const OPERATOR_STATUSES: readonly SpecialRequestStatus[] = [
+const OPERATOR_STATUSES: readonly OperatorMutableStatus[] = [
   'under_review',
   'needs_customer_input',
   'approved',
@@ -58,7 +59,7 @@ const FAILURE_COPY: Readonly<Record<'error' | 'offline' | 'forbidden' | 'conflic
 
 function formFromRequest(request: DshSpecialRequestResponse): OperatorForm {
   return {
-    status: request.status,
+    status: request.status === 'submitted' ? 'under_review' : request.status,
     workflowStage: request.workflowStage ?? '',
     estimatedAmountMinorUnits: request.estimatedAmountMinorUnits === null || request.estimatedAmountMinorUnits === undefined
       ? ''
@@ -385,7 +386,7 @@ export function OperatorSpecialRequestsWorkbench({
           <Box gap={2}>
             <label>
               الحالة التشغيلية
-              <select value={form.status} onChange={(event) => updateForm('status', event.target.value as SpecialRequestStatus)} disabled={pendingAction !== null}>
+              <select value={form.status} onChange={(event) => updateForm('status', event.target.value as OperatorMutableStatus)} disabled={pendingAction !== null}>
                 {OPERATOR_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
               </select>
             </label>

@@ -6793,8 +6793,31 @@ export interface components {
             deliveryUpdatedAt?: string | null;
             latestException?: components["schemas"]["DshSpecialRequestExecutionException"] | null;
         };
+        DshSpecialRequestPaymentSessionReadback: {
+            id: string;
+            /** Format: uuid */
+            specialRequestId: string;
+            status: string;
+            providerReference?: string | null;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshSpecialRequestFinancialReadback: {
+            /** @enum {string} */
+            owner: "WLT";
+            /** @enum {string} */
+            readState: "not_started" | "unavailable" | "not_found" | "available";
+            paymentSession: components["schemas"]["DshSpecialRequestPaymentSessionReadback"] | null;
+            /** @enum {string} */
+            settlementApplicability: "not_applicable";
+            settlementReason: string;
+        };
         DshSpecialRequestExecutionResponse: {
             execution: components["schemas"]["DshSpecialRequestExecution"];
+            financial: components["schemas"]["DshSpecialRequestFinancialReadback"];
         };
         /** @enum {string} */
         DshPartnerDeliveryTaskStatus: "unassigned" | "assigned" | "departed" | "arrived" | "proof_pending" | "completed" | "cancelled" | "exception";

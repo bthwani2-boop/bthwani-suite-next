@@ -10933,12 +10933,40 @@ components:
             - $ref: "#/components/schemas/DshSpecialRequestExecutionException"
             - type: "null"
 
+    DshSpecialRequestPaymentSessionReadback:
+      type: object
+      additionalProperties: false
+      required: [id, specialRequestId, status, amountMinorUnits, currency, updatedAt]
+      properties:
+        id: { type: string }
+        specialRequestId: { type: string, format: uuid }
+        status: { type: string }
+        providerReference: { type: [string, "null"] }
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string }
+        updatedAt: { type: string, format: date-time }
+
+    DshSpecialRequestFinancialReadback:
+      type: object
+      additionalProperties: false
+      required: [owner, readState, paymentSession, settlementApplicability, settlementReason]
+      properties:
+        owner: { type: string, enum: [WLT] }
+        readState: { type: string, enum: [not_started, unavailable, not_found, available] }
+        paymentSession:
+          oneOf:
+            - $ref: "#/components/schemas/DshSpecialRequestPaymentSessionReadback"
+            - type: "null"
+        settlementApplicability: { type: string, enum: [not_applicable] }
+        settlementReason: { type: string }
+
     DshSpecialRequestExecutionResponse:
       type: object
       additionalProperties: false
-      required: [execution]
+      required: [execution, financial]
       properties:
         execution: { $ref: "#/components/schemas/DshSpecialRequestExecution" }
+        financial: { $ref: "#/components/schemas/DshSpecialRequestFinancialReadback" }
 
     DshPartnerDeliveryTaskStatus:
       type: string

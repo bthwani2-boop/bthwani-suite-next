@@ -51,7 +51,7 @@ export function SheinForm({ onBack, onViewRequests, onSubmit }: Props) {
             value={productUrl}
             onChangeText={setProductUrl}
             autoCapitalize="none"
-            error={submitError && !productUrl.trim() ? "رابط المنتج مطلوب" : undefined}
+            {...(submitError && !productUrl.trim() ? { error: "رابط المنتج مطلوب" } : {})}
           />
           <TextField label="المقاس" placeholder="مثال: M, L, 38" value={size} onChangeText={setSize} />
           <TextField label="اللون" placeholder="مثال: أسود، أبيض" value={color} onChangeText={setColor} />

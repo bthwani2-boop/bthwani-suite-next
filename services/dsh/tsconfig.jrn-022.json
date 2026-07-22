@@ -1,0 +1,30 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "outDir": "dist-jrn-022",
+    "paths": {
+      "@bthwani/ui-kit": ["shared/ui-kit/src/index.ts"],
+      "@bthwani/ui-kit/web": ["shared/ui-kit/src/web.ts"],
+      "@bthwani/ui-kit/tokens": ["shared/ui-kit/src/tokens/index.ts"],
+      "@bthwani/app-shell": ["shared/app-shell/src/index.ts"],
+      "@bthwani/core-identity": ["core/identity/clients/index.ts"],
+      "@dsh-shared/*": ["services/dsh/frontend/shared/*"],
+      "react-native": ["apps/app-client/runtime/node_modules/react-native"]
+    }
+  },
+  "include": [
+    "frontend/**/*.d.ts",
+    "frontend/shared/_kernel/**/*.ts",
+    "frontend/shared/_kernel/**/*.tsx",
+    "frontend/shared/special-requests/**/*.ts",
+    "frontend/shared/special-requests/**/*.tsx",
+    "frontend/shared/shein/**/*.tsx",
+    "frontend/shared/awnak/**/*.tsx",
+    "frontend/shared/delivery/captain-inbox.model.ts",
+    "frontend/shared/delivery/captain-inbox.mapper.ts"
+  ],
+  "exclude": ["node_modules", "dist", "dist-jrn-022"]
+}
