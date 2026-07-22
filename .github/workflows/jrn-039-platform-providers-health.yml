@@ -76,7 +76,13 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Verify JRN-039 Go formatting without rewriting source
         run: |
-          test -z "$(gofmt -l core/providers/backend/internal/providers/model.go core/providers/backend/internal/providers/service.go core/providers/backend/internal/providers/jrn039_security_health_test.go)"
+          test -z "$(gofmt -l \
+            core/providers/backend/internal/http/server.go \
+            core/providers/backend/internal/providers/model.go \
+            core/providers/backend/internal/providers/service.go \
+            core/providers/backend/internal/providers/governed_update.go \
+            core/providers/backend/internal/providers/jrn039_security_health_test.go \
+            core/providers/backend/internal/providers/governed_update_integration_test.go)"
       - name: Compile and test Providers
         working-directory: core/providers/backend
         run: go test ./...
@@ -91,6 +97,11 @@ jobs:
           set -euo pipefail
           for migration in core/providers/database/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -f "${migration}"; done
           for migration in core/platform-control/database/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -f "${migration}"; done
+      - name: Prove atomic provider mutation, audit, rollback, and idempotency
+        working-directory: core/providers/backend
+        env:
+          JRN039_DATABASE_TEST: "1"
+        run: go test ./internal/providers -run TestGovernedProviderUpdateIsAtomicAuditedAndIdempotent -count=1 -v
       - name: Assert mock provider truth was retired
         shell: bash
         run: |
