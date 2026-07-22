@@ -13,6 +13,7 @@ export type DshContractRegistration = {
   readonly id:
     | "dsh-main"
     | "dsh-administration"
+    | "dsh-analytics-extensions"
     | "dsh-catalog"
     | "dsh-catalog-proposal-readback"
     | "dsh-catalog-governance"
@@ -74,6 +75,14 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/administration",
+  },
+  {
+    id: "dsh-analytics-extensions",
+    path: "contracts/dsh.analytics-extensions.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/analytics",
   },
   {
     id: "dsh-catalog",
