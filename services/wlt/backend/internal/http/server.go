@@ -64,7 +64,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/refunds/{refundId}/reconcile", gate(serviceAuth(refund.RequireTenantScope(db, refund.RequireMutationIdempotency(db, "reconcile", refund.HandleReconcileGovernedRefund(db))))))
 
 	mux.HandleFunc("GET /wlt/settlements/summary", readGate(settlement.HandleGetSettlementSummaryGoverned(db)))
-	mux.HandleFunc("POST /wlt/settlements", gate(serviceAuth(settlement.HandleCreateEvidenceBackedSettlement(db))))
+	mux.HandleFunc("POST /wlt/settlements", gate(serviceAuth(settlement.HandleCreateSettlementFromDeliveredOrders(db))))
 	mux.HandleFunc("GET /wlt/settlements/{settlementId}/evidence", readGate(settlement.HandleListSettlementEvidence(db)))
 	mux.HandleFunc("GET /wlt/settlements/{settlementId}", readGate(settlement.HandleGetSettlement(db)))
 	mux.HandleFunc("GET /wlt/settlements", readGate(settlement.HandleListSettlements(db)))
