@@ -63,7 +63,7 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 func dispatch(ctx context.Context, client *wlt.Client, event Event) (DeliveryResult, error) {
 	switch event.EventType {
 	case EventTypeExpireSession:
-		if err := client.ExpireSession(ctx, event.PaymentSessionID, event.CheckoutIntentID); err != nil {
+		if err := client.ExpireSession(ctx, event.PaymentSessionID, event.CorrelationID); err != nil {
 			return DeliveryResult{}, err
 		}
 		return DeliveryResult{
@@ -75,7 +75,7 @@ func dispatch(ctx context.Context, client *wlt.Client, event Event) (DeliveryRes
 			OrderID:       event.OrderID,
 			ClientID:      event.ClientID,
 			Reason:        event.Reason,
-			CorrelationID: "order-cancellation-" + event.OrderID,
+			CorrelationID: event.CorrelationID,
 		})
 		if err != nil {
 			return DeliveryResult{}, err
