@@ -18,7 +18,7 @@ const newVisitTail = `    completedAt: { type: ["string", "null"], format: date-
     startProvider: { type: ["string", "null"] }
     startDeviceReference: { type: ["string", "null"] }
     startIsMocked: { type: boolean }
-    startGeofenceStatus: { type: ["string", "null"], enum: [inside, outside, unknown, null] }
+    startGeofenceStatus: { type: ["string", "null"], enum: [inside, outside, unknown] }
     startDistanceFromStoreMeters: { type: [number, "null"] }
     completionLatitude: { type: [number, "null"] }
     completionLongitude: { type: [number, "null"] }
@@ -26,7 +26,7 @@ const newVisitTail = `    completedAt: { type: ["string", "null"], format: date-
     completionCapturedAt: { type: ["string", "null"], format: date-time }
     completionProvider: { type: ["string", "null"] }
     completionIsMocked: { type: [boolean, "null"] }
-    completionGeofenceStatus: { type: ["string", "null"], enum: [inside, outside, unknown, null] }
+    completionGeofenceStatus: { type: ["string", "null"], enum: [inside, outside, unknown] }
     completionDistanceFromStoreMeters: { type: [number, "null"] }
     storeLatitude: { type: [number, "null"] }
     storeLongitude: { type: [number, "null"] }`;
@@ -93,7 +93,7 @@ if (!completeBlock.includes("required: [completionLocation]")) {
             required: [completionLocation]
             properties:
               completionLocation:
-${locationProperties.split("\n").map((line) => `    ${line}`).join("\n")}
+${locationProperties.split("\n").map((line) => `          ${line}`).join("\n")}
     responses:`;
   if (!completeBlock.includes(completeAnchor)) throw new Error("complete request anchor not found");
   completeBlock = completeBlock.replace(completeAnchor, completeBody);
