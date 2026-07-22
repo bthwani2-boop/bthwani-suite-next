@@ -96,7 +96,7 @@ export function DshFieldWorkQueueScreen({ onBack, onOpenVisit, onOpenEscalation 
       </View>
       <Header title="مهام التحقق" subtitle="زياراتك وتصعيداتك المفتوحة عبر كل المتاجر" />
       <ScrollView
-        style={{ flex: 1 }}
+        style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -155,6 +155,7 @@ export function DshFieldWorkQueueScreen({ onBack, onOpenVisit, onOpenEscalation 
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colorRoles.surfaceBase },
+  scroll: { flex: 1 },
   topActions: {
     flexDirection: "row-reverse",
     justifyContent: "space-between",
