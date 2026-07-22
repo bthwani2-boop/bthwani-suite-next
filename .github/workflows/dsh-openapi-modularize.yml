@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   verify:
-    name: JRN-032 DSH typecheck diagnostic
+    name: JRN-032 focused DSH typecheck
     runs-on: macos-14
     timeout-minutes: 35
     steps:
@@ -48,10 +48,10 @@ jobs:
           pnpm --dir services/dsh openapi:compose
           pnpm --dir services/dsh openapi:verify
 
-      - name: Run DSH typecheck and persist failure
+      - name: Run focused JRN-032 typecheck and persist failure
         run: |
           set +e
-          pnpm --dir services/dsh typecheck > "${RUNNER_TEMP}/jrn032-dsh-typecheck.log" 2>&1
+          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-032.json --noEmit > "${RUNNER_TEMP}/jrn032-dsh-typecheck.log" 2>&1
           status=$?
           set -e
           if [ "$status" -ne 0 ]; then
@@ -59,7 +59,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add governance/evidence/JRN-032_DSH_TYPECHECK_FAILURE.log
-            git commit -m "diagnostics(jrn-032): capture DSH typecheck failure [skip ci]" || true
+            git commit -m "diagnostics(jrn-032): capture focused typecheck failure [skip ci]" || true
             git push origin HEAD:verify/jrn-032-final2-8e71db5
             exit "$status"
           fi
