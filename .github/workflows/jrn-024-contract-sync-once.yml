@@ -33,60 +33,73 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Close JRN-024 request and response contract gaps
+      - name: Synchronize JRN-024 contract on the latest branch head
         shell: bash
         run: |
-          node <<'NODE'
-          const fs = require('node:fs');
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+          for attempt in 1 2 3 4 5; do
+            echo "JRN-024 synchronization attempt ${attempt}"
+            git fetch origin sambassam
+            git reset --hard origin/sambassam
+
+            node <<'NODE'
+          const fs = require('node:fs');
           const schemaPath = 'services/dsh/contracts/components/schemas/field.schemas.yaml';
           const pathsPath = 'services/dsh/contracts/paths/field.paths.yaml';
 
           let schema = fs.readFileSync(schemaPath, 'utf8');
           const oldVisitTail = `    completedAt: { type: ["string", "null"], format: date-time }\n    createdAt: { type: string, format: date-time }\n    updatedAt: { type: string, format: date-time }`;
           const newVisitTail = `    completedAt: { type: ["string", "null"], format: date-time }\n    createdAt: { type: string, format: date-time }\n    updatedAt: { type: string, format: date-time }\n    geofenceRadiusMeters: { type: number }\n    startLatitude: { type: [number, "null"] }\n    startLongitude: { type: [number, "null"] }\n    startAccuracyMeters: { type: [number, "null"] }\n    startCapturedAt: { type: ["string", "null"], format: date-time }\n    startProvider: { type: ["string", "null"] }\n    startDeviceReference: { type: ["string", "null"] }\n    startIsMocked: { type: boolean }\n    startGeofenceStatus: { type: ["string", "null"], enum: [inside, outside, unknown, null] }\n    startDistanceFromStoreMeters: { type: [number, "null"] }\n    completionLatitude: { type: [number, "null"] }\n    completionLongitude: { type: [number, "null"] }\n    completionAccuracyMeters: { type: [number, "null"] }\n    completionCapturedAt: { type: ["string", "null"], format: date-time }\n    completionProvider: { type: ["string", "null"] }\n    completionIsMocked: { type: [boolean, "null"] }\n    completionGeofenceStatus: { type: ["string", "null"], enum: [inside, outside, unknown, null] }\n    completionDistanceFromStoreMeters: { type: [number, "null"] }\n    storeLatitude: { type: [number, "null"] }\n    storeLongitude: { type: [number, "null"] }`;
-          if (!schema.includes(oldVisitTail)) throw new Error('DshFieldVisit anchor not found');
-          schema = schema.replace(oldVisitTail, newVisitTail);
+          if (!schema.includes('geofenceRadiusMeters: { type: number }')) {
+            if (!schema.includes(oldVisitTail)) throw new Error('DshFieldVisit anchor not found');
+            schema = schema.replace(oldVisitTail, newVisitTail);
+          }
 
           const oldCreate = `DshCreateFieldVisitRequest:\n  type: object\n  properties:\n    visitType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshVisitType" }`;
           const locationProperties = `      type: object\n      additionalProperties: false\n      required: [latitude, longitude, accuracyMeters, capturedAt, provider]\n      properties:\n        latitude: { type: number, minimum: -90, maximum: 90 }\n        longitude: { type: number, minimum: -180, maximum: 180 }\n        accuracyMeters: { type: number, exclusiveMinimum: 0, maximum: 50 }\n        capturedAt: { type: string, format: date-time }\n        provider: { type: string, minLength: 1 }\n        deviceReference: { type: string }\n        isMocked: { type: boolean, default: false }`;
           const newCreate = `DshCreateFieldVisitRequest:\n  type: object\n  additionalProperties: false\n  required: [startLocation]\n  properties:\n    visitType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshVisitType" }\n    startLocation:\n${locationProperties}`;
-          if (!schema.includes(oldCreate)) throw new Error('DshCreateFieldVisitRequest anchor not found');
-          schema = schema.replace(oldCreate, newCreate);
+          if (!schema.includes('required: [startLocation]')) {
+            if (!schema.includes(oldCreate)) throw new Error('DshCreateFieldVisitRequest anchor not found');
+            schema = schema.replace(oldCreate, newCreate);
+          }
           fs.writeFileSync(schemaPath, schema);
 
           let paths = fs.readFileSync(pathsPath, 'utf8');
-          const completeAnchor = `    parameters:\n      - name: visitId\n        in: path\n        required: true\n        schema: { type: string }\n    responses:`;
-          const completeBody = `    parameters:\n      - name: visitId\n        in: path\n        required: true\n        schema: { type: string }\n    requestBody:\n      required: true\n      content:\n        application/json:\n          schema:\n            type: object\n            additionalProperties: false\n            required: [completionLocation]\n            properties:\n              completionLocation:\n${locationProperties.split('\n').map((line) => `    ${line}`).join('\n')}\n    responses:`;
           const completeStart = paths.indexOf('/dsh/field/visits/{visitId}/complete:');
           const checksStart = paths.indexOf('/dsh/field/visits/{visitId}/checks:');
           if (completeStart < 0 || checksStart < 0) throw new Error('complete path boundaries not found');
-          const completeBlock = paths.slice(completeStart, checksStart);
-          if (!completeBlock.includes(completeAnchor)) throw new Error('complete request anchor not found');
-          paths = paths.slice(0, completeStart) + completeBlock.replace(completeAnchor, completeBody) + paths.slice(checksStart);
-          fs.writeFileSync(pathsPath, paths);
+          let completeBlock = paths.slice(completeStart, checksStart);
+          if (!completeBlock.includes('required: [completionLocation]')) {
+            const completeAnchor = `    parameters:\n      - name: visitId\n        in: path\n        required: true\n        schema: { type: string }\n    responses:`;
+            const completeBody = `    parameters:\n      - name: visitId\n        in: path\n        required: true\n        schema: { type: string }\n    requestBody:\n      required: true\n      content:\n        application/json:\n          schema:\n            type: object\n            additionalProperties: false\n            required: [completionLocation]\n            properties:\n              completionLocation:\n${locationProperties.split('\n').map((line) => `    ${line}`).join('\n')}\n    responses:`;
+            if (!completeBlock.includes(completeAnchor)) throw new Error('complete request anchor not found');
+            completeBlock = completeBlock.replace(completeAnchor, completeBody);
+            paths = paths.slice(0, completeStart) + completeBlock + paths.slice(checksStart);
+            fs.writeFileSync(pathsPath, paths);
+          }
           NODE
 
-      - name: Regenerate canonical bundle and TypeScript client
-        run: pnpm --dir services/dsh openapi:generate
+            pnpm --dir services/dsh openapi:generate
+            pnpm --dir services/dsh openapi:verify
+            pnpm --dir services/dsh openapi:test
 
-      - name: Verify modular OpenAPI and focused tests
-        run: |
-          pnpm --dir services/dsh openapi:verify
-          pnpm --dir services/dsh openapi:test
+            if git diff --quiet -- services/dsh/contracts/components/schemas/field.schemas.yaml services/dsh/contracts/paths/field.paths.yaml services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts; then
+              echo "JRN-024 contract is already synchronized."
+              exit 0
+            fi
 
-      - name: Commit synchronized contract artifacts
-        shell: bash
-        run: |
-          if git diff --quiet -- services/dsh/contracts/components/schemas/field.schemas.yaml services/dsh/contracts/paths/field.paths.yaml services/dsh/contracts/generated/dsh.bundle.openapi.yaml services/dsh/clients/generated/dsh-api.ts; then
-            echo "No JRN-024 contract drift remained."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add services/dsh/contracts/components/schemas/field.schemas.yaml \
-                  services/dsh/contracts/paths/field.paths.yaml \
-                  services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
-                  services/dsh/clients/generated/dsh-api.ts
-          git commit -m "fix(jrn-024): synchronize GPS visit contracts"
-          git push origin HEAD:sambassam
+            git add services/dsh/contracts/components/schemas/field.schemas.yaml \
+                    services/dsh/contracts/paths/field.paths.yaml \
+                    services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+                    services/dsh/clients/generated/dsh-api.ts
+            git commit -m "fix(jrn-024): synchronize GPS visit contracts"
+            if git push origin HEAD:sambassam; then
+              exit 0
+            fi
+          done
+
+          echo "Unable to push JRN-024 synchronization after five latest-head retries." >&2
+          exit 1
