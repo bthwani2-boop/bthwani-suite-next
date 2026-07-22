@@ -17,11 +17,10 @@ export type PartnerDeliveryWorkbenchScreenProps = {
   focusParams?: OperationsFocusParams;
 };
 
-function taskTone(status: string): 'success' | 'danger' | 'warning' | 'action' {
+function taskTone(status: string): 'success' | 'danger' | 'warning' {
   if (status === 'completed') return 'success';
   if (status === 'exception' || status === 'cancelled') return 'danger';
-  if (status === 'arrived' || status === 'proof_pending') return 'warning';
-  return 'action';
+  return 'warning';
 }
 
 function displayDate(value?: string | null): string {
