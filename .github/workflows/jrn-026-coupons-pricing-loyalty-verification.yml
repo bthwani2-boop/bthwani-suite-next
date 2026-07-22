@@ -36,6 +36,7 @@ on:
       - "services/dsh/tests/jrn-026-coupons-pricing-loyalty.test.mjs"
       - "services/dsh/tests/jrn-028-promotion-funding.test.mjs"
       - "services/dsh/tsconfig.jrn-026.json"
+      - "services/dsh/tsconfig.jrn-028.json"
       - "governance/product/contracts/JRN-026_COUPONS_DELIVERY_PRICING_LOYALTY.product-truth.json"
       - "governance/product/JRN-028_PROMOTION_FUNDING_PRODUCT_TRUTH.md"
       - "governance/evidence/JRN-026_REMOTE_SLICE_EXECUTION.md"
@@ -75,6 +76,7 @@ on:
       - "services/dsh/tests/jrn-026-coupons-pricing-loyalty.test.mjs"
       - "services/dsh/tests/jrn-028-promotion-funding.test.mjs"
       - "services/dsh/tsconfig.jrn-026.json"
+      - "services/dsh/tsconfig.jrn-028.json"
       - "governance/product/contracts/JRN-026_COUPONS_DELIVERY_PRICING_LOYALTY.product-truth.json"
       - "governance/product/JRN-028_PROMOTION_FUNDING_PRODUCT_TRUTH.md"
       - "governance/evidence/JRN-026_REMOTE_SLICE_EXECUTION.md"
@@ -216,10 +218,11 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Verify JRN-028 slices and TypeScript surfaces
-        run: |
-          node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs
-          pnpm --dir services/dsh typecheck
+      - name: Verify JRN-028 slice assertions
+        run: node --test services/dsh/tests/jrn-028-promotion-funding.test.mjs
+
+      - name: Verify JRN-028 TypeScript surface
+        run: pnpm --dir services/dsh exec tsc -p tsconfig.jrn-028.json --noEmit --pretty false
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -277,3 +280,35 @@ jobs:
           fi
 
           test "$(psql -At -h localhost -U postgres -d wlt_jrn_028 -c "SELECT status FROM wlt_promotion_funding_reservations WHERE external_reference='dsh:blocked'")" = "reserved"
+
+      - name: Prove stale event cannot authorize a later transition
+        shell: bash
+        run: |
+          psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 <<'SQL'
+          INSERT INTO wlt_promotion_funding_reservations (
+            tenant_id,external_reference,checkout_intent_id,coupon_redemption_id,
+            coupon_id,client_id,platform_funded_minor_units,
+            partner_funded_minor_units,total_discount_minor_units,currency,
+            status,idempotency_key,correlation_id
+          ) VALUES ('tenant-1','dsh:stale','checkout-stale','redemption-stale','coupon-1','client-1',1000,0,1000,'YER','reserved','reserve-stale','corr-stale');
+          INSERT INTO wlt_promotion_funding_events (
+            reservation_id,event_type,from_status,to_status,order_id,idempotency_key,correlation_id
+          )
+          SELECT id,'committed','reserved','committed','order-stale','commit-stale','corr-stale'
+            FROM wlt_promotion_funding_reservations
+           WHERE external_reference='dsh:stale';
+          SQL
+
+          if psql -v ON_ERROR_STOP=1 -h localhost -U postgres -d wlt_jrn_028 <<'SQL'
+          BEGIN;
+          UPDATE wlt_promotion_funding_reservations
+             SET status='committed',order_id='order-stale',committed_at=NOW(),updated_at=NOW()
+           WHERE external_reference='dsh:stale';
+          COMMIT;
+          SQL
+          then
+            echo "A stale event authorized a later promotion-funding transition." >&2
+            exit 1
+          fi
+
+          test "$(psql -At -h localhost -U postgres -d wlt_jrn_028 -c "SELECT status FROM wlt_promotion_funding_reservations WHERE external_reference='dsh:stale'")" = "reserved"
