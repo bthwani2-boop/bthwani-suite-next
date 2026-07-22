@@ -12,7 +12,7 @@ import {
   radius,
   spacing,
 } from "@bthwani/ui-kit";
-import { usePartnerFleetController } from "../../shared/partner";
+import { usePartnerFleetController } from "../../shared/partner/use-partner-fleet-controller";
 import type { DshCourierConnectionStatus } from "../../shared/partner/partner-fleet.api";
 import type { PartnerTeamMember } from "./partner-team.types";
 import type { PartnerTeamMutationResult } from "./usePartnerTeamModel";
