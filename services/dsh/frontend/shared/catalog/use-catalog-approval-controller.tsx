@@ -2,11 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   listCatalogApprovals,
   transitionCatalogApproval,
+  type CatalogApprovalRecord,
 } from "../partner/catalog-approval.api";
-import type { ApprovalRecord, ApprovalStage } from "../partner/partner.types";
+import type { ApprovalStage } from "../partner/partner.types";
 import type { CatalogSubmission, CatalogSubmissionState } from "./catalog.types";
-
-type LiveApprovalRecord = ApprovalRecord & { readonly entityId?: string };
 
 const NEXT_APPROVAL_STAGE: Partial<Record<ApprovalStage, ApprovalStage>> = {
   "partner-submitted": "partner-review",
@@ -18,8 +17,8 @@ const NEXT_APPROVAL_STAGE: Partial<Record<ApprovalStage, ApprovalStage>> = {
   "catalog-adopted": "client-visible",
 };
 
-function entityKey(record: ApprovalRecord): string {
-  return (record as LiveApprovalRecord).entityId || record.title;
+function entityKey(record: CatalogApprovalRecord): string {
+  return record.entityId || record.title;
 }
 
 function statusFor(stage: ApprovalStage): CatalogSubmission["status"] {
@@ -30,7 +29,7 @@ function statusFor(stage: ApprovalStage): CatalogSubmission["status"] {
   return "submitted";
 }
 
-function toSubmission(record: ApprovalRecord): CatalogSubmission {
+function toSubmission(record: CatalogApprovalRecord): CatalogSubmission {
   return {
     id: record.id,
     storeId: entityKey(record),
@@ -54,7 +53,7 @@ function classify(error: unknown): CatalogSubmissionState {
 }
 
 export function useCatalogApprovalController(authSession: string) {
-  const [records, setRecords] = useState<readonly ApprovalRecord[]>([]);
+  const [records, setRecords] = useState<readonly CatalogApprovalRecord[]>([]);
   const [state, setState] = useState<CatalogSubmissionState>({ kind: "loading" });
   const [action, setAction] = useState<"idle" | "submitting">("idle");
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -82,7 +81,7 @@ export function useCatalogApprovalController(authSession: string) {
   }, [reload]);
 
   const recordByStore = useMemo(() => {
-    const map = new Map<string, ApprovalRecord>();
+    const map = new Map<string, CatalogApprovalRecord>();
     for (const record of records) map.set(entityKey(record), record);
     return map;
   }, [records]);
