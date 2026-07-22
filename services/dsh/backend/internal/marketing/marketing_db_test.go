@@ -54,6 +54,31 @@ func TestCampaignTransitionPolicy(t *testing.T) {
 	}
 }
 
+func TestPartnerOfferTransitionPolicy(t *testing.T) {
+	tests := []struct {
+		from string
+		to   string
+		want bool
+	}{
+		{from: "inbound", to: "review", want: true},
+		{from: "inbound", to: "published", want: false},
+		{from: "review", to: "marketing-ready", want: true},
+		{from: "review", to: "published", want: false},
+		{from: "marketing-ready", to: "published", want: true},
+		{from: "published", to: "paused", want: true},
+		{from: "paused", to: "published", want: true},
+		{from: "rejected", to: "review", want: false},
+		{from: "archived", to: "published", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.from+"_to_"+tt.to, func(t *testing.T) {
+			if got := partnerOfferTransitionAllowed(tt.from, tt.to); got != tt.want {
+				t.Fatalf("partnerOfferTransitionAllowed(%q,%q)=%v want %v", tt.from, tt.to, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestValidateCampaignDates(t *testing.T) {
 	if err := validateCampaignDates("", ""); err != nil {
 		t.Fatalf("empty draft schedule should be accepted: %v", err)
@@ -73,6 +98,16 @@ func TestValidateCampaignDates(t *testing.T) {
 	}
 }
 
+func TestValidateCampaignActivationWindow(t *testing.T) {
+	now := time.Date(2026, time.July, 22, 12, 0, 0, 0, time.UTC)
+	if err := validateCampaignActivationWindow("2026-07-22", "2026-07-23", now); err != nil {
+		t.Fatalf("current campaign window rejected: %v", err)
+	}
+	if err := validateCampaignActivationWindow("2026-07-01", "2026-07-21", now); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected expired campaign window to be rejected, got %v", err)
+	}
+}
+
 func TestMarketingCampaignLifecycleDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -82,40 +117,54 @@ func TestMarketingCampaignLifecycleDBIntegration(t *testing.T) {
 		Description:   "integration test campaign",
 		StartDate:     "2099-01-01",
 		EndDate:       "2099-01-31",
+		Audience:      "client",
+		Placement:     "home",
 		CreatedBy:     "operator-local-001",
 		CorrelationID: "corr-" + suffix,
 	})
 	if err != nil {
 		t.Fatalf("CreateCampaign: %v", err)
 	}
-	if c.Status != "draft" {
-		t.Fatalf("expected draft status, got %q", c.Status)
+	if c.Status != "draft" || c.Version != 1 {
+		t.Fatalf("expected draft version 1, got status=%q version=%d", c.Status, c.Version)
 	}
 
 	if _, err := UpdateCampaign(db, c.ID, UpdateCampaignInput{
-		Status:        "paused",
-		ActorID:       "operator-local-001",
-		CorrelationID: "corr-" + suffix,
+		Status:          "paused",
+		ExpectedVersion: c.Version,
+		ActorID:         "operator-local-001",
+		CorrelationID:   "corr-" + suffix,
 	}); !errors.Is(err, ErrInvalidTransition) {
 		t.Fatalf("expected ErrInvalidTransition for draft->paused, got %v", err)
 	}
 
+	if _, err := UpdateCampaign(db, c.ID, UpdateCampaignInput{
+		Status:          "active",
+		ExpectedVersion: c.Version + 99,
+		ActorID:         "operator-local-001",
+		CorrelationID:   "corr-" + suffix,
+	}); !errors.Is(err, ErrCommercialVersionConflict) {
+		t.Fatalf("expected version conflict for stale campaign write, got %v", err)
+	}
+
 	updated, err := UpdateCampaign(db, c.ID, UpdateCampaignInput{
-		Status:        "active",
-		ActorID:       "operator-local-001",
-		CorrelationID: "corr-" + suffix,
+		Status:          "active",
+		ExpectedVersion: c.Version,
+		ActorID:         "operator-local-001",
+		CorrelationID:   "corr-" + suffix,
 	})
 	if err != nil {
 		t.Fatalf("UpdateCampaign: %v", err)
 	}
-	if updated.Status != "active" {
-		t.Fatalf("expected active status, got %q", updated.Status)
+	if updated.Status != "active" || updated.Version != c.Version+1 {
+		t.Fatalf("expected active version %d, got status=%q version=%d", c.Version+1, updated.Status, updated.Version)
 	}
 
 	if _, err := UpdateCampaign(db, c.ID, UpdateCampaignInput{
-		Status:        "draft",
-		ActorID:       "operator-local-001",
-		CorrelationID: "corr-" + suffix,
+		Status:          "draft",
+		ExpectedVersion: updated.Version,
+		ActorID:         "operator-local-001",
+		CorrelationID:   "corr-" + suffix,
 	}); !errors.Is(err, ErrInvalidTransition) {
 		t.Fatalf("expected ErrInvalidTransition for active->draft, got %v", err)
 	}
@@ -123,15 +172,18 @@ func TestMarketingCampaignLifecycleDBIntegration(t *testing.T) {
 	if err := ArchiveCampaign(db, c.ID, "operator-local-001", "corr-"+suffix); err != nil {
 		t.Fatalf("ArchiveCampaign: %v", err)
 	}
-	after, err := GetCampaign(db, c.ID)
-	if err != nil {
-		t.Fatalf("GetCampaign after archive: %v", err)
+	if _, err := GetCampaign(db, c.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("archived campaign must be hidden from API readback, got %v", err)
 	}
-	if after.Status != "cancelled" {
-		t.Fatalf("expected cancelled status after archive, got %q", after.Status)
+	var archivedStatus string
+	var archivedAt sql.NullTime
+	var archivedVersion int
+	if err := db.QueryRow(`SELECT status, archived_at, version FROM dsh_marketing_campaigns WHERE id=$1`, c.ID).
+		Scan(&archivedStatus, &archivedAt, &archivedVersion); err != nil {
+		t.Fatalf("read archived campaign truth: %v", err)
 	}
-	if after.ArchivedAt == nil {
-		t.Fatal("expected archived_at to be set after archive")
+	if archivedStatus != "cancelled" || !archivedAt.Valid || archivedVersion != updated.Version+1 {
+		t.Fatalf("unexpected archived truth status=%q archived=%v version=%d", archivedStatus, archivedAt.Valid, archivedVersion)
 	}
 
 	list, err := ListCampaigns(db)
@@ -144,7 +196,7 @@ func TestMarketingCampaignLifecycleDBIntegration(t *testing.T) {
 		}
 	}
 
-	if err := ArchiveCampaign(db, c.ID, "operator-local-001", "corr-"+suffix); err != ErrNotFound {
+	if err := ArchiveCampaign(db, c.ID, "operator-local-001", "corr-"+suffix); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound re-archiving already-archived campaign, got %v", err)
 	}
 
@@ -246,7 +298,7 @@ func TestMarketingTargetVisibilityGateDBIntegration(t *testing.T) {
 		TargetType: "store",
 		TargetID:   "store-does-not-exist-" + suffix,
 		CreatedBy:  "operator-local-001",
-	}); err != ErrTargetGateFailed {
+	}); !errors.Is(err, ErrTargetGateFailed) {
 		t.Fatalf("expected ErrTargetGateFailed for nonexistent store target, got %v", err)
 	}
 
@@ -255,7 +307,7 @@ func TestMarketingTargetVisibilityGateDBIntegration(t *testing.T) {
 		TargetType: "offer",
 		TargetID:   "offer-123",
 		CreatedBy:  "operator-local-001",
-	}); err != ErrTargetGateFailed {
+	}); !errors.Is(err, ErrTargetGateFailed) {
 		t.Fatalf("expected ErrTargetGateFailed for unsupported offer target, got %v", err)
 	}
 
