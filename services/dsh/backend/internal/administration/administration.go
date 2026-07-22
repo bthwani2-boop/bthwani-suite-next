@@ -153,14 +153,14 @@ func ListStaff(db *sql.DB) ([]StaffMember, error) {
 	return out, rows.Err()
 }
 
-// PartnerActivation is retained as a read-only compatibility projection.
-// Partner lifecycle mutations are owned by the governed partner lifecycle.
+// PartnerActivation is a privacy-minimized read-only compatibility projection.
+// Partner lifecycle mutations and review notes remain owned by the governed
+// partner lifecycle and are never exposed through administration diagnostics.
 type PartnerActivation struct {
 	ID         string    `json:"id"`
 	PartnerID  string    `json:"partnerId"`
 	Status     string    `json:"status"`
 	ReviewedBy string    `json:"reviewedBy"`
-	Notes      string    `json:"notes"`
 	CreatedAt  time.Time `json:"createdAt"`
 	UpdatedAt  time.Time `json:"updatedAt"`
 }
@@ -171,7 +171,7 @@ func ListPartnerActivations(db *sql.DB, status string) ([]PartnerActivation, err
 	}
 	rows, err := db.Query(`
 		SELECT id, partner_id, status, COALESCE(reviewed_by,''),
-		       COALESCE(notes,''), created_at, updated_at
+		       created_at, updated_at
 		FROM dsh_admin_partner_activations
 		WHERE ($1='' OR status=$1)
 		ORDER BY created_at DESC`, status)
@@ -184,8 +184,7 @@ func ListPartnerActivations(db *sql.DB, status string) ([]PartnerActivation, err
 		var activation PartnerActivation
 		if err := rows.Scan(
 			&activation.ID, &activation.PartnerID, &activation.Status,
-			&activation.ReviewedBy, &activation.Notes,
-			&activation.CreatedAt, &activation.UpdatedAt,
+			&activation.ReviewedBy, &activation.CreatedAt, &activation.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -194,16 +193,16 @@ func ListPartnerActivations(db *sql.DB, status string) ([]PartnerActivation, err
 	return out, rows.Err()
 }
 
-// CaptainCredential is a read-only projection. Credential review is owned by
-// the Workforce/captain accreditation journey and is not mutated by this area.
+// CaptainCredential is a privacy-minimized read-only projection. Credential
+// review and the raw license number remain owned by Workforce/captain
+// accreditation and are never exposed through the administration projection.
 type CaptainCredential struct {
-	ID            string    `json:"id"`
-	CaptainID     string    `json:"captainId"`
-	LicenseNumber string    `json:"licenseNumber"`
-	VehicleType   string    `json:"vehicleType"`
-	Status        string    `json:"status"`
-	ReviewedBy    string    `json:"reviewedBy"`
-	UpdatedAt     time.Time `json:"updatedAt"`
+	ID          string    `json:"id"`
+	CaptainID   string    `json:"captainId"`
+	VehicleType string    `json:"vehicleType"`
+	Status      string    `json:"status"`
+	ReviewedBy  string    `json:"reviewedBy"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 func ListCaptainCredentials(db *sql.DB, status string) ([]CaptainCredential, error) {
@@ -211,7 +210,7 @@ func ListCaptainCredentials(db *sql.DB, status string) ([]CaptainCredential, err
 		return nil, ErrInvalid
 	}
 	rows, err := db.Query(`
-		SELECT id, captain_id, COALESCE(license_number,''), COALESCE(vehicle_type,''),
+		SELECT id, captain_id, COALESCE(vehicle_type,''),
 		       status, COALESCE(reviewed_by,''), updated_at
 		FROM dsh_admin_captain_credentials
 		WHERE ($1='' OR status=$1)
@@ -224,9 +223,8 @@ func ListCaptainCredentials(db *sql.DB, status string) ([]CaptainCredential, err
 	for rows.Next() {
 		var credential CaptainCredential
 		if err := rows.Scan(
-			&credential.ID, &credential.CaptainID, &credential.LicenseNumber,
-			&credential.VehicleType, &credential.Status,
-			&credential.ReviewedBy, &credential.UpdatedAt,
+			&credential.ID, &credential.CaptainID, &credential.VehicleType,
+			&credential.Status, &credential.ReviewedBy, &credential.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
