@@ -13,6 +13,7 @@ on:
       - "services/dsh/backend/internal/http/delivery_pricing.go"
       - "services/dsh/backend/internal/http/loyalty_policy.go"
       - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
+      - "services/dsh/backend/internal/http/jrn_026_routes_test.go"
       - "services/dsh/backend/internal/marketing/loyalty_policy.go"
       - "services/dsh/backend/internal/wlt/loyalty.go"
       - "services/dsh/backend/internal/wlt/promotion_funding*.go"
@@ -51,6 +52,7 @@ on:
       - "services/dsh/backend/internal/http/delivery_pricing.go"
       - "services/dsh/backend/internal/http/loyalty_policy.go"
       - "services/dsh/backend/internal/http/journeys_026_030_routes_test.go"
+      - "services/dsh/backend/internal/http/jrn_026_routes_test.go"
       - "services/dsh/backend/internal/marketing/loyalty_policy.go"
       - "services/dsh/backend/internal/wlt/loyalty.go"
       - "services/dsh/backend/internal/wlt/promotion_funding*.go"
@@ -139,7 +141,7 @@ jobs:
 
       - name: Verify governed JRN-026 route registration
         working-directory: services/dsh/backend
-        run: go test ./internal/http -run '^TestJourneys026To030ExposeGovernedRoutes$'
+        run: go test ./internal/http -run '^TestJourney026ExposesGovernedCouponPricingAndLoyaltyRoutes$'
 
       - name: Compile sovereign WLT loyalty ledger
         working-directory: services/wlt/backend
