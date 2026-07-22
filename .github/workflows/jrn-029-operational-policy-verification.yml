@@ -1,42 +1,19 @@
-# Permanent same-commit gates for JRN-029 operational zones, SLA, capacity and modes.
+# Isolated remote proof for JRN-029 sourced from sambassam.
 name: JRN-029 Operational Policy Verification
 
 on:
   workflow_dispatch:
   push:
-    branches: [sambassam, "verify/jrn-029-final-20260722"]
-    paths: &jrn029_paths
-      - "governance/product/contracts/jrn-029-zones-sla-capacity-delivery-modes.product-truth.json"
-      - "governance/evidence/JRN-029_FULLSTACK_CLOSURE.json"
-      - "governance/evidence/JRN-029_TECHNICAL_CLOSURE_2026-07-22.md"
-      - "services/dsh/database/migrations/dsh-129_jrn029_operational_policy_closure.sql"
-      - "services/dsh/database/migrations/dsh-130_jrn029_store_visibility_projection.sql"
-      - "services/dsh/backend/cmd/dsh-api/main.go"
-      - "services/dsh/backend/internal/platformpolicies/jrn029*.go"
-      - "services/dsh/backend/internal/http/jrn029*.go"
-      - "services/dsh/backend/internal/http/jrn_029_operational_policy_routes_test.go"
-      - "services/dsh/backend/internal/http/platformpolicies_routes.go"
-      - "services/dsh/frontend/shared/platform/jrn029-operational-policy.api.ts"
-      - "services/dsh/frontend/shared/platform/index.ts"
-      - "services/dsh/frontend/control-panel/platform/Jrn029OperationalPolicySection.tsx"
-      - "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx"
-      - "services/dsh/contracts/**"
-      - "services/dsh/clients/generated/dsh-api.ts"
-      - "services/dsh/tests/jrn-029-operational-policy.test.mjs"
-      - "services/dsh/tsconfig.jrn-029.json"
-      - "tools/scripts/integrate-jrn029-openapi.mjs"
-      - "tools/scripts/finalize-jrn029-openapi.mjs"
-      - ".github/workflows/jrn-029-operational-policy-verification.yml"
-  pull_request:
-    branches: [master]
-    paths: *jrn029_paths
+    branches: ["verify/jrn-029-final-20260722"]
+    paths:
+      - "governance/evidence/JRN-029_REMOTE_PROOF_TRIGGER.txt"
 
 permissions:
   contents: write
 
 concurrency:
-  group: jrn-029-${{ github.workflow }}-${{ github.run_id }}
-  cancel-in-progress: false
+  group: jrn-029-isolated-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
