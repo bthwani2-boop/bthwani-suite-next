@@ -118,14 +118,14 @@ func (s *protectedStoreServer) handleListGovernedClientSupportMessages(w http.Re
 	if !ok {
 		return
 	}
-	messages, err := support.ListClientMessages(s.db, actor.ID, r.PathValue("ticketId"))
+	messages, err := support.ListActorRichMessages(s.db, actor.ID, support.RoleClient, r.PathValue("ticketId"))
 	if err != nil {
 		sendGovernedSupportError(w, err, "failed to list client support messages")
 		return
 	}
 	result := make([]map[string]any, 0, len(messages))
 	for _, message := range messages {
-		result = append(result, marshalMessage(message))
+		result = append(result, marshalRichMessage(message))
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"messages": result})
 }
@@ -140,24 +140,19 @@ func (s *protectedStoreServer) handleAddGovernedClientSupportMessage(w http.Resp
 	if !ok {
 		return
 	}
-	var body struct {
-		Body string `json:"body"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
+	input, ok := decodeRichSupportMessageRequest(w, r, false)
+	if !ok {
 		return
 	}
-	message, err := support.AddClientMessage(s.db, support.GovernedMessageInput{
-		ActorID:        actor.ID,
-		TicketID:       r.PathValue("ticketId"),
-		Body:           body.Body,
-		IdempotencyKey: idempotencyKey,
-		CorrelationID:  correlationID,
-	})
+	input.TicketID = r.PathValue("ticketId")
+	input.IdempotencyKey = idempotencyKey
+	input.CorrelationID = correlationID
+	message, err := support.AddActorRichMessage(s.db, actor.ID, support.RoleClient, input)
 	if err != nil {
 		sendGovernedSupportError(w, err, "failed to add client support message")
 		return
 	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"message": marshalMessage(message)})
+	store.SendJSON(w, http.StatusCreated, map[string]any{"message": marshalRichMessage(message)})
 }
 
 // GET /dsh/operator/support/tickets
@@ -194,18 +189,18 @@ func (s *protectedStoreServer) handleGetGovernedOperatorSupportTicket(w http.Res
 
 // GET /dsh/operator/support/tickets/{ticketId}/messages
 func (s *protectedStoreServer) handleListGovernedOperatorSupportMessages(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", SupportPermissionRead, "operator")
 	if !ok {
 		return
 	}
-	messages, err := support.ListOperatorMessages(s.db, r.PathValue("ticketId"))
+	messages, err := support.ListOperatorRichMessages(s.db, actor.ID, r.PathValue("ticketId"))
 	if err != nil {
 		sendGovernedSupportError(w, err, "failed to list operator support messages")
 		return
 	}
 	result := make([]map[string]any, 0, len(messages))
 	for _, message := range messages {
-		result = append(result, marshalMessage(message))
+		result = append(result, marshalRichMessage(message))
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"messages": result})
 }
@@ -220,26 +215,19 @@ func (s *protectedStoreServer) handleAddGovernedOperatorSupportMessage(w http.Re
 	if !ok {
 		return
 	}
-	var body struct {
-		Body       string `json:"body"`
-		IsInternal bool   `json:"isInternal"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
+	input, ok := decodeRichSupportMessageRequest(w, r, true)
+	if !ok {
 		return
 	}
-	message, err := support.AddOperatorMessage(s.db, support.GovernedMessageInput{
-		ActorID:        actor.ID,
-		TicketID:       r.PathValue("ticketId"),
-		Body:           body.Body,
-		IsInternal:     body.IsInternal,
-		IdempotencyKey: idempotencyKey,
-		CorrelationID:  correlationID,
-	})
+	input.TicketID = r.PathValue("ticketId")
+	input.IdempotencyKey = idempotencyKey
+	input.CorrelationID = correlationID
+	message, err := support.AddOperatorRichMessage(s.db, actor.ID, input)
 	if err != nil {
 		sendGovernedSupportError(w, err, "failed to add operator support message")
 		return
 	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"message": marshalMessage(message)})
+	store.SendJSON(w, http.StatusCreated, map[string]any{"message": marshalRichMessage(message)})
 }
 
 // PATCH /dsh/operator/support/tickets/{ticketId}

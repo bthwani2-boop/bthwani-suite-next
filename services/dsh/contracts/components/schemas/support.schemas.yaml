@@ -61,16 +61,79 @@ DshUpdateTicketRequest:
     status: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshTicketStatus" }
     assignedTo: { type: string }
 
+DshSupportMediaKind:
+  type: string
+  enum: [image, audio, video, document]
+
+DshSupportMediaUploadStatus:
+  type: string
+  enum: [uploaded, processing, ready, failed]
+
+DshSupportMessageAttachmentInput:
+  type: object
+  additionalProperties: false
+  required: [mediaAssetId, fileName, mimeType, sizeBytes, kind]
+  properties:
+    mediaAssetId: { type: string, minLength: 1, maxLength: 240 }
+    fileName: { type: string, minLength: 1, maxLength: 240 }
+    mimeType: { type: string, minLength: 1, maxLength: 160 }
+    sizeBytes: { type: integer, minimum: 1, maximum: 104857600 }
+    kind: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSupportMediaKind" }
+    durationMs: { type: ["integer", "null"], minimum: 0 }
+    thumbnailMediaAssetId: { type: string, maxLength: 240 }
+    waveformRef: { type: string, maxLength: 2000 }
+    uploadStatus:
+      allOf:
+        - { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSupportMediaUploadStatus" }
+      default: ready
+
+DshSupportMessageAttachment:
+  allOf:
+    - { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSupportMessageAttachmentInput" }
+    - type: object
+      additionalProperties: false
+      required: [id, ticketId, messageId, attachedBy, isInternal, createdAt, uploadStatus]
+      properties:
+        id: { type: string, format: uuid }
+        ticketId: { type: string, format: uuid }
+        messageId: { type: string, format: uuid }
+        attachedBy: { type: string }
+        isInternal: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+DshRichMessageRequest:
+  type: object
+  additionalProperties: false
+  properties:
+    body: { type: string, minLength: 1, maxLength: 4000 }
+    isInternal: { type: boolean, default: false }
+    attachments:
+      type: array
+      maxItems: 10
+      uniqueItems: true
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSupportMessageAttachmentInput" }
+  anyOf:
+    - required: [body]
+    - required: [attachments]
+      properties:
+        attachments:
+          type: array
+          minItems: 1
+
 DshSupportMessage:
   type: object
-  required: [id, ticketId, senderId, senderRole, body, isInternal, createdAt]
+  additionalProperties: false
+  required: [id, ticketId, senderId, senderRole, body, isInternal, attachments, createdAt]
   properties:
-    id: { type: string }
-    ticketId: { type: string }
+    id: { type: string, format: uuid }
+    ticketId: { type: string, format: uuid }
     senderId: { type: string }
     senderRole: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSenderRole" }
-    body: { type: string }
+    body: { type: string, maxLength: 4000 }
     isInternal: { type: boolean }
+    attachments:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSupportMessageAttachment" }
     createdAt: { type: string, format: date-time }
 
 DshSupportAnalyticsResponse:

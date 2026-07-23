@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: DSH Support Message Delivery API
-  version: 1.0.0
-  description: Actor-owned support attachment delivery and durable read receipts.
+  version: 1.1.0
+  description: Actor-owned support media references, compatibility attachment delivery, and durable read receipts. New messages use the atomic rich-message contract in dsh.openapi.yaml.
 x-bthwani-owner: services/dsh
 x-bthwani-journey: JRN-021
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -26,6 +26,7 @@ paths:
         '404': { description: Ticket or message not found }
     post:
       operationId: attachDshActorSupportMessageAsset
+      description: Compatibility operation for linking one already-uploaded governed asset. New clients should send attachments atomically with message creation.
       requestBody:
         required: true
         content:
@@ -54,6 +55,7 @@ paths:
         '403': { description: Missing support read permission }
     post:
       operationId: attachDshOperatorSupportMessageAsset
+      description: Compatibility operation for linking one already-uploaded governed asset.
       requestBody:
         required: true
         content:
@@ -80,10 +82,15 @@ components:
     AttachmentInput:
       type: object
       additionalProperties: false
-      required: [mediaAssetId, fileName, mimeType, sizeBytes]
+      required: [mediaAssetId, fileName, mimeType, sizeBytes, kind]
       properties:
-        mediaAssetId: { type: string, minLength: 1 }
-        fileName: { type: string, minLength: 1 }
-        mimeType: { type: string, minLength: 1 }
-        sizeBytes: { type: integer, minimum: 1 }
+        mediaAssetId: { type: string, minLength: 1, maxLength: 240 }
+        fileName: { type: string, minLength: 1, maxLength: 240 }
+        mimeType: { type: string, minLength: 1, maxLength: 160 }
+        sizeBytes: { type: integer, minimum: 1, maximum: 104857600 }
+        kind: { type: string, enum: [image, audio, video, document] }
+        durationMs: { type: [integer, 'null'], minimum: 0 }
+        thumbnailMediaAssetId: { type: string, maxLength: 240 }
+        waveformRef: { type: string, maxLength: 2000 }
+        uploadStatus: { type: string, enum: [uploaded, processing, ready, failed], default: ready }
         isInternal: { type: boolean, default: false }

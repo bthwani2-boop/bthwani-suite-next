@@ -78,6 +78,9 @@ if (rootPkg.packageManager !== `pnpm@${manifest.global.pnpm}`) {
 if (rootPkg.engines?.node !== `>=${manifest.global.node} <25`) fail("root node engine mismatch");
 if (rootPkg.engines?.pnpm !== manifest.global.pnpm) fail(`root pnpm engine must be ${manifest.global.pnpm}`);
 if (rootPkg.pnpm) fail("root package.json must not contain pnpm config; use pnpm-workspace.yaml");
+if (!/^\d+\.\d+\.\d+$/.test(manifest.global.version) || manifest.global.version === "0.1.0") {
+  fail("mobile release version must be an intentional semver newer than the bootstrap 0.1.0");
+}
 
 const expectedChannels = {
   development: "development",
@@ -95,6 +98,9 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (pkg.devDependencies?.typescript !== "~6.0.3") fail(`${key}: TypeScript must be ~6.0.3`);
   if (pkg.scripts?.typecheck !== "tsc --noEmit -p tsconfig.json") fail(`${key}: strict typecheck script is required`);
   if (!pkg.dependencies?.["@sentry/react-native"]) fail(`${key}: @sentry/react-native is required`);
+  if (!pkg.dependencies?.["@bthwani/data-runtime"]) fail(`${key}: @bthwani/data-runtime is required`);
+  if (!pkg.dependencies?.["@bthwani/media-runtime"]) fail(`${key}: @bthwani/media-runtime is required`);
+  for (const asset of requiredAssets) requireFile(path.join("apps", key, "runtime", "assets", asset), `${key}: ${asset}`);
 
   if (eas.cli?.appVersionSource !== "remote") fail(`${key}: EAS appVersionSource must be remote`);
   if (eas.cli?.requireCommit !== true) fail(`${key}: EAS builds must require an immutable commit`);
@@ -124,6 +130,7 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (expo.slug !== app.slug) fail(`${key}: slug mismatch`);
   if (expo.owner !== manifest.global.owner) fail(`${key}: owner mismatch`);
   if (expo.scheme !== app.scheme) fail(`${key}: scheme mismatch`);
+  if (expo.version !== manifest.global.version) fail(`${key}: version mismatch`);
   if (expo.entryPoint !== "./index.js") fail(`${key}: entryPoint mismatch`);
   if (expo.android?.package !== app.androidPackage) fail(`${key}: Android package mismatch`);
   if (expo.ios?.bundleIdentifier !== app.iosBundleIdentifier) fail(`${key}: iOS bundleIdentifier mismatch`);
@@ -170,6 +177,9 @@ for (const [key, app] of Object.entries(manifest.apps)) {
     constants: "expo-constants",
     application: "expo-application",
     device: "expo-device",
+    crypto: "expo-crypto",
+    image: "expo-image",
+    battery: "expo-battery",
     splashScreen: "expo-splash-screen",
     localization: "expo-localization",
     localAuthentication: "expo-local-authentication",
@@ -209,15 +219,22 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   }
 
   const metro = fs.readFileSync(path.join(dir, "metro.config.cjs"), "utf8");
-  if (!metro.includes("getSentryExpoConfig")) fail(`${key}: Sentry Metro source-map configuration is required`);
+  for (const marker of ["getSentryExpoConfig", "shared/media-runtime", "@bthwani/media-runtime"]) {
+    if (!metro.includes(marker)) fail(`${key}: Metro marker missing: ${marker}`);
+  }
+  const appRoot = fs.readFileSync(path.join(dir, "src", "index.ts"), "utf8");
+  for (const marker of ["persistenceKey", "createBthwaniOfflineMutationQueue", "clearBthwaniQueryClient", "registerIdentityBeforeSessionEndHook"]) {
+    if (!appRoot.includes(marker)) fail(`${key}: tenant-safe data runtime marker missing: ${marker}`);
+  }
+  if ((key === "app-captain" || key === "app-field") && !appRoot.includes("wireBatteryAwareQueue")) {
+    fail(`${key}: battery-aware offline synchronization is required`);
+  }
   const sentryRuntime = fs.readFileSync(path.join(dir, "src", "observability", "sentry.ts"), "utf8");
   for (const marker of ["sendDefaultPii: false", "beforeSend", "SENTRY_TRACES_SAMPLE_RATE", "FORBIDDEN_KEY"]) {
     if (!sentryRuntime.includes(marker)) fail(`${key}: Sentry SaaS privacy marker missing: ${marker}`);
   }
 
   if (requireBuildSecrets) {
-    for (const asset of requiredAssets) requireFile(path.join("apps", key, "runtime", "assets", asset), `${key}: ${asset}`);
-
     if ((platform === "android" || platform === "all") && features.includes("notifications")) {
       const googleServices = requireEnv(key, "GOOGLE_SERVICES_JSON");
       if (!fs.existsSync(path.resolve(googleServices))) fail(`${key}: GOOGLE_SERVICES_JSON does not point to an existing file`);
@@ -236,8 +253,17 @@ for (const [key, app] of Object.entries(manifest.apps)) {
 
 const workspace = fs.readFileSync(path.join(root, "pnpm-workspace.yaml"), "utf8");
 if (!workspace.includes("apps/*/runtime")) fail("pnpm-workspace.yaml must include apps/*/runtime");
+if (!workspace.includes("shared/media-runtime")) fail("pnpm-workspace.yaml must include shared/media-runtime");
 if (!workspace.includes("allowBuilds:")) fail("pnpm-workspace.yaml must define allowBuilds");
+if (!workspace.includes('"@sentry/cli": true')) fail("pnpm-workspace.yaml must allow the Sentry CLI source-map uploader");
 if (workspace.includes("onlyBuiltDependencies")) fail("pnpm-workspace.yaml must not use onlyBuiltDependencies");
 if (workspace.includes("ignoredBuiltDependencies")) fail("pnpm-workspace.yaml must not use ignoredBuiltDependencies");
+
+for (const file of [
+  "shared/data-runtime/src/persistence.ts",
+  "shared/data-runtime/src/offline-mutation-queue.ts",
+  "shared/media-runtime/src/resumable-upload.ts",
+  "shared/media-runtime/src/CachedMediaImage.tsx",
+]) requireFile(file);
 
 console.log(`PASS: mobile Expo/EAS configuration is centrally guarded for ${profile}/${platform}`);

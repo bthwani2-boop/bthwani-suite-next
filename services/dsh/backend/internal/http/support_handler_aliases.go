@@ -9,31 +9,31 @@ import (
 )
 
 func (s *protectedStoreServer) handleListClientSupportTickets(w http.ResponseWriter, r *http.Request) {
-	s.handleListMyTickets(w, r)
+	s.handleListGovernedClientSupportTickets(w, r)
 }
 
 func (s *protectedStoreServer) handleGetClientSupportTicket(w http.ResponseWriter, r *http.Request) {
-	s.handleGetTicket(w, r)
+	s.handleGetGovernedClientSupportTicket(w, r)
 }
 
 func (s *protectedStoreServer) handleAddClientSupportMessage(w http.ResponseWriter, r *http.Request) {
-	s.handleAddTicketMessage(w, r)
+	s.handleAddGovernedClientSupportMessage(w, r)
 }
 
 func (s *protectedStoreServer) handleListOperatorSupportTickets(w http.ResponseWriter, r *http.Request) {
-	s.handleOperatorListTickets(w, r)
+	s.handleListGovernedOperatorSupportTickets(w, r)
 }
 
 func (s *protectedStoreServer) handleGetOperatorSupportTicket(w http.ResponseWriter, r *http.Request) {
-	s.handleGetTicket(w, r)
+	s.handleGetGovernedOperatorSupportTicket(w, r)
 }
 
 func (s *protectedStoreServer) handleUpdateOperatorSupportTicket(w http.ResponseWriter, r *http.Request) {
-	s.handleOperatorUpdateTicket(w, r)
+	s.handleUpdateGovernedOperatorSupportTicket(w, r)
 }
 
 func (s *protectedStoreServer) handleAddOperatorSupportMessage(w http.ResponseWriter, r *http.Request) {
-	s.handleAddTicketMessage(w, r)
+	s.handleAddGovernedOperatorSupportMessage(w, r)
 }
 
 func (s *protectedStoreServer) handleEscalateSupportTicket(w http.ResponseWriter, r *http.Request) {
