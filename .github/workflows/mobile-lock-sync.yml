@@ -1,0 +1,54 @@
+name: BThwani Mobile Lockfile Sync
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [lianbassam]
+    paths:
+      - governance/github/mobile-lock-sync.trigger.json
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-lock-sync-lianbassam
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Regenerate immutable pnpm lockfile
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: lianbassam
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+      - name: Activate locked pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.0 --activate
+          pnpm --version
+      - name: Regenerate lockfile only
+        run: pnpm install --lockfile-only --no-frozen-lockfile
+      - name: Commit lockfile if changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- pnpm-lock.yaml; then
+            echo "pnpm-lock.yaml already synchronized"
+            exit 0
+          fi
+          git config user.name "bthwani-lock-bot"
+          git config user.email "bthwani-lock-bot@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "build(mobile): synchronize pnpm lockfile"
+          auth="$(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${auth}" push origin HEAD:lianbassam
