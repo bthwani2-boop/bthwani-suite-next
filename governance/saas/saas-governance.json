@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "platformMode": "BTHWANI_NATIVE_PLATFORM",
-  "saasReadinessMode": "SAAS_ACTIVE",
+  "saasReadinessMode": "SAAS_READY_DEFERRED",
   "commercialActivationState": "ACTIVATION_AUTHORIZED",
   "activationAuthorization": {
     "authorizationPath": "governance/saas/activation-authorization.json",
