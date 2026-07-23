@@ -1,0 +1,218 @@
+name: JRN-001 FS-17 comprehensive verification
+
+on:
+  push:
+    branches: [lianbassam]
+    paths:
+      - "services/dsh/**"
+      - "services/wlt/**"
+      - "core/identity/**"
+      - "apps/app-client/**"
+      - "apps/app-field/**"
+      - "apps/app-partner/**"
+      - "apps/control-panel/**"
+      - "governance/product/contracts/jrn-001-*.json"
+      - "tools/guards/partner/jrn-001-*.mjs"
+      - "tools/guards/wlt-financial-boundary-gate.mjs"
+      - "tools/guards/jrn-037-payout-destination-gate.mjs"
+      - ".github/workflows/jrn-001-fs-17-comprehensive-verification.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: jrn-001-fs-17-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-and-surfaces:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Publish static verification pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -f state=pending -f context=bthwani/jrn001-fs17-static -f description='JRN-001 static and surface verification running' -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.26.4"
+          cache: false
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+
+      - name: Install workspace dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@10.34.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Validate product truth JSON
+        run: node -e "JSON.parse(require('node:fs').readFileSync('governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json','utf8'))"
+
+      - name: Verify all JRN-001 slice contracts
+        shell: bash
+        run: |
+          set +e
+          log="${RUNNER_TEMP}/jrn001-slice-contracts.log"
+          node --test services/dsh/tests/jrn-001-*.test.mjs >"${log}" 2>&1
+          status=$?
+          cat "${log}"
+          exit "${status}"
+
+      - name: Upload JRN-001 slice diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jrn001-slice-contracts-${{ github.run_id }}
+          path: ${{ runner.temp }}/jrn001-slice-contracts.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Verify JRN-001 partner guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          for guard in tools/guards/partner/jrn-001-*.mjs; do
+            node "$guard"
+          done
+
+      - name: Verify WLT ownership boundaries
+        run: |
+          node tools/guards/wlt-financial-boundary-gate.mjs
+          node tools/guards/jrn-037-payout-destination-gate.mjs
+
+      - name: Verify DSH backend
+        working-directory: services/dsh/backend
+        run: go test ./internal/partner ./internal/partnerwltoutbox ./internal/store ./internal/http -count=1
+
+      - name: Verify WLT backend
+        working-directory: services/wlt/backend
+        run: go test ./internal/payout ./internal/http -count=1
+
+      - name: Verify Identity backend
+        working-directory: core/identity/backend
+        run: go test ./... -count=1
+
+      - name: Typecheck app-client
+        run: pnpm --dir apps/app-client/runtime typecheck
+
+      - name: Typecheck app-field
+        run: pnpm --dir apps/app-field/runtime typecheck
+
+      - name: Typecheck app-partner
+        run: pnpm --dir apps/app-partner/runtime typecheck
+
+      - name: Typecheck control-panel
+        run: pnpm --dir apps/control-panel/runtime typecheck
+
+      - name: Publish static verification terminal status
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state=failure
+          description='JRN-001 static and surface verification did not pass'
+          if [[ "${JOB_STATUS}" == "success" ]]; then
+            state=success
+            description='JRN-001 static and surface verification passed'
+          fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state="${state}" \
+            -f context=bthwani/jrn001-fs17-static \
+            -f description="${description}" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+  database-isolation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Publish database verification pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -f state=pending -f context=bthwani/jrn001-fs17-database -f description='JRN-001 database isolation verification running' -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.26.4"
+          cache: false
+
+      - name: Start PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml up -d postgres
+          for attempt in {1..60}; do
+            if docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml exec -T postgres pg_isready -U bthwani_runtime -d bthwani_runtime; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml logs postgres
+          exit 1
+
+      - name: Apply governed DSH migrations
+        shell: pwsh
+        run: ./infra/docker/scripts/invoke-runtime-database-migrations.ps1 -Service dsh -SourceCommitSha $env:GITHUB_SHA
+
+      - name: Apply governed WLT migrations
+        shell: pwsh
+        run: ./infra/docker/scripts/invoke-runtime-database-migrations.ps1 -Service wlt -SourceCommitSha $env:GITHUB_SHA
+
+      - name: Verify DSH tenant isolation in PostgreSQL
+        working-directory: services/dsh/backend
+        env:
+          DSH_REQUIRE_DB_TESTS: "true"
+          DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@127.0.0.1:55432/dsh_runtime?sslmode=disable
+        run: go test ./internal/partner ./internal/http -count=1
+
+      - name: Verify WLT payout idempotency in PostgreSQL
+        working-directory: services/wlt/backend
+        env:
+          WLT_REQUIRE_DB_TESTS: "true"
+          DATABASE_URL: postgres://wlt_runtime:wlt_runtime_password@127.0.0.1:55432/wlt_runtime?sslmode=disable
+          WLT_PAYOUT_ENCRYPTION_KEY: dev-only-payout-destination-encryption-key
+        run: go test ./internal/payout -count=1
+
+      - name: PostgreSQL diagnostics
+        if: ${{ failure() }}
+        shell: bash
+        run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml logs postgres || true
+
+      - name: Publish database verification terminal status
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state=failure
+          description='JRN-001 database isolation verification did not pass'
+          if [[ "${JOB_STATUS}" == "success" ]]; then
+            state=success
+            description='JRN-001 database isolation verification passed'
+          fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state="${state}" \
+            -f context=bthwani/jrn001-fs17-database \
+            -f description="${description}" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
