@@ -1,6 +1,8 @@
 {
   "cli": {
-    "appVersionSource": "local"
+    "appVersionSource": "remote",
+    "requireCommit": true,
+    "promptToConfigurePushNotifications": false
   },
   "build": {
     "base": {
@@ -13,6 +15,7 @@
     "development": {
       "extends": "base",
       "environment": "development",
+      "channel": "development",
       "developmentClient": true,
       "distribution": "internal",
       "android": {
@@ -22,6 +25,7 @@
     "internal": {
       "extends": "base",
       "environment": "preview",
+      "channel": "preview",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
@@ -30,6 +34,8 @@
     "production": {
       "extends": "base",
       "environment": "production",
+      "channel": "production",
+      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
       }
