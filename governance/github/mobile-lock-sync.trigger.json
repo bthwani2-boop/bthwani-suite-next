@@ -3,7 +3,14 @@
   "targetRef": "lianbassam",
   "purpose": "MOBILE_PACKAGE_LOCK_SYNCHRONIZATION",
   "requestedDate": "2026-07-23",
+  "attempt": 2,
   "packageManager": "pnpm@10.34.0",
   "allowedOutput": "pnpm-lock.yaml",
+  "expectedPackages": [
+    "app-client:expo-camera",
+    "app-partner:@bthwani/data-runtime",
+    "app-captain:@bthwani/data-runtime+expo-video",
+    "app-field:@bthwani/data-runtime+expo-audio+expo-video"
+  ],
   "deleteWorkflowAfterSuccess": true
 }
