@@ -16,6 +16,8 @@ function statusDescription(value) {
 function diagnosticSubject(value) {
   const exportedMember = value.match(/has no exported member ['"]([^'"]+)['"]/)?.[1];
   if (exportedMember) return exportedMember;
+  const duplicateMember = value.match(/already exported a member named ['"]([^'"]+)['"]/)?.[1];
+  if (duplicateMember) return duplicateMember;
   const missingModule = value.match(/Cannot find module ['"]([^'"]+)['"]/)?.[1];
   if (missingModule) return missingModule.split("/").filter(Boolean).slice(-1)[0];
   const missingName = value.match(/Cannot find name ['"]([^'"]+)['"]/)?.[1];
