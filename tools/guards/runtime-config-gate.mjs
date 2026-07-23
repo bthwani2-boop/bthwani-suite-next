@@ -100,6 +100,43 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
     });
   }
 
+  const saasMode = env.get("BTHWANI_SAAS_MODE");
+  const activationState = env.get("BTHWANI_COMMERCIAL_ACTIVATION_STATE");
+  const productionDeploymentAuthorized = env.get("BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED");
+  const defaultTenantId = env.get("BTHWANI_DEFAULT_TENANT_ID") ?? "";
+
+  if (!new Set(["deferred", "active"]).has(saasMode)) {
+    violations.push({ file: envExample, message: "SAAS_MODE_INVALID: expected deferred or active" });
+  }
+  if (!new Set(["blocked", "eligible", "authorized", "active"]).has(activationState)) {
+    violations.push({ file: envExample, message: "SAAS_ACTIVATION_STATE_INVALID" });
+  }
+  if (!new Set(["true", "false"]).has(productionDeploymentAuthorized)) {
+    violations.push({ file: envExample, message: "PRODUCTION_DEPLOYMENT_AUTHORIZATION_FLAG_INVALID" });
+  }
+  if (saasMode === "active" && activationState === "blocked") {
+    violations.push({ file: envExample, message: "ACTIVE_SAAS_RUNTIME_CANNOT_BE_POLICY_BLOCKED" });
+  }
+  if (activationState === "authorized") {
+    if (saasMode !== "active") {
+      violations.push({ file: envExample, message: "AUTHORIZED_ACTIVATION_REQUIRES_ACTIVE_SAAS_MODE" });
+    }
+    if (productionDeploymentAuthorized !== "false") {
+      violations.push({ file: envExample, message: "AUTHORIZED_RUNTIME_MUST_NOT_IMPLY_PRODUCTION_DEPLOYMENT" });
+    }
+    if (!/^[a-z0-9][a-z0-9-]{2,62}$/.test(defaultTenantId)) {
+      violations.push({ file: envExample, message: "AUTHORIZED_SAAS_RUNTIME_REQUIRES_GOVERNED_DEFAULT_TENANT_ID" });
+    }
+  }
+  if (activationState === "active") {
+    if (saasMode !== "active") {
+      violations.push({ file: envExample, message: "COMMERCIAL_ACTIVE_REQUIRES_ACTIVE_SAAS_MODE" });
+    }
+    if (mode !== "production" || productionDeploymentAuthorized !== "true") {
+      violations.push({ file: envExample, message: "COMMERCIAL_ACTIVE_REQUIRES_PRODUCTION_MODE_AND_DEPLOYMENT_AUTHORIZATION" });
+    }
+  }
+
   const weakDefaults = new Map([
     ["BTHWANI_POSTGRES_PASSWORD", "bthwani_runtime_password"],
     ["BTHWANI_MINIO_ROOT_PASSWORD", "bthwani_minio_password"],
@@ -122,16 +159,10 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
   const providerMode = env.get("WLT_FINANCIAL_PROVIDER_MODE");
   const productionProviderAllowed = env.get("WLT_ALLOW_PRODUCTION_PROVIDER") === "true";
   if (mutationsEnabled && mode === "development" && providerMode !== "mock") {
-    violations.push({
-      file: envExample,
-      message: "DEVELOPMENT_MUTATIONS_REQUIRE_MOCK_PROVIDER",
-    });
+    violations.push({ file: envExample, message: "DEVELOPMENT_MUTATIONS_REQUIRE_MOCK_PROVIDER" });
   }
   if (productionProviderAllowed && providerMode === "mock") {
-    violations.push({
-      file: envExample,
-      message: "MOCK_PROVIDER_CANNOT_BE_MARKED_PRODUCTION_ALLOWED",
-    });
+    violations.push({ file: envExample, message: "MOCK_PROVIDER_CANNOT_BE_MARKED_PRODUCTION_ALLOWED" });
   }
   if (mode === "production" && providerMode === "mock") {
     violations.push({ file: envExample, message: "PRODUCTION_MOCK_PROVIDER_FORBIDDEN" });
