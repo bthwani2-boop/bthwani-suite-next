@@ -242,7 +242,7 @@ export function Jrn029OperationalPolicySection() {
       setError(null);
       const response = await evaluateDshOperationalPolicy({
         zoneId: selectedZoneId,
-        serviceAreaCode: selectedZone?.cityCode,
+        ...(selectedZone?.cityCode ? { serviceAreaCode: selectedZone.cityCode } : {}),
         fulfillmentMode: evaluationMode,
         slaCategory: form.slaCategory,
         activeOrders: integer(activeOrders, "الطلبات الحالية", 0, 1_000_000),

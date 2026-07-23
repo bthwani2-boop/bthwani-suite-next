@@ -479,8 +479,8 @@ export function CatalogDashboardScreen() {
       const firstTab = group.subTabs.find((stId) => {
         const tabDef = TABS.find((t) => t.id === stId);
         return tabDef && !tabDef.disabled;
-      }) || group.subTabs[0];
-      setActiveTab(firstTab);
+      }) ?? group.subTabs[0];
+      if (firstTab) setActiveTab(firstTab);
     }
   };
 
