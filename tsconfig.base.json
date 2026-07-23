@@ -67,6 +67,9 @@
       "expo-secure-store": [
         "apps/app-field/runtime/node_modules/expo-secure-store"
       ],
+      "expo-constants": [
+        "apps/app-client/runtime/node_modules/expo-constants"
+      ],
       "@dsh-shared/*": [
         "services/dsh/frontend/shared/*"
       ]

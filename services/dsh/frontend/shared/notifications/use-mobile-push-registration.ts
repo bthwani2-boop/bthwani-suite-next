@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Linking, Platform } from "react-native";
+import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import { registerIdentityBeforeSessionEndHook } from "@bthwani/core-identity";
@@ -108,7 +109,14 @@ export function useDshMobilePushRegistration(
         const permissionGranted = await ensureNotificationPermission();
         if (!permissionGranted || !active) return;
 
-        const token = (await Notifications.getExpoPushTokenAsync()).data;
+        const projectId =
+          Constants.expoConfig?.extra?.eas?.projectId ||
+          Constants.easConfig?.projectId;
+        const token = (
+          await Notifications.getExpoPushTokenAsync(
+            projectId ? { projectId } : undefined,
+          )
+        ).data;
         const deviceId = await resolvePushDeviceId(appKey);
         if (!active) return;
 
