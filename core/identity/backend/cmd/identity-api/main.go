@@ -44,6 +44,13 @@ func main() {
 	if err := repository.BootstrapLocalPlatformActors(context.Background(), localBootstrap); err != nil {
 		log.Fatalf("[identity-api] local platform separation bootstrap: %v", err)
 	}
+	if err := repository.RepairLocalBootstrapTenant(
+		context.Background(),
+		localBootstrap,
+		envOr("BTHWANI_DEFAULT_TENANT_ID", "local-dsh"),
+	); err != nil {
+		log.Fatalf("[identity-api] local tenant repair: %v", err)
+	}
 
 	router := identityhttp.NewRouter(db, repository)
 	authTenantScopedRouter := identityhttp.SaaSAuthTenantBoundary(repository, router)
