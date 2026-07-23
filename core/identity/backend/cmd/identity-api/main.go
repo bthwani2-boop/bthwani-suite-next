@@ -47,12 +47,13 @@ func main() {
 
 	router := identityhttp.NewRouter(db, repository)
 	tenantScopedRouter := identityhttp.SaaSTenantBoundary(db, router)
+	otpScopedRouter := identityhttp.SaaSOtpBoundary(repository, tenantScopedRouter)
 	server := &http.Server{
 		Addr: ":" + port,
 		Handler: identityhttp.BrowserOriginGuard(
 			identityhttp.CorsMiddleware(
 				identityhttp.RequestContractMiddleware(
-					identityhttp.ActivationSafetyMiddleware(tenantScopedRouter),
+					identityhttp.ActivationSafetyMiddleware(otpScopedRouter),
 				),
 			),
 		),
