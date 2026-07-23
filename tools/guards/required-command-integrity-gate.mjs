@@ -13,10 +13,9 @@ const scripts = packageJson.scripts ?? {};
 
 const requiredFailClosedScripts = [
   "guard:markdown-governance",
-  "e2e:web:install",
-  "e2e:web:smoke",
-  "storybook:ui-kit:build",
-  "visual:ui-kit:smoke",
+  "web:runtime-contract:test",
+  "ui-kit:catalog:build",
+  "visual:ui-kit:contract",
   "performance:api:quick",
   "performance:bundle:size",
 ];
@@ -38,6 +37,30 @@ for (const scriptName of requiredFailClosedScripts) {
       scriptName,
       command,
       message: `FALSE_SUCCESS_WRAPPER: ${scriptName} must propagate tool failures instead of catching them`,
+    });
+  }
+  if (/\b(?:npx|pnpm\s+dlx)\b/.test(command)) {
+    violations.push({
+      file: packageFile,
+      scriptName,
+      command,
+      message: `DYNAMIC_TOOL_DOWNLOAD_FORBIDDEN: ${scriptName} must use repository-locked tools or repository-owned scripts`,
+    });
+  }
+}
+
+const expectedCommands = new Map([
+  ["web:runtime-contract:test", "node --test apps/control-panel/runtime/tests/*.test.mjs"],
+  ["ui-kit:catalog:build", "node tools/scripts/build-ui-kit-catalog.mjs"],
+  ["visual:ui-kit:contract", "node tools/guards/ui-kit-visual-contract-gate.mjs"],
+]);
+for (const [scriptName, expected] of expectedCommands) {
+  if (scripts[scriptName] !== expected) {
+    violations.push({
+      file: packageFile,
+      scriptName,
+      command: scripts[scriptName],
+      message: `GOVERNED_COMMAND_DRIFT: ${scriptName} must equal ${expected}`,
     });
   }
 }
@@ -68,6 +91,30 @@ for (const [scriptName, command] of Object.entries(scripts)) {
       scriptName,
       command,
       message: "DEPRECATED_DECISION_ALIAS: executable scripts must not convert a failed check into BLOCKED_NEEDS_RUNTIME text",
+    });
+  }
+  if (/\b(?:npx|pnpm\s+dlx)\b/.test(command)) {
+    violations.push({
+      file: packageFile,
+      scriptName,
+      command,
+      message: `UNPINNED_EXECUTION_FORBIDDEN: non-diagnostic command ${scriptName} may not download tools dynamically`,
+    });
+  }
+}
+
+for (const deprecated of [
+  "e2e:web:install",
+  "e2e:web:smoke",
+  "guard:a11y-runtime",
+  "storybook:ui-kit:build",
+  "visual:ui-kit:smoke",
+]) {
+  if (deprecated in scripts) {
+    violations.push({
+      file: packageFile,
+      scriptName: deprecated,
+      message: `DEPRECATED_UNLOCKED_COMMAND_PRESENT: ${deprecated} must not remain after deterministic replacement`,
     });
   }
 }
