@@ -1,0 +1,155 @@
+name: One-time lianbassam security remediation v2
+
+on:
+  push:
+    branches: [lianbassam]
+    paths:
+      - ".github/workflows/security-remediation-lianbassam-v2.yml"
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: security-remediation-lianbassam-v2
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout current lianbassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: lianbassam
+          fetch-depth: 0
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.34.2
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.26.5"
+
+      - name: Apply dependency remediation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > .github/dependabot.yml <<'YAML'
+          version: 2
+          updates:
+            - package-ecosystem: "npm"
+              directory: "/"
+              target-branch: "lianbassam"
+              schedule: { interval: "weekly" }
+              open-pull-requests-limit: 10
+              labels: ["dependencies", "gate:ci-required"]
+              commit-message: { prefix: "chore(deps)" }
+              groups:
+                production-dependencies: { dependency-type: "production" }
+                development-dependencies: { dependency-type: "development" }
+            - package-ecosystem: "gomod"
+              directory: "/services/wlt/backend"
+              target-branch: "lianbassam"
+              schedule: { interval: "weekly" }
+              open-pull-requests-limit: 5
+              labels: ["dependencies", "gate:ci-required"]
+              commit-message: { prefix: "chore(deps)" }
+            - package-ecosystem: "gomod"
+              directory: "/services/dsh/backend"
+              target-branch: "lianbassam"
+              schedule: { interval: "weekly" }
+              open-pull-requests-limit: 5
+              labels: ["dependencies", "gate:ci-required"]
+              commit-message: { prefix: "chore(deps)" }
+            - package-ecosystem: "gomod"
+              directory: "/core/identity/backend"
+              target-branch: "lianbassam"
+              schedule: { interval: "weekly" }
+              open-pull-requests-limit: 5
+              labels: ["dependencies", "gate:ci-required"]
+              commit-message: { prefix: "chore(deps)" }
+            - package-ecosystem: "gomod"
+              directory: "/core/workforce/backend"
+              target-branch: "lianbassam"
+              schedule: { interval: "weekly" }
+              open-pull-requests-limit: 5
+              labels: ["dependencies", "gate:ci-required"]
+              commit-message: { prefix: "chore(deps)" }
+            - package-ecosystem: "gomod"
+              directory: "/core/platform-control/backend"
+              target-branch: "lianbassam"
+              schedule: { interval: "weekly" }
+              open-pull-requests-limit: 5
+              labels: ["dependencies", "gate:ci-required"]
+              commit-message: { prefix: "chore(deps)" }
+            - package-ecosystem: "gomod"
+              directory: "/core/providers/backend"
+              target-branch: "lianbassam"
+              schedule: { interval: "weekly" }
+              open-pull-requests-limit: 5
+              labels: ["dependencies", "gate:ci-required"]
+              commit-message: { prefix: "chore(deps)" }
+            - package-ecosystem: "github-actions"
+              directory: "/"
+              target-branch: "lianbassam"
+              schedule: { interval: "weekly" }
+              open-pull-requests-limit: 5
+              labels: ["dependencies", "gate:ci-required"]
+              commit-message: { prefix: "chore(deps)" }
+          YAML
+
+          pnpm --dir apps/control-panel/runtime add next@16.2.11 --save-exact
+          pnpm --dir services/dsh add next@16.2.11 --save-dev --save-exact
+          pnpm install --lockfile-only
+          pnpm audit --fix || true
+          pnpm install --lockfile-only
+
+          while IFS= read -r module_file; do
+            module_dir="$(dirname "${module_file}")"
+            pushd "${module_dir}" >/dev/null
+            if grep -q 'github.com/lib/pq' go.mod; then
+              go get github.com/lib/pq@v1.12.3
+            fi
+            if grep -q 'golang.org/x/crypto' go.mod; then
+              go get golang.org/x/crypto@v0.54.0
+            fi
+            go mod tidy
+            popd >/dev/null
+          done < <(find core services -path '*/backend/go.mod' -type f | sort)
+
+          mkdir -p governance/evidence/security
+          pnpm audit --json > governance/evidence/security/pnpm-audit-lianbassam.json || true
+          cat > governance/evidence/security/lianbassam-remediation.md <<'MD'
+          # lianbassam security remediation
+
+          - Next.js updated to 16.2.11.
+          - github.com/lib/pq updated to v1.12.3 wherever declared.
+          - golang.org/x/crypto updated to v0.54.0 wherever declared.
+          - Dependabot coverage expanded to all known Node, Go, and Actions ecosystems and targeted at lianbassam.
+          - No merge or write to master was performed.
+          MD
+
+      - name: Commit remediation to lianbassam
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/security-remediation-lianbassam.yml
+          rm -f .github/workflows/security-remediation-lianbassam-v2.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(security): remediate lianbassam dependency vulnerabilities"
+          git pull --rebase origin lianbassam
+          git push origin HEAD:lianbassam
