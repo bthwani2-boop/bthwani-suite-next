@@ -31,18 +31,19 @@ jobs:
               raise RuntimeError('FINALIZER_PAYLOAD_NOT_FOUND')
           Path('/tmp/finalize.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
           PY
-          if ! python3 /tmp/finalize.py >/tmp/finalizer.out 2>/tmp/finalizer.err; then
-            tail -n 1 /tmp/finalizer.err | tr '\n' ' ' | cut -c1-130 >/tmp/finalizer.status
+          mkdir -p artifacts/mobile-closure-diagnostic
+          if ! python3 /tmp/finalize.py >artifacts/mobile-closure-diagnostic/finalizer.out 2>artifacts/mobile-closure-diagnostic/finalizer.err; then
+            tail -n 1 artifacts/mobile-closure-diagnostic/finalizer.err | tr '\n' ' ' | cut -c1-130 >/tmp/finalizer.status
             exit 1
           fi
-          printf '%s\n' 'FINALIZER_SUCCEEDED' >/tmp/finalizer.err
+          printf '%s\n' 'FINALIZER_SUCCEEDED' >artifacts/mobile-closure-diagnostic/finalizer.err
           printf '%s' 'FINALIZER_SUCCEEDED' >/tmp/finalizer.status
       - name: Upload transient diagnostic
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: mobile-closure-finalizer-${{ github.sha }}
-          path: /tmp/finalizer.err
+          path: artifacts/mobile-closure-diagnostic
           if-no-files-found: error
           retention-days: 1
       - name: Publish diagnostic result
