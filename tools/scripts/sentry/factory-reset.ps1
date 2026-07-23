@@ -12,6 +12,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "SentryReset.Common.ps1")
 . (Join-Path $PSScriptRoot "NativeProcess.Fixed.ps1")
+. (Join-Path $PSScriptRoot "EasSync.Fast.ps1")
 
 try {
     Write-Stage "BTHWANI SENTRY FACTORY RESET"
@@ -28,7 +29,7 @@ try {
     Assert-Command -Name "pwsh"
 
     Write-Warning "ALL Sentry projects in '$Organization' will be deleted and recreated."
-    Write-Warning "Only Sentry-related EAS variables are deleted; unrelated EAS data remains unchanged."
+    Write-Warning "Only Sentry-related EAS variables are replaced; unrelated EAS data remains unchanged."
     Write-Host "Starting in 8 seconds. Press Ctrl+C to cancel."
     Start-Sleep -Seconds 8
 
@@ -79,7 +80,7 @@ try {
     Write-Host "The OAuth token was not written to the repository or mobile.env."
 
     if (-not $SkipEas) {
-        Write-Stage "DELETE AND RECREATE ALL SENTRY VARIABLES IN EAS"
+        Write-Stage "FAST REPLACE OF SENTRY VARIABLES IN EAS"
         $mobileProjects = @($createdProjects | Where-Object { $null -ne $_.AppKey })
         Ensure-EasAuthentication -WorkingDirectory (Join-Path $RepoRoot "apps\app-client\runtime")
         Reset-EasSentryVariables `
