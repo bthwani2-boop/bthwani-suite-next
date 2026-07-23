@@ -55,6 +55,7 @@ requireText(databaseReadme, "production", "DSH database README");
 requireText(databaseReadme, "WLT", "DSH database README");
 
 const runnerPath = "services/dsh/database/scripts/invoke-dsh-database.ps1";
+const runnerVerificationPath = "services/dsh/database/scripts/test-dsh-migration-runner.ps1";
 const serviceRunnerPath = "database/scripts/invoke-dsh-database.ps1";
 const runner = read(runnerPath);
 requireText(runner, "runtime_schema_migrations", runnerPath);
@@ -65,6 +66,11 @@ requireText(runner, "AllowLocalSeeds", runnerPath);
 requireText(runner, "CREATE INDEX CONCURRENTLY", runnerPath);
 requireText(runner, "Set-StrictMode", runnerPath);
 requireText(runner, "Ensure-DockerDshPostgres", runnerPath);
+
+const runnerVerification = read(runnerVerificationPath);
+requireText(runnerVerification, "checksum drift", runnerVerificationPath);
+requireText(runnerVerification, "dsh_ci_atomicity_probe", runnerVerificationPath);
+requireText(runnerVerification, "Atomic migration rollback", runnerVerificationPath);
 
 const migrations = listSql("services/dsh/database/migrations");
 if (migrations.length === 0) {
@@ -149,13 +155,16 @@ if (rootPackage) {
 
 const workflow = read(".github/workflows/dsh-database.yml");
 requireText(workflow, runnerPath, "DSH database workflow");
+requireText(workflow, runnerVerificationPath, "DSH database workflow runner verification");
 requireText(workflow, '"package.json"', "DSH database workflow path routing");
 requireText(workflow, "Apply canonical DSH migrations", "DSH database workflow");
 requireText(workflow, "Re-run canonical DSH migrations", "DSH database workflow");
+requireText(workflow, "Verify DSH migration runner failure contracts", "DSH database workflow");
 requireText(workflow, "Apply DSH local seeds twice", "DSH database workflow");
 requireText(workflow, "Run DSH schema database contracts", "DSH database workflow");
 requireText(workflow, "Run DSH seed database contracts", "DSH database workflow");
 requireText(workflow, "bthwani/dsh-database", "DSH database workflow status context");
+requireText(workflow, "target_url", "DSH database workflow status target");
 
 if (failures.length > 0) {
   console.error("DSH database contract: FAIL");
