@@ -4,7 +4,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 const require = createRequire(import.meta.url);
-const { resolveSentryEnvironment, withSentryEnvironmentForApp } = require("../mobile/sentry-env.js");
+const {
+  appEnvSuffix,
+  resolveSentryEnvironment,
+  withSentryEnvironmentForApp,
+} = require("../mobile/sentry-env.js");
 
 const root = process.cwd();
 const manifest = JSON.parse(
@@ -56,6 +60,29 @@ function run(command, args, cwd = root, env = process.env) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+function optionalEnvironmentValue(value) {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function withMobileBuildEnvironmentForApp(appKey, environment = process.env) {
+  const next = withSentryEnvironmentForApp(appKey, environment);
+  const suffix = appEnvSuffix(appKey);
+  for (const name of [
+    "GOOGLE_SERVICES_JSON",
+    "GOOGLE_MAPS_ANDROID_API_KEY",
+    "GOOGLE_MAPS_IOS_API_KEY",
+  ]) {
+    const scoped = optionalEnvironmentValue(environment[`${name}_${suffix}`]);
+    const common = optionalEnvironmentValue(environment[name]);
+    const value = scoped ?? common;
+    if (value) next[name] = value;
+    else delete next[name];
+  }
+  return next;
+}
+
 run(process.execPath, ["tools/scripts/sync-mobile-apps.mjs", "--check"]);
 
 if (all && profile !== "development") {
@@ -73,7 +100,7 @@ if (all && profile !== "development") {
 
 for (const key of targets) {
   const appDir = path.join(root, "apps", key, "runtime");
-  const appEnvironment = withSentryEnvironmentForApp(key, process.env);
+  const appEnvironment = withMobileBuildEnvironmentForApp(key, process.env);
 
   run(process.execPath, [
     "tools/scripts/verify-mobile-sentry-env.mjs",
