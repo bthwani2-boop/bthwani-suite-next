@@ -32,7 +32,7 @@ function jsonNotFound(code: string, message: string): Response {
 
 async function handle(request: NextRequest, context: RouteContext) {
   const { service, path } = await context.params;
-  if (!(service in allowedPathPrefixes)) {
+  if (!Object.hasOwn(allowedPathPrefixes, service)) {
     return jsonNotFound("BFF_SERVICE_NOT_ALLOWED", "Unknown BFF service.");
   }
 
