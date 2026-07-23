@@ -1,0 +1,114 @@
+name: One-time lianbassam valid js-yaml remediation
+
+on:
+  push:
+    branches: [lianbassam]
+    paths:
+      - ".github/workflows/security-remediation-lianbassam-v5.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout lianbassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: lianbassam
+          fetch-depth: 1
+          show-progress: false
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.34.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Apply valid exact-version overrides
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p governance/evidence/security
+          cp pnpm-workspace.yaml /tmp/pnpm-workspace.yaml.before
+          cp pnpm-lock.yaml /tmp/pnpm-lock.yaml.before
+
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('pnpm-workspace.yaml')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          remove_fragments = (
+              'js-yaml@>=4.0.0 <4.3.0:',
+              'js-yaml@>=4.0.0 <=4.1.1:',
+              'js-yaml@>=5.0.0 <=5.2.0:',
+              "'@eslint/eslintrc>js-yaml':",
+              "'@yarnpkg/parsers>js-yaml':",
+              "'eslint>@eslint/eslintrc>js-yaml':",
+              "'nx>@yarnpkg/parsers>js-yaml':",
+              'js-yaml@4.2.0:',
+              'js-yaml@5.2.0:',
+          )
+          filtered = [line for line in lines if not any(fragment in line for fragment in remove_fragments)]
+          output = []
+          inserted = False
+          for line in filtered:
+              output.append("  next: 16.2.11" if line.strip().startswith('next:') else line)
+              if 'js-yaml@>=3.0.0 <3.15.0:' in line:
+                  output.extend([
+                      "  js-yaml@4.2.0: 4.3.0",
+                      "  js-yaml@5.2.0: 5.2.1",
+                  ])
+                  inserted = True
+          if not inserted:
+              raise SystemExit('Unable to locate js-yaml insertion point')
+          path.write_text('\n'.join(output) + '\n', encoding='utf-8')
+          PY
+
+          set +e
+          pnpm install --lockfile-only --reporter=append-only > /tmp/pnpm-remediation-install.log 2>&1
+          install_code=$?
+          set -e
+
+          if [[ ${install_code} -ne 0 ]]; then
+            cp /tmp/pnpm-workspace.yaml.before pnpm-workspace.yaml
+            cp /tmp/pnpm-lock.yaml.before pnpm-lock.yaml
+            {
+              echo "# PNPM remediation diagnostic"
+              echo
+              echo "Install exit code: ${install_code}"
+              echo
+              echo '```text'
+              tail -n 100 /tmp/pnpm-remediation-install.log
+              echo '```'
+            } > governance/evidence/security/pnpm-remediation-diagnostic.md
+          else
+            pnpm audit --json > governance/evidence/security/pnpm-audit-lianbassam.json || true
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('governance/evidence/security/pnpm-audit-lianbassam.json').read_text(encoding='utf-8'))
+          counts = report.get('metadata', {}).get('vulnerabilities', {})
+          Path('governance/evidence/security/pnpm-remediation-diagnostic.md').write_text(
+              '# PNPM remediation diagnostic\n\nInstall succeeded.\n\nVulnerabilities: ' + json.dumps(counts, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+          fi
+
+      - name: Commit result
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/security-remediation-lianbassam-v5.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(security): apply valid js-yaml overrides"
+          git push origin HEAD:lianbassam
