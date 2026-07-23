@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -32,6 +33,14 @@ func TestRegisterLegacyContractCompatibilityRoutesRegistersExactMethods(t *testi
 		{method: http.MethodPost, path: "/dsh/operator/admin/captains/captain-1/credential"},
 	}
 
+	allowedMethods := make(map[string]map[string]struct{})
+	for _, test := range tests {
+		if allowedMethods[test.path] == nil {
+			allowedMethods[test.path] = make(map[string]struct{})
+		}
+		allowedMethods[test.path][test.method] = struct{}{}
+	}
+
 	for _, test := range tests {
 		t.Run(test.method+" "+test.path, func(t *testing.T) {
 			req := httptest.NewRequest(test.method, test.path, nil)
@@ -39,15 +48,39 @@ func TestRegisterLegacyContractCompatibilityRoutesRegistersExactMethods(t *testi
 			if pattern == "" {
 				t.Fatalf("expected route to be registered: %s %s", test.method, test.path)
 			}
+		})
+	}
 
-			wrongMethod := http.MethodGet
-			if test.method == http.MethodGet {
-				wrongMethod = http.MethodPost
+	candidateMethods := []string{
+		http.MethodGet,
+		http.MethodPost,
+		http.MethodPut,
+		http.MethodPatch,
+		http.MethodDelete,
+	}
+	paths := make([]string, 0, len(allowedMethods))
+	for path := range allowedMethods {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	for _, path := range paths {
+		wrongMethod := ""
+		for _, candidate := range candidateMethods {
+			if _, allowed := allowedMethods[path][candidate]; !allowed {
+				wrongMethod = candidate
+				break
 			}
-			wrongReq := httptest.NewRequest(wrongMethod, test.path, nil)
-			_, wrongPattern := mux.Handler(wrongReq)
-			if wrongPattern != "" {
-				t.Fatalf("unexpected registration for wrong method %s on %s: %s", wrongMethod, test.path, wrongPattern)
+		}
+		if wrongMethod == "" {
+			t.Fatalf("test configuration has no unsupported method for %s", path)
+		}
+
+		t.Run("reject "+wrongMethod+" "+path, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			mux.ServeHTTP(recorder, httptest.NewRequest(wrongMethod, path, nil))
+			if recorder.Code != http.StatusMethodNotAllowed {
+				t.Fatalf("expected status %d for unsupported method %s on %s, got %d", http.StatusMethodNotAllowed, wrongMethod, path, recorder.Code)
 			}
 		})
 	}
