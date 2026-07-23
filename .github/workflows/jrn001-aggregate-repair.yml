@@ -1,0 +1,471 @@
+name: One-time JRN-001 aggregate repair
+
+on:
+  push:
+    branches: [lianbassam]
+    paths:
+      - ".github/workflows/jrn001-aggregate-repair.yml"
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: jrn001-aggregate-repair-lianbassam
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout latest lianbassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: lianbassam
+          fetch-depth: 0
+
+      - name: Publish running status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=pending \
+            -f context='bthwani/jrn001-aggregate-repair' \
+            -f description='JRN-001 aggregate repair is running' \
+            -f target_url="${RUN_URL}"
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.26.5"
+          cache: false
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+
+      - name: Setup pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Apply governed JRN-001 repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one replacement, found {count}")
+              file.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          replace_once(
+              "services/wlt/backend/internal/http/server.go",
+              '''\t// The historical partner URL is retained only as a typed compatibility
+\t// adapter. It reaches the same encryption, ownership, audit and one-active-
+\t// destination invariants as the current multi-actor routes.
+\tmux.HandleFunc("PUT /wlt/payout-destinations/{partnerId}", gate(serviceAuth(payout.HandleUpsertPartnerPayoutDestinationJRN037(db))))
+\tmux.HandleFunc("GET /wlt/payout-destinations/{partnerId}", readGate(payout.HandleGetPartnerPayoutDestinationJRN037(db)))
+\tmux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePartnerPayoutDestinationJRN037(db))))''',
+              '''\t// JRN-001 retains the canonical partner-specific contract because DSH
+\t// depends on its exact masked response and durable Idempotency-Key replay.
+\t// JRN-037 typed owner routes remain below for partner/captain/field finance.
+\tmux.HandleFunc("PUT /wlt/payout-destinations/{partnerId}", gate(serviceAuth(payout.HandleUpsertPayoutDestinationGoverned(db))))
+\tmux.HandleFunc("GET /wlt/payout-destinations/{partnerId}", readGate(payout.HandleGetPayoutDestination(db)))
+\tmux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePayoutDestination(db))))''',
+          )
+
+          gate_path = Path("tools/guards/jrn-037-payout-destination-gate.mjs")
+          gate = gate_path.read_text(encoding="utf-8")
+          old = '''requireIncludes("services/wlt/backend/internal/http/server.go", [
+  "HandleUpsertPartnerPayoutDestinationJRN037",
+  "HandleGetPartnerPayoutDestinationJRN037",
+  "HandleDeactivatePartnerPayoutDestinationJRN037",
+  "/wlt/payout-destinations/{actorType}/{actorId}",'''
+          new = '''requireIncludes("services/wlt/backend/internal/http/server.go", [
+  "HandleUpsertPayoutDestinationGoverned",
+  "HandleGetPayoutDestination",
+  "HandleDeactivatePayoutDestination",
+  "/wlt/payout-destinations/{actorType}/{actorId}",'''
+          if gate.count(old) != 1:
+              raise SystemExit("JRN-037 server expectation block drifted")
+          gate_path.write_text(gate.replace(old, new, 1), encoding="utf-8")
+
+          controller_path = Path("services/dsh/frontend/shared/partner/use-partner-admin-controller.tsx")
+          controller = controller_path.read_text(encoding="utf-8")
+          old = '''  const detailViewModel = detailState.kind === "success" ? buildPartnerDetailViewModel(detailState.partner) : null;
+  return { detailState, detailViewModel, mutationState, reload: load, transition };
+}'''
+          new = '''  const detailViewModel = detailState.kind === "success" ? buildPartnerDetailViewModel(detailState.partner) : null;
+  const resetMutation = useCallback(() => setMutationState({ kind: "idle" }), []);
+  return { detailState, detailViewModel, mutationState, reload: load, transition, resetMutation };
+}'''
+          if controller.count(old) != 1:
+              raise SystemExit("partner detail controller return block drifted")
+          controller_path.write_text(controller.replace(old, new, 1), encoding="utf-8")
+
+          detail_path = Path("services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx")
+          detail = detail_path.read_text(encoding="utf-8")
+          old = '''  const confirmStoreLink = async () => {
+    const storeId = storeIdToLink.trim();
+    if (!storeId) return;
+    const succeeded = await stores.linkStore(storeId);
+    if (succeeded) setStoreIdToLink("");
+  };
+
+  return ('''
+          new = '''  const confirmStoreLink = async () => {
+    const storeId = storeIdToLink.trim();
+    if (!storeId) return;
+    const succeeded = await stores.linkStore(storeId);
+    if (succeeded) setStoreIdToLink("");
+  };
+
+  const reloadAfterConflict = async () => {
+    const loaded = await detail.reload();
+    if (loaded) detail.resetMutation();
+  };
+
+  return ('''
+          if detail.count(old) != 1:
+              raise SystemExit("partner detail helper insertion point drifted")
+          detail = detail.replace(old, new, 1)
+          old = '<CpRetryButton onClick={() => void detail.reload()}>تحميل أحدث نسخة</CpRetryButton>'
+          new = '<CpRetryButton onClick={() => void reloadAfterConflict()}>تحميل أحدث نسخة</CpRetryButton>'
+          if detail.count(old) != 1:
+              raise SystemExit("partner conflict retry button drifted")
+          detail_path.write_text(detail.replace(old, new, 1), encoding="utf-8")
+          PY
+
+          cat > services/dsh/tests/jrn-001-fs-02-rbac.test.mjs <<'EOF'
+          import fs from "node:fs";
+          import assert from "node:assert/strict";
+
+          const read = (path) => fs.readFileSync(path, "utf8");
+          const routes = read("services/dsh/backend/internal/http/partner_lifecycle_routes.go");
+          const wrappers = read("services/dsh/backend/internal/http/partner_tenant_boundary.go");
+          const protectedStore = read("services/dsh/backend/internal/http/protected_store.go");
+          const integrity = read("services/dsh/backend/internal/http/partner_onboarding_integrity.go");
+
+          const governedBindings = [
+            ["GET /dsh/operator/partners/{partnerId}", "handleGovernedGetPartner"],
+            ["POST /dsh/operator/partners/{partnerId}/transition", "handleGovernedActivationTransition"],
+            ["POST /dsh/operator/partners/{partnerId}/stores", "handleTenantLinkPartnerStore"],
+            ["GET /dsh/field/partners/{partnerId}", "handleGovernedFieldGetPartnerDraft"],
+            ["PATCH /dsh/field/partners/{partnerId}", "handleGovernedFieldUpdatePartnerDraft"],
+            ["POST /dsh/field/partners/{partnerId}/visits", "handleGovernedFieldCreatePartnerVisit"],
+            ["POST /dsh/field/partners/{partnerId}/submit", "handleGovernedFieldSubmitPartnerDraft"],
+          ];
+
+          for (const [path, handler] of governedBindings) {
+            assert.ok(
+              routes.includes(`mux.HandleFunc("${path}", protected.withTenantPartnerResource(protected.${handler}))`),
+              `${path} is not tenant-wrapped and bound to ${handler}`,
+            );
+          }
+
+          for (const path of ["GET /dsh/operator/partners", "POST /dsh/operator/partners", "GET /dsh/field/partners", "POST /dsh/field/partners/drafts"]) {
+            assert.ok(routes.includes(`mux.HandleFunc("${path}", protected.withTrustedPartnerTenant(`), `${path} lacks trusted tenant context`);
+          }
+
+          assert.match(wrappers, /identity\.TenantID/);
+          assert.match(wrappers, /TENANT_CONTEXT_REQUIRED/);
+          assert.match(wrappers, /EnsureTenantPartner/);
+          assert.doesNotMatch(wrappers, /X-Tenant-ID|URL\.Query\(\)\.Get\(["']tenant/i);
+          assert.match(protectedStore, /requirePermission/);
+          assert.match(integrity, /PartnersPermissionRead/);
+          assert.match(integrity, /PartnersPermissionManage/);
+          assert.match(integrity, /PartnersPermissionActivate/);
+
+          console.log("JRN-001 FS-02 RBAC, trusted tenant context, and governed route scope verified");
+          EOF
+
+          cat > services/dsh/tests/jrn-001-fs-07-backend.test.mjs <<'EOF'
+          import fs from "node:fs";
+          import assert from "node:assert/strict";
+
+          const read = (path) => fs.readFileSync(path, "utf8");
+          const routes = read("services/dsh/backend/internal/http/partner_lifecycle_routes.go");
+          const tenantBoundary = read("services/dsh/backend/internal/http/partner_tenant_boundary.go");
+          const wrappers = read("services/dsh/backend/internal/http/partner_onboarding_integrity.go");
+          const protectedStore = read("services/dsh/backend/internal/http/protected_store.go");
+          const handlers = read("services/dsh/backend/internal/partner/onboarding_integrity_handlers.go");
+          const repository = read("services/dsh/backend/internal/partner/onboarding_integrity_repository.go");
+          const tenantRepository = read("services/dsh/backend/internal/partner/tenant_repository.go");
+          const statePolicy = read("services/dsh/backend/internal/partner/state_policy.go");
+          const wltClient = read("services/dsh/backend/internal/wlt/payout_destination.go");
+          const wltServer = read("services/wlt/backend/internal/http/server.go");
+
+          const governedBindings = new Map([
+            ["GET /dsh/operator/partners/{partnerId}", "handleGovernedGetPartner"],
+            ["POST /dsh/operator/partners/{partnerId}/transition", "handleGovernedActivationTransition"],
+            ["POST /dsh/operator/partners/{partnerId}/stores", "handleTenantLinkPartnerStore"],
+            ["GET /dsh/field/partners/{partnerId}", "handleGovernedFieldGetPartnerDraft"],
+            ["PATCH /dsh/field/partners/{partnerId}", "handleGovernedFieldUpdatePartnerDraft"],
+            ["POST /dsh/field/partners/{partnerId}/visits", "handleGovernedFieldCreatePartnerVisit"],
+            ["POST /dsh/field/partners/{partnerId}/submit", "handleGovernedFieldSubmitPartnerDraft"],
+          ]);
+          for (const [path, handler] of governedBindings) {
+            assert.ok(
+              routes.includes(`mux.HandleFunc("${path}", protected.withTenantPartnerResource(protected.${handler}))`),
+              `${path} is not tenant-wrapped and bound to ${handler}`,
+            );
+          }
+
+          for (const legacyHandler of [
+            "protected.handleGetPartner)",
+            "protected.handleActivationTransition)",
+            "protected.handleLinkPartnerStore)",
+            "protected.handleFieldGetPartnerDraft)",
+            "protected.handleFieldUpdatePartnerDraft)",
+            "protected.handleFieldCreatePartnerVisit)",
+            "protected.handleFieldSubmitPartnerDraft)",
+          ]) {
+            assert.ok(!routes.includes(legacyHandler), `legacy route binding remains: ${legacyHandler}`);
+          }
+
+          assert.match(tenantBoundary, /withTrustedPartnerTenant/);
+          assert.match(tenantBoundary, /withTenantPartnerResource/);
+          assert.match(tenantBoundary, /TENANT_CONTEXT_REQUIRED/);
+          assert.match(tenantRepository, /ListPartnersForTenant/);
+          assert.match(tenantRepository, /LinkPartnerStoreForTenant/);
+          assert.match(wrappers, /PartnersPermissionRead/);
+          assert.match(wrappers, /PartnersPermissionManage/);
+          assert.match(wrappers, /PartnersPermissionActivate/);
+          assert.match(protectedStore, /requireFieldOwnsPartner|servePartnerHandler/);
+          assert.match(handlers, /http\.StatusPreconditionRequired/);
+          assert.match(handlers, /EXPECTED_VERSION_REQUIRED/);
+          assert.match(handlers, /VERSION_CONFLICT/);
+          assert.match(handlers, /IDEMPOTENCY_KEY_REUSED/);
+          assert.match(handlers, /STORE_OWNERSHIP_CONFLICT/);
+          assert.match(handlers, /PARTNER_READINESS_GATES_FAILED/);
+          assert.match(handlers, /WLT_PAYOUT_HANDOFF_FAILED/);
+          assert.match(repository, /pg_advisory_xact_lock/);
+          assert.match(repository, /FOR UPDATE/);
+          assert.match(repository, /request_hash/);
+          assert.match(repository, /WHERE id = \$1 AND version = \$3/);
+          assert.match(repository, /ErrStoreOwnershipConflict/);
+          assert.match(repository, /validateTransitionReadinessTx/);
+          assert.match(statePolicy, /AllowedActionsForSurface/);
+          assert.match(statePolicy, /AllowedTransitionsForSurface/);
+          assert.match(wltClient, /setRequiredMutationHeaders/);
+          assert.match(wltServer, /HandleUpsertPayoutDestinationGoverned/);
+
+          console.log("JRN-001 FS-07 tenant-governed backend routes, validation, authorization, concurrency, and idempotency verified");
+          EOF
+
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("services/dsh/tests/jrn-001-fs-10-support-mutation.test.mjs")
+          text = path.read_text(encoding="utf-8")
+          old = 'assert.match(controller, /addTicketMessage\\(ticketId, input, attempt\\.context\\)/);'
+          new = 'assert.match(controller, /addTicketMessage\\(ticketId, normalizedInput, attempt\\.context\\)/);'
+          if text.count(old) != 1:
+              raise SystemExit("FS-10 support expectation drifted")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
+
+          cat > .github/workflows/jrn-001-fs-17-comprehensive-verification.yml <<'EOF'
+          name: JRN-001 FS-17 comprehensive verification
+
+          on:
+            push:
+              branches: [lianbassam]
+              paths:
+                - "services/dsh/**"
+                - "services/wlt/**"
+                - "core/identity/**"
+                - "apps/app-client/**"
+                - "apps/app-field/**"
+                - "apps/app-partner/**"
+                - "apps/control-panel/**"
+                - "governance/product/contracts/jrn-001-*.json"
+                - "tools/guards/partner/jrn-001-*.mjs"
+                - "tools/guards/wlt-financial-boundary-gate.mjs"
+                - ".github/workflows/jrn-001-fs-17-comprehensive-verification.yml"
+            workflow_dispatch:
+
+          permissions:
+            contents: read
+
+          concurrency:
+            group: jrn-001-fs-17-${{ github.ref }}
+            cancel-in-progress: true
+
+          jobs:
+            static-and-surfaces:
+              runs-on: ubuntu-24.04
+              timeout-minutes: 90
+              steps:
+                - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+                - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+                  with:
+                    go-version: "1.26.5"
+                    cache: false
+                - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+                  with:
+                    node-version: "24.17.0"
+                - name: Install workspace dependencies
+                  run: |
+                    corepack enable
+                    corepack prepare pnpm@10.34.0 --activate
+                    pnpm install --frozen-lockfile
+                - name: Verify all JRN-001 slice contracts
+                  run: node --test services/dsh/tests/jrn-001-*.test.mjs
+                - name: Verify all JRN-001 partner guards
+                  shell: bash
+                  run: |
+                    for guard in tools/guards/partner/jrn-001-*.mjs; do
+                      node "$guard"
+                    done
+                - name: Verify WLT ownership boundaries
+                  run: |
+                    node tools/guards/wlt-financial-boundary-gate.mjs
+                    node tools/guards/jrn-037-payout-destination-gate.mjs
+                - name: Verify DSH backend
+                  working-directory: services/dsh/backend
+                  run: go test ./internal/partner ./internal/partnerwltoutbox ./internal/store ./internal/http -count=1
+                - name: Verify WLT backend
+                  working-directory: services/wlt/backend
+                  run: go test ./internal/payout ./internal/http -count=1
+                - name: Verify Identity backend
+                  working-directory: core/identity/backend
+                  run: go test ./... -count=1
+                - name: Typecheck app-client
+                  run: pnpm --dir apps/app-client/runtime typecheck
+                - name: Typecheck app-field
+                  run: pnpm --dir apps/app-field/runtime typecheck
+                - name: Typecheck app-partner
+                  run: pnpm --dir apps/app-partner/runtime typecheck
+                - name: Typecheck control-panel
+                  run: pnpm --dir apps/control-panel/runtime typecheck
+
+            database-isolation:
+              runs-on: ubuntu-24.04
+              timeout-minutes: 60
+              steps:
+                - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+                - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+                  with:
+                    go-version: "1.26.5"
+                    cache: false
+                - name: Start PostgreSQL
+                  shell: bash
+                  run: |
+                    docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml up -d postgres
+                    for attempt in {1..60}; do
+                      if docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml exec -T postgres pg_isready -U bthwani_runtime -d bthwani_runtime; then
+                        exit 0
+                      fi
+                      sleep 2
+                    done
+                    exit 1
+                - name: Apply DSH and WLT migrations
+                  shell: pwsh
+                  run: |
+                    ./infra/docker/scripts/invoke-runtime-database-migrations.ps1 -Service dsh -SourceCommitSha $env:GITHUB_SHA
+                    ./infra/docker/scripts/invoke-runtime-database-migrations.ps1 -Service wlt -SourceCommitSha $env:GITHUB_SHA
+                - name: Verify DSH tenant isolation in PostgreSQL
+                  working-directory: services/dsh/backend
+                  env:
+                    DSH_REQUIRE_DB_TESTS: "true"
+                    DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@127.0.0.1:55432/dsh_runtime?sslmode=disable
+                  run: go test ./internal/partner ./internal/http -count=1
+                - name: Verify WLT payout idempotency in PostgreSQL
+                  working-directory: services/wlt/backend
+                  env:
+                    WLT_REQUIRE_DB_TESTS: "true"
+                    DATABASE_URL: postgres://wlt_runtime:wlt_runtime_password@127.0.0.1:55432/wlt_runtime?sslmode=disable
+                    WLT_PAYOUT_ENCRYPTION_KEY: dev-only-payout-destination-encryption-key
+                  run: go test ./internal/payout -count=1
+                - name: PostgreSQL diagnostics
+                  if: failure()
+                  run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml logs postgres
+          EOF
+
+          rm -f .github/workflows/jrn001-contract-diagnostic.yml
+          rm -f .github/workflows/jrn001-tenant-isolation-verify.yml
+
+          gofmt -w \
+            services/wlt/backend/internal/http/server.go \
+            services/dsh/frontend/shared/partner/use-partner-admin-controller.tsx
+
+      - name: Verify repaired aggregate contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test \
+            services/dsh/tests/jrn-001-fs-01-product-truth.test.mjs \
+            services/dsh/tests/jrn-001-fs-02-rbac.test.mjs \
+            services/dsh/tests/jrn-001-fs-04-wlt-boundary.test.mjs \
+            services/dsh/tests/jrn-001-fs-06-contracts.test.mjs \
+            services/dsh/tests/jrn-001-fs-07-backend.test.mjs \
+            services/dsh/tests/jrn-001-fs-10-support-mutation.test.mjs \
+            services/dsh/tests/jrn-001-fs-11-visible-states.test.mjs \
+            services/dsh/tests/jrn-001-slice-verification-registry.test.mjs
+          node tools/guards/jrn-037-payout-destination-gate.mjs
+          node tools/guards/partner/jrn-001-security-privacy-gate.mjs
+
+      - name: Verify affected Go packages
+        shell: bash
+        run: |
+          (cd services/dsh/backend && go test ./internal/partner ./internal/http ./internal/store -count=1)
+          (cd services/wlt/backend && go test ./internal/payout ./internal/http -count=1)
+
+      - name: Verify control-panel types
+        run: pnpm --dir apps/control-panel/runtime typecheck
+
+      - name: Commit repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/jrn001-aggregate-repair.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(dsh): close JRN-001 aggregate verification drift"
+          git pull --rebase origin lianbassam
+          git push origin HEAD:lianbassam
+
+      - name: Publish success
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=success \
+            -f context='bthwani/jrn001-aggregate-repair' \
+            -f description='JRN-001 aggregate repair passed and was committed' \
+            -f target_url="${RUN_URL}"
+
+      - name: Publish failure
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=failure \
+            -f context='bthwani/jrn001-aggregate-repair' \
+            -f description='JRN-001 aggregate repair failed' \
+            -f target_url="${RUN_URL}"
