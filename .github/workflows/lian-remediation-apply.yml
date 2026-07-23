@@ -52,6 +52,34 @@ jobs:
         run: |
           set -euo pipefail
           {
+            python3 - <<'PY'
+          from pathlib import Path
+          path = Path("tools/scripts/lian-remediation-finalize.py")
+          text = path.read_text(encoding="utf-8")
+          old = '''for entry in guard_registry["entries"]:
+              if entry.get("id") == "a11y-runtime":
+                  entry["source_file"] = "tools/guards/a11y-runtime-gate.mjs"
+                  break
+          else:
+              raise RuntimeError("a11y-runtime registry entry is missing")
+          '''
+          new = '''a11y_entry = next((entry for entry in guard_registry["entries"] if entry.get("id") == "a11y-runtime"), None)
+          if a11y_entry is None:
+              guard_registry["entries"].append({
+                  "id": "a11y-runtime",
+                  "name": "Accessibility Runtime Gate",
+                  "script": "guard:a11y-runtime",
+                  "exit_level": "fail",
+                  "description": "Runs Playwright and axe runtime accessibility checks and propagates missing-runtime or test failure.",
+                  "source_file": "tools/guards/a11y-runtime-gate.mjs",
+              })
+          else:
+              a11y_entry["source_file"] = "tools/guards/a11y-runtime-gate.mjs"
+          '''
+          if old not in text:
+              raise RuntimeError("a11y registry bootstrap anchor missing")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
             python3 tools/scripts/lian-remediation-finalize.py
             python3 - <<'PY'
           from pathlib import Path
