@@ -1,0 +1,273 @@
+name: One-time lianbassam OSV and Trivy diagnostics v2
+
+on:
+  push:
+    branches: [lianbassam]
+    paths:
+      - ".github/workflows/security-scanners-lianbassam-v2.yml"
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: security-scanners-lianbassam-v2
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout current lianbassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: lianbassam
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Publish run locator
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=pending \
+            -f context='bthwani/security-scanners-v2' \
+            -f description='OSV and Trivy diagnostic scan is running' \
+            -f target_url="${RUN_URL}"
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.26.5"
+          cache: false
+
+      - name: Install pinned scanners
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.3.8
+          version="0.70.0"
+          archive="trivy_${version}_Linux-64bit.tar.gz"
+          base="https://github.com/aquasecurity/trivy/releases/download/v${version}"
+          curl --fail --silent --show-error --location --output "/tmp/${archive}" "${base}/${archive}"
+          curl --fail --silent --show-error --location --output /tmp/trivy-checksums.txt "${base}/trivy_${version}_checksums.txt"
+          (cd /tmp && grep " ${archive}$" trivy-checksums.txt | sha256sum --check --strict -)
+          tar -xzf "/tmp/${archive}" -C /tmp trivy
+          sudo install -m 0755 /tmp/trivy /usr/local/bin/trivy
+
+      - name: Run scanners and always produce sanitized diagnostics
+        id: scanners
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p governance/evidence/security
+
+          osv-scanner scan source --recursive --format=json . > /tmp/osv-report.json 2>/tmp/osv-stderr.log
+          osv_code=$?
+
+          trivy fs --config trivy.yaml --format json --output /tmp/trivy-report.json . > /tmp/trivy-stdout.log 2>/tmp/trivy-stderr.log
+          trivy_code=$?
+
+          OSV_CODE="${osv_code}" TRIVY_CODE="${trivy_code}" python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          parse_errors = []
+
+          def load_json(path, label):
+              p = Path(path)
+              if not p.exists():
+                  parse_errors.append(f'{label}: output file missing')
+                  return {}
+              raw = p.read_bytes()
+              if not raw.strip():
+                  parse_errors.append(f'{label}: output file empty')
+                  return {}
+              try:
+                  return json.loads(raw.decode('utf-8-sig'))
+              except Exception as exc:
+                  parse_errors.append(f'{label}: {type(exc).__name__}: {exc}')
+                  return {}
+
+          osv = load_json('/tmp/osv-report.json', 'osv')
+          trivy = load_json('/tmp/trivy-report.json', 'trivy')
+
+          osv_findings = []
+          results = osv.get('results', []) if isinstance(osv, dict) else []
+          for result in results or []:
+              if not isinstance(result, dict):
+                  continue
+              source = result.get('source') or {}
+              source_path = source.get('path') if isinstance(source, dict) else str(source)
+              for package in result.get('packages') or []:
+                  if not isinstance(package, dict):
+                      continue
+                  package_info = package.get('package') or {}
+                  if not isinstance(package_info, dict):
+                      package_info = {}
+                  for vulnerability in package.get('vulnerabilities') or []:
+                      if not isinstance(vulnerability, dict):
+                          continue
+                      osv_findings.append({
+                          'id': vulnerability.get('id'),
+                          'aliases': vulnerability.get('aliases') or [],
+                          'package': package_info.get('name'),
+                          'version': package_info.get('version'),
+                          'ecosystem': package_info.get('ecosystem'),
+                          'source_path': source_path,
+                      })
+
+          trivy_vulnerabilities = []
+          trivy_misconfigurations = []
+          trivy_secrets = []
+          results = trivy.get('Results', []) if isinstance(trivy, dict) else []
+          for result in results or []:
+              if not isinstance(result, dict):
+                  continue
+              target = result.get('Target')
+              for vulnerability in result.get('Vulnerabilities') or []:
+                  if not isinstance(vulnerability, dict):
+                      continue
+                  trivy_vulnerabilities.append({
+                      'target': target,
+                      'id': vulnerability.get('VulnerabilityID'),
+                      'package': vulnerability.get('PkgName'),
+                      'installed': vulnerability.get('InstalledVersion'),
+                      'fixed': vulnerability.get('FixedVersion'),
+                      'severity': vulnerability.get('Severity'),
+                      'title': vulnerability.get('Title'),
+                  })
+              for finding in result.get('Misconfigurations') or []:
+                  if not isinstance(finding, dict):
+                      continue
+                  trivy_misconfigurations.append({
+                      'target': target,
+                      'id': finding.get('ID'),
+                      'title': finding.get('Title'),
+                      'severity': finding.get('Severity'),
+                      'status': finding.get('Status'),
+                  })
+              for secret in result.get('Secrets') or []:
+                  if not isinstance(secret, dict):
+                      continue
+                  trivy_secrets.append({
+                      'target': target,
+                      'rule_id': secret.get('RuleID'),
+                      'category': secret.get('Category'),
+                      'severity': secret.get('Severity'),
+                      'start_line': secret.get('StartLine'),
+                      'end_line': secret.get('EndLine'),
+                  })
+
+          summary = {
+              'branch': 'lianbassam',
+              'master_merge_performed': False,
+              'tool_exit_codes': {
+                  'osv': int(os.environ.get('OSV_CODE', '255')),
+                  'trivy': int(os.environ.get('TRIVY_CODE', '255')),
+              },
+              'parse_errors': parse_errors,
+              'osv_findings': osv_findings,
+              'trivy_vulnerabilities': trivy_vulnerabilities,
+              'trivy_misconfigurations': trivy_misconfigurations,
+              'trivy_secrets': trivy_secrets,
+              'counts': {
+                  'osv': len(osv_findings),
+                  'trivy_vulnerabilities': len(trivy_vulnerabilities),
+                  'trivy_misconfigurations': len(trivy_misconfigurations),
+                  'trivy_secrets': len(trivy_secrets),
+                  'parse_errors': len(parse_errors),
+              },
+              'raw_output_sha256': {
+                  'osv': hashlib.sha256(Path('/tmp/osv-report.json').read_bytes()).hexdigest() if Path('/tmp/osv-report.json').exists() else None,
+                  'trivy': hashlib.sha256(Path('/tmp/trivy-report.json').read_bytes()).hexdigest() if Path('/tmp/trivy-report.json').exists() else None,
+              },
+          }
+          evidence_dir = Path('governance/evidence/security')
+          (evidence_dir / 'security-scanners-summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
+
+          total = sum(summary['counts'].values())
+          exit_errors = any(code not in (0, 1) for code in summary['tool_exit_codes'].values())
+          result = 'success' if total == 0 and not exit_errors else 'failure'
+          (evidence_dir / 'security-scanners-verification.md').write_text(
+              '# OSV and Trivy verification\n\n'
+              '- Branch: lianbassam\n'
+              '- Master merge: not performed\n'
+              f"- OSV exit: {summary['tool_exit_codes']['osv']}\n"
+              f"- Trivy exit: {summary['tool_exit_codes']['trivy']}\n"
+              f"- OSV findings: {summary['counts']['osv']}\n"
+              f"- Trivy vulnerabilities: {summary['counts']['trivy_vulnerabilities']}\n"
+              f"- Trivy misconfigurations: {summary['counts']['trivy_misconfigurations']}\n"
+              f"- Trivy secret findings: {summary['counts']['trivy_secrets']}\n"
+              f"- Parse errors: {summary['counts']['parse_errors']}\n\n"
+              f'Result: {result.upper()}\n\n'
+              'Raw secret matches were not committed; only sanitized metadata is recorded.\n',
+              encoding='utf-8',
+          )
+          Path('/tmp/scanner-result').write_text(result, encoding='utf-8')
+          PY
+
+          {
+            echo "# Scanner stderr diagnostics"
+            echo
+            echo "## OSV"
+            echo '```text'
+            tail -n 80 /tmp/osv-stderr.log || true
+            echo '```'
+            echo
+            echo "## Trivy stderr"
+            echo '```text'
+            tail -n 80 /tmp/trivy-stderr.log || true
+            echo '```'
+            echo
+            echo "## Trivy stdout"
+            echo '```text'
+            tail -n 40 /tmp/trivy-stdout.log || true
+            echo '```'
+          } > governance/evidence/security/security-scanners-diagnostics.md
+
+          echo "result=$(cat /tmp/scanner-result)" >> "${GITHUB_OUTPUT}"
+
+      - name: Commit sanitized scanner diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/security-scanners-lianbassam.yml
+          rm -f .github/workflows/security-scanners-lianbassam-v2.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "test(security): record OSV and Trivy diagnostics"
+          git pull --rebase origin lianbassam
+          git push origin HEAD:lianbassam
+
+      - name: Publish result
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESULT: ${{ steps.scanners.outputs.result }}
+        run: |
+          state="failure"
+          description="OSV or Trivy findings/errors remain"
+          if [[ "${RESULT}" == "success" ]]; then
+            state="success"
+            description="OSV and Trivy found no remaining issues"
+          fi
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state="${state}" \
+            -f context='bthwani/security-scanners-v2' \
+            -f description="${description}" \
+            -f target_url="${RUN_URL}"
