@@ -111,7 +111,6 @@ for (const [scriptName, command] of Object.entries(scripts)) {
 for (const deprecated of [
   "e2e:web:install",
   "e2e:web:smoke",
-  "guard:a11y-runtime",
   "storybook:ui-kit:build",
   "visual:ui-kit:smoke",
 ]) {
