@@ -118,6 +118,11 @@ jobs:
           -DatabaseUrl $env:DATABASE_URL
           -TestSuite schema
 
+      - name: Configure isolated CI trusted tenant context
+        run: >-
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1
+          -c "ALTER DATABASE dsh_runtime SET bthwani.tenant_id TO 'ci-dsh';"
+
       - name: Test and build DSH backend on clean schema
         working-directory: services/dsh/backend
         run: |
@@ -147,6 +152,12 @@ jobs:
           path: ${{ runner.temp }}/dsh-backend-verification.log
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Clear isolated CI trusted tenant context
+        if: always()
+        run: >-
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1
+          -c "ALTER DATABASE dsh_runtime RESET bthwani.tenant_id;"
 
       - name: Apply DSH local seeds twice
         shell: pwsh
