@@ -82,9 +82,14 @@ function isClientTab(value: string): value is ClientTab {
 }
 
 function notificationActionFromDeepLink(url: string): string | null {
-  const parsed = Linking.parse(url);
-  if (parsed.scheme !== "bthwani-client-next" || !parsed.path) return null;
-  return `/${parsed.path.replace(/^\/+/, "")}`;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "bthwani-client-next:") return null;
+    const path = `${parsed.hostname}${parsed.pathname}`.replace(/^\/+|\/+$/g, "");
+    return path ? `/${path}` : null;
+  } catch {
+    return null;
+  }
 }
 
 export function DshClientSurface() {
