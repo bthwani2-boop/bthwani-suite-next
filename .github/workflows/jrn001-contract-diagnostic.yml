@@ -1,0 +1,80 @@
+name: JRN-001 contract gate diagnostic
+
+on:
+  push:
+    branches: [lianbassam]
+    paths:
+      - ".github/workflows/jrn001-contract-diagnostic.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout lianbassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: lianbassam
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+
+      - name: Run JRN-001 contract gates
+        shell: bash
+        run: |
+          set +e
+          {
+            node --test services/dsh/tests/jrn-001-*.test.mjs
+            first=$?
+            node tools/guards/partner/jrn-001-security-privacy-gate.mjs
+            second=$?
+            echo "node_test_exit=${first}"
+            echo "security_gate_exit=${second}"
+            if [[ ${first} -ne 0 || ${second} -ne 0 ]]; then
+              exit 1
+            fi
+          } 2>&1 | tee /tmp/jrn001-contract-gates.log
+          code=${PIPESTATUS[0]}
+          echo "JRN001_CONTRACT_EXIT=${code}" >> "${GITHUB_ENV}"
+          exit 0
+
+      - name: Upload contract gate diagnostic
+        if: env.JRN001_CONTRACT_EXIT != '0'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jrn001-contract-gate-failure
+          path: /tmp/jrn001-contract-gates.log
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Publish status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [[ "${JRN001_CONTRACT_EXIT:-1}" == "0" ]]; then
+            state=success
+            description='JRN-001 contract gates passed'
+          else
+            state=failure
+            description='JRN-001 contract gates failed; diagnostic uploaded'
+          fi
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state="${state}" \
+            -f context='bthwani/jrn001-contract-diagnostic' \
+            -f description="${description}" \
+            -f target_url="${RUN_URL}"
+
+      - name: Require contract gates
+        shell: bash
+        run: exit "${JRN001_CONTRACT_EXIT}"
