@@ -1,0 +1,214 @@
+name: Temporary application runtime remediation
+
+on:
+  push:
+    branches: [lianbassam]
+    paths:
+      - .github/workflows/remediate-application-runtime.yml
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: temporary-application-runtime-remediation
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: lianbassam
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up locked workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Apply targeted source corrections
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path: str, old: str, new: str) -> None:
+              file = Path(path)
+              text = file.read_text(encoding="utf-8")
+              if old not in text:
+                  raise SystemExit(f"expected source fragment not found: {path}")
+              file.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+          replace(
+              "services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx",
+              '''  const activeMainGroup = useMemo(() => {
+              return MAIN_TAB_GROUPS.find((g) => g.subTabs.includes(activeTab)) || MAIN_TAB_GROUPS[0];
+            }, [activeTab]);''',
+              '''  const activeMainGroup = useMemo<MainTabGroup>(() => {
+              return MAIN_TAB_GROUPS.find((group) => group.subTabs.includes(activeTab)) ?? MAIN_TAB_GROUPS[0]!;
+            }, [activeTab]);''',
+          )
+          replace(
+              "services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx",
+              '''      const firstTab = group.subTabs.find((stId) => {
+                const tabDef = TABS.find((t) => t.id === stId);
+                return tabDef && !tabDef.disabled;
+              }) || group.subTabs[0];
+              setActiveTab(firstTab);''',
+              '''      const firstTab = group.subTabs.find((subTabId) => {
+                const tabDef = TABS.find((tab) => tab.id === subTabId);
+                return Boolean(tabDef && !tabDef.disabled);
+              }) ?? group.subTabs[0];
+              if (firstTab) setActiveTab(firstTab);''',
+          )
+          replace(
+              "services/dsh/frontend/control-panel/platform/Jrn029OperationalPolicySection.tsx",
+              '''        zoneId: selectedZoneId,
+                serviceAreaCode: selectedZone?.cityCode,
+                fulfillmentMode: evaluationMode,''',
+              '''        zoneId: selectedZoneId,
+                ...(selectedZone?.cityCode ? { serviceAreaCode: selectedZone.cityCode } : {}),
+                fulfillmentMode: evaluationMode,''',
+          )
+          replace(
+              "services/dsh/frontend/shared/finance-wlt-link/wlt-cod/PartnerCodCustodyPanel.tsx",
+              '''{ label: "بانتظار التحصيل", value: String(pending.length), tone: pending.length > 0 ? "info" : "neutral" },''',
+              '''{ label: "بانتظار التحصيل", value: String(pending.length), tone: pending.length > 0 ? "info" : "default" },''',
+          )
+          replace(
+              "services/dsh/frontend/shared/finance-wlt-link/wlt-refund/OrderRefundStatusCard.tsx",
+              '''  return (
+                <Surface style={styles.card} accessibilityLabel={`حالة استردادات الطلب، العدد ${state.refunds.length}`}>
+                  <View style={styles.header}>''',
+              '''  return (
+                <View accessible accessibilityLabel={`حالة استردادات الطلب، العدد ${state.refunds.length}`}>
+                  <Surface style={styles.card}>
+                    <View style={styles.header}>''',
+          )
+          replace(
+              "services/dsh/frontend/shared/finance-wlt-link/wlt-refund/OrderRefundStatusCard.tsx",
+              '''      {hasProviderUnknown ? (
+                <View accessibilityRole="alert" accessibilityLiveRegion="assertive">
+                  <Text role="bodySm" style={styles.warningText}>
+                    نتيجة المزود غير محسومة. لا يعني ذلك نجاحًا أو فشلًا حتى تنتهي المصالحة المالية.
+                  </Text>
+                </View>
+              ) : null}
+            </Surface>
+          );''',
+              '''      {hasProviderUnknown ? (
+                <View accessibilityRole="alert" accessibilityLiveRegion="assertive">
+                  <Text role="bodySm" style={styles.warningText}>
+                    نتيجة المزود غير محسومة. لا يعني ذلك نجاحًا أو فشلًا حتى تنتهي المصالحة المالية.
+                  </Text>
+                </View>
+              ) : null}
+                  </Surface>
+                </View>
+              );''',
+          )
+          replace(
+              "services/dsh/frontend/shared/finance-wlt-link/wlt-refund/wlt-refund.api.ts",
+              '''  return {
+                id: raw.id,
+                orderId: raw.orderId,
+                paymentSessionId: raw.paymentSessionId,
+                clientId: raw.clientId,
+                status,
+                statusLabel: mapStatusLabel(status),
+                statusBadge: mapStatusBadge(status),
+                amountMinorUnits: raw.amountMinorUnits,
+                amountLabel: String(raw.amountMinorUnits),
+                currency: raw.currency,
+                reason: raw.reason,
+                eligibilityReference: raw.eligibilityReference,
+                providerReference: raw.providerReference,
+                providerStatus: raw.providerStatus,
+                reconciliationCaseId: raw.reconciliationCaseId,
+                requestedByOperatorId: raw.requestedByOperatorId,
+                approvedByOperatorId: raw.approvedByOperatorId,
+                rejectedByOperatorId: raw.rejectedByOperatorId,
+                decisionReason: raw.decisionReason,
+                resolvedAt: raw.resolvedAt,
+                createdAt: raw.createdAt,
+                updatedAt: raw.updatedAt,
+              };''',
+              '''  return {
+                id: raw.id,
+                orderId: raw.orderId,
+                status,
+                statusLabel: mapStatusLabel(status),
+                statusBadge: mapStatusBadge(status),
+                amountMinorUnits: raw.amountMinorUnits,
+                amountLabel: String(raw.amountMinorUnits),
+                currency: raw.currency,
+                resolvedAt: raw.resolvedAt,
+                ...(raw.paymentSessionId !== undefined ? { paymentSessionId: raw.paymentSessionId } : {}),
+                ...(raw.clientId !== undefined ? { clientId: raw.clientId } : {}),
+                ...(raw.reason !== undefined ? { reason: raw.reason } : {}),
+                ...(raw.eligibilityReference !== undefined ? { eligibilityReference: raw.eligibilityReference } : {}),
+                ...(raw.providerReference !== undefined ? { providerReference: raw.providerReference } : {}),
+                ...(raw.providerStatus !== undefined ? { providerStatus: raw.providerStatus } : {}),
+                ...(raw.reconciliationCaseId !== undefined ? { reconciliationCaseId: raw.reconciliationCaseId } : {}),
+                ...(raw.requestedByOperatorId !== undefined ? { requestedByOperatorId: raw.requestedByOperatorId } : {}),
+                ...(raw.approvedByOperatorId !== undefined ? { approvedByOperatorId: raw.approvedByOperatorId } : {}),
+                ...(raw.rejectedByOperatorId !== undefined ? { rejectedByOperatorId: raw.rejectedByOperatorId } : {}),
+                ...(raw.decisionReason !== undefined ? { decisionReason: raw.decisionReason } : {}),
+                ...(raw.createdAt !== undefined ? { createdAt: raw.createdAt } : {}),
+                ...(raw.updatedAt !== undefined ? { updatedAt: raw.updatedAt } : {}),
+              };''',
+          )
+          replace(
+              "tools/scripts/invoke-runtime-phase.ps1",
+              '''  $subject = if ($message -match "([A-Za-z][A-Za-z0-9_-]+(?: API| migration| smoke| health| readiness| bootstrap| start)?)") {
+                $Matches[1]
+              } else {
+                "phase-failed"
+              }''',
+              '''  $subject = ConvertTo-StatusText -Value $message -Limit 72''',
+          )
+
+          Path(".github/workflows/remediate-application-runtime.yml").unlink()
+          PY
+
+      - name: Run concise DSH typecheck diagnostic
+        id: typecheck
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          pnpm --dir services/dsh typecheck > /tmp/dsh-typecheck.log 2>&1
+          code=$?
+          grep -E 'error TS[0-9]+' /tmp/dsh-typecheck.log | head -n 40 || true
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit "$code"
+
+      - name: Commit and push remediation
+        if: always()
+        shell: bash
+        run: |
+          git config user.name "bthwani-runtime-remediator"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(apps): close runtime and TypeScript contract gaps"
+          git push origin HEAD:lianbassam
+
+      - name: Publish remaining typecheck summary
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head_sha="$(git rev-parse HEAD)"
+          state=success
+          description="targeted DSH typecheck passed"
+          if [[ "${{ steps.typecheck.outputs.exit_code }}" != "0" ]]; then
+            state=failure
+            first_error="$(grep -E 'error TS[0-9]+' /tmp/dsh-typecheck.log | head -n 1 | sed -E 's/[[:space:]]+/ /g' | cut -c1-120)"
+            description="${first_error:-DSH typecheck still has errors}"
+          fi
+          jq -n --arg state "$state" --arg context "bthwani/remediation/dsh-typecheck" --arg description "$description" --arg target_url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          curl --fail-with-body -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GH_TOKEN" -H "X-GitHub-Api-Version: 2022-11-28" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/statuses/$head_sha" --data-binary @/tmp/status.json
