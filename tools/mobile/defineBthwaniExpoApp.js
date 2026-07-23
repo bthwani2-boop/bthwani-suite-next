@@ -231,6 +231,11 @@ function defineBthwaniExpoApp(appKey) {
       appKey,
       appLine: manifest.global.appLine,
       sourceRepo: manifest.global.sourceRepo,
+      sentry: {
+        dsn: process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined,
+        environment: process.env.EXPO_PUBLIC_APP_ENV?.trim() || "development",
+        tracesSampleRate: process.env.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE?.trim() || "0",
+      },
       eas: { projectId: app.projectId },
     },
   };
