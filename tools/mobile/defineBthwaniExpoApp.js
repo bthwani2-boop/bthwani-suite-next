@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const manifest = require("./mobile-apps.manifest.json");
-const { resolveSentryEnvironment } = require("./sentry-env.js");
+const { appEnvSuffix, resolveSentryEnvironment } = require("./sentry-env.js");
 
 const PERMISSION_TEXT = {
   photos: "نحتاج الوصول إلى معرض الصور لاختيار الصور ومشاركتها.",
@@ -11,6 +11,17 @@ const PERMISSION_TEXT = {
   locationAlwaysAndWhenInUse: "نحتاج الوصول إلى الموقع في الخلفية لتتبع مسار المهمة النشطة وتحديد وصول الكابتن.",
   faceId: "نحتاج حماية التطبيق باستخدام البصمة أو Face ID للعمليات الحساسة والمحفظة.",
 };
+
+function optionalEnvironmentValue(value) {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function resolveAppEnvironmentValue(baseName, appKey) {
+  return optionalEnvironmentValue(process.env[`${baseName}_${appEnvSuffix(appKey)}`])
+    ?? optionalEnvironmentValue(process.env[baseName]);
+}
 
 function nativeCapabilities(features) {
   const hasCamera = features.includes("camera");
@@ -50,7 +61,7 @@ function buildInfoPlist(features) {
   return infoPlist;
 }
 
-function buildAndroidConfig(appKey, app, features) {
+function buildAndroidConfig(appKey, app, features, googleServicesFile) {
   const { needsMicrophone } = nativeCapabilities(features);
   const adaptiveIcon = appAsset(appKey, "adaptive-icon.png");
   const android = {
@@ -65,14 +76,14 @@ function buildAndroidConfig(appKey, app, features) {
     };
   }
 
-  if (features.includes("notifications") && process.env.GOOGLE_SERVICES_JSON) {
-    android.googleServicesFile = process.env.GOOGLE_SERVICES_JSON;
+  if (features.includes("notifications") && googleServicesFile) {
+    android.googleServicesFile = googleServicesFile;
   }
 
   if (features.includes("maps")) {
     android.config = {
       googleMaps: {
-        apiKey: process.env.GOOGLE_MAPS_ANDROID_API_KEY || "",
+        apiKey: resolveAppEnvironmentValue("GOOGLE_MAPS_ANDROID_API_KEY", appKey) || "",
       },
     };
   }
@@ -80,7 +91,7 @@ function buildAndroidConfig(appKey, app, features) {
   return android;
 }
 
-function buildIosConfig(app, features) {
+function buildIosConfig(appKey, app, features) {
   const ios = {
     bundleIdentifier: app.iosBundleIdentifier,
     supportsTablet: false,
@@ -89,7 +100,7 @@ function buildIosConfig(app, features) {
 
   if (features.includes("maps")) {
     ios.config = {
-      googleMapsApiKey: process.env.GOOGLE_MAPS_IOS_API_KEY || "",
+      googleMapsApiKey: resolveAppEnvironmentValue("GOOGLE_MAPS_IOS_API_KEY", appKey) || "",
     };
   }
 
@@ -222,6 +233,7 @@ function defineBthwaniExpoApp(appKey) {
 
   const features = app.features || [];
   const sentry = resolveSentryEnvironment(appKey);
+  const googleServicesFile = resolveAppEnvironmentValue("GOOGLE_SERVICES_JSON", appKey);
   return {
     name: app.name,
     slug: app.slug,
@@ -239,8 +251,8 @@ function defineBthwaniExpoApp(appKey) {
     },
     orientation: "portrait",
     userInterfaceStyle: "light",
-    android: buildAndroidConfig(appKey, app, features),
-    ios: buildIosConfig(app, features),
+    android: buildAndroidConfig(appKey, app, features, googleServicesFile),
+    ios: buildIosConfig(appKey, app, features),
     plugins: buildPlugins(appKey, features, sentry),
     extra: {
       appKey,
@@ -255,6 +267,9 @@ function defineBthwaniExpoApp(appKey) {
         tracesSampleRate: sentry.tracesSampleRate,
         debug: sentry.debug,
         startupProbe: sentry.startupProbe,
+      },
+      notifications: {
+        androidNativeConfigured: Boolean(googleServicesFile),
       },
       eas: { projectId: app.projectId },
     },
