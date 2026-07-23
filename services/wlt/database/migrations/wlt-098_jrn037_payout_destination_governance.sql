@@ -1,4 +1,4 @@
--- WLT-091 / JRN-037: typed payout destinations, destination-bound requests,
+-- WLT-098 / JRN-037: typed payout destinations, destination-bound requests,
 -- payout-specific audit, notification outbox and reconciliation evidence.
 --
 -- This migration is additive. Existing partner destinations are backfilled as

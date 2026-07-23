@@ -1,4 +1,4 @@
--- WLT-034 / JRN-028: make every promotion-funding state transition
+-- WLT-096 / JRN-028: make every promotion-funding state transition
 -- inseparable from its append-only audit event.
 --
 -- The application updates the reservation and appends the event in one

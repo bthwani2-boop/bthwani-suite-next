@@ -4,7 +4,7 @@ import test from "node:test";
 
 const read = (path) => fs.readFileSync(path, "utf8");
 
-const wltMigration = read("services/wlt/database/migrations/wlt-034_jrn_028_promotion_funding_audit_integrity.sql");
+const wltMigration = read("services/wlt/database/migrations/wlt-096_jrn_028_promotion_funding_audit_integrity.sql");
 const integrityProof = read("services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh");
 const concurrencyProof = read("services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh");
 const verifier = read("tools/verification/jrn-028-all-slices.sh");

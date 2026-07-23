@@ -25,3 +25,29 @@ paths:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1financial-snapshot"
   /dsh/operator/analytics/export.csv:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1export.csv"
+  /dsh/operator/analytics/operations:
+    get:
+      operationId: getDshOperationsAnalytics
+      summary: Return the governed operations analytics projection.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema: { type: string, enum: [today, week, month], default: today }
+      responses:
+        "200":
+          description: Operations analytics projection.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { description: Invalid analytics period. }
+        "401": { description: Authentication required. }
+        "403": { description: Analytics read permission required. }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

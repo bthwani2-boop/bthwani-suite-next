@@ -16,7 +16,7 @@ RESTORE_SOURCES: dict[str, str] = {
     "services/dsh/backend/internal/wlt/subscription_lifecycle.go": "f04df3ebde3f07a45659ed0a8db9a19d8364e5fe",
     "services/dsh/backend/internal/wlt/commercial.go": "5fc129e493802985b9c05b04aabe9a2925eb4f52",
     "services/wlt/backend/internal/commercial/subscription_lifecycle.go": "b7afc7c0db913e76549a8498d7429302f3a517e4",
-    "services/wlt/database/migrations/wlt-033_jrn027_subscription_lifecycle.sql": "928c5f0f96b777723475e05af9bd8975a5a74344",
+    "services/wlt/database/migrations/wlt-095_jrn027_subscription_lifecycle.sql": "928c5f0f96b777723475e05af9bd8975a5a74344",
     "services/dsh/database/migrations/dsh-103_jrn_027_subscription_lifecycle.sql": "619c1b1c3c0b9f5e77b0f4d7efac3639c19a7813",
     "governance/product/contracts/jrn-027-subscriptions-commercial-benefits.product-truth.json": "a569e7a630cf581dcf51d5b7bbdd0120fde8c9e7",
 }

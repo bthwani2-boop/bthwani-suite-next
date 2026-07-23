@@ -1,4 +1,4 @@
--- WLT-033: JRN-027 sovereign subscription lifecycle.
+-- WLT-095: JRN-027 sovereign subscription lifecycle.
 --
 -- WLT remains the sole owner of paid product terms, captured-payment evidence,
 -- effective subscription periods, loyalty entries, compensation and recurring

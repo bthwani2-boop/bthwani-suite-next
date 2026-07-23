@@ -1,4 +1,4 @@
--- WLT-093 / JRN-037: a governed payout request retains the destination
+-- WLT-100 / JRN-037: a governed payout request retains the destination
 -- reference used for the financial intent. Legacy rows may remain NULL, but
 -- every non-NULL reference must resolve to a WLT-owned destination and cannot
 -- be deleted while payout history exists.

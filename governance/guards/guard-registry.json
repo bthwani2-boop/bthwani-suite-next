@@ -1,61 +1,459 @@
 {
   "entries": [
-    {"id":"foundation","name":"Foundation Guard Set","script":"guard:foundation","exit_level":"fail","description":"Runs the registered targeted foundation guard set; a pass is static scoped evidence only.","source_file":"tools/scripts/run-foundation-gate.ps1"},
-    {"id":"journey","name":"Journey Guard Set","script":"guard:journey","exit_level":"fail","description":"Runs the registered targeted journey guard set; full and runtime modes require explicit commands and never imply final closure.","source_file":"tools/scripts/run-journey-gate.ps1"},
-    {"id":"ui-kit-boundary","name":"UI Kit Boundary Gate","script":"guard:ui-kit-boundary","exit_level":"fail","description":"Statically enforces reusable UI ownership and boundary rules.","source_file":"tools/guards/ui-kit-boundary-gate.mjs"},
-    {"id":"fullstack-boundary","name":"Fullstack Boundary Gate","script":"guard:fullstack-boundary","exit_level":"fail","description":"Statically enforces declared frontend, backend, contract, and ownership boundaries.","source_file":"tools/guards/fullstack-boundary-gate.mjs"},
-    {"id":"wlt-financial-boundary","name":"WLT Financial Boundary Gate","script":"guard:wlt-financial-boundary","exit_level":"fail","description":"Statically enforces WLT ownership of financial truth and forbids duplicate DSH financial mutation.","source_file":"tools/guards/wlt-financial-boundary-gate.mjs"},
-    {"id":"runtime-config","name":"Runtime Configuration Gate","script":"guard:runtime-config","exit_level":"fail","description":"Validates runtime configuration ownership and safe defaults; it does not prove a runtime executed.","source_file":"tools/guards/runtime-config-gate.mjs"},
-    {"id":"no-broken-imports","name":"No Broken Imports Gate","script":"guard:no-broken-imports","exit_level":"fail","description":"Statically verifies supported imports resolve to existing repository modules.","source_file":"tools/guards/no-broken-imports.mjs"},
-    {"id":"cleanup-policy","name":"Cleanup Policy Gate","script":"guard:cleanup-policy","exit_level":"fail","description":"Rejects forbidden local roots, retired labels, deprecated guards, and transient or fake truth patterns in governed scopes.","source_file":"tools/guards/cleanup-policy-gate.mjs"},
-    {"id":"api-binding","name":"API Contract Binding Gate","script":"guard:api-binding","exit_level":"fail","description":"Statically validates OpenAPI and generated-client contract compatibility.","source_file":"tools/guards/api-binding-gate.mjs"},
-    {"id":"backend-api-binding","name":"Backend API Binding Gate","script":"guard:backend-api-binding","exit_level":"fail","description":"Statically reconciles supported backend route registrations with API contracts.","source_file":"tools/guards/backend-api-binding-gate.mjs"},
-    {"id":"service-manifest-drift","name":"Service Manifest Drift Gate","script":"guard:service-manifest-drift","exit_level":"fail","description":"Statically validates canonical DSH capability ownership and contract-operation coverage without duplicating manifest truth.","source_file":"tools/guards/service-manifest-drift-gate.mjs"},
-    {"id":"frontend-feature-binding","name":"Frontend Static Binding Gate","script":"guard:frontend-feature-binding","exit_level":"fail","description":"Proves declared static screen-to-controller-to-contract-to-route-to-capability reachability only.","source_file":"tools/guards/frontend-feature-binding-gate.mjs"},
-    {"id":"required-command-integrity","name":"Required Command Integrity Gate","script":"guard:required-command-integrity","exit_level":"fail","description":"Rejects required guards, tests, visual checks, and performance checks that swallow failures or target an invalid host runtime endpoint.","source_file":"tools/guards/required-command-integrity-gate.mjs"},
-    {"id":"go-routes-ci","name":"Go Route AST Gate","script":"guard:go-routes-ci","exit_level":"fail","description":"Extracts supported Go route registrations from source AST; it does not prove endpoint reachability.","source_file":"tools/guards/go-routes-ci.mjs"},
-    {"id":"logic-coverage","name":"Static Logic Heuristic Gate","script":"guard:logic-coverage","exit_level":"fail","description":"Rejects selected dead-action and local-stub patterns without claiming complete behavioral coverage.","source_file":"tools/guards/logic-coverage-gate.mjs"},
-    {"id":"a11y","name":"Static Accessibility Gate","script":"guard:a11y","exit_level":"fail","description":"Checks selected static accessibility contracts; runtime assistive-technology behavior remains separate.","source_file":"tools/guards/a11y-gate.mjs"},
-    {"id":"dependency-graph","name":"Dependency Graph Gate","script":"guard:dependency-graph","exit_level":"fail","description":"Statically validates configured dependency layering and prohibited cycles.","source_file":"tools/guards/dependency-graph-gate.mjs"},
-    {"id":"ast-grep-rules","name":"AST Structural Rules Gate","script":"guard:ast-grep-rules","exit_level":"fail","description":"Applies registered structural source rules using AST matching.","source_file":"tools/guards/ast-grep-rules-gate.mjs"},
-    {"id":"ui-provider","name":"UI Provider Required Gate","script":"guard:ui-provider","exit_level":"fail","description":"Statically requires configured UI provider composition.","source_file":"tools/guards/ui-provider-required-gate.mjs"},
-    {"id":"icon-contract","name":"Icon Contract Gate","script":"guard:icon-contract","exit_level":"fail","description":"Statically enforces icon ownership and usage contracts.","source_file":"tools/guards/icon-contract-gate.mjs"},
-    {"id":"design-tokens","name":"Design Token Diagnostics","script":"guard:design-tokens","exit_level":"warn","description":"Reports configured design-token and spacing anomalies without owning visual acceptance.","source_file":"tools/guards/design-tokens-gate.mjs"},
-    {"id":"brand-identity","name":"Brand Identity Diagnostics","script":"guard:brand-identity","exit_level":"warn","description":"Generates a bounded static brand-identity report; it is not a visual approval gate.","source_file":"tools/guards/brand-identity-report.mjs"},
-    {"id":"repo-size","name":"Repository Size Gate","script":"guard:repo-size","exit_level":"fail","description":"Rejects configured forbidden tracked outputs and oversized repository artifacts.","source_file":"tools/guards/repository-size-gate.mjs"},
-    {"id":"repo-naming","name":"Repository Naming Diagnostics","script":"guard:repo-naming","exit_level":"warn","description":"Reports naming-policy drift while registered legacy exceptions remain.","source_file":"tools/guards/repository-naming-gate.mjs"},
-    {"id":"repo-structure","name":"Repository Structure Diagnostics","script":"guard:repo-structure","exit_level":"warn","description":"Reports configured directory depth and structural-policy drift.","source_file":"tools/guards/repository-structure-gate.mjs"},
-    {"id":"heavy-imports","name":"Heavy Import Gate","script":"guard:heavy-imports","exit_level":"fail","description":"Rejects configured prohibited heavy imports in governed source scopes.","source_file":"tools/guards/heavy-import-gate.mjs"},
-    {"id":"performance-budget","name":"Performance Budget Configuration Gate","script":"guard:performance-budget","exit_level":"fail","description":"Validates budget definitions only; measured runtime performance requires benchmarks.","source_file":"tools/guards/performance-budget-gate.mjs"},
-    {"id":"bundle-budget","name":"Bundle Budget Diagnostics","script":"guard:bundle-budget","exit_level":"warn","description":"Reports configured bundle-size and dependency budget drift.","source_file":"tools/guards/bundle-budget-gate.mjs"},
-    {"id":"governance-schema","name":"Governance Contract Gate","script":"guard:governance-schema","exit_level":"fail","description":"Validates registered governance schemas and cross-registry invariants.","source_file":"tools/guards/governance-schema-gate.mjs"},
-    {"id":"agent-governance","name":"Agent and Skill Governance Gate","script":"guard:agent-governance","exit_level":"fail","description":"Validates active governed skills, retired legacy skills, dependencies, routing, agent roles, and authority separation.","source_file":"tools/guards/agent-governance-gate.mjs"},
-    {"id":"authority-separation","name":"Authority Separation Gate","script":"guard:authority-separation","exit_level":"fail","description":"Enforces complete SDLC roles, advisory-only supervision, independent governance and CI skills, distinct approval owners, and forward stage ownership.","source_file":"tools/guards/authority-separation-gate.mjs"},
-    {"id":"saas-governance","name":"SaaS Governance Gate","script":"guard:saas-governance","exit_level":"fail","description":"Validates SaaS readiness state, tenant-governance constraints, deferred commercial policy, canonical decisions, and activation evidence boundaries.","source_file":"tools/guards/saas-governance-gate.mjs"},
-    {"id":"guard-registry","name":"Guard Registry and CI Policy Gate","script":"guard:guard-registry","exit_level":"fail","description":"Validates guard registration, package commands, fail-closed runners, workflow policy, permissions, and immutable action references.","source_file":"tools/guards/guard-registry-gate.mjs"},
-    {"id":"sdlc","name":"SDLC Contract Gate","script":"guard:sdlc","exit_level":"fail","description":"Validates SDLC schemas, lifecycle vocabulary, impact routing, approvals, and supplied transition artifacts without granting a stage pass itself.","source_file":"tools/guards/sdlc/Invoke-SdlcGate.ps1"},
-    {"id":"markdown-governance","name":"Markdown Governance Gate","script":"guard:markdown-governance","exit_level":"fail","description":"Fails on Markdown contract and style violations in active governance and GitHub documentation."},
-    {"id":"secrets","name":"Secrets Detection Gate","script":"guard:secrets","exit_level":"fail","description":"Fails on configured exposed secret, key, token, or credential patterns using redacted output."},
-    {"id":"tool-catalog-coverage","name":"Tool Catalog Coverage Gate","script":"guard:tool-catalog-coverage","exit_level":"fail","description":"Validates tool catalog schema, IDs, and cross-file registration.","source_file":"tools/guards/tool-catalog-coverage-gate.mjs"},
-    {"id":"toolchain-activation","name":"Toolchain Activation Gate","script":"guard:toolchain-activation","exit_level":"fail","description":"Validates catalog, baseline, scripts, workflows, and activation-state consistency.","source_file":"tools/guards/toolchain-activation-gate.mjs"},
-    {"id":"oss-toolchain-policy","name":"OSS Toolchain Policy Gate","script":"guard:oss-toolchain-policy","exit_level":"fail","description":"Enforces registered open-source and free-tool metadata policy.","source_file":"tools/guards/oss-toolchain-policy-gate.mjs"},
-    {"id":"workflow-lint","name":"Workflow Syntax Gate","script":"guard:workflow-lint","exit_level":"fail","description":"Fails on GitHub Actions workflow syntax errors detected by actionlint.","source_file":"tools/scripts/run-actionlint.mjs"},
-    {"id":"workflow-security","name":"Workflow Static Security Gate","script":"guard:workflow-security","exit_level":"fail","description":"Fails on configured high-confidence high-severity GitHub Actions findings detected by zizmor.","source_file":"tools/scripts/run-zizmor.mjs"},
-    {"id":"actions-pin","name":"Actions Immutable Pinning Gate","script":"guard:actions-pin","exit_level":"fail","description":"Fails when external GitHub Actions are not pinned to immutable commit SHAs.","source_file":"tools/scripts/run-pinact.mjs"},
-    {"id":"rego-lint","name":"Rego Policy Diagnostics","script":"guard:rego-lint","exit_level":"warn","description":"Reports Rego style and quality findings while the lint baseline remains diagnostic.","source_file":"tools/scripts/run-regal.mjs"},
-    {"id":"opa-policies","name":"OPA Policy Gate","script":"guard:opa-policies","exit_level":"fail","description":"Runs registered Conftest and OPA policy checks against governance inputs.","source_file":"tools/scripts/run-conftest.mjs"},
-    {"id":"shellcheck","name":"Shell Script Diagnostics","script":"guard:shellcheck","exit_level":"warn","description":"Reports ShellCheck findings while the shell baseline remains diagnostic.","source_file":"tools/scripts/run-shellcheck.mjs"},
-    {"id":"dockerfile-lint","name":"Dockerfile Diagnostics","script":"guard:dockerfile-lint","exit_level":"warn","description":"Reports hadolint findings while the Dockerfile baseline remains diagnostic.","source_file":"tools/scripts/run-hadolint.mjs"},
-    {"id":"yaml-lint","name":"YAML Diagnostics","script":"guard:yaml-lint","exit_level":"warn","description":"Reports YAML formatting findings while the formatting baseline remains diagnostic.","source_file":"tools/scripts/run-yamllint.mjs"},
-    {"id":"ls-lint","name":"Repository Naming Diagnostics","script":"guard:ls-lint","exit_level":"warn","description":"Reports ls-lint naming findings while registered legacy names remain.","source_file":".ls-lint.yml"},
-    {"id":"runtime-real-bindings","name":"Runtime-Facing Static Anti-Stub Gate","script":"guard:runtime-real-bindings","exit_level":"fail","description":"Rejects selected fake, preview, placeholder, and in-memory success patterns in runtime-facing source; it does not prove runtime execution.","source_file":"tools/guards/runtime-real-bindings-gate.mjs"},
-    {"id":"live-cross-journey-integrity","name":"Cross-Journey Regression Gate","script":"guard:live-cross-journey-integrity","exit_level":"fail","description":"Enforces selected named cross-journey regression invariants without claiming complete runtime coverage.","source_file":"tools/guards/live-cross-journey-integrity-gate.mjs"},
-    {"id":"product-truth-dispatcher","name":"Journey Product Truth Dispatcher","exit_level":"fail","description":"Runs the journey-specific Product Truth validators discovered by the governed dispatcher.","source_file":"tools/guards/product-truth-gate.mjs"},
-    {"id":"dsh-openapi-modular","name":"DSH Modular OpenAPI Gate","exit_level":"fail","description":"Validates the modular DSH OpenAPI composition and generated-client source of truth.","source_file":"tools/guards/dsh-openapi-modular-gate.mjs"},
-    {"id":"jrn-031-closure","name":"JRN-031 Administration Closure Gate","exit_level":"fail","description":"Validates JRN-031 administration governance, maker-checker boundaries, immutable evidence and consolidated CI coverage.","source_file":"tools/guards/jrn-031-closure-gate.mjs"},
-    {"id":"jrn-036-settlement-commission","name":"JRN-036 Settlement Commission Gate","exit_level":"fail","description":"Validates JRN-036 settlement and commission ownership, contracts, and surface bindings.","source_file":"tools/guards/jrn-036-settlement-commission-gate.mjs"},
-    {"id":"jrn-037-payout-destination","name":"JRN-037 Payout Destination Gate","exit_level":"fail","description":"Validates JRN-037 payout destination ownership, contracts, and multi-surface bindings.","source_file":"tools/guards/jrn-037-payout-destination-gate.mjs"},
-    {"id":"jrn-040-platform-change-sets","name":"JRN-040 Platform Change Sets Gate","exit_level":"fail","description":"Validates JRN-040 platform change-set governance, contracts, and control-panel binding.","source_file":"tools/guards/jrn-040-platform-change-sets-gate.mjs"},
-    {"id":"jrn-041-progressive-rollout","name":"JRN-041 Progressive Rollout Gate","exit_level":"fail","description":"Validates JRN-041 progressive rollout and rollback governance, contracts, and surfaces.","source_file":"tools/guards/jrn-041-progressive-rollout-gate.mjs"}
+    {
+      "id": "foundation",
+      "name": "Foundation Guard Set",
+      "script": "guard:foundation",
+      "exit_level": "fail",
+      "description": "Runs the registered targeted foundation guard set; a pass is static scoped evidence only.",
+      "source_file": "tools/scripts/run-foundation-gate.ps1"
+    },
+    {
+      "id": "journey",
+      "name": "Journey Guard Set",
+      "script": "guard:journey",
+      "exit_level": "fail",
+      "description": "Runs the registered targeted journey guard set; full and runtime modes require explicit commands and never imply final closure.",
+      "source_file": "tools/scripts/run-journey-gate.ps1"
+    },
+    {
+      "id": "ui-kit-boundary",
+      "name": "UI Kit Boundary Gate",
+      "script": "guard:ui-kit-boundary",
+      "exit_level": "fail",
+      "description": "Statically enforces reusable UI ownership and boundary rules.",
+      "source_file": "tools/guards/ui-kit-boundary-gate.mjs"
+    },
+    {
+      "id": "fullstack-boundary",
+      "name": "Fullstack Boundary Gate",
+      "script": "guard:fullstack-boundary",
+      "exit_level": "fail",
+      "description": "Statically enforces declared frontend, backend, contract, and ownership boundaries.",
+      "source_file": "tools/guards/fullstack-boundary-gate.mjs"
+    },
+    {
+      "id": "wlt-financial-boundary",
+      "name": "WLT Financial Boundary Gate",
+      "script": "guard:wlt-financial-boundary",
+      "exit_level": "fail",
+      "description": "Statically enforces WLT ownership of financial truth and forbids duplicate DSH financial mutation.",
+      "source_file": "tools/guards/wlt-financial-boundary-gate.mjs"
+    },
+    {
+      "id": "runtime-config",
+      "name": "Runtime Configuration Gate",
+      "script": "guard:runtime-config",
+      "exit_level": "fail",
+      "description": "Validates runtime configuration ownership and safe defaults; it does not prove a runtime executed.",
+      "source_file": "tools/guards/runtime-config-gate.mjs"
+    },
+    {
+      "id": "no-broken-imports",
+      "name": "No Broken Imports Gate",
+      "script": "guard:no-broken-imports",
+      "exit_level": "fail",
+      "description": "Statically verifies supported imports resolve to existing repository modules.",
+      "source_file": "tools/guards/no-broken-imports.mjs"
+    },
+    {
+      "id": "cleanup-policy",
+      "name": "Cleanup Policy Gate",
+      "script": "guard:cleanup-policy",
+      "exit_level": "fail",
+      "description": "Rejects forbidden local roots, retired labels, deprecated guards, and transient or fake truth patterns in governed scopes.",
+      "source_file": "tools/guards/cleanup-policy-gate.mjs"
+    },
+    {
+      "id": "api-binding",
+      "name": "API Contract Binding Gate",
+      "script": "guard:api-binding",
+      "exit_level": "fail",
+      "description": "Statically validates OpenAPI and generated-client contract compatibility.",
+      "source_file": "tools/guards/api-binding-gate.mjs"
+    },
+    {
+      "id": "backend-api-binding",
+      "name": "Backend API Binding Gate",
+      "script": "guard:backend-api-binding",
+      "exit_level": "fail",
+      "description": "Statically reconciles supported backend route registrations with API contracts.",
+      "source_file": "tools/guards/backend-api-binding-gate.mjs"
+    },
+    {
+      "id": "service-manifest-drift",
+      "name": "Service Manifest Drift Gate",
+      "script": "guard:service-manifest-drift",
+      "exit_level": "fail",
+      "description": "Statically validates canonical DSH capability ownership and contract-operation coverage without duplicating manifest truth.",
+      "source_file": "tools/guards/service-manifest-drift-gate.mjs"
+    },
+    {
+      "id": "frontend-feature-binding",
+      "name": "Frontend Static Binding Gate",
+      "script": "guard:frontend-feature-binding",
+      "exit_level": "fail",
+      "description": "Proves declared static screen-to-controller-to-contract-to-route-to-capability reachability only.",
+      "source_file": "tools/guards/frontend-feature-binding-gate.mjs"
+    },
+    {
+      "id": "required-command-integrity",
+      "name": "Required Command Integrity Gate",
+      "script": "guard:required-command-integrity",
+      "exit_level": "fail",
+      "description": "Rejects required guards, tests, visual checks, and performance checks that swallow failures or target an invalid host runtime endpoint.",
+      "source_file": "tools/guards/required-command-integrity-gate.mjs"
+    },
+    {
+      "id": "go-routes-ci",
+      "name": "Go Route AST Gate",
+      "script": "guard:go-routes-ci",
+      "exit_level": "fail",
+      "description": "Extracts supported Go route registrations from source AST; it does not prove endpoint reachability.",
+      "source_file": "tools/guards/go-routes-ci.mjs"
+    },
+    {
+      "id": "logic-coverage",
+      "name": "Static Logic Heuristic Gate",
+      "script": "guard:logic-coverage",
+      "exit_level": "fail",
+      "description": "Rejects selected dead-action and local-stub patterns without claiming complete behavioral coverage.",
+      "source_file": "tools/guards/logic-coverage-gate.mjs"
+    },
+    {
+      "id": "a11y",
+      "name": "Static Accessibility Gate",
+      "script": "guard:a11y",
+      "exit_level": "fail",
+      "description": "Checks selected static accessibility contracts; runtime assistive-technology behavior remains separate.",
+      "source_file": "tools/guards/a11y-gate.mjs"
+    },
+    {
+      "id": "dependency-graph",
+      "name": "Dependency Graph Gate",
+      "script": "guard:dependency-graph",
+      "exit_level": "fail",
+      "description": "Statically validates configured dependency layering and prohibited cycles.",
+      "source_file": "tools/guards/dependency-graph-gate.mjs"
+    },
+    {
+      "id": "ast-grep-rules",
+      "name": "AST Structural Rules Gate",
+      "script": "guard:ast-grep-rules",
+      "exit_level": "fail",
+      "description": "Applies registered structural source rules using AST matching.",
+      "source_file": "tools/guards/ast-grep-rules-gate.mjs"
+    },
+    {
+      "id": "ui-provider",
+      "name": "UI Provider Required Gate",
+      "script": "guard:ui-provider",
+      "exit_level": "fail",
+      "description": "Statically requires configured UI provider composition.",
+      "source_file": "tools/guards/ui-provider-required-gate.mjs"
+    },
+    {
+      "id": "icon-contract",
+      "name": "Icon Contract Gate",
+      "script": "guard:icon-contract",
+      "exit_level": "fail",
+      "description": "Statically enforces icon ownership and usage contracts.",
+      "source_file": "tools/guards/icon-contract-gate.mjs"
+    },
+    {
+      "id": "design-tokens",
+      "name": "Design Token Diagnostics",
+      "script": "guard:design-tokens",
+      "exit_level": "warn",
+      "description": "Reports configured design-token and spacing anomalies without owning visual acceptance.",
+      "source_file": "tools/guards/design-tokens-gate.mjs"
+    },
+    {
+      "id": "brand-identity",
+      "name": "Brand Identity Diagnostics",
+      "script": "guard:brand-identity",
+      "exit_level": "warn",
+      "description": "Generates a bounded static brand-identity report; it is not a visual approval gate.",
+      "source_file": "tools/guards/brand-identity-report.mjs"
+    },
+    {
+      "id": "repo-size",
+      "name": "Repository Size Gate",
+      "script": "guard:repo-size",
+      "exit_level": "fail",
+      "description": "Rejects configured forbidden tracked outputs and oversized repository artifacts.",
+      "source_file": "tools/guards/repository-size-gate.mjs"
+    },
+    {
+      "id": "repo-naming",
+      "name": "Repository Naming Diagnostics",
+      "script": "guard:repo-naming",
+      "exit_level": "warn",
+      "description": "Reports naming-policy drift while registered legacy exceptions remain.",
+      "source_file": "tools/guards/repository-naming-gate.mjs"
+    },
+    {
+      "id": "repo-structure",
+      "name": "Repository Structure Diagnostics",
+      "script": "guard:repo-structure",
+      "exit_level": "warn",
+      "description": "Reports configured directory depth and structural-policy drift.",
+      "source_file": "tools/guards/repository-structure-gate.mjs"
+    },
+    {
+      "id": "heavy-imports",
+      "name": "Heavy Import Gate",
+      "script": "guard:heavy-imports",
+      "exit_level": "fail",
+      "description": "Rejects configured prohibited heavy imports in governed source scopes.",
+      "source_file": "tools/guards/heavy-import-gate.mjs"
+    },
+    {
+      "id": "performance-budget",
+      "name": "Performance Budget Configuration Gate",
+      "script": "guard:performance-budget",
+      "exit_level": "fail",
+      "description": "Validates budget definitions only; measured runtime performance requires benchmarks.",
+      "source_file": "tools/guards/performance-budget-gate.mjs"
+    },
+    {
+      "id": "bundle-budget",
+      "name": "Bundle Budget Diagnostics",
+      "script": "guard:bundle-budget",
+      "exit_level": "warn",
+      "description": "Reports configured bundle-size and dependency budget drift.",
+      "source_file": "tools/guards/bundle-budget-gate.mjs"
+    },
+    {
+      "id": "governance-schema",
+      "name": "Governance Contract Gate",
+      "script": "guard:governance-schema",
+      "exit_level": "fail",
+      "description": "Validates registered governance schemas and cross-registry invariants.",
+      "source_file": "tools/guards/governance-schema-gate.mjs"
+    },
+    {
+      "id": "agent-governance",
+      "name": "Agent and Skill Governance Gate",
+      "script": "guard:agent-governance",
+      "exit_level": "fail",
+      "description": "Validates active governed skills, retired legacy skills, dependencies, routing, agent roles, and authority separation.",
+      "source_file": "tools/guards/agent-governance-gate.mjs"
+    },
+    {
+      "id": "authority-separation",
+      "name": "Authority Separation Gate",
+      "script": "guard:authority-separation",
+      "exit_level": "fail",
+      "description": "Enforces complete SDLC roles, advisory-only supervision, independent governance and CI skills, distinct approval owners, and forward stage ownership.",
+      "source_file": "tools/guards/authority-separation-gate.mjs"
+    },
+    {
+      "id": "saas-governance",
+      "name": "SaaS Governance Gate",
+      "script": "guard:saas-governance",
+      "exit_level": "fail",
+      "description": "Validates SaaS readiness state, tenant-governance constraints, deferred commercial policy, canonical decisions, and activation evidence boundaries.",
+      "source_file": "tools/guards/saas-governance-gate.mjs"
+    },
+    {
+      "id": "guard-registry",
+      "name": "Guard Registry and CI Policy Gate",
+      "script": "guard:guard-registry",
+      "exit_level": "fail",
+      "description": "Validates guard registration, package commands, fail-closed runners, workflow policy, permissions, and immutable action references.",
+      "source_file": "tools/guards/guard-registry-gate.mjs"
+    },
+    {
+      "id": "sdlc",
+      "name": "SDLC Contract Gate",
+      "script": "guard:sdlc",
+      "exit_level": "fail",
+      "description": "Validates SDLC schemas, lifecycle vocabulary, impact routing, approvals, and supplied transition artifacts without granting a stage pass itself.",
+      "source_file": "tools/guards/sdlc/Invoke-SdlcGate.ps1"
+    },
+    {
+      "id": "markdown-governance",
+      "name": "Markdown Governance Gate",
+      "script": "guard:markdown-governance",
+      "exit_level": "fail",
+      "description": "Fails on Markdown contract and style violations in active governance and GitHub documentation."
+    },
+    {
+      "id": "secrets",
+      "name": "Secrets Detection Gate",
+      "script": "guard:secrets",
+      "exit_level": "fail",
+      "description": "Fails on configured exposed secret, key, token, or credential patterns using redacted output."
+    },
+    {
+      "id": "tool-catalog-coverage",
+      "name": "Tool Catalog Coverage Gate",
+      "script": "guard:tool-catalog-coverage",
+      "exit_level": "fail",
+      "description": "Validates tool catalog schema, IDs, and cross-file registration.",
+      "source_file": "tools/guards/tool-catalog-coverage-gate.mjs"
+    },
+    {
+      "id": "toolchain-activation",
+      "name": "Toolchain Activation Gate",
+      "script": "guard:toolchain-activation",
+      "exit_level": "fail",
+      "description": "Validates catalog, baseline, scripts, workflows, and activation-state consistency.",
+      "source_file": "tools/guards/toolchain-activation-gate.mjs"
+    },
+    {
+      "id": "oss-toolchain-policy",
+      "name": "OSS Toolchain Policy Gate",
+      "script": "guard:oss-toolchain-policy",
+      "exit_level": "fail",
+      "description": "Enforces registered open-source and free-tool metadata policy.",
+      "source_file": "tools/guards/oss-toolchain-policy-gate.mjs"
+    },
+    {
+      "id": "workflow-lint",
+      "name": "Workflow Syntax Gate",
+      "script": "guard:workflow-lint",
+      "exit_level": "fail",
+      "description": "Fails on GitHub Actions workflow syntax errors detected by actionlint.",
+      "source_file": "tools/scripts/run-actionlint.mjs"
+    },
+    {
+      "id": "workflow-security",
+      "name": "Workflow Static Security Gate",
+      "script": "guard:workflow-security",
+      "exit_level": "fail",
+      "description": "Fails on configured high-confidence high-severity GitHub Actions findings detected by zizmor.",
+      "source_file": "tools/scripts/run-zizmor.mjs"
+    },
+    {
+      "id": "actions-pin",
+      "name": "Actions Immutable Pinning Gate",
+      "script": "guard:actions-pin",
+      "exit_level": "fail",
+      "description": "Fails when external GitHub Actions are not pinned to immutable commit SHAs.",
+      "source_file": "tools/scripts/run-pinact.mjs"
+    },
+    {
+      "id": "rego-lint",
+      "name": "Rego Policy Diagnostics",
+      "script": "guard:rego-lint",
+      "exit_level": "warn",
+      "description": "Reports Rego style and quality findings while the lint baseline remains diagnostic.",
+      "source_file": "tools/scripts/run-regal.mjs"
+    },
+    {
+      "id": "opa-policies",
+      "name": "OPA Policy Gate",
+      "script": "guard:opa-policies",
+      "exit_level": "fail",
+      "description": "Runs registered Conftest and OPA policy checks against governance inputs.",
+      "source_file": "tools/scripts/run-conftest.mjs"
+    },
+    {
+      "id": "shellcheck",
+      "name": "Shell Script Diagnostics",
+      "script": "guard:shellcheck",
+      "exit_level": "warn",
+      "description": "Reports ShellCheck findings while the shell baseline remains diagnostic.",
+      "source_file": "tools/scripts/run-shellcheck.mjs"
+    },
+    {
+      "id": "dockerfile-lint",
+      "name": "Dockerfile Diagnostics",
+      "script": "guard:dockerfile-lint",
+      "exit_level": "warn",
+      "description": "Reports hadolint findings while the Dockerfile baseline remains diagnostic.",
+      "source_file": "tools/scripts/run-hadolint.mjs"
+    },
+    {
+      "id": "yaml-lint",
+      "name": "YAML Diagnostics",
+      "script": "guard:yaml-lint",
+      "exit_level": "warn",
+      "description": "Reports YAML formatting findings while the formatting baseline remains diagnostic.",
+      "source_file": "tools/scripts/run-yamllint.mjs"
+    },
+    {
+      "id": "ls-lint",
+      "name": "Repository Naming Diagnostics",
+      "script": "guard:ls-lint",
+      "exit_level": "warn",
+      "description": "Reports ls-lint naming findings while registered legacy names remain.",
+      "source_file": ".ls-lint.yml"
+    },
+    {
+      "id": "runtime-real-bindings",
+      "name": "Runtime-Facing Static Anti-Stub Gate",
+      "script": "guard:runtime-real-bindings",
+      "exit_level": "fail",
+      "description": "Rejects selected fake, preview, placeholder, and in-memory success patterns in runtime-facing source; it does not prove runtime execution.",
+      "source_file": "tools/guards/runtime-real-bindings-gate.mjs"
+    },
+    {
+      "id": "live-cross-journey-integrity",
+      "name": "Cross-Journey Regression Gate",
+      "script": "guard:live-cross-journey-integrity",
+      "exit_level": "fail",
+      "description": "Enforces selected named cross-journey regression invariants without claiming complete runtime coverage.",
+      "source_file": "tools/guards/live-cross-journey-integrity-gate.mjs"
+    },
+    {
+      "id": "product-truth-dispatcher",
+      "name": "Journey Product Truth Dispatcher",
+      "exit_level": "fail",
+      "description": "Runs the journey-specific Product Truth validators discovered by the governed dispatcher.",
+      "source_file": "tools/guards/product-truth-gate.mjs"
+    },
+    {
+      "id": "dsh-openapi-modular",
+      "name": "DSH Modular OpenAPI Gate",
+      "exit_level": "fail",
+      "description": "Validates the modular DSH OpenAPI composition and generated-client source of truth.",
+      "source_file": "tools/guards/dsh-openapi-modular-gate.mjs"
+    },
+    {
+      "id": "jrn-031-closure",
+      "name": "JRN-031 Administration Closure Gate",
+      "exit_level": "fail",
+      "description": "Validates JRN-031 administration governance, maker-checker boundaries, immutable evidence and consolidated CI coverage.",
+      "source_file": "tools/guards/jrn-031-closure-gate.mjs"
+    },
+    {
+      "id": "jrn-036-settlement-commission",
+      "name": "JRN-036 Settlement Commission Gate",
+      "exit_level": "fail",
+      "description": "Validates JRN-036 settlement and commission ownership, contracts, and surface bindings.",
+      "source_file": "tools/guards/jrn-036-settlement-commission-gate.mjs"
+    },
+    {
+      "id": "jrn-037-payout-destination",
+      "name": "JRN-037 Payout Destination Gate",
+      "exit_level": "fail",
+      "description": "Validates JRN-037 payout destination ownership, contracts, and multi-surface bindings.",
+      "source_file": "tools/guards/jrn-037-payout-destination-gate.mjs"
+    },
+    {
+      "id": "jrn-040-platform-change-sets",
+      "name": "JRN-040 Platform Change Sets Gate",
+      "exit_level": "fail",
+      "description": "Validates JRN-040 platform change-set governance, contracts, and control-panel binding.",
+      "source_file": "tools/guards/jrn-040-platform-change-sets-gate.mjs"
+    },
+    {
+      "id": "jrn-041-progressive-rollout",
+      "name": "JRN-041 Progressive Rollout Gate",
+      "exit_level": "fail",
+      "description": "Validates JRN-041 progressive rollout and rollback governance, contracts, and surfaces.",
+      "source_file": "tools/guards/jrn-041-progressive-rollout-gate.mjs"
+    },
+    {
+      "id": "a11y-runtime",
+      "name": "Accessibility Runtime Gate",
+      "script": "guard:a11y-runtime",
+      "exit_level": "fail",
+      "description": "Runs Playwright and axe runtime accessibility checks and propagates missing-runtime or test failure.",
+      "source_file": "tools/guards/a11y-runtime-gate.mjs"
+    }
   ]
 }

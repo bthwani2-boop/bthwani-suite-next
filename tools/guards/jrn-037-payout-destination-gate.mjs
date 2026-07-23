@@ -46,7 +46,7 @@ if (truthRaw) {
   }
 }
 
-requireIncludes("services/wlt/database/migrations/wlt-091_jrn037_payout_destination_governance.sql", [
+requireIncludes("services/wlt/database/migrations/wlt-098_jrn037_payout_destination_governance.sql", [
   "owner_actor_id",
   "owner_actor_type",
   "wlt_payout_destinations_one_active_owner_uidx",
@@ -57,17 +57,17 @@ requireIncludes("services/wlt/database/migrations/wlt-091_jrn037_payout_destinat
   "wlt_jrn037_payout_reconciliations",
   "wlt_jrn037_payout_transition_trigger",
 ]);
-requireIncludes("services/wlt/database/migrations/wlt-092_jrn037_request_hash_scope.sql", [
+requireIncludes("services/wlt/database/migrations/wlt-099_jrn037_request_hash_scope.sql", [
   "DROP INDEX IF EXISTS wlt_payout_requests_request_hash_uidx",
   "wlt_payout_requests_request_hash_idx",
 ]);
-requireIncludes("services/wlt/database/migrations/wlt-093_jrn037_payout_destination_reference.sql", [
+requireIncludes("services/wlt/database/migrations/wlt-100_jrn037_payout_destination_reference.sql", [
   "wlt_payout_requests_destination_fk",
   "FOREIGN KEY (payout_destination_id)",
   "ON DELETE RESTRICT",
   "VALIDATE CONSTRAINT",
 ]);
-requireIncludes("services/wlt/database/migrations/wlt-094_jrn037_reconciliation_single_claim.sql", [
+requireIncludes("services/wlt/database/migrations/wlt-101_jrn037_reconciliation_single_claim.sql", [
   "wlt_jrn037_reject_duplicate_reconciliation_claim",
   "wlt_jrn037_single_reconciliation_claim_trigger",
   "inquiry_pending",

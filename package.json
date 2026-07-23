@@ -227,16 +227,19 @@
     "journey:gate:runtime": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Runtime",
     "journey:gate:runtime:full": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Full -Runtime",
     "openapi:lint:dsh": "node tools/guards/dsh-openapi-modular-gate.mjs",
-    "openapi:verify:dsh": "pnpm --dir services/dsh openapi:verify"
+    "openapi:verify:dsh": "pnpm --dir services/dsh openapi:verify",
+    "guard:a11y-runtime": "node tools/guards/a11y-runtime-gate.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
+    "@axe-core/playwright": "^4.12.1",
     "@ls-lint/ls-lint": "^2.2.3",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.217.0",
     "@opentelemetry/resources": "^1.30.0",
     "@opentelemetry/sdk-node": "^0.217.0",
     "@opentelemetry/semantic-conventions": "^1.28.0",
+    "@playwright/test": "^1.61.1",
     "@stoplight/spectral-cli": "6.16.0",
     "@types/react": "19.2.17",
     "ajv": "8.20.0",

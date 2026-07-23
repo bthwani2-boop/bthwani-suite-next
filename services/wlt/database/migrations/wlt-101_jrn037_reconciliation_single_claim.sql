@@ -1,4 +1,4 @@
--- WLT-094 / JRN-037: prevent a second worker from claiming the same ambiguous
+-- WLT-101 / JRN-037: prevent a second worker from claiming the same ambiguous
 -- provider result after it has already entered inquiry_pending. The payout row
 -- is selected FOR UPDATE by the application; this trigger is the final data
 -- boundary that rejects an inquiry_pending -> inquiry_pending re-claim before

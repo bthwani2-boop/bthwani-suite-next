@@ -67,6 +67,13 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-091_jrn036_adjustment_ledger_identity.sql" = "to_regclass('public.wlt_jrn036_commission_adjustments_request_hash_idx') IS NOT NULL AND to_regclass('public.wlt_jrn036_commission_adjustments_commission_created_idx') IS NOT NULL"
   "wlt-092_jrn_035_refund_operation_idempotency.sql" = "to_regclass('public.wlt_refund_operation_receipts') IS NOT NULL AND to_regclass('public.wlt_refund_operation_receipts_identity_uq') IS NOT NULL"
   "wlt-093_jrn036_mutation_receipts.sql" = "to_regclass('public.wlt_jrn036_mutation_receipts') IS NOT NULL AND to_regclass('public.wlt_jrn036_mutation_receipts_aggregate_idx') IS NOT NULL AND to_regclass('public.wlt_jrn036_mutation_receipts_request_hash_idx') IS NOT NULL"
+  "wlt-095_jrn027_subscription_lifecycle.sql" = "to_regclass('public.wlt_subscription_lifecycle_events') IS NOT NULL AND to_regclass('public.wlt_subscription_compensations') IS NOT NULL"
+  "wlt-096_jrn_028_promotion_funding_audit_integrity.sql" = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_promotion_funding_events' AND column_name = 'transaction_id') AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_wlt_require_promotion_funding_transition_event' AND NOT tgisinternal)"
+  "wlt-097_cod_custody_evidence_reconciliation.sql" = "to_regclass('public.wlt_cod_custody_evidence') IS NOT NULL AND to_regclass('public.wlt_cod_reconciliation_cases') IS NOT NULL AND to_regclass('public.wlt_cod_reconciliation_audit_events') IS NOT NULL"
+  "wlt-098_jrn037_payout_destination_governance.sql" = "to_regclass('public.wlt_jrn037_payout_audit_events') IS NOT NULL AND to_regclass('public.wlt_jrn037_payout_outbox') IS NOT NULL AND to_regclass('public.wlt_jrn037_payout_reconciliations') IS NOT NULL"
+  "wlt-099_jrn037_request_hash_scope.sql" = "to_regclass('public.wlt_payout_requests_request_hash_idx') IS NOT NULL"
+  "wlt-100_jrn037_payout_destination_reference.sql" = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_payout_requests_destination_fk')"
+  "wlt-101_jrn037_reconciliation_single_claim.sql" = "EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'wlt_jrn037_single_reconciliation_claim_trigger' AND NOT tgisinternal)"
 }
 
 function Test-WltMigrationProbeCoverage {

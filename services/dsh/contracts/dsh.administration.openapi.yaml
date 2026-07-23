@@ -301,6 +301,107 @@ paths:
                   audit:
                     type: array
                     items: { $ref: "#/components/schemas/AuditEntry" }
+  /operator/admin/support-sessions:
+    get:
+      operationId: listDshAdministrationSupportSessionRequests
+      description: Lists governed support-session requests without exposing issued bearer tokens.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: [pending, approved, rejected, issued, revoked, expired] }
+      responses:
+        "200":
+          description: Support-session request queue.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [requests]
+                properties:
+                  requests: { type: array, items: { type: object, additionalProperties: true } }
+        "400": { description: Invalid status filter. }
+        "401": { description: Authentication required. }
+        "403": { description: Administration read permission required. }
+    post:
+      operationId: createDshAdministrationSupportSessionRequest
+      description: Creates a pending support-session request; issuance requires an independent checker.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [targetActorId, reason, durationMinutes]
+              properties:
+                targetActorId: { type: string, minLength: 1 }
+                reason: { type: string, minLength: 5, maxLength: 1000 }
+                durationMinutes: { type: integer, minimum: 1, maximum: 120 }
+      responses:
+        "202": { description: Pending support-session request created. }
+        "400": { description: Invalid request. }
+        "401": { description: Authentication required. }
+        "403": { description: Administration manage permission required. }
+        "409": { description: Equivalent request is active or source state changed. }
+        "503": { description: Identity support-session integration is not configured. }
+  /operator/admin/support-sessions/{requestId}/review:
+    post:
+      operationId: reviewDshAdministrationSupportSessionRequest
+      description: Independently approves or rejects a pending support-session request.
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [decision, expectedVersion]
+              properties:
+                decision: { type: string, enum: [approved, rejected] }
+                reviewNote: { type: string, maxLength: 1000 }
+                expectedVersion: { type: integer, minimum: 1 }
+      responses:
+        "200": { description: Request reviewed; an approved response may include the one-time Identity handoff result. }
+        "400": { description: Invalid review. }
+        "403": { description: Self-approval or missing approval permission. }
+        "404": { description: Request not found. }
+        "409": { description: Version or lifecycle conflict. }
+        "502": { description: Identity denied the support-session handoff. }
+  /operator/admin/support-sessions/{requestId}/revoke:
+    post:
+      operationId: revokeDshAdministrationSupportSessionRequest
+      description: Revokes the Identity support session and appends the DSH request lifecycle evidence.
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 1000 }
+      responses:
+        "200": { description: Support session revoked. }
+        "400": { description: Invalid revocation. }
+        "403": { description: Administration approval permission required. }
+        "404": { description: Request not found. }
+        "409": { description: Request is no longer revocable. }
+  /operator/admin/support/snapshot:
+    get:
+      operationId: getDshAdministrationSupportSnapshot
+      description: Returns a privacy-scoped snapshot only for a valid Identity support session with actor-bound support.read permission.
+      responses:
+        "200": { description: Identity support-session context and privacy-scoped operational snapshot. }
+        "401": { description: Support bearer session required. }
+        "403": { description: Session invalid, expired, or outside its actor scope. }
+        "503": { description: Identity support-session integration is not configured. }
+
 components:
   securitySchemes:
     bearerAuth:

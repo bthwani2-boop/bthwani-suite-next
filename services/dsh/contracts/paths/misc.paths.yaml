@@ -579,6 +579,26 @@
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
 /dsh/notifications/preferences:
+  get:
+    operationId: getDshNotificationPreferences
+    summary: List notification preferences for the authenticated actor.
+    tags: [notifications]
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Actor-owned notification preference policies.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [preferences]
+              properties:
+                preferences:
+                  type: array
+                  items: { $ref: "../dsh.openapi.yaml#/components/schemas/DshNotificationPreference" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
   put:
     operationId: updateDshNotificationPreferences
     summary: Update notification preferences for the authenticated actor.

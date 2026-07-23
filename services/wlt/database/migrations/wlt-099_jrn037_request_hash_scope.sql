@@ -1,4 +1,4 @@
--- WLT-092 / JRN-037: request_hash is evidence for an idempotency key,
+-- WLT-099 / JRN-037: request_hash is evidence for an idempotency key,
 -- not a permanent uniqueness key for a financial intent. Two legitimate
 -- payouts may have the same actor, destination, amount and currency at
 -- different times, while wlt_payout_requests.idempotency_key remains unique.

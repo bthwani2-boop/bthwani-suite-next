@@ -49,6 +49,7 @@ x-bthwani-contracts:
     dshPartnerSupport: ../services/dsh/contracts/dsh.partner-support.openapi.yaml
     dshPaymentSessions: ../services/dsh/contracts/dsh.payment-sessions.openapi.yaml
     dshPayoutDestinations: ../services/dsh/contracts/dsh.jrn-037-payouts-destinations.openapi.yaml
+    dshCodCustody: ../services/dsh/contracts/dsh.jrn-038-cod-custody.openapi.yaml
     dshPlatformPolicies: ../services/dsh/contracts/dsh.platform-policies.openapi.yaml
     dshRepresentativeFinance: ../services/dsh/contracts/jrn-033-representative-finance.openapi.yaml
     dshRefunds: ../services/dsh/contracts/jrn-035-refunds.openapi.yaml
