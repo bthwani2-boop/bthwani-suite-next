@@ -3,6 +3,13 @@
   "targetRef": "lianbassam",
   "purpose": "SAAS_ACTIVATION_FULL_VERIFICATION",
   "requestedDate": "2026-07-23",
+  "attempt": 2,
+  "previousRunId": 29972316421,
+  "remediation": [
+    "ALIGN_PNPM_TO_PUBLISHED_10_34_0",
+    "PRESERVE_FROZEN_LOCKFILE",
+    "REVERIFY_DSH_WLT_AND_RUNTIME"
+  ],
   "saasMode": "SAAS_ACTIVE",
   "commercialActivationState": "ACTIVATION_AUTHORIZED",
   "productionDeploymentAuthorized": false,
