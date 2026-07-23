@@ -19,7 +19,7 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir apps/control-panel/runtime build"
+        "command": "pnpm --dir apps/control-panel/runtime build && pnpm run performance:bundle:size"
       }
     },
     "dev": {
