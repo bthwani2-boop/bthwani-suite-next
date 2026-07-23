@@ -122,6 +122,8 @@ node-gates*.log
 *.keystore
 *credentials*.json
 service-account*.json
+**/google-services.json
+**/GoogleService-Info.plist
 secrets.local.*
 passwords.local.*
 credentials.local.*
