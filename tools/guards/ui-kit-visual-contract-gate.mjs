@@ -32,6 +32,7 @@ if (!fs.existsSync(path.join(repoRoot, htmlFile))) {
 }
 
 const manifest = JSON.parse(read(manifestFile));
+const modules = Array.isArray(manifest.modules) ? manifest.modules : [];
 const symbols = new Set(manifest.publicSymbols ?? []);
 for (const required of [
   "ActionBar",
@@ -63,41 +64,45 @@ for (const required of [
   }
 }
 
-const duplicateSymbols = manifest.duplicateSymbols ?? [];
-for (const duplicate of duplicateSymbols) {
+for (const duplicate of manifest.duplicateSymbols ?? []) {
   violations.push({
     file: manifestFile,
     message: `DUPLICATE_PUBLIC_SYMBOL:${duplicate.symbol}:${duplicate.owners.join(",")}`,
   });
 }
 
-const sourceFiles = (manifest.modules ?? []).map((module) => module.path);
-for (const file of sourceFiles) {
-  const source = read(file);
+for (const module of modules) {
+  const source = read(module.path);
   if (/\b(?:TODO|FIXME|HACK)\b/.test(source)) {
-    violations.push({ file, message: "UNRESOLVED_UI_MARKER" });
+    violations.push({ file: module.path, message: "UNRESOLVED_UI_MARKER" });
   }
   if (/Math\.random\s*\(/.test(source)) {
-    violations.push({ file, message: "SYNTHETIC_UI_RANDOMNESS_FORBIDDEN" });
+    violations.push({ file: module.path, message: "SYNTHETIC_UI_RANDOMNESS_FORBIDDEN" });
   }
 }
 
-for (const interactiveFile of [
-  "shared/ui-kit/src/components/Button/index.tsx",
-  "shared/ui-kit/src/components/IconButton/index.tsx",
-  "shared/ui-kit/src/components/Checkbox/index.tsx",
-  "shared/ui-kit/src/components/Tabs/index.tsx",
-  "shared/ui-kit/src/components/Dialog/index.tsx",
-  "shared/ui-kit/src/components/Sheet/index.tsx",
+for (const interactiveSymbol of [
+  "Button",
+  "IconButton",
+  "Checkbox",
+  "Tabs",
+  "Dialog",
+  "Sheet",
 ]) {
-  const absolute = path.join(repoRoot, interactiveFile);
-  if (!fs.existsSync(absolute)) {
-    violations.push({ file: interactiveFile, message: "INTERACTIVE_COMPONENT_SOURCE_MISSING" });
+  const owner = modules.find((module) => module.exports?.includes(interactiveSymbol));
+  if (!owner) {
+    violations.push({
+      file: manifestFile,
+      message: `INTERACTIVE_COMPONENT_OWNER_MISSING:${interactiveSymbol}`,
+    });
     continue;
   }
-  const source = read(interactiveFile);
+  const source = read(owner.path);
   if (!/accessibility|aria-|role=|accessibilityRole/.test(source)) {
-    violations.push({ file: interactiveFile, message: "INTERACTIVE_ACCESSIBILITY_CONTRACT_MISSING" });
+    violations.push({
+      file: owner.path,
+      message: `INTERACTIVE_ACCESSIBILITY_CONTRACT_MISSING:${interactiveSymbol}`,
+    });
   }
 }
 
