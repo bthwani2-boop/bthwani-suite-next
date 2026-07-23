@@ -1,0 +1,300 @@
+name: One-time lianbassam final Go vulnerability remediation
+
+on:
+  push:
+    branches: [lianbassam]
+    paths:
+      - ".github/workflows/security-final-go-remediation-lianbassam.yml"
+
+permissions:
+  contents: write
+  statuses: write
+
+concurrency:
+  group: security-final-go-remediation-lianbassam
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout current lianbassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: lianbassam
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Publish run locator
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=pending \
+            -f context='bthwani/final-go-security-remediation' \
+            -f description='Final Go vulnerability remediation is running' \
+            -f target_url="${RUN_URL}"
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.26.5"
+          cache: false
+
+      - name: Install pinned security scanners
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install golang.org/x/vuln/cmd/govulncheck@v1.6.0
+          go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.3.8
+
+          version="0.70.0"
+          archive="trivy_${version}_Linux-64bit.tar.gz"
+          base="https://github.com/aquasecurity/trivy/releases/download/v${version}"
+          curl --fail --silent --show-error --location --output "/tmp/${archive}" "${base}/${archive}"
+          curl --fail --silent --show-error --location --output /tmp/trivy-checksums.txt "${base}/trivy_${version}_checksums.txt"
+          (cd /tmp && grep " ${archive}$" trivy-checksums.txt | sha256sum --check --strict -)
+          tar -xzf "/tmp/${archive}" -C /tmp trivy
+          sudo install -m 0755 /tmp/trivy /usr/local/bin/trivy
+
+      - name: Apply Go baseline and governed OSV exception
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd services/dsh/backend
+            go mod edit -go=1.26.5
+            go mod tidy
+          )
+
+          cat > core/identity/backend/osv-scanner.toml <<'TOML'
+          [[IgnoredVulns]]
+          id = "GO-2026-5932"
+          ignoreUntil = 2026-10-31
+          reason = "The advisory is scoped to golang.org/x/crypto/openpgp. This module imports only golang.org/x/crypto/bcrypt; no openpgp package is imported, and govulncheck symbol analysis is required to pass. Review before expiry."
+          TOML
+
+          cat > services/dsh/backend/osv-scanner.toml <<'TOML'
+          [[IgnoredVulns]]
+          id = "GO-2026-5932"
+          ignoreUntil = 2026-10-31
+          reason = "The advisory is scoped to golang.org/x/crypto/openpgp. This module imports only golang.org/x/crypto/bcrypt; no openpgp package is imported, and govulncheck symbol analysis is required to pass. Review before expiry."
+          TOML
+
+      - name: Verify imports, reachability, tests, and builds
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p governance/evidence/security/go-reachability
+          summary="governance/evidence/security/go-reachability-verification.md"
+          : > "${summary}"
+
+          if git grep -n 'golang.org/x/crypto/openpgp' -- '*.go' > governance/evidence/security/go-reachability/openpgp-imports.log; then
+            echo "Unexpected OpenPGP imports found." >&2
+            cat governance/evidence/security/go-reachability/openpgp-imports.log >&2
+            exit 1
+          fi
+
+          {
+            echo "# Go vulnerability reachability verification"
+            echo
+            echo "- Branch: lianbassam"
+            echo "- Go toolchain: $(go version)"
+            echo "- OpenPGP imports: 0"
+            echo "- GO-2026-5932 scope: openpgp packages only"
+            echo "- Exception expiry: 2026-10-31"
+            echo "- Master merge: not performed"
+            echo
+            echo "| Module | govulncheck | tests | build |"
+            echo "|---|---:|---:|---:|"
+          } >> "${summary}"
+
+          for module_dir in core/identity/backend services/dsh/backend; do
+            safe_name="$(echo "${module_dir}" | tr '/.' '__')"
+            govuln_log="governance/evidence/security/go-reachability/${safe_name}-govulncheck.log"
+            test_log="governance/evidence/security/go-reachability/${safe_name}-test.log"
+            build_log="governance/evidence/security/go-reachability/${safe_name}-build.log"
+
+            pushd "${module_dir}" >/dev/null
+            govulncheck ./... > "${GITHUB_WORKSPACE}/${govuln_log}" 2>&1
+            govuln_code=$?
+            go test ./... -count=1 > "${GITHUB_WORKSPACE}/${test_log}" 2>&1
+            test_code=$?
+            go build ./... > "${GITHUB_WORKSPACE}/${build_log}" 2>&1
+            build_code=$?
+            popd >/dev/null
+
+            printf '| `%s` | %s | %s | %s |\n' \
+              "${module_dir}" "${govuln_code}" "${test_code}" "${build_code}" >> "${summary}"
+
+            if [[ ${govuln_code} -ne 0 || ${test_code} -ne 0 || ${build_code} -ne 0 ]]; then
+              exit 1
+            fi
+          done
+
+          echo >> "${summary}"
+          echo "Result: PASS — no reachable known Go vulnerabilities were reported in the affected modules." >> "${summary}"
+
+      - name: Re-run OSV and Trivy with governed configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p governance/evidence/security
+
+          osv-scanner scan source --recursive --format=json . > /tmp/osv-final.json 2>/tmp/osv-final.err
+          osv_code=$?
+          trivy fs --config trivy.yaml --format json --output /tmp/trivy-final.json . > /tmp/trivy-final.stdout 2>/tmp/trivy-final.err
+          trivy_code=$?
+
+          OSV_CODE="${osv_code}" TRIVY_CODE="${trivy_code}" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          def load(path):
+              return json.loads(Path(path).read_text(encoding='utf-8-sig'))
+
+          osv = load('/tmp/osv-final.json')
+          trivy = load('/tmp/trivy-final.json')
+
+          osv_findings = []
+          for result in osv.get('results', []) or []:
+              source = result.get('source') or {}
+              for package in result.get('packages') or []:
+                  package_info = package.get('package') or {}
+                  for vulnerability in package.get('vulnerabilities') or []:
+                      osv_findings.append({
+                          'id': vulnerability.get('id'),
+                          'package': package_info.get('name'),
+                          'version': package_info.get('version'),
+                          'ecosystem': package_info.get('ecosystem'),
+                          'source_path': source.get('path') if isinstance(source, dict) else str(source),
+                      })
+
+          trivy_vulnerabilities = []
+          trivy_misconfigurations = []
+          trivy_secrets = []
+          for result in trivy.get('Results', []) or []:
+              target = result.get('Target')
+              for vulnerability in result.get('Vulnerabilities') or []:
+                  trivy_vulnerabilities.append({
+                      'target': target,
+                      'id': vulnerability.get('VulnerabilityID'),
+                      'package': vulnerability.get('PkgName'),
+                      'installed': vulnerability.get('InstalledVersion'),
+                      'fixed': vulnerability.get('FixedVersion'),
+                      'severity': vulnerability.get('Severity'),
+                  })
+              for finding in result.get('Misconfigurations') or []:
+                  trivy_misconfigurations.append({
+                      'target': target,
+                      'id': finding.get('ID'),
+                      'title': finding.get('Title'),
+                      'severity': finding.get('Severity'),
+                  })
+              for secret in result.get('Secrets') or []:
+                  trivy_secrets.append({
+                      'target': target,
+                      'rule_id': secret.get('RuleID'),
+                      'category': secret.get('Category'),
+                      'severity': secret.get('Severity'),
+                      'start_line': secret.get('StartLine'),
+                      'end_line': secret.get('EndLine'),
+                  })
+
+          summary = {
+              'branch': 'lianbassam',
+              'master_merge_performed': False,
+              'tool_exit_codes': {
+                  'osv': int(os.environ['OSV_CODE']),
+                  'trivy': int(os.environ['TRIVY_CODE']),
+              },
+              'counts': {
+                  'osv': len(osv_findings),
+                  'trivy_vulnerabilities': len(trivy_vulnerabilities),
+                  'trivy_misconfigurations': len(trivy_misconfigurations),
+                  'trivy_secrets': len(trivy_secrets),
+              },
+              'osv_findings': osv_findings,
+              'trivy_vulnerabilities': trivy_vulnerabilities,
+              'trivy_misconfigurations': trivy_misconfigurations,
+              'trivy_secrets': trivy_secrets,
+              'governed_exceptions': [{
+                  'id': 'GO-2026-5932',
+                  'scope': 'golang.org/x/crypto/openpgp only',
+                  'reason': 'No openpgp imports; affected modules import bcrypt only; govulncheck passes.',
+                  'expires': '2026-10-31',
+              }],
+          }
+
+          remaining = sum(summary['counts'].values())
+          if remaining:
+              raise SystemExit(f'Scanner findings remain: {summary["counts"]}')
+
+          evidence = Path('governance/evidence/security')
+          (evidence / 'security-scanners-summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          (evidence / 'security-scanners-verification.md').write_text(
+              '# OSV and Trivy verification\n\n'
+              '- Branch: lianbassam\n'
+              '- Master merge: not performed\n'
+              '- OSV findings after governed exception: 0\n'
+              '- Trivy vulnerabilities: 0\n'
+              '- Trivy misconfigurations: 0\n'
+              '- Trivy secret findings: 0\n'
+              '- GO-2026-5932: no reachable affected symbols; exception expires 2026-10-31\n\n'
+              'Result: PASS\n',
+              encoding='utf-8',
+          )
+          PY
+
+          rm -f governance/evidence/security/security-scanners-diagnostics.md
+          rm -f governance/evidence/security/security-scanners-raw-diagnostics.md
+
+      - name: Commit final verified remediation
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/security-final-go-remediation-lianbassam.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix(security): close final Go vulnerability findings"
+          git pull --rebase origin lianbassam
+          git push origin HEAD:lianbassam
+
+      - name: Publish success
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=success \
+            -f context='bthwani/final-go-security-remediation' \
+            -f description='Go reachability, OSV, and Trivy verification passed' \
+            -f target_url="${RUN_URL}"
+
+      - name: Publish failure
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=failure \
+            -f context='bthwani/final-go-security-remediation' \
+            -f description='Final Go vulnerability remediation failed' \
+            -f target_url="${RUN_URL}"
