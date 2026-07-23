@@ -37,6 +37,17 @@ function listSql(relativeDirectory) {
     .sort((a, b) => a.localeCompare(b));
 }
 
+function parsePackage(relativePath) {
+  const text = read(relativePath);
+  if (!text) return undefined;
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    fail(`${relativePath} is invalid JSON: ${error.message}`);
+    return undefined;
+  }
+}
+
 const databaseReadme = read("services/dsh/database/README.md");
 requireText(databaseReadme, "seeds/local", "DSH database README");
 requireText(databaseReadme, "staging", "DSH database README");
@@ -53,6 +64,7 @@ requireText(runner, "--single-transaction", runnerPath);
 requireText(runner, "AllowLocalSeeds", runnerPath);
 requireText(runner, "CREATE INDEX CONCURRENTLY", runnerPath);
 requireText(runner, "Set-StrictMode", runnerPath);
+requireText(runner, "Ensure-DockerDshPostgres", runnerPath);
 
 const migrations = listSql("services/dsh/database/migrations");
 if (migrations.length === 0) {
@@ -95,33 +107,49 @@ if (fs.existsSync(indexesDirectory)) {
   }
 }
 
-const servicePackageText = read("services/dsh/package.json");
-if (servicePackageText) {
-  try {
-    const servicePackage = JSON.parse(servicePackageText);
-    const scripts = servicePackage.scripts ?? {};
-    for (const scriptName of [
-      "database:migrate",
-      "database:seed:local",
-      "database:test",
-      "database:test:seed",
-      "database:contract",
-    ]) {
-      if (typeof scripts[scriptName] !== "string") {
-        fail(`services/dsh/package.json is missing script: ${scriptName}`);
-      }
+const servicePackage = parsePackage("services/dsh/package.json");
+if (servicePackage) {
+  const scripts = servicePackage.scripts ?? {};
+  for (const scriptName of [
+    "database:migrate",
+    "database:seed:local",
+    "database:test",
+    "database:test:seed",
+    "database:contract",
+  ]) {
+    if (typeof scripts[scriptName] !== "string") {
+      fail(`services/dsh/package.json is missing script: ${scriptName}`);
     }
-    requireText(scripts["database:migrate"] ?? "", serviceRunnerPath, "database:migrate");
-    requireText(scripts["database:seed:local"] ?? "", serviceRunnerPath, "database:seed:local");
-    requireText(scripts["database:seed:local"] ?? "", "AllowLocalSeeds", "database:seed:local");
-    requireText(scripts["database:contract"] ?? "", "check-dsh-database-contract.mjs", "database:contract");
-  } catch (error) {
-    fail(`services/dsh/package.json is invalid JSON: ${error.message}`);
   }
+  requireText(scripts["database:migrate"] ?? "", serviceRunnerPath, "database:migrate");
+  requireText(scripts["database:seed:local"] ?? "", serviceRunnerPath, "database:seed:local");
+  requireText(scripts["database:seed:local"] ?? "", "AllowLocalSeeds", "database:seed:local");
+  requireText(scripts["database:contract"] ?? "", "check-dsh-database-contract.mjs", "database:contract");
+}
+
+const rootPackage = parsePackage("package.json");
+if (rootPackage) {
+  const scripts = rootPackage.scripts ?? {};
+  for (const scriptName of [
+    "runtime:migrate",
+    "runtime:seed",
+    "database:dsh:test",
+    "database:dsh:test:seed",
+    "database:dsh:contract",
+  ]) {
+    if (typeof scripts[scriptName] !== "string") {
+      fail(`package.json is missing script: ${scriptName}`);
+    }
+  }
+  requireText(scripts["runtime:migrate"] ?? "", runnerPath, "runtime:migrate");
+  requireText(scripts["runtime:seed"] ?? "", runnerPath, "runtime:seed");
+  requireText(scripts["runtime:seed"] ?? "", "AllowLocalSeeds", "runtime:seed");
+  requireText(scripts["database:dsh:contract"] ?? "", "check-dsh-database-contract.mjs", "database:dsh:contract");
 }
 
 const workflow = read(".github/workflows/dsh-database.yml");
 requireText(workflow, runnerPath, "DSH database workflow");
+requireText(workflow, '"package.json"', "DSH database workflow path routing");
 requireText(workflow, "Apply canonical DSH migrations", "DSH database workflow");
 requireText(workflow, "Re-run canonical DSH migrations", "DSH database workflow");
 requireText(workflow, "Apply DSH local seeds twice", "DSH database workflow");
