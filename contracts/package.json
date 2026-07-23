@@ -3,7 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "sideEffects": false,
   "scripts": {
-    "typecheck": "node ../tools/important-scripts/contracts-typecheck.mjs"
+    "typecheck": "node ../tools/important-scripts/contracts-typecheck.mjs",
+    "build": "node ../tools/important-scripts/contracts-typecheck.mjs",
+    "test": "node ../tools/important-scripts/contracts-foundation.mjs",
+    "lint": "node ../tools/guards/api-binding-gate.mjs && node ../tools/guards/backend-api-binding-gate.mjs && node ../tools/guards/service-manifest-drift-gate.mjs"
   }
 }
