@@ -28,6 +28,20 @@ test("treats the contextual router itself as workflow policy", () => {
   assert.equal(result.policy, true);
 });
 
+test("routes sovereign mobile tooling through policy frontend and runtime proof", () => {
+  const result = classifyFiles([
+    "tools/mobile/defineBthwaniExpoApp.js",
+    "tools/scripts/guard-mobile-apps.mjs",
+  ]);
+  assert.equal(result.governance, true);
+  assert.equal(result.policy, true);
+  assert.equal(result.frontend, true);
+  assert.equal(result.node, true);
+  assert.equal(result.runtime, true);
+  assert.equal(result.heavy, true);
+  assert.equal(result.workflow, false);
+});
+
 test("routes infrastructure without product-wide verification", () => {
   const result = classifyFiles(["infra/docker/compose.runtime.yml"]);
   assert.equal(result.infrastructure, true);
