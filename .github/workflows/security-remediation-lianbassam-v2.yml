@@ -25,6 +25,20 @@ jobs:
           ref: lianbassam
           fetch-depth: 0
 
+      - name: Publish remediation run locator
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=pending \
+            -f context='bthwani/security-remediation-v2' \
+            -f description='Security remediation is running' \
+            -f target_url="${RUN_URL}"
+
       - name: Setup PNPM
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
@@ -147,9 +161,40 @@ jobs:
           set -euo pipefail
           rm -f .github/workflows/security-remediation-lianbassam.yml
           rm -f .github/workflows/security-remediation-lianbassam-v2.yml
+          rm -f .github/workflows/lianbassam-workflow-probe.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "fix(security): remediate lianbassam dependency vulnerabilities"
           git pull --rebase origin lianbassam
           git push origin HEAD:lianbassam
+
+      - name: Publish remediation success
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=success \
+            -f context='bthwani/security-remediation-v2' \
+            -f description='Security remediation committed to lianbassam' \
+            -f target_url="${RUN_URL}"
+
+      - name: Publish remediation failure
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=failure \
+            -f context='bthwani/security-remediation-v2' \
+            -f description='Security remediation failed; inspect the workflow log' \
+            -f target_url="${RUN_URL}"
