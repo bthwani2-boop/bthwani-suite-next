@@ -18,6 +18,11 @@ export function resolveWorkforceServerBaseUrl(): string {
   return readServerEnv("WORKFORCE_API_BASE_URL", "http://localhost:58086");
 }
 
+/** Server-only Providers backend base URL used by the /api/providers proxy route. */
+export function resolveProvidersServerBaseUrl(): string {
+  return readServerEnv("PROVIDERS_API_BASE_URL", "http://localhost:58087");
+}
+
 /** Server-only Platform Control base URL used by the /api/platform-control proxy route. */
 export function resolvePlatformControlServerBaseUrl(): string {
   return readServerEnv("PLATFORM_CONTROL_API_BASE_URL", "http://localhost:58088");
