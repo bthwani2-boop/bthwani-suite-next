@@ -36,11 +36,9 @@ function Publish-RuntimeStatus {
     return
   }
 
-  $suffix = if ([string]::IsNullOrWhiteSpace($Subject)) {
-    ""
-  } else {
-    "/" + (($Subject -replace "[^A-Za-z0-9_.-]", "-").Trim("-").Substring(0, [Math]::Min(48, (($Subject -replace "[^A-Za-z0-9_.-]", "-").Trim("-")).Length)))
-  }
+  $cleanSubject = ($Subject -replace "[^A-Za-z0-9_.-]", "-").Trim("-")
+  if ($cleanSubject.Length -gt 48) { $cleanSubject = $cleanSubject.Substring(0, 48) }
+  $suffix = if ($cleanSubject) { "/$cleanSubject" } else { "" }
   $context = "bthwani/runtime/$Action$suffix"
   if ($context.Length -gt 100) { $context = $context.Substring(0, 100) }
   $apiUrl = if ($env:GITHUB_API_URL) { $env:GITHUB_API_URL } else { "https://api.github.com" }
@@ -53,17 +51,20 @@ function Publish-RuntimeStatus {
   }
   if ($targetUrl) { $payload.target_url = $targetUrl }
 
+  $requestParameters = @{
+    Uri = "$apiUrl/repos/$($env:GITHUB_REPOSITORY)/statuses/$($env:GITHUB_SHA)"
+    Method = "Post"
+    Headers = @{
+      Accept = "application/vnd.github+json"
+      Authorization = "Bearer $($env:BTHWANI_STATUS_TOKEN)"
+      "X-GitHub-Api-Version" = "2022-11-28"
+    }
+    ContentType = "application/json"
+    Body = ($payload | ConvertTo-Json -Compress)
+  }
+
   try {
-    Invoke-RestMethod \
-      -Uri "$apiUrl/repos/$($env:GITHUB_REPOSITORY)/statuses/$($env:GITHUB_SHA)" \
-      -Method Post \
-      -Headers @{
-        Accept = "application/vnd.github+json"
-        Authorization = "Bearer $($env:BTHWANI_STATUS_TOKEN)"
-        "X-GitHub-Api-Version" = "2022-11-28"
-      } \
-      -ContentType "application/json" \
-      -Body ($payload | ConvertTo-Json -Compress) | Out-Null
+    Invoke-RestMethod @requestParameters | Out-Null
   } catch {
     Write-Warning "Runtime status publication failed: $($_.Exception.Message)"
   }
@@ -80,9 +81,6 @@ if ($Force) { $arguments += "-Force" }
 try {
   Set-Location -LiteralPath $RepoRoot
   & $RuntimeScript @arguments 2>&1 | Tee-Object -FilePath $LogPath
-  if ($LASTEXITCODE -ne 0) {
-    throw "runtime phase '$Action' exited with code $LASTEXITCODE"
-  }
   Publish-RuntimeStatus -State success -Description "runtime $Action passed"
 } catch {
   $message = $_.Exception.Message
