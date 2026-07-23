@@ -159,7 +159,7 @@ func validateOfferTarget(db *sql.DB, offerID string) (bool, string, error) {
 		SELECT EXISTS (
 		  SELECT 1
 		  FROM dsh_partner_offers o
-		  JOIN dsh_stores s ON s.id=o.store_id
+		  JOIN dsh_stores s ON s.id = o.store_id::text
 		  WHERE o.id::TEXT=$1 AND o.status='published' AND o.archived_at IS NULL
 		    AND o.eligibility IN ('all','client')
 		    AND o.active_from_date <> '' AND o.active_to_date <> ''
