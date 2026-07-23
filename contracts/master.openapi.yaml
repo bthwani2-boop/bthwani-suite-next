@@ -26,6 +26,7 @@ x-bthwani-contracts:
     dshClientAddress: ../services/dsh/contracts/dsh.client-address.openapi.yaml
     dshClientAddressPrivacy: ../services/dsh/contracts/dsh.client-address-privacy.openapi.yaml
     dshClientMap: ../services/dsh/contracts/dsh.client-map.openapi.yaml
+    dshCodCustody: ../services/dsh/contracts/dsh.jrn-038-cod-custody.openapi.yaml
     dshDeliveryExceptions: ../services/dsh/contracts/dsh.delivery-exceptions.openapi.yaml
     dshDeliveryProofCompletion: ../services/dsh/contracts/dsh.delivery-proof-completion.openapi.yaml
     dshDeliveryProofMedia: ../services/dsh/contracts/dsh.delivery-proof-media.openapi.yaml
@@ -60,6 +61,7 @@ x-bthwani-contracts:
     wltRefunds: ../services/wlt/contracts/jrn-035-refunds.openapi.yaml
     wltSettlementsCommissions: ../services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml
     wltPayoutsDestinations: ../services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml
+    wltCodCustody: ../services/wlt/contracts/jrn-038-cod-custody.openapi.yaml
     wltCommercialBenefits: ../services/wlt/contracts/wlt.commercial.openapi.yaml
     wltCommercialBenefitsSummary: ../services/wlt/contracts/wlt.commercial-summary.openapi.yaml
     wltPromotionFunding: ../services/wlt/contracts/wlt.promotion-funding.openapi.yaml

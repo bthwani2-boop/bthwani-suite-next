@@ -104,6 +104,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          show-progress: false
       - name: Set up locked Node runtime
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -161,6 +162,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          show-progress: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Verify canonical governance
@@ -173,6 +175,7 @@ jobs:
           pnpm run guard:guard-registry
           pnpm run guard:sdlc
           pnpm run guard:cleanup-policy
+          pnpm run guard:required-command-integrity
       - name: Verify pinned GitHub Actions
         if: ${{ needs.context.outputs.workflow == 'true' || needs.context.outputs.security == 'true' }}
         run: pnpm run guard:actions-pin
@@ -205,16 +208,50 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+          show-progress: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Verify affected contracts and bindings
+      - name: Verify contract foundation
         if: ${{ needs.context.outputs.contracts == 'true' }}
+        run: pnpm run contracts:lint
+      - name: Verify frontend API adapters
+        id: api_binding
+        if: ${{ needs.context.outputs.contracts == 'true' }}
+        shell: bash
         run: |
-          pnpm run contracts:lint
-          pnpm run guard:api-binding
-          pnpm run guard:backend-api-binding
-          pnpm run guard:service-manifest-drift
-          pnpm run guard:frontend-feature-binding
+          set -euo pipefail
+          mkdir -p .diagnostics/contracts
+          pnpm run guard:api-binding 2>&1 | tee .diagnostics/contracts/api-binding.log
+      - name: Upload focused frontend API binding failure evidence
+        if: ${{ failure() && steps.api_binding.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: api-binding-failure-${{ github.run_id }}
+          path: .diagnostics/contracts/api-binding.log
+          if-no-files-found: error
+          retention-days: 1
+      - name: Verify backend API contract parity
+        id: backend_binding
+        if: ${{ needs.context.outputs.contracts == 'true' && steps.api_binding.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .diagnostics/contracts
+          pnpm run guard:backend-api-binding 2>&1 | tee .diagnostics/contracts/backend-api-binding.log
+      - name: Upload focused backend API binding failure evidence
+        if: ${{ failure() && steps.backend_binding.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: backend-api-binding-failure-${{ github.run_id }}
+          path: .diagnostics/contracts/backend-api-binding.log
+          if-no-files-found: error
+          retention-days: 1
+      - name: Verify service manifest parity
+        if: ${{ needs.context.outputs.contracts == 'true' && steps.backend_binding.outcome == 'success' }}
+        run: pnpm run guard:service-manifest-drift
+      - name: Verify frontend feature binding
+        if: ${{ needs.context.outputs.contracts == 'true' && steps.backend_binding.outcome == 'success' }}
+        run: pnpm run guard:frontend-feature-binding
       - name: Typecheck, lint, and test affected frontend projects
         if: ${{ needs.context.outputs.frontend == 'true' }}
         env:
@@ -248,6 +285,7 @@ jobs:
           pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml -o /tmp/jrn-040-platform-change-sets-api.ts
           node tools/guards/jrn-040-platform-change-sets-gate.mjs
       - name: Verify immutable diff hygiene
+        if: ${{ always() }}
         run: git diff --check
 
   dsh:
@@ -261,6 +299,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          show-progress: false
       - name: Set up Go from DSH module
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -283,6 +322,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          show-progress: false
       - name: Set up Go from WLT module
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -305,6 +345,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          show-progress: false
       - name: Set up Go from Identity module
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -327,6 +368,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          show-progress: false
       - name: Set up Go from Workforce module
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -366,6 +408,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          show-progress: false
       - name: Set up Go from Platform Control module
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -396,6 +439,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          show-progress: false
       - name: Set up Go from Providers module
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -418,6 +462,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          show-progress: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Start and verify full runtime
@@ -427,7 +472,7 @@ jobs:
           pnpm run runtime:full:bootstrap-dev
           pnpm run runtime:full:smoke
       - name: Stop runtime
-        if: always()
+        if: ${{ always() }}
         shell: pwsh
         run: pnpm run runtime:full:down
 
@@ -439,36 +484,59 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Enforce contextual result
+        shell: bash
         env:
           CONTEXT_RESULT: ${{ needs.context.result }}
+          EXPECTED_POLICY: ${{ needs.context.outputs.policy }}
           POLICY_RESULT: ${{ needs.policy.result }}
+          EXPECTED_NODE: ${{ needs.context.outputs.node }}
           NODE_RESULT: ${{ needs.node_affected.result }}
+          EXPECTED_DSH: ${{ needs.context.outputs.dsh }}
           DSH_RESULT: ${{ needs.dsh.result }}
+          EXPECTED_WLT: ${{ needs.context.outputs.wlt }}
           WLT_RESULT: ${{ needs.wlt.result }}
+          EXPECTED_IDENTITY: ${{ needs.context.outputs.identity }}
           IDENTITY_RESULT: ${{ needs.identity.result }}
+          EXPECTED_WORKFORCE: ${{ needs.context.outputs.workforce }}
           WORKFORCE_RESULT: ${{ needs.workforce.result }}
+          EXPECTED_PLATFORM: ${{ needs.context.outputs.platform }}
           PLATFORM_RESULT: ${{ needs.platform.result }}
+          EXPECTED_PROVIDERS: ${{ needs.context.outputs.providers }}
           PROVIDERS_RESULT: ${{ needs.providers.result }}
+          EXPECTED_RUNTIME: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof }}
           RUNTIME_RESULT: ${{ needs.runtime_proof.result }}
         run: |
           set -euo pipefail
           failed=0
-          for entry in \
-            "context=${CONTEXT_RESULT}" \
-            "policy=${POLICY_RESULT}" \
-            "node=${NODE_RESULT}" \
-            "dsh=${DSH_RESULT}" \
-            "wlt=${WLT_RESULT}" \
-            "identity=${IDENTITY_RESULT}" \
-            "workforce=${WORKFORCE_RESULT}" \
-            "platform=${PLATFORM_RESULT}" \
-            "providers=${PROVIDERS_RESULT}" \
-            "runtime=${RUNTIME_RESULT}"; do
-            name="${entry%%=*}"
-            result="${entry#*=}"
-            if [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
-              echo "${name} failed with ${result}"
+
+          if [[ "${CONTEXT_RESULT}" != "success" ]]; then
+            echo "context failed with ${CONTEXT_RESULT}"
+            failed=1
+          fi
+
+          check_result() {
+            local name="$1"
+            local expected="$2"
+            local result="$3"
+            if [[ "${expected}" == "true" ]]; then
+              if [[ "${result}" != "success" ]]; then
+                echo "${name} was required but finished with ${result}"
+                failed=1
+              fi
+            elif [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
+              echo "${name} was not required but finished with ${result}"
               failed=1
             fi
-          done
+          }
+
+          check_result policy "${EXPECTED_POLICY}" "${POLICY_RESULT}"
+          check_result node "${EXPECTED_NODE}" "${NODE_RESULT}"
+          check_result dsh "${EXPECTED_DSH}" "${DSH_RESULT}"
+          check_result wlt "${EXPECTED_WLT}" "${WLT_RESULT}"
+          check_result identity "${EXPECTED_IDENTITY}" "${IDENTITY_RESULT}"
+          check_result workforce "${EXPECTED_WORKFORCE}" "${WORKFORCE_RESULT}"
+          check_result platform "${EXPECTED_PLATFORM}" "${PLATFORM_RESULT}"
+          check_result providers "${EXPECTED_PROVIDERS}" "${PROVIDERS_RESULT}"
+          check_result runtime "${EXPECTED_RUNTIME}" "${RUNTIME_RESULT}"
+
           exit "${failed}"

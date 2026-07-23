@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Notification Governance API
-  version: 1.2.1
-  description: Governed JRN-023 notification policy, actor-owned push endpoints and delivery audit.
+  version: 1.3.0
+  description: Governed JRN-023 notification policy, actor-owned preferences, push endpoints and delivery audit.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-runtime-dependency: true
 x-bthwani-generation: DISABLED
@@ -14,6 +14,27 @@ tags:
 security:
   - bearerAuth: []
 paths:
+  /dsh/notifications/preferences:
+    get:
+      operationId: getDshNotificationPreferences
+      summary: Read notification preferences owned by the authenticated actor.
+      tags: [DshNotificationGovernance]
+      responses:
+        '200':
+          description: Actor-owned notification preference policies.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [preferences]
+                properties:
+                  preferences:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DshNotificationPreferencePolicy'
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /dsh/notifications/push-endpoints:
     put:
       operationId: upsertDshNotificationPushEndpoint

@@ -1,9 +1,24 @@
-import { execFileSync } from "node:child_process";
-import { appendFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { appendFileSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 
 const ZERO_SHA = /^0+$/;
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(SCRIPT_DIR, "../..");
+
+function loadRegisteredJourneyIds() {
+  const registryPath = resolve(REPO_ROOT, "governance/guards/guard-registry.json");
+  const registry = JSON.parse(readFileSync(registryPath, "utf8"));
+  return new Set(
+    (registry.entries ?? [])
+      .map((entry) => String(entry.id ?? "").match(/^(jrn-\d{3})-/i)?.[1])
+      .filter(Boolean)
+      .map((value) => value.toUpperCase()),
+  );
+}
+
+const REGISTERED_JOURNEY_IDS = loadRegisteredJourneyIds();
 
 function normalizePath(value) {
   return String(value ?? "").trim().replaceAll("\\", "/").replace(/^\.\//, "");
@@ -90,14 +105,22 @@ export function classifyFiles(inputFiles, options = {}) {
       journeyIds.add(`JRN-${match[1]}`);
     }
   }
-
-  const journey = full || Boolean(manualJourney) || journeyIds.size > 0 || sharedBrain || has((file) =>
+  const registeredJourneyIds = new Set(
+    [...journeyIds].filter((journeyId) => REGISTERED_JOURNEY_IDS.has(journeyId)),
+  );
+  const journeyGovernance = has((file) =>
     file.startsWith("governance/product/") ||
     file.startsWith("governance/product-truth/") ||
     file.startsWith("governance/evidence/") ||
     /tools\/guards\/jrn[-_]?\d{3}/i.test(file) ||
     file === "tools/scripts/run-journey-gate.ps1"
   );
+
+  // A journey-numbered contract is already covered by contract and service
+  // owners. Run a journey gate automatically only when that journey has an
+  // executable registered guard, when governed product/evidence changes, or
+  // when the caller explicitly requests a journey.
+  const journey = full || Boolean(manualJourney) || registeredJourneyIds.size > 0 || sharedBrain || journeyGovernance;
 
   const jrn040 = manualJourney === "JRN-040" || journeyIds.has("JRN-040") || has((file) =>
     /jrn[-_]?040/i.test(file) ||
@@ -114,9 +137,11 @@ export function classifyFiles(inputFiles, options = {}) {
     journeyScope = "PROJECT-WIDE";
   } else if (manualJourney) {
     journeyScope = manualJourney;
-  } else if (journeyIds.size > 0) {
+  } else if (registeredJourneyIds.size > 0) {
+    journeyScope = uniqueSorted([...registeredJourneyIds]).join(",");
+  } else if (journeyGovernance && journeyIds.size > 0) {
     journeyScope = uniqueSorted([...journeyIds]).join(",");
-  } else if (sharedBrain) {
+  } else if (sharedBrain || journeyGovernance) {
     journeyScope = "PROJECT-WIDE";
   }
 

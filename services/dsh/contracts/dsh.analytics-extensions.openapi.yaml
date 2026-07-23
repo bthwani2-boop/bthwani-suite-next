@@ -1,17 +1,20 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Analytics Extensions API
-  version: 1.0.0
+  version: 1.1.0
   description: >-
-    Active standalone index for analytics path-items implemented by JRN-032 but
-    not yet composed into the primary generated DSH document. The path-item
-    definitions remain sovereign in paths/analytics.paths.yaml.
+    Active standalone index for analytics path-items implemented by JRN-032 and
+    operational analytics routes not yet composed into the primary generated DSH
+    document. Shared path-item definitions remain sovereign in
+    paths/analytics.paths.yaml.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true
 servers:
   - url: http://localhost:58080
+security:
+  - bearerAuth: []
 paths:
   /dsh/operator/analytics/preparation-sla:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1preparation-sla"
@@ -25,3 +28,35 @@ paths:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1financial-snapshot"
   /dsh/operator/analytics/export.csv:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1export.csv"
+  /dsh/operator/analytics/operations:
+    get:
+      operationId: getDshOperationsAnalytics
+      summary: Read live operational order, dispatch and fulfillment analytics.
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [today, week, month]
+            default: today
+      responses:
+        '200':
+          description: Operational analytics snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          description: Invalid analytics period.
+        '401':
+          description: Authentication is required.
+        '403':
+          description: The actor lacks analytics read permission.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
