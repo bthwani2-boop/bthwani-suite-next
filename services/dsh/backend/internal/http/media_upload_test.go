@@ -104,7 +104,7 @@ func TestActorCanAccessMediaReferenceUnit(t *testing.T) {
 		StorageKey:     "key-123",
 		OwnerActorID:   "field-1",
 		OwnerActorRole: "field",
-		PartnerID:      "partner-1",
+		PartnerID:      "",
 	}
 
 	// 1. Operator has full download access
@@ -178,6 +178,7 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 	partnerID := "test-partner-1"
 	storeID := "test-store-1"
 	actorID := "test-actor-1"
+	tenantID := "local-dsh"
 	mediaRefStr := "test-media-ref-1"
 
 	// Insert test store and partner/scope mapping
@@ -187,25 +188,25 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 	_, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID)
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_partners (id, legal_name_ar, legal_name_en, display_name, legal_identity_type, legal_identity_number, owner_name, primary_phone, email, category)
-		VALUES ($1, 'شريك تجريبي', 'Test Partner', 'Test Partner', 'commercial_register', '12345', 'Owner', '+967770000000', 'test@local.test', 'restaurant')`,
-		partnerID); err != nil {
+		INSERT INTO dsh_partners (id, tenant_id, legal_name_ar, legal_name_en, display_name, legal_identity_type, legal_identity_number, owner_name, primary_phone, email, category)
+		VALUES ($1, $2, 'شريك تجريبي', 'Test Partner', 'Test Partner', 'commercial_register', '12345', 'Owner', '+967770000000', 'test@local.test', 'restaurant')`,
+		partnerID, tenantID); err != nil {
 		t.Fatalf("failed to insert test partner: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID) })
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
-		VALUES ($1, $1, 'Test Store for Media', 'active', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
-		storeID, partnerID); err != nil {
+		INSERT INTO dsh_stores (id, tenant_id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
+		VALUES ($1, $3, $1, 'Test Store for Media', 'active', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
+		storeID, partnerID, tenantID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID) })
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_store_actor_scopes (actor_id, actor_role, store_id, scope_type, active)
-		VALUES ($1, 'partner', $2, 'own', true)`,
-		actorID, storeID); err != nil {
+		INSERT INTO dsh_store_actor_scopes (tenant_id, actor_id, actor_role, store_id, scope_type, active)
+		VALUES ($3, $1, 'partner', $2, 'own', true)`,
+		actorID, storeID, tenantID); err != nil {
 		t.Fatalf("failed to insert test scope: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_actor_scopes WHERE actor_id = $1`, actorID) })
@@ -220,7 +221,7 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 
 	// 1. Partner in scope should be allowed
 	{
-		actor := store.StoreActor{ID: actorID, Role: "partner"}
+		actor := store.StoreActor{ID: actorID, Role: "partner", TenantID: tenantID}
 		allowed, err := s.actorCanAccessMediaReference(ctx, actor, ref)
 		if err != nil {
 			t.Fatalf("partner scope verification failed: %v", err)
@@ -232,7 +233,7 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 
 	// 2. Partner outside scope (different partner ID or no scopes) should be forbidden
 	{
-		actor := store.StoreActor{ID: "other-actor-no-scope", Role: "partner"}
+		actor := store.StoreActor{ID: "other-actor-no-scope", Role: "partner", TenantID: tenantID}
 		allowed, err := s.actorCanAccessMediaReference(ctx, actor, ref)
 		if err != nil {
 			t.Fatalf("partner out of scope verification failed: %v", err)
