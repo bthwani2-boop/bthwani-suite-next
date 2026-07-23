@@ -149,8 +149,12 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: dsh-backend-verification-${{ github.run_id }}
-          path: ${{ runner.temp }}/dsh-backend-verification.log
-          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/dsh-backend-verification.log
+            services/dsh/backend/internal/fieldreadiness/fieldreadiness_db_test.go
+            services/dsh/backend/internal/fieldreadiness/journey024_governance_db_test.go
+            services/dsh/backend/internal/store/governance_db_test.go
+          if-no-files-found: error
           retention-days: 7
 
       - name: Clear isolated CI trusted tenant context
