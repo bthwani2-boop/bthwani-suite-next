@@ -1,8 +1,14 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "platformMode": "BTHWANI_NATIVE_PLATFORM",
-  "saasReadinessMode": "SAAS_READY_DEFERRED",
-  "commercialActivationState": "BLOCKED_BY_POLICY",
+  "saasReadinessMode": "SAAS_ACTIVE",
+  "commercialActivationState": "ACTIVATION_AUTHORIZED",
+  "activationAuthorization": {
+    "authorizationPath": "governance/saas/activation-authorization.json",
+    "status": "AUTHORIZED",
+    "targetRef": "lianbassam",
+    "productionDeploymentAuthorized": false
+  },
   "tenantDefinition": "A tenant is the platform operator or organization that owns an isolated operating context; it is not automatically a partner, store, user, city, or service.",
   "trustedTenantContextRequired": true,
   "clientSuppliedTenantTrusted": false,
