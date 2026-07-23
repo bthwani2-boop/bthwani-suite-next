@@ -1,0 +1,95 @@
+name: JRN-001 FS-17 contract diagnostic
+
+on:
+  push:
+    branches: [lianbassam]
+    paths:
+      - ".github/workflows/jrn001-fs17-contract-diagnostic.yml"
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Publish pending
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -f state=pending -f context=bthwani/jrn001-contract-diagnostic -f description='JRN-001 contract diagnosis running' -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+
+      - name: Install workspace dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@10.34.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Run contracts individually
+        id: contracts
+        shell: bash
+        run: |
+          set +e
+          : > /tmp/jrn001-contract-diagnostic.log
+          : > /tmp/jrn001-contract-failures.txt
+          for test_file in services/dsh/tests/jrn-001-*.test.mjs; do
+            echo "===== ${test_file} =====" | tee -a /tmp/jrn001-contract-diagnostic.log
+            node --test "${test_file}" 2>&1 | tee -a /tmp/jrn001-contract-diagnostic.log
+            code=${PIPESTATUS[0]}
+            if [[ ${code} -ne 0 ]]; then
+              basename "${test_file}" | tee -a /tmp/jrn001-contract-failures.txt
+            fi
+          done
+          if [[ -s /tmp/jrn001-contract-failures.txt ]]; then
+            echo "failed=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "failed=false" >> "${GITHUB_OUTPUT}"
+          fi
+          exit 0
+
+      - name: Upload diagnostic
+        if: steps.contracts.outputs.failed == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jrn001-fs17-contract-diagnostic
+          path: |
+            /tmp/jrn001-contract-diagnostic.log
+            /tmp/jrn001-contract-failures.txt
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Publish terminal status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FAILED: ${{ steps.contracts.outputs.failed }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state=success
+          description='All JRN-001 contract tests passed'
+          if [[ "${FAILED:-true}" == "true" ]]; then
+            state=failure
+            names=$(paste -sd, /tmp/jrn001-contract-failures.txt 2>/dev/null || true)
+            description="Failed: ${names:0:120}"
+          fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state="${state}" \
+            -f context=bthwani/jrn001-contract-diagnostic \
+            -f description="${description}" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+      - name: Require contracts
+        if: steps.contracts.outputs.failed == 'true'
+        run: exit 1
