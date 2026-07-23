@@ -225,4 +225,48 @@ if (fs.existsSync(profilesPath)) {
   }
 }
 
+async function publishFirstViolation() {
+  const first = violations[0];
+  const token = process.env.BTHWANI_STATUS_TOKEN;
+  const repository = process.env.GITHUB_REPOSITORY;
+  const sha = process.env.GITHUB_SHA;
+  if (!first || !token || !repository || !sha) return;
+
+  const file = String(first.file ?? "unknown")
+    .replaceAll("\\", "/")
+    .split("/")
+    .slice(-3)
+    .join("/");
+  const location = `${file}${first.line ? `:${first.line}` : ""}`;
+  const context = `bthwani/guard/runtime-config/${location}`.slice(0, 100);
+  const description = String(first.message ?? "runtime configuration violation")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 140);
+  const apiUrl = process.env.GITHUB_API_URL || "https://api.github.com";
+  const runUrl = process.env.GITHUB_RUN_ID
+    ? `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`
+    : undefined;
+
+  const response = await fetch(`${apiUrl}/repos/${repository}/statuses/${sha}`, {
+    method: "POST",
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${token}`,
+      "X-GitHub-Api-Version": "2022-11-28",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      state: "failure",
+      context,
+      description,
+      ...(runUrl ? { target_url: runUrl } : {}),
+    }),
+  });
+  if (!response.ok) {
+    console.error(`${guardId}: status publication failed with HTTP ${response.status}`);
+  }
+}
+
+await publishFirstViolation();
 fail(guardId, violations);
