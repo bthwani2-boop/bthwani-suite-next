@@ -37,19 +37,20 @@ export function initSentry(): void {
   }
 
   const extra = Constants.expoConfig?.extra as Record<string, unknown> | undefined;
+  const surface = typeof extra?.["appKey"] === "string" ? extra["appKey"] : "app-field";
+  const appLine = typeof extra?.["appLine"] === "string" ? extra["appLine"] : "next";
+
   Sentry.init({
     dsn: config.dsn,
     environment: config.environment,
+    debug: config.debug,
     sendDefaultPii: false,
     enableAutoSessionTracking: true,
     attachStacktrace: true,
     // EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE is resolved only by the config layer.
     tracesSampleRate: config.tracesSampleRate,
     initialScope: {
-      tags: {
-        surface: typeof extra?.["appKey"] === "string" ? extra["appKey"] : "app-field",
-        appLine: typeof extra?.["appLine"] === "string" ? extra["appLine"] : "next",
-      },
+      tags: { surface, appLine },
     },
     beforeBreadcrumb(breadcrumb) {
       const sanitized = { ...breadcrumb };
@@ -77,4 +78,9 @@ export function initSentry(): void {
       return event;
     },
   });
+
+  console.log(`[sentry] enabled: ${surface} (${config.environment})`);
+  if (config.startupProbe) {
+    Sentry.captureMessage("bthwani.mobile.sentry.startup", "info");
+  }
 }
