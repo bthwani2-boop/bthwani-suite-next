@@ -17,7 +17,7 @@ x-bthwani-saas-environment: &bthwani-saas-environment
   BTHWANI_SAAS_MODE: "${BTHWANI_SAAS_MODE:-active}"
   BTHWANI_COMMERCIAL_ACTIVATION_STATE: "${BTHWANI_COMMERCIAL_ACTIVATION_STATE:-authorized}"
   BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED: "${BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED:-false}"
-  BTHWANI_DEFAULT_TENANT_ID: "${BTHWANI_DEFAULT_TENANT_ID:-bthwani-platform-local}"
+  BTHWANI_DEFAULT_TENANT_ID: "${BTHWANI_DEFAULT_TENANT_ID:-local-dsh}"
 
 services:
   postgres:
@@ -100,6 +100,10 @@ services:
     profiles:
       - identity
       - platform
+      - workforce
+      - providers
+      - wlt
+      - dsh
     build:
       context: ../..
       dockerfile: core/identity/backend/Dockerfile
@@ -229,7 +233,8 @@ services:
       <<: *bthwani-saas-environment
       PORT: "8083"
       DATABASE_URL: "postgres://${BTHWANI_WLT_DB_USER:-wlt_runtime}:${BTHWANI_WLT_DB_PASSWORD:-wlt_runtime_password}@postgres:5432/${BTHWANI_WLT_DB_NAME:-wlt_runtime}?sslmode=disable"
-      WLT_AUTH_MODE: "public-read-references"
+      WLT_AUTH_MODE: "identity-or-dsh-reference-auth"
+      IDENTITY_API_BASE_URL: "http://identity-api:8082"
       WLT_FINANCIAL_PROVIDER_MODE: "${WLT_FINANCIAL_PROVIDER_MODE:-mock}"
       WLT_FINANCIAL_PROVIDER_BASE_URL: "${WLT_FINANCIAL_PROVIDER_BASE_URL:-http://wiremock-financial-provider:8080}"
       WLT_ALLOW_PRODUCTION_PROVIDER: "${WLT_ALLOW_PRODUCTION_PROVIDER:-false}"
@@ -242,6 +247,8 @@ services:
       - "127.0.0.1:${BTHWANI_WLT_API_HOST_PORT:-58083}:8083"
     depends_on:
       postgres:
+        condition: service_healthy
+      identity-api:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8083/wlt/readiness || exit 1"]
