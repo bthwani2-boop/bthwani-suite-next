@@ -1,4 +1,3 @@
-
 packages:
   - "apps/*/runtime"
   - "shared/app-shell"
@@ -37,5 +36,6 @@ overrides:
 allowBuilds:
   nx: true
   sharp: true
+  "@sentry/cli": true
   "@ast-grep/cli": false
 # END BTHWANI_RUNTIME_VERSION_POLICY
