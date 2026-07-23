@@ -14,6 +14,14 @@ const PUSH_DEVICE_KEY_PREFIX = "bthwani-dsh-push-device";
 
 type DshMobileAppKey = "app-client" | "app-partner" | "app-captain" | "app-field";
 
+type MobileExpoExtra = {
+  readonly notifications?: {
+    readonly androidNativeConfigured?: unknown;
+  };
+};
+
+type RemovableSubscription = { remove(): void };
+
 if (Platform.OS !== "web") {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -53,8 +61,17 @@ async function ensureNotificationPermission(): Promise<boolean> {
   return notificationPermissionGranted(requested);
 }
 
+function androidNativePushConfigured(): boolean {
+  const extra = Constants.expoConfig?.extra as MobileExpoExtra | undefined;
+  return extra?.notifications?.androidNativeConfigured === true;
+}
+
 function createPushDeviceId(appKey: string): string {
-  return `${appKey}-${Crypto.randomUUID()}`;
+  const randomUuid = (Crypto as Partial<typeof Crypto>).randomUUID;
+  const unique = typeof randomUuid === "function"
+    ? randomUuid()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  return `${appKey}-${unique}`;
 }
 
 async function resolvePushDeviceId(appKey: string): Promise<string> {
@@ -100,21 +117,36 @@ export function useDshMobilePushRegistration(
 ): void {
   useEffect(() => {
     if (authKind !== "authenticated" || Platform.OS === "web") return undefined;
+    if (Platform.OS === "android" && !androidNativePushConfigured()) {
+      console.log(`[${appKey}] push disabled: Firebase is not configured in the native Android build`);
+      return undefined;
+    }
 
     let active = true;
     let deviceId: string | undefined;
     let unregisterSessionEndHook: (() => void) | undefined;
-    let tokenSubscription: ReturnType<typeof Notifications.addPushTokenListener> | undefined;
+    let tokenSubscription: RemovableSubscription | undefined;
+    let responseSubscription: RemovableSubscription | undefined;
 
-    const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      void openNotificationAction(response, appScheme);
-    });
+    const addResponseListener = (Notifications as Partial<typeof Notifications>)
+      .addNotificationResponseReceivedListener;
+    if (typeof addResponseListener === "function") {
+      responseSubscription = addResponseListener((response) => {
+        void openNotificationAction(response, appScheme);
+      });
+    }
 
-    void Notifications.getLastNotificationResponseAsync().then(async (response) => {
-      if (!active || response === null) return;
-      await openNotificationAction(response, appScheme);
-      await Notifications.clearLastNotificationResponseAsync();
-    }).catch((error) => console.warn(`[${appKey}] notification response handling failed`, error));
+    const getLastResponse = (Notifications as Partial<typeof Notifications>)
+      .getLastNotificationResponseAsync;
+    if (typeof getLastResponse === "function") {
+      void getLastResponse().then(async (response) => {
+        if (!active || response === null) return;
+        await openNotificationAction(response, appScheme);
+        const clearLastResponse = (Notifications as Partial<typeof Notifications>)
+          .clearLastNotificationResponseAsync;
+        if (typeof clearLastResponse === "function") await clearLastResponse();
+      }).catch((error) => console.warn(`[${appKey}] notification response handling failed`, error));
+    }
 
     void (async () => {
       try {
@@ -142,17 +174,23 @@ export function useDshMobilePushRegistration(
         await registerToken(await readExpoToken());
         if (!active) return;
 
-        tokenSubscription = Notifications.addPushTokenListener(() => {
-          void readExpoToken()
-            .then(registerToken)
-            .catch((error) => console.warn(`[${appKey}] push token rotation failed`, error));
-        });
+        const addPushTokenListener = (Notifications as Partial<typeof Notifications>).addPushTokenListener;
+        if (typeof addPushTokenListener === "function") {
+          tokenSubscription = addPushTokenListener(() => {
+            void readExpoToken()
+              .then(registerToken)
+              .catch((error) => console.warn(`[${appKey}] push token rotation failed`, error));
+          });
+        }
 
         unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(async () => {
           if (deviceId) await deactivateNotificationPushEndpoint(deviceId).catch(() => undefined);
         });
       } catch (error) {
-        console.warn(`[${appKey}] push registration failed`, error);
+        console.warn(
+          `[${appKey}] push registration failed; rebuild the development client after configuring GOOGLE_SERVICES_JSON`,
+          error,
+        );
       }
     })();
 
@@ -160,7 +198,7 @@ export function useDshMobilePushRegistration(
       active = false;
       unregisterSessionEndHook?.();
       tokenSubscription?.remove();
-      responseSubscription.remove();
+      responseSubscription?.remove();
     };
   }, [appKey, appScheme, authKind]);
 }
