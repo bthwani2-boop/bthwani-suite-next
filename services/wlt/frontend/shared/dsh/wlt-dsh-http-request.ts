@@ -1,3 +1,5 @@
+import { getIdentityAccessToken } from "@bthwani/core-identity";
+
 export type WltReferenceApiResult<T> =
   | { readonly ok: true; readonly data: T }
   | { readonly ok: false; readonly kind: "http" | "network"; readonly status?: number; readonly message: string };
@@ -10,28 +12,43 @@ function wltCorrId(): string {
   return `wlt-${Date.now().toString(36)}-${wltCorrelationSequence.toString(36)}`;
 }
 
+function isRelativeWltUrl(url: string): boolean {
+  return url.startsWith("/");
+}
+
 /**
- * Shared GET+parse helper for WLT **public reference** endpoints only
- * (/wlt/references/*). Centralizes fetch/timeout/correlation-id/ok-check/
- * error-shape logic.
+ * Shared GET+parse helper for WLT tenant-protected reference projections.
+ * Control-panel calls use the same-origin HttpOnly BFF. Native applications
+ * send their Identity bearer token directly; no client-supplied tenant header
+ * is used as an ownership signal.
  *
- * Only the public reference endpoints are unauthenticated by design. WLT's
- * internal financial reads (settlements, refunds, ledger, COD, commissions)
- * are service-authenticated and MUST be consumed through the governed DSH
- * finance proxy (/dsh/control-panel/finance/*, /dsh/captain/finance/*) —
- * never with this helper and never directly from the browser.
+ * Broad financial reads and all mutations remain service-authenticated and MUST
+ * be consumed through governed DSH finance adapters.
  */
 export async function wltFetchJson<T>(
   url: string,
   extract: (body: unknown) => T,
   timeoutMs = 10_000,
 ): Promise<WltReferenceApiResult<T>> {
+  const cookieMode = isRelativeWltUrl(url);
+  const token = cookieMode ? undefined : getIdentityAccessToken();
+  if (!cookieMode && !token) {
+    return {
+      ok: false,
+      kind: "http",
+      status: 401,
+      message: "Identity session is required",
+    };
+  }
+
   try {
     const res = await fetch(url, {
       headers: {
         Accept: "application/json",
         "X-Correlation-ID": wltCorrId(),
+        ...(!cookieMode && token ? { Authorization: `Bearer ${token}` } : {}),
       },
+      ...(cookieMode ? { credentials: "include" as const } : {}),
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) {
