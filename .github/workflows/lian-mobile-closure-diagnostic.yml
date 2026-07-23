@@ -7,7 +7,7 @@ on:
       - ".github/workflows/lian-mobile-closure-diagnostic.yml"
 
 permissions:
-  contents: read
+  contents: write
   statuses: write
 
 jobs:
@@ -16,6 +16,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
       - name: Extract and execute finalizer
         id: finalizer
         shell: bash
@@ -35,37 +38,37 @@ jobs:
             exit 1
           fi
           printf '%s\n' 'FINALIZER_SUCCEEDED' >/tmp/finalizer.err
-      - name: Encode diagnostic in status contexts
+      - name: Push isolated diagnostic branch
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp /tmp/finalizer.err /tmp/mobile-closure-finalizer-error.txt
+          git reset --hard HEAD
+          git clean -fd
+          branch="automation/mobile-closure-diagnostic-${GITHUB_SHA:0:12}"
+          git switch -C "$branch"
+          mkdir -p .diagnostics
+          cp /tmp/mobile-closure-finalizer-error.txt .diagnostics/mobile-closure-finalizer-error.txt
+          git config user.name "bthwani-mobile-diagnostic-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -f .diagnostics/mobile-closure-finalizer-error.txt
+          git commit -m "diagnostics(mobile): capture closure finalizer result"
+          git push --force origin "HEAD:refs/heads/$branch"
+      - name: Publish diagnostic result
         if: always()
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          base64 -w0 /tmp/finalizer.err | fold -w 70 >/tmp/chunks.txt
-          index=0
-          while IFS= read -r chunk; do
-            index=$((index + 1))
-            context="bthwani/mobile-error-$(printf '%02d' "$index")-${chunk}"
-            jq -n \
-              --arg state failure \
-              --arg context "$context" \
-              --arg description "encoded mobile closure diagnostic chunk" \
-              --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-              '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
-            curl --fail-with-body --retry 3 -X POST \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${GH_TOKEN}" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-              --data-binary @/tmp/status.json >/dev/null
-          done </tmp/chunks.txt
           state=success
           if [[ "${{ steps.finalizer.outcome }}" != "success" ]]; then state=failure; fi
+          context="bthwani/mobile-diagnostic-branch-${GITHUB_SHA:0:12}"
           jq -n \
             --arg state "$state" \
-            --arg context bthwani/mobile-closure-diagnostic \
-            --arg description "finalizer diagnostic completed" \
+            --arg context "$context" \
+            --arg description "diagnostic branch published" \
             --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
           curl --fail-with-body --retry 3 -X POST \
