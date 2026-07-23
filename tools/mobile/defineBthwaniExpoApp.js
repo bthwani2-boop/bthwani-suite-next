@@ -108,7 +108,7 @@ function buildIosConfig(appKey, app, features) {
 }
 
 function buildSentryPlugin(sentry) {
-  if (!sentry.organization || !sentry.project) return "@sentry/react-native/expo";
+  if (!sentry.dsn || !sentry.organization || !sentry.project) return undefined;
 
   return [
     "@sentry/react-native/expo",
@@ -138,8 +138,10 @@ function buildPlugins(appKey, features, sentry) {
       },
     ],
     "expo-document-picker",
-    buildSentryPlugin(sentry),
   ];
+
+  const sentryPlugin = buildSentryPlugin(sentry);
+  if (sentryPlugin) plugins.push(sentryPlugin);
 
   if (features.includes("router")) plugins.push("expo-router");
   if (features.includes("updates")) plugins.push("expo-updates");
@@ -234,6 +236,7 @@ function defineBthwaniExpoApp(appKey) {
   const features = app.features || [];
   const sentry = resolveSentryEnvironment(appKey);
   const googleServicesFile = resolveAppEnvironmentValue("GOOGLE_SERVICES_JSON", appKey);
+  const sentryNativeConfigured = Boolean(sentry.dsn && sentry.organization && sentry.project);
   return {
     name: app.name,
     slug: app.slug,
@@ -260,6 +263,7 @@ function defineBthwaniExpoApp(appKey) {
       sourceRepo: manifest.global.sourceRepo,
       sentry: {
         enabled: Boolean(sentry.dsn),
+        nativeConfigured: sentryNativeConfigured,
         dsn: sentry.dsn,
         organization: sentry.organization,
         project: sentry.project,
