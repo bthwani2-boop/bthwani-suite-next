@@ -55,29 +55,66 @@ jobs:
               source = source.replace(marker, insertion + marker, 1)
           target.write_text(source, encoding='utf-8')
           PY
-      - name: Generate and verify DSH OpenAPI deliverables
+      - name: Compose DSH OpenAPI
+        id: compose
+        continue-on-error: true
         shell: bash
-        run: |
-          set -euo pipefail
-          pnpm openapi:compose:dsh
-          pnpm openapi:generate:dsh
-          pnpm openapi:generate:dsh-catalog
-          pnpm contracts:lint
-          pnpm openapi:verify:dsh
-      - name: Stage generated contract artifacts
+        run: pnpm openapi:compose:dsh > /tmp/compose.log 2>&1
+      - name: Generate DSH client
+        id: generate
+        continue-on-error: true
+        shell: bash
+        run: pnpm openapi:generate:dsh > /tmp/generate.log 2>&1
+      - name: Generate DSH catalog client
+        id: catalog
+        continue-on-error: true
+        shell: bash
+        run: pnpm openapi:generate:dsh-catalog > /tmp/catalog.log 2>&1
+      - name: Lint contract foundation
+        id: lint
+        continue-on-error: true
+        shell: bash
+        run: pnpm contracts:lint > /tmp/lint.log 2>&1
+      - name: Verify modular DSH contract
+        id: verify
+        continue-on-error: true
+        shell: bash
+        run: pnpm openapi:verify:dsh > /tmp/verify.log 2>&1
+      - name: Stage generated artifacts and diagnostics
+        if: always()
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p artifacts/rich-support-contract/services/dsh/contracts/generated
           mkdir -p artifacts/rich-support-contract/services/dsh/clients/generated
+          mkdir -p artifacts/rich-support-contract/diagnostics
           cp services/dsh/contracts/dsh.openapi.yaml artifacts/rich-support-contract/services/dsh/contracts/dsh.openapi.yaml
-          cp services/dsh/contracts/generated/dsh.bundle.openapi.yaml artifacts/rich-support-contract/services/dsh/contracts/generated/dsh.bundle.openapi.yaml
-          cp services/dsh/clients/generated/dsh-api.ts artifacts/rich-support-contract/services/dsh/clients/generated/dsh-api.ts
-          cp services/dsh/clients/generated/dsh-catalog-api.ts artifacts/rich-support-contract/services/dsh/clients/generated/dsh-catalog-api.ts
+          test ! -f services/dsh/contracts/generated/dsh.bundle.openapi.yaml || cp services/dsh/contracts/generated/dsh.bundle.openapi.yaml artifacts/rich-support-contract/services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+          test ! -f services/dsh/clients/generated/dsh-api.ts || cp services/dsh/clients/generated/dsh-api.ts artifacts/rich-support-contract/services/dsh/clients/generated/dsh-api.ts
+          test ! -f services/dsh/clients/generated/dsh-catalog-api.ts || cp services/dsh/clients/generated/dsh-catalog-api.ts artifacts/rich-support-contract/services/dsh/clients/generated/dsh-catalog-api.ts
+          cp /tmp/compose.log /tmp/generate.log /tmp/catalog.log /tmp/lint.log /tmp/verify.log artifacts/rich-support-contract/diagnostics/
+          printf '%s\n' \
+            "compose=${{ steps.compose.outcome }}" \
+            "generate=${{ steps.generate.outcome }}" \
+            "catalog=${{ steps.catalog.outcome }}" \
+            "lint=${{ steps.lint.outcome }}" \
+            "verify=${{ steps.verify.outcome }}" \
+            > artifacts/rich-support-contract/diagnostics/outcomes.txt
       - name: Upload generated contract artifacts
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: rich-support-contract-${{ github.sha }}
           path: artifacts/rich-support-contract
           if-no-files-found: error
           retention-days: 1
+      - name: Fail if any contract step failed
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.compose.outcome }}" = success
+          test "${{ steps.generate.outcome }}" = success
+          test "${{ steps.catalog.outcome }}" = success
+          test "${{ steps.lint.outcome }}" = success
+          test "${{ steps.verify.outcome }}" = success
