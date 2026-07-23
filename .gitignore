@@ -48,6 +48,10 @@ services/dsh/database/seeds/local/media/
 !services/dsh/database/seeds/local/media/fixtures/
 !services/dsh/database/seeds/local/media/fixtures/**
 
+# Native application identity assets are governed source inputs for Expo/EAS.
+!apps/*/runtime/assets/
+!apps/*/runtime/assets/**
+
 .gocache*/
 .gomodcache*/
 .cache/
