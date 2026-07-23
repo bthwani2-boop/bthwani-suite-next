@@ -25,6 +25,20 @@ function noStoreJson(body: unknown, status: number): NextResponse {
   });
 }
 
+function pathIsSafe(path: readonly string[]): boolean {
+  return (
+    path.length > 0 &&
+    path.every(
+      (segment) =>
+        segment.length > 0 &&
+        segment !== "." &&
+        segment !== ".." &&
+        !segment.includes("/") &&
+        !segment.includes("\\"),
+    )
+  );
+}
+
 async function tryForward(
   request: Request,
   path: readonly string[],
@@ -60,6 +74,12 @@ export async function proxyAuthenticatedUpstream(
   path: readonly string[],
   baseUrl: string,
 ): Promise<NextResponse> {
+  if (!baseUrl) {
+    return noStoreJson({ code: "BFF_UPSTREAM_NOT_CONFIGURED" }, 503);
+  }
+  if (!pathIsSafe(path)) {
+    return noStoreJson({ code: "BFF_PATH_NOT_ALLOWED" }, 404);
+  }
   if (MUTATING_METHODS.has(request.method) && !isSameOriginRequest(request)) {
     return noStoreJson({ code: "CROSS_ORIGIN_REJECTED" }, 403);
   }
