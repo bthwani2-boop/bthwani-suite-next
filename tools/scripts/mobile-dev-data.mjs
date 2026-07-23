@@ -278,6 +278,7 @@ async function repairCaptain(operatorToken, zone) {
     licenseExpiresAt: '2035-12-31',
     serviceZoneId: zone.id,
     operatingScopeCode: 'local-dsh',
+    documentMediaRefs: ['local-dev/workforce/captain-license.jpg'],
   };
   await createOrAttachProvider(operatorToken, 'captain', createPayload);
 

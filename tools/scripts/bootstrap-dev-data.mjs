@@ -63,17 +63,24 @@ async function proposeProduct(token, product) {
   return (await res.json()).proposal;
 }
 
-async function transitionProposal(token, proposalId, nextStatus) {
+async function transitionProposal(token, proposalId, nextStatus, expectedVersion) {
   const res = await fetch(`${DSH_API_BASE}/dsh/operator/catalog/product-proposals/${proposalId}/transition`, {
     method: 'POST',
     headers: mutationHeaders(token, 'catalog-transition', `${proposalId}:${nextStatus}`),
-    body: JSON.stringify({ nextStatus, note: 'Dev bootstrap transition' }),
+    body: JSON.stringify({ nextStatus, note: 'Dev bootstrap transition', expectedVersion }),
   });
   if (!res.ok) throw await responseError(`catalog:transition:${proposalId}:${nextStatus}`, res);
   return (await res.json()).proposal;
 }
 
 async function setStoreAssortment(token, storeId, masterProductId, unitPrice) {
+  const listRes = await fetch(`${DSH_API_BASE}/dsh/operator/stores/${storeId}/assortment`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!listRes.ok) throw await responseError(`catalog:assortment-list:${storeId}`, listRes);
+  const existing = await listRes.json();
+  const current = (existing?.assortment || []).find((a) => a.masterProductId === masterProductId);
+
   const res = await fetch(`${DSH_API_BASE}/dsh/operator/stores/${storeId}/assortment/${masterProductId}`, {
     method: 'PUT',
     headers: mutationHeaders(token, 'catalog-assortment', `${storeId}:${masterProductId}`),
@@ -83,18 +90,20 @@ async function setStoreAssortment(token, storeId, masterProductId, unitPrice) {
       available: true,
       stockStatus: 'in_stock',
       publicationStatus: 'client_visible',
+      expectedVersion: current ? current.version : undefined,
     }),
   });
   if (!res.ok) throw await responseError(`catalog:assortment:${storeId}:${masterProductId}`, res);
 }
 
-async function reviewAsset(token, assetId, decision, reviewNote) {
+async function reviewAsset(token, assetId, decision, reviewNote, expectedVersion) {
   const res = await fetch(`${DSH_API_BASE}/dsh/operator/catalog/assets/${assetId}/review`, {
     method: 'POST',
     headers: mutationHeaders(token, 'catalog-asset-review', `${assetId}:${decision}`),
-    body: JSON.stringify({ decision, reviewNote }),
+    body: JSON.stringify({ decision, reviewNote, expectedVersion }),
   });
   if (!res.ok) throw await responseError(`catalog:asset-review:${assetId}:${decision}`, res);
+  return (await res.json()).asset;
 }
 
 async function uploadAsset(token, filePath, altAr, altEn, intendedEntityType, intendedEntityId, intendedRole) {
@@ -136,9 +145,10 @@ async function uploadAsset(token, filePath, altAr, altEn, intendedEntityType, in
     headers: mutationHeaders(token, 'catalog-asset-complete', assetId),
   });
   if (!completeRes.ok) throw await responseError(`catalog:asset-complete:${assetId}`, completeRes);
+  const completedAsset = (await completeRes.json()).asset;
 
-  await reviewAsset(token, assetId, 'pending_review', 'Dev Bootstrap (submit)');
-  await reviewAsset(token, assetId, 'approved', 'Dev Bootstrap');
+  const pendingAsset = await reviewAsset(token, assetId, 'pending_review', 'Dev Bootstrap (submit)', completedAsset.version);
+  await reviewAsset(token, assetId, 'approved', 'Dev Bootstrap', pendingAsset.version);
   return assetId;
 }
 
@@ -165,10 +175,10 @@ async function main() {
       const { price, imgKey, storeId, ...proposalPayload } = product;
       const proposal = await proposeProduct(partnerToken, proposalPayload);
       console.log(`Transitioning ${proposal.id} (${product.proposedNameEn})...`);
-      await transitionProposal(operatorToken, proposal.id, 'partner-review');
-      await transitionProposal(operatorToken, proposal.id, 'marketing-review');
-      const adopted = await transitionProposal(operatorToken, proposal.id, 'catalog-adopted');
-      await transitionProposal(operatorToken, proposal.id, 'catalog-approved');
+      const afterPartnerReview = await transitionProposal(operatorToken, proposal.id, 'partner-review', proposal.version);
+      const afterMarketingReview = await transitionProposal(operatorToken, proposal.id, 'marketing-review', afterPartnerReview.version);
+      const adopted = await transitionProposal(operatorToken, proposal.id, 'catalog-adopted', afterMarketingReview.version);
+      const afterApproved = await transitionProposal(operatorToken, proposal.id, 'catalog-approved', adopted.version);
 
       const fixturePath = path.join(
         __dirname,
@@ -202,7 +212,7 @@ async function main() {
       await setStoreAssortment(operatorToken, storeId, adopted.adoptedMasterProductId, price);
 
       console.log(`Making ${adopted.adoptedMasterProductId} client-visible...`);
-      await transitionProposal(operatorToken, proposal.id, 'client-visible');
+      await transitionProposal(operatorToken, proposal.id, 'client-visible', afterApproved.version);
     }
 
     console.log('Dev bootstrap complete.');

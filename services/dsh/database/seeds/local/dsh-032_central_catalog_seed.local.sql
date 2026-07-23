@@ -113,12 +113,20 @@ WHERE slug IN ('electronics', 'spare_parts', 'honey_dates')
 ON CONFLICT (id) DO UPDATE SET allows_store_product_custom_image = EXCLUDED.allows_store_product_custom_image, updated_at = NOW();
 
 INSERT INTO dsh_store_catalog_domains (store_id, domain_id, status)
-VALUES 
+VALUES
   ('store-test-grocery', 'domain-groceries', 'approved'),
   ('store-1002', 'domain-groceries', 'approved'),
   ('store-1005', 'domain-restaurants', 'approved'),
   ('store-1006', 'domain-pharmacy', 'approved'),
-  ('store-test-electronics', 'domain-electronics', 'approved')
+  ('store-test-electronics', 'domain-electronics', 'approved'),
+  -- store-test-grocery is the sole dev-bootstrap partner's source store
+  -- (bootstrap-dev-data.mjs proposes every domain's fixture product through
+  -- this one partner token, so the proposal's source store is always this
+  -- one regardless of which store the product is later assorted to).
+  ('store-test-grocery', 'domain-restaurants', 'approved'),
+  ('store-test-grocery', 'domain-pharmacy', 'approved'),
+  ('store-test-grocery', 'domain-electronics', 'approved'),
+  ('store-test-grocery', 'domain-sweets-juices', 'approved')
 ON CONFLICT DO NOTHING;
 
 -- Canonical local-development products. These are real sovereign master

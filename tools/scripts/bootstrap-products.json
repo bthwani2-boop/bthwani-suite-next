@@ -2,8 +2,8 @@
   {
     "proposedNameAr": "منتج بقالة 1",
     "proposedNameEn": "Grocery Product 1",
-    "domainId": "domain-grocery",
-    "categoryNodeId": "node-grocery",
+    "domainId": "domain-groceries",
+    "categoryNodeId": "node-supermarket",
     "brand": "Brand Grocery",
     "sourceSurface": "app-partner",
     "price": 1100,
@@ -13,8 +13,8 @@
   {
     "proposedNameAr": "منتج بقالة 2",
     "proposedNameEn": "Grocery Product 2",
-    "domainId": "domain-grocery",
-    "categoryNodeId": "node-grocery",
+    "domainId": "domain-groceries",
+    "categoryNodeId": "node-supermarket",
     "brand": "Brand Grocery",
     "sourceSurface": "app-partner",
     "price": 1200,
@@ -24,8 +24,8 @@
   {
     "proposedNameAr": "منتج بقالة 3",
     "proposedNameEn": "Grocery Product 3",
-    "domainId": "domain-grocery",
-    "categoryNodeId": "node-grocery",
+    "domainId": "domain-groceries",
+    "categoryNodeId": "node-supermarket",
     "brand": "Brand Grocery",
     "sourceSurface": "app-partner",
     "price": 1300,
@@ -35,8 +35,8 @@
   {
     "proposedNameAr": "منتج بقالة 4",
     "proposedNameEn": "Grocery Product 4",
-    "domainId": "domain-grocery",
-    "categoryNodeId": "node-grocery",
+    "domainId": "domain-groceries",
+    "categoryNodeId": "node-supermarket",
     "brand": "Brand Grocery",
     "sourceSurface": "app-partner",
     "price": 1400,
@@ -46,8 +46,8 @@
   {
     "proposedNameAr": "منتج بقالة 5",
     "proposedNameEn": "Grocery Product 5",
-    "domainId": "domain-grocery",
-    "categoryNodeId": "node-grocery",
+    "domainId": "domain-groceries",
+    "categoryNodeId": "node-supermarket",
     "brand": "Brand Grocery",
     "sourceSurface": "app-partner",
     "price": 1500,
@@ -57,57 +57,57 @@
   {
     "proposedNameAr": "منتج مطعم 1",
     "proposedNameEn": "Restaurant Product 1",
-    "domainId": "domain-restaurant",
-    "categoryNodeId": "node-restaurant",
+    "domainId": "domain-restaurants",
+    "categoryNodeId": "node-restaurants",
     "brand": "Brand Restaurant",
     "sourceSurface": "app-partner",
     "price": 1100,
     "imgKey": "realistic/product-restaurant-1.jpg",
-    "storeId": "store-test-restaurant"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج مطعم 2",
     "proposedNameEn": "Restaurant Product 2",
-    "domainId": "domain-restaurant",
-    "categoryNodeId": "node-restaurant",
+    "domainId": "domain-restaurants",
+    "categoryNodeId": "node-restaurants",
     "brand": "Brand Restaurant",
     "sourceSurface": "app-partner",
     "price": 1200,
     "imgKey": "realistic/product-restaurant-2.jpg",
-    "storeId": "store-test-restaurant"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج مطعم 3",
     "proposedNameEn": "Restaurant Product 3",
-    "domainId": "domain-restaurant",
-    "categoryNodeId": "node-restaurant",
+    "domainId": "domain-restaurants",
+    "categoryNodeId": "node-restaurants",
     "brand": "Brand Restaurant",
     "sourceSurface": "app-partner",
     "price": 1300,
     "imgKey": "realistic/product-restaurant-3.jpg",
-    "storeId": "store-test-restaurant"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج مطعم 4",
     "proposedNameEn": "Restaurant Product 4",
-    "domainId": "domain-restaurant",
-    "categoryNodeId": "node-restaurant",
+    "domainId": "domain-restaurants",
+    "categoryNodeId": "node-restaurants",
     "brand": "Brand Restaurant",
     "sourceSurface": "app-partner",
     "price": 1400,
     "imgKey": "realistic/product-restaurant-4.jpg",
-    "storeId": "store-test-restaurant"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج مطعم 5",
     "proposedNameEn": "Restaurant Product 5",
-    "domainId": "domain-restaurant",
-    "categoryNodeId": "node-restaurant",
+    "domainId": "domain-restaurants",
+    "categoryNodeId": "node-restaurants",
     "brand": "Brand Restaurant",
     "sourceSurface": "app-partner",
     "price": 1500,
     "imgKey": "realistic/product-restaurant-5.jpg",
-    "storeId": "store-test-restaurant"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج صيدلية 1",
@@ -118,7 +118,7 @@
     "sourceSurface": "app-partner",
     "price": 1100,
     "imgKey": "realistic/product-pharmacy-1.jpg",
-    "storeId": "store-test-pharmacy"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج صيدلية 2",
@@ -129,7 +129,7 @@
     "sourceSurface": "app-partner",
     "price": 1200,
     "imgKey": "realistic/product-pharmacy-2.jpg",
-    "storeId": "store-test-pharmacy"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج صيدلية 3",
@@ -140,7 +140,7 @@
     "sourceSurface": "app-partner",
     "price": 1300,
     "imgKey": "realistic/product-pharmacy-3.jpg",
-    "storeId": "store-test-pharmacy"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج صيدلية 4",
@@ -151,7 +151,7 @@
     "sourceSurface": "app-partner",
     "price": 1400,
     "imgKey": "realistic/product-pharmacy-4.jpg",
-    "storeId": "store-test-pharmacy"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج صيدلية 5",
@@ -162,7 +162,7 @@
     "sourceSurface": "app-partner",
     "price": 1500,
     "imgKey": "realistic/product-pharmacy-5.jpg",
-    "storeId": "store-test-pharmacy"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج إلكترونيات 1",
@@ -173,7 +173,7 @@
     "sourceSurface": "app-partner",
     "price": 1100,
     "imgKey": "realistic/product-electronics-1.jpg",
-    "storeId": "store-test-electronics"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج إلكترونيات 2",
@@ -184,7 +184,7 @@
     "sourceSurface": "app-partner",
     "price": 1200,
     "imgKey": "realistic/product-electronics-2.jpg",
-    "storeId": "store-test-electronics"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج إلكترونيات 3",
@@ -195,7 +195,7 @@
     "sourceSurface": "app-partner",
     "price": 1300,
     "imgKey": "realistic/product-electronics-3.jpg",
-    "storeId": "store-test-electronics"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج إلكترونيات 4",
@@ -206,7 +206,7 @@
     "sourceSurface": "app-partner",
     "price": 1400,
     "imgKey": "realistic/product-electronics-4.jpg",
-    "storeId": "store-test-electronics"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج إلكترونيات 5",
@@ -217,61 +217,61 @@
     "sourceSurface": "app-partner",
     "price": 1500,
     "imgKey": "realistic/product-electronics-5.jpg",
-    "storeId": "store-test-electronics"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج حلويات 1",
     "proposedNameEn": "Sweets Product 1",
-    "domainId": "domain-sweets",
+    "domainId": "domain-sweets-juices",
     "categoryNodeId": "node-sweets",
     "brand": "Brand Sweets",
     "sourceSurface": "app-partner",
     "price": 1100,
     "imgKey": "realistic/product-sweets-1.jpg",
-    "storeId": "store-test-sweets"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج حلويات 2",
     "proposedNameEn": "Sweets Product 2",
-    "domainId": "domain-sweets",
+    "domainId": "domain-sweets-juices",
     "categoryNodeId": "node-sweets",
     "brand": "Brand Sweets",
     "sourceSurface": "app-partner",
     "price": 1200,
     "imgKey": "realistic/product-sweets-2.jpg",
-    "storeId": "store-test-sweets"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج حلويات 3",
     "proposedNameEn": "Sweets Product 3",
-    "domainId": "domain-sweets",
+    "domainId": "domain-sweets-juices",
     "categoryNodeId": "node-sweets",
     "brand": "Brand Sweets",
     "sourceSurface": "app-partner",
     "price": 1300,
     "imgKey": "realistic/product-sweets-3.jpg",
-    "storeId": "store-test-sweets"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج حلويات 4",
     "proposedNameEn": "Sweets Product 4",
-    "domainId": "domain-sweets",
+    "domainId": "domain-sweets-juices",
     "categoryNodeId": "node-sweets",
     "brand": "Brand Sweets",
     "sourceSurface": "app-partner",
     "price": 1400,
     "imgKey": "realistic/product-sweets-4.jpg",
-    "storeId": "store-test-sweets"
+    "storeId": "store-test-grocery"
   },
   {
     "proposedNameAr": "منتج حلويات 5",
     "proposedNameEn": "Sweets Product 5",
-    "domainId": "domain-sweets",
+    "domainId": "domain-sweets-juices",
     "categoryNodeId": "node-sweets",
     "brand": "Brand Sweets",
     "sourceSurface": "app-partner",
     "price": 1500,
     "imgKey": "realistic/product-sweets-5.jpg",
-    "storeId": "store-test-sweets"
+    "storeId": "store-test-grocery"
   }
 ]

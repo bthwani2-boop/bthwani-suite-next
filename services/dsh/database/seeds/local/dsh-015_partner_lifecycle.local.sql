@@ -4,6 +4,7 @@
 
 INSERT INTO dsh_partners (
     id,
+    tenant_id,
     legal_name_ar,
     legal_name_en,
     display_name,
@@ -23,6 +24,7 @@ INSERT INTO dsh_partners (
     updated_at
 ) VALUES (
     'prt_partner_local_001',
+    'local-dsh',
     'مؤسسة أسواق حدة المركزية',
     'Haddah Central Market Est',
     'أسواق حدة المركزية',
