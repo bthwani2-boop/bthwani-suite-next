@@ -1,4 +1,4 @@
-name: Apply Validated Canonical CI Commit
+name: Generate Validated Canonical CI Commit
 
 on:
   push:
@@ -11,15 +11,15 @@ permissions:
   statuses: write
 
 concurrency:
-  group: lian-ci-observability-commit-${{ github.ref }}
+  group: lian-ci-observability-generate-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  apply:
+  generate:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - name: Publish apply run locator
+      - name: Publish generation run locator
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -27,143 +27,91 @@ jobs:
           set -euo pipefail
           jq -n \
             --arg state pending \
-            --arg context bthwani/lian-ci-observability-commit \
-            --arg description "validated canonical CI commit is being rebased onto the latest branch head" \
+            --arg context bthwani/lian-ci-generated-commit \
+            --arg description "validated canonical CI commit is being generated from the latest branch head" \
             --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-            '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/apply-status.json
+            '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
           curl --fail-with-body --retry 3 -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-            --data-binary @/tmp/apply-status.json
+            --data-binary @/tmp/status.json
 
       - name: Checkout branch history
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
-          persist-credentials: true
+          persist-credentials: false
 
-      - name: Preserve deterministic renderer
-        run: cp tools/scripts/render-lian-ci-observability.py /tmp/render-lian-ci-observability.py
+      - name: Preserve renderer and sync latest head
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tools/scripts/render-lian-ci-observability.py /tmp/render-lian-ci-observability.py
+          git fetch origin lianbassam
+          git reset --hard origin/lianbassam
+          git clean -fd
 
-      - name: Rebase validated blobs and publish atomically
-        id: publish
+      - name: Render validated target files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 /tmp/render-lian-ci-observability.py
+          git diff --check
+          test "$(git hash-object .github/workflows/ci.yml)" = "e9ed5d1a4a5b0d8fb1c277628693c73977807b6b"
+          test "$(git hash-object services/dsh/backend/internal/http/catalog_contract_alignment_test.go)" = "06345c3833837d5b27efb037c3a4ea35ee58cae3"
+          test "$(git hash-object governance/github/lianbassam-full-verification.trigger.json)" = "f3575610b82fd15b46580e326acfafa8c82654db"
+
+      - name: Create immutable Git tree and commit
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           api() {
-            local method="$1"
-            local endpoint="$2"
-            local data_file="${3:-}"
-            local args=(
-              --fail-with-body --retry 3 -sS
-              -X "${method}"
-              -H "Accept: application/vnd.github+json"
-              -H "Authorization: Bearer ${GH_TOKEN}"
-              -H "X-GitHub-Api-Version: 2022-11-28"
-            )
+            local method="$1" endpoint="$2" data_file="${3:-}"
+            local args=(--fail-with-body --retry 3 -sS -X "${method}" -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${GH_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28")
             if [[ -n "${data_file}" ]]; then args+=(--data-binary "@${data_file}"); fi
             curl "${args[@]}" "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}${endpoint}"
           }
           create_blob() {
-            local file="$1"
-            local payload response
+            local file="$1" payload response
             payload="$(base64 -w0 "${file}")"
             jq -n --arg content "${payload}" '{content:$content,encoding:"base64"}' >/tmp/blob.json
             response="$(api POST /git/blobs /tmp/blob.json)"
             jq -er '.sha' <<<"${response}"
           }
 
-          expected_ci="e9ed5d1a4a5b0d8fb1c277628693c73977807b6b"
-          expected_dsh_test="06345c3833837d5b27efb037c3a4ea35ee58cae3"
-          expected_trigger="f3575610b82fd15b46580e326acfafa8c82654db"
+          parent_sha="$(git rev-parse HEAD)"
+          base_tree="$(git rev-parse 'HEAD^{tree}')"
+          ci_blob="$(create_blob .github/workflows/ci.yml)"
+          dsh_blob="$(create_blob services/dsh/backend/internal/http/catalog_contract_alignment_test.go)"
+          trigger_blob="$(create_blob governance/github/lianbassam-full-verification.trigger.json)"
 
-          for attempt in 1 2 3 4 5; do
-            echo "=== optimistic publish attempt ${attempt}/5 ==="
-            git fetch origin lianbassam
-            git reset --hard origin/lianbassam
-            git clean -fd
+          jq -n --arg base_tree "${base_tree}" --arg ci "${ci_blob}" --arg dsh "${dsh_blob}" --arg trigger "${trigger_blob}" '{base_tree:$base_tree,tree:[{path:".github/workflows/ci.yml",mode:"100644",type:"blob",sha:$ci},{path:"services/dsh/backend/internal/http/catalog_contract_alignment_test.go",mode:"100644",type:"blob",sha:$dsh},{path:"governance/github/lianbassam-full-verification.trigger.json",mode:"100644",type:"blob",sha:$trigger},{path:".github/workflows/lian-ci-observability-apply.yml",mode:"100644",type:"blob",sha:null},{path:"tools/scripts/render-lian-ci-observability.py",mode:"100644",type:"blob",sha:null}]}' >/tmp/tree.json
+          tree_response="$(api POST /git/trees /tmp/tree.json)"
+          tree_sha="$(jq -er '.sha' <<<"${tree_response}")"
 
-            python3 /tmp/render-lian-ci-observability.py
-            git diff --check
-            ci_hash="$(git hash-object .github/workflows/ci.yml)"
-            dsh_hash="$(git hash-object services/dsh/backend/internal/http/catalog_contract_alignment_test.go)"
-            trigger_hash="$(git hash-object governance/github/lianbassam-full-verification.trigger.json)"
-            if [[ "${ci_hash}" != "${expected_ci}" || "${dsh_hash}" != "${expected_dsh_test}" || "${trigger_hash}" != "${expected_trigger}" ]]; then
-              echo "validated blob mismatch: ci=${ci_hash} dsh=${dsh_hash} trigger=${trigger_hash}" >&2
-              exit 1
-            fi
+          jq -n --arg message "fix(ci): expose remaining failures and align DSH catalog test" --arg tree "${tree_sha}" --arg parent "${parent_sha}" '{message:$message,tree:$tree,parents:[$parent]}' >/tmp/commit.json
+          commit_response="$(api POST /git/commits /tmp/commit.json)"
+          commit_sha="$(jq -er '.sha' <<<"${commit_response}")"
+          jq -n --arg parent_sha "${parent_sha}" --arg tree_sha "${tree_sha}" --arg commit_sha "${commit_sha}" '{parent_sha:$parent_sha,tree_sha:$tree_sha,commit_sha:$commit_sha}' >/tmp/generated-commit.json
+          cat /tmp/generated-commit.json
 
-            base_commit="$(git rev-parse HEAD)"
-            base_tree="$(git rev-parse 'HEAD^{tree}')"
-            ci_blob="$(create_blob .github/workflows/ci.yml)"
-            dsh_test_blob="$(create_blob services/dsh/backend/internal/http/catalog_contract_alignment_test.go)"
-            trigger_blob="$(create_blob governance/github/lianbassam-full-verification.trigger.json)"
+      - name: Upload generated commit manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lian-generated-commit-${{ github.run_id }}
+          path: /tmp/generated-commit.json
+          if-no-files-found: error
+          retention-days: 2
 
-            jq -n \
-              --arg base_tree "${base_tree}" \
-              --arg ci_blob "${ci_blob}" \
-              --arg dsh_test_blob "${dsh_test_blob}" \
-              --arg trigger_blob "${trigger_blob}" \
-              '{
-                base_tree:$base_tree,
-                tree:[
-                  {path:".github/workflows/ci.yml",mode:"100644",type:"blob",sha:$ci_blob},
-                  {path:"services/dsh/backend/internal/http/catalog_contract_alignment_test.go",mode:"100644",type:"blob",sha:$dsh_test_blob},
-                  {path:"governance/github/lianbassam-full-verification.trigger.json",mode:"100644",type:"blob",sha:$trigger_blob},
-                  {path:".github/workflows/lian-ci-observability-apply.yml",mode:"100644",type:"blob",sha:null},
-                  {path:"tools/scripts/render-lian-ci-observability.py",mode:"100644",type:"blob",sha:null}
-                ]
-              }' >/tmp/tree.json
-            tree_response="$(api POST /git/trees /tmp/tree.json)"
-            tree_sha="$(jq -er '.sha' <<<"${tree_response}")"
-
-            jq -n \
-              --arg message "fix(ci): expose remaining failures and align DSH catalog test" \
-              --arg tree "${tree_sha}" \
-              --arg parent "${base_commit}" \
-              '{message:$message,tree:$tree,parents:[$parent]}' >/tmp/commit.json
-            commit_response="$(api POST /git/commits /tmp/commit.json)"
-            commit_sha="$(jq -er '.sha' <<<"${commit_response}")"
-
-            latest_ref="$(api GET /git/ref/heads/lianbassam)"
-            latest_head="$(jq -er '.object.sha' <<<"${latest_ref}")"
-            if [[ "${latest_head}" != "${base_commit}" ]]; then
-              echo "branch moved before publish: expected=${base_commit} actual=${latest_head}; retrying"
-              continue
-            fi
-
-            jq -n --arg sha "${commit_sha}" '{sha:$sha,force:false}' >/tmp/ref.json
-            if api PATCH /git/refs/heads/lianbassam /tmp/ref.json >/tmp/ref-response.json; then
-              echo "commit_sha=${commit_sha}" >>"${GITHUB_OUTPUT}"
-              echo "Published ${commit_sha} on attempt ${attempt}"
-              exit 0
-            fi
-            echo "ref update raced on attempt ${attempt}; retrying"
-          done
-
-          echo "Unable to publish after 5 optimistic retries" >&2
-          exit 1
-
-      - name: Publish applied commit status
+      - name: Publish generation success
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          RESULT_SHA: ${{ steps.publish.outputs.commit_sha }}
         run: |
           set -euo pipefail
-          jq -n \
-            --arg state success \
-            --arg context bthwani/lian-ci-observability-commit \
-            --arg description "validated CI observability and DSH alignment committed" \
-            --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-            '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/result-status.json
-          curl --fail-with-body --retry 3 -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${RESULT_SHA}" \
-            --data-binary @/tmp/result-status.json
+          jq -n --arg state success --arg context bthwani/lian-ci-generated-commit --arg description "validated commit generated; awaiting fast-forward ref update" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          curl --fail-with-body --retry 3 -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${GH_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28" "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" --data-binary @/tmp/status.json
