@@ -121,7 +121,18 @@ jobs:
 
       - name: Regenerate standalone DSH catalog client
         shell: bash
-        run: pnpm run openapi:generate:dsh-catalog
+        run: |
+          set -o pipefail
+          pnpm run openapi:generate:dsh-catalog 2>&1 | tee "${RUNNER_TEMP}/lian-catalog-generation.log"
+
+      - name: Upload catalog generation diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lian-catalog-generation-${{ github.run_id }}
+          path: ${{ runner.temp }}/lian-catalog-generation.log
+          if-no-files-found: warn
+          retention-days: 2
 
       - name: Validate accessibility gate syntax
         shell: bash
