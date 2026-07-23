@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  statuses: write
 
 concurrency:
   group: jrn001-tenant-isolation-lianbassam
@@ -23,6 +24,20 @@ jobs:
         with:
           ref: lianbassam
           fetch-depth: 0
+
+      - name: Publish running status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=pending \
+            -f context='bthwani/jrn001-tenant-isolation' \
+            -f description='Full tenant isolation verification is running' \
+            -f target_url="${RUN_URL}"
 
       - name: Setup Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
@@ -48,13 +63,19 @@ jobs:
             services/dsh/backend/internal/partner/repository_db_test.go \
             services/dsh/backend/internal/partner/repository_authz_test.go \
             services/dsh/backend/internal/partner/handler_test.go \
+            services/dsh/backend/internal/partner/handler.go \
             services/dsh/backend/internal/http/partner_tenant_boundary.go \
             services/dsh/backend/internal/http/partner_tenant_boundary_test.go \
             services/dsh/backend/internal/http/partner_lifecycle_routes.go \
-            services/dsh/backend/internal/http/partner_self_routes.go
+            services/dsh/backend/internal/http/partner_self_routes.go \
+            services/dsh/backend/internal/http/protected_store.go \
+            services/dsh/backend/internal/store/tenant_repository.go \
+            services/dsh/backend/internal/store/governance.go
           python -m json.tool governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json >/dev/null
           grep -q 'TENANT_CONTEXT_REQUIRED' services/dsh/backend/internal/http/partner_tenant_boundary.go
-          grep -q 'tenant_id = \$1' services/dsh/backend/internal/partner/tenant_repository.go
+          grep -q 'ListPartnersForTenant' services/dsh/backend/internal/partner/tenant_repository.go
+          grep -q 'ListAllStoresForTenant' services/dsh/backend/internal/store/tenant_repository.go
+          grep -q 'tenant_id = $3' services/dsh/backend/internal/store/governance.go
           grep -q 'uq_dsh_partners_tenant_legal_identity' services/dsh/database/migrations/dsh-103_jrn001_partner_tenant_isolation.sql
 
       - name: Run DSH Go tests
@@ -112,6 +133,7 @@ jobs:
           - Go unit/package tests: PASS
           - Governed DSH migration chain: PASS
           - PostgreSQL tenant-isolation integration tests: PASS
+          - Partner and store scope isolation tests: PASS
           - JRN-001 contract tests: PASS
           - JRN-001 security/privacy gate: PASS
           - Product truth JSON validation: PASS
@@ -131,7 +153,37 @@ jobs:
           git pull --rebase origin lianbassam
           git push origin HEAD:lianbassam
 
+      - name: Publish success
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=success \
+            -f context='bthwani/jrn001-tenant-isolation' \
+            -f description='Tenant isolation verification passed and evidence was committed' \
+            -f target_url="${RUN_URL}"
+
       - name: PostgreSQL diagnostics
         if: failure()
         shell: bash
         run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml logs postgres || true
+
+      - name: Publish failure
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=failure \
+            -f context='bthwani/jrn001-tenant-isolation' \
+            -f description='Tenant isolation verification failed' \
+            -f target_url="${RUN_URL}"
