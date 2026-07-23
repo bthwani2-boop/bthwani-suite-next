@@ -7,7 +7,7 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir shared/data-runtime typecheck"
+        "command": "node tools/scripts/run-tsc-check.mjs --project shared/data-runtime/tsconfig.json --label data-runtime"
       }
     },
     "build": {
