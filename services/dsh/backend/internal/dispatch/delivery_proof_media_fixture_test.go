@@ -2,7 +2,9 @@ package dispatch
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -20,9 +22,10 @@ func seedCaptainDeliveryProofMedia(
 	createdPartner := false
 	if partnerID == "" {
 		partnerID = "pod-media-partner-" + uuid.NewString()
+		phone := fmt.Sprintf("7%09d", time.Now().UnixNano()%1_000_000_000)
 		if _, err := db.Exec(`
 			INSERT INTO dsh_partners (id, legal_name_ar, display_name, legal_identity_number, primary_phone)
-			VALUES ($1, 'شريك إثبات اختبار', 'Delivery Proof Test Partner', $1, '700000099')`, partnerID); err != nil {
+			VALUES ($1, 'شريك إثبات اختبار', 'Delivery Proof Test Partner', $1, $2)`, partnerID, phone); err != nil {
 			t.Fatalf("seed delivery-proof media partner: %v", err)
 		}
 		createdPartner = true
