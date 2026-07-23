@@ -58,9 +58,10 @@ test("FS-04 declares Identity as the only credential and session truth owner", a
   assert.ok(boundary.forbiddenOwnership.some((item) => item.includes("UI surfaces")));
 });
 
-test("FS-05 database migrations enforce lifecycle, concurrency, and outbox invariants", async () => {
+test("FS-05 database migrations enforce lifecycle, concurrency, outbox, and tenant invariants", async () => {
   const governance = await read("core/identity/database/migrations/identity-005_jrn_002_governance.sql");
   const delivery = await read("core/identity/database/migrations/identity-006_deletion_outbox_delivery.sql");
+  const tenantRepair = await read("core/identity/database/migrations/identity-007_local_actor_tenant_repair.sql");
   for (const marker of [
     "identity_actors_roles_nonempty_check",
     "identity_actors_phone_e164_check",
@@ -71,6 +72,9 @@ test("FS-05 database migrations enforce lifecycle, concurrency, and outbox invar
   ]) assert.match(governance, new RegExp(marker));
   for (const marker of ["event_key", "next_attempt_at", "attempts", "identity_deletion_outbox_delivery_idx", "identity_deletion_outbox_reconciliation_idx"]) {
     assert.match(delivery, new RegExp(marker));
+  }
+  for (const marker of ["identity_actors_tenant_nonblank_chk", "operator-local-001", "btrim(tenant_id)"]) {
+    assert.match(tenantRepair, new RegExp(marker.replace(/[()]/g, "\\$&")));
   }
 });
 
@@ -104,15 +108,20 @@ test("FS-06 operation registry matches OpenAPI, routes, and both clients", async
   }
 });
 
-test("FS-07 backend request governance is in the canonical middleware chain", async () => {
-  const [middleware, main] = await Promise.all([
+test("FS-07 backend request and tenant governance are in the canonical startup chain", async () => {
+  const [middleware, main, tenantRepair] = await Promise.all([
     read("core/identity/backend/internal/http/request_contract.go"),
     read("core/identity/backend/cmd/identity-api/main.go"),
+    read("core/identity/backend/internal/identity/local_tenant_repair.go"),
   ]);
   for (const marker of ["X-Correlation-ID", "Cache-Control", "no-store", "X-Content-Type-Options", "UNSUPPORTED_MEDIA_TYPE", "INVALID_IDEMPOTENCY_KEY"]) {
     assert.match(middleware, new RegExp(marker));
   }
   assert.match(main, /RequestContractMiddleware/);
+  assert.match(main, /RepairLocalBootstrapTenant/);
+  assert.match(main, /BTHWANI_DEFAULT_TENANT_ID/);
+  assert.ok(main.indexOf("RepairLocalBootstrapTenant") < main.indexOf("identityhttp.NewRouter"));
+  assert.match(tenantRepair, /tenant_id IS DISTINCT FROM \$1/);
   assert.match(main, /ReadHeaderTimeout:\s*5 \* time\.Second/);
   assert.match(main, /MaxHeaderBytes:\s*32 \* 1024/);
 });
