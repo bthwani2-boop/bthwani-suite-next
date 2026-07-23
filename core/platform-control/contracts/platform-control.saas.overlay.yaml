@@ -1,0 +1,49 @@
+overlay: 1.0.0
+info:
+  title: Platform Control SaaS runtime contract overlay
+  version: 1.0.0
+actions:
+  - target: $.components.schemas.PlatformRuntimeSnapshot
+    description: Require the governed SaaS activation and trusted tenant runtime projection.
+    update:
+      required:
+        - status
+        - revision
+        - generatedAt
+        - variablesState
+        - flagsState
+        - rolloutsState
+        - healthState
+        - auditState
+        - rollbackState
+        - servicesState
+        - evidence
+        - saas
+      properties:
+        saas:
+          $ref: "#/components/schemas/PlatformSaasRuntimeStatus"
+  - target: $.components.schemas
+    description: Add the server-owned SaaS runtime status schema.
+    update:
+      PlatformSaasRuntimeStatus:
+        type: object
+        additionalProperties: false
+        required:
+          - mode
+          - commercialActivationState
+          - productionDeploymentAuthorized
+          - defaultTenantId
+          - runtimeEnabled
+        properties:
+          mode:
+            type: string
+            enum: [active, deferred]
+          commercialActivationState:
+            type: string
+            enum: [blocked, eligible, authorized, active]
+          productionDeploymentAuthorized:
+            type: boolean
+          defaultTenantId:
+            type: string
+          runtimeEnabled:
+            type: boolean
