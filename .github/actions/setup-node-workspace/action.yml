@@ -9,7 +9,7 @@ inputs:
   pnpm-version:
     description: PNPM version required by the root package contract.
     required: false
-    default: "10.34.2"
+    default: "10.34.0"
 
 runs:
   using: composite
@@ -27,4 +27,4 @@ runs:
 
     - name: Install frozen workspace
       shell: bash
-      run: pnpm install --frozen-lockfile --reporter=silent
+      run: pnpm install --frozen-lockfile --reporter=append-only
