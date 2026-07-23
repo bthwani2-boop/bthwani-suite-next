@@ -61,6 +61,22 @@ test("identity and service clients switch to cookie transport for relative bases
   }
 });
 
+test("all control-panel BFF routes share one HttpOnly cookie owner", () => {
+  const sessionCookies = read("apps/control-panel/runtime/src/server/session-cookies.ts");
+  const proxy = read("apps/control-panel/runtime/src/server/bff-proxy.ts");
+  const authCookies = read("apps/control-panel/runtime/src/app/api/auth/_lib/cookies.ts");
+
+  assert.match(sessionCookies, /ACCESS_TOKEN_COOKIE = "dsh_cp_at"/);
+  assert.match(sessionCookies, /REFRESH_TOKEN_COOKIE = "dsh_cp_rt"/);
+  assert.match(sessionCookies, /httpOnly:\s*true/);
+  assert.match(sessionCookies, /sameSite:\s*"strict"/);
+  assert.match(proxy, /from "\.\/session-cookies"/);
+  assert.match(proxy, /BFF_ACCESS_COOKIE = ACCESS_TOKEN_COOKIE/);
+  assert.match(proxy, /BFF_REFRESH_COOKIE = REFRESH_TOKEN_COOKIE/);
+  assert.match(authCookies, /from "\.\.\/\.\.\/\.\.\/\.\.\/server\/session-cookies"/);
+  assert.doesNotMatch(proxy, /bthwani_cp_access|bthwani_cp_refresh/);
+});
+
 test("control-panel BFF keeps credentials server-side and rejects open proxy behavior", () => {
   const proxy = read("apps/control-panel/runtime/src/server/bff-proxy.ts");
   const route = read("apps/control-panel/runtime/src/app/api/[service]/[...path]/route.ts");
@@ -72,8 +88,6 @@ test("control-panel BFF keeps credentials server-side and rejects open proxy beh
   assert.doesNotMatch(forwardedHeaders, /authorization/i);
   assert.doesNotMatch(forwardedHeaders, /cookie/i);
   assert.doesNotMatch(forwardedHeaders, /x-service-caller/i);
-  assert.match(proxy, /httpOnly:\s*true/);
-  assert.match(proxy, /sameSite:\s*"strict"/);
   assert.match(proxy, /headers\.set\("authorization", `Bearer \$\{accessToken\}`\)/);
   assert.match(proxy, /BFF_CROSS_SITE_FORBIDDEN/);
   assert.match(proxy, /redirect:\s*"manual"/);
