@@ -28,3 +28,4 @@ export * from './captain-gps.model';
 export * from './captain-profile.model';
 export * from './captain.derived';
 export * from './captain.surface.types';
+export type * from './captain-support-route';
