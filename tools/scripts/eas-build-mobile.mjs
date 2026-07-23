@@ -46,7 +46,7 @@ function run(command, args, cwd = root, env = process.env) {
     stdio: "inherit",
     shell: false,
     windowsHide: true,
-    env,
+    env: { ...env, CI: "1", EXPO_NO_TELEMETRY: "1" },
   });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
@@ -73,6 +73,14 @@ for (const key of targets) {
     fs.rmSync(outputDir, { recursive: true, force: true });
     run("pnpm", ["exec", "expo", "export", "--platform", platform, "--output-dir", outputDir], appDir);
   }
+
+  run(process.execPath, [
+    "tools/scripts/verify-mobile-prebuild.mjs",
+    "--app",
+    key,
+    "--platform",
+    platform,
+  ]);
 
   const args = [
     "dlx",
