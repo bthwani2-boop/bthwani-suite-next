@@ -23,10 +23,42 @@ test("control-panel emits governed browser security headers", () => {
   assert.match(config, /NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED:\s*"true"/);
 });
 
-test("browser identity tokens are not persisted in localStorage", () => {
+test("browser identity storage contains no durable real token store", () => {
   const storage = read("core/identity/clients/identity-session-storage.ts");
   assert.doesNotMatch(storage, /\blocalStorage\b/);
   assert.match(storage, /window\.sessionStorage/);
+
+  const proxy = read("apps/control-panel/runtime/src/server/bff-proxy.ts");
+  assert.match(proxy, /BFF_HTTP_ONLY_COOKIE_SESSION/);
+  assert.match(proxy, /accessToken:\s*BFF_OPAQUE_TOKEN/);
+  assert.match(proxy, /refreshToken:\s*BFF_OPAQUE_TOKEN/);
+});
+
+test("identity and service clients switch to cookie transport for relative bases", () => {
+  const identityClient = read("core/identity/clients/identity-client.ts");
+  assert.match(identityClient, /const cookieMode = isRelativeBaseUrl\(baseUrl\)/);
+  assert.match(identityClient, /credentials:\s*"include"/);
+  assert.match(identityClient, /!cookieMode && options\.token/);
+
+  const kernel = read("services/dsh/frontend/shared/_kernel/dsh-http-request.ts");
+  assert.match(kernel, /function resolveRequestUrl/);
+  assert.match(kernel, /createDshPublicHttpClient/);
+  assert.match(kernel, /createDshFlexibleHttpClient/);
+  assert.match(kernel, /createDshRawHttpClient/);
+  assert.match(kernel, /requestCredentials\(cookieMode\)/);
+  assert.match(kernel, /!cookieMode && token/);
+
+  const resolvers = [
+    ["services/dsh/frontend/shared/_kernel/identity-api-base-url.ts", "/api/identity"],
+    ["services/dsh/frontend/shared/_kernel/dsh-api-base-url.ts", "/api/dsh"],
+    ["services/dsh/frontend/shared/_kernel/workforce-api-base-url.ts", "/api/workforce"],
+    ["services/dsh/frontend/shared/_kernel/providers-api-base-url.ts", "/api/providers"],
+    ["services/wlt/frontend/shared/dsh/wlt-dsh-api-base-url.ts", "/api/wlt"],
+    ["services/dsh/frontend/shared/_kernel/platform-control-api-base-url.ts", "/api/platform-control"],
+  ];
+  for (const [file, expected] of resolvers) {
+    assert.match(read(file), new RegExp(expected.replaceAll("/", "\\/")));
+  }
 });
 
 test("control-panel BFF keeps credentials server-side and rejects open proxy behavior", () => {
@@ -43,7 +75,6 @@ test("control-panel BFF keeps credentials server-side and rejects open proxy beh
   assert.match(proxy, /httpOnly:\s*true/);
   assert.match(proxy, /sameSite:\s*"strict"/);
   assert.match(proxy, /headers\.set\("authorization", `Bearer \$\{accessToken\}`\)/);
-  assert.match(proxy, /BFF_HTTP_ONLY_COOKIE_SESSION/);
   assert.match(proxy, /BFF_CROSS_SITE_FORBIDDEN/);
   assert.match(proxy, /redirect:\s*"manual"/);
   assert.doesNotMatch(proxy, /redirect:\s*"follow"/);
