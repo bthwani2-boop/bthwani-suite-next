@@ -19,7 +19,11 @@ function diagnosticSubject(value) {
   const missingModule = value.match(/Cannot find module ['"]([^'"]+)['"]/)?.[1];
   if (missingModule) return missingModule.split("/").filter(Boolean).slice(-1)[0];
   const missingName = value.match(/Cannot find name ['"]([^'"]+)['"]/)?.[1];
-  return missingName || "";
+  if (missingName) return missingName;
+  const missingProperty = value.match(/Property ['"]([^'"]+)['"] does not exist/)?.[1];
+  if (missingProperty) return missingProperty;
+  const expectedArgs = value.match(/Expected (\d+(?:-\d+)?) arguments?/)?.[1];
+  return expectedArgs ? `args-${expectedArgs}` : "";
 }
 
 function diagnosticContext(value) {
@@ -103,8 +107,15 @@ if (result.status === 0) {
 const lines = output.split("\n");
 const errors = lines.filter((line) => /error TS\d+:/.test(line));
 const selected = errors.length > 0 ? errors.slice(-120) : lines.slice(-120);
+const uniqueDiagnostics = [...new Map(errors.map((line) => [diagnosticContext(line), line])).entries()].slice(0, 8);
 const firstError = errors[0] || selected[0] || `${label} TypeScript failed`;
 console.error(`[typecheck:${label}] failed with exit ${result.status ?? 1}`);
 for (const line of selected) console.error(line);
-await publishStatus("failure", firstError, diagnosticContext(firstError));
+await publishStatus("failure", `${errors.length || selected.length} TypeScript diagnostics`, "failed");
+for (const [context, line] of uniqueDiagnostics) {
+  await publishStatus("failure", line, context);
+}
+if (uniqueDiagnostics.length === 0) {
+  await publishStatus("failure", firstError, diagnosticContext(firstError));
+}
 process.exit(result.status ?? 1);
