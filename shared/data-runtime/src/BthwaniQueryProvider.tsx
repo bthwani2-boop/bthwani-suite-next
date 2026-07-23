@@ -9,7 +9,11 @@ export type BthwaniQueryProviderProps = {
   readonly children?: React.ReactNode;
 };
 
-export function BthwaniQueryProvider({ client, persistenceKey, children }: BthwaniQueryProviderProps) {
+export function BthwaniQueryProvider({
+  client,
+  persistenceKey,
+  children,
+}: BthwaniQueryProviderProps): React.ReactElement | null {
   const [ownedClient] = useState(() => client ?? createBthwaniQueryClient());
   const activeClient = client ?? ownedClient;
   const [restored, setRestored] = useState(() => !persistenceKey);
