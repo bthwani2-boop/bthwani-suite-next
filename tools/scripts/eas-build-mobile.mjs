@@ -1,6 +1,10 @@
+import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
+const require = createRequire(import.meta.url);
+const { resolveSentryEnvironment, withSentryEnvironmentForApp } = require("../mobile/sentry-env.js");
 
 const root = process.cwd();
 const manifest = JSON.parse(
@@ -53,25 +57,40 @@ function run(command, args, cwd = root, env = process.env) {
 }
 
 run(process.execPath, ["tools/scripts/sync-mobile-apps.mjs", "--check"]);
-run(process.execPath, [
-  "tools/scripts/guard-mobile-apps.mjs",
-  "--require-build-secrets",
-  "--platform",
-  platform,
-  "--profile",
-  profile,
-]);
+
+if (all && profile !== "development") {
+  const projects = new Map();
+  for (const key of targets) {
+    const sentry = resolveSentryEnvironment(key, process.env);
+    if (!sentry.project) continue;
+    const existing = projects.get(sentry.project);
+    if (existing) {
+      throw new Error(`Sentry project '${sentry.project}' is shared by ${existing} and ${key}. Use one project per mobile application for release and source-map isolation.`);
+    }
+    projects.set(sentry.project, key);
+  }
+}
 
 for (const key of targets) {
   const appDir = path.join(root, "apps", key, "runtime");
+  const appEnvironment = withSentryEnvironmentForApp(key, process.env);
 
-  run("pnpm", ["typecheck"], appDir);
-  run("pnpm", ["dlx", "expo-doctor@latest"], appDir);
+  run(process.execPath, [
+    "tools/scripts/guard-mobile-apps.mjs",
+    "--require-build-secrets",
+    "--platform",
+    platform,
+    "--profile",
+    profile,
+  ], root, appEnvironment);
+
+  run("pnpm", ["typecheck"], appDir, appEnvironment);
+  run("pnpm", ["dlx", "expo-doctor@latest"], appDir, appEnvironment);
 
   if (!skipExport) {
     const outputDir = path.join(root, ".tmp", "eas-preflight", key, platform);
     fs.rmSync(outputDir, { recursive: true, force: true });
-    run("pnpm", ["exec", "expo", "export", "--platform", platform, "--output-dir", outputDir], appDir);
+    run("pnpm", ["exec", "expo", "export", "--platform", platform, "--output-dir", outputDir], appDir, appEnvironment);
   }
 
   run(process.execPath, [
@@ -80,7 +99,7 @@ for (const key of targets) {
     key,
     "--platform",
     platform,
-  ]);
+  ], root, appEnvironment);
 
   const args = [
     "dlx",
@@ -95,5 +114,5 @@ for (const key of targets) {
   if (nonInteractive) args.push("--non-interactive");
 
   // Expo requires EAS commands to run from each app root in a monorepo.
-  run("pnpm", args, appDir);
+  run("pnpm", args, appDir, appEnvironment);
 }
