@@ -11,6 +11,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "SentryReset.Common.ps1")
+. (Join-Path $PSScriptRoot "NativeProcess.Fixed.ps1")
 
 try {
     Write-Stage "BTHWANI SENTRY FACTORY RESET"
