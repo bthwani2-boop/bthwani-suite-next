@@ -100,6 +100,33 @@ func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFu
 	})
 }
 
+func enforceSaasTenantContext(w http.ResponseWriter, r *http.Request, identity auth.Identity) bool {
+	status, err := currentSaasRuntimeStatus()
+	if err != nil {
+		sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
+		return false
+	}
+	if !status.RuntimeEnabled {
+		return true
+	}
+
+	identityTenantID := strings.TrimSpace(identity.TenantID)
+	if identityTenantID == "" {
+		sendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "authenticated identity has no trusted tenant context")
+		return false
+	}
+	if identityTenantID != status.DefaultTenantID {
+		sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "identity tenant does not match the active runtime tenant")
+		return false
+	}
+	requestedTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	if requestedTenantID != "" && requestedTenantID != identityTenantID {
+		sendError(w, http.StatusForbidden, "UNTRUSTED_TENANT_CONTEXT", "client-supplied tenant context does not match the authenticated identity")
+		return false
+	}
+	return true
+}
+
 func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		identity, err := s.auth.Resolve(r.Context(), r.Header.Get("Authorization"))
@@ -109,6 +136,9 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 				return
 			}
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
+			return
+		}
+		if !enforceSaasTenantContext(w, r, identity) {
 			return
 		}
 		next(w, r, identity)
