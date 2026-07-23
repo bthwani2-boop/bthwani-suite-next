@@ -44,6 +44,8 @@ function namedExports(source) {
     names.add(match[1]);
   }
   for (const block of source.matchAll(/\bexport\s*\{([^}]+)\}/g)) {
+    const remainder = source.slice((block.index ?? 0) + block[0].length);
+    if (/^\s*from\b/.test(remainder)) continue;
     for (const raw of block[1].split(",")) {
       const cleaned = raw.trim().replace(/^type\s+/, "");
       if (!cleaned) continue;
