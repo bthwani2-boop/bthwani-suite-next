@@ -66,7 +66,7 @@ for (const key of targets) {
   const appDir = path.join(root, "apps", key, "runtime");
 
   run("pnpm", ["typecheck"], appDir);
-  run("pnpm", ["exec", "expo-doctor"], appDir);
+  run("pnpm", ["dlx", "expo-doctor@latest"], appDir);
 
   if (!skipExport) {
     const outputDir = path.join(root, ".tmp", "eas-preflight", key, platform);
