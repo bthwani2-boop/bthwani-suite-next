@@ -26,7 +26,8 @@
     "frontend/**/*.d.ts",
     "frontend/shared/platform/platform-control.api.ts",
     "frontend/shared/platform/use-platform-change-workflow-controller.tsx",
-    "frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
+    "frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx",
+    "frontend/control-panel/platform/PlatformGovernanceVisual.tsx"
   ],
   "exclude": ["node_modules", "dist", "dist-jrn-040"]
 }
