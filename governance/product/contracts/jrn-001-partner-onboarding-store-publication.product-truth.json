@@ -3,20 +3,16 @@
   "capabilityId": "JRN_001_PARTNER_ONBOARDING_STORE_PUBLICATION",
   "state": "READY_FOR_IMPLEMENTATION",
   "problem": {
-    "statement": "Partner onboarding, first-store readiness, approval, publication, and payout setup must form one governed journey instead of disconnected surface-specific records and manual checks.",
-    "affectedActors": [
-      "field-agent",
-      "partner-owner",
-      "control-operator",
-      "client"
-    ],
-    "currentWorkaround": "Operators manually reconcile partner, store, document, visit, publication, and payout state across separate screens and services.",
+    "statement": "Partner onboarding, first-store readiness, approval, publication, payout setup, and tenant isolation must form one governed journey instead of disconnected surface-specific records and manual checks.",
+    "affectedActors": ["field-agent", "partner-owner", "control-operator", "client"],
+    "currentWorkaround": "Operators manually reconcile partner, store, document, visit, publication, payout, and tenant ownership state across separate screens and services.",
     "frequency": "continuous",
     "severity": "critical",
     "evidenceState": "QUALITATIVE",
     "evidenceReferences": [
       "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-001",
       "services/dsh/database/migrations/dsh-015_partner_lifecycle.sql",
+      "services/dsh/database/migrations/dsh-103_jrn001_partner_tenant_isolation.sql",
       "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx",
       "services/wlt/database/migrations/wlt-010_payout_destinations.sql"
     ]
@@ -24,65 +20,27 @@
   "actors": [
     {
       "id": "field-agent",
-      "role": "Captures and maintains an owned partner and first-store onboarding draft with evidence.",
-      "permittedActions": [
-        "create-owned-partner-draft",
-        "edit-owned-partner-draft",
-        "capture-first-store-profile",
-        "upload-partner-documents",
-        "submit-evidence-bearing-field-visit",
-        "submit-owned-draft-for-review"
-      ],
-      "forbiddenActions": [
-        "approve-own-evidence",
-        "publish-store-to-client",
-        "reassign-a-store-owned-by-another-partner",
-        "write-financial-ledger-or-settlement-truth"
-      ]
+      "role": "Captures and maintains an owned partner and first-store onboarding draft with evidence inside the authenticated tenant.",
+      "permittedActions": ["create-owned-partner-draft", "edit-owned-partner-draft", "capture-first-store-profile", "upload-partner-documents", "submit-evidence-bearing-field-visit", "submit-owned-draft-for-review"],
+      "forbiddenActions": ["approve-own-evidence", "publish-store-to-client", "reassign-a-store-owned-by-another-partner", "write-financial-ledger-or-settlement-truth", "select-or-override-tenant"]
     },
     {
       "id": "partner-owner",
-      "role": "Reads the governed activation, readiness, store scope, and team state for the partner context.",
-      "permittedActions": [
-        "read-own-activation-state",
-        "read-own-readiness",
-        "read-own-store-scope",
-        "manage-authorized-store-team"
-      ],
-      "forbiddenActions": [
-        "self-approve-onboarding",
-        "override-store-publication-gates",
-        "read-raw-payout-identifiers-from-dsh"
-      ]
+      "role": "Reads the governed activation, readiness, store scope, and team state for the authenticated partner tenant context.",
+      "permittedActions": ["read-own-activation-state", "read-own-readiness", "read-own-store-scope", "manage-authorized-store-team"],
+      "forbiddenActions": ["self-approve-onboarding", "override-store-publication-gates", "read-raw-payout-identifiers-from-dsh", "read-another-tenant-partner-or-store"]
     },
     {
       "id": "control-operator",
-      "role": "Reviews documents and evidence, links unowned stores, and applies governed activation and publication decisions.",
-      "permittedActions": [
-        "review-partner-documents",
-        "read-field-visit-evidence",
-        "link-an-unowned-store",
-        "apply-allowed-partner-transitions",
-        "read-immutable-onboarding-audit"
-      ],
-      "forbiddenActions": [
-        "bypass-readiness-gates",
-        "reassign-a-store-owned-by-another-partner",
-        "persist-raw-payout-identifiers-in-dsh",
-        "mutate-wlt-ledger-truth"
-      ]
+      "role": "Reviews documents and evidence, links unowned stores, and applies governed activation and publication decisions inside the authenticated tenant.",
+      "permittedActions": ["review-partner-documents", "read-field-visit-evidence", "link-an-unowned-store", "apply-allowed-partner-transitions", "read-immutable-onboarding-audit"],
+      "forbiddenActions": ["bypass-readiness-gates", "reassign-a-store-owned-by-another-partner", "persist-raw-payout-identifiers-in-dsh", "mutate-wlt-ledger-truth", "read-or-mutate-another-tenant-onboarding-record"]
     },
     {
       "id": "client",
       "role": "Discovers a store only after all publication gates are satisfied.",
-      "permittedActions": [
-        "discover-client-visible-store",
-        "read-public-store-profile"
-      ],
-      "forbiddenActions": [
-        "discover-hidden-or-unready-store",
-        "read-partner-private-onboarding-data"
-      ]
+      "permittedActions": ["discover-client-visible-store", "read-public-store-profile"],
+      "forbiddenActions": ["discover-hidden-or-unready-store", "read-partner-private-onboarding-data"]
     }
   ],
   "surfaces": [
@@ -136,8 +94,8 @@
       "actors": ["field-agent", "partner-owner", "control-operator", "client"],
       "routesOrScreens": ["DSH partner lifecycle API", "WLT payout destination API"],
       "operationIds": ["transitionDshPartner", "updateFieldPartnerDraft", "upsertWltPayoutDestination"],
-      "states": ["authorized", "forbidden", "conflict", "readiness-blocked", "idempotent-replay", "service-unavailable"],
-      "actions": ["authorize", "validate", "persist", "audit", "handoff-to-wlt", "readback"]
+      "states": ["authorized", "tenant-context-required", "not-found", "forbidden", "conflict", "readiness-blocked", "idempotent-replay", "service-unavailable"],
+      "actions": ["authenticate", "derive-tenant", "authorize", "validate", "persist", "audit", "handoff-to-wlt", "readback"]
     },
     {
       "id": "database",
@@ -145,8 +103,8 @@
       "actors": ["control-operator"],
       "routesOrScreens": ["DSH partner and store tables", "WLT payout destination tables"],
       "operationIds": [],
-      "states": ["consistent", "conflict-rejected", "single-active-payout", "audit-retained"],
-      "actions": ["enforce-ownership", "enforce-version", "enforce-idempotency", "retain-audit"]
+      "states": ["tenant-isolated", "consistent", "conflict-rejected", "single-active-payout", "audit-retained"],
+      "actions": ["enforce-tenant-ownership", "enforce-ownership", "enforce-version", "enforce-idempotency", "retain-audit"]
     },
     {
       "id": "shared",
@@ -159,20 +117,26 @@
     }
   ],
   "outcome": {
-    "statement": "A partner can be onboarded from field draft to a client-visible first store with one traceable state model, while WLT exclusively owns raw payout details.",
+    "statement": "A partner can be onboarded from field draft to a client-visible first store with one traceable tenant-isolated state model, while WLT exclusively owns raw payout details.",
     "primaryMetric": "percentage of submitted partner drafts reaching a governed terminal decision without manual cross-system reconciliation",
     "guardrailMetrics": [
+      "zero cross-tenant partner, store, document, visit, scope, or audit reads and writes",
       "zero stores reassigned between partners outside an explicit future transfer journey",
       "zero raw payout account identifiers returned by DSH",
       "zero client-visible stores failing any publication gate",
       "zero duplicate transition audit events for identical retries"
     ],
-    "baselineState": "Existing implementation contains disconnected readiness checks, weak retry identity, and legacy raw payout fields in DSH.",
-    "targetState": "Every mutation is authorization-scoped, concurrency-safe, idempotent, audited, and readable on all required surfaces.",
+    "baselineState": "Existing implementation contains disconnected readiness checks, weak retry identity, legacy raw payout fields in DSH, and partner records without proven tenant isolation.",
+    "targetState": "Every mutation is tenant-scoped, authorization-scoped, concurrency-safe, idempotent, audited, and readable on all required surfaces.",
     "observationWindow": "one complete onboarding cycle plus seven days of post-publication monitoring"
   },
   "acceptance": {
     "criteria": [
+      "The tenant is derived only from the authenticated Identity session; browser headers, query parameters, and request bodies cannot select or override it.",
+      "Requests without trusted tenant context fail with TENANT_CONTEXT_REQUIRED and do not reach partner persistence.",
+      "Partner lists, details, documents, visits, stores, scopes, transitions, and audit records are read and mutated only inside the authenticated tenant.",
+      "Cross-tenant partner and store identifiers are returned as not found without disclosing ownership.",
+      "The same legal identity may exist in different tenants but remains unique inside one tenant.",
       "Field agents can create, resume, save, and submit only their own partner draft.",
       "Submission is blocked until legal identity, first-store profile, and a WLT payout destination reference are complete.",
       "All uploaded documents must be independently approved before operations review.",
@@ -184,6 +148,9 @@
       "Partner and control-panel surfaces read back the committed activation and readiness state."
     ],
     "failureStates": [
+      "tenant selected from client-controlled input",
+      "missing tenant context accepted",
+      "cross-tenant record read, mutation, link, scope, or audit disclosure",
       "raw payout data stored or returned by DSH",
       "store ownership silently changed",
       "publication without all gates",
@@ -195,11 +162,11 @@
       "product truth schema validation",
       "OpenAPI validation",
       "Go unit tests",
-      "PostgreSQL integration tests",
+      "PostgreSQL migration and tenant isolation integration tests",
       "shared TypeScript typecheck",
       "multi-surface route and state verification",
       "WLT financial-boundary guard",
-      "RBAC and negative-path tests",
+      "RBAC, tenant spoofing, cross-tenant, and negative-path tests",
       "runtime smoke",
       "visual and RTL review"
     ],
@@ -208,13 +175,17 @@
   },
   "invariants": {
     "business": [
+      "Every partner and onboarding child record belongs to exactly one authenticated tenant.",
       "One partner may own multiple stores, but one store has at most one onboarding owner.",
       "Control-panel approval is distinct from field evidence capture.",
       "WLT is the sole owner of raw payout destination data.",
       "Client visibility is a store publication outcome, not merely a partner status label.",
-      "Every material transition has actor, surface, correlation, retry identity, and immutable audit."
+      "Every material transition has actor, tenant, surface, correlation, retry identity, and immutable audit."
     ],
     "negative": [
+      "A request cannot choose tenant through a header, query parameter, or JSON field.",
+      "A missing trusted tenant cannot fall back silently to a runtime default inside partner handlers.",
+      "A tenant cannot enumerate, read, link, mutate, or infer another tenant's partner or store.",
       "A field agent cannot approve their own evidence.",
       "A partner cannot self-publish a store.",
       "A store cannot be reassigned by the generic link operation.",
@@ -236,24 +207,15 @@
   "execution": {
     "appetite": "Close JRN-001 sequentially across all mandatory FS-01 through FS-18 slices, then stop before JRN-002.",
     "fixedConstraints": [
-      "Use GitHub Remote sambassam as execution truth.",
+      "Use GitHub Remote lianbassam as execution truth.",
       "DSH owns operational partner and store state; WLT owns financial payout truth.",
+      "Tenant context is derived from authenticated Identity and never accepted from client-controlled input.",
       "No store reassignment through the generic onboarding link route.",
       "No raw payout identifiers persisted or returned by DSH.",
       "No next journey begins before the JRN-001 decision is recorded."
     ],
-    "variableScope": [
-      "readiness copy and recovery actions",
-      "targeted tests and CI composition",
-      "non-breaking compatibility mappings for masked payout fields"
-    ],
-    "forbiddenScope": [
-      "captain fulfillment implementation",
-      "order lifecycle implementation",
-      "commercial SaaS activation",
-      "pull request, merge, release, or production deployment",
-      "fabricated runtime, QA, security, finance, or visual evidence"
-    ],
+    "variableScope": ["readiness copy and recovery actions", "targeted tests and CI composition", "non-breaking compatibility mappings for masked payout fields"],
+    "forbiddenScope": ["captain fulfillment implementation", "order lifecycle implementation", "commercial SaaS activation", "pull request, merge, release, or production deployment", "fabricated runtime, QA, security, finance, or visual evidence"],
     "forecastRange": "one governed journey",
     "confidence": "high",
     "unknowns": [
