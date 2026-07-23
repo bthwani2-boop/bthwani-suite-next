@@ -64,5 +64,5 @@ func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, e
 		SendError(w, http.StatusForbidden, "SERVICE_CALLER_FORBIDDEN", "unexpected service caller")
 		return false
 	}
-	return requireTrustedSAASTenant(w, r)
+	return requireTrustedSaaSTenant(w, r)
 }
