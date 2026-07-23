@@ -2,11 +2,8 @@ package http
 
 import (
 	"errors"
-	"net/http"
 	"os"
 	"strings"
-
-	"platform-control-api/internal/auth"
 )
 
 type saasRuntimeStatus struct {
@@ -51,14 +48,6 @@ func resolveSaasRuntimeStatus(getenv func(string) string) (saasRuntimeStatus, er
 	}, nil
 }
 
-func (s *server) saasStatus(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
-	_ = s
-	_ = r
-	_ = identity
-	status, err := resolveSaasRuntimeStatus(os.Getenv)
-	if err != nil {
-		sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
-		return
-	}
-	sendJSON(w, http.StatusOK, status)
+func currentSaasRuntimeStatus() (saasRuntimeStatus, error) {
+	return resolveSaasRuntimeStatus(os.Getenv)
 }
