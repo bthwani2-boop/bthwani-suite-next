@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Linking, Platform } from "react-native";
 import Constants from "expo-constants";
+import * as Crypto from "expo-crypto";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import { registerIdentityBeforeSessionEndHook } from "@bthwani/core-identity";
@@ -10,7 +11,6 @@ import {
 } from "./notifications.api";
 
 const PUSH_DEVICE_KEY_PREFIX = "bthwani-dsh-push-device";
-let fallbackDeviceSequence = 0;
 
 type DshMobileAppKey = "app-client" | "app-partner" | "app-captain" | "app-field";
 
@@ -54,10 +54,7 @@ async function ensureNotificationPermission(): Promise<boolean> {
 }
 
 function createPushDeviceId(appKey: string): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return `${appKey}-${uuid}`;
-  fallbackDeviceSequence += 1;
-  return `${appKey}-${Date.now().toString(36)}-${fallbackDeviceSequence.toString(36)}`;
+  return `${appKey}-${Crypto.randomUUID()}`;
 }
 
 async function resolvePushDeviceId(appKey: string): Promise<string> {
@@ -155,8 +152,6 @@ export function useDshMobilePushRegistration(
           if (deviceId) await deactivateNotificationPushEndpoint(deviceId).catch(() => undefined);
         });
       } catch (error) {
-        // Registration is retried when the authenticated app root mounts again;
-        // notification inbox remains available even when push registration fails.
         console.warn(`[${appKey}] push registration failed`, error);
       }
     })();
