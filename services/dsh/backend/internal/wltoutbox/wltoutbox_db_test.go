@@ -34,7 +34,8 @@ func openRequiredDB(t *testing.T) *sql.DB {
 
 // seedOrderFixture creates the minimal tenant/store/cart/checkout-intent/order
 // chain dsh_wlt_outbox_events' foreign keys and tenant-isolation constraints
-// require, and registers cleanup.
+// require, including the immutable governed pricing snapshot enforced for every
+// checkout intent, and registers cleanup.
 func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID string) {
 	t.Helper()
 	ctx := context.Background()
@@ -64,9 +65,12 @@ func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID strin
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_checkout_intents (
 			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
-			payment_method, wlt_payment_session_id
+			payment_method, wlt_payment_session_id,
+			subtotal_minor_units, delivery_fee_minor_units, discount_minor_units,
+			total_minor_units, currency, pricing_snapshot_hash
 		)
-		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery', 'cod', $5)
+		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery', 'cod', $5,
+		        1000, 0, 0, 1000, 'YER', repeat('f', 64))
 		RETURNING id::text`,
 		tenantID, clientID, cartID, storeID, "wlt-ps-"+suffix,
 	).Scan(&checkoutIntentID); err != nil {
