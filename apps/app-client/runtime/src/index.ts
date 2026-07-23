@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { registerRootComponent } from "expo";
+import * as Sentry from "@sentry/react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BthwaniUiProvider } from "@bthwani/ui-kit";
 import { registerIdentityBeforeSessionEndHook } from "@bthwani/core-identity";
@@ -48,4 +49,4 @@ function Root() {
   );
 }
 
-registerRootComponent(Root);
+registerRootComponent(Sentry.wrap(Root));
