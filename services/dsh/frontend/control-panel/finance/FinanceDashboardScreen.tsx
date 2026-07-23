@@ -39,6 +39,14 @@ const FINANCE_BLOCK_REASON_COPY: Record<string, { readonly title: string; readon
     title: "الجلسة غير مصادق عليها (AUTH_MISSING)",
     description: "لا يوجد رمز دخول صالح لهذا المشغّل. سجّل الدخول من جديد ثم أعد المحاولة.",
   },
+  MISSING_TENANT_ID: {
+    title: "سياق المستأجر غير مكتمل (MISSING_TENANT_ID)",
+    description: "لم تُرجع جلسة المشغّل سياق المستأجر الموثوق. سجّل الدخول من جديد؛ لا تُدخل معرّف مستأجر يدويًا.",
+  },
+  TENANT_MISMATCH: {
+    title: "تعارض سياق المستأجر (TENANT_MISMATCH)",
+    description: "رُفض الطلب لأن محدد المستأجر لا يطابق سياق جلسة المشغّل الموثوق.",
+  },
   RUNTIME_PORT_MISMATCH: {
     title: "تعذر الاتصال بالمنفذ (RUNTIME_PORT_MISMATCH)",
     description: "فشل الاتصال الشبكي بعنوان/منفذ DSH runtime API. تحقق من تشغيل الخدمة والمنفذ الصحيح.",
