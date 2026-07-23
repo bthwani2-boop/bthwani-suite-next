@@ -9,7 +9,7 @@
   },
   "apps": {
     "app-client": {
-      "name": "app-client-next",
+      "name": "بثواني",
       "slug": "app-client-next",
       "scheme": "bthwani-client-next",
       "androidPackage": "com.bthwani.client.next",
@@ -18,7 +18,7 @@
       "features": ["router", "updates", "constants", "application", "device", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "video", "imageManipulator", "sharing", "webBrowser", "sqlite", "location"]
     },
     "app-partner": {
-      "name": "app-partner-next",
+      "name": "بثواني الشريك",
       "slug": "app-partner-next",
       "scheme": "bthwani-partner-next",
       "androidPackage": "com.bthwani.partner.next",
@@ -27,7 +27,7 @@
       "features": ["router", "updates", "constants", "application", "device", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "keepAwake", "sqlite"]
     },
     "app-captain": {
-      "name": "app-captain-next",
+      "name": "بثواني الكابتن",
       "slug": "app-captain-next",
       "scheme": "bthwani-captain-next",
       "androidPackage": "com.bthwani.captain.next",
@@ -36,7 +36,7 @@
       "features": ["router", "updates", "constants", "application", "device", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "location", "backgroundLocation", "maps", "keepAwake", "sqlite", "taskManager", "imageManipulator", "sharing", "webBrowser"]
     },
     "app-field": {
-      "name": "app-field-next",
+      "name": "بثواني الميدان",
       "slug": "app-field-next",
       "scheme": "bthwani-field-next",
       "androidPackage": "com.bthwani.field.next",
