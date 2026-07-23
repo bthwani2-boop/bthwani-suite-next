@@ -92,7 +92,8 @@ async function openNotificationAction(
 }
 
 function resolveExpoProjectId(): string | undefined {
-  return Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+  return typeof projectId === "string" ? projectId : undefined;
 }
 
 export function useDshMobilePushRegistration(
@@ -124,9 +125,10 @@ export function useDshMobilePushRegistration(
         if (!permissionGranted || !active) return;
 
         const projectId = resolveExpoProjectId();
-        const token = (
+        const readExpoToken = async (): Promise<string> => (
           await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined)
         ).data;
+
         deviceId = await resolvePushDeviceId(appKey);
         if (!active) return;
 
@@ -140,14 +142,13 @@ export function useDshMobilePushRegistration(
           });
         };
 
-        await registerToken(token);
+        await registerToken(await readExpoToken());
         if (!active) return;
 
-        tokenSubscription = Notifications.addPushTokenListener((nextToken) => {
-          if (nextToken.type !== "expo") return;
-          void registerToken(nextToken.data).catch((error) => {
-            console.warn(`[${appKey}] push token rotation failed`, error);
-          });
+        tokenSubscription = Notifications.addPushTokenListener(() => {
+          void readExpoToken()
+            .then(registerToken)
+            .catch((error) => console.warn(`[${appKey}] push token rotation failed`, error));
         });
 
         unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(async () => {
