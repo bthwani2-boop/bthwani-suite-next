@@ -25,6 +25,15 @@ runs:
         node-version: ${{ inputs.node-version }}
         cache: pnpm
 
+    - name: Register immutable status diagnostics
+      shell: bash
+      env:
+        BTHWANI_STATUS_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        echo "::add-mask::${BTHWANI_STATUS_TOKEN}"
+        echo "BTHWANI_STATUS_TOKEN=${BTHWANI_STATUS_TOKEN}" >> "${GITHUB_ENV}"
+
     - name: Install frozen workspace
       id: install
       continue-on-error: true
