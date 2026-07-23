@@ -7,9 +7,12 @@ type BatteryState = {
   readonly batteryLevel?: number;
 };
 
+type BatterySubscription = { remove(): void };
+
 type BatteryModule = {
   getPowerStateAsync(): Promise<BatteryState>;
-  addPowerStateListener(listener: (state: BatteryState) => void): { remove(): void };
+  addBatteryLevelListener(listener: (event: { batteryLevel: number }) => void): BatterySubscription;
+  addLowPowerModeListener(listener: (event: { lowPowerMode: boolean }) => void): BatterySubscription;
 };
 
 function shouldPause(state: BatteryState): boolean {
@@ -28,11 +31,19 @@ export function wireBatteryAwareQueue(queue: BthwaniOfflineMutationQueue): () =>
     return () => {};
   }
 
-  void battery.getPowerStateAsync().then((state) => queue.setPaused(shouldPause(state)));
-  const subscription = battery.addPowerStateListener((state) => {
-    const paused = shouldPause(state);
+  let lastState: BatteryState = {};
+  const applyState = (patch: BatteryState) => {
+    lastState = { ...lastState, ...patch };
+    const paused = shouldPause(lastState);
     queue.setPaused(paused);
     if (!paused) void queue.flush();
-  });
-  return () => subscription.remove();
+  };
+
+  void battery.getPowerStateAsync().then((state) => applyState(state));
+  const levelSubscription = battery.addBatteryLevelListener(({ batteryLevel }) => applyState({ batteryLevel }));
+  const lowPowerSubscription = battery.addLowPowerModeListener(({ lowPowerMode }) => applyState({ lowPowerMode }));
+  return () => {
+    levelSubscription.remove();
+    lowPowerSubscription.remove();
+  };
 }

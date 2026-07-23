@@ -58,7 +58,7 @@ function createPushDeviceId(appKey: string): string {
 }
 
 async function resolvePushDeviceId(appKey: string): Promise<string> {
-  const storageKey = `${PUSH_DEVICE_KEY_PREFIX}:${appKey}`;
+  const storageKey = `${PUSH_DEVICE_KEY_PREFIX}-${appKey}`;
   const existing = await SecureStore.getItemAsync(storageKey);
   if (existing) return existing;
 
@@ -114,7 +114,7 @@ export function useDshMobilePushRegistration(
       if (!active || response === null) return;
       await openNotificationAction(response, appScheme);
       await Notifications.clearLastNotificationResponseAsync();
-    });
+    }).catch((error) => console.warn(`[${appKey}] notification response handling failed`, error));
 
     void (async () => {
       try {
