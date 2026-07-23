@@ -28,7 +28,6 @@ func NewRouter(service *platformcontrol.Service, authClient *auth.Client) http.H
 	mux.HandleFunc("GET /platform/v1/variables", s.operatorOnly("platform:read", s.variables))
 	mux.HandleFunc("GET /platform/v1/variables/{key}", s.operatorOnly("platform:read", s.variable))
 	mux.HandleFunc("GET /platform/v1/feature-flags", s.operatorOnly("platform:read", s.featureFlags))
-	mux.HandleFunc("GET /platform/v1/saas-status", s.operatorOnly("platform:read", s.saasStatus))
 	mux.HandleFunc("GET /platform/v1/services", s.operatorOnly("platform:read", s.services))
 	mux.HandleFunc("GET /platform/v1/health", s.operatorOnly("platform:health:read", s.health))
 	mux.HandleFunc("GET /platform/v1/audit-events", s.operatorOnly("platform:audit:read", s.auditEvents))
@@ -118,7 +117,19 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 
 func (s *server) runtimeConfig(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	_ = identity
-	sendJSON(w, http.StatusOK, s.service.RuntimeSnapshot(r.Context()))
+	saas, err := currentSaasRuntimeStatus()
+	if err != nil {
+		sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
+		return
+	}
+	response := struct {
+		platformcontrol.RuntimeSnapshot
+		SaaS saasRuntimeStatus `json:"saas"`
+	}{
+		RuntimeSnapshot: s.service.RuntimeSnapshot(r.Context()),
+		SaaS:            saas,
+	}
+	sendJSON(w, http.StatusOK, response)
 }
 
 func (s *server) effectiveRuntimeConfig(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
