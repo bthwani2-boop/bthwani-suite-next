@@ -8,6 +8,7 @@
     "platformMode",
     "saasReadinessMode",
     "commercialActivationState",
+    "activationAuthorization",
     "tenantDefinition",
     "trustedTenantContextRequired",
     "clientSuppliedTenantTrusted",
@@ -17,10 +18,23 @@
     "decisionVocabulary"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
+    "schemaVersion": { "const": 2 },
     "platformMode": { "const": "BTHWANI_NATIVE_PLATFORM" },
     "saasReadinessMode": { "enum": ["NOT_APPLICABLE", "SAAS_READY_DEFERRED", "SAAS_ACTIVE"] },
-    "commercialActivationState": { "enum": ["BLOCKED_BY_POLICY", "ELIGIBLE_FOR_REVIEW", "ACTIVE"] },
+    "commercialActivationState": {
+      "enum": ["BLOCKED_BY_POLICY", "ELIGIBLE_FOR_REVIEW", "ACTIVATION_AUTHORIZED", "ACTIVE"]
+    },
+    "activationAuthorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authorizationPath", "status", "targetRef", "productionDeploymentAuthorized"],
+      "properties": {
+        "authorizationPath": { "const": "governance/saas/activation-authorization.json" },
+        "status": { "enum": ["NOT_AUTHORIZED", "AUTHORIZED"] },
+        "targetRef": { "type": "string", "minLength": 1 },
+        "productionDeploymentAuthorized": { "type": "boolean" }
+      }
+    },
     "tenantDefinition": { "type": "string", "minLength": 1 },
     "trustedTenantContextRequired": { "const": true },
     "clientSuppliedTenantTrusted": { "const": false },
@@ -78,6 +92,12 @@
         "properties": {
           "saasReadinessMode": { "const": "SAAS_ACTIVE" },
           "canonicalDecision": { "const": "CLOSED_WITH_EVIDENCE" },
+          "activationAuthorization": {
+            "properties": {
+              "status": { "const": "AUTHORIZED" },
+              "productionDeploymentAuthorized": { "const": true }
+            }
+          },
           "activationEvidence": {
             "properties": {
               "tenantOwnedEntitiesClassified": { "const": "PROVEN" },
@@ -100,11 +120,29 @@
       }
     },
     {
+      "if": { "properties": { "commercialActivationState": { "const": "ACTIVATION_AUTHORIZED" } } },
+      "then": {
+        "properties": {
+          "saasReadinessMode": { "const": "SAAS_ACTIVE" },
+          "canonicalDecision": { "enum": ["NEEDS_EVIDENCE", "FIX_REQUIRED", "BLOCKED_EXTERNAL"] },
+          "activationAuthorization": {
+            "properties": {
+              "status": { "const": "AUTHORIZED" },
+              "productionDeploymentAuthorized": { "const": false }
+            }
+          }
+        }
+      }
+    },
+    {
       "if": { "properties": { "commercialActivationState": { "const": "BLOCKED_BY_POLICY" } } },
       "then": {
         "properties": {
           "saasReadinessMode": { "enum": ["NOT_APPLICABLE", "SAAS_READY_DEFERRED"] },
-          "canonicalDecision": { "enum": ["NEEDS_EVIDENCE", "BLOCKED_EXTERNAL", "FIX_REQUIRED"] }
+          "canonicalDecision": { "enum": ["NEEDS_EVIDENCE", "BLOCKED_EXTERNAL", "FIX_REQUIRED"] },
+          "activationAuthorization": {
+            "properties": { "status": { "const": "NOT_AUTHORIZED" } }
+          }
         }
       }
     }
