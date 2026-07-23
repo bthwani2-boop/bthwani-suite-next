@@ -62,7 +62,23 @@ jobs:
         run: node -e "JSON.parse(require('node:fs').readFileSync('governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json','utf8'))"
 
       - name: Verify all JRN-001 slice contracts
-        run: node --test services/dsh/tests/jrn-001-*.test.mjs
+        shell: bash
+        run: |
+          set +e
+          log="${RUNNER_TEMP}/jrn001-slice-contracts.log"
+          node --test services/dsh/tests/jrn-001-*.test.mjs >"${log}" 2>&1
+          status=$?
+          cat "${log}"
+          exit "${status}"
+
+      - name: Upload JRN-001 slice diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jrn001-slice-contracts-${{ github.run_id }}
+          path: ${{ runner.temp }}/jrn001-slice-contracts.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Verify JRN-001 partner guards
         shell: bash
