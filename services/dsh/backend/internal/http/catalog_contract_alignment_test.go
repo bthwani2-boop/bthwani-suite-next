@@ -85,8 +85,8 @@ func TestCatalogContractMatchesRuntimeOCCSurface(t *testing.T) {
 		"operationId: transitionProductProposal",
 		"operationId: updateCatalogPlatformPolicy",
 		"operationId: upsertOperatorStoreAssortment",
-		"operationId: updatePartnerProductProposal",
-		"operationId: updateFieldProductProposal",
+		"operationId: patchPartnerProductProposal",
+		"operationId: patchFieldProductProposal",
 		"operationId: updateCatalogAsset",
 		"operationId: reviewCatalogAsset",
 	} {
