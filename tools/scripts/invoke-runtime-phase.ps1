@@ -12,8 +12,10 @@ param(
 $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
+$CatalogSeedScript = Join-Path $RepoRoot "services/dsh/database/scripts/apply-central-catalog-seed.ps1"
 $LogRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
 $LogPath = Join-Path $LogRoot "bthwani-runtime-$Action.log"
+$ProfileList = @($Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 
 function ConvertTo-StatusText {
   param([string]$Value, [int]$Limit = 140)
@@ -84,6 +86,19 @@ if ($Force) { $runtimeParameters.Force = $true }
 try {
   Set-Location -LiteralPath $RepoRoot
   & $RuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath
+
+  # A normal unified full-stack startup must converge the sovereign DSH catalog,
+  # not merely start containers. This closes the fresh/persisted-volume gap where
+  # taxonomy rows existed while master products and store assortments remained
+  # absent until an operator manually ran the seed script.
+  if ($Action -eq "up" -and $ProfileList -contains "dsh") {
+    if (-not (Test-Path -LiteralPath $CatalogSeedScript)) {
+      throw "Central catalog convergence script not found: $CatalogSeedScript"
+    }
+    Write-Host "`n=== runtime:catalog-convergence ==="
+    & $CatalogSeedScript 2>&1 | Tee-Object -FilePath $LogPath -Append
+  }
+
   Publish-RuntimeStatus -State success -Description "runtime $Action passed"
 } catch {
   $message = $_.Exception.Message
