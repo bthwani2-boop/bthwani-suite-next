@@ -83,10 +83,11 @@ jobs:
             python3 tools/scripts/lian-remediation-finalize.py
             python3 - <<'PY'
           from pathlib import Path
-          path = Path("services/dsh/contracts/dsh.analytics-extensions.openapi.yaml")
-          text = path.read_text(encoding="utf-8")
-          if "\ncomponents:\n" not in text:
-              text = text.rstrip() + """
+
+          analytics = Path("services/dsh/contracts/dsh.analytics-extensions.openapi.yaml")
+          analytics_text = analytics.read_text(encoding="utf-8")
+          if "\ncomponents:\n" not in analytics_text:
+              analytics_text = analytics_text.rstrip() + """
 
           components:
             securitySchemes:
@@ -95,7 +96,22 @@ jobs:
                 scheme: bearer
                 bearerFormat: JWT
           """
-              path.write_text(text, encoding="utf-8")
+              analytics.write_text(analytics_text, encoding="utf-8")
+
+          facade = Path("services/dsh/clients/generated/dsh-catalog-api.ts")
+          facade_text = facade.read_text(encoding="utf-8")
+          replacements = {
+              '    patch: operations["updatePartnerProductProposal"];': '    patch: operations["patchPartnerProductProposal"];',
+              '    patch: operations["updateFieldProductProposal"];': '    patch: operations["patchFieldProductProposal"];',
+              '  updatePartnerProductProposal: MutationOperation<': '  patchPartnerProductProposal: MutationOperation<',
+              '  updateFieldProductProposal: MutationOperation<': '  patchFieldProductProposal: MutationOperation<',
+              'interface ExpectedVersion {\n  expectedVersion: number;\n}\n': 'type ExpectedVersion = { expectedVersion: number };\n',
+          }
+          for old, new in replacements.items():
+              if old not in facade_text:
+                  raise RuntimeError(f"catalog facade anchor missing: {old}")
+              facade_text = facade_text.replace(old, new, 1)
+          facade.write_text(facade_text, encoding="utf-8")
           PY
           } 2>&1 | tee "${RUNNER_TEMP}/lian-remediation-apply.log"
 
