@@ -10,9 +10,9 @@ assert.match(controller, /getOrCreateSupportMutationAttempt/);
 assert.match(controller, /clearSupportMutationAttempt/);
 assert.match(controller, /createSupportTicket\(input, attempt\.context\)/);
 assert.match(controller, /updateTicket\(ticketId, input, attempt\.context\)/);
-assert.match(controller, /addTicketMessage\(ticketId, input, attempt\.context\)/);
+assert.match(controller, /addTicketMessage\(ticketId, normalizedInput, attempt\.context\)/);
 assert.doesNotMatch(controller, /createSupportTicket\(input\);/);
 assert.doesNotMatch(controller, /updateTicket\(ticketId, input\);/);
-assert.doesNotMatch(controller, /addTicketMessage\(ticketId, input\);/);
+assert.doesNotMatch(controller, /addTicketMessage\(ticketId, (?:input|normalizedInput)\);/);
 
 console.log("JRN-001 FS-10 support mutation identity boundary verified");
