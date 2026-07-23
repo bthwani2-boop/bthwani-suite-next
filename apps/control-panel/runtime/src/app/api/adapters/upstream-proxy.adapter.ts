@@ -12,7 +12,11 @@ import { sendAuthenticatedUpstreamRequest } from "../_kernel/upstream-http-reque
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-type TokenPair = { accessToken: string; refreshToken: string };
+type OperatorTokenPair = {
+  accessToken: string;
+  refreshToken: string;
+  identity: { roles: readonly string[] };
+};
 
 function noStoreJson(body: unknown, status: number): NextResponse {
   return NextResponse.json(body, {
@@ -34,6 +38,23 @@ async function tryForward(
   }
 }
 
+async function rotateOperatorSession(
+  refreshToken: string,
+): Promise<OperatorTokenPair | null> {
+  const rotated = await identityServerClient().refresh(refreshToken);
+  if (!rotated.identity.roles.includes("operator")) return null;
+  return rotated;
+}
+
+function expiredSessionResponse(status = 401): NextResponse {
+  const response = noStoreJson(
+    { code: status === 403 ? "CONTROL_PANEL_FORBIDDEN" : "SESSION_EXPIRED" },
+    status,
+  );
+  clearSessionCookies(response);
+  return response;
+}
+
 export async function proxyAuthenticatedUpstream(
   request: Request,
   path: readonly string[],
@@ -44,25 +65,35 @@ export async function proxyAuthenticatedUpstream(
   }
 
   const store = await cookies();
-  const accessToken = store.get(ACCESS_TOKEN_COOKIE)?.value;
+  let accessToken = store.get(ACCESS_TOKEN_COOKIE)?.value;
   const refreshToken = store.get(REFRESH_TOKEN_COOKIE)?.value;
+  let rotatedCookies: OperatorTokenPair | null = null;
 
   if (!accessToken) {
-    return noStoreJson({ code: "SESSION_NOT_FOUND" }, 401);
+    if (!refreshToken) return noStoreJson({ code: "SESSION_NOT_FOUND" }, 401);
+    try {
+      rotatedCookies = await rotateOperatorSession(refreshToken);
+      if (!rotatedCookies) return expiredSessionResponse(403);
+      accessToken = rotatedCookies.accessToken;
+    } catch {
+      return expiredSessionResponse();
+    }
   }
 
   let upstream = await tryForward(request.clone(), path, baseUrl, accessToken);
-  let rotatedCookies: TokenPair | null = null;
 
   if (upstream.status === 401 && refreshToken) {
     try {
-      const rotated = await identityServerClient().refresh(refreshToken);
-      rotatedCookies = rotated;
-      upstream = await tryForward(request.clone(), path, baseUrl, rotated.accessToken);
+      rotatedCookies = await rotateOperatorSession(refreshToken);
+      if (!rotatedCookies) return expiredSessionResponse(403);
+      upstream = await tryForward(
+        request.clone(),
+        path,
+        baseUrl,
+        rotatedCookies.accessToken,
+      );
     } catch {
-      const response = noStoreJson({ code: "SESSION_EXPIRED" }, 401);
-      clearSessionCookies(response);
-      return response;
+      return expiredSessionResponse();
     }
   }
 
@@ -72,11 +103,19 @@ export async function proxyAuthenticatedUpstream(
     headers: {
       "Content-Type": upstream.headers.get("content-type") ?? "application/json",
       "Cache-Control": "no-store",
+      ...(upstream.headers.get("etag")
+        ? { ETag: upstream.headers.get("etag") as string }
+        : {}),
+      ...(upstream.headers.get("x-correlation-id")
+        ? {
+            "X-Correlation-ID": upstream.headers.get(
+              "x-correlation-id",
+            ) as string,
+          }
+        : {}),
     },
   });
 
-  if (rotatedCookies) {
-    setSessionCookies(response, rotatedCookies);
-  }
+  if (rotatedCookies) setSessionCookies(response, rotatedCookies);
   return response;
 }
