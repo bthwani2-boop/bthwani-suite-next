@@ -29,11 +29,11 @@ function sanitizeUrl(value: string | undefined): string | undefined {
  * Technical crash reporting only. Identity, tenant, financial and message truth
  * remain in their sovereign services and are deliberately filtered here.
  */
-export function initSentry(): void {
+export function initSentry(): boolean {
   const config = resolveSentryRuntimeConfig();
   if (!config.dsn) {
     console.log("[sentry] disabled: EXPO_PUBLIC_SENTRY_DSN not set");
-    return;
+    return false;
   }
 
   const extra = Constants.expoConfig?.extra as Record<string, unknown> | undefined;
@@ -83,4 +83,5 @@ export function initSentry(): void {
   if (config.startupProbe) {
     Sentry.captureMessage("bthwani.mobile.sentry.startup", "info");
   }
+  return true;
 }
