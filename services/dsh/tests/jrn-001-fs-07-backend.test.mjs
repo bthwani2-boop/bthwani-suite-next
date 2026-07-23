@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 const read = (path) => fs.readFileSync(path, "utf8");
 const routes = read("services/dsh/backend/internal/http/partner_lifecycle_routes.go");
+const tenantBoundary = read("services/dsh/backend/internal/http/partner_tenant_boundary.go");
+const tenantRepository = read("services/dsh/backend/internal/partner/tenant_repository.go");
 const wrappers = read("services/dsh/backend/internal/http/partner_onboarding_integrity.go");
 const protectedStore = read("services/dsh/backend/internal/http/protected_store.go");
 const handlers = read("services/dsh/backend/internal/partner/onboarding_integrity_handlers.go");
@@ -14,14 +16,17 @@ const wltServer = read("services/wlt/backend/internal/http/server.go");
 const governedBindings = new Map([
   ["GET /dsh/operator/partners/{partnerId}", "handleGovernedGetPartner"],
   ["POST /dsh/operator/partners/{partnerId}/transition", "handleGovernedActivationTransition"],
-  ["POST /dsh/operator/partners/{partnerId}/stores", "handleGovernedLinkPartnerStore"],
+  ["POST /dsh/operator/partners/{partnerId}/stores", "handleTenantLinkPartnerStore"],
   ["GET /dsh/field/partners/{partnerId}", "handleGovernedFieldGetPartnerDraft"],
   ["PATCH /dsh/field/partners/{partnerId}", "handleGovernedFieldUpdatePartnerDraft"],
   ["POST /dsh/field/partners/{partnerId}/visits", "handleGovernedFieldCreatePartnerVisit"],
   ["POST /dsh/field/partners/{partnerId}/submit", "handleGovernedFieldSubmitPartnerDraft"],
 ]);
 for (const [path, handler] of governedBindings) {
-  assert.ok(routes.includes(`mux.HandleFunc("${path}", protected.${handler})`), `${path} is not bound to ${handler}`);
+  assert.ok(
+    routes.includes(`mux.HandleFunc("${path}", protected.withTenantPartnerResource(protected.${handler}))`),
+    `${path} is not tenant-wrapped and bound to ${handler}`,
+  );
 }
 
 for (const legacyHandler of [
@@ -36,6 +41,11 @@ for (const legacyHandler of [
   assert.ok(!routes.includes(legacyHandler), `legacy route binding remains: ${legacyHandler}`);
 }
 
+assert.match(tenantBoundary, /withTrustedPartnerTenant/);
+assert.match(tenantBoundary, /withTenantPartnerResource/);
+assert.match(tenantBoundary, /TENANT_CONTEXT_REQUIRED/);
+assert.match(tenantRepository, /ListPartnersForTenant/);
+assert.match(tenantRepository, /LinkPartnerStoreForTenant/);
 assert.match(wrappers, /PartnersPermissionRead/);
 assert.match(wrappers, /PartnersPermissionManage/);
 assert.match(wrappers, /PartnersPermissionActivate/);
@@ -58,4 +68,4 @@ assert.match(statePolicy, /AllowedTransitionsForSurface/);
 assert.match(wltClient, /setRequiredMutationHeaders/);
 assert.match(wltServer, /HandleUpsertPayoutDestinationGoverned/);
 
-console.log("JRN-001 FS-07 backend routes, validation, authorization, concurrency, and idempotency verified");
+console.log("JRN-001 FS-07 tenant-governed backend routes, validation, authorization, concurrency, and idempotency verified");
