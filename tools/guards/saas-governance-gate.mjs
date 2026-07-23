@@ -31,6 +31,7 @@ function readText(relativePath) {
 
 const statePath = "governance/saas/saas-governance.json";
 const schemaPath = "governance/saas/saas-governance.schema.json";
+const authorizationPath = "governance/saas/activation-authorization.json";
 const annexPath = "governance/operational_journey_protocol_package/annexes/SAAS_READINESS_AND_TENANCY_GATES.md";
 const authorityPath = "governance/authority/authority-precedence.json";
 const decisionsPath = "governance/contracts/decision-vocabulary.json";
@@ -40,6 +41,7 @@ const finalJudgePath = ".agents/skills/bthwani-final-journey-closure-judge/SKILL
 
 const state = readJson(statePath);
 const schema = readJson(schemaPath);
+const authorization = readJson(authorizationPath);
 const authority = readJson(authorityPath);
 const decisions = readJson(decisionsPath);
 const artifactSchema = readJson(artifactSchemaPath);
@@ -66,13 +68,49 @@ if (state && !canonicalDecisions.has(state.canonicalDecision)) {
 }
 
 if (state?.commercialActivationState === "BLOCKED_BY_POLICY") {
-  if (state.saasReadinessMode === "SAAS_ACTIVE") violations.push({ file: statePath, line: 0, message: "SAAS_ACTIVE_WHILE_COMMERCIAL_ACTIVATION_BLOCKED" });
-  if (["PASS", "CLOSED_WITH_EVIDENCE"].includes(state.canonicalDecision)) violations.push({ file: statePath, line: 0, message: "SAAS_ACTIVATION_CLAIM_WITHOUT_ACTIVATION_PERMISSION" });
+  if (state.saasReadinessMode === "SAAS_ACTIVE") {
+    violations.push({ file: statePath, line: 0, message: "SAAS_ACTIVE_WHILE_COMMERCIAL_ACTIVATION_BLOCKED" });
+  }
+  if (["PASS", "CLOSED_WITH_EVIDENCE"].includes(state.canonicalDecision)) {
+    violations.push({ file: statePath, line: 0, message: "SAAS_ACTIVATION_CLAIM_WITHOUT_ACTIVATION_PERMISSION" });
+  }
+}
+
+if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED") {
+  if (state.saasReadinessMode !== "SAAS_ACTIVE") {
+    violations.push({ file: statePath, line: 0, message: "AUTHORIZED_SAAS_RUNTIME_MUST_BE_ACTIVE" });
+  }
+  if (state.activationAuthorization?.status !== "AUTHORIZED") {
+    violations.push({ file: statePath, line: 0, message: "AUTHORIZED_STATE_REQUIRES_AUTHORIZATION_STATUS" });
+  }
+  if (state.activationAuthorization?.authorizationPath !== authorizationPath) {
+    violations.push({ file: statePath, line: 0, message: "AUTHORIZED_STATE_REQUIRES_CANONICAL_AUTHORIZATION_PATH" });
+  }
+  if (state.activationAuthorization?.productionDeploymentAuthorized !== false) {
+    violations.push({ file: statePath, line: 0, message: "PRODUCTION_DEPLOYMENT_MUST_REMAIN_SEPARATELY_AUTHORIZED" });
+  }
+  if (authorization?.status !== "AUTHORIZED" || authorization?.source !== "USER_EXPLICIT_INSTRUCTION") {
+    violations.push({ file: authorizationPath, line: 0, message: "EXPLICIT_SAAS_ACTIVATION_AUTHORIZATION_MISSING" });
+  }
+  if (authorization?.targetRef !== state.activationAuthorization?.targetRef) {
+    violations.push({ file: authorizationPath, line: 0, message: "ACTIVATION_AUTHORIZATION_TARGET_REF_MISMATCH" });
+  }
+  if (authorization?.productionDeploymentAuthorized !== false) {
+    violations.push({ file: authorizationPath, line: 0, message: "PRODUCTION_DEPLOYMENT_AUTHORIZATION_MUST_BE_SEPARATE" });
+  }
+  if (["PASS", "CLOSED_WITH_EVIDENCE"].includes(state.canonicalDecision)) {
+    violations.push({ file: statePath, line: 0, message: "AUTHORIZED_RUNTIME_CANNOT_CLAIM_FINAL_COMMERCIAL_CLOSURE" });
+  }
 }
 
 if (state?.commercialActivationState === "ACTIVE") {
   const unresolved = Object.entries(state.activationEvidence ?? {}).filter(([, value]) => value !== "PROVEN");
-  for (const [key, value] of unresolved) violations.push({ file: statePath, line: 0, message: `ACTIVE_SAAS_WITH_UNPROVEN_EVIDENCE ${key}=${value}` });
+  for (const [key, value] of unresolved) {
+    violations.push({ file: statePath, line: 0, message: `ACTIVE_SAAS_WITH_UNPROVEN_EVIDENCE ${key}=${value}` });
+  }
+  if (authorization?.status !== "AUTHORIZED" || authorization?.productionDeploymentAuthorized !== true) {
+    violations.push({ file: authorizationPath, line: 0, message: "ACTIVE_COMMERCIAL_SAAS_REQUIRES_PRODUCTION_DEPLOYMENT_AUTHORIZATION" });
+  }
 }
 
 const registered = (authority?.documents ?? []).some((entry) =>
@@ -82,7 +120,7 @@ const registered = (authority?.documents ?? []).some((entry) =>
 );
 if (!registered) violations.push({ file: authorityPath, line: 0, message: "SAAS_MACHINE_GOVERNANCE_NOT_REGISTERED" });
 
-for (const marker of [statePath, schemaPath, decisionsPath]) {
+for (const marker of [statePath, schemaPath, authorizationPath, decisionsPath]) {
   if (!annex.includes(marker)) violations.push({ file: annexPath, line: 0, message: `SAAS_ANNEX_MISSING_REFERENCE ${marker}` });
 }
 
