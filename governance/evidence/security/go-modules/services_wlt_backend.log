@@ -1,0 +1,19 @@
+all modules verified
+?   	wlt-api/cmd/wlt-api	[no test files]
+ok  	wlt-api/internal/cod	0.022s
+ok  	wlt-api/internal/commercial	0.017s
+ok  	wlt-api/internal/dshnotify	0.024s
+?   	wlt-api/internal/dshoutbox	[no test files]
+?   	wlt-api/internal/health	[no test files]
+ok  	wlt-api/internal/http	0.013s
+ok  	wlt-api/internal/ledger	0.009s
+ok  	wlt-api/internal/payment	0.010s
+ok  	wlt-api/internal/payout	0.015s
+ok  	wlt-api/internal/promotionfunding	0.013s
+ok  	wlt-api/internal/provider	0.008s
+ok  	wlt-api/internal/reconciliation	0.016s
+ok  	wlt-api/internal/reference	0.006s
+ok  	wlt-api/internal/refund	0.016s
+ok  	wlt-api/internal/settlement	0.008s
+ok  	wlt-api/internal/shared	0.005s
+ok  	wlt-api/internal/wallet	0.003s

@@ -1,0 +1,7 @@
+all modules verified
+?   	workforce-api/cmd/workforce-api	[no test files]
+ok  	workforce-api/internal/auth	0.011s
+?   	workforce-api/internal/dshclient	[no test files]
+ok  	workforce-api/internal/http	0.004s
+ok  	workforce-api/internal/identityclient	0.006s
+?   	workforce-api/internal/workforce	[no test files]

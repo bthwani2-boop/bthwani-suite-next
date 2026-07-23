@@ -1,0 +1,5 @@
+all modules verified
+?   	providers-api/cmd/providers-api	[no test files]
+ok  	providers-api/internal/auth	0.008s
+ok  	providers-api/internal/http	0.004s
+ok  	providers-api/internal/providers	0.005s
