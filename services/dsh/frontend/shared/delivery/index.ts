@@ -11,9 +11,12 @@ export type * from './delivery.view-model';
 // Adapters
 export type * from './delivery.adapters';
 
-// Native captain runtime is intentionally excluded from this general barrel.
-// It depends on expo-location and must be imported explicitly by app-captain from:
-// ./use-captain-order-runtime
+// Native captain runtime values are intentionally excluded from this general barrel.
+// Shared type-only contracts remain safe to expose because they emit no native runtime import.
+export type {
+  CaptainDeliveryExceptionDraft,
+  DshCaptainLocationPush,
+} from './use-captain-order-runtime';
 
 // Captain exports
 export * from './captain.contract';
@@ -28,4 +31,3 @@ export * from './captain-gps.model';
 export * from './captain-profile.model';
 export * from './captain.derived';
 export * from './captain.surface.types';
-export type { CaptainSupportRoute } from './captain-support-route';
