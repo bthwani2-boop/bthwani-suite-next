@@ -45,12 +45,14 @@ func main() {
 		log.Fatalf("[identity-api] local platform separation bootstrap: %v", err)
 	}
 
+	router := identityhttp.NewRouter(db, repository)
+	tenantScopedRouter := identityhttp.SaaSTenantBoundary(db, router)
 	server := &http.Server{
 		Addr: ":" + port,
 		Handler: identityhttp.BrowserOriginGuard(
 			identityhttp.CorsMiddleware(
 				identityhttp.RequestContractMiddleware(
-					identityhttp.ActivationSafetyMiddleware(identityhttp.NewRouter(db, repository)),
+					identityhttp.ActivationSafetyMiddleware(tenantScopedRouter),
 				),
 			),
 		),
