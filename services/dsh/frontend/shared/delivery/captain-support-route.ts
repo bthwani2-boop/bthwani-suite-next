@@ -1,0 +1,15 @@
+export type CaptainSupportRoute =
+  | "chat-read-ack"
+  | "chat-send"
+  | "cod-liability"
+  | "order-accept"
+  | "order-deliver"
+  | "order-details"
+  | "order-get"
+  | "order-pickup"
+  | "orders-list"
+  | "orders-offers-list"
+  | "profile-get"
+  | "proof-upload"
+  | "tier-evaluate"
+  | "tier-info";
