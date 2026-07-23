@@ -122,7 +122,7 @@
       "name": "Comprehensive implementation verification",
       "context": "journeys/jrn-001/fs-17-comprehensive",
       "commands": ["node --test services/dsh/tests/jrn-001-*.test.mjs", "for guard in tools/guards/partner/jrn-001-*.mjs; do node \"$guard\" || exit 1; done", "cd services/dsh/backend && go test ./internal/partner ./internal/partnerwltoutbox ./internal/store -count=1", "cd core/identity/backend && go test ./... -count=1", "pnpm --dir apps/app-field/runtime typecheck", "node tools/guards/wlt-financial-boundary-gate.mjs"],
-      "evidence": [".github/workflows/jrn-001-fs-17-comprehensive-verification.yml"]
+      "evidence": [".github/workflows/ci.yml", "governance/evidence/JRN-001_TENANT_ISOLATION_REMOTE_VERIFICATION.md"]
     },
     {
       "id": "FS-18",
