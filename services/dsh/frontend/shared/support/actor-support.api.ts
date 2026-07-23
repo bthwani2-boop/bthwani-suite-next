@@ -3,12 +3,21 @@ import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshAddMessageInput,
   DshCreateTicketInput,
+  DshSenderRole,
   DshSupportMessage,
   DshSupportTicket,
 } from "./support.types";
 import type { SupportMutationContext } from "./support-mutation-attempt";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "actor-support");
+
+export type DshSupportMessageReadReceipt = {
+  readonly ticketId: string;
+  readonly actorId: string;
+  readonly actorRole: DshSenderRole;
+  readonly markedCount: number;
+  readonly readAt: string;
+};
 
 export async function createActorSupportTicket(
   input: DshCreateTicketInput,
@@ -42,6 +51,16 @@ export async function fetchActorSupportMessages(
     `/dsh/support/tickets/${encodeURIComponent(ticketId)}/messages`,
   );
   return data.messages ?? [];
+}
+
+export async function markActorSupportMessagesRead(
+  ticketId: string,
+): Promise<DshSupportMessageReadReceipt> {
+  const data = await request<{ receipt: DshSupportMessageReadReceipt }>(
+    `/dsh/support/tickets/${encodeURIComponent(ticketId)}/messages/read`,
+    { method: "POST" },
+  );
+  return data.receipt;
 }
 
 export async function addActorSupportMessage(
