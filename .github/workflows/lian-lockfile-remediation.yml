@@ -52,13 +52,57 @@ jobs:
           git clean -fd
 
       - name: Regenerate and verify frozen lockfile
+        id: lockfile
+        continue-on-error: true
         shell: bash
         run: |
-          set -euo pipefail
-          pnpm install --lockfile-only --no-frozen-lockfile --reporter=append-only
-          git diff --check -- pnpm-lock.yaml
-          grep -A8 -F '  shared/data-runtime:' pnpm-lock.yaml | grep -Fq "'@react-native-async-storage/async-storage':"
-          pnpm install --lockfile-only --frozen-lockfile --reporter=append-only
+          set -uo pipefail
+          : >/tmp/lockfile-remediation.log
+          pnpm install --lockfile-only --no-frozen-lockfile --reporter=append-only 2>&1 | tee -a /tmp/lockfile-remediation.log
+          regenerate_rc=${PIPESTATUS[0]}
+          {
+            echo "regenerate_exit=${regenerate_rc}"
+            echo "--- pnpm-lock diff ---"
+            git diff -- pnpm-lock.yaml
+            echo "--- shared/data-runtime importer ---"
+            python3 - <<'PY'
+          from pathlib import Path
+          text = Path('pnpm-lock.yaml').read_text(encoding='utf-8')
+          start = text.index('  shared/data-runtime:\n')
+          end = text.index('\n  shared/ui-kit:', start)
+          block = text[start:end]
+          print(block)
+          if "'@react-native-async-storage/async-storage':" not in block:
+              raise SystemExit('async-storage importer entry is missing')
+          PY
+          } 2>&1 | tee -a /tmp/lockfile-remediation.log
+          importer_rc=${PIPESTATUS[0]}
+          git diff --check -- pnpm-lock.yaml 2>&1 | tee -a /tmp/lockfile-remediation.log
+          diff_rc=${PIPESTATUS[0]}
+          pnpm install --lockfile-only --frozen-lockfile --reporter=append-only 2>&1 | tee -a /tmp/lockfile-remediation.log
+          frozen_rc=${PIPESTATUS[0]}
+          echo "importer_exit=${importer_rc} diff_exit=${diff_rc} frozen_exit=${frozen_rc}" | tee -a /tmp/lockfile-remediation.log
+          if [[ ${regenerate_rc} -ne 0 || ${importer_rc} -ne 0 || ${diff_rc} -ne 0 || ${frozen_rc} -ne 0 ]]; then
+            exit 1
+          fi
+
+      - name: Upload lockfile generation diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lian-lockfile-generation-${{ github.run_id }}
+          path: |
+            pnpm-lock.yaml
+            /tmp/lockfile-remediation.log
+          if-no-files-found: warn
+          retention-days: 2
+
+      - name: Fail closed on lockfile generation error
+        if: ${{ steps.lockfile.outcome == 'failure' }}
+        shell: bash
+        run: |
+          tail -n 200 /tmp/lockfile-remediation.log
+          exit 1
 
       - name: Advance full verification trigger
         shell: bash
