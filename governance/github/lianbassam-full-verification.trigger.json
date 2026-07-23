@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "targetRef": "lianbassam",
+  "purpose": "SAAS_ACTIVATION_FULL_VERIFICATION",
+  "requestedDate": "2026-07-23",
+  "saasMode": "SAAS_ACTIVE",
+  "commercialActivationState": "ACTIVATION_AUTHORIZED",
+  "productionDeploymentAuthorized": false,
+  "runtimeProofRequired": true,
+  "databaseIntegrationRequired": true,
+  "fullWorkspaceRequired": true,
+  "expectedCommitStatus": "bthwani/full-verification",
+  "evidencePolicy": "SAME_IMMUTABLE_COMMIT_ONLY"
+}
