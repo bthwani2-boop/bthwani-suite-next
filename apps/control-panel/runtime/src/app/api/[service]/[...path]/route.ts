@@ -7,17 +7,17 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const allowedPathPrefixes: Record<
-  ControlPanelBffService,
-  ReadonlySet<string>
-> = {
-  dsh: new Set(["dsh"]),
+// DSH, Workforce, Providers and Platform Control have explicit static BFF
+// routes that share one authenticated refresh/reauthorization proxy. The
+// dynamic route is deliberately limited to Identity and read-only WLT
+// reference projections so a missing static route cannot degrade into a broad
+// browser-to-service proxy.
+const allowedPathPrefixes = {
   identity: new Set(["auth", "identity"]),
   wlt: new Set(["wlt"]),
-  workforce: new Set(["workforce"]),
-  providers: new Set(["providers"]),
-  "platform-control": new Set(["platform"]),
-};
+} satisfies Partial<Record<ControlPanelBffService, ReadonlySet<string>>>;
+
+type DynamicBffService = keyof typeof allowedPathPrefixes;
 
 type RouteContext = {
   params: Promise<{
@@ -36,7 +36,7 @@ async function handle(request: NextRequest, context: RouteContext) {
     return jsonNotFound("BFF_SERVICE_NOT_ALLOWED", "Unknown BFF service.");
   }
 
-  const typedService = service as ControlPanelBffService;
+  const typedService = service as DynamicBffService;
   const unsafeSegment = path.some(
     (segment) => segment.length === 0 || segment === "." || segment === "..",
   );
@@ -51,7 +51,11 @@ async function handle(request: NextRequest, context: RouteContext) {
     );
   }
 
-  return proxyControlPanelRequest(request, typedService, path);
+  return proxyControlPanelRequest(
+    request,
+    typedService as ControlPanelBffService,
+    path,
+  );
 }
 
 export const GET = handle;
