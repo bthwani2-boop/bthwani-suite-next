@@ -107,7 +107,7 @@ export function useDshMobilePushRegistration(
     let active = true;
     let deviceId: string | undefined;
     let unregisterSessionEndHook: (() => void) | undefined;
-    let tokenSubscription: Notifications.EventSubscription | undefined;
+    let tokenSubscription: ReturnType<typeof Notifications.addPushTokenListener> | undefined;
 
     const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
       void openNotificationAction(response, appScheme);
