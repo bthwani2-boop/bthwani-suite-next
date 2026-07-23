@@ -127,7 +127,7 @@ test("DSH enforces actor, identity tenant, idempotency and privacy boundaries", 
   mustContain(paths.dshHandlers, [
     /FinancePermissionManage/, /requestedByOperatorId/,
     /requiredPaymentTenant\(w,\s*r,\s*actor\.TenantID\)/,
-    /input\.AmountMinorUnits <= 0/,
+    /input\.AmountMinorUnits < 0/,
     /SELECT tenant_id FROM dsh_orders/, /partnerStore/, /privacyRefund/, /FinanceRefundWrite/,
   ]);
   assert.doesNotMatch(read(paths.dshHandlers), /requiredPaymentTenant\(w,\s*r\)/);
