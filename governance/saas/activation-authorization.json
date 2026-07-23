@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "authorizationId": "SAAS-ACT-2026-07-23-LIANBASSAM",
+  "status": "AUTHORIZED",
+  "source": "USER_EXPLICIT_INSTRUCTION",
+  "authorizedDate": "2026-07-23",
+  "targetRef": "lianbassam",
+  "scope": [
+    "ENABLE_SAAS_RUNTIME_MODE",
+    "REMOVE_COMMERCIAL_ACTIVATION_POLICY_BLOCK",
+    "EXECUTE_SAAS_ACTIVATION_VERIFICATION"
+  ],
+  "productionDeploymentAuthorized": false,
+  "evidencePolicy": "NO_UNPROVEN_EVIDENCE_MAY_BE_MARKED_PROVEN",
+  "notes": "The user explicitly authorized SaaS activation. Production deployment remains a separate authorization and the final commercial ACTIVE state still requires same-commit evidence."
+}
