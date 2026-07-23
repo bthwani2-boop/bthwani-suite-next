@@ -58,7 +58,8 @@
       "Bash(go get *)",
       "Bash(gofmt -l ./internal/cache/ ./internal/homediscovery/ ./internal/http/ ./cmd/dsh-api/)",
       "Bash(echo \"gofmt exit: $?\")",
-      "Bash(gofmt -d cmd/dsh-api/main.go)"
+      "Bash(gofmt -d cmd/dsh-api/main.go)",
+      "Bash(git rebase *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\bassa\\.claude\\plans"
