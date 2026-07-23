@@ -13,13 +13,24 @@ function statusDescription(value) {
     .slice(0, 140);
 }
 
+function diagnosticSubject(value) {
+  const exportedMember = value.match(/has no exported member ['"]([^'"]+)['"]/)?.[1];
+  if (exportedMember) return exportedMember;
+  const missingModule = value.match(/Cannot find module ['"]([^'"]+)['"]/)?.[1];
+  if (missingModule) return missingModule.split("/").filter(Boolean).slice(-1)[0];
+  const missingName = value.match(/Cannot find name ['"]([^'"]+)['"]/)?.[1];
+  return missingName || "";
+}
+
 function diagnosticContext(value) {
   const normalized = value.replace(/\\/g, "/");
   const location = normalized.match(/([^\s()]+)\((\d+),(\d+)\): error (TS\d+):/);
   if (location) {
     const fileParts = location[1].split("/").filter(Boolean);
     const file = fileParts.slice(-2).join("/");
-    return `${location[4]}@${file}:${location[2]}`.slice(0, 72);
+    const subject = diagnosticSubject(normalized).replace(/[^A-Za-z0-9_.-]/g, "-");
+    const code = subject ? `${location[4]}-${subject}` : location[4];
+    return `${code}@${file}:${location[2]}`.slice(0, 72);
   }
   const code = normalized.match(/error (TS\d+):/)?.[1];
   return code || "failed";
