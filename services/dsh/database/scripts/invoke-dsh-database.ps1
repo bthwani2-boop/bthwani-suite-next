@@ -30,6 +30,7 @@ param(
   [string]$EnvFile = "infra/docker/env/runtime.env.example"
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../../../..")).Path
@@ -196,11 +197,16 @@ function Assert-LocalSeedEnvironment {
     Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
     Select-Object -First 1
 
-  if ($environmentName) {
-    $allowed = @("local", "development", "dev", "test", "ci")
-    if ($allowed -notcontains $environmentName.ToLowerInvariant()) {
-      throw "Local DSH seeds are forbidden in environment '$environmentName'. Allowed: $($allowed -join ', ')."
+  if (-not $environmentName) {
+    if ($Transport -ne "docker") {
+      throw "Local DSH seeds require BTHWANI_ENVIRONMENT, APP_ENV, or NODE_ENV when Transport is not docker."
     }
+    return
+  }
+
+  $allowed = @("local", "development", "dev", "test", "ci")
+  if ($allowed -notcontains $environmentName.ToLowerInvariant()) {
+    throw "Local DSH seeds are forbidden in environment '$environmentName'. Allowed: $($allowed -join ', ')."
   }
 }
 
@@ -245,9 +251,9 @@ ON CONFLICT (seed_name) DO UPDATE SET
 
 function Invoke-DshDatabaseTests {
   $directories = switch ($TestSuite) {
-    "schema" { @(Join-Path $TestRoot "schema") }
-    "seed" { @(Join-Path $TestRoot "seed") }
-    "all" { @(Join-Path $TestRoot "schema"), @(Join-Path $TestRoot "seed") }
+    "schema" { @((Join-Path $TestRoot "schema")) }
+    "seed" { @((Join-Path $TestRoot "seed")) }
+    "all" { @((Join-Path $TestRoot "schema"), (Join-Path $TestRoot "seed")) }
   }
 
   Write-Host "`n--- Running DSH database tests: $TestSuite ($Transport) ---"
