@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const manifest = require("./mobile-apps.manifest.json");
 
 const PERMISSION_TEXT = {
@@ -22,6 +24,12 @@ function nativeCapabilities(features) {
     hasVideoRecording,
     needsMicrophone: hasAudioRecording || hasVideoRecording,
   };
+}
+
+function appAsset(appKey, fileName) {
+  const relative = `./assets/${fileName}`;
+  const absolute = path.resolve(__dirname, "../..", "apps", appKey, "runtime", "assets", fileName);
+  return fs.existsSync(absolute) ? relative : undefined;
 }
 
 function buildInfoPlist(features) {
@@ -53,12 +61,20 @@ function buildInfoPlist(features) {
   return infoPlist;
 }
 
-function buildAndroidConfig(app, features) {
+function buildAndroidConfig(appKey, app, features) {
   const { needsMicrophone } = nativeCapabilities(features);
+  const adaptiveIcon = appAsset(appKey, "adaptive-icon.png");
   const android = {
     package: app.androidPackage,
     blockedPermissions: needsMicrophone ? [] : ["android.permission.RECORD_AUDIO"],
   };
+
+  if (adaptiveIcon) {
+    android.adaptiveIcon = {
+      foregroundImage: adaptiveIcon,
+      backgroundColor: "#FFFFFF",
+    };
+  }
 
   if (features.includes("notifications") && process.env.GOOGLE_SERVICES_JSON) {
     android.googleServicesFile = process.env.GOOGLE_SERVICES_JSON;
@@ -91,7 +107,7 @@ function buildIosConfig(app, features) {
   return ios;
 }
 
-function buildPlugins(features) {
+function buildPlugins(appKey, features) {
   const {
     hasCamera,
     hasAudioRecording,
@@ -121,7 +137,16 @@ function buildPlugins(features) {
   }
 
   if (features.includes("splashScreen")) {
-    plugins.push("expo-splash-screen");
+    const splashIcon = appAsset(appKey, "splash-icon.png");
+    plugins.push(splashIcon ? [
+      "expo-splash-screen",
+      {
+        image: splashIcon,
+        imageWidth: 220,
+        resizeMode: "contain",
+        backgroundColor: "#FFFFFF",
+      },
+    ] : "expo-splash-screen");
   }
 
   if (features.includes("localAuthentication")) {
@@ -200,10 +225,12 @@ function buildPlugins(features) {
   }
 
   if (features.includes("notifications")) {
+    const notificationIcon = appAsset(appKey, "notification-icon.png");
     plugins.push([
       "expo-notifications",
       {
         defaultChannel: "bthwani-operational",
+        ...(notificationIcon ? { icon: notificationIcon } : {}),
       },
     ]);
   }
@@ -232,6 +259,7 @@ function defineBthwaniExpoApp(appKey) {
     platforms: ["ios", "android"],
     scheme: app.scheme,
     version: manifest.global.version,
+    icon: appAsset(appKey, "icon.png"),
     runtimeVersion: {
       policy: "fingerprint",
     },
@@ -242,9 +270,9 @@ function defineBthwaniExpoApp(appKey) {
     },
     orientation: "portrait",
     userInterfaceStyle: "light",
-    android: buildAndroidConfig(app, features),
+    android: buildAndroidConfig(appKey, app, features),
     ios: buildIosConfig(app, features),
-    plugins: buildPlugins(features),
+    plugins: buildPlugins(appKey, features),
     extra: {
       appKey,
       appLine: manifest.global.appLine,
