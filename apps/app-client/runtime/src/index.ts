@@ -3,7 +3,10 @@ import { registerRootComponent } from "expo";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BthwaniUiProvider } from "@bthwani/ui-kit";
 import { BthwaniQueryProvider, wireNetInfoOnlineManager, createBthwaniQueryClient } from "@bthwani/data-runtime";
+import { initSentry } from "./observability/sentry";
 import App from "./App";
+
+initSentry();
 
 const queryClient = createBthwaniQueryClient();
 
