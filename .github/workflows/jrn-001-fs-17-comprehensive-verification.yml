@@ -32,6 +32,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Publish static verification pending
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -f state=pending -f context=bthwani/jrn001-fs17-static -f description='JRN-001 static and surface verification running' -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
@@ -62,6 +63,7 @@ jobs:
         run: node -e "JSON.parse(require('node:fs').readFileSync('governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json','utf8'))"
 
       - name: Verify all JRN-001 slice contracts
+        id: slice_contracts
         shell: bash
         run: |
           set +e
@@ -72,7 +74,7 @@ jobs:
           exit "${status}"
 
       - name: Upload JRN-001 slice diagnostics
-        if: ${{ failure() }}
+        if: ${{ steps.slice_contracts.outcome == 'failure' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: jrn001-slice-contracts-${{ github.run_id }}
@@ -119,6 +121,7 @@ jobs:
 
       - name: Publish static verification terminal status
         if: ${{ always() }}
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           JOB_STATUS: ${{ job.status }}
@@ -142,6 +145,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Publish database verification pending
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -f state=pending -f context=bthwani/jrn001-fs17-database -f description='JRN-001 database isolation verification running' -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
@@ -199,6 +203,7 @@ jobs:
 
       - name: Publish database verification terminal status
         if: ${{ always() }}
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           JOB_STATUS: ${{ job.status }}
