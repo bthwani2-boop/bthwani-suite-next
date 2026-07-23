@@ -29,6 +29,10 @@ function buildAndroidConfig(app, features) {
     package: app.androidPackage,
   };
 
+  if (features.includes("notifications")) {
+    android.googleServicesFile = "./google-services.json";
+  }
+
   if (features.includes("maps")) {
     android.config = {
       googleMaps: {
