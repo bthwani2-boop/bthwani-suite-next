@@ -76,13 +76,17 @@ jobs:
           pnpm add -Dw '@playwright/test@^1.56.1' '@axe-core/playwright@^4.11.0' --lockfile-only
           pnpm install --no-frozen-lockfile
 
-      - name: Regenerate governed DSH contracts and clients
+      - name: Regenerate primary DSH contract and client
         shell: bash
-        run: |
-          set -euo pipefail
-          pnpm run openapi:generate:dsh
-          pnpm run openapi:generate:dsh-catalog
-          node --check tools/guards/a11y-runtime-gate.mjs
+        run: pnpm run openapi:generate:dsh
+
+      - name: Regenerate standalone DSH catalog client
+        shell: bash
+        run: pnpm run openapi:generate:dsh-catalog
+
+      - name: Validate accessibility gate syntax
+        shell: bash
+        run: node --check tools/guards/a11y-runtime-gate.mjs
 
       - name: Validate WLT migration numbering and probes
         shell: pwsh
