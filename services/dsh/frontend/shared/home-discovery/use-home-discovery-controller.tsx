@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@bthwani/data-runtime";
+import { queryKeys, useBthwaniQuery } from "@bthwani/data-runtime";
 import { fetchHomeDiscovery } from "./home-discovery.api";
 import { HOME_DISCOVERY_INITIAL_FILTER } from "./home-discovery.controller-core";
 import { loadingState, type HomeDiscoveryState } from "./home-discovery.states";
@@ -30,10 +29,10 @@ export function useHomeDiscoveryController(
   const serviceAreaCode = scope.serviceAreaCode?.trim() || undefined;
 
   // fetchHomeDiscovery never throws — network/HTTP failures resolve to
-  // errorState()/serviceUnavailableState() instead. useQuery here therefore
+  // errorState()/serviceUnavailableState() instead. useBthwaniQuery here therefore
   // provides caching, dedup, and refetch-on-reconnect only; its own
   // throw-based retry/error path is structurally unreachable for this query.
-  const query = useQuery({
+  const query = useBthwaniQuery({
     queryKey: queryKeys.dshHomeDiscovery({ cityCode, serviceAreaCode }),
     queryFn: () =>
       fetchHomeDiscovery({
