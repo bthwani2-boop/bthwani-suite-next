@@ -123,7 +123,7 @@
       "if": { "properties": { "commercialActivationState": { "const": "ACTIVATION_AUTHORIZED" } } },
       "then": {
         "properties": {
-          "saasReadinessMode": { "const": "SAAS_ACTIVE" },
+          "saasReadinessMode": { "const": "SAAS_READY_DEFERRED" },
           "canonicalDecision": { "enum": ["NEEDS_EVIDENCE", "FIX_REQUIRED", "BLOCKED_EXTERNAL"] },
           "activationAuthorization": {
             "properties": {
