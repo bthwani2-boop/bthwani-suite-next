@@ -17,6 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          fetch-depth: 0
           persist-credentials: true
       - name: Extract and execute finalizer
         id: finalizer
@@ -33,24 +34,28 @@ jobs:
               raise RuntimeError('FINALIZER_PAYLOAD_NOT_FOUND')
           Path('/tmp/finalize.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
           PY
-          mkdir -p .diagnostics
           if ! python3 /tmp/finalize.py >/tmp/finalizer.out 2>/tmp/finalizer.err; then
-            cp /tmp/finalizer.err .diagnostics/mobile-closure-finalizer-error.txt
             tail -n 1 /tmp/finalizer.err | tr '\n' ' ' | cut -c1-130 >/tmp/finalizer.status
             exit 1
           fi
-          printf '%s\n' 'FINALIZER_SUCCEEDED' >.diagnostics/mobile-closure-finalizer-error.txt
+          printf '%s\n' 'FINALIZER_SUCCEEDED' >/tmp/finalizer.err
           printf '%s' 'FINALIZER_SUCCEEDED' >/tmp/finalizer.status
-      - name: Persist diagnostic evidence
+      - name: Persist isolated diagnostic evidence
         if: always()
         shell: bash
         run: |
           set -euo pipefail
+          cp /tmp/finalizer.err /tmp/mobile-closure-finalizer-error.txt
+          git reset --hard HEAD
+          git clean -fd
+          git fetch origin lianbassam
+          git reset --hard origin/lianbassam
+          mkdir -p .diagnostics
+          cp /tmp/mobile-closure-finalizer-error.txt .diagnostics/mobile-closure-finalizer-error.txt
           git config user.name "bthwani-mobile-diagnostic-bot"
           git config user.email "actions@users.noreply.github.com"
           git add -f .diagnostics/mobile-closure-finalizer-error.txt
           git commit -m "diagnostics(mobile): capture closure finalizer result"
-          git pull --rebase origin lianbassam
           git push origin HEAD:lianbassam
       - name: Publish diagnostic result
         if: always()
