@@ -8,9 +8,7 @@ on:
         required: true
         default: affected
         type: choice
-        options:
-          - affected
-          - full
+        options: [affected, full]
       journey:
         description: Optional journey such as JRN-040
         required: false
@@ -62,10 +60,14 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: contextual-ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+
+env:
+  FULL_VERIFICATION_TRIGGER: governance/github/lianbassam-full-verification.trigger.json
 
 jobs:
   context:
@@ -75,7 +77,7 @@ jobs:
     outputs:
       base_sha: ${{ steps.scope.outputs.base_sha }}
       head_sha: ${{ steps.scope.outputs.head_sha }}
-      changed_count: ${{ steps.scope.outputs.changed_count }}
+      full_verification: ${{ steps.scope.outputs.full_verification }}
       governance: ${{ steps.scope.outputs.governance }}
       workflow: ${{ steps.scope.outputs.workflow }}
       infrastructure: ${{ steps.scope.outputs.infrastructure }}
@@ -119,7 +121,7 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           DISPATCH_MODE: ${{ inputs.mode }}
           DISPATCH_JOURNEY: ${{ inputs.journey }}
-          ACTIVE_BRANCH_FULL: ${{ github.event_name == 'push' && github.ref == 'refs/heads/lianbassam' }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           HEAD_SHA="${PR_HEAD_SHA:-${GITHUB_SHA}}"
@@ -127,10 +129,17 @@ jobs:
           if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
             BASE_SHA="$(git rev-parse "${HEAD_SHA}^" 2>/dev/null || printf '%s' "${HEAD_SHA}")"
           fi
-          MODE="${DISPATCH_MODE:-affected}"
-          if [[ "${ACTIVE_BRANCH_FULL}" == "true" ]]; then
-            MODE="full"
+
+          FULL_VERIFICATION=false
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" && "${DISPATCH_MODE:-affected}" == "full" ]]; then
+            FULL_VERIFICATION=true
+          elif git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" | grep -Fxq "${FULL_VERIFICATION_TRIGGER}"; then
+            FULL_VERIFICATION=true
           fi
+          echo "full_verification=${FULL_VERIFICATION}" >> "${GITHUB_OUTPUT}"
+
+          MODE="${DISPATCH_MODE:-affected}"
+          if [[ "${FULL_VERIFICATION}" == "true" ]]; then MODE="full"; fi
           CI_BASE_SHA="${BASE_SHA}" \
           CI_HEAD_SHA="${HEAD_SHA}" \
           CI_MODE="${MODE}" \
@@ -138,29 +147,29 @@ jobs:
           node tools/scripts/detect-ci-context.mjs
       - name: Publish routing summary
         env:
-          CHANGED_COUNT: ${{ steps.scope.outputs.changed_count }}
           BASE_SHA: ${{ steps.scope.outputs.base_sha }}
           HEAD_SHA: ${{ steps.scope.outputs.head_sha }}
           NODE_SCOPE: ${{ steps.scope.outputs.node_scope }}
           JOURNEY_SCOPE: ${{ steps.scope.outputs.journey_scope }}
           HEAVY_CHECKS: ${{ steps.scope.outputs.heavy }}
+          FULL_VERIFICATION: ${{ steps.scope.outputs.full_verification }}
         run: |
           {
             echo "### Contextual CI routing"
-            echo "- Changed files: ${CHANGED_COUNT}"
             echo "- Base: ${BASE_SHA}"
             echo "- Head: ${HEAD_SHA}"
+            echo "- Full verification: ${FULL_VERIFICATION}"
             echo "- Node scope: ${NODE_SCOPE}"
             echo "- Journey scope: ${JOURNEY_SCOPE:-none}"
             echo "- Heavy checks: ${HEAVY_CHECKS}"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
   policy:
     name: Verify affected policy
     needs: [context]
     if: ${{ needs.context.outputs.policy == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -168,8 +177,7 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Verify canonical governance
-        if: ${{ needs.context.outputs.governance == 'true' }}
+      - name: Verify canonical governance and commands
         run: |
           pnpm run guard:governance-schema
           pnpm run guard:agent-governance
@@ -179,18 +187,13 @@ jobs:
           pnpm run guard:sdlc
           pnpm run guard:cleanup-policy
           pnpm run guard:required-command-integrity
-      - name: Verify pinned GitHub Actions
+      - name: Verify workflow supply chain
         if: ${{ needs.context.outputs.workflow == 'true' || needs.context.outputs.security == 'true' }}
-        run: pnpm run guard:actions-pin
-      - name: Lint GitHub Actions workflow
-        if: ${{ needs.context.outputs.workflow == 'true' || needs.context.outputs.security == 'true' }}
-        run: pnpm run guard:workflow-lint
-      - name: Verify GitHub Actions security
-        if: ${{ needs.context.outputs.workflow == 'true' || needs.context.outputs.security == 'true' }}
-        run: pnpm run guard:workflow-security
-      - name: Verify OPA policies
-        if: ${{ needs.context.outputs.workflow == 'true' || needs.context.outputs.security == 'true' }}
-        run: pnpm run guard:opa-policies
+        run: |
+          pnpm run guard:actions-pin
+          pnpm run guard:workflow-lint
+          pnpm run guard:workflow-security
+          pnpm run guard:opa-policies
       - name: Verify infrastructure policy
         if: ${{ needs.context.outputs.infrastructure == 'true' }}
         run: |
@@ -200,11 +203,11 @@ jobs:
         run: git diff --check
 
   node_affected:
-    name: Verify affected frontend, contracts, and journeys
+    name: Verify frontend, contracts, and journeys
     needs: [context]
     if: ${{ needs.context.outputs.node == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout immutable source history
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -222,8 +225,17 @@ jobs:
           pnpm run guard:backend-api-binding
           pnpm run guard:service-manifest-drift
           pnpm run guard:frontend-feature-binding
-      - name: Typecheck, lint, and test affected frontend projects
-        if: ${{ needs.context.outputs.frontend == 'true' }}
+          pnpm run guard:runtime-real-bindings
+          pnpm run guard:live-cross-journey-integrity
+      - name: Verify complete Node workspace
+        if: ${{ needs.context.outputs.full_verification == 'true' }}
+        run: |
+          pnpm run nx:typecheck
+          pnpm run nx:lint
+          pnpm run nx:test
+          pnpm run nx:build
+      - name: Verify affected Node workspace
+        if: ${{ needs.context.outputs.full_verification != 'true' && needs.context.outputs.frontend == 'true' }}
         env:
           NX_BASE: ${{ needs.context.outputs.base_sha }}
           NX_HEAD: ${{ needs.context.outputs.head_sha }}
@@ -231,12 +243,9 @@ jobs:
           pnpm run affected:typecheck -- --base="${NX_BASE}" --head="${NX_HEAD}"
           pnpm run affected:lint -- --base="${NX_BASE}" --head="${NX_HEAD}"
           pnpm run affected:test -- --base="${NX_BASE}" --head="${NX_HEAD}"
-      - name: Build affected frontend projects for high-risk changes
-        if: ${{ needs.context.outputs.frontend == 'true' && needs.context.outputs.heavy == 'true' }}
-        env:
-          NX_BASE: ${{ needs.context.outputs.base_sha }}
-          NX_HEAD: ${{ needs.context.outputs.head_sha }}
-        run: pnpm run affected:build -- --base="${NX_BASE}" --head="${NX_HEAD}"
+          if [[ "${{ needs.context.outputs.heavy }}" == "true" ]]; then
+            pnpm run affected:build -- --base="${NX_BASE}" --head="${NX_HEAD}"
+          fi
       - name: Run detected journey gates
         if: ${{ needs.context.outputs.journey == 'true' && needs.context.outputs.journey_scope != '' }}
         shell: pwsh
@@ -248,7 +257,7 @@ jobs:
             ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim()
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-      - name: Verify JRN-040 platform contract and frontend binding
+      - name: Verify JRN-040 platform binding
         if: ${{ needs.context.outputs.jrn040 == 'true' }}
         run: |
           pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false
@@ -258,11 +267,11 @@ jobs:
         run: git diff --check
 
   dsh:
-    name: Verify affected DSH backend
+    name: Verify DSH backend and database
     needs: [context]
     if: ${{ needs.context.outputs.dsh == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 55
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:16-alpine
@@ -270,48 +279,36 @@ jobs:
           POSTGRES_USER: dsh_runtime
           POSTGRES_PASSWORD: dsh_runtime_password
           POSTGRES_DB: dsh_runtime
-        ports:
-          - 5432:5432
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U dsh_runtime -d dsh_runtime"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
+          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
       DSH_REQUIRE_DB_TESTS: "true"
       PGPASSWORD: dsh_runtime_password
     steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up Go from DSH module
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply DSH migrations
         run: |
           set -euo pipefail
-          for migration in services/dsh/database/migrations/*.sql; do
-            echo "Applying ${migration}"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
-          done
-      - name: Test and build DSH with required database integration
+          for migration in services/dsh/database/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
+      - name: Test and build DSH
         working-directory: services/dsh/backend
-        run: |
-          go test ./... -count=1
-          go build ./...
+        run: go test ./... -count=1 && go build ./...
 
   wlt:
-    name: Verify affected WLT backend
+    name: Verify WLT backend and database
     needs: [context]
     if: ${{ needs.context.outputs.wlt == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 55
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:16-alpine
@@ -319,48 +316,36 @@ jobs:
           POSTGRES_USER: wlt_runtime
           POSTGRES_PASSWORD: wlt_runtime_password
           POSTGRES_DB: wlt_runtime
-        ports:
-          - 5432:5432
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U wlt_runtime -d wlt_runtime"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
+          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       DATABASE_URL: postgres://wlt_runtime:wlt_runtime_password@localhost:5432/wlt_runtime?sslmode=disable
       WLT_REQUIRE_DB_TESTS: "true"
       PGPASSWORD: wlt_runtime_password
     steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up Go from WLT module
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: services/wlt/backend/go.mod
           cache-dependency-path: services/wlt/backend/go.sum
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply WLT migrations
         run: |
           set -euo pipefail
-          for migration in services/wlt/database/migrations/*.sql; do
-            echo "Applying ${migration}"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
-          done
-      - name: Test and build WLT with required database integration
+          for migration in services/wlt/database/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
+      - name: Test and build WLT
         working-directory: services/wlt/backend
-        run: |
-          go test ./... -count=1
-          go build ./...
+        run: go test ./... -count=1 && go build ./...
 
   identity:
-    name: Verify affected Identity backend
+    name: Verify Identity backend and database
     needs: [context]
     if: ${{ needs.context.outputs.identity == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16-alpine
@@ -368,47 +353,35 @@ jobs:
           POSTGRES_USER: identity_runtime
           POSTGRES_PASSWORD: identity_runtime_password
           POSTGRES_DB: identity_runtime
-        ports:
-          - 5432:5432
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U identity_runtime -d identity_runtime"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
+          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       DATABASE_URL: postgres://identity_runtime:identity_runtime_password@localhost:5432/identity_runtime?sslmode=disable
       PGPASSWORD: identity_runtime_password
     steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up Go from Identity module
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: core/identity/backend/go.mod
           cache-dependency-path: core/identity/backend/go.sum
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply Identity migrations
         run: |
           set -euo pipefail
-          for migration in core/identity/database/migrations/*.sql; do
-            echo "Applying ${migration}"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
-          done
+          for migration in core/identity/database/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
       - name: Test and build Identity
         working-directory: core/identity/backend
-        run: |
-          go test ./... -count=1
-          go build ./...
+        run: go test ./... -count=1 && go build ./...
 
   workforce:
-    name: Verify affected Workforce backend
+    name: Verify Workforce backend and database
     needs: [context]
     if: ${{ needs.context.outputs.workforce == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16-alpine
@@ -416,47 +389,35 @@ jobs:
           POSTGRES_USER: workforce_runtime
           POSTGRES_PASSWORD: workforce_runtime_password
           POSTGRES_DB: workforce_runtime
-        ports:
-          - 5432:5432
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U workforce_runtime -d workforce_runtime"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
+          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       DATABASE_URL: postgres://workforce_runtime:workforce_runtime_password@localhost:5432/workforce_runtime?sslmode=disable
       PGPASSWORD: workforce_runtime_password
     steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up Go from Workforce module
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: core/workforce/backend/go.mod
           cache-dependency-path: core/workforce/backend/go.sum
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply Workforce migrations
         run: |
           set -euo pipefail
-          for migration in core/workforce/database/migrations/*.sql; do
-            echo "Applying ${migration}"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
-          done
+          for migration in core/workforce/database/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
       - name: Test and build Workforce
         working-directory: core/workforce/backend
-        run: |
-          go test ./... -count=1
-          go build ./...
+        run: go test ./... -count=1 && go build ./...
 
   platform:
-    name: Verify affected Platform Control backend
+    name: Verify Platform Control backend and database
     needs: [context]
     if: ${{ needs.context.outputs.platform == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 50
     services:
       postgres:
         image: postgres:16-alpine
@@ -464,47 +425,35 @@ jobs:
           POSTGRES_USER: platform
           POSTGRES_PASSWORD: platform
           POSTGRES_DB: platform
-        ports:
-          - 5432:5432
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U platform -d platform"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
+          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       DATABASE_URL: postgres://platform:platform@localhost:5432/platform?sslmode=disable
       PGPASSWORD: platform
     steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up Go from Platform Control module
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: core/platform-control/backend/go.mod
           cache-dependency-path: core/platform-control/backend/go.sum
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply Platform Control migrations
         run: |
           set -euo pipefail
-          for migration in core/platform-control/database/migrations/*.sql; do
-            echo "Applying ${migration}"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
-          done
+          for migration in core/platform-control/database/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
       - name: Test and build Platform Control
         working-directory: core/platform-control/backend
-        run: |
-          go test ./... -count=1
-          go build ./...
+        run: go test ./... -count=1 && go build ./...
 
   providers:
-    name: Verify affected Providers backend
+    name: Verify Providers backend and database
     needs: [context]
     if: ${{ needs.context.outputs.providers == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16-alpine
@@ -512,54 +461,39 @@ jobs:
           POSTGRES_USER: providers_runtime
           POSTGRES_PASSWORD: providers_runtime_password
           POSTGRES_DB: providers_runtime
-        ports:
-          - 5432:5432
+        ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U providers_runtime -d providers_runtime"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
+          --health-interval 5s --health-timeout 5s --health-retries 20
     env:
       DATABASE_URL: postgres://providers_runtime:providers_runtime_password@localhost:5432/providers_runtime?sslmode=disable
       PGPASSWORD: providers_runtime_password
     steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up Go from Providers module
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: core/providers/backend/go.mod
           cache-dependency-path: core/providers/backend/go.sum
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply Providers migrations
         run: |
           set -euo pipefail
-          for migration in core/providers/database/migrations/*.sql; do
-            echo "Applying ${migration}"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
-          done
+          for migration in core/providers/database/migrations/*.sql; do psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"; done
       - name: Test and build Providers
         working-directory: core/providers/backend
-        run: |
-          go test ./... -count=1
-          go build ./...
+        run: go test ./... -count=1 && go build ./...
 
   runtime_proof:
     name: Execute required runtime proof
     needs: [context]
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.runtime_proof) || (github.event_name == 'push' && github.ref == 'refs/heads/lianbassam') }}
+    if: ${{ needs.context.outputs.full_verification == 'true' || (github.event_name == 'workflow_dispatch' && inputs.runtime_proof) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    timeout-minutes: 90
     steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up locked Node workspace
-        uses: ./.github/actions/setup-node-workspace
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with: { persist-credentials: false }
+      - uses: ./.github/actions/setup-node-workspace
       - name: Start and verify full runtime
         shell: pwsh
         run: |
@@ -576,10 +510,14 @@ jobs:
     needs: [context, policy, node_affected, dsh, wlt, identity, workforce, platform, providers, runtime_proof]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Enforce contextual result
+      - name: Enforce result and publish immutable commit status
         env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ needs.context.outputs.head_sha }}
+          FULL_VERIFICATION: ${{ needs.context.outputs.full_verification }}
+          PUBLISH_STATUS: ${{ github.event_name != 'pull_request' }}
           CONTEXT_RESULT: ${{ needs.context.result }}
           POLICY_RESULT: ${{ needs.policy.result }}
           NODE_RESULT: ${{ needs.node_affected.result }}
@@ -598,24 +536,17 @@ jobs:
           EXPECTED_WORKFORCE: ${{ needs.context.outputs.workforce }}
           EXPECTED_PLATFORM: ${{ needs.context.outputs.platform }}
           EXPECTED_PROVIDERS: ${{ needs.context.outputs.providers }}
-          EXPECTED_RUNTIME: ${{ (github.event_name == 'workflow_dispatch' && inputs.runtime_proof) || (github.event_name == 'push' && github.ref == 'refs/heads/lianbassam') }}
+          EXPECTED_RUNTIME: ${{ needs.context.outputs.full_verification == 'true' || (github.event_name == 'workflow_dispatch' && inputs.runtime_proof) }}
         run: |
           set -euo pipefail
           failed=0
+          failures=()
           check_result() {
-            local name="$1"
-            local expected="$2"
-            local result="$3"
+            local name="$1" expected="$2" result="$3"
             if [[ "${expected}" == "true" ]]; then
-              if [[ "${result}" != "success" ]]; then
-                echo "${name} was required but completed with ${result}"
-                failed=1
-              fi
-              return
-            fi
-            if [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
-              echo "${name} was not required but completed with ${result}"
-              failed=1
+              if [[ "${result}" != "success" ]]; then failures+=("${name}:${result}"); failed=1; fi
+            elif [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
+              failures+=("${name}:${result}"); failed=1
             fi
           }
           check_result context true "${CONTEXT_RESULT}"
@@ -628,4 +559,31 @@ jobs:
           check_result platform "${EXPECTED_PLATFORM}" "${PLATFORM_RESULT}"
           check_result providers "${EXPECTED_PROVIDERS}" "${PROVIDERS_RESULT}"
           check_result runtime "${EXPECTED_RUNTIME}" "${RUNTIME_RESULT}"
+
+          state=success
+          description="all required scopes passed"
+          if [[ "${failed}" -ne 0 ]]; then
+            state=failure
+            description="failed: $(IFS=,; echo "${failures[*]}")"
+          fi
+          description="${description:0:140}"
+          context="bthwani/contextual-verification"
+          if [[ "${FULL_VERIFICATION}" == "true" ]]; then context="bthwani/full-verification"; fi
+
+          if [[ "${PUBLISH_STATUS}" == "true" ]]; then
+            jq -n \
+              --arg state "${state}" \
+              --arg context "${context}" \
+              --arg description "${description}" \
+              --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+              '{state:$state,context:$context,description:$description,target_url:$target_url}' > /tmp/status.json
+            curl --fail-with-body --retry 3 \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+              --data-binary @/tmp/status.json
+          fi
+          printf '%s\n' "${description}"
           exit "${failed}"
