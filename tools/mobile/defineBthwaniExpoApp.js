@@ -38,25 +38,13 @@ function buildInfoPlist(features) {
     NSPhotoLibraryUsageDescription: PERMISSION_TEXT.photos,
   };
 
-  if (hasCamera) {
-    infoPlist.NSCameraUsageDescription = PERMISSION_TEXT.camera;
-  }
-
-  if (needsMicrophone) {
-    infoPlist.NSMicrophoneUsageDescription = PERMISSION_TEXT.microphone;
-  }
-
-  if (features.includes("location")) {
-    infoPlist.NSLocationWhenInUseUsageDescription = PERMISSION_TEXT.locationWhenInUse;
-  }
-
+  if (hasCamera) infoPlist.NSCameraUsageDescription = PERMISSION_TEXT.camera;
+  if (needsMicrophone) infoPlist.NSMicrophoneUsageDescription = PERMISSION_TEXT.microphone;
+  if (features.includes("location")) infoPlist.NSLocationWhenInUseUsageDescription = PERMISSION_TEXT.locationWhenInUse;
   if (features.includes("backgroundLocation")) {
     infoPlist.NSLocationAlwaysAndWhenInUseUsageDescription = PERMISSION_TEXT.locationAlwaysAndWhenInUse;
   }
-
-  if (features.includes("localAuthentication")) {
-    infoPlist.NSFaceIDUsageDescription = PERMISSION_TEXT.faceId;
-  }
+  if (features.includes("localAuthentication")) infoPlist.NSFaceIDUsageDescription = PERMISSION_TEXT.faceId;
 
   return infoPlist;
 }
@@ -128,13 +116,8 @@ function buildPlugins(appKey, features) {
     "@sentry/react-native/expo",
   ];
 
-  if (features.includes("router")) {
-    plugins.push("expo-router");
-  }
-
-  if (features.includes("updates")) {
-    plugins.push("expo-updates");
-  }
+  if (features.includes("router")) plugins.push("expo-router");
+  if (features.includes("updates")) plugins.push("expo-updates");
 
   if (features.includes("splashScreen")) {
     const splashIcon = appAsset(appKey, "splash-icon.png");
@@ -152,9 +135,7 @@ function buildPlugins(appKey, features) {
   if (features.includes("localAuthentication")) {
     plugins.push([
       "expo-local-authentication",
-      {
-        faceIDPermission: PERMISSION_TEXT.faceId,
-      },
+      { faceIDPermission: PERMISSION_TEXT.faceId },
     ]);
   }
 
@@ -176,33 +157,17 @@ function buildPlugins(appKey, features) {
       {
         cameraPermission: PERMISSION_TEXT.camera,
         microphonePermission: needsMicrophone ? PERMISSION_TEXT.microphone : false,
+        recordAudioAndroid: needsMicrophone,
       },
     ]);
   }
 
-  if (hasVideoPlayback) {
-    plugins.push("expo-video");
-  }
-
-  if (features.includes("sharing")) {
-    plugins.push("expo-sharing");
-  }
-
-  if (features.includes("webBrowser")) {
-    plugins.push("expo-web-browser");
-  }
-
-  if (features.includes("sqlite")) {
-    plugins.push("expo-sqlite");
-  }
-
-  if (features.includes("taskManager")) {
-    plugins.push("expo-task-manager");
-  }
-
-  if (features.includes("backgroundTask")) {
-    plugins.push("expo-background-task");
-  }
+  if (hasVideoPlayback) plugins.push("expo-video");
+  if (features.includes("sharing")) plugins.push("expo-sharing");
+  if (features.includes("webBrowser")) plugins.push("expo-web-browser");
+  if (features.includes("sqlite")) plugins.push("expo-sqlite");
+  if (features.includes("taskManager")) plugins.push("expo-task-manager");
+  if (features.includes("backgroundTask")) plugins.push("expo-background-task");
 
   if (features.includes("backgroundLocation")) {
     plugins.push([
@@ -218,9 +183,7 @@ function buildPlugins(appKey, features) {
   } else if (features.includes("location")) {
     plugins.push([
       "expo-location",
-      {
-        locationWhenInUsePermission: PERMISSION_TEXT.locationWhenInUse,
-      },
+      { locationWhenInUsePermission: PERMISSION_TEXT.locationWhenInUse },
     ]);
   }
 
@@ -235,22 +198,15 @@ function buildPlugins(appKey, features) {
     ]);
   }
 
-  if (features.includes("secureStore")) {
-    plugins.push("expo-secure-store");
-  }
-
+  if (features.includes("secureStore")) plugins.push("expo-secure-store");
   return plugins;
 }
 
 function defineBthwaniExpoApp(appKey) {
   const app = manifest.apps[appKey];
-
-  if (!app) {
-    throw new Error(`Unknown BThwani mobile app: ${appKey}`);
-  }
+  if (!app) throw new Error(`Unknown BThwani mobile app: ${appKey}`);
 
   const features = app.features || [];
-
   return {
     name: app.name,
     slug: app.slug,
@@ -260,9 +216,7 @@ function defineBthwaniExpoApp(appKey) {
     scheme: app.scheme,
     version: manifest.global.version,
     icon: appAsset(appKey, "icon.png"),
-    runtimeVersion: {
-      policy: "fingerprint",
-    },
+    runtimeVersion: { policy: "fingerprint" },
     updates: {
       url: `https://u.expo.dev/${app.projectId}`,
       checkAutomatically: "ON_LOAD",
@@ -277,13 +231,9 @@ function defineBthwaniExpoApp(appKey) {
       appKey,
       appLine: manifest.global.appLine,
       sourceRepo: manifest.global.sourceRepo,
-      eas: {
-        projectId: app.projectId,
-      },
+      eas: { projectId: app.projectId },
     },
   };
 }
 
-module.exports = {
-  defineBthwaniExpoApp,
-};
+module.exports = { defineBthwaniExpoApp };
