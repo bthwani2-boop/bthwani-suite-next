@@ -5,7 +5,7 @@
     "sourceRepo": "bthwani-suite-next",
     "version": "0.1.0",
     "node": "24.17.0",
-    "pnpm": "10.34.2"
+    "pnpm": "10.34.0"
   },
   "apps": {
     "app-client": {
