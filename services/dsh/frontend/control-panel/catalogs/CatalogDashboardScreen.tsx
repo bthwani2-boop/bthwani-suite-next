@@ -468,8 +468,8 @@ export function CatalogDashboardScreen() {
     return [...groups.entries()].filter(([, products]) => products.length > 1);
   }, [controller.state.masterProducts.items]);
 
-  const activeMainGroup = useMemo(() => {
-    return MAIN_TAB_GROUPS.find((g) => g.subTabs.includes(activeTab)) || MAIN_TAB_GROUPS[0];
+  const activeMainGroup = useMemo<MainTabGroup>(() => {
+    return MAIN_TAB_GROUPS.find((group) => group.subTabs.includes(activeTab)) ?? MAIN_TAB_GROUPS[0]!;
   }, [activeTab]);
 
   const handleSelectMainGroup = (groupId: MainGroupId) => {
