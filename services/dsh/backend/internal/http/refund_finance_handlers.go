@@ -102,7 +102,7 @@ func (s *protectedStoreServer) handleCreateFinanceRefund(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r)
+	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
 	if !ok {
 		return
 	}
@@ -118,8 +118,8 @@ func (s *protectedStoreServer) handleCreateFinanceRefund(w http.ResponseWriter, 
 	input.ClientID = strings.TrimSpace(input.ClientID)
 	input.Reason = strings.TrimSpace(input.Reason)
 	input.EligibilityReference = strings.TrimSpace(input.EligibilityReference)
-	if input.PaymentSessionID == "" || input.OrderID == "" || input.ClientID == "" || input.Reason == "" || input.EligibilityReference == "" || input.AmountMinorUnits < 0 {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "paymentSessionId, orderId, clientId, reason, eligibilityReference and a non-negative amountMinorUnits are required")
+	if input.PaymentSessionID == "" || input.OrderID == "" || input.ClientID == "" || input.Reason == "" || input.EligibilityReference == "" || input.AmountMinorUnits <= 0 {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "paymentSessionId, orderId, clientId, reason, eligibilityReference and a positive amountMinorUnits are required")
 		return
 	}
 	body, _ := json.Marshal(map[string]any{
@@ -137,7 +137,7 @@ func (s *protectedStoreServer) refundDecisionCommand(w http.ResponseWriter, r *h
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r)
+	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
 	if !ok {
 		return
 	}
@@ -177,7 +177,7 @@ func (s *protectedStoreServer) handleCompleteFinanceRefund(w http.ResponseWriter
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r)
+	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
 	if !ok {
 		return
 	}
@@ -197,7 +197,7 @@ func (s *protectedStoreServer) handleReconcileFinanceRefund(w http.ResponseWrite
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r)
+	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
 	if !ok {
 		return
 	}
@@ -230,10 +230,11 @@ func (s *protectedStoreServer) handleReconcileFinanceRefund(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleFinanceRefundAudit(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r)
+	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
 	if !ok {
 		return
 	}
