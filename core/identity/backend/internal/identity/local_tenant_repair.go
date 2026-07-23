@@ -3,6 +3,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/lib/pq"
@@ -31,7 +32,8 @@ func normalizeLocalBootstrapTenantID(raw string) (string, error) {
 // for every explicitly local bootstrap identity. Older development databases may
 // contain these actors with a blank or stale tenant because the original
 // bootstrap upsert did not update tenant_id on conflict. The repair is bounded
-// to local bootstrap actors and is disabled whenever local bootstrap is off.
+// to local bootstrap actors, executes before the auth router is exposed, and is
+// disabled whenever local bootstrap is off.
 func (r *Repository) RepairLocalBootstrapTenant(
 	ctx context.Context,
 	input LocalBootstrap,
@@ -44,12 +46,14 @@ func (r *Repository) RepairLocalBootstrapTenant(
 	if err != nil {
 		return err
 	}
-	_, err = r.db.ExecContext(ctx, `
+	if _, err = r.db.ExecContext(ctx, `
 		UPDATE identity_actors
 		SET tenant_id = $1, updated_at = now()
 		WHERE id = ANY($2)
 		  AND tenant_id IS DISTINCT FROM $1`,
 		tenantID, pq.Array(localBootstrapActorIDs),
-	)
-	return err
+	); err != nil {
+		return fmt.Errorf("persist local bootstrap tenant %q: %w", tenantID, err)
+	}
+	return nil
 }
