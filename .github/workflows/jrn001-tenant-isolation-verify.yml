@@ -69,6 +69,8 @@ jobs:
             services/dsh/backend/internal/http/partner_lifecycle_routes.go \
             services/dsh/backend/internal/http/partner_self_routes.go \
             services/dsh/backend/internal/http/protected_store.go \
+            services/dsh/backend/internal/http/media_upload.go \
+            services/dsh/backend/internal/http/media_upload_test.go \
             services/dsh/backend/internal/store/tenant_repository.go \
             services/dsh/backend/internal/store/governance.go
           python -m json.tool governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json >/dev/null
@@ -76,6 +78,7 @@ jobs:
           grep -q 'ListPartnersForTenant' services/dsh/backend/internal/partner/tenant_repository.go
           grep -q 'ListAllStoresForTenant' services/dsh/backend/internal/store/tenant_repository.go
           grep -q 'tenant_id = $3' services/dsh/backend/internal/store/governance.go
+          grep -q 'scopes.tenant_id = $3' services/dsh/backend/internal/http/media_upload.go
           grep -q 'uq_dsh_partners_tenant_legal_identity' services/dsh/database/migrations/dsh-103_jrn001_partner_tenant_isolation.sql
 
       - name: Run DSH Go tests
@@ -154,7 +157,7 @@ jobs:
           - Go unit/package tests: PASS
           - Governed DSH migration chain: PASS
           - PostgreSQL tenant-isolation integration tests: PASS
-          - Partner and store scope isolation tests: PASS
+          - Partner, store, scope, and partner-media isolation tests: PASS
           - JRN-001 contract tests: PASS
           - JRN-001 security/privacy gate: PASS
           - Product truth JSON validation: PASS
