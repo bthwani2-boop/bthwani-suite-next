@@ -101,10 +101,13 @@ requireIncludes("services/wlt/backend/internal/payout/jrn037_legacy_destination_
   "HandleDeactivatePayoutDestinationJRN037",
 ]);
 requireIncludes("services/wlt/backend/internal/http/server.go", [
-  "HandleUpsertPartnerPayoutDestinationJRN037",
-  "HandleGetPartnerPayoutDestinationJRN037",
-  "HandleDeactivatePartnerPayoutDestinationJRN037",
+  "HandleUpsertPayoutDestinationGoverned",
+  "HandleGetPayoutDestination",
+  "HandleDeactivatePayoutDestination",
   "/wlt/payout-destinations/{actorType}/{actorId}",
+  "HandleUpsertPayoutDestinationJRN037",
+  "HandleGetPayoutDestinationJRN037",
+  "HandleDeactivatePayoutDestinationJRN037",
   "HandleCreatePayoutRequestJRN037",
   "/wlt/payout-requests/{payoutId}/reconcile",
   "/wlt/payout-requests/{payoutId}/audit",
