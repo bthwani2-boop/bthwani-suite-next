@@ -44,3 +44,9 @@ export * from './platform';
 export * from './store';
 export * from './support';
 export * from './hr';
+
+// Resolve intentional cross-domain name overlaps without weakening either
+// domain barrel. Analytics owns the public performance projection; checkout
+// owns the public fulfillment-mode alias consumed by client surfaces.
+export { fetchPartnerPerformance } from './analytics';
+export type { DshFulfillmentMode } from './checkout';
