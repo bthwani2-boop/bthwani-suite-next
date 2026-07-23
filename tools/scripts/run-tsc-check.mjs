@@ -13,7 +13,19 @@ function statusDescription(value) {
     .slice(0, 140);
 }
 
-async function publishStatus(state, description) {
+function diagnosticContext(value) {
+  const normalized = value.replace(/\\/g, "/");
+  const location = normalized.match(/([^\s()]+)\((\d+),(\d+)\): error (TS\d+):/);
+  if (location) {
+    const fileParts = location[1].split("/").filter(Boolean);
+    const file = fileParts.slice(-2).join("/");
+    return `${location[4]}@${file}:${location[2]}`.slice(0, 72);
+  }
+  const code = normalized.match(/error (TS\d+):/)?.[1];
+  return code || "failed";
+}
+
+async function publishStatus(state, description, contextSuffix = "") {
   const token = process.env.BTHWANI_STATUS_TOKEN;
   const repository = process.env.GITHUB_REPOSITORY;
   const sha = process.env.GITHUB_SHA;
@@ -23,6 +35,7 @@ async function publishStatus(state, description) {
   const runUrl = process.env.GITHUB_RUN_ID
     ? `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`
     : undefined;
+  const context = `bthwani/typecheck/${label}${contextSuffix ? `/${contextSuffix}` : ""}`.slice(0, 100);
   const response = await fetch(`${apiUrl}/repos/${repository}/statuses/${sha}`, {
     method: "POST",
     headers: {
@@ -33,7 +46,7 @@ async function publishStatus(state, description) {
     },
     body: JSON.stringify({
       state,
-      context: `bthwani/typecheck/${label}`,
+      context,
       description: statusDescription(description),
       ...(runUrl ? { target_url: runUrl } : {}),
     }),
@@ -66,7 +79,7 @@ const output = `${result.stdout ?? ""}${result.stderr ?? ""}`.replace(/\r\n/g, "
 if (result.error) {
   const message = `launcher failed: ${result.error.message}`;
   console.error(`[typecheck:${label}] ${message}`);
-  await publishStatus("error", message);
+  await publishStatus("error", message, "launcher");
   process.exit(1);
 }
 
@@ -82,5 +95,5 @@ const selected = errors.length > 0 ? errors.slice(-120) : lines.slice(-120);
 const firstError = errors[0] || selected[0] || `${label} TypeScript failed`;
 console.error(`[typecheck:${label}] failed with exit ${result.status ?? 1}`);
 for (const line of selected) console.error(line);
-await publishStatus("failure", firstError);
+await publishStatus("failure", firstError, diagnosticContext(firstError));
 process.exit(result.status ?? 1);
