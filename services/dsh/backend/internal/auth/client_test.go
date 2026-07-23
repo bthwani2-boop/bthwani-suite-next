@@ -71,6 +71,19 @@ func TestResolveUnauthorizedStatus(t *testing.T) {
 	}
 }
 
+func TestResolveForbiddenStatusIsUnauthenticated(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL)
+	_, err := c.Resolve(context.Background(), "Bearer cross-tenant-token")
+	if err != ErrUnauthenticated {
+		t.Fatalf("expected ErrUnauthenticated for HTTP 403, got %v", err)
+	}
+}
+
 func TestResolveOtherErrorStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -109,6 +122,47 @@ func TestResolveRejectsMissingSubject(t *testing.T) {
 	_, err := c.Resolve(context.Background(), "Bearer token-1")
 	if err != ErrUnauthenticated {
 		t.Fatalf("expected ErrUnauthenticated for missing subject, got %v", err)
+	}
+}
+
+func TestActiveSaaSResolveAcceptsMatchingRuntimeTenant(t *testing.T) {
+	t.Setenv("BTHWANI_SAAS_MODE", "active")
+	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(Identity{
+			Subject: "user-1", TenantID: "tenant-main", Roles: []string{"client"}, AuthState: "authenticated",
+		})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	if _, err := client.Resolve(context.Background(), "Bearer token-1"); err != nil {
+		t.Fatalf("expected matching tenant to resolve, got %v", err)
+	}
+}
+
+func TestActiveSaaSResolveRejectsCrossTenantIdentity(t *testing.T) {
+	t.Setenv("BTHWANI_SAAS_MODE", "active")
+	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(Identity{
+			Subject: "user-2", TenantID: "tenant-other", Roles: []string{"client"}, AuthState: "authenticated",
+		})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	if _, err := client.Resolve(context.Background(), "Bearer cross-token"); err != ErrUnauthenticated {
+		t.Fatalf("expected cross-tenant identity rejection, got %v", err)
+	}
+}
+
+func TestActiveSaaSResolveFailsClosedWithoutRuntimeTenant(t *testing.T) {
+	t.Setenv("BTHWANI_SAAS_MODE", "active")
+	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
+	client := NewClient("https://identity.internal")
+	if _, err := client.Resolve(context.Background(), "Bearer token-1"); err != ErrIdentityUnavailable {
+		t.Fatalf("expected missing SaaS tenant configuration failure, got %v", err)
 	}
 }
 
