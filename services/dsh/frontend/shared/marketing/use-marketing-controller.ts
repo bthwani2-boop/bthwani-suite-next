@@ -59,15 +59,15 @@ export function useCampaignsController(authKind: DshMarketingAuthState["kind"]):
   const create = React.useCallback(async (body: Partial<GovernedDshCampaign>) => {
     await createCampaign({
       title: body.title ?? "",
-      description: body.description,
-      startDate: body.startDate,
-      endDate: body.endDate,
-      targetType: body.targetType,
-      targetId: body.targetId,
-      targetCityCode: body.targetCityCode,
-      targetServiceAreaCode: body.targetServiceAreaCode,
-      audience: body.audience,
-      placement: body.placement,
+      ...(body.description !== undefined ? { description: body.description } : {}),
+      ...(body.startDate !== undefined ? { startDate: body.startDate } : {}),
+      ...(body.endDate !== undefined ? { endDate: body.endDate } : {}),
+      ...(body.targetType !== undefined ? { targetType: body.targetType } : {}),
+      ...(body.targetId !== undefined ? { targetId: body.targetId } : {}),
+      ...(body.targetCityCode !== undefined ? { targetCityCode: body.targetCityCode } : {}),
+      ...(body.targetServiceAreaCode !== undefined ? { targetServiceAreaCode: body.targetServiceAreaCode } : {}),
+      ...(body.audience !== undefined ? { audience: body.audience } : {}),
+      ...(body.placement !== undefined ? { placement: body.placement } : {}),
     });
     await reload();
   }, [reload]);
@@ -78,7 +78,7 @@ export function useCampaignsController(authKind: DshMarketingAuthState["kind"]):
       : undefined;
     await updateCampaign(id, {
       ...body,
-      expectedVersion: current?.version,
+      ...(current?.version !== undefined ? { expectedVersion: current.version } : {}),
     });
     await reload();
   }, [reload, state]);
