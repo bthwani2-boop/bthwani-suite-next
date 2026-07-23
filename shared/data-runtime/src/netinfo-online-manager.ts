@@ -1,5 +1,7 @@
 import { onlineManager, type QueryClient } from "@tanstack/react-query";
 
+declare const require: ((id: string) => unknown) | undefined;
+
 type NetInfoState = {
   readonly isConnected: boolean | null;
   readonly isInternetReachable: boolean | null;
@@ -17,17 +19,16 @@ type NetInfoModule = {
  * ship it, this becomes a no-op instead of a crash.
  */
 export function wireNetInfoOnlineManager(_queryClient: QueryClient): () => void {
+  if (typeof require !== "function") return () => {};
+
   let netInfo: NetInfoModule;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    netInfo = require("@react-native-community/netinfo").default as NetInfoModule;
+    netInfo = (require("@react-native-community/netinfo") as { default: NetInfoModule }).default;
   } catch {
     return () => {};
   }
 
-  return onlineManager.setEventListener((setOnline) => {
-    return netInfo.addEventListener((state) => {
-      setOnline(Boolean(state.isConnected && state.isInternetReachable));
-    });
+  return netInfo.addEventListener((state) => {
+    onlineManager.setOnline(Boolean(state.isConnected && state.isInternetReachable));
   });
 }
