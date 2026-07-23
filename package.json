@@ -227,7 +227,8 @@
     "journey:gate:runtime": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Runtime",
     "journey:gate:runtime:full": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Full -Runtime",
     "openapi:lint:dsh": "node tools/guards/dsh-openapi-modular-gate.mjs",
-    "openapi:verify:dsh": "pnpm --dir services/dsh openapi:verify"
+    "openapi:verify:dsh": "pnpm --dir services/dsh openapi:verify",
+    "guard:a11y-runtime": "node tools/guards/a11y-runtime-gate.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
