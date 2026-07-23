@@ -23,6 +23,8 @@ const paths = {
   dshHandlers: "services/dsh/backend/internal/http/refund_finance_handlers.go",
   dshRoutes: "services/dsh/backend/internal/http/refund_finance_routes.go",
   dshProxy: "services/dsh/backend/internal/wlt/refund_proxy.go",
+  tenantBoundary: "services/dsh/backend/internal/http/finance_payment_sessions.go",
+  tenantBoundaryTest: "services/dsh/backend/internal/http/finance_payment_sessions_tenant_test.go",
   sharedApi: "services/dsh/frontend/shared/finance-wlt-link/wlt-refund/wlt-refund.api.ts",
   sharedController: "services/dsh/frontend/shared/finance-wlt-link/wlt-refund/use-wlt-refund-controller.tsx",
   controlPanel: "services/dsh/frontend/control-panel/finance/RefundsCommandPanel.tsx",
@@ -121,10 +123,23 @@ test("WLT claims provider once, replays mutations and commits ledger plus durabl
   mustContain(paths.worker, [/NotifyEvent/, /RefundReference/]);
 });
 
-test("DSH enforces actor, tenant, idempotency and privacy boundaries", () => {
+test("DSH enforces actor, identity tenant, idempotency and privacy boundaries", () => {
   mustContain(paths.dshHandlers, [
-    /FinancePermissionManage/, /requestedByOperatorId/, /requiredPaymentTenant/,
+    /FinancePermissionManage/, /requestedByOperatorId/,
+    /requiredPaymentTenant\(w,\s*r,\s*actor\.TenantID\)/,
+    /input\.AmountMinorUnits <= 0/,
     /SELECT tenant_id FROM dsh_orders/, /partnerStore/, /privacyRefund/, /FinanceRefundWrite/,
+  ]);
+  assert.doesNotMatch(read(paths.dshHandlers), /requiredPaymentTenant\(w,\s*r\)/);
+  mustContain(paths.tenantBoundary, [
+    /actorTenantID/,
+    /TENANT_MISMATCH/,
+    /suppliedTenantID != "" && suppliedTenantID != tenantID/,
+  ]);
+  mustContain(paths.tenantBoundaryTest, [
+    /TestRequiredPaymentTenantUsesAuthenticatedActorTenant/,
+    /TestRequiredPaymentTenantRejectsMismatchingSelector/,
+    /TestRequiredPaymentTenantRejectsMissingActorTenant/,
   ]);
   mustContain(paths.dshRoutes, [
     /control-panel\/finance\/refunds/, /client\/orders\/\{orderId\}\/refunds/,
