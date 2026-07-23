@@ -7,6 +7,14 @@ import { Text } from "../Text";
 import { Checkbox } from "../Checkbox";
 import { Button } from "../Button";
 
+type PropagationEvent = {
+  stopPropagation(): void;
+};
+
+function stopEventPropagation(event: PropagationEvent): void {
+  event.stopPropagation();
+}
+
 export type DataGridColumn<TRow> = {
   key: string;
   header: string;
@@ -192,7 +200,7 @@ export function DataGrid<TRow>({
               style={{ opacity: isLoading ? 0.5 : 1 }}
             >
               {onSelectionChange ? (
-                <Block width={40} onPress={(event) => event.stopPropagation()}>
+                <Block width={40} onPress={stopEventPropagation}>
                   <Checkbox
                     checked={selectedRowKeys?.has(rowKey) ?? false}
                     aria-label={`تحديد الصف ${rowKey}`}
@@ -225,7 +233,7 @@ export function DataGrid<TRow>({
                   width={48}
                   alignItems="center"
                   justifyContent="center"
-                  onPress={(event) => event.stopPropagation()}
+                  onPress={stopEventPropagation}
                 >
                   {rowActions(row)}
                 </Block>
