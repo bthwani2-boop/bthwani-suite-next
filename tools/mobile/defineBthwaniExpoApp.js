@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const manifest = require("./mobile-apps.manifest.json");
+const { resolveSentryEnvironment } = require("./sentry-env.js");
 
 const PERMISSION_TEXT = {
   photos: "نحتاج الوصول إلى معرض الصور لاختيار الصور ومشاركتها.",
@@ -95,7 +96,20 @@ function buildIosConfig(app, features) {
   return ios;
 }
 
-function buildPlugins(appKey, features) {
+function buildSentryPlugin(sentry) {
+  if (!sentry.organization || !sentry.project) return "@sentry/react-native/expo";
+
+  return [
+    "@sentry/react-native/expo",
+    {
+      organization: sentry.organization,
+      project: sentry.project,
+      ...(sentry.url ? { url: sentry.url } : {}),
+    },
+  ];
+}
+
+function buildPlugins(appKey, features, sentry) {
   const {
     hasCamera,
     hasAudioRecording,
@@ -113,7 +127,7 @@ function buildPlugins(appKey, features) {
       },
     ],
     "expo-document-picker",
-    "@sentry/react-native/expo",
+    buildSentryPlugin(sentry),
   ];
 
   if (features.includes("router")) plugins.push("expo-router");
@@ -207,6 +221,7 @@ function defineBthwaniExpoApp(appKey) {
   if (!app) throw new Error(`Unknown BThwani mobile app: ${appKey}`);
 
   const features = app.features || [];
+  const sentry = resolveSentryEnvironment(appKey);
   return {
     name: app.name,
     slug: app.slug,
@@ -226,15 +241,20 @@ function defineBthwaniExpoApp(appKey) {
     userInterfaceStyle: "light",
     android: buildAndroidConfig(appKey, app, features),
     ios: buildIosConfig(app, features),
-    plugins: buildPlugins(appKey, features),
+    plugins: buildPlugins(appKey, features, sentry),
     extra: {
       appKey,
       appLine: manifest.global.appLine,
       sourceRepo: manifest.global.sourceRepo,
       sentry: {
-        dsn: process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined,
-        environment: process.env.EXPO_PUBLIC_APP_ENV?.trim() || "development",
-        tracesSampleRate: process.env.EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE?.trim() || "0",
+        enabled: Boolean(sentry.dsn),
+        dsn: sentry.dsn,
+        organization: sentry.organization,
+        project: sentry.project,
+        environment: sentry.appEnvironment,
+        tracesSampleRate: sentry.tracesSampleRate,
+        debug: sentry.debug,
+        startupProbe: sentry.startupProbe,
       },
       eas: { projectId: app.projectId },
     },
