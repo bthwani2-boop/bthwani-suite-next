@@ -1,6 +1,11 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { REFRESH_TOKEN_COOKIE, clearSessionCookies, isSameOriginRequest, setSessionCookies } from "../_lib/cookies";
+import {
+  REFRESH_TOKEN_COOKIE,
+  clearSessionCookies,
+  isSameOriginRequest,
+  setSessionCookies,
+} from "../_lib/cookies";
 import { identityServerClient } from "../_lib/identity-server";
 
 export const runtime = "nodejs";
@@ -26,6 +31,15 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   try {
     const rotated = await identityServerClient().refresh(refreshToken);
+    if (!rotated.identity.roles.includes("operator")) {
+      const response = NextResponse.json(
+        { code: "CONTROL_PANEL_FORBIDDEN" },
+        { status: 403, headers: { "Cache-Control": "no-store" } },
+      );
+      clearSessionCookies(response);
+      return response;
+    }
+
     const response = NextResponse.json(
       { identity: rotated.identity },
       { status: 200, headers: { "Cache-Control": "no-store" } },
