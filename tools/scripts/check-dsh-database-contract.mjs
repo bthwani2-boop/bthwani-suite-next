@@ -44,6 +44,7 @@ requireText(databaseReadme, "production", "DSH database README");
 requireText(databaseReadme, "WLT", "DSH database README");
 
 const runnerPath = "services/dsh/database/scripts/invoke-dsh-database.ps1";
+const serviceRunnerPath = "database/scripts/invoke-dsh-database.ps1";
 const runner = read(runnerPath);
 requireText(runner, "runtime_schema_migrations", runnerPath);
 requireText(runner, "runtime_seed_runs", runnerPath);
@@ -51,6 +52,7 @@ requireText(runner, "SingleTransaction", runnerPath);
 requireText(runner, "--single-transaction", runnerPath);
 requireText(runner, "AllowLocalSeeds", runnerPath);
 requireText(runner, "CREATE INDEX CONCURRENTLY", runnerPath);
+requireText(runner, "Set-StrictMode", runnerPath);
 
 const migrations = listSql("services/dsh/database/migrations");
 if (migrations.length === 0) {
@@ -109,9 +111,10 @@ if (servicePackageText) {
         fail(`services/dsh/package.json is missing script: ${scriptName}`);
       }
     }
-    requireText(scripts["database:migrate"] ?? "", runnerPath, "database:migrate");
-    requireText(scripts["database:seed:local"] ?? "", runnerPath, "database:seed:local");
+    requireText(scripts["database:migrate"] ?? "", serviceRunnerPath, "database:migrate");
+    requireText(scripts["database:seed:local"] ?? "", serviceRunnerPath, "database:seed:local");
     requireText(scripts["database:seed:local"] ?? "", "AllowLocalSeeds", "database:seed:local");
+    requireText(scripts["database:contract"] ?? "", "check-dsh-database-contract.mjs", "database:contract");
   } catch (error) {
     fail(`services/dsh/package.json is invalid JSON: ${error.message}`);
   }
@@ -124,6 +127,7 @@ requireText(workflow, "Re-run canonical DSH migrations", "DSH database workflow"
 requireText(workflow, "Apply DSH local seeds twice", "DSH database workflow");
 requireText(workflow, "Run DSH schema database contracts", "DSH database workflow");
 requireText(workflow, "Run DSH seed database contracts", "DSH database workflow");
+requireText(workflow, "bthwani/dsh-database", "DSH database workflow status context");
 
 if (failures.length > 0) {
   console.error("DSH database contract: FAIL");
