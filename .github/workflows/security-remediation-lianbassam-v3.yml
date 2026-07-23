@@ -19,7 +19,8 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: lianbassam
-          fetch-depth: 0
+          fetch-depth: 1
+          show-progress: false
 
       - name: Publish run locator
         shell: bash
@@ -83,7 +84,7 @@ jobs:
           path.write_text('\n'.join(output) + '\n', encoding='utf-8')
           PY
 
-          pnpm install --lockfile-only
+          pnpm install --lockfile-only --reporter=append-only
           pnpm audit --json > governance/evidence/security/pnpm-audit-lianbassam.json || true
 
           python - <<'PY'
@@ -119,7 +120,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "fix(security): close remaining js-yaml advisories"
-          git pull --rebase origin lianbassam
           git push origin HEAD:lianbassam
 
       - name: Publish success
