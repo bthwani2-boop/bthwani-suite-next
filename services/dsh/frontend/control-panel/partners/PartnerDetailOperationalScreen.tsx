@@ -138,6 +138,10 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
     if (succeeded) setStoreIdToLink("");
   };
 
+  const reloadAfterConflict = () => {
+    window.location.reload();
+  };
+
   return (
     <DetailPageFrame
       header={(
@@ -207,7 +211,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                 ) : null}
                 {detail.mutationState.kind === "version_conflict" ? (
                   <CpStatePanel role="alert" title="تعارض نسخة الشريك" code="تغيرت بيانات الشريك من جلسة أخرى. حمّل أحدث نسخة قبل إعادة القرار.">
-                    <CpRetryButton onClick={() => void detail.reload()}>تحميل أحدث نسخة</CpRetryButton>
+                    <CpRetryButton onClick={reloadAfterConflict}>تحميل أحدث نسخة</CpRetryButton>
                   </CpStatePanel>
                 ) : detail.mutationState.kind === "invalid_transition" ? (
                   <CpStatePanel role="alert" title="القرار محجوب ببوابات الجاهزية" code={detail.mutationState.message}>
