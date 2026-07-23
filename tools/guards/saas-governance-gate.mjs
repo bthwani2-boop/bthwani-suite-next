@@ -38,6 +38,9 @@ const decisionsPath = "governance/contracts/decision-vocabulary.json";
 const artifactSchemaPath = "governance/operational_journey_protocol_package/sdlc/artifact-manifest.schema.json";
 const impactSchemaPath = "governance/operational_journey_protocol_package/sdlc/change-impact.schema.json";
 const finalJudgePath = ".agents/skills/bthwani-final-journey-closure-judge/SKILL.md";
+const runtimeEnvPath = "infra/docker/env/runtime.env.example";
+const composePath = "infra/docker/compose.runtime.yml";
+const activationVerifierPath = "tools/scripts/verify-saas-activation.mjs";
 
 const state = readJson(statePath);
 const schema = readJson(schemaPath);
@@ -48,6 +51,9 @@ const artifactSchema = readJson(artifactSchemaPath);
 const impactSchema = readJson(impactSchemaPath);
 const annex = readText(annexPath);
 const finalJudge = readText(finalJudgePath);
+const runtimeEnv = readText(runtimeEnvPath);
+const compose = readText(composePath);
+readText(activationVerifierPath);
 
 if (state && schema) {
   try {
@@ -155,6 +161,49 @@ for (const requiredFeature of [
   "database per tenant",
 ]) {
   if (!deferred.has(requiredFeature)) violations.push({ file: statePath, line: 0, message: `DEFERRED_COMMERCIAL_FEATURE_MISSING ${requiredFeature}` });
+}
+
+if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED" || state?.commercialActivationState === "ACTIVE") {
+  for (const marker of [
+    "BTHWANI_SAAS_MODE=active",
+    "BTHWANI_COMMERCIAL_ACTIVATION_STATE=authorized",
+    "BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED=false",
+    "BTHWANI_DEFAULT_TENANT_ID=",
+  ]) {
+    if (!runtimeEnv.includes(marker)) {
+      violations.push({ file: runtimeEnvPath, line: 0, message: `SAAS_RUNTIME_ENV_MARKER_MISSING ${marker}` });
+    }
+  }
+
+  for (const marker of [
+    "x-bthwani-saas-environment: &bthwani-saas-environment",
+    "BTHWANI_SAAS_MODE:",
+    "BTHWANI_COMMERCIAL_ACTIVATION_STATE:",
+    "BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED:",
+    "BTHWANI_DEFAULT_TENANT_ID:",
+  ]) {
+    if (!compose.includes(marker)) {
+      violations.push({ file: composePath, line: 0, message: `SAAS_COMPOSE_BINDING_MISSING ${marker}` });
+    }
+  }
+
+  const saasMergeCount = (compose.match(/<<:\s*\*bthwani-saas-environment/g) ?? []).length;
+  if (saasMergeCount < 6) {
+    violations.push({ file: composePath, line: 0, message: `SAAS_CONTEXT_NOT_PROPAGATED_TO_ALL_APIS expected>=6 actual=${saasMergeCount}` });
+  }
+
+  for (const service of ["identity-api", "workforce-api", "providers-api", "platform-control-api", "wlt-api", "dsh-api"]) {
+    const serviceStart = compose.indexOf(`  ${service}:`);
+    if (serviceStart < 0) {
+      violations.push({ file: composePath, line: 0, message: `SAAS_REQUIRED_API_SERVICE_MISSING ${service}` });
+      continue;
+    }
+    const nextService = compose.indexOf("\n  ", serviceStart + service.length + 3);
+    const serviceBlock = compose.slice(serviceStart, nextService > serviceStart ? nextService : compose.length);
+    if (!serviceBlock.includes("<<: *bthwani-saas-environment")) {
+      violations.push({ file: composePath, line: 0, message: `SAAS_CONTEXT_MISSING_FROM_SERVICE ${service}` });
+    }
+  }
 }
 
 fail(guardId, violations);
