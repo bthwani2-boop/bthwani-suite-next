@@ -110,8 +110,42 @@ jobs:
           DSH_REQUIRE_DB_TESTS: "true"
           DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@127.0.0.1:55432/dsh_runtime?sslmode=disable
         run: |
+          set +e
+          go test -v ./internal/partner ./internal/http 2>&1 | tee /tmp/jrn001-db-tests.log
+          code=${PIPESTATUS[0]}
+          echo "JRN001_DB_TEST_EXIT=${code}" >> "${GITHUB_ENV}"
+          exit 0
+
+      - name: Commit PostgreSQL failure diagnostic
+        if: env.JRN001_DB_TEST_EXIT != '0'
+        shell: bash
+        run: |
           set -euo pipefail
-          go test ./internal/partner ./internal/http
+          mkdir -p governance/evidence
+          {
+            echo '# JRN-001 tenant isolation PostgreSQL diagnostic'
+            echo
+            echo "- Verification source SHA: \`${GITHUB_SHA}\`"
+            echo "- Exit code: ${JRN001_DB_TEST_EXIT}"
+            echo
+            echo '```text'
+            tail -n 500 /tmp/jrn001-db-tests.log
+            echo '```'
+          } > governance/evidence/JRN-001_TENANT_ISOLATION_DB_DIAGNOSTIC.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add governance/evidence/JRN-001_TENANT_ISOLATION_DB_DIAGNOSTIC.md
+          git commit -m "test(dsh): capture JRN-001 tenant DB failure"
+          git pull --rebase origin lianbassam
+          git push origin HEAD:lianbassam
+
+      - name: Require PostgreSQL tenant tests
+        shell: bash
+        run: |
+          if [[ "${JRN001_DB_TEST_EXIT}" != "0" ]]; then
+            echo "PostgreSQL tenant tests failed; diagnostic committed."
+            exit "${JRN001_DB_TEST_EXIT}"
+          fi
 
       - name: Run JRN-001 contract gates
         shell: bash
@@ -125,6 +159,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p governance/evidence
+          rm -f governance/evidence/JRN-001_TENANT_ISOLATION_DB_DIAGNOSTIC.md
           cat > governance/evidence/JRN-001_TENANT_ISOLATION_REMOTE_VERIFICATION.md <<EOF
           # JRN-001 tenant isolation remote verification
 
