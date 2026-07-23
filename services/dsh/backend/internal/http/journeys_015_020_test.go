@@ -7,7 +7,7 @@ import (
 )
 
 func TestJourneys015Through020ExposeGovernedRoutes(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil)
 	cases := []struct {
 		journey string
 		method  string

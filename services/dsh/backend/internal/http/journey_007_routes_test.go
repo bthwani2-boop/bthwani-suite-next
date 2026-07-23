@@ -8,7 +8,7 @@ import (
 )
 
 func TestJourney007ExposesHomeMarketingEventRoute(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil)
 	req := httptest.NewRequest(http.MethodPost, "/dsh/home-discovery/events", strings.NewReader("{"))
 	req.Header.Set("Content-Type", "application/json")
 	res := httptest.NewRecorder()

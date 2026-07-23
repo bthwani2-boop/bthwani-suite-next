@@ -6,7 +6,7 @@ import (
 )
 
 func TestFirstFiveJourneysExposeGovernedDSHRoutes(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil)
 	RegisterPartnerLifecycleRoutes(router, nil, nil, nil, nil)
 	RegisterPartnerSelfRoutes(router, nil, nil, nil, nil)
 

@@ -6,7 +6,7 @@ import (
 )
 
 func TestJourney026ExposesGovernedCouponPricingAndLoyaltyRoutes(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil)
 
 	cases := []struct {
 		name    string

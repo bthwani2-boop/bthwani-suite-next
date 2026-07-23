@@ -6,7 +6,7 @@ import (
 )
 
 func TestJRN021OrderRescueRoutes(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil)
 	RegisterOrderRescueRoutes(router, nil, nil, nil, nil)
 
 	cases := []struct {

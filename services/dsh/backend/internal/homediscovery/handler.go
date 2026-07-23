@@ -4,13 +4,18 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"dsh-api/internal/cache"
 )
 
-func HandleHomeDiscovery(db *sql.DB) http.HandlerFunc {
+const homeDiscoveryCacheTTL = 30 * time.Second
+
+func HandleHomeDiscovery(db *sql.DB, respCache *cache.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
@@ -40,6 +45,14 @@ func HandleHomeDiscovery(db *sql.DB) http.HandlerFunc {
 			ServiceAreaCode: serviceAreaCode,
 			AudienceSegment: audienceSegment,
 			Limit:           limit,
+		}
+
+		cacheKey := fmt.Sprintf("dsh:home-discovery:%s:%s:%s:%d", cityCode, serviceAreaCode, audienceSegment, limit)
+		var cached map[string]interface{}
+		if respCache.GetJSON(ctx, cacheKey, &cached) {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(cached) //nolint:errcheck
+			return
 		}
 
 		banners, err := ListBanners(ctx, db, query)
@@ -81,6 +94,8 @@ func HandleHomeDiscovery(db *sql.DB) http.HandlerFunc {
 			"pagination":  HomePagination{Limit: limit, Offset: 0, Total: total},
 			"generatedAt": time.Now().UTC().Format(time.RFC3339),
 		}
+
+		respCache.SetJSON(ctx, cacheKey, result, homeDiscoveryCacheTTL)
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result) //nolint:errcheck

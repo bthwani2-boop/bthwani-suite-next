@@ -13,6 +13,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"dsh-api/internal/auth"
+	"dsh-api/internal/cache"
 	"dsh-api/internal/checkoutfinanceoutbox"
 	"dsh-api/internal/fieldcommissionoutbox"
 	dshHttp "dsh-api/internal/http"
@@ -61,7 +62,15 @@ func main() {
 	mediaProvider := newMediaProvider(appCtx)
 	identityClient := auth.NewClient(identityBaseURL)
 	wltClient := wlt.NewClient(wltBaseURL, wltServiceToken)
-	router := dshHttp.NewRouter(db, identityClient, wltClient, mediaProvider)
+
+	respCache := cache.NewClient(os.Getenv("DSH_VALKEY_ADDR"))
+	if respCache == nil {
+		log.Println("[dsh-api] response cache disabled (DSH_VALKEY_ADDR not set)")
+	} else {
+		log.Println("[dsh-api] response cache enabled")
+	}
+
+	router := dshHttp.NewRouter(db, identityClient, wltClient, mediaProvider, respCache)
 	dshHttp.RegisterPartnerLifecycleRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterPartnerSelfRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterJRN032AnalyticsRoutes(router, db, identityClient, wltClient, mediaProvider)

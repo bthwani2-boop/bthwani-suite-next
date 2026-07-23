@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"dsh-api/internal/auth"
+	"dsh-api/internal/cache"
 	"dsh-api/internal/health"
 	"dsh-api/internal/homediscovery"
 	"dsh-api/internal/media"
@@ -12,7 +13,7 @@ import (
 	"dsh-api/internal/wlt"
 )
 
-func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, mediaProvider *media.Provider) *http.ServeMux {
+func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, mediaProvider *media.Provider, respCache *cache.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /dsh/health", health.HandleHealth)
@@ -22,7 +23,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/stores/{storeId}/catalog", handlePublicCatalog(db))
 	mux.HandleFunc("GET /dsh/public/media/{assetId}/{variant}", handlePublicMedia(db, mediaProvider))
 	mux.HandleFunc("GET /dsh/public/reels", handlePublicReels(db))
-	mux.HandleFunc("GET /dsh/home-discovery", homediscovery.HandleHomeDiscovery(db))
+	mux.HandleFunc("GET /dsh/home-discovery", homediscovery.HandleHomeDiscovery(db, respCache))
 	mux.HandleFunc("POST /dsh/home-discovery/events", homediscovery.HandleHomeContentEvent(db))
 	protected := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
 	mux.HandleFunc("POST /dsh/field/media/uploads", protected.handleFieldMediaUpload)

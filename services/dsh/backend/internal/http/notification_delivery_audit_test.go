@@ -6,7 +6,7 @@ import (
 )
 
 func TestNotificationDeliveryAuditRouteIsMounted(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil)
 	RegisterActorNotificationRoutes(router, nil, nil, nil, nil)
 	request, err := http.NewRequest(http.MethodGet, "/dsh/operator/notifications/delivery-attempts?outcome=dead_letter", nil)
 	if err != nil {

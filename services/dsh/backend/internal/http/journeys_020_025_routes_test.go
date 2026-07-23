@@ -6,7 +6,7 @@ import (
 )
 
 func TestJourneys020To025ExposeGovernedRoutes(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil)
 	RegisterActorNotificationRoutes(router, nil, nil, nil, nil)
 	RegisterFieldReadinessRoutes(router, nil, nil, nil, nil)
 
