@@ -1,0 +1,121 @@
+name: DSH Database Contract
+
+on:
+  push:
+    branches:
+      - main
+      - lianbassam
+    paths:
+      - "services/dsh/database/**"
+      - "services/dsh/backend/**"
+      - "services/dsh/package.json"
+      - "tools/scripts/check-dsh-database-contract.mjs"
+      - ".github/workflows/dsh-database.yml"
+  pull_request:
+    paths:
+      - "services/dsh/database/**"
+      - "services/dsh/backend/**"
+      - "services/dsh/package.json"
+      - "tools/scripts/check-dsh-database-contract.mjs"
+      - ".github/workflows/dsh-database.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dsh-database-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify canonical DSH database path
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_runtime
+          POSTGRES_PASSWORD: dsh_runtime_password
+          POSTGRES_DB: dsh_runtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_runtime -d dsh_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
+      PGPASSWORD: dsh_runtime_password
+      BTHWANI_ENVIRONMENT: ci
+      DSH_REQUIRE_DB_TESTS: "true"
+
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          show-progress: false
+
+      - name: Set up Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client >/dev/null
+
+      - name: Validate static DSH database contract
+        run: node tools/scripts/check-dsh-database-contract.mjs
+
+      - name: Apply canonical DSH migrations
+        shell: pwsh
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1
+          -Action migrate
+          -Transport url
+          -DatabaseUrl $env:DATABASE_URL
+
+      - name: Re-run canonical DSH migrations
+        shell: pwsh
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1
+          -Action migrate
+          -Transport url
+          -DatabaseUrl $env:DATABASE_URL
+
+      - name: Run DSH schema database contracts
+        shell: pwsh
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1
+          -Action test
+          -Transport url
+          -DatabaseUrl $env:DATABASE_URL
+          -TestSuite schema
+
+      - name: Apply DSH local seeds twice
+        shell: pwsh
+        run: |
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds
+
+      - name: Run DSH seed database contracts
+        shell: pwsh
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1
+          -Action test
+          -Transport url
+          -DatabaseUrl $env:DATABASE_URL
+          -TestSuite seed
+
+      - name: Test and build DSH backend
+        working-directory: services/dsh/backend
+        run: |
+          set -euo pipefail
+          go test ./... -count=1
+          go build ./...
