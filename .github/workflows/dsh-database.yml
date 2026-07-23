@@ -118,6 +118,36 @@ jobs:
           -DatabaseUrl $env:DATABASE_URL
           -TestSuite schema
 
+      - name: Test and build DSH backend on clean schema
+        working-directory: services/dsh/backend
+        run: |
+          set -uo pipefail
+          log="${RUNNER_TEMP}/dsh-backend-verification.log"
+          : >"$log"
+
+          if ! go test ./... -count=1 >"$log" 2>&1; then
+            echo "::error title=DSH Go tests failed::The complete backend log is uploaded as an artifact."
+            grep -E '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' "$log" | tail -n 120 || true
+            echo "--- DSH backend final log lines ---"
+            tail -n 200 "$log"
+            exit 1
+          fi
+
+          if ! go build ./... >>"$log" 2>&1; then
+            echo "::error title=DSH Go build failed::The complete backend log is uploaded as an artifact."
+            tail -n 200 "$log"
+            exit 1
+          fi
+
+      - name: Upload DSH backend failure log
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: dsh-backend-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/dsh-backend-verification.log
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Apply DSH local seeds twice
         shell: pwsh
         run: |
@@ -132,13 +162,6 @@ jobs:
           -Transport url
           -DatabaseUrl $env:DATABASE_URL
           -TestSuite seed
-
-      - name: Test and build DSH backend
-        working-directory: services/dsh/backend
-        run: |
-          set -euo pipefail
-          go test ./... -count=1
-          go build ./...
 
   result:
     name: DSH database result
