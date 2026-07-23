@@ -7,7 +7,7 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir services/dsh typecheck"
+        "command": "node tools/scripts/run-tsc-check.mjs --project services/dsh/tsconfig.json --label dsh"
       }
     },
     "build": {
@@ -30,6 +30,7 @@
     }
   },
   "tags": [
-    "scope:dsh type:service"
+    "scope:dsh",
+    "type:service"
   ]
 }
