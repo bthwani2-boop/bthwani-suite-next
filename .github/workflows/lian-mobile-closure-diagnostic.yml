@@ -31,35 +31,41 @@ jobs:
               raise RuntimeError('FINALIZER_PAYLOAD_NOT_FOUND')
           Path('/tmp/finalize.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
           PY
-          mkdir -p artifacts/mobile-closure-diagnostic
-          if ! python3 /tmp/finalize.py >artifacts/mobile-closure-diagnostic/finalizer.out 2>artifacts/mobile-closure-diagnostic/finalizer.err; then
-            tail -n 1 artifacts/mobile-closure-diagnostic/finalizer.err | tr '\n' ' ' | cut -c1-130 >/tmp/finalizer.status
+          if ! python3 /tmp/finalize.py >/tmp/finalizer.out 2>/tmp/finalizer.err; then
             exit 1
           fi
-          printf '%s\n' 'FINALIZER_SUCCEEDED' >artifacts/mobile-closure-diagnostic/finalizer.err
-          printf '%s' 'FINALIZER_SUCCEEDED' >/tmp/finalizer.status
-      - name: Upload transient diagnostic
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: mobile-closure-finalizer-${{ github.sha }}
-          path: artifacts/mobile-closure-diagnostic
-          if-no-files-found: error
-          retention-days: 1
-      - name: Publish diagnostic result
+          printf '%s\n' 'FINALIZER_SUCCEEDED' >/tmp/finalizer.err
+      - name: Encode diagnostic in status contexts
         if: always()
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          description="$(cat /tmp/finalizer.status 2>/dev/null || printf 'FINALIZER_DIAGNOSTIC_FAILED')"
+          base64 -w0 /tmp/finalizer.err | fold -w 70 >/tmp/chunks.txt
+          index=0
+          while IFS= read -r chunk; do
+            index=$((index + 1))
+            context="bthwani/mobile-error-$(printf '%02d' "$index")-${chunk}"
+            jq -n \
+              --arg state failure \
+              --arg context "$context" \
+              --arg description "encoded mobile closure diagnostic chunk" \
+              --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+              '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+            curl --fail-with-body --retry 3 -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+              --data-binary @/tmp/status.json >/dev/null
+          done </tmp/chunks.txt
           state=success
           if [[ "${{ steps.finalizer.outcome }}" != "success" ]]; then state=failure; fi
           jq -n \
             --arg state "$state" \
             --arg context bthwani/mobile-closure-diagnostic \
-            --arg description "$description" \
+            --arg description "finalizer diagnostic completed" \
             --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
           curl --fail-with-body --retry 3 -X POST \
@@ -67,4 +73,4 @@ jobs:
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-            --data-binary @/tmp/status.json
+            --data-binary @/tmp/status.json >/dev/null
