@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -32,19 +33,23 @@ type Identity struct {
 }
 
 type Client struct {
-	baseURL string
-	http    *http.Client
+	baseURL         string
+	defaultTenantID string
+	saasActive      bool
+	http            *http.Client
 }
 
 func NewClient(baseURL string) *Client {
 	return &Client{
-		baseURL: strings.TrimRight(baseURL, "/"),
-		http:    &http.Client{Timeout: 3 * time.Second},
+		baseURL:         strings.TrimRight(baseURL, "/"),
+		defaultTenantID: strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID")),
+		saasActive:      strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active"),
+		http:            &http.Client{Timeout: 3 * time.Second},
 	}
 }
 
 func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, error) {
-	if c.baseURL == "" {
+	if c.baseURL == "" || (c.saasActive && c.defaultTenantID == "") {
 		return Identity{}, ErrIdentityUnavailable
 	}
 	if !strings.HasPrefix(strings.TrimSpace(authorization), "Bearer ") {
@@ -60,7 +65,7 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 		return Identity{}, ErrIdentityUnavailable
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusUnauthorized {
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		return Identity{}, ErrUnauthenticated
 	}
 	if resp.StatusCode != http.StatusOK {
@@ -71,6 +76,9 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 		return Identity{}, ErrIdentityUnavailable
 	}
 	if identity.AuthState != "authenticated" || identity.Subject == "" {
+		return Identity{}, ErrUnauthenticated
+	}
+	if c.saasActive && strings.TrimSpace(identity.TenantID) != c.defaultTenantID {
 		return Identity{}, ErrUnauthenticated
 	}
 	return identity, nil
