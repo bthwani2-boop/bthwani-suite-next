@@ -7,7 +7,7 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir apps/control-panel/runtime typecheck"
+        "command": "node tools/scripts/run-tsc-check.mjs --project apps/control-panel/runtime/tsconfig.json --label control-panel"
       }
     },
     "test": {
