@@ -1,13 +1,8 @@
 import Constants from "expo-constants";
 import * as Sentry from "@sentry/react-native";
+import { resolveSentryRuntimeConfig } from "../config/sentry-config";
 
 const FORBIDDEN_KEY = /(authorization|cookie|token|secret|password|phone|email|tenant|iban|account|card|wallet|ledger|message|document|latitude|longitude)/i;
-
-function boundedSampleRate(value: string | undefined): number {
-  if (!value) return 0;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : 0;
-}
 
 function scrubRecord(value: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   if (!value) return undefined;
@@ -35,20 +30,20 @@ function sanitizeUrl(value: string | undefined): string | undefined {
  * remain in their sovereign services and are deliberately filtered here.
  */
 export function initSentry(): void {
-  const dsn = process.env["EXPO_PUBLIC_SENTRY_DSN"]?.trim();
-  if (!dsn) {
+  const config = resolveSentryRuntimeConfig();
+  if (!config.dsn) {
     console.log("[sentry] disabled: EXPO_PUBLIC_SENTRY_DSN not set");
     return;
   }
 
   const extra = Constants.expoConfig?.extra as Record<string, unknown> | undefined;
   Sentry.init({
-    dsn,
-    environment: process.env["EXPO_PUBLIC_APP_ENV"] || "development",
+    dsn: config.dsn,
+    environment: config.environment,
     sendDefaultPii: false,
     enableAutoSessionTracking: true,
     attachStacktrace: true,
-    tracesSampleRate: boundedSampleRate(process.env["EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE"]),
+    tracesSampleRate: config.tracesSampleRate,
     initialScope: {
       tags: {
         surface: typeof extra?.["appKey"] === "string" ? extra["appKey"] : "app-captain",
