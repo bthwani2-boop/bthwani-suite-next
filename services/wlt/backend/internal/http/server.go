@@ -94,12 +94,12 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/ledger/entries", readGate(ledger.HandleListLedgerEntries(db)))
 	mux.HandleFunc("GET /wlt/ledger/financial-summary", readGate(ledger.HandleFinancialSummary(db)))
 
-	// The historical partner URL is retained only as a typed compatibility
-	// adapter. It reaches the same encryption, ownership, audit and one-active-
-	// destination invariants as the current multi-actor routes.
-	mux.HandleFunc("PUT /wlt/payout-destinations/{partnerId}", gate(serviceAuth(payout.HandleUpsertPartnerPayoutDestinationJRN037(db))))
-	mux.HandleFunc("GET /wlt/payout-destinations/{partnerId}", readGate(payout.HandleGetPartnerPayoutDestinationJRN037(db)))
-	mux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePartnerPayoutDestinationJRN037(db))))
+	// JRN-001 keeps the canonical partner contract because DSH depends on its
+	// exact masked response plus durable Idempotency-Key replay. Typed JRN-037
+	// owner routes remain below for partner, captain, and field finance.
+	mux.HandleFunc("PUT /wlt/payout-destinations/{partnerId}", gate(serviceAuth(payout.HandleUpsertPayoutDestinationGoverned(db))))
+	mux.HandleFunc("GET /wlt/payout-destinations/{partnerId}", readGate(payout.HandleGetPayoutDestination(db)))
+	mux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePayoutDestination(db))))
 	mux.HandleFunc("PUT /wlt/payout-destinations/{actorType}/{actorId}", gate(serviceAuth(payout.HandleUpsertPayoutDestinationJRN037(db))))
 	mux.HandleFunc("GET /wlt/payout-destinations/{actorType}/{actorId}", readGate(payout.HandleGetPayoutDestinationJRN037(db)))
 	mux.HandleFunc("POST /wlt/payout-destinations/{actorType}/{actorId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePayoutDestinationJRN037(db))))
