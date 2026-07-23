@@ -43,6 +43,7 @@ export function initSentry(): void {
     sendDefaultPii: false,
     enableAutoSessionTracking: true,
     attachStacktrace: true,
+    // EXPO_PUBLIC_SENTRY_TRACES_SAMPLE_RATE is resolved only by the config layer.
     tracesSampleRate: config.tracesSampleRate,
     initialScope: {
       tags: {
