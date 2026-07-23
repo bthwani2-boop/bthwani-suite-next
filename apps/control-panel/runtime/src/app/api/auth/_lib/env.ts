@@ -1,6 +1,7 @@
 function readServerEnv(name: string, fallback: string): string {
   const value = process.env[name];
-  return value && value.trim().length > 0 ? value.trim() : fallback;
+  if (value && value.trim().length > 0) return value.trim().replace(/\/$/, "");
+  return process.env.NODE_ENV === "production" ? "" : fallback;
 }
 
 /** Server-only Identity base URL. Never exposed to the browser (no NEXT_PUBLIC_ prefix). */
