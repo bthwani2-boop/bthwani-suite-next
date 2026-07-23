@@ -30,42 +30,38 @@ const FORWARDED_REQUEST_HEADERS = [
 
 const SERVICE_CONFIG = {
   dsh: {
-    env: ["DSH_API_BASE_URL", "NEXT_PUBLIC_DSH_API_BASE_URL"],
+    env: "DSH_API_BASE_URL",
     fallback: "http://127.0.0.1:58080",
   },
   identity: {
-    env: ["IDENTITY_API_BASE_URL", "NEXT_PUBLIC_IDENTITY_API_BASE_URL"],
+    env: "IDENTITY_API_BASE_URL",
     fallback: "http://127.0.0.1:58082",
   },
   wlt: {
-    env: ["WLT_API_BASE_URL", "NEXT_PUBLIC_WLT_API_BASE_URL"],
+    env: "WLT_API_BASE_URL",
     fallback: "http://127.0.0.1:58083",
   },
   workforce: {
-    env: ["WORKFORCE_API_BASE_URL", "NEXT_PUBLIC_WORKFORCE_API_BASE_URL"],
+    env: "WORKFORCE_API_BASE_URL",
     fallback: "http://127.0.0.1:58086",
   },
   providers: {
-    env: ["PROVIDERS_API_BASE_URL", "NEXT_PUBLIC_PROVIDERS_API_BASE_URL"],
+    env: "PROVIDERS_API_BASE_URL",
     fallback: "http://127.0.0.1:58087",
   },
   "platform-control": {
-    env: [
-      "PLATFORM_CONTROL_API_BASE_URL",
-      "NEXT_PUBLIC_PLATFORM_CONTROL_API_BASE_URL",
-    ],
+    env: "PLATFORM_CONTROL_API_BASE_URL",
     fallback: "http://127.0.0.1:58088",
   },
 } as const;
 
 export type ControlPanelBffService = keyof typeof SERVICE_CONFIG;
 
-function serviceBaseUrl(service: ControlPanelBffService): string {
+function serviceBaseUrl(service: ControlPanelBffService): string | null {
   const config = SERVICE_CONFIG[service];
-  for (const key of config.env) {
-    const value = process.env[key];
-    if (value?.trim()) return value.trim().replace(/\/$/, "");
-  }
+  const configured = process.env[config.env];
+  if (configured?.trim()) return configured.trim().replace(/\/$/, "");
+  if (process.env.NODE_ENV === "production") return null;
   return config.fallback;
 }
 
@@ -185,9 +181,18 @@ export async function proxyControlPanelRequest(
     return jsonError(401, "IDENTITY_REFRESH_COOKIE_MISSING", "Refresh session is unavailable.");
   }
 
+  const baseUrl = serviceBaseUrl(service);
+  if (!baseUrl) {
+    return jsonError(
+      503,
+      "BFF_UPSTREAM_NOT_CONFIGURED",
+      `Server-only upstream ${SERVICE_CONFIG[service].env} is required in production.`,
+    );
+  }
+
   const upstreamUrl = new URL(
     `${upstreamPath}${request.nextUrl.search}`,
-    `${serviceBaseUrl(service)}/`,
+    `${baseUrl}/`,
   );
   const body = await requestBody(
     request,
