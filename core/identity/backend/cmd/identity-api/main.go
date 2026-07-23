@@ -46,7 +46,8 @@ func main() {
 	}
 
 	router := identityhttp.NewRouter(db, repository)
-	tenantScopedRouter := identityhttp.SaaSTenantBoundary(db, router)
+	issuerScopedRouter := identityhttp.SaaSActivationIssuerBoundary(db, router)
+	tenantScopedRouter := identityhttp.SaaSTenantBoundary(db, issuerScopedRouter)
 	otpScopedRouter := identityhttp.SaaSOtpBoundary(repository, tenantScopedRouter)
 	server := &http.Server{
 		Addr: ":" + port,
