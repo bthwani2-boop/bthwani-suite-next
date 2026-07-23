@@ -24,7 +24,7 @@ permissions:
 
 concurrency:
   group: jrn-001-fs-17-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   static-and-surfaces:
@@ -101,17 +101,25 @@ jobs:
       - name: Typecheck control-panel
         run: pnpm --dir apps/control-panel/runtime typecheck
 
-      - name: Publish static verification success
-        if: success()
+      - name: Publish static verification terminal status
+        if: ${{ always() }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -f state=success -f context=bthwani/jrn001-fs17-static -f description='JRN-001 static and surface verification passed' -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-
-      - name: Publish static verification failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -f state=failure -f context=bthwani/jrn001-fs17-static -f description='JRN-001 static and surface verification failed' -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          JOB_STATUS: ${{ job.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state=failure
+          description='JRN-001 static and surface verification did not pass'
+          if [[ "${JOB_STATUS}" == "success" ]]; then
+            state=success
+            description='JRN-001 static and surface verification passed'
+          fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state="${state}" \
+            -f context=bthwani/jrn001-fs17-static \
+            -f description="${description}" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
   database-isolation:
     runs-on: ubuntu-24.04
@@ -169,18 +177,26 @@ jobs:
         run: go test ./internal/payout -count=1
 
       - name: PostgreSQL diagnostics
-        if: failure()
+        if: ${{ failure() }}
         shell: bash
         run: docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml logs postgres || true
 
-      - name: Publish database verification success
-        if: success()
+      - name: Publish database verification terminal status
+        if: ${{ always() }}
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -f state=success -f context=bthwani/jrn001-fs17-database -f description='JRN-001 database isolation verification passed' -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-
-      - name: Publish database verification failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -f state=failure -f context=bthwani/jrn001-fs17-database -f description='JRN-001 database isolation verification failed' -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          JOB_STATUS: ${{ job.status }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state=failure
+          description='JRN-001 database isolation verification did not pass'
+          if [[ "${JOB_STATUS}" == "success" ]]; then
+            state=success
+            description='JRN-001 database isolation verification passed'
+          fi
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state="${state}" \
+            -f context=bthwani/jrn001-fs17-database \
+            -f description="${description}" \
+            -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
