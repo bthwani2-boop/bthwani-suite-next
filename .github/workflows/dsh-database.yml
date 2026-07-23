@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 concurrency:
   group: dsh-database-${{ github.workflow }}-${{ github.ref }}
@@ -58,6 +59,16 @@ jobs:
         with:
           persist-credentials: false
           show-progress: false
+
+      - name: Publish DSH database pending status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh api --method POST
+          "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}"
+          -f state=pending
+          -f context=bthwani/dsh-database
+          -f description="Canonical DSH database verification is running"
 
       - name: Set up Go
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
@@ -119,3 +130,32 @@ jobs:
           set -euo pipefail
           go test ./... -count=1
           go build ./...
+
+  result:
+    name: DSH database result
+    needs: verify
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Publish DSH database final status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+        run: |
+          state=failure
+          description="Canonical DSH database verification failed"
+          if [ "$VERIFY_RESULT" = "success" ]; then
+            state=success
+            description="Canonical DSH database verification passed"
+          elif [ "$VERIFY_RESULT" = "cancelled" ]; then
+            state=error
+            description="Canonical DSH database verification was cancelled"
+          fi
+
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -f state="$state" \
+            -f context=bthwani/dsh-database \
+            -f description="$description"
+
+          test "$state" = success
