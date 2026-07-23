@@ -7,12 +7,7 @@ $AdbHelper = Join-Path $RepoRoot "tools\scripts\mobile-adb.ps1"
 . $AdbHelper
 
 $AdbPath = Resolve-BthwaniAdb
-
-& $AdbPath start-server
-
-if ($LASTEXITCODE -ne 0) {
-    throw "ADB server failed to start."
-}
+Start-BthwaniAdbServer -AdbPath $AdbPath
 
 $Devices = Get-BthwaniAndroidDevices -AdbPath $AdbPath
 $SelectedDevice = Select-BthwaniAndroidDevice -Devices $Devices

@@ -219,10 +219,8 @@ try {
 }
 
 $AdbPath = Resolve-BthwaniAdb
-& $AdbPath start-server
-if ($LASTEXITCODE -ne 0) {
-    throw "ADB server failed to start."
-}
+Start-BthwaniAdbServer -AdbPath $AdbPath
+Write-Host "ADB server ready."
 
 $Devices = Get-BthwaniAndroidDevices -AdbPath $AdbPath
 $SelectedDevice = Select-BthwaniAndroidDevice -Devices $Devices

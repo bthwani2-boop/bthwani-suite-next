@@ -32,6 +32,46 @@ function Run-Cmd {
     }
 }
 
+function Start-ScrcpyAdbServer {
+    param([Parameter(Mandatory)][string] $AdbPath)
+
+    function Invoke-AdbStart {
+        param([string] $Exe)
+        $psi                        = [System.Diagnostics.ProcessStartInfo]::new($Exe)
+        $psi.Arguments              = 'start-server'
+        $psi.UseShellExecute        = $false
+        $psi.CreateNoWindow         = $true
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError  = $true
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        $proc.StandardOutput.ReadToEndAsync() | Out-Null
+        $proc.StandardError.ReadToEndAsync()  | Out-Null
+        return $proc
+    }
+
+    $proc = Invoke-AdbStart -Exe $AdbPath
+    if (-not $proc.WaitForExit(15000)) {
+        $proc.Kill()
+        Write-Warning "ADB server did not respond in 15 s — killing stale daemon and retrying."
+        Get-Process -Name adb -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 800
+        $proc2 = Invoke-AdbStart -Exe $AdbPath
+        if (-not $proc2.WaitForExit(15000)) {
+            $proc2.Kill()
+            throw "ADB server failed to start after retry. Check Android SDK installation."
+        }
+        if ($proc2.ExitCode -ne 0) {
+            throw "ADB server failed to start after retry (exit $($proc2.ExitCode))."
+        }
+        return
+    }
+    if ($proc.ExitCode -ne 0) {
+        throw "ADB server failed to start (exit $($proc.ExitCode))."
+    }
+}
+
+
 function Resolve-ScrcpyTools {
     $scrcpy = (Get-Command scrcpy.exe -ErrorAction SilentlyContinue | Select-Object -First 1).Source
     if (-not $scrcpy) { throw "scrcpy.exe not found. Install it or add it to PATH." }
@@ -230,7 +270,7 @@ function Start-Watchdog {
 # --- Main Entry Point ---
 $DesktopPath = [Environment]::GetFolderPath("Desktop")
 $LauncherPath = Join-Path $DesktopPath "Start Scrcpy WiFi.cmd"
-$LauncherContent = "@echo off`r`npowershell -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$PSCommandPath`"`r`n"
+$LauncherContent = "@echo off`r`npwsh -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"`r`n"
 Set-Content -LiteralPath $LauncherPath -Value $LauncherContent -Encoding Ascii
 
 $Tools = Resolve-ScrcpyTools
@@ -247,7 +287,8 @@ if (Test-Path "$sdkRoot\platform-tools\adb.exe") {
 Write-Host "ADB:    $Adb"
 Write-Host "scrcpy: $Scrcpy"
 
-Run-Cmd $Adb "start-server" | Out-Null
+Start-ScrcpyAdbServer -AdbPath $Adb
+
 
 $devices = Get-Devices
 $usbDevices = @($devices | Where-Object { -not $_.IsTcpIp -and $_.State -eq "device" })

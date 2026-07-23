@@ -1,5 +1,58 @@
 Set-StrictMode -Version Latest
 
+# ---------------------------------------------------------------------------
+# Start-BthwaniAdbServer
+#   Starts the ADB daemon with a hard 15-second timeout.
+#   If the daemon is stale/frozen it is killed and one retry is attempted.
+#   Using [Diagnostics.Process] avoids the overhead of a background job and
+#   gives a reliable process exit code without stdout-capture tricks.
+# ---------------------------------------------------------------------------
+function Start-BthwaniAdbServer {
+    param([Parameter(Mandatory)][string] $AdbPath)
+
+    function Invoke-AdbStartServer {
+        param([string] $Exe)
+        $psi                        = [System.Diagnostics.ProcessStartInfo]::new($Exe)
+        $psi.Arguments              = 'start-server'
+        $psi.UseShellExecute        = $false
+        $psi.CreateNoWindow         = $true
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError  = $true
+        $proc = [System.Diagnostics.Process]::Start($psi)
+        # Read streams asynchronously so the process never blocks on full buffers.
+        $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
+        $stderrTask = $proc.StandardError.ReadToEndAsync()
+        return $proc, $stdoutTask, $stderrTask
+    }
+
+    $proc, $stdoutTask, $stderrTask = Invoke-AdbStartServer -Exe $AdbPath
+
+    if (-not $proc.WaitForExit(15000)) {
+        $proc.Kill()
+        [void] $stdoutTask; [void] $stderrTask
+        Write-Warning "ADB server did not respond in 15 s — killing stale daemon and retrying."
+        Get-Process -Name adb -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 800
+
+        $proc2, $stdoutTask2, $stderrTask2 = Invoke-AdbStartServer -Exe $AdbPath
+        if (-not $proc2.WaitForExit(15000)) {
+            $proc2.Kill()
+            throw "ADB server failed to start after retry. Check Android SDK installation."
+        }
+        if ($proc2.ExitCode -ne 0) {
+            $err = $stderrTask2.Result.Trim()
+            throw "ADB server failed to start after retry (exit $($proc2.ExitCode))$(if ($err) { ": $err" })."
+        }
+        return
+    }
+
+    if ($proc.ExitCode -ne 0) {
+        $err = $stderrTask.Result.Trim()
+        throw "ADB server failed to start (exit $($proc.ExitCode))$(if ($err) { ": $err" })."
+    }
+}
+
 function Resolve-BthwaniAdb {
     $DefaultSdk = Join-Path $env:LOCALAPPDATA "Android\Sdk"
     $Candidates = New-Object System.Collections.Generic.List[string]
