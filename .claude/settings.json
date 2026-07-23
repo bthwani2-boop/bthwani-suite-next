@@ -45,7 +45,20 @@
       "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\({dependencies:p.dependencies, devDependencies:p.devDependencies}, null, 2\\)\\)\")",
       "Bash(mkdir -p \"C:\\\\Users\\\\bassa\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--bthwani-suite-next\\\\e849f825-e7f3-47f6-9002-704b1cbeffcf\\\\scratchpad\")",
       "Bash(pnpm install *)",
-      "Bash(pnpm nx *)"
+      "Bash(pnpm nx *)",
+      "Bash(grep -iE \"^react$|^@react-native-async-storage$\")",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm --dir /c/bthwani-suite-next/apps/app-captain/runtime exec expo install @sentry/react-native)",
+      "Bash(pnpm --dir /c/bthwani-suite-next/apps/app-field/runtime exec expo install @sentry/react-native)",
+      "Bash(pnpm --dir /c/bthwani-suite-next/apps/app-partner/runtime exec expo install @sentry/react-native)",
+      "Bash(xargs sed -i 's/NewRouter\\(nil, nil, nil, nil\\)/NewRouter\\(nil, nil, nil, nil, nil\\)/g')",
+      "Bash(echo \"remaining-plain: $?\")",
+      "Bash(grep -rl \"NewRouter\\(nil, nil, nil, nil\\)$\" .)",
+      "Bash(echo \"remaining check exit: $?\")",
+      "Bash(go get *)",
+      "Bash(gofmt -l ./internal/cache/ ./internal/homediscovery/ ./internal/http/ ./cmd/dsh-api/)",
+      "Bash(echo \"gofmt exit: $?\")",
+      "Bash(gofmt -d cmd/dsh-api/main.go)"
     ],
     "additionalDirectories": [
       "C:\\Users\\bassa\\.claude\\plans"

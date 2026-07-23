@@ -4,7 +4,10 @@ import { createBthwaniQueryClient } from "./create-query-client";
 
 export type BthwaniQueryProviderProps = {
   readonly client?: QueryClient;
-  readonly children: React.ReactNode;
+  // Optional in the type only because React.createElement's variadic-children
+  // overload doesn't unify with a required `children` prop; it is always
+  // supplied at the call site.
+  readonly children?: React.ReactNode;
 };
 
 export function BthwaniQueryProvider({ client, children }: BthwaniQueryProviderProps) {

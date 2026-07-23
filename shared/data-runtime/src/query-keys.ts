@@ -4,6 +4,9 @@
  * and scoped to the parameters that actually vary the response.
  */
 export const queryKeys = {
-  dshHomeDiscovery: (scope: { readonly cityCode?: string; readonly serviceAreaCode?: string }) =>
+  dshHomeDiscovery: (scope: {
+    readonly cityCode?: string | undefined;
+    readonly serviceAreaCode?: string | undefined;
+  }) =>
     ["dsh", "home-discovery", scope.cityCode ?? null, scope.serviceAreaCode ?? null] as const,
 };
