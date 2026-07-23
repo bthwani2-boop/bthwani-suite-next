@@ -1,13 +1,31 @@
 {
   "name": "app-shell",
   "root": "shared/app-shell",
-  "sourceRoot": "shared/app-shell",
+  "sourceRoot": "shared/app-shell/src",
   "projectType": "library",
   "targets": {
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
         "command": "pnpm --dir shared/app-shell typecheck"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir shared/app-shell build"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir shared/app-shell test"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir shared/app-shell lint"
       }
     }
   },
