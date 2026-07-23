@@ -14,7 +14,7 @@ import {
 import { initSentry } from "./observability/sentry";
 import App from "./App";
 
-initSentry();
+const sentryEnabled = initSentry();
 
 const APP_KEY = "app-client";
 const queryClient = createBthwaniQueryClient();
@@ -49,4 +49,4 @@ function Root() {
   );
 }
 
-registerRootComponent(Sentry.wrap(Root));
+registerRootComponent(sentryEnabled ? Sentry.wrap(Root) : Root);
