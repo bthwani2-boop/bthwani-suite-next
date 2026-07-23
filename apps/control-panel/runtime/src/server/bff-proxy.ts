@@ -115,6 +115,14 @@ function isTokenResponse(value: unknown): value is {
   );
 }
 
+function tokenResponseHasOperatorIdentity(value: {
+  identity?: unknown;
+}): boolean {
+  if (!value.identity || typeof value.identity !== "object") return false;
+  const roles = (value.identity as { roles?: unknown }).roles;
+  return Array.isArray(roles) && roles.includes("operator");
+}
+
 async function requestBody(
   request: NextRequest,
   service: ControlPanelBffService,
@@ -201,6 +209,16 @@ export async function proxyControlPanelRequest(
     }
 
     if (upstream.ok && isTokenResponse(parsed)) {
+      if (!tokenResponseHasOperatorIdentity(parsed)) {
+        const response = jsonError(
+          403,
+          "CONTROL_PANEL_FORBIDDEN",
+          "Identity is not authorized for the control panel.",
+        );
+        clearSessionCookies(response);
+        return response;
+      }
+
       const publicBody = {
         ...parsed,
         accessToken: BFF_OPAQUE_TOKEN,
