@@ -56,21 +56,27 @@ export function initSentry(): void {
       },
     },
     beforeBreadcrumb(breadcrumb) {
-      return {
-        ...breadcrumb,
-        message: FORBIDDEN_KEY.test(breadcrumb.category || "") ? "[Filtered]" : breadcrumb.message,
-        data: scrubRecord(breadcrumb.data),
-      };
+      const sanitized = { ...breadcrumb };
+      if (FORBIDDEN_KEY.test(breadcrumb.category || "")) sanitized.message = "[Filtered]";
+      const data = scrubRecord(breadcrumb.data);
+      if (data) sanitized.data = data;
+      else delete sanitized.data;
+      return sanitized;
     },
     beforeSend(event) {
-      event.user = event.user?.id ? { id: event.user.id } : undefined;
-      event.extra = scrubRecord(event.extra);
+      if (event.user?.id) event.user = { id: event.user.id };
+      else delete event.user;
+
+      const extraData = scrubRecord(event.extra);
+      if (extraData) event.extra = extraData;
+      else delete event.extra;
+
       if (event.request) {
-        event.request.url = sanitizeUrl(event.request.url);
-        event.request.data = undefined;
-        event.request.cookies = undefined;
-        event.request.env = undefined;
-        event.request.headers = undefined;
+        const safeUrl = sanitizeUrl(event.request.url);
+        if (safeUrl) event.request.url = safeUrl;
+        else delete event.request.url;
+        const request = event.request as unknown as Record<string, unknown>;
+        for (const key of ["data", "cookies", "env", "headers"]) delete request[key];
       }
       return event;
     },
