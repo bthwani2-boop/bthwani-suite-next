@@ -1,13 +1,31 @@
 {
   "name": "ui-kit",
   "root": "shared/ui-kit",
-  "sourceRoot": "shared/ui-kit",
+  "sourceRoot": "shared/ui-kit/src",
   "projectType": "library",
   "targets": {
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
         "command": "pnpm --dir shared/ui-kit typecheck"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm run visual:ui-kit:contract"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm run ui-kit:catalog:build"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir shared/ui-kit lint"
       }
     }
   },
