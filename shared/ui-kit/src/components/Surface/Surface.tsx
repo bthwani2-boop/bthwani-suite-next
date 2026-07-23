@@ -16,7 +16,8 @@ export type SurfaceProps = Omit<ViewProps, "children" | "style"> & {
   onPress?: (() => void) | undefined;
   hoverStyle?: Record<string, unknown> | undefined;
   pressStyle?: Record<string, unknown> | undefined;
-  style?: ViewProps["style"];
+  /** Cross-platform style contract: React Native styles and web CSS objects are both accepted. */
+  style?: unknown;
   radiusToken?: string | undefined;
   elevationToken?: string | undefined;
   border?: boolean | undefined;
@@ -79,7 +80,7 @@ export function Surface({
           maxWidth,
           alignItems: centered ? "center" : undefined,
         },
-        style,
+        style as ViewProps["style"],
       ]}
     >
       {children}
