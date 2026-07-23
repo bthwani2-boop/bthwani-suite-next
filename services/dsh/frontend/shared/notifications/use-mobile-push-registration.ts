@@ -10,6 +10,7 @@ import {
 } from "./notifications.api";
 
 const PUSH_DEVICE_KEY_PREFIX = "bthwani-dsh-push-device";
+let fallbackDeviceSequence = 0;
 
 type DshMobileAppKey = "app-client" | "app-partner" | "app-captain" | "app-field";
 
@@ -52,12 +53,19 @@ async function ensureNotificationPermission(): Promise<boolean> {
   return notificationPermissionGranted(requested);
 }
 
+function createPushDeviceId(appKey: string): string {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return `${appKey}-${uuid}`;
+  fallbackDeviceSequence += 1;
+  return `${appKey}-${Date.now().toString(36)}-${fallbackDeviceSequence.toString(36)}`;
+}
+
 async function resolvePushDeviceId(appKey: string): Promise<string> {
   const storageKey = `${PUSH_DEVICE_KEY_PREFIX}:${appKey}`;
   const existing = await SecureStore.getItemAsync(storageKey);
   if (existing) return existing;
 
-  const generated = `${appKey}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
+  const generated = createPushDeviceId(appKey);
   await SecureStore.setItemAsync(storageKey, generated);
   return generated;
 }
@@ -65,7 +73,7 @@ async function resolvePushDeviceId(appKey: string): Promise<string> {
 function resolveSafeActionUrl(actionUrl: string, appScheme: string): string | null {
   const value = actionUrl.trim();
   if (!value) return null;
-  if (value.startsWith("https://") || value.startsWith("http://")) return value;
+  if (value.startsWith("https://")) return value;
   if (value.startsWith(`${appScheme}://`)) return value;
   if (value.includes(":")) return null;
   return `${appScheme}://${value.replace(/^\/+/, "")}`;
@@ -83,6 +91,10 @@ async function openNotificationAction(
   await Linking.openURL(safeUrl);
 }
 
+function resolveExpoProjectId(): string | undefined {
+  return Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+}
+
 export function useDshMobilePushRegistration(
   authKind: string,
   appKey: DshMobileAppKey,
@@ -92,7 +104,9 @@ export function useDshMobilePushRegistration(
     if (authKind !== "authenticated" || Platform.OS === "web") return undefined;
 
     let active = true;
+    let deviceId: string | undefined;
     let unregisterSessionEndHook: (() => void) | undefined;
+    let tokenSubscription: Notifications.EventSubscription | undefined;
 
     const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
       void openNotificationAction(response, appScheme);
@@ -109,27 +123,35 @@ export function useDshMobilePushRegistration(
         const permissionGranted = await ensureNotificationPermission();
         if (!permissionGranted || !active) return;
 
-        const projectId =
-          Constants.expoConfig?.extra?.eas?.projectId ||
-          Constants.easConfig?.projectId;
+        const projectId = resolveExpoProjectId();
         const token = (
-          await Notifications.getExpoPushTokenAsync(
-            projectId ? { projectId } : undefined,
-          )
+          await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined)
         ).data;
-        const deviceId = await resolvePushDeviceId(appKey);
+        deviceId = await resolvePushDeviceId(appKey);
         if (!active) return;
 
-        await upsertNotificationPushEndpoint({
-          provider: "expo",
-          endpointToken: token,
-          deviceId,
-          platform: Platform.OS === "ios" ? "ios" : "android",
-        });
+        const registerToken = async (endpointToken: string): Promise<void> => {
+          if (!active || !deviceId) return;
+          await upsertNotificationPushEndpoint({
+            provider: "expo",
+            endpointToken,
+            deviceId,
+            platform: Platform.OS === "ios" ? "ios" : "android",
+          });
+        };
+
+        await registerToken(token);
         if (!active) return;
+
+        tokenSubscription = Notifications.addPushTokenListener((nextToken) => {
+          if (nextToken.type !== "expo") return;
+          void registerToken(nextToken.data).catch((error) => {
+            console.warn(`[${appKey}] push token rotation failed`, error);
+          });
+        });
 
         unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(async () => {
-          await deactivateNotificationPushEndpoint(deviceId).catch(() => undefined);
+          if (deviceId) await deactivateNotificationPushEndpoint(deviceId).catch(() => undefined);
         });
       } catch (error) {
         // Registration is retried when the authenticated app root mounts again;
@@ -141,6 +163,7 @@ export function useDshMobilePushRegistration(
     return () => {
       active = false;
       unregisterSessionEndHook?.();
+      tokenSubscription?.remove();
       responseSubscription.remove();
     };
   }, [appKey, appScheme, authKind]);
