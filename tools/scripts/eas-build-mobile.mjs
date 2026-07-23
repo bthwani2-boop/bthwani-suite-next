@@ -76,6 +76,14 @@ for (const key of targets) {
   const appEnvironment = withSentryEnvironmentForApp(key, process.env);
 
   run(process.execPath, [
+    "tools/scripts/verify-mobile-sentry-env.mjs",
+    "--app",
+    key,
+    "--profile",
+    profile,
+  ], root, appEnvironment);
+
+  run(process.execPath, [
     "tools/scripts/guard-mobile-apps.mjs",
     "--require-build-secrets",
     "--platform",
