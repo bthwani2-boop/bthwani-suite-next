@@ -31,6 +31,9 @@
       "@bthwani/app-shell": [
         "shared/app-shell/src/index.ts"
       ],
+      "@bthwani/data-runtime": [
+        "shared/data-runtime/src/index.ts"
+      ],
       "@bthwani/core-identity": [
         "core/identity/clients/index.ts"
       ],

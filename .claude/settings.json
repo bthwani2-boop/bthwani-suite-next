@@ -41,7 +41,11 @@
       "Bash(gofmt -l internal/http/dispatch.go internal/dispatch/dispatch.go)",
       "Bash(gofmt -w internal/http/dispatch.go internal/dispatch/dispatch.go)",
       "Bash(node tools/guards/live-cross-journey-integrity-gate.mjs)",
-      "Bash(DSH_REQUIRE_DB_TESTS=true DATABASE_URL=\"postgres://bthwani_runtime:bthwani_runtime_password@127.0.0.1:55432/bthwani_runtime?sslmode=disable\" go test ./internal/partnerdelivery/... -v)"
+      "Bash(DSH_REQUIRE_DB_TESTS=true DATABASE_URL=\"postgres://bthwani_runtime:bthwani_runtime_password@127.0.0.1:55432/bthwani_runtime?sslmode=disable\" go test ./internal/partnerdelivery/... -v)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\({dependencies:p.dependencies, devDependencies:p.devDependencies}, null, 2\\)\\)\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\bassa\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--bthwani-suite-next\\\\e849f825-e7f3-47f6-9002-704b1cbeffcf\\\\scratchpad\")",
+      "Bash(pnpm install *)",
+      "Bash(pnpm nx *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\bassa\\.claude\\plans"

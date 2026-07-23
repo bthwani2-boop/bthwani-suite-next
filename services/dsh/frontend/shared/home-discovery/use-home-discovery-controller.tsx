@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@bthwani/data-runtime";
 import { fetchHomeDiscovery } from "./home-discovery.api";
-import {
-  HOME_DISCOVERY_INITIAL_FILTER,
-  loadHomeDiscovery,
-} from "./home-discovery.controller-core";
+import { HOME_DISCOVERY_INITIAL_FILTER } from "./home-discovery.controller-core";
 import { loadingState, type HomeDiscoveryState } from "./home-discovery.states";
 import type { DiscoveryFilterKind } from "./home-discovery.types";
 
@@ -23,7 +22,6 @@ export type HomeDiscoveryController = {
 export function useHomeDiscoveryController(
   scope: HomeDiscoveryScope = {},
 ): HomeDiscoveryController {
-  const [state, setState] = useState<HomeDiscoveryState>(loadingState());
   const [activeFilter, setActiveFilter] = useState<DiscoveryFilterKind>(
     HOME_DISCOVERY_INITIAL_FILTER,
   );
@@ -31,31 +29,27 @@ export function useHomeDiscoveryController(
   const cityCode = scope.cityCode?.trim() || undefined;
   const serviceAreaCode = scope.serviceAreaCode?.trim() || undefined;
 
-  const load = useCallback(async () => {
-    if (!enabled) {
-      setState(loadingState());
-      return;
-    }
-    await loadHomeDiscovery(
-      () => fetchHomeDiscovery({
+  // fetchHomeDiscovery never throws — network/HTTP failures resolve to
+  // errorState()/serviceUnavailableState() instead. useQuery here therefore
+  // provides caching, dedup, and refetch-on-reconnect only; its own
+  // throw-based retry/error path is structurally unreachable for this query.
+  const query = useQuery({
+    queryKey: queryKeys.dshHomeDiscovery({ cityCode, serviceAreaCode }),
+    queryFn: () =>
+      fetchHomeDiscovery({
         ...(cityCode !== undefined ? { cityCode } : {}),
         ...(serviceAreaCode !== undefined ? { serviceAreaCode } : {}),
         limit: 20,
       }),
-      setState,
-    );
-  }, [cityCode, enabled, serviceAreaCode]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+    enabled,
+  });
 
   return {
-    state,
+    state: query.isPending ? loadingState() : (query.data ?? loadingState()),
     activeFilter,
     setActiveFilter,
     retry: () => {
-      void load();
+      void query.refetch();
     },
   };
 }

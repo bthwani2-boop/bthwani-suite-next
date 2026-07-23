@@ -2,6 +2,7 @@
 packages:
   - "apps/*/runtime"
   - "shared/app-shell"
+  - "shared/data-runtime"
   - "shared/ui-kit"
   - "services/*"
   - "core/identity"
