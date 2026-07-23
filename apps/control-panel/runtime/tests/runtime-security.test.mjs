@@ -77,15 +77,20 @@ test("all control-panel BFF routes share one HttpOnly cookie owner", () => {
   assert.doesNotMatch(proxy, /bthwani_cp_access|bthwani_cp_refresh/);
 });
 
-test("generic identity BFF accepts only control-panel operator token sessions", () => {
+test("all identity token rotation paths require control-panel operator role", () => {
   const proxy = read("apps/control-panel/runtime/src/server/bff-proxy.ts");
   const loginRoute = read("apps/control-panel/runtime/src/app/api/auth/login/route.ts");
+  const refreshRoute = read("apps/control-panel/runtime/src/app/api/auth/refresh/route.ts");
+  const sessionRoute = read("apps/control-panel/runtime/src/app/api/auth/session/route.ts");
 
   assert.match(proxy, /function tokenResponseHasOperatorIdentity/);
   assert.match(proxy, /roles\.includes\("operator"\)/);
   assert.match(proxy, /CONTROL_PANEL_FORBIDDEN/);
   assert.match(proxy, /clearSessionCookies\(response\)/);
   assert.match(loginRoute, /tokens\.identity\.roles\.includes\("operator"\)/);
+  assert.match(refreshRoute, /rotated\.identity\.roles\.includes\("operator"\)/);
+  assert.match(refreshRoute, /clearSessionCookies\(response\)/);
+  assert.match(sessionRoute, /resolved\.identity\.roles\.includes\("operator"\)/);
 });
 
 test("control-panel BFF keeps credentials server-side and rejects open proxy behavior", () => {
