@@ -32,9 +32,27 @@ export async function fetchNotificationPreferences(): Promise<{ preferences: Dsh
   return request("/dsh/notifications/preferences");
 }
 
-export async function updateNotificationPreferences(
+export function updateNotificationPreferences(
   input: DshUpdateNotificationPreferenceInput,
+): Promise<{ preference: DshNotificationPreference }>;
+export function updateNotificationPreferences(
+  topic: string,
+  enabled: boolean,
+): Promise<{ preference: DshNotificationPreference }>;
+export async function updateNotificationPreferences(
+  inputOrTopic: DshUpdateNotificationPreferenceInput | string,
+  enabled?: boolean,
 ): Promise<{ preference: DshNotificationPreference }> {
+  const input: DshUpdateNotificationPreferenceInput = typeof inputOrTopic === "string"
+    ? {
+        topic: inputOrTopic,
+        enabled: enabled === true,
+        channels: ["in_app"],
+        locale: "ar",
+        timezone: "Asia/Aden",
+      }
+    : inputOrTopic;
+
   return request("/dsh/notifications/preferences", {
     method: "PUT",
     body: JSON.stringify(input),
