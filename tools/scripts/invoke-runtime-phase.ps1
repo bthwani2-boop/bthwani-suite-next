@@ -75,20 +75,20 @@ if (-not (Test-Path -LiteralPath $RuntimeScript)) {
   throw "Runtime script not found: $RuntimeScript"
 }
 
-$arguments = @("-Action", $Action, "-Profiles", $Profiles)
-if ($Force) { $arguments += "-Force" }
+$runtimeParameters = @{
+  Action = $Action
+  Profiles = $Profiles
+}
+if ($Force) { $runtimeParameters.Force = $true }
 
 try {
   Set-Location -LiteralPath $RepoRoot
-  & $RuntimeScript @arguments 2>&1 | Tee-Object -FilePath $LogPath
+  & $RuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath
   Publish-RuntimeStatus -State success -Description "runtime $Action passed"
 } catch {
   $message = $_.Exception.Message
-  $subject = if ($message -match "([A-Za-z][A-Za-z0-9_-]+(?: API| migration| smoke| health| readiness| bootstrap| start)?)") {
-    $Matches[1]
-  } else {
-    "phase-failed"
-  }
+  $subject = ConvertTo-StatusText -Value $message -Limit 48
+  if ([string]::IsNullOrWhiteSpace($subject)) { $subject = "phase-failed" }
   Publish-RuntimeStatus -State failure -Description $message -Subject $subject
   Write-Error "Runtime phase '$Action' failed: $message. Full log: $LogPath"
   if (Test-Path -LiteralPath $LogPath) {
