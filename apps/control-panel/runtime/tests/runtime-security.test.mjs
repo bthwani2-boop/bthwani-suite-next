@@ -120,6 +120,26 @@ test("control-panel BFF keeps credentials server-side and rejects open proxy beh
     assert.match(route, new RegExp(`"${service.replace("-", "\\-")}"`));
   }
   assert.match(route, /BFF_SERVICE_NOT_ALLOWED/);
+  assert.match(route, /BFF_PATH_NOT_ALLOWED/);
+  assert.match(route, /Object\.hasOwn\(allowedPathPrefixes, service\)/);
+});
+
+test("production BFF upstreams are server-only and fail closed when absent", () => {
+  const proxy = read("apps/control-panel/runtime/src/server/bff-proxy.ts");
+  for (const variable of [
+    "DSH_API_BASE_URL",
+    "IDENTITY_API_BASE_URL",
+    "WLT_API_BASE_URL",
+    "WORKFORCE_API_BASE_URL",
+    "PROVIDERS_API_BASE_URL",
+    "PLATFORM_CONTROL_API_BASE_URL",
+  ]) {
+    assert.match(proxy, new RegExp(`env: "${variable}"`));
+  }
+  assert.doesNotMatch(proxy, /NEXT_PUBLIC_[A-Z_]+_API_BASE_URL/);
+  assert.match(proxy, /process\.env\.NODE_ENV === "production"/);
+  assert.match(proxy, /BFF_UPSTREAM_NOT_CONFIGURED/);
+  assert.match(proxy, /return null/);
 });
 
 test("web compatibility adapters preserve visible and truthful behavior", () => {
