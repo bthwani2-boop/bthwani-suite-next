@@ -79,6 +79,9 @@
       "expo-constants": [
         "apps/app-client/runtime/node_modules/expo-constants"
       ],
+      "expo-crypto": [
+        "apps/app-client/runtime/node_modules/expo-crypto"
+      ],
       "@dsh-shared/*": [
         "services/dsh/frontend/shared/*"
       ]
