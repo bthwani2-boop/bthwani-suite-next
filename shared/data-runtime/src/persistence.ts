@@ -27,17 +27,21 @@ export async function restoreBthwaniQueryClient(
   client: QueryClient,
   storageKey: string,
 ): Promise<void> {
-  const raw = await AsyncStorage.getItem(storageKey);
-  if (!raw) return;
   try {
-    const envelope: unknown = JSON.parse(raw);
-    if (!isEnvelope(envelope) || Date.now() - envelope.persistedAt > MAX_CACHE_AGE_MS) {
+    const raw = await AsyncStorage.getItem(storageKey);
+    if (!raw) return;
+    try {
+      const envelope: unknown = JSON.parse(raw);
+      if (!isEnvelope(envelope) || Date.now() - envelope.persistedAt > MAX_CACHE_AGE_MS) {
+        await AsyncStorage.removeItem(storageKey);
+        return;
+      }
+      hydrate(client, envelope.clientState);
+    } catch {
       await AsyncStorage.removeItem(storageKey);
-      return;
     }
-    hydrate(client, envelope.clientState);
   } catch {
-    await AsyncStorage.removeItem(storageKey);
+    // Storage unavailable (e.g. native module not linked); continue without cached state.
   }
 }
 

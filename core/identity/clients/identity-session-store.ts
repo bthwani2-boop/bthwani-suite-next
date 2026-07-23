@@ -171,7 +171,7 @@ function identityErrorCode(error: unknown): string {
 
 function clearSession(message?: string): void {
   stored = null;
-  void saveStoredSession(null);
+  void saveStoredSession(null).catch(() => undefined);
   setState(message ? { kind: "error", message } : { kind: "signed_out" });
 }
 
@@ -181,7 +181,7 @@ function commitAuthenticatedSession(session: StoredSession, persist: boolean): v
     return;
   }
   stored = session;
-  if (persist) void saveStoredSession(session);
+  if (persist) void saveStoredSession(session).catch(() => undefined);
   setState({
     kind: "authenticated",
     identity: session.identity,
@@ -218,12 +218,16 @@ export function configureIdentitySession(baseUrl: string): void {
   setState({ kind: "restoring" });
 
   void (async () => {
-    const saved = await loadStoredSession();
-    if (!saved) {
+    try {
+      const saved = await loadStoredSession();
+      if (!saved) {
+        setState({ kind: "signed_out" });
+        return;
+      }
+      await restoreStoredSession(configuredClient, saved);
+    } catch {
       setState({ kind: "signed_out" });
-      return;
     }
-    await restoreStoredSession(configuredClient, saved);
   })();
 }
 
