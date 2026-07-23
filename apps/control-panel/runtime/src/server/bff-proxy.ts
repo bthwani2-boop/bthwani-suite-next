@@ -1,8 +1,14 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  clearSessionCookies,
+  setSessionCookies,
+} from "./session-cookies";
 
-export const BFF_ACCESS_COOKIE = "bthwani_cp_access";
-export const BFF_REFRESH_COOKIE = "bthwani_cp_refresh";
+export const BFF_ACCESS_COOKIE = ACCESS_TOKEN_COOKIE;
+export const BFF_REFRESH_COOKIE = REFRESH_TOKEN_COOKIE;
 export const BFF_OPAQUE_TOKEN = "BFF_HTTP_ONLY_COOKIE_SESSION";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -69,35 +75,6 @@ function jsonError(status: number, code: string, message: string): NextResponse 
     { code, message },
     { status, headers: { "Cache-Control": "no-store" } },
   );
-}
-
-function tokenCookieOptions(expires?: Date) {
-  return {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict" as const,
-    path: "/",
-    ...(expires ? { expires } : {}),
-  };
-}
-
-function clearSessionCookies(response: NextResponse): void {
-  response.cookies.set(BFF_ACCESS_COOKIE, "", {
-    ...tokenCookieOptions(new Date(0)),
-    maxAge: 0,
-  });
-  response.cookies.set(BFF_REFRESH_COOKIE, "", {
-    ...tokenCookieOptions(new Date(0)),
-    maxAge: 0,
-  });
-}
-
-function accessTokenExpiry(identity: unknown): Date | undefined {
-  if (!identity || typeof identity !== "object") return undefined;
-  const expiresAt = (identity as { expiresAt?: unknown }).expiresAt;
-  if (typeof expiresAt !== "string") return undefined;
-  const parsed = new Date(expiresAt);
-  return Number.isFinite(parsed.getTime()) ? parsed : undefined;
 }
 
 function buildUpstreamHeaders(
@@ -233,15 +210,7 @@ export async function proxyControlPanelRequest(
         status: upstream.status,
         headers: copyResponseHeaders(upstream),
       });
-      response.cookies.set(
-        BFF_ACCESS_COOKIE,
-        parsed.accessToken,
-        tokenCookieOptions(accessTokenExpiry(parsed.identity)),
-      );
-      response.cookies.set(BFF_REFRESH_COOKIE, parsed.refreshToken, {
-        ...tokenCookieOptions(),
-        maxAge: 60 * 60 * 24 * 30,
-      });
+      setSessionCookies(response, parsed);
       return response;
     }
 
