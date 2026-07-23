@@ -98,6 +98,14 @@ for (const migration of migrations) {
   }
 }
 
+const trustedTenantMigrationPath = "services/dsh/database/migrations/dsh-954_trusted_tenant_session_context.sql";
+const trustedTenantMigration = read(trustedTenantMigrationPath);
+requireText(trustedTenantMigration, "dsh_trusted_tenant_context", trustedTenantMigrationPath);
+requireText(trustedTenantMigration, "current_setting('bthwani.tenant_id', TRUE)", trustedTenantMigrationPath);
+requireText(trustedTenantMigration, "TENANT_OWNERSHIP_IMMUTABLE", trustedTenantMigrationPath);
+requireText(trustedTenantMigration, "trg_dsh_partners_tenant", trustedTenantMigrationPath);
+requireText(trustedTenantMigration, "trg_dsh_stores_tenant", trustedTenantMigrationPath);
+
 for (const suite of ["schema", "seed"]) {
   const tests = listSql(`services/dsh/database/tests/${suite}`);
   if (tests.length === 0) {
@@ -160,6 +168,10 @@ requireText(workflow, '"package.json"', "DSH database workflow path routing");
 requireText(workflow, "Apply canonical DSH migrations", "DSH database workflow");
 requireText(workflow, "Re-run canonical DSH migrations", "DSH database workflow");
 requireText(workflow, "Verify DSH migration runner failure contracts", "DSH database workflow");
+requireText(workflow, "Configure isolated CI trusted tenant context", "DSH database workflow");
+requireText(workflow, "ALTER DATABASE dsh_runtime SET bthwani.tenant_id", "DSH database workflow");
+requireText(workflow, "Clear isolated CI trusted tenant context", "DSH database workflow");
+requireText(workflow, "ALTER DATABASE dsh_runtime RESET bthwani.tenant_id", "DSH database workflow");
 requireText(workflow, "Apply DSH local seeds twice", "DSH database workflow");
 requireText(workflow, "Run DSH schema database contracts", "DSH database workflow");
 requireText(workflow, "Run DSH seed database contracts", "DSH database workflow");
