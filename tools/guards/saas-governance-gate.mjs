@@ -29,6 +29,18 @@ function readText(relativePath) {
   return fs.readFileSync(fullPath, "utf8");
 }
 
+function requireMarkers(relativePath, content, markers) {
+  for (const marker of markers) {
+    if (!content.includes(marker)) {
+      violations.push({
+        file: relativePath,
+        line: 0,
+        message: `SAAS_LIVE_CODE_MARKER_MISSING ${marker}`,
+      });
+    }
+  }
+}
+
 const statePath = "governance/saas/saas-governance.json";
 const schemaPath = "governance/saas/saas-governance.schema.json";
 const authorizationPath = "governance/saas/activation-authorization.json";
@@ -182,6 +194,10 @@ if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED" || state?.comme
       violations.push({ file: runtimeEnvPath, line: 0, message: `SAAS_RUNTIME_ENV_MARKER_MISSING ${marker}` });
     }
   }
+  const defaultTenantMatch = /^BTHWANI_DEFAULT_TENANT_ID=(.+)$/m.exec(runtimeEnv);
+  if (!defaultTenantMatch || defaultTenantMatch[1].trim() === "") {
+    violations.push({ file: runtimeEnvPath, line: 0, message: "SAAS_DEFAULT_TENANT_MUST_BE_NON_EMPTY" });
+  }
 
   for (const marker of [
     "x-bthwani-saas-environment: &bthwani-saas-environment",
@@ -215,6 +231,52 @@ if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED" || state?.comme
     if (!serviceBlock.includes("<<: *bthwani-saas-environment")) {
       violations.push({ file: composePath, line: 0, message: `SAAS_CONTEXT_MISSING_FROM_SERVICE ${service}` });
     }
+  }
+
+  const liveCodeRequirements = [
+    {
+      path: "core/platform-control/backend/internal/auth/client.go",
+      markers: ["TenantID", `json:\"tenantId\"`],
+    },
+    {
+      path: "core/platform-control/backend/internal/http/server.go",
+      markers: ["enforceSaasTenantContext", "TENANT_CONTEXT_REQUIRED", "TENANT_CONTEXT_FORBIDDEN", "UNTRUSTED_TENANT_CONTEXT"],
+    },
+    {
+      path: "core/platform-control/backend/internal/http/saas_tenant_context_test.go",
+      markers: ["TestSaaSTenantContextAcceptsIdentityOwnedTenant", "TestSaaSTenantContextRejectsCrossTenantIdentity", "TestSaaSTenantContextRejectsClientTenantOverride"],
+    },
+    {
+      path: "core/platform-control/contracts/platform-control.saas.overlay.yaml",
+      markers: ["PlatformRuntimeSnapshot", "PlatformSaasRuntimeStatus", "defaultTenantId", "runtimeEnabled"],
+    },
+    {
+      path: "core/platform-control/clients/generated/platform-control-saas-runtime.ts",
+      markers: ["PlatformSaasRuntimeStatus", "PlatformRuntimeSnapshotWithSaaS"],
+    },
+    {
+      path: "services/wlt/backend/internal/shared/serviceauth.go",
+      markers: ["requireTrustedSaaSTenant", "SAAS_TENANT_NOT_CONFIGURED", "TENANT_CONTEXT_FORBIDDEN"],
+    },
+    {
+      path: "services/wlt/backend/internal/shared/serviceauth_test.go",
+      markers: ["TestRequireServiceCallerRequiresTenantForEveryActiveSaaSCall", "TestRequireServiceCallerRejectsCrossTenantServiceCall"],
+    },
+    {
+      path: "services/dsh/backend/internal/wlt/client.go",
+      markers: ["defaultTenantID", "resolveTrustedTenant", "setTrustedTenantHeader"],
+    },
+    {
+      path: "services/dsh/backend/internal/wlt/saas_tenant_test.go",
+      markers: ["TestActiveSaaSClientPropagatesTrustedTenantToCodHandoff", "TestActiveSaaSClientRejectsTenantOverride"],
+    },
+    {
+      path: "services/dsh/frontend/shared/platform/platform-control.api.ts",
+      markers: ["PlatformRuntimeSnapshotWithSaaS", "fetchPlatformRuntimeConfig"],
+    },
+  ];
+  for (const requirement of liveCodeRequirements) {
+    requireMarkers(requirement.path, readText(requirement.path), requirement.markers);
   }
 }
 
