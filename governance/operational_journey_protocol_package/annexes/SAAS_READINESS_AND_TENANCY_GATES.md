@@ -1,8 +1,13 @@
 # SaaS Readiness and Tenancy Gates
 
 Classification: CONDITIONAL_MANDATORY_ANNEX
+
 Machine-readable state: `governance/saas/saas-governance.json`
+
 Schema: `governance/saas/saas-governance.schema.json`
+
+Activation authorization: `governance/saas/activation-authorization.json`
+
 Canonical decisions: `governance/contracts/decision-vocabulary.json`
 
 ## Applies When
@@ -21,19 +26,24 @@ applies_when:
 
 ```yaml
 platform_mode: BTHWANI_NATIVE_PLATFORM
-saas_readiness_mode: SAAS_READY_DEFERRED
-commercial_activation_state: BLOCKED_BY_POLICY
+saas_readiness_mode: SAAS_ACTIVE
+commercial_activation_state: ACTIVATION_AUTHORIZED
+production_deployment_authorized: false
 canonical_decision: NEEDS_EVIDENCE
 ```
 
-`SAAS_READY_DEFERRED` and `BLOCKED_BY_POLICY` are state values, not closure decisions. They never replace the canonical decision vocabulary.
+The explicit user instruction dated 2026-07-23 removed the policy block and authorized SaaS activation on `lianbassam`. SaaS runtime mode is active. Production deployment remains a separate authorization, and `ACTIVE` commercial state remains unavailable until same-commit evidence and independent approvals are complete.
 
-Current meaning:
+State values never replace the canonical decision vocabulary. `SAAS_ACTIVE` means the platform must execute tenant-aware runtime behavior; it does not by itself prove production isolation, security, financial separation, or commercial release readiness.
+
+Current rules:
 
 - Preserve the unified multi-surface full-stack model.
-- Add trusted tenant boundaries and isolation where future retrofit would be expensive.
-- Do not claim tenant isolation, SaaS readiness, or commercial activation without same-commit evidence.
-- Do not add subscriptions, billing, self-service signup, white-labeling, custom domains, marketplace extensions, or database-per-tenant while commercial activation is blocked.
+- Derive tenant context from trusted identity or server-side delegation.
+- Never trust a client-supplied tenant identifier as authority.
+- Do not mark any evidence `PROVEN` without same-commit proof.
+- Do not deploy production from this authorization because `productionDeploymentAuthorized` is false.
+- Keep deferred commercial capabilities disabled until each has Product Truth, architecture, security, finance, and SDLC approval.
 
 ## Tenant Definition
 
@@ -41,7 +51,7 @@ A tenant is the platform operator or organization that owns an isolated operatin
 
 A tenant is not automatically the same as a Partner, Store, User, City, or Service.
 
-Expected future relationship:
+Expected relationship:
 
 ```text
 Tenant / Platform Operator
@@ -101,11 +111,11 @@ A matrix is planning or evidence structure only. It does not prove runtime isola
 - Privileged operator cross-tenant access requires delegated tenant context, permission, reason, expiry, audit event, and no self-approval.
 - Global data must be explicitly classified as `GLOBAL`; unexplained null tenant ownership is forbidden.
 - Cache keys, idempotency keys, outbox events, audit events, media references, and financial references must carry or derive the same trusted tenant boundary when tenant-owned.
-- Cross-tenant negative tests and independent isolation-security approval are mandatory before any isolation claim.
+- Cross-tenant negative tests and independent isolation-security approval are mandatory before production isolation claims.
 
 ## Deferred Commercial Features
 
-Do not build or activate in `SAAS_READY_DEFERRED` mode:
+The following remain deferred even though SaaS runtime mode is active:
 
 - commercial subscription billing;
 - paid plan matrix;
@@ -119,11 +129,23 @@ Do not build or activate in `SAAS_READY_DEFERRED` mode:
 - database-per-tenant;
 - multi-region tenant placement.
 
-Adding one of these features requires an explicit Product Truth contract, SaaS impact declaration, architecture approval, security and finance impact routing, and formal SDLC evidence.
+Adding one requires an explicit Product Truth contract, SaaS impact declaration, architecture approval, security and finance routing, and formal SDLC evidence.
 
-## Activation Gate
+## Activation States
 
-Commercial SaaS activation requires all of the following on the same immutable commit and environment:
+### ACTIVATION_AUTHORIZED
+
+This state means:
+
+- the previous policy block is removed;
+- SaaS runtime mode is enabled;
+- verification work may execute immediately;
+- production deployment is not authorized unless separately recorded;
+- unresolved evidence remains visible and cannot be rewritten as proven.
+
+### ACTIVE
+
+Commercial production activation requires all of the following on the same immutable commit and environment:
 
 ```yaml
 saas_activation_gate:
@@ -143,9 +165,9 @@ saas_activation_gate:
   legal_privacy_commercial_model_approved: PROVEN
 ```
 
-The readiness state may then move to `SAAS_ACTIVE` and the commercial activation state to `ACTIVE` only when the requested SDLC journey also reaches the applicable canonical decision. The state transition itself is not a decision.
+Only then may `commercialActivationState` move to `ACTIVE`, `productionDeploymentAuthorized` become true under separate authorization, and the applicable canonical decision become `CLOSED_WITH_EVIDENCE`.
 
-Allowed canonical decisions for this annex:
+Allowed canonical decisions:
 
 ```text
 PASS
@@ -156,8 +178,6 @@ PROTOCOL_VIOLATION
 CLOSED_WITH_EVIDENCE
 ```
 
-`PASS` is scope-specific. `CLOSED_WITH_EVIDENCE` remains subject to every applicable product, runtime, QA, security, finance, isolation, governance, CI, release, and production scope.
+## Acceptance Condition
 
-## Acceptance condition
-
-Accepted only when the machine-readable SaaS state validates against its schema, applicable tenant boundaries and security rules are traceable to live code or explicit planned scope, deferred commercial constraints remain enforced, every readiness state is distinct from the canonical decision, and commercial activation cannot occur without complete same-commit evidence and independent approvals.
+Accepted when machine-readable SaaS state validates against its schema, explicit activation authorization is traceable, SaaS runtime mode is enabled, tenant boundaries remain enforced, deferred features remain controlled, and no production or evidence claim exceeds the proof available on the same commit.
