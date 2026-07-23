@@ -30,6 +30,7 @@
     }
   },
   "tags": [
-    "scope:control-panel type:app"
+    "scope:control-panel",
+    "type:app"
   ]
 }
