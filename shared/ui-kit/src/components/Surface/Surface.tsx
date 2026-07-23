@@ -1,5 +1,5 @@
 import React from "react";
-import { View, type ViewProps } from "react-native";
+import { View, type DimensionValue, type ViewProps } from "react-native";
 import { colorRoles } from "../../tokens/colors";
 import { radius } from "../../tokens/radius";
 
@@ -11,8 +11,8 @@ export type SurfaceProps = Omit<ViewProps, "children" | "style"> & {
   centered?: boolean | undefined;
   padding?: string | number | undefined;
   gap?: string | number | undefined;
-  width?: string | number | undefined;
-  maxWidth?: string | number | undefined;
+  width?: DimensionValue | undefined;
+  maxWidth?: DimensionValue | undefined;
   onPress?: (() => void) | undefined;
   hoverStyle?: Record<string, unknown> | undefined;
   pressStyle?: Record<string, unknown> | undefined;
