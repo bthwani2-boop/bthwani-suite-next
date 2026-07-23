@@ -164,12 +164,20 @@ for (const requiredFeature of [
 }
 
 if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED" || state?.commercialActivationState === "ACTIVE") {
-  for (const marker of [
-    "BTHWANI_SAAS_MODE=active",
-    "BTHWANI_COMMERCIAL_ACTIVATION_STATE=authorized",
-    "BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED=false",
-    "BTHWANI_DEFAULT_TENANT_ID=",
-  ]) {
+  const expectedRuntimeMarkers = state.commercialActivationState === "ACTIVE"
+    ? [
+        "BTHWANI_SAAS_MODE=active",
+        "BTHWANI_COMMERCIAL_ACTIVATION_STATE=active",
+        "BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED=true",
+        "BTHWANI_DEFAULT_TENANT_ID=",
+      ]
+    : [
+        "BTHWANI_SAAS_MODE=active",
+        "BTHWANI_COMMERCIAL_ACTIVATION_STATE=authorized",
+        "BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED=false",
+        "BTHWANI_DEFAULT_TENANT_ID=",
+      ];
+  for (const marker of expectedRuntimeMarkers) {
     if (!runtimeEnv.includes(marker)) {
       violations.push({ file: runtimeEnvPath, line: 0, message: `SAAS_RUNTIME_ENV_MARKER_MISSING ${marker}` });
     }
@@ -193,13 +201,17 @@ if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED" || state?.comme
   }
 
   for (const service of ["identity-api", "workforce-api", "providers-api", "platform-control-api", "wlt-api", "dsh-api"]) {
-    const serviceStart = compose.indexOf(`  ${service}:`);
-    if (serviceStart < 0) {
+    const header = new RegExp(`^  ${service}:\\s*$`, "m").exec(compose);
+    if (!header) {
       violations.push({ file: composePath, line: 0, message: `SAAS_REQUIRED_API_SERVICE_MISSING ${service}` });
       continue;
     }
-    const nextService = compose.indexOf("\n  ", serviceStart + service.length + 3);
-    const serviceBlock = compose.slice(serviceStart, nextService > serviceStart ? nextService : compose.length);
+    const serviceStart = header.index;
+    const afterHeader = serviceStart + header[0].length;
+    const tail = compose.slice(afterHeader);
+    const nextHeader = /^  [A-Za-z0-9-]+:\s*$/m.exec(tail);
+    const serviceEnd = nextHeader ? afterHeader + nextHeader.index : compose.length;
+    const serviceBlock = compose.slice(serviceStart, serviceEnd);
     if (!serviceBlock.includes("<<: *bthwani-saas-environment")) {
       violations.push({ file: composePath, line: 0, message: `SAAS_CONTEXT_MISSING_FROM_SERVICE ${service}` });
     }
