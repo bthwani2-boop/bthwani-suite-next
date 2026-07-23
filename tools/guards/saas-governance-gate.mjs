@@ -122,7 +122,7 @@ if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED") {
 }
 
 if (state?.commercialActivationState === "ACTIVE") {
-  const unresolved = Object.entries(state.activationEvidence ?? {}).filter(([, value]) => value !== "PROVEN");
+  const unresolved = Object.entries(state.activationEvidence ?? []).filter(([, value]) => value !== "PROVEN");
   for (const [key, value] of unresolved) {
     violations.push({ file: statePath, line: 0, message: `ACTIVE_SAAS_WITH_UNPROVEN_EVIDENCE ${key}=${value}` });
   }
@@ -198,6 +198,9 @@ if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED" || state?.comme
   if (!defaultTenantMatch || defaultTenantMatch[1].trim() === "") {
     violations.push({ file: runtimeEnvPath, line: 0, message: "SAAS_DEFAULT_TENANT_MUST_BE_NON_EMPTY" });
   }
+  if (defaultTenantMatch?.[1].trim() !== "local-dsh") {
+    violations.push({ file: runtimeEnvPath, line: 0, message: "LOCAL_SAAS_TENANT_MUST_MATCH_IDENTITY_BOOTSTRAP local-dsh" });
+  }
 
   for (const marker of [
     "x-bthwani-saas-environment: &bthwani-saas-environment",
@@ -205,6 +208,9 @@ if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED" || state?.comme
     "BTHWANI_COMMERCIAL_ACTIVATION_STATE:",
     "BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED:",
     "BTHWANI_DEFAULT_TENANT_ID:",
+    "BTHWANI_DEFAULT_TENANT_ID:-local-dsh",
+    "IDENTITY_API_BASE_URL: \"http://identity-api:8082\"",
+    "WLT_AUTH_MODE: \"identity-or-dsh-reference-auth\"",
   ]) {
     if (!compose.includes(marker)) {
       violations.push({ file: composePath, line: 0, message: `SAAS_COMPOSE_BINDING_MISSING ${marker}` });
@@ -255,12 +261,76 @@ if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED" || state?.comme
       markers: ["PlatformSaasRuntimeStatus", "PlatformRuntimeSnapshotWithSaaS"],
     },
     {
-      path: "services/wlt/backend/internal/shared/serviceauth.go",
-      markers: ["requireTrustedSaaSTenant", "SAAS_TENANT_NOT_CONFIGURED", "TENANT_CONTEXT_FORBIDDEN"],
+      path: "core/identity/backend/cmd/identity-api/main.go",
+      markers: ["SaaSAuthTenantBoundary", "SaaSActivationIssuerBoundary", "SaaSTenantBoundary", "SaaSOtpBoundary"],
     },
     {
-      path: "services/wlt/backend/internal/shared/serviceauth_test.go",
-      markers: ["TestRequireServiceCallerRequiresTenantForEveryActiveSaaSCall", "TestRequireServiceCallerRejectsCrossTenantServiceCall"],
+      path: "core/identity/backend/internal/http/saas_tenant_boundary.go",
+      markers: ["SaaSTenantBoundary", "TENANT_CONTEXT_REQUIRED", "PHONE_BOUND_TO_ANOTHER_TENANT", "handleTenantActorSearch"],
+    },
+    {
+      path: "core/identity/backend/internal/http/saas_auth_tenant_boundary.go",
+      markers: ["SaaSAuthTenantBoundary", "tenantFromAuthResponse", "repository.Logout", "TENANT_CONTEXT_FORBIDDEN"],
+    },
+    {
+      path: "core/identity/backend/internal/http/saas_otp_boundary.go",
+      markers: ["SaaSOtpBoundary", "RequestOtpForTenant", "activeSaaSTenant"],
+    },
+    {
+      path: "core/identity/backend/internal/identity/saas_otp.go",
+      markers: ["RequestOtpForTenant", "ErrTenantMismatch", "WHERE id = $1 AND tenant_id = $4"],
+    },
+    {
+      path: "core/identity/backend/internal/http/saas_activation_issuer_boundary.go",
+      markers: ["SaaSActivationIssuerBoundary", "issuedByActorId", "issuing actor belongs to another tenant"],
+    },
+    {
+      path: "core/identity/backend/internal/http/saas_auth_tenant_boundary_test.go",
+      markers: ["TestAuthTenantBoundaryRejectsAndRevokesCrossTenantLogin", "TestAuthTenantBoundaryPrechecksProtectedBearerRoutes"],
+    },
+    {
+      path: "core/identity/backend/internal/http/saas_tenant_boundary_test.go",
+      markers: ["TestInternalTenantRequestRejectsCrossTenantHeader", "TestProvisionTenantOverrideIsRejectedBeforeDatabaseAccess"],
+    },
+    {
+      path: "core/identity/backend/internal/http/saas_otp_boundary_test.go",
+      markers: ["TestSaaSOtpBoundaryUsesTrustedRuntimeTenant", "TestSaaSOtpBoundaryRejectsCrossTenantPhone"],
+    },
+    {
+      path: "core/identity/backend/internal/http/saas_activation_issuer_boundary_test.go",
+      markers: ["TestActivationIssuerBoundaryRejectsCrossTenantIssuer", "TestActivationIssuerBoundaryAcceptsSameTenantAndRestoresBody"],
+    },
+    {
+      path: "core/workforce/backend/internal/identityclient/client.go",
+      markers: ["defaultTenantID", "trustedTenant", "X-Tenant-ID", "ErrTenantForbidden"],
+    },
+    {
+      path: "core/workforce/backend/internal/identityclient/client_test.go",
+      markers: ["TestActiveSaaSClientSendsTrustedTenantToEveryIdentityCall", "TestActiveSaaSProvisionRejectsTenantOverrideBeforeNetwork"],
+    },
+    {
+      path: "core/workforce/backend/internal/auth/client.go",
+      markers: ["defaultTenantID", "identity.TenantID", "ErrUnauthenticated"],
+    },
+    {
+      path: "core/workforce/backend/internal/auth/saas_tenant_test.go",
+      markers: ["TestWorkforceAuthRejectsCrossTenantIdentity", "TestWorkforceAuthFailsClosedWithoutActiveTenant"],
+    },
+    {
+      path: "core/providers/backend/internal/auth/client.go",
+      markers: ["defaultTenantID", "identity.TenantID", "ErrUnauthenticated"],
+    },
+    {
+      path: "core/providers/backend/internal/auth/saas_tenant_test.go",
+      markers: ["TestProvidersAuthRejectsCrossTenantIdentity", "TestProvidersAuthFailsClosedWithoutActiveTenant"],
+    },
+    {
+      path: "services/dsh/backend/internal/auth/client.go",
+      markers: ["defaultTenantID", "identityMatchesRuntimeTenant", "ErrUnauthenticated"],
+    },
+    {
+      path: "services/dsh/backend/internal/auth/client_test.go",
+      markers: ["TestActiveSaaSResolveRejectsCrossTenantIdentity", "TestActiveSaaSResolveFailsClosedWithoutRuntimeTenant"],
     },
     {
       path: "services/dsh/backend/internal/wlt/client.go",
@@ -269,6 +339,34 @@ if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED" || state?.comme
     {
       path: "services/dsh/backend/internal/wlt/saas_tenant_test.go",
       markers: ["TestActiveSaaSClientPropagatesTrustedTenantToCodHandoff", "TestActiveSaaSClientRejectsTenantOverride"],
+    },
+    {
+      path: "services/wlt/backend/internal/shared/serviceauth.go",
+      markers: ["requireTrustedSaaSTenant", "SAAS_TENANT_NOT_CONFIGURED", "TENANT_CONTEXT_FORBIDDEN"],
+    },
+    {
+      path: "services/wlt/backend/internal/shared/referenceauth.go",
+      markers: ["RequireReferenceReader", "trustedDshReferenceRequest", "resolveReferenceIdentity", "TENANT_CONTEXT_FORBIDDEN"],
+    },
+    {
+      path: "services/wlt/backend/internal/http/reference_read_boundary.go",
+      markers: ["ReferenceReadBoundary", "/wlt/references/"],
+    },
+    {
+      path: "services/wlt/backend/internal/shared/referenceauth_test.go",
+      markers: ["TestReferenceReaderAcceptsTrustedDshService", "TestReferenceReaderRejectsCrossTenantIdentityDespiteClientHeader"],
+    },
+    {
+      path: "services/wlt/contracts/wlt.saas-reference-auth.overlay.yaml",
+      markers: ["BearerIdentity", "DshServiceBearer", "TenantContext", "Unavailable"],
+    },
+    {
+      path: "services/wlt/frontend/shared/dsh/wlt-dsh-http-request.ts",
+      markers: ["getIdentityAccessToken", "credentials: \"include\"", "Authorization: `Bearer ${token}`"],
+    },
+    {
+      path: "services/wlt/tests/saas-reference-transport.test.mjs",
+      markers: ["WLT reference transport authenticates both browser and native callers", "WLT SaaS reference contract declares Identity or trusted DSH authentication"],
     },
     {
       path: "services/dsh/frontend/shared/platform/platform-control.api.ts",
