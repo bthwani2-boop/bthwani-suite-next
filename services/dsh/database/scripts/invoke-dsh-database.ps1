@@ -72,6 +72,33 @@ function ConvertTo-SqlLiteral {
   return $Value.Replace("'", "''")
 }
 
+function Get-DockerComposeBaseArguments {
+  return @("compose", "--env-file", $EnvFilePath, "-f", $ComposeFilePath)
+}
+
+function Ensure-DockerDshPostgres {
+  $startArguments = @(Get-DockerComposeBaseArguments) + @("up", "-d", "postgres")
+  & docker @startArguments | Out-Host
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unable to start the PostgreSQL runtime container (exit $LASTEXITCODE)."
+  }
+
+  for ($attempt = 1; $attempt -le 30; $attempt += 1) {
+    $readyArguments = @(Get-DockerComposeBaseArguments) + @(
+      "exec", "-T", "postgres", "pg_isready",
+      "-U", "dsh_runtime", "-d", "dsh_runtime"
+    )
+    & docker @readyArguments *> $null
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "DSH PostgreSQL: ready"
+      return
+    }
+    Start-Sleep -Seconds 2
+  }
+
+  throw "DSH PostgreSQL did not become ready after 60 seconds."
+}
+
 function Invoke-DshPsql {
   param(
     [Parameter(Mandatory = $true)][string]$Sql,
@@ -85,8 +112,7 @@ function Invoke-DshPsql {
     if ($SingleTransaction) { $arguments += "--single-transaction" }
     $output = $Sql | & psql @arguments
   } else {
-    $arguments = @(
-      "compose", "--env-file", $EnvFilePath, "-f", $ComposeFilePath,
+    $arguments = @(Get-DockerComposeBaseArguments) + @(
       "exec", "-T", "postgres", "psql",
       "-U", "dsh_runtime", "-d", "dsh_runtime",
       "-X", "-q", "-v", "ON_ERROR_STOP=1"
@@ -250,10 +276,12 @@ ON CONFLICT (seed_name) DO UPDATE SET
 }
 
 function Invoke-DshDatabaseTests {
-  $directories = switch ($TestSuite) {
-    "schema" { @((Join-Path $TestRoot "schema")) }
-    "seed" { @((Join-Path $TestRoot "seed")) }
-    "all" { @((Join-Path $TestRoot "schema"), (Join-Path $TestRoot "seed")) }
+  $directories = @()
+  if ($TestSuite -eq "schema" -or $TestSuite -eq "all") {
+    $directories += (Join-Path $TestRoot "schema")
+  }
+  if ($TestSuite -eq "seed" -or $TestSuite -eq "all") {
+    $directories += (Join-Path $TestRoot "seed")
   }
 
   Write-Host "`n--- Running DSH database tests: $TestSuite ($Transport) ---"
@@ -269,6 +297,10 @@ function Invoke-DshDatabaseTests {
   }
 
   Write-Host "DSH database tests ($TestSuite): PASS"
+}
+
+if ($Transport -eq "docker") {
+  Ensure-DockerDshPostgres
 }
 
 switch ($Action) {
