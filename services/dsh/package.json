@@ -16,10 +16,10 @@
     "react": "19.2.3"
   },
   "dependencies": {
-    "@bthwani/core-identity": "workspace:*",
-    "@bthwani/ui-kit": "workspace:*",
     "@bthwani/control-panel": "workspace:*",
+    "@bthwani/core-identity": "workspace:*",
     "@bthwani/core-platform-control": "workspace:*",
+    "@bthwani/ui-kit": "workspace:*",
     "@bthwani/wlt": "workspace:*",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4"
@@ -27,7 +27,7 @@
   "devDependencies": {
     "@types/node": "24.10.1",
     "@types/react": "19.2.17",
-    "next": "16.2.2",
+    "next": "^16.2.11",
     "react": "19.2.3"
   }
 }

