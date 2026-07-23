@@ -161,16 +161,21 @@ if ($ShouldClearCache) {
 # Wi-Fi transport drops and interrupted scrcpy/Metro sessions.
 $AdbWatchdog = $null
 if ($WatchdogEligible) {
+    $WatchPortsCsv = $Ports -join ","
     $AdbWatchdog = Start-Job `
-        -ArgumentList @($AdbPath, $SelectedSerial, $Ports) `
+        -ArgumentList @($AdbPath, $SelectedSerial, $WatchPortsCsv) `
         -ScriptBlock {
             param(
                 [string] $WatchAdb,
                 [string] $WatchSerial,
-                [int[]] $WatchPorts
+                [string] $WatchPortsCsv
             )
 
             $ErrorActionPreference = "SilentlyContinue"
+            [int[]] $WatchPorts = @(
+                $WatchPortsCsv.Split(",", [System.StringSplitOptions]::RemoveEmptyEntries) |
+                    ForEach-Object { [int] $_ }
+            )
 
             while ($true) {
                 $State = (
