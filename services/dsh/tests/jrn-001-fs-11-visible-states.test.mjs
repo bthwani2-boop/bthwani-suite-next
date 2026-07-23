@@ -20,7 +20,7 @@ for (const state of ["loading", "empty", "offline", "forbidden", "conflict", "re
   assert.ok(registry.states[state], `visible state registry missing: ${state}`);
 }
 for (const state of ["idle", "loading", "ready", "saving", "submitting", "offline", "forbidden", "conflict", "readiness_blocked", "wlt_unavailable", "partial", "error"]) {
-  assert.match(visible, new RegExp(`\b${state}:\s*\{`), `partner onboarding visible copy missing: ${state}`);
+  assert.match(visible, new RegExp(`\\b${state}:\\s*\\{`), `partner onboarding visible copy missing: ${state}`);
 }
 for (const state of ["offline", "forbidden", "conflict", "readiness_blocked", "wlt_unavailable", "error"]) {
   assert.match(runtime, new RegExp(`["']${state}["']`), `runtime failure state missing: ${state}`);
