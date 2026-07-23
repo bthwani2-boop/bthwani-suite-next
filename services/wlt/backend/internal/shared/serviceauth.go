@@ -7,15 +7,44 @@ import (
 	"strings"
 )
 
+func requireTrustedSaaSTenant(w http.ResponseWriter, r *http.Request) bool {
+	mode := strings.ToLower(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")))
+	activation := strings.ToLower(strings.TrimSpace(os.Getenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE")))
+	requestTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+
+	if mode != "active" {
+		if strings.HasPrefix(r.URL.Path, "/wlt/promotion-funding/") && requestTenantID == "" {
+			SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required for promotion funding")
+			return false
+		}
+		return true
+	}
+	if activation != "authorized" && activation != "active" {
+		SendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", "active SaaS mode requires authorized or active commercial state")
+		return false
+	}
+
+	defaultTenantID := strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID"))
+	if defaultTenantID == "" {
+		SendError(w, http.StatusServiceUnavailable, "SAAS_TENANT_NOT_CONFIGURED", "BTHWANI_DEFAULT_TENANT_ID is required in active SaaS mode")
+		return false
+	}
+	if requestTenantID == "" {
+		SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required in active SaaS mode")
+		return false
+	}
+	if subtle.ConstantTimeCompare([]byte(requestTenantID), []byte(defaultTenantID)) != 1 {
+		SendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "service tenant does not match the active runtime tenant")
+		return false
+	}
+	return true
+}
+
 // RequireServiceCaller enforces that a request carries a valid shared-secret
-// bearer token (compared in constant time) plus the expected X-Service-Caller
-// identity. The secret is read from the given environment variable on every
-// call so it can be rotated without a restart in most deployments.
-//
-// Missing Authorization -> 401. Wrong token or wrong caller -> 403. If the
-// environment variable itself is unset, the request is rejected as
-// unavailable (503) rather than silently allowed, so a misconfigured
-// deployment fails closed instead of open.
+// bearer token (compared in constant time), the expected X-Service-Caller and,
+// when SaaS runtime mode is active, a trusted X-Tenant-ID matching the runtime
+// tenant. The tenant header is accepted only after service authentication and
+// is never trusted as a browser-supplied ownership selector.
 func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, expectedCaller string) bool {
 	expectedToken := os.Getenv(tokenEnvVar)
 	if expectedToken == "" {
@@ -35,9 +64,5 @@ func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, e
 		SendError(w, http.StatusForbidden, "SERVICE_CALLER_FORBIDDEN", "unexpected service caller")
 		return false
 	}
-	if strings.HasPrefix(r.URL.Path, "/wlt/promotion-funding/") && strings.TrimSpace(r.Header.Get("X-Tenant-ID")) == "" {
-		SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required for promotion funding")
-		return false
-	}
-	return true
+	return requireTrustedSAASTenant(w, r)
 }
