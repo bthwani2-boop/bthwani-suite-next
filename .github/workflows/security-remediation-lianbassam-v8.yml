@@ -1,0 +1,174 @@
+name: One-time lianbassam js-yaml edge diagnostics
+
+on:
+  push:
+    branches: [lianbassam]
+    paths:
+      - ".github/workflows/security-remediation-lianbassam-v8.yml"
+
+permissions:
+  contents: write
+  statuses: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout current lianbassam
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: lianbassam
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Publish run locator
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=pending \
+            -f context='bthwani/security-diagnostics-v8' \
+            -f description='Inspecting js-yaml dependency edges' \
+            -f target_url="${RUN_URL}"
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.34.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.17.0"
+          cache: pnpm
+
+      - name: Capture dependency edges and safe trial result
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p governance/evidence/security
+          cp pnpm-workspace.yaml /tmp/pnpm-workspace.yaml.before
+          cp pnpm-lock.yaml /tmp/pnpm-lock.yaml.before
+
+          pnpm why js-yaml --recursive --json > governance/evidence/security/js-yaml-why-before.json || true
+
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('pnpm-workspace.yaml')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          remove_fragments = (
+              'js-yaml@4.2.0:',
+              'js-yaml@5.2.0:',
+              "'@redocly/openapi-core@*>js-yaml':",
+              "'@eslint/eslintrc@*>js-yaml':",
+              "'@yarnpkg/parsers@*>js-yaml':",
+          )
+          filtered = [line for line in lines if not any(fragment in line for fragment in remove_fragments)]
+          output = []
+          for line in filtered:
+              output.append(line)
+              if 'js-yaml@>=3.0.0 <3.15.0:' in line:
+                  output.extend([
+                      "  '@redocly/openapi-core@*>js-yaml': 4.3.0",
+                      "  '@eslint/eslintrc@*>js-yaml': 4.3.0",
+                      "  '@yarnpkg/parsers@*>js-yaml': 5.2.1",
+                  ])
+          path.write_text('\n'.join(output) + '\n', encoding='utf-8')
+          PY
+
+          set +e
+          pnpm install --lockfile-only --reporter=append-only > /tmp/install.log 2>&1
+          install_code=$?
+          pnpm why js-yaml --recursive --json > governance/evidence/security/js-yaml-why-after-trial.json 2>/tmp/why-after.err
+          why_code=$?
+          pnpm audit --json > governance/evidence/security/pnpm-audit-js-yaml-trial.json 2>/tmp/audit.err
+          audit_code=$?
+          set -e
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          audit_path = Path('governance/evidence/security/pnpm-audit-js-yaml-trial.json')
+          counts = {}
+          advisories = []
+          if audit_path.exists() and audit_path.stat().st_size:
+              try:
+                  report = json.loads(audit_path.read_text(encoding='utf-8'))
+                  counts = report.get('metadata', {}).get('vulnerabilities', {})
+                  for advisory in report.get('advisories', {}).values():
+                      advisories.append({
+                          'module_name': advisory.get('module_name'),
+                          'severity': advisory.get('severity'),
+                          'patched_versions': advisory.get('patched_versions'),
+                          'findings': advisory.get('findings'),
+                      })
+              except Exception as exc:
+                  advisories.append({'parse_error': str(exc)})
+          summary = {
+              'counts': counts,
+              'advisories': advisories,
+          }
+          Path('governance/evidence/security/js-yaml-trial-summary.json').write_text(
+              json.dumps(summary, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
+          PY
+
+          {
+            echo "# JS-YAML trial diagnostics"
+            echo
+            echo "- install exit: ${install_code}"
+            echo "- why exit: ${why_code}"
+            echo "- audit exit: ${audit_code}"
+            echo
+            echo "## Install tail"
+            echo '```text'
+            tail -n 80 /tmp/install.log
+            echo '```'
+            echo
+            echo "## Why stderr"
+            echo '```text'
+            tail -n 40 /tmp/why-after.err
+            echo '```'
+            echo
+            echo "## Audit stderr"
+            echo '```text'
+            tail -n 40 /tmp/audit.err
+            echo '```'
+          } > governance/evidence/security/js-yaml-trial-diagnostic.md
+
+          cp /tmp/pnpm-workspace.yaml.before pnpm-workspace.yaml
+          cp /tmp/pnpm-lock.yaml.before pnpm-lock.yaml
+
+      - name: Commit diagnostics without changing dependency state
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/security-remediation-lianbassam-v7.yml
+          rm -f .github/workflows/security-remediation-lianbassam-v8.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(security): record js-yaml dependency edge diagnostics"
+          git pull --rebase origin lianbassam
+          git push origin HEAD:lianbassam
+
+      - name: Publish success
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api --method POST "repos/${REPOSITORY}/statuses/${SHA}" \
+            -f state=success \
+            -f context='bthwani/security-diagnostics-v8' \
+            -f description='js-yaml dependency edge diagnostics committed' \
+            -f target_url="${RUN_URL}"
