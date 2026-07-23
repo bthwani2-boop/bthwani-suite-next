@@ -9,10 +9,6 @@ function isDshRequestError(error: unknown): error is DshRequestError {
   return typeof error === "object" && error !== null && "kind" in error;
 }
 
-/**
- * 4xx/validation failures are stable outcomes, not transient faults — retrying
- * them just repeats the same rejection. Only network/5xx errors are worth a retry.
- */
 function shouldRetry(failureCount: number, error: unknown): boolean {
   if (failureCount >= 2) return false;
   if (isDshRequestError(error)) {
@@ -30,9 +26,15 @@ export function createBthwaniQueryClient(): QueryClient {
     defaultOptions: {
       queries: {
         staleTime: 30_000,
+        gcTime: 24 * 60 * 60 * 1000,
         retry: shouldRetry,
+        networkMode: "offlineFirst",
         refetchOnReconnect: true,
         refetchOnWindowFocus: false,
+      },
+      mutations: {
+        retry: shouldRetry,
+        networkMode: "offlineFirst",
       },
     },
   });
