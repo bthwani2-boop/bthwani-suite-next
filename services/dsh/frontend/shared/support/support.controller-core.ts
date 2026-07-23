@@ -148,7 +148,14 @@ export function makeSupportMessageController(
   }
 
   async function sendMessage(ticketId: string, input: DshAddMessageInput): Promise<void> {
-    const fingerprint = stableFingerprint({ body: input.body.trim(), isInternal: input.isInternal === true });
+    const body = input.body?.trim() ?? "";
+    if (!body) {
+      setState({ ...state, actionState: messageActionError("اكتب رسالة قبل الإرسال") });
+      return;
+    }
+
+    const normalizedInput: DshAddMessageInput = { ...input, body };
+    const fingerprint = stableFingerprint({ body, isInternal: input.isInternal === true });
     const attempt = await getOrCreateSupportMutationAttempt({
       scope: "client",
       operation: "ticket-message",
@@ -157,7 +164,7 @@ export function makeSupportMessageController(
     });
     setState({ ...state, actionState: messageActionSubmitting() });
     try {
-      const msg = await addTicketMessage(ticketId, input, attempt.context);
+      const msg = await addTicketMessage(ticketId, normalizedInput, attempt.context);
       await clearSupportMutationAttempt({
         scope: "client",
         operation: "ticket-message",
