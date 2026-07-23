@@ -18,53 +18,77 @@ $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $RuntimeDir = Join-Path $RepoRoot "apps\$AppKey\runtime"
 $AdbHelper = Join-Path $PSScriptRoot "mobile-adb.ps1"
 
-if (-not (Test-Path -LiteralPath $RuntimeDir)) {
+if (-not (Test-Path -LiteralPath $RuntimeDir -PathType Container)) {
     throw "Runtime directory not found: $RuntimeDir"
 }
-if (-not (Test-Path -LiteralPath $AdbHelper)) {
+if (-not (Test-Path -LiteralPath $AdbHelper -PathType Leaf)) {
     throw "ADB helper not found: $AdbHelper"
 }
 
 . $AdbHelper
-
-
 Set-Location -LiteralPath $RuntimeDir
 
-$DefaultRoute = Get-NetRoute `
-    -AddressFamily IPv4 `
-    -DestinationPrefix "0.0.0.0/0" `
-    -ErrorAction Stop |
-    Sort-Object RouteMetric, InterfaceMetric |
+# Fixed ports are part of the multi-app runtime contract. Never let Expo switch
+# interactively to another port because that invalidates adb reverse and scripts.
+$ExistingListener = Get-NetTCPConnection `
+    -State Listen `
+    -LocalPort $MetroPort `
+    -ErrorAction SilentlyContinue |
     Select-Object -First 1
 
-if (-not $DefaultRoute) {
-    throw "No active IPv4 default route was found."
+if ($ExistingListener) {
+    $OwnerLabel = "PID $($ExistingListener.OwningProcess)"
+    try {
+        $OwnerProcess = Get-Process -Id $ExistingListener.OwningProcess -ErrorAction Stop
+        $OwnerLabel = "$($OwnerProcess.ProcessName) (PID $($OwnerProcess.Id))"
+    } catch {
+        # The listener can disappear between discovery and process resolution.
+    }
+    throw "Metro port $MetroPort is already in use by $OwnerLabel. Stop that process before starting $AppKey."
 }
 
-$HostAddress = Get-NetIPAddress `
-    -AddressFamily IPv4 `
-    -InterfaceIndex $DefaultRoute.InterfaceIndex `
-    -ErrorAction Stop |
-    Where-Object {
-        -not $_.SkipAsSource -and
-        $_.IPAddress -notmatch "^(127\.|169\.254\.)"
-    } |
-    Select-Object -First 1
+# LAN information is diagnostic only. Runtime traffic uses adb reverse, so VPNs,
+# missing default routes, or network-interface changes must not block startup.
+$LanIp = "not-required (adb reverse)"
+try {
+    $DefaultRoute = Get-NetRoute `
+        -AddressFamily IPv4 `
+        -DestinationPrefix "0.0.0.0/0" `
+        -ErrorAction Stop |
+        Sort-Object RouteMetric, InterfaceMetric |
+        Select-Object -First 1
 
-if (-not $HostAddress) {
-    throw "No usable IPv4 address was found on the active network interface."
+    if ($DefaultRoute) {
+        $HostAddress = Get-NetIPAddress `
+            -AddressFamily IPv4 `
+            -InterfaceIndex $DefaultRoute.InterfaceIndex `
+            -ErrorAction Stop |
+            Where-Object {
+                -not $_.SkipAsSource -and
+                $_.IPAddress -notmatch "^(127\.|169\.254\.)"
+            } |
+            Select-Object -First 1
+
+        if ($HostAddress) {
+            $LanIp = $HostAddress.IPAddress
+        }
+    }
+} catch {
+    # The selected device still reaches localhost through adb reverse.
 }
 
-# Metro is reached through adb reverse, not through an incoming LAN port.
+# Metro and local APIs are reached from Android through explicit reverse bridges.
 $env:NODE_OPTIONS = "--dns-result-order=ipv4first"
 $env:REACT_NATIVE_PACKAGER_HOSTNAME = "127.0.0.1"
 $env:EXPO_PACKAGER_PROXY_URL = "http://127.0.0.1:$MetroPort"
-$env:EXPO_PUBLIC_DSH_API_BASE_URL      = "http://127.0.0.1:58080"
-$env:NEXT_PUBLIC_DSH_API_BASE_URL      = "http://127.0.0.1:58080"
-$env:EXPO_PUBLIC_IDENTITY_API_BASE_URL = "http://127.0.0.1:58082"
-$env:NEXT_PUBLIC_IDENTITY_API_BASE_URL = "http://127.0.0.1:58082"
-$env:EXPO_PUBLIC_WLT_API_BASE_URL      = "http://127.0.0.1:58083"
-$env:NEXT_PUBLIC_WLT_API_BASE_URL      = "http://127.0.0.1:58083"
+$env:BTHWANI_ADB_REVERSE_ENABLED = "1"
+$env:EXPO_PUBLIC_ADB_REVERSE_ENABLED = "true"
+$env:EXPO_PUBLIC_DSH_API_BASE_URL       = "http://127.0.0.1:58080"
+$env:NEXT_PUBLIC_DSH_API_BASE_URL       = "http://127.0.0.1:58080"
+$env:EXPO_PUBLIC_IDENTITY_API_BASE_URL  = "http://127.0.0.1:58082"
+$env:NEXT_PUBLIC_IDENTITY_API_BASE_URL  = "http://127.0.0.1:58082"
+$env:EXPO_PUBLIC_WLT_API_BASE_URL       = "http://127.0.0.1:58083"
+$env:NEXT_PUBLIC_WLT_API_BASE_URL       = "http://127.0.0.1:58083"
 $env:EXPO_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
 $env:NEXT_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
 
@@ -97,16 +121,22 @@ if ($ShouldMirror) {
 }
 
 $ShouldClearCache = $ClearCache -or $env:BTHWANI_METRO_CLEAR -eq "1"
+$WatchdogSetting = [string] $env:BTHWANI_ADB_WATCHDOG
+$WatchdogEnabled = $WatchdogSetting.Trim().ToLowerInvariant() -in @("1", "true", "reverse")
+$WatchdogEligible = $SelectedDevice.IsTcpIp -and $WatchdogEnabled
 
 Write-Host ""
 Write-Host "=== MOBILE RUNTIME ==="
 Write-Host "App:          $AppKey"
 Write-Host "Runtime:      $RuntimeDir"
 Write-Host "Metro URL:    http://127.0.0.1:$MetroPort"
-Write-Host "LAN IP:       $($HostAddress.IPAddress)"
+Write-Host "LAN IP:       $LanIp"
 Write-Host "ADB:          $AdbPath"
 Write-Host "Device:       $SelectedSerial"
+Write-Host "Transport:    $(if ($SelectedDevice.IsTcpIp) { 'tcp' } else { 'usb' })"
 Write-Host "Metro port:   $MetroPort"
+Write-Host "Reverse:      verified"
+Write-Host "Watchdog:     $(if ($WatchdogEligible) { 'reverse-only' } else { 'off' })"
 Write-Host "Mirror:       $ShouldMirror"
 Write-Host "Cache clear:  $ShouldClearCache"
 Write-Host ""
@@ -126,22 +156,13 @@ if ($ShouldClearCache) {
     $ExpoArguments += "--clear"
 }
 
-# BTHWANI_ADB_WATCHDOG:
-# Keep the TCP/IP transport online and restore reverse mappings
-# whenever Android temporarily marks the Wi-Fi device offline.
+# Optional TCP watchdog repairs only missing reverse mappings. It deliberately
+# never runs `adb disconnect` or `adb connect`, which previously caused periodic
+# Wi-Fi transport drops and interrupted scrcpy/Metro sessions.
 $AdbWatchdog = $null
-
-if (
-    $env:BTHWANI_ADB_WATCHDOG -eq "1" -and
-    $SelectedSerial -match
-    "^\d{1,3}(?:\.\d{1,3}){3}:\d+$"
-) {
+if ($WatchdogEligible) {
     $AdbWatchdog = Start-Job `
-        -ArgumentList @(
-            $AdbPath,
-            $SelectedSerial,
-            $Ports
-        ) `
+        -ArgumentList @($AdbPath, $SelectedSerial, $Ports) `
         -ScriptBlock {
             param(
                 [string] $WatchAdb,
@@ -153,44 +174,20 @@ if (
 
             while ($true) {
                 $State = (
-                    & $WatchAdb `
-                        -s $WatchSerial `
-                        get-state 2>$null |
-                        Out-String
+                    & $WatchAdb -s $WatchSerial get-state 2>$null |
+                    Out-String
                 ).Trim()
 
-                $StateExitCode = $LASTEXITCODE
+                if ($LASTEXITCODE -eq 0 -and $State -eq "device") {
+                    $Mappings = @(
+                        & $WatchAdb -s $WatchSerial reverse --list 2>$null |
+                        ForEach-Object { [string] $_ }
+                    )
 
-                if (
-                    $StateExitCode -ne 0 -or
-                    $State -ne "device"
-                ) {
-                    & $WatchAdb `
-                        disconnect $WatchSerial `
-                        2>$null |
-                        Out-Null
-
-                    Start-Sleep -Milliseconds 750
-
-                    & $WatchAdb `
-                        connect $WatchSerial `
-                        2>$null |
-                        Out-Null
-
-                    Start-Sleep -Seconds 1
-
-                    $RecoveredState = (
-                        & $WatchAdb `
-                            -s $WatchSerial `
-                            get-state 2>$null |
-                            Out-String
-                    ).Trim()
-
-                    if ($RecoveredState -eq "device") {
-                        foreach (
-                            $WatchPort in
-                            ($WatchPorts | Select-Object -Unique)
-                        ) {
+                    foreach ($WatchPort in ($WatchPorts | Select-Object -Unique)) {
+                        $Pattern = "tcp:$WatchPort\s+tcp:$WatchPort(?:\s|$)"
+                        $Exists = @($Mappings | Where-Object { $_ -match $Pattern }).Count -gt 0
+                        if (-not $Exists) {
                             & $WatchAdb `
                                 -s $WatchSerial `
                                 reverse `
@@ -202,7 +199,7 @@ if (
                     }
                 }
 
-                Start-Sleep -Seconds 2
+                Start-Sleep -Seconds 10
             }
         }
 }
@@ -213,16 +210,9 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "Expo runtime failed for $AppKey."
     }
-}
-finally {
+} finally {
     if ($AdbWatchdog) {
-        Stop-Job `
-            -Job $AdbWatchdog `
-            -ErrorAction SilentlyContinue
-
-        Remove-Job `
-            -Job $AdbWatchdog `
-            -Force `
-            -ErrorAction SilentlyContinue
+        Stop-Job -Job $AdbWatchdog -ErrorAction SilentlyContinue
+        Remove-Job -Job $AdbWatchdog -Force -ErrorAction SilentlyContinue
     }
 }
