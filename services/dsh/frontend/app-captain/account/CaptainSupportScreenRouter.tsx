@@ -1,4 +1,5 @@
 import React from 'react';
+import type { CaptainSupportRoute } from '../../shared/delivery';
 import {
   DshCaptainOrderAcceptScreen,
   DshCaptainOrderDeliverScreen,
@@ -16,22 +17,6 @@ import {
   DshCaptainTierEvaluateScreen,
   DshCaptainTierInfoScreen,
 } from './DshCaptainProfileScreen';
-
-type CaptainSupportRoute =
-  | 'chat-read-ack'
-  | 'chat-send'
-  | 'cod-liability'
-  | 'order-accept'
-  | 'order-deliver'
-  | 'order-details'
-  | 'order-get'
-  | 'order-pickup'
-  | 'orders-list'
-  | 'orders-offers-list'
-  | 'profile-get'
-  | 'proof-upload'
-  | 'tier-evaluate'
-  | 'tier-info';
 
 export type CaptainSupportScreenRouterProps = {
   selectedSupportScreen: CaptainSupportRoute;
