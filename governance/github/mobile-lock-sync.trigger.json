@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "targetRef": "lianbassam",
+  "purpose": "MOBILE_PACKAGE_LOCK_SYNCHRONIZATION",
+  "requestedDate": "2026-07-23",
+  "packageManager": "pnpm@10.34.0",
+  "allowedOutput": "pnpm-lock.yaml",
+  "deleteWorkflowAfterSuccess": true
+}
