@@ -2,6 +2,10 @@ import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import { resolvePlatformControlApiBaseUrl } from "../_kernel/platform-control-api-base-url";
 import type { components } from "@bthwani/core-platform-control";
 import type {
+  PlatformRuntimeSnapshotWithSaaS,
+  PlatformSaasRuntimeStatus,
+} from "@bthwani/core-platform-control/clients/generated/platform-control-saas-runtime";
+import type {
   CreatePlatformChangeSetInput,
   PlatformChangeSet,
   RejectPlatformChangeSetInput,
@@ -9,16 +13,8 @@ import type {
 } from "@bthwani/core-platform-control/clients/generated/jrn-040-platform-change-sets-api";
 
 export type PlatformControlState = components["schemas"]["PlatformControlState"];
-export type PlatformSaasRuntimeStatus = {
-  readonly mode: "active" | "deferred";
-  readonly commercialActivationState: "blocked" | "eligible" | "authorized" | "active";
-  readonly productionDeploymentAuthorized: boolean;
-  readonly defaultTenantId: string;
-  readonly runtimeEnabled: boolean;
-};
-export type PlatformRuntimeSnapshot = components["schemas"]["PlatformRuntimeSnapshot"] & {
-  readonly saas: PlatformSaasRuntimeStatus;
-};
+export type { PlatformSaasRuntimeStatus };
+export type PlatformRuntimeSnapshot = PlatformRuntimeSnapshotWithSaaS;
 export type PlatformEffectiveRuntimeConfig = components["schemas"]["PlatformEffectiveRuntimeConfig"];
 export type PlatformVariable = components["schemas"]["PlatformVariable"];
 export type PlatformFeatureFlag = components["schemas"]["PlatformFeatureFlag"];
