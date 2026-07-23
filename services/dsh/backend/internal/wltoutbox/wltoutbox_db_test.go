@@ -32,12 +32,14 @@ func openRequiredDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// seedOrderFixture creates the minimal store/cart/checkout-intent/order chain
-// dsh_wlt_outbox_events' foreign keys require, and registers cleanup.
+// seedOrderFixture creates the minimal tenant/store/cart/checkout-intent/order
+// chain dsh_wlt_outbox_events' foreign keys and tenant-isolation constraints
+// require, and registers cleanup.
 func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID string) {
 	t.Helper()
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	tenantID := "tenant-wlt-outbox-test-" + suffix
 	storeID := "wlt-outbox-test-store-" + suffix
 	clientID := "wlt-outbox-test-client-" + suffix
 
@@ -60,19 +62,22 @@ func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID strin
 	}
 
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_checkout_intents (client_id, cart_id, store_id, state, payment_method, wlt_payment_session_id)
-		VALUES ($1, $2::uuid, $3, 'payment_pending', 'cod', $4)
+		INSERT INTO dsh_checkout_intents (
+			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
+			payment_method, wlt_payment_session_id
+		)
+		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery', 'cod', $5)
 		RETURNING id::text`,
-		clientID, cartID, storeID, "wlt-ps-"+suffix,
+		tenantID, clientID, cartID, storeID, "wlt-ps-"+suffix,
 	).Scan(&checkoutIntentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
 
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_orders (checkout_intent_id, store_id, client_id, status)
-		VALUES ($1::uuid, $2, $3, 'pending')
+		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status)
+		VALUES ($1, $2::uuid, $3, 'bthwani_delivery', $4, 'pending')
 		RETURNING id::text`,
-		checkoutIntentID, storeID, clientID,
+		tenantID, checkoutIntentID, storeID, clientID,
 	).Scan(&orderID); err != nil {
 		t.Fatalf("failed to insert test order: %v", err)
 	}
@@ -91,9 +96,6 @@ func fetchOutboxRow(t *testing.T, db *sql.DB, id string) (status string, attempt
 	return
 }
 
-// TestEnqueueIsIdempotentByOrderAndEventTypeDBIntegration proves a duplicate
-// PoD-triggered enqueue for the same order never creates a second outbox row,
-// so retried HTTP requests or transaction retries can't double-notify WLT.
 func TestEnqueueIsIdempotentByOrderAndEventTypeDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	orderID, checkoutIntentID := seedOrderFixture(t, db)
@@ -122,10 +124,6 @@ func TestEnqueueIsIdempotentByOrderAndEventTypeDBIntegration(t *testing.T) {
 	}
 }
 
-// TestClaimBatchLeasesRowsAndMarkSentFinalizesDBIntegration proves the WLT-down
-// scenario from the P0 remediation: an event survives as 'pending' until
-// claimed, a claim leases it (so a concurrent worker can't double-send), and
-// MarkSent finalizes it after a successful notify.
 func TestClaimBatchLeasesRowsAndMarkSentFinalizesDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	orderID, checkoutIntentID := seedOrderFixture(t, db)
@@ -156,14 +154,12 @@ func TestClaimBatchLeasesRowsAndMarkSentFinalizesDBIntegration(t *testing.T) {
 		t.Fatalf("expected order %s to be claimed in batch, got %d other events", orderID, len(batch))
 	}
 
-	// A second claim before the lease expires must not return the same row
-	// (this is what prevents a second worker instance from double-sending).
 	secondBatch, err := ClaimBatch(db, 20, 2*time.Minute)
 	if err != nil {
 		t.Fatalf("second ClaimBatch failed: %v", err)
 	}
-	for _, e := range secondBatch {
-		if e.OrderID == orderID {
+	for _, event := range secondBatch {
+		if event.OrderID == orderID {
 			t.Fatalf("order %s was claimed twice while its lease was still active", orderID)
 		}
 	}
@@ -177,9 +173,6 @@ func TestClaimBatchLeasesRowsAndMarkSentFinalizesDBIntegration(t *testing.T) {
 	}
 }
 
-// TestMarkFailedSchedulesRetryWithoutLosingTheEventDBIntegration proves that a
-// WLT-down failure does not drop the event: it stays queryable, records the
-// error, and becomes claimable again once next_retry_at has passed.
 func TestMarkFailedSchedulesRetryWithoutLosingTheEventDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	orderID, checkoutIntentID := seedOrderFixture(t, db)
@@ -196,7 +189,7 @@ func TestMarkFailedSchedulesRetryWithoutLosingTheEventDBIntegration(t *testing.T
 		t.Fatal(err)
 	}
 
-	batch, err := ClaimBatch(db, 20, 1*time.Millisecond)
+	batch, err := ClaimBatch(db, 20, time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
