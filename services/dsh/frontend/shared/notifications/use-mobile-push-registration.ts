@@ -21,6 +21,20 @@ type MobileExpoExtra = {
 };
 
 type RemovableSubscription = { remove(): void };
+type NotificationsCompatibility = {
+  readonly addNotificationResponseReceivedListener?: (
+    listener: (response: Notifications.NotificationResponse) => void,
+  ) => RemovableSubscription;
+  readonly getLastNotificationResponseAsync?: () => Promise<Notifications.NotificationResponse | null>;
+  readonly clearLastNotificationResponseAsync?: () => Promise<void>;
+  readonly addPushTokenListener?: (listener: () => void) => RemovableSubscription;
+};
+type CryptoCompatibility = {
+  readonly randomUUID?: () => string;
+};
+
+const notificationCompatibility = Notifications as unknown as NotificationsCompatibility;
+const cryptoCompatibility = Crypto as unknown as CryptoCompatibility;
 
 if (Platform.OS !== "web") {
   Notifications.setNotificationHandler({
@@ -67,9 +81,8 @@ function androidNativePushConfigured(): boolean {
 }
 
 function createPushDeviceId(appKey: string): string {
-  const randomUuid = (Crypto as Partial<typeof Crypto>).randomUUID;
-  const unique = typeof randomUuid === "function"
-    ? randomUuid()
+  const unique = typeof cryptoCompatibility.randomUUID === "function"
+    ? cryptoCompatibility.randomUUID()
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   return `${appKey}-${unique}`;
 }
@@ -128,22 +141,19 @@ export function useDshMobilePushRegistration(
     let tokenSubscription: RemovableSubscription | undefined;
     let responseSubscription: RemovableSubscription | undefined;
 
-    const addResponseListener = (Notifications as Partial<typeof Notifications>)
-      .addNotificationResponseReceivedListener;
+    const addResponseListener = notificationCompatibility.addNotificationResponseReceivedListener;
     if (typeof addResponseListener === "function") {
       responseSubscription = addResponseListener((response) => {
         void openNotificationAction(response, appScheme);
       });
     }
 
-    const getLastResponse = (Notifications as Partial<typeof Notifications>)
-      .getLastNotificationResponseAsync;
+    const getLastResponse = notificationCompatibility.getLastNotificationResponseAsync;
     if (typeof getLastResponse === "function") {
       void getLastResponse().then(async (response) => {
         if (!active || response === null) return;
         await openNotificationAction(response, appScheme);
-        const clearLastResponse = (Notifications as Partial<typeof Notifications>)
-          .clearLastNotificationResponseAsync;
+        const clearLastResponse = notificationCompatibility.clearLastNotificationResponseAsync;
         if (typeof clearLastResponse === "function") await clearLastResponse();
       }).catch((error) => console.warn(`[${appKey}] notification response handling failed`, error));
     }
@@ -174,7 +184,7 @@ export function useDshMobilePushRegistration(
         await registerToken(await readExpoToken());
         if (!active) return;
 
-        const addPushTokenListener = (Notifications as Partial<typeof Notifications>).addPushTokenListener;
+        const addPushTokenListener = notificationCompatibility.addPushTokenListener;
         if (typeof addPushTokenListener === "function") {
           tokenSubscription = addPushTokenListener(() => {
             void readExpoToken()
