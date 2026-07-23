@@ -76,15 +76,17 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlementSummary(w http.Resp
 func (s *protectedStoreServer) handleFinanceRefunds(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
 	if !ok { return }
-	if _, ok := requiredPaymentTenant(w, r); !ok { return }
-	s.proxyFinanceRead(w, r, "/wlt/refunds", financeQuery(r, "orderId", "limit", "cursor"), actor.TenantID)
+	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
+	if !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/refunds", financeQuery(r, "orderId", "limit", "cursor"), tenantID)
 }
 
 func (s *protectedStoreServer) handleFinanceRefundDetail(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
 	if !ok { return }
-	if _, ok := requiredPaymentTenant(w, r); !ok { return }
-	s.proxyFinanceRead(w, r, "/wlt/refunds/"+url.PathEscape(r.PathValue("refundId")), nil, actor.TenantID)
+	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
+	if !ok { return }
+	s.proxyFinanceRead(w, r, "/wlt/refunds/"+url.PathEscape(r.PathValue("refundId")), nil, tenantID)
 }
 
 func (s *protectedStoreServer) handleFinanceLedgerEntries(w http.ResponseWriter, r *http.Request) {
