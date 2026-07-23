@@ -18,7 +18,7 @@ jobs:
       - name: Publish pending
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -f state=pending -f context=bthwani/jrn001-contract-diagnostic -f description='JRN-001 contract diagnosis running' -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" -f state=pending -f context=bthwani/jrn001-contract-diagnostic -f description='JRN-001 contract diagnosis running after FS-11 repair' -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
