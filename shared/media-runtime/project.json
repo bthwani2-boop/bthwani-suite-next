@@ -1,0 +1,30 @@
+{
+  "name": "media-runtime",
+  "root": "shared/media-runtime",
+  "sourceRoot": "shared/media-runtime/src",
+  "projectType": "library",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir shared/media-runtime typecheck"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir shared/media-runtime build"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir shared/media-runtime test"
+      }
+    }
+  },
+  "tags": [
+    "scope:shared",
+    "type:library"
+  ]
+}
