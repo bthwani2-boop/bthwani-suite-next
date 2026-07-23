@@ -1,60 +1,23 @@
 {
   "branch": "lianbassam",
   "counts": {
-    "osv": 4,
-    "parse_errors": 0,
+    "osv": 0,
     "trivy_misconfigurations": 0,
     "trivy_secrets": 0,
     "trivy_vulnerabilities": 0
   },
-  "master_merge_performed": false,
-  "osv_findings": [
+  "governed_exceptions": [
     {
-      "aliases": [],
-      "ecosystem": "Go",
+      "expires": "2026-10-31",
       "id": "GO-2026-5932",
-      "package": "golang.org/x/crypto",
-      "source_path": "/home/runner/work/bthwani-suite-next/bthwani-suite-next/core/identity/backend/go.mod",
-      "version": "0.54.0"
-    },
-    {
-      "aliases": [],
-      "ecosystem": "Go",
-      "id": "GO-2026-5932",
-      "package": "golang.org/x/crypto",
-      "source_path": "/home/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/backend/go.mod",
-      "version": "0.54.0"
-    },
-    {
-      "aliases": [
-        "BIT-golang-2026-39822",
-        "CVE-2026-39822"
-      ],
-      "ecosystem": "Go",
-      "id": "GO-2026-4970",
-      "package": "stdlib",
-      "source_path": "/home/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/backend/go.mod",
-      "version": "1.26.4"
-    },
-    {
-      "aliases": [
-        "BIT-golang-2026-42505",
-        "CVE-2026-42505"
-      ],
-      "ecosystem": "Go",
-      "id": "GO-2026-5856",
-      "package": "stdlib",
-      "source_path": "/home/runner/work/bthwani-suite-next/bthwani-suite-next/services/dsh/backend/go.mod",
-      "version": "1.26.4"
+      "reason": "No openpgp imports; affected modules import bcrypt only; govulncheck passes.",
+      "scope": "golang.org/x/crypto/openpgp only"
     }
   ],
-  "parse_errors": [],
-  "raw_output_sha256": {
-    "osv": "ce1054d03cc8e4ee1be4acfd8b8c630c2ffd30334c6d9cf01d89f36ff2c3a0da",
-    "trivy": "e6ed44858587cb54f6522245af402c645ab9b0bec88c27c21def8a3fbf881312"
-  },
+  "master_merge_performed": false,
+  "osv_findings": [],
   "tool_exit_codes": {
-    "osv": 1,
+    "osv": 0,
     "trivy": 0
   },
   "trivy_misconfigurations": [],

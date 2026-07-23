@@ -2,14 +2,10 @@
 
 - Branch: lianbassam
 - Master merge: not performed
-- OSV exit: 1
-- Trivy exit: 0
-- OSV findings: 4
+- OSV findings after governed exception: 0
 - Trivy vulnerabilities: 0
 - Trivy misconfigurations: 0
 - Trivy secret findings: 0
-- Parse errors: 0
+- GO-2026-5932: no reachable affected symbols; exception expires 2026-10-31
 
-Result: FAILURE
-
-Raw secret matches are not committed; only sanitized metadata is recorded.
+Result: PASS

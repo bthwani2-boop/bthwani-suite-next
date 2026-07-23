@@ -1,0 +1,40 @@
+?   	dsh-api/cmd/dsh-address-privacy	[no test files]
+?   	dsh-api/cmd/dsh-api	[no test files]
+?   	dsh-api/cmd/jrn030-route-proof	[no test files]
+ok  	dsh-api/internal/administration	0.004s
+ok  	dsh-api/internal/analytics	0.003s
+ok  	dsh-api/internal/auth	0.011s
+ok  	dsh-api/internal/cache	3.362s
+ok  	dsh-api/internal/cart	0.006s
+ok  	dsh-api/internal/catalogapproval	0.004s
+ok  	dsh-api/internal/centralcatalog	0.005s
+ok  	dsh-api/internal/checkout	0.005s
+ok  	dsh-api/internal/checkoutfinanceoutbox	0.005s
+ok  	dsh-api/internal/clientaddress	0.005s
+ok  	dsh-api/internal/coupons	0.004s
+ok  	dsh-api/internal/dispatch	0.213s
+ok  	dsh-api/internal/fieldcommissionoutbox	0.004s
+ok  	dsh-api/internal/fieldreadiness	0.008s
+ok  	dsh-api/internal/health	0.011s
+ok  	dsh-api/internal/homediscovery	0.003s
+ok  	dsh-api/internal/http	0.101s
+ok  	dsh-api/internal/mapproviders	0.059s
+ok  	dsh-api/internal/marketing	0.004s
+ok  	dsh-api/internal/media	0.005s
+ok  	dsh-api/internal/notifications	0.003s
+ok  	dsh-api/internal/operationaloutbox	0.006s
+ok  	dsh-api/internal/orders	0.004s
+ok  	dsh-api/internal/partner	0.004s
+ok  	dsh-api/internal/partnerdelivery	0.003s
+ok  	dsh-api/internal/partnerfleet	0.003s
+ok  	dsh-api/internal/partnerwltoutbox	0.003s
+ok  	dsh-api/internal/pickup	0.003s
+ok  	dsh-api/internal/platformpolicies	0.003s
+?   	dsh-api/internal/promotionfundingoutbox	[no test files]
+ok  	dsh-api/internal/servicearea	0.002s
+ok  	dsh-api/internal/specialrequests	0.004s
+ok  	dsh-api/internal/store	0.004s
+ok  	dsh-api/internal/support	0.002s
+?   	dsh-api/internal/supportsession	[no test files]
+ok  	dsh-api/internal/wlt	0.326s
+ok  	dsh-api/internal/wltoutbox	0.004s
