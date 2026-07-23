@@ -6,6 +6,7 @@ on:
       - main
       - lianbassam
     paths:
+      - "package.json"
       - "services/dsh/database/**"
       - "services/dsh/backend/**"
       - "services/dsh/package.json"
@@ -13,6 +14,7 @@ on:
       - ".github/workflows/dsh-database.yml"
   pull_request:
     paths:
+      - "package.json"
       - "services/dsh/database/**"
       - "services/dsh/backend/**"
       - "services/dsh/package.json"
