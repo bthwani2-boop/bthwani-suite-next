@@ -33,6 +33,11 @@ export function classifyFiles(inputFiles, options = {}) {
     file === "tools/scripts/detect-ci-context.mjs" ||
     file === "tools/scripts/detect-ci-context.test.mjs"
   );
+  const mobileTooling = full || starts("tools/mobile/") || equals(
+    "tools/scripts/guard-mobile-apps.mjs",
+    "tools/scripts/sync-mobile-apps.mjs",
+    "tools/scripts/eas-build-mobile.mjs"
+  );
 
   const workflow = full || starts(".github/") || ciRouter || has((file) =>
     file === "tools/scripts/run-actionlint.mjs" ||
@@ -40,7 +45,7 @@ export function classifyFiles(inputFiles, options = {}) {
     file === "tools/scripts/run-pinact.mjs"
   );
 
-  const governance = full || equals("AGENTS.md", "GEMINI.md") || starts(".agents/", "governance/") || has((file) =>
+  const governance = full || mobileTooling || equals("AGENTS.md", "GEMINI.md") || starts(".agents/", "governance/") || has((file) =>
     file.startsWith("tools/guards/") || workspaceManifest
   );
 
@@ -68,10 +73,10 @@ export function classifyFiles(inputFiles, options = {}) {
     "tools/guards/backend-api-binding-gate.mjs"
   );
 
-  const frontend = full || workspaceManifest || starts("apps/", "shared/") || includes("/frontend/", "/clients/generated/");
+  const frontend = full || mobileTooling || workspaceManifest || starts("apps/", "shared/") || includes("/frontend/", "/clients/generated/");
   const contracts = full || backendApiSurface || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
   const database = full || includes("/database/", "/migrations/") || starts("infra/docker/");
-  const runtime = full || starts("infra/") || has((file) =>
+  const runtime = full || mobileTooling || starts("infra/") || has((file) =>
     file.endsWith("service.manifest.ts") ||
     file.endsWith("start.ps1") ||
     /(^|\/)(next|metro|babel|app)\.config\.[cm]?[jt]s$/.test(file) ||
@@ -105,7 +110,7 @@ export function classifyFiles(inputFiles, options = {}) {
     file === "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
   );
 
-  const heavy = full || workspaceManifest || sharedBrain || database || runtime || (contracts && frontend);
+  const heavy = full || mobileTooling || workspaceManifest || sharedBrain || database || runtime || (contracts && frontend);
   const policy = governance || workflow || infrastructure || security;
   const node = frontend || contracts || journey || jrn040;
 
