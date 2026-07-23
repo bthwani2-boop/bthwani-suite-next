@@ -52,7 +52,8 @@ func main() {
 	router := wltHttp.NewRouter(db, mutationsEnabled)
 	wltHttp.RegisterDeliveryCollectionRoutes(router, db, mutationsEnabled)
 	wltHttp.RegisterOrderCancellationRoutes(router, db, mutationsEnabled)
-	handler := wltHttp.CorsMiddleware(authMode, router)
+	referenceScopedRouter := wltHttp.ReferenceReadBoundary(router)
+	handler := wltHttp.CorsMiddleware(authMode, referenceScopedRouter)
 
 	var cancelOutbox context.CancelFunc = func() {}
 	if dshClient.Configured() {
