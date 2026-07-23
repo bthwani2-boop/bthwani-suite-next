@@ -1,21 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colorRoles } from '@bthwani/ui-kit';
-import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from './dsh-api-base-url';
+import {
+  isDshDeviceLoopbackBridgeEnabled,
+  resolveDshApiBaseUrl,
+  validateDshApiBaseUrl,
+} from './dsh-api-base-url';
 
 export function DshDevDiagnostic() {
   const [url, setUrl] = useState('');
   const [isValid, setIsValid] = useState(false);
-  const [isDevice, setIsDevice] = useState(false);
+  const [isNativeRuntime, setIsNativeRuntime] = useState(false);
+  const [hasLoopbackBridge, setHasLoopbackBridge] = useState(false);
 
   useEffect(() => {
     const resolvedUrl = resolveDshApiBaseUrl();
-    setUrl(resolvedUrl);
+    const nativeRuntime = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
+    const loopbackBridge = isDshDeviceLoopbackBridgeEnabled();
 
-    // Naive check if we are on a physical device. We assume if we aren't in a web environment, we could be on a device.
-    const _isDevice = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
-    setIsDevice(_isDevice);
-    setIsValid(validateDshApiBaseUrl(resolvedUrl, _isDevice));
+    setUrl(resolvedUrl);
+    setIsNativeRuntime(nativeRuntime);
+    setHasLoopbackBridge(loopbackBridge);
+    setIsValid(validateDshApiBaseUrl(resolvedUrl, nativeRuntime, loopbackBridge));
   }, []);
 
   if (!__DEV__) {
@@ -30,10 +36,17 @@ export function DshDevDiagnostic() {
         {url}
       </Text>
       <Text style={styles.text}>
-        Valid for Device? {isValid ? "✅ YES" : "❌ NO"}
+        Runtime transport valid? {isValid ? "✅ YES" : "❌ NO"}
       </Text>
+      {isNativeRuntime ? (
+        <Text style={styles.text}>
+          ADB reverse bridge: {hasLoopbackBridge ? "verified by launcher" : "not declared"}
+        </Text>
+      ) : null}
       <Text style={styles.note}>
-        {!isValid && isDevice && "FATAL: Cannot use localhost on physical device. Must use EXPO_PUBLIC_DSH_API_BASE_URL."}
+        {!isValid && isNativeRuntime
+          ? "Native loopback requires the governed launcher to establish and verify adb reverse mappings."
+          : ""}
       </Text>
     </View>
   );
@@ -74,5 +87,5 @@ const styles = StyleSheet.create({
     color: colorRoles.danger,
     marginTop: 8,
     fontStyle: 'italic',
-  }
+  },
 });
