@@ -11,18 +11,21 @@ permissions:
 
 concurrency:
   group: lian-ci-observability-apply-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   apply:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout branch with push credentials
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
           persist-credentials: true
+
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
 
       - name: Patch canonical CI and self-delete
         shell: bash
@@ -35,12 +38,12 @@ jobs:
           ci = Path('.github/workflows/ci.yml')
           text = ci.read_text(encoding='utf-8')
 
-          checkout_anchor = '''      - name: Set up locked Node runtime
+          setup_anchor = '''      - name: Set up locked Node runtime
           uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
           with:
             node-version: "24.17.0"
-'''
-          locator = checkout_anchor + '''      - name: Publish contextual CI run locator
+          '''
+          locator = setup_anchor + '''      - name: Publish contextual CI run locator
           shell: bash
           env:
             GH_TOKEN: ${{ github.token }}
@@ -59,11 +62,11 @@ jobs:
               -H "X-GitHub-Api-Version: 2022-11-28" \\
               "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \\
               --data-binary @/tmp/contextual-ci-status.json
-'''
+          '''
           if 'name: Publish contextual CI run locator' not in text:
-              if checkout_anchor not in text:
+              if setup_anchor not in text:
                   raise RuntimeError('context setup anchor not found')
-              text = text.replace(checkout_anchor, locator, 1)
+              text = text.replace(setup_anchor, locator, 1)
 
           policy_old = '''      - name: Verify canonical governance and commands
           run: |
@@ -75,7 +78,7 @@ jobs:
             pnpm run guard:sdlc
             pnpm run guard:cleanup-policy
             pnpm run guard:required-command-integrity
-'''
+          '''
           policy_new = '''      - name: Verify governance schema
           run: pnpm run guard:governance-schema
       - name: Verify agent governance
@@ -92,7 +95,8 @@ jobs:
           run: pnpm run guard:cleanup-policy
       - name: Verify required command integrity
           run: pnpm run guard:required-command-integrity
-'''
+          '''
+          policy_new = policy_new.replace('\n          run:', '\n        run:')
           if policy_old not in text:
               raise RuntimeError('policy aggregate anchor not found')
           text = text.replace(policy_old, policy_new, 1)
@@ -108,7 +112,7 @@ jobs:
             pnpm run guard:frontend-feature-binding
             pnpm run guard:runtime-real-bindings
             pnpm run guard:live-cross-journey-integrity
-'''
+          '''
           node_new = '''      - name: Verify imports resolve
           if: ${{ needs.context.outputs.contracts == 'true' }}
           run: pnpm run guard:no-broken-imports
@@ -133,7 +137,8 @@ jobs:
       - name: Verify cross-journey integrity
           if: ${{ needs.context.outputs.contracts == 'true' }}
           run: pnpm run guard:live-cross-journey-integrity
-'''
+          '''
+          node_new = node_new.replace('\n          if:', '\n        if:').replace('\n          run:', '\n        run:')
           if node_old not in text:
               raise RuntimeError('node aggregate anchor not found')
           text = text.replace(node_old, node_new, 1)
@@ -152,10 +157,11 @@ jobs:
           Path('.github/workflows/lian-ci-observability-apply.yml').unlink(missing_ok=True)
           PY
 
-      - name: Validate canonical workflow syntax surface
+      - name: Validate canonical workflow with actionlint
         shell: bash
         run: |
           set -euo pipefail
+          pnpm run guard:workflow-lint
           grep -Fq 'name: Publish contextual CI run locator' .github/workflows/ci.yml
           grep -Fq 'name: Verify backend API binding' .github/workflows/ci.yml
           grep -Fq 'name: Verify required command integrity' .github/workflows/ci.yml
