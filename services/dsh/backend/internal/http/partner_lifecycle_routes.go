@@ -10,8 +10,8 @@ import (
 )
 
 // RegisterPartnerLifecycleRoutes binds the complete governed partner lifecycle
-// shared by control-panel and app-field. The handlers remain the single source
-// of authorization and persistence truth; surfaces only consume these routes.
+// shared by control-panel and app-field. Every route derives tenant ownership
+// from the authenticated Identity session before authorization and persistence.
 func RegisterPartnerLifecycleRoutes(
 	mux *http.ServeMux,
 	db *sql.DB,
@@ -23,31 +23,31 @@ func RegisterPartnerLifecycleRoutes(
 
 	// Control-panel: partner intake, review, activation, documents, stores,
 	// field evidence and immutable audit history.
-	mux.HandleFunc("GET /dsh/operator/partners", protected.handleListPartners)
-	mux.HandleFunc("POST /dsh/operator/partners", protected.handleCreatePartner)
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}", protected.handleGovernedGetPartner)
-	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", protected.handleGovernedActivationTransition)
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/readiness", protected.handleGetPartnerReadiness)
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/documents", protected.handleListPartnerDocuments)
-	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/documents", protected.handleAddPartnerDocument)
-	mux.HandleFunc("PATCH /dsh/operator/partners/{partnerId}/documents/{docId}/review", protected.handleReviewPartnerDocument)
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/stores", protected.handleListPartnerStores)
-	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/stores", protected.handleGovernedLinkPartnerStore)
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/field-visits", protected.handleListPartnerFieldVisits)
-	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/audit", protected.handleListPartnerAudit)
+	mux.HandleFunc("GET /dsh/operator/partners", protected.withTrustedPartnerTenant(protected.handleTenantListPartners))
+	mux.HandleFunc("POST /dsh/operator/partners", protected.withTrustedPartnerTenant(protected.handleTenantCreatePartner))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}", protected.withTenantPartnerResource(protected.handleGovernedGetPartner))
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/transition", protected.withTenantPartnerResource(protected.handleGovernedActivationTransition))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/readiness", protected.withTenantPartnerResource(protected.handleGetPartnerReadiness))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/documents", protected.withTenantPartnerResource(protected.handleListPartnerDocuments))
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/documents", protected.withTenantPartnerResource(protected.handleAddPartnerDocument))
+	mux.HandleFunc("PATCH /dsh/operator/partners/{partnerId}/documents/{docId}/review", protected.withTenantPartnerResource(protected.handleReviewPartnerDocument))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/stores", protected.withTenantPartnerResource(protected.handleListPartnerStores))
+	mux.HandleFunc("POST /dsh/operator/partners/{partnerId}/stores", protected.withTenantPartnerResource(protected.handleTenantLinkPartnerStore))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/field-visits", protected.withTenantPartnerResource(protected.handleListPartnerFieldVisits))
+	mux.HandleFunc("GET /dsh/operator/partners/{partnerId}/audit", protected.withTenantPartnerResource(protected.handleListPartnerAudit))
 
 	// App-field: owned drafts, store profile, documents, visits, readiness and
-	// submission. Every handler verifies the field actor and draft ownership.
-	mux.HandleFunc("GET /dsh/field/partners", protected.handleFieldListPartnerDrafts)
-	mux.HandleFunc("POST /dsh/field/partners/drafts", protected.handleFieldCreatePartnerDraft)
-	mux.HandleFunc("GET /dsh/field/partners/{partnerId}", protected.handleGovernedFieldGetPartnerDraft)
-	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}", protected.handleGovernedFieldUpdatePartnerDraft)
-	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/readiness", protected.handleFieldGetPartnerReadiness)
-	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/store", protected.handleFieldGetPartnerStore)
-	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}/store", protected.handleFieldUpdatePartnerStore)
-	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/documents", protected.handleFieldListPartnerDocuments)
-	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/documents", protected.handleFieldUploadPartnerDocument)
-	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", protected.handleGovernedFieldCreatePartnerVisit)
-	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/field-visits", protected.handleFieldListPartnerFieldVisits)
-	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", protected.handleGovernedFieldSubmitPartnerDraft)
+	// submission. Tenant ownership is checked before the actor ownership check.
+	mux.HandleFunc("GET /dsh/field/partners", protected.withTrustedPartnerTenant(protected.handleTenantFieldListPartnerDrafts))
+	mux.HandleFunc("POST /dsh/field/partners/drafts", protected.withTrustedPartnerTenant(protected.handleTenantFieldCreatePartnerDraft))
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}", protected.withTenantPartnerResource(protected.handleGovernedFieldGetPartnerDraft))
+	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}", protected.withTenantPartnerResource(protected.handleGovernedFieldUpdatePartnerDraft))
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/readiness", protected.withTenantPartnerResource(protected.handleFieldGetPartnerReadiness))
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/store", protected.withTenantPartnerResource(protected.handleFieldGetPartnerStore))
+	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}/store", protected.withTenantPartnerResource(protected.handleFieldUpdatePartnerStore))
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/documents", protected.withTenantPartnerResource(protected.handleFieldListPartnerDocuments))
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/documents", protected.withTenantPartnerResource(protected.handleFieldUploadPartnerDocument))
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/visits", protected.withTenantPartnerResource(protected.handleGovernedFieldCreatePartnerVisit))
+	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/field-visits", protected.withTenantPartnerResource(protected.handleFieldListPartnerFieldVisits))
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/submit", protected.withTenantPartnerResource(protected.handleGovernedFieldSubmitPartnerDraft))
 }
