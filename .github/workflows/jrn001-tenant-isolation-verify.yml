@@ -116,34 +116,20 @@ jobs:
           echo "JRN001_DB_TEST_EXIT=${code}" >> "${GITHUB_ENV}"
           exit 0
 
-      - name: Commit PostgreSQL failure diagnostic
+      - name: Upload PostgreSQL failure diagnostic
         if: env.JRN001_DB_TEST_EXIT != '0'
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p governance/evidence
-          {
-            echo '# JRN-001 tenant isolation PostgreSQL diagnostic'
-            echo
-            echo "- Verification source SHA: \`${GITHUB_SHA}\`"
-            echo "- Exit code: ${JRN001_DB_TEST_EXIT}"
-            echo
-            echo '```text'
-            tail -n 500 /tmp/jrn001-db-tests.log
-            echo '```'
-          } > governance/evidence/JRN-001_TENANT_ISOLATION_DB_DIAGNOSTIC.md
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add governance/evidence/JRN-001_TENANT_ISOLATION_DB_DIAGNOSTIC.md
-          git commit -m "test(dsh): capture JRN-001 tenant DB failure"
-          git pull --rebase origin lianbassam
-          git push origin HEAD:lianbassam
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: jrn001-db-test-failure
+          path: /tmp/jrn001-db-tests.log
+          if-no-files-found: error
+          retention-days: 3
 
       - name: Require PostgreSQL tenant tests
         shell: bash
         run: |
           if [[ "${JRN001_DB_TEST_EXIT}" != "0" ]]; then
-            echo "PostgreSQL tenant tests failed; diagnostic committed."
+            echo "PostgreSQL tenant tests failed; diagnostic artifact uploaded."
             exit "${JRN001_DB_TEST_EXIT}"
           fi
 
