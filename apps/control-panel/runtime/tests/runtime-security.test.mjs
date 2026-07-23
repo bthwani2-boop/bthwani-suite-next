@@ -93,7 +93,7 @@ test("all identity token rotation paths require control-panel operator role", ()
   assert.match(sessionRoute, /resolved\.identity\.roles\.includes\("operator"\)/);
 });
 
-test("control-panel BFF keeps credentials server-side and rejects open proxy behavior", () => {
+test("dynamic BFF is limited to Identity and read-only WLT references", () => {
   const proxy = read("apps/control-panel/runtime/src/server/bff-proxy.ts");
   const route = read("apps/control-panel/runtime/src/app/api/[service]/[...path]/route.ts");
   const forwardedHeaders = proxy.match(
@@ -108,32 +108,33 @@ test("control-panel BFF keeps credentials server-side and rejects open proxy beh
   assert.match(proxy, /BFF_CROSS_SITE_FORBIDDEN/);
   assert.match(proxy, /redirect:\s*"manual"/);
   assert.doesNotMatch(proxy, /redirect:\s*"follow"/);
-
-  for (const service of [
-    "dsh",
-    "identity",
-    "wlt",
-    "workforce",
-    "providers",
-    "platform-control",
-  ]) {
-    assert.match(route, new RegExp(`"${service.replace("-", "\\-")}"`));
-  }
+  assert.match(route, /identity:\s*new Set\(\["auth", "identity"\]\)/);
+  assert.match(route, /wlt:\s*new Set\(\["wlt"\]\)/);
+  assert.doesNotMatch(route, /dsh:\s*new Set/);
+  assert.doesNotMatch(route, /workforce:\s*new Set/);
+  assert.doesNotMatch(route, /providers:\s*new Set/);
+  assert.doesNotMatch(route, /"platform-control":\s*new Set/);
   assert.match(route, /BFF_SERVICE_NOT_ALLOWED/);
   assert.match(route, /BFF_PATH_NOT_ALLOWED/);
   assert.match(route, /Object\.hasOwn\(allowedPathPrefixes, service\)/);
 });
 
+test("authenticated business services use explicit static BFF routes", () => {
+  const staticRoutes = [
+    "apps/control-panel/runtime/src/app/api/dsh/[...path]/route.ts",
+    "apps/control-panel/runtime/src/app/api/workforce/[...path]/route.ts",
+    "apps/control-panel/runtime/src/app/api/providers/[...path]/route.ts",
+    "apps/control-panel/runtime/src/app/api/platform-control/[...path]/route.ts",
+  ];
+  for (const routeFile of staticRoutes) {
+    const route = read(routeFile);
+    assert.match(route, /proxyAuthenticatedUpstream/);
+  }
+});
+
 test("production BFF upstreams are server-only and fail closed when absent", () => {
   const proxy = read("apps/control-panel/runtime/src/server/bff-proxy.ts");
-  for (const variable of [
-    "DSH_API_BASE_URL",
-    "IDENTITY_API_BASE_URL",
-    "WLT_API_BASE_URL",
-    "WORKFORCE_API_BASE_URL",
-    "PROVIDERS_API_BASE_URL",
-    "PLATFORM_CONTROL_API_BASE_URL",
-  ]) {
+  for (const variable of ["IDENTITY_API_BASE_URL", "WLT_API_BASE_URL"]) {
     assert.match(proxy, new RegExp(`env: "${variable}"`));
   }
   assert.doesNotMatch(proxy, /NEXT_PUBLIC_[A-Z_]+_API_BASE_URL/);
