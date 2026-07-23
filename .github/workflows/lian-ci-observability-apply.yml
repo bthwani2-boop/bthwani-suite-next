@@ -1,4 +1,4 @@
-name: Generate Validated Canonical CI Commit
+name: Diagnose Validated Git Commit Creation
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   statuses: write
 
 concurrency:
-  group: lian-ci-observability-generate-${{ github.ref }}
+  group: lian-ci-git-object-diagnostics-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -19,99 +19,116 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - name: Publish generation run locator
+      - name: Publish run locator
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          jq -n \
-            --arg state pending \
-            --arg context bthwani/lian-ci-generated-commit \
-            --arg description "validated canonical CI commit is being generated from the latest branch head" \
-            --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-            '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
-          curl --fail-with-body --retry 3 -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-            --data-binary @/tmp/status.json
+          jq -n --arg state pending --arg context bthwani/lian-ci-git-object-diagnostics --arg description "validated Git object creation is running" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          curl --fail-with-body --retry 3 -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${GH_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28" "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" --data-binary @/tmp/status.json
 
-      - name: Checkout branch history
+      - name: Checkout and synchronize latest head
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Preserve renderer and sync latest head
+      - name: Render and validate exact files
+        id: render
         shell: bash
         run: |
           set -euo pipefail
-          cp tools/scripts/render-lian-ci-observability.py /tmp/render-lian-ci-observability.py
+          cp tools/scripts/render-lian-ci-observability.py /tmp/renderer.py
           git fetch origin lianbassam
           git reset --hard origin/lianbassam
           git clean -fd
-
-      - name: Render validated target files
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 /tmp/render-lian-ci-observability.py
+          python3 /tmp/renderer.py
           git diff --check
           test "$(git hash-object .github/workflows/ci.yml)" = "e9ed5d1a4a5b0d8fb1c277628693c73977807b6b"
           test "$(git hash-object services/dsh/backend/internal/http/catalog_contract_alignment_test.go)" = "06345c3833837d5b27efb037c3a4ea35ee58cae3"
           test "$(git hash-object governance/github/lianbassam-full-verification.trigger.json)" = "f3575610b82fd15b46580e326acfafa8c82654db"
+          echo "parent_sha=$(git rev-parse HEAD)" >>"${GITHUB_OUTPUT}"
+          echo "base_tree=$(git rev-parse 'HEAD^{tree}')" >>"${GITHUB_OUTPUT}"
 
-      - name: Create immutable Git tree and commit
+      - name: Create validated blobs
+        id: blobs
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          api() {
-            local method="$1" endpoint="$2" data_file="${3:-}"
-            local args=(--fail-with-body --retry 3 -sS -X "${method}" -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${GH_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28")
-            if [[ -n "${data_file}" ]]; then args+=(--data-binary "@${data_file}"); fi
-            curl "${args[@]}" "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}${endpoint}"
-          }
           create_blob() {
-            local file="$1" payload response
+            local label="$1" file="$2" payload response code
             payload="$(base64 -w0 "${file}")"
-            jq -n --arg content "${payload}" '{content:$content,encoding:"base64"}' >/tmp/blob.json
-            response="$(api POST /git/blobs /tmp/blob.json)"
-            jq -er '.sha' <<<"${response}"
+            jq -n --arg content "${payload}" '{content:$content,encoding:"base64"}' >/tmp/${label}-request.json
+            code="$(curl --retry 3 -sS -o /tmp/${label}-response.json -w '%{http_code}' -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${GH_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28" "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/git/blobs" --data-binary @/tmp/${label}-request.json)"
+            echo "${label} HTTP ${code}" | tee -a /tmp/git-object-diagnostics.log
+            cat /tmp/${label}-response.json | tee -a /tmp/git-object-diagnostics.log
+            test "${code}" = "201"
+            jq -er '.sha' /tmp/${label}-response.json
           }
+          ci_sha="$(create_blob ci .github/workflows/ci.yml | tail -n1)"
+          dsh_sha="$(create_blob dsh services/dsh/backend/internal/http/catalog_contract_alignment_test.go | tail -n1)"
+          trigger_sha="$(create_blob trigger governance/github/lianbassam-full-verification.trigger.json | tail -n1)"
+          echo "ci_sha=${ci_sha}" >>"${GITHUB_OUTPUT}"
+          echo "dsh_sha=${dsh_sha}" >>"${GITHUB_OUTPUT}"
+          echo "trigger_sha=${trigger_sha}" >>"${GITHUB_OUTPUT}"
 
-          parent_sha="$(git rev-parse HEAD)"
-          base_tree="$(git rev-parse 'HEAD^{tree}')"
-          ci_blob="$(create_blob .github/workflows/ci.yml)"
-          dsh_blob="$(create_blob services/dsh/backend/internal/http/catalog_contract_alignment_test.go)"
-          trigger_blob="$(create_blob governance/github/lianbassam-full-verification.trigger.json)"
+      - name: Create validated tree
+        id: tree
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_TREE: ${{ steps.render.outputs.base_tree }}
+          CI_SHA: ${{ steps.blobs.outputs.ci_sha }}
+          DSH_SHA: ${{ steps.blobs.outputs.dsh_sha }}
+          TRIGGER_SHA: ${{ steps.blobs.outputs.trigger_sha }}
+        run: |
+          set -euo pipefail
+          jq -n --arg base_tree "${BASE_TREE}" --arg ci "${CI_SHA}" --arg dsh "${DSH_SHA}" --arg trigger "${TRIGGER_SHA}" '{base_tree:$base_tree,tree:[{path:".github/workflows/ci.yml",mode:"100644",type:"blob",sha:$ci},{path:"services/dsh/backend/internal/http/catalog_contract_alignment_test.go",mode:"100644",type:"blob",sha:$dsh},{path:"governance/github/lianbassam-full-verification.trigger.json",mode:"100644",type:"blob",sha:$trigger},{path:".github/workflows/lian-ci-observability-apply.yml",sha:null},{path:"tools/scripts/render-lian-ci-observability.py",sha:null}]}' >/tmp/tree-request.json
+          code="$(curl --retry 3 -sS -o /tmp/tree-response.json -w '%{http_code}' -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${GH_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28" "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/git/trees" --data-binary @/tmp/tree-request.json)"
+          echo "tree HTTP ${code}" | tee -a /tmp/git-object-diagnostics.log
+          cat /tmp/tree-response.json | tee -a /tmp/git-object-diagnostics.log
+          test "${code}" = "201"
+          echo "tree_sha=$(jq -er '.sha' /tmp/tree-response.json)" >>"${GITHUB_OUTPUT}"
 
-          jq -n --arg base_tree "${base_tree}" --arg ci "${ci_blob}" --arg dsh "${dsh_blob}" --arg trigger "${trigger_blob}" '{base_tree:$base_tree,tree:[{path:".github/workflows/ci.yml",mode:"100644",type:"blob",sha:$ci},{path:"services/dsh/backend/internal/http/catalog_contract_alignment_test.go",mode:"100644",type:"blob",sha:$dsh},{path:"governance/github/lianbassam-full-verification.trigger.json",mode:"100644",type:"blob",sha:$trigger},{path:".github/workflows/lian-ci-observability-apply.yml",mode:"100644",type:"blob",sha:null},{path:"tools/scripts/render-lian-ci-observability.py",mode:"100644",type:"blob",sha:null}]}' >/tmp/tree.json
-          tree_response="$(api POST /git/trees /tmp/tree.json)"
-          tree_sha="$(jq -er '.sha' <<<"${tree_response}")"
+      - name: Create validated commit
+        id: commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PARENT_SHA: ${{ steps.render.outputs.parent_sha }}
+          TREE_SHA: ${{ steps.tree.outputs.tree_sha }}
+        run: |
+          set -euo pipefail
+          jq -n --arg message "fix(ci): expose remaining failures and align DSH catalog test" --arg tree "${TREE_SHA}" --arg parent "${PARENT_SHA}" '{message:$message,tree:$tree,parents:[$parent]}' >/tmp/commit-request.json
+          code="$(curl --retry 3 -sS -o /tmp/commit-response.json -w '%{http_code}' -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${GH_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28" "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/git/commits" --data-binary @/tmp/commit-request.json)"
+          echo "commit HTTP ${code}" | tee -a /tmp/git-object-diagnostics.log
+          cat /tmp/commit-response.json | tee -a /tmp/git-object-diagnostics.log
+          test "${code}" = "201"
+          commit_sha="$(jq -er '.sha' /tmp/commit-response.json)"
+          echo "commit_sha=${commit_sha}" >>"${GITHUB_OUTPUT}"
+          jq -n --arg parent_sha "${PARENT_SHA}" --arg tree_sha "${TREE_SHA}" --arg commit_sha "${commit_sha}" '{parent_sha:$parent_sha,tree_sha:$tree_sha,commit_sha:$commit_sha}' >/tmp/generated-commit.json
 
-          jq -n --arg message "fix(ci): expose remaining failures and align DSH catalog test" --arg tree "${tree_sha}" --arg parent "${parent_sha}" '{message:$message,tree:$tree,parents:[$parent]}' >/tmp/commit.json
-          commit_response="$(api POST /git/commits /tmp/commit.json)"
-          commit_sha="$(jq -er '.sha' <<<"${commit_response}")"
-          jq -n --arg parent_sha "${parent_sha}" --arg tree_sha "${tree_sha}" --arg commit_sha "${commit_sha}" '{parent_sha:$parent_sha,tree_sha:$tree_sha,commit_sha:$commit_sha}' >/tmp/generated-commit.json
-          cat /tmp/generated-commit.json
-
-      - name: Upload generated commit manifest
+      - name: Upload diagnostics and generated commit
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: lian-generated-commit-${{ github.run_id }}
-          path: /tmp/generated-commit.json
-          if-no-files-found: error
+          name: lian-git-object-diagnostics-${{ github.run_id }}
+          path: |
+            /tmp/git-object-diagnostics.log
+            /tmp/*-request.json
+            /tmp/*-response.json
+            /tmp/generated-commit.json
+          if-no-files-found: warn
           retention-days: 2
 
-      - name: Publish generation success
+      - name: Publish generated commit status
+        if: ${{ steps.commit.outputs.commit_sha != '' }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          jq -n --arg state success --arg context bthwani/lian-ci-generated-commit --arg description "validated commit generated; awaiting fast-forward ref update" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
+          jq -n --arg state success --arg context bthwani/lian-ci-git-object-diagnostics --arg description "validated commit generated; awaiting connector fast-forward" --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/status.json
           curl --fail-with-body --retry 3 -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${GH_TOKEN}" -H "X-GitHub-Api-Version: 2022-11-28" "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" --data-binary @/tmp/status.json
