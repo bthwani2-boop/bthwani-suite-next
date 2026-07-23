@@ -121,7 +121,7 @@ function Select-BthwaniAndroidDevice {
         }
 
         if ($Offline.Count -gt 0) {
-            throw "Android device is offline. Reconnect ADB or restart the phone connection."
+            throw "Android device is offline. Restore the existing ADB connection; the runtime will not disconnect and reconnect it automatically."
         }
 
         throw "No authorized Android device is connected."
@@ -143,17 +143,37 @@ function Select-BthwaniAndroidDevice {
         throw "BTHWANI_ANDROID_SERIAL '$PreferredSerial' is unavailable. Available: $Available"
     }
 
-    # For the user's real-device workflow, prefer the sole TCP/IP connection.
-    $TcpDevices = @(
-        $Online |
-            Where-Object IsTcpIp
-    )
-
-    if ($TcpDevices.Count -eq 1) {
-        return $TcpDevices[0]
+    $Transport = if ($env:BTHWANI_ANDROID_TRANSPORT) {
+        $env:BTHWANI_ANDROID_TRANSPORT.Trim().ToLowerInvariant()
+    } else {
+        "auto"
     }
 
-    if ($TcpDevices.Count -gt 1) {
+    if ($Transport -notin @("auto", "usb", "tcp")) {
+        throw "BTHWANI_ANDROID_TRANSPORT must be auto, usb, or tcp."
+    }
+
+    $UsbDevices = @($Online | Where-Object { -not $_.IsTcpIp })
+    $TcpDevices = @($Online | Where-Object IsTcpIp)
+
+    if ($Transport -eq "usb") {
+        if ($UsbDevices.Count -eq 1) {
+            return $UsbDevices[0]
+        }
+        if ($UsbDevices.Count -eq 0) {
+            throw "No online USB Android device was found."
+        }
+        $Available = ($UsbDevices.Serial -join ", ")
+        throw "Multiple USB Android devices found: $Available. Set BTHWANI_ANDROID_SERIAL."
+    }
+
+    if ($Transport -eq "tcp") {
+        if ($TcpDevices.Count -eq 1) {
+            return $TcpDevices[0]
+        }
+        if ($TcpDevices.Count -eq 0) {
+            throw "No online TCP/IP Android device was found."
+        }
         $Available = ($TcpDevices.Serial -join ", ")
         throw "Multiple TCP/IP Android devices found: $Available. Set BTHWANI_ANDROID_SERIAL."
     }
@@ -162,8 +182,63 @@ function Select-BthwaniAndroidDevice {
         return $Online[0]
     }
 
+    # When both transports expose the same phone, USB is the stable default.
+    # Wi-Fi remains automatic when it is the only available transport.
+    if ($UsbDevices.Count -eq 1) {
+        return $UsbDevices[0]
+    }
+
+    if ($UsbDevices.Count -gt 1) {
+        $Available = ($UsbDevices.Serial -join ", ")
+        throw "Multiple USB Android devices found: $Available. Set BTHWANI_ANDROID_SERIAL."
+    }
+
+    if ($TcpDevices.Count -eq 1) {
+        return $TcpDevices[0]
+    }
+
     $Available = ($Online.Serial -join ", ")
     throw "Multiple Android devices found: $Available. Set BTHWANI_ANDROID_SERIAL."
+}
+
+function Get-BthwaniAdbReverseMappings {
+    param(
+        [Parameter(Mandatory)]
+        [string] $AdbPath,
+
+        [Parameter(Mandatory)]
+        [string] $Serial
+    )
+
+    $RawOutput = @(& $AdbPath -s $Serial reverse --list 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        throw "adb reverse --list failed for $Serial`: $($RawOutput -join [Environment]::NewLine)"
+    }
+
+    return @($RawOutput | ForEach-Object { [string] $_ })
+}
+
+function Assert-BthwaniAdbReverse {
+    param(
+        [Parameter(Mandatory)]
+        [string] $AdbPath,
+
+        [Parameter(Mandatory)]
+        [string] $Serial,
+
+        [Parameter(Mandatory)]
+        [int[]] $Ports
+    )
+
+    $Mappings = Get-BthwaniAdbReverseMappings -AdbPath $AdbPath -Serial $Serial
+
+    foreach ($Port in ($Ports | Select-Object -Unique)) {
+        $Pattern = "tcp:$Port\s+tcp:$Port(?:\s|$)"
+        $Found = @($Mappings | Where-Object { $_ -match $Pattern }).Count -gt 0
+        if (-not $Found) {
+            throw "adb reverse mapping was not confirmed for $Serial on port $Port."
+        }
+    }
 }
 
 function Invoke-BthwaniAdbReverse {
@@ -179,15 +254,19 @@ function Invoke-BthwaniAdbReverse {
     )
 
     foreach ($Port in ($Ports | Select-Object -Unique)) {
-        & $AdbPath `
-            -s $Serial `
-            reverse `
-            "tcp:$Port" `
-            "tcp:$Port" |
-            Out-Null
+        $RawOutput = @(
+            & $AdbPath `
+                -s $Serial `
+                reverse `
+                "tcp:$Port" `
+                "tcp:$Port" `
+                2>&1
+        )
 
         if ($LASTEXITCODE -ne 0) {
-            throw "adb reverse failed for $Serial on port $Port."
+            throw "adb reverse failed for $Serial on port $Port`: $($RawOutput -join [Environment]::NewLine)"
         }
     }
+
+    Assert-BthwaniAdbReverse -AdbPath $AdbPath -Serial $Serial -Ports $Ports
 }
