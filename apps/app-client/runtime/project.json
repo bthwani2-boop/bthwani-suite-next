@@ -7,13 +7,17 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir apps/app-client/runtime typecheck"
+        "command": "node tools/scripts/run-tsc-check.mjs --project apps/app-client/runtime/tsconfig.json --label app-client"
       }
     },
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "node tools/scripts/guard-mobile-apps.mjs"
+        "commands": [
+          "node tools/scripts/run-command-check.mjs --label app-client-contracts -- node --test apps/app-client/runtime/tests/*.test.mjs",
+          "node tools/scripts/run-command-check.mjs --label mobile-config -- node tools/scripts/guard-mobile-apps.mjs"
+        ],
+        "parallel": false
       }
     },
     "build": {
@@ -24,6 +28,7 @@
     }
   },
   "tags": [
-    "scope:app-client type:app"
+    "scope:app-client",
+    "type:app"
   ]
 }
