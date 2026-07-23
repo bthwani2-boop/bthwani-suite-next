@@ -1,4 +1,4 @@
-name: Apply Canonical CI Observability Commit
+name: Apply Validated Canonical CI Commit
 
 on:
   push:
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   apply:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
       - name: Publish apply run locator
         shell: bash
@@ -28,7 +28,7 @@ jobs:
           jq -n \
             --arg state pending \
             --arg context bthwani/lian-ci-observability-commit \
-            --arg description "canonical CI commit is being rebased onto the latest branch head" \
+            --arg description "validated canonical CI commit is being rebased onto the latest branch head" \
             --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/apply-status.json
           curl --fail-with-body --retry 3 -X POST \
@@ -44,13 +44,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Set up locked Node workspace
-        uses: ./.github/actions/setup-node-workspace
-
       - name: Preserve deterministic renderer
         run: cp tools/scripts/render-lian-ci-observability.py /tmp/render-lian-ci-observability.py
 
-      - name: Rebase, render, validate, and publish atomically
+      - name: Rebase validated blobs and publish atomically
         id: publish
         shell: bash
         env:
@@ -80,6 +77,10 @@ jobs:
             jq -er '.sha' <<<"${response}"
           }
 
+          expected_ci="e9ed5d1a4a5b0d8fb1c277628693c73977807b6b"
+          expected_dsh_test="06345c3833837d5b27efb037c3a4ea35ee58cae3"
+          expected_trigger="f3575610b82fd15b46580e326acfafa8c82654db"
+
           for attempt in 1 2 3 4 5; do
             echo "=== optimistic publish attempt ${attempt}/5 ==="
             git fetch origin lianbassam
@@ -87,15 +88,14 @@ jobs:
             git clean -fd
 
             python3 /tmp/render-lian-ci-observability.py
-            pnpm run guard:workflow-lint
-            grep -Fq 'name: Publish contextual CI run locator' .github/workflows/ci.yml
-            grep -Fq 'name: Verify complete Node tests' .github/workflows/ci.yml
-            grep -Fq 'operationId: patchPartnerProductProposal' services/dsh/backend/internal/http/catalog_contract_alignment_test.go
-            if grep -Eq 'GH_TOKEN: (ghp_|github_pat_)' .github/workflows/ci.yml; then
-              echo 'refusing to commit an expanded GitHub token' >&2
+            git diff --check
+            ci_hash="$(git hash-object .github/workflows/ci.yml)"
+            dsh_hash="$(git hash-object services/dsh/backend/internal/http/catalog_contract_alignment_test.go)"
+            trigger_hash="$(git hash-object governance/github/lianbassam-full-verification.trigger.json)"
+            if [[ "${ci_hash}" != "${expected_ci}" || "${dsh_hash}" != "${expected_dsh_test}" || "${trigger_hash}" != "${expected_trigger}" ]]; then
+              echo "validated blob mismatch: ci=${ci_hash} dsh=${dsh_hash} trigger=${trigger_hash}" >&2
               exit 1
             fi
-            git diff --check
 
             base_commit="$(git rev-parse HEAD)"
             base_tree="$(git rev-parse 'HEAD^{tree}')"
@@ -158,7 +158,7 @@ jobs:
           jq -n \
             --arg state success \
             --arg context bthwani/lian-ci-observability-commit \
-            --arg description "canonical CI observability and DSH alignment committed" \
+            --arg description "validated CI observability and DSH alignment committed" \
             --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}' >/tmp/result-status.json
           curl --fail-with-body --retry 3 -X POST \
