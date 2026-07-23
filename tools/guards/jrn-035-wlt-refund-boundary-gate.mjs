@@ -84,11 +84,20 @@ required("services/dsh/backend/internal/wlt/refund_proxy.go", [
   [/X-Tenant-ID/, "DSH_REFUND_TENANT_FORWARDING_MISSING"],
   [/FinanceRefundWrite/, "DSH_REFUND_WLT_WRITE_ALLOWLIST_MISSING"],
 ]);
-required("services/dsh/backend/internal/http/refund_finance_handlers.go", [
-  [/requiredPaymentTenant/, "DSH_REFUND_CANONICAL_TENANT_LOOKUP_MISSING"],
+required("services/dsh/backend/internal/http/finance_payment_sessions.go", [
+  [/actorTenantID/, "DSH_FINANCE_IDENTITY_TENANT_SOURCE_MISSING"],
+  [/TENANT_MISMATCH/, "DSH_FINANCE_TENANT_MISMATCH_GUARD_MISSING"],
+  [/suppliedTenantID != "" && suppliedTenantID != tenantID/, "DSH_FINANCE_LEGACY_SELECTOR_CONFIRMATION_MISSING"],
+]);
+const dshRefundHandlers = required("services/dsh/backend/internal/http/refund_finance_handlers.go", [
+  [/requiredPaymentTenant\(w,\s*r,\s*actor\.TenantID\)/, "DSH_REFUND_IDENTITY_TENANT_BINDING_MISSING"],
   [/privacyRefund/, "DSH_REFUND_PRIVACY_PROJECTION_MISSING"],
   [/FinancePermissionManage/, "DSH_REFUND_FINANCE_AUTHORITY_MISSING"],
+  [/input\.AmountMinorUnits <= 0/, "DSH_REFUND_POSITIVE_AMOUNT_GUARD_MISSING"],
 ]);
+if (/requiredPaymentTenant\(w,\s*r\)/.test(dshRefundHandlers)) {
+  violations.push({ file: "services/dsh/backend/internal/http/refund_finance_handlers.go", line: 0, message: "DSH_REFUND_BROWSER_TENANT_AUTHORITY_REMAINS" });
+}
 
 for (const file of listCodeFiles()) {
   if (!file.startsWith("services/dsh/frontend/")) continue;
