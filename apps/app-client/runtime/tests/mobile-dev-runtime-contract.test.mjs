@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+const require = createRequire(import.meta.url);
 
 const mobileApps = ['app-client', 'app-partner', 'app-captain', 'app-field'];
 
@@ -49,6 +51,14 @@ test('every mobile launcher executes the shared preflight before Metro', () => {
   }
 });
 
+test('Android development client opens once outside Expo stream piping', () => {
+  const source = read('tools/scripts/start-mobile-runtime.ps1');
+  const expoArguments = source.slice(source.indexOf('$ExpoArguments = @('), source.indexOf('$SlugByApp = @{'));
+  assert.doesNotMatch(expoArguments, /--android/);
+  assert.match(source, /shell am start -W/);
+  assert.match(source, /Metro port \$LaunchPort did not become ready for Android launch/);
+});
+
 test('Sentry root instrumentation is conditional on successful initialization', () => {
   for (const app of mobileApps) {
     const indexSource = read(`apps/${app}/runtime/src/index.ts`);
@@ -58,5 +68,43 @@ test('Sentry root instrumentation is conditional on successful initialization', 
     assert.match(sentrySource, /export function initSentry\(\): boolean/);
     assert.match(sentrySource, /return false;/);
     assert.match(sentrySource, /return true;/);
+  }
+});
+
+test('Sentry Expo plugin is omitted until the native configuration is complete', () => {
+  const environmentNames = [
+    'EXPO_PUBLIC_SENTRY_DSN',
+    'SENTRY_ORG',
+    'SENTRY_PROJECT',
+    'EXPO_PUBLIC_SENTRY_DSN_APP_CLIENT',
+    'SENTRY_ORG_APP_CLIENT',
+    'SENTRY_PROJECT_APP_CLIENT',
+  ];
+  const previous = Object.fromEntries(environmentNames.map((name) => [name, process.env[name]]));
+  const restore = () => {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  };
+
+  try {
+    for (const name of environmentNames) delete process.env[name];
+    const { defineBthwaniExpoApp } = require(path.join(repoRoot, 'tools/mobile/defineBthwaniExpoApp.js'));
+
+    const unconfigured = defineBthwaniExpoApp('app-client');
+    assert.equal(unconfigured.plugins.some((plugin) => plugin === '@sentry/react-native/expo' || plugin?.[0] === '@sentry/react-native/expo'), false);
+    assert.equal(unconfigured.extra.sentry.enabled, false);
+    assert.equal(unconfigured.extra.sentry.nativeConfigured, false);
+
+    process.env.EXPO_PUBLIC_SENTRY_DSN = 'https://public@example.invalid/1';
+    process.env.SENTRY_ORG = 'bthwani';
+    process.env.SENTRY_PROJECT = 'app-client';
+    const configured = defineBthwaniExpoApp('app-client');
+    assert.equal(configured.plugins.some((plugin) => plugin?.[0] === '@sentry/react-native/expo'), true);
+    assert.equal(configured.extra.sentry.enabled, true);
+    assert.equal(configured.extra.sentry.nativeConfigured, true);
+  } finally {
+    restore();
   }
 });
