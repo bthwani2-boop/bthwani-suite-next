@@ -113,12 +113,13 @@ func HandleUpsertPayoutDestinationGoverned(db *sql.DB) http.HandlerFunc {
 		maskedMobile := maskLast4(input.PayoutMobileNumber)
 		rows, err := tx.QueryContext(r.Context(), `
 			INSERT INTO wlt_payout_destinations
-				(partner_id, beneficiary_name, bank_name, bank_branch,
+				(partner_id, owner_actor_id, owner_actor_type,
+				 beneficiary_name, bank_name, bank_branch,
 				 account_number_encrypted, iban_encrypted, payout_mobile_number_encrypted,
 				 settlement_preference, bank_account_holder_matches_owner, bank_notes,
 				 masked_account_number, masked_iban, masked_mobile_number,
 				 active, created_by_actor_id)
-			VALUES ($1,$2,$3,$4,
+			VALUES ($1,$1,'partner',$2,$3,$4,
 			        pgp_sym_encrypt($5, $6), pgp_sym_encrypt($7, $6), pgp_sym_encrypt($8, $6),
 			        $9,$10,$11,$12,$13,$14,true,$15)
 			RETURNING `+cols,
