@@ -11,123 +11,64 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$StateDirectory = Join-Path $env:LOCALAPPDATA "Bthwani\ScrcpyWiFi"
-$ConfigPath = Join-Path $StateDirectory "config.json"
+# ---------------------------------------------------------------------------
+# Shared ADB helper (Resolve-BthwaniAdb + Start-BthwaniAdbServer)
+# ---------------------------------------------------------------------------
+$AdbHelper = Join-Path $PSScriptRoot "..\tools\scripts\mobile-adb.ps1"
+if (-not (Test-Path -LiteralPath $AdbHelper -PathType Leaf)) {
+    throw "ADB helper not found: $AdbHelper"
+}
+. $AdbHelper
 
-New-Item -ItemType Directory -Path $StateDirectory -Force | Out-Null
+# ---------------------------------------------------------------------------
+# Config persistence
+# ---------------------------------------------------------------------------
+$StateDir  = Join-Path $env:LOCALAPPDATA "Bthwani\ScrcpyWiFi"
+$ConfigPath = Join-Path $StateDir "config.json"
+New-Item -ItemType Directory -Path $StateDir -Force | Out-Null
 
-# Clean up legacy folders if any
-$LegacyStateDir = Join-Path $env:LOCALAPPDATA "ScrcpyWiFi"
-Remove-Item -LiteralPath $LegacyStateDir -Recurse -Force -ErrorAction SilentlyContinue
+# Remove legacy folder if it survived earlier cleanup
+$LegacyDir = Join-Path $env:LOCALAPPDATA "ScrcpyWiFi"
+Remove-Item -LiteralPath $LegacyDir -Recurse -Force -ErrorAction SilentlyContinue
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 function Run-Cmd {
-    param([string]$cmd, [string[]]$cmdArgs)
+    param([string]$Cmd, [string[]]$Args)
     $prev = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
-    $output = & $cmd $cmdArgs 2>&1
+    $out = & $Cmd $Args 2>&1
     $ErrorActionPreference = $prev
-    return [pscustomobject]@{
-        ExitCode = $LASTEXITCODE
-        Output = [string]::Join("`n", @($output)).Trim()
-    }
-}
-
-function Start-ScrcpyAdbServer {
-    param([Parameter(Mandatory)][string] $AdbPath)
-
-    function Invoke-AdbStart {
-        param([string] $Exe)
-        $psi                        = [System.Diagnostics.ProcessStartInfo]::new($Exe)
-        $psi.Arguments              = 'start-server'
-        $psi.UseShellExecute        = $false
-        $psi.CreateNoWindow         = $true
-        $psi.RedirectStandardOutput = $true
-        $psi.RedirectStandardError  = $true
-        $proc = [System.Diagnostics.Process]::Start($psi)
-        $proc.StandardOutput.ReadToEndAsync() | Out-Null
-        $proc.StandardError.ReadToEndAsync()  | Out-Null
-        return $proc
-    }
-
-    $proc = Invoke-AdbStart -Exe $AdbPath
-    if (-not $proc.WaitForExit(15000)) {
-        $proc.Kill()
-        Write-Warning "ADB server did not respond in 15 s — killing stale daemon and retrying."
-        Get-Process -Name adb -ErrorAction SilentlyContinue |
-            Stop-Process -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Milliseconds 800
-        $proc2 = Invoke-AdbStart -Exe $AdbPath
-        if (-not $proc2.WaitForExit(15000)) {
-            $proc2.Kill()
-            throw "ADB server failed to start after retry. Check Android SDK installation."
-        }
-        if ($proc2.ExitCode -ne 0) {
-            throw "ADB server failed to start after retry (exit $($proc2.ExitCode))."
-        }
-        return
-    }
-    if ($proc.ExitCode -ne 0) {
-        throw "ADB server failed to start (exit $($proc.ExitCode))."
-    }
-}
-
-
-function Resolve-ScrcpyTools {
-    $scrcpy = (Get-Command scrcpy.exe -ErrorAction SilentlyContinue | Select-Object -First 1).Source
-    if (-not $scrcpy) { throw "scrcpy.exe not found. Install it or add it to PATH." }
-    $dir = Split-Path -Parent $scrcpy
-    $adbCandidates = @(
-        "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe",
-        "$dir\adb.exe",
-        "$env:ANDROID_HOME\platform-tools\adb.exe",
-        "$env:ANDROID_SDK_ROOT\platform-tools\adb.exe",
-        (Get-Command adb.exe -ErrorAction SilentlyContinue | Select-Object -First 1).Source
-    )
-    $adb = ($adbCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1)
-    if (-not $adb) { throw "adb.exe not found." }
-    return [pscustomobject]@{ Scrcpy = $scrcpy; Adb = $adb }
-}
-
-function Test-ValidIp {
-    param([string]$addr)
-    try {
-        $bytes = [System.Net.IPAddress]::Parse($addr).GetAddressBytes()
-        return ($bytes.Count -eq 4 -and $bytes[0] -ne 127 -and -not ($bytes[0] -eq 169 -and $bytes[1] -eq 254))
-    } catch {
-        return $false
-    }
+    [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = ($out -join "`n").Trim() }
 }
 
 function Get-Devices {
     $res = Run-Cmd $Adb @("devices", "-l")
-    $devices = @()
     foreach ($line in ($res.Output -split "`n")) {
-        if ($line.Trim() -match "^(?<serial>\S+)\s+(?<state>device|offline|unauthorized)(?:\s+(?<details>.*))?$") {
-            $serial = $Matches.serial
-            $devices += [pscustomobject]@{
-                Serial  = $serial
+        if ($line -match "^(?<serial>\S+)\s+(?<state>device|offline|unauthorized)(\s+(?<details>.*))?$") {
+            [pscustomobject]@{
+                Serial  = $Matches.serial
                 State   = $Matches.state
-                IsTcpIp = [bool]($serial -match "^\d{1,3}(\.\d{1,3}){3}:\d+$")
+                IsTcpIp = [bool]($Matches.serial -match "^\d{1,3}(\.\d{1,3}){3}:\d+$")
             }
         }
     }
-    return $devices
 }
 
 function Get-PhoneIp {
-    param([string]$serial)
-    $res = Run-Cmd $Adb @("-s", $serial, "shell", "ip -f inet addr show wlan0")
-    if ($res.Output -match "inet\s+(?<ip>\d{1,3}(\.\d{1,3}){3})/") { return $Matches.ip }
-    $res = Run-Cmd $Adb @("-s", $serial, "shell", "getprop dhcp.wlan0.ipaddress")
-    if ($res.Output -match "^\d{1,3}(\.\d{1,3}){3}$") { return $res.Output.Trim() }
-    
-    # Scan other active interfaces
-    $res = Run-Cmd $Adb @("-s", $serial, "shell", "ip -f inet addr show")
+    param([string]$Serial)
+    $r = Run-Cmd $Adb @("-s", $Serial, "shell", "ip -f inet addr show wlan0")
+    if ($r.Output -match "inet\s+(?<ip>\d{1,3}(\.\d{1,3}){3})/") { return $Matches.ip }
+    $r = Run-Cmd $Adb @("-s", $Serial, "shell", "getprop dhcp.wlan0.ipaddress")
+    if ($r.Output -match "^\d{1,3}(\.\d{1,3}){3}$") { return $r.Output.Trim() }
+    # Fallback: scan active interfaces
+    $r = Run-Cmd $Adb @("-s", $Serial, "shell", "ip -f inet addr show")
     $iface = ""
-    foreach ($line in ($res.Output -split "`n")) {
-        $trimmed = $line.Trim()
-        if ($trimmed -match "^\d+:\s+(?<name>[^:@\s]+)") { $iface = $Matches.name }
-        if ($trimmed -match "inet\s+(?<ip>\d{1,3}(\.\d{1,3}){3})/" -and $iface -notmatch "lo|dummy") {
+    foreach ($line in ($r.Output -split "`n")) {
+        $t = $line.Trim()
+        if ($t -match "^\d+:\s+(?<name>[^:@\s]+)") { $iface = $Matches.name }
+        if ($t -match "inet\s+(?<ip>\d{1,3}(\.\d{1,3}){3})/" -and $iface -notmatch "lo|dummy") {
             if ($iface -match "wlan|ap|eth") { return $Matches.ip }
         }
     }
@@ -135,194 +76,164 @@ function Get-PhoneIp {
 }
 
 function Test-Endpoint {
-    param([string]$endpoint, [string]$expectedSerial)
-    Run-Cmd $Adb @("connect", $endpoint) | Out-Null
+    param([string]$Endpoint, [string]$ExpectedSerial)
+    Run-Cmd $Adb @("connect", $Endpoint) | Out-Null
     Start-Sleep -Milliseconds 400
-    $resState = Run-Cmd $Adb @("-s", $endpoint, "get-state")
-    if ($resState.Output -ne "device") { return $false }
-    $resSerial = Run-Cmd $Adb @("-s", $endpoint, "shell", "getprop ro.serialno")
-    $serial = ($resSerial.Output -split "`n" | Select-Object -Last 1).Trim()
-    if ($serial -eq $expectedSerial) { return $true }
-    Run-Cmd $Adb @("disconnect", $endpoint) | Out-Null
+    if ((Run-Cmd $Adb @("-s", $Endpoint, "get-state")).Output -ne "device") { return $false }
+    $serial = ((Run-Cmd $Adb @("-s", $Endpoint, "shell", "getprop ro.serialno")).Output -split "`n" |
+               Select-Object -Last 1).Trim()
+    if ($serial -eq $ExpectedSerial) { return $true }
+    Run-Cmd $Adb @("disconnect", $Endpoint) | Out-Null
     return $false
 }
 
 function Get-LocalSubnets {
-    $ips = @()
     try {
-        $ips = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop | 
-            Where-Object { $_.IPAddress -notmatch "^(127\.|169\.254\.)" -and -not $_.SkipAsSource } | 
-            Select-Object -ExpandProperty IPAddress)
+        Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop |
+            Where-Object { $_.IPAddress -notmatch "^(127\.|169\.254\.)" -and -not $_.SkipAsSource } |
+            ForEach-Object { ($_.IPAddress -split '\.')[0..2] -join '.' } |
+            Select-Object -Unique
     } catch {
-        $ips = [System.Net.Dns]::GetHostEntry([System.Net.Dns]::GetHostName()).AddressList | 
-            Where-Object { $_.AddressFamily -eq 'InterNetwork' } | 
-            ForEach-Object { $_.IPAddressToString } | 
-            Where-Object { $_ -notmatch "^(127\.|169\.254\.)" }
+        [System.Net.Dns]::GetHostEntry([System.Net.Dns]::GetHostName()).AddressList |
+            Where-Object AddressFamily -eq InterNetwork |
+            ForEach-Object { $_.IPAddressToString } |
+            Where-Object { $_ -notmatch "^(127\.|169\.254\.)" } |
+            ForEach-Object { ($_ -split '\.')[0..2] -join '.' } |
+            Select-Object -Unique
     }
-    return @($ips | ForEach-Object { $parts = $_.Split('.'); if ($parts.Count -eq 4) { "$($parts[0]).$($parts[1]).$($parts[2])" } } | Select-Object -Unique)
 }
 
 function Scan-Subnets {
-    param([string[]]$prefixes, [int]$port)
-    $open = @()
-    foreach ($prefix in $prefixes) {
-        Write-Host "Scanning $prefix.0/24 on port $port..."
-        $clients = @()
+    param([string[]]$Prefixes, [int]$ScanPort)
+    $clients = foreach ($prefix in $Prefixes) {
+        Write-Host "Scanning $prefix.0/24 on port $ScanPort..."
         foreach ($i in 1..254) {
-            $ip = "$prefix.$i"
-            $client = New-Object System.Net.Sockets.TcpClient
-            try {
-                $ar = $client.BeginConnect($ip, $port, $null, $null)
-                $clients += [pscustomobject]@{ Client = $client; AsyncResult = $ar; Ip = $ip }
-            } catch {
-                $client.Close()
-            }
-        }
-        Start-Sleep -Milliseconds 1000
-        foreach ($c in $clients) {
-            if ($c.AsyncResult.IsCompleted -and $c.Client.Connected) {
-                $open += $c.Ip
-            }
-            $c.Client.Close()
+            $c = [System.Net.Sockets.TcpClient]::new()
+            try { [pscustomobject]@{ Client = $c; Ar = $c.BeginConnect("$prefix.$i", $ScanPort, $null, $null); Ip = "$prefix.$i" } }
+            catch { $c.Close() }
         }
     }
-    return $open
+    Start-Sleep -Milliseconds 1000
+    foreach ($c in $clients) {
+        if ($c.Ar.IsCompleted -and $c.Client.Connected) { $c.Ip }
+        $c.Client.Close()
+    }
 }
 
 function Init-UsbDevice {
-    param($usb)
-    Write-Host "Configuring phone through USB ($($usb.Serial))..." -ForegroundColor Cyan
-    $model = (Run-Cmd $Adb @("-s", $($usb.Serial), "shell", "getprop ro.product.model")).Output
-    $serial = (Run-Cmd $Adb @("-s", $($usb.Serial), "shell", "getprop ro.serialno")).Output
-    $ip = Get-PhoneIp -serial $($usb.Serial)
-    if (-not $ip) { throw "The phone has no usable IP address. Ensure Wi-Fi/Ethernet is connected on phone." }
-    
-    Write-Host "Phone: $model ($serial), IP: $ip" -ForegroundColor Green
-    $tcpipRes = Run-Cmd $Adb @("-s", $($usb.Serial), "tcpip", $Port)
-    if ($tcpipRes.Output -notmatch "(?i)(restarting in TCP mode|already.*TCP)") {
-        Write-Warning "TCP/IP activation output: $($tcpipRes.Output)"
+    param($Usb)
+    Write-Host "Configuring phone via USB ($($Usb.Serial))..." -ForegroundColor Cyan
+    $model  = (Run-Cmd $Adb @("-s", $Usb.Serial, "shell", "getprop ro.product.model")).Output
+    $serial = (Run-Cmd $Adb @("-s", $Usb.Serial, "shell", "getprop ro.serialno")).Output
+    $ip     = Get-PhoneIp -Serial $Usb.Serial
+    if (-not $ip) { throw "Phone has no usable IP. Ensure Wi-Fi is connected on the device." }
+    Write-Host "Phone: $model ($serial) at $ip" -ForegroundColor Green
+    $r = Run-Cmd $Adb @("-s", $Usb.Serial, "tcpip", "$Port")
+    if ($r.Output -notmatch "(?i)(restarting in TCP mode|already.*TCP)") {
+        Write-Warning "tcpip output: $($r.Output)"
     }
     Start-Sleep -Seconds 3
-
     $endpoint = "${ip}:$Port"
     if (-not (Test-Endpoint $endpoint $serial)) {
         throw "Could not connect to ADB Wi-Fi endpoint: $endpoint"
     }
-
-    $config = [ordered]@{
-        IpAddress = $ip; Port = $Port; PhysicalSerial = $serial; Model = $model; AdbPath = $Adb; ScrcpyPath = $Scrcpy
-    }
-    $config | ConvertTo-Json | Set-Content -LiteralPath $ConfigPath -Encoding UTF8
-    Write-Host "Configuration saved to: $ConfigPath" -ForegroundColor Green
-    return $config
+    $cfg = [ordered]@{ IpAddress = $ip; Port = $Port; PhysicalSerial = $serial; Model = $model }
+    $cfg | ConvertTo-Json | Set-Content -LiteralPath $ConfigPath -Encoding UTF8
+    Write-Host "Config saved: $ConfigPath" -ForegroundColor Green
+    return $cfg
 }
 
 function Find-Endpoint {
-    param($cfg)
-    $saved = "$($cfg.IpAddress):$($cfg.Port)"
-    if (Test-Endpoint $saved $($cfg.PhysicalSerial)) { return $saved }
-
-    Write-Warning "Saved endpoint $saved is unavailable. Searching network..."
-    $subnets = Get-LocalSubnets
-    $parts = $cfg.IpAddress.Split('.')
+    param($Cfg)
+    $saved = "$($Cfg.IpAddress):$($Cfg.Port)"
+    if (Test-Endpoint $saved $Cfg.PhysicalSerial) { return $saved }
+    Write-Warning "Saved endpoint $saved unavailable. Scanning network..."
+    $subnets = @(Get-LocalSubnets)
+    $parts = $Cfg.IpAddress -split '\.'
     if ($parts.Count -eq 4) { $subnets += "$($parts[0]).$($parts[1]).$($parts[2])" }
-    $subnets = @($subnets | Select-Object -Unique)
-
-    foreach ($ip in (Scan-Subnets -prefixes $subnets -port $cfg.Port)) {
-        $endpoint = "${ip}:$($cfg.Port)"
-        if (Test-Endpoint $endpoint $($cfg.PhysicalSerial)) {
-            $cfg.IpAddress = $ip
-            $cfg | ConvertTo-Json | Set-Content -LiteralPath $ConfigPath -Encoding UTF8
-            Write-Host "Found phone at: $endpoint (configuration updated)" -ForegroundColor Green
-            return $endpoint
+    foreach ($ip in (Scan-Subnets -Prefixes ($subnets | Select-Object -Unique) -ScanPort $Cfg.Port)) {
+        $ep = "${ip}:$($Cfg.Port)"
+        if (Test-Endpoint $ep $Cfg.PhysicalSerial) {
+            $Cfg.IpAddress = $ip
+            $Cfg | ConvertTo-Json | Set-Content -LiteralPath $ConfigPath -Encoding UTF8
+            Write-Host "Found at $ep (config updated)" -ForegroundColor Green
+            return $ep
         }
     }
     return $null
 }
 
 function Start-Watchdog {
-    param($cfg)
-    Write-Host "Watchdog started for $($cfg.Model) ($($cfg.PhysicalSerial))" -ForegroundColor Cyan
+    param($Cfg)
+    $scrcpy = (Get-Command scrcpy.exe -ErrorAction Stop | Select-Object -First 1).Source
+    Write-Host "Watchdog started for $($Cfg.Model) ($($Cfg.PhysicalSerial))" -ForegroundColor Cyan
     while ($true) {
-        $endpoint = Find-Endpoint $cfg
+        $endpoint = Find-Endpoint $Cfg
         if (-not $endpoint) {
-            Write-Warning "Phone not reachable. Retrying in $ReconnectDelaySeconds seconds."
+            Write-Warning "Phone unreachable. Retrying in $ReconnectDelaySeconds s."
             Start-Sleep -Seconds $ReconnectDelaySeconds
             continue
         }
         if ($ConnectOnly) {
-            Write-Host "ADB Wi-Fi is ready at $endpoint" -ForegroundColor Green
+            Write-Host "ADB Wi-Fi ready: $endpoint" -ForegroundColor Green
             return
         }
-        Write-Host "Starting scrcpy through $endpoint..." -ForegroundColor Green
-        # Force Normal window style so the UI opens on screen even if script is hidden
-        $proc = Start-Process $Scrcpy -ArgumentList @("-s", $endpoint) -WindowStyle Normal -PassThru -Wait
-        if ($proc.ExitCode -eq 0) {
-            Write-Host "scrcpy closed normally." -ForegroundColor Yellow
-            return
-        }
-        Write-Warning "scrcpy exited with code $($proc.ExitCode). Reconnecting in $ReconnectDelaySeconds seconds."
+        Write-Host "Starting scrcpy on $endpoint..." -ForegroundColor Green
+        $proc = Start-Process $scrcpy -ArgumentList @("-s", $endpoint) -WindowStyle Normal -PassThru -Wait
+        if ($proc.ExitCode -eq 0) { Write-Host "scrcpy closed normally." -ForegroundColor Yellow; return }
+        Write-Warning "scrcpy exited $($proc.ExitCode). Reconnecting in $ReconnectDelaySeconds s."
         Run-Cmd $Adb @("disconnect", $endpoint) | Out-Null
         Start-Sleep -Seconds $ReconnectDelaySeconds
     }
 }
 
-# --- Main Entry Point ---
-$DesktopPath = [Environment]::GetFolderPath("Desktop")
-$LauncherPath = Join-Path $DesktopPath "Start Scrcpy WiFi.cmd"
-$LauncherContent = "@echo off`r`npwsh -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"`r`n"
-Set-Content -LiteralPath $LauncherPath -Value $LauncherContent -Encoding Ascii
+# ---------------------------------------------------------------------------
+# Desktop launcher (.cmd shortcut)
+# ---------------------------------------------------------------------------
+$LauncherPath = Join-Path ([Environment]::GetFolderPath("Desktop")) "Start Scrcpy WiFi.cmd"
+Set-Content -LiteralPath $LauncherPath -Encoding Ascii -Value "@echo off`r`npwsh -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"`r`n"
 
-$Tools = Resolve-ScrcpyTools
-$Adb = $Tools.Adb
-$Scrcpy = $Tools.Scrcpy
-$env:ADB = $Adb
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+$Adb = Resolve-BthwaniAdb
+Write-Host "ADB: $Adb"
 
-$sdkRoot = Split-Path -Parent (Split-Path -Parent $Adb)
-if (Test-Path "$sdkRoot\platform-tools\adb.exe") {
-    $env:ANDROID_HOME = $sdkRoot
-    $env:ANDROID_SDK_ROOT = $sdkRoot
-}
+Start-BthwaniAdbServer -AdbPath $Adb
 
-Write-Host "ADB:    $Adb"
-Write-Host "scrcpy: $Scrcpy"
-
-Start-ScrcpyAdbServer -AdbPath $Adb
-
-
-$devices = Get-Devices
+$devices    = @(Get-Devices)
 $usbDevices = @($devices | Where-Object { -not $_.IsTcpIp -and $_.State -eq "device" })
-$unauth = @($devices | Where-Object { -not $_.IsTcpIp -and $_.State -eq "unauthorized" })
+$unauth     = @($devices | Where-Object { -not $_.IsTcpIp -and $_.State -eq "unauthorized" })
 
 if ($unauth.Count -gt 0) {
-    throw "USB device is unauthorized. Unlock phone and approve debugging prompt."
+    throw "USB device is unauthorized. Unlock phone and approve USB debugging."
 }
 
 $cfg = $null
 if (Test-Path $ConfigPath) {
     try {
         $cfg = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
-        if (-not ($cfg.IpAddress -and $cfg.Port -and $cfg.PhysicalSerial -and $cfg.Model)) { throw "Invalid configuration fields" }
-    } catch {
-        $cfg = $null
-    }
+        if (-not ($cfg.IpAddress -and $cfg.Port -and $cfg.PhysicalSerial -and $cfg.Model)) {
+            throw "Invalid config"
+        }
+    } catch { $cfg = $null }
 }
 
 if ($cfg) {
     $saved = "$($cfg.IpAddress):$($cfg.Port)"
-    Write-Host "Checking saved Wi-Fi connection: $saved"
-    if (Test-Endpoint $saved $($cfg.PhysicalSerial)) {
-        Write-Host "Saved ADB Wi-Fi connection is ready: $saved" -ForegroundColor Green
-    } elseif ($usbDevices.Count -eq 1) {
-        Write-Warning "Saved Wi-Fi connection unavailable. Reconfiguring through USB..."
-        $cfg = Init-UsbDevice $usbDevices[0]
-    } else {
-        Write-Warning "Saved endpoint unavailable. No USB phone connected. Trying automatic network recovery..."
+    Write-Host "Checking saved connection: $saved"
+    if (-not (Test-Endpoint $saved $cfg.PhysicalSerial)) {
+        if ($usbDevices.Count -eq 1) {
+            Write-Warning "Wi-Fi unavailable. Reconfiguring via USB..."
+            $cfg = Init-UsbDevice $usbDevices[0]
+        } else {
+            Write-Warning "Saved endpoint unavailable. Will scan on watchdog start."
+        }
     }
 } elseif ($usbDevices.Count -eq 1) {
     $cfg = Init-UsbDevice $usbDevices[0]
 } else {
-    throw "No verified ADB Wi-Fi configuration exists, and no USB phone is connected. Connect phone via USB first."
+    throw "No Wi-Fi config found and no USB phone connected. Connect phone via USB first."
 }
 
 Start-Watchdog $cfg
