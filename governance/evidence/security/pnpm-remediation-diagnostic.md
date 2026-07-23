@@ -1,8 +1,5 @@
 # PNPM remediation diagnostic
 
-Install exit code: 1
+Install succeeded.
 
-```text
-Scope: all 26 workspace projects
- ERR_PNPM_INVALID_SELECTOR  Cannot parse the "@eslint/eslintrc>js-yaml" selector
-```
+Vulnerabilities: {"critical": 0, "high": 1, "info": 0, "low": 0, "moderate": 2}
