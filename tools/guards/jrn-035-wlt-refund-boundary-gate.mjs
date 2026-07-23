@@ -93,11 +93,15 @@ const dshRefundHandlers = required("services/dsh/backend/internal/http/refund_fi
   [/requiredPaymentTenant\(w,\s*r,\s*actor\.TenantID\)/, "DSH_REFUND_IDENTITY_TENANT_BINDING_MISSING"],
   [/privacyRefund/, "DSH_REFUND_PRIVACY_PROJECTION_MISSING"],
   [/FinancePermissionManage/, "DSH_REFUND_FINANCE_AUTHORITY_MISSING"],
-  [/input\.AmountMinorUnits <= 0/, "DSH_REFUND_POSITIVE_AMOUNT_GUARD_MISSING"],
+  [/input\.AmountMinorUnits < 0/, "DSH_REFUND_NON_NEGATIVE_AMOUNT_GUARD_MISSING"],
 ]);
 if (/requiredPaymentTenant\(w,\s*r\)/.test(dshRefundHandlers)) {
   violations.push({ file: "services/dsh/backend/internal/http/refund_finance_handlers.go", line: 0, message: "DSH_REFUND_BROWSER_TENANT_AUTHORITY_REMAINS" });
 }
+required("services/dsh/contracts/jrn-035-refunds.openapi.yaml", [
+  [/TenantHeader:[\s\S]*?required: false[\s\S]*?authenticated Identity actor/, "DSH_REFUND_CONTRACT_IDENTITY_TENANT_AUTHORITY_MISSING"],
+  [/minimum: 0[\s\S]*?Zero requests the full remaining refundable amount/, "DSH_REFUND_FULL_REMAINING_COMMAND_CONTRACT_MISSING"],
+]);
 
 for (const file of listCodeFiles()) {
   if (!file.startsWith("services/dsh/frontend/")) continue;

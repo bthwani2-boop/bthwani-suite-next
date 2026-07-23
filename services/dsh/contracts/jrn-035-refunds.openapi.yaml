@@ -2,10 +2,12 @@ openapi: 3.1.0
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: DSH Financial Refund Orchestration
-  version: 1.2.0
+  version: 1.2.1
   description: >-
-    JRN-035 DSH contract. DSH validates actor, permission, tenant and owned-order
-    scope, then delegates all financial truth to WLT. Client and partner reads
+    JRN-035 DSH contract. DSH validates actor, permission, authenticated tenant
+    and owned-order scope, then delegates all financial truth to WLT. The actor
+    tenant from Identity is authoritative; an optional X-Tenant-ID selector may
+    only confirm that tenant and a mismatch is rejected. Client and partner reads
     intentionally exclude provider and operator evidence. WLT idempotency and
     outcome-persistence failures are propagated without changing status or body.
 servers:
@@ -16,7 +18,7 @@ paths:
   /dsh/control-panel/finance/refunds:
     get:
       operationId: listDshFinanceRefunds
-      summary: List refunds for a trusted tenant and optional order
+      summary: List refunds for the authenticated tenant and optional order
       parameters:
         - $ref: '#/components/parameters/TenantHeader'
         - $ref: '#/components/parameters/CorrelationHeaderOptional'
@@ -29,6 +31,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ControlPanelRefundListEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -64,7 +67,7 @@ paths:
   /dsh/control-panel/finance/refunds/{refundId}:
     get:
       operationId: getDshFinanceRefund
-      summary: Read one tenant-scoped canonical refund
+      summary: Read one authenticated-tenant-scoped canonical refund
       parameters:
         - $ref: '#/components/parameters/RefundId'
         - $ref: '#/components/parameters/TenantHeader'
@@ -75,6 +78,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -98,6 +102,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -122,6 +127,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ControlPanelRefundEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -157,6 +163,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ProviderUnknownError' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '500': { $ref: '#/components/responses/CompletionPersistenceFailure' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -199,6 +206,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuditEnvelope' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
   /dsh/client/orders/{orderId}/refunds:
     get:
@@ -252,7 +260,10 @@ components:
     TenantHeader:
       name: X-Tenant-ID
       in: header
-      required: true
+      required: false
+      description: >-
+        Optional legacy tenant confirmation. DSH derives the authoritative tenant
+        from the authenticated Identity actor and rejects a supplied mismatch.
       schema: { type: string, minLength: 1 }
     CorrelationHeader:
       name: X-Correlation-ID
@@ -424,7 +435,7 @@ components:
         - $ref: '#/components/schemas/MutationReceiptError'
   responses:
     BadRequest:
-      description: Invalid request or missing reconciliation evidence
+      description: Invalid request, missing authenticated tenant or missing reconciliation evidence
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -434,7 +445,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Forbidden:
-      description: Permission, tenant, maker-checker or store scope denied
+      description: Permission, tenant mismatch, maker-checker or store scope denied
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }

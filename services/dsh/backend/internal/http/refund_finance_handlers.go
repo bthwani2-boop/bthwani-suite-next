@@ -118,8 +118,8 @@ func (s *protectedStoreServer) handleCreateFinanceRefund(w http.ResponseWriter, 
 	input.ClientID = strings.TrimSpace(input.ClientID)
 	input.Reason = strings.TrimSpace(input.Reason)
 	input.EligibilityReference = strings.TrimSpace(input.EligibilityReference)
-	if input.PaymentSessionID == "" || input.OrderID == "" || input.ClientID == "" || input.Reason == "" || input.EligibilityReference == "" || input.AmountMinorUnits <= 0 {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "paymentSessionId, orderId, clientId, reason, eligibilityReference and a positive amountMinorUnits are required")
+	if input.PaymentSessionID == "" || input.OrderID == "" || input.ClientID == "" || input.Reason == "" || input.EligibilityReference == "" || input.AmountMinorUnits < 0 {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "paymentSessionId, orderId, clientId, reason, eligibilityReference and a non-negative amountMinorUnits are required")
 		return
 	}
 	body, _ := json.Marshal(map[string]any{
