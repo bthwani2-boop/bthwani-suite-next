@@ -2,23 +2,39 @@ const manifest = require("./mobile-apps.manifest.json");
 
 const PERMISSION_TEXT = {
   photos: "نحتاج الوصول إلى معرض الصور لاختيار الصور ومشاركتها.",
-  camera: "نحتاج الوصول إلى الكاميرا لالتقاط الصور ومسح الباركود.",
-  microphone: "نحتاج الوصول إلى الميكروفون لتسجيل الرسائل الصوتية المرتبطة بالطلب.",
+  camera: "نحتاج الوصول إلى الكاميرا لالتقاط الصور ومسح الباركود وتوثيق الطلب عند الحاجة.",
+  microphone: "نحتاج الوصول إلى الميكروفون لتسجيل الرسائل الصوتية أو الفيديو المرتبط بالطلب.",
   locationWhenInUse: "نحتاج الوصول إلى موقعك لعرض أقرب الخدمات وتتبع الطلبات.",
   locationAlwaysAndWhenInUse: "نحتاج الوصول إلى الموقع في الخلفية لتتبع مسار المهمة النشطة وتحديد وصول الكابتن.",
   faceId: "نحتاج حماية التطبيق باستخدام البصمة أو Face ID للعمليات الحساسة والمحفظة.",
 };
 
+function nativeCapabilities(features) {
+  const hasCamera = features.includes("camera");
+  const hasAudioRecording = features.includes("audio");
+  const hasVideoPlayback = features.includes("video");
+  const hasVideoRecording = hasCamera && hasVideoPlayback;
+
+  return {
+    hasCamera,
+    hasAudioRecording,
+    hasVideoPlayback,
+    hasVideoRecording,
+    needsMicrophone: hasAudioRecording || hasVideoRecording,
+  };
+}
+
 function buildInfoPlist(features) {
+  const { hasCamera, needsMicrophone } = nativeCapabilities(features);
   const infoPlist = {
     NSPhotoLibraryUsageDescription: PERMISSION_TEXT.photos,
   };
 
-  if (features.includes("camera")) {
+  if (hasCamera) {
     infoPlist.NSCameraUsageDescription = PERMISSION_TEXT.camera;
   }
 
-  if (features.includes("camera") || features.includes("audio")) {
+  if (needsMicrophone) {
     infoPlist.NSMicrophoneUsageDescription = PERMISSION_TEXT.microphone;
   }
 
@@ -38,12 +54,14 @@ function buildInfoPlist(features) {
 }
 
 function buildAndroidConfig(app, features) {
+  const { needsMicrophone } = nativeCapabilities(features);
   const android = {
     package: app.androidPackage,
+    blockedPermissions: needsMicrophone ? [] : ["android.permission.RECORD_AUDIO"],
   };
 
-  if (features.includes("notifications")) {
-    android.googleServicesFile = "./google-services.json";
+  if (features.includes("notifications") && process.env.GOOGLE_SERVICES_JSON) {
+    android.googleServicesFile = process.env.GOOGLE_SERVICES_JSON;
   }
 
   if (features.includes("maps")) {
@@ -60,6 +78,7 @@ function buildAndroidConfig(app, features) {
 function buildIosConfig(app, features) {
   const ios = {
     bundleIdentifier: app.iosBundleIdentifier,
+    supportsTablet: false,
     infoPlist: buildInfoPlist(features),
   };
 
@@ -73,8 +92,12 @@ function buildIosConfig(app, features) {
 }
 
 function buildPlugins(features) {
-  const hasCamera = features.includes("camera");
-  const hasAudio = features.includes("audio");
+  const {
+    hasCamera,
+    hasAudioRecording,
+    hasVideoPlayback,
+    needsMicrophone,
+  } = nativeCapabilities(features);
 
   const plugins = [
     [
@@ -82,10 +105,11 @@ function buildPlugins(features) {
       {
         photosPermission: PERMISSION_TEXT.photos,
         cameraPermission: hasCamera ? PERMISSION_TEXT.camera : false,
-        microphonePermission: (hasCamera || hasAudio) ? PERMISSION_TEXT.microphone : false,
+        microphonePermission: needsMicrophone ? PERMISSION_TEXT.microphone : false,
       },
     ],
     "expo-document-picker",
+    "@sentry/react-native/expo",
   ];
 
   if (features.includes("router")) {
@@ -94,6 +118,10 @@ function buildPlugins(features) {
 
   if (features.includes("updates")) {
     plugins.push("expo-updates");
+  }
+
+  if (features.includes("splashScreen")) {
+    plugins.push("expo-splash-screen");
   }
 
   if (features.includes("localAuthentication")) {
@@ -105,7 +133,7 @@ function buildPlugins(features) {
     ]);
   }
 
-  if (hasAudio) {
+  if (hasAudioRecording) {
     plugins.push([
       "expo-audio",
       {
@@ -122,12 +150,12 @@ function buildPlugins(features) {
       "expo-camera",
       {
         cameraPermission: PERMISSION_TEXT.camera,
-        microphonePermission: PERMISSION_TEXT.microphone,
+        microphonePermission: needsMicrophone ? PERMISSION_TEXT.microphone : false,
       },
     ]);
   }
 
-  if (features.includes("video")) {
+  if (hasVideoPlayback) {
     plugins.push("expo-video");
   }
 
@@ -172,7 +200,12 @@ function buildPlugins(features) {
   }
 
   if (features.includes("notifications")) {
-    plugins.push("expo-notifications");
+    plugins.push([
+      "expo-notifications",
+      {
+        defaultChannel: "bthwani-operational",
+      },
+    ]);
   }
 
   if (features.includes("secureStore")) {
@@ -204,6 +237,8 @@ function defineBthwaniExpoApp(appKey) {
     },
     updates: {
       url: `https://u.expo.dev/${app.projectId}`,
+      checkAutomatically: "ON_LOAD",
+      fallbackToCacheTimeout: 0,
     },
     orientation: "portrait",
     userInterfaceStyle: "light",
@@ -224,4 +259,3 @@ function defineBthwaniExpoApp(appKey) {
 module.exports = {
   defineBthwaniExpoApp,
 };
-
