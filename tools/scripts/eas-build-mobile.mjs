@@ -18,45 +18,28 @@ const profile = valueAfter("--profile", "development");
 const all = process.argv.includes("--all");
 const clearCache = process.argv.includes("--clear-cache");
 const nonInteractive = process.argv.includes("--non-interactive");
+const skipExport = process.argv.includes("--skip-local-export");
 
-if (!["android", "ios", "all"].includes(platform)) {
-  throw new Error("--platform must be android, ios, or all");
-}
-if (all && requestedApp) {
-  throw new Error("Use either --all or --app, not both");
-}
-if (!all && !requestedApp) {
-  throw new Error("Use --app <app-key> or --all");
-}
+if (!["android", "ios", "all"].includes(platform)) throw new Error("--platform must be android, ios, or all");
+if (!["development", "internal", "production"].includes(profile)) throw new Error("--profile must be development, internal, or production");
+if (all && requestedApp) throw new Error("Use either --all or --app, not both");
+if (!all && !requestedApp) throw new Error("Use --app <app-key> or --all");
 
 const appKeys = Object.keys(manifest.apps);
 const targets = all ? appKeys : [requestedApp];
-
 for (const key of targets) {
-  if (!manifest.apps[key]) {
-    throw new Error(`Unknown app '${key}'. Allowed: ${appKeys.join(", ")}`);
-  }
+  if (!manifest.apps[key]) throw new Error(`Unknown app '${key}'. Allowed: ${appKeys.join(", ")}`);
 }
 
 function resolveInvocation(command, args) {
-  if (command !== "pnpm") {
-    return { executable: command, args };
-  }
-
+  if (command !== "pnpm") return { executable: command, args };
   const pnpmCli = process.env.npm_execpath;
-  if (!pnpmCli) {
-    throw new Error("npm_execpath is unavailable. Run the EAS runner through a pnpm script.");
-  }
-
-  return {
-    executable: process.execPath,
-    args: [pnpmCli, ...args],
-  };
+  if (!pnpmCli) throw new Error("npm_execpath is unavailable. Run the EAS runner through a pnpm script.");
+  return { executable: process.execPath, args: [pnpmCli, ...args] };
 }
 
 function run(command, args, cwd = root, env = process.env) {
   console.log(`\n> ${command} ${args.join(" ")}`);
-
   const invocation = resolveInvocation(command, args);
   const result = spawnSync(invocation.executable, invocation.args, {
     cwd,
@@ -65,14 +48,8 @@ function run(command, args, cwd = root, env = process.env) {
     windowsHide: true,
     env,
   });
-
-  if (result.error) {
-    throw result.error;
-  }
-
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
-  }
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
 run(process.execPath, ["tools/scripts/sync-mobile-apps.mjs", "--check"]);
@@ -81,12 +58,21 @@ run(process.execPath, [
   "--require-build-secrets",
   "--platform",
   platform,
+  "--profile",
+  profile,
 ]);
 
 for (const key of targets) {
   const appDir = path.join(root, "apps", key, "runtime");
 
   run("pnpm", ["typecheck"], appDir);
+  run("pnpm", ["exec", "expo-doctor"], appDir);
+
+  if (!skipExport) {
+    const outputDir = path.join(root, ".tmp", "eas-preflight", key, platform);
+    fs.rmSync(outputDir, { recursive: true, force: true });
+    run("pnpm", ["exec", "expo", "export", "--platform", platform, "--output-dir", outputDir], appDir);
+  }
 
   const args = [
     "dlx",
@@ -97,7 +83,6 @@ for (const key of targets) {
     "--profile",
     profile,
   ];
-
   if (clearCache) args.push("--clear-cache");
   if (nonInteractive) args.push("--non-interactive");
 
