@@ -28,6 +28,7 @@ func NewRouter(service *platformcontrol.Service, authClient *auth.Client) http.H
 	mux.HandleFunc("GET /platform/v1/variables", s.operatorOnly("platform:read", s.variables))
 	mux.HandleFunc("GET /platform/v1/variables/{key}", s.operatorOnly("platform:read", s.variable))
 	mux.HandleFunc("GET /platform/v1/feature-flags", s.operatorOnly("platform:read", s.featureFlags))
+	mux.HandleFunc("GET /platform/v1/saas-status", s.operatorOnly("platform:read", s.saasStatus))
 	mux.HandleFunc("GET /platform/v1/services", s.operatorOnly("platform:read", s.services))
 	mux.HandleFunc("GET /platform/v1/health", s.operatorOnly("platform:health:read", s.health))
 	mux.HandleFunc("GET /platform/v1/audit-events", s.operatorOnly("platform:audit:read", s.auditEvents))
