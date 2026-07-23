@@ -23,8 +23,8 @@ Invoke-RequiredCommand -Name "docker" -Arguments @("--version")
 Invoke-RequiredCommand -Name "docker" -Arguments @("compose", "version")
 
 $pnpmVersion = (& pnpm --version).Trim()
-if ($pnpmVersion -ne "10.34.2") {
-  throw "pnpm version must be 10.34.2, got $pnpmVersion"
+if ($pnpmVersion -ne "10.34.0") {
+  throw "pnpm version must be 10.34.0, got $pnpmVersion"
 }
 
 docker info | Out-Null
