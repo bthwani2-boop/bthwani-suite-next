@@ -2,17 +2,39 @@ import React, { useEffect } from "react";
 import { registerRootComponent } from "expo";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BthwaniUiProvider } from "@bthwani/ui-kit";
-import { BthwaniQueryProvider, wireNetInfoOnlineManager, createBthwaniQueryClient } from "@bthwani/data-runtime";
+import { registerIdentityBeforeSessionEndHook } from "@bthwani/core-identity";
+import {
+  BthwaniQueryProvider,
+  clearBthwaniQueryClient,
+  createBthwaniOfflineMutationQueue,
+  createBthwaniQueryClient,
+  wireNetInfoOnlineManager,
+} from "@bthwani/data-runtime";
 import { initSentry } from "./observability/sentry";
 import App from "./App";
 
 initSentry();
 
+const APP_KEY = "app-client";
 const queryClient = createBthwaniQueryClient();
+const queryPersistenceKey = `bthwani-query-cache:v2:${APP_KEY}`;
+const mutationQueue = createBthwaniOfflineMutationQueue(
+  `bthwani-offline-mutations:v1:${APP_KEY}`,
+);
 
 function Root() {
   useEffect(() => {
-    return wireNetInfoOnlineManager(queryClient);
+    const detachNetwork = wireNetInfoOnlineManager(queryClient, mutationQueue);
+    const detachSession = registerIdentityBeforeSessionEndHook(async () => {
+      await Promise.all([
+        clearBthwaniQueryClient(queryClient, queryPersistenceKey),
+        mutationQueue.clear(),
+      ]);
+    });
+    return () => {
+      detachNetwork();
+      detachSession();
+    };
   }, []);
 
   return React.createElement(
@@ -20,13 +42,9 @@ function Root() {
     null,
     React.createElement(
       BthwaniQueryProvider,
-      { client: queryClient },
-      React.createElement(
-        BthwaniUiProvider,
-        null,
-        React.createElement(App)
-      )
-    )
+      { client: queryClient, persistenceKey: queryPersistenceKey },
+      React.createElement(BthwaniUiProvider, null, React.createElement(App)),
+    ),
   );
 }
 
