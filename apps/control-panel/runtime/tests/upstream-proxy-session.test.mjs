@@ -25,3 +25,14 @@ test("authenticated service proxy never persists a non-operator rotation", () =>
   assert.match(proxy, /CONTROL_PANEL_FORBIDDEN/);
   assert.match(proxy, /clearSessionCookies\(response\)/);
 });
+
+test("authenticated service proxy rejects missing production targets and unsafe paths", () => {
+  assert.match(proxy, /if \(!baseUrl\)/);
+  assert.match(proxy, /BFF_UPSTREAM_NOT_CONFIGURED/);
+  assert.match(proxy, /function pathIsSafe/);
+  assert.match(proxy, /segment !== "\."/);
+  assert.match(proxy, /segment !== "\.\."/);
+  assert.match(proxy, /!segment\.includes\("\/"\)/);
+  assert.match(proxy, /!segment\.includes\("\\\\"\)/);
+  assert.match(proxy, /BFF_PATH_NOT_ALLOWED/);
+});
