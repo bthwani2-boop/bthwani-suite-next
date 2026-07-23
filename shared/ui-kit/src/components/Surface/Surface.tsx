@@ -64,25 +64,24 @@ export function Surface({
   border: _border,
   ...viewProps
 }: SurfaceProps) {
+  const composedStyle = [
+    {
+      backgroundColor: toneBg[tone] ?? colorRoles.surfaceBase,
+      borderColor: toneBorder[tone] ?? colorRoles.borderSubtle,
+      borderWidth: borderless ? 0 : 1,
+      borderRadius: (radius as Record<string, number>).lg ?? 12,
+      padding: typeof padding === "number" ? padding * 4 : 16,
+      gap: typeof gap === "number" ? gap * 4 : 12,
+      flex: fill ? 1 : undefined,
+      width,
+      maxWidth,
+      alignItems: centered ? "center" : undefined,
+    },
+    style,
+  ] as unknown as ViewProps["style"];
+
   return (
-    <View
-      {...viewProps}
-      style={[
-        {
-          backgroundColor: toneBg[tone] ?? colorRoles.surfaceBase,
-          borderColor: toneBorder[tone] ?? colorRoles.borderSubtle,
-          borderWidth: borderless ? 0 : 1,
-          borderRadius: (radius as Record<string, number>).lg ?? 12,
-          padding: typeof padding === "number" ? padding * 4 : 16,
-          gap: typeof gap === "number" ? gap * 4 : 12,
-          flex: fill ? 1 : undefined,
-          width,
-          maxWidth,
-          alignItems: centered ? "center" : undefined,
-        },
-        style as ViewProps["style"],
-      ]}
-    >
+    <View {...viewProps} style={composedStyle}>
       {children}
     </View>
   );
