@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: DSH Governed Support API
-  version: 1.0.0
-  description: Owner-scoped client support and permission-scoped operator support, messages, state transitions, and audit readback.
+  version: 1.1.0
+  description: Owner-scoped client support, permission-scoped operator support, temporary administration support sessions, state transitions, and audit readback.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-runtime-dependency: true
 x-bthwani-generation: DISABLED
@@ -140,6 +140,84 @@ paths:
                     items: { $ref: '#/components/schemas/TicketEvent' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+  /dsh/operator/admin/support-sessions:
+    get:
+      operationId: listDshAdminSupportSessions
+      summary: List governed temporary support-access requests and active sessions.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/SupportSessionStatus' }
+      responses:
+        '200': { $ref: '#/components/responses/SupportSessionList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createDshAdminSupportSession
+      summary: Request a bounded temporary support-access session.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSupportSessionInput' }
+      responses:
+        '201': { $ref: '#/components/responses/SupportSession' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /dsh/operator/admin/support-sessions/{requestId}/review:
+    post:
+      operationId: reviewDshAdminSupportSession
+      summary: Approve or reject a temporary support-access request using maker-checker review.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewSupportSessionInput' }
+      responses:
+        '200': { $ref: '#/components/responses/SupportSession' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /dsh/operator/admin/support-sessions/{requestId}/revoke:
+    post:
+      operationId: revokeDshAdminSupportSession
+      summary: Revoke an approved or active temporary support-access session.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RevokeSupportSessionInput' }
+      responses:
+        '200': { $ref: '#/components/responses/SupportSession' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /dsh/operator/admin/support/snapshot:
+    get:
+      operationId: getDshAdminSupportSnapshot
+      summary: Read a redacted operational snapshot of temporary support access.
+      responses:
+        '200': { $ref: '#/components/responses/SupportSnapshot' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
 components:
   securitySchemes:
     bearerAuth:
@@ -149,6 +227,11 @@ components:
   parameters:
     TicketId:
       name: ticketId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    RequestId:
+      name: requestId
       in: path
       required: true
       schema: { type: string, minLength: 1 }
@@ -237,6 +320,61 @@ components:
         eventType: { type: string, enum: [created, message_added, status_changed, escalated, closed] }
         correlationId: { type: string }
         createdAt: { type: string, format: date-time }
+    SupportSessionStatus:
+      type: string
+      enum: [pending, approved, rejected, active, revoked, expired]
+    CreateSupportSessionInput:
+      type: object
+      additionalProperties: false
+      required: [targetActorId, reason, durationMinutes]
+      properties:
+        targetActorId: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 5, maxLength: 1000 }
+        durationMinutes: { type: integer, minimum: 5, maximum: 240 }
+    ReviewSupportSessionInput:
+      type: object
+      additionalProperties: false
+      required: [decision, reviewNote, expectedVersion]
+      properties:
+        decision: { type: string, enum: [approved, rejected] }
+        reviewNote: { type: string, maxLength: 1000 }
+        expectedVersion: { type: integer, minimum: 1 }
+    RevokeSupportSessionInput:
+      type: object
+      additionalProperties: false
+      required: [reason, expectedVersion]
+      properties:
+        reason: { type: string, minLength: 5, maxLength: 1000 }
+        expectedVersion: { type: integer, minimum: 1 }
+    SupportSession:
+      type: object
+      additionalProperties: false
+      required: [id, targetActorId, requestedBy, reason, durationMinutes, status, version, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        targetActorId: { type: string }
+        requestedBy: { type: string }
+        reason: { type: string }
+        durationMinutes: { type: integer, minimum: 5 }
+        status: { $ref: '#/components/schemas/SupportSessionStatus' }
+        reviewedBy: { type: [string, 'null'] }
+        reviewNote: { type: string }
+        activatedAt: { type: [string, 'null'], format: date-time }
+        expiresAt: { type: [string, 'null'], format: date-time }
+        revokedAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    SupportSnapshot:
+      type: object
+      additionalProperties: false
+      required: [pending, active, revoked, expired, generatedAt]
+      properties:
+        pending: { type: integer, minimum: 0 }
+        active: { type: integer, minimum: 0 }
+        revoked: { type: integer, minimum: 0 }
+        expired: { type: integer, minimum: 0 }
+        generatedAt: { type: string, format: date-time }
   responses:
     Ticket:
       description: Support ticket.
@@ -278,6 +416,35 @@ components:
               messages:
                 type: array
                 items: { $ref: '#/components/schemas/Message' }
+    SupportSession:
+      description: Governed temporary support-access session.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [supportSession]
+            properties:
+              supportSession: { $ref: '#/components/schemas/SupportSession' }
+    SupportSessionList:
+      description: Governed temporary support-access sessions.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [supportSessions]
+            properties:
+              supportSessions:
+                type: array
+                items: { $ref: '#/components/schemas/SupportSession' }
+    SupportSnapshot:
+      description: Redacted support-access operational snapshot.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [supportSnapshot]
+            properties:
+              supportSnapshot: { $ref: '#/components/schemas/SupportSnapshot' }
     Error:
       description: Governed error response.
       content:
