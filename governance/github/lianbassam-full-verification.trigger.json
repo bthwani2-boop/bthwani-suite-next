@@ -3,10 +3,10 @@
   "targetRef": "lianbassam",
   "purpose": "SAAS_ACTIVATION_FULL_VERIFICATION",
   "requestedDate": "2026-07-23",
-  "attempt": 3,
+  "attempt": 4,
   "previousRunId": 29972869234,
   "remediation": [
-    "ALIGN_PNPM_TO_PUBLISHED_10_34_0",
+    "ALIGN_ALL_PNPM_SOURCES_TO_PUBLISHED_10_34_0",
     "PRESERVE_FROZEN_LOCKFILE",
     "CAPTURE_DSH_WLT_FAILURE_ARTIFACTS",
     "REVERIFY_FULL_WORKSPACE_DATABASES_AND_RUNTIME"
