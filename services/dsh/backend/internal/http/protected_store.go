@@ -112,7 +112,11 @@ func (s *protectedStoreServer) mediaClient() *media.Client {
 }
 
 func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Request {
-	ctx := context.WithValue(r.Context(), "actor_id", actor.ID)
+	ctx := r.Context()
+	if strings.TrimSpace(actor.TenantID) != "" {
+		ctx = partner.WithTenantContext(ctx, actor.TenantID)
+	}
+	ctx = context.WithValue(ctx, "actor_id", actor.ID)
 	ctx = context.WithValue(ctx, "actor_phone", actor.PhoneE164)
 	ctx = context.WithValue(ctx, "actor_surface", dshActorSurface(actor.Role))
 	return r.WithContext(ctx)
@@ -305,8 +309,12 @@ func (s *protectedStoreServer) handleStoreContext(w http.ResponseWriter, r *http
 }
 
 func (s *protectedStoreServer) handleOperatorStores(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
 	if !ok {
+		return
+	}
+	if strings.TrimSpace(actor.TenantID) == "" {
+		store.SendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is required")
 		return
 	}
 	listQuery, errMessage := store.ParseListQuery(r.URL.Query())
@@ -314,20 +322,24 @@ func (s *protectedStoreServer) handleOperatorStores(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", errMessage)
 		return
 	}
-	result, err := store.ListAllStores(s.db, listQuery)
+	result, err := store.ListAllStoresForTenant(s.db, actor.TenantID, listQuery)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not load stores")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not load tenant stores")
 		return
 	}
 	store.SendJSON(w, http.StatusOK, result)
 }
 
 func (s *protectedStoreServer) handleOperatorStoreDetail(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
 	if !ok {
 		return
 	}
-	row, err := store.GetStoreByIDInternal(r.Context(), s.db, r.PathValue("storeId"))
+	if strings.TrimSpace(actor.TenantID) == "" {
+		store.SendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is required")
+		return
+	}
+	row, err := store.GetStoreByIDInternalForTenant(r.Context(), s.db, actor.TenantID, r.PathValue("storeId"))
 	if err != nil {
 		s.writeStoreError(w, err)
 		return
@@ -430,8 +442,16 @@ func (s *protectedStoreServer) handleOperatorGovernance(w http.ResponseWriter, r
 }
 
 func (s *protectedStoreServer) handleStoreAudit(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", PartnersPermissionRead, "operator")
 	if !ok {
+		return
+	}
+	if strings.TrimSpace(actor.TenantID) == "" {
+		store.SendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is required")
+		return
+	}
+	if _, err := store.GetStoreByIDInternalForTenant(r.Context(), s.db, actor.TenantID, r.PathValue("storeId")); err != nil {
+		s.writeStoreError(w, err)
 		return
 	}
 	events, err := store.ListStoreAudit(r.Context(), s.db, r.PathValue("storeId"), 20)
