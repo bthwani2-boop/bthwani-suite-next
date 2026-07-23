@@ -1,51 +1,73 @@
-<!-- ALLOW_LOCAL_PATH_EXAMPLE -->
-# تشغيل تطبيقات الهاتف محلياً (Mobile Local Run)
+# تشغيل التطبيقات محليًا
 
-الأوامر البرمجية التالية تقوم بالانتقال التلقائي لمسار المشروع وتجلب الـ IP الفعلي للإنترنت/الراوتر تلقائياً:
+هذا المستودع يستخدم مشغلات حاكمة ثابتة. لا تشغّل Expo أو Next مباشرة، ولا تغيّر المنافذ، ولا تضبط عنوان الراوتر يدويًا.
 
-### 1️⃣ تشغيل تطبيق العميل (app-client)
+## المتطلبات
+
+1. شغّل الخدمات المحلية المطلوبة من جذر المستودع:
+
 ```powershell
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-$env:REACT_NATIVE_PACKAGER_HOSTNAME = (Get-NetRoute -DestinationPrefix "0.0.0.0/0" | Sort-Object RouteMetric | Get-NetIPInterface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
-$env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:NEXT_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:58080 tcp:58080
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:59000 tcp:59000
-pnpm --dir apps/app-client/runtime exec expo start --dev-client --host lan --port 18101 --android --clear
+pnpm runtime:full:up
+pnpm runtime:full:smoke
 ```
 
-### 2️⃣ تشغيل تطبيق الشركاء (app-partner)
+2. تأكد أن الهاتف ظاهر بحالة `device` في ADB. عند وجود USB وWi-Fi معًا يختار المشغّل USB افتراضيًا للاستقرار. لتحديد اتصال بعينه:
+
 ```powershell
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-$env:REACT_NATIVE_PACKAGER_HOSTNAME = (Get-NetRoute -DestinationPrefix "0.0.0.0/0" | Sort-Object RouteMetric | Get-NetIPInterface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
-$env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:NEXT_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:EXPO_PUBLIC_DEV_STORE_ID = try { (Invoke-RestMethod "http://127.0.0.1:58080/dsh/stores?limit=1&offset=0" -TimeoutSec 3 -ErrorAction SilentlyContinue).stores[0].id } catch { "store-1005" }
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:58080 tcp:58080
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:59000 tcp:59000
-pnpm --dir apps/app-partner/runtime exec expo start --dev-client --host lan --port 18102 --android --clear
+$env:BTHWANI_ANDROID_SERIAL = "192.168.0.104:5555"
 ```
 
-### 3️⃣ تشغيل تطبيق الكابتن والتوصيل (app-captain)
+أو لاختيار نوع النقل دون تثبيت serial:
+
 ```powershell
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-$env:REACT_NATIVE_PACKAGER_HOSTNAME = (Get-NetRoute -DestinationPrefix "0.0.0.0/0" | Sort-Object RouteMetric | Get-NetIPInterface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
-$env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:NEXT_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:EXPO_PUBLIC_DEV_STORE_ID = try { (Invoke-RestMethod "http://127.0.0.1:58080/dsh/stores?limit=1&offset=0" -TimeoutSec 3 -ErrorAction SilentlyContinue).stores[0].id } catch { "store-1005" }
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:58080 tcp:58080
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:59000 tcp:59000
-pnpm --dir apps/app-captain/runtime exec expo start --dev-client --host lan --port 18103 --android --clear
+$env:BTHWANI_ANDROID_TRANSPORT = "tcp" # auto | usb | tcp
 ```
 
-### 4️⃣ تشغيل تطبيق العمليات الميدانية (app-field)
+## أوامر التطبيقات
+
+| التطبيق | الأمر | المنفذ الثابت |
+|---|---|---:|
+| العميل | `pnpm client` | 18101 |
+| الشريك | `pnpm partner` | 18102 |
+| الكابتن | `pnpm captain` | 18103 |
+| الميدان | `pnpm field` | 18104 |
+| لوحة التحكم | `pnpm control` | 13000 |
+
+المشغّل المحمول ينفذ تلقائيًا ما يلي:
+
+- يثبت منفذ Metro ويرفض التشغيل برسالة واضحة إذا كان مستخدمًا بدل الانتقال إلى منفذ آخر.
+- يختار جهاز ADB وفق `BTHWANI_ANDROID_SERIAL` أو `BTHWANI_ANDROID_TRANSPORT`.
+- ينشئ ويتحقق من `adb reverse` لمنافذ Metro والخدمات المحلية.
+- يعلن لتطبيق DSH أن loopback صالح فقط بعد نجاح جسور ADB.
+- يشغّل Expo بوضع dev client عبر localhost، ولذلك لا يعتمد على IP الراوتر أو حالة VPN.
+
+لوحة التحكم تستخدم same-origin BFF عبر `/api/*`. عناوين الخدمات المباشرة تبقى في بيئة Next server ولا تُكشف كاتصال مباشر من المتصفح.
+
+## الخيارات التشغيلية
+
+مسح Metro cache عند الحاجة فقط:
+
 ```powershell
-Set-Location -LiteralPath "C:\bthwani-suite-next"
-$env:REACT_NATIVE_PACKAGER_HOSTNAME = (Get-NetRoute -DestinationPrefix "0.0.0.0/0" | Sort-Object RouteMetric | Get-NetIPInterface | Get-NetIPAddress -AddressFamily IPv4 | Select-Object -First 1).IPAddress
-$env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:NEXT_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-$env:EXPO_PUBLIC_DEV_STORE_ID = try { (Invoke-RestMethod "http://127.0.0.1:58080/dsh/stores?limit=1&offset=0" -TimeoutSec 3 -ErrorAction SilentlyContinue).stores[0].id } catch { "store-1005" }
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:58080 tcp:58080
-& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" reverse tcp:59000 tcp:59000
-pnpm --dir apps/app-field/runtime exec expo start --dev-client --host lan --port 18104 --android --clear
+$env:BTHWANI_METRO_CLEAR = "1"
+pnpm client
+```
+
+فتح scrcpy مع التطبيق:
+
+```powershell
+$env:BTHWANI_MIRROR_DEVICE = "1"
+pnpm captain
+```
+
+مراقب Wi-Fi ADB اختياري ومتوقف افتراضيًا. عند تفعيله يصلح خرائط reverse المفقودة فقط ولا ينفذ `adb disconnect` أو `adb connect`:
+
+```powershell
+$env:BTHWANI_ADB_WATCHDOG = "reverse"
+pnpm field
+```
+
+لإعادة تطبيق جميع الخرائط يدويًا دون تشغيل تطبيق:
+
+```powershell
+pnpm reverse
 ```
