@@ -1,0 +1,51 @@
+name: Contextual CI Status Finalizer
+
+on:
+  workflow_run:
+    workflows:
+      - BThwani Contextual CI
+    types:
+      - completed
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  finalize:
+    name: Finalize contextual CI status
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Publish final contextual CI locator status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          set -euo pipefail
+
+          state=error
+          description="contextual CI ended with ${RUN_CONCLUSION}"
+          case "${RUN_CONCLUSION}" in
+            success)
+              state=success
+              description="contextual CI routing and verification passed"
+              ;;
+            failure|timed_out|action_required|startup_failure)
+              state=failure
+              description="contextual CI routing or verification failed"
+              ;;
+            cancelled|neutral|skipped|stale)
+              state=error
+              description="contextual CI ended with ${RUN_CONCLUSION}"
+              ;;
+          esac
+
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+            -f state="${state}" \
+            -f context="bthwani/contextual-ci" \
+            -f description="${description}" \
+            -f target_url="${RUN_URL}"
