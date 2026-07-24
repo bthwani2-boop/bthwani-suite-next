@@ -84,6 +84,9 @@ jobs:
       - name: Verify cleanup policy
         if: ${{ inputs.policy == 'true' }}
         run: pnpm run guard:cleanup-policy
+      - name: Verify portable tracked configuration
+        if: ${{ inputs.policy == 'true' }}
+        run: node tools/scripts/check-portable-tracked-config.mjs
       - name: Analyze tracked repository hygiene
         id: repository_hygiene
         if: ${{ inputs.policy == 'true' }}
