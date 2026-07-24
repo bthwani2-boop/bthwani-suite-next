@@ -33,6 +33,12 @@ governance/saas/saas-governance.json
 governance/saas/saas-governance.schema.json
 ```
 
+The repository-owner approval model is encoded in:
+
+```text
+governance/authority/single-owner-mode.json
+```
+
 Adapters, skills, protocol templates, matrices, diagnostics, historical phase files, and generated artifacts may not override those sources.
 
 ## Repository truth
@@ -63,6 +69,14 @@ Before implementing a new or materially changed user-visible or operational capa
 7. obtain product-owner approval of functional readiness.
 
 Engineering may challenge assumptions and contribute to discovery, but it cannot self-approve product acceptance for its own implementation.
+
+## Sole-owner operating mode
+
+This repository is operated by the single owner recorded in `governance/authority/single-owner-mode.json`. The owner may satisfy multiple eligible human approval roles, including product, architecture, governance, CI, implementation review, and QA, when the current task approval and exact scope are recorded in GitHub and all required same-commit automated checks pass.
+
+This is an explicit human-identity exception, not a merger of logical authorities or owner skills. An execution agent may not impersonate the owner, issue owner approval, convert blanket authorization into acceptance of an unseen outcome, waive failed checks, or bypass repository protection.
+
+Authentication, authorization, sessions, PII, privacy, secrets, credentials, tenant isolation, security approval, WLT and finance, migrations and production data, critical or high vulnerability acceptance, residual risk, release, deployment, production verification, and final closure remain protected. Missing independent or external evidence for a protected domain keeps that scope unclosed.
 
 ## Default execution rules
 
@@ -124,10 +138,10 @@ Graphify is a tool, not an agent. LeanCTX is optional, not a mandatory first ste
 - `MASTER_ADVISORY_SUPERVISOR` coordinates broad work, remains read/plan/verify only, and does not replace formal authorities.
 - `SDLC_PROGRAM_AUTHORITY` owns stage state, transition legality, and evidence-backed exclusions.
 - `PRODUCT_MANAGER_AUTHORITY` owns the problem, outcome, scope, exclusions, and product-model approval.
-- `PRODUCT_OWNER_ACCEPTANCE_AUTHORITY` owns functional readiness and product acceptance and must be distinct from the product manager.
+- `PRODUCT_OWNER_ACCEPTANCE_AUTHORITY` owns functional readiness and product acceptance and remains logically distinct from the product manager; the recorded sole owner may fulfill both eligible human roles under the active sole-owner contract.
 - `UX_JOURNEY_AUTHORITY` owns journey clarity and accessibility intent when human-facing flows change.
 - `ARCHITECTURE_AUTHORITY` owns boundaries, contracts, data flow, and dependency direction.
-- `GOVERNANCE_CONTRACT_AUTHORITY` and `CI_WORKFLOW_AUTHORITY` are separate approving authorities with separate owner skills and identities.
+- `GOVERNANCE_CONTRACT_AUTHORITY` and `CI_WORKFLOW_AUTHORITY` remain separate logical approving authorities with separate owner skills; the recorded sole owner may fulfill both eligible human approval roles under the active sole-owner contract.
 - `FINANCIAL_CONTROL_AUTHORITY` owns independent WLT financial truth and handoff approval.
 - `INDEPENDENT_QUALITY_AUTHORITY`, `APPLICATION_SECURITY_AUTHORITY`, and `RELEASE_AUTHORITY` own their formal approvals.
 - `RISK_ACCEPTANCE_AUTHORITY` alone may accept documented residual risk and cannot be the change author.
@@ -149,7 +163,7 @@ Typical scoped aliases:
 
 Use `FIX_REQUIRED` when in-scope acceptance fails, `NEEDS_EVIDENCE` when the implementation claim lacks current evidence, `BLOCKED_EXTERNAL` for truly external blockers, and `PROTOCOL_VIOLATION` for authority, scope, safety, or evidence breaches.
 
-`CLOSED_WITH_EVIDENCE` requires every applicable same-commit evidence scope: `static`, `product`, `runtime`, `visual`, `qa`, `security`, `finance`, `isolation`, `governance`, `ci`, `release`, and `production`. It also requires every required independent approval, evidence-backed stage exclusion, no open blocker, and proven GitHub enforcement for protected high-risk closure. It cannot be issued by an implementation skill or inferred from documentation, configuration, schemas, guard names, or prior workflow runs.
+`CLOSED_WITH_EVIDENCE` requires every applicable same-commit evidence scope: `static`, `product`, `runtime`, `visual`, `qa`, `security`, `finance`, `isolation`, `governance`, `ci`, `release`, and `production`. It also requires every approval required after applying the sole-owner contract, evidence-backed stage exclusion, no open blocker, and proven GitHub enforcement for protected high-risk closure. Sole-owner authorization never supplies protected security, finance, isolation, release, production, residual-risk, or final-closure evidence. Closure cannot be issued by an implementation skill or inferred from documentation, configuration, schemas, guard names, or prior workflow runs.
 
 SaaS readiness modes and commercial activation states are not decisions. `SAAS_ACTIVE` cannot be declared until its machine-readable activation evidence is fully proven and the applicable SDLC journey reaches `CLOSED_WITH_EVIDENCE`.
 
