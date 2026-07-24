@@ -10,7 +10,7 @@ import type {
   PlatformChangeSet,
   RejectPlatformChangeSetInput,
   RollbackPlatformChangeSetInput,
-} from "@bthwani/core-platform-control/clients/generated/jrn-040-platform-change-sets-api";
+} from "@bthwani/core-platform-control/clients/generated/platform-change-sets-api";
 
 export type PlatformControlState = components["schemas"]["PlatformControlState"];
 export type { PlatformSaasRuntimeStatus };
