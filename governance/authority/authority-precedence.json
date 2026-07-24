@@ -16,6 +16,7 @@
   "documents": [
     {"path":"governance/authority/authority-precedence.json","classification":"ROOT_AUTHORITY","precedenceId":"AUTHORITY_PRECEDENCE_REGISTRY","authorityDomains":["authority_resolution","classification"]},
     {"path":"AGENTS.md","classification":"ACTIVE_CANONICAL","precedenceId":"AGENT_EXECUTION_POLICY","authorityDomains":["agent_execution","scope_control","claim_safety"]},
+    {"path":"governance/authority/single-owner-mode.json","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["single_owner_approval","approval_identity_exception"],"scopeLimit":"Allows the recorded repository owner to satisfy eligible approval roles only under the declared checks and audit requirements; protected domains and final closure remain excluded."},
     {"path":"governance/00_DECISION_INDEX.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["governance_index"]},
     {"path":"governance/LEAN_CODE_BASED_CHECK.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["lean_verification"],"scopeLimit":"Verification scope only; it cannot override formal product, security, financial, governance, CI, QA, release, or production gates."},
     {"path":"governance/01_REPO_BOUNDARIES.md","classification":"ACTIVE_CANONICAL","precedenceId":"ACTIVE_CANONICAL_GOVERNANCE","authorityDomains":["repository_boundaries"]},
@@ -37,6 +38,7 @@
     {"path":"governance/agents","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["agent_roles","approval_domains"]},
     {"path":"governance/skills","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["skill_lifecycle","skill_dependencies","skill_routing"]},
     {"path":"governance/guards","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["guard_registry","guard_assurance","static_binding_registry"]},
+    {"path":"governance/authority/single-owner-mode.schema.json","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["single_owner_mode_schema"]},
     {"path":"governance/product/product-truth.schema.json","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["product_truth_schema"]},
     {"path":"governance/saas","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["saas_readiness_state","tenant_governance","commercial_activation_policy"]},
     {"path":"tools/guards/guard-manifest.json","classification":"ACTIVE_CANONICAL","precedenceId":"MACHINE_READABLE_CONTRACT","authorityDomains":["guard_sets","guard_execution_policy"]},
