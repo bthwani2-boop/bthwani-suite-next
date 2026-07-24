@@ -1,4 +1,5 @@
 import type { components } from "../../../clients/generated/dsh-api";
+import type { DshSlaProjection } from "../sla/sla.types";
 
 type GeneratedPickupSession = components["schemas"]["DshPickupSession"];
 
@@ -8,6 +9,9 @@ export type DshPickupSession = GeneratedPickupSession & {
   readonly noShowAt?: string | null;
   readonly noShowReason?: string | null;
   readonly rescheduledAt?: string | null;
+  readonly extensionCount?: number;
+  readonly maxExtensions?: number;
+  readonly slaState?: DshSlaProjection;
 };
 
 export type DshPickupSessionResponse = {
@@ -38,6 +42,7 @@ export type PickupErrorCode =
   | "PICKUP_CODE_ATTEMPTS_EXCEEDED"
   | "PICKUP_CODE_INVALID"
   | "PICKUP_INVALID_TRANSITION"
+  | "PICKUP_EXTENSION_LIMIT_EXCEEDED"
   | "PICKUP_OTP_DELIVERY_FAILED"
   | "PICKUP_UNAVAILABLE"
   | "INVALID_REQUEST"

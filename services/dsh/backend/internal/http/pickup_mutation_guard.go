@@ -76,6 +76,8 @@ func matchPickupMutationRoute(r *http.Request) (pickupMutationRoute, bool) {
 			"customer-arrived": "customer_arrived",
 			"verify":           "verify_otp",
 			"no-show":          "no_show",
+			"extend-window":    "extend_window",
+			"reschedule":       "reschedule",
 		}[parts[5]]
 		if !ok {
 			return pickupMutationRoute{}, false
@@ -181,7 +183,12 @@ func authorizePickupMutation(
 		_, _, ok := protected.partnerOrder(w, r)
 		return ok
 	}
-	_, ok := protected.requirePermission(w, r, "control-panel", PickupPermissionManage, "operator")
+	// The operator surface for pickup extend/reschedule is the emergency
+	// override once the partner's own bounded allowance (see
+	// dsh_pickup_sessions.max_extensions) is exhausted -- not routine
+	// tooling -- so it requires the same override permission as any other
+	// sovereign intervention, not the ordinary PickupPermissionManage.
+	_, ok := protected.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
 	return ok
 }
 
@@ -348,8 +355,12 @@ func PickupMutationGuard(
 	})
 }
 
+// handleReschedulePickupWindow is the operator's emergency-override reopen
+// of a no_show session, gated by IncidentPermissionOverride -- routine
+// reschedule after no-show belongs to the partner (see
+// handlePartnerReschedulePickupWindow in pickup.go).
 func (s *protectedStoreServer) handleReschedulePickupWindow(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PickupPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
 	if !ok {
 		return
 	}

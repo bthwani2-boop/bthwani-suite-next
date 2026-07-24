@@ -48,9 +48,10 @@ export async function cancelOperatorOrder(
   orderId: string,
   reasonCode: OperatorCancellationReasonCode,
   reasonNote = '',
+  ticketReference = '',
 ): Promise<CancelOrderResponse> {
   if (!orderId.trim()) throw { kind: 'invalid_request', message: 'orderId is required' };
-  return cancelOrder('operator', orderId, { reasonCode, reasonNote });
+  return cancelOrder('operator', orderId, { reasonCode, reasonNote, ticketReference });
 }
 
 export function operatorOrderWorkboardErrorMessage(error: unknown): string {

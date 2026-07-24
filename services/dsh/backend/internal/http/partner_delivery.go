@@ -4,8 +4,10 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"dsh-api/internal/dispatch"
+	"dsh-api/internal/incident"
 	"dsh-api/internal/partnerdelivery"
 	"dsh-api/internal/store"
 
@@ -23,6 +25,7 @@ type partnerDeliveryMutationBody struct {
 	CorrelationID      string   `json:"correlationId"`
 	Reason             string   `json:"reason"`
 	EvidenceReferences []string `json:"evidenceReferences"`
+	TicketReference    string   `json:"ticketReference"`
 }
 
 type assignPartnerDeliveryBody struct {
@@ -68,12 +71,15 @@ func writePartnerDeliveryError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusUnprocessableEntity, "PARTNER_DELIVERY_INVALID_TRANSITION", err.Error())
 	case errors.Is(err, partnerdelivery.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	case errors.Is(err, incident.ErrInvalid):
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "partner delivery action failed")
 	}
 }
 
 func marshalPartnerDeliveryTask(t *partnerdelivery.PartnerDeliveryTask) map[string]any {
+	sla := partnerdelivery.EvaluateDeliverySLA(t, partnerdelivery.DefaultDeliverySLAThresholds(), time.Now().UTC())
 	return map[string]any{
 		"id":                          t.ID,
 		"orderId":                     t.OrderID,
@@ -94,6 +100,7 @@ func marshalPartnerDeliveryTask(t *partnerdelivery.PartnerDeliveryTask) map[stri
 		"version":                     t.Version,
 		"createdAt":                   t.CreatedAt,
 		"updatedAt":                   t.UpdatedAt,
+		"slaState":                    sla,
 	}
 }
 
@@ -206,8 +213,12 @@ func (s *protectedStoreServer) handlePartnerDeliveryProof(w http.ResponseWriter,
 	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(updated)})
 }
 
+// handlePartnerDeliveryException is a sovereign-intervention entry point:
+// raising an exception on a partner_delivery task overrides the partner's
+// own execution, so it requires IncidentPermissionOverride and is recorded
+// as an operational_incident before the task is actually mutated.
 func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PartnerDeliveryPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
 	if !ok {
 		return
 	}
@@ -216,12 +227,12 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	if strings.TrimSpace(body.CommandID) == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
-		return
-	}
 	if strings.TrimSpace(body.Reason) == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "reason is required")
+		return
+	}
+	if strings.TrimSpace(body.TicketReference) == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "ticketReference is required")
 		return
 	}
 	task, err := partnerdelivery.GetByOrderID(s.db, orderID)
@@ -230,15 +241,30 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 		return
 	}
 	correlationID := partnerDeliveryCorrelationID(r, body.CorrelationID)
-	updated, err := partnerdelivery.NewService(s.db).RaiseExceptionCommand(
-		r.Context(), task.ID, body.ExpectedVersion, body.Reason, body.EvidenceReferences,
-		actor.ID, actor.Role, correlationID, body.CommandID,
-	)
+	reported, err := incident.NewService(s.db).Report(r.Context(), incident.ReportInput{
+		OrderID:            orderID,
+		TenantID:           actor.TenantID,
+		TargetEntityType:   incident.TargetPartnerDeliveryTask,
+		TargetEntityID:     task.ID,
+		IncidentType:       incident.TypeRaiseException,
+		Reason:             body.Reason,
+		TicketReference:    body.TicketReference,
+		ActorID:            actor.ID,
+		ActorRole:          actor.Role,
+		CorrelationID:      correlationID,
+		ExpectedVersion:    body.ExpectedVersion,
+		EvidenceReferences: body.EvidenceReferences,
+	})
 	if err != nil {
 		writePartnerDeliveryError(w, err)
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(updated)})
+	updated, err := partnerdelivery.Get(s.db, task.ID)
+	if err != nil {
+		writePartnerDeliveryError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"task": marshalPartnerDeliveryTask(updated), "incidentId": reported.ID})
 }
 
 func (s *protectedStoreServer) handleListOperatorPartnerDeliveries(w http.ResponseWriter, r *http.Request) {

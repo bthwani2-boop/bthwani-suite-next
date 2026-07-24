@@ -13,6 +13,7 @@ import {
   type OperatorOrderWorkboardRow,
 } from '../../shared/operations';
 import { useOperatorPartnerDeliveriesController } from '../../shared/partner-delivery/use-partner-delivery-controller';
+import { PartnerDeliveryStatusCard } from '../../shared/partner-delivery/PartnerDeliveryStatusCard';
 
 export type OrderJourneyOperatorInterventionProps = {
   readonly order: OperatorOrderWorkboardRow;
@@ -47,11 +48,13 @@ const PARTNER_DELIVERY_EXCEPTION_CLOSED_STATUSES = new Set(['completed', 'cancel
 function PartnerDeliveryExceptionPanel({ orderId }: { readonly orderId: string }) {
   const { detailState, loadDetailByOrder, raiseException } = useOperatorPartnerDeliveriesController({ autoLoad: false });
   const [reason, setReason] = React.useState('');
+  const [ticketReference, setTicketReference] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [message, setMessage] = React.useState<{ readonly text: string; readonly tone: 'success' | 'danger' } | null>(null);
 
   React.useEffect(() => {
     setReason('');
+    setTicketReference('');
     setMessage(null);
     void loadDetailByOrder(orderId);
     // loadDetailByOrder is stable (useCallback with no deps); re-running per orderId change only.
@@ -63,38 +66,48 @@ function PartnerDeliveryExceptionPanel({ orderId }: { readonly orderId: string }
   if (PARTNER_DELIVERY_EXCEPTION_CLOSED_STATUSES.has(task.status)) return null;
 
   const submit = async () => {
-    if (!reason.trim()) return;
+    if (!reason.trim() || !ticketReference.trim()) return;
     setSubmitting(true);
     setMessage(null);
-    const result = await raiseException(orderId, task.version, reason.trim());
+    const result = await raiseException(orderId, task.version, reason.trim(), ticketReference.trim());
     setSubmitting(false);
     if (result.ok) {
       setReason('');
-      setMessage({ text: 'تم تسجيل الاستثناء على مهمة توصيل المتجر.', tone: 'success' });
+      setTicketReference('');
+      setMessage({ text: 'تم تسجيل الاستثناء كحادثة تشغيلية على مهمة توصيل المتجر.', tone: 'success' });
     } else {
       setMessage({ text: result.message, tone: 'danger' });
     }
   };
 
   return (
-    <Box gap={2} padding={4} background="surfaceInset" radiusToken="md">
-      <Text role="titleSm">تسجيل استثناء توصيل المتجر</Text>
-      <Text role="bodySm" tone="muted">
-        يبقى تعديل فريق المتجر ونطاق الفروع داخل تطبيق الشريك. هذا الإجراء يسجل استثناءً تشغيليًا على المهمة الحالية فقط.
-      </Text>
-      <TextField
-        label="سبب الاستثناء"
-        placeholder="سبب تشغيلي مسجل قبل إغلاق المهمة"
-        value={reason}
-        onChangeText={setReason}
-      />
-      {message ? <Text role="bodySm" tone={message.tone}>{message.text}</Text> : null}
-      <Button
-        label={submitting ? 'جارٍ تسجيل الاستثناء…' : 'تسجيل استثناء'}
-        tone="danger"
-        disabled={submitting || !reason.trim()}
-        onPress={() => void submit()}
-      />
+    <Box gap={3}>
+      <PartnerDeliveryStatusCard task={task} />
+      <Box gap={2} padding={4} background="surfaceInset" radiusToken="md">
+        <Text role="titleSm">تسجيل استثناء توصيل المتجر</Text>
+        <Text role="bodySm" tone="muted">
+          يبقى تعديل فريق المتجر ونطاق الفروع داخل تطبيق الشريك. هذا الإجراء يسجل استثناءً تشغيليًا على المهمة الحالية فقط.
+        </Text>
+        <TextField
+          label="سبب الاستثناء"
+          placeholder="سبب تشغيلي مسجل قبل إغلاق المهمة"
+          value={reason}
+          onChangeText={setReason}
+        />
+        <TextField
+          label="رقم التذكرة/الحادثة"
+          placeholder="مرجع إلزامي يربط الاستثناء بحادثة تشغيلية"
+          value={ticketReference}
+          onChangeText={setTicketReference}
+        />
+        {message ? <Text role="bodySm" tone={message.tone}>{message.text}</Text> : null}
+        <Button
+          label={submitting ? 'جارٍ تسجيل الاستثناء…' : 'تسجيل استثناء'}
+          tone="danger"
+          disabled={submitting || !reason.trim() || !ticketReference.trim()}
+          onPress={() => void submit()}
+        />
+      </Box>
     </Box>
   );
 }
@@ -105,6 +118,7 @@ export function OrderJourneyOperatorIntervention({
 }: OrderJourneyOperatorInterventionProps) {
   const [reasonCode, setReasonCode] = React.useState<OperatorCancellationReasonCode>('operational_failure');
   const [reasonNote, setReasonNote] = React.useState('');
+  const [ticketReference, setTicketReference] = React.useState('');
   const [state, setState] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = React.useState('');
   const terminal = isTerminal(order.status);
@@ -112,6 +126,7 @@ export function OrderJourneyOperatorIntervention({
   React.useEffect(() => {
     setReasonCode('operational_failure');
     setReasonNote('');
+    setTicketReference('');
     setState('idle');
     setMessage('');
   }, [order.id]);
@@ -158,14 +173,20 @@ export function OrderJourneyOperatorIntervention({
       setMessage('التوضيح مطلوب عند اختيار سبب آخر.');
       return;
     }
+    if (!ticketReference.trim()) {
+      setState('error');
+      setMessage('رقم التذكرة/الحادثة مطلوب لإلغاء سيادي.');
+      return;
+    }
     setState('loading');
     setMessage('');
     try {
-      await cancelOperatorOrder(order.id, reasonCode, reasonNote);
+      await cancelOperatorOrder(order.id, reasonCode, reasonNote, ticketReference.trim());
       await onChanged();
       setState('success');
       setReasonNote('');
-      setMessage('تم تثبيت الإلغاء، وإيقاف المهام التابعة، وبدء قرار WLT المالي.');
+      setTicketReference('');
+      setMessage('تم تثبيت الإلغاء كحادثة تشغيلية، وإيقاف المهام التابعة، وبدء قرار WLT المالي.');
     } catch (error) {
       setState('error');
       setMessage(operatorOrderWorkboardErrorMessage(error));
@@ -202,11 +223,17 @@ export function OrderJourneyOperatorIntervention({
           value={reasonNote}
           onChangeText={setReasonNote}
         />
+        <TextField
+          label="رقم التذكرة/الحادثة"
+          placeholder="مرجع إلزامي يربط الإلغاء بحادثة تشغيلية"
+          value={ticketReference}
+          onChangeText={setTicketReference}
+        />
         {message ? <Text role="bodySm" tone={state === 'error' ? 'danger' : 'success'}>{message}</Text> : null}
         <Button
           label={state === 'loading' ? 'جارٍ تثبيت الإلغاء…' : 'تأكيد الإلغاء وإغلاق المهام'}
           tone="danger"
-          disabled={state === 'loading' || (noteRequired && !reasonNote.trim())}
+          disabled={state === 'loading' || (noteRequired && !reasonNote.trim()) || !ticketReference.trim()}
           onPress={() => void submit()}
         />
       </Box>

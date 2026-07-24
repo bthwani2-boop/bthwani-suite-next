@@ -15,53 +15,18 @@ export type PickupWorkbenchScreenProps = {
   subGroup?: string;
 };
 
+/**
+ * Read/monitor screen. The store owns extending an active window and
+ * rescheduling after a no-show from its own app; the operator surface only
+ * observes. Extending a session beyond its cap still requires an operator
+ * emergency override, which is a separate sovereign-intervention flow, not
+ * a routine action offered here.
+ */
 export function PickupWorkbenchScreen() {
-  const {
-    listState,
-    loadList,
-    extendWindow,
-    rescheduleWindow,
-  } = useOperatorPickupsController({
+  const { listState, loadList } = useOperatorPickupsController({
     limit: 100,
     autoLoad: true,
   });
-  const [actionFeedback, setActionFeedback] = React.useState<string | null>(null);
-  const [actionPendingFor, setActionPendingFor] = React.useState<string | null>(null);
-
-  const handleWindowAction = React.useCallback(
-    async (orderId: string, version: number, mode: 'extend' | 'reschedule') => {
-      setActionPendingFor(orderId);
-      setActionFeedback(null);
-      const newExpiry = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
-      const result = mode === 'reschedule'
-        ? await rescheduleWindow(
-            orderId,
-            version,
-            'إعادة جدولة موثقة بعد عدم حضور العميل',
-            newExpiry,
-          )
-        : await extendWindow(
-            orderId,
-            version,
-            'تمديد تشغيلي موثق من لوحة التحكم',
-            newExpiry,
-          );
-      setActionPendingFor(null);
-      if (result.ok) {
-        setActionFeedback(
-          mode === 'reschedule'
-            ? 'تمت إعادة فتح نافذة الاستلام. يجب على المتجر إصدار وإرسال رمز جديد للعميل.'
-            : 'تم تمديد نافذة الاستلام وقراءة الحالة المحدّثة من DSH.',
-        );
-        await loadList();
-        return;
-      }
-      setActionFeedback(
-        `${mode === 'reschedule' ? 'تعذرت إعادة الجدولة' : 'تعذر تمديد النافذة'}: ${result.message}`,
-      );
-    },
-    [extendWindow, loadList, rescheduleWindow],
-  );
 
   if (!listState.loaded && !listState.error) {
     return (
@@ -88,24 +53,18 @@ export function PickupWorkbenchScreen() {
   return (
     <Box gap={4}>
       <Box gap={1}>
-        <Text role="titleMd">إدارة جلسات الاستلام الذاتي</Text>
+        <Text role="titleMd">متابعة جلسات الاستلام الذاتي</Text>
         <Text role="bodySm" tone="muted">
-          يراقب المشغّل الجلسات ويمدد النافذة النشطة أو يعيد جدولة جلسة عدم الحضور. إصدار الرمز والتحقق منه يبقيان لدى المتجر والعميل.
+          المتجر يملك تمديد نافذته النشطة وإعادة جدولتها بعد عدم الحضور من تطبيق الشريك. هذه الشاشة للقراءة والمتابعة فقط.
         </Text>
       </Box>
 
       <WebControlPanelRecommendation
         title="حدود التحكم السيادية"
-        reason="إعادة الجدولة تبطل الرمز السابق وتفتح نافذة جديدة فقط؛ لا تعرض رمزًا للمشغّل، ويجب على المتجر إرسال رمز جديد بعد الاستعادة."
+        reason="تمديد النافذة وإعادة الجدولة إجراءان روتينيان يديرهما المتجر. تدخّل العمليات مقصور على التعليق أو الإلغاء الاستثنائي عبر مسار الحوادث التشغيلية."
         confidence="high"
         auditTag="PICKUP_OPERATOR_BOUNDARY"
       />
-
-      {actionFeedback ? (
-        <Box padding={3} background="brandSurface" radiusToken="md">
-          <Text role="bodySm">{actionFeedback}</Text>
-        </Box>
-      ) : null}
 
       <WebControlPanelQueue
         title="نوافذ الاستلام المباشرة"
@@ -125,27 +84,6 @@ export function PickupWorkbenchScreen() {
             const cancelled = currentStatus === 'cancelled' || Boolean(session.cancelledAt);
             const consumed = Boolean(session.usedAt);
             const expired = !cancelled && !consumed && new Date(session.expiresAt).getTime() < Date.now();
-            const pending = actionPendingFor === session.orderId;
-            const actionMode = currentStatus === 'no_show'
-              ? 'reschedule'
-              : currentStatus === 'active' && !cancelled && !consumed
-                ? 'extend'
-                : null;
-            const action = actionMode
-              ? {
-                  id: `${actionMode}-${session.id}`,
-                  label: pending
-                    ? 'جارٍ التنفيذ...'
-                    : actionMode === 'reschedule'
-                      ? 'إعادة جدولة ساعتين'
-                      : 'تمديد ساعتين',
-                  onAction: () => void handleWindowAction(
-                    session.orderId,
-                    session.version,
-                    actionMode,
-                  ),
-                }
-              : undefined;
             const status = cancelled
               ? 'cancelled'
               : consumed
@@ -171,7 +109,7 @@ export function PickupWorkbenchScreen() {
               ? `ألغي: ${new Date(session.cancelledAt).toLocaleString('ar-SA')}`
               : currentStatus === 'no_show' && session.noShowAt
                 ? `سُجل عدم الحضور: ${new Date(session.noShowAt).toLocaleString('ar-SA')}`
-                : `ينتهي: ${new Date(session.expiresAt).toLocaleString('ar-SA')}`;
+                : `ينتهي: ${new Date(session.expiresAt).toLocaleString('ar-SA')} — تمديدات: ${session.extensionCount ?? 0}/${session.maxExtensions ?? 2}`;
             const rowProps: WebControlPanelDecisionRowProps = {
               entityId: session.id,
               entityLabel: `طلب: ${session.orderId} — عميل: ${session.clientId}`,
@@ -180,11 +118,7 @@ export function PickupWorkbenchScreen() {
               reason,
               sla,
             };
-            return action ? (
-              <WebControlPanelDecisionRow key={session.id} {...rowProps} primaryAction={action} />
-            ) : (
-              <WebControlPanelDecisionRow key={session.id} {...rowProps} />
-            );
+            return <WebControlPanelDecisionRow key={session.id} {...rowProps} />;
           })
         )}
       </WebControlPanelQueue>

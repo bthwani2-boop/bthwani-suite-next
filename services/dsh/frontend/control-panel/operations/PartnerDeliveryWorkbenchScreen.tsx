@@ -31,19 +31,21 @@ export function PartnerDeliveryWorkbenchScreen(_props: PartnerDeliveryWorkbenchS
   const { listState, loadList, detailState, loadDetail, raiseException } =
     useOperatorPartnerDeliveriesController({ limit: 100, autoLoad: true });
   const [reason, setReason] = React.useState('');
+  const [ticketReference, setTicketReference] = React.useState('');
   const [evidenceReference, setEvidenceReference] = React.useState('');
   const [actionPending, setActionPending] = React.useState(false);
   const [feedback, setFeedback] = React.useState<string | null>(null);
 
   const selectedTask = detailState.data;
   const handleRaiseException = React.useCallback(async () => {
-    if (!selectedTask || !reason.trim()) return;
+    if (!selectedTask || !reason.trim() || !ticketReference.trim()) return;
     setActionPending(true);
     setFeedback(null);
     const result = await raiseException(
       selectedTask.orderId,
       selectedTask.version,
       reason.trim(),
+      ticketReference.trim(),
       evidenceReference.trim() ? [evidenceReference.trim()] : [],
     );
     setActionPending(false);
@@ -52,10 +54,11 @@ export function PartnerDeliveryWorkbenchScreen(_props: PartnerDeliveryWorkbenchS
       return;
     }
     setReason('');
+    setTicketReference('');
     setEvidenceReference('');
-    setFeedback('تم تثبيت الاستثناء وسببه ومراجع أدلته في DSH ثم إعادة قراءة المهمة.');
+    setFeedback('تم تثبيت الاستثناء كحادثة تشغيلية موثقة، وأعيدت قراءة المهمة.');
     await loadList();
-  }, [evidenceReference, loadList, raiseException, reason, selectedTask]);
+  }, [evidenceReference, loadList, raiseException, reason, selectedTask, ticketReference]);
 
   if (!listState.loaded && !listState.error) {
     return (
@@ -169,10 +172,16 @@ export function PartnerDeliveryWorkbenchScreen(_props: PartnerDeliveryWorkbenchS
                 value={evidenceReference}
                 onChangeText={setEvidenceReference}
               />
+              <TextField
+                label="رقم التذكرة/الحادثة"
+                placeholder="مرجع إلزامي يربط الاستثناء بحادثة تشغيلية"
+                value={ticketReference}
+                onChangeText={setTicketReference}
+              />
               <Button
                 label={actionPending ? 'جارٍ تثبيت الاستثناء…' : 'تسجيل الاستثناء الموثق'}
                 tone="danger"
-                disabled={actionPending || !reason.trim()}
+                disabled={actionPending || !reason.trim() || !ticketReference.trim()}
                 onPress={() => void handleRaiseException()}
               />
             </Box>

@@ -86,6 +86,28 @@ export async function markPickupNoShow(
   );
 }
 
+/** Partner's routine window extension, bounded by session extensionCount/maxExtensions. */
+export async function extendPickupWindowAsPartner(
+  orderId: string,
+  input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
+): Promise<DshPickupSessionResponse> {
+  return request<DshPickupSessionResponse>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/pickup/extend-window`,
+    { method: "POST", body: { ...input, commandId: corrId("pk-extend") } },
+  );
+}
+
+/** Partner's routine no-show recovery: reopens the session with a fresh expiry. */
+export async function reschedulePickupWindowAsPartner(
+  orderId: string,
+  input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
+): Promise<DshPickupSessionResponse> {
+  return request<DshPickupSessionResponse>(
+    `/dsh/partner/orders/${encodeURIComponent(orderId)}/pickup/reschedule`,
+    { method: "POST", body: { ...input, commandId: corrId("pk-reschedule") } },
+  );
+}
+
 // --- Operator side --------------------------------------------------------
 
 export async function fetchOperatorPickups(params: {
