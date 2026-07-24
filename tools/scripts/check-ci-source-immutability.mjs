@@ -33,12 +33,12 @@ const forbiddenPatterns = [
   },
   {
     id: "SOURCE_MUTATING_GIT_COMMAND",
-    regex: /^\s*(?:sudo\s+|env\s+(?:[^\s=]+=[^\s]+\s+)+)?git\s+(?:add|commit|push|merge|rebase|reset|restore|update-ref|checkout\s+(?:-B|--)|switch\s+-C|branch\s+-f|tag\s+-f)\b/i,
+    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:sudo\s+|env\s+(?:[^\s=]+=[^\s]+\s+)+)?git\s+(?:add|commit|push|merge|rebase|reset|restore|update-ref|checkout\s+(?:-B|--)|switch\s+-C|branch\s+-f|tag\s+-f)\b/i,
     reason: "verification workflows must not mutate the worktree, index, refs, commits, tags, or branches",
   },
   {
     id: "SOURCE_MUTATING_GH_COMMAND",
-    regex: /^\s*gh\s+(?:pr\s+merge|api\s+.*(?:--method|-X)\s*(?:POST|PUT|PATCH|DELETE).*\/(?:contents|git\/refs|merges)(?:\b|\/))/i,
+    regex: /^\s*(?:-\s*)?(?:run:\s*)?gh\s+(?:pr\s+merge|api\s+.*(?:--method|-X)\s*(?:POST|PUT|PATCH|DELETE).*\/(?:contents|git\/refs|merges)(?:\b|\/))/i,
     reason: "verification workflows must not mutate repository source through GitHub CLI",
   },
   {
@@ -48,17 +48,17 @@ const forbiddenPatterns = [
   },
   {
     id: "AUTO_COMMIT_ACTION",
-    regex: /^\s*uses:\s*(?:stefanzweifel\/git-auto-commit-action|EndBug\/add-and-commit|peter-evans\/create-pull-request|ad-m\/github-push-action)@/i,
+    regex: /^\s*(?:-\s*)?uses:\s*(?:stefanzweifel\/git-auto-commit-action|EndBug\/add-and-commit|peter-evans\/create-pull-request|ad-m\/github-push-action)@/i,
     reason: "auto-commit and auto-push actions are forbidden in verification workflows",
   },
   {
     id: "SOURCE_FORMAT_WRITE",
-    regex: /^\s*(?:pnpm|npm|npx|yarn|bunx?)\b.*\b(?:prettier\b.*--write|eslint\b.*--fix)\b/i,
+    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:pnpm|npm|npx|yarn|bunx?)\b.*\b(?:prettier\b.*--write|eslint\b.*--fix)\b/i,
     reason: "verification workflows must check formatting and linting without rewriting source",
   },
   {
     id: "IN_PLACE_SOURCE_EDIT",
-    regex: /^\s*(?:sed\s+-i|perl\s+-pi)\b/i,
+    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:sed\s+-i|perl\s+-pi)\b/i,
     reason: "in-place source editing is forbidden in verification workflows",
   },
 ];
