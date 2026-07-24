@@ -7,7 +7,7 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir contracts typecheck"
+        "command": "node tools/scripts/run-command-check.mjs --label c-type -- pnpm --dir contracts typecheck"
       }
     },
     "build": {
