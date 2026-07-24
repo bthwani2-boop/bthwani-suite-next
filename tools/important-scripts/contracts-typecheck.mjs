@@ -8,7 +8,7 @@ const contracts = [
   "core/identity/contracts/auth.openapi.yaml",
   "core/providers/contracts/providers.openapi.yaml",
   "core/workforce/contracts/workforce.openapi.yaml",
-  "services/dsh/contracts/dsh.openapi.yaml",
+  "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
   "services/wlt/contracts/wlt.openapi.yaml",
 ];
 
@@ -58,6 +58,9 @@ function run(label, command, args, options = {}) {
 
 try {
   run("contracts-foundation", "node", ["tools/important-scripts/contracts-foundation.mjs"], {
+    stdio: "inherit",
+  });
+  run("dsh-openapi-modular", "node", ["tools/guards/dsh-openapi-modular-gate.mjs"], {
     stdio: "inherit",
   });
   for (const contract of contracts) {
