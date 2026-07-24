@@ -48,11 +48,14 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
   });
 
   if (sessionState.kind !== "authenticated") {
+    const restoring = sessionState.kind === "restoring" || sessionState.kind === "authenticating";
     return (
       <ScrollScreen>
         <StateView
-          stateId={sessionState.kind === "restoring" ? "loading" : "permissionDenied"}
-          title={sessionState.kind === "restoring" ? "جاري استعادة جلسة لوحة التحكم" : "جلسة مصادق عليها مطلوبة"}
+          stateId={restoring ? "loading" : "recoverableError"}
+          loading={restoring}
+          tone={restoring ? "neutral" : "warning"}
+          title={restoring ? "جاري استعادة جلسة لوحة التحكم" : "جلسة مصادق عليها مطلوبة"}
           description="لا يتم تحميل أو عرض بيانات الشركاء قبل استعادة جلسة المشغل وصلاحيات المستأجر."
         />
       </ScrollScreen>
