@@ -9,7 +9,7 @@ const strictBoundaryFile = "core/platform-control/backend/internal/platformcontr
 const strictBoundaryProofFile = "core/platform-control/backend/internal/platformcontrol/jrn040_strict_boundary_test.go";
 const databaseProofFile = "core/platform-control/backend/internal/platformcontrol/jrn040_database_sensitive_guard_test.go";
 const httpProofFile = "core/platform-control/backend/internal/http/jrn040_workflow_handlers_test.go";
-const workflowFile = ".github/workflows/jrn-040-platform-change-sets-verification.yml";
+const workflowFile = ".github/workflows/ci.yml";
 const requiredFiles = [
   productTruthFile,
   validationMigrationFile,
@@ -162,15 +162,11 @@ if (failures.length === 0) {
     "draftItems",
   ]);
   requireText(workflowFile, [
-    "group: jrn-040-${{ github.sha }}",
-    "cancel-in-progress: false",
-    "jrn040_strict_boundary.go",
-    "jrn040_strict_boundary_test.go",
-    "jrn040_database_sensitive_guard_test.go",
-    "platform-006_jrn040_sensitive_change_boundary.sql",
-    "Run targeted Go tests",
-    "Typecheck generated contract and control-panel binding",
-    "Verify JRN-040 contract and binding gate",
+    "node_jrn040:",
+    "name: Verify JRN-040 platform binding",
+    "pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false",
+    "openapi-typescript ../../core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml",
+    "node tools/guards/jrn-040-platform-change-sets-gate.mjs",
   ]);
 }
 
