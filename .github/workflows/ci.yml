@@ -289,16 +289,6 @@ jobs:
           if [[ "${{ needs.context.outputs.heavy }}" == "true" ]]; then
             pnpm run affected:build
           fi
-      - name: Upload regenerated DSH contract artifacts
-        if: ${{ always() && needs.context.outputs.contracts == 'true' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: dsh-openapi-generated-${{ github.run_id }}
-          path: |
-            services/dsh/contracts/generated/dsh.bundle.openapi.yaml
-            services/dsh/contracts/dsh.modular.manifest.json
-          if-no-files-found: error
-          retention-days: 1
       - name: Run detected journey gates
         if: ${{ needs.context.outputs.journey == 'true' && needs.context.outputs.journey_scope != '' }}
         shell: pwsh
