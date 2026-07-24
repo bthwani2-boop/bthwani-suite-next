@@ -130,10 +130,7 @@ export function useDshMobilePushRegistration(
 ): void {
   useEffect(() => {
     if (authKind !== "authenticated" || Platform.OS === "web") return undefined;
-    if (Platform.OS === "android" && !androidNativePushConfigured()) {
-      console.log(`[${appKey}] push disabled: Firebase is not configured in the native Android build`);
-      return undefined;
-    }
+    if (Platform.OS === "android" && !androidNativePushConfigured()) return undefined;
 
     let active = true;
     let deviceId: string | undefined;
