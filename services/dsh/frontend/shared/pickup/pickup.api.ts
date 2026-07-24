@@ -137,14 +137,16 @@ export async function extendPickupWindow(
   );
 }
 
+/**
+ * Operator pickup rescheduling is intentionally unsupported. The store owns
+ * routine no-show recovery; the operator surface remains read-only except for
+ * the separately permissioned emergency extension route.
+ */
 export async function reschedulePickupWindow(
-  orderId: string,
-  input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
+  _orderId: string,
+  _input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
 ): Promise<DshPickupSessionResponse> {
-  return request<DshPickupSessionResponse>(
-    `/dsh/operator/pickups/${encodeURIComponent(orderId)}/reschedule`,
-    { method: "POST", body: { ...input, commandId: corrId("pk-reschedule") } },
-  );
+  throw new Error("Operator pickup rescheduling is not supported; use the partner-owned recovery flow.");
 }
 
 function classified(
