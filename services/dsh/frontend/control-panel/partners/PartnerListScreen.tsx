@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { neutralScale, statusScale } from "@bthwani/ui-kit";
 import {
   CpButton,
@@ -14,10 +15,7 @@ import {
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame, PaginationToolbar } from "@bthwani/control-panel/shell";
 import { useControlPanelSession } from "@dsh-shared/session/control-panel-session";
-import {
-  usePartnerWorkspaceListController,
-  getDshPartnerActivationStatusLabel,
-} from "../../shared/partner";
+import { usePartnerWorkspaceListController } from "../../shared/partner";
 
 const STATUS_OPTIONS = [
   { value: "", label: "جميع الحالات" },
@@ -55,7 +53,7 @@ const TONE_COLOR: Record<string, string> = {
   info: statusScale.info,
 };
 
-function statusBadgeStyle(tone: string): React.CSSProperties {
+function statusBadgeStyle(tone: string): CSSProperties {
   const color = TONE_COLOR[tone] ?? neutralScale[500];
   return {
     display: "inline-flex",
@@ -159,7 +157,7 @@ export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
               </CpTableCell>
               <CpTableCell>{row.category}</CpTableCell>
               <CpTableCell>
-                <span style={statusBadgeStyle(row.statusTone)}>{getDshPartnerActivationStatusLabel(row.activationStatus)}</span>
+                <span style={statusBadgeStyle(row.statusTone)}>{row.statusLabel}</span>
               </CpTableCell>
               <CpTableCell>
                 <span style={{ color: neutralScale[500], fontSize: "0.75rem" }}>{row.nextAction}</span>
