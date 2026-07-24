@@ -283,11 +283,11 @@ jobs:
           NX_BASE: ${{ needs.context.outputs.base_sha }}
           NX_HEAD: ${{ needs.context.outputs.head_sha }}
         run: |
-          pnpm run affected:typecheck -- --base="${NX_BASE}" --head="${NX_HEAD}"
-          pnpm run affected:lint -- --base="${NX_BASE}" --head="${NX_HEAD}"
-          pnpm run affected:test -- --base="${NX_BASE}" --head="${NX_HEAD}"
+          pnpm run affected:typecheck
+          pnpm run affected:lint
+          pnpm run affected:test
           if [[ "${{ needs.context.outputs.heavy }}" == "true" ]]; then
-            pnpm run affected:build -- --base="${NX_BASE}" --head="${NX_HEAD}"
+            pnpm run affected:build
           fi
       - name: Run detected journey gates
         if: ${{ needs.context.outputs.journey == 'true' && needs.context.outputs.journey_scope != '' }}
