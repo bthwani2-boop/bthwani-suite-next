@@ -92,7 +92,7 @@ function withMobileBuildEnvironmentForApp(appKey, environment = process.env) {
 
 function requireNativeProviderInputs(appKey, app, environment) {
   const features = app.features ?? [];
-  if (!features.includes("maps")) return;
+  if (profile === "development" || !features.includes("maps")) return;
 
   if ((platform === "android" || platform === "all")
     && !optionalEnvironmentValue(environment.GOOGLE_MAPS_ANDROID_API_KEY)) {
