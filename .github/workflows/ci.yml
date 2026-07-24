@@ -249,6 +249,59 @@ jobs:
       - name: Verify immutable diff hygiene
         run: git diff --check
 
+  node_deep_diagnostics:
+    name: Operational deep diagnostics (UI purity, dead code)
+    needs: [context]
+    if: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: UI Surface Purity (ui-kit)
+        run: pnpm run diagnostics:ui-kit
+      - name: Dead Code Prevention (knip)
+        run: pnpm run diagnostics:knip
+
+  node_vertical_integrity:
+    name: Vertical fullstack integrity (Logic, bindings, AST)
+    needs: [context]
+    if: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' || needs.context.outputs.contracts == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Logic coverage and AST rules
+        run: pnpm run guard:logic-all
+
+  node_performance_budget:
+    name: Organization and performance (Budgets, limits)
+    needs: [context]
+    if: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' || needs.context.outputs.node == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Repo structure and naming
+        run: pnpm run guard:repo-all
+      - name: Performance, budgets and heavy imports
+        run: pnpm run guard:performance-all
+
   node_contracts:
     name: Verify contract foundation and bindings
     needs: [context]
@@ -749,7 +802,7 @@ jobs:
 
   result:
     name: BThwani CI result
-    needs: [context, objective_nomenclature, policy, node_contracts, node_typecheck, node_lint, node_test, node_build, node_journeys, node_jrn040, node_hygiene, dsh, wlt, identity, workforce, platform, providers, runtime_proof]
+    needs: [context, objective_nomenclature, policy, node_deep_diagnostics, node_vertical_integrity, node_performance_budget, node_contracts, node_typecheck, node_lint, node_test, node_build, node_journeys, node_jrn040, node_hygiene, dsh, wlt, identity, workforce, platform, providers, runtime_proof]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -763,6 +816,9 @@ jobs:
           CONTEXT_RESULT: ${{ needs.context.result }}
           OBJECTIVE_NOMENCLATURE_RESULT: ${{ needs.objective_nomenclature.result }}
           POLICY_RESULT: ${{ needs.policy.result }}
+          NODE_DEEP_DIAGNOSTICS_RESULT: ${{ needs.node_deep_diagnostics.result }}
+          NODE_VERTICAL_INTEGRITY_RESULT: ${{ needs.node_vertical_integrity.result }}
+          NODE_PERFORMANCE_BUDGET_RESULT: ${{ needs.node_performance_budget.result }}
           NODE_CONTRACTS_RESULT: ${{ needs.node_contracts.result }}
           NODE_TYPECHECK_RESULT: ${{ needs.node_typecheck.result }}
           NODE_LINT_RESULT: ${{ needs.node_lint.result }}
@@ -779,6 +835,9 @@ jobs:
           PROVIDERS_RESULT: ${{ needs.providers.result }}
           RUNTIME_RESULT: ${{ needs.runtime_proof.result }}
           EXPECTED_POLICY: ${{ needs.context.outputs.policy }}
+          EXPECTED_NODE_DEEP_DIAGNOSTICS: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' }}
+          EXPECTED_NODE_VERTICAL_INTEGRITY: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' || needs.context.outputs.contracts == 'true' }}
+          EXPECTED_NODE_PERFORMANCE_BUDGET: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' || needs.context.outputs.node == 'true' }}
           EXPECTED_NODE_CONTRACTS: ${{ needs.context.outputs.contracts }}
           EXPECTED_NODE_TYPECHECK: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' }}
           EXPECTED_NODE_LINT: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' }}
@@ -809,6 +868,9 @@ jobs:
           check_result context true "${CONTEXT_RESULT}"
           check_result objective_nomenclature true "${OBJECTIVE_NOMENCLATURE_RESULT}"
           check_result policy "${EXPECTED_POLICY}" "${POLICY_RESULT}"
+          check_result node_deep_diagnostics "${EXPECTED_NODE_DEEP_DIAGNOSTICS}" "${NODE_DEEP_DIAGNOSTICS_RESULT}"
+          check_result node_vertical_integrity "${EXPECTED_NODE_VERTICAL_INTEGRITY}" "${NODE_VERTICAL_INTEGRITY_RESULT}"
+          check_result node_performance_budget "${EXPECTED_NODE_PERFORMANCE_BUDGET}" "${NODE_PERFORMANCE_BUDGET_RESULT}"
           check_result node_contracts "${EXPECTED_NODE_CONTRACTS}" "${NODE_CONTRACTS_RESULT}"
           check_result node_typecheck "${EXPECTED_NODE_TYPECHECK}" "${NODE_TYPECHECK_RESULT}"
           check_result node_lint "${EXPECTED_NODE_LINT}" "${NODE_LINT_RESULT}"
