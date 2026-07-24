@@ -66,8 +66,8 @@ for (const required of [
 
 for (const duplicate of manifest.duplicateSymbols ?? []) {
   violations.push({
-    file: manifestFile,
-    message: `DUPLICATE_PUBLIC_SYMBOL:${duplicate.symbol}:${duplicate.owners.join(",")}`,
+    file: "ui-kit",
+    message: `DUP:${duplicate.symbol}:${duplicate.owners.join(",")}`,
   });
 }
 
