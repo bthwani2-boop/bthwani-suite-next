@@ -195,13 +195,18 @@ function Set-EasDevelopmentVariable {
         [Parameter(Mandatory)][ValidateSet("file", "string")][string] $Type
     )
 
+    # google-services.json and Google Maps keys are embedded into client APKs.
+    # Use sensitive rather than secret so EAS CLI can resolve dynamic app config
+    # consistently while still avoiding plain log output.
+    $visibility = "sensitive"
+
     Push-Location -LiteralPath $AppDirectory
     try {
         & pnpm dlx eas-cli@latest env:create development `
             --name $Name `
             --value $Value `
             --type $Type `
-            --visibility secret `
+            --visibility $visibility `
             --scope project `
             --force `
             --non-interactive | Out-Null
