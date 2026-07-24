@@ -14,7 +14,27 @@ const contracts = [
 
 const tempDir = mkdtempSync(join(tmpdir(), "bthwani-contracts-"));
 const ruleset = join(tempDir, "spectral.yaml");
-writeFileSync(ruleset, "extends: [spectral:oas]\n", "utf8");
+writeFileSync(
+  ruleset,
+  `extends: [spectral:oas]
+rules:
+  duplicated-entry-in-enum:
+    description: Enum values must not have duplicate entry.
+    severity: warn
+    recommended: true
+    message: "{{error}}"
+    given:
+      - "$..[?(@property !== 'properties' && @ != null && @.enum && @.enum.constructor.name === 'Array')]"
+    then:
+      field: enum
+      function: oasSchema
+      functionOptions:
+        schema:
+          type: array
+          uniqueItems: true
+`,
+  "utf8",
+);
 
 function run(label, command, args, options = {}) {
   const result = spawnSync(command, args, {
