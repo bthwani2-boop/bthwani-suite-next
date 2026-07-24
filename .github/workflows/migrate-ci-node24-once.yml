@@ -1,0 +1,80 @@
+name: One-time contextual CI Node 24 migration
+
+on:
+  push:
+    branches:
+      - fix/lianbassam-pr-ci-trigger
+    paths:
+      - .github/workflows/migrate-ci-node24-once.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: migrate-contextual-ci-node24-once
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout migration branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: fix/lianbassam-pr-ci-trigger
+          fetch-depth: 0
+          persist-credentials: true
+          show-progress: false
+
+      - name: Replace deprecated action runtimes and self-remove
+        shell: python
+        run: |
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/ci.yml')
+          source = workflow.read_text(encoding='utf-8')
+          replacements = {
+              'actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4':
+                  'actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6',
+              'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4':
+                  'actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0',
+              'actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5':
+                  'actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0',
+              'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2':
+                  'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1',
+          }
+          for old, new in replacements.items():
+              if old not in source:
+                  raise SystemExit(f'Expected pinned action was not found: {old}')
+              source = source.replace(old, new)
+
+          env_block = (
+              'env:\n'
+              '  FULL_VERIFICATION_TRIGGER: governance/github/lianbassam-full-verification.trigger.json\n'
+          )
+          hardened_env_block = (
+              'env:\n'
+              '  FULL_VERIFICATION_TRIGGER: governance/github/lianbassam-full-verification.trigger.json\n'
+              '  GIT_CONFIG_COUNT: "1"\n'
+              '  GIT_CONFIG_KEY_0: init.defaultBranch\n'
+              '  GIT_CONFIG_VALUE_0: master\n'
+          )
+          if 'GIT_CONFIG_KEY_0: init.defaultBranch' not in source:
+              if env_block not in source:
+                  raise SystemExit('Canonical workflow env block was not found')
+              source = source.replace(env_block, hardened_env_block, 1)
+
+          workflow.write_text(source, encoding='utf-8', newline='\n')
+          Path('.github/workflows/migrate-ci-node24-once.yml').unlink()
+
+      - name: Commit atomic migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .github/workflows/ci.yml .github/workflows/migrate-ci-node24-once.yml
+          git diff --cached --check
+          git commit -m "fix(ci): migrate contextual workflow to Node 24 actions"
+          git push origin HEAD:fix/lianbassam-pr-ci-trigger
