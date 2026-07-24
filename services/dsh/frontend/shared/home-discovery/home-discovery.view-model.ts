@@ -12,8 +12,10 @@ import type {
   DshHomeStoreDto,
 } from './home-discovery.types';
 import { resolveDshMediaUrl } from '../_kernel/dsh-media-url';
-import { toFulfillmentModes, type DshStoreCardViewModel, type DshDeliveryMode } from '../store';
-import type { DshFulfillmentDeliveryMode } from '../delivery/delivery.contract';
+import {
+  toCardViewModel,
+  type DshStoreCardViewModel,
+} from '../store';
 
 export type BannerViewModel = {
   id: string;
@@ -41,67 +43,34 @@ export type CategoryViewModel = {
   sortOrder: number;
 };
 
-type FilterViewModel = {
-  id: string;
-  label: string;
-  kind: string;
-  isActive: boolean;
+export type HomeStoreCardViewModel = DshStoreCardViewModel & {
+  readonly slug: string;
+  readonly serviceabilityStatus: string;
+  readonly storeStatus: string;
+  readonly ratingDisplay: string;
+  readonly followerCountDisplay: string;
+  readonly etaDisplay: string;
+  readonly heroImageUrl: string | null;
+  readonly logoUrl: string | null;
+  readonly categoryLabel: string;
+  readonly categoryId: string;
+  readonly distanceDisplay: string | null;
+  readonly openStatusRole: 'storeOpen' | 'storeClosed' | 'storeTemporaryClosed' | 'storeUnavailable';
 };
 
-export type HomeStoreCardViewModel = {
-  id: string;
-  slug: string;
-  displayName: string;
-  serviceabilityStatus: string;
-  storeStatus: string;
-  ratingDisplay: string;
-  followerCountDisplay: string;
-  etaDisplay: string;
-  heroImageUrl: string | null;
-  logoUrl: string | null;
-  categoryLabel: string;
-  categoryId: string;
-  isFreeDelivery: boolean;
-  hasProBadge: boolean;
-  hasCouponBadge: boolean;
-  isPopular: boolean;
-  pointsMultiplier: number | null;
-  distanceDisplay: string | null;
-  /** Human-readable delivery mode labels e.g. ["⚡ ثواني", "توصيل", "استلم"] */
-  deliveryModeLabels: readonly string[];
-  /** Canonical checkout fulfillment modes this store has enabled. */
-  availableFulfillmentModes: readonly DshFulfillmentDeliveryMode[];
-  /** Semantic role for open/closed indicator, resolved by UI via ui-kit tokens */
-  openStatusRole: 'storeOpen' | 'storeClosed' | 'storeTemporaryClosed' | 'storeUnavailable';
-};
-
-const DELIVERY_MODE_LABELS: Record<string, string> = {
-  delivery: 'توصيل',
-  pickup:   'استلام',
-  express:  '⚡ ثواني',
-};
-
-function formatFollowerCount(count: number): string {
-  if (count >= 1000) {
-    return new Intl.NumberFormat('ar', { notation: 'compact', maximumFractionDigits: 1 }).format(count);
-  }
-  return String(count);
-}
-
-function formatRating(avg?: number | null): string {
-  if (avg == null) return '—';
-  return avg.toFixed(1);
-}
-
-function formatEta(min?: number | null, max?: number | null): string {
-  if (min == null || max == null) return '—';
-  return `${min}–${max} د`;
-}
-
-function resolveOpenStatusRole(status: string, serviceabilityStatus: string): HomeStoreCardViewModel['openStatusRole'] {
-  if (status === 'active' && serviceabilityStatus === 'serviceable') return 'storeOpen';
+function resolveOpenStatusRole(
+  status: string,
+  serviceabilityStatus: string,
+): HomeStoreCardViewModel['openStatusRole'] {
   if (status === 'temporarily_closed') return 'storeTemporaryClosed';
-  if (serviceabilityStatus === 'unavailable' || serviceabilityStatus === 'out_of_area') return 'storeUnavailable';
+  if (
+    status === 'unavailable' ||
+    serviceabilityStatus === 'unavailable' ||
+    serviceabilityStatus === 'out_of_area'
+  ) {
+    return 'storeUnavailable';
+  }
+  if (status === 'active') return 'storeOpen';
   return 'storeClosed';
 }
 
@@ -132,67 +101,37 @@ export function toCategoryViewModel(dto: DshHomeCategoryDto): CategoryViewModel 
   return {
     id: dto.id,
     label: dto.label,
-    iconUrl: dto.iconUrl ?? '',
+    iconUrl: resolveDshMediaUrl(dto.iconUrl) ?? dto.iconUrl ?? '',
     sortOrder: dto.sortOrder,
   };
 }
 
 export function toHomeStoreCardViewModel(dto: DshHomeStoreDto): HomeStoreCardViewModel {
+  const shared = toCardViewModel(dto);
+
   return {
-    id: dto.id,
+    ...shared,
     slug: dto.slug,
-    displayName: dto.displayName,
     serviceabilityStatus: dto.serviceability.status,
     storeStatus: dto.status,
-    ratingDisplay: formatRating(dto.ratingAverage),
-    followerCountDisplay: formatFollowerCount(dto.followerCount),
-    etaDisplay: formatEta(dto.deliveryEtaMin, dto.deliveryEtaMax),
-    heroImageUrl: resolveDshMediaUrl(dto.heroImageUrl),
-    logoUrl: resolveDshMediaUrl(dto.logoUrl),
+    ratingDisplay: shared.ratingAverage == null ? '—' : shared.ratingAverage.toFixed(1),
+    followerCountDisplay: shared.followerCountLabel ?? '0',
+    etaDisplay: shared.etaLabel ?? '—',
+    heroImageUrl: shared.heroImageSource?.uri ?? null,
+    logoUrl: shared.logoImageSource?.uri ?? null,
     categoryLabel: dto.categoryLabel,
     categoryId: dto.category,
-    isFreeDelivery: dto.isFreeDelivery,
-    hasProBadge: dto.hasProBadge,
-    hasCouponBadge: dto.hasCouponBadge,
-    isPopular: dto.isPopular,
-    pointsMultiplier: dto.pointsMultiplier ?? null,
-    distanceDisplay: dto.distanceKm != null ? `${dto.distanceKm.toFixed(1)} كم` : null,
-    deliveryModeLabels: (dto.deliveryModes ?? []).map((m) => DELIVERY_MODE_LABELS[m] ?? m),
-    availableFulfillmentModes: toFulfillmentModes((dto.deliveryModes ?? []) as readonly DshDeliveryMode[]),
+    distanceDisplay: shared.distanceLabel,
     openStatusRole: resolveOpenStatusRole(dto.status, dto.serviceability.status),
   };
 }
 
+/**
+ * Home discovery and store discovery share one canonical store-card contract.
+ * This adapter remains only as a compatibility boundary for app-client callers.
+ */
 export function toSharedStoreCardViewModel(
   vm: HomeStoreCardViewModel,
 ): DshStoreCardViewModel {
-  return {
-    id: vm.id,
-    displayName: vm.displayName,
-    cityCode: "",
-    serviceAreaCode: "",
-    locationLabel: vm.categoryLabel,
-    isOpen: vm.openStatusRole === "storeOpen",
-    isServiceable: vm.serviceabilityStatus === "serviceable",
-    ratingLabel: vm.ratingDisplay === "—" ? null : vm.ratingDisplay,
-    ratingAverage: vm.ratingDisplay === "—" ? null : Number(vm.ratingDisplay),
-    etaLabel: vm.etaDisplay === "—" ? null : vm.etaDisplay,
-    heroImageSource: vm.heroImageUrl === null ? null : { uri: vm.heroImageUrl },
-    logoImageSource: vm.logoUrl === null ? null : { uri: vm.logoUrl },
-    statusBadge:
-      vm.storeStatus === "temporarily_closed" ? "مغلق مؤقتًا" : null,
-    isFreeDelivery: vm.isFreeDelivery,
-    placeholderEmoji: "🏪",
-    placeholderTone: "brandAction",
-    deliveryModeLabels: vm.deliveryModeLabels,
-    availableFulfillmentModes: vm.availableFulfillmentModes,
-    distanceLabel: vm.distanceDisplay,
-    distanceKm: null,
-    followerCountLabel: vm.followerCountDisplay,
-    hasProBadge: vm.hasProBadge,
-    hasCouponBadge: vm.hasCouponBadge,
-    pointsMultiplier: vm.pointsMultiplier,
-    isPopular: vm.isPopular,
-    isClientEligible: true,
-  };
+  return vm;
 }
