@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Button, Divider, MobileScrollView, SectionHeader, StateView, Text, spacing } from '@bthwani/ui-kit';
+import { Box, Button, Divider, SectionHeader, StateView, spacing } from '@bthwani/ui-kit';
 
 export type DshOperationScreenState = 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled';
 
@@ -41,8 +41,6 @@ function renderNonReadyState(state: DshOperationScreenState, onRetry?: () => voi
 
 export function DshOperationScreen({
   state = 'ready',
-  title,
-  subtitle,
   content,
   primaryActionLabel,
   secondaryActionLabel,
@@ -61,12 +59,7 @@ export function DshOperationScreen({
   }
 
   return (
-    <MobileScrollView padding={4} gap={3}>
-      <Box gap={2}>
-        <Text role="titleLg">{title}</Text>
-        <Text role="bodySm" tone="muted">{subtitle}</Text>
-      </Box>
-
+    <Box gap={3}>
       {content}
 
       {hasActions ? (
@@ -80,6 +73,6 @@ export function DshOperationScreen({
           </Box>
         </Box>
       ) : null}
-    </MobileScrollView>
+    </Box>
   );
 }
