@@ -251,6 +251,15 @@ function defineBthwaniExpoApp(appKey) {
     version: manifest.global.version,
     icon: appAsset(appKey, "icon.png"),
     runtimeVersion: { policy: "fingerprint" },
+    fingerprintSources: {
+      ignorePaths: [
+        "node_modules/.pnpm",
+        "android",
+        "ios",
+        ".tmp",
+        ".expo",
+      ],
+    },
     updates: {
       url: `https://u.expo.dev/${app.projectId}`,
       checkAutomatically: "ON_LOAD",
