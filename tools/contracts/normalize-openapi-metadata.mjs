@@ -66,6 +66,9 @@ function findTopLevelBlockEnd(lines, start) {
   return index;
 }
 
+// Collect only direct children of components.schemas. The previous expression
+// accepted deeper property keys because `\s{4}` also matched the first four
+// spaces of six-space indentation, creating invalid exported component refs.
 function collectSchemaNames(lines) {
   const componentsIndex = lines.findIndex((line) => line === "components:");
   if (componentsIndex < 0) return [];
@@ -74,10 +77,19 @@ function collectSchemaNames(lines) {
   if (schemasIndex < 0) return [];
   const names = [];
   for (let index = schemasIndex + 1; index < componentsEnd; index += 1) {
-    const match = lines[index].match(/^\s{4}([^#][^:]+):\s*$/);
+    const match = lines[index].match(/^ {4}([^\s#][^:]*):\s*$/);
     if (match) names.push(match[1].trim());
   }
   return names;
+}
+
+function collectInlineTags(line) {
+  const match = line?.match(/^\s{6}tags:\s*\[([^\]]+)\]\s*$/);
+  if (!match) return [];
+  return match[1]
+    .split(",")
+    .map(cleanScalar)
+    .filter(Boolean);
 }
 
 export function normalizeOpenApiMetadata(source, contractPath = "contract.openapi.yaml") {
@@ -114,6 +126,9 @@ export function normalizeOpenApiMetadata(source, contractPath = "contract.openap
       .slice(tagsLineIndex >= 0 ? tagsLineIndex + 1 : 0)
       .filter((line) => /^\s{8}-\s+\S/.test(line));
     for (const line of existingTagLines) operationTags.add(cleanScalar(line.replace(/^\s{8}-\s+/, "")));
+    if (tagsLineIndex >= 0) {
+      for (const tag of collectInlineTags(block[tagsLineIndex])) operationTags.add(tag);
+    }
 
     const inserts = [];
     if (descriptionIndex < 0) inserts.push(`      description: ${yamlString(operationDescription(lines, operation.start, operation.end, operation.method, operation.apiPath))}`);
@@ -154,7 +169,6 @@ export function normalizeOpenApiMetadata(source, contractPath = "contract.openap
   edits.sort((left, right) => right.index - left.index);
   for (const edit of edits) lines.splice(edit.index, edit.deleteCount, ...edit.lines);
 
-  const refreshedPathsIndex = lines.findIndex((line) => line === "paths:");
   const infoIndex = lines.findIndex((line) => line === "info:");
   if (infoIndex >= 0) {
     const infoEnd = findTopLevelBlockEnd(lines, infoIndex);
