@@ -25,7 +25,7 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir services/dsh test"
+        "command": "pnpm --dir services/dsh build && node --test services/dsh/tests/*.test.mjs"
       }
     }
   },
