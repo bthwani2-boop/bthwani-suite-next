@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // Anchor root to this file's location (tools/guards/ → repo root) so guards work
@@ -130,6 +131,54 @@ export function read(file) {
   return fs.readFileSync(path.join(repoRoot, file), "utf8");
 }
 
+function publishGuardFailureStatus(guardId, violation) {
+  const token = String(process.env.BTHWANI_STATUS_TOKEN ?? "").trim();
+  const apiUrl = String(process.env.GITHUB_API_URL ?? "").trim();
+  const repository = String(process.env.GITHUB_REPOSITORY ?? "").trim();
+  const sha = String(process.env.GITHUB_SHA ?? "").trim();
+  if (!token || !apiUrl || !repository || !sha) return;
+
+  const slug = String(guardId ?? "guard")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70) || "guard";
+  const file = String(violation?.file ?? "").trim();
+  const line = violation?.line ? `:${violation.line}` : "";
+  const message = String(violation?.message ?? "guard violation")
+    .replace(/\s+/g, " ")
+    .trim();
+  const description = `${file}${line}${file ? " " : ""}${message}`.slice(0, 140);
+  const targetUrl = `${process.env.GITHUB_SERVER_URL ?? "https://github.com"}/${repository}/actions/runs/${process.env.GITHUB_RUN_ID ?? ""}`;
+  const payload = JSON.stringify({
+    state: "failure",
+    context: `bthwani/diagnostic/${slug}`.slice(0, 100),
+    description: description || `${guardId}: failed`,
+    target_url: targetUrl,
+  });
+
+  try {
+    spawnSync(
+      "curl",
+      [
+        "--silent",
+        "--show-error",
+        "--fail-with-body",
+        "--retry", "2",
+        "-X", "POST",
+        "-H", "Accept: application/vnd.github+json",
+        "-H", `Authorization: Bearer ${token}`,
+        "-H", "X-GitHub-Api-Version: 2022-11-28",
+        `${apiUrl}/repos/${repository}/statuses/${sha}`,
+        "--data-binary", "@-",
+      ],
+      { input: payload, encoding: "utf8", stdio: ["pipe", "ignore", "ignore"] },
+    );
+  } catch {
+    // Diagnostic publication must never replace the guard's own result.
+  }
+}
+
 export function fail(guardId, violations) {
   if (violations.length === 0) {
     console.log(`${guardId}: PASS`);
@@ -140,6 +189,7 @@ export function fail(guardId, violations) {
   for (const violation of violations) {
     console.error(`- ${violation.file}${violation.line ? `:${violation.line}` : ""} ${violation.message}`);
   }
+  publishGuardFailureStatus(guardId, violations[0]);
   process.exit(1);
 }
 
