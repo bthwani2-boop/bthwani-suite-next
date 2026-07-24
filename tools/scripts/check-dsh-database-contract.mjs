@@ -203,6 +203,7 @@ const workflow = read(".github/workflows/dsh-database.yml");
 requireText(workflow, runnerPath, "DSH database workflow");
 requireText(workflow, runnerVerificationPath, "DSH database workflow runner verification");
 requireText(workflow, '"package.json"', "DSH database workflow path routing");
+requireText(workflow, "permissions:\n  contents: read", "DSH database workflow read-only permissions");
 requireText(workflow, "DSH_TEST_TENANT_ID: ci-dsh", "DSH database workflow test tenant");
 requireText(workflow, "Apply canonical DSH migrations", "DSH database workflow");
 requireText(workflow, "Re-run canonical DSH migrations", "DSH database workflow");
@@ -210,8 +211,9 @@ requireText(workflow, "Verify DSH migration runner failure contracts", "DSH data
 requireText(workflow, "Apply DSH local seeds twice", "DSH database workflow");
 requireText(workflow, "Run DSH schema database contracts", "DSH database workflow");
 requireText(workflow, "Run DSH seed database contracts", "DSH database workflow");
-requireText(workflow, "bthwani/dsh-database", "DSH database workflow status context");
-requireText(workflow, "target_url", "DSH database workflow status target");
+forbidText(workflow, "statuses: write", "DSH database workflow");
+forbidText(workflow, "gh api --method POST", "DSH database workflow");
+forbidText(workflow, "bthwani/dsh-database", "DSH database workflow");
 forbidText(workflow, "ALTER DATABASE dsh_runtime SET bthwani.tenant_id", "DSH database workflow");
 forbidText(workflow, "Capture canonical contextual workflow source", "DSH database workflow");
 
