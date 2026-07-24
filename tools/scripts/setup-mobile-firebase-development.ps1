@@ -4,7 +4,8 @@
 
 [CmdletBinding()]
 param(
-    [switch] $Apply
+    [switch] $Apply,
+    [switch] $AllowEnvironmentFirebaseOverride
 )
 
 Set-StrictMode -Version Latest
@@ -67,6 +68,87 @@ function Resolve-AppScopedValue {
         return $commonValue.Trim()
     }
     return $null
+}
+
+function Read-LocalSecretsMap {
+    param([Parameter(Mandatory)][string] $Path)
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return $null
+    }
+
+    try {
+        return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -Depth 20
+    } catch {
+        throw "Local Firebase path map is invalid: $Path. $($_.Exception.Message)"
+    }
+}
+
+function Get-LocalSecretsMapValue {
+    param(
+        [AllowNull()] $Map,
+        [Parameter(Mandatory)][string] $AppKey
+    )
+
+    if ($null -eq $Map) {
+        return $null
+    }
+
+    $property = $Map.PSObject.Properties[$AppKey]
+    if ($null -eq $property) {
+        return $null
+    }
+
+    $value = [string]$property.Value
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        return $null
+    }
+
+    return $value.Trim()
+}
+
+function Resolve-FirebaseInputPath {
+    param(
+        [Parameter(Mandatory)][string] $AppKey,
+        [Parameter(Mandatory)][string] $DefaultFirebasePath,
+        [AllowNull()] $LocalSecretsMap
+    )
+
+    $mappedFirebasePath = Get-LocalSecretsMapValue -Map $LocalSecretsMap -AppKey $AppKey
+    $configuredFirebasePath = Resolve-AppScopedValue -BaseName "GOOGLE_SERVICES_JSON" -AppKey $AppKey
+
+    if (-not $AllowEnvironmentFirebaseOverride) {
+        if (-not [string]::IsNullOrWhiteSpace($mappedFirebasePath)) {
+            return [pscustomobject]@{
+                Path = $mappedFirebasePath
+                Source = "secrets.local.mobile.json"
+            }
+        }
+
+        return [pscustomobject]@{
+            Path = $DefaultFirebasePath
+            Source = "secure-default"
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($configuredFirebasePath)) {
+        return [pscustomobject]@{
+            Path = $configuredFirebasePath
+            Source = "environment-override"
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($mappedFirebasePath)) {
+        return [pscustomobject]@{
+            Path = $mappedFirebasePath
+            Source = "secrets.local.mobile.json"
+        }
+    }
+
+    return [pscustomobject]@{
+        Path = $DefaultFirebasePath
+        Source = "secure-default"
+    }
 }
 
 function Invoke-GoogleServicesValidation {
@@ -133,7 +215,8 @@ function Set-EasDevelopmentVariable {
 
 Write-Host "BThwani Mobile Firebase Development Setup" -ForegroundColor Cyan
 Write-Host "Repo Root: $RepoRoot"
-Write-Host "Mode: $(if ($Apply) { 'APPLY TO EAS' } else { 'VALIDATION ONLY' })`n"
+Write-Host "Mode: $(if ($Apply) { 'APPLY TO EAS' } else { 'VALIDATION ONLY' })"
+Write-Host "Firebase path priority: $(if ($AllowEnvironmentFirebaseOverride) { 'environment override enabled' } else { 'bootstrapped local secrets first' })`n"
 
 foreach ($requiredPath in @($ManifestPath, $ValidatorPath)) {
     if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
@@ -142,6 +225,7 @@ foreach ($requiredPath in @($ManifestPath, $ValidatorPath)) {
 }
 
 Import-BthwaniEnvironmentFile -Path $MobileEnvPath
+$bootstrapSecretsMap = Read-LocalSecretsMap -Path $LocalSecretsJsonPath
 
 $nodeVersion = (& node -v).Trim()
 $pnpmVersion = (& pnpm -v).Trim()
@@ -165,13 +249,13 @@ foreach ($appKey in $manifest.apps.PSObject.Properties.Name) {
     $appSecretsDirectory = Join-Path $SecretsDir $appKey
     New-Item -ItemType Directory -Path $appSecretsDirectory -Force | Out-Null
 
-    $configuredFirebasePath = Resolve-AppScopedValue -BaseName "GOOGLE_SERVICES_JSON" -AppKey $appKey
     $defaultFirebasePath = Join-Path $appSecretsDirectory "google-services.json"
-    $firebasePath = if (-not [string]::IsNullOrWhiteSpace($configuredFirebasePath)) {
-        $configuredFirebasePath
-    } else {
-        $defaultFirebasePath
-    }
+    $firebaseInput = Resolve-FirebaseInputPath `
+        -AppKey $appKey `
+        -DefaultFirebasePath $defaultFirebasePath `
+        -LocalSecretsMap $bootstrapSecretsMap
+    $firebasePath = [string]$firebaseInput.Path
+    $firebaseSource = [string]$firebaseInput.Source
 
     $firebaseState = "Missing"
     $projectId = "-"
@@ -215,6 +299,7 @@ foreach ($appKey in $manifest.apps.PSObject.Properties.Name) {
         Package = $expectedPackage
         AppDirectory = $appDirectory
         FirebasePath = $resolvedFirebasePath
+        FirebaseSource = $firebaseSource
         Firebase = $firebaseState
         ProjectId = $projectId
         MobileSdkAppId = $mobileSdkAppId
@@ -226,7 +311,7 @@ foreach ($appKey in $manifest.apps.PSObject.Properties.Name) {
 }
 
 $validationPlan |
-    Select-Object App, Package, Firebase, ProjectId, Maps, EasFcm |
+    Select-Object App, Package, Firebase, FirebaseSource, ProjectId, Maps, EasFcm |
     Format-Table -AutoSize
 
 if ($validationErrors.Count -gt 0) {
@@ -291,7 +376,7 @@ Write-Host "`n==========================================================" -Foreg
 Write-Host " BThwani Development Firebase / EAS Status" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 $validationPlan |
-    Select-Object App, Package, Firebase, ProjectId, Maps, EasFcm |
+    Select-Object App, Package, Firebase, FirebaseSource, ProjectId, Maps, EasFcm |
     Format-Table -AutoSize
 
 Write-Host "PASS: all Firebase files were validated before EAS mutation and uploaded only to their matching projects." -ForegroundColor Green
