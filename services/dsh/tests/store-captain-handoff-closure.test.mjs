@@ -159,7 +159,7 @@ test("contextual CI covers contracts, tests, boundaries, database and backend", 
   assert.match(workflow, /pnpm run contracts:lint/);
   assert.match(workflow, /pnpm run affected:typecheck/);
   assert.match(workflow, /pnpm run affected:test/);
-  assert.match(workflow, /pnpm run guard:fullstack-boundary/);
+  assert.match(workflow, /pnpm run affected:lint/);
   assert.match(workflow, /name: Apply DSH migrations/);
   assert.match(workflow, /go test \.\/\.\. -count=1/);
   assert.match(workflow, /go build \.\/\.\./);
