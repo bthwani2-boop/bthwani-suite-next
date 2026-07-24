@@ -10,7 +10,7 @@ on:
         type: choice
         options: [affected, full]
       journey:
-        description: Optional journey such as JRN-040
+        description: Optional governed capability identifier
         required: false
         type: string
       runtime_proof:
@@ -19,7 +19,7 @@ on:
         default: false
         type: boolean
   pull_request:
-    branches: [master, lianbassam]
+    branches: [master]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "AGENTS.md"
@@ -39,7 +39,7 @@ on:
       - "pnpm-workspace.yaml"
       - "nx.json"
   push:
-    branches: [master, lianbassam]
+    branches: [master]
     paths:
       - "AGENTS.md"
       - "GEMINI.md"
@@ -66,7 +66,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FULL_VERIFICATION_TRIGGER: governance/github/lianbassam-full-verification.trigger.json
+  FULL_VERIFICATION_TRIGGER: governance/github/full-verification.trigger.json
   GIT_CONFIG_COUNT: "1"
   GIT_CONFIG_KEY_0: init.defaultBranch
   GIT_CONFIG_VALUE_0: master
