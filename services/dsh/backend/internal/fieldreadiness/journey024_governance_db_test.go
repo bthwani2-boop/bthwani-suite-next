@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
-
-	"dsh-api/internal/store"
 )
 
 func registerGovernedStoreLocation(t *testing.T, db *sql.DB, storeID, partnerID string) {
