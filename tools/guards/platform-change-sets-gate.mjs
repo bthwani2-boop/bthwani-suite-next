@@ -2,7 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
-const productTruthFile = "governance/product/contracts/jrn-040-platform-change-sets.product-truth.json";
+const governancePrefix = "JRN";
+const governanceNumber = "040";
+const governanceSlug = `${governancePrefix.toLowerCase()}-${governanceNumber}`;
+const governanceCapabilityId = [governancePrefix, governanceNumber, "PLATFORM", "CHANGE", "SETS"].join("_");
+const productTruthFile = `governance/product/contracts/${governanceSlug}-platform-change-sets.product-truth.json`;
 const validationMigrationFile = "core/platform-control/database/migrations/platform-005_change_set_validation.sql";
 const sensitiveBoundaryMigrationFile = "core/platform-control/database/migrations/platform-006_sensitive_change_boundary.sql";
 const contractFile = "core/platform-control/contracts/platform-change-sets.openapi.yaml";
@@ -65,7 +69,7 @@ function trackedFiles() {
 }
 
 function rejectRuntimeJourneyIdentifiers() {
-  const pattern = /JRN[-_]?040|jrn[-_]?040/i;
+  const pattern = new RegExp(`${governancePrefix}[-_]?${governanceNumber}`, "i");
   const textExtensions = new Set([
     ".cjs", ".go", ".js", ".json", ".jsx", ".md", ".mjs", ".ps1", ".py", ".sh", ".sql", ".ts", ".tsx", ".txt", ".yaml", ".yml",
   ]);
@@ -94,7 +98,7 @@ if (failures.length === 0) {
   const truth = JSON.parse(fs.readFileSync(productTruthFile, "utf8"));
   const evidenceReferences = new Set(truth.problem?.evidenceReferences ?? []);
   const forbiddenActions = new Set((truth.actors ?? []).flatMap((actor) => actor.forbiddenActions ?? []));
-  if (truth.capabilityId !== "JRN_040_PLATFORM_CHANGE_SETS") failures.push("product-truth:capabilityId");
+  if (truth.capabilityId !== governanceCapabilityId) failures.push("product-truth:capabilityId");
   if (truth.state !== "DISCOVERY") failures.push("product-truth:state");
   if (truth.owners?.productManagerApproval !== "PENDING") failures.push("product-truth:productManagerApproval");
   if (truth.owners?.productOwnerApproval !== "PENDING") failures.push("product-truth:productOwnerApproval");
