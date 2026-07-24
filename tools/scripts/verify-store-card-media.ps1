@@ -72,8 +72,8 @@ $normalizedBaseUrl = $BaseUrl.TrimEnd('/')
 Write-Host "=== Store Card Media Verification ===" -ForegroundColor Cyan
 Write-Host "DSH API: $normalizedBaseUrl"
 
-$home = Invoke-RestMethod -Uri "$normalizedBaseUrl/dsh/home-discovery" -Method Get -TimeoutSec 20
-$stores = @($home.stores)
+$homeDiscoveryResponse = Invoke-RestMethod -Uri "$normalizedBaseUrl/dsh/home-discovery" -Method Get -TimeoutSec 20
+$stores = @($homeDiscoveryResponse.stores)
 
 if ($stores.Count -eq 0) {
     throw "Home Discovery returned no stores. Run the DSH local seed before verifying media."
