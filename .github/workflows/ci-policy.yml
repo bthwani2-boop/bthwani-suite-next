@@ -59,7 +59,9 @@ jobs:
         uses: ./.github/actions/setup-node-workspace
       - name: Enforce verification-only CI source policy
         if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
-        run: node tools/scripts/check-ci-source-immutability.mjs
+        run: |
+          node --test tools/scripts/check-ci-source-immutability.test.mjs
+          node tools/scripts/check-ci-source-immutability.mjs
       - name: Verify governance contracts
         if: ${{ inputs.policy == 'true' }}
         run: |
