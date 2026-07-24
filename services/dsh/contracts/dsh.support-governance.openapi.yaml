@@ -14,10 +14,12 @@ security:
 paths:
   /dsh/client/support/tickets:
     get:
+      tags: ["dsh-client"]
       operationId: listDshClientSupportTickets
       responses:
         '200': { $ref: '#/components/responses/TicketList' }
     post:
+      tags: ["dsh-client"]
       operationId: createDshClientSupportTicket
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -35,6 +37,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     get:
+      tags: ["dsh-client"]
       operationId: getDshClientSupportTicket
       responses:
         '200': { $ref: '#/components/responses/Ticket' }
@@ -43,11 +46,13 @@ paths:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     get:
+      tags: ["dsh-client"]
       operationId: listDshClientSupportMessages
       responses:
         '200': { $ref: '#/components/responses/MessageList' }
         '404': { $ref: '#/components/responses/Error' }
     post:
+      tags: ["dsh-client"]
       operationId: addDshClientSupportMessage
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -63,6 +68,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
   /dsh/operator/support/tickets:
     get:
+      tags: ["dsh-operator"]
       operationId: listDshOperatorSupportTickets
       parameters:
         - name: status
@@ -76,12 +82,14 @@ paths:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     get:
+      tags: ["dsh-operator"]
       operationId: getDshOperatorSupportTicket
       responses:
         '200': { $ref: '#/components/responses/Ticket' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
     patch:
+      tags: ["dsh-operator"]
       operationId: updateDshOperatorSupportTicket
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -101,12 +109,14 @@ paths:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     get:
+      tags: ["dsh-operator"]
       operationId: listDshOperatorSupportMessages
       responses:
         '200': { $ref: '#/components/responses/MessageList' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
     post:
+      tags: ["dsh-operator"]
       operationId: addDshOperatorSupportMessage
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -125,6 +135,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     get:
+      tags: ["dsh-operator"]
       operationId: listDshOperatorSupportEvents
       responses:
         '200':

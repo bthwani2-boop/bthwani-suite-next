@@ -155,7 +155,8 @@ export function classifyFiles(inputFiles, options = {}) {
     runtime,
     shared_brain: sharedBrain,
     heavy,
-    jrn040
+    jrn040,
+    platform_change_sets: jrn040
   };
 }
 

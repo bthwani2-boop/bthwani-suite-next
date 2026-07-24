@@ -11,6 +11,7 @@ security:
 paths:
   /wlt/payout-destinations/{partnerId}:
     put:
+      tags: ["wlt-payout-destinations"]
       operationId: upsertWltPayoutDestination
       summary: Replace the active encrypted payout destination for a partner
       parameters:
@@ -41,6 +42,7 @@ paths:
         '422': { $ref: '#/components/responses/InvalidDestination' }
         '500': { $ref: '#/components/responses/InternalError' }
     get:
+      tags: ["wlt-payout-destinations"]
       operationId: getWltPayoutDestination
       summary: Read the active masked payout destination reference
       parameters:
@@ -56,6 +58,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /wlt/payout-destinations/{partnerId}/deactivate:
     post:
+      tags: ["wlt-payout-destinations"]
       operationId: deactivateWltPayoutDestination
       summary: Deactivate the current payout destination after governed partner deactivation
       parameters:

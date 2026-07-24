@@ -19,12 +19,14 @@ paths:
       - $ref: '#/components/parameters/TicketId'
       - $ref: '#/components/parameters/MessageId'
     get:
+      tags: ["dsh-support"]
       operationId: listDshActorSupportMessageAttachments
       responses:
         '200': { description: Actor-visible message attachments }
         '403': { description: Actor does not own the ticket }
         '404': { description: Ticket or message not found }
     post:
+      tags: ["dsh-support"]
       operationId: attachDshActorSupportMessageAsset
       description: Compatibility operation for linking one already-uploaded governed asset. New clients should send attachments atomically with message creation.
       requestBody:
@@ -40,6 +42,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     post:
+      tags: ["dsh-support"]
       operationId: markDshActorSupportMessagesRead
       responses:
         '200': { description: Durable actor read receipt }
@@ -49,11 +52,13 @@ paths:
       - $ref: '#/components/parameters/TicketId'
       - $ref: '#/components/parameters/MessageId'
     get:
+      tags: ["dsh-operator"]
       operationId: listDshOperatorSupportMessageAttachments
       responses:
         '200': { description: Operator-visible message attachments }
         '403': { description: Missing support read permission }
     post:
+      tags: ["dsh-operator"]
       operationId: attachDshOperatorSupportMessageAsset
       description: Compatibility operation for linking one already-uploaded governed asset.
       requestBody:
@@ -68,6 +73,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     post:
+      tags: ["dsh-operator"]
       operationId: markDshOperatorSupportMessagesRead
       responses:
         '200': { description: Durable operator read receipt }

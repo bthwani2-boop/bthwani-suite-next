@@ -8,7 +8,8 @@
     "pnpm": "10.34.0"
   },
   "scripts": {
-    "contracts:lint": "node tools/important-scripts/contracts-foundation.mjs",
+    "contracts:spectral": "spectral lint \"{core,services,apps,contracts}/**/*.openapi.yaml\"",
+    "contracts:lint": "node tools/important-scripts/contracts-foundation.mjs && pnpm run contracts:spectral",
     "foundation:gate": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1",
     "typecheck": "pnpm -r --if-present typecheck",
     "build": "pnpm -r --if-present build",

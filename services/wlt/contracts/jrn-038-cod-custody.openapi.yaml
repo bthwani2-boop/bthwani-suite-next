@@ -14,6 +14,7 @@ security:
 paths:
   /wlt/cod-records/{codRecordId}/collect:
     post:
+      tags: ["wlt-cod-records"]
       operationId: collectCodCustody
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
@@ -41,6 +42,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/cod-records/{codRecordId}/remit:
     post:
+      tags: ["wlt-cod-records"]
       operationId: remitCodCustody
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
@@ -68,6 +70,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/cod-reconciliation-cases:
     get:
+      tags: ["wlt-cod-reconciliation-cases"]
       operationId: listCodReconciliationCases
       parameters:
         - in: query
@@ -92,6 +95,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
   /wlt/cod-reconciliation-cases/{caseId}/assign:
     post:
+      tags: ["wlt-cod-reconciliation-cases"]
       operationId: assignCodReconciliationCase
       parameters:
         - $ref: '#/components/parameters/CaseId'
@@ -121,6 +125,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/cod-reconciliation-cases/{caseId}/resolve:
     post:
+      tags: ["wlt-cod-reconciliation-cases"]
       operationId: resolveCodReconciliationCase
       parameters:
         - $ref: '#/components/parameters/CaseId'

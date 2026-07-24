@@ -6,6 +6,7 @@ info:
 paths:
   /dsh/operator/workforce/scopes/{actorId}:
     get:
+      tags: ["dsh-operator"]
       operationId: getWorkforceActorScopes
       parameters:
         - in: path
@@ -19,6 +20,7 @@ paths:
       responses:
         '200': { description: Scope snapshot }
     put:
+      tags: ["dsh-operator"]
       operationId: replaceWorkforceActorScopes
       parameters:
         - in: path
@@ -35,6 +37,7 @@ paths:
         '200': { description: Scope snapshot }
   /dsh/operator/workforce/employees/{actorId}/media/uploads:
     post:
+      tags: ["dsh-operator"]
       operationId: uploadWorkforceEmployeeMedia
       parameters:
         - in: path

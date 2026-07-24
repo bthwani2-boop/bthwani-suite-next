@@ -17,6 +17,7 @@ security:
 paths:
   /dsh/control-panel/finance/refunds:
     get:
+      tags: ["dsh-control-panel"]
       operationId: listDshFinanceRefunds
       summary: List refunds for the authenticated tenant and optional order
       parameters:
@@ -36,6 +37,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
     post:
+      tags: ["dsh-control-panel"]
       operationId: createDshFinanceRefund
       summary: Request a partial or full remaining refund
       parameters:
@@ -66,6 +68,7 @@ paths:
         '502': { $ref: '#/components/responses/WltUnavailable' }
   /dsh/control-panel/finance/refunds/{refundId}:
     get:
+      tags: ["dsh-control-panel"]
       operationId: getDshFinanceRefund
       summary: Read one authenticated-tenant-scoped canonical refund
       parameters:
@@ -84,6 +87,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /dsh/control-panel/finance/refunds/{refundId}/approve:
     post:
+      tags: ["dsh-control-panel"]
       operationId: approveDshFinanceRefund
       summary: Approve a requested refund as an independent operator
       parameters:
@@ -109,6 +113,7 @@ paths:
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /dsh/control-panel/finance/refunds/{refundId}/reject:
     post:
+      tags: ["dsh-control-panel"]
       operationId: rejectDshFinanceRefund
       summary: Reject a requested refund as an independent operator
       parameters:
@@ -134,6 +139,7 @@ paths:
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /dsh/control-panel/finance/refunds/{refundId}/complete:
     post:
+      tags: ["dsh-control-panel"]
       operationId: completeDshFinanceRefund
       summary: Execute an approved refund through WLT and the provider
       description: >-
@@ -170,6 +176,7 @@ paths:
         '502': { $ref: '#/components/responses/WltUnavailable' }
   /dsh/control-panel/finance/refunds/{refundId}/reconcile:
     post:
+      tags: ["dsh-control-panel"]
       operationId: reconcileDshFinanceRefund
       summary: Resolve an unknown provider result with evidence
       parameters:
@@ -194,6 +201,7 @@ paths:
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /dsh/control-panel/finance/refunds/{refundId}/audit:
     get:
+      tags: ["dsh-control-panel"]
       operationId: listDshFinanceRefundAudit
       summary: Read operator, provider and lifecycle audit evidence
       parameters:
@@ -210,6 +218,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /dsh/client/orders/{orderId}/refunds:
     get:
+      tags: ["dsh-client"]
       operationId: getDshClientOrderRefundStatus
       summary: Read privacy-safe refund status for the authenticated client's owned order
       parameters:
@@ -226,6 +235,7 @@ paths:
         '502': { $ref: '#/components/responses/WltUnavailable' }
   /dsh/partner/orders/{orderId}/refunds:
     get:
+      tags: ["dsh-partner"]
       operationId: getDshPartnerOrderRefundStatus
       summary: Read privacy-safe refund status for an authenticated partner store order
       parameters:

@@ -6,12 +6,14 @@ info:
 paths:
   /workforce/reference/cities:
     post:
+      tags: ["workforce-reference"]
       operationId: createWorkforceCity
       summary: Create a governed workforce city reference
       responses:
         '201': { description: Created }
   /workforce/reference/cities/{code}:
     patch:
+      tags: ["workforce-reference"]
       operationId: updateWorkforceCity
       summary: Update or activate/deactivate a workforce city reference
       parameters:
@@ -23,6 +25,7 @@ paths:
         '200': { description: Updated }
   /workforce/{collection}/{actorId}/documents:
     post:
+      tags: ["workforce-collection"]
       operationId: appendWorkforceProviderDocument
       summary: Link an opaque DSH media reference to a Workforce profile
       parameters:

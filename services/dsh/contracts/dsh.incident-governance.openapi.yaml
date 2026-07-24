@@ -17,6 +17,7 @@ security:
 paths:
   /dsh/operator/support/incidents:
     get:
+      tags: ["dsh-operator"]
       operationId: listDshGovernedIncidents
       parameters:
         - name: status
@@ -28,6 +29,7 @@ paths:
         '400': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
     post:
+      tags: ["dsh-operator"]
       operationId: createDshGovernedIncident
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -45,12 +47,14 @@ paths:
     parameters:
       - $ref: '#/components/parameters/IncidentId'
     get:
+      tags: ["dsh-operator"]
       operationId: getDshGovernedIncident
       responses:
         '200': { $ref: '#/components/responses/Incident' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
     patch:
+      tags: ["dsh-operator"]
       operationId: updateDshGovernedIncident
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -70,6 +74,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/IncidentId'
     get:
+      tags: ["dsh-operator"]
       operationId: listDshGovernedIncidentEvents
       responses:
         '200':
@@ -88,6 +93,7 @@ paths:
 
   /dsh/operator/operational-incidents:
     get:
+      tags: ["dsh-operator"]
       operationId: listDshOperationalIncidents
       parameters:
         - { name: orderId, in: query, required: false, schema: { type: string } }
@@ -97,6 +103,7 @@ paths:
         '200': { $ref: '#/components/responses/OperationalIncidentList' }
         '403': { $ref: '#/components/responses/Error' }
     post:
+      tags: ["dsh-operator"]
       operationId: reportDshOperationalIncident
       requestBody:
         required: true
@@ -110,6 +117,7 @@ paths:
         '422': { $ref: '#/components/responses/Error' }
   /dsh/operator/operational-incidents/{incidentId}:
     get:
+      tags: ["dsh-operator"]
       operationId: getDshOperationalIncident
       parameters:
         - $ref: '#/components/parameters/IncidentId'

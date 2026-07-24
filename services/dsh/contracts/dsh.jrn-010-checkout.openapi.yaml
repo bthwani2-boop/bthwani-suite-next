@@ -13,6 +13,7 @@ x-bthwani-truth-boundary:
 paths:
   /dsh/client/checkout-intents:
     post:
+      tags: ["dsh-client"]
       operationId: createDshClientCheckoutIntent
       security: [{ bearerAuth: [] }]
       parameters:
@@ -32,6 +33,7 @@ paths:
         '503': {$ref: '#/components/responses/ErrorResponse'}
   /dsh/client/checkout-intents/{intentId}:
     get:
+      tags: ["dsh-client"]
       operationId: getDshClientCheckoutIntent
       security: [{ bearerAuth: [] }]
       parameters: [{$ref: '#/components/parameters/IntentId'}]
@@ -40,6 +42,7 @@ paths:
         '404': {$ref: '#/components/responses/ErrorResponse'}
   /dsh/client/checkout-intents/{intentId}/cancel:
     post:
+      tags: ["dsh-client"]
       operationId: cancelDshClientCheckoutIntent
       security: [{ bearerAuth: [] }]
       parameters: [{$ref: '#/components/parameters/IntentId'}]
@@ -48,6 +51,7 @@ paths:
         '409': {$ref: '#/components/responses/ErrorResponse'}
   /dsh/operator/checkout-intents:
     get:
+      tags: ["dsh-operator"]
       operationId: listDshOperatorCheckoutIntents
       security: [{ bearerAuth: [] }]
       parameters:
@@ -68,6 +72,7 @@ paths:
                     items: {$ref: '#/components/schemas/CheckoutIntent'}
   /dsh/operator/checkout-intents/{intentId}/reconcile:
     post:
+      tags: ["dsh-operator"]
       operationId: reconcileDshOperatorCheckoutIntent
       security: [{ bearerAuth: [] }]
       parameters:
@@ -80,6 +85,7 @@ paths:
         '503': {$ref: '#/components/responses/ErrorResponse'}
   /dsh/internal/wlt/payment-session-events:
     post:
+      tags: ["dsh-internal"]
       operationId: applyDshWltPaymentSessionEvent
       security: [{ serviceToken: [] }]
       parameters:

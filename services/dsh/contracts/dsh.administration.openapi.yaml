@@ -13,6 +13,7 @@ security:
 paths:
   /operator/admin/roles:
     get:
+      tags: ["operator-admin"]
       operationId: listDshAdministrationRoles
       responses:
         "200":
@@ -28,6 +29,7 @@ paths:
                     items: { $ref: "#/components/schemas/Role" }
   /operator/admin/roles/requests:
     post:
+      tags: ["operator-admin"]
       operationId: requestDshAdministrationRoleDefinition
       description: Creates a pending role-definition request; it never creates a role directly.
       requestBody:
@@ -48,6 +50,7 @@ paths:
         "409": { description: Role exists or an equivalent request is pending. }
   /operator/admin/role-requests:
     get:
+      tags: ["operator-admin"]
       operationId: listDshAdministrationRoleDefinitionRequests
       parameters:
         - $ref: "#/components/parameters/ApprovalStatus"
@@ -65,6 +68,7 @@ paths:
                     items: { $ref: "#/components/schemas/RoleDefinitionRequest" }
   /operator/admin/role-requests/{requestId}/review:
     post:
+      tags: ["operator-admin"]
       operationId: reviewDshAdministrationRoleDefinitionRequest
       description: Creates a role only after an independent checker approves the pending request.
       parameters:
@@ -92,6 +96,7 @@ paths:
         "409": { description: Version, lifecycle, or duplicate-role conflict. }
   /operator/admin/staff:
     get:
+      tags: ["operator-admin"]
       operationId: listDshAdministrationStaff
       responses:
         "200":
@@ -107,6 +112,7 @@ paths:
                     items: { $ref: "#/components/schemas/StaffAssignment" }
   /operator/admin/staff/{staffId}/roles:
     post:
+      tags: ["operator-admin"]
       operationId: requestDshStaffRoleChange
       description: Creates a pending maker-checker request for assignment or revocation; it never mutates the approved assignment directly.
       parameters:
@@ -130,6 +136,7 @@ paths:
         "409": { description: Requested assignment state is no longer valid or an equivalent request is pending. }
   /operator/admin/approvals:
     get:
+      tags: ["operator-admin"]
       operationId: listDshRoleAssignmentApprovals
       parameters:
         - $ref: "#/components/parameters/ApprovalStatus"
@@ -147,6 +154,7 @@ paths:
                     items: { $ref: "#/components/schemas/RoleAssignmentApproval" }
   /operator/admin/approvals/{approvalId}/review:
     post:
+      tags: ["operator-admin"]
       operationId: reviewDshStaffRoleChange
       description: Applies assignment or revocation only when checker differs from maker and beneficiary.
       parameters:
@@ -174,6 +182,7 @@ paths:
         "409": { description: Version, lifecycle, or role-state conflict. }
   /operator/admin/approvals/{approvalId}/rollback-requests:
     post:
+      tags: ["operator-admin"]
       operationId: requestDshAdministrationDecisionRollback
       description: Appends a pending inverse decision without deleting the source approval or audit history.
       parameters:
@@ -202,6 +211,7 @@ paths:
         "409": { description: A pending rollback already exists or source state is no longer valid. }
   /operator/admin/rollback-requests:
     get:
+      tags: ["operator-admin"]
       operationId: listDshAdministrationRollbackRequests
       parameters:
         - $ref: "#/components/parameters/ApprovalStatus"
@@ -219,6 +229,7 @@ paths:
                     items: { $ref: "#/components/schemas/RollbackRequest" }
   /operator/admin/rollback-requests/{requestId}/review:
     post:
+      tags: ["operator-admin"]
       operationId: reviewDshAdministrationDecisionRollback
       description: Applies the inverse action only when checker differs from rollback maker, beneficiary, and original checker.
       parameters:
@@ -246,6 +257,7 @@ paths:
         "409": { description: Version or role-state conflict. }
   /operator/admin/diagnostics:
     get:
+      tags: ["operator-admin"]
       operationId: getDshAdministrationDiagnostics
       description: Returns aggregate operational counts only and never PII, credentials, documents, tokens, or secrets.
       responses:
@@ -260,6 +272,7 @@ paths:
                   diagnostics: { $ref: "#/components/schemas/AdministrationDiagnostics" }
   /operator/admin/partners:
     get:
+      tags: ["operator-admin"]
       operationId: listDshAdministrationPartnerActivationProjections
       description: Read-only projection; activation and blocking remain owned by the partner lifecycle route.
       parameters:
@@ -271,6 +284,7 @@ paths:
         "200": { description: Partner activation projections. }
   /operator/admin/captains:
     get:
+      tags: ["operator-admin"]
       operationId: listDshAdministrationCaptainCredentialProjections
       description: Read-only projection; credential creation and update remain owned by Workforce.
       parameters:
@@ -282,6 +296,7 @@ paths:
         "200": { description: Captain credential projections. }
   /operator/admin/audit:
     get:
+      tags: ["operator-admin"]
       operationId: listDshAdministrationAudit
       description: Returns append-only audit events with allowlisted, redacted metadata only.
       parameters:
@@ -303,6 +318,7 @@ paths:
                     items: { $ref: "#/components/schemas/AuditEntry" }
   /operator/admin/support-sessions:
     get:
+      tags: ["operator-admin"]
       operationId: listDshAdministrationSupportSessionRequests
       description: Lists governed support-session requests without exposing issued bearer tokens.
       parameters:
@@ -324,6 +340,7 @@ paths:
         "401": { description: Authentication required. }
         "403": { description: Administration read permission required. }
     post:
+      tags: ["operator-admin"]
       operationId: createDshAdministrationSupportSessionRequest
       description: Creates a pending support-session request; issuance requires an independent checker.
       requestBody:
@@ -347,6 +364,7 @@ paths:
         "503": { description: Identity support-session integration is not configured. }
   /operator/admin/support-sessions/{requestId}/review:
     post:
+      tags: ["operator-admin"]
       operationId: reviewDshAdministrationSupportSessionRequest
       description: Independently approves or rejects a pending support-session request.
       parameters:
@@ -372,6 +390,7 @@ paths:
         "502": { description: Identity denied the support-session handoff. }
   /operator/admin/support-sessions/{requestId}/revoke:
     post:
+      tags: ["operator-admin"]
       operationId: revokeDshAdministrationSupportSessionRequest
       description: Revokes the Identity support session and appends the DSH request lifecycle evidence.
       parameters:
@@ -394,6 +413,7 @@ paths:
         "409": { description: Request is no longer revocable. }
   /operator/admin/support/snapshot:
     get:
+      tags: ["operator-admin"]
       operationId: getDshAdministrationSupportSnapshot
       description: Returns a privacy-scoped snapshot only for a valid Identity support session with actor-bound support.read permission.
       responses:

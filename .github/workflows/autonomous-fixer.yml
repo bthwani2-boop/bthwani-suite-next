@@ -1,0 +1,43 @@
+name: BThwani Autonomous Loop Engineer
+
+on:
+  workflow_run:
+    workflows: ["BThwani Contextual CI"]
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  auto_fix:
+    name: Execute Deep Multi-Layered Loop Engineering
+    # We only run autonomously if the CI failed, OR if manually triggered.
+    if: ${{ github.event.workflow_run.conclusion == 'failure' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout failing branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+      
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+        
+      - name: Start Deep Diagnostic Loop Engine
+        run: node tools/scripts/autonomous-loop-engine.mjs
+        
+      - name: Commit and Push 100% Corrected Code
+        run: |
+          git config --global user.name "BThwani Autonomous Engineer"
+          git config --global user.email "autonomous-loop-engine@bthwani.local"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No autonomous corrections were required. The loop exited cleanly."
+          else
+            git commit -m "chore(autonomous): deep diagnostic loop correction"
+            git push origin HEAD
+          fi

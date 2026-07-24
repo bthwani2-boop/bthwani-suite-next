@@ -27,6 +27,7 @@ paths:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1export.csv"
   /dsh/operator/analytics/operations:
     get:
+      tags: ["dsh-operator"]
       operationId: getDshOperationsAnalytics
       summary: Return the governed operations analytics projection.
       security: [{ bearerAuth: [] }]

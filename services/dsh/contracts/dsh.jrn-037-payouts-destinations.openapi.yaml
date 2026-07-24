@@ -17,6 +17,7 @@ security:
 paths:
   /dsh/partner/me/finance/payout-destination:
     get:
+      tags: ["dsh-partner"]
       operationId: getDshPartnerOwnPayoutDestination
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
@@ -25,6 +26,7 @@ paths:
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
     put:
+      tags: ["dsh-partner"]
       operationId: upsertDshPartnerOwnPayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -39,6 +41,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/partner/me/finance/payout-destination/deactivate:
     post:
+      tags: ["dsh-partner"]
       operationId: deactivateDshPartnerOwnPayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -50,6 +53,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/partner/me/finance/payout-requests:
     post:
+      tags: ["dsh-partner"]
       operationId: createDshPartnerOwnPayoutRequest
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -64,6 +68,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/captain/me/finance/payout-destination:
     get:
+      tags: ["dsh-captain"]
       operationId: getDshCaptainOwnPayoutDestination
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
@@ -72,6 +77,7 @@ paths:
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
     put:
+      tags: ["dsh-captain"]
       operationId: upsertDshCaptainOwnPayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -86,6 +92,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/captain/me/finance/payout-destination/deactivate:
     post:
+      tags: ["dsh-captain"]
       operationId: deactivateDshCaptainOwnPayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -97,6 +104,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/field/me/finance/payout-destination:
     get:
+      tags: ["dsh-field"]
       operationId: getDshFieldOwnPayoutDestination
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
@@ -105,6 +113,7 @@ paths:
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
     put:
+      tags: ["dsh-field"]
       operationId: upsertDshFieldOwnPayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -119,6 +128,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/field/me/finance/payout-destination/deactivate:
     post:
+      tags: ["dsh-field"]
       operationId: deactivateDshFieldOwnPayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -130,6 +140,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/control-panel/finance/payout-requests/{payoutId}/audit:
     get:
+      tags: ["dsh-control-panel"]
       operationId: listDshControlPanelPayoutAudit
       parameters:
         - $ref: '#/components/parameters/PayoutId'
@@ -141,6 +152,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile:
     post:
+      tags: ["dsh-control-panel"]
       operationId: reconcileDshControlPanelPayoutRequest
       parameters:
         - $ref: '#/components/parameters/PayoutId'

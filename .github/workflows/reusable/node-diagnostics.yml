@@ -1,0 +1,184 @@
+name: Reusable Workflow
+
+on:
+  workflow_call:
+    inputs:
+      base_sha:
+        type: string
+        required: false
+      head_sha:
+        type: string
+        required: false
+      full_verification:
+        type: string
+        required: false
+      governance:
+        type: string
+        required: false
+      workflow:
+        type: string
+        required: false
+      infrastructure:
+        type: string
+        required: false
+      security:
+        type: string
+        required: false
+      policy:
+        type: string
+        required: false
+      frontend:
+        type: string
+        required: false
+      contracts:
+        type: string
+        required: false
+      journey:
+        type: string
+        required: false
+      journey_scope:
+        type: string
+        required: false
+      node:
+        type: string
+        required: false
+      node_scope:
+        type: string
+        required: false
+      dsh:
+        type: string
+        required: false
+      wlt:
+        type: string
+        required: false
+      identity:
+        type: string
+        required: false
+      workforce:
+        type: string
+        required: false
+      platform:
+        type: string
+        required: false
+      providers:
+        type: string
+        required: false
+      database:
+        type: string
+        required: false
+      runtime:
+        type: string
+        required: false
+      shared_brain:
+        type: string
+        required: false
+      heavy:
+        type: string
+        required: false
+      platform_change_sets:
+        type: string
+        required: false
+      runtime_proof:
+        type: boolean
+        required: false
+
+jobs:
+  node_deep_diagnostics:
+    name: Operational deep diagnostics (UI purity, dead code)
+    needs: []
+    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: UI Surface Purity (ui-kit)
+        run: pnpm run diagnostics:ui-kit
+      - name: Dead Code Prevention (knip)
+        run: pnpm run diagnostics:knip
+
+  node_vertical_integrity:
+    name: Vertical fullstack integrity (Logic, bindings, AST)
+    needs: []
+    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.contracts == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Logic coverage and AST rules
+        run: pnpm run guard:logic-all
+
+  node_performance_budget:
+    name: Organization and performance (Budgets, limits)
+    needs: []
+    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.node == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Repo structure and naming
+        run: pnpm run guard:repo-all
+      - name: Performance, budgets and heavy imports
+        run: pnpm run guard:performance-all
+
+  node_contracts:
+    name: Verify contract foundation and bindings
+    needs: []
+    if: ${{ inputs.contracts == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify imports resolve
+        run: pnpm run guard:no-broken-imports
+      - name: Verify contract foundation
+        run: pnpm run contracts:lint
+      - name: Verify frontend API binding
+        run: pnpm run guard:api-binding
+      - name: Verify backend API binding
+        run: pnpm run guard:backend-api-binding
+      - name: Verify service manifest drift
+        run: pnpm run guard:service-manifest-drift
+      - name: Verify frontend feature binding
+        run: pnpm run guard:frontend-feature-binding
+      - name: Verify runtime-facing bindings
+        run: pnpm run guard:runtime-real-bindings
+      - name: Verify cross-journey integrity
+        run: pnpm run guard:live-cross-journey-integrity
+
+  node_hygiene:
+    name: Verify immutable diff hygiene
+    needs: []
+    if: ${{ inputs.node == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify immutable diff hygiene
+        run: git diff --check
+

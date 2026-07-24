@@ -11,6 +11,7 @@ servers:
 paths:
   /identity/health:
     get:
+      tags: ["identity-health"]
       operationId: getIdentityHealth
       responses:
         "200":
@@ -21,6 +22,7 @@ paths:
                 $ref: "#/components/schemas/RuntimeStatus"
   /identity/readiness:
     get:
+      tags: ["identity-readiness"]
       operationId: getIdentityReadiness
       responses:
         "200":
@@ -33,6 +35,7 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
   /auth/login:
     post:
+      tags: ["auth-login"]
       operationId: login
       requestBody:
         required: true
@@ -53,6 +56,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
   /auth/otp/request:
     post:
+      tags: ["auth-otp"]
       operationId: requestOtp
       requestBody:
         required: true
@@ -73,6 +77,7 @@ paths:
           $ref: "#/components/responses/RateLimited"
   /auth/activate:
     post:
+      tags: ["auth-activate"]
       operationId: activateActor
       requestBody:
         required: true
@@ -95,6 +100,7 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
   /auth/logout:
     post:
+      tags: ["auth-logout"]
       operationId: logout
       security:
         - bearerAuth: []
@@ -105,6 +111,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
   /auth/refresh:
     post:
+      tags: ["auth-refresh"]
       operationId: refreshSession
       requestBody:
         required: true
@@ -125,6 +132,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
   /auth/session:
     get:
+      tags: ["auth-session"]
       operationId: getAuthSession
       security:
         - bearerAuth: []
@@ -139,6 +147,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
   /auth/introspect:
     post:
+      tags: ["auth-introspect"]
       operationId: introspectToken
       requestBody:
         required: true
@@ -159,6 +168,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
   /auth/sessions:
     get:
+      tags: ["auth-sessions"]
       operationId: listSessions
       summary: List all active sessions for the current authenticated actor.
       security:
@@ -176,6 +186,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
   /auth/sessions/{sessionId}:
     delete:
+      tags: ["auth-sessions"]
       operationId: revokeSession
       summary: Revoke a specific session for the current actor.
       security:
@@ -195,6 +206,7 @@ paths:
           $ref: "#/components/responses/NotFound"
   /auth/account:
     delete:
+      tags: ["auth-account"]
       operationId: deleteAccount
       summary: Anonymize/delete the current actor's account and queue outbox event.
       security:
@@ -206,6 +218,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
   /auth/password/change:
     post:
+      tags: ["auth-password"]
       operationId: changePassword
       summary: Change the current actor's password.
       security:

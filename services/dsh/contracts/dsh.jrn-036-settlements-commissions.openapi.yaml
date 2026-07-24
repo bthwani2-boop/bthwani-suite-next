@@ -17,6 +17,7 @@ security:
 paths:
   /dsh/control-panel/finance/settlements/{settlementId}/evidence:
     get:
+      tags: ["dsh-control-panel"]
       operationId: getDshControlPanelSettlementEvidence
       parameters:
         - $ref: '#/components/parameters/SettlementId'
@@ -27,6 +28,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/control-panel/finance/commission-policies:
     put:
+      tags: ["dsh-control-panel"]
       operationId: upsertDshControlPanelCommissionPolicy
       requestBody:
         $ref: '#/components/requestBodies/ObjectBody'
@@ -39,6 +41,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/control-panel/finance/commissions/{commissionId}:
     get:
+      tags: ["dsh-control-panel"]
       operationId: getDshControlPanelCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -50,6 +53,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/control-panel/finance/commissions/{commissionId}/adjust:
     post:
+      tags: ["dsh-control-panel"]
       operationId: adjustDshControlPanelCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -65,6 +69,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/control-panel/finance/commissions/{commissionId}/confirm:
     post:
+      tags: ["dsh-control-panel"]
       operationId: confirmDshControlPanelCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -77,6 +82,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/control-panel/finance/commissions/{commissionId}/settle:
     post:
+      tags: ["dsh-control-panel"]
       operationId: settleDshControlPanelCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -89,6 +95,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/control-panel/finance/commissions/{commissionId}/reject:
     post:
+      tags: ["dsh-control-panel"]
       operationId: rejectDshControlPanelCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -104,6 +111,7 @@ paths:
         '502': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/control-panel/finance/commissions/{commissionId}/reverse:
     post:
+      tags: ["dsh-control-panel"]
       operationId: reverseDshControlPanelCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'

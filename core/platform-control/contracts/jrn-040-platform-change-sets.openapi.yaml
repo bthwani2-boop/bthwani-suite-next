@@ -9,6 +9,7 @@ servers:
 paths:
   /platform/v1/change-sets:
     get:
+      tags: ["platform-v1"]
       operationId: listPlatformChangeSetsJRN040
       summary: List governed platform change sets.
       responses:
@@ -24,6 +25,7 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/PlatformChangeSet' }
     post:
+      tags: ["platform-v1"]
       operationId: createPlatformChangeSetJRN040
       summary: Create a governed multi-item draft.
       requestBody:
@@ -38,6 +40,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/ChangeSetId'
     get:
+      tags: ["platform-v1"]
       operationId: getPlatformChangeSetJRN040
       summary: Read details, validation snapshot, diff, impact and audit actors.
       responses:
@@ -46,6 +49,7 @@ paths:
   /platform/v1/change-sets/{id}/validate:
     parameters: [{ $ref: '#/components/parameters/ChangeSetId' }]
     post:
+      tags: ["platform-v1"]
       operationId: validatePlatformChangeSetJRN040
       summary: Capture target snapshots and reserve targets.
       responses:
@@ -55,6 +59,7 @@ paths:
   /platform/v1/change-sets/{id}/submit:
     parameters: [{ $ref: '#/components/parameters/ChangeSetId' }]
     post:
+      tags: ["platform-v1"]
       operationId: submitPlatformChangeSetJRN040
       summary: Submit a still-current validated request.
       responses:
@@ -63,6 +68,7 @@ paths:
   /platform/v1/change-sets/{id}/approve:
     parameters: [{ $ref: '#/components/parameters/ChangeSetId' }]
     post:
+      tags: ["platform-v1"]
       operationId: approvePlatformChangeSetJRN040
       summary: Independently approve a submitted request.
       responses:
@@ -71,6 +77,7 @@ paths:
   /platform/v1/change-sets/{id}/reject:
     parameters: [{ $ref: '#/components/parameters/ChangeSetId' }]
     post:
+      tags: ["platform-v1"]
       operationId: rejectPlatformChangeSetJRN040
       summary: Independently reject a submitted request with a reason.
       requestBody:
@@ -85,6 +92,7 @@ paths:
   /platform/v1/change-sets/{id}/apply:
     parameters: [{ $ref: '#/components/parameters/ChangeSetId' }]
     post:
+      tags: ["platform-v1"]
       operationId: applyPlatformChangeSetJRN040
       summary: Atomically apply an approved request when preconditions still match.
       responses:
@@ -93,6 +101,7 @@ paths:
   /platform/v1/change-sets/{id}/rollback:
     parameters: [{ $ref: '#/components/parameters/ChangeSetId' }]
     post:
+      tags: ["platform-v1"]
       operationId: rollbackPlatformChangeSetJRN040
       summary: Restore the captured safe baseline with a mandatory reason.
       requestBody:

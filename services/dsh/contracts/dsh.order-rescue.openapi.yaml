@@ -14,6 +14,7 @@ security:
 paths:
   /dsh/operator/support/order-rescue-cases:
     get:
+      tags: ["dsh-operator"]
       operationId: listDshOrderRescueCases
       parameters:
         - name: status
@@ -25,6 +26,7 @@ paths:
         '400': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
     post:
+      tags: ["dsh-operator"]
       operationId: createDshOrderRescueCase
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -44,12 +46,14 @@ paths:
     parameters:
       - $ref: '#/components/parameters/CaseId'
     get:
+      tags: ["dsh-operator"]
       operationId: getDshOrderRescueCase
       responses:
         '200': { $ref: '#/components/responses/RescueCase' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
     patch:
+      tags: ["dsh-operator"]
       operationId: updateDshOrderRescueCase
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -69,6 +73,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/CaseId'
     get:
+      tags: ["dsh-operator"]
       operationId: listDshOrderRescueEvents
       responses:
         '200':

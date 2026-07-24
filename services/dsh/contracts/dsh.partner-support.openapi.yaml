@@ -14,6 +14,7 @@ security:
 paths:
   /dsh/partner/support/tickets:
     get:
+      tags: ["dsh-partner"]
       operationId: listDshPartnerSupportTickets
       responses:
         '200':
@@ -29,6 +30,7 @@ paths:
                     items:
                       $ref: '#/components/schemas/PartnerSupportTicket'
     post:
+      tags: ["dsh-partner"]
       operationId: createDshPartnerSupportTicket
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -56,6 +58,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     get:
+      tags: ["dsh-partner"]
       operationId: getDshPartnerSupportTicket
       responses:
         '200':
@@ -73,6 +76,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     get:
+      tags: ["dsh-partner"]
       operationId: listDshPartnerSupportMessages
       responses:
         '200':
@@ -89,6 +93,7 @@ paths:
                       $ref: '#/components/schemas/PartnerSupportMessage'
         '404': { $ref: '#/components/responses/Error' }
     post:
+      tags: ["dsh-partner"]
       operationId: addDshPartnerSupportMessage
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
