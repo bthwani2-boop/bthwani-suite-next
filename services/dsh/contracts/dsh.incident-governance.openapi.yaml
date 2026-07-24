@@ -1,8 +1,11 @@
 openapi: 3.1.0
 info:
   title: DSH Governed Incident API
-  version: 1.0.0
-  description: Permission-scoped operational incidents with retry-safe mutations, optimistic transitions and append-only audit readback.
+  version: 1.1.0
+  description: >-
+    Permission-scoped support incidents and sovereign operational interventions
+    with retry-safe mutations, optimistic transitions, evidence references and
+    append-only audit readback.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-runtime-dependency: true
 x-bthwani-generation: DISABLED
@@ -80,6 +83,38 @@ paths:
                   events:
                     type: array
                     items: { $ref: '#/components/schemas/IncidentEvent' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /dsh/operator/operational-incidents:
+    get:
+      operationId: listDshOperationalIncidents
+      parameters:
+        - { name: orderId, in: query, required: false, schema: { type: string } }
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: offset, in: query, required: false, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { $ref: '#/components/responses/OperationalIncidentList' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: reportDshOperationalIncident
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReportOperationalIncidentInput' }
+      responses:
+        '200': { $ref: '#/components/responses/OperationalIncident' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /dsh/operator/operational-incidents/{incidentId}:
+    get:
+      operationId: getDshOperationalIncident
+      parameters:
+        - $ref: '#/components/parameters/IncidentId'
+      responses:
+        '200': { $ref: '#/components/responses/OperationalIncident' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
 components:
@@ -162,9 +197,78 @@ components:
         toStatus: { $ref: '#/components/schemas/IncidentStatus' }
         correlationId: { type: string }
         createdAt: { type: string, format: date-time }
+    OperationalIncidentType:
+      type: string
+      enum: [cancel, suspend, raise_exception]
+    OperationalTargetEntityType:
+      type: string
+      enum: [partner_delivery_task, pickup_session, order]
+    ReportOperationalIncidentInput:
+      type: object
+      additionalProperties: false
+      required:
+        - orderId
+        - targetEntityType
+        - targetEntityId
+        - incidentType
+        - reason
+        - ticketReference
+        - expectedVersion
+      properties:
+        orderId: { type: string, minLength: 1 }
+        targetEntityType: { $ref: '#/components/schemas/OperationalTargetEntityType' }
+        targetEntityId: { type: string, minLength: 1 }
+        incidentType: { $ref: '#/components/schemas/OperationalIncidentType' }
+        reason: { type: string, minLength: 1, maxLength: 2000 }
+        ticketReference: { type: string, minLength: 1, maxLength: 256 }
+        correlationId: { type: string, maxLength: 200 }
+        expectedVersion: { type: integer, minimum: 0 }
+        evidenceReferences:
+          type: array
+          maxItems: 20
+          items: { type: string, minLength: 1, maxLength: 512 }
+        reasonCode: { type: string, maxLength: 128 }
+        reasonNote: { type: string, maxLength: 2000 }
+    OperationalIncident:
+      type: object
+      additionalProperties: true
+      required:
+        - id
+        - orderId
+        - targetEntityType
+        - targetEntityId
+        - incidentType
+        - status
+        - reason
+        - ticketReference
+        - actorId
+        - actorRole
+        - correlationId
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        targetEntityType: { $ref: '#/components/schemas/OperationalTargetEntityType' }
+        targetEntityId: { type: string }
+        incidentType: { $ref: '#/components/schemas/OperationalIncidentType' }
+        status: { type: string }
+        reason: { type: string }
+        ticketReference: { type: string }
+        actorId: { type: string }
+        actorRole: { type: string }
+        beforeState: { type: [object, 'null'], additionalProperties: true }
+        afterState: { type: [object, 'null'], additionalProperties: true }
+        failureReason: { type: [string, 'null'] }
+        partnerNotified: { type: boolean }
+        partnerNotifiedAt: { type: [string, 'null'], format: date-time }
+        correlationId: { type: string }
+        appliedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
   responses:
     Incident:
-      description: Operational incident.
+      description: Operational support incident.
       content:
         application/json:
           schema:
@@ -173,7 +277,7 @@ components:
             properties:
               incident: { $ref: '#/components/schemas/Incident' }
     IncidentList:
-      description: Operational incidents.
+      description: Operational support incidents.
       content:
         application/json:
           schema:
@@ -183,6 +287,26 @@ components:
               incidents:
                 type: array
                 items: { $ref: '#/components/schemas/Incident' }
+    OperationalIncident:
+      description: Sovereign operational intervention record.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [incident]
+            properties:
+              incident: { $ref: '#/components/schemas/OperationalIncident' }
+    OperationalIncidentList:
+      description: Sovereign operational intervention records.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [incidents]
+            properties:
+              incidents:
+                type: array
+                items: { $ref: '#/components/schemas/OperationalIncident' }
     Error:
       description: Governed error response.
       content:
