@@ -17,9 +17,17 @@ function pluginNames(config) {
   return new Set((config.plugins ?? []).map((plugin) => (Array.isArray(plugin) ? plugin[0] : plugin)));
 }
 
+function clearProviderEnvironment() {
+  const providerVariablePattern = /^(?:GOOGLE_SERVICES_JSON|GOOGLE_MAPS_(?:ANDROID|IOS)_API_KEY|SENTRY_|EXPO_PUBLIC_SENTRY_|BTHWANI_SENTRY_|BTHWANI_APP_ENV)/;
+  for (const key of Object.keys(process.env)) {
+    if (providerVariablePattern.test(key)) delete process.env[key];
+  }
+}
+
 function withRestoredEnvironment(run) {
   const previous = { ...process.env };
   try {
+    clearProviderEnvironment();
     return run();
   } finally {
     for (const key of Object.keys(process.env)) {
@@ -55,8 +63,6 @@ test("partner receives location native configuration without Google Maps", () =>
 
 test("captain receives Google Maps only when its scoped key exists", () => {
   withRestoredEnvironment(() => {
-    delete process.env.GOOGLE_MAPS_ANDROID_API_KEY;
-    delete process.env.GOOGLE_MAPS_ANDROID_API_KEY_APP_CAPTAIN;
     const disabled = defineBthwaniExpoApp("app-captain");
     assert.equal(disabled.android.config?.googleMaps, undefined);
     assert.equal(disabled.extra.maps.androidNativeConfigured, false);
