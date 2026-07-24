@@ -1,7 +1,7 @@
 # tools/scripts/repair-mobile-eas-firebase-variable.ps1
 # Validate and repair one mobile app's GOOGLE_SERVICES_JSON variable on EAS.
 # Uses the current `eas env:set` command, retries transient GraphQL failures,
-# and verifies variable metadata before allowing a new build.
+# and recognizes EAS secret-protection responses as proof of existence.
 
 [CmdletBinding()]
 param(
@@ -62,10 +62,31 @@ function Invoke-EasCommand {
     }
 }
 
+function Test-ProtectedSecretResponse {
+    param([Parameter(Mandatory)] $Result)
+
+    if ([string]::IsNullOrWhiteSpace([string]$Result.Text)) {
+        return $false
+    }
+
+    return [string]$Result.Text -match "GOOGLE_SERVICES_JSON is a secret variable and cannot be displayed once it has been created"
+}
+
+function Test-RemoteVariableExists {
+    param([Parameter(Mandatory)] $Result)
+
+    if (Test-ProtectedSecretResponse -Result $Result) {
+        return $true
+    }
+
+    return $Result.ExitCode -eq 0 -and [string]$Result.Text -match "GOOGLE_SERVICES_JSON"
+}
+
 function Invoke-WithRetry {
     param(
         [Parameter(Mandatory)][scriptblock] $Operation,
-        [Parameter(Mandatory)][string] $Label
+        [Parameter(Mandatory)][string] $Label,
+        [switch] $AcceptProtectedSecret
     )
 
     $last = $null
@@ -73,6 +94,10 @@ function Invoke-WithRetry {
         Write-Host "$Label attempt $attempt/$MaxAttempts" -ForegroundColor Yellow
         $last = & $Operation
         if ($last.ExitCode -eq 0) {
+            return $last
+        }
+        if ($AcceptProtectedSecret -and (Test-ProtectedSecretResponse -Result $last)) {
+            Write-Host "PASS: EAS confirmed the protected secret exists; its value is intentionally hidden." -ForegroundColor Green
             return $last
         }
 
@@ -158,16 +183,16 @@ function Get-RemoteVariable {
     )
 }
 
-$before = Invoke-WithRetry -Label "EAS GOOGLE_SERVICES_JSON metadata query" -Operation { Get-RemoteVariable }
-$beforeExists = $before.ExitCode -eq 0 -and $before.Text -match "GOOGLE_SERVICES_JSON"
+$before = Invoke-WithRetry -Label "EAS GOOGLE_SERVICES_JSON metadata query" -AcceptProtectedSecret -Operation { Get-RemoteVariable }
+$beforeExists = Test-RemoteVariableExists -Result $before
 
 if ($VerifyOnly) {
     if (-not $beforeExists) {
         throw "GOOGLE_SERVICES_JSON could not be proven in the development environment. Last EAS response: $($before.Text)"
     }
 
-    Write-Host "PASS: GOOGLE_SERVICES_JSON exists in the app-field EAS development environment." -ForegroundColor Green
-    "PASS: remote variable exists`n$($before.Text)" | Set-Content -LiteralPath $ReportPath -Encoding UTF8
+    Write-Host "PASS: GOOGLE_SERVICES_JSON exists in the $AppKey EAS development environment." -ForegroundColor Green
+    "PASS: remote variable exists and is protected as a secret`n$($before.Text)" | Set-Content -LiteralPath $ReportPath -Encoding UTF8
     Write-Host "Report: $ReportPath"
     return
 }
@@ -189,8 +214,8 @@ if ($setResult.ExitCode -ne 0) {
     throw "EAS env:set failed after $MaxAttempts attempts: $($setResult.Text)"
 }
 
-$after = Invoke-WithRetry -Label "Post-upload EAS metadata verification" -Operation { Get-RemoteVariable }
-$afterExists = $after.ExitCode -eq 0 -and $after.Text -match "GOOGLE_SERVICES_JSON"
+$after = Invoke-WithRetry -Label "Post-upload EAS metadata verification" -AcceptProtectedSecret -Operation { Get-RemoteVariable }
+$afterExists = Test-RemoteVariableExists -Result $after
 if (-not $afterExists) {
     throw "Upload command returned success, but GOOGLE_SERVICES_JSON metadata could not be verified. Last response: $($after.Text)"
 }
@@ -204,7 +229,8 @@ if (-not $afterExists) {
     "Visibility: secret",
     "Type: file",
     "Environment: development",
-    "Remote metadata:",
+    "Verification: EAS protected-secret acknowledgement",
+    "Remote response:",
     $after.Text
 ) | Set-Content -LiteralPath $ReportPath -Encoding UTF8
 
