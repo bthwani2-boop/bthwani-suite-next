@@ -74,6 +74,7 @@ const guardRelative = "governance/guards/guard-registry.json";
 const assuranceRelative = "governance/guards/guard-assurance.json";
 const bindingRelative = "governance/guards/frontend-binding-registry.json";
 const enforcementRelative = "governance/github/repository-enforcement.json";
+const singleOwnerRelative = "governance/authority/single-owner-mode.json";
 const saasRelative = "governance/saas/saas-governance.json";
 const decisionIndexRelative = "governance/00_DECISION_INDEX.md";
 
@@ -85,6 +86,7 @@ const guards = validateDocument(guardRelative, "governance/guards/guard-schema.j
 const guardAssurance = validateDocument(assuranceRelative, "governance/guards/guard-assurance.schema.json", "GUARD_ASSURANCE");
 const frontendBindings = validateDocument(bindingRelative, "governance/guards/frontend-binding-registry.schema.json", "FRONTEND_BINDING");
 const repositoryEnforcement = validateDocument(enforcementRelative, "governance/github/repository-enforcement.schema.json", "GITHUB_ENFORCEMENT");
+const singleOwnerMode = validateDocument(singleOwnerRelative, "governance/authority/single-owner-mode.schema.json", "SINGLE_OWNER_MODE");
 const saasGovernance = validateDocument(saasRelative, "governance/saas/saas-governance.schema.json", "SAAS_GOVERNANCE");
 readJson("tools/guards/guard-manifest.json", "GUARD_MANIFEST");
 
@@ -215,11 +217,56 @@ if (authority) {
     "governance/agents",
     "governance/skills",
     "governance/guards",
+    singleOwnerRelative,
+    "governance/authority/single-owner-mode.schema.json",
     canonicalProductSchema,
     "governance/saas",
     "tools/guards/guard-manifest.json",
   ]) {
     if (!documentPaths.has(requiredPath)) violations.push({ file: authorityRelative, line: 0, message: `MACHINE_AUTHORITY_NOT_REGISTERED ${requiredPath}` });
+  }
+}
+
+if (singleOwnerMode) {
+  const requiredAllowedDomains = [
+    "product_model_approval",
+    "implementation_readiness",
+    "product_acceptance",
+    "ux_acceptance",
+    "architecture_approval",
+    "governance_contract_approval",
+    "ci_workflow_approval",
+    "implementation_review",
+    "qa_approval",
+  ];
+  const requiredProtectedDomains = [
+    "authentication_authorization_sessions",
+    "pii_privacy_secrets_credentials",
+    "tenant_isolation",
+    "security_approval",
+    "financial_control",
+    "migrations_and_production_data",
+    "critical_high_vulnerability_acceptance",
+    "residual_risk_acceptance",
+    "release_approval",
+    "deployment",
+    "production_verification",
+    "final_closure",
+  ];
+  const allowedDomains = new Set(singleOwnerMode.approvalPolicy.allowedDomains);
+  const protectedDomains = new Set(singleOwnerMode.approvalPolicy.protectedDomains);
+
+  for (const domain of requiredAllowedDomains) {
+    if (!allowedDomains.has(domain)) violations.push({ file: singleOwnerRelative, line: 0, message: `SINGLE_OWNER_ALLOWED_DOMAIN_MISSING ${domain}` });
+  }
+  for (const domain of requiredProtectedDomains) {
+    if (!protectedDomains.has(domain)) violations.push({ file: singleOwnerRelative, line: 0, message: `SINGLE_OWNER_PROTECTED_DOMAIN_MISSING ${domain}` });
+  }
+  for (const domain of allowedDomains) {
+    if (protectedDomains.has(domain)) violations.push({ file: singleOwnerRelative, line: 0, message: `SINGLE_OWNER_DOMAIN_BOTH_ALLOWED_AND_PROTECTED ${domain}` });
+  }
+  if (singleOwnerMode.status === "ACTIVE" && singleOwnerMode.authoritySource !== "CURRENT_USER_INSTRUCTION") {
+    violations.push({ file: singleOwnerRelative, line: 0, message: "ACTIVE_SINGLE_OWNER_MODE_REQUIRES_CURRENT_USER_INSTRUCTION" });
   }
 }
 
@@ -295,6 +342,9 @@ if (repositoryEnforcement) {
     if (JSON.stringify(actualOwners) !== JSON.stringify(declaredOwners)) violations.push({ file: enforcementRelative, line: 0, message: `CODEOWNERS_EVIDENCE_DRIFT declared=${declaredOwners.join(",")} actual=${actualOwners.join(",")}` });
     const actualMode = actualOwners.length > 1 ? "MULTI_OWNER_ROUTING" : "SINGLE_OWNER_ROUTING";
     if (repositoryEnforcement.observed.codeownersMode !== actualMode) violations.push({ file: enforcementRelative, line: 0, message: `CODEOWNERS_MODE_DRIFT declared=${repositoryEnforcement.observed.codeownersMode} actual=${actualMode}` });
+    if (singleOwnerMode?.status === "ACTIVE" && !actualOwners.includes(singleOwnerMode.ownerIdentity)) {
+      violations.push({ file: singleOwnerRelative, line: 0, message: `SINGLE_OWNER_IDENTITY_NOT_IN_CODEOWNERS ${singleOwnerMode.ownerIdentity}` });
+    }
   }
 
   const observed = repositoryEnforcement.observed;
