@@ -47,6 +47,34 @@ function Add-Result {
     Write-Host "[$Status] $Check - $Detail" -ForegroundColor $color
 }
 
+function Write-FailureExcerpt {
+    param(
+        [AllowNull()][string] $Output,
+        [Parameter(Mandatory)][string] $LogPath
+    )
+
+    Write-Host ""
+    Write-Host "----- FAILURE OUTPUT BEGIN -----" -ForegroundColor Red
+    if ([string]::IsNullOrWhiteSpace($Output)) {
+        Write-Host "No command output was captured. Full log: $LogPath" -ForegroundColor Red
+    } else {
+        $lines = @($Output -split "`r?`n")
+        $selected = if ($lines.Count -gt 120) {
+            $lines | Select-Object -Last 120
+        } else {
+            $lines
+        }
+        foreach ($line in $selected) {
+            Write-Host $line -ForegroundColor Red
+        }
+        if ($lines.Count -gt 120) {
+            Write-Host "... truncated; full log: $LogPath" -ForegroundColor Red
+        }
+    }
+    Write-Host "----- FAILURE OUTPUT END -----" -ForegroundColor Red
+    Write-Host ""
+}
+
 function Invoke-LoggedCommand {
     param(
         [Parameter(Mandatory)][string] $FilePath,
@@ -101,6 +129,7 @@ function Assert-CommandPasses {
 
     if ($result.ExitCode -ne 0) {
         Add-Result "FAIL" $Name "exit=$($result.ExitCode); log=$($result.LogPath)"
+        Write-FailureExcerpt -Output $result.Output -LogPath $result.LogPath
         throw "$Name failed. Review $($result.LogPath)"
     }
 
