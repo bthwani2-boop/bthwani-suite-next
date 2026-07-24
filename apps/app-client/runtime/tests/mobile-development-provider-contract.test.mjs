@@ -3,9 +3,11 @@ import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const repoRoot = path.resolve(import.meta.dirname, "../../../..");
+const testDirectory = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(testDirectory, "../../../..");
 const manifest = JSON.parse(
   fs.readFileSync(path.join(repoRoot, "tools/mobile/mobile-apps.manifest.json"), "utf8"),
 );
