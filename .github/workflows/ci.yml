@@ -19,7 +19,7 @@ on:
         default: false
         type: boolean
   pull_request:
-    branches: [master]
+    branches: [master, lianbassam]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "AGENTS.md"
