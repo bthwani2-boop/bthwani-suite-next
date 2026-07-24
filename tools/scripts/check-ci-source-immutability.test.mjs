@@ -19,6 +19,33 @@ steps:
   assert.deepEqual(ids(workflow), []);
 });
 
+test("allows read-only workflow-run analysis without source checkout", () => {
+  const workflow = `
+on:
+  workflow_run:
+    workflows: [CI]
+permissions:
+  actions: read
+  contents: read
+steps:
+  - run: gh api repos/example/project/actions/runs/1/jobs
+`;
+  assert.deepEqual(ids(workflow), []);
+});
+
+test("detects privileged triggers that checkout repository source", () => {
+  const workflow = `
+on:
+  workflow_run:
+    workflows: [CI]
+permissions:
+  contents: read
+steps:
+  - uses: actions/checkout@0123456789012345678901234567890123456789
+`;
+  assert.deepEqual(ids(workflow), ["PRIVILEGED_TRIGGER_SOURCE_EXECUTION"]);
+});
+
 test("detects indented git push inside run blocks", () => {
   const workflow = `
 steps:
@@ -34,18 +61,12 @@ steps:
   ]);
 });
 
-test("detects privileged triggers and source write permission", () => {
+test("detects source write permission", () => {
   const workflow = `
-on:
-  workflow_run:
-    workflows: [CI]
 permissions:
   contents: write
 `;
-  assert.deepEqual(ids(workflow), [
-    "PRIVILEGED_WORKFLOW_RUN",
-    "SOURCE_WRITE_PERMISSION",
-  ]);
+  assert.deepEqual(ids(workflow), ["SOURCE_WRITE_PERMISSION"]);
 });
 
 test("detects automatic commit actions", () => {
