@@ -1,8 +1,13 @@
 openapi: 3.1.0
 info:
   title: BThwani Master API Index
-  version: 0.3.5
+  version: 0.3.6
   description: Root contract index only. No runtime endpoints are defined here.
+  contact:
+    name: BThwani API Governance
+servers:
+  - url: /
+    description: Gateway-relative contract index; concrete runtime servers are declared by each owned contract.
 paths: {}
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-contract-role: MASTER_INDEX_ONLY
@@ -59,10 +64,3 @@ x-bthwani-contracts:
     dshSupportMessageDelivery: ../services/dsh/contracts/dsh.support-message-delivery.openapi.yaml
     dshWorkforceScopes: ../services/dsh/contracts/dsh.jrn-003-workforce-scopes.openapi.yaml
     wlt: ../services/wlt/contracts/wlt.openapi.yaml
-    wltPayments: ../services/wlt/contracts/wlt.payments.openapi.yaml
-    wltRefunds: ../services/wlt/contracts/jrn-035-refunds.openapi.yaml
-    wltSettlementsCommissions: ../services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml
-    wltPayoutsDestinations: ../services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml
-    wltCommercialBenefits: ../services/wlt/contracts/wlt.commercial.openapi.yaml
-    wltCommercialBenefitsSummary: ../services/wlt/contracts/wlt.commercial-summary.openapi.yaml
-    wltPromotionFunding: ../services/wlt/contracts/wlt.promotion-funding.openapi.yaml
