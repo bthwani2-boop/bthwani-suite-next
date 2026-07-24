@@ -19,7 +19,7 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir contracts test"
+        "command": "node tools/scripts/run-command-check.mjs --label contracts-tests -- pnpm --dir contracts test"
       }
     },
     "lint": {
