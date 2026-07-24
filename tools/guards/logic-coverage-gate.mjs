@@ -65,6 +65,10 @@ function isAdapterOrController(f) {
     f.endsWith(".api.tsx") ||
     f.endsWith("runtime-adapter.ts") ||
     f.endsWith("api-client.ts") ||
+    // The control-panel BFF proxy is the approved server-side HTTP boundary,
+    // not a screen or component. Keep this exception exact so raw fetch remains
+    // forbidden everywhere else in runtime UI source.
+    f.endsWith("/server/bff-proxy.ts") ||
     // HTTP kernel/transport files ARE the approved HTTP layer
     f.includes("/_kernel/") ||
     f.includes("/http-request") ||
