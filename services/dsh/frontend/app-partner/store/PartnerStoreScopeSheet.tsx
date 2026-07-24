@@ -13,9 +13,11 @@ export function PartnerStoreScopeSheet({
   onSelect: (id: string) => void;
 }) {
   if (!visible) return null;
+  const scopeLabel = options.length > 1 ? 'الفروع' : 'المتجر';
+
   return (
     <Surface tone="raised" padding={5} gap={4} radiusToken="xl" border={false} style={{ margin: spacing[4] }}>
-      <Text role="titleMd">نطاق الفرع</Text>
+      <Text role="titleMd">{scopeLabel}</Text>
       {options.map((option) => (
         <Button key={option.scopeId} label={option.displayName} tone={option.scopeId === selectedId ? 'primary' : 'secondary'} onPress={() => onSelect(option.scopeId)} />
       ))}
