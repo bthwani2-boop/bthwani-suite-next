@@ -92,11 +92,41 @@ function collectInlineTags(line) {
     .filter(Boolean);
 }
 
+function replaceExplicitEmptyOperationTags(lines, pathsIndex, contractPath) {
+  let currentPath = "";
+  let currentMethod = "";
+  for (let index = pathsIndex + 1; index < lines.length; index += 1) {
+    if (/^\S/.test(lines[index])) break;
+    const pathMatch = lines[index].match(/^\s{2}(\/[^:]+):\s*$/);
+    if (pathMatch) {
+      currentPath = pathMatch[1];
+      currentMethod = "";
+      continue;
+    }
+    const methodMatch = lines[index].match(/^\s{4}([a-z]+):\s*$/i);
+    if (methodMatch) {
+      const method = methodMatch[1].toLowerCase();
+      currentMethod = HTTP_METHODS.has(method) ? method : "";
+      continue;
+    }
+    if (currentPath && currentMethod && /^\s{6}tags:\s*\[\s*\]\s*$/.test(lines[index])) {
+      const tag = deriveTag(currentPath, contractPath);
+      lines.splice(index, 1, "      tags:", `        - ${yamlString(tag)}`);
+      index += 1;
+    }
+  }
+}
+
 export function normalizeOpenApiMetadata(source, contractPath = "contract.openapi.yaml") {
   const originalTrailingNewline = source.endsWith("\n");
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const pathsIndex = lines.findIndex((line) => line === "paths:");
   if (pathsIndex < 0) return source;
+
+  // Normalize the explicit `tags: []` form before operation ranges are
+  // calculated. This avoids index drift and guarantees every operation has at
+  // least one concrete tag in the generated contract.
+  replaceExplicitEmptyOperationTags(lines, pathsIndex, contractPath);
 
   const operations = [];
   let currentPath = "";
@@ -138,9 +168,9 @@ export function normalizeOpenApiMetadata(source, contractPath = "contract.openap
       const tag = deriveTag(operation.apiPath, contractPath);
       operationTags.add(tag);
       if (tagsLineIndex >= 0) {
-        edits.push({ index: operation.start + 1 + tagsLineIndex, deleteCount: 1, lines: [`      tags:`, `        - ${yamlString(tag)}`] });
+        edits.push({ index: operation.start + 1 + tagsLineIndex, deleteCount: 1, lines: ["      tags:", `        - ${yamlString(tag)}`] });
       } else {
-        inserts.push(`      tags:`, `        - ${yamlString(tag)}`);
+        inserts.push("      tags:", `        - ${yamlString(tag)}`);
       }
     }
     if (inserts.length) edits.push({ index: operation.start + 1, deleteCount: 0, lines: inserts });
@@ -160,7 +190,7 @@ export function normalizeOpenApiMetadata(source, contractPath = "contract.openap
         edits.push({
           index: responsesStart + 1,
           deleteCount: 0,
-          lines: [`        "204":`, `          description: "Operation completed successfully."`],
+          lines: ["        \"204\":", "          description: \"Operation completed successfully.\""],
         });
       }
     }
