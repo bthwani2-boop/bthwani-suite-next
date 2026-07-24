@@ -7,13 +7,13 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir shared/ui-kit typecheck"
+        "command": "node tools/scripts/run-command-check.mjs --label u-type -- pnpm --dir shared/ui-kit typecheck"
       }
     },
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "node tools/scripts/run-command-check.mjs --label ui-kit-visual-contract -- pnpm run visual:ui-kit:contract"
+        "command": "node tools/scripts/run-command-check.mjs --label u-vis -- pnpm run visual:ui-kit:contract"
       }
     },
     "build": {
