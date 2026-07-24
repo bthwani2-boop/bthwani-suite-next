@@ -8,11 +8,11 @@ import {
   Text,
   lightThemeColors,
 } from "@bthwani/ui-kit";
-import type {
-  PartnerWorkspaceTabId,
+import {
+  getDshPartnerActivationStatusLabel,
+  type PartnerWorkspaceTabId,
   usePartnerWorkspaceListController,
 } from "../../shared/partner";
-import { getDshPartnerActivationStatusLabel } from "../../shared/partner";
 
 type Controller = ReturnType<typeof usePartnerWorkspaceListController>;
 
