@@ -250,7 +250,7 @@ function defineBthwaniExpoApp(appKey) {
     scheme: app.scheme,
     version: manifest.global.version,
     icon: appAsset(appKey, "icon.png"),
-    runtimeVersion: { policy: "fingerprint" },
+    runtimeVersion: { policy: "appVersion" },
     updates: {
       url: `https://u.expo.dev/${app.projectId}`,
       checkAutomatically: "ON_LOAD",
