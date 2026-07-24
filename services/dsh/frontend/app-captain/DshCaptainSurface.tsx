@@ -180,6 +180,7 @@ function AuthenticatedCaptainSurface({
           captainPodRequired={derived.captainPodRequired}
           captainCollectsCod={derived.captainCollectsCod}
           isStoreCourierMode={derived.isStoreCourierMode}
+          isCaptainAvailable={derived.isCaptainAvailable}
           selectedSupportScreen={state.selectedSupportScreen}
           isPickupSheetVisible={state.isPickupSheetVisible}
           isDeliverySheetVisible={state.isDeliverySheetVisible}
@@ -230,6 +231,7 @@ function AuthenticatedCaptainSurface({
           onOpenCaptainAccountSection={actions.openCaptainAccountSection}
           onSetAppearanceMode={setAppearanceMode}
           onToggleStoreCourierMode={actions.toggleStoreCourierMode}
+          onToggleAvailability={(available) => actions.setCaptainAvailabilityStatus(available ? "available" : "unavailable")}
           onPushLocation={actions.pushLocation}
         />
       </View>
@@ -261,12 +263,7 @@ export function DshCaptainSurface({ captainId, command }: DshCaptainSurfaceProps
     );
   }
 
-  return (
-    <AuthenticatedCaptainSurface
-      captainId={resolvedCaptainId}
-      command={command ?? { token: 0, target: "home" }}
-    />
-  );
+  return <AuthenticatedCaptainSurface captainId={resolvedCaptainId} command={command ?? { token: 0, target: "home" }} />;
 }
 
 const styles = StyleSheet.create({
