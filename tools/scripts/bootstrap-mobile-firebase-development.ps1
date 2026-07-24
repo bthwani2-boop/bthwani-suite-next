@@ -120,6 +120,23 @@ function Test-EmbeddedJsonSuccess {
     }
 }
 
+function Test-EmbeddedGoogleServicesConfig {
+    param([Parameter(Mandatory)][string] $Text)
+
+    try {
+        $json = Convert-EmbeddedJson -Text $Text
+        $projectId = $json.project_info.project_id
+        $clients = @($json.client)
+        return (
+            -not [string]::IsNullOrWhiteSpace([string]$projectId) -and
+            $clients.Count -gt 0 -and
+            -not [string]::IsNullOrWhiteSpace([string]$json.configuration_version)
+        )
+    } catch {
+        return $false
+    }
+}
+
 function Invoke-FirebaseCli {
     param(
         [Parameter(Mandatory)][string[]] $Arguments,
@@ -127,12 +144,14 @@ function Invoke-FirebaseCli {
     )
 
     $output = & pnpm dlx "firebase-tools@$FirebaseToolsVersion" @Arguments 2>&1
-    $exitCode = $LASTEXITCODE
+    $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
     $text = ($output | Out-String).Trim()
 
     if (-not $AllowFailure -and $exitCode -ne 0) {
         if (($Arguments -contains "--json") -and (Test-EmbeddedJsonSuccess -Text $text)) {
             Write-Host "WARN: Firebase CLI returned exit code $exitCode after emitting successful JSON; continuing with parsed JSON output." -ForegroundColor DarkYellow
+        } elseif ($Arguments.Count -ge 1 -and $Arguments[0] -eq "apps:sdkconfig" -and (Test-EmbeddedGoogleServicesConfig -Text $text)) {
+            Write-Host "WARN: Firebase CLI returned exit code $exitCode after emitting a complete google-services.json payload; continuing with parsed config." -ForegroundColor DarkYellow
         } else {
             throw "Firebase CLI failed ($exitCode): firebase $($Arguments -join ' ')`n$text"
         }
@@ -236,7 +255,7 @@ function Invoke-GoogleServicesValidation {
         --file $Path `
         --package $ExpectedPackage `
         --json 2>&1
-    $exitCode = $LASTEXITCODE
+    $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
     $text = ($output | Out-String).Trim()
     $result = Convert-EmbeddedJson -Text $text
 
