@@ -23,6 +23,20 @@
     "\\.(tmp|bak|old|orig|rej)$",
     "(~|\\.swp)$"
   ],
+  "portableTrackedConfiguration": {
+    "files": [
+      ".claude/settings.json",
+      ".vscode/settings.json"
+    ],
+    "forbiddenContentPatterns": [
+      "[A-Za-z]:\\\\Users\\\\",
+      "/[cC]/Users/",
+      "AppData[/\\\\]Local[/\\\\]Temp",
+      "Bash\\(git (?:push|commit|rebase|stash|checkout)",
+      "DATABASE_URL=",
+      "postgres://[^\\s\"]+:[^\\s\"]+@"
+    ]
+  },
   "allowedTrackedLogRoots": [
     "governance/evidence/security/"
   ],
