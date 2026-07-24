@@ -193,6 +193,7 @@ try {
 
     foreach ($file in @(
         "tools/scripts/bootstrap-mobile-firebase-development.ps1",
+        "tools/scripts/login-mobile-firebase-development.ps1",
         "tools/scripts/setup-mobile-firebase-development.ps1",
         "tools/scripts/verify-mobile-firebase-bootstrap.ps1"
     )) {
