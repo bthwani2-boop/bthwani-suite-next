@@ -7,6 +7,28 @@
 [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 $global:OutputEncoding = [Text.UTF8Encoding]::new($false)
 
+function Format-RedactedArguments {
+    param([Parameter(Mandatory)][string[]]$Arguments)
+
+    $redacted = [System.Collections.Generic.List[string]]::new()
+    $hideNext = $false
+
+    foreach ($argument in $Arguments) {
+        if ($hideNext) {
+            $redacted.Add("<redacted>")
+            $hideNext = $false
+            continue
+        }
+
+        $redacted.Add($argument)
+        if ($argument -in @("--value", "--auth-token", "--token")) {
+            $hideNext = $true
+        }
+    }
+
+    return ($redacted -join " ")
+}
+
 function Invoke-SentryCli {
     param(
         [Parameter(Mandatory)][string[]]$Arguments,
@@ -19,7 +41,7 @@ function Invoke-SentryCli {
         $exitCode = [int]$LASTEXITCODE
 
         if ($exitCode -ne 0 -and -not $AllowFailure) {
-            throw "Sentry CLI failed: sentry $($Arguments -join ' ')"
+            throw "Sentry CLI failed: sentry $(Format-RedactedArguments -Arguments $Arguments)"
         }
 
         return [pscustomobject]@{
@@ -35,7 +57,7 @@ function Invoke-SentryCli {
     $exitCode = [int]$LASTEXITCODE
 
     if ($exitCode -ne 0 -and -not $AllowFailure) {
-        throw "Sentry CLI failed: sentry $($Arguments -join ' ')"
+        throw "Sentry CLI failed: sentry $(Format-RedactedArguments -Arguments $Arguments)"
     }
 
     return $exitCode
@@ -60,7 +82,8 @@ function Invoke-EasCli {
     }
 
     if ($exitCode -ne 0 -and -not $AllowFailure) {
-        throw "EAS command failed in '$WorkingDirectory': eas $($Arguments -join ' ')"
+        $safeArguments = Format-RedactedArguments -Arguments $Arguments
+        throw "EAS command failed in '$WorkingDirectory': eas $safeArguments"
     }
 
     return $exitCode
