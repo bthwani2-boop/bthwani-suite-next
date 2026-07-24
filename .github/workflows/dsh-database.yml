@@ -152,8 +152,28 @@ jobs:
       - name: Apply DSH local seeds twice
         shell: pwsh
         run: |
-          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds
-          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds
+          $log = Join-Path $env:RUNNER_TEMP "dsh-seed-verification.log"
+          try {
+            ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds *>&1 |
+              Tee-Object -FilePath $log
+            ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds *>&1 |
+              Tee-Object -FilePath $log -Append
+          } catch {
+            Write-Host "--- DSH seed final log lines ---"
+            if (Test-Path -LiteralPath $log) {
+              Get-Content -LiteralPath $log -Tail 240
+            }
+            throw
+          }
+
+      - name: Upload DSH seed failure log
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dsh-seed-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/dsh-seed-verification.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Run DSH seed database contracts
         shell: pwsh
