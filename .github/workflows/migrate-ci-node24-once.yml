@@ -33,9 +33,15 @@ jobs:
           persist-credentials: true
           show-progress: false
 
-      - name: Replace deprecated action runtimes and self-remove
-        shell: python
+      - name: Atomically migrate latest branch and self-remove
+        shell: bash
         run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+          apply_migration() {
+            python <<'PY'
           from pathlib import Path
 
           workflow = Path('.github/workflows/ci.yml')
@@ -51,8 +57,6 @@ jobs:
                   'actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1',
           }
           for old, new in replacements.items():
-              if old not in source:
-                  raise SystemExit(f'Expected pinned action was not found: {old}')
               source = source.replace(old, new)
 
           env_block = (
@@ -71,16 +75,33 @@ jobs:
                   raise SystemExit('Canonical workflow env block was not found')
               source = source.replace(env_block, hardened_env_block, 1)
 
+          deprecated = [
+              'actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
+              'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020',
+              'actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff',
+              'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+          ]
+          remaining = [item for item in deprecated if item in source]
+          if remaining:
+              raise SystemExit(f'Deprecated action pins remain: {remaining}')
+
           workflow.write_text(source, encoding='utf-8', newline='\n')
           Path('.github/workflows/migrate-ci-node24-once.yml').unlink()
+          PY
+          }
 
-      - name: Commit atomic migration
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add .github/workflows/ci.yml .github/workflows/migrate-ci-node24-once.yml
-          git diff --cached --check
-          git commit -m "fix(ci): migrate contextual workflow to Node 24 actions"
-          git push origin HEAD:fix/lianbassam-pr-ci-trigger
+          for attempt in 1 2 3; do
+            git fetch origin fix/lianbassam-pr-ci-trigger
+            git reset --hard origin/fix/lianbassam-pr-ci-trigger
+            apply_migration
+            git add .github/workflows/ci.yml .github/workflows/migrate-ci-node24-once.yml
+            git diff --cached --check
+            git commit -m "fix(ci): migrate contextual workflow to Node 24 actions"
+            if git push origin HEAD:fix/lianbassam-pr-ci-trigger; then
+              exit 0
+            fi
+            echo "Branch advanced during migration; retrying from latest remote head (${attempt}/3)."
+          done
+
+          echo "Atomic migration could not be pushed after three retries."
+          exit 1
