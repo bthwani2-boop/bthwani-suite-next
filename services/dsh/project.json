@@ -19,7 +19,7 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir services/dsh lint"
+        "command": "node tools/scripts/run-command-check.mjs --label dsh-lint -- pnpm --dir services/dsh lint"
       }
     },
     "test": {
