@@ -1,0 +1,93 @@
+name: BThwani Failure Analysis
+
+on:
+  workflow_run:
+    workflows:
+      - BThwani Contextual CI
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: failure-analysis-${{ github.event.workflow_run.id }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Build immutable failure map
+    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.head_repository.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Collect failed jobs and steps
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+          SOURCE_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          SOURCE_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+
+          gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/jobs?filter=latest&per_page=100" \
+            --jq '.jobs[]' | jq -s '.' > /tmp/jobs.json
+
+          jq \
+            --arg repository "${GITHUB_REPOSITORY}" \
+            --arg runId "${SOURCE_RUN_ID}" \
+            --arg runUrl "${SOURCE_RUN_URL}" \
+            --arg headSha "${SOURCE_HEAD_SHA}" \
+            --arg headBranch "${SOURCE_HEAD_BRANCH}" \
+            '{
+              schemaVersion: 1,
+              repository: $repository,
+              sourceRunId: $runId,
+              sourceRunUrl: $runUrl,
+              headSha: $headSha,
+              headBranch: $headBranch,
+              failedJobs: [
+                .[]
+                | select(.conclusion != "success" and .conclusion != "skipped")
+                | {
+                    id,
+                    name,
+                    status,
+                    conclusion,
+                    htmlUrl: .html_url,
+                    failedSteps: [
+                      .steps[]?
+                      | select(.conclusion != "success" and .conclusion != "skipped")
+                      | {number, name, status, conclusion}
+                    ]
+                  }
+              ]
+            }' /tmp/jobs.json > failure-map.json
+
+          failed_count="$(jq '.failedJobs | length' failure-map.json)"
+          if [[ "${failed_count}" -eq 0 ]]; then
+            echo "No failed job was returned for failed workflow run ${SOURCE_RUN_ID}." >&2
+            exit 1
+          fi
+
+          {
+            echo "### Immutable failure map"
+            echo "- Source run: ${SOURCE_RUN_URL}"
+            echo "- Branch: ${SOURCE_HEAD_BRANCH}"
+            echo "- Commit: ${SOURCE_HEAD_SHA}"
+            echo "- Failed jobs: ${failed_count}"
+            echo
+            jq -r '.failedJobs[] | "- **\(.name)** — \(.conclusion)\n" + ((.failedSteps // []) | map("  - \(.name): \(.conclusion)") | join("\n"))' failure-map.json
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload immutable failure map
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: failure-map-${{ github.event.workflow_run.id }}
+          path: failure-map.json
+          if-no-files-found: error
+          retention-days: 7
