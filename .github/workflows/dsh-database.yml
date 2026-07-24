@@ -11,6 +11,7 @@ on:
       - "services/dsh/backend/**"
       - "services/dsh/package.json"
       - "tools/scripts/check-dsh-database-contract.mjs"
+      - "tools/scripts/check-local-media-contract.mjs"
       - ".github/workflows/dsh-database.yml"
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - "services/dsh/backend/**"
       - "services/dsh/package.json"
       - "tools/scripts/check-dsh-database-contract.mjs"
+      - "tools/scripts/check-local-media-contract.mjs"
       - ".github/workflows/dsh-database.yml"
   workflow_dispatch:
 
@@ -84,6 +86,9 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client >/dev/null
+
+      - name: Validate governed local media contract
+        run: node tools/scripts/check-local-media-contract.mjs
 
       - name: Validate static DSH database contract
         run: node tools/scripts/check-dsh-database-contract.mjs
