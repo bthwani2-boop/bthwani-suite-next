@@ -25,7 +25,7 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir contracts lint"
+        "command": "node tools/scripts/run-command-check.mjs --label contracts-lint -- pnpm --dir contracts lint"
       }
     }
   },
