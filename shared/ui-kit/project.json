@@ -13,7 +13,7 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm run visual:ui-kit:contract"
+        "command": "node tools/scripts/run-command-check.mjs --label ui-kit-visual-contract -- pnpm run visual:ui-kit:contract"
       }
     },
     "build": {
