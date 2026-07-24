@@ -14,7 +14,7 @@ on:
         required: false
         type: string
       runtime_proof:
-        description: Start the full runtime and execute smoke proof
+        description: Start the scoped runtime and execute smoke proof
         required: true
         default: false
         type: boolean
@@ -60,7 +60,6 @@ on:
 
 permissions:
   contents: read
-  statuses: write
 
 concurrency:
   group: contextual-ci-${{ github.event.pull_request.number || github.ref }}
@@ -113,25 +112,6 @@ jobs:
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
-      - name: Publish contextual CI pending status
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          jq -n \
-            --arg state pending \
-            --arg context bthwani/contextual-ci \
-            --arg description "contextual verification is running" \
-            --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-            '{state:$state,context:$context,description:$description,target_url:$target_url}' > /tmp/contextual-ci-status.json
-          curl --fail-with-body --retry 3 \
-            -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-            --data-binary @/tmp/contextual-ci-status.json
       - name: Verify contextual router decisions
         run: node --test tools/scripts/detect-ci-context.test.mjs
       - name: Classify changed paths
@@ -186,9 +166,10 @@ jobs:
             echo "- Heavy checks: ${HEAVY_CHECKS}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
-  policy_bundle:
+  policy:
+    name: Policy and governance
     needs: [context]
-    uses: ./.github/workflows/reusable/policy.yml
+    uses: ./.github/workflows/ci-policy.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
       head_sha: ${{ needs.context.outputs.head_sha }}
@@ -197,9 +178,10 @@ jobs:
       security: ${{ needs.context.outputs.security }}
       infrastructure: ${{ needs.context.outputs.infrastructure }}
 
-  node_diagnostics_bundle:
+  diagnostics:
+    name: Static diagnostics
     needs: [context]
-    uses: ./.github/workflows/reusable/node-diagnostics.yml
+    uses: ./.github/workflows/ci-node-diagnostics.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
       head_sha: ${{ needs.context.outputs.head_sha }}
@@ -208,9 +190,10 @@ jobs:
       contracts: ${{ needs.context.outputs.contracts }}
       node: ${{ needs.context.outputs.node }}
 
-  node_verification_bundle:
+  verification:
+    name: Node verification
     needs: [context]
-    uses: ./.github/workflows/reusable/node-verification.yml
+    uses: ./.github/workflows/ci-node-verification.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
       head_sha: ${{ needs.context.outputs.head_sha }}
@@ -221,9 +204,10 @@ jobs:
       journey_scope: ${{ needs.context.outputs.journey_scope }}
       platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}
 
-  backends_bundle:
+  backends:
+    name: Backend verification
     needs: [context]
-    uses: ./.github/workflows/reusable/backends.yml
+    uses: ./.github/workflows/ci-backends.yml
     with:
       dsh: ${{ needs.context.outputs.dsh }}
       wlt: ${{ needs.context.outputs.wlt }}
@@ -232,45 +216,42 @@ jobs:
       platform: ${{ needs.context.outputs.platform }}
       providers: ${{ needs.context.outputs.providers }}
 
-  runtime_bundle:
+  runtime:
+    name: Runtime proof
     needs: [context]
-    uses: ./.github/workflows/reusable/runtime.yml
+    uses: ./.github/workflows/ci-runtime.yml
     with:
       full_verification: ${{ needs.context.outputs.full_verification }}
+      runtime: ${{ needs.context.outputs.runtime }}
       runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
 
   result:
     name: BThwani CI result
-    needs: [context, policy_bundle, node_diagnostics_bundle, node_verification_bundle, backends_bundle, runtime_bundle]
+    needs: [context, policy, diagnostics, verification, backends, runtime]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Aggregate results and publish immutable status
+      - name: Enforce fail-closed aggregate result
         shell: bash
         env:
-          GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ needs.context.outputs.head_sha }}
-          FULL_VERIFICATION: ${{ needs.context.outputs.full_verification }}
           CONTEXT_RESULT: ${{ needs.context.result }}
-          POLICY_RESULT: ${{ needs.policy_bundle.result }}
-          DIAGNOSTICS_RESULT: ${{ needs.node_diagnostics_bundle.result }}
-          VERIFICATION_RESULT: ${{ needs.node_verification_bundle.result }}
-          BACKENDS_RESULT: ${{ needs.backends_bundle.result }}
-          RUNTIME_RESULT: ${{ needs.runtime_bundle.result }}
+          POLICY_RESULT: ${{ needs.policy.result }}
+          DIAGNOSTICS_RESULT: ${{ needs.diagnostics.result }}
+          VERIFICATION_RESULT: ${{ needs.verification.result }}
+          BACKENDS_RESULT: ${{ needs.backends.result }}
+          RUNTIME_RESULT: ${{ needs.runtime.result }}
         run: |
           set -euo pipefail
-
-          head_sha="${HEAD_SHA:-${GITHUB_SHA}}"
-          state=success
-          description="all required contextual verification bundles passed"
-          failed=()
+          failed=0
+          failures=()
 
           check_result() {
             local name="$1"
             local result="$2"
-            if [[ "${result}" != "success" ]]; then
-              failed+=("${name}=${result:-missing}")
+            if [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
+              failures+=("${name}:${result}")
+              failed=1
             fi
           }
 
@@ -281,33 +262,11 @@ jobs:
           check_result backends "${BACKENDS_RESULT}"
           check_result runtime "${RUNTIME_RESULT}"
 
-          if (( ${#failed[@]} > 0 )); then
-            state=failure
-            description="required bundles failed: $(IFS=,; echo "${failed[*]}")"
-          elif [[ "${FULL_VERIFICATION}" == "true" ]]; then
-            description="all required full-verification bundles passed"
+          if [[ "${failed}" -ne 0 ]]; then
+            message="failed bundles: $(IFS=,; echo "${failures[*]}")"
+            echo "::error title=BThwani CI failed::${message}"
+            printf '%s\n' "${message}"
+            exit 1
           fi
 
-          description="${description:0:140}"
-          jq -n \
-            --arg state "${state}" \
-            --arg context "bthwani/contextual-ci" \
-            --arg description "${description}" \
-            --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-            '{state:$state,context:$context,description:$description,target_url:$target_url}' > /tmp/contextual-ci-status.json
-          curl --fail-with-body --retry 3 \
-            -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${head_sha}" \
-            --data-binary @/tmp/contextual-ci-status.json
-
-          {
-            echo "### Final contextual verification"
-            echo "- Commit: ${head_sha}"
-            echo "- State: ${state}"
-            echo "- Result: ${description}"
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-          test "${state}" = success
+          printf '%s\n' "all required bundles passed or were intentionally skipped"
