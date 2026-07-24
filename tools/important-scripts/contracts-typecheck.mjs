@@ -1,7 +1,8 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { normalizeOpenApiMetadata } from "../contracts/normalize-openapi-metadata.mjs";
 
 const contracts = [
   "contracts/master.openapi.yaml",
@@ -12,8 +13,10 @@ const contracts = [
   "services/wlt/contracts/wlt.openapi.yaml",
 ];
 
+const repoRoot = new URL("../..", import.meta.url);
 const tempDir = mkdtempSync(join(tmpdir(), "bthwani-contracts-"));
 const ruleset = join(tempDir, "spectral.yaml");
+const normalizedContracts = [];
 writeFileSync(
   ruleset,
   `extends: [spectral:oas]
@@ -38,7 +41,7 @@ rules:
 
 function run(label, command, args, options = {}) {
   const result = spawnSync(command, args, {
-    cwd: new URL("../..", import.meta.url),
+    cwd: repoRoot,
     encoding: "utf8",
     shell: process.platform === "win32",
     ...options,
@@ -50,10 +53,16 @@ function run(label, command, args, options = {}) {
     throw new Error(`${label} failed with exit code ${result.status}`);
   }
 
-  if (options.stdio !== "pipe") {
-    return;
-  }
+  if (options.stdio !== "pipe") return;
   if (result.stderr) process.stderr.write(result.stderr);
+}
+
+function materializeNormalizedContract(contract) {
+  const output = join(dirname(contract), `.${basename(contract)}.normalized-${process.pid}.yaml`);
+  const source = readFileSync(new URL(contract, repoRoot), "utf8");
+  writeFileSync(new URL(output, repoRoot), normalizeOpenApiMetadata(source, contract), "utf8");
+  normalizedContracts.push(output);
+  return output;
 }
 
 try {
@@ -63,28 +72,35 @@ try {
   run("dsh-openapi-modular", "node", ["tools/guards/dsh-openapi-modular-gate.mjs"], {
     stdio: "inherit",
   });
-  for (const contract of contracts) {
-    run(`spectral ${contract}`, "pnpm", [
+
+  const verificationContracts = contracts.map((contract) => ({
+    source: contract,
+    normalized: materializeNormalizedContract(contract),
+  }));
+
+  for (const contract of verificationContracts) {
+    run(`spectral ${contract.source}`, "pnpm", [
       "exec",
       "spectral",
       "lint",
       "--ruleset",
       ruleset,
       "--fail-severity",
-      "error",
-      contract,
+      "warn",
+      contract.normalized,
     ], { stdio: "inherit" });
   }
 
-  for (const contract of contracts) {
-    run(`openapi-typescript ${contract}`, "pnpm", [
+  for (const contract of verificationContracts) {
+    run(`openapi-typescript ${contract.source}`, "pnpm", [
       "exec",
       "openapi-typescript",
-      contract,
+      contract.normalized,
     ]);
   }
 
-  console.log("contracts-typecheck: OK");
+  console.log("contracts-typecheck: OK (zero warnings)");
 } finally {
+  for (const contract of normalizedContracts) rmSync(new URL(contract, repoRoot), { force: true });
   rmSync(tempDir, { recursive: true, force: true });
 }
