@@ -241,6 +241,7 @@ function defineBthwaniExpoApp(appKey) {
   const androidMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_ANDROID_API_KEY", appKey);
   const iosMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_IOS_API_KEY", appKey);
   const sentryNativeConfigured = Boolean(sentry.dsn && sentry.organization && sentry.project);
+  const hasMapsFeature = features.includes("maps");
   return {
     name: app.name,
     slug: app.slug,
@@ -280,8 +281,8 @@ function defineBthwaniExpoApp(appKey) {
         androidNativeConfigured: Boolean(googleServicesFile),
       },
       maps: {
-        androidNativeConfigured: Boolean(androidMapsKey),
-        iosNativeConfigured: Boolean(iosMapsKey),
+        androidNativeConfigured: Boolean(hasMapsFeature && androidMapsKey),
+        iosNativeConfigured: Boolean(hasMapsFeature && iosMapsKey),
       },
       eas: { projectId: app.projectId },
     },
