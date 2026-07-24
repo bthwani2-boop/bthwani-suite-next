@@ -79,7 +79,7 @@ func (s *Service) RuntimeSnapshot(ctx context.Context) RuntimeSnapshot {
 	}
 	return RuntimeSnapshot{
 		Status:         status,
-		Revision:       "platform-control-jrn040-jrn041-governed-delivery",
+		Revision:       "platform-control-governed-delivery",
 		GeneratedAt:    generatedAt,
 		VariablesState: StateOperational,
 		FlagsState:     StateOperational,
@@ -90,7 +90,7 @@ func (s *Service) RuntimeSnapshot(ctx context.Context) RuntimeSnapshot {
 		ServicesState:  healthState,
 		Evidence: []string{
 			"platform-control PostgreSQL store attached",
-			"JRN-040 change sets use immutable validation snapshots, maker-checker review, target reservation, optimistic concurrency, redacted audit, atomic apply and reasoned rollback",
+			"platform change sets use immutable validation snapshots, maker-checker review, target reservation, optimistic concurrency, redacted audit, atomic apply and reasoned rollback",
 			"service posture is computed from live health probes",
 			rolloutEvidence,
 		},
