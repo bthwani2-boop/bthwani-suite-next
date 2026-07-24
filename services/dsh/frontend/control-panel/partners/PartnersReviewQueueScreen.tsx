@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Badge,
@@ -12,9 +13,13 @@ import {
   colorPalette,
   alpha,
 } from "@bthwani/ui-kit";
+import { useControlPanelSession } from "@dsh-shared/session/control-panel-session";
 import { usePartnersController } from "../../shared/partner";
 import { PartnerListScreen } from "./PartnerListScreen";
+import { StoreManagementScreen } from "./stores/StoreManagementScreen";
 import { FieldReadinessQueueScreen } from "./field-readiness/FieldReadinessQueueScreen";
+import { PartnerGovernanceWorkspaceScreen } from "./PartnerGovernanceWorkspaceScreen";
+import { PartnerCreatePanel } from "./PartnerCreatePanel";
 
 type Props = {
   readonly onOpenPartner?: (partnerId: string) => void;
@@ -23,8 +28,11 @@ type Props = {
 export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { state: sessionState } = useControlPanelSession();
+  const [createOpen, setCreateOpen] = useState(false);
   const {
     activeTab,
+    activeSubTab,
     tabItems,
     subTabItems,
     activePartnersCount,
@@ -36,122 +44,35 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
     initialWorkspace: "inbox",
     searchParams: searchParams ?? undefined,
     router: router ?? undefined,
-    authKind: "authenticated",
+    authKind: sessionState.kind,
   });
 
-  const renderRegistrationQueue = () => {
-    if (adminController.listState.kind === "loading" || adminController.listState.kind === "idle") {
-      return (
-        <StateView
-          stateId="loading"
-          title="جاري تحميل ملفات الانضمام"
-          description="تتم قراءة الشركاء من DSH Runtime."
-        />
-      );
-    }
-
-    if (adminController.listState.kind === "offline") {
-      return (
-        <StateView
-          stateId="offline"
-          tone="warning"
-          title="لا يوجد اتصال بخدمة الشركاء"
-          description="لم تُعرض بيانات محلية كحقيقة تشغيلية. أعد الاتصال ثم اقرأ أحدث حالة من DSH."
-          actionLabel="إعادة المحاولة"
-          onActionPress={adminController.retry}
-        />
-      );
-    }
-
-    if (adminController.listState.kind === "error") {
-      return (
-        <StateView
-          stateId="recoverableError"
-          title="تعذر تحميل ملفات الانضمام"
-          description={adminController.listState.message}
-          actionLabel="إعادة المحاولة"
-          onActionPress={adminController.retry}
-        />
-      );
-    }
-
-    if (adminController.listState.kind === "empty" || adminController.rows.length === 0) {
-      return (
-        <StateView
-          stateId="empty"
-          title="لا توجد ملفات انضمام"
-          description="لا توجد طلبات شراكة مطابقة للحالة الحالية."
-          actionLabel="تحديث"
-          onActionPress={adminController.retry}
-        />
-      );
-    }
-
+  if (sessionState.kind !== "authenticated") {
     return (
-      <Card style={{ padding: "1rem" }}>
-        <Text role="titleMd" style={{ marginBottom: "1rem" }}>طلبات الشركاء والمقدمين</Text>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "right" }}>
-            <thead>
-              <tr style={{ borderBottom: `2px solid ${lightThemeColors.borderColor}` }}>
-                <th style={{ padding: "0.75rem" }}>اسم الشريك</th>
-                <th style={{ padding: "0.75rem" }}>رقم الجوال</th>
-                <th style={{ padding: "0.75rem" }}>الحالة</th>
-                <th style={{ padding: "0.75rem" }}>الإجراء</th>
-              </tr>
-            </thead>
-            <tbody>
-              {adminController.rows.map((row) => {
-                const originalPartner = adminController.listState.kind === "success"
-                  ? adminController.listState.partners.find((partner) => partner.id === row.id)
-                  : undefined;
-                return (
-                  <tr key={row.id} style={{ borderBottom: `1px solid ${lightThemeColors.borderColor}` }}>
-                    <td style={{ padding: "0.75rem" }}>
-                      <Text style={{ fontWeight: "bold" }}>{row.displayName}</Text>
-                    </td>
-                    <td style={{ padding: "0.75rem" }}>{originalPartner?.primaryPhone || "—"}</td>
-                    <td style={{ padding: "0.75rem" }}>
-                      <Badge
-                        label={row.statusLabel}
-                        tone={
-                          row.statusTone === "muted" ? "neutral" :
-                          row.statusTone === "success" ? "success" :
-                          row.statusTone === "warning" ? "warning" :
-                          row.statusTone === "danger" ? "danger" : "info"
-                        }
-                      />
-                    </td>
-                    <td style={{ padding: "0.75rem" }}>
-                      {onOpenPartner ? (
-                        <Button
-                          label="فتح ملف الشريك"
-                          tone="secondary"
-                          onPress={() => onOpenPartner(row.id)}
-                        />
-                      ) : (
-                        <Text role="caption" tone="muted">مسار التفاصيل غير متاح</Text>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <ScrollScreen>
+        <StateView
+          stateId={sessionState.kind === "restoring" ? "loading" : "permissionDenied"}
+          title={sessionState.kind === "restoring" ? "جاري استعادة جلسة لوحة التحكم" : "جلسة مصادق عليها مطلوبة"}
+          description="لا يتم تحميل أو عرض بيانات الشركاء قبل استعادة جلسة المشغل وصلاحيات المستأجر."
+        />
+      </ScrollScreen>
     );
-  };
+  }
 
   const renderContent = () => {
-    switch (activeTab) {
-      case "inbox":
-        return renderRegistrationQueue();
-      case "all_partners":
-        return <PartnerListScreen {...(onOpenPartner ? { onSelectPartner: onOpenPartner } : {})} />;
-      case "field_readiness":
-        return <FieldReadinessQueueScreen />;
+    if (activeTab === "field_readiness") return <FieldReadinessQueueScreen />;
+    if (activeTab === "stores") return <StoreManagementScreen />;
+    if (activeTab === "all_partners") {
+      return <PartnerListScreen {...(onOpenPartner ? { onSelectPartner: onOpenPartner } : {})} />;
     }
+    return (
+      <PartnerGovernanceWorkspaceScreen
+        workspace={activeTab}
+        subTab={activeSubTab}
+        controller={adminController}
+        {...(onOpenPartner ? { onOpenPartner } : {})}
+      />
+    );
   };
 
   return (
@@ -160,14 +81,14 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", borderBottom: `1px solid ${lightThemeColors.borderColor}`, paddingBottom: "1rem" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Text role="titleMd">شركاء DSH</Text>
-              <Badge label="حقيقة تشغيلية" tone="action" />
+              <Text role="titleMd">الشركاء والمتاجر</Text>
+              <Badge label="فول ستاك متعدد المستأجرين" tone="action" />
             </div>
             <Text role="body" tone="muted" style={{ fontSize: "12px", marginTop: "0.25rem" }}>
-              طلبات الانضمام، ملفات الشركاء، وتصعيدات الجاهزية المرتبطة بخدمات DSH الفعلية
+              الهوية القانونية، التفعيل، الوثائق، الفروع، الجاهزية، الكتالوج، الأداء، الترويج، مستوى الخدمة والعقود ضمن مساحة موحدة
             </Text>
           </div>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
             <Card style={{ padding: "0.5rem 0.75rem", alignItems: "center" }}>
               <Text role="caption" tone="muted">نشطون أو ظاهرون</Text>
               <Text role="titleMd" style={{ fontWeight: "bold", marginTop: "0.25rem" }}>{activePartnersCount}</Text>
@@ -176,8 +97,17 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
               <Text role="caption" tone="muted">قيد المعالجة</Text>
               <Text role="titleMd" style={{ fontWeight: "bold", color: lightThemeColors.warning, marginTop: "0.25rem" }}>{pendingCount}</Text>
             </Card>
+            <Button label={createOpen ? "إغلاق نموذج الإضافة" : "+ إضافة شريك"} tone="primary" onPress={() => setCreateOpen((current) => !current)} />
           </div>
         </div>
+
+        {createOpen ? (
+          <PartnerCreatePanel
+            controller={adminController}
+            onClose={() => setCreateOpen(false)}
+            {...(onOpenPartner ? { onCreated: onOpenPartner } : {})}
+          />
+        ) : null}
 
         <div style={{ display: "flex", gap: "0.5rem", padding: "0.5rem 0", flexWrap: "wrap" }}>
           {tabItems.map((tab) => (
@@ -190,7 +120,7 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
           ))}
         </div>
 
-        {subTabItems.length > 1 && (
+        {subTabItems.length > 0 ? (
           <div style={{ display: "flex", gap: "0.5rem", padding: "0.5rem", flexWrap: "wrap", background: alpha(colorPalette.black, 0.02), borderRadius: "4px" }}>
             {subTabItems.map((subTab) => (
               <Button
@@ -201,7 +131,7 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
               />
             ))}
           </div>
-        )}
+        ) : null}
 
         <div style={{ marginTop: "0.5rem" }}>{renderContent()}</div>
       </div>
