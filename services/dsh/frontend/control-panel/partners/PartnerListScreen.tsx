@@ -1,6 +1,6 @@
 "use client";
 
-import { statusScale, neutralScale } from "@bthwani/ui-kit";
+import { neutralScale, statusScale } from "@bthwani/ui-kit";
 import {
   CpButton,
   CpFilterBar,
@@ -13,8 +13,9 @@ import {
   CpTableHeaderCell,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame, PaginationToolbar } from "@bthwani/control-panel/shell";
+import { useControlPanelSession } from "@dsh-shared/session/control-panel-session";
 import {
-  usePartnerAdminController,
+  usePartnerWorkspaceListController,
   getDshPartnerActivationStatusLabel,
 } from "../../shared/partner";
 
@@ -25,6 +26,10 @@ const STATUS_OPTIONS = [
   { value: "documents_missing", label: "وثائق ناقصة" },
   { value: "documents_uploaded", label: "وثائق مرفوعة" },
   { value: "documents_verified", label: "وثائق معتمدة" },
+  { value: "catalog_not_ready", label: "كتالوج غير جاهز" },
+  { value: "catalog_ready", label: "كتالوج جاهز" },
+  { value: "delivery_modes_not_ready", label: "أنماط التوصيل غير جاهزة" },
+  { value: "delivery_modes_ready", label: "أنماط التوصيل جاهزة" },
   { value: "ops_review", label: "مراجعة العمليات" },
   { value: "ops_approved", label: "معتمد" },
   { value: "ops_rejected", label: "مرفوض" },
@@ -40,7 +45,7 @@ const CATEGORY_OPTIONS = [
   { value: "grocery", label: "بقالة" },
   { value: "pharmacy", label: "صيدلية" },
   { value: "bakery", label: "مخبز" },
-  { value: "other", label: "أخرى" },
+  { value: "default", label: "أخرى" },
 ];
 
 const TONE_COLOR: Record<string, string> = {
@@ -72,48 +77,52 @@ type Props = {
 };
 
 export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
-  const c = usePartnerAdminController("authenticated");
+  const { state: sessionState } = useControlPanelSession();
+  const controller = usePartnerWorkspaceListController(sessionState.kind);
 
   const stateView =
-    c.listState.kind === "loading" ? (
+    sessionState.kind !== "authenticated" ? (
+      <CpStatePanel role="alert" title="جلسة مصادق عليها مطلوبة" description="يجب استعادة جلسة المشغل قبل قراءة الشركاء." />
+    ) : controller.listState.kind === "loading" || controller.listState.kind === "idle" ? (
       <CpStatePanel role="status" title="جاري تحميل الشركاء…" />
-    ) : c.listState.kind === "empty" ? (
-      <CpStatePanel
-        role="status"
-        title="لا يوجد شركاء مطابقون"
-        description="جرّب تغيير الفلتر أو البحث بكلمة مختلفة."
-      />
-    ) : c.listState.kind === "error" ? (
-      <CpStatePanel role="alert" title="تعذر تحميل الشركاء" code={c.listState.message}>
-        <CpRetryButton onClick={c.retry}>إعادة المحاولة</CpRetryButton>
+    ) : controller.listState.kind === "offline" ? (
+      <CpStatePanel role="alert" title="DSH غير متاح حاليًا">
+        <CpRetryButton onClick={controller.retry}>إعادة المحاولة</CpRetryButton>
+      </CpStatePanel>
+    ) : controller.listState.kind === "empty" ? (
+      <CpStatePanel role="status" title="لا يوجد شركاء مطابقون" description="جرّب تغيير الحالة أو الفئة." />
+    ) : controller.listState.kind === "error" ? (
+      <CpStatePanel role="alert" title="تعذر تحميل الشركاء" code={controller.listState.message}>
+        <CpRetryButton onClick={controller.retry}>إعادة المحاولة</CpRetryButton>
       </CpStatePanel>
     ) : undefined;
+
+  const start = controller.total === 0 ? 0 : controller.page * controller.pageSize + 1;
+  const end = Math.min((controller.page + 1) * controller.pageSize, controller.total);
 
   return (
     <DataTablePageFrame
       header={
         <CpPageHeader title="إدارة الشركاء">
-          {c.total > 0 ? (
+          {controller.total > 0 ? (
             <span style={{ fontSize: "0.8rem", color: neutralScale[500] }}>
-              {c.total} شريك
+              {controller.total} شريك
             </span>
           ) : null}
-          {onCreatePartner ? (
-            <CpButton onClick={onCreatePartner}>+ إضافة شريك</CpButton>
-          ) : null}
+          {onCreatePartner ? <CpButton onClick={onCreatePartner}>+ إضافة شريك</CpButton> : null}
         </CpPageHeader>
       }
       filters={
         <CpFilterBar label="فلاتر الشركاء">
           <CpSelect
-            value={c.filters.status}
-            onChange={(v) => c.setFilters({ ...c.filters, status: v })}
+            value={controller.filters.status}
+            onChange={(status) => controller.setFilters({ ...controller.filters, status })}
             options={STATUS_OPTIONS}
             aria-label="فلتر الحالة"
           />
           <CpSelect
-            value={c.filters.category}
-            onChange={(v) => c.setFilters({ ...c.filters, category: v })}
+            value={controller.filters.category}
+            onChange={(category) => controller.setFilters({ ...controller.filters, category })}
             options={CATEGORY_OPTIONS}
             aria-label="فلتر الفئة"
           />
@@ -121,12 +130,12 @@ export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
       }
       toolbar={
         <PaginationToolbar
-          label={`${c.page * 50 + 1}–${Math.min((c.page + 1) * 50, c.total)} من ${c.total}`}
-          hasPrev={c.hasPrevPage}
-          hasNext={c.hasNextPage}
-          onPrev={c.prevPage}
-          onNext={c.nextPage}
-          onRetry={c.retry}
+          label={`${start}–${end} من ${controller.total}`}
+          hasPrev={controller.hasPrevPage}
+          hasNext={controller.hasNextPage}
+          onPrev={controller.prevPage}
+          onNext={controller.nextPage}
+          onRetry={controller.retry}
         />
       }
       stateView={stateView}
@@ -142,7 +151,7 @@ export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
           </tr>
         </thead>
         <tbody>
-          {c.rows.map((row) => (
+          {controller.rows.map((row) => (
             <tr key={row.id}>
               <CpTableCell>
                 <div style={{ fontWeight: 600 }}>{row.displayName}</div>
@@ -150,7 +159,7 @@ export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
               </CpTableCell>
               <CpTableCell>{row.category}</CpTableCell>
               <CpTableCell>
-                <span style={statusBadgeStyle(row.statusTone)}>{row.statusLabel}</span>
+                <span style={statusBadgeStyle(row.statusTone)}>{getDshPartnerActivationStatusLabel(row.activationStatus)}</span>
               </CpTableCell>
               <CpTableCell>
                 <span style={{ color: neutralScale[500], fontSize: "0.75rem" }}>{row.nextAction}</span>
