@@ -1,6 +1,6 @@
-﻿extends: ["spectral:oas"]
+extends: ["spectral:oas"]
 rules:
   operation-tags: error
   operation-operationId: error
   info-contact: error
-  invalid-ref: off
+  invalid-ref: error
