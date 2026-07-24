@@ -60,9 +60,6 @@ try {
   run("contracts-foundation", "node", ["tools/important-scripts/contracts-foundation.mjs"], {
     stdio: "inherit",
   });
-  run("dsh-openapi-compose", "node", ["tools/scripts/compose-dsh-openapi.mjs"], {
-    stdio: "inherit",
-  });
   run("dsh-openapi-modular", "node", ["tools/guards/dsh-openapi-modular-gate.mjs"], {
     stdio: "inherit",
   });
