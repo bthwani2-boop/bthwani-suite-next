@@ -4,15 +4,25 @@ export function resolveDshMediaUrl(
   raw: string | null | undefined,
   apiBaseUrl = resolveDshApiBaseUrl(),
 ): string | null {
-  if (raw == null || raw.trim().length === 0) return null;
+  const value = raw?.trim();
+  if (!value) return null;
+
+  const hasValidApiBaseUrl = validateDshApiBaseUrl(apiBaseUrl);
 
   try {
-    const media = new URL(raw);
-    if (media.protocol !== "http:" && media.protocol !== "https:") return null;
+    const media = /^https?:\/\//i.test(value)
+      ? new URL(value)
+      : hasValidApiBaseUrl
+        ? new URL(value, apiBaseUrl)
+        : null;
+
+    if (media === null || (media.protocol !== "http:" && media.protocol !== "https:")) {
+      return null;
+    }
 
     if (
       (media.hostname === "localhost" || media.hostname === "127.0.0.1") &&
-      validateDshApiBaseUrl(apiBaseUrl)
+      hasValidApiBaseUrl
     ) {
       media.hostname = new URL(apiBaseUrl).hostname;
     }
