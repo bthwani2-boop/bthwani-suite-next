@@ -5,9 +5,20 @@ const guardId = "nomenclature-guard";
 const violations = [];
 
 const ZERO_SHA = /^0+$/;
+const JOURNEY_ID = /\bJRN[-_\s]?\d{3}\b/i;
+const USER_VISIBLE_PROP = /\b(?:title|subtitle|label|heading|description|message|placeholder|accessibilityLabel|emptyText|errorText|sectionTitle|tabLabel)\s*[:=]/i;
 
 function normalizePath(value) {
   return String(value ?? "").trim().replaceAll("\\", "/").replace(/^\.\//, "");
+}
+
+function inUserFacingScope(file) {
+  if (!/\.(?:tsx?|jsx?)$/i.test(file)) return false;
+  if (/(?:^|\/)(?:tests?|__tests__|generated|clients\/generated)(?:\/|$)/i.test(file)) return false;
+  return (
+    /^apps\/[^/]+\/runtime\/src\//.test(file) ||
+    /^services\/[^/]+\/frontend\//.test(file)
+  );
 }
 
 function getChangedFiles(baseSha, headSha) {
@@ -34,35 +45,41 @@ function getDiffContent(baseSha, headSha, file) {
     : ["show", "-U0", headSha, "--", file];
   try {
     return execFileSync("git", args, { encoding: "utf8" });
-  } catch (error) {
+  } catch {
     return "";
   }
+}
+
+function exposesInternalJourneyId(line) {
+  if (!JOURNEY_ID.test(line)) return false;
+
+  // Internal route names, imports, identifiers, test references and governed
+  // capability IDs are legitimate. Only rendered JSX text and common UI-copy
+  // properties are user-facing nomenclature boundaries.
+  const jsxText = />[^<\r\n]*\bJRN[-_\s]?\d{3}\b[^<\r\n]*</i.test(line);
+  const visibleProperty = USER_VISIBLE_PROP.test(line);
+  return jsxText || visibleProperty;
 }
 
 const baseSha = String(process.env.CI_BASE_SHA ?? "").trim();
 const headSha = String(process.env.CI_HEAD_SHA ?? "HEAD").trim() || "HEAD";
 
-const files = getChangedFiles(baseSha, headSha);
+const files = getChangedFiles(baseSha, headSha).filter(inUserFacingScope);
 
 for (const file of files) {
-  // Check filename first
-  if (/jrn/i.test(file)) {
-    violations.push({ file, line: 0, message: "OBJECTIVE_NOMENCLATURE_REQUIRED_IN_FILENAME" });
-    continue;
-  }
-
-  // Check diff content
   const diff = getDiffContent(baseSha, headSha, file);
   const lines = diff.split(/\r?\n/);
-  
+
   for (const line of lines) {
-    // Only care about newly added lines (+), but not file header (+++)
-    if (line.startsWith("+") && !line.startsWith("+++")) {
-      if (/jrn/i.test(line)) {
-        violations.push({ file, line: 0, message: "OBJECTIVE_NOMENCLATURE_REQUIRED_IN_CODE" });
-        break; // One violation per file is enough
-      }
-    }
+    if (!line.startsWith("+") || line.startsWith("+++")) continue;
+    if (!exposesInternalJourneyId(line.slice(1))) continue;
+
+    violations.push({
+      file,
+      line: 0,
+      message: "INTERNAL_JOURNEY_ID_EXPOSED_TO_USER — replace JRN identifier with an objective product label",
+    });
+    break;
   }
 }
 
