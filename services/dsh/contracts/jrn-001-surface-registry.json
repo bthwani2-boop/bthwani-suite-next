@@ -1,8 +1,8 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "journeyId": "JRN-001",
   "sliceId": "FS-10",
-  "description": "Required UI surfaces, routes, screens, tabs, actions, icons, and deep-navigation bindings for partner onboarding and first-store publication.",
+  "description": "Required UI surfaces, routes, governed partner workspaces, multi-store readiness, ownership transfer, actions and deep-navigation bindings for partner onboarding and store publication.",
   "authority": "governance/product/contracts/jrn-001-partner-onboarding-store-publication.product-truth.json",
   "requiredSurfaces": [
     {
@@ -55,7 +55,7 @@
       "actors": ["control-operator"],
       "routes": [
         {
-          "routeId": "partners-list",
+          "routeId": "partners-workspace",
           "routeFile": "apps/control-panel/runtime/src/app/dsh/partners/page.tsx",
           "screenFile": "services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx",
           "deepLink": "/dsh/partners/{partnerId}"
@@ -63,12 +63,19 @@
         {
           "routeId": "partner-detail",
           "routeFile": "apps/control-panel/runtime/src/app/dsh/partners/[partnerId]/page.tsx",
-          "screenFile": "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx",
+          "screenFile": "services/dsh/frontend/control-panel/partners/PartnerDetailUnifiedScreen.tsx",
           "backRoute": "/dsh/partners"
+        },
+        {
+          "routeId": "stores-management",
+          "routeFile": "apps/control-panel/runtime/src/app/dsh/partners/stores/page.tsx",
+          "screenFile": "services/dsh/frontend/control-panel/partners/stores/StoreManagementScreen.tsx",
+          "workspaceTab": "stores"
         }
       ],
+      "workspaces": ["inbox", "activation", "documents", "field_readiness", "readiness_approvals", "catalog_exceptions", "performance", "promotion_eligibility", "service_levels", "contracts", "deactivation", "stores", "all_partners"],
       "tabs": ["overview", "documents", "visits", "stores", "readiness", "audit"],
-      "actions": ["open-partner", "approve-document", "reject-document", "request-resubmit", "link-store", "apply-transition", "read-audit"]
+      "actions": ["create-partner", "open-partner", "approve-document", "reject-document", "request-resubmit", "assign-store", "transfer-store", "apply-transition", "read-multi-store-readiness", "read-audit"]
     }
   ],
   "excludedSurfaces": [
