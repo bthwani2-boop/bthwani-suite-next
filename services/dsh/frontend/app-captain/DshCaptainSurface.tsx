@@ -1,23 +1,15 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Icon, StateView, colorRoles, spacing } from "@bthwani/ui-kit";
 import { useIdentitySession } from "@bthwani/core-identity";
-import {
-  Box,
-  Button,
-  Icon,
-  StateView,
-  Surface,
-  Text,
-  colorRoles,
-  spacing,
-} from "@bthwani/ui-kit";
 import { DshCaptainOrderJourneyRenderer } from "./DshCaptainOrderJourneyRenderer";
 import { useDshCaptainSurfaceModel } from "./useDshCaptainSurfaceModel";
 import type { DshCaptainRoute } from "./dsh-captain.types";
 import type { DshCaptainNavigationCommand } from "../shared/delivery/captain.surface.types";
 import { useCameraPhotoCapture } from "../shared/media/useCameraPhotoCapture";
 import { CaptainAssignmentOfferPanel } from "./orders/CaptainAssignmentOfferPanel";
+import { BottomNavBar } from "./components/BottomNavBar";
+import { ModernPremiumHeader } from "./components/ModernPremiumHeader";
 
 export type DshCaptainSurfaceProps = {
   readonly captainId?: string;
@@ -45,33 +37,32 @@ const ACCOUNT_ITEMS: ReadonlyArray<{
 function CaptainBottomNavigation({
   route,
   setRoute,
-  openSupportDirectory,
+  openActiveTask,
 }: {
   readonly route: DshCaptainRoute;
   readonly setRoute: (route: DshCaptainRoute) => void;
-  readonly openSupportDirectory: () => void;
+  readonly openActiveTask: () => void;
 }) {
-  const items: ReadonlyArray<{ readonly id: DshCaptainRoute; readonly label: string }> = [
-    { id: "entry", label: "الرئيسية" },
-    { id: "inbox", label: "الطلبات" },
-    { id: "account", label: "الحساب" },
-  ];
+  const items = [
+    { id: "entry", label: "الرئيسية", icon: "home-outline", activeIcon: "home" },
+    { id: "inbox", label: "الطلبات", icon: "bag-outline", activeIcon: "bag" },
+    { id: "bell", label: "التنبيهات", icon: "notifications-outline", activeIcon: "notifications" },
+    { id: "account", label: "الحساب", icon: "person-outline", activeIcon: "person" },
+  ] as const;
+  const launcherActive = route === "detail" || route === "map" || route === "pod-submission";
+
   return (
-    <Surface tone="raised" padding={2}>
-      <Box layoutDirection="row" gap={2} style={{ justifyContent: "space-between" }}>
-        {items.map((item) => (
-          <Button
-            key={item.id}
-            label={item.label}
-            size="sm"
-            tone={route === item.id ? "brand" : "ghost"}
-            fullWidth={false}
-            onPress={() => setRoute(item.id)}
-          />
-        ))}
-        <Button label="الدعم" size="sm" tone="ghost" fullWidth={false} onPress={openSupportDirectory} />
-      </Box>
-    </Surface>
+    <View style={styles.bottomNavShell}>
+      <BottomNavBar
+        activeId={route}
+        launcherLabel="المهمة"
+        launcherIcon="navigate"
+        launcherActive={launcherActive}
+        onLauncherPress={openActiveTask}
+        onSelect={(id) => setRoute(id as DshCaptainRoute)}
+        items={items}
+      />
+    </View>
   );
 }
 
@@ -82,7 +73,6 @@ function AuthenticatedCaptainSurface({
   readonly captainId: string;
   readonly command: DshCaptainNavigationCommand;
 }) {
-  const insets = useSafeAreaInsets();
   const {
     state,
     actions,
@@ -109,7 +99,7 @@ function AuthenticatedCaptainSurface({
     <CaptainBottomNavigation
       route={state.route}
       setRoute={actions.setRoute}
-      openSupportDirectory={actions.openSupportDirectory}
+      openActiveTask={() => actions.setRoute(activeAssignment ? "detail" : "inbox")}
     />
   );
 
@@ -117,18 +107,33 @@ function AuthenticatedCaptainSurface({
   const offerError = state.inboxState === "error" || state.declineSheetState === "error"
     ? "تغيرت حالة العرض أو تعذر الوصول إلى DSH. حدّث صندوق المهام ثم أعد القرار."
     : undefined;
+  const activeStageLabel = derived.activeSummary?.currentStageLabel;
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <Surface tone="raised" padding={3} style={styles.statusStrip}>
-        <Box layoutDirection="row" gap={3} style={{ justifyContent: "space-between", alignItems: "center" }}>
-          <View style={{ flex: 1, alignItems: "flex-end" }}>
-            <Text role="bodyStrong">بثواني كابتن</Text>
-            <Text role="caption" tone="muted">{derived.currentAvailabilityMeta.label} · GPS: {state.gpsStatus}</Text>
-          </View>
-          <Button label="الإشعارات" size="sm" tone="ghost" fullWidth={false} onPress={() => actions.setRoute("bell")} />
-        </Box>
-      </Surface>
+    <View style={styles.root}>
+      <ModernPremiumHeader
+        title="بثواني كابتن"
+        locationLabel={`${derived.currentAvailabilityMeta.label} · GPS: ${state.gpsStatus}`}
+        actions={[
+          {
+            id: "notifications",
+            accessibilityLabel: "فتح تنبيهات الكابتن",
+            icon: <Icon name="notifications-outline" size={21} color={colorRoles.surfaceBase} />,
+            onPress: () => actions.setRoute("bell"),
+          },
+          {
+            id: "account",
+            accessibilityLabel: "فتح حساب الكابتن",
+            icon: <Icon name="person-outline" size={21} color={colorRoles.surfaceBase} />,
+            onPress: actions.openCaptainAccount,
+          },
+        ]}
+        tickerStatus={activeAssignment ? "مهمة نشطة" : "جاهزية"}
+        tickerMessage={activeAssignment
+          ? `${derived.activeOrderDisplayId} · ${activeStageLabel ?? "مهمة قيد التنفيذ"}`
+          : "لا توجد مهمة نشطة. تتم مزامنة صندوق العروض من DSH."}
+        onTickerPress={() => actions.setRoute(activeAssignment ? "detail" : "inbox")}
+      />
 
       {assignmentClosureNotice ? (
         <StateView
@@ -269,11 +274,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colorRoles.surfaceBase,
   },
-  statusStrip: {
-    marginHorizontal: spacing[3],
-    marginTop: spacing[2],
-  },
   content: {
     flex: 1,
+  },
+  bottomNavShell: {
+    paddingTop: 20,
+    paddingHorizontal: spacing[3],
+    paddingBottom: spacing[2],
   },
 });
