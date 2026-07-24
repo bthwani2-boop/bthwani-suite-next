@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestJRN040StrictBoundaryRejectsExpandedSensitiveClassifications(t *testing.T) {
+func TestStrictBoundaryRejectsExpandedSensitiveClassifications(t *testing.T) {
 	repository := &Repository{}
 	for _, classification := range []string{"sensitive", "confidential", "restricted"} {
 		t.Run(classification, func(t *testing.T) {
@@ -24,7 +24,7 @@ func TestJRN040StrictBoundaryRejectsExpandedSensitiveClassifications(t *testing.
 					RollbackPlan:     "not applicable",
 					Items: []CreateChangeSetItemInput{{
 						TargetType:       ChangeTargetVariable,
-						TargetKey:        "JRN040_STRICT_" + strings.ToUpper(classification),
+						TargetKey:        "PLATFORM_STRICT_" + strings.ToUpper(classification),
 						OwnerService:     "vault",
 						ScopeType:        "global",
 						ValueType:        "json",
@@ -41,7 +41,7 @@ func TestJRN040StrictBoundaryRejectsExpandedSensitiveClassifications(t *testing.
 	}
 }
 
-func TestJRN040StrictBoundaryEnforcesReasonLength(t *testing.T) {
+func TestStrictBoundaryEnforcesReasonLength(t *testing.T) {
 	repository := &Repository{}
 	tooLong := strings.Repeat("x", maxGovernedTextLength+1)
 
