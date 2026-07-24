@@ -23,29 +23,32 @@ function renderOffersSection(onOpenOffersPress?: () => void, onOpenExecutionPres
 	return (
 		<Surface tone="action" gap={3}>
 			<SectionHeader
-				title="مراجعة العروض الواردة"
-				subtitle="ابدأ من قائمة عروض الكابتن حتى يصبح قرار الإرسال التالي واضحًا خلال ثوانٍ."
+				title="العروض والمهام"
+				subtitle="اقرأ عروض DSH الحية فقط، ثم انتقل للتنفيذ عند وجود مهمة مقبولة."
 			/>
 			<Box gap={2}>
 				<Text role="bodySm" tone="default">
-					يبقى العرض المفتوح نقطة البداية نفسها المستخدمة في أسلوب تطبيق العميل: عنوان واضح، محتوى قصير، ثم زر إجراء واحد مباشر.
+					لا تُنشئ هذه الصفحة طلبات أو مهام افتراضية. كل بطاقة تظهر هنا يجب أن تأتي من صندوق الكابتن الحقيقي.
 				</Text>
 				<Button label="عرض العروض" tone="secondary" onPress={onOpenOffersPress} />
-				<Button label="فتح التنفيذ" tone="ghost" onPress={onOpenExecutionPress} />
+				{onOpenExecutionPress ? (
+					<Button label="فتح التنفيذ" tone="ghost" onPress={onOpenExecutionPress} />
+				) : null}
 			</Box>
 		</Surface>
 	);
 }
 
 function renderCompletionSection(onOpenProofCapturePress?: () => void) {
+	if (!onOpenProofCapturePress) return null;
 	return (
 		<Surface tone="raised" gap={3}>
 			<SectionHeader
-				title="التنفيذ والإثبات"
-				subtitle="يبقى رفع الإثبات بوابة إغلاق واضحة قبل إقفال الطلب بالكامل."
+				title="الإثبات والإغلاق"
+				subtitle="يظهر هذا المسار فقط عند وجود مهمة حية تتطلب PoD."
 			/>
 			<Text role="bodySm" tone="muted">
-				المالية والطبقات غير الحرجة خارج هذا المدخل الأول حتى تظل إجراءات التسليم هي الأساسية.
+				إثبات التسليم مرتبط بالمهمة النشطة ولا يستقبل معرفات محلية أو بيانات تجربة.
 			</Text>
 			<Button label="فتح إثبات التسليم" tone="secondary" onPress={onOpenProofCapturePress} />
 		</Surface>
@@ -64,14 +67,20 @@ function DshCaptainEntryScreen({
 		<DshOperationScreen
 			state={state}
 			title="مدخل الكابتن"
-			subtitle="مدخل أحادي الغرض لعمليات تسليم app-captain وأول خطوة إرسال بنفس البنية البصرية المستخدمة في تطبيق العميل."
+			subtitle="مدخل أحادي الغرض لعمليات تسليم app-captain."
 			content={
 				<Box gap={3}>
 					<Surface tone={isAvailable ? 'success' : 'raised'} gap={2}>
 						<Text role="titleSm">{isAvailable ? 'أنت متاح لاستقبال العروض' : 'أنت غير متاح حالياً'}</Text>
+						<Text role="bodySm" tone="muted">
+							{isAvailable
+								? 'سيستمر التطبيق في قراءة عروض DSH المؤهلة لهويتك.'
+								: 'فعّل الاستقبال لإظهار العروض الحية عند توفرها.'}
+						</Text>
 						<Button
 							label={isAvailable ? 'إيقاف الاستقبال' : 'بدء الاستقبال'}
 							tone={isAvailable ? 'danger' : 'primary'}
+							disabled={!onToggleAvailability}
 							onPress={() => onToggleAvailability?.(!isAvailable)}
 						/>
 					</Surface>
@@ -79,12 +88,6 @@ function DshCaptainEntryScreen({
 					{renderCompletionSection(onOpenProofCapturePress)}
 				</Box>
 			}
-			primaryActionLabel="فتح العروض"
-			secondaryActionLabel="فتح التنفيذ"
-			tertiaryActionLabel="فتح إثبات التسليم"
-			onPrimaryAction={onOpenOffersPress}
-			onSecondaryAction={onOpenExecutionPress}
-			onTertiaryAction={onOpenProofCapturePress}
 		/>
 	);
 }
