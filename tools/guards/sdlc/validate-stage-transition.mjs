@@ -39,7 +39,8 @@ const allowedDecisions = new Set([...nonTerminalDecisions, "PASS", "CLOSED_WITH_
 
 for (const marker of [
   "product_truth_precedes_implementation",
-  "product_manager_and_product_owner_approvals_are_separate",
+  "product_manager_and_product_owner_authorities_remain_logically_separate",
+  "single_owner_mode_may_combine_eligible_human_approval_identities",
   "independent_reviewer_owns_g4_implementation_verification",
   "reviewer_must_differ_from_author_executor_and_coordinator",
   "product_acceptance_precedes_qa",
@@ -48,7 +49,8 @@ for (const marker of [
   "executor_cannot_finally_approve_own_high_risk_work",
   "governance_change_requires_governance_contract_authority",
   "ci_change_requires_ci_workflow_authority",
-  "governance_and_ci_approvers_must_be_separate_when_both_apply",
+  "governance_and_ci_authorities_remain_logically_separate",
+  "single_owner_authorization_never_satisfies_protected_closure",
   "wlt_finance_change_requires_financial_control_authority",
   "tenant_or_isolation_change_requires_isolation_security_approval",
   "residual_risk_requires_risk_acceptance_authority",
