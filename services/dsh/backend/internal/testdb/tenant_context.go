@@ -14,7 +14,9 @@ var tenantIDPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`)
 //
 // Production code never calls this helper. The fallback is allowed only inside
 // GitHub CI when DSH_REQUIRE_DB_TESTS=true; local DB tests must provide an
-// explicit DSH_TEST_TENANT_ID.
+// explicit DSH_TEST_TENANT_ID. github.com/lib/pq maps PGOPTIONS to PostgreSQL's
+// startup "options" parameter, so every pooled test connection receives the
+// same trusted tenant context.
 func ConfigureTrustedTenantContext() {
 	if os.Getenv("DSH_REQUIRE_DB_TESTS") != "true" {
 		return
@@ -34,6 +36,9 @@ func ConfigureTrustedTenantContext() {
 	option := "-c bthwani.tenant_id=" + tenantID
 	existing := strings.TrimSpace(os.Getenv("PGOPTIONS"))
 	if strings.Contains(existing, "bthwani.tenant_id=") {
+		if !strings.Contains(existing, "bthwani.tenant_id="+tenantID) {
+			panic(fmt.Sprintf("PGOPTIONS contains a conflicting DSH tenant context: %q", existing))
+		}
 		return
 	}
 	if existing != "" {
