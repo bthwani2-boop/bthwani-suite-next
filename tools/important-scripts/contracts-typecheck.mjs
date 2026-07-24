@@ -40,16 +40,18 @@ try {
   run("contracts-foundation", "node", ["tools/important-scripts/contracts-foundation.mjs"], {
     stdio: "inherit",
   });
-  run("spectral active contract lint", "pnpm", [
-    "exec",
-    "spectral",
-    "lint",
-    "--ruleset",
-    ruleset,
-    "--fail-severity",
-    "error",
-    ...contracts,
-  ], { stdio: "inherit" });
+  for (const contract of contracts) {
+    run(`spectral ${contract}`, "pnpm", [
+      "exec",
+      "spectral",
+      "lint",
+      "--ruleset",
+      ruleset,
+      "--fail-severity",
+      "error",
+      contract,
+    ], { stdio: "inherit" });
+  }
 
   for (const contract of contracts) {
     run(`openapi-typescript ${contract}`, "pnpm", [
