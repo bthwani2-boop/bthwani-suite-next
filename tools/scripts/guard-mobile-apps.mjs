@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
+import { validateGoogleServicesConfigFile } from "../mobile/google-services-config.mjs";
 
 const require = createRequire(import.meta.url);
 const { appEnvSuffix, resolveGoogleServicesFile } = require("../mobile/sentry-env.js");
@@ -91,25 +92,11 @@ function validateGoogleServicesFile(appKey, file, expectedPackage) {
   if (!file) {
     fail(`${appKey}: GOOGLE_SERVICES_JSON is required for ${profile}/${platform} build preflight`);
   }
-  const absolute = path.resolve(file);
-  if (!fs.existsSync(absolute)) {
-    fail(`${appKey}: GOOGLE_SERVICES_JSON does not point to an existing file: ${absolute}`);
-  }
 
-  let googleServices;
   try {
-    googleServices = JSON.parse(fs.readFileSync(absolute, "utf8"));
+    validateGoogleServicesConfigFile(file, expectedPackage);
   } catch (error) {
-    fail(`${appKey}: GOOGLE_SERVICES_JSON is not valid JSON: ${error.message}`);
-  }
-
-  const packageNames = (googleServices.client ?? [])
-    .map((client) => client?.client_info?.android_client_info?.package_name)
-    .filter((value) => typeof value === "string" && value.length > 0);
-
-  if (!packageNames.includes(expectedPackage)) {
-    const actual = packageNames.length > 0 ? packageNames.join(", ") : "none";
-    fail(`${appKey}: GOOGLE_SERVICES_JSON must contain Android package '${expectedPackage}' (found: ${actual})`);
+    fail(`${appKey}: GOOGLE_SERVICES_JSON validation failed: ${error.message}`);
   }
 }
 
@@ -181,7 +168,7 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (expo.extra?.appLine !== manifest.global.appLine) fail(`${key}: extra.appLine mismatch`);
   if (expo.extra?.sourceRepo !== manifest.global.sourceRepo) fail(`${key}: extra.sourceRepo mismatch`);
   if (expo.extra?.eas?.projectId !== app.projectId) fail(`${key}: EAS projectId mismatch`);
-  if (expo.runtimeVersion?.policy !== "fingerprint") fail(`${key}: fingerprint runtime policy is required`);
+  if (expo.runtimeVersion?.policy !== "appVersion") fail(`${key}: appVersion runtime policy is required`);
   if (expo.updates?.url !== `https://u.expo.dev/${app.projectId}`) fail(`${key}: EAS Update URL mismatch`);
   if (expo.updates?.checkAutomatically !== "ON_LOAD") fail(`${key}: update check policy mismatch`);
   if (expo.updates?.fallbackToCacheTimeout !== 0) fail(`${key}: update fallback timeout must be zero`);
@@ -298,7 +285,6 @@ for (const [key, app] of Object.entries(manifest.apps)) {
     }
   }
 }
-
 
 const workspace = fs.readFileSync(path.join(root, "pnpm-workspace.yaml"), "utf8");
 if (!workspace.includes("apps/*/runtime")) fail("pnpm-workspace.yaml must include apps/*/runtime");
