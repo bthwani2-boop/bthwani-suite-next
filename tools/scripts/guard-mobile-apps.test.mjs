@@ -61,6 +61,17 @@ function createIncompleteFirebaseFile(filename, packageName) {
   return filepath;
 }
 
+function cleanProviderEnvironment(overrides = {}) {
+  const environment = { ...process.env };
+  const providerVariablePattern = /^(?:GOOGLE_SERVICES_JSON|GOOGLE_MAPS_(?:ANDROID|IOS)_API_KEY|SENTRY_|EXPO_PUBLIC_SENTRY_|BTHWANI_SENTRY_|BTHWANI_APP_ENV)/;
+
+  for (const name of Object.keys(environment)) {
+    if (providerVariablePattern.test(name)) delete environment[name];
+  }
+
+  return { ...environment, ...overrides };
+}
+
 function runGuard(args, env = {}) {
   return spawnSync(
     process.execPath,
@@ -68,10 +79,7 @@ function runGuard(args, env = {}) {
     {
       cwd: root,
       encoding: "utf8",
-      env: {
-        ...process.env,
-        ...env,
-      },
+      env: cleanProviderEnvironment(env),
     },
   );
 }
@@ -98,8 +106,6 @@ test("guard-mobile-apps: captain development does not require a Maps key", () =>
       ["--app", "app-captain", "--require-build-secrets", "--platform", "android", "--profile", "development"],
       {
         GOOGLE_SERVICES_JSON_APP_CAPTAIN: captainFb,
-        GOOGLE_MAPS_ANDROID_API_KEY: "",
-        GOOGLE_MAPS_ANDROID_API_KEY_APP_CAPTAIN: "",
       },
     );
     assert.equal(res.status, 0, `Development must allow the captain fallback without Maps. Stderr: ${res.stderr}`);
@@ -114,7 +120,7 @@ test("guard-mobile-apps: internal without Maps fails when app has maps feature",
     const captainFb = createCompleteFirebaseFile("captain-fb.json", "com.bthwani.captain.next");
     const res = runGuard(
       ["--app", "app-captain", "--require-build-secrets", "--platform", "android", "--profile", "internal"],
-      { GOOGLE_SERVICES_JSON_APP_CAPTAIN: captainFb, GOOGLE_MAPS_ANDROID_API_KEY: "" },
+      { GOOGLE_SERVICES_JSON_APP_CAPTAIN: captainFb },
     );
     assert.notEqual(res.status, 0, "Expected failure for internal without Maps key");
     assert.match(res.stderr, /GOOGLE_MAPS_ANDROID_API_KEY is required/);
@@ -129,7 +135,7 @@ test("guard-mobile-apps: production without Maps fails when app has maps feature
     const captainFb = createCompleteFirebaseFile("captain-fb.json", "com.bthwani.captain.next");
     const res = runGuard(
       ["--app", "app-captain", "--require-build-secrets", "--platform", "android", "--profile", "production"],
-      { GOOGLE_SERVICES_JSON_APP_CAPTAIN: captainFb, GOOGLE_MAPS_ANDROID_API_KEY: "" },
+      { GOOGLE_SERVICES_JSON_APP_CAPTAIN: captainFb },
     );
     assert.notEqual(res.status, 0, "Expected failure for production without Maps key");
     assert.match(res.stderr, /GOOGLE_MAPS_ANDROID_API_KEY is required/);
@@ -204,10 +210,6 @@ test("guard-mobile-apps: building a single app does not require Firebase files f
       ["--app", "app-client", "--require-build-secrets", "--platform", "android", "--profile", "development"],
       {
         GOOGLE_SERVICES_JSON_APP_CLIENT: clientFb,
-        GOOGLE_SERVICES_JSON_APP_PARTNER: "",
-        GOOGLE_SERVICES_JSON_APP_CAPTAIN: "",
-        GOOGLE_SERVICES_JSON_APP_FIELD: "",
-        GOOGLE_SERVICES_JSON: "",
       },
     );
     assert.equal(res.status, 0, `Single app check failed when other app files were absent. Stderr: ${res.stderr}`);
