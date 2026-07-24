@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Image,
   Platform,
@@ -24,8 +25,8 @@ export type StoreCardPremiumProps = Readonly<{
 // ─── Layout constants ──────────────────────────────────────────────────────────
 
 const CARD_HEIGHT  = 118;
-const IMAGE_SIZE   = CARD_HEIGHT;     // square image size
-const LOGO_SIZE    = 52;              // large, prominent circular logo
+const IMAGE_SIZE   = CARD_HEIGHT;
+const LOGO_SIZE    = 52;
 const LOCK_BOX     = 30;
 const LEFT_COL_W   = 42;
 
@@ -53,6 +54,21 @@ export function StoreCardPremium({
   isFavorite = false,
 }: StoreCardPremiumProps) {
   const placeholderBgColor = PLACEHOLDER_COLORS[store.placeholderTone];
+  const heroUri = store.heroImageSource?.uri ?? null;
+  const logoUri = store.logoImageSource?.uri ?? null;
+  const [heroFailed, setHeroFailed] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  useEffect(() => {
+    setHeroFailed(false);
+  }, [heroUri]);
+
+  useEffect(() => {
+    setLogoFailed(false);
+  }, [logoUri]);
+
+  const showHeroImage = heroUri !== null && !heroFailed;
+  const showLogoImage = logoUri !== null && !logoFailed;
 
   return (
     <Pressable
@@ -75,7 +91,10 @@ export function StoreCardPremium({
 
         {/* Favourite heart — solid when active */}
         <Pressable
-          onPress={() => onFavoritePress?.(store.id)}
+          onPress={(event) => {
+            event.stopPropagation();
+            onFavoritePress?.(store.id);
+          }}
           hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel={isFavorite ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
@@ -121,7 +140,7 @@ export function StoreCardPremium({
               return (
                 <View key={label} style={styles.svcItem}>
                   <Text style={styles.svcIcon}>{SVC_ICON[clean] ?? "•"}</Text>
-                  <Text style={styles.svcLabel}>{clean}</Text>
+                  <Text style={styles.svcLabel} numberOfLines={1}>{clean}</Text>
                 </View>
               );
             })}
@@ -173,13 +192,14 @@ export function StoreCardPremium({
 
         {/* Main square image */}
         <View style={[styles.imageSquare, { backgroundColor: placeholderBgColor }]}>
-          {store.heroImageSource != null ? (
+          {showHeroImage ? (
             <Image
-              source={store.heroImageSource}
+              source={{ uri: heroUri }}
               style={StyleSheet.absoluteFill}
               accessibilityIgnoresInvertColors
               resizeMode="cover"
               alt=""
+              onError={() => setHeroFailed(true)}
             />
           ) : (
             <Text style={styles.squareEmoji}>{store.placeholderEmoji}</Text>
@@ -188,12 +208,13 @@ export function StoreCardPremium({
 
         {/* Store logo — bottom-right corner of image block, white ring border */}
         <View style={styles.logoRing}>
-          {store.logoImageSource != null ? (
+          {showLogoImage ? (
             <Image
-              source={store.logoImageSource}
+              source={{ uri: logoUri }}
               style={styles.logoImg}
               resizeMode="contain"
               alt=""
+              onError={() => setLogoFailed(true)}
             />
           ) : (
             <View style={[styles.logoImg, styles.logoFallback]}>
@@ -251,6 +272,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
     flexDirection: "row",
+    overflow: "hidden",
     ...SHADOW,
   },
   cardPressed: {
@@ -320,6 +342,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     justifyContent: "space-between",
     alignItems: "flex-end",
+    minWidth: 0,
   },
 
   storeName: {
@@ -356,10 +379,11 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 8,
     width: "100%",
+    overflow: "hidden",
   },
-  svcItem: { flexDirection: "row", alignItems: "center", gap: 2 },
+  svcItem: { flexDirection: "row", alignItems: "center", gap: 2, flexShrink: 1 },
   svcIcon:  { fontSize: 11 },
-  svcLabel: { fontSize: 11, color: colorRoles.textSecondary, fontWeight: "500" },
+  svcLabel: { fontSize: 11, color: colorRoles.textSecondary, fontWeight: "500", flexShrink: 1 },
 
   closedTag: {
     alignSelf: "flex-end",
@@ -379,6 +403,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     width: "100%",
     flexWrap: "nowrap",
+    overflow: "hidden",
   },
 
   /* Promo badges */
@@ -441,8 +466,8 @@ const styles = StyleSheet.create({
   /* Logo ring — prominent circular logo positioned at the bottom-right corner, overlapping the borders */
   logoRing: {
     position: "absolute",
-    bottom: -4,
-    right: -4,
+    bottom: 5,
+    right: 5,
     width: LOGO_SIZE,
     height: LOGO_SIZE,
     borderRadius: LOGO_SIZE / 2,
