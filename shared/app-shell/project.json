@@ -7,7 +7,7 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir shared/app-shell typecheck"
+        "command": "node tools/scripts/run-command-check.mjs --label a-type -- pnpm --dir shared/app-shell typecheck"
       }
     },
     "build": {
