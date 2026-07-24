@@ -3649,7 +3649,7 @@ paths:
   /dsh/support/tickets/{ticketId}/messages:
     post:
       operationId: addDshTicketMessage
-      summary: Add a message to a support ticket thread.
+      summary: Add a text, image, audio, video, or document message atomically to a support ticket thread.
       tags: [DshSupport]
       security:
         - bearerAuth: []
@@ -3662,18 +3662,19 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/DshAddMessageRequest" }
+            schema: { $ref: "#/components/schemas/DshRichMessageRequest" }
       responses:
         "201":
-          description: Message added.
+          description: Message and its governed media references were added atomically.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshMessageResponse" }
+        "400": { $ref: "#/components/responses/InvalidRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
     get:
       operationId: listDshTicketMessages
-      summary: List messages in a support ticket thread.
+      summary: List messages and governed media references in a support ticket thread.
       tags: [DshSupport]
       security:
         - bearerAuth: []
@@ -3684,7 +3685,7 @@ paths:
           schema: { type: string }
       responses:
         "200":
-          description: List of messages.
+          description: List of messages including an attachments array for every message.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DshMessagesResponse" }
@@ -9582,15 +9583,78 @@ components:
 
     DshSupportMessage:
       type: object
-      required: [id, ticketId, senderId, senderRole, body, isInternal, createdAt]
+      additionalProperties: false
+      required: [id, ticketId, senderId, senderRole, body, isInternal, attachments, createdAt]
       properties:
-        id: { type: string }
-        ticketId: { type: string }
+        id: { type: string, format: uuid }
+        ticketId: { type: string, format: uuid }
         senderId: { type: string }
         senderRole: { $ref: "#/components/schemas/DshSenderRole" }
-        body: { type: string }
+        body: { type: string, maxLength: 4000 }
         isInternal: { type: boolean }
+        attachments:
+          type: array
+          items: { $ref: "#/components/schemas/DshSupportMessageAttachment" }
         createdAt: { type: string, format: date-time }
+
+    DshSupportMediaKind:
+      type: string
+      enum: [image, audio, video, document]
+
+    DshSupportMediaUploadStatus:
+      type: string
+      enum: [uploaded, processing, ready, failed]
+
+    DshSupportMessageAttachmentInput:
+      type: object
+      additionalProperties: false
+      required: [mediaAssetId, fileName, mimeType, sizeBytes, kind]
+      properties:
+        mediaAssetId: { type: string, minLength: 1, maxLength: 240 }
+        fileName: { type: string, minLength: 1, maxLength: 240 }
+        mimeType: { type: string, minLength: 1, maxLength: 160 }
+        sizeBytes: { type: integer, minimum: 1, maximum: 104857600 }
+        kind: { $ref: "#/components/schemas/DshSupportMediaKind" }
+        durationMs: { type: ["integer", "null"], minimum: 0 }
+        thumbnailMediaAssetId: { type: string, maxLength: 240 }
+        waveformRef: { type: string, maxLength: 2000 }
+        uploadStatus:
+          allOf:
+            - { $ref: "#/components/schemas/DshSupportMediaUploadStatus" }
+          default: ready
+
+    DshSupportMessageAttachment:
+      allOf:
+        - { $ref: "#/components/schemas/DshSupportMessageAttachmentInput" }
+        - type: object
+          additionalProperties: false
+          required: [id, ticketId, messageId, attachedBy, isInternal, createdAt, uploadStatus]
+          properties:
+            id: { type: string, format: uuid }
+            ticketId: { type: string, format: uuid }
+            messageId: { type: string, format: uuid }
+            attachedBy: { type: string }
+            isInternal: { type: boolean }
+            createdAt: { type: string, format: date-time }
+
+    DshRichMessageRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        body: { type: string, minLength: 1, maxLength: 4000 }
+        isInternal: { type: boolean, default: false }
+        attachments:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/DshSupportMessageAttachmentInput" }
+      anyOf:
+        - required: [body]
+        - required: [attachments]
+          properties:
+            attachments:
+              type: array
+              minItems: 1
 
     DshMessageResponse:
       type: object
