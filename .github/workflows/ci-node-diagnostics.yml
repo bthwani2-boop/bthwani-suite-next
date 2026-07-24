@@ -30,24 +30,6 @@ jobs:
     name: UI purity and dead code
     if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - name: Checkout immutable source history
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Set up locked Node workspace
-        uses: ./.github/actions/setup-node-workspace
-      - name: Verify UI surface purity
-        run: pnpm run diagnostics:ui-kit
-      - name: Prevent dead code
-        run: pnpm run diagnostics:knip
-
-  vertical_integrity:
-    name: Logic, bindings and AST
-    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.contracts == 'true' }}
-    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - name: Checkout immutable source history
@@ -57,14 +39,16 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Verify logic coverage and AST rules
-        run: pnpm run guard:logic-all
+      - name: Verify UI providers, icons, tokens and boundaries
+        run: pnpm run diagnostics:ui-kit
+      - name: Prevent unused files, exports and dependencies
+        run: pnpm exec knip --reporter compact --reporter github-actions
 
-  performance:
-    name: Structure and performance budgets
-    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.node == 'true' }}
+  vertical_integrity:
+    name: Logic, accessibility and dependency integrity
+    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.contracts == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Checkout immutable source history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -73,10 +57,42 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Verify repository structure and naming
-        run: pnpm run guard:repo-all
-      - name: Verify performance and bundle budgets
-        run: pnpm run guard:performance-all
+      - name: Verify Go route extraction
+        run: pnpm run guard:go-routes-ci
+      - name: Verify logic coverage
+        run: pnpm run guard:logic-coverage
+      - name: Verify accessibility contracts
+        run: pnpm run guard:a11y
+      - name: Verify dependency graph boundaries
+        run: pnpm run guard:dependency-graph
+      - name: Verify AST rules
+        run: pnpm run guard:ast-grep-rules
+
+  repository_integrity:
+    name: Repository organization and performance budgets
+    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.node == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify repository size limits
+        run: pnpm run guard:repo-size
+      - name: Verify repository naming
+        run: pnpm run guard:repo-naming
+      - name: Verify repository structure
+        run: pnpm run guard:repo-structure
+      - name: Verify heavy-import boundaries
+        run: pnpm run guard:heavy-imports
+      - name: Verify runtime performance budgets
+        run: pnpm run guard:performance-budget
+      - name: Verify bundle budgets
+        run: pnpm run guard:bundle-budget
 
   contracts:
     name: Contract foundation and bindings
