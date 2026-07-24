@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func requireTenantContext(w http.ResponseWriter, r *http.Request) (string, bool) {
@@ -21,7 +22,7 @@ func parsePartnerListQuery(r *http.Request, actorID string) PartnerListQuery {
 	query := PartnerListQuery{
 		ActivationStatus: r.URL.Query().Get("status"),
 		CreatedByActorID: actorID,
-		Limit:            20,
+		Limit:            50,
 		Offset:           0,
 	}
 	if limit, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && limit > 0 {
@@ -61,7 +62,8 @@ func HandleTenantListPartners(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		query := parsePartnerListQuery(r, "")
-		partners, total, err := ListPartnersForTenant(db, tenantID, query)
+		category := strings.TrimSpace(r.URL.Query().Get("category"))
+		partners, total, err := ListPartnersForTenantCategory(db, tenantID, query, category)
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list partners")
 			return
@@ -104,7 +106,8 @@ func HandleTenantListFieldPartnerDrafts(db *sql.DB) http.HandlerFunc {
 		}
 		actorID, _ := actorFromContext(r)
 		query := parsePartnerListQuery(r, actorID)
-		partners, total, err := ListPartnersForTenant(db, tenantID, query)
+		category := strings.TrimSpace(r.URL.Query().Get("category"))
+		partners, total, err := ListPartnersForTenantCategory(db, tenantID, query, category)
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list field partner drafts")
 			return
@@ -146,22 +149,33 @@ func HandleTenantLinkPartnerStore(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		actorID, _ := actorFromContext(r)
-		var input struct {
-			StoreID string `json:"storeId"`
-		}
+		var input GovernedStoreLinkInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
 			return
 		}
-		stores, err := LinkPartnerStoreForTenant(db, tenantID, partnerIDFromPath(r), input.StoreID, actorID)
+		stores, err := LinkPartnerStoreForTenantGoverned(
+			db,
+			tenantID,
+			partnerIDFromPath(r),
+			actorID,
+			correlationID(r),
+			input,
+		)
 		switch {
 		case errors.Is(err, ErrInvalid):
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "storeId is required")
+			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "storeId and authenticated actor are required")
 		case errors.Is(err, ErrNotFound):
 			// Do not reveal whether an identifier exists in another tenant.
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner or store not found")
 		case errors.Is(err, ErrTenantContextRequired):
 			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", err.Error())
+		case errors.Is(err, ErrStoreOwnershipConflict):
+			sendError(w, http.StatusConflict, "STORE_OWNERSHIP_CONFLICT", "owned store transfer requires a reason and expectedStoreVersion")
+		case errors.Is(err, ErrVersionConflict):
+			sendError(w, http.StatusConflict, "VERSION_CONFLICT", "store changed concurrently; reload the current store version")
+		case errors.Is(err, ErrOpenStoreOperations):
+			sendError(w, http.StatusUnprocessableEntity, "OPEN_STORE_OPERATIONS", "store ownership cannot change while operational records are open")
 		case err != nil:
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to link partner store")
 		default:
