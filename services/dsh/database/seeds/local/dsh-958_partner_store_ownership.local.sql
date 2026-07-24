@@ -81,12 +81,79 @@ ON CONFLICT (id) DO UPDATE SET
     version = dsh_partner_brands.version + 1,
     updated_at = NOW();
 
-UPDATE dsh_stores SET partner_id = 'prt_partner_local_001', brand_id = 'pbr_local_haddah',      updated_at = NOW() WHERE id = 'store-test-grocery' AND tenant_id = 'local-dsh';
-UPDATE dsh_stores SET partner_id = 'prt_partner_local_002', brand_id = 'pbr_local_sabeen',      updated_at = NOW() WHERE id = 'store-1002' AND tenant_id = 'local-dsh';
-UPDATE dsh_stores SET partner_id = 'prt_partner_local_003', brand_id = 'pbr_local_taiz_market', updated_at = NOW() WHERE id = 'store-1003' AND tenant_id = 'local-dsh';
-UPDATE dsh_stores SET partner_id = 'prt_partner_local_005', brand_id = 'pbr_local_old_city',    updated_at = NOW() WHERE id = 'store-1005' AND tenant_id = 'local-dsh';
-UPDATE dsh_stores SET partner_id = 'prt_partner_local_006', brand_id = 'pbr_local_maeen',       updated_at = NOW() WHERE id = 'store-1006' AND tenant_id = 'local-dsh';
-UPDATE dsh_stores SET partner_id = 'prt_partner_local_007', brand_id = 'pbr_local_electronics', updated_at = NOW() WHERE id = 'store-test-electronics' AND tenant_id = 'local-dsh';
+UPDATE dsh_stores
+SET partner_id = 'prt_partner_local_001',
+    brand_id = 'pbr_local_haddah',
+    updated_at = NOW()
+WHERE id = 'store-test-grocery'
+  AND tenant_id = 'local-dsh';
+
+-- Partner replacement is opened only for this atomic seed transaction. The
+-- deferred database constraint still requires an exact transfer-audit row for
+-- every changed store and rejects the transaction if one is missing.
+SELECT set_config('bthwani.governed_store_partner_transfer', 'on', true);
+
+WITH transfer_plan(store_id, to_partner_id, brand_id) AS (
+    VALUES
+        ('store-1002', 'prt_partner_local_002', 'pbr_local_sabeen'),
+        ('store-1003', 'prt_partner_local_003', 'pbr_local_taiz_market'),
+        ('store-1005', 'prt_partner_local_005', 'pbr_local_old_city'),
+        ('store-1006', 'prt_partner_local_006', 'pbr_local_maeen'),
+        ('store-test-electronics', 'prt_partner_local_007', 'pbr_local_electronics')
+), current_rows AS MATERIALIZED (
+    SELECT
+        store.tenant_id,
+        store.id AS store_id,
+        store.partner_id AS from_partner_id,
+        store.version AS expected_store_version,
+        plan.to_partner_id,
+        plan.brand_id
+    FROM dsh_stores store
+    JOIN transfer_plan plan ON plan.store_id = store.id
+    WHERE store.tenant_id = 'local-dsh'
+      AND store.partner_id IS DISTINCT FROM plan.to_partner_id
+    FOR UPDATE OF store
+), updated AS (
+    UPDATE dsh_stores store
+    SET partner_id = current_rows.to_partner_id,
+        brand_id = current_rows.brand_id,
+        partner_readiness = 'ready',
+        catalog_approval_status = 'approved',
+        marketing_visibility = 'visible',
+        is_visible = true,
+        version = current_rows.expected_store_version + 1,
+        updated_at = NOW()
+    FROM current_rows
+    WHERE store.id = current_rows.store_id
+      AND store.tenant_id = current_rows.tenant_id
+      AND store.version = current_rows.expected_store_version
+    RETURNING
+        current_rows.tenant_id,
+        store.id AS store_id,
+        current_rows.from_partner_id,
+        current_rows.to_partner_id,
+        current_rows.expected_store_version,
+        store.version AS resulting_store_version
+)
+INSERT INTO dsh_partner_store_transfer_audit (
+    tenant_id, store_id, from_partner_id, to_partner_id,
+    actor_id, actor_surface, reason,
+    expected_store_version, resulting_store_version, correlation_id
+)
+SELECT
+    tenant_id,
+    store_id,
+    from_partner_id,
+    to_partner_id,
+    'system',
+    'control-panel',
+    'local governed ownership correction',
+    expected_store_version,
+    resulting_store_version,
+    'seed:dsh-958:' || store_id
+FROM updated;
+
+SELECT set_config('bthwani.governed_store_partner_transfer', 'off', true);
 
 -- Keep the canonical local partner actor scoped only to the legal entity/store
 -- represented by its session. Tenant ownership is derived through dsh_stores,
