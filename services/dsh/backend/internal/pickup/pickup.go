@@ -16,6 +16,7 @@ var (
 	ErrExpired          = errors.New("pickup code expired")
 	ErrAttemptsExceeded = errors.New("pickup code attempts exceeded")
 	ErrInvalidCode      = errors.New("pickup code is invalid")
+	ErrExtensionLimitExceeded = errors.New("pickup window extension limit exceeded")
 )
 
 type SessionStatus string
@@ -48,6 +49,8 @@ type PickupSession struct {
 	NoShowAt           *time.Time
 	NoShowReason       *string
 	RescheduledAt      *time.Time
+	ExtensionCount     int
+	MaxExtensions      int
 	Version            int
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
@@ -58,6 +61,7 @@ const sessionColumns = `
 	attempt_count, max_attempts, used_at, verified_by_actor_id, verification_method,
 	status, cancelled_at, cancellation_reason,
 	customer_notified_at, customer_arrived_at, no_show_at, no_show_reason, rescheduled_at,
+	extension_count, max_extensions,
 	version, created_at, updated_at
 `
 
@@ -83,6 +87,8 @@ func scanSession(scan func(...any) error) (*PickupSession, error) {
 		&session.NoShowAt,
 		&session.NoShowReason,
 		&session.RescheduledAt,
+		&session.ExtensionCount,
+		&session.MaxExtensions,
 		&session.Version,
 		&session.CreatedAt,
 		&session.UpdatedAt,

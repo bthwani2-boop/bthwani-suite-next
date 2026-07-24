@@ -5,6 +5,7 @@ import test from "node:test";
 
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const read = (relative) => fs.readFileSync(path.join(repoRoot, relative), "utf8");
+const stripComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
 test("control-panel emits governed browser security headers", () => {
   const config = read("apps/control-panel/runtime/next.config.ts");
@@ -24,7 +25,7 @@ test("control-panel emits governed browser security headers", () => {
 });
 
 test("browser identity storage contains no durable real token store", () => {
-  const storage = read("core/identity/clients/identity-session-storage.ts");
+  const storage = stripComments(read("core/identity/clients/identity-session-storage.ts"));
   assert.doesNotMatch(storage, /\blocalStorage\b/);
   assert.match(storage, /window\.sessionStorage/);
 

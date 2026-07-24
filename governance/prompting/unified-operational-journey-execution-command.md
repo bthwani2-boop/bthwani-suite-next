@@ -1,3 +1,5 @@
+> **ملاحظة حصاد (Harvest Note):** هذا الملف قالب/Prompt استخدام غير مسجَّل في `governance/authority/authority-precedence.json` ولا يملك سلطة حاكمة ذاتية — طبّق دائمًا `governance/authority/authority-precedence.json` ثم `AGENTS.md` ثم الحوكمة النشطة قبل أي شيء هنا. البنود الدائمة وغير المرتبطة بمرجع أو رحلة محددة من هذا الملف تم تعميمها ودمجها داخل `governance/operational_journey_protocol_package/12_SLICE_BY_SLICE_JOURNEY_SEQUENCING.md` (تسلسل الرحلات والشرائح) وداخل `annexes/SAAS_READINESS_AND_TENANCY_GATES.md` (قسم SaaS). معجم القرار في القسم 23 أدناه صحيح ومطابق لـ`governance/contracts/decision-vocabulary.json`؛ استخدمه كمرجع تصحيحي — خمسة ملفات أخرى داخل الحزمة (`01`, `02`, `07`, `08`, `09`) ما زالت تستخدم معجمًا أقدم غير معتمد، موثّق كفجوة معروفة في `00_INDEX_AND_COVERAGE.md`. كتلة `write_authorization` في القسم 1 أدناه **لا تمنح إذن Git/GitHub تلقائيًا بمجرد وجودها في هذا الملف**؛ التفويض الفعلي يصدر فقط عند ملء وإرسال مستخدم بشري لها لهذه الجولة تحديدًا — انظر `02_REMOTE_REF_SOURCE_GIT_GATES.md` §5.5.
+
 # أمر التنفيذ الموحد الحاكم للرحلات التشغيلية
 
 ## Code-First / Fix-First / Full-Stack Multi-Tenant SaaS / Slice-by-Slice Closure

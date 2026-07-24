@@ -69,6 +69,29 @@ function requireEnv(name, key) {
   return value;
 }
 
+function validateGoogleServicesFile(appKey, file, expectedPackage) {
+  const absolute = path.resolve(file);
+  if (!fs.existsSync(absolute)) {
+    fail(`${appKey}: GOOGLE_SERVICES_JSON does not point to an existing file: ${absolute}`);
+  }
+
+  let googleServices;
+  try {
+    googleServices = JSON.parse(fs.readFileSync(absolute, "utf8"));
+  } catch (error) {
+    fail(`${appKey}: GOOGLE_SERVICES_JSON is not valid JSON: ${error.message}`);
+  }
+
+  const packageNames = (googleServices.client ?? [])
+    .map((client) => client?.client_info?.android_client_info?.package_name)
+    .filter((value) => typeof value === "string" && value.length > 0);
+
+  if (!packageNames.includes(expectedPackage)) {
+    const actual = packageNames.length > 0 ? packageNames.join(", ") : "none";
+    fail(`${appKey}: GOOGLE_SERVICES_JSON must contain Android package '${expectedPackage}' (found: ${actual})`);
+  }
+}
+
 const manifest = readJson("tools/mobile/mobile-apps.manifest.json");
 const rootPkg = readJson("package.json");
 
@@ -145,9 +168,14 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (Array.isArray(expo.platforms) && expo.platforms.includes("web")) fail(`${key}: web is forbidden in Expo mobile config`);
 
   const plugins = pluginMap(expo.plugins);
-  for (const basePlugin of ["expo-image-picker", "expo-document-picker", "@sentry/react-native/expo"]) {
+  for (const basePlugin of ["expo-image-picker", "expo-document-picker"]) {
     if (!plugins.has(basePlugin)) fail(`${key}: missing ${basePlugin} plugin`);
   }
+  const sentryNativeConfigured = expo.extra?.sentry?.nativeConfigured === true;
+  const sentryEnabled = expo.extra?.sentry?.enabled === true;
+  const hasSentryPlugin = plugins.has("@sentry/react-native/expo");
+  if (sentryEnabled !== sentryNativeConfigured) fail(`${key}: Sentry enabled/nativeConfigured state mismatch`);
+  if (hasSentryPlugin !== sentryNativeConfigured) fail(`${key}: Sentry Expo plugin must match native configuration state`);
 
   const featurePlugins = {
     router: "expo-router",
@@ -237,9 +265,9 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (requireBuildSecrets) {
     if ((platform === "android" || platform === "all") && features.includes("notifications")) {
       const googleServices = requireEnv(key, "GOOGLE_SERVICES_JSON");
-      if (!fs.existsSync(path.resolve(googleServices))) fail(`${key}: GOOGLE_SERVICES_JSON does not point to an existing file`);
+      validateGoogleServicesFile(key, googleServices, app.androidPackage);
     }
-    if (features.includes("maps")) {
+    if (features.includes("maps") && profile !== "development") {
       if (platform === "android" || platform === "all") requireEnv(key, "GOOGLE_MAPS_ANDROID_API_KEY");
       if (platform === "ios" || platform === "all") requireEnv(key, "GOOGLE_MAPS_IOS_API_KEY");
     }

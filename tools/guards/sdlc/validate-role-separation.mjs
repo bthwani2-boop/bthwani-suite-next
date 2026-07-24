@@ -6,8 +6,10 @@ const guardId = "sdlc-role-separation";
 const violations = [];
 const rolesFile = "governance/operational_journey_protocol_package/sdlc/roles-and-authority.yaml";
 const agentRegistryFile = "governance/agents/agent-registry.json";
+const singleOwnerFile = "governance/authority/single-owner-mode.json";
 const roles = fs.readFileSync(path.join(repoRoot, rolesFile), "utf8");
 const agentRegistry = JSON.parse(fs.readFileSync(path.join(repoRoot, agentRegistryFile), "utf8"));
+const singleOwner = JSON.parse(fs.readFileSync(path.join(repoRoot, singleOwnerFile), "utf8"));
 
 for (const marker of [
   "sdlc_program_authority:",
@@ -31,6 +33,15 @@ for (const marker of [
   "may_approve_ci_workflow: false",
   "may_approve_finance: false",
   "must_be_separate_from_governance_contract_authority: true",
+  "single_owner_human_identity_exception:",
+  "logical_authorities_and_owner_skills_remain_separate: true",
+  "blanket_authorization_is_not_outcome_acceptance: true",
+  "exact_commit_required_for_outcome_approval: true",
+  "same_commit_automated_checks_required: true",
+  "failed_checks_may_not_be_waived: true",
+  "execution_agent_may_impersonate_owner: false",
+  "execution_agent_may_issue_owner_approval: false",
+  "protected_domains_remain_independent_or_unclosed:",
   "requires_product_acceptance: true",
   "- product_model_approval",
   "- product_acceptance",
@@ -40,6 +51,59 @@ for (const marker of [
   "- independent_review_high_risk",
   "- final_closure",
 ]) if (!roles.includes(marker)) violations.push({ file: rolesFile, message: `MISSING_ROLE_SEPARATION_RULE ${marker}` });
+
+if (singleOwner.mode !== "SOLE_OWNER" || singleOwner.status !== "ACTIVE") {
+  violations.push({ file: singleOwnerFile, message: "SOLE_OWNER_MODE_MUST_BE_ACTIVE" });
+}
+if (!singleOwner.ownerIdentity) {
+  violations.push({ file: singleOwnerFile, message: "SOLE_OWNER_IDENTITY_MISSING" });
+}
+if (singleOwner.acknowledgements?.reducedHumanSeparationOfDuties !== true) {
+  violations.push({ file: singleOwnerFile, message: "REDUCED_HUMAN_SEPARATION_NOT_ACKNOWLEDGED" });
+}
+if (singleOwner.acknowledgements?.automatedChecksRemainMandatory !== true) {
+  violations.push({ file: singleOwnerFile, message: "AUTOMATED_CHECKS_MUST_REMAIN_MANDATORY" });
+}
+if (singleOwner.acknowledgements?.blanketAuthorizationIsNotOutcomeAcceptance !== true) {
+  violations.push({ file: singleOwnerFile, message: "BLANKET_AUTHORIZATION_MUST_NOT_EQUAL_OUTCOME_ACCEPTANCE" });
+}
+
+const requiredProtectedDomains = [
+  "authentication_authorization_sessions",
+  "pii_privacy_secrets_credentials",
+  "tenant_isolation",
+  "security_approval",
+  "financial_control",
+  "migrations_and_production_data",
+  "critical_high_vulnerability_acceptance",
+  "residual_risk_acceptance",
+  "release_approval",
+  "deployment",
+  "production_verification",
+  "final_closure",
+];
+const protectedDomains = new Set(singleOwner.approvalPolicy?.protectedDomains ?? []);
+for (const domain of requiredProtectedDomains) {
+  if (!protectedDomains.has(domain)) {
+    violations.push({ file: singleOwnerFile, message: `SOLE_OWNER_PROTECTED_DOMAIN_MISSING ${domain}` });
+  }
+}
+for (const domain of singleOwner.approvalPolicy?.allowedDomains ?? []) {
+  if (protectedDomains.has(domain)) {
+    violations.push({ file: singleOwnerFile, message: `SOLE_OWNER_DOMAIN_BOTH_ALLOWED_AND_PROTECTED ${domain}` });
+  }
+}
+for (const [key, expected] of Object.entries({
+  mayImpersonateOwner: false,
+  mayConvertBlanketAuthorizationIntoOutcomeAcceptance: false,
+  maySelfApproveProtectedDomains: false,
+  mayMergeFailingCommit: false,
+  mayBypassRepositoryProtection: false,
+})) {
+  if (singleOwner.executorPolicy?.[key] !== expected) {
+    violations.push({ file: singleOwnerFile, message: `UNSAFE_SOLE_OWNER_EXECUTOR_POLICY ${key}` });
+  }
+}
 
 const agents = new Map(agentRegistry.entries.map((entry) => [entry.id, entry]));
 for (const requiredId of [

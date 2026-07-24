@@ -21,7 +21,7 @@ const partnerIndex = read("services/dsh/frontend/shared/partner/index.ts");
 const partnerCard = read("services/dsh/frontend/app-partner/store/PartnerDeliveryPricingCard.tsx");
 const partnerCourierScreen = read("services/dsh/frontend/app-partner/store/DshPartnerStoreCourierScreen.tsx");
 const operatorPanel = read("services/dsh/frontend/control-panel/partners/stores/OperatorDeliveryPricingPanel.tsx");
-const partnerDetailScreen = read("services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx");
+const partnerDetailScreen = read("services/dsh/frontend/control-panel/partners/PartnerDetailUnifiedScreen.tsx");
 const couponsDeck = read("services/dsh/frontend/control-panel/marketing/components/CouponsCommandDeck.tsx");
 const loyaltyPanel = read("services/dsh/frontend/control-panel/marketing/components/LoyaltyPolicyPanel.tsx");
 const marketingDashboard = read("services/dsh/frontend/control-panel/marketing/MarketingDashboardScreen.tsx");
@@ -56,8 +56,8 @@ test("JRN-026 mounts operator delivery pricing and supports first-policy creatio
   assert.match(operatorPanel, /record \? "حفظ" : "إنشاء"/);
   assert.match(operatorPanel, /لا توجد سياسات مهيأة/);
   assert.match(partnerDetailScreen, /import \{ OperatorDeliveryPricingPanel \} from "\.\/stores\/OperatorDeliveryPricingPanel"/);
-  assert.match(partnerDetailScreen, /selectedPricingStoreId/);
-  assert.match(partnerDetailScreen, /<OperatorDeliveryPricingPanel storeId=\{selectedPricingStoreId\} \/>/);
+  assert.match(partnerDetailScreen, /pricingStoreId/);
+  assert.match(partnerDetailScreen, /<OperatorDeliveryPricingPanel storeId=\{pricingStoreId\} \/>/);
 });
 
 test("JRN-026 confines partner pricing writes to the owned store and partner-delivery mode", () => {

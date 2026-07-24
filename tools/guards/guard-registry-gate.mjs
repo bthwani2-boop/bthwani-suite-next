@@ -12,6 +12,7 @@ const journeyRunnerRelative = "tools/scripts/run-journey-gate.ps1";
 const workflowsDir = path.join(repoRoot, ".github/workflows");
 const actionsDir = path.join(repoRoot, ".github/actions");
 const canonicalWorkflow = "ci.yml";
+const expectedWorkflowFiles = [canonicalWorkflow, "contextual-status-finalizer.yml", "dsh-database.yml"].sort();
 
 const aggregateScripts = new Set([
   "guard:logic-all",
@@ -269,11 +270,14 @@ if (fs.existsSync(workflowsDir)) {
     verifyCheckoutCredentials(relative, text);
   }
 
-  if (workflowFiles.length !== 1 || workflowFiles[0] !== canonicalWorkflow) {
+  const workflowInventoryMatches =
+    workflowFiles.length === expectedWorkflowFiles.length &&
+    workflowFiles.every((fileName, index) => fileName === expectedWorkflowFiles[index]);
+  if (!workflowInventoryMatches) {
     violations.push({
       file: ".github/workflows",
       line: 0,
-      message: `SINGLE_CONTEXTUAL_WORKFLOW_REQUIRED found=${workflowFiles.join(",") || "none"}`,
+      message: `WORKFLOW_INVENTORY_DRIFT expected=${expectedWorkflowFiles.join(",")} found=${workflowFiles.join(",") || "none"}`,
     });
   }
 
@@ -287,7 +291,7 @@ if (fs.existsSync(workflowsDir)) {
       "workflow_dispatch:",
       "pull_request:",
       "push:",
-      "branches: [master]",
+      "branches: [master, lianbassam]",
       "cancel-in-progress: true",
       "BThwani CI result",
       "if: ${{ always() }}",

@@ -18,8 +18,8 @@
     {
       "guardId": "authority-separation",
       "assuranceClass": "POLICY_ALIGNMENT",
-      "proves": ["Required logical authorities are registered", "The master supervisor is advisory-only", "Governance and CI use separate active skills and owners", "G4 and later SDLC stage ownership is ordered"],
-      "doesNotProve": ["Real people or teams exist", "GitHub approvals are independent", "A stage passed", "Final closure"],
+      "proves": ["Required logical authorities are registered", "The master supervisor is advisory-only", "Governance and CI use separate active skills and logical owners", "The sole-owner identity exception preserves protected-domain boundaries", "G4 and later SDLC stage ownership is ordered"],
+      "doesNotProve": ["A second human approver exists", "GitHub approvals are independent", "A stage passed", "Final closure"],
       "closureEligible": false
     },
     {

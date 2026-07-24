@@ -100,6 +100,7 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
     dto.serviceability.status === "limited";
   const ratingCount = dto.ratingCount ?? 0;
   const category = dto.category as StoreTone;
+  const deliveryModes = dto.deliveryModes ?? [];
 
   return {
     id: dto.id,
@@ -136,11 +137,11 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
     isFreeDelivery: dto.isFreeDelivery,
     placeholderEmoji: CATEGORY_EMOJI[category] ?? CATEGORY_EMOJI["domain-bthwani-store"],
     placeholderTone: CATEGORY_TONE[category] ?? CATEGORY_TONE["domain-bthwani-store"],
-    deliveryModeLabels: dto.deliveryModes.map(formatDeliveryMode),
-    availableFulfillmentModes: toFulfillmentModes(dto.deliveryModes),
+    deliveryModeLabels: deliveryModes.map(formatDeliveryMode),
+    availableFulfillmentModes: toFulfillmentModes(deliveryModes),
     distanceLabel: dto.distanceKm == null ? null : `${dto.distanceKm.toFixed(1)} كم`,
     distanceKm: dto.distanceKm ?? null,
-    followerCountLabel: formatFollowerCount(dto.followerCount),
+    followerCountLabel: formatFollowerCount(dto.followerCount ?? 0),
     hasProBadge: dto.hasProBadge,
     hasCouponBadge: dto.hasCouponBadge,
     pointsMultiplier: dto.pointsMultiplier ?? null,
@@ -152,10 +153,10 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
 export function toDetailViewModel(dto: DshStoreDetailDto): DshStoreDetailViewModel {
   return {
     ...toCardViewModel(dto),
-    addressLine: dto.addressLine.trim(),
-    coverageSummary: dto.coverageSummary.trim(),
-    operatingHours: dto.operatingHours.trim(),
-    deliveryReadiness: dto.deliveryReadiness.trim(),
+    addressLine: (dto.addressLine ?? "").trim(),
+    coverageSummary: (dto.coverageSummary ?? "").trim(),
+    operatingHours: (dto.operatingHours ?? "").trim(),
+    deliveryReadiness: (dto.deliveryReadiness ?? "").trim(),
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
   };

@@ -7,7 +7,7 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir shared/app-shell typecheck"
+        "command": "node tools/scripts/run-command-check.mjs --label a-type -- pnpm --dir shared/app-shell typecheck"
       }
     },
     "build": {
@@ -19,13 +19,13 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir shared/app-shell test"
+        "command": "node tools/scripts/run-command-check.mjs --label app-shell-tests -- pnpm --dir shared/app-shell test"
       }
     },
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir shared/app-shell lint"
+        "command": "node tools/scripts/run-command-check.mjs --label app-shell-lint -- pnpm --dir shared/app-shell lint"
       }
     }
   },

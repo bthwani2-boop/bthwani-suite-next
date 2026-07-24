@@ -144,7 +144,7 @@ test("JRN-031 shared brain binds all live administration routes", () => {
 test("JRN-031 control panel composes the workflow and delegates owner mutations", () => {
   const screen = read("services/dsh/frontend/control-panel/administration/GovernedAdministrationScreen.tsx");
   const dashboard = read("services/dsh/frontend/control-panel/administration/AdministrationDashboardScreen.tsx");
-  const partnerOwner = read("services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx");
+  const partnerOwner = read("services/dsh/frontend/control-panel/partners/PartnerDetailUnifiedScreen.tsx");
   const captainOwner = read("services/dsh/frontend/control-panel/hr/CaptainDetailView.tsx");
   const roleQueue = read("services/dsh/frontend/control-panel/administration/RoleDefinitionApprovalQueue.tsx");
   const rollbackQueue = read("services/dsh/frontend/control-panel/administration/DecisionRollbackQueue.tsx");
@@ -163,7 +163,7 @@ test("JRN-031 control panel composes the workflow and delegates owner mutations"
     "فتح ملف الاعتماد",
     "role.surfaces",
   ], "administration owner delegation");
-  assertIncludesAll(partnerOwner, ["detail.transition", "expectedVersion", "reason"], "partner lifecycle owner");
+  assertIncludesAll(partnerOwner, ["detail.transition", "partner.version", "transitionReason"], "partner lifecycle owner");
   assertIncludesAll(captainOwner, ["useCaptainDetailController", "اعتماد الرخصة", "licenseExpiresAt"], "captain credential owner");
   assertIncludesAll(roleQueue, ["AVAILABLE_PERMISSIONS", "AVAILABLE_SURFACES", '"control-panel"'], "role queue");
   assertIncludesAll(rollbackQueue, ["requestRollback", "اعتماد التراجع", "sourceApprovedBy"], "rollback queue");

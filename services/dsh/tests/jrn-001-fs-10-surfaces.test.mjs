@@ -99,14 +99,23 @@ assert.match(partnerTeam, /onMemberAction/);
 assert.match(partnerTeam, /label=.*إرسال الدعوة/);
 assert.match(partnerTeam, /submitAction/);
 
-// control-panel: runtime deep links, six tabs, governed reviews/transitions, store link, and audit.
+// control-panel: complete workspaces, deep links, session authority, six entity tabs,
+// governed document/lifecycle actions, protected ownership transfer, pricing and audit.
 const partnersPage = read("apps/control-panel/runtime/src/app/dsh/partners/page.tsx");
 const partnerDetailPage = read("apps/control-panel/runtime/src/app/dsh/partners/[partnerId]/page.tsx");
 const reviewQueue = read("services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx");
-const detailScreen = read("services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx");
+const registrySource = read("services/dsh/frontend/shared/partner/partner-registry.ts");
+const detailScreen = read("services/dsh/frontend/control-panel/partners/PartnerDetailUnifiedScreen.tsx");
+const partnerBarrel = read("services/dsh/frontend/control-panel/partners/index.ts");
 assert.match(partnersPage, /router\.push\(`\/dsh\/partners\/\$\{partnerId\}`\)/);
 assert.match(partnerDetailPage, /router\.push\("\/dsh\/partners"\)/);
-assert.match(reviewQueue, /onOpenPartner\(row\.id\)/);
+assert.match(reviewQueue, /useControlPanelSession/);
+assert.match(reviewQueue, /PartnerGovernanceWorkspaceScreen/);
+assert.match(reviewQueue, /StoreManagementScreen/);
+assert.match(reviewQueue, /FieldReadinessQueueScreen/);
+for (const workspace of registry.requiredSurfaces.find((surface) => surface.surfaceId === "control-panel").workspaces) {
+  assert.match(registrySource, new RegExp(`["']${workspace}["']`), `control-panel workspace missing: ${workspace}`);
+}
 for (const tab of ["overview", "documents", "visits", "stores", "readiness", "audit"]) {
   assert.match(detailScreen, new RegExp(`["']${tab}["']`), `control-panel tab missing: ${tab}`);
 }
@@ -116,9 +125,11 @@ assert.match(detailScreen, /decision: "rejected"/);
 assert.match(detailScreen, /decision: "needs_resubmit"/);
 assert.match(detailScreen, /allowedNextStatuses/);
 assert.match(detailScreen, /detail\.transition/);
-assert.match(detailScreen, /stores\.linkStore/);
-assert.match(detailScreen, /ربط المتجر بالشريك/);
+assert.match(detailScreen, /stores\.linkOrTransfer/);
+assert.match(detailScreen, /إسناد أو نقل ملكية متجر/);
+assert.match(detailScreen, /aggregate\.stores/);
 assert.match(detailScreen, /audit\.state\.events/);
+assert.match(partnerBarrel, /PartnerDetailUnifiedScreen as PartnerDetailScreen/);
 assert.doesNotMatch(detailScreen, /onClick=\{\(\) => \{\}\}/);
 
-console.log("JRN-001 FS-10 required routes, screens, tabs, actions, icons, and deep navigation verified");
+console.log("JRN-001 FS-10 required routes, workspaces, screens, tabs, governed actions and deep navigation verified");

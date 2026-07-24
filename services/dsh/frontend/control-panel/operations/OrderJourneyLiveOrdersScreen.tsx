@@ -21,6 +21,8 @@ import { resolveRuntimeOrderStatusTone } from '../shared/ControlPanelDshDecision
 import { buildOperationsHref } from './operations.registry';
 import { OrderJourneyOperatorIntervention } from './OrderJourneyOperatorIntervention';
 import { OrderPreparationAlertsPanel } from './OrderPreparationAlertsPanel';
+import { PartnerDeliverySLAAlertsPanel } from './PartnerDeliverySLAAlertsPanel';
+import { PickupSLAAlertsPanel } from './PickupSLAAlertsPanel';
 
 export type OrderJourneyLiveOrdersScreenProps = {
   hubHref: string;
@@ -130,6 +132,8 @@ export function OrderJourneyLiveOrdersScreen({
       ]} />
 
       <OrderPreparationAlertsPanel onOpenOrder={setSelectedOrderId} />
+      <PartnerDeliverySLAAlertsPanel onOpenOrder={setSelectedOrderId} />
+      <PickupSLAAlertsPanel onOpenOrder={setSelectedOrderId} />
 
       <div className={styles.surfaceSplitGrid}>
         <WebControlPanelQueue title="الطلبات المباشرة" meta={`${visible.length} من ${workboard.state.total}`}>

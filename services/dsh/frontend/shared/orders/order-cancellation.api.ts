@@ -65,6 +65,7 @@ export async function cancelOrder(
     reasonNote: input.reasonNote?.trim() ?? "",
     commandId,
     correlationId: input.correlationId?.trim() || commandId,
+    ...(input.ticketReference?.trim() ? { ticketReference: input.ticketReference.trim() } : {}),
   };
   return request<CancelOrderResponse>(
     cancellationPath(surface, orderId, "cancel"),

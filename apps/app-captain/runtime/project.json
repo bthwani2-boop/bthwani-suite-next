@@ -7,13 +7,13 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir apps/app-captain/runtime typecheck"
+        "command": "node tools/scripts/run-command-check.mjs --label cap-type -- pnpm --dir apps/app-captain/runtime typecheck"
       }
     },
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "node tools/scripts/guard-mobile-apps.mjs"
+        "command": "node tools/scripts/run-command-check.mjs --label app-captain-config -- node tools/scripts/guard-mobile-apps.mjs"
       }
     },
     "build": {
@@ -24,6 +24,7 @@
     }
   },
   "tags": [
-    "scope:app-captain type:app"
+    "scope:app-captain",
+    "type:app"
   ]
 }

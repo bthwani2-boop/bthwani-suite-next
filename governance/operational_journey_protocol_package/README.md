@@ -5,6 +5,7 @@ This package contains the governing, non-bypassable contract and rules for execu
 ## Contents (المحتويات)
 
 - [فهرس الحزمة ومصفوفة عدم إسقاط البنود (Index & Coverage)](file:///C:/bthwani-suite-next/governance/operational_journey_protocol_package/00_INDEX_AND_COVERAGE.md) - The main entrypoint, manifest, coverage matrices, and legacy source trace for the unified protocol package.
+- [Slice-by-Slice Journey Sequencing](file:///C:/bthwani-suite-next/governance/operational_journey_protocol_package/12_SLICE_BY_SLICE_JOURNEY_SEQUENCING.md) - Multi-journey selection from the live journey registry and vertical-slice-by-slice closure discipline within a journey.
 - [SaaS Readiness and Tenancy Gates](annexes/SAAS_READINESS_AND_TENANCY_GATES.md) - Conditional mandatory annex for tenant-owned data, cross-tenant operations, or future SaaS boundaries.
 
 ## Usage (الاستخدام)

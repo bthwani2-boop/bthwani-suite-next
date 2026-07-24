@@ -28,6 +28,7 @@ const PICKUP_ERROR_LABELS: Record<string, string> = {
   PICKUP_CODE_ATTEMPTS_EXCEEDED: 'تم تجاوز عدد محاولات الرمز المسموح.',
   PICKUP_CODE_INVALID: 'رمز الاستلام غير صحيح.',
   PICKUP_INVALID_TRANSITION: 'لا يمكن تنفيذ هذا الإجراء في المرحلة الحالية.',
+  PICKUP_EXTENSION_LIMIT_EXCEEDED: 'استُنفد عدد مرات تمديد النافذة المسموح؛ تواصل مع عمليات بثواني لتمديد استثنائي.',
   VERSION_CONFLICT: 'تغيّرت الجلسة من سطح آخر؛ أعد التحميل قبل المتابعة.',
 };
 
@@ -206,7 +207,7 @@ function PickupActions({ orderId }: { readonly orderId: string }) {
   const textAlignStyle = direction === 'rtl' ? styles.textRight : styles.textLeft;
   const [code, setCode] = React.useState('');
   const [noShowReason, setNoShowReason] = React.useState('');
-  const { state, markReady, notify, customerArrived, verify, noShow, refresh } =
+  const { state, markReady, notify, customerArrived, verify, noShow, extendWindow, rescheduleWindow, refresh } =
     usePickupActionsController(orderId);
   const { session, stage, loaded, busy, message, isError, errorCode } = state;
   const displayMessage = isError
@@ -284,9 +285,42 @@ function PickupActions({ orderId }: { readonly orderId: string }) {
       ) : null}
 
       {stage === 'no_show' ? (
-        <Text role="bodySm" tone="warning" style={textAlignStyle}>
-          أغلقت جلسة الرمز كعدم حضور. يبقى قرار إلغاء الطلب أو تمديد النافذة بيد العمليات.
-        </Text>
+        <Box gap={2}>
+          <Text role="bodySm" tone="warning" style={textAlignStyle}>
+            أغلقت جلسة الرمز كعدم حضور. يمكنك إعادة فتح نافذة استلام جديدة وإصدار رمز جديد للعميل.
+          </Text>
+          <Button
+            label={busy ? 'جارٍ إعادة الجدولة…' : 'إعادة جدولة نافذة الاستلام (ساعتان)'}
+            disabled={busy}
+            onPress={() => void rescheduleWindow(
+              'إعادة جدولة بعد عدم حضور العميل',
+              new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+            )}
+          />
+        </Box>
+      ) : null}
+
+      {(stage === 'ready' || stage === 'notified' || stage === 'customer_arrived') && session ? (
+        <Box gap={1}>
+          <Button
+            label={
+              busy
+                ? 'جارٍ تمديد النافذة…'
+                : `تمديد نافذة الاستلام ساعتين (${session.extensionCount ?? 0}/${session.maxExtensions ?? 2})`
+            }
+            tone="secondary"
+            disabled={busy || (session.extensionCount ?? 0) >= (session.maxExtensions ?? 2)}
+            onPress={() => void extendWindow(
+              'تمديد تشغيلي من تطبيق الشريك',
+              new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+            )}
+          />
+          {(session.extensionCount ?? 0) >= (session.maxExtensions ?? 2) ? (
+            <Text role="caption" tone="muted" style={textAlignStyle}>
+              استُنفد عدد مرات التمديد المتاحة لهذه الجلسة؛ التمديد الإضافي يتطلب تدخل عمليات بثواني.
+            </Text>
+          ) : null}
+        </Box>
       ) : null}
 
       {stage === 'cancelled' ? (

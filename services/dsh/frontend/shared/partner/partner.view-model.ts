@@ -7,7 +7,7 @@ export type DshPartnerListRowViewModel = {
   readonly displayName: string;
   readonly legalNameAr: string;
   readonly category: string;
-  readonly activationStatus: string;
+  readonly activationStatus: DshPartnerActivationStatus;
   readonly statusLabel: string;
   readonly statusTone: "success" | "warning" | "danger" | "info" | "muted";
   readonly nextAction: string;
@@ -42,14 +42,14 @@ export type DshPartnerDetailViewModel = {
   readonly email: string;
   readonly category: string;
   readonly bankAccount: DshPartnerBankAccountViewModel;
-  readonly activationStatus: string;
+  readonly activationStatus: DshPartnerActivationStatus;
   readonly statusLabel: string;
   readonly statusTone: "success" | "warning" | "danger" | "info" | "muted";
   readonly nextAction: string;
   readonly blockedReason: string;
   readonly rejectionReason: string;
   readonly auditRequired: boolean;
-  readonly allowedNextStatuses: readonly string[];
+  readonly allowedNextStatuses: readonly DshPartnerActivationStatus[];
   readonly canActivate: boolean;
   readonly canDeactivate: boolean;
   readonly canReject: boolean;

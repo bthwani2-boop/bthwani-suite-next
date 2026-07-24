@@ -19,7 +19,7 @@ on:
         default: false
         type: boolean
   pull_request:
-    branches: [master]
+    branches: [master, lianbassam]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "AGENTS.md"
@@ -68,6 +68,9 @@ concurrency:
 
 env:
   FULL_VERIFICATION_TRIGGER: governance/github/lianbassam-full-verification.trigger.json
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: master
 
 jobs:
   context:
@@ -102,12 +105,12 @@ jobs:
       jrn040: ${{ steps.scope.outputs.jrn040 }}
     steps:
       - name: Checkout immutable source history
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Set up locked Node runtime
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
       - name: Publish contextual CI run locator
@@ -191,7 +194,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
       - name: Set up locked Node workspace
@@ -227,70 +230,184 @@ jobs:
       - name: Verify immutable diff hygiene
         run: git diff --check
 
-  node_affected:
-    name: Verify frontend, contracts, and journeys
+  node_contracts:
+    name: Verify contract foundation and bindings
     needs: [context]
-    if: ${{ needs.context.outputs.node == 'true' }}
+    if: ${{ needs.context.outputs.contracts == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 40
     steps:
       - name: Checkout immutable source history
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Verify imports resolve
-        if: ${{ needs.context.outputs.contracts == 'true' }}
         run: pnpm run guard:no-broken-imports
       - name: Verify contract foundation
-        if: ${{ needs.context.outputs.contracts == 'true' }}
         run: pnpm run contracts:lint
       - name: Verify frontend API binding
-        if: ${{ needs.context.outputs.contracts == 'true' }}
         run: pnpm run guard:api-binding
       - name: Verify backend API binding
-        if: ${{ needs.context.outputs.contracts == 'true' }}
         run: pnpm run guard:backend-api-binding
       - name: Verify service manifest drift
-        if: ${{ needs.context.outputs.contracts == 'true' }}
         run: pnpm run guard:service-manifest-drift
       - name: Verify frontend feature binding
-        if: ${{ needs.context.outputs.contracts == 'true' }}
         run: pnpm run guard:frontend-feature-binding
       - name: Verify runtime-facing bindings
-        if: ${{ needs.context.outputs.contracts == 'true' }}
         run: pnpm run guard:runtime-real-bindings
       - name: Verify cross-journey integrity
-        if: ${{ needs.context.outputs.contracts == 'true' }}
         run: pnpm run guard:live-cross-journey-integrity
-      - name: Verify complete Node typecheck
-        if: ${{ needs.context.outputs.full_verification == 'true' }}
-        run: pnpm run nx:typecheck
-      - name: Verify complete Node lint
-        if: ${{ needs.context.outputs.full_verification == 'true' }}
-        run: pnpm run nx:lint
-      - name: Verify complete Node tests
-        if: ${{ needs.context.outputs.full_verification == 'true' }}
-        run: pnpm run nx:test
-      - name: Verify complete Node builds
-        if: ${{ needs.context.outputs.full_verification == 'true' }}
-        run: pnpm run nx:build
-      - name: Verify affected Node workspace
-        if: ${{ needs.context.outputs.full_verification != 'true' && needs.context.outputs.frontend == 'true' }}
+
+  node_typecheck:
+    name: Verify Node typecheck
+    needs: [context]
+    if: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Restore Nx computation cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .nx/cache
+          key: nx-typecheck-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ github.sha }}
+          restore-keys: |
+            nx-typecheck-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
+      - name: Verify Node typecheck
         env:
           NX_BASE: ${{ needs.context.outputs.base_sha }}
           NX_HEAD: ${{ needs.context.outputs.head_sha }}
         run: |
-          pnpm run affected:typecheck -- --base="${NX_BASE}" --head="${NX_HEAD}"
-          pnpm run affected:lint -- --base="${NX_BASE}" --head="${NX_HEAD}"
-          pnpm run affected:test -- --base="${NX_BASE}" --head="${NX_HEAD}"
-          if [[ "${{ needs.context.outputs.heavy }}" == "true" ]]; then
-            pnpm run affected:build -- --base="${NX_BASE}" --head="${NX_HEAD}"
+          set -euo pipefail
+          if [[ "${{ needs.context.outputs.full_verification }}" == "true" ]]; then
+            pnpm run nx:typecheck
+          else
+            pnpm run affected:typecheck
           fi
+
+  node_lint:
+    name: Verify Node lint
+    needs: [context]
+    if: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Restore Nx computation cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .nx/cache
+          key: nx-lint-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ github.sha }}
+          restore-keys: |
+            nx-lint-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
+      - name: Verify Node lint
+        env:
+          NX_BASE: ${{ needs.context.outputs.base_sha }}
+          NX_HEAD: ${{ needs.context.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ needs.context.outputs.full_verification }}" == "true" ]]; then
+            pnpm run nx:lint
+          else
+            pnpm run affected:lint
+          fi
+
+  node_test:
+    name: Verify Node tests
+    needs: [context]
+    if: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Restore Nx computation cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .nx/cache
+          key: nx-test-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ github.sha }}
+          restore-keys: |
+            nx-test-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
+      - name: Verify Node tests
+        env:
+          NX_BASE: ${{ needs.context.outputs.base_sha }}
+          NX_HEAD: ${{ needs.context.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ needs.context.outputs.full_verification }}" == "true" ]]; then
+            pnpm run nx:test
+          else
+            pnpm run affected:test
+          fi
+
+  node_build:
+    name: Verify Node build
+    needs: [context]
+    if: ${{ needs.context.outputs.full_verification == 'true' || (needs.context.outputs.frontend == 'true' && needs.context.outputs.heavy == 'true') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Restore Nx computation cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .nx/cache
+          key: nx-build-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ github.sha }}
+          restore-keys: |
+            nx-build-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
+      - name: Verify Node build
+        env:
+          NX_BASE: ${{ needs.context.outputs.base_sha }}
+          NX_HEAD: ${{ needs.context.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ "${{ needs.context.outputs.full_verification }}" == "true" ]]; then
+            pnpm run nx:build
+          else
+            pnpm run affected:build
+          fi
+
+  node_journeys:
+    name: Run detected journey gates
+    needs: [context]
+    if: ${{ needs.context.outputs.journey == 'true' && needs.context.outputs.journey_scope != '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
       - name: Run detected journey gates
-        if: ${{ needs.context.outputs.journey == 'true' && needs.context.outputs.journey_scope != '' }}
         shell: pwsh
         env:
           JOURNEY_SCOPE: ${{ needs.context.outputs.journey_scope }}
@@ -300,12 +417,39 @@ jobs:
             ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim()
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+
+  node_jrn040:
+    name: Verify JRN-040 platform binding
+    needs: [context]
+    if: ${{ needs.context.outputs.jrn040 == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
       - name: Verify JRN-040 platform binding
-        if: ${{ needs.context.outputs.jrn040 == 'true' }}
         run: |
           pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false
           pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml -o /tmp/jrn-040-platform-change-sets-api.ts
           node tools/guards/jrn-040-platform-change-sets-gate.mjs
+
+  node_hygiene:
+    name: Verify immutable diff hygiene
+    needs: [context]
+    if: ${{ needs.context.outputs.node == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - name: Verify immutable diff hygiene
         run: git diff --check
 
@@ -331,9 +475,9 @@ jobs:
       DSH_REQUIRE_DB_TESTS: "true"
       PGPASSWORD: dsh_runtime_password
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with: { persist-credentials: false, show-progress: false }
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
@@ -357,7 +501,7 @@ jobs:
           go build ./... >"${log}" 2>&1 || { tail -n 160 "${log}"; exit 1; }
       - name: Upload DSH verification log
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dsh-go-verification-${{ github.run_id }}
           path: ${{ runner.temp }}/dsh-go-verification.log
@@ -386,9 +530,9 @@ jobs:
       WLT_REQUIRE_DB_TESTS: "true"
       PGPASSWORD: wlt_runtime_password
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with: { persist-credentials: false, show-progress: false }
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: services/wlt/backend/go.mod
           cache-dependency-path: services/wlt/backend/go.sum
@@ -412,7 +556,7 @@ jobs:
           go build ./... >"${log}" 2>&1 || { tail -n 160 "${log}"; exit 1; }
       - name: Upload WLT verification log
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: wlt-go-verification-${{ github.run_id }}
           path: ${{ runner.temp }}/wlt-go-verification.log
@@ -440,9 +584,9 @@ jobs:
       DATABASE_URL: postgres://identity_runtime:identity_runtime_password@localhost:5432/identity_runtime?sslmode=disable
       PGPASSWORD: identity_runtime_password
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with: { persist-credentials: false }
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: core/identity/backend/go.mod
           cache-dependency-path: core/identity/backend/go.sum
@@ -476,9 +620,9 @@ jobs:
       DATABASE_URL: postgres://workforce_runtime:workforce_runtime_password@localhost:5432/workforce_runtime?sslmode=disable
       PGPASSWORD: workforce_runtime_password
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with: { persist-credentials: false }
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: core/workforce/backend/go.mod
           cache-dependency-path: core/workforce/backend/go.sum
@@ -512,9 +656,9 @@ jobs:
       DATABASE_URL: postgres://platform:platform@localhost:5432/platform?sslmode=disable
       PGPASSWORD: platform
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with: { persist-credentials: false }
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: core/platform-control/backend/go.mod
           cache-dependency-path: core/platform-control/backend/go.sum
@@ -548,9 +692,9 @@ jobs:
       DATABASE_URL: postgres://providers_runtime:providers_runtime_password@localhost:5432/providers_runtime?sslmode=disable
       PGPASSWORD: providers_runtime_password
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with: { persist-credentials: false }
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: core/providers/backend/go.mod
           cache-dependency-path: core/providers/backend/go.sum
@@ -570,7 +714,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with: { persist-credentials: false }
       - uses: ./.github/actions/setup-node-workspace
       - name: Start and verify full runtime
@@ -586,7 +730,7 @@ jobs:
 
   result:
     name: BThwani CI result
-    needs: [context, policy, node_affected, dsh, wlt, identity, workforce, platform, providers, runtime_proof]
+    needs: [context, policy, node_contracts, node_typecheck, node_lint, node_test, node_build, node_journeys, node_jrn040, node_hygiene, dsh, wlt, identity, workforce, platform, providers, runtime_proof]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -599,7 +743,14 @@ jobs:
           PUBLISH_STATUS: ${{ github.event_name != 'pull_request' }}
           CONTEXT_RESULT: ${{ needs.context.result }}
           POLICY_RESULT: ${{ needs.policy.result }}
-          NODE_RESULT: ${{ needs.node_affected.result }}
+          NODE_CONTRACTS_RESULT: ${{ needs.node_contracts.result }}
+          NODE_TYPECHECK_RESULT: ${{ needs.node_typecheck.result }}
+          NODE_LINT_RESULT: ${{ needs.node_lint.result }}
+          NODE_TEST_RESULT: ${{ needs.node_test.result }}
+          NODE_BUILD_RESULT: ${{ needs.node_build.result }}
+          NODE_JOURNEYS_RESULT: ${{ needs.node_journeys.result }}
+          NODE_JRN040_RESULT: ${{ needs.node_jrn040.result }}
+          NODE_HYGIENE_RESULT: ${{ needs.node_hygiene.result }}
           DSH_RESULT: ${{ needs.dsh.result }}
           WLT_RESULT: ${{ needs.wlt.result }}
           IDENTITY_RESULT: ${{ needs.identity.result }}
@@ -608,7 +759,14 @@ jobs:
           PROVIDERS_RESULT: ${{ needs.providers.result }}
           RUNTIME_RESULT: ${{ needs.runtime_proof.result }}
           EXPECTED_POLICY: ${{ needs.context.outputs.policy }}
-          EXPECTED_NODE: ${{ needs.context.outputs.node }}
+          EXPECTED_NODE_CONTRACTS: ${{ needs.context.outputs.contracts }}
+          EXPECTED_NODE_TYPECHECK: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' }}
+          EXPECTED_NODE_LINT: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' }}
+          EXPECTED_NODE_TEST: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' }}
+          EXPECTED_NODE_BUILD: ${{ needs.context.outputs.full_verification == 'true' || (needs.context.outputs.frontend == 'true' && needs.context.outputs.heavy == 'true') }}
+          EXPECTED_NODE_JOURNEYS: ${{ needs.context.outputs.journey == 'true' && needs.context.outputs.journey_scope != '' }}
+          EXPECTED_NODE_JRN040: ${{ needs.context.outputs.jrn040 }}
+          EXPECTED_NODE_HYGIENE: ${{ needs.context.outputs.node }}
           EXPECTED_DSH: ${{ needs.context.outputs.dsh }}
           EXPECTED_WLT: ${{ needs.context.outputs.wlt }}
           EXPECTED_IDENTITY: ${{ needs.context.outputs.identity }}
@@ -630,7 +788,14 @@ jobs:
           }
           check_result context true "${CONTEXT_RESULT}"
           check_result policy "${EXPECTED_POLICY}" "${POLICY_RESULT}"
-          check_result node "${EXPECTED_NODE}" "${NODE_RESULT}"
+          check_result node_contracts "${EXPECTED_NODE_CONTRACTS}" "${NODE_CONTRACTS_RESULT}"
+          check_result node_typecheck "${EXPECTED_NODE_TYPECHECK}" "${NODE_TYPECHECK_RESULT}"
+          check_result node_lint "${EXPECTED_NODE_LINT}" "${NODE_LINT_RESULT}"
+          check_result node_test "${EXPECTED_NODE_TEST}" "${NODE_TEST_RESULT}"
+          check_result node_build "${EXPECTED_NODE_BUILD}" "${NODE_BUILD_RESULT}"
+          check_result node_journeys "${EXPECTED_NODE_JOURNEYS}" "${NODE_JOURNEYS_RESULT}"
+          check_result node_jrn040 "${EXPECTED_NODE_JRN040}" "${NODE_JRN040_RESULT}"
+          check_result node_hygiene "${EXPECTED_NODE_HYGIENE}" "${NODE_HYGIENE_RESULT}"
           check_result dsh "${EXPECTED_DSH}" "${DSH_RESULT}"
           check_result wlt "${EXPECTED_WLT}" "${WLT_RESULT}"
           check_result identity "${EXPECTED_IDENTITY}" "${IDENTITY_RESULT}"
