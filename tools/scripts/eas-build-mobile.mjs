@@ -90,6 +90,21 @@ function withMobileBuildEnvironmentForApp(appKey, environment = process.env) {
   return next;
 }
 
+function requireNativeProviderInputs(appKey, app, environment) {
+  const features = app.features ?? [];
+  if (!features.includes("maps")) return;
+
+  if ((platform === "android" || platform === "all")
+    && !optionalEnvironmentValue(environment.GOOGLE_MAPS_ANDROID_API_KEY)) {
+    throw new Error(`${appKey}: GOOGLE_MAPS_ANDROID_API_KEY is required for ${profile}/${platform} because the app enables native maps`);
+  }
+
+  if ((platform === "ios" || platform === "all")
+    && !optionalEnvironmentValue(environment.GOOGLE_MAPS_IOS_API_KEY)) {
+    throw new Error(`${appKey}: GOOGLE_MAPS_IOS_API_KEY is required for ${profile}/${platform} because the app enables native maps`);
+  }
+}
+
 console.log("=== PHASE 1: Comprehensive Preflight ===");
 
 run(process.execPath, ["tools/scripts/sync-mobile-apps.mjs", "--check"]);
@@ -110,6 +125,7 @@ if (all && profile !== "development") {
 for (const key of targets) {
   const appDir = path.join(root, "apps", key, "runtime");
   const appEnvironment = withMobileBuildEnvironmentForApp(key, process.env);
+  requireNativeProviderInputs(key, manifest.apps[key], appEnvironment);
 
   run(process.execPath, [
     "tools/scripts/verify-mobile-sentry-env.mjs",
