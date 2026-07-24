@@ -131,6 +131,20 @@ export function read(file) {
   return fs.readFileSync(path.join(repoRoot, file), "utf8");
 }
 
+function diagnosticSlug(violation) {
+  const file = String(violation?.file ?? "unknown")
+    .replaceAll("\\", "/")
+    .split("/")
+    .slice(-2)
+    .join("-");
+  const message = String(violation?.message ?? "failure").split(/[—:]/)[0];
+  return `${file}-${message}`
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 54) || "failure";
+}
+
 function publishGuardFailureStatus(guardId, violation) {
   const token = String(process.env.BTHWANI_STATUS_TOKEN ?? "").trim();
   const apiUrl = String(process.env.GITHUB_API_URL ?? "").trim();
@@ -138,11 +152,11 @@ function publishGuardFailureStatus(guardId, violation) {
   const sha = String(process.env.GITHUB_SHA ?? "").trim();
   if (!token || !apiUrl || !repository || !sha) return;
 
-  const slug = String(guardId ?? "guard")
+  const guardSlug = String(guardId ?? "guard")
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 70) || "guard";
+    .slice(0, 34) || "guard";
   const file = String(violation?.file ?? "").trim();
   const line = violation?.line ? `:${violation.line}` : "";
   const message = String(violation?.message ?? "guard violation")
@@ -152,7 +166,7 @@ function publishGuardFailureStatus(guardId, violation) {
   const targetUrl = `${process.env.GITHUB_SERVER_URL ?? "https://github.com"}/${repository}/actions/runs/${process.env.GITHUB_RUN_ID ?? ""}`;
   const payload = JSON.stringify({
     state: "failure",
-    context: `bthwani/diagnostic/${slug}`.slice(0, 100),
+    context: `bthwani/diagnostic/${guardSlug}/${diagnosticSlug(violation)}`.slice(0, 100),
     description: description || `${guardId}: failed`,
     target_url: targetUrl,
   });
