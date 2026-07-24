@@ -67,6 +67,45 @@ function normalizedDocumentHash(content) {
   return crypto.createHash("sha256").update(normalized).digest("hex");
 }
 
+function markerStatus(marker) {
+  const normalized = String(marker).trim().toLowerCase();
+  const colon = normalized.lastIndexOf(":");
+  return (colon >= 0 ? normalized.slice(colon + 1) : normalized).trim();
+}
+
+function declaredRetiredMarker(file, content, markers) {
+  const markerStatuses = new Map(
+    markers.map((marker) => [markerStatus(marker), marker]),
+  );
+
+  if (file.toLowerCase().endsWith(".json")) {
+    try {
+      const document = JSON.parse(content);
+      const candidates = [
+        document?.status,
+        document?.documentStatus,
+        document?.metadata?.status,
+        document?.lifecycle?.status,
+      ];
+      for (const candidate of candidates) {
+        if (typeof candidate !== "string") continue;
+        const matched = markerStatuses.get(candidate.trim().toLowerCase());
+        if (matched) return matched;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  const declaredLines = content
+    .split(/\r?\n/, 80)
+    .map((line) => line.trim().replace(/^[-*#>]+\s*/, "").toLowerCase());
+  return markers.find((marker) =>
+    declaredLines.includes(String(marker).trim().toLowerCase()),
+  ) ?? null;
+}
+
 const policy = readJson(policyPath);
 const files = trackedFiles();
 const errors = [];
@@ -167,9 +206,7 @@ for (const file of files) {
   const isDocument = documentRoots.some((root) => lower.startsWith(root.toLowerCase()));
   if (isDocument && isTextFile(file)) {
     const content = searchableText.get(file) ?? "";
-    const retiredMarker = retiredMarkers.find((marker) =>
-      content.toLowerCase().includes(String(marker).toLowerCase()),
-    );
+    const retiredMarker = declaredRetiredMarker(file, content, retiredMarkers);
     if (retiredMarker && !lower.startsWith(archiveRoot.toLowerCase())) {
       add(errors, {
         code: "RETIRED_DOCUMENT_OUTSIDE_ARCHIVE",
