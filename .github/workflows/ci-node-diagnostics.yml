@@ -40,9 +40,25 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Verify UI providers, icons, tokens and boundaries
-        run: pnpm run diagnostics:ui-kit
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/deep-diagnostics"
+          set -o pipefail
+          pnpm run diagnostics:ui-kit 2>&1 | tee "${RUNNER_TEMP}/deep-diagnostics/ui-kit.log"
       - name: Prevent unused files, exports and dependencies
-        run: pnpm exec knip --reporter compact --reporter github-actions
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/deep-diagnostics"
+          set -o pipefail
+          pnpm exec knip --reporter compact --reporter github-actions 2>&1 | tee "${RUNNER_TEMP}/deep-diagnostics/knip.log"
+      - name: Upload deep-diagnostic evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deep-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/deep-diagnostics/*.log
+          if-no-files-found: error
+          retention-days: 7
 
   vertical_integrity:
     name: Logic, accessibility and dependency integrity
@@ -58,15 +74,40 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Verify Go route extraction
-        run: pnpm run guard:go-routes-ci
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/vertical-integrity"
+          set -o pipefail
+          pnpm run guard:go-routes-ci 2>&1 | tee "${RUNNER_TEMP}/vertical-integrity/go-routes.log"
       - name: Verify logic coverage
-        run: pnpm run guard:logic-coverage
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/vertical-integrity"
+          set -o pipefail
+          pnpm run guard:logic-coverage 2>&1 | tee "${RUNNER_TEMP}/vertical-integrity/logic-coverage.log"
       - name: Verify accessibility contracts
-        run: pnpm run guard:a11y
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:a11y 2>&1 | tee "${RUNNER_TEMP}/vertical-integrity/accessibility.log"
       - name: Verify dependency graph boundaries
-        run: pnpm run guard:dependency-graph
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:dependency-graph 2>&1 | tee "${RUNNER_TEMP}/vertical-integrity/dependency-graph.log"
       - name: Verify AST rules
-        run: pnpm run guard:ast-grep-rules
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:ast-grep-rules 2>&1 | tee "${RUNNER_TEMP}/vertical-integrity/ast-rules.log"
+      - name: Upload vertical-integrity evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vertical-integrity-${{ github.run_id }}
+          path: ${{ runner.temp }}/vertical-integrity/*.log
+          if-no-files-found: error
+          retention-days: 7
 
   repository_integrity:
     name: Repository organization and performance budgets
@@ -82,17 +123,44 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Verify repository size limits
-        run: pnpm run guard:repo-size
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/repository-integrity"
+          set -o pipefail
+          pnpm run guard:repo-size 2>&1 | tee "${RUNNER_TEMP}/repository-integrity/repository-size.log"
       - name: Verify repository naming
-        run: pnpm run guard:repo-naming
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:repo-naming 2>&1 | tee "${RUNNER_TEMP}/repository-integrity/repository-naming.log"
       - name: Verify repository structure
-        run: pnpm run guard:repo-structure
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:repo-structure 2>&1 | tee "${RUNNER_TEMP}/repository-integrity/repository-structure.log"
       - name: Verify heavy-import boundaries
-        run: pnpm run guard:heavy-imports
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:heavy-imports 2>&1 | tee "${RUNNER_TEMP}/repository-integrity/heavy-imports.log"
       - name: Verify runtime performance budgets
-        run: pnpm run guard:performance-budget
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:performance-budget 2>&1 | tee "${RUNNER_TEMP}/repository-integrity/performance-budget.log"
       - name: Verify bundle budgets
-        run: pnpm run guard:bundle-budget
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:bundle-budget 2>&1 | tee "${RUNNER_TEMP}/repository-integrity/bundle-budget.log"
+      - name: Upload repository-integrity evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: repository-integrity-${{ github.run_id }}
+          path: ${{ runner.temp }}/repository-integrity/*.log
+          if-no-files-found: error
+          retention-days: 7
 
   contracts:
     name: Contract foundation and bindings
