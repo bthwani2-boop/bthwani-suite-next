@@ -46,7 +46,7 @@ jobs:
             conclusion="${WORKFLOW_RUN_CONCLUSION}"
             run_url="${WORKFLOW_RUN_URL}"
           else
-            for attempt in $(seq 1 90); do
+            for (( attempt = 1; attempt <= 90; attempt++ )); do
               response="$(gh api \
                 "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${head_sha}&event=push&per_page=20")"
               run_id="$(jq -r --arg sha "${head_sha}" \
