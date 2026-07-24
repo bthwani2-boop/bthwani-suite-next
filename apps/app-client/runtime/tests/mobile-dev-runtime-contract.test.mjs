@@ -53,7 +53,10 @@ test('every mobile launcher executes the shared preflight before Metro', () => {
 
 test('Android development client opens once outside Expo stream piping', () => {
   const source = read('tools/scripts/start-mobile-runtime.ps1');
-  const expoArguments = source.slice(source.indexOf('$ExpoArguments = @('), source.indexOf('$SlugByApp = @{'));
+  const argumentsStart = source.indexOf('$ExpoArguments = @(');
+  const argumentsEnd = source.indexOf('if ($ShouldClearCache) {', argumentsStart);
+  assert.ok(argumentsStart >= 0 && argumentsEnd > argumentsStart, 'Expo argument array is missing');
+  const expoArguments = source.slice(argumentsStart, argumentsEnd);
   assert.doesNotMatch(expoArguments, /--android/);
   assert.match(source, /shell am start -W/);
   assert.match(source, /Metro port \$LaunchPort did not become ready for Android launch/);
