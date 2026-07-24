@@ -37,7 +37,7 @@ export function DshCaptainFinanceScreen({
 	onBack,
 	onRetry,
 	dshClientId,
-	embedded = false,
+	embedded = true,
 }: DshCaptainFinanceScreenProps) {
 	const theme = useTheme() as any;
 
