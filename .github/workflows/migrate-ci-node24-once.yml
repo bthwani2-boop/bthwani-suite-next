@@ -6,6 +6,12 @@ on:
       - fix/lianbassam-pr-ci-trigger
     paths:
       - .github/workflows/migrate-ci-node24-once.yml
+  pull_request:
+    branches:
+      - lianbassam
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/migrate-ci-node24-once.yml
 
 permissions:
   contents: write
