@@ -58,7 +58,7 @@ Current rules:
 - Keep deferred commercial capabilities disabled until each has Product Truth, architecture, security, finance, and SDLC approval.
 - Default a journey's `saas_context.mode` to `NOT_APPLICABLE` unless the journey actually touches tenant ownership, tenant isolation, cross-tenant access, subscriptions, entitlements, metering, tenant billing, tenant lifecycle, white-labeling, custom domains, or commercial SaaS activation — do not auto-expand an unrelated journey into a SaaS-readiness project just because this annex exists.
 - Record `NOT_APPLICABLE` with a stated technical reason (`NOT_AFFECTED_WITH_REASON`) rather than leaving `saas_context` blank; a blank `saas_context` on a journey that does touch tenant-owned data is `FIX_REQUIRED`.
-- Never output or accept `SAAS_ACTIVE` or `SAAS_ACTIVATION_APPROVED` as the current platform state — the current, single-source-of-truth state is `SAAS_READY_DEFERRED` / `ELIGIBLE_FOR_REVIEW` as recorded above. Only `governance/saas/saas-governance.json` itself, edited under explicit authorization, can change this.
+- Never output or accept `SAAS_ACTIVE` or the deprecated activation-approval alias as the current platform state — the current, single-source-of-truth state is `SAAS_READY_DEFERRED` / `ELIGIBLE_FOR_REVIEW` as recorded above. Only `governance/saas/saas-governance.json` itself, edited under explicit authorization, can change this.
 - Commercial/production SaaS activation is never implied by completing an unrelated implementation journey; it requires the full `saas_activation_gate` in the ACTIVE section below, evaluated on its own same-commit evidence.
 
 ## Tenant Definition
@@ -131,7 +131,7 @@ A matrix is planning or evidence structure only. It does not prove runtime isola
 
 ## Deferred Commercial Features
 
-The following remain deferred even though SaaS runtime mode is active:
+The following remain deferred while the platform is `SAAS_READY_DEFERRED` and continue to require their own approval and evidence even after any future runtime activation:
 
 - commercial subscription billing;
 - paid plan matrix;
@@ -196,4 +196,4 @@ CLOSED_WITH_EVIDENCE
 
 ## Acceptance Condition
 
-Accepted when machine-readable SaaS state validates against its schema, explicit activation authorization is traceable, SaaS runtime mode is enabled, tenant boundaries remain enforced, deferred features remain controlled, and no production or evidence claim exceeds the proof available on the same commit.
+Accepted when the machine-readable SaaS state validates against its schema, explicit implementation authorization is traceable, the declared runtime mode matches the machine-readable state, tenant boundaries remain enforced, deferred features remain controlled, and no production or evidence claim exceeds the proof available on the same commit.
