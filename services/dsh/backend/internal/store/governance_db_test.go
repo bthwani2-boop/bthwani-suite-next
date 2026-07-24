@@ -12,6 +12,20 @@ import (
 	_ "github.com/lib/pq"
 )
 
+func requiredTestTenantID(t *testing.T) string {
+	t.Helper()
+	tenantID := os.Getenv("DSH_TEST_TENANT_ID")
+	if tenantID == "" {
+		t.Fatal("DSH_TEST_TENANT_ID is required when DSH_REQUIRE_DB_TESTS=true")
+	}
+	return tenantID
+}
+
+func testStoreActor(t *testing.T, actorID string) StoreActor {
+	t.Helper()
+	return StoreActor{ID: actorID, Role: "field", TenantID: requiredTestTenantID(t)}
+}
+
 func openRequiredDB(t *testing.T) *sql.DB {
 	t.Helper()
 	if os.Getenv("DSH_REQUIRE_DB_TESTS") != "true" {
@@ -120,7 +134,7 @@ func TestSubmitFieldVerificationRequiresVisitID(t *testing.T) {
 	storeID := uniqueID("store-fv")
 	agentID := uniqueID("agent-fv")
 	seedGovernanceStore(t, db, storeID, agentID)
-	actor := StoreActor{ID: agentID, Role: "field"}
+	actor := testStoreActor(t, agentID)
 
 	_, err := SubmitFieldVerification(ctx, db, actor, storeID, "idempotency-key-1", "correlation-id-1", FieldVerificationInput{
 		ExpectedVersion: 1,
@@ -141,7 +155,7 @@ func TestSubmitFieldVerificationRejectsVisitStoreMismatch(t *testing.T) {
 	agentID := uniqueID("agent-fv-mm")
 	seedGovernanceStore(t, db, storeA, agentID)
 	seedGovernanceStore(t, db, storeB, agentID)
-	actor := StoreActor{ID: agentID, Role: "field"}
+	actor := testStoreActor(t, agentID)
 
 	visitID := seedFieldVisit(t, db, storeB, agentID, "complete")
 
@@ -163,7 +177,7 @@ func TestSubmitFieldVerificationRejectsVerifiedWithIncompleteVisit(t *testing.T)
 	storeID := uniqueID("store-fv-ic")
 	agentID := uniqueID("agent-fv-ic")
 	seedGovernanceStore(t, db, storeID, agentID)
-	actor := StoreActor{ID: agentID, Role: "field"}
+	actor := testStoreActor(t, agentID)
 
 	visitID := seedFieldVisit(t, db, storeID, agentID, "in_progress")
 
@@ -200,7 +214,7 @@ func TestSubmitFieldVerificationRejectsVerifiedWithOpenEscalation(t *testing.T) 
 	storeID := uniqueID("store-fv-esc")
 	agentID := uniqueID("agent-fv-esc")
 	seedGovernanceStore(t, db, storeID, agentID)
-	actor := StoreActor{ID: agentID, Role: "field"}
+	actor := testStoreActor(t, agentID)
 
 	visitID := seedFieldVisit(t, db, storeID, agentID, "complete")
 	seedVerificationEvidence(t, db, visitID, storeID, agentID)
@@ -248,7 +262,7 @@ func TestResolveActorStoreForIDFallbackAndExplicit(t *testing.T) {
 	agentID := uniqueID("agent-ras")
 	seedGovernanceStore(t, db, storeA, agentID)
 	seedGovernanceStore(t, db, storeB, agentID)
-	actor := StoreActor{ID: agentID, Role: "field"}
+	actor := testStoreActor(t, agentID)
 
 	rowNoParam, _, err := ResolveActorStoreForID(ctx, db, actor, "")
 	if err != nil {
