@@ -42,13 +42,15 @@
   ],
   "evidence": {
     "roots": ["governance/evidence/"],
-    "maximumUnreferencedAgeDays": 365,
+    "maximumUnreferencedAgeDays": 180,
     "permanentRoots": [
-      "governance/evidence/security/"
+      "governance/evidence/security/archive/"
     ],
     "referenceIndexes": [
       "governance/00_DECISION_INDEX.md",
-      "governance/operational_journey_protocol_package/00_INDEX_AND_COVERAGE.md"
+      "governance/operational_journey_protocol_package/00_INDEX_AND_COVERAGE.md",
+      "governance/evidence/security/lianbassam-remediation.md",
+      "governance/evidence/security/archive/README.md"
     ]
   },
   "documents": {
