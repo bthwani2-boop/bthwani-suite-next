@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestJRN040CreateValidationRejectsUnsafeInputs(t *testing.T) {
+func TestChangeSetCreateValidationRejectsUnsafeInputs(t *testing.T) {
 	base := CreateChangeSetInput{
 		Title:            "safe change",
 		Reason:           "verified operational reason",
@@ -67,7 +67,7 @@ func TestJRN040CreateValidationRejectsUnsafeInputs(t *testing.T) {
 	}
 }
 
-func TestJRN040ConflictStaleSnapshotAndMetadataRollback(t *testing.T) {
+func TestChangeSetConflictStaleSnapshotAndMetadataRollback(t *testing.T) {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		t.Skip("DATABASE_URL is required for platform-control integration tests")
@@ -88,8 +88,8 @@ func TestJRN040ConflictStaleSnapshotAndMetadataRollback(t *testing.T) {
 INSERT INTO platform_variables
   (variable_key, owner_service, value_type, classification, scope_type, scope_id, value_json, revision, status)
 VALUES
-  ('JRN040_TARGET', 'legacy-owner', 'integer', 'public', 'global', '', '5'::jsonb, 1, 'disabled'),
-  ('JRN040_SECRET', 'vault', 'json', 'secret', 'global', '', '{"credential":"redacted"}'::jsonb, 1, 'active')`); err != nil {
+  ('PLATFORM_CHANGESET_TARGET', 'legacy-owner', 'integer', 'public', 'global', '', '5'::jsonb, 1, 'disabled'),
+  ('PLATFORM_CHANGESET_SECRET', 'vault', 'json', 'secret', 'global', '', '{"credential":"redacted"}'::jsonb, 1, 'active')`); err != nil {
 		t.Fatalf("seed variables: %v", err)
 	}
 
@@ -101,7 +101,7 @@ VALUES
 		RollbackPlan:     "not applicable",
 		Items: []CreateChangeSetItemInput{{
 			TargetType:       ChangeTargetVariable,
-			TargetKey:        "JRN040_SECRET",
+			TargetKey:        "PLATFORM_CHANGESET_SECRET",
 			OwnerService:     "vault",
 			ScopeType:        "global",
 			ValueType:        "json",
@@ -121,7 +121,7 @@ VALUES
 			RollbackPlan:     "restore",
 			Items: []CreateChangeSetItemInput{{
 				TargetType:       ChangeTargetVariable,
-				TargetKey:        "JRN040_TARGET",
+				TargetKey:        "PLATFORM_CHANGESET_TARGET",
 				OwnerService:     "new-owner",
 				ScopeType:        "global",
 				ValueType:        "integer",
@@ -164,7 +164,7 @@ VALUES
 	var owner, valueType, classification, status string
 	var valueRaw []byte
 	var revision int64
-	if err := db.QueryRowContext(ctx, `SELECT owner_service, value_type, classification, status, value_json, revision FROM platform_variables WHERE variable_key='JRN040_TARGET' AND scope_type='global' AND scope_id=''`).Scan(&owner, &valueType, &classification, &status, &valueRaw, &revision); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT owner_service, value_type, classification, status, value_json, revision FROM platform_variables WHERE variable_key='PLATFORM_CHANGESET_TARGET' AND scope_type='global' AND scope_id=''`).Scan(&owner, &valueType, &classification, &status, &valueRaw, &revision); err != nil {
 		t.Fatalf("read restored variable: %v", err)
 	}
 	if owner != "legacy-owner" || valueType != "integer" || classification != "public" || status != "disabled" || string(valueRaw) != "5" || revision != 3 {
@@ -175,7 +175,7 @@ VALUES
 	if _, err := service.ValidateChangeSet(ctx, stale.ID, "maker", nil, "stale"); err != nil {
 		t.Fatalf("validate stale candidate: %v", err)
 	}
-	if _, err := db.ExecContext(ctx, `UPDATE platform_variables SET revision=revision+1, value_json='9'::jsonb WHERE variable_key='JRN040_TARGET' AND scope_type='global' AND scope_id=''`); err != nil {
+	if _, err := db.ExecContext(ctx, `UPDATE platform_variables SET revision=revision+1, value_json='9'::jsonb WHERE variable_key='PLATFORM_CHANGESET_TARGET' AND scope_type='global' AND scope_id=''`); err != nil {
 		t.Fatalf("mutate target after validation: %v", err)
 	}
 	if _, err := service.SubmitChangeSet(ctx, stale.ID, "maker", nil, "stale"); !errors.Is(err, ErrVersionConflict) {
