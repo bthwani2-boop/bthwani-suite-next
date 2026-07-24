@@ -23,7 +23,6 @@ import {
 } from "@bthwani/ui-kit";
 import {
   applyDiscoveryFilter,
-  buildHomeStorePresentation,
   recordHomeMarketingEvent,
   type BannerViewModel,
   type DiscoveryFilterKind,
@@ -34,7 +33,6 @@ import { HomeFilterRailSection } from "./HomeFilterRailSection";
 import { HomeHeroBannerSection } from "./HomeHeroBannerSection";
 import { HomePromoSection } from "./HomePromoSection";
 import { HomeStoreFeedSection } from "./HomeStoreFeedSection";
-import { HomeStoreGroupsSection } from "./HomeStoreGroupsSection";
 
 type Props = {
   state: HomeDiscoveryState;
@@ -148,8 +146,7 @@ export function HomeDiscoveryShell({
   }
 
   const { banners, promos, filters, categories, stores } = state.data;
-  const presentation = buildHomeStorePresentation(stores);
-  const filteredStores = applyDiscoveryFilter(presentation.feedStores, activeFilter)
+  const filteredStores = applyDiscoveryFilter(stores, activeFilter)
     .filter((store) => activeCategoryId === null || store.categoryId === activeCategoryId);
 
   return (
@@ -169,7 +166,6 @@ export function HomeDiscoveryShell({
             onCategoriesPress={() => setShowDropdown(true)}
           />
         ) : null}
-        <HomeStoreGroupsSection groups={presentation.groups} onStorePress={onStorePress} />
         <HomeFilterRailSection
           filters={filters}
           activeFilter={activeFilter}
@@ -319,24 +315,32 @@ const styles = StyleSheet.create({
   rowLtr: { flexDirection: "row" },
   dropdownItemPressed: { backgroundColor: alpha(colorRoles.brandAction, 0.05) },
   dropdownItemActive: { backgroundColor: alpha(colorRoles.brandAction, 0.08) },
-  emojiContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    backgroundColor: colorRoles.surfaceMuted,
+  selectionIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: radius.round,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
   },
-  emojiContainerActive: { backgroundColor: colorRoles.brandActionSoft },
-  dropdownEmoji: { fontSize: 16 },
+  checkmark: { fontSize: 12, fontWeight: "800", color: colorRoles.brandAction },
   dropdownLabel: {
+    flex: 1,
     fontSize: 13,
     fontWeight: "600",
-    color: colorRoles.textSecondary,
+    color: colorRoles.textPrimary,
     textAlign: "right",
-    flex: 1,
   },
-  dropdownLabelActive: { color: colorRoles.brandAction, fontWeight: "700" },
-  selectionIndicator: { width: 16, height: 16, alignItems: "center", justifyContent: "center" },
-  checkmark: { fontSize: 14, fontWeight: "700", color: colorRoles.brandAction },
+  dropdownLabelActive: { color: colorRoles.brandAction, fontWeight: "800" },
+  emojiContainer: {
+    width: 34,
+    height: 34,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colorRoles.surfaceMuted,
+  },
+  emojiContainerActive: { backgroundColor: alpha(colorRoles.brandAction, 0.1) },
+  dropdownEmoji: { fontSize: 18 },
 });
