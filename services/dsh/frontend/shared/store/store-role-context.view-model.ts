@@ -44,10 +44,29 @@ export type CaptainStoreContextViewModel = {
   readonly pickupInstruction: string;
 };
 
+type SafeOperationalFields = Readonly<{
+  addressLine: string;
+  coverageSummary: string;
+  operatingHours: string;
+  deliveryReadiness: string;
+  deliveryModes: readonly string[];
+}>;
+
+function safeOperationalFields(store: DshStoreAdminDetail): SafeOperationalFields {
+  return {
+    addressLine: store.addressLine ?? "",
+    coverageSummary: store.coverageSummary ?? "",
+    operatingHours: store.operatingHours ?? "",
+    deliveryReadiness: store.deliveryReadiness ?? "",
+    deliveryModes: store.deliveryModes ?? [],
+  };
+}
+
 function operatingLabel(store: DshStoreAdminDetail): string {
   const lifecycle = store.isOpen ? "المتجر يعمل" : "المتجر غير متاح حاليًا";
-  return store.operatingHours.length > 0
-    ? `${lifecycle} · ${store.operatingHours}`
+  const { operatingHours } = safeOperationalFields(store);
+  return operatingHours.length > 0
+    ? `${lifecycle} · ${operatingHours}`
     : `${lifecycle} · ساعات التشغيل غير مكتملة`;
 }
 
@@ -57,6 +76,7 @@ export function toPartnerStoreContext(
   const checks = createReadinessChecks(store);
   const readyCount = checks.filter((check) => check.ready).length;
   const attentionCount = checks.length - readyCount;
+  const { deliveryModes } = safeOperationalFields(store);
   return {
     store,
     checks,
@@ -65,9 +85,9 @@ export function toPartnerStoreContext(
     catalogReadinessSummary: store.publicationEligible
       ? "المتجر اجتاز بوابة النشر التشغيلية"
       : "يلزم إغلاق عناصر الجاهزية قبل النشر للعملاء",
-    readinessPercent: Math.round((readyCount / checks.length) * 100),
+    readinessPercent: checks.length === 0 ? 0 : Math.round((readyCount / checks.length) * 100),
     attentionCount,
-    serviceModesLabel: formatDeliveryModes(store.deliveryModes),
+    serviceModesLabel: formatDeliveryModes(deliveryModes),
     nextAction:
       attentionCount === 0
         ? "حافظ على البيانات محدثة وراجع ظهور المتجر للعملاء."
@@ -84,7 +104,7 @@ export function toFieldStoreContext(
     store,
     checks,
     verificationSummary: `${readyCount} من ${checks.length} عناصر تحقق جاهزة`,
-    readinessPercent: Math.round((readyCount / checks.length) * 100),
+    readinessPercent: checks.length === 0 ? 0 : Math.round((readyCount / checks.length) * 100),
     attentionChecks: checks.filter((check) => !check.ready),
     recommendation:
       readyCount === checks.length
@@ -96,10 +116,17 @@ export function toFieldStoreContext(
 export function toCaptainStoreContext(
   store: DshStoreAdminDetail,
 ): CaptainStoreContextViewModel {
-  const pickupEnabled = store.deliveryModes.includes("pickup");
-  const hasLocation = store.addressLine.length > 0 && store.coverageSummary.length > 0;
-  const hasOperatingHours = store.operatingHours.length > 0;
-  const deliveryReady = store.deliveryReadiness === "ready";
+  const {
+    addressLine,
+    coverageSummary,
+    operatingHours,
+    deliveryReadiness,
+    deliveryModes,
+  } = safeOperationalFields(store);
+  const pickupEnabled = deliveryModes.includes("pickup");
+  const hasLocation = addressLine.length > 0 && coverageSummary.length > 0;
+  const hasOperatingHours = operatingHours.length > 0;
+  const deliveryReady = deliveryReadiness === "ready";
   const pickupChecks: readonly StoreReadinessCheck[] = [
     {
       id: "store-open",
@@ -123,19 +150,19 @@ export function toCaptainStoreContext(
       id: "location",
       label: "عنوان الاستلام",
       ready: hasLocation,
-      detail: hasLocation ? `${store.addressLine} · ${store.coverageSummary}` : "عنوان أو تغطية المتجر غير مكتملين",
+      detail: hasLocation ? `${addressLine} · ${coverageSummary}` : "عنوان أو تغطية المتجر غير مكتملين",
     },
     {
       id: "operating-hours",
       label: "ساعات التشغيل",
       ready: hasOperatingHours,
-      detail: hasOperatingHours ? store.operatingHours : "ساعات التشغيل غير محددة",
+      detail: hasOperatingHours ? operatingHours : "ساعات التشغيل غير محددة",
     },
     {
       id: "delivery-readiness",
       label: "جاهزية التسليم",
       ready: deliveryReady,
-      detail: deliveryReady ? "المتجر جاهز للتسليم" : `الحالة: ${store.deliveryReadiness || "غير محددة"}`,
+      detail: deliveryReady ? "المتجر جاهز للتسليم" : `الحالة: ${deliveryReadiness || "غير محددة"}`,
     },
   ];
   return {
@@ -144,9 +171,9 @@ export function toCaptainStoreContext(
     pickupLabel: pickupEnabled
       ? "الاستلام من المتجر متاح"
       : "الاستلام من المتجر غير متاح",
-    locationLabel: store.addressLine || formatServiceArea(store.cityCode, store.serviceAreaCode),
+    locationLabel: addressLine || formatServiceArea(store.cityCode, store.serviceAreaCode),
     operatingLabel: operatingLabel(store),
-    serviceModesLabel: formatDeliveryModes(store.deliveryModes, "غير محددة"),
+    serviceModesLabel: formatDeliveryModes(deliveryModes, "غير محددة"),
     estimatedWindowLabel:
       store.deliveryEtaMin !== null && store.deliveryEtaMax !== null
         ? `${store.deliveryEtaMin}–${store.deliveryEtaMax} دقيقة`
@@ -162,42 +189,49 @@ export function toCaptainStoreContext(
 function createReadinessChecks(
   store: DshStoreAdminDetail,
 ): readonly StoreReadinessCheck[] {
+  const {
+    addressLine,
+    coverageSummary,
+    operatingHours,
+    deliveryReadiness,
+    deliveryModes,
+  } = safeOperationalFields(store);
   const operationalContextReady =
-    store.addressLine.length > 0 &&
-    store.coverageSummary.length > 0 &&
-    store.operatingHours.length > 0 &&
-    store.deliveryReadiness.length > 0;
+    addressLine.length > 0 &&
+    coverageSummary.length > 0 &&
+    operatingHours.length > 0 &&
+    deliveryReadiness.length > 0;
   return [
     {
       id: "location",
       label: "الموقع ونطاق الخدمة",
       ready:
-        store.cityCode.trim().length > 0 &&
-        store.serviceAreaCode.trim().length > 0,
-      detail: formatServiceArea(store.cityCode, store.serviceAreaCode),
+        (store.cityCode ?? "").trim().length > 0 &&
+        (store.serviceAreaCode ?? "").trim().length > 0,
+      detail: formatServiceArea(store.cityCode ?? "", store.serviceAreaCode ?? ""),
     },
     {
       id: "operational-context",
       label: "الساعات والعنوان والجاهزية",
       ready: operationalContextReady,
       detail: operationalContextReady
-        ? `${store.operatingHours} · ${store.addressLine}`
+        ? `${operatingHours} · ${addressLine}`
         : "يلزم استكمال العنوان والتغطية والساعات وجاهزية التوصيل",
     },
     {
       id: "media",
       label: "الهوية البصرية",
-      ready: store.heroImageUrl !== null && store.logoUrl !== null,
+      ready: store.heroImageUrl != null && store.logoUrl != null,
       detail:
-        store.heroImageUrl !== null && store.logoUrl !== null
+        store.heroImageUrl != null && store.logoUrl != null
           ? "الغلاف والشعار متاحان"
           : "يلزم استكمال الغلاف أو الشعار",
     },
     {
       id: "delivery",
       label: "طرق الخدمة",
-      ready: store.deliveryModes.length > 0,
-      detail: formatDeliveryModes(store.deliveryModes, "لا توجد طرق خدمة"),
+      ready: deliveryModes.length > 0,
+      detail: formatDeliveryModes(deliveryModes, "لا توجد طرق خدمة"),
     },
     {
       id: "visibility",
@@ -212,13 +246,13 @@ function createReadinessChecks(
       id: "partner-readiness",
       label: "جاهزية الشريك",
       ready: store.partnerReadiness === "ready",
-      detail: store.partnerReadiness === "ready" ? "جاهزية الشريك مكتملة" : `الحالة: ${store.partnerReadiness}`,
+      detail: store.partnerReadiness === "ready" ? "جاهزية الشريك مكتملة" : `الحالة: ${store.partnerReadiness ?? "غير محددة"}`,
     },
     {
       id: "catalog-approval",
       label: "اعتماد الكتالوج",
       ready: store.catalogApprovalStatus === "approved",
-      detail: store.catalogApprovalStatus === "approved" ? "الكتالوج معتمد" : `الحالة: ${store.catalogApprovalStatus}`,
+      detail: store.catalogApprovalStatus === "approved" ? "الكتالوج معتمد" : `الحالة: ${store.catalogApprovalStatus ?? "غير محددة"}`,
     },
     {
       id: "marketing-visibility",
