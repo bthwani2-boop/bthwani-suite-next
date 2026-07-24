@@ -47,6 +47,8 @@ export { useFieldCatalogController } from "./use-field-catalog-controller";
 export * from "./partner-registry";
 export * from "./use-partners-controller";
 export * from "./partner-workspace.controller";
+export * from "./partner-store-ownership.api";
+export * from "./use-governed-partner-stores-controller";
 
 export type {
   DeliveryPricingFulfillmentMode,
