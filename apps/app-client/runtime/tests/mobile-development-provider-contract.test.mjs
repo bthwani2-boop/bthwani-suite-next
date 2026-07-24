@@ -68,24 +68,31 @@ test("captain receives Google Maps only when its scoped key exists", () => {
   });
 });
 
-test("remote build preflight requires captain map credentials in development", () => {
+test("development permits the captain map fallback while release profiles require Maps", () => {
   const buildRunner = fs.readFileSync(
     path.join(repoRoot, "tools/scripts/eas-build-mobile.mjs"),
     "utf8",
   );
   for (const marker of [
-    "requireNativeProviderInputs",
+    'profile === "development"',
     "GOOGLE_MAPS_ANDROID_API_KEY is required",
     "because the app enables native maps",
   ]) {
-    assert.ok(buildRunner.includes(marker), `missing build preflight marker: ${marker}`);
+    assert.ok(buildRunner.includes(marker), `missing build policy marker: ${marker}`);
   }
 
   const setupScript = fs.readFileSync(
     path.join(repoRoot, "tools/scripts/setup-mobile-firebase-development.ps1"),
     "utf8",
   );
+  assert.ok(setupScript.includes("Validate every local Firebase input before EAS mutation"));
+  assert.ok(setupScript.includes("Optional in development"));
   assert.ok(setupScript.includes('Name "GOOGLE_SERVICES_JSON"'));
-  assert.ok(setupScript.includes('Name "GOOGLE_MAPS_ANDROID_API_KEY"'));
-  assert.ok(setupScript.includes('Google Maps is configured only for app-captain'));
+
+  const bootstrapScript = fs.readFileSync(
+    path.join(repoRoot, "tools/scripts/bootstrap-mobile-firebase-development.ps1"),
+    "utf8",
+  );
+  assert.ok(bootstrapScript.includes("DRY RUN"));
+  assert.ok(bootstrapScript.includes("No EAS project, variable, credential, build, or workflow was changed"));
 });
