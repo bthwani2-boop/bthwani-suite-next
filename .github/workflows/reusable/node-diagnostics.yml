@@ -1,4 +1,4 @@
-name: Reusable Workflow
+name: Reusable Node Diagnostics
 
 on:
   workflow_call:
@@ -12,80 +12,22 @@ on:
       full_verification:
         type: string
         required: false
-      governance:
-        type: string
-        required: false
-      workflow:
-        type: string
-        required: false
-      infrastructure:
-        type: string
-        required: false
-      security:
-        type: string
-        required: false
-      policy:
-        type: string
-        required: false
       frontend:
         type: string
         required: false
       contracts:
         type: string
         required: false
-      journey:
-        type: string
-        required: false
-      journey_scope:
-        type: string
-        required: false
       node:
         type: string
         required: false
-      node_scope:
-        type: string
-        required: false
-      dsh:
-        type: string
-        required: false
-      wlt:
-        type: string
-        required: false
-      identity:
-        type: string
-        required: false
-      workforce:
-        type: string
-        required: false
-      platform:
-        type: string
-        required: false
-      providers:
-        type: string
-        required: false
-      database:
-        type: string
-        required: false
-      runtime:
-        type: string
-        required: false
-      shared_brain:
-        type: string
-        required: false
-      heavy:
-        type: string
-        required: false
-      platform_change_sets:
-        type: string
-        required: false
-      runtime_proof:
-        type: boolean
-        required: false
+
+permissions:
+  contents: read
 
 jobs:
   node_deep_diagnostics:
-    name: Operational deep diagnostics (UI purity, dead code)
-    needs: []
+    name: Operational deep diagnostics
     if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -96,14 +38,13 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: UI Surface Purity (ui-kit)
+      - name: Verify UI surface purity
         run: pnpm run diagnostics:ui-kit
-      - name: Dead Code Prevention (knip)
+      - name: Verify dead-code boundary
         run: pnpm run diagnostics:knip
 
   node_vertical_integrity:
-    name: Vertical fullstack integrity (Logic, bindings, AST)
-    needs: []
+    name: Verify vertical full-stack integrity
     if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.contracts == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -115,12 +56,11 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Logic coverage and AST rules
+      - name: Verify logic coverage and AST rules
         run: pnpm run guard:logic-all
 
   node_performance_budget:
-    name: Organization and performance (Budgets, limits)
-    needs: []
+    name: Verify repository organization and budgets
     if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.node == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -131,14 +71,13 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Repo structure and naming
+      - name: Verify repository structure and naming
         run: pnpm run guard:repo-all
-      - name: Performance, budgets and heavy imports
+      - name: Verify performance and bundle budgets
         run: pnpm run guard:performance-all
 
   node_contracts:
     name: Verify contract foundation and bindings
-    needs: []
     if: ${{ inputs.contracts == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 40
@@ -168,8 +107,7 @@ jobs:
         run: pnpm run guard:live-cross-journey-integrity
 
   node_hygiene:
-    name: Verify immutable diff hygiene
-    needs: []
+    name: Verify Node diff hygiene
     if: ${{ inputs.node == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -181,4 +119,3 @@ jobs:
           persist-credentials: false
       - name: Verify immutable diff hygiene
         run: git diff --check
-
