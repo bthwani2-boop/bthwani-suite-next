@@ -145,9 +145,14 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (Array.isArray(expo.platforms) && expo.platforms.includes("web")) fail(`${key}: web is forbidden in Expo mobile config`);
 
   const plugins = pluginMap(expo.plugins);
-  for (const basePlugin of ["expo-image-picker", "expo-document-picker", "@sentry/react-native/expo"]) {
+  for (const basePlugin of ["expo-image-picker", "expo-document-picker"]) {
     if (!plugins.has(basePlugin)) fail(`${key}: missing ${basePlugin} plugin`);
   }
+  const sentryNativeConfigured = expo.extra?.sentry?.nativeConfigured === true;
+  const sentryEnabled = expo.extra?.sentry?.enabled === true;
+  const hasSentryPlugin = plugins.has("@sentry/react-native/expo");
+  if (sentryEnabled !== sentryNativeConfigured) fail(`${key}: Sentry enabled/nativeConfigured state mismatch`);
+  if (hasSentryPlugin !== sentryNativeConfigured) fail(`${key}: Sentry Expo plugin must match native configuration state`);
 
   const featurePlugins = {
     router: "expo-router",
