@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestJRN040DatabaseRejectsSensitiveChangeSetItems(t *testing.T) {
+func TestDatabaseRejectsSensitiveChangeSetItems(t *testing.T) {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		t.Skip("DATABASE_URL is required for platform-control integration tests")
@@ -30,7 +30,7 @@ func TestJRN040DatabaseRejectsSensitiveChangeSetItems(t *testing.T) {
 INSERT INTO platform_variables
   (variable_key, owner_service, value_type, classification, scope_type, scope_id, value_json, revision, status)
 VALUES
-  ('JRN040_DB_SECRET', 'vault', 'json', 'confidential', 'global', '', '{"redacted":true}'::jsonb, 1, 'active')`); err != nil {
+  ('CHANGE_SET_DB_SECRET', 'vault', 'json', 'confidential', 'global', '', '{"redacted":true}'::jsonb, 1, 'active')`); err != nil {
 		t.Fatalf("seed sensitive variable: %v", err)
 	}
 
@@ -49,7 +49,7 @@ INSERT INTO platform_change_set_items
   (change_set_id, target_type, target_key, owner_service, scope_type, scope_id,
    value_type, classification, expected_revision, proposed_value_json)
 VALUES
-  ($1::uuid, 'variable', 'JRN040_NEW_SECRET', 'vault', 'global', '',
+  ($1::uuid, 'variable', 'CHANGE_SET_NEW_SECRET', 'vault', 'global', '',
    'json', 'sensitive', 0, '{"enabled":false}'::jsonb)`, changeSetID); err == nil {
 		t.Fatal("expected database to reject a sensitive change-set classification")
 	}
@@ -59,7 +59,7 @@ INSERT INTO platform_change_set_items
   (change_set_id, target_type, target_key, owner_service, scope_type, scope_id,
    value_type, classification, expected_revision, proposed_value_json)
 VALUES
-  ($1::uuid, 'variable', 'JRN040_DB_SECRET', 'vault', 'global', '',
+  ($1::uuid, 'variable', 'CHANGE_SET_DB_SECRET', 'vault', 'global', '',
    'json', 'internal', 1, '{"enabled":false}'::jsonb)`, changeSetID); err == nil {
 		t.Fatal("expected database to reject an existing confidential target")
 	}
