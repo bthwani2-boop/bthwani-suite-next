@@ -13,6 +13,20 @@ function optionalString(value) {
   return normalized.length > 0 ? normalized : undefined;
 }
 
+function configuredFilePath(value) {
+  const normalized = optionalString(value);
+  if (!normalized) return undefined;
+
+  // EAS verification runs on Linux even when a local developer supplied an
+  // absolute Windows path. path.resolve("C:/...") on Linux incorrectly prefixes
+  // the workspace, so preserve drive-qualified and UNC paths verbatim while
+  // still resolving normal relative paths against the current process.
+  if (/^[A-Za-z]:[\\/]/.test(normalized) || /^\\\\[^\\]+\\[^\\]+/.test(normalized)) {
+    return normalized;
+  }
+  return path.resolve(normalized);
+}
+
 function firstEnvironmentValue(environment, names) {
   for (const name of names) {
     const value = optionalString(environment[name]);
@@ -35,15 +49,15 @@ function resolveGoogleServicesFile(appKey, environment = process.env) {
   const suffix = appEnvSuffix(appKey);
 
   // 1. App-specific environment variable (e.g. GOOGLE_SERVICES_JSON_APP_CLIENT)
-  const scoped = optionalString(environment[`GOOGLE_SERVICES_JSON_${suffix}`]);
+  const scoped = configuredFilePath(environment[`GOOGLE_SERVICES_JSON_${suffix}`]);
   if (scoped) {
-    return path.resolve(scoped);
+    return scoped;
   }
 
   // 2. Common environment variable (GOOGLE_SERVICES_JSON)
-  const common = optionalString(environment.GOOGLE_SERVICES_JSON);
+  const common = configuredFilePath(environment.GOOGLE_SERVICES_JSON);
   if (common) {
-    return path.resolve(common);
+    return common;
   }
 
   // 3. secrets.local.mobile.json in project root
@@ -52,9 +66,9 @@ function resolveGoogleServicesFile(appKey, environment = process.env) {
   if (fs.existsSync(secretsConfigPath)) {
     try {
       const secretsData = JSON.parse(fs.readFileSync(secretsConfigPath, "utf8"));
-      const customPath = optionalString(secretsData[appKey]);
-      if (customPath && fs.existsSync(path.resolve(customPath))) {
-        return path.resolve(customPath);
+      const customPath = configuredFilePath(secretsData[appKey]);
+      if (customPath && fs.existsSync(customPath)) {
+        return customPath;
       }
     } catch {
       // Ignore parse errors in local secrets file
