@@ -265,6 +265,14 @@
       "source_file": "tools/guards/guard-registry-gate.mjs"
     },
     {
+      "id": "nomenclature",
+      "name": "Objective Nomenclature Guard",
+      "script": "guard:nomenclature",
+      "exit_level": "fail",
+      "description": "Rejects new files or new code lines containing annoying .jrn or JRN- naming conventions to ensure objective and contextual naming.",
+      "source_file": "tools/guards/nomenclature-guard.mjs"
+    },
+    {
       "id": "sdlc",
       "name": "SDLC Contract Gate",
       "script": "guard:sdlc",

@@ -150,6 +150,7 @@
     "guard:authority-separation": "node tools/guards/authority-separation-gate.mjs",
     "guard:saas-governance": "node tools/guards/saas-governance-gate.mjs",
     "guard:guard-registry": "node tools/guards/guard-registry-gate.mjs",
+    "guard:nomenclature": "node tools/guards/nomenclature-guard.mjs",
     "guard:sdlc": "node tools/guards/sdlc/invoke-sdlc-gate.mjs",
     "guard:markdown-governance": "pnpm exec markdownlint-cli2 \"governance/**/*.md\" \"AGENTS.md\" \".github/**/*.md\"",
     "guard:secrets": "gitleaks detect --log-opts=\"HEAD\" --source . --no-banner --redact --verbose",

@@ -186,6 +186,25 @@ jobs:
             echo "- Heavy checks: ${HEAVY_CHECKS}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
+  objective_nomenclature:
+    name: Ensure objective nomenclature
+    needs: [context]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify objective nomenclature
+        env:
+          CI_BASE_SHA: ${{ needs.context.outputs.base_sha }}
+          CI_HEAD_SHA: ${{ needs.context.outputs.head_sha }}
+        run: pnpm run guard:nomenclature
+
   policy:
     name: Verify affected policy
     needs: [context]
@@ -730,7 +749,7 @@ jobs:
 
   result:
     name: BThwani CI result
-    needs: [context, policy, node_contracts, node_typecheck, node_lint, node_test, node_build, node_journeys, node_jrn040, node_hygiene, dsh, wlt, identity, workforce, platform, providers, runtime_proof]
+    needs: [context, objective_nomenclature, policy, node_contracts, node_typecheck, node_lint, node_test, node_build, node_journeys, node_jrn040, node_hygiene, dsh, wlt, identity, workforce, platform, providers, runtime_proof]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -742,6 +761,7 @@ jobs:
           FULL_VERIFICATION: ${{ needs.context.outputs.full_verification }}
           PUBLISH_STATUS: ${{ github.event_name != 'pull_request' }}
           CONTEXT_RESULT: ${{ needs.context.result }}
+          OBJECTIVE_NOMENCLATURE_RESULT: ${{ needs.objective_nomenclature.result }}
           POLICY_RESULT: ${{ needs.policy.result }}
           NODE_CONTRACTS_RESULT: ${{ needs.node_contracts.result }}
           NODE_TYPECHECK_RESULT: ${{ needs.node_typecheck.result }}
@@ -787,6 +807,7 @@ jobs:
             fi
           }
           check_result context true "${CONTEXT_RESULT}"
+          check_result objective_nomenclature true "${OBJECTIVE_NOMENCLATURE_RESULT}"
           check_result policy "${EXPECTED_POLICY}" "${POLICY_RESULT}"
           check_result node_contracts "${EXPECTED_NODE_CONTRACTS}" "${NODE_CONTRACTS_RESULT}"
           check_result node_typecheck "${EXPECTED_NODE_TYPECHECK}" "${NODE_TYPECHECK_RESULT}"
