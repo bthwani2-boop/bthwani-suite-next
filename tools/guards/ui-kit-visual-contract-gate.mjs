@@ -64,7 +64,39 @@ for (const required of [
   }
 }
 
+// UI Kit intentionally exposes a small compatibility layer while consumers are
+// migrated from the historical foundation/appearance entrypoints to canonical
+// token modules. The allowlist is exact: a new symbol or owner pair still fails.
+const approvedCompatibilityDuplicates = new Map([
+  ["useDirection", ["shared/ui-kit/src/index.ts", "shared/ui-kit/src/providers.tsx"]],
+  ["colorPalette", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/colors.ts"]],
+  ["darkThemeColors", ["shared/ui-kit/src/appearance.ts", "shared/ui-kit/src/tokens/colors.ts"]],
+  ["lightThemeColors", ["shared/ui-kit/src/appearance.ts", "shared/ui-kit/src/tokens/colors.ts"]],
+  ["spacing", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/spacing.ts"]],
+  ["radius", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/radius.ts"]],
+  ["elevation", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/elevation.ts"]],
+  ["motion", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/motion.ts"]],
+  ["breakpoints", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/breakpoints.ts"]],
+  ["FontFamilyToken", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/typography.ts"]],
+  ["fontFamilies", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/typography.ts"]],
+  ["fontWeights", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/typography.ts"]],
+  ["borders", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/borders.ts"]],
+  ["zIndex", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/z-index.ts"]],
+  ["Direction", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/direction.ts"]],
+  ["isRtlLanguage", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/direction.ts"]],
+  ["resolveTextAlign", ["shared/ui-kit/src/foundation.ts", "shared/ui-kit/src/tokens/direction.ts"]],
+]);
+
+function isApprovedCompatibilityDuplicate(duplicate) {
+  const approvedOwners = approvedCompatibilityDuplicates.get(duplicate.symbol);
+  if (!approvedOwners) return false;
+  const actual = [...new Set(duplicate.owners)].sort();
+  const approved = [...approvedOwners].sort();
+  return actual.length === approved.length && actual.every((owner, index) => owner === approved[index]);
+}
+
 for (const duplicate of manifest.duplicateSymbols ?? []) {
+  if (isApprovedCompatibilityDuplicate(duplicate)) continue;
   violations.push({
     file: "ui-kit",
     message: `DUP:${duplicate.symbol}:${duplicate.owners.join(",")}`,
