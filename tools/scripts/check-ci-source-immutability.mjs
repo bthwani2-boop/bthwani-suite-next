@@ -7,16 +7,6 @@ const workflowsRoot = path.join(repoRoot, ".github", "workflows");
 
 const forbiddenPatterns = [
   {
-    id: "PRIVILEGED_WORKFLOW_RUN",
-    regex: /^\s*workflow_run\s*:/i,
-    reason: "workflow_run is privileged and must not execute repository source in verification workflows",
-  },
-  {
-    id: "PRIVILEGED_PULL_REQUEST_TARGET",
-    regex: /^\s*pull_request_target\s*:/i,
-    reason: "pull_request_target is privileged and must not execute untrusted pull-request source",
-  },
-  {
     id: "WRITE_ALL_PERMISSION",
     regex: /^\s*permissions:\s*write-all\s*(?:#.*)?$/i,
     reason: "verification workflows must not receive repository-wide write permissions",
@@ -78,6 +68,21 @@ function listWorkflowFiles(directory, output = []) {
 export function scanWorkflowContent(content, relative = "workflow.yml") {
   const violations = [];
   const lines = String(content).split(/\r?\n/);
+  const privilegedTriggerLine = lines.findIndex((line) => /^\s*(?:workflow_run|pull_request_target)\s*:/i.test(line));
+  const sourceExecutionLine = lines.findIndex((line) => (
+    /^\s*(?:-\s*)?uses:\s*actions\/checkout@/i.test(line)
+    || /^\s*(?:-\s*)?uses:\s*\.\//i.test(line)
+  ));
+
+  if (privilegedTriggerLine >= 0 && sourceExecutionLine >= 0) {
+    violations.push({
+      file: relative,
+      line: sourceExecutionLine + 1,
+      id: "PRIVILEGED_TRIGGER_SOURCE_EXECUTION",
+      reason: "workflow_run or pull_request_target must not checkout or execute repository source",
+    });
+  }
+
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     const trimmed = line.trim();
