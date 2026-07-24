@@ -5,6 +5,11 @@ import { fetchPartnerStores } from "./partner.api";
 
 const ownershipClient = createDshHttpClient(resolveDshApiBaseUrl(), "partner-store-ownership");
 
+type GovernedPartnerStoresResponse = Readonly<{
+  stores: DshPartnerLinkedStore[];
+  total: number;
+}>;
+
 export type GovernedPartnerStoreLinkInput = Readonly<{
   storeId: string;
   reason?: string;
@@ -13,14 +18,14 @@ export type GovernedPartnerStoreLinkInput = Readonly<{
 
 export function fetchGovernedPartnerStores(
   partnerId: string,
-): Promise<{ stores: DshPartnerLinkedStore[]; total: number }> {
+): Promise<GovernedPartnerStoresResponse> {
   return fetchPartnerStores(partnerId);
 }
 
 export function linkOrTransferPartnerStore(
   partnerId: string,
   input: GovernedPartnerStoreLinkInput,
-): Promise<{ stores: DshPartnerLinkedStore[]; total: number }> {
+): Promise<GovernedPartnerStoresResponse> {
   const storeId = input.storeId.trim();
   if (!storeId) {
     return Promise.reject({
@@ -39,14 +44,17 @@ export function linkOrTransferPartnerStore(
   }
 
   const correlationId = `partner-store.${partnerId}.${storeId}.${Date.now().toString(36)}`;
-  return ownershipClient.request(`/dsh/operator/partners/${encodeURIComponent(partnerId)}/stores`, {
-    method: "POST",
-    body: {
-      storeId,
-      ...(input.reason?.trim() ? { reason: input.reason.trim() } : {}),
-      ...(expectedStoreVersion !== undefined ? { expectedStoreVersion } : {}),
+  return ownershipClient.request<GovernedPartnerStoresResponse>(
+    `/dsh/operator/partners/${encodeURIComponent(partnerId)}/stores`,
+    {
+      method: "POST",
+      body: {
+        storeId,
+        ...(input.reason?.trim() ? { reason: input.reason.trim() } : {}),
+        ...(expectedStoreVersion !== undefined ? { expectedStoreVersion } : {}),
+      },
+      correlationId,
+      idempotencyKey: correlationId,
     },
-    correlationId,
-    idempotencyKey: correlationId,
-  });
+  );
 }
