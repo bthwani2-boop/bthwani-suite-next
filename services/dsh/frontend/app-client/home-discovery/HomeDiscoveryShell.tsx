@@ -23,7 +23,7 @@ import {
 } from "@bthwani/ui-kit";
 import {
   applyDiscoveryFilter,
-  buildHomeStoreGroups,
+  buildHomeStorePresentation,
   recordHomeMarketingEvent,
   type BannerViewModel,
   type DiscoveryFilterKind,
@@ -148,8 +148,8 @@ export function HomeDiscoveryShell({
   }
 
   const { banners, promos, filters, categories, stores } = state.data;
-  const groups = buildHomeStoreGroups(stores);
-  const filteredStores = applyDiscoveryFilter(stores, activeFilter)
+  const presentation = buildHomeStorePresentation(stores);
+  const filteredStores = applyDiscoveryFilter(presentation.feedStores, activeFilter)
     .filter((store) => activeCategoryId === null || store.categoryId === activeCategoryId);
 
   return (
@@ -169,7 +169,7 @@ export function HomeDiscoveryShell({
             onCategoriesPress={() => setShowDropdown(true)}
           />
         ) : null}
-        <HomeStoreGroupsSection groups={groups} onStorePress={onStorePress} />
+        <HomeStoreGroupsSection groups={presentation.groups} onStorePress={onStorePress} />
         <HomeFilterRailSection
           filters={filters}
           activeFilter={activeFilter}
