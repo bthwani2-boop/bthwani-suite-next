@@ -1,0 +1,89 @@
+name: BThwani Policy Verification
+
+on:
+  workflow_call:
+    inputs:
+      base_sha:
+        type: string
+        required: true
+      head_sha:
+        type: string
+        required: true
+      policy:
+        type: string
+        required: true
+      workflow:
+        type: string
+        required: true
+      security:
+        type: string
+        required: true
+      infrastructure:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  nomenclature:
+    name: Ensure objective nomenclature
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify objective nomenclature
+        env:
+          CI_BASE_SHA: ${{ inputs.base_sha }}
+          CI_HEAD_SHA: ${{ inputs.head_sha }}
+        run: pnpm run guard:nomenclature
+
+  governance:
+    name: Verify affected policy
+    if: ${{ inputs.policy == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify governance schema
+        run: pnpm run guard:governance-schema
+      - name: Verify agent governance
+        run: pnpm run guard:agent-governance
+      - name: Verify authority separation
+        run: pnpm run guard:authority-separation
+      - name: Verify SaaS governance
+        run: pnpm run guard:saas-governance
+      - name: Verify guard registry
+        run: pnpm run guard:guard-registry
+      - name: Verify SDLC governance
+        run: pnpm run guard:sdlc
+      - name: Verify cleanup policy
+        run: pnpm run guard:cleanup-policy
+      - name: Verify required command integrity
+        run: pnpm run guard:required-command-integrity
+      - name: Verify workflow supply chain
+        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
+        run: |
+          pnpm run guard:actions-pin
+          pnpm run guard:workflow-lint
+          pnpm run guard:workflow-security
+          pnpm run guard:opa-policies
+      - name: Verify infrastructure policy
+        if: ${{ inputs.infrastructure == 'true' }}
+        run: |
+          pnpm run guard:runtime-config
+          pnpm run guard:opa-policies
+      - name: Verify immutable commit diff
+        run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
