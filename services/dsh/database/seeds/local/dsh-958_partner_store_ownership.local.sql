@@ -89,24 +89,23 @@ UPDATE dsh_stores SET partner_id = 'prt_partner_local_006', brand_id = 'pbr_loca
 UPDATE dsh_stores SET partner_id = 'prt_partner_local_007', brand_id = 'pbr_local_electronics', updated_at = NOW() WHERE id = 'store-test-electronics' AND tenant_id = 'local-dsh';
 
 -- Keep the canonical local partner actor scoped only to the legal entity/store
--- represented by its session. Other fixture actors are isolated by store.
+-- represented by its session. Tenant ownership is derived through dsh_stores,
+-- matching the canonical scope table and backend authorization queries.
 DELETE FROM dsh_store_actor_scopes
-WHERE tenant_id = 'local-dsh'
-  AND actor_id = 'partner-local-001'
+WHERE actor_id = 'partner-local-001'
   AND actor_role = 'partner'
   AND store_id IN ('store-1002', 'store-1003', 'store-1005', 'store-1006', 'store-test-electronics');
 
 INSERT INTO dsh_store_actor_scopes (
-    tenant_id, actor_id, actor_role, store_id, scope_type, active
+    actor_id, actor_role, store_id, scope_type, active
 ) VALUES
-    ('local-dsh', 'partner-local-001', 'partner', 'store-test-grocery', 'own', true),
-    ('local-dsh', 'partner-local-002', 'partner', 'store-1002', 'own', true),
-    ('local-dsh', 'partner-local-003', 'partner', 'store-1003', 'own', true),
-    ('local-dsh', 'partner-local-005', 'partner', 'store-1005', 'own', true),
-    ('local-dsh', 'partner-local-006', 'partner', 'store-1006', 'own', true),
-    ('local-dsh', 'partner-local-007', 'partner', 'store-test-electronics', 'own', true)
+    ('partner-local-001', 'partner', 'store-test-grocery', 'own', true),
+    ('partner-local-002', 'partner', 'store-1002', 'own', true),
+    ('partner-local-003', 'partner', 'store-1003', 'own', true),
+    ('partner-local-005', 'partner', 'store-1005', 'own', true),
+    ('partner-local-006', 'partner', 'store-1006', 'own', true),
+    ('partner-local-007', 'partner', 'store-test-electronics', 'own', true)
 ON CONFLICT (actor_id, actor_role, store_id) DO UPDATE SET
-    tenant_id = EXCLUDED.tenant_id,
     scope_type = EXCLUDED.scope_type,
     active = true;
 
