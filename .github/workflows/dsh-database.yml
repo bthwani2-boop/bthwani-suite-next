@@ -63,6 +63,14 @@ jobs:
           persist-credentials: false
           show-progress: false
 
+      - name: Capture canonical contextual workflow source
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: contextual-workflow-source-${{ github.run_id }}
+          path: .github/workflows/ci.yml
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Publish DSH database pending status
         env:
           GH_TOKEN: ${{ github.token }}
