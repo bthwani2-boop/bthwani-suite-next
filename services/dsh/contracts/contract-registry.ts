@@ -35,6 +35,7 @@ export type DshContractRegistration = {
     | "dsh-partner-commercial"
     | "dsh-partner-fleet"
     | "dsh-partner-delivery"
+    | "dsh-fulfillment-operations"
     | "dsh-home-marketing-governance"
     | "dsh-home-marketing-events"
     | "dsh-client-address"
@@ -253,6 +254,14 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/partner-delivery",
+  },
+  {
+    id: "dsh-fulfillment-operations",
+    path: "contracts/dsh.fulfillment-operations.openapi.yaml",
+    state: "CONTRACT_ACTIVE",
+    runtimeDependency: true,
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared",
   },
   {
     id: "dsh-home-marketing-governance",
