@@ -9655,6 +9655,7 @@ components:
             attachments:
               type: array
               minItems: 1
+              items: { $ref: "#/components/schemas/DshSupportMessageAttachmentInput" }
 
     DshMessageResponse:
       type: object
