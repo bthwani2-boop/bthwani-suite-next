@@ -8,7 +8,7 @@ import {
   Text,
   TextField,
 } from "@bthwani/ui-kit";
-import type { usePartnerWorkspaceListController } from "../../shared/partner";
+import { usePartnerWorkspaceListController } from "../../shared/partner";
 
 type Controller = ReturnType<typeof usePartnerWorkspaceListController>;
 
