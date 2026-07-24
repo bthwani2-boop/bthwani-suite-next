@@ -118,16 +118,26 @@ jobs:
           restore-keys: |
             nx-test-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
       - name: Verify Node tests
+        shell: bash
         env:
           NX_BASE: ${{ inputs.base_sha }}
           NX_HEAD: ${{ inputs.head_sha }}
         run: |
-          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/node-tests"
+          set -o pipefail
           if [[ "${{ inputs.full_verification }}" == "true" ]]; then
-            pnpm run nx:test
+            pnpm run nx:test -- --outputStyle=stream 2>&1 | tee "${RUNNER_TEMP}/node-tests/nx-test.log"
           else
-            pnpm run affected:test
+            pnpm run affected:test -- --outputStyle=stream 2>&1 | tee "${RUNNER_TEMP}/node-tests/nx-test.log"
           fi
+      - name: Upload Node test evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: node-tests-${{ github.run_id }}
+          path: ${{ runner.temp }}/node-tests/*.log
+          if-no-files-found: error
+          retention-days: 7
 
   build:
     name: Verify Node build
@@ -179,11 +189,23 @@ jobs:
         env:
           JOURNEY_SCOPE: ${{ inputs.journey_scope }}
         run: |
+          $logDirectory = Join-Path $env:RUNNER_TEMP "journey-gates"
+          New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null
+          $logPath = Join-Path $logDirectory "journey-gates.log"
           $journeys = $env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() }
           foreach ($journey in $journeys) {
-            ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim()
+            "=== $($journey.Trim()) ===" | Tee-Object -FilePath $logPath -Append
+            & ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim() *>&1 | Tee-Object -FilePath $logPath -Append
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+      - name: Upload journey-gate evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: journey-gates-${{ github.run_id }}
+          path: ${{ runner.temp }}/journey-gates/*.log
+          if-no-files-found: error
+          retention-days: 7
 
   platform_change_sets:
     name: Verify platform change-set binding
@@ -199,7 +221,20 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Verify platform change-set binding
+        shell: bash
         run: |
-          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false
-          pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml -o /tmp/platform-change-sets-api.ts
-          node tools/guards/jrn-040-platform-change-sets-gate.mjs
+          mkdir -p "${RUNNER_TEMP}/platform-change-sets"
+          set -o pipefail
+          {
+            pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false
+            pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml -o /tmp/platform-change-sets-api.ts
+            node tools/guards/jrn-040-platform-change-sets-gate.mjs
+          } 2>&1 | tee "${RUNNER_TEMP}/platform-change-sets/jrn-040.log"
+      - name: Upload platform change-set evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: platform-change-sets-${{ github.run_id }}
+          path: ${{ runner.temp }}/platform-change-sets/*.log
+          if-no-files-found: error
+          retention-days: 7
