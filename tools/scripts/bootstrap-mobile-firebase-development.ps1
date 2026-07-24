@@ -30,21 +30,82 @@ $LocalSecretsMapPath = Join-Path $RepoRoot "secrets.local.mobile.json"
 New-Item -ItemType Directory -Force -Path $ReportRoot, $DownloadRoot | Out-Null
 Set-Location $RepoRoot
 
+function Get-BalancedJsonObjectText {
+    param(
+        [Parameter(Mandatory)][string] $Text,
+        [Parameter(Mandatory)][int] $StartIndex
+    )
+
+    $depth = 0
+    $inString = $false
+    $escaped = $false
+
+    for ($index = $StartIndex; $index -lt $Text.Length; $index++) {
+        $char = $Text[$index]
+
+        if ($inString) {
+            if ($escaped) {
+                $escaped = $false
+                continue
+            }
+
+            if ($char -eq '\') {
+                $escaped = $true
+                continue
+            }
+
+            if ($char -eq '"') {
+                $inString = $false
+                continue
+            }
+
+            continue
+        }
+
+        if ($char -eq '"') {
+            $inString = $true
+            continue
+        }
+
+        if ($char -eq '{') {
+            $depth++
+            continue
+        }
+
+        if ($char -eq '}') {
+            $depth--
+            if ($depth -eq 0) {
+                return $Text.Substring($StartIndex, ($index - $StartIndex + 1))
+            }
+        }
+    }
+
+    return $null
+}
+
 function Convert-EmbeddedJson {
     param([Parameter(Mandatory)][string] $Text)
 
-    $start = $Text.IndexOf("{")
-    $end = $Text.LastIndexOf("}")
-    if ($start -lt 0 -or $end -lt $start) {
-        throw "No JSON object was found in command output: $Text"
+    $searchStart = 0
+    while ($searchStart -lt $Text.Length) {
+        $start = $Text.IndexOf("{", $searchStart)
+        if ($start -lt 0) {
+            break
+        }
+
+        $jsonText = Get-BalancedJsonObjectText -Text $Text -StartIndex $start
+        if ($null -ne $jsonText) {
+            try {
+                return $jsonText | ConvertFrom-Json -Depth 100
+            } catch {
+                # Keep scanning; Firebase CLI can print non-JSON brace blocks before the real JSON.
+            }
+        }
+
+        $searchStart = $start + 1
     }
 
-    $jsonText = $Text.Substring($start, ($end - $start + 1))
-    try {
-        return $jsonText | ConvertFrom-Json -Depth 100
-    } catch {
-        throw "Command output did not contain valid JSON: $Text"
-    }
+    throw "No valid JSON object was found in command output: $Text"
 }
 
 function Test-EmbeddedJsonSuccess {
@@ -226,7 +287,7 @@ foreach ($requiredPath in @($ManifestPath, $ValidatorPath)) {
 
 $loginResult = Invoke-FirebaseCli -Arguments @("login:list")
 if ($loginResult.Output -notmatch "Logged in as") {
-    throw "Firebase CLI login was not proven. Run 'pnpm dlx firebase-tools@$FirebaseToolsVersion login'."
+    throw "Firebase CLI login was not proven. Run 'pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/login-mobile-firebase-development.ps1'."
 }
 Write-Host $loginResult.Output -ForegroundColor Green
 
