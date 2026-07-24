@@ -1,15 +1,18 @@
-﻿{
+{
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "ignore": [
     ".cache/**",
     ".gocache*/**",
     ".gomodcache*/**",
+    ".agents/skills-deferred/**",
     "tools/registry/runs/**",
     "tools/diagnostics/**",
     "services/dsh/evidence/**",
     "infra/**",
     "governance/**",
-    ".github/**"
+    ".github/**",
+    "**/clients/generated/**",
+    "**/contracts/generated/**"
   ],
   "ignoreDependencies": [
     "@react-native-async-storage/async-storage",
@@ -55,11 +58,8 @@
   "workspaces": {
     "apps/*/runtime": {
       "entry": [
-        "src/App.tsx",
-        "src/index.{ts,tsx}",
-        "src/main.{ts,tsx}",
-        "src/app/**/index.{ts,tsx}",
-        "src/app/**/*Screen.{ts,tsx}"
+        "fingerprint.config.js",
+        "src/index.ts"
       ]
     },
     "services/dsh": {
@@ -73,7 +73,6 @@
         "frontend/control-panel/**/*Panel.tsx",
         "frontend/shared/**/index.{ts,tsx}",
         "frontend/shared/**/*.registry.ts",
-        "frontend/shared/**/*.routes.ts",
         "frontend/shared/**/*.contract.ts",
         "frontend/shared/**/*.policy.ts",
         "frontend/shared/**/*.view-model.ts",
@@ -84,8 +83,7 @@
         "frontend/shared/**/*.types.ts",
         "frontend/shared/**/*.model.ts",
         "frontend/shared/**/*.api.ts",
-        "frontend/shared/**/*.client.ts",
-        "frontend/shared/**/*.map.ts"
+        "frontend/shared/**/*.client.ts"
       ]
     },
     "services/wlt": {
