@@ -46,6 +46,7 @@ export type { FieldPartnerProgressState } from "./use-field-partner-progress-con
 export { useFieldCatalogController } from "./use-field-catalog-controller";
 export * from "./partner-registry";
 export * from "./use-partners-controller";
+export * from "./partner-workspace.controller";
 
 export type {
   DeliveryPricingFulfillmentMode,
