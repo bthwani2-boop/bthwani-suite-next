@@ -39,6 +39,20 @@ rules:
   "utf8",
 );
 
+function firstActionableDiagnostic(output) {
+  const lines = String(output ?? "")
+    .replace(/\u001b\[[0-9;]*m/g, "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return (
+    lines.find((line) => /\b(?:error|warning)\b/i.test(line) && !/^\d+\s+(?:errors?|warnings?)/i.test(line))
+    ?? lines.find((line) => /\d+:\d+/.test(line))
+    ?? lines.at(-1)
+    ?? "command failed"
+  ).replace(/\s+/g, " ").slice(0, 220);
+}
+
 function run(label, command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: repoRoot,
@@ -48,9 +62,11 @@ function run(label, command, args, options = {}) {
   });
 
   if (result.status !== 0) {
+    const combined = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
     if (result.stdout) process.stdout.write(result.stdout);
     if (result.stderr) process.stderr.write(result.stderr);
-    throw new Error(`${label} failed with exit code ${result.status}`);
+    const diagnostic = firstActionableDiagnostic(combined);
+    throw new Error(`${label}: ${diagnostic}`);
   }
 
   if (options.stdio !== "pipe") return;
@@ -88,7 +104,7 @@ try {
       "--fail-severity",
       "warn",
       contract.normalized,
-    ], { stdio: "inherit" });
+    ], { stdio: "pipe" });
   }
 
   for (const contract of verificationContracts) {
