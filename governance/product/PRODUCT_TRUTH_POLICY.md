@@ -17,6 +17,14 @@ A Product Truth contract is required for every new or materially changed user-vi
 - `UX_JOURNEY_AUTHORITY` owns journey coherence and actor-facing state clarity when a UI or human workflow is affected.
 - Engineering may challenge assumptions and contribute to discovery, but it may not self-approve product acceptance for its own implementation.
 
+## Sole-owner exception
+
+When `governance/authority/single-owner-mode.json` is active and matches this repository, the recorded owner may fulfill both Product Manager and Product Owner human approval roles for an eligible non-protected change. The two logical authorities, their owned decisions, and their evidence remain separate even when one human fulfills both.
+
+Implementation readiness requires an explicit current-task approval and a GitHub audit record identifying the scope. Product acceptance additionally requires the exact implementation commit and the required same-commit automated and visual/runtime evidence. A blanket future authorization cannot pre-accept an unseen implementation result.
+
+An execution agent cannot issue or impersonate owner approval. Authentication, authorization, sessions, PII, privacy, secrets, credentials, tenant isolation, security approval, WLT and finance, migrations and production data, critical or high vulnerability acceptance, residual risk, release, deployment, production verification, and final closure remain outside this exception.
+
 ## Required contract
 
 The machine-readable contract must validate against `governance/product/product-truth.schema.json` and must declare:
@@ -34,7 +42,7 @@ The machine-readable contract must validate against `governance/product/product-
 
 - G0 requires a Product Truth contract or an explicit `product_impact: NONE` declaration.
 - G1 requires product-manager approval of the problem, actors, outcome, and scope.
-- G3 requires `PRODUCT_MODEL_APPROVED` and product-owner approval of functional acceptance.
+- G3 requires `PRODUCT_MODEL_APPROVED` and product-owner approval of functional readiness; the recorded owner may satisfy both human roles under the sole-owner exception.
 - G4 implementation evidence cannot substitute for product acceptance.
 - Product acceptance must pass before G5 independent QA approval.
 
@@ -52,4 +60,4 @@ This policy does not activate or implement SaaS. SaaS and tenancy remain governe
 
 ## Acceptance condition
 
-Accepted only when every applicable capability has one valid Product Truth contract, product-manager and product-owner authorities are separated, required surfaces are explicit, negative invariants are testable, and no implementation or QA gate can bypass product-model approval.
+Accepted only when every applicable capability has one valid Product Truth contract, product-manager and product-owner logical authorities remain separated, any sole-owner human-identity exception is recorded and bounded, required surfaces are explicit, negative invariants are testable, and no implementation or QA gate can bypass product-model approval or required evidence.
