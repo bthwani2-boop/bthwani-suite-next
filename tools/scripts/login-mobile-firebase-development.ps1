@@ -59,6 +59,24 @@ function Add-ReportSection {
     ) | Add-Content -LiteralPath $TextReportPath -Encoding UTF8
 }
 
+function Test-AppsListOutputProvesAccess {
+    param([Parameter(Mandatory)][string] $Text)
+
+    if ($Text -match "No apps found\.") {
+        return $true
+    }
+
+    if ($Text -match "Project Display Name" -or
+        $Text -match "App Display Name" -or
+        $Text -match "App ID" -or
+        $Text -match "android:" -or
+        $Text -match "com\.bthwani\.") {
+        return $true
+    }
+
+    return $false
+}
+
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host " BTHWANI FIREBASE LOGIN / ACCESS PROBE" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
@@ -95,11 +113,20 @@ if ($projectsResult.Output -notmatch "\b$([regex]::Escape($ProjectId))\b") {
 }
 Write-Host "Firebase project '$ProjectId' is visible." -ForegroundColor Green
 
-# Use the human-readable apps:list here on purpose. Some Windows Firebase CLI builds can emit valid JSON and then crash on --json.
+# Use the human-readable apps:list here on purpose. Some Windows Firebase CLI builds
+# can print the successful app list result and then crash with UV_HANDLE_CLOSING.
 $appsListResult = Invoke-FirebaseCli -Arguments @("apps:list", "--project", $ProjectId) -AllowFailure
 Add-ReportSection -Title "firebase apps:list --project $ProjectId" -Text $appsListResult.Output
+$appsListOutputProvesAccess = Test-AppsListOutputProvesAccess -Text $appsListResult.Output
 if ($appsListResult.ExitCode -ne 0) {
-    throw "Firebase apps:list failed while proving project access:`n$($appsListResult.Output)"
+    if ($appsListOutputProvesAccess) {
+        Write-Host "WARN: Firebase apps:list returned exit code $($appsListResult.ExitCode) after proving access; continuing." -ForegroundColor DarkYellow
+    } else {
+        throw "Firebase apps:list failed while proving project access:`n$($appsListResult.Output)"
+    }
+}
+if (-not $appsListOutputProvesAccess) {
+    throw "Firebase apps:list output did not prove app-list access:`n$($appsListResult.Output)"
 }
 
 $summary = [pscustomobject]@{
@@ -109,6 +136,7 @@ $summary = [pscustomobject]@{
     LoggedIn = $true
     ProjectVisible = $true
     AppsListExitCode = $appsListResult.ExitCode
+    AppsListOutputProvesAccess = $appsListOutputProvesAccess
     FirebaseChanged = $false
     EASChanged = $false
     TextReport = $TextReportPath
