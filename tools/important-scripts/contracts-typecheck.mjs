@@ -27,7 +27,7 @@ rules:
       - "$..[?(@property !== 'properties' && @ != null && @.enum && @.enum.constructor.name === 'Array')]"
     then:
       field: enum
-      function: oasSchema
+      function: schema
       functionOptions:
         schema:
           type: array
