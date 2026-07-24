@@ -1,98 +1,32 @@
-name: Reusable Workflow
+name: Reusable Runtime Verification
 
 on:
   workflow_call:
     inputs:
-      base_sha:
-        type: string
-        required: false
-      head_sha:
-        type: string
-        required: false
       full_verification:
-        type: string
-        required: false
-      governance:
-        type: string
-        required: false
-      workflow:
-        type: string
-        required: false
-      infrastructure:
-        type: string
-        required: false
-      security:
-        type: string
-        required: false
-      policy:
-        type: string
-        required: false
-      frontend:
-        type: string
-        required: false
-      contracts:
-        type: string
-        required: false
-      journey:
-        type: string
-        required: false
-      journey_scope:
-        type: string
-        required: false
-      node:
-        type: string
-        required: false
-      node_scope:
-        type: string
-        required: false
-      dsh:
-        type: string
-        required: false
-      wlt:
-        type: string
-        required: false
-      identity:
-        type: string
-        required: false
-      workforce:
-        type: string
-        required: false
-      platform:
-        type: string
-        required: false
-      providers:
-        type: string
-        required: false
-      database:
-        type: string
-        required: false
-      runtime:
-        type: string
-        required: false
-      shared_brain:
-        type: string
-        required: false
-      heavy:
-        type: string
-        required: false
-      platform_change_sets:
         type: string
         required: false
       runtime_proof:
         type: boolean
         required: false
+        default: false
+
+permissions:
+  contents: read
 
 jobs:
   runtime_proof:
     name: Execute required runtime proof
-    needs: []
-    if: ${{ inputs.full_verification == 'true' || (github.event_name == 'workflow_dispatch' && inputs.runtime_proof) }}
+    if: ${{ inputs.full_verification == 'true' || inputs.runtime_proof }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with: { persist-credentials: false }
-      - uses: ./.github/actions/setup-node-workspace
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
       - name: Start and verify full runtime
         shell: pwsh
         run: |
@@ -103,4 +37,3 @@ jobs:
         if: always()
         shell: pwsh
         run: pnpm run runtime:full:down
-
