@@ -24,6 +24,12 @@ function requireText(content, needle, owner) {
   }
 }
 
+function forbidText(content, needle, owner) {
+  if (content.includes(needle)) {
+    fail(`${owner} must not contain: ${needle}`);
+  }
+}
+
 function listSql(relativeDirectory) {
   const absoluteDirectory = path.join(root, relativeDirectory);
   if (!fs.existsSync(absoluteDirectory)) {
@@ -106,6 +112,38 @@ requireText(trustedTenantMigration, "TENANT_OWNERSHIP_IMMUTABLE", trustedTenantM
 requireText(trustedTenantMigration, "trg_dsh_partners_tenant", trustedTenantMigrationPath);
 requireText(trustedTenantMigration, "trg_dsh_stores_tenant", trustedTenantMigrationPath);
 
+const testTenantHelperPath = "services/dsh/backend/internal/testdb/tenant_context.go";
+const testTenantHelper = read(testTenantHelperPath);
+requireText(testTenantHelper, "DSH_REQUIRE_DB_TESTS", testTenantHelperPath);
+requireText(testTenantHelper, "DSH_TEST_TENANT_ID", testTenantHelperPath);
+requireText(testTenantHelper, "PGOPTIONS", testTenantHelperPath);
+requireText(testTenantHelper, "bthwani.tenant_id", testTenantHelperPath);
+requireText(testTenantHelper, 'os.Getenv("CI") == "true"', testTenantHelperPath);
+
+const databaseTestPackages = [
+  "cart",
+  "checkout",
+  "checkoutfinanceoutbox",
+  "dispatch",
+  "fieldcommissionoutbox",
+  "fieldreadiness",
+  "marketing",
+  "orders",
+  "partnerdelivery",
+  "partnerfleet",
+  "partnerwltoutbox",
+  "pickup",
+  "platformpolicies",
+  "store",
+  "wltoutbox",
+];
+for (const packageName of databaseTestPackages) {
+  const activatorPath = `services/dsh/backend/internal/${packageName}/tenant_context_test.go`;
+  const activator = read(activatorPath);
+  requireText(activator, `package ${packageName}`, activatorPath);
+  requireText(activator, "testdb.ConfigureTrustedTenantContext()", activatorPath);
+}
+
 for (const suite of ["schema", "seed"]) {
   const tests = listSql(`services/dsh/database/tests/${suite}`);
   if (tests.length === 0) {
@@ -165,18 +203,17 @@ const workflow = read(".github/workflows/dsh-database.yml");
 requireText(workflow, runnerPath, "DSH database workflow");
 requireText(workflow, runnerVerificationPath, "DSH database workflow runner verification");
 requireText(workflow, '"package.json"', "DSH database workflow path routing");
+requireText(workflow, "DSH_TEST_TENANT_ID: ci-dsh", "DSH database workflow test tenant");
 requireText(workflow, "Apply canonical DSH migrations", "DSH database workflow");
 requireText(workflow, "Re-run canonical DSH migrations", "DSH database workflow");
 requireText(workflow, "Verify DSH migration runner failure contracts", "DSH database workflow");
-requireText(workflow, "Configure isolated CI trusted tenant context", "DSH database workflow");
-requireText(workflow, "ALTER DATABASE dsh_runtime SET bthwani.tenant_id", "DSH database workflow");
-requireText(workflow, "Clear isolated CI trusted tenant context", "DSH database workflow");
-requireText(workflow, "ALTER DATABASE dsh_runtime RESET bthwani.tenant_id", "DSH database workflow");
 requireText(workflow, "Apply DSH local seeds twice", "DSH database workflow");
 requireText(workflow, "Run DSH schema database contracts", "DSH database workflow");
 requireText(workflow, "Run DSH seed database contracts", "DSH database workflow");
 requireText(workflow, "bthwani/dsh-database", "DSH database workflow status context");
 requireText(workflow, "target_url", "DSH database workflow status target");
+forbidText(workflow, "ALTER DATABASE dsh_runtime SET bthwani.tenant_id", "DSH database workflow");
+forbidText(workflow, "Capture canonical contextual workflow source", "DSH database workflow");
 
 if (failures.length > 0) {
   console.error("DSH database contract: FAIL");
@@ -186,4 +223,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`DSH database contract: PASS (${migrations.length} migrations)`);
+console.log(`DSH database contract: PASS (${migrations.length} migrations, ${databaseTestPackages.length} tenant-aware DB test packages)`);
