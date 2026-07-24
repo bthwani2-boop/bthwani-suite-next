@@ -93,14 +93,20 @@ function Get-FirebaseAppRecords {
     function Visit-FirebaseNode {
         param([AllowNull()] $Node)
 
-        if ($null -eq $Node -or $Node -is [string]) {
+        if ($null -eq $Node -or $Node -is [string] -or $Node -is [ValueType]) {
             return
         }
 
-        if ($Node -is [System.Collections.IEnumerable] -and $Node -isnot [pscustomobject]) {
+        if ($Node -is [System.Collections.IEnumerable] -and
+            $Node -isnot [pscustomobject] -and
+            $Node -isnot [System.Collections.IDictionary]) {
             foreach ($item in $Node) {
                 Visit-FirebaseNode -Node $item
             }
+            return
+        }
+
+        if ($Node -isnot [pscustomobject] -and $Node -isnot [System.Collections.IDictionary]) {
             return
         }
 
@@ -164,7 +170,7 @@ function Invoke-GoogleServicesValidation {
 
 function Find-AppByPackage {
     param(
-        [Parameter(Mandatory)][object[]] $Apps,
+        [Parameter(Mandatory)][AllowEmptyCollection()][object[]] $Apps,
         [Parameter(Mandatory)][string] $Package
     )
 
@@ -274,14 +280,38 @@ foreach ($entry in $plan | Where-Object FirebaseState -eq "Create") {
     ))
 }
 
-$firebaseApps = @(Get-FirebaseApps)
-foreach ($entry in $plan) {
-    $resolvedApp = Find-AppByPackage -Apps $firebaseApps -Package $entry.Package
-    if ($null -eq $resolvedApp) {
-        throw "Firebase app was not found after apply for package '$($entry.Package)'."
+$allAppsResolved = $false
+for ($attempt = 1; $attempt -le 10; $attempt++) {
+    $firebaseApps = @(Get-FirebaseApps)
+    $unresolved = [System.Collections.Generic.List[string]]::new()
+
+    foreach ($entry in $plan) {
+        $resolvedApp = Find-AppByPackage -Apps $firebaseApps -Package $entry.Package
+        if ($null -eq $resolvedApp) {
+            $unresolved.Add($entry.Package)
+            continue
+        }
+
+        $entry.AppId = [string](Get-ObjectPropertyValue -Object $resolvedApp -Names @("appId", "app_id"))
+        $entry.FirebaseState = "Ready"
     }
-    $entry.AppId = [string](Get-ObjectPropertyValue -Object $resolvedApp -Names @("appId", "app_id"))
-    $entry.FirebaseState = "Ready"
+
+    if ($unresolved.Count -eq 0) {
+        $allAppsResolved = $true
+        break
+    }
+
+    if ($attempt -lt 10) {
+        Write-Host "Waiting for Firebase app registration visibility (attempt $attempt/10)..." -ForegroundColor DarkYellow
+        Start-Sleep -Seconds 2
+    }
+}
+
+if (-not $allAppsResolved) {
+    $missingPackages = @(
+        $plan | Where-Object { [string]::IsNullOrWhiteSpace([string]$_.AppId) } | ForEach-Object Package
+    )
+    throw "Firebase apps were not visible after retries: $($missingPackages -join ', ')"
 }
 
 Write-Host "`nPHASE 3: Download all SDK configs into an isolated staging directory" -ForegroundColor Yellow
