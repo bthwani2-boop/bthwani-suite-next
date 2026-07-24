@@ -9,7 +9,7 @@ import (
 	"platform-control-api/internal/platformcontrol"
 )
 
-func TestJRN040GovernedErrorsExposeStableCodes(t *testing.T) {
+func TestGovernedChangeSetErrorsExposeStableCodes(t *testing.T) {
 	tests := []struct {
 		name       string
 		err        error
