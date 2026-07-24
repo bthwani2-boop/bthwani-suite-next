@@ -1,6 +1,44 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
+function Set-EasSensitiveVariable {
+    param(
+        [Parameter(Mandatory)][string]$WorkingDirectory,
+        [Parameter(Mandatory)][string]$Environment,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$Value
+    )
+
+    Write-Host "Upserting sensitive EAS variable: $Name / $Environment"
+
+    # env:update is the supported path for an existing variable. EAS treats a
+    # variable assigned to several environments as one record, so attempting a
+    # multi-environment env:create can fail when only some environments exist.
+    $updateExitCode = Invoke-EasCli -WorkingDirectory $WorkingDirectory -Arguments @(
+        "env:update", $Environment,
+        "--variable-name", $Name,
+        "--value", $Value,
+        "--visibility", "sensitive",
+        "--scope", "project",
+        "--non-interactive"
+    ) -AllowFailure
+
+    if ($updateExitCode -eq 0) {
+        return
+    }
+
+    # The variable does not exist in this environment yet. Create only that
+    # environment instead of sending one create request for all environments.
+    Invoke-EasCli -WorkingDirectory $WorkingDirectory -Arguments @(
+        "env:create", $Environment,
+        "--name", $Name,
+        "--value", $Value,
+        "--visibility", "sensitive",
+        "--scope", "project",
+        "--non-interactive"
+    ) | Out-Null
+}
+
 function Reset-EasSentryVariables {
     param(
         [Parameter(Mandatory)][string]$RepoRoot,
@@ -20,7 +58,7 @@ function Reset-EasSentryVariables {
             }
 
             foreach ($environment in $Environments) {
-                Write-Host "Fast EAS sync: $($project.AppKey) / $environment"
+                Write-Host "Fast EAS public sync: $($project.AppKey) / $environment"
 
                 $environmentFile = Join-Path $temporaryRoot "$($project.AppKey)-$environment.env"
                 $lines = @(
@@ -40,36 +78,23 @@ function Reset-EasSentryVariables {
                     [Text.UTF8Encoding]::new($false)
                 )
 
-                # One remote operation replaces eight public variables.
-                # --force updates existing values and creates missing values.
+                # One remote operation handles all public variables for this
+                # application/environment pair.
                 Invoke-EasCli -WorkingDirectory $runtime -Arguments @(
                     "env:push", $environment,
                     "--path", $environmentFile,
                     "--force"
                 ) | Out-Null
-            }
 
-            # One remote operation applies the sensitive token to all environments.
-            $tokenArguments = [System.Collections.Generic.List[string]]::new()
-            foreach ($argument in @(
-                "env:create",
-                "--name", "SENTRY_AUTH_TOKEN",
-                "--value", $script:SentryToken,
-                "--visibility", "sensitive",
-                "--scope", "project",
-                "--force",
-                "--non-interactive"
-            )) {
-                $tokenArguments.Add($argument)
+                # Upsert the token independently for each environment. This
+                # resumes safely after a partial run and avoids the GraphQL
+                # duplicate-variable failure from multi-environment create.
+                Set-EasSensitiveVariable `
+                    -WorkingDirectory $runtime `
+                    -Environment $environment `
+                    -Name "SENTRY_AUTH_TOKEN" `
+                    -Value $script:SentryToken
             }
-
-            foreach ($environment in $Environments) {
-                $tokenArguments.Add("--environment")
-                $tokenArguments.Add($environment)
-            }
-
-            Write-Host "Fast EAS secret sync: $($project.AppKey) / $($Environments -join ', ')"
-            Invoke-EasCli -WorkingDirectory $runtime -Arguments $tokenArguments.ToArray() | Out-Null
         }
     }
     finally {
