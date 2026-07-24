@@ -84,6 +84,26 @@ jobs:
       - name: Verify cleanup policy
         if: ${{ inputs.policy == 'true' }}
         run: pnpm run guard:cleanup-policy
+      - name: Analyze tracked repository hygiene
+        id: repository_hygiene
+        if: ${{ inputs.policy == 'true' }}
+        continue-on-error: true
+        env:
+          BTHWANI_HYGIENE_REPORT: ${{ runner.temp }}/repository-hygiene/report.json
+        run: node tools/scripts/check-repository-hygiene.mjs
+      - name: Upload repository hygiene report
+        if: ${{ inputs.policy == 'true' && always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: repository-hygiene-${{ github.run_id }}
+          path: ${{ runner.temp }}/repository-hygiene/report.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Fail closed on repository hygiene violations
+        if: ${{ inputs.policy == 'true' && steps.repository_hygiene.outcome == 'failure' }}
+        run: |
+          echo "::error title=Repository hygiene violations::Review the uploaded repository-hygiene artifact."
+          exit 1
       - name: Verify required command integrity
         if: ${{ inputs.policy == 'true' }}
         run: pnpm run guard:required-command-integrity
