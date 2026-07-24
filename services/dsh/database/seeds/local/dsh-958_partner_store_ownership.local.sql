@@ -99,12 +99,12 @@ WHERE tenant_id = 'local-dsh'
 INSERT INTO dsh_store_actor_scopes (
     tenant_id, actor_id, actor_role, store_id, scope_type, active
 ) VALUES
-    ('local-dsh', 'partner-local-001', 'partner', 'store-test-grocery', 'owner', true),
-    ('local-dsh', 'partner-local-002', 'partner', 'store-1002', 'owner', true),
-    ('local-dsh', 'partner-local-003', 'partner', 'store-1003', 'owner', true),
-    ('local-dsh', 'partner-local-005', 'partner', 'store-1005', 'owner', true),
-    ('local-dsh', 'partner-local-006', 'partner', 'store-1006', 'owner', true),
-    ('local-dsh', 'partner-local-007', 'partner', 'store-test-electronics', 'owner', true)
+    ('local-dsh', 'partner-local-001', 'partner', 'store-test-grocery', 'own', true),
+    ('local-dsh', 'partner-local-002', 'partner', 'store-1002', 'own', true),
+    ('local-dsh', 'partner-local-003', 'partner', 'store-1003', 'own', true),
+    ('local-dsh', 'partner-local-005', 'partner', 'store-1005', 'own', true),
+    ('local-dsh', 'partner-local-006', 'partner', 'store-1006', 'own', true),
+    ('local-dsh', 'partner-local-007', 'partner', 'store-test-electronics', 'own', true)
 ON CONFLICT (actor_id, actor_role, store_id) DO UPDATE SET
     tenant_id = EXCLUDED.tenant_id,
     scope_type = EXCLUDED.scope_type,
