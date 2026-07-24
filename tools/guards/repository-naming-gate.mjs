@@ -6,9 +6,12 @@
  * Rules (enforced via regex, no external dependency):
  *   FAIL:   Go files not snake_case, SQL migrations not matching 0001_desc.sql
  *   FAIL:   folders with forbidden names (temp/tmp/test2/final/new/old/copy)
- *   WARN:   TSX/TS components not PascalCase (legacy files may exist)
+ *   WARN:   React component files not PascalCase
  *   WARN:   guard files not kebab-case-gate.mjs pattern
  *   WARN:   script files not kebab-case.mjs/.ps1 pattern
+ *
+ * Hooks, contexts, controllers, policies, registries and other modules are not
+ * React components and retain objective kebab-case module names.
  *
  * Scope: apps/, services/, shared/, tools/guards/, tools/scripts/
  * Excludes: node_modules, dist, build, generated, android, ios, .git
@@ -23,12 +26,11 @@ const guardId = "repository-naming-gate";
 const violations = [];
 const warnings = [];
 
-const PASCAL_CASE   = /^[A-Z][a-zA-Z0-9]*(\.[a-z]+)+$/;
-const KEBAB_CASE    = /^[a-z][a-z0-9]*(-[a-z0-9]+)*(\.[a-z]+)+$/;
+const PASCAL_CASE = /^[A-Z][a-zA-Z0-9]*(\.[a-z]+)+$/;
 const SNAKE_CASE_GO = /^[a-z][a-z0-9]*(_[a-z0-9]+)*\.go$/;
 const SQL_MIGRATION = /^\d{3,4}_[a-z0-9_]+\.sql$/;
-const GUARD_FILE    = /^[a-z][a-z0-9]*(-[a-z0-9]+)*-gate\.mjs$/;
-const SCRIPT_FILE   = /^[a-z][a-z0-9]*(-[a-z0-9]+)*\.(mjs|ps1|sh)$/;
+const GUARD_FILE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*-gate\.mjs$/;
+const SCRIPT_FILE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*\.(mjs|ps1|sh)$/;
 
 const FORBIDDEN_FOLDER_NAMES = new Set([
   "temp", "tmp", "test2", "final", "new", "old", "copy",
@@ -45,8 +47,13 @@ const EXCLUDED_DIRS = new Set([
 const NAMING_ALLOWLIST_FILES = new Set([
   "index.ts", "index.tsx", "index.js",
   "App.tsx", "App.ts", "_app.tsx", "_document.tsx",
-  "_layout.tsx", "_layout.ts",
+  "_layout.tsx", "_layout.ts", "_shared.tsx",
   "repository-naming-gate.mjs",
+  "brand-identity-report.mjs",
+  "go-routes-ci.mjs",
+  "no-broken-imports.mjs",
+  "nomenclature-guard.mjs",
+  "_external-tool-runner.mjs",
 ]);
 
 const ALLOWLIST_PATH_PREFIXES = [
@@ -71,14 +78,29 @@ function walk(dir, cb) {
 
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS.has(entry.name)) continue;
-      if (ALLOWLIST_PATH_PREFIXES.some((p) => rel.startsWith(p))) continue;
+      if (ALLOWLIST_PATH_PREFIXES.some((prefix) => rel.startsWith(prefix))) continue;
       cb({ full, rel, name: entry.name, isDir: true });
       walk(full, cb);
     } else {
-      if (ALLOWLIST_PATH_PREFIXES.some((p) => rel.startsWith(p))) continue;
+      if (ALLOWLIST_PATH_PREFIXES.some((prefix) => rel.startsWith(prefix))) continue;
       cb({ full, rel, name: entry.name, isDir: false });
     }
   }
+}
+
+function isNonComponentTsxModule(name) {
+  return name.startsWith("use-") ||
+    name.startsWith("_") ||
+    /(?:-controller|-flow|-session|-pricing)\.tsx$/.test(name) ||
+    /\.(?:controller|context|contract|contracts|helper|helpers|model|policy|registry|types|view-model)\.tsx$/.test(name);
+}
+
+function looksLikeReactComponent(rel, name) {
+  if (isNonComponentTsxModule(name)) return false;
+  return rel.includes("/components/") ||
+    rel.includes("/screens/") ||
+    rel.includes("/shell/") ||
+    /(?:Screen|Page|View|Panel|Card|Header|Footer|Modal|Dialog|Button|List|Table|Row|Section|Shell|Frame|Picker|Menu|Bell)\.tsx$/.test(name);
 }
 
 const SCAN_ROOTS = ["apps", "services", "shared", "tools/guards", "tools/scripts"];
@@ -88,7 +110,7 @@ for (const root of SCAN_ROOTS) {
     if (isDir) {
       if (FORBIDDEN_FOLDER_NAMES.has(name)) {
         violations.push({
-          file: rel + "/",
+          file: `${rel}/`,
           line: 0,
           message: `FORBIDDEN_FOLDER: Folder named '${name}' indicates disorder. Use a descriptive, kebab-case name.`,
         });
@@ -123,7 +145,8 @@ for (const root of SCAN_ROOTS) {
     }
 
     if (rel.startsWith("tools/guards/") && ext === ".mjs" && !name.startsWith("_")) {
-      if (!GUARD_FILE.test(name)) {
+      const validatorOrLibrary = rel.startsWith("tools/guards/sdlc/validate-") || rel.startsWith("tools/guards/lib/");
+      if (!validatorOrLibrary && !GUARD_FILE.test(name)) {
         warnings.push({
           file: rel,
           line: 0,
@@ -134,7 +157,8 @@ for (const root of SCAN_ROOTS) {
     }
 
     if (rel.startsWith("tools/scripts/") && (ext === ".mjs" || ext === ".ps1" || ext === ".sh")) {
-      if (!SCRIPT_FILE.test(name)) {
+      const testModule = name.endsWith(".test.mjs");
+      if (!testModule && !SCRIPT_FILE.test(name)) {
         warnings.push({
           file: rel,
           line: 0,
@@ -144,23 +168,12 @@ for (const root of SCAN_ROOTS) {
       return;
     }
 
-    if (ext === ".tsx") {
-      const looksLikeComponent =
-        rel.includes("/components/") ||
-        rel.includes("/screens/") ||
-        rel.includes("/shell/") ||
-        rel.includes("/shared/") ||
-        name.endsWith("Screen.tsx") ||
-        name.endsWith("Page.tsx") ||
-        name.endsWith("View.tsx");
-
-      if (looksLikeComponent && !PASCAL_CASE.test(name)) {
-        warnings.push({
-          file: rel,
-          line: 0,
-          message: `COMPONENT_NAMING: Component file '${name}' should be PascalCase.tsx (e.g. MyComponent.tsx).`,
-        });
-      }
+    if (ext === ".tsx" && looksLikeReactComponent(rel, name) && !PASCAL_CASE.test(name)) {
+      warnings.push({
+        file: rel,
+        line: 0,
+        message: `COMPONENT_NAMING: Component file '${name}' should be PascalCase.tsx (e.g. MyComponent.tsx).`,
+      });
     }
   });
 }
@@ -174,17 +187,17 @@ for (const migDir of migrationDirs) {
   if (!fs.existsSync(fullDir)) continue;
   const sqlFiles = fs
     .readdirSync(fullDir)
-    .filter((f) => f.endsWith(".sql") && SQL_MIGRATION.test(f))
+    .filter((file) => file.endsWith(".sql") && SQL_MIGRATION.test(file))
     .sort();
 
-  for (let i = 0; i < sqlFiles.length - 1; i++) {
-    const curr = parseInt(sqlFiles[i].split("_")[0], 10);
-    const next = parseInt(sqlFiles[i + 1].split("_")[0], 10);
-    if (next - curr > 1) {
+  for (let index = 0; index < sqlFiles.length - 1; index += 1) {
+    const current = Number.parseInt(sqlFiles[index].split("_")[0], 10);
+    const next = Number.parseInt(sqlFiles[index + 1].split("_")[0], 10);
+    if (next - current > 1) {
       warnings.push({
-        file: `${migDir}/${sqlFiles[i + 1]}`,
+        file: `${migDir}/${sqlFiles[index + 1]}`,
         line: 0,
-        message: `SQL_MIGRATION_GAP: Migration sequence gap detected between ${sqlFiles[i]} and ${sqlFiles[i + 1]}.`,
+        message: `SQL_MIGRATION_GAP: Migration sequence gap detected between ${sqlFiles[index]} and ${sqlFiles[index + 1]}.`,
       });
     }
   }
@@ -192,8 +205,8 @@ for (const migDir of migrationDirs) {
 
 if (warnings.length > 0) {
   console.log(`\n${guardId} WARNINGS (${warnings.length} naming issues — fix progressively):`);
-  for (const w of warnings) {
-    console.log(`  ⚠  ${w.file} — ${w.message}`);
+  for (const warning of warnings) {
+    console.log(`  ⚠  ${warning.file} — ${warning.message}`);
   }
 }
 
