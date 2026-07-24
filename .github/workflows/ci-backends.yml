@@ -1,0 +1,154 @@
+name: BThwani Backend Verification
+
+on:
+  workflow_call:
+    inputs:
+      dsh:
+        type: string
+        required: true
+      wlt:
+        type: string
+        required: true
+      identity:
+        type: string
+        required: true
+      workforce:
+        type: string
+        required: true
+      platform:
+        type: string
+        required: true
+      providers:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Select affected backends
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      count: ${{ steps.matrix.outputs.count }}
+    steps:
+      - name: Build immutable backend matrix
+        id: matrix
+        shell: bash
+        env:
+          DSH: ${{ inputs.dsh }}
+          WLT: ${{ inputs.wlt }}
+          IDENTITY: ${{ inputs.identity }}
+          WORKFORCE: ${{ inputs.workforce }}
+          PLATFORM: ${{ inputs.platform }}
+          PROVIDERS: ${{ inputs.providers }}
+        run: |
+          set -euo pipefail
+          entries='[]'
+
+          add_backend() {
+            local enabled="$1"
+            local key="$2"
+            local go_mod="$3"
+            local migrations="$4"
+            local workdir="$5"
+            if [[ "${enabled}" != "true" ]]; then return; fi
+            entries="$(jq -c \
+              --arg key "${key}" \
+              --arg go_mod "${go_mod}" \
+              --arg migrations "${migrations}" \
+              --arg workdir "${workdir}" \
+              '. + [{key:$key,go_mod:$go_mod,migrations:$migrations,workdir:$workdir}]' \
+              <<< "${entries}")"
+          }
+
+          add_backend "${DSH}" dsh services/dsh/backend/go.mod 'services/dsh/database/migrations/*.sql' services/dsh/backend
+          add_backend "${WLT}" wlt services/wlt/backend/go.mod 'services/wlt/database/migrations/*.sql' services/wlt/backend
+          add_backend "${IDENTITY}" identity core/identity/backend/go.mod 'core/identity/database/migrations/*.sql' core/identity/backend
+          add_backend "${WORKFORCE}" workforce core/workforce/backend/go.mod 'core/workforce/database/migrations/*.sql' core/workforce/backend
+          add_backend "${PLATFORM}" platform core/platform-control/backend/go.mod 'core/platform-control/database/migrations/*.sql' core/platform-control/backend
+          add_backend "${PROVIDERS}" providers core/providers/backend/go.mod 'core/providers/database/migrations/*.sql' core/providers/backend
+
+          count="$(jq 'length' <<< "${entries}")"
+          echo "count=${count}" >> "${GITHUB_OUTPUT}"
+          echo "matrix={\"include\":${entries}}" >> "${GITHUB_OUTPUT}"
+
+  verify:
+    name: Verify ${{ matrix.key }} backend and database
+    needs: [plan]
+    if: ${{ needs.plan.outputs.count != '0' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ci_runtime
+          POSTGRES_PASSWORD: ci_runtime_password
+          POSTGRES_DB: ci_runtime
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci_runtime -d ci_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://ci_runtime:ci_runtime_password@localhost:5432/ci_runtime?sslmode=disable
+      PGPASSWORD: ci_runtime_password
+      DSH_REQUIRE_DB_TESTS: ${{ matrix.key == 'dsh' && 'true' || 'false' }}
+      WLT_REQUIRE_DB_TESTS: ${{ matrix.key == 'wlt' && 'true' || 'false' }}
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          show-progress: false
+      - name: Set up locked Go runtime
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: ${{ matrix.go_mod }}
+          cache-dependency-path: ${{ matrix.workdir }}/go.sum
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+      - name: Apply migrations
+        shell: bash
+        env:
+          MIGRATIONS: ${{ matrix.migrations }}
+        run: |
+          set -euo pipefail
+          found=0
+          for migration in ${MIGRATIONS}; do
+            found=1
+            psql "${DATABASE_URL}" -q -v ON_ERROR_STOP=1 -f "${migration}" >/dev/null
+          done
+          if [[ "${found}" -ne 1 ]]; then
+            echo "::error title=Migration discovery failed::No migrations matched ${MIGRATIONS}"
+            exit 1
+          fi
+      - name: Test and build backend
+        working-directory: ${{ matrix.workdir }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          log="${RUNNER_TEMP}/${{ matrix.key }}-go-verification.log"
+          if ! go test ./... -count=1 >"${log}" 2>&1; then
+            echo "::error title=${{ matrix.key }} Go verification failed::The complete log is stored as an artifact."
+            grep -E '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' "${log}" | tail -n 80 || true
+            tail -n 160 "${log}"
+            exit 1
+          fi
+          if ! go build ./... >>"${log}" 2>&1; then
+            tail -n 160 "${log}"
+            exit 1
+          fi
+      - name: Upload verification log
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.key }}-go-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/${{ matrix.key }}-go-verification.log
+          if-no-files-found: warn
+          retention-days: 7

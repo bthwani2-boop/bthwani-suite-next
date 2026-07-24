@@ -24,3 +24,13 @@ func TestStoreIDFromContextIgnoresSpoofableHeader(t *testing.T) {
 		t.Fatalf("storeIDFromContext must ignore client-controlled headers, got %q", got)
 	}
 }
+
+func TestTenantIDFromContextIgnoresSpoofableHeadersAndQuery(t *testing.T) {
+	req := httptest.NewRequest("GET", "/dsh/operator/partners?tenantId=spoofed-query", nil)
+	req.Header.Set("X-Tenant-ID", "spoofed-header")
+	req.Header.Set("X-Organization-ID", "spoofed-organization")
+
+	if tenantID, ok := TenantIDFromContext(req.Context()); ok || tenantID != "" {
+		t.Fatalf("TenantIDFromContext must ignore client-controlled tenant selectors, got tenantID=%q ok=%v", tenantID, ok)
+	}
+}

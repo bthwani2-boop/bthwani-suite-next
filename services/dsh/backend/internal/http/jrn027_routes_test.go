@@ -7,7 +7,7 @@ import (
 )
 
 func TestJRN027GovernedSubscriptionRoutes(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil)
 	cases := []struct {
 		method string
 		path   string

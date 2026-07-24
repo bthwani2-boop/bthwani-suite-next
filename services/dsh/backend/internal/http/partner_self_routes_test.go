@@ -6,7 +6,7 @@ import (
 )
 
 func TestPartnerSelfRoutesRegisterOnceOnApplicationRouter(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil)
 	RegisterPartnerSelfRoutes(router, nil, nil, nil, nil)
 
 	request, err := http.NewRequest(http.MethodGet, "/dsh/partner/order-workboard", nil)

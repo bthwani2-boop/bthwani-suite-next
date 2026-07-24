@@ -10,26 +10,26 @@ export type DshWltRefundStatus =
 export type DshWltRefundView = {
   readonly id: string;
   readonly orderId: string;
-  readonly paymentSessionId?: string;
-  readonly clientId?: string;
+  readonly paymentSessionId?: string | undefined;
+  readonly clientId?: string | undefined;
   readonly status: DshWltRefundStatus;
   readonly statusLabel: string;
   readonly statusBadge: "success" | "warning" | "error" | "neutral";
   readonly amountMinorUnits: number;
   readonly amountLabel: string;
   readonly currency: string;
-  readonly reason?: string;
-  readonly eligibilityReference?: string;
-  readonly providerReference?: string;
-  readonly providerStatus?: string;
-  readonly reconciliationCaseId?: string;
-  readonly requestedByOperatorId?: string;
-  readonly approvedByOperatorId?: string;
-  readonly rejectedByOperatorId?: string;
-  readonly decisionReason?: string;
+  readonly reason?: string | undefined;
+  readonly eligibilityReference?: string | undefined;
+  readonly providerReference?: string | undefined;
+  readonly providerStatus?: string | undefined;
+  readonly reconciliationCaseId?: string | undefined;
+  readonly requestedByOperatorId?: string | undefined;
+  readonly approvedByOperatorId?: string | undefined;
+  readonly rejectedByOperatorId?: string | undefined;
+  readonly decisionReason?: string | undefined;
   readonly resolvedAt: string | null;
-  readonly createdAt?: string;
-  readonly updatedAt?: string;
+  readonly createdAt?: string | undefined;
+  readonly updatedAt?: string | undefined;
 };
 
 export type DshWltRefundAuditEvent = {
@@ -38,10 +38,10 @@ export type DshWltRefundAuditEvent = {
   readonly eventType: string;
   readonly actorId: string;
   readonly actorType: "operator" | "service" | "provider" | "reconciler" | "system";
-  readonly fromStatus?: string;
+  readonly fromStatus?: string | undefined;
   readonly toStatus: string;
-  readonly reason?: string;
-  readonly correlationId?: string;
+  readonly reason?: string | undefined;
+  readonly correlationId?: string | undefined;
   readonly createdAt: string;
 };
 
@@ -59,7 +59,7 @@ export type RefundDecisionInput = { readonly reason: string };
 export type RefundReconciliationInput = {
   readonly resolutionAction: "confirmed_success" | "confirmed_failed";
   readonly evidenceNote: string;
-  readonly providerReference?: string;
+  readonly providerReference?: string | undefined;
 };
 
 export type DshWltRefundFailureKind =

@@ -14,6 +14,20 @@ import (
 	"dsh-api/internal/store"
 )
 
+func requiredTestTenantID(t *testing.T) string {
+	t.Helper()
+	tenantID := os.Getenv("DSH_TEST_TENANT_ID")
+	if tenantID == "" {
+		t.Fatal("DSH_TEST_TENANT_ID is required when DSH_REQUIRE_DB_TESTS=true")
+	}
+	return tenantID
+}
+
+func testFieldActor(t *testing.T, actorID string) store.StoreActor {
+	t.Helper()
+	return store.StoreActor{ID: actorID, Role: "field", TenantID: requiredTestTenantID(t)}
+}
+
 func openRequiredDB(t *testing.T) *sql.DB {
 	t.Helper()
 	if os.Getenv("DSH_REQUIRE_DB_TESTS") != "true" {
@@ -118,8 +132,8 @@ func TestSameStoreAssignedAgentCannotAccessAnotherAgentsVisit(t *testing.T) {
 	seedFieldStore(t, db, storeA, agentA)
 	seedFieldStore(t, db, storeA, agentB)
 
-	actorA := store.StoreActor{ID: agentA, Role: "field"}
-	actorB := store.StoreActor{ID: agentB, Role: "field"}
+	actorA := testFieldActor(t, agentA)
+	actorB := testFieldActor(t, agentB)
 
 	visit, err := CreateVisit(ctx, db, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
 	if err != nil {
@@ -157,8 +171,8 @@ func TestActorCannotAccessOtherStoreVisits(t *testing.T) {
 	seedFieldStore(t, db, storeA, agentA)
 	seedFieldStore(t, db, storeB, agentB)
 
-	actorA := store.StoreActor{ID: agentA, Role: "field"}
-	actorB := store.StoreActor{ID: agentB, Role: "field"}
+	actorA := testFieldActor(t, agentA)
+	actorB := testFieldActor(t, agentB)
 
 	visit, err := CreateVisit(ctx, db, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
 	if err != nil {
@@ -200,7 +214,7 @@ func TestConcurrentInProgressVisitRejected(t *testing.T) {
 	storeA := uniqueID("store-conc")
 	agentA := uniqueID("agent-conc")
 	seedFieldStore(t, db, storeA, agentA)
-	actorA := store.StoreActor{ID: agentA, Role: "field"}
+	actorA := testFieldActor(t, agentA)
 
 	visit, err := CreateVisit(ctx, db, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
 	if err != nil {
@@ -221,7 +235,7 @@ func TestCompleteVisitRequiresChecklistAndNoOpenEscalation(t *testing.T) {
 	agentA := uniqueID("agent-cv")
 	partnerID := seedPartner(t, db, agentA)
 	seedFieldStore(t, db, storeA, agentA)
-	actorA := store.StoreActor{ID: agentA, Role: "field"}
+	actorA := testFieldActor(t, agentA)
 
 	visit, err := CreateVisit(ctx, db, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
 	if err != nil {
@@ -282,7 +296,7 @@ func TestCreateEscalationRejectsVisitStoreMismatch(t *testing.T) {
 	agentA := uniqueID("agent-mm")
 	seedFieldStore(t, db, storeA, agentA)
 	seedFieldStore(t, db, storeB, agentA)
-	actorA := store.StoreActor{ID: agentA, Role: "field"}
+	actorA := testFieldActor(t, agentA)
 
 	visit, err := CreateVisit(ctx, db, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
 	if err != nil {

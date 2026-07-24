@@ -38,6 +38,7 @@ func representativeFinanceRouter(
 		auth.NewClient(identityServer.URL),
 		wlt.NewClient(wltServer.URL, "test-service-token"),
 		nil,
+		nil,
 	)
 }
 

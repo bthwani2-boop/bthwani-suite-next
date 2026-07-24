@@ -101,16 +101,17 @@ export function useDispatchOperations() {
       message: '',
     }));
     try {
-      const [decisions, candidates] = await Promise.all([
-        fetchDispatchDecisions({
-          tenantId: assignment.tenantId ?? 'default',
-          assignmentId: assignment.id,
-          limit: 100,
-        }),
-        assignment.serviceAreaCode
-          ? fetchCaptainDispatchCandidates(assignment.serviceAreaCode, assignment.tenantId ?? 'default')
-          : Promise.resolve([]),
-      ]);
+      const tenantId = assignment.tenantId ?? 'default';
+      const decisionsPromise = fetchDispatchDecisions({
+        tenantId,
+        assignmentId: assignment.id,
+        limit: 100,
+      });
+      const candidates = assignment.serviceAreaCode
+        ? await fetchCaptainDispatchCandidates(assignment.serviceAreaCode, tenantId)
+        : [];
+      const decisions = await decisionsPromise;
+
       setState((current) => current.selectedAssignment?.id !== assignment.id
         ? current
         : {

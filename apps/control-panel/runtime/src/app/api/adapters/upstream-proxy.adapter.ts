@@ -12,13 +12,31 @@ import { sendAuthenticatedUpstreamRequest } from "../_kernel/upstream-http-reque
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-type TokenPair = { accessToken: string; refreshToken: string };
+type OperatorTokenPair = {
+  accessToken: string;
+  refreshToken: string;
+  identity: { roles: readonly string[] };
+};
 
 function noStoreJson(body: unknown, status: number): NextResponse {
   return NextResponse.json(body, {
     status,
     headers: { "Cache-Control": "no-store" },
   });
+}
+
+function pathIsSafe(path: readonly string[]): boolean {
+  return (
+    path.length > 0 &&
+    path.every(
+      (segment) =>
+        segment.length > 0 &&
+        segment !== "." &&
+        segment !== ".." &&
+        !segment.includes("/") &&
+        !segment.includes("\\"),
+    )
+  );
 }
 
 async function tryForward(
@@ -34,35 +52,68 @@ async function tryForward(
   }
 }
 
+async function rotateOperatorSession(
+  refreshToken: string,
+): Promise<OperatorTokenPair | null> {
+  const rotated = await identityServerClient().refresh(refreshToken);
+  if (!rotated.identity.roles.includes("operator")) return null;
+  return rotated;
+}
+
+function expiredSessionResponse(status = 401): NextResponse {
+  const response = noStoreJson(
+    { code: status === 403 ? "CONTROL_PANEL_FORBIDDEN" : "SESSION_EXPIRED" },
+    status,
+  );
+  clearSessionCookies(response);
+  return response;
+}
+
 export async function proxyAuthenticatedUpstream(
   request: Request,
   path: readonly string[],
   baseUrl: string,
 ): Promise<NextResponse> {
+  if (!baseUrl) {
+    return noStoreJson({ code: "BFF_UPSTREAM_NOT_CONFIGURED" }, 503);
+  }
+  if (!pathIsSafe(path)) {
+    return noStoreJson({ code: "BFF_PATH_NOT_ALLOWED" }, 404);
+  }
   if (MUTATING_METHODS.has(request.method) && !isSameOriginRequest(request)) {
     return noStoreJson({ code: "CROSS_ORIGIN_REJECTED" }, 403);
   }
 
   const store = await cookies();
-  const accessToken = store.get(ACCESS_TOKEN_COOKIE)?.value;
+  let accessToken = store.get(ACCESS_TOKEN_COOKIE)?.value;
   const refreshToken = store.get(REFRESH_TOKEN_COOKIE)?.value;
+  let rotatedCookies: OperatorTokenPair | null = null;
 
   if (!accessToken) {
-    return noStoreJson({ code: "SESSION_NOT_FOUND" }, 401);
+    if (!refreshToken) return noStoreJson({ code: "SESSION_NOT_FOUND" }, 401);
+    try {
+      rotatedCookies = await rotateOperatorSession(refreshToken);
+      if (!rotatedCookies) return expiredSessionResponse(403);
+      accessToken = rotatedCookies.accessToken;
+    } catch {
+      return expiredSessionResponse();
+    }
   }
 
   let upstream = await tryForward(request.clone(), path, baseUrl, accessToken);
-  let rotatedCookies: TokenPair | null = null;
 
   if (upstream.status === 401 && refreshToken) {
     try {
-      const rotated = await identityServerClient().refresh(refreshToken);
-      rotatedCookies = rotated;
-      upstream = await tryForward(request.clone(), path, baseUrl, rotated.accessToken);
+      rotatedCookies = await rotateOperatorSession(refreshToken);
+      if (!rotatedCookies) return expiredSessionResponse(403);
+      upstream = await tryForward(
+        request.clone(),
+        path,
+        baseUrl,
+        rotatedCookies.accessToken,
+      );
     } catch {
-      const response = noStoreJson({ code: "SESSION_EXPIRED" }, 401);
-      clearSessionCookies(response);
-      return response;
+      return expiredSessionResponse();
     }
   }
 
@@ -72,11 +123,19 @@ export async function proxyAuthenticatedUpstream(
     headers: {
       "Content-Type": upstream.headers.get("content-type") ?? "application/json",
       "Cache-Control": "no-store",
+      ...(upstream.headers.get("etag")
+        ? { ETag: upstream.headers.get("etag") as string }
+        : {}),
+      ...(upstream.headers.get("x-correlation-id")
+        ? {
+            "X-Correlation-ID": upstream.headers.get(
+              "x-correlation-id",
+            ) as string,
+          }
+        : {}),
     },
   });
 
-  if (rotatedCookies) {
-    setSessionCookies(response, rotatedCookies);
-  }
+  if (rotatedCookies) setSessionCookies(response, rotatedCookies);
   return response;
 }

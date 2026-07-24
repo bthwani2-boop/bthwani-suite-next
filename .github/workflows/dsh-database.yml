@@ -1,0 +1,178 @@
+name: DSH Database Contract
+
+on:
+  push:
+    branches:
+      - master
+      - lianbassam
+    paths:
+      - "package.json"
+      - "services/dsh/database/**"
+      - "services/dsh/backend/**"
+      - "services/dsh/package.json"
+      - "tools/scripts/check-dsh-database-contract.mjs"
+      - "tools/scripts/check-local-media-contract.mjs"
+      - ".github/workflows/dsh-database.yml"
+  pull_request:
+    paths:
+      - "package.json"
+      - "services/dsh/database/**"
+      - "services/dsh/backend/**"
+      - "services/dsh/package.json"
+      - "tools/scripts/check-dsh-database-contract.mjs"
+      - "tools/scripts/check-local-media-contract.mjs"
+      - ".github/workflows/dsh-database.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dsh-database-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify canonical DSH database path
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_runtime
+          POSTGRES_PASSWORD: dsh_runtime_password
+          POSTGRES_DB: dsh_runtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_runtime -d dsh_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
+      PGPASSWORD: dsh_runtime_password
+      BTHWANI_ENVIRONMENT: ci
+      DSH_REQUIRE_DB_TESTS: "true"
+      DSH_TEST_TENANT_ID: ci-dsh
+
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          show-progress: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client >/dev/null
+
+      - name: Validate governed local media contract
+        run: node tools/scripts/check-local-media-contract.mjs
+
+      - name: Validate static DSH database contract
+        run: node tools/scripts/check-dsh-database-contract.mjs
+
+      - name: Apply canonical DSH migrations
+        shell: pwsh
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1
+          -Action migrate
+          -Transport url
+          -DatabaseUrl $env:DATABASE_URL
+
+      - name: Re-run canonical DSH migrations
+        shell: pwsh
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1
+          -Action migrate
+          -Transport url
+          -DatabaseUrl $env:DATABASE_URL
+
+      - name: Verify DSH migration runner failure contracts
+        shell: pwsh
+        run: >-
+          ./services/dsh/database/scripts/test-dsh-migration-runner.ps1
+          -DatabaseUrl $env:DATABASE_URL
+
+      - name: Run DSH schema database contracts
+        shell: pwsh
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1
+          -Action test
+          -Transport url
+          -DatabaseUrl $env:DATABASE_URL
+          -TestSuite schema
+
+      - name: Test and build DSH backend on clean schema
+        working-directory: services/dsh/backend
+        run: |
+          set -uo pipefail
+          log="${RUNNER_TEMP}/dsh-backend-verification.log"
+          : >"$log"
+
+          if ! go test ./... -count=1 >"$log" 2>&1; then
+            echo "::error title=DSH Go tests failed::The complete backend log is uploaded as an artifact."
+            grep -E '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' "$log" | tail -n 120 || true
+            echo "--- DSH backend final log lines ---"
+            tail -n 200 "$log"
+            exit 1
+          fi
+
+          if ! go build ./... >>"$log" 2>&1; then
+            echo "::error title=DSH Go build failed::The complete backend log is uploaded as an artifact."
+            tail -n 200 "$log"
+            exit 1
+          fi
+
+      - name: Upload DSH backend failure log
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dsh-backend-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/dsh-backend-verification.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Apply DSH local seeds twice
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP "dsh-seed-verification.log"
+          try {
+            ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds *>&1 |
+              Tee-Object -FilePath $log
+            ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds *>&1 |
+              Tee-Object -FilePath $log -Append
+          } catch {
+            Write-Host "--- DSH seed final log lines ---"
+            if (Test-Path -LiteralPath $log) {
+              Get-Content -LiteralPath $log -Tail 240
+            }
+            throw
+          }
+
+      - name: Upload DSH seed failure log
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dsh-seed-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/dsh-seed-verification.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Run DSH seed database contracts
+        shell: pwsh
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1
+          -Action test
+          -Transport url
+          -DatabaseUrl $env:DATABASE_URL
+          -TestSuite seed

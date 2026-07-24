@@ -54,6 +54,8 @@ func writePickupError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusUnprocessableEntity, "PICKUP_CODE_ATTEMPTS_EXCEEDED", err.Error())
 	case errors.Is(err, pickup.ErrInvalidCode):
 		store.SendError(w, http.StatusUnprocessableEntity, "PICKUP_CODE_INVALID", err.Error())
+	case errors.Is(err, pickup.ErrExtensionLimitExceeded):
+		store.SendError(w, http.StatusUnprocessableEntity, "PICKUP_EXTENSION_LIMIT_EXCEEDED", err.Error())
 	case errors.Is(err, pickup.ErrConflict):
 		store.SendError(w, http.StatusUnprocessableEntity, "PICKUP_INVALID_TRANSITION", err.Error())
 	case errors.Is(err, pickup.ErrInvalid):
@@ -64,6 +66,7 @@ func writePickupError(w http.ResponseWriter, err error) {
 }
 
 func marshalPickupSession(s *pickup.PickupSession) map[string]any {
+	sla := pickup.EvaluateSLA(s, pickup.DefaultSLAThresholds(), time.Now().UTC())
 	return map[string]any{
 		"id":                 s.ID,
 		"orderId":            s.OrderID,
@@ -83,6 +86,9 @@ func marshalPickupSession(s *pickup.PickupSession) map[string]any {
 		"noShowAt":           s.NoShowAt,
 		"noShowReason":       s.NoShowReason,
 		"rescheduledAt":      s.RescheduledAt,
+		"extensionCount":     s.ExtensionCount,
+		"maxExtensions":      s.MaxExtensions,
+		"slaState":           sla,
 		"version":            s.Version,
 		"createdAt":          s.CreatedAt,
 		"updatedAt":          s.UpdatedAt,
@@ -330,8 +336,81 @@ func (s *protectedStoreServer) handleGetOperatorPickup(w http.ResponseWriter, r 
 	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
 }
 
+// handlePartnerExtendPickupWindow is the partner's routine window-extension
+// tool, bounded by dsh_pickup_sessions.max_extensions. Once exhausted, the
+// partner must escalate to the operator override at
+// POST /dsh/operator/pickups/{orderId}/extend-window.
+func (s *protectedStoreServer) handlePartnerExtendPickupWindow(w http.ResponseWriter, r *http.Request) {
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
+	if !ok {
+		return
+	}
+	var body extendPickupWindowBody
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	if body.CommandID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
+		return
+	}
+	body.Reason = strings.TrimSpace(body.Reason)
+	if body.Reason == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "reason is required")
+		return
+	}
+	if body.NewExpiry.IsZero() {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "newExpiry is required")
+		return
+	}
+	svc := pickup.NewService(s.db)
+	session, err := svc.ExtendWindow(r.Context(), ownedOrder.ID, body.NewExpiry, actor.ID, actor.Role, body.Reason, operationalCorrelationID(r, body.CorrelationID))
+	if err != nil {
+		writePickupError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
+}
+
+// handlePartnerReschedulePickupWindow is the partner's routine no-show
+// recovery tool: it reopens a no_show session with a fresh expiry, without
+// exposing or reusing the previous OTP.
+func (s *protectedStoreServer) handlePartnerReschedulePickupWindow(w http.ResponseWriter, r *http.Request) {
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
+	if !ok {
+		return
+	}
+	var body extendPickupWindowBody
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	if body.CommandID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
+		return
+	}
+	body.Reason = strings.TrimSpace(body.Reason)
+	if body.Reason == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "reason is required")
+		return
+	}
+	if body.NewExpiry.IsZero() {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "newExpiry is required")
+		return
+	}
+	svc := pickup.NewService(s.db)
+	session, err := svc.RescheduleWindow(r.Context(), ownedOrder.ID, body.NewExpiry, actor.ID, actor.Role, body.Reason, operationalCorrelationID(r, body.CorrelationID))
+	if err != nil {
+		writePickupError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{"session": marshalPickupSession(session)})
+}
+
+// handleExtendPickupWindow is the operator's emergency-override extension,
+// used once the partner's own bounded allowance is exhausted -- gated by
+// IncidentPermissionOverride, not the ordinary PickupPermissionManage that
+// gates read/monitor-adjacent operator actions elsewhere in this file.
 func (s *protectedStoreServer) handleExtendPickupWindow(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", PickupPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
 	if !ok {
 		return
 	}

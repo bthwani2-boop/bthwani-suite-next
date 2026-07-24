@@ -6,7 +6,7 @@ root = Path(__file__).resolve().parents[2]
 checks = {
     "product truth": ("governance/product/contracts/jrn-027-subscriptions-commercial-benefits.product-truth.json", "JRN_027_SUBSCRIPTIONS_COMMERCIAL_BENEFITS"),
     "DSH migration": ("services/dsh/database/migrations/dsh-103_jrn_027_subscription_lifecycle.sql", "dsh_subscription_lifecycle_events"),
-    "WLT migration": ("services/wlt/database/migrations/wlt-033_jrn027_subscription_lifecycle.sql", "wlt_subscription_compensations"),
+    "WLT migration": ("services/wlt/database/migrations/wlt-095_jrn027_subscription_lifecycle.sql", "wlt_subscription_compensations"),
     "DSH handlers": ("services/dsh/backend/internal/http/subscription_purchases.go", "handleCancelSubscriptionPurchase"),
     "WLT lifecycle": ("services/wlt/backend/internal/commercial/subscription_lifecycle.go", "RenewSubscriptionLifecycleGoverned"),
     "shared controller": ("services/dsh/frontend/shared/marketing/use-subscription-lifecycle-controller.tsx", "useSubscriptionLifecycleController"),

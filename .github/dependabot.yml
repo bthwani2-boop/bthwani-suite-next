@@ -1,66 +1,61 @@
 version: 2
 updates:
-  # Root npm / pnpm packages
   - package-ecosystem: "npm"
     directory: "/"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "gate:ci-required"
-    commit-message:
-      prefix: "chore(deps)"
+    target-branch: "lianbassam"
+    schedule: { interval: "weekly" }
+    open-pull-requests-limit: 10
+    labels: ["dependencies", "gate:ci-required"]
+    commit-message: { prefix: "chore(deps)" }
     groups:
-      production-dependencies:
-        dependency-type: "production"
-      development-dependencies:
-        dependency-type: "development"
-
-  # WLT Go backend packages
+      production-dependencies: { dependency-type: "production" }
+      development-dependencies: { dependency-type: "development" }
   - package-ecosystem: "gomod"
     directory: "/services/wlt/backend"
-    schedule:
-      interval: "weekly"
+    target-branch: "lianbassam"
+    schedule: { interval: "weekly" }
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "gate:ci-required"
-    commit-message:
-      prefix: "chore(deps)"
-
-  # DSH Go backend packages
+    labels: ["dependencies", "gate:ci-required"]
+    commit-message: { prefix: "chore(deps)" }
   - package-ecosystem: "gomod"
     directory: "/services/dsh/backend"
-    schedule:
-      interval: "weekly"
+    target-branch: "lianbassam"
+    schedule: { interval: "weekly" }
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "gate:ci-required"
-    commit-message:
-      prefix: "chore(deps)"
-
-  # Identity Go backend packages
+    labels: ["dependencies", "gate:ci-required"]
+    commit-message: { prefix: "chore(deps)" }
   - package-ecosystem: "gomod"
     directory: "/core/identity/backend"
-    schedule:
-      interval: "weekly"
+    target-branch: "lianbassam"
+    schedule: { interval: "weekly" }
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "gate:ci-required"
-    commit-message:
-      prefix: "chore(deps)"
-
-  # GitHub Actions workflows
+    labels: ["dependencies", "gate:ci-required"]
+    commit-message: { prefix: "chore(deps)" }
+  - package-ecosystem: "gomod"
+    directory: "/core/workforce/backend"
+    target-branch: "lianbassam"
+    schedule: { interval: "weekly" }
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "gate:ci-required"]
+    commit-message: { prefix: "chore(deps)" }
+  - package-ecosystem: "gomod"
+    directory: "/core/platform-control/backend"
+    target-branch: "lianbassam"
+    schedule: { interval: "weekly" }
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "gate:ci-required"]
+    commit-message: { prefix: "chore(deps)" }
+  - package-ecosystem: "gomod"
+    directory: "/core/providers/backend"
+    target-branch: "lianbassam"
+    schedule: { interval: "weekly" }
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "gate:ci-required"]
+    commit-message: { prefix: "chore(deps)" }
   - package-ecosystem: "github-actions"
     directory: "/"
-    schedule:
-      interval: "weekly"
+    target-branch: "lianbassam"
+    schedule: { interval: "weekly" }
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "gate:ci-required"
-    commit-message:
-      prefix: "chore(deps)"
+    labels: ["dependencies", "gate:ci-required"]
+    commit-message: { prefix: "chore(deps)" }

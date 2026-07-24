@@ -8,7 +8,11 @@
     "next-env.d.ts",
     "src/app/dsh/partners/page.tsx",
     "src/app/dsh/partners/[partnerId]/page.tsx",
+    "src/app/dsh/partners/stores/page.tsx",
     "../../../services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx",
-    "../../../services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx"
+    "../../../services/dsh/frontend/control-panel/partners/PartnerGovernanceWorkspaceScreen.tsx",
+    "../../../services/dsh/frontend/control-panel/partners/PartnerCreatePanel.tsx",
+    "../../../services/dsh/frontend/control-panel/partners/PartnerDetailUnifiedScreen.tsx",
+    "../../../services/dsh/frontend/control-panel/partners/stores/StoreManagementScreen.tsx"
   ]
 }

@@ -78,7 +78,16 @@ test("DSH refund contract binds command, client and partner surfaces and preserv
     "REFUND_IDEMPOTENCY_RECEIPT_FAILED",
     "MutationReceiptFailure:",
     "CompletionPersistenceFailure:",
+    "authenticated Identity actor",
   ], "DSH refund OpenAPI");
+  const tenantHeaderStart = contract.indexOf("    TenantHeader:\n");
+  const correlationHeaderStart = contract.indexOf("    CorrelationHeader:\n", tenantHeaderStart + 1);
+  assert.ok(tenantHeaderStart >= 0 && correlationHeaderStart > tenantHeaderStart, "TenantHeader parameter boundaries are missing");
+  const tenantHeader = contract.slice(tenantHeaderStart, correlationHeaderStart);
+  assert.match(tenantHeader, /name: X-Tenant-ID/);
+  assert.match(tenantHeader, /required: false/);
+  assert.match(tenantHeader, /authoritative tenant[\s\S]*authenticated Identity actor/);
+  assert.doesNotMatch(tenantHeader, /required: true/);
   assertMutationReceiptResponse(contract, "/dsh/control-panel/finance/refunds", "/dsh/control-panel/finance/refunds/{refundId}");
   assertMutationReceiptResponse(contract, "/dsh/control-panel/finance/refunds/{refundId}/approve", "/dsh/control-panel/finance/refunds/{refundId}/reject");
   assertMutationReceiptResponse(contract, "/dsh/control-panel/finance/refunds/{refundId}/reject", "/dsh/control-panel/finance/refunds/{refundId}/complete");

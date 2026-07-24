@@ -48,6 +48,10 @@ services/dsh/database/seeds/local/media/
 !services/dsh/database/seeds/local/media/fixtures/
 !services/dsh/database/seeds/local/media/fixtures/**
 
+# Native application identity assets are governed source inputs for Expo/EAS.
+!apps/*/runtime/assets/
+!apps/*/runtime/assets/**
+
 .gocache*/
 .gomodcache*/
 .cache/
@@ -118,6 +122,8 @@ node-gates*.log
 *.keystore
 *credentials*.json
 service-account*.json
+**/google-services.json
+**/GoogleService-Info.plist
 secrets.local.*
 passwords.local.*
 credentials.local.*

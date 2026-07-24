@@ -7,6 +7,7 @@ import (
 
 	"database/sql"
 	"dsh-api/internal/auth"
+	"dsh-api/internal/incident"
 	"dsh-api/internal/media"
 	"dsh-api/internal/orders"
 	"dsh-api/internal/store"
@@ -14,11 +15,12 @@ import (
 )
 
 type orderCancellationBody struct {
-	Reason        string `json:"reason"`
-	ReasonCode    string `json:"reasonCode"`
-	ReasonNote    string `json:"reasonNote"`
-	CommandID     string `json:"commandId"`
-	CorrelationID string `json:"correlationId"`
+	Reason          string `json:"reason"`
+	ReasonCode      string `json:"reasonCode"`
+	ReasonNote      string `json:"reasonNote"`
+	CommandID       string `json:"commandId"`
+	CorrelationID   string `json:"correlationId"`
+	TicketReference string `json:"ticketReference"`
 }
 
 func cancellationCorrelation(r *http.Request, body orderCancellationBody) string {
@@ -40,6 +42,8 @@ func writeOrderCancellationError(w http.ResponseWriter, err error) {
 	case errors.Is(err, orders.ErrConflict):
 		store.SendError(w, http.StatusConflict, "ORDER_CANCELLATION_CONFLICT", "order cannot be cancelled from its current state")
 	case errors.Is(err, orders.ErrInvalid):
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	case errors.Is(err, incident.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "order cancellation failed")
@@ -142,24 +146,49 @@ func (s *protectedStoreServer) handlePartnerCancelOrder(w http.ResponseWriter, r
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order), "cancellation": cancellation})
 }
 
+// handleOperatorCancelOrderGoverned is the sovereign order-cancellation
+// entry point: it requires IncidentPermissionOverride and records an
+// operational_incident before applying the cancellation, so an operator
+// override always carries a reason and ticket reference in a durable,
+// queryable record.
 func (s *protectedStoreServer) handleOperatorCancelOrderGoverned(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requirePermission(w, r, "control-panel", OperationsPermissionManage, "operator")
+	actor, ok := s.requirePermission(w, r, "control-panel", IncidentPermissionOverride, "operator")
 	if !ok {
 		return
 	}
+	orderID := r.PathValue("orderId")
 	body, ok := decodeCancellationBody(w, r)
 	if !ok {
 		return
 	}
-	order, err := orders.CancelOrder(s.db, orders.CancellationInput{
-		OrderID:       r.PathValue("orderId"),
-		TenantID:      actor.TenantID,
-		ActorID:       actor.ID,
-		ActorRole:     "operator",
-		ReasonCode:    body.ReasonCode,
-		ReasonNote:    body.ReasonNote,
-		CorrelationID: cancellationCorrelation(r, body),
+	body.TicketReference = strings.TrimSpace(body.TicketReference)
+	if body.TicketReference == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "ticketReference is required for a sovereign cancellation")
+		return
+	}
+	reason := body.ReasonNote
+	if strings.TrimSpace(reason) == "" {
+		reason = body.ReasonCode
+	}
+	reported, err := incident.NewService(s.db).Report(r.Context(), incident.ReportInput{
+		OrderID:          orderID,
+		TenantID:         actor.TenantID,
+		TargetEntityType: incident.TargetOrder,
+		TargetEntityID:   orderID,
+		IncidentType:     incident.TypeCancel,
+		Reason:           reason,
+		TicketReference:  body.TicketReference,
+		ActorID:          actor.ID,
+		ActorRole:        "operator",
+		CorrelationID:    cancellationCorrelation(r, body),
+		ReasonCode:       body.ReasonCode,
+		ReasonNote:       body.ReasonNote,
 	})
+	if err != nil {
+		writeOrderCancellationError(w, err)
+		return
+	}
+	order, err := orders.GetOrder(s.db, orderID)
 	if err != nil {
 		writeOrderCancellationError(w, err)
 		return
@@ -169,7 +198,11 @@ func (s *protectedStoreServer) handleOperatorCancelOrderGoverned(w http.Response
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cancellation projection unavailable")
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order), "cancellation": cancellation})
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"order":        marshalOrder(order),
+		"cancellation": cancellation,
+		"incidentId":   reported.ID,
+	})
 }
 
 func (s *protectedStoreServer) handleClientOrderCancellation(w http.ResponseWriter, r *http.Request) {

@@ -1,0 +1,6 @@
+all modules verified
+go: downloading github.com/lib/pq v1.12.3
+go: downloading golang.org/x/crypto v0.54.0
+?   	identity-api/cmd/identity-api	[no test files]
+ok  	identity-api/internal/http	0.006s
+ok  	identity-api/internal/identity	0.004s

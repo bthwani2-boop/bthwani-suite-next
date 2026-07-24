@@ -1,8 +1,7 @@
-import { Platform, StyleSheet, View } from "react-native";
+import { Linking, Platform, StyleSheet, View } from "react-native";
 
 import * as SecureStore from "expo-secure-store";
 import * as Notifications from "expo-notifications";
-import * as Linking from "expo-linking";
 import { useEffect, useRef, useState } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
 import { DshFieldSurface } from "../../../../services/dsh/frontend/app-field";
@@ -35,19 +34,42 @@ if (Platform.OS !== "web") {
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
-// ─── Deep-link / notification URL → navigation command ───────────────────────
 // URL scheme: bthwani-field-next://route?storeId=X&visitId=Y&partnerId=Z
+function decodeQueryValue(value: string): string {
+  return decodeURIComponent(value.replaceAll("+", " "));
+}
+
+function parseQuery(query: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const pair of query.split("&")) {
+    if (!pair) continue;
+    const separator = pair.indexOf("=");
+    const key = decodeQueryValue(separator >= 0 ? pair.slice(0, separator) : pair);
+    const value = decodeQueryValue(separator >= 0 ? pair.slice(separator + 1) : "");
+    if (key) result[key] = value;
+  }
+  return result;
+}
+
 function parseDeepLink(url: string): DshFieldNavigationCommand | null {
   try {
-    const parsed = Linking.parse(url);
-    const path = parsed.path ?? parsed.scheme ?? "";
-    const p = parsed.queryParams ?? {};
-    const base: Partial<DshFieldNavigationCommand> = {
-      token: Date.now(),
-    };
-    if (typeof p.storeId === "string") base.storeId = p.storeId;
-    if (typeof p.visitId === "string") base.visitId = p.visitId;
-    if (typeof p.partnerId === "string") base.partnerId = p.partnerId;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+
+    const schemeSeparator = trimmed.indexOf("://");
+    const afterScheme = schemeSeparator >= 0 ? trimmed.slice(schemeSeparator + 3) : trimmed;
+    const withoutFragment = afterScheme.split("#", 1)[0] ?? "";
+    const querySeparator = withoutFragment.indexOf("?");
+    const location = querySeparator >= 0 ? withoutFragment.slice(0, querySeparator) : withoutFragment;
+    const query = querySeparator >= 0 ? withoutFragment.slice(querySeparator + 1) : "";
+    const path = location.replace(/^\/+|\/+$/g, "").split("/")[0] ?? "";
+    const params = parseQuery(query);
+
+    const base: Partial<DshFieldNavigationCommand> = { token: Date.now() };
+    if (params.storeId) base.storeId = params.storeId;
+    if (params.visitId) base.visitId = params.visitId;
+    if (params.partnerId) base.partnerId = params.partnerId;
+
     const routeMap: Record<string, DshFieldNavigationCommand["target"]> = {
       "work-queue": "work-queue",
       visit: "visit",
@@ -69,7 +91,9 @@ function parseDeepLink(url: string): DshFieldNavigationCommand | null {
 function parseNotificationData(data: Record<string, unknown>): DshFieldNavigationCommand | null {
   const route = data.route as string | undefined;
   if (!route) return null;
-  return parseDeepLink(`bthwani-field-next://${route}?storeId=${data.storeId ?? ""}&visitId=${data.visitId ?? ""}&partnerId=${data.partnerId ?? ""}`);
+  return parseDeepLink(
+    `bthwani-field-next://${route}?storeId=${encodeURIComponent(String(data.storeId ?? ""))}&visitId=${encodeURIComponent(String(data.visitId ?? ""))}&partnerId=${encodeURIComponent(String(data.partnerId ?? ""))}`,
+  );
 }
 
 function AppContent() {

@@ -15,6 +15,7 @@ security:
 paths:
   /wlt/settlements:
     post:
+      tags: ["wlt-settlements"]
       operationId: createWltEvidenceBackedSettlement
       x-bthwani-mutation-approved: true
       x-bthwani-default-enabled: false
@@ -41,6 +42,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/settlements/{settlementId}/evidence:
     get:
+      tags: ["wlt-settlements"]
       operationId: listWltSettlementEvidence
       parameters:
         - $ref: '#/components/parameters/SettlementId'
@@ -59,6 +61,7 @@ paths:
                     items: { $ref: '#/components/schemas/SettlementEvidence' }
   /wlt/settlement-policies/{partnerId}:
     put:
+      tags: ["wlt-settlement-policies"]
       operationId: upsertWltSettlementPolicy
       parameters:
         - $ref: '#/components/parameters/PartnerId'
@@ -75,6 +78,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commission-policies:
     put:
+      tags: ["wlt-commission-policies"]
       operationId: upsertWltCommissionPolicy
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -90,6 +94,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions:
     get:
+      tags: ["wlt-commissions"]
       operationId: listWltGovernedCommissions
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -129,6 +134,7 @@ paths:
                     type: array
                     items: { $ref: '#/components/schemas/Commission' }
     post:
+      tags: ["wlt-commissions"]
       operationId: createWltGovernedCommission
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
@@ -154,6 +160,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions/{commissionId}:
     get:
+      tags: ["wlt-commissions"]
       operationId: getWltGovernedCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -166,6 +173,7 @@ paths:
               schema: { $ref: '#/components/schemas/CommissionDetail' }
   /wlt/commissions/{commissionId}/adjust:
     post:
+      tags: ["wlt-commissions"]
       operationId: adjustWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -190,6 +198,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions/{commissionId}/confirm:
     post:
+      tags: ["wlt-commissions"]
       operationId: confirmWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -201,6 +210,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions/{commissionId}/settle:
     post:
+      tags: ["wlt-commissions"]
       operationId: settleWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -212,6 +222,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions/{commissionId}/reject:
     post:
+      tags: ["wlt-commissions"]
       operationId: rejectWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -223,6 +234,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/commissions/{commissionId}/reverse:
     post:
+      tags: ["wlt-commissions"]
       operationId: reverseWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'

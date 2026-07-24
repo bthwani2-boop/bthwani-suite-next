@@ -468,8 +468,8 @@ export function CatalogDashboardScreen() {
     return [...groups.entries()].filter(([, products]) => products.length > 1);
   }, [controller.state.masterProducts.items]);
 
-  const activeMainGroup = useMemo(() => {
-    return MAIN_TAB_GROUPS.find((g) => g.subTabs.includes(activeTab)) || MAIN_TAB_GROUPS[0];
+  const activeMainGroup = useMemo<MainTabGroup>(() => {
+    return MAIN_TAB_GROUPS.find((group) => group.subTabs.includes(activeTab)) ?? MAIN_TAB_GROUPS[0]!;
   }, [activeTab]);
 
   const handleSelectMainGroup = (groupId: MainGroupId) => {
@@ -479,8 +479,8 @@ export function CatalogDashboardScreen() {
       const firstTab = group.subTabs.find((stId) => {
         const tabDef = TABS.find((t) => t.id === stId);
         return tabDef && !tabDef.disabled;
-      }) || group.subTabs[0];
-      setActiveTab(firstTab);
+      }) ?? group.subTabs[0];
+      if (firstTab) setActiveTab(firstTab);
     }
   };
 
@@ -550,14 +550,14 @@ export function CatalogDashboardScreen() {
                   cursor: "pointer",
                   transition: "all 0.2s ease-in-out",
                   border: isActive
-                    ? "1px solid color-mix(in srgb, var(--bth-colors-brandAction, #0052FF) 40%, transparent)"
+                    ? `1px solid ${colorRoles.focusRing}`
                     : "1px solid transparent",
                   background: isActive
-                    ? "color-mix(in srgb, var(--bth-colors-brandAction, #0052FF) 12%, transparent)"
+                    ? colorRoles.brandActionTint
                     : "transparent",
                   color: isActive ? colorRoles.brandAction : "currentColor",
                   boxShadow: isActive
-                    ? "0 4px 14px color-mix(in srgb, var(--bth-colors-brandAction, #0052FF) 15%, transparent)"
+                    ? `0 4px 14px ${colorRoles.brandActionTint}`
                     : "none",
                   whiteSpace: "nowrap",
                 }}
@@ -623,7 +623,7 @@ export function CatalogDashboardScreen() {
                     : "color-mix(in srgb, currentColor 2%, transparent)",
                   color: isSubActive ? colorRoles.surfaceBase : "currentColor",
                   boxShadow: isSubActive
-                    ? "0 2px 8px color-mix(in srgb, var(--bth-colors-brandAction, #0052FF) 30%, transparent)"
+                    ? `0 2px 8px ${colorRoles.focusRing}`
                     : "none",
                   whiteSpace: "nowrap",
                 }}

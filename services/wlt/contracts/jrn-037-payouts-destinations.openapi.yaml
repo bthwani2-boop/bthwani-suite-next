@@ -16,6 +16,7 @@ paths:
       - $ref: '#/components/parameters/ActorType'
       - $ref: '#/components/parameters/ActorId'
     get:
+      tags: ["wlt-payout-destinations"]
       operationId: getWltTypedPayoutDestination
       responses:
         '200':
@@ -26,6 +27,7 @@ paths:
                 $ref: '#/components/schemas/PayoutDestinationEnvelope'
         '404': { $ref: '#/components/responses/NotFound' }
     put:
+      tags: ["wlt-payout-destinations"]
       operationId: upsertWltTypedPayoutDestination
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -52,12 +54,14 @@ paths:
       - $ref: '#/components/parameters/CorrelationId'
       - $ref: '#/components/parameters/IdempotencyKey'
     post:
+      tags: ["wlt-payout-destinations"]
       operationId: deactivateWltTypedPayoutDestination
       responses:
         '204': { description: Destination deactivated. }
         '404': { $ref: '#/components/responses/NotFound' }
   /wlt/payout-requests:
     get:
+      tags: ["wlt-payout-requests"]
       operationId: listWltPayoutRequests
       parameters:
         - name: beneficiaryActorId
@@ -83,6 +87,7 @@ paths:
                     items: { $ref: '#/components/schemas/PayoutRequest' }
                   total: { type: integer, minimum: 0 }
     post:
+      tags: ["wlt-payout-requests"]
       operationId: createWltDestinationBoundPayoutRequest
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -110,6 +115,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/PayoutId'
     get:
+      tags: ["wlt-payout-requests"]
       operationId: getWltPayoutRequest
       responses:
         '200':
@@ -120,6 +126,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /wlt/payout-requests/{payoutId}/approve:
     post:
+      tags: ["wlt-payout-requests"]
       operationId: approveWltPayoutRequest
       parameters:
         - $ref: '#/components/parameters/PayoutId'
@@ -131,6 +138,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/payout-requests/{payoutId}/reject:
     post:
+      tags: ["wlt-payout-requests"]
       operationId: rejectWltPayoutRequest
       parameters:
         - $ref: '#/components/parameters/PayoutId'
@@ -142,6 +150,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/payout-requests/{payoutId}/process:
     post:
+      tags: ["wlt-payout-requests"]
       operationId: processWltPayoutRequest
       parameters:
         - $ref: '#/components/parameters/PayoutId'
@@ -155,6 +164,7 @@ paths:
         '502': { $ref: '#/components/responses/ProviderError' }
   /wlt/payout-requests/{payoutId}/complete:
     post:
+      tags: ["wlt-payout-requests"]
       operationId: completeWltPayoutRequest
       parameters:
         - $ref: '#/components/parameters/PayoutId'
@@ -167,6 +177,7 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
   /wlt/payout-requests/{payoutId}/reconcile:
     post:
+      tags: ["wlt-payout-requests"]
       operationId: reconcileWltPayoutRequest
       parameters:
         - $ref: '#/components/parameters/PayoutId'
@@ -184,6 +195,7 @@ paths:
         '502': { $ref: '#/components/responses/ProviderError' }
   /wlt/payout-requests/{payoutId}/audit:
     get:
+      tags: ["wlt-payout-requests"]
       operationId: listWltPayoutAudit
       parameters:
         - $ref: '#/components/parameters/PayoutId'

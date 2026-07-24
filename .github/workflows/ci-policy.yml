@@ -1,0 +1,148 @@
+name: BThwani Policy Verification
+
+on:
+  workflow_call:
+    inputs:
+      base_sha:
+        type: string
+        required: true
+      head_sha:
+        type: string
+        required: true
+      policy:
+        type: string
+        required: true
+      workflow:
+        type: string
+        required: true
+      security:
+        type: string
+        required: true
+      infrastructure:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  nomenclature:
+    name: Ensure objective nomenclature
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify objective nomenclature
+        env:
+          CI_BASE_SHA: ${{ inputs.base_sha }}
+          CI_HEAD_SHA: ${{ inputs.head_sha }}
+        run: pnpm run guard:nomenclature
+
+  affected_policy:
+    name: Verify affected governance and workflow policy
+    if: ${{ inputs.policy == 'true' || inputs.workflow == 'true' || inputs.security == 'true' || inputs.infrastructure == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Test CI source immutability guard
+        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
+        run: node --test tools/scripts/check-ci-source-immutability.test.mjs
+      - name: Enforce verification-only CI source policy
+        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
+        run: node tools/scripts/check-ci-source-immutability.mjs
+      - name: Verify governance schema
+        if: ${{ inputs.policy == 'true' }}
+        run: pnpm run guard:governance-schema
+      - name: Verify agent governance
+        if: ${{ inputs.policy == 'true' }}
+        run: pnpm run guard:agent-governance
+      - name: Verify authority separation
+        if: ${{ inputs.policy == 'true' }}
+        run: pnpm run guard:authority-separation
+      - name: Verify SaaS governance
+        if: ${{ inputs.policy == 'true' }}
+        run: pnpm run guard:saas-governance
+      - name: Verify guard registry
+        id: guard_registry
+        if: ${{ inputs.policy == 'true' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/guard-registry"
+          set -o pipefail
+          pnpm run guard:guard-registry 2>&1 | tee "${RUNNER_TEMP}/guard-registry/guard-registry.log"
+      - name: Upload guard registry evidence
+        if: ${{ inputs.policy == 'true' && steps.guard_registry.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: guard-registry-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/guard-registry/guard-registry.log
+            governance/guards/guard-registry.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Verify SDLC governance
+        if: ${{ inputs.policy == 'true' }}
+        run: pnpm run guard:sdlc
+      - name: Verify cleanup policy
+        if: ${{ inputs.policy == 'true' }}
+        run: pnpm run guard:cleanup-policy
+      - name: Verify portable tracked configuration
+        if: ${{ inputs.policy == 'true' }}
+        run: node tools/scripts/check-portable-tracked-config.mjs
+      - name: Analyze tracked repository hygiene
+        id: repository_hygiene
+        if: ${{ inputs.policy == 'true' }}
+        continue-on-error: true
+        env:
+          BTHWANI_HYGIENE_REPORT: ${{ runner.temp }}/repository-hygiene/report.json
+        run: node tools/scripts/check-repository-hygiene.mjs
+      - name: Upload repository hygiene report
+        if: ${{ inputs.policy == 'true' && always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: repository-hygiene-${{ github.run_id }}
+          path: ${{ runner.temp }}/repository-hygiene/report.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Verify required command integrity
+        if: ${{ inputs.policy == 'true' }}
+        run: pnpm run guard:required-command-integrity
+      - name: Verify pinned actions
+        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
+        run: pnpm run guard:actions-pin
+      - name: Verify workflow syntax
+        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
+        run: pnpm run guard:workflow-lint
+      - name: Verify workflow security
+        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
+        run: pnpm run guard:workflow-security
+      - name: Verify workflow policy
+        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
+        run: pnpm run guard:opa-policies
+      - name: Verify runtime configuration policy
+        if: ${{ inputs.infrastructure == 'true' }}
+        run: pnpm run guard:runtime-config
+      - name: Verify infrastructure policy
+        if: ${{ inputs.infrastructure == 'true' }}
+        run: pnpm run guard:opa-policies
+      - name: Verify immutable commit diff
+        run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
+      - name: Fail closed on deferred policy violations
+        if: ${{ always() && (steps.guard_registry.outcome == 'failure' || steps.repository_hygiene.outcome == 'failure') }}
+        run: |
+          echo "::error title=Policy verification failed::Review the guard-registry and repository-hygiene artifacts."
+          exit 1

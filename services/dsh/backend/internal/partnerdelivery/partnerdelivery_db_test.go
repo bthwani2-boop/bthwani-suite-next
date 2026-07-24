@@ -32,9 +32,6 @@ func openRequiredDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// fixture bundles the ids of a freshly seeded partner_delivery order plus
-// an eligible active courier belonging to its store, ready for
-// AssignCourier's happy path.
 type fixture struct {
 	tenantID  string
 	partnerID string
@@ -42,6 +39,7 @@ type fixture struct {
 	clientID  string
 	orderID   string
 	courierID string
+	proofRef  string
 }
 
 func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
@@ -53,6 +51,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 		partnerID: "pd-test-partner-" + suffix,
 		storeID:   "pd-test-store-" + suffix,
 		clientID:  "pd-test-client-" + suffix,
+		proofRef:  "proof://partner-delivery/" + suffix,
 	}
 
 	if _, err := db.ExecContext(ctx, `
@@ -112,7 +111,18 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 		t.Fatalf("failed to insert test courier: %v", err)
 	}
 
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_media_refs (
+			media_ref, storage_key, owner_actor_id, owner_actor_role,
+			partner_id, store_id, purpose, content_type, original_filename
+		)
+		VALUES ($1, $2, $3, 'partner', $4, $5, 'partner_delivery_proof', 'image/jpeg', 'partner-proof.jpg')`,
+		f.proofRef, "tests/partner-delivery/"+suffix, f.courierID, f.partnerID, f.storeID); err != nil {
+		t.Fatalf("failed to insert governed partner proof media: %v", err)
+	}
+
 	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_media_refs WHERE media_ref = $1`, f.proofRef)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_partner_delivery_audit_events WHERE entity_id IN (SELECT id FROM dsh_partner_delivery_tasks WHERE order_id = $1::uuid)`, f.orderID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_operational_outbox_events WHERE entity_type = 'partner_delivery_task' AND entity_id IN (SELECT id FROM dsh_partner_delivery_tasks WHERE order_id = $1::uuid)`, f.orderID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_partner_delivery_tasks WHERE order_id = $1::uuid`, f.orderID)
@@ -152,7 +162,6 @@ func TestAssignCourierIneligibleCourierRejectedDBIntegration(t *testing.T) {
 	f := seedFixture(t, db, "ready_for_pickup")
 	ctx := context.Background()
 
-	// Wrong role.
 	var staffID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_store_team_members (store_id, name, role, status)
@@ -166,22 +175,18 @@ func TestAssignCourierIneligibleCourierRejectedDBIntegration(t *testing.T) {
 		t.Fatalf("expected ErrCourierIneligible for wrong role, got %v", err)
 	}
 
-	// Wrong status (paused).
 	var pausedCourierID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_store_team_members (store_id, name, role, status)
 		VALUES ($1, 'Paused Courier', 'courier', 'paused') RETURNING id`, f.storeID).Scan(&pausedCourierID); err != nil {
 		t.Fatalf("failed to insert paused courier: %v", err)
 	}
-	t.Cleanup(func() {
-		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_team_members WHERE id = $1`, pausedCourierID)
-	})
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_team_members WHERE id = $1`, pausedCourierID) })
 
 	if _, err := svc.AssignCourier(ctx, f.orderID, pausedCourierID, "operator-1", "operator", ""); !errors.Is(err, ErrCourierIneligible) {
 		t.Fatalf("expected ErrCourierIneligible for paused status, got %v", err)
 	}
 
-	// Wrong store: courier belongs to a different store entirely.
 	other := seedFixture(t, db, "ready_for_pickup")
 	if _, err := svc.AssignCourier(ctx, f.orderID, other.courierID, "operator-1", "operator", ""); !errors.Is(err, ErrCourierIneligible) {
 		t.Fatalf("expected ErrCourierIneligible for cross-store courier, got %v", err)
@@ -217,7 +222,6 @@ func TestAssignCourierVersionConflictOnConcurrentUpdateDBIntegration(t *testing.
 		t.Fatalf("AssignCourier failed: %v", err)
 	}
 
-	// Simulate a concurrent writer bumping the version out from under us.
 	if _, err := db.ExecContext(ctx, `UPDATE dsh_partner_delivery_tasks SET version = version + 1, updated_at = NOW() WHERE id = $1`, task.ID); err != nil {
 		t.Fatalf("failed to simulate concurrent update: %v", err)
 	}
@@ -278,7 +282,7 @@ func TestPartnerDeliveryCompletesTaskAndOrderAtomicallyDBIntegration(t *testing.
 		t.Fatalf("expected order status arrived_customer, got %s", got)
 	}
 
-	completed, err := svc.SubmitProof(ctx, arrived.ID, arrived.Version, "photo", "proof://partner-delivery", f.courierID, "partner", "corr-complete")
+	completed, err := svc.SubmitProof(ctx, arrived.ID, arrived.Version, "photo", f.proofRef, f.courierID, "partner", "corr-complete")
 	if err != nil {
 		t.Fatalf("SubmitProof failed: %v", err)
 	}

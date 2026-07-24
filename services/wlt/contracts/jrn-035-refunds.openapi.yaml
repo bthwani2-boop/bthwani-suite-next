@@ -16,6 +16,7 @@ security:
 paths:
   /wlt/refunds:
     get:
+      tags: ["wlt-refunds"]
       operationId: listWltRefunds
       summary: List tenant-scoped refunds
       parameters:
@@ -38,6 +39,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
     post:
+      tags: ["wlt-refunds"]
       operationId: createWltRefund
       summary: Create a partial or full remaining refund request
       parameters:
@@ -68,6 +70,7 @@ paths:
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /wlt/refunds/{refundId}:
     get:
+      tags: ["wlt-refunds"]
       operationId: getWltRefund
       summary: Read one tenant-scoped refund
       parameters:
@@ -85,6 +88,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /wlt/refunds/{refundId}/approve:
     post:
+      tags: ["wlt-refunds"]
       operationId: approveWltRefund
       summary: Independently approve a requested refund
       parameters:
@@ -110,6 +114,7 @@ paths:
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /wlt/refunds/{refundId}/reject:
     post:
+      tags: ["wlt-refunds"]
       operationId: rejectWltRefund
       summary: Independently reject a requested refund
       parameters:
@@ -135,6 +140,7 @@ paths:
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /wlt/refunds/{refundId}/complete:
     post:
+      tags: ["wlt-refunds"]
       operationId: completeWltRefund
       summary: Claim and execute an approved refund through the provider
       description: >-
@@ -170,6 +176,7 @@ paths:
         '502': { $ref: '#/components/responses/ProviderFailure' }
   /wlt/refunds/{refundId}/reconcile:
     post:
+      tags: ["wlt-refunds"]
       operationId: reconcileWltRefund
       summary: Resolve a provider-unknown refund with external evidence
       parameters:
@@ -195,6 +202,7 @@ paths:
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /wlt/refunds/{refundId}/audit:
     get:
+      tags: ["wlt-refunds"]
       operationId: listWltRefundAudit
       summary: List append-only refund audit evidence
       parameters:

@@ -22,6 +22,7 @@ const fieldScreen = read("frontend/app-field/components/DshFieldAssortmentPauseS
 const fieldRouter = read("frontend/app-field/components/DshFieldRouteRenderer.tsx");
 const dashboard = read("frontend/control-panel/catalogs/CatalogDashboardScreen.tsx");
 const reelsPanel = read("frontend/control-panel/catalogs/ReelsReviewPanel.tsx");
+const runtimePhase = readRepo("tools/scripts/invoke-runtime-phase.ps1");
 
 function requireMarkers(source, markers, label) {
   for (const marker of markers) {
@@ -158,6 +159,15 @@ test("JRN-008 slice 09 closes approvals, policies, seed diagnostics, audit and r
     "ROLLBACK_VERSION_CONFLICT",
   ], "audit rollback schema");
   requireMarkers(operatorScreen, ["سجل التدقيق والتراجع المحكوم", "rollbackOperatorCatalogAudit"], "audit operator UI");
+});
+
+test("JRN-008 normal unified startup converges the central catalog seed", () => {
+  requireMarkers(runtimePhase, [
+    "$Action -eq \"up\"",
+    "$ProfileList -contains \"dsh\"",
+    "apply-central-catalog-seed.ps1",
+    "runtime:catalog-convergence",
+  ], "central catalog startup convergence");
 });
 
 test("JRN-008 slice 10 publishes one client catalog and forbids parallel local catalogs", () => {

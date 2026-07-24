@@ -1,0 +1,5 @@
+all modules verified
+?   	platform-control-api/cmd/platform-control-api	[no test files]
+ok  	platform-control-api/internal/auth	0.008s
+ok  	platform-control-api/internal/http	0.004s
+ok  	platform-control-api/internal/platformcontrol	0.005s

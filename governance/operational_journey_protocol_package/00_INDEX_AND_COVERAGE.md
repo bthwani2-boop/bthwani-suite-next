@@ -32,9 +32,14 @@ No file in this package may override a higher authority, live service manifest, 
 | `09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md` | Acceptance and closure guidance. |
 | `10_EXECUTION_PLAN_NO_SKIP_GATE.md` | Execution-plan no-skip support. |
 | `11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md` | Code-first multi-surface support. |
+| `12_SLICE_BY_SLICE_JOURNEY_SEQUENCING.md` | Multi-journey selection and vertical-slice-by-slice closure sequencing. |
 | `sdlc/` | Derived stage-gate schemas, profiles, templates, and validators. |
 | `annexes/` | Conditional annexes that apply only through the authority registry. |
 | `LEGACY_SOURCE_TRACE.md` | Historical source trace only. |
+
+## Known vocabulary drift
+
+`governance/contracts/decision-vocabulary.json` is the canonical result vocabulary (`PASS`, `FIX_REQUIRED`, `BLOCKED_EXTERNAL`, `NEEDS_EVIDENCE`, `READY_FOR_REVIEW`, `OUT_OF_SCOPE_FOR_THIS_JOURNEY`, `QA_BLOCK`, `SECURITY_BLOCK`, `RELEASE_BLOCK`, `PROTOCOL_VIOLATION`, `CLOSED_WITH_EVIDENCE`). Files `01_COMMAND_INPUTS_RESULTS.md`, `02_REMOTE_REF_SOURCE_GIT_GATES.md`, `07_VERIFICATION_RUNTIME_CI_PR.md`, `08_IMPLEMENTATION_ANTIGRAVITY_REPORT.md`, and `09_ACCEPTANCE_QUICK_COMMAND_CLOSE.md` still use an earlier result vocabulary (`ANALYSIS_PASS`, `IMPLEMENTATION_PASS`, `DO_NOT_MERGE`, `MERGE_READY`, `BLOCKED_NEEDS_EVIDENCE`) that predates the current canonical contract. `BLOCKED_NEEDS_EVIDENCE` is a deprecated alias of `NEEDS_EVIDENCE`; `ANALYSIS_PASS`, `IMPLEMENTATION_PASS`, `DO_NOT_MERGE`, and `MERGE_READY` are not registered in the canonical file at all. Until those five files are rewritten, any output produced under them must still be mapped to the canonical vocabulary before it is reported as a final decision — the older terms are internal package shorthand, not the governing contract. `12_SLICE_BY_SLICE_JOURNEY_SEQUENCING.md` uses the canonical vocabulary directly.
 
 ## Use rule
 

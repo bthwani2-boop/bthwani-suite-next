@@ -59,7 +59,7 @@
 /dsh/support/tickets/{ticketId}/messages:
   post:
     operationId: addDshTicketMessage
-    summary: Add a message to a support ticket thread.
+    summary: Add a text, image, audio, video, or document message atomically to a support ticket thread.
     tags: [DshSupport]
     security:
       - bearerAuth: []
@@ -72,18 +72,19 @@
       required: true
       content:
         application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshAddMessageRequest" }
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshRichMessageRequest" }
     responses:
       "201":
-        description: Message added.
+        description: Message and its governed media references were added atomically.
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshMessageResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
   get:
     operationId: listDshTicketMessages
-    summary: List messages in a support ticket thread.
+    summary: List messages and governed media references in a support ticket thread.
     tags: [DshSupport]
     security:
       - bearerAuth: []
@@ -94,7 +95,7 @@
         schema: { type: string }
     responses:
       "200":
-        description: List of messages.
+        description: List of messages including an attachments array for every message.
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshMessagesResponse" }

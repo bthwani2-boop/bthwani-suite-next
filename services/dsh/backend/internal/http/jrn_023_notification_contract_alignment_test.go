@@ -104,7 +104,7 @@ func TestJRN023NotificationGovernanceContractAndRuntimeAlignment(t *testing.T) {
 		requireNotificationGovernanceSnippet(t, migration, snippet)
 	}
 
-	router := NewRouter(nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil)
 	RegisterActorNotificationRoutes(router, nil, nil, nil, nil)
 
 	cases := []struct {

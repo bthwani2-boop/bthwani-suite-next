@@ -16,6 +16,7 @@ security:
 paths:
   /dsh/control-panel/finance/cod-reconciliation-cases:
     get:
+      tags: ["dsh-control-panel"]
       operationId: listDshControlPanelCodReconciliationCases
       responses:
         '200': { description: WLT COD reconciliation cases }
@@ -23,6 +24,7 @@ paths:
         '502': { description: WLT unavailable }
   /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign:
     post:
+      tags: ["dsh-control-panel"]
       operationId: assignDshControlPanelCodReconciliationCase
       parameters:
         - $ref: '#/components/parameters/CaseId'
@@ -33,6 +35,7 @@ paths:
         '502': { description: WLT unavailable }
   /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve:
     post:
+      tags: ["dsh-control-panel"]
       operationId: resolveDshControlPanelCodReconciliationCase
       parameters:
         - $ref: '#/components/parameters/CaseId'
@@ -43,6 +46,7 @@ paths:
         '502': { description: WLT unavailable }
   /dsh/partner/me/finance/cod-records:
     get:
+      tags: ["dsh-partner"]
       operationId: listDshPartnerCodRecords
       responses:
         '200': { description: Partner-owned COD records }
@@ -50,6 +54,7 @@ paths:
         '502': { description: WLT unavailable }
   /dsh/partner/me/finance/cod-records/{recordId}/remit:
     post:
+      tags: ["dsh-partner"]
       operationId: remitDshPartnerCodRecord
       parameters:
         - $ref: '#/components/parameters/RecordId'

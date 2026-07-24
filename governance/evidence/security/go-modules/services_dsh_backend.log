@@ -1,0 +1,62 @@
+all modules verified
+go: downloading github.com/redis/go-redis/v9 v9.21.0
+go: downloading github.com/google/uuid v1.6.0
+go: downloading golang.org/x/image v0.44.0
+go: downloading github.com/minio/minio-go/v7 v7.2.1
+go: downloading github.com/cespare/xxhash/v2 v2.3.0
+go: downloading github.com/dustin/go-humanize v1.0.1
+go: downloading github.com/klauspost/compress v1.18.6
+go: downloading github.com/klauspost/crc32 v1.3.0
+go: downloading github.com/minio/crc64nvme v1.1.1
+go: downloading github.com/minio/md5-simd v1.1.2
+go: downloading github.com/zeebo/xxh3 v1.1.0
+go: downloading go.yaml.in/yaml/v3 v3.0.4
+go: downloading golang.org/x/net v0.56.0
+go: downloading gopkg.in/ini.v1 v1.67.2
+go: downloading go.uber.org/atomic v1.11.0
+go: downloading golang.org/x/sys v0.47.0
+go: downloading github.com/klauspost/cpuid/v2 v2.2.11
+go: downloading github.com/rs/xid v1.6.0
+go: downloading github.com/tinylib/msgp v1.6.1
+go: downloading github.com/philhofer/fwd v1.2.0
+go: downloading golang.org/x/text v0.40.0
+?   	dsh-api/cmd/dsh-address-privacy	[no test files]
+?   	dsh-api/cmd/dsh-api	[no test files]
+?   	dsh-api/cmd/jrn030-route-proof	[no test files]
+ok  	dsh-api/internal/administration	0.004s
+ok  	dsh-api/internal/analytics	0.004s
+ok  	dsh-api/internal/auth	0.011s
+ok  	dsh-api/internal/cache	3.354s
+ok  	dsh-api/internal/cart	0.005s
+ok  	dsh-api/internal/catalogapproval	0.003s
+ok  	dsh-api/internal/centralcatalog	0.005s
+ok  	dsh-api/internal/checkout	0.003s
+ok  	dsh-api/internal/checkoutfinanceoutbox	0.005s
+ok  	dsh-api/internal/clientaddress	0.004s
+ok  	dsh-api/internal/coupons	0.003s
+ok  	dsh-api/internal/dispatch	0.238s
+ok  	dsh-api/internal/fieldcommissionoutbox	0.004s
+ok  	dsh-api/internal/fieldreadiness	0.004s
+ok  	dsh-api/internal/health	0.004s
+ok  	dsh-api/internal/homediscovery	0.003s
+ok  	dsh-api/internal/http	0.101s
+ok  	dsh-api/internal/mapproviders	0.060s
+ok  	dsh-api/internal/marketing	0.005s
+ok  	dsh-api/internal/media	0.005s
+ok  	dsh-api/internal/notifications	0.003s
+ok  	dsh-api/internal/operationaloutbox	0.010s
+ok  	dsh-api/internal/orders	0.005s
+ok  	dsh-api/internal/partner	0.005s
+ok  	dsh-api/internal/partnerdelivery	0.003s
+ok  	dsh-api/internal/partnerfleet	0.004s
+ok  	dsh-api/internal/partnerwltoutbox	0.003s
+ok  	dsh-api/internal/pickup	0.004s
+ok  	dsh-api/internal/platformpolicies	0.004s
+?   	dsh-api/internal/promotionfundingoutbox	[no test files]
+ok  	dsh-api/internal/servicearea	0.003s
+ok  	dsh-api/internal/specialrequests	0.004s
+ok  	dsh-api/internal/store	0.004s
+ok  	dsh-api/internal/support	0.003s
+?   	dsh-api/internal/supportsession	[no test files]
+ok  	dsh-api/internal/wlt	0.325s
+ok  	dsh-api/internal/wltoutbox	0.004s

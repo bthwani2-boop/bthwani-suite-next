@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { MobileScrollView, TopBar, useTheme } from '@bthwani/ui-kit';
+import { Box, MobileScrollView, TopBar, useTheme } from '@bthwani/ui-kit';
 import { WltDshCaptainBridge } from '../../shared/finance-wlt-link/wlt/generated/wlt_frontend_dsh_app_captain.facade';
 import { ActorWalletPanel } from '../../shared/finance-wlt-link/actor-wallet';
 import { RepresentativeCommissionPanel } from '../../shared/finance-wlt-link/jrn036';
@@ -18,7 +18,18 @@ export type DshCaptainFinanceScreenProps = {
 	onBack?: (() => void) | undefined;
 	onRetry?: (() => void) | undefined;
 	dshClientId?: string | null;
+	embedded?: boolean;
 };
+
+function EarningsContent() {
+	return (
+		<Box gap={4}>
+			<ActorWalletPanel actorType="captain" title="الرصيد والأرباح المرجعية" embedded />
+			<RepresentativeCommissionPanel actorType="captain" title="عمولات التوصيل" embedded />
+			<PayoutDestinationPanel actorType="captain" title="وجهة صرف الكابتن وطلبات الدفع" embedded />
+		</Box>
+	);
+}
 
 export function DshCaptainFinanceScreen({
 	section = 'cod-liability',
@@ -26,6 +37,7 @@ export function DshCaptainFinanceScreen({
 	onBack,
 	onRetry,
 	dshClientId,
+	embedded = true,
 }: DshCaptainFinanceScreenProps) {
 	const theme = useTheme() as any;
 
@@ -41,17 +53,16 @@ export function DshCaptainFinanceScreen({
 	}
 
 	if (section === 'cod-liability') {
-		return <DshCaptainCodCustodyScreen {...(onBack ? { onBack } : {})} />;
+		return <DshCaptainCodCustodyScreen embedded={embedded} {...(onBack ? { onBack } : {})} />;
 	}
 
 	if (section === 'earnings') {
+		if (embedded) return <EarningsContent />;
 		return (
 			<View style={{ flex: 1, backgroundColor: theme.surface }}>
 				<TopBar title="محفظة الكابتن" {...(onBack ? { onBack } : {})} />
 				<MobileScrollView fill padding={4} gap={4} contentContainerStyle={{ paddingBottom: 120 }}>
-					<ActorWalletPanel actorType="captain" title="الرصيد والأرباح المرجعية" embedded />
-					<RepresentativeCommissionPanel actorType="captain" title="عمولات التوصيل" embedded />
-					<PayoutDestinationPanel actorType="captain" title="وجهة صرف الكابتن وطلبات الدفع" embedded />
+					<EarningsContent />
 				</MobileScrollView>
 			</View>
 		);

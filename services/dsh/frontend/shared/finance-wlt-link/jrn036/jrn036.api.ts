@@ -90,11 +90,8 @@ const { request } = createDshHttpClient(
   "dsh-jrn036-settlements-commissions",
 );
 
-const ownCommissionPathByActor: Record<Jrn036RepresentativeActorType, string> = {
-  partner: "/dsh/partner/me/finance/commissions",
-  captain: "/dsh/captain/me/finance/commissions",
-  field: "/dsh/field/me/finance/commissions",
-};
+const ownCommissionPath = (actorType: Jrn036RepresentativeActorType): string =>
+  `/dsh/${actorType}/me/finance/commissions`;
 
 function commissionActionPath(
   commissionId: string,
@@ -125,7 +122,7 @@ export async function fetchOwnJrn036Commissions(
   actorType: Jrn036RepresentativeActorType,
 ): Promise<readonly Jrn036Commission[]> {
   const response = await request<{ readonly commissions: Jrn036Commission[] }>(
-    ownCommissionPathByActor[actorType],
+    ownCommissionPath(actorType),
   );
   return response.commissions ?? [];
 }

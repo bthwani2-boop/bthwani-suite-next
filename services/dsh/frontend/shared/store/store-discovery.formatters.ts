@@ -15,12 +15,12 @@ const DELIVERY_MODE_LABELS: Record<DshDeliveryMode, string> = {
   pickup: "استلم بنفسك",
 };
 
-export function formatDeliveryMode(mode: DshDeliveryMode): string {
-  return DELIVERY_MODE_LABELS[mode];
+export function formatDeliveryMode(mode: string): string {
+  return DELIVERY_MODE_LABELS[mode as DshDeliveryMode] ?? mode;
 }
 
 export function formatDeliveryModes(
-  modes: readonly DshDeliveryMode[],
+  modes: readonly string[],
   emptyLabel = "لا توجد طرق خدمة مفعلة",
 ): string {
   return modes.map(formatDeliveryMode).join("، ") || emptyLabel;
@@ -38,12 +38,12 @@ const DELIVERY_MODE_TO_FULFILLMENT_MODE: Record<DshDeliveryMode, DshFulfillmentD
   pickup: "pickup",
 };
 
-export function toFulfillmentMode(mode: DshDeliveryMode): DshFulfillmentDeliveryMode {
-  return DELIVERY_MODE_TO_FULFILLMENT_MODE[mode];
+export function toFulfillmentMode(mode: string): DshFulfillmentDeliveryMode {
+  return DELIVERY_MODE_TO_FULFILLMENT_MODE[mode as DshDeliveryMode] ?? "partner_delivery";
 }
 
 export function toFulfillmentModes(
-  modes: readonly DshDeliveryMode[],
+  modes: readonly string[],
 ): readonly DshFulfillmentDeliveryMode[] {
   return modes.map(toFulfillmentMode);
 }

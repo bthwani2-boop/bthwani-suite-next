@@ -115,9 +115,9 @@ export type DshUpsertOperationalProfileInput = {
 
 export type DshOperationalEvaluationInput = {
   readonly zoneId: string;
-  readonly serviceAreaCode?: string;
+  readonly serviceAreaCode?: string | undefined;
   readonly fulfillmentMode: DshFulfillmentMode;
-  readonly slaCategory?: string;
+  readonly slaCategory?: string | undefined;
   readonly activeOrders: number;
   readonly captainsOnline: number;
 };

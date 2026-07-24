@@ -56,7 +56,7 @@ export interface paths {
     post: operations["createPartnerProductProposal"];
   };
   "/dsh/partner/catalog/product-proposals/{proposalId}": {
-    patch: operations["updatePartnerProductProposal"];
+    patch: operations["patchPartnerProductProposal"];
   };
   "/dsh/partner/stores/{storeId}/assortment": {
     get: operations["getPartnerStoreAssortment"];
@@ -74,7 +74,7 @@ export interface paths {
     post: operations["createFieldProductProposal"];
   };
   "/dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}": {
-    patch: operations["updateFieldProductProposal"];
+    patch: operations["patchFieldProductProposal"];
   };
   "/dsh/field/partners/{partnerId}/assortment": {
     get: operations["fieldGetStoreAssortment"];
@@ -251,9 +251,7 @@ interface VersionedEntity {
   id: string;
   version: number;
 }
-interface ExpectedVersion {
-  expectedVersion: number;
-}
+type ExpectedVersion = { expectedVersion: number };
 
 type JsonResponse<T, Status extends number = 200> = {
   content: { "application/json": T };
@@ -296,13 +294,13 @@ export interface operations {
   getPartnerCatalogTaxonomy: { responses: { 200: JsonResponse<{ domains: components["schemas"]["Domain"][]; nodes: components["schemas"]["Node"][] }> } & ErrorResponses };
   listPartnerMasterProducts: { responses: { 200: JsonResponse<{ masterProducts: components["schemas"]["MasterProduct"][] }> } & ErrorResponses };
   createPartnerProductProposal: MutationOperation<components["schemas"]["CreateProposalRequest"], { proposal: components["schemas"]["Proposal"] }>;
-  updatePartnerProductProposal: MutationOperation<components["schemas"]["UpdateProposalRequest"], { proposal: components["schemas"]["Proposal"] }, { proposalId: string }>;
+  patchPartnerProductProposal: MutationOperation<components["schemas"]["UpdateProposalRequest"], { proposal: components["schemas"]["Proposal"] }, { proposalId: string }>;
   getPartnerStoreAssortment: { responses: { 200: JsonResponse<{ assortment: components["schemas"]["Assortment"][] }> } & ErrorResponses };
   upsertPartnerStoreAssortment: operations["upsertOperatorStoreAssortment"];
   getFieldCatalogTaxonomy: operations["getPartnerCatalogTaxonomy"];
   listFieldMasterProducts: operations["listPartnerMasterProducts"];
   createFieldProductProposal: MutationOperation<components["schemas"]["CreateProposalRequest"], { proposal: components["schemas"]["Proposal"] }, { partnerId: string }>;
-  updateFieldProductProposal: MutationOperation<components["schemas"]["UpdateProposalRequest"], { proposal: components["schemas"]["Proposal"] }, { partnerId: string; proposalId: string }>;
+  patchFieldProductProposal: MutationOperation<components["schemas"]["UpdateProposalRequest"], { proposal: components["schemas"]["Proposal"] }, { partnerId: string; proposalId: string }>;
   fieldGetStoreAssortment: { responses: { 200: JsonResponse<{ storeId: string; assortment: components["schemas"]["Assortment"][] }> } & ErrorResponses };
   fieldUpsertStoreAssortment: MutationOperation<components["schemas"]["UpsertAssortmentRequest"], { assortment: components["schemas"]["Assortment"] }, { partnerId: string; storeId: string; masterProductId: string }>;
   listCatalogAssets: { responses: { 200: JsonResponse<{ assets: components["schemas"]["Asset"][]; total: number; limit: number; offset: number }> } & ErrorResponses };

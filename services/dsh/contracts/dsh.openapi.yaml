@@ -845,6 +845,16 @@ components:
       $ref: "./components/schemas/support.schemas.yaml#/DshUpdateTicketRequest"
     DshSupportMessage:
       $ref: "./components/schemas/support.schemas.yaml#/DshSupportMessage"
+    DshSupportMediaKind:
+      $ref: "./components/schemas/support.schemas.yaml#/DshSupportMediaKind"
+    DshSupportMediaUploadStatus:
+      $ref: "./components/schemas/support.schemas.yaml#/DshSupportMediaUploadStatus"
+    DshSupportMessageAttachmentInput:
+      $ref: "./components/schemas/support.schemas.yaml#/DshSupportMessageAttachmentInput"
+    DshSupportMessageAttachment:
+      $ref: "./components/schemas/support.schemas.yaml#/DshSupportMessageAttachment"
+    DshRichMessageRequest:
+      $ref: "./components/schemas/support.schemas.yaml#/DshRichMessageRequest"
     DshMessageResponse:
       $ref: "./components/schemas/common.schemas.yaml#/DshMessageResponse"
     DshMessagesResponse:

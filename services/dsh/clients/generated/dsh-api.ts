@@ -2494,7 +2494,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Order volume and fulfillment analytics for a given period. */
+        /** Order volume and fulfillment analytics for a governed period. */
         get: operations["getDshOrderAnalytics"];
         put?: never;
         post?: never;
@@ -2562,7 +2562,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Authenticated partner's own store performance summary. */
+        /** Authenticated partner's own store performance summary; store scope is derived from identity. */
         get: operations["getDshPartnerPerformance"];
         put?: never;
         post?: never;
@@ -2663,7 +2663,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List notification preferences for the authenticated actor. */
+        get: operations["getDshNotificationPreferences"];
         /** Update notification preferences for the authenticated actor. */
         put: operations["updateDshNotificationPreferences"];
         post?: never;
@@ -5793,7 +5794,8 @@ export interface components {
         DshOrderAnalyticsResponse: {
             totalOrders: number;
             byStatus: components["schemas"]["DshOrderStatusCount"][];
-            period: string;
+            /** @enum {string} */
+            period: "today" | "week" | "month";
             /** Format: date-time */
             generatedAt: string;
         };
@@ -5802,7 +5804,8 @@ export interface components {
             acceptedAssignments: number;
             completedAssignments: number;
             declinedAssignments: number;
-            period: string;
+            /** @enum {string} */
+            period: "today" | "week" | "month";
             /** Format: date-time */
             generatedAt: string;
         };
@@ -11803,14 +11806,16 @@ export interface operations {
     };
     getDshPlatformKpis: {
         parameters: {
-            query?: never;
+            query?: {
+                period?: "today" | "week" | "month";
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Platform KPIs snapshot. */
+            /** @description Platform KPIs snapshot derived from DSH records. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -11819,7 +11824,9 @@ export interface operations {
                     "application/json": components["schemas"]["DshPlatformKpisResponse"];
                 };
             };
+            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getDshOrderAnalytics: {
@@ -11842,7 +11849,9 @@ export interface operations {
                     "application/json": components["schemas"]["DshOrderAnalyticsResponse"];
                 };
             };
+            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getDshDeliveryAnalytics: {
@@ -11865,7 +11874,9 @@ export interface operations {
                     "application/json": components["schemas"]["DshDeliveryAnalyticsResponse"];
                 };
             };
+            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getDshSupportAnalytics: {
@@ -11910,6 +11921,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getDshPartnerPerformance: {
@@ -11923,7 +11935,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Partner performance metrics for their own store. */
+            /** @description Partner performance metrics for the actor's authorized store only. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -11932,7 +11944,9 @@ export interface operations {
                     "application/json": components["schemas"]["DshPartnerPerformanceResponse"];
                 };
             };
+            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     reconcileDshCheckoutIntent: {
@@ -12084,6 +12098,30 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshNotificationPreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actor-owned notification preference policies. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        preferences: components["schemas"]["DshNotificationPreference"][];
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
         };
     };

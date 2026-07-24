@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
-import { Box, Text, useTheme, colorRoles, colorPalette, alpha } from '@bthwani/ui-kit';
+import { Text, colorRoles, colorPalette, alpha } from '@bthwani/ui-kit';
 
 export type ModernPremiumHeaderProps = {
   title?: string;
@@ -27,21 +27,15 @@ export function ModernPremiumHeader({
   onTickerPress,
   direction = 'rtl',
 }: ModernPremiumHeaderProps) {
-  const theme = useTheme() as any;
   const isRTL = direction === 'rtl';
 
   return (
     <View style={[styles.container, { backgroundColor: colorRoles.brandAction }]}>
-      {/* Top row: Title/Location and actions */}
       <View style={[styles.mainRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
         <View style={[styles.infoSection, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
-          {title ? (
-            <Text role="titleMd" tone="inverse">
-              {title}
-            </Text>
-          ) : null}
+          {title ? <Text role="titleMd" tone="inverse">{title}</Text> : null}
           {locationLabel ? (
-            <Text role="bodySm" tone="inverse" style={{ opacity: 0.9 }}>
+            <Text role="bodySm" tone="inverse" style={styles.locationLabel}>
               {locationLabel}
             </Text>
           ) : null}
@@ -52,6 +46,7 @@ export function ModernPremiumHeader({
             <Pressable
               key={action.id}
               onPress={action.onPress}
+              accessibilityRole="button"
               accessibilityLabel={action.accessibilityLabel}
               style={styles.actionButton}
             >
@@ -66,9 +61,9 @@ export function ModernPremiumHeader({
         </View>
       </View>
 
-      {/* Bottom row: Ticker (optional status message banner) */}
       {tickerMessage ? (
         <Pressable
+          accessibilityRole={onTickerPress ? 'button' : undefined}
           onPress={onTickerPress}
           disabled={!onTickerPress}
           style={[styles.tickerBanner, { backgroundColor: alpha(colorPalette.black, 0.25) }]}
@@ -108,6 +103,9 @@ const styles = StyleSheet.create({
   infoSection: {
     flex: 1,
     justifyContent: 'center',
+  },
+  locationLabel: {
+    opacity: 0.9,
   },
   actionsRow: {
     alignItems: 'center',

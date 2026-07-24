@@ -1,6 +1,14 @@
+import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
+const require = createRequire(import.meta.url);
+const {
+  appEnvSuffix,
+  resolveSentryEnvironment,
+  withSentryEnvironmentForApp,
+} = require("../mobile/sentry-env.js");
 
 const root = process.cwd();
 const manifest = JSON.parse(
@@ -18,75 +26,158 @@ const profile = valueAfter("--profile", "development");
 const all = process.argv.includes("--all");
 const clearCache = process.argv.includes("--clear-cache");
 const nonInteractive = process.argv.includes("--non-interactive");
+const skipExport = process.argv.includes("--skip-local-export");
+const preflightOnly = process.argv.includes("--preflight-only");
 
-if (!["android", "ios", "all"].includes(platform)) {
-  throw new Error("--platform must be android, ios, or all");
-}
-if (all && requestedApp) {
-  throw new Error("Use either --all or --app, not both");
-}
-if (!all && !requestedApp) {
-  throw new Error("Use --app <app-key> or --all");
-}
+if (!["android", "ios", "all"].includes(platform)) throw new Error("--platform must be android, ios, or all");
+if (!["development", "internal", "production"].includes(profile)) throw new Error("--profile must be development, internal, or production");
+if (all && requestedApp) throw new Error("Use either --all or --app, not both");
+if (!all && !requestedApp) throw new Error("Use --app <app-key> or --all");
 
 const appKeys = Object.keys(manifest.apps);
 const targets = all ? appKeys : [requestedApp];
-
 for (const key of targets) {
-  if (!manifest.apps[key]) {
-    throw new Error(`Unknown app '${key}'. Allowed: ${appKeys.join(", ")}`);
-  }
+  if (!manifest.apps[key]) throw new Error(`Unknown app '${key}'. Allowed: ${appKeys.join(", ")}`);
 }
 
 function resolveInvocation(command, args) {
-  if (command !== "pnpm") {
-    return { executable: command, args };
+  if (command === "pnpm") {
+    const pnpmCli = process.env.npm_execpath;
+    if (pnpmCli && fs.existsSync(pnpmCli)) return { executable: process.execPath, args: [pnpmCli, ...args] };
+    return { executable: process.platform === "win32" ? "pnpm.cmd" : "pnpm", args };
   }
-
-  const pnpmCli = process.env.npm_execpath;
-  if (!pnpmCli) {
-    throw new Error("npm_execpath is unavailable. Run the EAS runner through a pnpm script.");
+  if (command === "npx" && process.platform === "win32") {
+    return { executable: "npx.cmd", args };
   }
-
-  return {
-    executable: process.execPath,
-    args: [pnpmCli, ...args],
-  };
+  return { executable: command, args };
 }
 
 function run(command, args, cwd = root, env = process.env) {
   console.log(`\n> ${command} ${args.join(" ")}`);
-
   const invocation = resolveInvocation(command, args);
+  const isCmd = invocation.executable.endsWith(".cmd") || invocation.executable.endsWith(".bat");
   const result = spawnSync(invocation.executable, invocation.args, {
     cwd,
     stdio: "inherit",
-    shell: false,
+    shell: isCmd,
     windowsHide: true,
-    env,
+    env: { ...env, CI: "1", EXPO_NO_TELEMETRY: "1" },
   });
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status ?? 1);
+}
 
-  if (result.error) {
-    throw result.error;
+function optionalEnvironmentValue(value) {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function withMobileBuildEnvironmentForApp(appKey, environment = process.env) {
+  const next = withSentryEnvironmentForApp(appKey, environment);
+  const suffix = appEnvSuffix(appKey);
+  for (const name of [
+    "GOOGLE_SERVICES_JSON",
+    "GOOGLE_MAPS_ANDROID_API_KEY",
+    "GOOGLE_MAPS_IOS_API_KEY",
+  ]) {
+    const scoped = optionalEnvironmentValue(environment[`${name}_${suffix}`]);
+    const common = optionalEnvironmentValue(environment[name]);
+    const value = scoped ?? common;
+    if (value) next[name] = value;
+    else delete next[name];
+  }
+  return next;
+}
+
+function requireNativeProviderInputs(appKey, app, environment) {
+  const features = app.features ?? [];
+  if (profile === "development" || !features.includes("maps")) return;
+
+  if ((platform === "android" || platform === "all")
+    && !optionalEnvironmentValue(environment.GOOGLE_MAPS_ANDROID_API_KEY)) {
+    throw new Error(`${appKey}: GOOGLE_MAPS_ANDROID_API_KEY is required for ${profile}/${platform} because the app enables native maps`);
   }
 
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
+  if ((platform === "ios" || platform === "all")
+    && !optionalEnvironmentValue(environment.GOOGLE_MAPS_IOS_API_KEY)) {
+    throw new Error(`${appKey}: GOOGLE_MAPS_IOS_API_KEY is required for ${profile}/${platform} because the app enables native maps`);
   }
 }
 
+console.log("=== PHASE 1: Comprehensive Preflight ===");
+
 run(process.execPath, ["tools/scripts/sync-mobile-apps.mjs", "--check"]);
-run(process.execPath, [
-  "tools/scripts/guard-mobile-apps.mjs",
-  "--require-build-secrets",
-  "--platform",
-  platform,
-]);
+run(process.execPath, ["tools/scripts/guard-mobile-expo-sdk56-versions.mjs"]);
+
+if (all && profile !== "development") {
+  const projects = new Map();
+  for (const key of targets) {
+    const sentry = resolveSentryEnvironment(key, process.env);
+    if (!sentry.project) continue;
+    const existing = projects.get(sentry.project);
+    if (existing) {
+      throw new Error(`Sentry project '${sentry.project}' is shared by ${existing} and ${key}. Use one project per mobile application for release and source-map isolation.`);
+    }
+    projects.set(sentry.project, key);
+  }
+}
 
 for (const key of targets) {
   const appDir = path.join(root, "apps", key, "runtime");
+  const appEnvironment = withMobileBuildEnvironmentForApp(key, process.env);
+  requireNativeProviderInputs(key, manifest.apps[key], appEnvironment);
 
-  run("pnpm", ["typecheck"], appDir);
+  run(process.execPath, [
+    "tools/scripts/verify-mobile-sentry-env.mjs",
+    "--app",
+    key,
+    "--profile",
+    profile,
+  ], root, appEnvironment);
+
+  run(process.execPath, [
+    "tools/scripts/guard-mobile-apps.mjs",
+    "--app",
+    key,
+    "--require-build-secrets",
+    "--platform",
+    platform,
+    "--profile",
+    profile,
+  ], root, appEnvironment);
+
+  run("pnpm", ["typecheck"], appDir, appEnvironment);
+  run("npx", ["--yes", "expo-doctor@latest"], appDir, appEnvironment);
+
+  if (!skipExport) {
+    const outputDir = path.join(root, ".tmp", "eas-preflight", key, platform);
+    fs.rmSync(outputDir, { recursive: true, force: true });
+    run("pnpm", ["exec", "expo", "export", "--platform", platform, "--output-dir", outputDir], appDir, appEnvironment);
+  }
+
+  run(process.execPath, [
+    "tools/scripts/verify-mobile-prebuild.mjs",
+    "--app",
+    key,
+    "--platform",
+    platform,
+  ], root, appEnvironment);
+}
+
+console.log("\nPASS: All target app preflight checks completed successfully!");
+
+if (preflightOnly) {
+  console.log("Preflight-only mode requested. Skipping remote builds.");
+  process.exit(0);
+}
+
+console.log("\n=== PHASE 2: Remote EAS Build Submission ===");
+
+for (const key of targets) {
+  console.log(`\nSubmitting remote build for '${key}'...`);
+  const appDir = path.join(root, "apps", key, "runtime");
+  const appEnvironment = withMobileBuildEnvironmentForApp(key, process.env);
 
   const args = [
     "dlx",
@@ -97,10 +188,9 @@ for (const key of targets) {
     "--profile",
     profile,
   ];
-
   if (clearCache) args.push("--clear-cache");
   if (nonInteractive) args.push("--non-interactive");
 
   // Expo requires EAS commands to run from each app root in a monorepo.
-  run("pnpm", args, appDir);
+  run("pnpm", args, appDir, appEnvironment);
 }

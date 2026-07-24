@@ -7,13 +7,19 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir apps/control-panel/runtime typecheck"
+        "command": "node tools/scripts/run-tsc-check.mjs --project apps/control-panel/runtime/tsconfig.json --label control-panel"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node tools/scripts/run-command-check.mjs --label control-panel-contracts -- node --test apps/control-panel/runtime/tests/*.test.mjs"
       }
     },
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir apps/control-panel/runtime build"
+        "command": "pnpm --dir apps/control-panel/runtime build && pnpm run performance:bundle:size"
       }
     },
     "dev": {
@@ -24,6 +30,7 @@
     }
   },
   "tags": [
-    "scope:control-panel type:app"
+    "scope:control-panel",
+    "type:app"
   ]
 }

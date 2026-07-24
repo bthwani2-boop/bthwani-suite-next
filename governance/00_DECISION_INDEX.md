@@ -26,22 +26,23 @@ The machine-readable authority registry overrides stale `Status: CANONICAL`, sel
 
 1. `governance/authority/authority-precedence.json`
 2. `AGENTS.md`
-3. `governance/00_DECISION_INDEX.md`
-4. `governance/LEAN_CODE_BASED_CHECK.md`
-5. `governance/01_REPO_BOUNDARIES.md`
-6. `governance/02_SERVICES_AND_SURFACES.md`
-7. `governance/03_UI_KIT_AND_BRAND_LOCK.md`
-8. `governance/04_API_RUNTIME_BINDING.md`
-9. `governance/05_DOCKER_AND_DATA_PLANE.md`
-10. `governance/06_EVIDENCE_AND_GATES.md`
-11. `governance/07_SECURITY_AND_SECRETS.md`
-12. `governance/08_CLEANUP_AND_DEPRECATION.md`
-13. `governance/09_JOURNEY_OPERATING_MODEL.md`
-14. `governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md`
-15. `governance/10_TOOLCHAIN_VERSION_LOCK.md`
-16. `governance/17_PERFORMANCE_AND_RUNTIME_BASELINE.md`
-17. `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`
-18. `governance/product/PRODUCT_TRUTH_POLICY.md`
+3. `governance/authority/single-owner-mode.json`
+4. `governance/00_DECISION_INDEX.md`
+5. `governance/LEAN_CODE_BASED_CHECK.md`
+6. `governance/01_REPO_BOUNDARIES.md`
+7. `governance/02_SERVICES_AND_SURFACES.md`
+8. `governance/03_UI_KIT_AND_BRAND_LOCK.md`
+9. `governance/04_API_RUNTIME_BINDING.md`
+10. `governance/05_DOCKER_AND_DATA_PLANE.md`
+11. `governance/06_EVIDENCE_AND_GATES.md`
+12. `governance/07_SECURITY_AND_SECRETS.md`
+13. `governance/08_CLEANUP_AND_DEPRECATION.md`
+14. `governance/09_JOURNEY_OPERATING_MODEL.md`
+15. `governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md`
+16. `governance/10_TOOLCHAIN_VERSION_LOCK.md`
+17. `governance/17_PERFORMANCE_AND_RUNTIME_BASELINE.md`
+18. `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`
+19. `governance/product/PRODUCT_TRUTH_POLICY.md`
 
 ## Active machine-readable contracts
 
@@ -51,11 +52,20 @@ The following paths encode enforceable governance and are validated by registere
 - `governance/agents/**` — logical roles, authority, and approval domains;
 - `governance/skills/**` — skill lifecycle, dependencies, authority, and routing;
 - `governance/guards/**` — guard registry, assurance boundaries, and static binding registry;
+- `governance/authority/single-owner-mode.schema.json` — validates the active sole-owner approval exception;
 - `governance/product/product-truth.schema.json` — Product Truth schema;
 - `governance/saas/**` — SaaS readiness state, tenant-governance constraints, activation evidence, and commercial activation policy;
 - `tools/guards/guard-manifest.json` — guard sets and execution policy.
 
 A machine-readable contract does not prove that its associated guard, workflow, runtime, or human approval executed.
+
+## Sole-owner operating mode
+
+`governance/authority/single-owner-mode.json` records the explicit repository-owner decision to operate without a second human approver. It permits the recorded owner to satisfy eligible approval roles only when the exact scope and, for outcome acceptance, exact commit are recorded in GitHub and the required same-commit automated checks pass.
+
+Logical authorities, skills, and evidence scopes remain separate. An execution agent cannot impersonate the owner, convert blanket authorization into acceptance of an unseen result, waive failed checks, or bypass repository protection.
+
+Authentication, authorization, sessions, PII, privacy, secrets, credentials, tenant isolation, security approval, WLT and finance, migrations and production data, critical or high vulnerability acceptance, residual risk, release, deployment, production verification, and final closure remain protected. If required independent evidence for one of those domains is unavailable, the decision remains unclosed.
 
 ## Conditional annex
 
@@ -70,7 +80,7 @@ The annex and `governance/saas/**` govern readiness and tenancy claims. They do 
 - `.agents/skills/**` may own only the scope of an `active` or `conditional` `governed` entry in `governance/skills/skills-registry.json`.
 - Governance-contract approval routes through `bthwani-governance-contract-guardian` and `GOVERNANCE_CONTRACT_AUTHORITY`.
 - CI-workflow approval routes through `bthwani-ci-workflow-guardian` and `CI_WORKFLOW_AUTHORITY`.
-- The governance and CI authorities must remain separate from each other and from the executor.
+- Governance and CI retain separate logical authorities and owner skills. The recorded sole owner may satisfy both human approval roles only within the active sole-owner contract and after the required checks pass.
 - `legacy` skills are `retired`; they may remain historical references but cannot be routed, depended on, or treated as authorities.
 - `GEMINI.md` is an adapter and may not override `AGENTS.md`, canonical governance, or owner contracts.
 - Graphify, Nx, LeanCTX, and similar utilities are tools, not owner skills or approval authorities.
@@ -121,4 +131,4 @@ Allowed unresolved decisions include `FIX_REQUIRED`, `BLOCKED_EXTERNAL`, `NEEDS_
 
 ## Acceptance condition
 
-Accepted only when this index matches the authority registry, every active source is classified once, active skills are governed, legacy skills are retired, governance and CI approvals remain separated, machine contracts and guard sets are registered, SaaS state is machine-validated, all decisions map to the canonical vocabulary, assurance boundaries prevent overclaiming, and no applicable Product Truth, governance, CI, SDLC, security, finance, isolation, QA, release, runtime, or production requirement is bypassed.
+Accepted only when this index matches the authority registry, every active source is classified once, active skills are governed, legacy skills are retired, governance and CI logical authorities remain separated, the sole-owner exception is bounded and machine-validated, machine contracts and guard sets are registered, SaaS state is machine-validated, all decisions map to the canonical vocabulary, assurance boundaries prevent overclaiming, and no applicable Product Truth, governance, CI, SDLC, security, finance, isolation, QA, release, runtime, or production requirement is bypassed.

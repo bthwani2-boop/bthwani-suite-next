@@ -46,11 +46,17 @@ const truthPath = "governance/product/contracts/jrn-031-administration-roles-app
 const ledgerPath = "governance/approvals/jrn-031-independent-approvals.json";
 const evidencePath = "governance/evidence/jrn-031-administration-governance-evidence.md";
 const ciPath = ".github/workflows/ci.yml";
+const verificationWorkflowPath = ".github/workflows/ci-node-verification.yml";
+const manifestPath = "tools/guards/guard-manifest.json";
+const registryPath = "governance/guards/guard-registry.json";
 
 const truth = readJson(truthPath);
 const ledger = readJson(ledgerPath);
 const evidence = read(evidencePath);
 const ci = read(ciPath);
+const verificationWorkflow = read(verificationWorkflowPath);
+const manifest = readJson(manifestPath);
+const registry = readJson(registryPath);
 
 const requiredApprovals = [
   "product-manager",
@@ -91,15 +97,25 @@ if (ledger) {
 }
 
 requireIncludes(ci, [
-  "jrn031:",
-  "Verify JRN-031 administration governance",
-  "services/dsh/database/tests/jrn-031-administration-governance.sql",
-  "services/dsh/tests/jrn-031-administration-maker-checker.test.mjs",
-  "services/dsh/tests/jrn-031-administration-governance.test.mjs",
-  "tsconfig.jrn-031.json",
-  "dsh.administration.openapi.yaml",
-  "jrn-031-closure-gate.mjs",
-], "consolidated CI");
+  "uses: ./.github/workflows/ci-node-verification.yml",
+  "journey: ${{ needs.context.outputs.journey }}",
+  "journey_scope: ${{ needs.context.outputs.journey_scope }}",
+], "contextual CI journey routing");
+
+requireIncludes(verificationWorkflow, [
+  "name: Run detected journey gates",
+  "& ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim()",
+  "Upload journey-gate evidence",
+], "modular journey verification");
+
+const journeyGuardIds = manifest?.guardSets?.journey ?? [];
+if (!journeyGuardIds.includes("jrn-031-closure")) {
+  failures.push("journey manifest: missing jrn-031-closure");
+}
+const registryEntry = (registry?.entries ?? []).find((entry) => entry.id === "jrn-031-closure");
+if (registryEntry?.source_file !== "tools/guards/jrn-031-closure-gate.mjs") {
+  failures.push("guard registry: jrn-031-closure must resolve to its canonical source");
+}
 
 requireIncludes(evidence, [
   "IMPLEMENTED_AND_VERIFIED_READY_FOR_INDEPENDENT_APPROVAL",
@@ -151,4 +167,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("JRN-031 closure gate passed: implementation, CI, evidence, and independent-approval boundaries are intact.");
+console.log("JRN-031 closure gate passed: implementation, modular CI routing, evidence, and independent-approval boundaries are intact.");

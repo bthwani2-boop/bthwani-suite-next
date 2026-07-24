@@ -252,11 +252,13 @@ export function useTicketDetailController(
   }, [authKind, loadDetail, loadEvents, loadMessages]);
 
   const sendMessage = useCallback(async (input: DshAddMessageInput): Promise<boolean> => {
-    if (!ticketId || !input.body.trim()) {
+    const body = input.body?.trim() ?? "";
+    if (!ticketId || !body) {
       setMessageActionState(messageActionError("اكتب رسالة وحدد تذكرة أولًا"));
       return false;
     }
-    const fingerprint = stableFingerprint({ body: input.body.trim(), isInternal: input.isInternal === true });
+    const normalizedInput: DshAddMessageInput = { ...input, body };
+    const fingerprint = stableFingerprint({ body, isInternal: input.isInternal === true });
     const attempt = await getOrCreateSupportMutationAttempt({
       scope: mode,
       operation: "ticket-message",
@@ -266,8 +268,8 @@ export function useTicketDetailController(
     setMessageActionState(messageActionSubmitting());
     try {
       const message = mode === "operator"
-        ? await addOperatorTicketMessage(ticketId, input, attempt.context)
-        : await addTicketMessage(ticketId, input, attempt.context);
+        ? await addOperatorTicketMessage(ticketId, normalizedInput, attempt.context)
+        : await addTicketMessage(ticketId, normalizedInput, attempt.context);
       await clearSupportMutationAttempt({
         scope: mode,
         operation: "ticket-message",

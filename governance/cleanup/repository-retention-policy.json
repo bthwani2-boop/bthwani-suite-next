@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "decision": "DETECT_FAIL_AND_REVIEW_WITHOUT_CI_SOURCE_MUTATION",
+  "ciSourceMutation": "FORBIDDEN",
+  "generatedOutputRoots": [
+    ".diagnostics/",
+    "coverage/",
+    "dist/",
+    "build/",
+    "out/",
+    "graphify-out/"
+  ],
+  "forbiddenTrackedPathPrefixes": [
+    "tools/scripts/scratch/",
+    "tools/tmp/",
+    "tmp/",
+    "temp/",
+    "logs/"
+  ],
+  "forbiddenTrackedFilenamePatterns": [
+    "(^|/)tmp[-_.]",
+    "(^|/)(copy|backup|bak)[-_.]",
+    "\\.(tmp|bak|old|orig|rej)$",
+    "(~|\\.swp)$"
+  ],
+  "portableTrackedConfiguration": {
+    "files": [
+      ".claude/settings.json",
+      ".vscode/settings.json"
+    ],
+    "forbiddenContentPatterns": [
+      "[A-Za-z]:\\\\Users\\\\",
+      "/[cC]/Users/",
+      "AppData[/\\\\]Local[/\\\\]Temp",
+      "Bash\\(git (?:push|commit|rebase|stash|checkout)",
+      "DATABASE_URL=",
+      "postgres://[^\\s\"]+:[^\\s\"]+@"
+    ]
+  },
+  "allowedTrackedLogRoots": [
+    "governance/evidence/security/"
+  ],
+  "evidence": {
+    "roots": ["governance/evidence/"],
+    "maximumUnreferencedAgeDays": 180,
+    "permanentRoots": [
+      "governance/evidence/security/archive/"
+    ],
+    "referenceIndexes": [
+      "governance/00_DECISION_INDEX.md",
+      "governance/operational_journey_protocol_package/00_INDEX_AND_COVERAGE.md",
+      "governance/evidence/security/lianbassam-remediation.md",
+      "governance/evidence/security/archive/README.md"
+    ]
+  },
+  "documents": {
+    "roots": ["docs/", "governance/"],
+    "archiveRoot": "governance/archive/",
+    "retiredMarkers": [
+      "status: retired",
+      "status: obsolete",
+      "status: superseded",
+      "STATUS: RETIRED",
+      "STATUS: OBSOLETE",
+      "STATUS: SUPERSEDED"
+    ]
+  },
+  "maintenanceScripts": {
+    "root": "tools/scripts/",
+    "oneOffPrefixes": [
+      "apply-",
+      "close-",
+      "finalize-",
+      "fix-",
+      "integrate-",
+      "patch-",
+      "update-"
+    ],
+    "maximumUnreferencedAgeDays": 90
+  },
+  "deletionPolicy": {
+    "safeAutomaticClasses": ["scratch", "temporary", "generated-output"],
+    "requiresExplicitHumanOrAgentCommit": true,
+    "forbiddenAutomaticClasses": [
+      "source",
+      "contract",
+      "migration",
+      "governance",
+      "evidence",
+      "audit"
+    ]
+  }
+}

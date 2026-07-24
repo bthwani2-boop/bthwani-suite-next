@@ -122,6 +122,33 @@ human_change_control_status:
 
 أي إجراء Git/GitHub تغييري بلا أمر مستقل = `PROTOCOL_VIOLATION`.
 
+### 5.5 نمط تفويض مكتوب صريح (بديل مقبول للجملة الحرة)
+
+بدل جملة حرة مثل "نفّذ commit الآن على الفرع X"، يجوز للمستخدم أن يملأ ويرسل كتلة تفويض مكتوبة صريحة كهذه، وتُعامل معاملة أمر بشري صريح لكل فعل مدرج فيها فقط:
+
+```yaml
+write_authorization:
+  modify_target_ref: true | false
+  commit_to_target_ref: true | false
+  push_to_target_ref: true | false
+  force_push: false          # لا يُمنح إلا بجملة صريحة منفصلة، ولا يكون ضمن قالب افتراضي أبدًا
+forbidden_without_separate_authorization:
+  - create_pull_request
+  - merge_pull_request
+  - change_base_branch
+  - create_tag
+  - create_release
+  - deploy_production
+  - delete_target_branch
+```
+
+قواعد استخدام هذا النمط:
+
+- هذه الكتلة لا تمنح شيئًا بمجرد وجودها في ملف قالب أو Prompt عام غير مسجَّل في `governance/authority/authority-precedence.json`؛ التفويض يصدر فقط حين يملأ **مستخدم بشري** الحقول ويرسلها كجزء من أمره الفعلي لهذه الجولة تحديدًا.
+- `commit_to_target_ref: true` أو `push_to_target_ref: true` داخل قالب لم يملأه المستخدم بنفسه، أو مأخوذ من محادثة أو جولة سابقة، لا يشكّل إذنًا. أعد طلب التفويض لكل جولة عند الشك.
+- أي فعل غير مذكور صراحة في `write_authorization` أو مذكور في `forbidden_without_separate_authorization` يبقى ممنوعًا، حتى لو بدت الرحلة مصرحًا بها بشكل عام.
+- `force_push: true` لا يُقبل إلا بجملة بشرية صريحة منفصلة عن القالب، ولا يجوز أن تكون القيمة الافتراضية `true` في أي قالب.
+
 ---
 
 ## 6) تعريف 100% داخل هذا البروتوكول

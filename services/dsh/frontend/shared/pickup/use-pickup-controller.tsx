@@ -11,6 +11,8 @@ import {
   fetchOperatorPickup,
   extendPickupWindow,
   reschedulePickupWindow,
+  extendPickupWindowAsPartner,
+  reschedulePickupWindowAsPartner,
   classifyPickupError,
   type PartnerPickupStage,
 } from "./pickup.api";
@@ -160,7 +162,35 @@ export function usePickupActionsController(orderId: string) {
       })),
   [orderId, runAction, state.session?.version]);
 
-  return { state, markReady, notify, customerArrived, verify, noShow, refresh: load } as const;
+  const extendWindow = useCallback((reason: string, newExpiry: string) =>
+    runAction("تم تمديد نافذة الاستلام.", () =>
+      extendPickupWindowAsPartner(orderId, {
+        expectedVersion: state.session?.version ?? 0,
+        reason: reason.trim(),
+        newExpiry,
+      })),
+  [orderId, runAction, state.session?.version]);
+
+  const rescheduleWindow = useCallback((reason: string, newExpiry: string) =>
+    runAction("تمت إعادة فتح نافذة الاستلام. أصدر رمزًا جديدًا وأشعر العميل.", () =>
+      reschedulePickupWindowAsPartner(orderId, {
+        expectedVersion: state.session?.version ?? 0,
+        reason: reason.trim(),
+        newExpiry,
+      })),
+  [orderId, runAction, state.session?.version]);
+
+  return {
+    state,
+    markReady,
+    notify,
+    customerArrived,
+    verify,
+    noShow,
+    extendWindow,
+    rescheduleWindow,
+    refresh: load,
+  } as const;
 }
 
 export type ClientPickupViewState = {

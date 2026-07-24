@@ -9,6 +9,7 @@ security:
 paths:
   /dsh/client/order-truth:
     post:
+      tags: ["dsh-client"]
       operationId: createOrderTruthFromCheckout
       summary: Create one immutable order from an eligible actor-owned Checkout Intent.
       parameters:
@@ -43,6 +44,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
     get:
+      tags: ["dsh-client"]
       operationId: listClientOrderTruth
       summary: List orders owned by the authenticated client in the current tenant.
       parameters:
@@ -57,6 +59,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
   /dsh/client/order-truth/{orderId}:
     get:
+      tags: ["dsh-client"]
       operationId: getClientOrderTruth
       summary: Read one actor-owned order truth.
       parameters:
@@ -72,6 +75,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /dsh/client/order-truth/{orderId}/events:
     get:
+      tags: ["dsh-client"]
       operationId: listClientOrderTruthEvents
       summary: Read the redacted timeline of an actor-owned order.
       parameters:
@@ -87,6 +91,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /dsh/partner/order-truth:
     get:
+      tags: ["dsh-partner"]
       operationId: listPartnerOrderTruth
       summary: List order truth for the authenticated partner store scope.
       parameters:
@@ -102,6 +107,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
   /dsh/partner/order-truth/{orderId}:
     get:
+      tags: ["dsh-partner"]
       operationId: getPartnerOrderTruth
       summary: Read one order within the authenticated partner store scope.
       parameters:
@@ -117,6 +123,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /dsh/operator/order-truth:
     get:
+      tags: ["dsh-operator"]
       operationId: listOperatorOrderTruth
       summary: List tenant order truth for an operator with operations.read.
       parameters:
@@ -132,6 +139,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
   /dsh/operator/order-truth/diagnostics:
     get:
+      tags: ["dsh-operator"]
       operationId: getOperatorOrderTruthDiagnostics
       summary: Read redacted tenant-scoped operational diagnostics.
       responses:
@@ -144,6 +152,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
   /dsh/operator/order-truth/{orderId}:
     get:
+      tags: ["dsh-operator"]
       operationId: getOperatorOrderTruth
       summary: Read one tenant order for an operator with operations.read.
       parameters:

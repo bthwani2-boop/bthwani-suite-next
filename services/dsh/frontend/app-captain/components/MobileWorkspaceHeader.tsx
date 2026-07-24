@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Pressable, StyleSheet } from 'react-native';
-import { Box, Button, Icon, Text, useTheme, colorRoles } from '@bthwani/ui-kit';
+import { Icon, Text, useTheme, colorRoles } from '@bthwani/ui-kit';
 
 export type MobileWorkspaceHeaderProps = {
   title: string;
   description: string;
-  icon: string;
+  icon: React.ComponentProps<typeof Icon>['name'];
   backLabel: string;
   onBack: () => void;
 };
@@ -17,16 +17,33 @@ export function MobileWorkspaceHeader({
   backLabel,
   onBack,
 }: MobileWorkspaceHeaderProps) {
-  const theme = useTheme() as any;
+  const theme = useTheme() as {
+    readonly line?: string;
+    readonly surfaceRaised?: string;
+    readonly textMuted?: string;
+  };
 
   return (
-    <View style={[styles.container, { borderBottomColor: theme.line || colorRoles.surfaceBase, backgroundColor: theme.surfaceRaised || colorRoles.surfaceBase }]}>
+    <View
+      style={[
+        styles.container,
+        {
+          borderBottomColor: theme.line ?? colorRoles.borderSubtle,
+          backgroundColor: theme.surfaceRaised ?? colorRoles.surfaceBase,
+        },
+      ]}
+    >
       <View style={styles.topRow}>
-        <Pressable onPress={onBack} style={styles.backButton}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={backLabel}
+          onPress={onBack}
+          style={styles.backButton}
+        >
           <Icon name="arrow-forward-outline" size={20} color={colorRoles.brandAction} />
           <Text style={[styles.backText, { color: colorRoles.brandAction }]}>{backLabel}</Text>
         </Pressable>
-        <Icon name={icon} size={22} color={theme.textMuted || colorRoles.brandStructure} />
+        <Icon name={icon} size={22} color={theme.textMuted ?? colorRoles.brandStructure} />
       </View>
       <View style={styles.infoCol}>
         <Text role="titleMd">{title}</Text>

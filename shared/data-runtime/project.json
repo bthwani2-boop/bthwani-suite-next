@@ -1,0 +1,30 @@
+{
+  "name": "data-runtime",
+  "root": "shared/data-runtime",
+  "sourceRoot": "shared/data-runtime/src",
+  "projectType": "library",
+  "targets": {
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node tools/scripts/run-tsc-check.mjs --project shared/data-runtime/tsconfig.json --label data-runtime"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm --dir shared/data-runtime build"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node tools/scripts/run-command-check.mjs --label data-runtime-contracts -- pnpm --dir shared/data-runtime test"
+      }
+    }
+  },
+  "tags": [
+    "scope:shared",
+    "type:library"
+  ]
+}

@@ -6,7 +6,7 @@ import (
 )
 
 func TestCommercialProgramRoutesRegistered(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil)
 	tests := []struct {
 		method  string
 		path    string

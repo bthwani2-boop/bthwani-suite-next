@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
-
-	"dsh-api/internal/store"
 )
 
 func registerGovernedStoreLocation(t *testing.T, db *sql.DB, storeID, partnerID string) {
@@ -43,7 +41,7 @@ func TestCreateGovernedVisitUsesRegisteredStoreCoordinates(t *testing.T) {
 	storeID := uniqueID("store-governed-location")
 	seedFieldStore(t, db, storeID, agentID)
 	registerGovernedStoreLocation(t, db, storeID, partnerID)
-	actor := store.StoreActor{ID: agentID, Role: "field"}
+	actor := testFieldActor(t, agentID)
 
 	maliciousLatitude := -33.0
 	maliciousLongitude := 151.0
@@ -78,7 +76,7 @@ func TestGovernedCheckRejectsEvidenceFromAnotherStore(t *testing.T) {
 	seedFieldStore(t, db, storeB, agentID)
 	registerGovernedStoreLocation(t, db, storeA, partnerID)
 	registerGovernedStoreLocation(t, db, storeB, partnerID)
-	actor := store.StoreActor{ID: agentID, Role: "field"}
+	actor := testFieldActor(t, agentID)
 
 	visit, err := CreateGovernedVisit(ctx, db, actor, CreateVisitInput{
 		StoreID: storeA, FieldAgentID: agentID, VisitType: VisitTypeOnboarding, StartLocation: testValidLocation(),
@@ -104,7 +102,7 @@ func TestEscalatedFurtherRemainsACompletionBlocker(t *testing.T) {
 	storeID := uniqueID("store-escalated-further")
 	seedFieldStore(t, db, storeID, agentID)
 	registerGovernedStoreLocation(t, db, storeID, partnerID)
-	actor := store.StoreActor{ID: agentID, Role: "field"}
+	actor := testFieldActor(t, agentID)
 
 	visit, err := CreateGovernedVisit(ctx, db, actor, CreateVisitInput{
 		StoreID: storeID, FieldAgentID: agentID, VisitType: VisitTypeOnboarding, StartLocation: testValidLocation(),

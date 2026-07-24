@@ -1,9 +1,9 @@
 import React from "react";
-import { View } from "react-native";
+import { View, type DimensionValue, type ViewProps } from "react-native";
 import { colorRoles } from "../../tokens/colors";
 import { radius } from "../../tokens/radius";
 
-export type SurfaceProps = {
+export type SurfaceProps = Omit<ViewProps, "children" | "style"> & {
   children?: React.ReactNode;
   tone?: "default" | "raised" | "inset" | "action" | "success" | "warning" | "danger" | "info" | undefined;
   borderless?: boolean | undefined;
@@ -11,11 +11,12 @@ export type SurfaceProps = {
   centered?: boolean | undefined;
   padding?: string | number | undefined;
   gap?: string | number | undefined;
-  width?: string | number | undefined;
-  maxWidth?: string | number | undefined;
+  width?: DimensionValue | undefined;
+  maxWidth?: DimensionValue | undefined;
   onPress?: (() => void) | undefined;
   hoverStyle?: Record<string, unknown> | undefined;
   pressStyle?: Record<string, unknown> | undefined;
+  /** Cross-platform style contract: React Native styles and web CSS objects are both accepted. */
   style?: unknown;
   radiusToken?: string | undefined;
   elevationToken?: string | undefined;
@@ -44,25 +45,43 @@ const toneBorder: Record<string, string> = {
   info: colorRoles.info,
 };
 
-export function Surface({ centered, tone = "default", borderless, fill, padding, gap, width, maxWidth, children, style }: SurfaceProps) {
+export function Surface({
+  centered,
+  tone = "default",
+  borderless,
+  fill,
+  padding,
+  gap,
+  width,
+  maxWidth,
+  children,
+  style,
+  onPress: _onPress,
+  hoverStyle: _hoverStyle,
+  pressStyle: _pressStyle,
+  radiusToken: _radiusToken,
+  elevationToken: _elevationToken,
+  border: _border,
+  ...viewProps
+}: SurfaceProps) {
+  const composedStyle = [
+    {
+      backgroundColor: toneBg[tone] ?? colorRoles.surfaceBase,
+      borderColor: toneBorder[tone] ?? colorRoles.borderSubtle,
+      borderWidth: borderless ? 0 : 1,
+      borderRadius: (radius as Record<string, number>).lg ?? 12,
+      padding: typeof padding === "number" ? padding * 4 : 16,
+      gap: typeof gap === "number" ? gap * 4 : 12,
+      flex: fill ? 1 : undefined,
+      width,
+      maxWidth,
+      alignItems: centered ? "center" : undefined,
+    },
+    style,
+  ] as unknown as ViewProps["style"];
+
   return (
-    <View
-      style={[
-        {
-          backgroundColor: toneBg[tone] ?? colorRoles.surfaceBase,
-          borderColor: toneBorder[tone] ?? colorRoles.borderSubtle,
-          borderWidth: borderless ? 0 : 1,
-          borderRadius: (radius as any).lg ?? 12,
-          padding: typeof padding === "number" ? padding * 4 : 16,
-          gap: typeof gap === "number" ? gap * 4 : 12,
-          flex: fill ? 1 : undefined,
-          width: width as any,
-          maxWidth: maxWidth as any,
-          alignItems: centered ? "center" : undefined,
-        },
-        style as any,
-      ]}
-    >
+    <View {...viewProps} style={composedStyle}>
       {children}
     </View>
   );

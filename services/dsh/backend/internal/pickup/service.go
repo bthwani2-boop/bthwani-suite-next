@@ -389,9 +389,11 @@ func (s *Service) NoShow(ctx context.Context, orderID, actorID, actorRole, reaso
 	return Get(s.db, updated.ID)
 }
 
-// ExtendWindow is the manual-override fallback for a session that would
-// otherwise expire: it requires a reason (written to audit) and is gated by
-// a higher-privilege permission at the HTTP layer.
+// ExtendWindow is the partner's routine tool for pushing out an active
+// session's expiry, bounded by extension_count/max_extensions. When called
+// with actorRole "operator" (the emergency-override surface), the cap is
+// not enforced -- that path exists precisely for when the partner's normal
+// allowance has been exhausted.
 func (s *Service) ExtendWindow(ctx context.Context, orderID string, newExpiry time.Time, actorID, actorRole, reason, correlationID string) (*PickupSession, error) {
 	if strings.TrimSpace(reason) == "" {
 		return nil, fmt.Errorf("%w: reason is required", ErrInvalid)
@@ -416,11 +418,15 @@ func (s *Service) ExtendWindow(ctx context.Context, orderID string, newExpiry ti
 	if current.Status != SessionActive || current.UsedAt != nil {
 		return nil, ErrAlreadyUsed
 	}
+	if actorRole != "operator" && current.ExtensionCount >= current.MaxExtensions {
+		return nil, ErrExtensionLimitExceeded
+	}
 	fromJSON := sessionJSON(current)
 
 	res, err := tx.Exec(`
 		UPDATE dsh_pickup_sessions
-		SET expires_at = $1, attempt_count = 0, version = version + 1, updated_at = NOW()
+		SET expires_at = $1, attempt_count = 0, extension_count = extension_count + 1,
+		    version = version + 1, updated_at = NOW()
 		WHERE id = $2 AND version = $3`,
 		newExpiry, current.ID, current.Version)
 	if err != nil {

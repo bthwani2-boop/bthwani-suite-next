@@ -5,17 +5,20 @@ import { readFileSync } from "node:fs";
 const read = (path) => readFileSync(path, "utf8");
 
 describe("JRN-007 home discovery slice closure", () => {
-  test("S1 renders categories, filters, stores, and real derived groups", () => {
+  test("S1 renders categories, filters, stores, and exclusive derived groups", () => {
     const groups = read("services/dsh/frontend/shared/home-discovery/home-discovery.groups.ts");
     const groupSection = read("services/dsh/frontend/app-client/home-discovery/HomeStoreGroupsSection.tsx");
     const shell = read("services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx");
 
-    assert.match(groups, /stores\.filter\(\(store\) => store\.isPopular\)/);
+    assert.match(groups, /matches: \(store\) => store\.isPopular/);
     assert.match(groups, /store\.hasCouponBadge \|\| store\.isFreeDelivery/);
     assert.match(groups, /pointsMultiplier/);
+    assert.match(groups, /claimed\.has\(store\.id\)/);
+    assert.match(groups, /feedStores: stores\.filter\(\(store\) => !claimed\.has\(store\.id\)\)/);
     assert.doesNotMatch(groups, /mock|fixture|placeholderStore/i);
     assert.match(groupSection, /group\.stores\.map/);
-    assert.match(shell, /buildHomeStoreGroups\(stores\)/);
+    assert.match(shell, /buildHomeStorePresentation\(stores\)/);
+    assert.match(shell, /presentation\.feedStores/);
     assert.match(shell, /HomeStoreGroupsSection/);
     assert.match(shell, /categories\.map/);
     assert.match(shell, /HomeFilterRailSection/);

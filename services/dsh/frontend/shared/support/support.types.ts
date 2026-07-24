@@ -13,6 +13,8 @@ export type DshSenderRole = "client" | "partner" | "captain" | "operator" | "sys
 export type DshIncidentStatus = "open" | "monitoring" | "resolved";
 export type DshIncidentSeverity = "low" | "medium" | "high" | "critical";
 export type DshIncidentScope = "delivery" | "stores" | "payments" | "platform" | "unknown";
+export type DshSupportMediaKind = "image" | "audio" | "video" | "document";
+export type DshSupportMediaUploadStatus = "uploaded" | "processing" | "ready" | "failed";
 
 export type DshSupportTicket = {
   readonly id: string;
@@ -32,6 +34,24 @@ export type DshSupportTicket = {
   readonly updatedAt: string;
 };
 
+export type DshSupportMessageAttachment = {
+  readonly id: string;
+  readonly ticketId: string;
+  readonly messageId: string;
+  readonly mediaAssetId: string;
+  readonly fileName: string;
+  readonly mimeType: string;
+  readonly sizeBytes: number;
+  readonly kind: DshSupportMediaKind;
+  readonly durationMs?: number | undefined;
+  readonly thumbnailMediaAssetId?: string | undefined;
+  readonly waveformRef?: string | undefined;
+  readonly uploadStatus: DshSupportMediaUploadStatus;
+  readonly attachedBy: string;
+  readonly isInternal: boolean;
+  readonly createdAt: string;
+};
+
 export type DshSupportMessage = {
   readonly id: string;
   readonly ticketId: string;
@@ -39,6 +59,7 @@ export type DshSupportMessage = {
   readonly senderRole: DshSenderRole;
   readonly body: string;
   readonly isInternal: boolean;
+  readonly attachments: readonly DshSupportMessageAttachment[];
   readonly createdAt: string;
 };
 
@@ -77,8 +98,21 @@ export type DshCreateTicketInput = {
   readonly orderId?: string | undefined;
 };
 
+export type DshAddMessageAttachmentInput = {
+  readonly mediaAssetId: string;
+  readonly fileName: string;
+  readonly mimeType: string;
+  readonly sizeBytes: number;
+  readonly kind: DshSupportMediaKind;
+  readonly durationMs?: number | undefined;
+  readonly thumbnailMediaAssetId?: string | undefined;
+  readonly waveformRef?: string | undefined;
+  readonly uploadStatus?: DshSupportMediaUploadStatus | undefined;
+};
+
 export type DshAddMessageInput = {
-  readonly body: string;
+  readonly body?: string | undefined;
+  readonly attachments?: readonly DshAddMessageAttachmentInput[] | undefined;
   readonly isInternal?: boolean | undefined;
 };
 

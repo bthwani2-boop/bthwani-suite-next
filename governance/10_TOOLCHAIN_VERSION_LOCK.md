@@ -13,7 +13,7 @@ A version change updates every affected live manifest, lockfile, installer, work
 | Tool | Declared baseline | Operative source | Evidence state |
 |---|---:|---|---|
 | Node.js | `>=24.17.0 <25` | `package.json#engines.node` | `PASS` only when the manifest and active CI setup agree |
-| pnpm | `10.34.2` | `packageManager` and `engines.pnpm` | `PASS` only when the manifest, lockfile, and setup action agree |
+| pnpm | `10.34.0` | `packageManager` and `engines.pnpm` | `PASS` only when the manifest, lockfile, and setup action agree |
 | TypeScript | `~6.0.3` | `devDependencies.typescript` | `PASS` only when package metadata and lockfile agree |
 | Go | repository `go.mod` declarations | applicable `go.mod` files and CI setup | `NEEDS_EVIDENCE` when no applicable module or CI evidence exists |
 | PostgreSQL | versioned runtime references | compose and runtime manifests | `NEEDS_EVIDENCE` without same-commit runtime evidence |

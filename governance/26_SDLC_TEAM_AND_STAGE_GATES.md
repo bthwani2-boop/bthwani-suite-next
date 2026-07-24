@@ -81,9 +81,17 @@ production
 
 ## Separation of duties
 
-The author or executor of a protected change cannot approve the same risk. This applies to product model and acceptance, governance, CI, independent review, security, finance, migrations, production data, release, deployment, critical vulnerabilities, residual risk, and final closure.
+By default, the author or executor of a change cannot approve the same risk. Default separation applies to product model and acceptance, governance, CI, independent review, security, finance, migrations, production data, release, deployment, critical vulnerabilities, residual risk, and final closure. The sole-owner exception below narrows only its explicitly eligible approval domains.
 
-When both governance and CI are impacted, their approving identities must differ. A skill or agent may route evidence but cannot fabricate a missing person, team, regulator, provider, QA, security, finance, release, or production approval.
+Without the active sole-owner exception, governance and CI approving identities must differ. A skill or agent may route evidence but cannot fabricate a missing person, team, regulator, provider, QA, security, finance, release, or production approval.
+
+### Sole-owner exception
+
+When `governance/authority/single-owner-mode.json` is active and matches the repository, its recorded owner may fulfill multiple eligible human approval roles for non-protected work. Product, architecture, governance, CI, implementation-review, and QA authority domains remain logically separate and retain their distinct owner skills and evidence, but they do not require a second human identity.
+
+The exception applies only when the exact scope is recorded in GitHub, the current task explicitly authorizes the decision, and every required same-commit automated check passes. Outcome acceptance additionally requires the exact implementation commit. A blanket future authorization is implementation authority, not advance acceptance of an unseen result.
+
+Execution agents cannot impersonate the owner, issue owner approval, waive failed checks, or bypass repository protection. Authentication, authorization, sessions, PII, privacy, secrets, credentials, tenant isolation, security approval, WLT and finance, migrations and production data, critical or high vulnerability acceptance, residual risk, release, deployment, production verification, and final closure remain protected and require independent or external evidence. If that evidence is unavailable, the applicable scope remains unclosed.
 
 ## Stage outputs
 
@@ -105,11 +113,11 @@ Product Owner implementation-readiness approval, functional behavior, permission
 
 ### G4 — Implementation verified
 
-Independent review, targeted checks, diff scope, no fake runtime or commercial truth, Governance Contract approval when governance is impacted, CI Workflow approval when CI is impacted, and Financial Control approval when WLT finance is impacted.
+Independent review or recorded sole-owner review for eligible non-protected work, targeted checks, diff scope, no fake runtime or commercial truth, Governance Contract approval when governance is impacted, CI Workflow approval when CI is impacted, and independent Financial Control approval when WLT finance is impacted.
 
 ### G5 — Product accepted
 
-Independent Product Owner acceptance, required surfaces present, excluded surfaces absent, actor actions and forbidden actions verified, state and failure behavior accepted, and Product Truth updated.
+Independent Product Owner acceptance or exact-commit sole-owner acceptance for eligible non-protected work, required surfaces present, excluded surfaces absent, actor actions and forbidden actions verified, state and failure behavior accepted, and Product Truth updated.
 
 ### G6 — QA approved
 
@@ -141,8 +149,8 @@ Production smoke and readback, telemetry and error review, and rollback readines
 - Product Truth and acceptance where product impact exists;
 - governance, CI, finance, security, QA, release, and production approval where their impact exists;
 - runtime and persistence evidence where behavior is claimed;
-- no failed, blocked, pending, stale, branch-mismatched, self-approved, or merge-ref-only evidence;
-- separation of duties and current GitHub enforcement proven for protected high-risk closure.
+- no failed, blocked, pending, stale, branch-mismatched, unauthorized self-approved, or merge-ref-only evidence;
+- separation of duties and current GitHub enforcement proven for protected high-risk closure; sole-owner mode cannot satisfy protected closure.
 
 A bounded governance-only change may close without runtime or production only when those stages and scopes are demonstrably not applicable. It cannot claim application, financial, runtime, release, production, or SaaS activation closure.
 
@@ -156,4 +164,4 @@ Structural validation without an artifact may verify package integrity only. It 
 
 ## Acceptance condition
 
-Accepted only when Product Truth precedes implementation, product acceptance precedes QA, finance has an independent owner, all applicable scopes are declared, stage exclusions are evidence-backed, impact-driven approvals are same-commit and non-self-approved, transitions are forward-only, validators aggregate failures, and final closure cannot be issued from static code, declarations, stale runs, or incomplete GitHub enforcement.
+Accepted only when Product Truth precedes implementation, product acceptance precedes QA, finance has an independent owner, all applicable scopes are declared, stage exclusions are evidence-backed, sole-owner approvals are exact-scope and exact-commit where required, protected approvals remain independent, transitions are forward-only, validators aggregate failures, and final closure cannot be issued from static code, declarations, stale runs, sole-owner authorization, or incomplete GitHub enforcement.

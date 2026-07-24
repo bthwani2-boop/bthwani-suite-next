@@ -54,6 +54,8 @@ export type CancelOrderInput = {
   readonly reasonNote?: string;
   readonly commandId?: string;
   readonly correlationId?: string;
+  /** Required on the operator surface: ties the cancellation to an operational_incident. */
+  readonly ticketReference?: string;
 };
 
 export type CancelOrderResponse = {

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -20,25 +21,47 @@ var (
 	ErrActorNotFound     = errors.New("actor not found")
 	ErrRateLimited       = errors.New("activation rate limited")
 	ErrInvalidActor      = errors.New("actor input invalid")
+	ErrTenantForbidden   = errors.New("tenant context forbidden")
 	ErrUnavailable       = errors.New("identity unavailable")
 )
 
 type Client struct {
-	baseURL      string
-	serviceToken string
-	http         *http.Client
+	baseURL         string
+	serviceToken    string
+	defaultTenantID string
+	saasActive      bool
+	http            *http.Client
 }
 
 func NewClient(baseURL, serviceToken string) *Client {
 	return &Client{
-		baseURL:      strings.TrimRight(baseURL, "/"),
-		serviceToken: serviceToken,
-		http:         &http.Client{Timeout: 10 * time.Second},
+		baseURL:         strings.TrimRight(baseURL, "/"),
+		serviceToken:    serviceToken,
+		defaultTenantID: strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID")),
+		saasActive:      strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active"),
+		http:            &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
 func (c *Client) Configured() bool {
-	return c != nil && c.baseURL != "" && c.serviceToken != ""
+	return c != nil && c.baseURL != "" && c.serviceToken != "" && (!c.saasActive || c.defaultTenantID != "")
+}
+
+func (c *Client) trustedTenant(requested string) (string, error) {
+	requested = strings.TrimSpace(requested)
+	if c.saasActive {
+		if c.defaultTenantID == "" {
+			return "", ErrUnavailable
+		}
+		if requested != "" && requested != c.defaultTenantID {
+			return "", ErrTenantForbidden
+		}
+		return c.defaultTenantID, nil
+	}
+	if requested != "" {
+		return requested, nil
+	}
+	return c.defaultTenantID, nil
 }
 
 type ActorView struct {
@@ -73,7 +96,12 @@ type ActivationMetadata struct {
 
 func (c *Client) Provision(ctx context.Context, input ProvisionInput) (ActorView, error) {
 	var view ActorView
-	err := c.do(ctx, http.MethodPost, "/internal/actors/provision", input, &view, nil)
+	tenantID, err := c.trustedTenant(input.TenantID)
+	if err != nil {
+		return view, err
+	}
+	input.TenantID = tenantID
+	err = c.do(ctx, http.MethodPost, "/internal/actors/provision", input, &view, nil)
 	return view, err
 }
 
@@ -163,6 +191,13 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 	}
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "workforce")
+	tenantID, err := c.trustedTenant("")
+	if err != nil {
+		return err
+	}
+	if tenantID != "" {
+		req.Header.Set("X-Tenant-ID", tenantID)
+	}
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
@@ -197,6 +232,8 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 		return ErrRateLimited
 	case "INVALID_ACTOR_INPUT":
 		return ErrInvalidActor
+	case "TENANT_CONTEXT_REQUIRED", "TENANT_CONTEXT_FORBIDDEN", "PHONE_BOUND_TO_ANOTHER_TENANT":
+		return ErrTenantForbidden
 	}
 	if response.StatusCode == http.StatusNotFound {
 		return ErrActorNotFound

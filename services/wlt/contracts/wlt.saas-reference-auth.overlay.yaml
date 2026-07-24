@@ -1,0 +1,49 @@
+overlay: 1.0.0
+info:
+  title: WLT SaaS financial reference authentication overlay
+  version: 1.0.0
+actions:
+  - target: $.paths['/wlt/references/payment-status'].get
+    update: &reference-auth
+      security:
+        - BearerIdentity: []
+        - DshServiceBearer: []
+          DshServiceCaller: []
+          TenantContext: []
+      responses:
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+  - target: $.paths['/wlt/references/settlement-status'].get
+    update: *reference-auth
+  - target: $.paths['/wlt/references/refund-status'].get
+    update: *reference-auth
+  - target: $.paths['/wlt/references/wallet-status'].get
+    update: *reference-auth
+  - target: $.components.responses
+    update:
+      Unavailable:
+        description: Identity or active SaaS tenant configuration is unavailable.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WltApiError"
+  - target: $.components
+    update:
+      securitySchemes:
+        BearerIdentity:
+          type: http
+          scheme: bearer
+          bearerFormat: Identity access token
+        DshServiceBearer:
+          type: http
+          scheme: bearer
+          bearerFormat: DSH-WLT shared service token
+        DshServiceCaller:
+          type: apiKey
+          in: header
+          name: X-Service-Caller
+        TenantContext:
+          type: apiKey
+          in: header
+          name: X-Tenant-ID

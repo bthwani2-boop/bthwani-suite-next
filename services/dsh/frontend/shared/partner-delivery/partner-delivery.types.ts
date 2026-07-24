@@ -1,4 +1,5 @@
 import type { components } from "../../../clients/generated/dsh-api";
+import type { DshSlaProjection } from "../sla/sla.types";
 
 type GeneratedPartnerDeliveryTask = components["schemas"]["DshPartnerDeliveryTask"];
 
@@ -6,6 +7,7 @@ export type DshPartnerDeliveryTask = GeneratedPartnerDeliveryTask & {
   readonly exceptionReason?: string | null;
   readonly exceptionEvidenceReferences?: readonly string[];
   readonly exceptionReportedAt?: string | null;
+  readonly slaState?: DshSlaProjection;
 };
 export type DshPartnerDeliveryTaskStatus = components["schemas"]["DshPartnerDeliveryTaskStatus"];
 export type DshPartnerDeliveryTaskResponse = Omit<components["schemas"]["DshPartnerDeliveryTaskResponse"], "task"> & {

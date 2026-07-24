@@ -298,7 +298,7 @@ paths:
 
   /dsh/partner/catalog/product-proposals/{proposalId}:
     patch:
-      operationId: updatePartnerProductProposal
+      operationId: patchPartnerProductProposal
       tags: [CentralCatalog]
       security: [{ bearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/ProposalId" }]
@@ -378,7 +378,7 @@ paths:
 
   /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}:
     patch:
-      operationId: updateFieldProductProposal
+      operationId: patchFieldProductProposal
       tags: [CentralCatalog]
       security: [{ bearerAuth: [] }]
       parameters:

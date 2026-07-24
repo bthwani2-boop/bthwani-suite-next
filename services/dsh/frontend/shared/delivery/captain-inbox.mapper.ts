@@ -1,3 +1,4 @@
+import { resolveCaptainInboxFulfillmentMode } from './captain-inbox.fulfillment';
 import { ASSIGNMENT_STATUS_LABELS, DELIVERY_STATUS_LABELS } from '../dispatch/dispatch.types';
 import type { DshDispatchAssignment } from '../dispatch/dispatch.types';
 
@@ -66,7 +67,7 @@ export function toBellItem(assignment: DshDispatchAssignment): CaptainInboxBellI
     orderId: assignment.orderId,
     kind: assignment.status === 'offered' ? 'incoming-offer' : 'active',
     serviceType,
-    fulfillmentMode: 'bthwani_delivery',
+    fulfillmentMode: resolveCaptainInboxFulfillmentMode(assignment),
     title: resolveBellTitle(assignment, serviceType),
     subtitle: `${DELIVERY_STATUS_LABELS[assignment.delivery.status] ?? assignment.delivery.status} · ${distance} · ${area}`,
     meta: assignment.status === 'offered'

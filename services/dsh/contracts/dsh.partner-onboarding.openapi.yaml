@@ -11,6 +11,7 @@ security:
 paths:
   /dsh/operator/partners/{partnerId}:
     get:
+      tags: ["dsh-operator"]
       operationId: getDshPartner
       summary: Read governed partner state for control-panel
       parameters:
@@ -25,6 +26,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /dsh/operator/partners/{partnerId}/transition:
     post:
+      tags: ["dsh-operator"]
       operationId: transitionDshPartner
       summary: Apply one governed partner activation transition
       parameters:
@@ -49,6 +51,7 @@ paths:
         '503': { $ref: '#/components/responses/WltUnavailable' }
   /dsh/operator/partners/{partnerId}/stores:
     post:
+      tags: ["dsh-operator"]
       operationId: linkDshPartnerStore
       summary: Link an unowned store to a partner
       parameters:
@@ -79,6 +82,7 @@ paths:
         '409': { $ref: '#/components/responses/StoreOwnershipConflict' }
   /dsh/field/partners/{partnerId}:
     get:
+      tags: ["dsh-field"]
       operationId: getFieldPartnerDraft
       summary: Read an owned field partner draft
       parameters:
@@ -92,6 +96,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
     patch:
+      tags: ["dsh-field"]
       operationId: updateFieldPartnerDraft
       summary: Update an owned draft and hand raw payout details to WLT
       parameters:
@@ -116,6 +121,7 @@ paths:
         '502': { $ref: '#/components/responses/WltUnavailable' }
   /dsh/field/partners/{partnerId}/visits:
     post:
+      tags: ["dsh-field"]
       operationId: createFieldPartnerVisit
       summary: Create an evidence-bearing field visit bound to the first store
       parameters:
@@ -135,6 +141,7 @@ paths:
         '422': { $ref: '#/components/responses/ReadinessFailed' }
   /dsh/field/partners/{partnerId}/submit:
     post:
+      tags: ["dsh-field"]
       operationId: submitFieldPartnerDraft
       summary: Submit an owned draft for independent review
       parameters:
@@ -159,6 +166,7 @@ paths:
         '422': { $ref: '#/components/responses/ReadinessFailed' }
   /dsh/partner/activation/status:
     get:
+      tags: ["dsh-partner"]
       operationId: getDshPartnerActivationStatus
       summary: Read the authenticated partner activation state and allowed actions
       responses:
@@ -170,6 +178,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
   /dsh/partner/activation/readiness:
     get:
+      tags: ["dsh-partner"]
       operationId: getDshPartnerSelfReadiness
       summary: Read authenticated partner readiness gates
       responses:

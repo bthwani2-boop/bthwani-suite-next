@@ -45,11 +45,14 @@ export async function addTicketMessage(
   input: DshAddMessageInput,
   context: SupportMutationContext,
 ): Promise<DshSupportMessage> {
+  if (!input.body?.trim() && !input.attachments?.length) {
+    throw new Error("SUPPORT_MESSAGE_BODY_OR_ATTACHMENT_REQUIRED");
+  }
   const data = await request<{ message: DshSupportMessage }>(
     `/dsh/client/support/tickets/${encodeURIComponent(ticketId)}/messages`,
     {
       method: "POST",
-      body: { body: input.body },
+      body: input,
       idempotencyKey: context.idempotencyKey,
       correlationId: context.correlationId,
     },
@@ -98,6 +101,9 @@ export async function addOperatorTicketMessage(
   input: DshAddMessageInput,
   context: SupportMutationContext,
 ): Promise<DshSupportMessage> {
+  if (!input.body?.trim() && !input.attachments?.length) {
+    throw new Error("SUPPORT_MESSAGE_BODY_OR_ATTACHMENT_REQUIRED");
+  }
   const data = await request<{ message: DshSupportMessage }>(
     `/dsh/operator/support/tickets/${encodeURIComponent(ticketId)}/messages`,
     {
@@ -128,7 +134,10 @@ export async function updateTicket(
 }
 
 export async function createIncident(input: DshCreateIncidentInput): Promise<DshIncident> {
-  const data = await request<{ incident: DshIncident }>("/dsh/operator/incidents", { method: "POST", body: input });
+  const data = await request<{ incident: DshIncident }>("/dsh/operator/incidents", {
+    method: "POST",
+    body: input,
+  });
   return data.incident;
 }
 
@@ -140,7 +149,10 @@ export async function fetchIncidents(statusFilter?: string): Promise<readonly Ds
   return data.incidents ?? [];
 }
 
-export async function updateIncident(incidentId: string, input: DshUpdateIncidentInput): Promise<DshIncident> {
+export async function updateIncident(
+  incidentId: string,
+  input: DshUpdateIncidentInput,
+): Promise<DshIncident> {
   const data = await request<{ incident: DshIncident }>(
     `/dsh/operator/incidents/${encodeURIComponent(incidentId)}`,
     { method: "PATCH", body: input },

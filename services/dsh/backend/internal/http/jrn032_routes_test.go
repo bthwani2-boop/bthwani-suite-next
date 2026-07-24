@@ -7,7 +7,7 @@ import (
 )
 
 func TestJRN032AnalyticsRoutesRegistered(t *testing.T) {
-	mux := NewRouter(nil, nil, nil, nil)
+	mux := NewRouter(nil, nil, nil, nil, nil)
 	RegisterPartnerSelfRoutes(mux, nil, nil, nil, nil)
 	RegisterJRN032AnalyticsRoutes(mux, nil, nil, nil, nil)
 	routes := []string{

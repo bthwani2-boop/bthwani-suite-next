@@ -20,7 +20,7 @@ for (const state of ["loading", "empty", "offline", "forbidden", "conflict", "re
   assert.ok(registry.states[state], `visible state registry missing: ${state}`);
 }
 for (const state of ["idle", "loading", "ready", "saving", "submitting", "offline", "forbidden", "conflict", "readiness_blocked", "wlt_unavailable", "partial", "error"]) {
-  assert.match(visible, new RegExp(`\\b${state}:\\s*\\{`), `partner onboarding visible copy missing: ${state}`);
+  assert.ok(visible.includes(`  ${state}: {`), `partner onboarding visible copy missing: ${state}`);
 }
 for (const state of ["offline", "forbidden", "conflict", "readiness_blocked", "wlt_unavailable", "error"]) {
   assert.match(runtime, new RegExp(`["']${state}["']`), `runtime failure state missing: ${state}`);
@@ -94,23 +94,31 @@ assert.match(partnerStatus, /title="الحالة التشغيلية متاحة �
 assert.match(partnerStatus, /description=\{selfReadinessState\.message\}/);
 assert.match(partnerStatus, /onActionPress=\{reloadSelfStatus\}/);
 
-// control-panel: offline, optimistic concurrency, readiness blocking, and retry are first-class states.
-const adminController = read("services/dsh/frontend/shared/partner/use-partner-admin-controller.tsx");
+// control-panel: session/tenant restoration, offline retry, optimistic concurrency,
+// readiness blocking, governed store ownership conflicts and recovery are first-class states.
+const legacyAdminController = read("services/dsh/frontend/shared/partner/use-partner-admin-controller.tsx");
+const workspaceController = read("services/dsh/frontend/shared/partner/partner-workspace.controller.tsx");
+const ownershipController = read("services/dsh/frontend/shared/partner/use-governed-partner-stores-controller.tsx");
 const reviewQueue = read("services/dsh/frontend/control-panel/partners/PartnersReviewQueueScreen.tsx");
-const detailScreen = read("services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx");
-assert.match(adminController, /kind: "offline"/);
-assert.match(adminController, /kind: "version_conflict"/);
-assert.match(adminController, /kind: "invalid_transition"/);
-assert.match(adminController, /e\?\.status === 403\) setDetailState\(\{ kind: "forbidden" \}\)/);
-assert.match(reviewQueue, /adminController\.listState\.kind === "offline"/);
-assert.match(reviewQueue, /stateId="offline"/);
-assert.match(reviewQueue, /onActionPress=\{adminController\.retry\}/);
+const detailScreen = read("services/dsh/frontend/control-panel/partners/PartnerDetailUnifiedScreen.tsx");
+assert.match(legacyAdminController, /kind: "offline"/);
+assert.match(legacyAdminController, /kind: "version_conflict"/);
+assert.match(legacyAdminController, /kind: "invalid_transition"/);
+assert.match(legacyAdminController, /e\?\.status === 403\) setDetailState\(\{ kind: "forbidden" \}\)/);
+assert.match(workspaceController, /setListState\(typed\.kind === 'network'|setListState\(typed\.kind === "network"/);
+assert.match(reviewQueue, /useControlPanelSession/);
+assert.match(reviewQueue, /sessionState\.kind !== "authenticated"/);
+assert.match(reviewQueue, /stateId=\{restoring \? "loading" : "recoverableError"\}/);
 assert.match(detailScreen, /detail\.mutationState\.kind === "version_conflict"/);
-assert.match(detailScreen, /title="تعارض نسخة الشريك"/);
-assert.match(detailScreen, /onClick=\{\(\) => void reloadAfterConflict\(\)\}/);
+assert.match(detailScreen, /title="تعارض الإصدار"/);
+assert.match(detailScreen, /void detail\.reload\(\)|readiness\.reload/);
 assert.match(detailScreen, /detail\.mutationState\.kind === "invalid_transition"/);
-assert.match(detailScreen, /title="القرار محجوب ببوابات الجاهزية"/);
-assert.match(detailScreen, /onClick=\{\(\) => setTab\("readiness"\)\}/);
+assert.match(detailScreen, /title="القرار محجوب"/);
+assert.match(detailScreen, /tab === "readiness"/);
+assert.match(ownershipController, /STORE_OWNERSHIP_CONFLICT/);
+assert.match(ownershipController, /VERSION_CONFLICT/);
+assert.match(ownershipController, /OPEN_STORE_OPERATIONS/);
+assert.match(detailScreen, /stores\.actionState\.kind === "error"/);
 
 for (const temporaryWorkflow of [
   ".github/workflows/jrn-001-fs-11-field-visible-state-repair.yml",
@@ -125,4 +133,4 @@ for (const temporaryWorkflow of [
   );
 }
 
-console.log("JRN-001 FS-11 canonical visible states, recovery actions, and clean permanent gate verified");
+console.log("JRN-001 FS-11 canonical visible states, recovery actions and clean permanent gate verified");

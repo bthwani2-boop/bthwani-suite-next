@@ -13,13 +13,20 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 	db := openDispatchRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	tenantID := "tenant-delivery-exception-" + suffix
+	partnerID := "delivery-exception-partner-" + suffix
 	storeID := "delivery-exception-store-" + suffix
 	captainID := "delivery-exception-captain-" + suffix
 	clientID := uuid.NewString()
 
 	if _, err := db.Exec(`
-		INSERT INTO dsh_stores(id,slug,display_name,status,city_code,service_area_code,serviceability_status,is_visible)
-		VALUES($1,$1,'Delivery Exception Store','active','SAN','SAN-1','serviceable',true)`, storeID); err != nil {
+		INSERT INTO dsh_partners (id, legal_name_ar, display_name, legal_identity_number, primary_phone)
+		VALUES ($1, 'شريك اختبار الاستثناء', 'Delivery Exception Partner', $1, '700000098')`, partnerID); err != nil {
+		t.Fatalf("insert partner: %v", err)
+	}
+
+	if _, err := db.Exec(`
+		INSERT INTO dsh_stores(id,slug,display_name,status,city_code,service_area_code,serviceability_status,is_visible,partner_id)
+		VALUES($1,$1,'Delivery Exception Store','active','SAN','SAN-1','serviceable',true,$2)`, storeID, partnerID); err != nil {
 		t.Fatalf("insert store: %v", err)
 	}
 
@@ -58,6 +65,7 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 		_, _ = db.Exec(`DELETE FROM dsh_orders WHERE id=$1::uuid`, orderID)
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_intents WHERE id=$1::uuid`, checkoutIntentID)
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id=$1`, storeID)
+		_, _ = db.Exec(`DELETE FROM dsh_partners WHERE id=$1`, partnerID)
 	})
 
 	correlationID := "delivery-exception-command-" + suffix
@@ -121,6 +129,7 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 		t.Fatalf("unexpected resolved state: %+v", resolved)
 	}
 
+	seedCaptainDeliveryProofMedia(t, db, captainID, "retry-proof", partnerID, storeID)
 	if _, err := SubmitPoD(db, assignmentID, captainID, PoDInput{Method: "photo", Reference: "retry-proof"}); err != nil {
 		t.Fatalf("proof must reopen after operations resolution: %v", err)
 	}

@@ -8,15 +8,13 @@ on:
         required: true
         default: affected
         type: choice
-        options:
-          - affected
-          - full
+        options: [affected, full]
       journey:
-        description: Optional journey such as JRN-040
+        description: Optional governed capability identifier
         required: false
         type: string
       runtime_proof:
-        description: Start the full runtime and execute smoke proof
+        description: Start the scoped runtime and execute smoke proof
         required: true
         default: false
         type: boolean
@@ -67,6 +65,12 @@ concurrency:
   group: contextual-ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  FULL_VERIFICATION_TRIGGER: governance/github/full-verification.trigger.json
+  GIT_CONFIG_COUNT: "1"
+  GIT_CONFIG_KEY_0: init.defaultBranch
+  GIT_CONFIG_VALUE_0: master
+
 jobs:
   context:
     name: Detect affected scope
@@ -75,7 +79,7 @@ jobs:
     outputs:
       base_sha: ${{ steps.scope.outputs.base_sha }}
       head_sha: ${{ steps.scope.outputs.head_sha }}
-      changed_count: ${{ steps.scope.outputs.changed_count }}
+      full_verification: ${{ steps.scope.outputs.full_verification }}
       governance: ${{ steps.scope.outputs.governance }}
       workflow: ${{ steps.scope.outputs.workflow }}
       infrastructure: ${{ steps.scope.outputs.infrastructure }}
@@ -97,15 +101,15 @@ jobs:
       runtime: ${{ steps.scope.outputs.runtime }}
       shared_brain: ${{ steps.scope.outputs.shared_brain }}
       heavy: ${{ steps.scope.outputs.heavy }}
-      jrn040: ${{ steps.scope.outputs.jrn040 }}
+      platform_change_sets: ${{ steps.scope.outputs.platform_change_sets }}
     steps:
       - name: Checkout immutable source history
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Set up locked Node runtime
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
       - name: Verify contextual router decisions
@@ -119,6 +123,7 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           DISPATCH_MODE: ${{ inputs.mode }}
           DISPATCH_JOURNEY: ${{ inputs.journey }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           HEAD_SHA="${PR_HEAD_SHA:-${GITHUB_SHA}}"
@@ -126,349 +131,142 @@ jobs:
           if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
             BASE_SHA="$(git rev-parse "${HEAD_SHA}^" 2>/dev/null || printf '%s' "${HEAD_SHA}")"
           fi
+
+          FULL_VERIFICATION=false
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" && "${DISPATCH_MODE:-affected}" == "full" ]]; then
+            FULL_VERIFICATION=true
+          elif git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" | grep -Fxq "${FULL_VERIFICATION_TRIGGER}"; then
+            FULL_VERIFICATION=true
+          fi
+          echo "full_verification=${FULL_VERIFICATION}" >> "${GITHUB_OUTPUT}"
+
+          MODE="${DISPATCH_MODE:-affected}"
+          if [[ "${FULL_VERIFICATION}" == "true" ]]; then MODE="full"; fi
           CI_BASE_SHA="${BASE_SHA}" \
           CI_HEAD_SHA="${HEAD_SHA}" \
-          CI_MODE="${DISPATCH_MODE:-affected}" \
+          CI_MODE="${MODE}" \
           CI_JOURNEY="${DISPATCH_JOURNEY:-}" \
           node tools/scripts/detect-ci-context.mjs
       - name: Publish routing summary
         env:
-          CHANGED_COUNT: ${{ steps.scope.outputs.changed_count }}
           BASE_SHA: ${{ steps.scope.outputs.base_sha }}
           HEAD_SHA: ${{ steps.scope.outputs.head_sha }}
           NODE_SCOPE: ${{ steps.scope.outputs.node_scope }}
           JOURNEY_SCOPE: ${{ steps.scope.outputs.journey_scope }}
           HEAVY_CHECKS: ${{ steps.scope.outputs.heavy }}
+          FULL_VERIFICATION: ${{ steps.scope.outputs.full_verification }}
         run: |
           {
             echo "### Contextual CI routing"
-            echo "- Changed files: ${CHANGED_COUNT}"
             echo "- Base: ${BASE_SHA}"
             echo "- Head: ${HEAD_SHA}"
+            echo "- Full verification: ${FULL_VERIFICATION}"
             echo "- Node scope: ${NODE_SCOPE}"
             echo "- Journey scope: ${JOURNEY_SCOPE:-none}"
             echo "- Heavy checks: ${HEAVY_CHECKS}"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
   policy:
-    name: Verify affected policy
+    name: Policy and governance
     needs: [context]
-    if: ${{ needs.context.outputs.policy == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up locked Node workspace
-        uses: ./.github/actions/setup-node-workspace
-      - name: Verify canonical governance
-        if: ${{ needs.context.outputs.governance == 'true' }}
-        run: |
-          pnpm run guard:governance-schema
-          pnpm run guard:agent-governance
-          pnpm run guard:authority-separation
-          pnpm run guard:saas-governance
-          pnpm run guard:guard-registry
-          pnpm run guard:sdlc
-          pnpm run guard:cleanup-policy
-      - name: Verify pinned GitHub Actions
-        if: ${{ needs.context.outputs.workflow == 'true' || needs.context.outputs.security == 'true' }}
-        run: pnpm run guard:actions-pin
-      - name: Lint GitHub Actions workflow
-        if: ${{ needs.context.outputs.workflow == 'true' || needs.context.outputs.security == 'true' }}
-        run: pnpm run guard:workflow-lint
-      - name: Verify GitHub Actions security
-        if: ${{ needs.context.outputs.workflow == 'true' || needs.context.outputs.security == 'true' }}
-        run: pnpm run guard:workflow-security
-      - name: Verify OPA policies
-        if: ${{ needs.context.outputs.workflow == 'true' || needs.context.outputs.security == 'true' }}
-        run: pnpm run guard:opa-policies
-      - name: Verify infrastructure policy
-        if: ${{ needs.context.outputs.infrastructure == 'true' }}
-        run: |
-          pnpm run guard:runtime-config
-          pnpm run guard:opa-policies
-      - name: Verify immutable diff hygiene
-        run: git diff --check
+    uses: ./.github/workflows/ci-policy.yml
+    with:
+      base_sha: ${{ needs.context.outputs.base_sha }}
+      head_sha: ${{ needs.context.outputs.head_sha }}
+      policy: ${{ needs.context.outputs.policy }}
+      workflow: ${{ needs.context.outputs.workflow }}
+      security: ${{ needs.context.outputs.security }}
+      infrastructure: ${{ needs.context.outputs.infrastructure }}
 
-  node_affected:
-    name: Verify affected frontend, contracts, and journeys
+  diagnostics:
+    name: Static diagnostics
     needs: [context]
-    if: ${{ needs.context.outputs.node == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    steps:
-      - name: Checkout immutable source history
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Set up locked Node workspace
-        uses: ./.github/actions/setup-node-workspace
-      - name: Verify affected contracts and bindings
-        if: ${{ needs.context.outputs.contracts == 'true' }}
-        run: |
-          pnpm run contracts:lint
-          pnpm run guard:api-binding
-          pnpm run guard:backend-api-binding
-          pnpm run guard:service-manifest-drift
-          pnpm run guard:frontend-feature-binding
-      - name: Typecheck, lint, and test affected frontend projects
-        if: ${{ needs.context.outputs.frontend == 'true' }}
-        env:
-          NX_BASE: ${{ needs.context.outputs.base_sha }}
-          NX_HEAD: ${{ needs.context.outputs.head_sha }}
-        run: |
-          pnpm run affected:typecheck -- --base="${NX_BASE}" --head="${NX_HEAD}"
-          pnpm run affected:lint -- --base="${NX_BASE}" --head="${NX_HEAD}"
-          pnpm run affected:test -- --base="${NX_BASE}" --head="${NX_HEAD}"
-      - name: Build affected frontend projects for high-risk changes
-        if: ${{ needs.context.outputs.frontend == 'true' && needs.context.outputs.heavy == 'true' }}
-        env:
-          NX_BASE: ${{ needs.context.outputs.base_sha }}
-          NX_HEAD: ${{ needs.context.outputs.head_sha }}
-        run: pnpm run affected:build -- --base="${NX_BASE}" --head="${NX_HEAD}"
-      - name: Run only detected journey gates
-        if: ${{ needs.context.outputs.journey == 'true' && needs.context.outputs.journey_scope != '' }}
-        shell: pwsh
-        env:
-          JOURNEY_SCOPE: ${{ needs.context.outputs.journey_scope }}
-        run: |
-          $journeys = $env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() }
-          foreach ($journey in $journeys) {
-            ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim()
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
-      - name: Verify JRN-040 platform contract and frontend binding
-        if: ${{ needs.context.outputs.jrn040 == 'true' }}
-        run: |
-          pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false
-          pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml -o /tmp/jrn-040-platform-change-sets-api.ts
-          node tools/guards/jrn-040-platform-change-sets-gate.mjs
-      - name: Verify immutable diff hygiene
-        run: git diff --check
+    uses: ./.github/workflows/ci-node-diagnostics.yml
+    with:
+      base_sha: ${{ needs.context.outputs.base_sha }}
+      head_sha: ${{ needs.context.outputs.head_sha }}
+      full_verification: ${{ needs.context.outputs.full_verification }}
+      frontend: ${{ needs.context.outputs.frontend }}
+      contracts: ${{ needs.context.outputs.contracts }}
+      node: ${{ needs.context.outputs.node }}
 
-  dsh:
-    name: Verify affected DSH backend
+  verification:
+    name: Node verification
     needs: [context]
-    if: ${{ needs.context.outputs.dsh == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up Go from DSH module
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version-file: services/dsh/backend/go.mod
-          cache-dependency-path: services/dsh/backend/go.sum
-      - name: Test and build DSH
-        working-directory: services/dsh/backend
-        run: |
-          go test ./... -count=1
-          go build ./...
+    uses: ./.github/workflows/ci-node-verification.yml
+    with:
+      base_sha: ${{ needs.context.outputs.base_sha }}
+      head_sha: ${{ needs.context.outputs.head_sha }}
+      full_verification: ${{ needs.context.outputs.full_verification }}
+      frontend: ${{ needs.context.outputs.frontend }}
+      heavy: ${{ needs.context.outputs.heavy }}
+      journey: ${{ needs.context.outputs.journey }}
+      journey_scope: ${{ needs.context.outputs.journey_scope }}
+      platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}
 
-  wlt:
-    name: Verify affected WLT backend
+  backends:
+    name: Backend verification
     needs: [context]
-    if: ${{ needs.context.outputs.wlt == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up Go from WLT module
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version-file: services/wlt/backend/go.mod
-          cache-dependency-path: services/wlt/backend/go.sum
-      - name: Test and build WLT
-        working-directory: services/wlt/backend
-        run: |
-          go test ./... -count=1
-          go build ./...
+    uses: ./.github/workflows/ci-backends.yml
+    with:
+      dsh: ${{ needs.context.outputs.dsh }}
+      wlt: ${{ needs.context.outputs.wlt }}
+      identity: ${{ needs.context.outputs.identity }}
+      workforce: ${{ needs.context.outputs.workforce }}
+      platform: ${{ needs.context.outputs.platform }}
+      providers: ${{ needs.context.outputs.providers }}
 
-  identity:
-    name: Verify affected Identity backend
+  runtime:
+    name: Runtime proof
     needs: [context]
-    if: ${{ needs.context.outputs.identity == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up Go from Identity module
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version-file: core/identity/backend/go.mod
-          cache-dependency-path: core/identity/backend/go.sum
-      - name: Test and build Identity
-        working-directory: core/identity/backend
-        run: |
-          go test ./... -count=1
-          go build ./...
-
-  workforce:
-    name: Verify affected Workforce backend
-    needs: [context]
-    if: ${{ needs.context.outputs.workforce == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up Go from Workforce module
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version-file: core/workforce/backend/go.mod
-          cache-dependency-path: core/workforce/backend/go.sum
-      - name: Test and build Workforce
-        working-directory: core/workforce/backend
-        run: |
-          go test ./... -count=1
-          go build ./...
-
-  platform:
-    name: Verify affected Platform Control backend
-    needs: [context]
-    if: ${{ needs.context.outputs.platform == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: platform
-          POSTGRES_PASSWORD: platform
-          POSTGRES_DB: platform
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U platform -d platform"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-    env:
-      DATABASE_URL: postgres://platform:platform@localhost:5432/platform?sslmode=disable
-      PGPASSWORD: platform
-    steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up Go from Platform Control module
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version-file: core/platform-control/backend/go.mod
-          cache-dependency-path: core/platform-control/backend/go.sum
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Apply platform migrations
-        run: |
-          for migration in core/platform-control/database/migrations/platform-*.sql; do
-            echo "Applying ${migration}"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
-          done
-      - name: Test and build Platform Control
-        working-directory: core/platform-control/backend
-        run: |
-          go test ./... -count=1
-          go build ./...
-
-  providers:
-    name: Verify affected Providers backend
-    needs: [context]
-    if: ${{ needs.context.outputs.providers == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up Go from Providers module
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
-        with:
-          go-version-file: core/providers/backend/go.mod
-          cache-dependency-path: core/providers/backend/go.sum
-      - name: Test and build Providers
-        working-directory: core/providers/backend
-        run: |
-          go test ./... -count=1
-          go build ./...
-
-  runtime_proof:
-    name: Execute explicitly requested runtime proof
-    needs: [context]
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 60
-    steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-      - name: Set up locked Node workspace
-        uses: ./.github/actions/setup-node-workspace
-      - name: Start and verify full runtime
-        shell: pwsh
-        run: |
-          pnpm run runtime:full:up
-          pnpm run runtime:full:bootstrap-dev
-          pnpm run runtime:full:smoke
-      - name: Stop runtime
-        if: always()
-        shell: pwsh
-        run: pnpm run runtime:full:down
+    uses: ./.github/workflows/ci-runtime.yml
+    with:
+      full_verification: ${{ needs.context.outputs.full_verification }}
+      runtime: ${{ needs.context.outputs.runtime }}
+      runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
 
   result:
     name: BThwani CI result
-    needs: [context, policy, node_affected, dsh, wlt, identity, workforce, platform, providers, runtime_proof]
+    needs: [context, policy, diagnostics, verification, backends, runtime]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Enforce contextual result
+      - name: Enforce fail-closed aggregate result
+        shell: bash
         env:
           CONTEXT_RESULT: ${{ needs.context.result }}
           POLICY_RESULT: ${{ needs.policy.result }}
-          NODE_RESULT: ${{ needs.node_affected.result }}
-          DSH_RESULT: ${{ needs.dsh.result }}
-          WLT_RESULT: ${{ needs.wlt.result }}
-          IDENTITY_RESULT: ${{ needs.identity.result }}
-          WORKFORCE_RESULT: ${{ needs.workforce.result }}
-          PLATFORM_RESULT: ${{ needs.platform.result }}
-          PROVIDERS_RESULT: ${{ needs.providers.result }}
-          RUNTIME_RESULT: ${{ needs.runtime_proof.result }}
+          DIAGNOSTICS_RESULT: ${{ needs.diagnostics.result }}
+          VERIFICATION_RESULT: ${{ needs.verification.result }}
+          BACKENDS_RESULT: ${{ needs.backends.result }}
+          RUNTIME_RESULT: ${{ needs.runtime.result }}
         run: |
           set -euo pipefail
           failed=0
-          for entry in \
-            "context=${CONTEXT_RESULT}" \
-            "policy=${POLICY_RESULT}" \
-            "node=${NODE_RESULT}" \
-            "dsh=${DSH_RESULT}" \
-            "wlt=${WLT_RESULT}" \
-            "identity=${IDENTITY_RESULT}" \
-            "workforce=${WORKFORCE_RESULT}" \
-            "platform=${PLATFORM_RESULT}" \
-            "providers=${PROVIDERS_RESULT}" \
-            "runtime=${RUNTIME_RESULT}"; do
-            name="${entry%%=*}"
-            result="${entry#*=}"
+          failures=()
+
+          check_result() {
+            local name="$1"
+            local result="$2"
             if [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
-              echo "${name} failed with ${result}"
+              failures+=("${name}:${result}")
               failed=1
             fi
-          done
-          exit "${failed}"
+          }
+
+          check_result context "${CONTEXT_RESULT}"
+          check_result policy "${POLICY_RESULT}"
+          check_result diagnostics "${DIAGNOSTICS_RESULT}"
+          check_result verification "${VERIFICATION_RESULT}"
+          check_result backends "${BACKENDS_RESULT}"
+          check_result runtime "${RUNTIME_RESULT}"
+
+          if [[ "${failed}" -ne 0 ]]; then
+            message="failed bundles: $(IFS=,; echo "${failures[*]}")"
+            echo "::error title=BThwani CI failed::${message}"
+            printf '%s\n' "${message}"
+            exit 1
+          fi
+
+          printf '%s\n' "all required bundles passed or were intentionally skipped"

@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "decision": "DEFERRED_WITH_EXPLICIT_EXCLUSION",
+  "projects": [
+    {
+      "root": "apps/webapp/runtime",
+      "owner": "product-platform",
+      "reason": "No approved product model, active surface assignment, or runtime acceptance exists for the generic webapp surface.",
+      "activationRequirements": ["Product Truth approval", "surface owner", "typecheck/build/test/lint targets", "same-commit runtime evidence"]
+    },
+    {
+      "root": "apps/website/runtime",
+      "owner": "product-platform",
+      "reason": "The public website remains outside the active five-surface operational scope until its product outcome and publishing authority are approved.",
+      "activationRequirements": ["Product Truth approval", "content and privacy owner", "typecheck/build/test/lint targets", "release evidence"]
+    },
+    {
+      "root": "services/amn",
+      "owner": "service-portfolio",
+      "reason": "Service placeholder has no approved capability owner, active contract, database boundary, or runtime deployment.",
+      "activationRequirements": ["capability owner", "active contract", "runtime manifest", "typecheck/build/test/lint targets"]
+    },
+    {
+      "root": "services/arb",
+      "owner": "service-portfolio",
+      "reason": "Service placeholder has no approved capability owner, active contract, database boundary, or runtime deployment.",
+      "activationRequirements": ["capability owner", "active contract", "runtime manifest", "typecheck/build/test/lint targets"]
+    },
+    {
+      "root": "services/esf",
+      "owner": "service-portfolio",
+      "reason": "Service placeholder has no approved capability owner, active contract, database boundary, or runtime deployment.",
+      "activationRequirements": ["capability owner", "active contract", "runtime manifest", "typecheck/build/test/lint targets"]
+    },
+    {
+      "root": "services/knz",
+      "owner": "service-portfolio",
+      "reason": "Service placeholder has no approved capability owner, active contract, database boundary, or runtime deployment.",
+      "activationRequirements": ["capability owner", "active contract", "runtime manifest", "typecheck/build/test/lint targets"]
+    },
+    {
+      "root": "services/kwd",
+      "owner": "service-portfolio",
+      "reason": "Service placeholder has no approved capability owner, active contract, database boundary, or runtime deployment.",
+      "activationRequirements": ["capability owner", "active contract", "runtime manifest", "typecheck/build/test/lint targets"]
+    },
+    {
+      "root": "services/mrf",
+      "owner": "service-portfolio",
+      "reason": "Service placeholder has no approved capability owner, active contract, database boundary, or runtime deployment.",
+      "activationRequirements": ["capability owner", "active contract", "runtime manifest", "typecheck/build/test/lint targets"]
+    },
+    {
+      "root": "services/snd",
+      "owner": "service-portfolio",
+      "reason": "Service placeholder has no approved capability owner, active contract, database boundary, or runtime deployment.",
+      "activationRequirements": ["capability owner", "active contract", "runtime manifest", "typecheck/build/test/lint targets"]
+    }
+  ]
+}

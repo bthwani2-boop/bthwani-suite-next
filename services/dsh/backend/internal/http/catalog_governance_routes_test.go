@@ -8,7 +8,7 @@ import (
 
 func TestJRN008CatalogGovernanceRoutesAreRegistered(t *testing.T) {
 	t.Parallel()
-	mux := NewRouter(nil, nil, nil, nil)
+	mux := NewRouter(nil, nil, nil, nil, nil)
 	cases := []struct {
 		method  string
 		path    string

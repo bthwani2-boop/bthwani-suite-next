@@ -36,19 +36,33 @@ const universalForbidden = [
   [/\bMath\.random\s*\(/g, "RANDOM_RUNTIME_TRUTH_FORBIDDEN"],
   [/\balert\s*\(/g, "ALERT_ONLY_OPERATION_FORBIDDEN"],
   [/catch\s*\{\s*\}/g, "SWALLOWED_RUNTIME_ERROR_FORBIDDEN"],
-  [/\bfetch\s*\(/g, "DIRECT_SURFACE_FETCH_FORBIDDEN"],
-  [/\baxios\s*\./g, "DIRECT_SURFACE_AXIOS_FORBIDDEN"],
   [/store-1001|field-local-001|captain-local-001|partner-local-001|client-local-001/g, "HARDCODED_RUNTIME_ACTOR_OR_STORE_FORBIDDEN"],
   [/localhost:(?:8080|8081|8082|8083|8084|3000)\b/g, "LEGACY_HOST_PORT_FORBIDDEN"],
   [/set(?:Success|Completed|Uploaded|Submitted|Saved)\s*\(\s*true\s*\)\s*;\s*(?:void\s+)?[A-Za-z0-9_.]+\s*\(/g, "SUCCESS_BEFORE_MUTATION_FORBIDDEN"],
   [/return\s+null\s*;\s*\/\/\s*(?:TODO|placeholder|not implemented)/gi, "PLACEHOLDER_NULL_FORBIDDEN"],
   [/console\.log\s*\([^)]*(?:success|saved|submitted|uploaded|completed)/gi, "CONSOLE_ONLY_SUCCESS_FORBIDDEN"],
+  [/\b(?:DEFAULT_MESSAGES|mockData|fakeData|seededData)\b/g, "SYNTHETIC_RUNTIME_DATA_FORBIDDEN"],
+];
+
+const transportForbidden = [
+  [/\bfetch\s*\(/g, "DIRECT_SURFACE_FETCH_FORBIDDEN"],
+  [/\baxios\s*\./g, "DIRECT_SURFACE_AXIOS_FORBIDDEN"],
 ];
 
 const mobileForbidden = [
   [/\b(?:localStorage|sessionStorage)\b/g, "BROWSER_STORAGE_MOBILE_TRUTH_FORBIDDEN"],
   [/\bnavigator\.geolocation\b/g, "UNGOVERNED_BROWSER_GEOLOCATION_FORBIDDEN"],
 ];
+
+function isTransportOwner(relative) {
+  return (
+    relative.includes("/shared/_kernel/") ||
+    /\.api\.[cm]?[jt]sx?$/.test(relative) ||
+    relative.includes("/clients/") ||
+    relative.includes("/src/server/") ||
+    relative.includes("/src/app/api/")
+  );
+}
 
 function walk(relativeRoot) {
   const absoluteRoot = path.join(repoRoot, relativeRoot);
@@ -79,10 +93,12 @@ for (const root of roots) {
   for (const absolute of walk(root)) {
     const relative = toPosix(path.relative(repoRoot, absolute));
     const content = fs.readFileSync(absolute, "utf8");
-    for (const [pattern, message] of [
+    const patterns = [
       ...universalForbidden,
+      ...(isTransportOwner(relative) ? [] : transportForbidden),
       ...(isMobile ? mobileForbidden : []),
-    ]) {
+    ];
+    for (const [pattern, message] of patterns) {
       for (const match of content.matchAll(pattern)) {
         violations.push({
           file: relative,

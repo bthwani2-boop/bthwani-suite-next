@@ -13,6 +13,12 @@ x-bthwani-policy:
   redis: "not active"
   mongo: "forbidden"
 
+x-bthwani-saas-environment: &bthwani-saas-environment
+  BTHWANI_SAAS_MODE: "${BTHWANI_SAAS_MODE:-active}"
+  BTHWANI_COMMERCIAL_ACTIVATION_STATE: "${BTHWANI_COMMERCIAL_ACTIVATION_STATE:-authorized}"
+  BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED: "${BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED:-false}"
+  BTHWANI_DEFAULT_TENANT_ID: "${BTHWANI_DEFAULT_TENANT_ID:-local-dsh}"
+
 services:
   postgres:
     image: ${BTHWANI_POSTGRES_IMAGE:-postgres:16-alpine}
@@ -94,12 +100,17 @@ services:
     profiles:
       - identity
       - platform
+      - workforce
+      - providers
+      - wlt
+      - dsh
     build:
       context: ../..
       dockerfile: core/identity/backend/Dockerfile
     container_name: ${BTHWANI_IDENTITY_API_CONTAINER:-bthwani-identity-api-runtime}
     restart: unless-stopped
     environment:
+      <<: *bthwani-saas-environment
       PORT: "8082"
       DATABASE_URL: "postgres://${BTHWANI_IDENTITY_DB_USER:-identity_runtime}:${BTHWANI_IDENTITY_DB_PASSWORD:-identity_runtime_password}@postgres:5432/${BTHWANI_IDENTITY_DB_NAME:-identity_runtime}?sslmode=disable"
       IDENTITY_LOCAL_BOOTSTRAP: "${IDENTITY_LOCAL_BOOTSTRAP:-true}"
@@ -128,6 +139,7 @@ services:
     container_name: ${BTHWANI_WORKFORCE_API_CONTAINER:-bthwani-workforce-api-runtime}
     restart: unless-stopped
     environment:
+      <<: *bthwani-saas-environment
       PORT: "8086"
       DATABASE_URL: "postgres://${BTHWANI_WORKFORCE_DB_USER:-workforce_runtime}:${BTHWANI_WORKFORCE_DB_PASSWORD:-workforce_runtime_password}@postgres:5432/${BTHWANI_WORKFORCE_DB_NAME:-workforce_runtime}?sslmode=disable"
       WORKFORCE_IDENTITY_BASE_URL: "http://identity-api:8082"
@@ -158,6 +170,7 @@ services:
     container_name: ${BTHWANI_PROVIDERS_API_CONTAINER:-bthwani-providers-api-runtime}
     restart: unless-stopped
     environment:
+      <<: *bthwani-saas-environment
       PORT: "8087"
       DATABASE_URL: "postgres://${BTHWANI_PROVIDERS_DB_USER:-providers_runtime}:${BTHWANI_PROVIDERS_DB_PASSWORD:-providers_runtime_password}@postgres:5432/${BTHWANI_PROVIDERS_DB_NAME:-providers_runtime}?sslmode=disable"
       PROVIDERS_IDENTITY_BASE_URL: "http://identity-api:8082"
@@ -187,6 +200,7 @@ services:
     container_name: ${BTHWANI_PLATFORM_CONTROL_API_CONTAINER:-bthwani-platform-control-api-runtime}
     restart: unless-stopped
     environment:
+      <<: *bthwani-saas-environment
       PORT: "8088"
       DATABASE_URL: "postgres://${BTHWANI_PLATFORM_CONTROL_DB_USER:-platform_control_runtime}:${BTHWANI_PLATFORM_CONTROL_DB_PASSWORD:-platform_control_runtime_password}@postgres:5432/${BTHWANI_PLATFORM_CONTROL_DB_NAME:-platform_control_runtime}?sslmode=disable"
       PLATFORM_CONTROL_IDENTITY_BASE_URL: "http://identity-api:8082"
@@ -216,9 +230,11 @@ services:
     container_name: ${BTHWANI_WLT_API_CONTAINER:-bthwani-wlt-api-runtime}
     restart: unless-stopped
     environment:
+      <<: *bthwani-saas-environment
       PORT: "8083"
       DATABASE_URL: "postgres://${BTHWANI_WLT_DB_USER:-wlt_runtime}:${BTHWANI_WLT_DB_PASSWORD:-wlt_runtime_password}@postgres:5432/${BTHWANI_WLT_DB_NAME:-wlt_runtime}?sslmode=disable"
-      WLT_AUTH_MODE: "public-read-references"
+      WLT_AUTH_MODE: "identity-or-dsh-reference-auth"
+      IDENTITY_API_BASE_URL: "http://identity-api:8082"
       WLT_FINANCIAL_PROVIDER_MODE: "${WLT_FINANCIAL_PROVIDER_MODE:-mock}"
       WLT_FINANCIAL_PROVIDER_BASE_URL: "${WLT_FINANCIAL_PROVIDER_BASE_URL:-http://wiremock-financial-provider:8080}"
       WLT_ALLOW_PRODUCTION_PROVIDER: "${WLT_ALLOW_PRODUCTION_PROVIDER:-false}"
@@ -231,6 +247,8 @@ services:
       - "127.0.0.1:${BTHWANI_WLT_API_HOST_PORT:-58083}:8083"
     depends_on:
       postgres:
+        condition: service_healthy
+      identity-api:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8083/wlt/readiness || exit 1"]
@@ -249,6 +267,7 @@ services:
     container_name: ${BTHWANI_DSH_API_CONTAINER:-bthwani-dsh-api-runtime}
     restart: unless-stopped
     environment:
+      <<: *bthwani-saas-environment
       PORT: "8080"
       DATABASE_URL: "postgres://${BTHWANI_DSH_DB_USER:-dsh_runtime}:${BTHWANI_DSH_DB_PASSWORD:-dsh_runtime_password}@postgres:5432/${BTHWANI_DSH_DB_NAME:-dsh_runtime}?sslmode=disable"
       DSH_AUTH_MODE: "identity-required-for-protected-store-actions"

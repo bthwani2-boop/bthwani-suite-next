@@ -11,11 +11,11 @@
     "evidenceState": "QUALITATIVE",
     "evidenceReferences": [
       "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-040",
-      "core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml",
-      "core/platform-control/clients/generated/jrn-040-platform-change-sets-api.ts",
-      "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_workflow.go",
-      "core/platform-control/backend/internal/platformcontrol/jrn040_change_set_apply_rollback.go",
-      "core/platform-control/database/migrations/platform-006_jrn040_sensitive_change_boundary.sql",
+      "core/platform-control/contracts/platform-change-sets.openapi.yaml",
+      "core/platform-control/clients/generated/platform-change-sets-api.ts",
+      "core/platform-control/backend/internal/platformcontrol/change_set_workflow.go",
+      "core/platform-control/backend/internal/platformcontrol/change_set_apply_rollback.go",
+      "core/platform-control/database/migrations/platform-006_sensitive_change_boundary.sql",
       "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
     ]
   },
@@ -63,7 +63,7 @@
       "required": true,
       "actors": ["platform-change-proposer", "platform-change-reviewer", "platform-change-applier", "platform-change-rollback-operator", "platform-auditor"],
       "routesOrScreens": ["PlatformChangeWorkflowPanel", "platform change workflow workspace"],
-      "operationIds": ["listPlatformChangeSetsJRN040", "getPlatformChangeSetJRN040", "createPlatformChangeSetJRN040", "validatePlatformChangeSetJRN040", "submitPlatformChangeSetJRN040", "approvePlatformChangeSetJRN040", "rejectPlatformChangeSetJRN040", "applyPlatformChangeSetJRN040", "rollbackPlatformChangeSetJRN040"],
+      "operationIds": ["listPlatformChangeSets", "getPlatformChangeSet", "createPlatformChangeSet", "validatePlatformChangeSet", "submitPlatformChangeSet", "approvePlatformChangeSet", "rejectPlatformChangeSet", "applyPlatformChangeSet", "rollbackPlatformChangeSet"],
       "states": ["loading", "empty", "draft", "validated", "submitted", "approved", "rejected", "applied", "rolled_back", "failed", "forbidden", "conflict", "offline", "error"],
       "actions": ["list", "create draft", "inspect item diff", "validate", "submit", "approve", "reject with reason", "apply", "rollback with reason", "refresh canonical readback"]
     },
@@ -71,8 +71,8 @@
       "id": "backend",
       "required": true,
       "actors": ["platform-control-service", "platform-change-proposer", "platform-change-reviewer", "platform-change-applier", "platform-change-rollback-operator", "platform-auditor"],
-      "routesOrScreens": ["platform-control JRN-040 HTTP routes", "strict service boundary", "PostgreSQL repository"],
-      "operationIds": ["listPlatformChangeSetsJRN040", "getPlatformChangeSetJRN040", "createPlatformChangeSetJRN040", "validatePlatformChangeSetJRN040", "submitPlatformChangeSetJRN040", "approvePlatformChangeSetJRN040", "rejectPlatformChangeSetJRN040", "applyPlatformChangeSetJRN040", "rollbackPlatformChangeSetJRN040"],
+      "routesOrScreens": ["platform-control change-set HTTP routes", "strict service boundary", "PostgreSQL repository"],
+      "operationIds": ["listPlatformChangeSets", "getPlatformChangeSet", "createPlatformChangeSet", "validatePlatformChangeSet", "submitPlatformChangeSet", "approvePlatformChangeSet", "rejectPlatformChangeSet", "applyPlatformChangeSet", "rollbackPlatformChangeSet"],
       "states": ["draft", "validated", "submitted", "approved", "rejected", "applied", "rolled_back", "failed", "target_conflict", "version_conflict", "maker_checker_violation", "sensitive_value_forbidden"],
       "actions": ["authorize", "validate", "reserve target", "enforce maker checker", "apply atomically", "restore baseline", "audit", "read back"]
     },
@@ -90,7 +90,7 @@
       "required": true,
       "actors": ["platform-change-proposer", "platform-change-reviewer", "platform-change-applier", "platform-change-rollback-operator", "platform-auditor"],
       "routesOrScreens": ["services/dsh/frontend/shared/platform/platform-control.api.ts", "services/dsh/frontend/shared/platform/use-platform-change-workflow-controller.tsx"],
-      "operationIds": ["listPlatformChangeSetsJRN040", "getPlatformChangeSetJRN040", "createPlatformChangeSetJRN040", "validatePlatformChangeSetJRN040", "submitPlatformChangeSetJRN040", "approvePlatformChangeSetJRN040", "rejectPlatformChangeSetJRN040", "applyPlatformChangeSetJRN040", "rollbackPlatformChangeSetJRN040"],
+      "operationIds": ["listPlatformChangeSets", "getPlatformChangeSet", "createPlatformChangeSet", "validatePlatformChangeSet", "submitPlatformChangeSet", "approvePlatformChangeSet", "rejectPlatformChangeSet", "applyPlatformChangeSet", "rollbackPlatformChangeSet"],
       "states": ["idle", "loading", "success", "forbidden", "conflict", "validation_failed", "offline", "error"],
       "actions": ["call generated client", "map canonical state", "classify errors", "disable illegal transitions", "refresh after mutation"]
     },
@@ -147,7 +147,7 @@
       "Authoritative OpenAPI generated client shared controller control-panel binding migrations and targeted tests pass on one immutable commit."
     ],
     "failureStates": ["missing validation snapshot", "maker-checker bypass", "target conflict", "version conflict", "sensitive value accepted", "partial apply", "rollback without reason", "metadata loss", "audit value leakage", "frontend-only success"],
-    "requiredChecks": ["product truth schema", "JRN-040 static gate", "PostgreSQL migration application", "database sensitive-boundary tests", "platform-control Go tests", "HTTP workflow tests", "OpenAPI parse", "generated-client typecheck", "shared controller typecheck", "control-panel binding typecheck", "workflow security", "independent product security QA release and production review"],
+    "requiredChecks": ["product truth schema", "platform change-set static gate", "PostgreSQL migration application", "database sensitive-boundary tests", "platform-control Go tests", "HTTP workflow tests", "OpenAPI parse", "generated-client typecheck", "shared controller typecheck", "control-panel binding typecheck", "workflow security", "independent product security QA release and production review"],
     "runtimeEvidenceRequired": true,
     "visualEvidenceRequired": true
   },
@@ -165,11 +165,11 @@
     "productAcceptanceDecision": "PENDING"
   },
   "execution": {
-    "appetite": "Close JRN-040 product contract code data API shared frontend and CI gaps without deploying production or self-approving protected evidence.",
-    "fixedConstraints": ["Repository mode is REMOTE_ONLY on sambassam.", "Platform Control remains the sole owner of platform change mutations.", "Maker-checker and sensitive-value boundaries remain fail-closed.", "No PR merge force push release production deployment or SaaS activation is authorized.", "Independent product security QA release and risk approvals cannot be self-issued by engineering."],
+    "appetite": "Close the platform change-set product contract code data API shared frontend and CI gaps without deploying production or self-approving protected evidence.",
+    "fixedConstraints": ["Repository evidence is evaluated against the active inspected remote ref.", "Platform Control remains the sole owner of platform change mutations.", "Maker-checker and sensitive-value boundaries remain fail-closed.", "Production deployment and protected product security QA release and risk approvals remain outside engineering authority.", "A merge requires repository-owner authorization and successful applicable checks on the exact inspected commit."],
     "variableScope": ["Arabic operational wording", "non-secret diagnostics", "control-panel layout", "focused test grouping"],
     "forbiddenScope": ["direct DSH platform mutation", "frontend-owned change truth", "committed secrets", "production deployment", "commercial SaaS activation", "fake runtime evidence", "self-approval of protected gates"],
-    "forecastRange": "one sequential journey closure",
+    "forecastRange": "one sequential capability closure",
     "confidence": "high",
     "unknowns": ["Independent product manager approval outcome", "Independent product owner approval outcome", "Live runtime database outcome", "Visual accessibility and weak-network outcome", "Independent security QA release and production outcomes"]
   }

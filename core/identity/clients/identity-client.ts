@@ -32,7 +32,19 @@ export type IdentityClient = {
   deleteAccount(accessToken: string): Promise<void>;
 };
 
+function isRelativeBaseUrl(baseUrl: string): boolean {
+  return baseUrl.startsWith("/");
+}
+
+function resolveRequestUrl(path: string, baseUrl: string): string | URL {
+  return isRelativeBaseUrl(baseUrl)
+    ? `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`
+    : new URL(path, baseUrl);
+}
+
 export function createIdentityClient(baseUrl: string): IdentityClient {
+  const cookieMode = isRelativeBaseUrl(baseUrl);
+
   async function request<T>(
     path: string,
     options: {
@@ -45,16 +57,23 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
   ): Promise<T> {
     let response: Response;
     try {
-      response = await fetch(new URL(path, baseUrl), {
+      response = await fetch(resolveRequestUrl(path, baseUrl), {
         method: options.method,
         headers: {
           Accept: "application/json",
           ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
-          ...(options.token !== undefined ? { Authorization: `Bearer ${options.token}` } : {}),
-          ...(options.idempotencyKey !== undefined ? { "Idempotency-Key": options.idempotencyKey } : {}),
-          ...(options.correlationId !== undefined ? { "X-Correlation-ID": options.correlationId } : {}),
+          ...(!cookieMode && options.token !== undefined
+            ? { Authorization: `Bearer ${options.token}` }
+            : {}),
+          ...(options.idempotencyKey !== undefined
+            ? { "Idempotency-Key": options.idempotencyKey }
+            : {}),
+          ...(options.correlationId !== undefined
+            ? { "X-Correlation-ID": options.correlationId }
+            : {}),
         },
         ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+        ...(cookieMode ? { credentials: "include" as const } : {}),
         signal: AbortSignal.timeout(8000),
       });
     } catch (error) {
@@ -64,7 +83,10 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
       } satisfies IdentityClientError;
     }
     if (!response.ok) {
-      const body = await response.json().catch(() => ({})) as { code?: string; message?: string };
+      const body = (await response.json().catch(() => ({}))) as {
+        code?: string;
+        message?: string;
+      };
       throw {
         kind: "http",
         status: response.status,
@@ -72,9 +94,7 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
         message: body.message ?? "identity request failed",
       } satisfies IdentityClientError;
     }
-    if (response.status === 204) {
-      return undefined as T;
-    }
+    if (response.status === 204) return undefined as T;
     return response.json() as Promise<T>;
   }
 
@@ -116,7 +136,11 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
       return request("/auth/logout", { method: "POST", token: accessToken });
     },
     changePassword(accessToken, password) {
-      return request("/auth/password/change", { method: "POST", token: accessToken, body: { password } });
+      return request("/auth/password/change", {
+        method: "POST",
+        token: accessToken,
+        body: { password },
+      });
     },
     deleteAccount(accessToken) {
       return request("/auth/account", { method: "DELETE", token: accessToken });

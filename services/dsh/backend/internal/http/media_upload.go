@@ -207,15 +207,44 @@ func (s *protectedStoreServer) loadMediaReference(ctx context.Context, mediaRef 
 }
 
 func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context, actor store.StoreActor, ref mediaReference) (bool, error) {
+	tenantID := strings.TrimSpace(actor.TenantID)
+	partnerBelongsToTenant := func() (bool, error) {
+		if ref.PartnerID == "" || tenantID == "" {
+			return false, nil
+		}
+		var allowed bool
+		err := s.db.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM dsh_partners
+				WHERE id = $1 AND tenant_id = $2
+			)`, ref.PartnerID, tenantID).Scan(&allowed)
+		return allowed, err
+	}
+
 	switch actor.Role {
 	case "operator":
-		return true, nil
-	case "field":
-		return ref.OwnerActorID == actor.ID && ref.OwnerActorRole == "field", nil
-	case "captain":
-		return ref.OwnerActorID == actor.ID && ref.OwnerActorRole == "captain", nil
-	case "partner":
 		if ref.PartnerID == "" {
+			return true, nil
+		}
+		return partnerBelongsToTenant()
+	case "field":
+		if ref.OwnerActorID != actor.ID || ref.OwnerActorRole != "field" {
+			return false, nil
+		}
+		if ref.PartnerID == "" {
+			return true, nil
+		}
+		return partnerBelongsToTenant()
+	case "captain":
+		if ref.OwnerActorID != actor.ID || ref.OwnerActorRole != "captain" {
+			return false, nil
+		}
+		if ref.PartnerID == "" {
+			return true, nil
+		}
+		return partnerBelongsToTenant()
+	case "partner":
+		if ref.PartnerID == "" || tenantID == "" {
 			return false, nil
 		}
 		var allowed bool
@@ -223,12 +252,15 @@ func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context,
 			SELECT EXISTS (
 				SELECT 1
 				FROM dsh_store_actor_scopes scopes
-				JOIN dsh_stores stores ON stores.id = scopes.store_id
+				JOIN dsh_stores stores
+				  ON stores.id = scopes.store_id
+				 AND stores.tenant_id = $3
 				WHERE scopes.actor_id = $1
 				  AND scopes.actor_role = 'partner'
 				  AND scopes.active = true
+				  AND scopes.tenant_id = $3
 				  AND stores.partner_id = $2
-			)`, actor.ID, ref.PartnerID).Scan(&allowed)
+			)`, actor.ID, ref.PartnerID, tenantID).Scan(&allowed)
 		return allowed, err
 	default:
 		return false, nil

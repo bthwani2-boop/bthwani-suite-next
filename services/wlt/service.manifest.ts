@@ -13,15 +13,22 @@ export const wltServiceManifest = {
 
   ownsFinancialTruth: true,
 
+  contracts: [
+    "contracts/wlt.openapi.yaml",
+    "contracts/wlt.saas-reference-auth.overlay.yaml",
+  ],
+
   implementationReadiness: {
     backend: true,
-    database: true,
-    generatedClient: true,
+    database: false,
+    generatedClient: false,
     frontend: true,
     frontendDshBoundary: true,
     paymentSessionReference: true,
-    localSimulatorMutations: true,
-    stagingProviderLabMutations: true,
+    saasReferenceAuthentication: true,
+    trustedTenantServiceBoundary: true,
+    localSimulatorMutations: false,
+    stagingProviderLabMutations: false,
   },
 
   runtimeEvidence: {
@@ -33,28 +40,30 @@ export const wltServiceManifest = {
     productionMutationsVerified: false,
     evidenceState: "NEEDS_EVIDENCE",
     reason:
-      "Implementation exists, but reference, mutation, reconciliation, and cross-service journeys require fresh same-commit runtime evidence.",
+      "Implementation exists, but database migration, generated/manual clients, reference, mutation, reconciliation, tenant-isolation, and cross-service journeys require fresh same-commit evidence.",
   },
 
   productionReadiness: {
     productionMutationsReady: false,
     productionProviderDefaultEnabled: false,
     blocker:
-      "Production provider mutations remain fail-closed unless WLT_ALLOW_PRODUCTION_PROVIDER is explicitly true and independent finance, security, release, and same-commit runtime evidence are complete.",
+      "Production provider mutations remain fail-closed unless WLT_ALLOW_PRODUCTION_PROVIDER is explicitly true and independent finance, security, release, tenant-isolation, and same-commit runtime evidence are complete.",
   },
 
-  // Compatibility fields remain deliberately evidence-safe. They must not be
-  // promoted independently from runtimeEvidence and productionReadiness.
-  backendRuntimeReady: true,
-  databaseReady: true,
-  generatedClientReady: true,
+  // Compatibility fields are deliberately evidence-safe. Static source or
+  // simulator configuration must not promote runtime or financial readiness.
+  backendRuntimeReady: false,
+  databaseReady: false,
+  generatedClientReady: false,
   frontendReady: true,
   frontendDshBoundaryReady: true,
   referenceRuntimeVerified: false,
   journeyRuntimeVerified: false,
   paymentSessionReferenceReady: true,
-  localSimulatorMutationsReady: true,
-  stagingProviderLabMutationsReady: true,
+  saasReferenceAuthenticationReady: true,
+  trustedTenantServiceBoundaryReady: true,
+  localSimulatorMutationsReady: false,
+  stagingProviderLabMutationsReady: false,
   productionMutationsReady: false,
   productionMutationBlocker:
     "Production provider mutations remain fail-closed pending explicit provider enablement and same-commit independent evidence.",
@@ -69,11 +78,14 @@ export const wltServiceManifest = {
       "settlements",
       "payout_decisions",
       "commissions",
-      "cod_financial_state",
+      "delivery_collection_custody",
+      "cod_legacy_compatibility",
       "ledger",
       "reconciliation",
       "finance_reports",
       "audit_references",
+      "saas_financial_reference_authentication",
+      "trusted_financial_tenant_context",
     ],
     forbiddenOutsideWlt: [
       "wallet_balance_mutation",
@@ -83,6 +95,9 @@ export const wltServiceManifest = {
       "ledger_entry_mutation",
       "payout_decision_mutation",
       "commission_finalization",
+      "collection_custody_mutation",
+      "unauthenticated_financial_reference_read",
+      "client_asserted_financial_tenant_ownership",
     ],
     allowedForDsh: [
       "wlt_reference",
@@ -90,6 +105,8 @@ export const wltServiceManifest = {
       "payment_status_reference",
       "settlement_status_reference",
       "refund_status_reference",
+      "delivery_collection_reference",
+      "trusted_tenant_scoped_reference_read",
     ],
   },
 } as const;

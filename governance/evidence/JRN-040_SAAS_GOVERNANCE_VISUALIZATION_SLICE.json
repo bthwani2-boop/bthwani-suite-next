@@ -1,0 +1,51 @@
+{
+  "journeyId": "JRN-040",
+  "sliceId": "JRN-040-SAAS-VISUAL-READ-MODEL",
+  "title": "Tenant-bound SaaS governance visualization for platform change sets",
+  "targetRef": "lianbassam",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "pinnedStartHead": "1c08c805c1b07ee4f205170087be190c3967be12",
+  "implementationCommits": [
+    "44851f9f520f7fcd07dc6a3b16e9402ffb2dd0f4",
+    "faa9fbd83d9f34c34fe88e0c1c433490f2d77b44",
+    "5de686576b1c9b1da1dcbee07b42580e2d0225d2",
+    "60566c4cd81d9dcc2c6dd5d0971b06058ef25f4e",
+    "44b62a57a581b0447e7659633eb2e5659286c94f"
+  ],
+  "implemented": [
+    "The sovereign platform route renders an explicit JRN-040 governance visualization before the detailed platform dashboard.",
+    "The visualization reads the authenticated ActorIdentity tenantId and never hardcodes a tenant selector or X-Tenant-ID override.",
+    "Lifecycle metrics are derived from the live typed platform-control change-set controller rather than fixtures or local arrays.",
+    "The complete governed lifecycle is visualized: draft, validated, submitted, approved, applied and rolled_back.",
+    "Loading, permission-denied, error, retry, refresh and empty/live-zero states are represented without demo fallbacks.",
+    "The focused JRN-040 TypeScript configuration includes the new component.",
+    "A permanent Node source-contract test verifies tenant binding, typed API use, lifecycle coverage and absence of direct fetch or bypass mutations."
+  ],
+  "files": [
+    "services/dsh/frontend/control-panel/platform/PlatformGovernanceVisual.tsx",
+    "services/dsh/frontend/control-panel/platform/index.ts",
+    "apps/control-panel/runtime/src/app/dsh/platform/page.tsx",
+    "services/dsh/tests/jrn-040-saas-governance-visualization.test.mjs",
+    "services/dsh/tsconfig.jrn-040.json"
+  ],
+  "verificationCommands": [
+    "node --test services/dsh/tests/jrn-040-saas-governance-visualization.test.mjs",
+    "pnpm exec tsc -p services/dsh/tsconfig.jrn-040.json --noEmit",
+    "pnpm --dir apps/control-panel/runtime typecheck"
+  ],
+  "remoteVerification": {
+    "sourceReadback": "PASS",
+    "branchContainsImplementation": true,
+    "combinedCommitStatusesAtImplementationHead": [],
+    "pullRequestWorkflowRunsAtImplementationHead": [],
+    "ciExecutionState": "NOT_STARTED_NO_PR_OR_MATCHING_PUSH_RUN",
+    "runtimeScreenshotState": "PENDING_INDEPENDENT_RUNTIME_CAPTURE"
+  },
+  "closure": {
+    "codeSliceStatus": "IMPLEMENTED_REMOTE",
+    "independentApprovalIssued": false,
+    "productionDeploymentPerformed": false,
+    "mergePerformed": false,
+    "remainingCodeGapsForThisSlice": []
+  }
+}

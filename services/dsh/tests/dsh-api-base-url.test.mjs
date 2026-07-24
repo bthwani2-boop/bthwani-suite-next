@@ -41,6 +41,10 @@ describe("validateDshApiBaseUrl — rejects old ports on localhost", () => {
   test("rejects IPv6 localhost old port", () => {
     assert.equal(validateDshApiBaseUrl("http://[::1]:8084"), false);
   });
+
+  test("still rejects old device port when adb reverse is declared", () => {
+    assert.equal(validateDshApiBaseUrl("http://127.0.0.1:8080", true, true), false);
+  });
 });
 
 describe("validateDshApiBaseUrl — accepts canonical DSH port", () => {
@@ -62,6 +66,24 @@ describe("validateDshApiBaseUrl — accepts canonical DSH port", () => {
 
   test("accepts IPv6 localhost canonical port", () => {
     assert.equal(validateDshApiBaseUrl("http://[::1]:58080"), true);
+  });
+});
+
+describe("validateDshApiBaseUrl — native Android transport", () => {
+  test("rejects physical-device loopback without an explicit bridge", () => {
+    assert.equal(validateDshApiBaseUrl("http://127.0.0.1:58080", true, false), false);
+  });
+
+  test("accepts physical-device loopback after adb reverse is verified", () => {
+    assert.equal(validateDshApiBaseUrl("http://127.0.0.1:58080", true, true), true);
+  });
+
+  test("accepts the Android emulator host bridge", () => {
+    assert.equal(validateDshApiBaseUrl("http://10.0.2.2:58080", true, false), true);
+  });
+
+  test("accepts a non-local production endpoint on a device", () => {
+    assert.equal(validateDshApiBaseUrl("https://api.example.com", true, false), true);
   });
 });
 

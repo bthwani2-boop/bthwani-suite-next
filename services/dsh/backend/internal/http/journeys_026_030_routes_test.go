@@ -6,7 +6,7 @@ import (
 )
 
 func TestJourneys026To030ExposeGovernedRoutes(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil)
+	router := NewRouter(nil, nil, nil, nil, nil)
 	RegisterPartnerFleetMembershipRoutes(router, nil, nil, nil, nil)
 	RegisterPartnerFleetOperatorRoutes(router, nil, nil, nil, nil)
 

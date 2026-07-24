@@ -1,0 +1,10 @@
+[
+  {
+    "name": "control-panel browser JavaScript",
+    "path": "apps/control-panel/runtime/.next/static/chunks/**/*.js",
+    "ignore": [
+      "apps/control-panel/runtime/.next/static/chunks/**/*.map"
+    ],
+    "limit": "5 MB"
+  }
+]

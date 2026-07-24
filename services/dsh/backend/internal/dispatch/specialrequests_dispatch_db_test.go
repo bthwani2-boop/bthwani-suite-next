@@ -392,7 +392,8 @@ func TestSpecialRequestAssignmentAcceptDeclineDBIntegration(t *testing.T) {
 // delivery sub-states forward to arrived_customer, the precondition SubmitPoD
 // requires. None of these intermediate delivery sub-states change the special
 // request's status (it stays in_progress throughout, per dispatch.go's
-// updateDeliveryProgress comment).
+// updateDeliveryProgress comment). It also registers the two governed media
+// references used by the completion subtests for this captain.
 func driveDeliveryToArrivedCustomer(t *testing.T, db *sql.DB, assignmentID, captainID string) {
 	t.Helper()
 	if _, err := AcceptAssignment(db, assignmentID, captainID); err != nil {
@@ -403,6 +404,8 @@ func driveDeliveryToArrivedCustomer(t *testing.T, db *sql.DB, assignmentID, capt
 			t.Fatalf("UpdateDeliveryStatus(%s) failed: %v", status, err)
 		}
 	}
+	seedCaptainDeliveryProofMedia(t, db, captainID, "sr-pod-ref", "", "")
+	seedCaptainDeliveryProofMedia(t, db, captainID, "sr-pod-outbox-guard", "", "")
 }
 
 func TestSpecialRequestSubmitPoDDBIntegration(t *testing.T) {

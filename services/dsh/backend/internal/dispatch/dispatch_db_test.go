@@ -112,11 +112,6 @@ func seedArrivedCustomerFixture(t *testing.T, db *sql.DB, paymentMethod string) 
 		t.Fatalf("failed to insert test delivery: %v", err)
 	}
 
-	// Cleanup must run child-to-parent: dsh_orders cascades to its
-	// assignments/deliveries/items/status-events, but dsh_stores and
-	// dsh_partners have no ON DELETE CASCADE from orders/checkout-intents/
-	// carts, so deleting the store first would silently fail (leaking rows)
-	// unless everything referencing it is gone first.
 	t.Cleanup(func() {
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_orders WHERE id = $1::uuid`, orderID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_checkout_intents WHERE id = $1::uuid`, checkoutIntentID)
@@ -128,15 +123,11 @@ func seedArrivedCustomerFixture(t *testing.T, db *sql.DB, paymentMethod string) 
 	return assignmentID, captainID, orderID, checkoutIntentID, partnerID
 }
 
-// TestSubmitPoDEnqueuesWltOutboxEventForCodOrderDBIntegration is the
-// end-to-end proof for the P0 fix: a captain's proof-of-delivery submission
-// for a COD order must durably record a WLT notification, in the same
-// transaction as the delivery confirmation, instead of the old fire-and-
-// forget goroutine that could silently drop the event if WLT was down.
 func TestSubmitPoDEnqueuesWltOutboxEventForCodOrderDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	assignmentID, captainID, orderID, checkoutIntentID, partnerID := seedArrivedCustomerFixture(t, db, "cod")
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_wlt_outbox_events WHERE order_id = $1::uuid`, orderID) })
+	seedCaptainDeliveryProofMedia(t, db, captainID, "ref-123", partnerID, "")
 
 	assignment, err := SubmitPoD(db, assignmentID, captainID, PoDInput{Method: "photo", Reference: "ref-123"})
 	if err != nil {
@@ -146,9 +137,7 @@ func TestSubmitPoDEnqueuesWltOutboxEventForCodOrderDBIntegration(t *testing.T) {
 		t.Fatalf("expected assignment order id %s, got %s", orderID, assignment.OrderID)
 	}
 
-	var (
-		gotCaptainID, gotPartnerID, gotCheckoutIntentID, status string
-	)
+	var gotCaptainID, gotPartnerID, gotCheckoutIntentID, status string
 	err = db.QueryRow(`
 		SELECT captain_id, partner_id, checkout_intent_id::text, status
 		FROM dsh_wlt_outbox_events WHERE order_id = $1::uuid AND event_type = 'delivery_completed'`,
@@ -166,13 +155,11 @@ func TestSubmitPoDEnqueuesWltOutboxEventForCodOrderDBIntegration(t *testing.T) {
 	}
 }
 
-// TestSubmitPoDDoesNotEnqueueOutboxForNonCodOrderDBIntegration proves prepaid
-// orders (WLT already has the funds via its own payment session) don't get a
-// spurious delivery-completed notification.
 func TestSubmitPoDDoesNotEnqueueOutboxForNonCodOrderDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
-	assignmentID, captainID, orderID, _, _ := seedArrivedCustomerFixture(t, db, "wallet")
+	assignmentID, captainID, orderID, _, partnerID := seedArrivedCustomerFixture(t, db, "wallet")
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_wlt_outbox_events WHERE order_id = $1::uuid`, orderID) })
+	seedCaptainDeliveryProofMedia(t, db, captainID, "ref-456", partnerID, "")
 
 	if _, err := SubmitPoD(db, assignmentID, captainID, PoDInput{Method: "photo", Reference: "ref-456"}); err != nil {
 		t.Fatalf("SubmitPoD failed: %v", err)

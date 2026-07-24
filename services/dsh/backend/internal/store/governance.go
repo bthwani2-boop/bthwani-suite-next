@@ -87,20 +87,23 @@ type OperatorGovernanceInput struct {
 }
 
 func ResolveActorStore(ctx context.Context, db *sql.DB, actor StoreActor) (*DshStoreRow, StoreScope, error) {
+	if strings.TrimSpace(actor.TenantID) == "" {
+		return nil, StoreScope{}, ErrScopedStoreNotFound
+	}
 	var scope StoreScope
 	err := db.QueryRowContext(ctx, `
 		SELECT store_id, scope_type
 		FROM dsh_store_actor_scopes
-		WHERE actor_id = $1 AND actor_role = $2 AND active = true
+		WHERE actor_id = $1 AND actor_role = $2 AND tenant_id = $3 AND active = true
 		ORDER BY created_at ASC
-		LIMIT 1`, actor.ID, actor.Role).Scan(&scope.StoreID, &scope.Type)
+		LIMIT 1`, actor.ID, actor.Role, actor.TenantID).Scan(&scope.StoreID, &scope.Type)
 	if err == sql.ErrNoRows {
 		return nil, StoreScope{}, ErrScopedStoreNotFound
 	}
 	if err != nil {
 		return nil, StoreScope{}, err
 	}
-	row, err := getStoreByIDContext(ctx, db, scope.StoreID)
+	row, err := GetStoreByIDInternalForTenant(ctx, db, actor.TenantID, scope.StoreID)
 	return row, scope, err
 }
 
@@ -110,6 +113,9 @@ func ResolveActorStore(ctx context.Context, db *sql.DB, actor StoreActor) (*DshS
 // (e.g. field agents with several assigned stores) disambiguate which store
 // they mean instead of always landing on the oldest scope row.
 func ResolveActorStoreForID(ctx context.Context, db *sql.DB, actor StoreActor, storeID string) (*DshStoreRow, StoreScope, error) {
+	if strings.TrimSpace(actor.TenantID) == "" {
+		return nil, StoreScope{}, ErrScopedStoreNotFound
+	}
 	if storeID == "" {
 		return ResolveActorStore(ctx, db, actor)
 	}
@@ -117,15 +123,15 @@ func ResolveActorStoreForID(ctx context.Context, db *sql.DB, actor StoreActor, s
 	err := db.QueryRowContext(ctx, `
 		SELECT store_id, scope_type
 		FROM dsh_store_actor_scopes
-		WHERE actor_id = $1 AND actor_role = $2 AND store_id = $3 AND active = true`,
-		actor.ID, actor.Role, storeID).Scan(&scope.StoreID, &scope.Type)
+		WHERE actor_id = $1 AND actor_role = $2 AND store_id = $3 AND tenant_id = $4 AND active = true`,
+		actor.ID, actor.Role, storeID, actor.TenantID).Scan(&scope.StoreID, &scope.Type)
 	if err == sql.ErrNoRows {
 		return nil, StoreScope{}, ErrScopedStoreNotFound
 	}
 	if err != nil {
 		return nil, StoreScope{}, err
 	}
-	row, err := getStoreByIDContext(ctx, db, scope.StoreID)
+	row, err := GetStoreByIDInternalForTenant(ctx, db, actor.TenantID, scope.StoreID)
 	return row, scope, err
 }
 
@@ -134,15 +140,22 @@ func GetStoreByIDInternal(ctx context.Context, db *sql.DB, storeID string) (*Dsh
 }
 
 func ActorCanAccessStore(ctx context.Context, db queryer, actor StoreActor, storeID string) (bool, error) {
-	if actor.Role == "operator" {
-		return true, nil
+	if strings.TrimSpace(actor.TenantID) == "" {
+		return false, nil
 	}
 	var exists bool
+	if actor.Role == "operator" || strings.HasPrefix(actor.Role, "permission:") {
+		err := db.QueryRowContext(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM dsh_stores WHERE id = $1 AND tenant_id = $2
+			)`, storeID, actor.TenantID).Scan(&exists)
+		return exists, err
+	}
 	err := db.QueryRowContext(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM dsh_store_actor_scopes
-			WHERE actor_id = $1 AND actor_role = $2 AND store_id = $3 AND active = true
-		)`, actor.ID, actor.Role, storeID).Scan(&exists)
+			WHERE actor_id = $1 AND actor_role = $2 AND store_id = $3 AND tenant_id = $4 AND active = true
+		)`, actor.ID, actor.Role, storeID, actor.TenantID).Scan(&exists)
 	return exists, err
 }
 

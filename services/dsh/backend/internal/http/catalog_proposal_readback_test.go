@@ -9,7 +9,7 @@ import (
 func TestCatalogProposalReadbackRoutesAreRegistered(t *testing.T) {
 	t.Parallel()
 
-	mux := NewRouter(nil, nil, nil, nil)
+	mux := NewRouter(nil, nil, nil, nil, nil)
 	cases := []struct {
 		name    string
 		method  string

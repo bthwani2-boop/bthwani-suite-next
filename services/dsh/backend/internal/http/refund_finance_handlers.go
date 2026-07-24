@@ -102,7 +102,7 @@ func (s *protectedStoreServer) handleCreateFinanceRefund(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r)
+	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
 	if !ok {
 		return
 	}
@@ -137,7 +137,7 @@ func (s *protectedStoreServer) refundDecisionCommand(w http.ResponseWriter, r *h
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r)
+	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
 	if !ok {
 		return
 	}
@@ -177,7 +177,7 @@ func (s *protectedStoreServer) handleCompleteFinanceRefund(w http.ResponseWriter
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r)
+	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
 	if !ok {
 		return
 	}
@@ -197,7 +197,7 @@ func (s *protectedStoreServer) handleReconcileFinanceRefund(w http.ResponseWrite
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r)
+	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
 	if !ok {
 		return
 	}
@@ -230,10 +230,11 @@ func (s *protectedStoreServer) handleReconcileFinanceRefund(w http.ResponseWrite
 }
 
 func (s *protectedStoreServer) handleFinanceRefundAudit(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator"); !ok {
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
+	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r)
+	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
 	if !ok {
 		return
 	}

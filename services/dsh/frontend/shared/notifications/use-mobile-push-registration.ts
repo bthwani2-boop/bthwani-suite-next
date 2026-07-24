@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { Linking, Platform } from "react-native";
+import Constants from "expo-constants";
+import * as Crypto from "expo-crypto";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import { registerIdentityBeforeSessionEndHook } from "@bthwani/core-identity";
@@ -11,6 +13,28 @@ import {
 const PUSH_DEVICE_KEY_PREFIX = "bthwani-dsh-push-device";
 
 type DshMobileAppKey = "app-client" | "app-partner" | "app-captain" | "app-field";
+
+type MobileExpoExtra = {
+  readonly notifications?: {
+    readonly androidNativeConfigured?: unknown;
+  };
+};
+
+type RemovableSubscription = { remove(): void };
+type NotificationsCompatibility = {
+  readonly addNotificationResponseReceivedListener?: (
+    listener: (response: Notifications.NotificationResponse) => void,
+  ) => RemovableSubscription;
+  readonly getLastNotificationResponseAsync?: () => Promise<Notifications.NotificationResponse | null>;
+  readonly clearLastNotificationResponseAsync?: () => Promise<void>;
+  readonly addPushTokenListener?: (listener: () => void) => RemovableSubscription;
+};
+type CryptoCompatibility = {
+  readonly randomUUID?: () => string;
+};
+
+const notificationCompatibility = Notifications as unknown as NotificationsCompatibility;
+const cryptoCompatibility = Crypto as unknown as CryptoCompatibility;
 
 if (Platform.OS !== "web") {
   Notifications.setNotificationHandler({
@@ -51,12 +75,24 @@ async function ensureNotificationPermission(): Promise<boolean> {
   return notificationPermissionGranted(requested);
 }
 
+function androidNativePushConfigured(): boolean {
+  const extra = Constants.expoConfig?.extra as MobileExpoExtra | undefined;
+  return extra?.notifications?.androidNativeConfigured === true;
+}
+
+function createPushDeviceId(appKey: string): string {
+  const unique = typeof cryptoCompatibility.randomUUID === "function"
+    ? cryptoCompatibility.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  return `${appKey}-${unique}`;
+}
+
 async function resolvePushDeviceId(appKey: string): Promise<string> {
-  const storageKey = `${PUSH_DEVICE_KEY_PREFIX}:${appKey}`;
+  const storageKey = `${PUSH_DEVICE_KEY_PREFIX}-${appKey}`;
   const existing = await SecureStore.getItemAsync(storageKey);
   if (existing) return existing;
 
-  const generated = `${appKey}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
+  const generated = createPushDeviceId(appKey);
   await SecureStore.setItemAsync(storageKey, generated);
   return generated;
 }
@@ -64,7 +100,7 @@ async function resolvePushDeviceId(appKey: string): Promise<string> {
 function resolveSafeActionUrl(actionUrl: string, appScheme: string): string | null {
   const value = actionUrl.trim();
   if (!value) return null;
-  if (value.startsWith("https://") || value.startsWith("http://")) return value;
+  if (value.startsWith("https://")) return value;
   if (value.startsWith(`${appScheme}://`)) return value;
   if (value.includes(":")) return null;
   return `${appScheme}://${value.replace(/^\/+/, "")}`;
@@ -82,6 +118,11 @@ async function openNotificationAction(
   await Linking.openURL(safeUrl);
 }
 
+function resolveExpoProjectId(): string | undefined {
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+  return typeof projectId === "string" ? projectId : undefined;
+}
+
 export function useDshMobilePushRegistration(
   authKind: string,
   appKey: DshMobileAppKey,
@@ -89,51 +130,82 @@ export function useDshMobilePushRegistration(
 ): void {
   useEffect(() => {
     if (authKind !== "authenticated" || Platform.OS === "web") return undefined;
+    if (Platform.OS === "android" && !androidNativePushConfigured()) return undefined;
 
     let active = true;
+    let deviceId: string | undefined;
     let unregisterSessionEndHook: (() => void) | undefined;
+    let tokenSubscription: RemovableSubscription | undefined;
+    let responseSubscription: RemovableSubscription | undefined;
 
-    const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      void openNotificationAction(response, appScheme);
-    });
+    const addResponseListener = notificationCompatibility.addNotificationResponseReceivedListener;
+    if (typeof addResponseListener === "function") {
+      responseSubscription = addResponseListener((response) => {
+        void openNotificationAction(response, appScheme);
+      });
+    }
 
-    void Notifications.getLastNotificationResponseAsync().then(async (response) => {
-      if (!active || response === null) return;
-      await openNotificationAction(response, appScheme);
-      await Notifications.clearLastNotificationResponseAsync();
-    });
+    const getLastResponse = notificationCompatibility.getLastNotificationResponseAsync;
+    if (typeof getLastResponse === "function") {
+      void getLastResponse().then(async (response) => {
+        if (!active || response === null) return;
+        await openNotificationAction(response, appScheme);
+        const clearLastResponse = notificationCompatibility.clearLastNotificationResponseAsync;
+        if (typeof clearLastResponse === "function") await clearLastResponse();
+      }).catch((error) => console.warn(`[${appKey}] notification response handling failed`, error));
+    }
 
     void (async () => {
       try {
         const permissionGranted = await ensureNotificationPermission();
         if (!permissionGranted || !active) return;
 
-        const token = (await Notifications.getExpoPushTokenAsync()).data;
-        const deviceId = await resolvePushDeviceId(appKey);
+        const projectId = resolveExpoProjectId();
+        const readExpoToken = async (): Promise<string> => (
+          await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined)
+        ).data;
+
+        deviceId = await resolvePushDeviceId(appKey);
         if (!active) return;
 
-        await upsertNotificationPushEndpoint({
-          provider: "expo",
-          endpointToken: token,
-          deviceId,
-          platform: Platform.OS === "ios" ? "ios" : "android",
-        });
+        const registerToken = async (endpointToken: string): Promise<void> => {
+          if (!active || !deviceId) return;
+          await upsertNotificationPushEndpoint({
+            provider: "expo",
+            endpointToken,
+            deviceId,
+            platform: Platform.OS === "ios" ? "ios" : "android",
+          });
+        };
+
+        await registerToken(await readExpoToken());
         if (!active) return;
+
+        const addPushTokenListener = notificationCompatibility.addPushTokenListener;
+        if (typeof addPushTokenListener === "function") {
+          tokenSubscription = addPushTokenListener(() => {
+            void readExpoToken()
+              .then(registerToken)
+              .catch((error) => console.warn(`[${appKey}] push token rotation failed`, error));
+          });
+        }
 
         unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(async () => {
-          await deactivateNotificationPushEndpoint(deviceId).catch(() => undefined);
+          if (deviceId) await deactivateNotificationPushEndpoint(deviceId).catch(() => undefined);
         });
       } catch (error) {
-        // Registration is retried when the authenticated app root mounts again;
-        // notification inbox remains available even when push registration fails.
-        console.warn(`[${appKey}] push registration failed`, error);
+        console.warn(
+          `[${appKey}] push registration failed; rebuild the development client after configuring GOOGLE_SERVICES_JSON`,
+          error,
+        );
       }
     })();
 
     return () => {
       active = false;
       unregisterSessionEndHook?.();
-      responseSubscription.remove();
+      tokenSubscription?.remove();
+      responseSubscription?.remove();
     };
   }, [appKey, appScheme, authKind]);
 }

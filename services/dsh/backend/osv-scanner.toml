@@ -1,0 +1,4 @@
+[[IgnoredVulns]]
+id = "GO-2026-5932"
+ignoreUntil = 2026-10-31
+reason = "The advisory is scoped to golang.org/x/crypto/openpgp. This module imports only golang.org/x/crypto/bcrypt; no openpgp package is imported, and govulncheck symbol analysis is required to pass. Review before expiry."

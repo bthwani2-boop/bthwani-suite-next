@@ -16,6 +16,7 @@ security:
 paths:
   /dsh/partner/order-workboard:
     get:
+      tags: ["dsh-partner"]
       operationId: getDshPartnerOrderWorkboard
       summary: Return the authenticated partner order workboard and executable actions.
       parameters:
@@ -26,6 +27,7 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/operator/order-workboard:
     get:
+      tags: ["dsh-operator"]
       operationId: getDshOperatorOrderWorkboard
       summary: Return the governed cross-store operator order workboard.
       parameters:

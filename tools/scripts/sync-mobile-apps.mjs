@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -50,6 +51,37 @@ function assertSame(file, expected) {
 function isUuid(value) {
   return typeof value === "string" &&
     /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value);
+}
+
+function runPnpm(args, cwd = root) {
+  const pnpmCli = process.env.npm_execpath;
+  if (!pnpmCli) throw new Error("npm_execpath is unavailable; run through pnpm");
+  const result = spawnSync(process.execPath, [pnpmCli, ...args], {
+    cwd,
+    stdio: "inherit",
+    shell: false,
+    windowsHide: true,
+    env: {
+      ...process.env,
+      CI: "1",
+      EXPO_NO_TELEMETRY: "1",
+      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
+    },
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status ?? 1);
+}
+
+function runNode(args) {
+  const result = spawnSync(process.execPath, args, {
+    cwd: root,
+    stdio: "inherit",
+    shell: false,
+    windowsHide: true,
+    env: { ...process.env, CI: "1", EXPO_NO_TELEMETRY: "1" },
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
 const manifest = readJson("tools/mobile/mobile-apps.manifest.json");
@@ -120,6 +152,19 @@ assertSame("tools/mobile/defineBthwaniExpoApp.d.ts", factoryDtsContent());
 for (const key of appKeys) {
   assertSame(`${appDir(key)}/app.config.ts`, appConfig(key));
   assertSame(`${appDir(key)}/eas.json`, JSON.stringify(easTemplate, null, 2) + "\n");
+}
+
+const lifecycle = process.env.npm_lifecycle_event ?? "";
+if (lifecycle === "mobile:eas:preflight" || lifecycle === "mobile:eas:preflight:android") {
+  const platform = process.env.MOBILE_PREFLIGHT_PLATFORM || "android";
+  for (const key of appKeys) {
+    const cwd = abs(appDir(key));
+    runPnpm(["dlx", "expo-doctor@latest"], cwd);
+    const outputDir = abs(`.tmp/eas-preflight/${key}/${platform}`);
+    fs.rmSync(outputDir, { recursive: true, force: true });
+    runPnpm(["exec", "expo", "export", "--platform", platform, "--output-dir", outputDir], cwd);
+  }
+  runNode(["tools/scripts/verify-mobile-prebuild.mjs", "--platform", platform]);
 }
 
 console.log("PASS: mobile generated contracts are synchronized");

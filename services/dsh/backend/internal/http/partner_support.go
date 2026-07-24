@@ -112,14 +112,14 @@ func (s *protectedStoreServer) handleListPartnerSupportMessages(w http.ResponseW
 	if !ok {
 		return
 	}
-	messages, err := support.ListPartnerMessages(s.db, actor.ID, r.PathValue("ticketId"))
+	messages, err := support.ListActorRichMessages(s.db, actor.ID, support.RolePartner, r.PathValue("ticketId"))
 	if err != nil {
 		sendPartnerSupportError(w, err, "failed to list partner support messages")
 		return
 	}
 	result := make([]map[string]any, 0, len(messages))
 	for _, message := range messages {
-		result = append(result, marshalMessage(message))
+		result = append(result, marshalRichMessage(message))
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"messages": result})
 }
@@ -134,22 +134,17 @@ func (s *protectedStoreServer) handleAddPartnerSupportMessage(w http.ResponseWri
 	if !ok {
 		return
 	}
-	var body struct {
-		Body string `json:"body"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
+	input, ok := decodeRichSupportMessageRequest(w, r, false)
+	if !ok {
 		return
 	}
-	message, err := support.AddPartnerMessage(s.db, support.PartnerAddMessageInput{
-		ActorID:        actor.ID,
-		TicketID:       r.PathValue("ticketId"),
-		Body:           body.Body,
-		IdempotencyKey: idempotencyKey,
-		CorrelationID:  correlationID,
-	})
+	input.TicketID = r.PathValue("ticketId")
+	input.IdempotencyKey = idempotencyKey
+	input.CorrelationID = correlationID
+	message, err := support.AddActorRichMessage(s.db, actor.ID, support.RolePartner, input)
 	if err != nil {
 		sendPartnerSupportError(w, err, "failed to add partner support message")
 		return
 	}
-	store.SendJSON(w, http.StatusCreated, map[string]any{"message": marshalMessage(message)})
+	store.SendJSON(w, http.StatusCreated, map[string]any{"message": marshalRichMessage(message)})
 }
