@@ -1,5 +1,5 @@
 -- LEGACY_FILENAME_ONLY — not a slice reference
--- Partner Onboarding & Store Publication local seed.
+-- DSH partner onboarding and store publication local seed.
 -- The audit trail below follows the backend state machine exactly.
 
 INSERT INTO dsh_partners (
@@ -58,13 +58,18 @@ INSERT INTO dsh_partners (
     version = EXCLUDED.version,
     updated_at = EXCLUDED.updated_at;
 
+-- This legal partner owns only the canonical Haddah grocery fixture. Other
+-- local stores are assigned to their independent partners by dsh-958. Keeping
+-- this update scoped makes the full seed set idempotent and prevents an older
+-- seed from silently undoing governed ownership transfers on a second run.
 UPDATE dsh_stores
 SET partner_id = 'prt_partner_local_001',
     partner_readiness = 'ready',
     catalog_approval_status = 'approved',
     marketing_visibility = 'visible',
     updated_at = now()
-WHERE id IN ('store-test-grocery', 'store-1002', 'store-1003', 'store-1005', 'store-1006', 'store-test-electronics');
+WHERE id = 'store-test-grocery'
+  AND tenant_id = 'local-dsh';
 
 INSERT INTO dsh_partner_documents (
     id,
