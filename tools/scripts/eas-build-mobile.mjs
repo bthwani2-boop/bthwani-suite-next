@@ -108,6 +108,7 @@ function requireNativeProviderInputs(appKey, app, environment) {
 console.log("=== PHASE 1: Comprehensive Preflight ===");
 
 run(process.execPath, ["tools/scripts/sync-mobile-apps.mjs", "--check"]);
+run(process.execPath, ["tools/scripts/guard-mobile-expo-sdk56-versions.mjs"]);
 
 if (all && profile !== "development") {
   const projects = new Map();
