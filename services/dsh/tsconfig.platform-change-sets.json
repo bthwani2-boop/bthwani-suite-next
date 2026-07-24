@@ -17,6 +17,7 @@
       "@bthwani/control-panel/shell": ["apps/control-panel/runtime/src/shell/index.ts"],
       "@bthwani/core-platform-control": ["core/platform-control/clients/generated/platform-control-api.ts"],
       "@bthwani/core-platform-control/*": ["core/platform-control/*"],
+      "@bthwani/core-providers": ["core/providers/clients/generated/providers-api.ts"],
       "@dsh-cp/*": ["services/dsh/frontend/control-panel/*"],
       "@dsh-shared/*": ["services/dsh/frontend/shared/*"],
       "react-native": ["apps/app-client/runtime/node_modules/react-native"]
