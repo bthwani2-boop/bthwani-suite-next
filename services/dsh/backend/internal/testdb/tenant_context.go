@@ -32,6 +32,9 @@ func ConfigureTrustedTenantContext() {
 	if !tenantIDPattern.MatchString(tenantID) {
 		panic(fmt.Sprintf("invalid DSH_TEST_TENANT_ID %q", tenantID))
 	}
+	if err := os.Setenv("DSH_TEST_TENANT_ID", tenantID); err != nil {
+		panic(fmt.Sprintf("publish DSH test tenant context: %v", err))
+	}
 
 	option := "-c bthwani.tenant_id=" + tenantID
 	existing := strings.TrimSpace(os.Getenv("PGOPTIONS"))
