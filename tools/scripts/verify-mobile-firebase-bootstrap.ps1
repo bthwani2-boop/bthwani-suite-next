@@ -24,6 +24,7 @@ Set-Location $RepoRoot
 
 $results = [System.Collections.Generic.List[object]]::new()
 $commandCounter = 0
+$finalStatus = "FAIL"
 
 function Add-Result {
     param(
@@ -119,7 +120,7 @@ function Assert-PowerShellSyntax {
 
     if (@($errors).Count -gt 0) {
         $details = @($errors | ForEach-Object { $_.Message }) -join "; "
-        Add-Result "FAIL" "PowerShell syntax" "$Path: $details"
+        Add-Result "FAIL" "PowerShell syntax" "${Path}: $details"
         throw "PowerShell syntax failure: $Path"
     }
 
