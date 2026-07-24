@@ -113,7 +113,7 @@ jobs:
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
-      - name: Publish contextual CI run locator
+      - name: Publish contextual CI pending status
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -122,7 +122,7 @@ jobs:
           jq -n \
             --arg state pending \
             --arg context bthwani/contextual-ci \
-            --arg description "contextual CI routing and verification are running" \
+            --arg description "contextual verification is running" \
             --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             '{state:$state,context:$context,description:$description,target_url:$target_url}' > /tmp/contextual-ci-status.json
           curl --fail-with-body --retry 3 \
@@ -192,30 +192,10 @@ jobs:
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
       head_sha: ${{ needs.context.outputs.head_sha }}
-      full_verification: ${{ needs.context.outputs.full_verification }}
-      governance: ${{ needs.context.outputs.governance }}
-      workflow: ${{ needs.context.outputs.workflow }}
-      infrastructure: ${{ needs.context.outputs.infrastructure }}
-      security: ${{ needs.context.outputs.security }}
       policy: ${{ needs.context.outputs.policy }}
-      frontend: ${{ needs.context.outputs.frontend }}
-      contracts: ${{ needs.context.outputs.contracts }}
-      journey: ${{ needs.context.outputs.journey }}
-      journey_scope: ${{ needs.context.outputs.journey_scope }}
-      node: ${{ needs.context.outputs.node }}
-      node_scope: ${{ needs.context.outputs.node_scope }}
-      dsh: ${{ needs.context.outputs.dsh }}
-      wlt: ${{ needs.context.outputs.wlt }}
-      identity: ${{ needs.context.outputs.identity }}
-      workforce: ${{ needs.context.outputs.workforce }}
-      platform: ${{ needs.context.outputs.platform }}
-      providers: ${{ needs.context.outputs.providers }}
-      database: ${{ needs.context.outputs.database }}
-      runtime: ${{ needs.context.outputs.runtime }}
-      shared_brain: ${{ needs.context.outputs.shared_brain }}
-      heavy: ${{ needs.context.outputs.heavy }}
-      platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}
-      runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
+      workflow: ${{ needs.context.outputs.workflow }}
+      security: ${{ needs.context.outputs.security }}
+      infrastructure: ${{ needs.context.outputs.infrastructure }}
 
   node_diagnostics_bundle:
     needs: [context]
@@ -224,29 +204,9 @@ jobs:
       base_sha: ${{ needs.context.outputs.base_sha }}
       head_sha: ${{ needs.context.outputs.head_sha }}
       full_verification: ${{ needs.context.outputs.full_verification }}
-      governance: ${{ needs.context.outputs.governance }}
-      workflow: ${{ needs.context.outputs.workflow }}
-      infrastructure: ${{ needs.context.outputs.infrastructure }}
-      security: ${{ needs.context.outputs.security }}
-      policy: ${{ needs.context.outputs.policy }}
       frontend: ${{ needs.context.outputs.frontend }}
       contracts: ${{ needs.context.outputs.contracts }}
-      journey: ${{ needs.context.outputs.journey }}
-      journey_scope: ${{ needs.context.outputs.journey_scope }}
       node: ${{ needs.context.outputs.node }}
-      node_scope: ${{ needs.context.outputs.node_scope }}
-      dsh: ${{ needs.context.outputs.dsh }}
-      wlt: ${{ needs.context.outputs.wlt }}
-      identity: ${{ needs.context.outputs.identity }}
-      workforce: ${{ needs.context.outputs.workforce }}
-      platform: ${{ needs.context.outputs.platform }}
-      providers: ${{ needs.context.outputs.providers }}
-      database: ${{ needs.context.outputs.database }}
-      runtime: ${{ needs.context.outputs.runtime }}
-      shared_brain: ${{ needs.context.outputs.shared_brain }}
-      heavy: ${{ needs.context.outputs.heavy }}
-      platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}
-      runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
 
   node_verification_bundle:
     needs: [context]
@@ -255,90 +215,28 @@ jobs:
       base_sha: ${{ needs.context.outputs.base_sha }}
       head_sha: ${{ needs.context.outputs.head_sha }}
       full_verification: ${{ needs.context.outputs.full_verification }}
-      governance: ${{ needs.context.outputs.governance }}
-      workflow: ${{ needs.context.outputs.workflow }}
-      infrastructure: ${{ needs.context.outputs.infrastructure }}
-      security: ${{ needs.context.outputs.security }}
-      policy: ${{ needs.context.outputs.policy }}
       frontend: ${{ needs.context.outputs.frontend }}
-      contracts: ${{ needs.context.outputs.contracts }}
+      heavy: ${{ needs.context.outputs.heavy }}
       journey: ${{ needs.context.outputs.journey }}
       journey_scope: ${{ needs.context.outputs.journey_scope }}
-      node: ${{ needs.context.outputs.node }}
-      node_scope: ${{ needs.context.outputs.node_scope }}
-      dsh: ${{ needs.context.outputs.dsh }}
-      wlt: ${{ needs.context.outputs.wlt }}
-      identity: ${{ needs.context.outputs.identity }}
-      workforce: ${{ needs.context.outputs.workforce }}
-      platform: ${{ needs.context.outputs.platform }}
-      providers: ${{ needs.context.outputs.providers }}
-      database: ${{ needs.context.outputs.database }}
-      runtime: ${{ needs.context.outputs.runtime }}
-      shared_brain: ${{ needs.context.outputs.shared_brain }}
-      heavy: ${{ needs.context.outputs.heavy }}
       platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}
-      runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
 
   backends_bundle:
     needs: [context]
     uses: ./.github/workflows/reusable/backends.yml
     with:
-      base_sha: ${{ needs.context.outputs.base_sha }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
-      full_verification: ${{ needs.context.outputs.full_verification }}
-      governance: ${{ needs.context.outputs.governance }}
-      workflow: ${{ needs.context.outputs.workflow }}
-      infrastructure: ${{ needs.context.outputs.infrastructure }}
-      security: ${{ needs.context.outputs.security }}
-      policy: ${{ needs.context.outputs.policy }}
-      frontend: ${{ needs.context.outputs.frontend }}
-      contracts: ${{ needs.context.outputs.contracts }}
-      journey: ${{ needs.context.outputs.journey }}
-      journey_scope: ${{ needs.context.outputs.journey_scope }}
-      node: ${{ needs.context.outputs.node }}
-      node_scope: ${{ needs.context.outputs.node_scope }}
       dsh: ${{ needs.context.outputs.dsh }}
       wlt: ${{ needs.context.outputs.wlt }}
       identity: ${{ needs.context.outputs.identity }}
       workforce: ${{ needs.context.outputs.workforce }}
       platform: ${{ needs.context.outputs.platform }}
       providers: ${{ needs.context.outputs.providers }}
-      database: ${{ needs.context.outputs.database }}
-      runtime: ${{ needs.context.outputs.runtime }}
-      shared_brain: ${{ needs.context.outputs.shared_brain }}
-      heavy: ${{ needs.context.outputs.heavy }}
-      platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}
-      runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
 
   runtime_bundle:
     needs: [context]
     uses: ./.github/workflows/reusable/runtime.yml
     with:
-      base_sha: ${{ needs.context.outputs.base_sha }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
       full_verification: ${{ needs.context.outputs.full_verification }}
-      governance: ${{ needs.context.outputs.governance }}
-      workflow: ${{ needs.context.outputs.workflow }}
-      infrastructure: ${{ needs.context.outputs.infrastructure }}
-      security: ${{ needs.context.outputs.security }}
-      policy: ${{ needs.context.outputs.policy }}
-      frontend: ${{ needs.context.outputs.frontend }}
-      contracts: ${{ needs.context.outputs.contracts }}
-      journey: ${{ needs.context.outputs.journey }}
-      journey_scope: ${{ needs.context.outputs.journey_scope }}
-      node: ${{ needs.context.outputs.node }}
-      node_scope: ${{ needs.context.outputs.node_scope }}
-      dsh: ${{ needs.context.outputs.dsh }}
-      wlt: ${{ needs.context.outputs.wlt }}
-      identity: ${{ needs.context.outputs.identity }}
-      workforce: ${{ needs.context.outputs.workforce }}
-      platform: ${{ needs.context.outputs.platform }}
-      providers: ${{ needs.context.outputs.providers }}
-      database: ${{ needs.context.outputs.database }}
-      runtime: ${{ needs.context.outputs.runtime }}
-      shared_brain: ${{ needs.context.outputs.shared_brain }}
-      heavy: ${{ needs.context.outputs.heavy }}
-      platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}
       runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
 
   result:
@@ -348,12 +246,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Enforce result and publish immutable commit status
+      - name: Aggregate results and publish immutable status
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ needs.context.outputs.head_sha }}
           FULL_VERIFICATION: ${{ needs.context.outputs.full_verification }}
-          PUBLISH_STATUS: ${{ github.event_name != 'pull_request' }}
           CONTEXT_RESULT: ${{ needs.context.result }}
           POLICY_RESULT: ${{ needs.policy_bundle.result }}
           DIAGNOSTICS_RESULT: ${{ needs.node_diagnostics_bundle.result }}
@@ -362,32 +260,54 @@ jobs:
           RUNTIME_RESULT: ${{ needs.runtime_bundle.result }}
         run: |
           set -euo pipefail
-          
-          # Run the absolute compliance guardian
-          node tools/guards/workflow-compliance-gate.mjs
-          
-          # If it exits successfully, we publish the green status
+
+          head_sha="${HEAD_SHA:-${GITHUB_SHA}}"
           state=success
-          description="all required scopes passed"
-          
-          # In case of failure, node script will process.exit(1) which halts the pipeline here.
+          description="all required contextual verification bundles passed"
+          failed=()
 
-          context="bthwani/contextual-verification"
-          if [[ "${FULL_VERIFICATION}" == "true" ]]; then context="bthwani/full-verification"; fi
+          check_result() {
+            local name="$1"
+            local result="$2"
+            if [[ "${result}" != "success" ]]; then
+              failed+=("${name}=${result:-missing}")
+            fi
+          }
 
-          if [[ "${PUBLISH_STATUS}" == "true" ]]; then
-            jq -n \
-              --arg state "${state}" \
-              --arg context "${context}" \
-              --arg description "${description}" \
-              --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-              '{state:$state,context:$context,description:$description,target_url:$target_url}' > /tmp/status.json
-            curl --fail-with-body --retry 3 \
-              -X POST \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${GH_TOKEN}" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
-              --data-binary @/tmp/status.json
+          check_result context "${CONTEXT_RESULT}"
+          check_result policy "${POLICY_RESULT}"
+          check_result diagnostics "${DIAGNOSTICS_RESULT}"
+          check_result verification "${VERIFICATION_RESULT}"
+          check_result backends "${BACKENDS_RESULT}"
+          check_result runtime "${RUNTIME_RESULT}"
+
+          if (( ${#failed[@]} > 0 )); then
+            state=failure
+            description="required bundles failed: $(IFS=,; echo "${failed[*]}")"
+          elif [[ "${FULL_VERIFICATION}" == "true" ]]; then
+            description="all required full-verification bundles passed"
           fi
-          printf '%s\n' "${description}"
+
+          description="${description:0:140}"
+          jq -n \
+            --arg state "${state}" \
+            --arg context "bthwani/contextual-ci" \
+            --arg description "${description}" \
+            --arg target_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            '{state:$state,context:$context,description:$description,target_url:$target_url}' > /tmp/contextual-ci-status.json
+          curl --fail-with-body --retry 3 \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/statuses/${head_sha}" \
+            --data-binary @/tmp/contextual-ci-status.json
+
+          {
+            echo "### Final contextual verification"
+            echo "- Commit: ${head_sha}"
+            echo "- State: ${state}"
+            echo "- Result: ${description}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+          test "${state}" = success
