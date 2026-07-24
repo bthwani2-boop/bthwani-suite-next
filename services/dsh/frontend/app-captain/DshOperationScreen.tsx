@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Button, Divider, MobileScrollView, SectionHeader, StateView, Text, spacing } from '@bthwani/ui-kit';
+import { MobileWorkspaceHeader } from './components/MobileWorkspaceHeader';
 
 export type DshOperationScreenState = 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled';
 
@@ -7,6 +8,7 @@ export type DshOperationScreenProps = {
   state?: DshOperationScreenState;
   title: string;
   subtitle: string;
+  headerIcon?: string;
   content?: React.ReactNode;
   primaryActionLabel?: string | undefined;
   secondaryActionLabel?: string | undefined;
@@ -43,6 +45,7 @@ export function DshOperationScreen({
   state = 'ready',
   title,
   subtitle,
+  headerIcon = 'apps-outline',
   content,
   primaryActionLabel,
   secondaryActionLabel,
@@ -61,25 +64,37 @@ export function DshOperationScreen({
   }
 
   return (
-    <MobileScrollView padding={4} gap={3}>
-      <Box gap={2}>
-        <Text role="titleLg">{title}</Text>
-        <Text role="bodySm" tone="muted">{subtitle}</Text>
-      </Box>
-
-      {content}
-
-      {hasActions ? (
-        <Box gap={3} style={{ marginTop: spacing[3] }}>
-          <Divider />
-          <SectionHeader title="الإجراء" subtitle="زر رئيسي واحد مع مسار رجوع صغير وواضح." />
-          <Box gap={2}>
-            {primaryActionLabel ? <Button label={primaryActionLabel} onPress={onPrimaryAction} disabled={primaryActionDisabled} loading={primaryActionLoading} accessibilityLabel={`تأكيد: ${primaryActionLabel}`} /> : null}
-            {secondaryActionLabel ? <Button label={secondaryActionLabel} tone="secondary" onPress={onSecondaryAction} accessibilityLabel={`إجراء ثانوي: ${secondaryActionLabel}`} /> : null}
-            {tertiaryActionLabel ? <Button label={tertiaryActionLabel} tone="ghost" onPress={onTertiaryAction} accessibilityLabel={`رجوع: ${tertiaryActionLabel}`} /> : null}
-          </Box>
+    <MobileScrollView padding={0} gap={3}>
+      {onTertiaryAction ? (
+        <MobileWorkspaceHeader
+          title={title}
+          description={subtitle}
+          icon={headerIcon}
+          backLabel={tertiaryActionLabel ?? 'رجوع'}
+          onBack={onTertiaryAction}
+        />
+      ) : (
+        <Box gap={2} paddingX={4} paddingY={3}>
+          <Text role="titleLg">{title}</Text>
+          <Text role="bodySm" tone="muted">{subtitle}</Text>
         </Box>
-      ) : null}
+      )}
+
+      <Box paddingX={4} gap={3}>
+        {content}
+
+        {hasActions ? (
+          <Box gap={3} style={{ marginTop: spacing[3], paddingBottom: spacing[4] }}>
+            <Divider />
+            <SectionHeader title="الإجراء" subtitle="زر رئيسي واحد مع مسار رجوع صغير وواضح." />
+            <Box gap={2}>
+              {primaryActionLabel ? <Button label={primaryActionLabel} onPress={onPrimaryAction} disabled={primaryActionDisabled} loading={primaryActionLoading} accessibilityLabel={`تأكيد: ${primaryActionLabel}`} /> : null}
+              {secondaryActionLabel ? <Button label={secondaryActionLabel} tone="secondary" onPress={onSecondaryAction} accessibilityLabel={`إجراء ثانوي: ${secondaryActionLabel}`} /> : null}
+              {tertiaryActionLabel ? <Button label={tertiaryActionLabel} tone="ghost" onPress={onTertiaryAction} accessibilityLabel={`رجوع: ${tertiaryActionLabel}`} /> : null}
+            </Box>
+          </Box>
+        ) : null}
+      </Box>
     </MobileScrollView>
   );
 }
