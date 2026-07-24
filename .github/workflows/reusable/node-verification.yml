@@ -1,4 +1,4 @@
-name: Reusable Workflow
+name: Reusable Node Verification
 
 on:
   workflow_call:
@@ -12,25 +12,10 @@ on:
       full_verification:
         type: string
         required: false
-      governance:
-        type: string
-        required: false
-      workflow:
-        type: string
-        required: false
-      infrastructure:
-        type: string
-        required: false
-      security:
-        type: string
-        required: false
-      policy:
-        type: string
-        required: false
       frontend:
         type: string
         required: false
-      contracts:
+      heavy:
         type: string
         required: false
       journey:
@@ -39,53 +24,16 @@ on:
       journey_scope:
         type: string
         required: false
-      node:
-        type: string
-        required: false
-      node_scope:
-        type: string
-        required: false
-      dsh:
-        type: string
-        required: false
-      wlt:
-        type: string
-        required: false
-      identity:
-        type: string
-        required: false
-      workforce:
-        type: string
-        required: false
-      platform:
-        type: string
-        required: false
-      providers:
-        type: string
-        required: false
-      database:
-        type: string
-        required: false
-      runtime:
-        type: string
-        required: false
-      shared_brain:
-        type: string
-        required: false
-      heavy:
-        type: string
-        required: false
       platform_change_sets:
         type: string
         required: false
-      runtime_proof:
-        type: boolean
-        required: false
+
+permissions:
+  contents: read
 
 jobs:
   node_typecheck:
     name: Verify Node typecheck
-    needs: []
     if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -97,7 +45,7 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Restore Nx computation cache
+      - name: Restore Nx typecheck cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .nx/cache
@@ -118,7 +66,6 @@ jobs:
 
   node_lint:
     name: Verify Node lint
-    needs: []
     if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -130,7 +77,7 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Restore Nx computation cache
+      - name: Restore Nx lint cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .nx/cache
@@ -151,7 +98,6 @@ jobs:
 
   node_test:
     name: Verify Node tests
-    needs: []
     if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -163,7 +109,7 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Restore Nx computation cache
+      - name: Restore Nx test cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .nx/cache
@@ -184,7 +130,6 @@ jobs:
 
   node_build:
     name: Verify Node build
-    needs: []
     if: ${{ inputs.full_verification == 'true' || (inputs.frontend == 'true' && inputs.heavy == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -196,7 +141,7 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Restore Nx computation cache
+      - name: Restore Nx build cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .nx/cache
@@ -217,7 +162,6 @@ jobs:
 
   node_journeys:
     name: Run detected journey gates
-    needs: []
     if: ${{ inputs.journey == 'true' && inputs.journey_scope != '' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -242,7 +186,6 @@ jobs:
 
   node_platform_change_sets:
     name: Verify JRN-040 platform binding
-    needs: []
     if: ${{ inputs.platform_change_sets == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -259,4 +202,3 @@ jobs:
           pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false
           pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml -o /tmp/jrn-040-platform-change-sets-api.ts
           node tools/guards/jrn-040-platform-change-sets-gate.mjs
-
