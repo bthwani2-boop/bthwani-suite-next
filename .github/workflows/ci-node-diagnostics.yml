@@ -1,0 +1,123 @@
+name: BThwani Node Diagnostics
+
+on:
+  workflow_call:
+    inputs:
+      base_sha:
+        type: string
+        required: true
+      head_sha:
+        type: string
+        required: true
+      full_verification:
+        type: string
+        required: true
+      frontend:
+        type: string
+        required: true
+      contracts:
+        type: string
+        required: true
+      node:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deep_diagnostics:
+    name: UI purity and dead code
+    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify UI surface purity
+        run: pnpm run diagnostics:ui-kit
+      - name: Prevent dead code
+        run: pnpm run diagnostics:knip
+
+  vertical_integrity:
+    name: Logic, bindings and AST
+    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.contracts == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify logic coverage and AST rules
+        run: pnpm run guard:logic-all
+
+  performance:
+    name: Structure and performance budgets
+    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.node == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify repository structure and naming
+        run: pnpm run guard:repo-all
+      - name: Verify performance and bundle budgets
+        run: pnpm run guard:performance-all
+
+  contracts:
+    name: Contract foundation and bindings
+    if: ${{ inputs.contracts == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify imports resolve
+        run: pnpm run guard:no-broken-imports
+      - name: Verify contract foundation
+        run: pnpm run contracts:lint
+      - name: Verify frontend API binding
+        run: pnpm run guard:api-binding
+      - name: Verify backend API binding
+        run: pnpm run guard:backend-api-binding
+      - name: Verify service manifest drift
+        run: pnpm run guard:service-manifest-drift
+      - name: Verify frontend feature binding
+        run: pnpm run guard:frontend-feature-binding
+      - name: Verify runtime-facing bindings
+        run: pnpm run guard:runtime-real-bindings
+      - name: Verify cross-journey integrity
+        run: pnpm run guard:live-cross-journey-integrity
+
+  diff_hygiene:
+    name: Immutable diff hygiene
+    if: ${{ inputs.node == 'true' || inputs.full_verification == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify immutable commit diff
+        run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
