@@ -25,7 +25,7 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir shared/ui-kit lint"
+        "command": "node tools/scripts/run-command-check.mjs --label ui-kit-lint -- pnpm --dir shared/ui-kit lint"
       }
     }
   },
