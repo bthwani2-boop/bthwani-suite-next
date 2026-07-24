@@ -15,6 +15,7 @@ import {
   readCaptainForegroundLocation,
   type DshCaptainLocationPush,
 } from '../../shared/delivery/use-captain-order-runtime';
+import { DshCaptainMapLayer } from './DshCaptainMapLayer';
 
 export type OperationalCaptainExecutionScreenProps = {
   readonly assignmentId: string;
@@ -118,10 +119,28 @@ export function OperationalCaptainExecutionScreen({
     }
   };
 
+  const locationTone = locationState === 'error' ? 'danger' : locationState === 'success' ? 'success' : locationState === 'loading' ? 'warning' : 'info';
+  const gpsLabel = locationState === 'loading'
+    ? 'قراءة GPS…'
+    : locationState === 'success'
+      ? 'GPS مصدق'
+      : locationState === 'error'
+        ? 'GPS غير متاح'
+        : 'GPS بانتظار التحديث';
+
   return (
     <View style={styles.root}>
       <TopBar title="تنفيذ المهمة" onBack={onBack} />
       <MobileScrollView fill padding={4} gap={4} contentContainerStyle={styles.content}>
+        <DshCaptainMapLayer
+          orderLabel={`الطلب #${orderId}`}
+          assignmentLabel={`الإسناد: ${assignmentId}`}
+          currentStageLabel={currentStageLabel}
+          gpsLabel={gpsLabel}
+          locationMessage={locationMessage ?? 'لا تُعرض إحداثيات افتراضية. حدّث الموقع لإرسال عينة GPS مصدقة من مقدمة التطبيق.'}
+          locationTone={locationTone}
+        />
+
         <Surface tone="action" gap={3}>
           <Text role="titleMd" style={styles.inverted}>{`الطلب #${orderId}`}</Text>
           <Text role="bodySm" style={styles.inverted}>{currentStageLabel}</Text>
