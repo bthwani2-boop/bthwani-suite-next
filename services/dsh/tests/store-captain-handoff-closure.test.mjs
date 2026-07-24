@@ -33,7 +33,10 @@ const paths = {
   operatorScreen: "services/dsh/frontend/control-panel/operations/ExceptionsEscalationsScreen.tsx",
   clientController: "services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts",
   productTruth: "governance/product/contracts/jrn-013-store-captain-handoff.product-truth.json",
-  workflow: ".github/workflows/ci.yml",
+  workflowRouter: ".github/workflows/ci.yml",
+  nodeWorkflow: ".github/workflows/ci-node-verification.yml",
+  diagnosticsWorkflow: ".github/workflows/ci-node-diagnostics.yml",
+  backendWorkflow: ".github/workflows/ci-backends.yml",
 };
 
 test("custody database truth has dual confirmation, reassignment and reporter audit", () => {
@@ -154,14 +157,21 @@ test("product truth closes code without claiming release approval", () => {
   assert.equal(manifest.slices.every((slice) => slice.codeStatus === "CLOSED"), true);
 });
 
-test("contextual CI covers contracts, tests, boundaries, database and backend", () => {
-  const workflow = read(paths.workflow);
-  assert.match(workflow, /pnpm run contracts:lint/);
-  assert.match(workflow, /pnpm run affected:typecheck/);
-  assert.match(workflow, /pnpm run affected:test/);
-  assert.match(workflow, /pnpm run affected:lint/);
-  assert.match(workflow, /name: Apply DSH migrations/);
-  assert.match(workflow, /go test \.\/\.\. -count=1/);
-  assert.match(workflow, /go build \.\/\.\./);
-  assert.match(workflow, /Run detected journey gates/);
+test("contextual CI delegates contracts, Node checks, journey gates and backend proof", () => {
+  const router = read(paths.workflowRouter);
+  const nodeWorkflow = read(paths.nodeWorkflow);
+  const diagnosticsWorkflow = read(paths.diagnosticsWorkflow);
+  const backendWorkflow = read(paths.backendWorkflow);
+
+  assert.match(router, /uses: \.\/\.github\/workflows\/ci-node-diagnostics\.yml/);
+  assert.match(router, /uses: \.\/\.github\/workflows\/ci-node-verification\.yml/);
+  assert.match(router, /uses: \.\/\.github\/workflows\/ci-backends\.yml/);
+  assert.match(diagnosticsWorkflow, /pnpm --dir contracts typecheck/);
+  assert.match(nodeWorkflow, /pnpm run affected:typecheck/);
+  assert.match(nodeWorkflow, /pnpm exec nx affected -t test/);
+  assert.match(nodeWorkflow, /pnpm run affected:lint/);
+  assert.match(nodeWorkflow, /Run detected journey gates/);
+  assert.match(backendWorkflow, /name: Apply migrations/);
+  assert.match(backendWorkflow, /go test \.\/\.\. -count=1/);
+  assert.match(backendWorkflow, /go build \.\/\.\./);
 });
