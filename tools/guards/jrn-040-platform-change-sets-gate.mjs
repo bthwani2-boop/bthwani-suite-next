@@ -10,7 +10,7 @@ const strictBoundaryProofFile = "core/platform-control/backend/internal/platform
 const databaseProofFile = "core/platform-control/backend/internal/platformcontrol/jrn040_database_sensitive_guard_test.go";
 const httpProofFile = "core/platform-control/backend/internal/http/jrn040_workflow_handlers_test.go";
 const callerWorkflowFile = ".github/workflows/ci.yml";
-const verificationWorkflowFile = ".github/workflows/reusable/node-verification.yml";
+const verificationWorkflowFile = ".github/workflows/ci-node-verification.yml";
 const requiredFiles = [
   productTruthFile,
   validationMigrationFile,
@@ -164,12 +164,12 @@ if (failures.length === 0) {
     "draftItems",
   ]);
   requireText(callerWorkflowFile, [
-    "uses: ./.github/workflows/reusable/node-verification.yml",
+    "uses: ./.github/workflows/ci-node-verification.yml",
     "platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}",
   ]);
   requireText(verificationWorkflowFile, [
-    "node_platform_change_sets:",
-    "name: Verify JRN-040 platform binding",
+    "platform_change_sets:",
+    "name: Verify platform change-set binding",
     "pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false",
     "openapi-typescript ../../core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml",
     "node tools/guards/jrn-040-platform-change-sets-gate.mjs",
