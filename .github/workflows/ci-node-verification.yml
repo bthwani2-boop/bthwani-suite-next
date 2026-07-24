@@ -126,9 +126,9 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/node-tests"
           set -o pipefail
           if [[ "${{ inputs.full_verification }}" == "true" ]]; then
-            pnpm run nx:test -- --outputStyle=stream 2>&1 | tee "${RUNNER_TEMP}/node-tests/nx-test.log"
+            pnpm exec nx run-many -t test --all --outputStyle=stream 2>&1 | tee "${RUNNER_TEMP}/node-tests/nx-test.log"
           else
-            pnpm run affected:test -- --outputStyle=stream 2>&1 | tee "${RUNNER_TEMP}/node-tests/nx-test.log"
+            pnpm exec nx affected -t test --outputStyle=stream 2>&1 | tee "${RUNNER_TEMP}/node-tests/nx-test.log"
           fi
       - name: Upload Node test evidence
         if: ${{ failure() }}
