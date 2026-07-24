@@ -6,20 +6,66 @@ const guardId = "required-command-integrity-gate";
 const violations = [];
 const packageFile = "package.json";
 const enforcementFile = "governance/github/repository-enforcement.json";
-const canonicalWorkflowFile = ".github/workflows/ci.yml";
+const fullVerificationTrigger = "governance/github/full-verification.trigger.json";
+const workflowsRoot = ".github/workflows";
 const expectedWorkflowFiles = [
+  "ci-backends.yml",
+  "ci-node-diagnostics.yml",
+  "ci-node-verification.yml",
+  "ci-policy.yml",
+  "ci-runtime.yml",
   "ci.yml",
-  "contextual-status-finalizer.yml",
   "dsh-database.yml",
-];
-const fullVerificationTrigger =
-  "governance/github/lianbassam-full-verification.trigger.json";
-const packageJson = JSON.parse(read(packageFile));
-const enforcement = JSON.parse(read(enforcementFile));
+  "remediation-analysis.yml",
+].sort();
+
+function exists(relativePath) {
+  return fs.existsSync(path.join(repoRoot, relativePath));
+}
+
+function text(relativePath) {
+  if (!exists(relativePath)) {
+    violations.push({ file: relativePath, line: 0, message: "MISSING_REQUIRED_FILE" });
+    return "";
+  }
+  return read(relativePath);
+}
+
+function requireMarkers(relativePath, markers) {
+  const content = text(relativePath);
+  for (const marker of markers) {
+    if (!content.includes(marker)) {
+      violations.push({
+        file: relativePath,
+        line: 0,
+        message: `REQUIRED_MARKER_MISSING ${marker}`,
+      });
+    }
+  }
+  return content;
+}
+
+function rejectMarkers(relativePath, content, markers) {
+  for (const [label, pattern] of markers) {
+    if (pattern.test(content)) {
+      violations.push({ file: relativePath, line: 0, message: label });
+    }
+  }
+}
+
+const packageJson = JSON.parse(text(packageFile));
+const enforcement = JSON.parse(text(enforcementFile));
 const scripts = packageJson.scripts ?? {};
 
 const requiredFailClosedScripts = [
   "guard:markdown-governance",
+  "guard:required-command-integrity",
+  "guard:workflow-lint",
+  "guard:workflow-security",
+  "guard:actions-pin",
+  "guard:cleanup-policy",
+  "guard:a11y",
+  "guard:repo-naming",
   "web:runtime-contract:test",
   "ui-kit:catalog:build",
   "visual:ui-kit:contract",
@@ -29,30 +75,15 @@ const requiredFailClosedScripts = [
 
 for (const scriptName of requiredFailClosedScripts) {
   const command = scripts[scriptName];
-  if (!command) {
-    violations.push({
-      file: packageFile,
-      scriptName,
-      message: `MISSING_REQUIRED_COMMAND: ${scriptName} is not defined`,
-    });
+  if (typeof command !== "string" || command.trim() === "") {
+    violations.push({ file: packageFile, line: 0, message: `MISSING_REQUIRED_COMMAND ${scriptName}` });
     continue;
   }
-
-  if (/\btry\s*\{|\bcatch\s*\(/.test(command)) {
-    violations.push({
-      file: packageFile,
-      scriptName,
-      command,
-      message: `FALSE_SUCCESS_WRAPPER: ${scriptName} must propagate tool failures instead of catching them`,
-    });
+  if (/\|\|\s*true|\bcontinue-on-error\b|\bcatch\s*\(/i.test(command)) {
+    violations.push({ file: packageFile, line: 0, message: `FALSE_SUCCESS_WRAPPER ${scriptName}` });
   }
   if (/\b(?:npx|pnpm\s+dlx)\b/.test(command)) {
-    violations.push({
-      file: packageFile,
-      scriptName,
-      command,
-      message: `DYNAMIC_TOOL_DOWNLOAD_FORBIDDEN: ${scriptName} must use repository-locked tools or repository-owned scripts`,
-    });
+    violations.push({ file: packageFile, line: 0, message: `DYNAMIC_TOOL_DOWNLOAD_FORBIDDEN ${scriptName}` });
   }
 }
 
@@ -60,163 +91,153 @@ const expectedCommands = new Map([
   ["web:runtime-contract:test", "node --test apps/control-panel/runtime/tests/*.test.mjs"],
   ["ui-kit:catalog:build", "node tools/scripts/build-ui-kit-catalog.mjs"],
   ["visual:ui-kit:contract", "node tools/guards/ui-kit-visual-contract-gate.mjs"],
+  ["guard:required-command-integrity", "node tools/guards/required-command-integrity-gate.mjs"],
 ]);
 for (const [scriptName, expected] of expectedCommands) {
   if (scripts[scriptName] !== expected) {
-    violations.push({
-      file: packageFile,
-      scriptName,
-      command: scripts[scriptName],
-      message: `GOVERNED_COMMAND_DRIFT: ${scriptName} must equal ${expected}`,
-    });
+    violations.push({ file: packageFile, line: 0, message: `GOVERNED_COMMAND_DRIFT ${scriptName}` });
   }
 }
 
 const performanceQuick = scripts["performance:api:quick"] ?? "";
 if (performanceQuick.includes("localhost:8080")) {
-  violations.push({
-    file: packageFile,
-    scriptName: "performance:api:quick",
-    command: performanceQuick,
-    message:
-      "HOST_CONTAINER_PORT_CONFUSION: host-side DSH performance checks must not target localhost:8080",
-  });
+  violations.push({ file: packageFile, line: 0, message: "LEGACY_DSH_HOST_PORT_FORBIDDEN" });
 }
 if (!performanceQuick.includes("localhost:58080/dsh/health")) {
-  violations.push({
-    file: packageFile,
-    scriptName: "performance:api:quick",
-    command: performanceQuick,
-    message:
-      "GOVERNED_DSH_HEALTH_TARGET_MISSING: performance:api:quick must target http://localhost:58080/dsh/health",
-  });
+  violations.push({ file: packageFile, line: 0, message: "GOVERNED_DSH_HEALTH_TARGET_MISSING" });
 }
 
 for (const [scriptName, command] of Object.entries(scripts)) {
-  if (scriptName.startsWith("diagnostics:") || typeof command !== "string") continue;
+  if (typeof command !== "string" || scriptName.startsWith("diagnostics:")) continue;
   if (command.includes("BLOCKED_NEEDS_RUNTIME")) {
-    violations.push({
-      file: packageFile,
-      scriptName,
-      command,
-      message:
-        "DEPRECATED_DECISION_ALIAS: executable scripts must not convert a failed check into BLOCKED_NEEDS_RUNTIME text",
-    });
+    violations.push({ file: packageFile, line: 0, message: `DEPRECATED_DECISION_ALIAS ${scriptName}` });
   }
   if (/\b(?:npx|pnpm\s+dlx)\b/.test(command)) {
-    violations.push({
-      file: packageFile,
-      scriptName,
-      command,
-      message: `UNPINNED_EXECUTION_FORBIDDEN: non-diagnostic command ${scriptName} may not download tools dynamically`,
-    });
+    violations.push({ file: packageFile, line: 0, message: `UNPINNED_EXECUTION_FORBIDDEN ${scriptName}` });
   }
 }
 
-for (const deprecated of [
-  "e2e:web:install",
-  "e2e:web:smoke",
-  "storybook:ui-kit:build",
-  "visual:ui-kit:smoke",
-]) {
-  if (deprecated in scripts) {
-    violations.push({
-      file: packageFile,
-      scriptName: deprecated,
-      message: `DEPRECATED_UNLOCKED_COMMAND_PRESENT: ${deprecated} must not remain after deterministic replacement`,
-    });
-  }
+if (!exists(fullVerificationTrigger)) {
+  violations.push({ file: fullVerificationTrigger, line: 0, message: "FULL_VERIFICATION_TRIGGER_MISSING" });
 }
 
-const workflowDir = path.join(repoRoot, ".github/workflows");
-const workflowFiles = fs.existsSync(workflowDir)
-  ? fs
-      .readdirSync(workflowDir)
-      .filter((name) => /\.ya?ml$/i.test(name))
-      .sort()
+const workflowDir = path.join(repoRoot, workflowsRoot);
+const workflowFiles = exists(workflowsRoot)
+  ? fs.readdirSync(workflowDir).filter((name) => /\.ya?ml$/i.test(name)).sort()
   : [];
+if (JSON.stringify(workflowFiles) !== JSON.stringify(expectedWorkflowFiles)) {
+  violations.push({
+    file: workflowsRoot,
+    line: 0,
+    message: `WORKFLOW_INVENTORY_DRIFT expected=${expectedWorkflowFiles.join(",")} actual=${workflowFiles.join(",")}`,
+  });
+}
 
-if (!workflowFiles.includes("ci.yml")) {
-  violations.push({
-    file: canonicalWorkflowFile,
-    message: "CANONICAL_WORKFLOW_MISSING: .github/workflows/ci.yml is required",
-  });
-}
-const workflowInventoryMatches =
-  workflowFiles.length === expectedWorkflowFiles.length &&
-  workflowFiles.every((name, index) => name === expectedWorkflowFiles[index]);
-if (!workflowInventoryMatches) {
-  violations.push({
-    file: ".github/workflows",
-    message: `CANONICAL_WORKFLOW_INVENTORY_INVALID:expected=${expectedWorkflowFiles.join(",")}:actual=${workflowFiles.join(",")}`,
-  });
-}
 for (const workflowFile of workflowFiles) {
-  if (/^tmp-|diagnostic|remediation/i.test(workflowFile)) {
-    violations.push({
-      file: `.github/workflows/${workflowFile}`,
-      message:
-        "TEMPORARY_WORKFLOW_FORBIDDEN: diagnostics and remediation must stay inside the canonical workflow",
-    });
+  const relative = `${workflowsRoot}/${workflowFile}`;
+  const content = text(relative);
+  rejectMarkers(relative, content, [
+    ["SOURCE_WRITE_PERMISSION_FORBIDDEN", /contents:\s*write\b|write-all\b/i],
+    ["STATUS_WRITE_PERMISSION_FORBIDDEN", /statuses:\s*write\b/i],
+    ["PULL_REQUEST_TARGET_FORBIDDEN", /pull_request_target\s*:/i],
+    ["CI_SOURCE_MUTATION_FORBIDDEN", /\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+merge)\b/i],
+    ["CI_SOURCE_REWRITE_FORBIDDEN", /\b(?:gofmt\s+-w|prettier\s+--write|eslint\s+--fix|sed\s+-i|perl\s+-pi)\b/i],
+    ["DYNAMIC_ACTION_VERSION_FORBIDDEN", /uses:\s*[^\s#]+@(?:latest|master|main)\b/i],
+  ]);
+  if (!/^permissions:\s*(?:\n|$)/m.test(content) && !/^permissions:\s*\{\s*\}\s*$/m.test(content)) {
+    violations.push({ file: relative, line: 0, message: "EXPLICIT_TOP_LEVEL_PERMISSIONS_REQUIRED" });
   }
 }
 
-if (fs.existsSync(path.join(repoRoot, canonicalWorkflowFile))) {
-  const workflow = read(canonicalWorkflowFile);
-  const targetBranch = enforcement.targetBranch;
-  if (typeof targetBranch !== "string" || targetBranch.length === 0) {
-    violations.push({
-      file: enforcementFile,
-      message:
-        "TARGET_BRANCH_MISSING: repository enforcement must declare the active target branch",
-    });
-  } else {
-    const escapedBranch = targetBranch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const branchArray = new RegExp(
-      `branches:\\s*\\[[^\\]]*\\b${escapedBranch}\\b[^\\]]*\\]`,
-      "m",
-    );
-    const branchList = new RegExp(
-      `branches:\\s*\\n(?:\\s*-\\s*[^\\n]+\\n)*\\s*-\\s*${escapedBranch}\\s*$`,
-      "m",
-    );
-    if (!branchArray.test(workflow) && !branchList.test(workflow)) {
-      violations.push({
-        file: canonicalWorkflowFile,
-        targetBranch,
-        message: `ACTIVE_BRANCH_NOT_COVERED: canonical workflow does not cover ${targetBranch}`,
-      });
-    }
-  }
+const ci = requireMarkers(`${workflowsRoot}/ci.yml`, [
+  "branches: [master]",
+  fullVerificationTrigger,
+  "uses: ./.github/workflows/ci-policy.yml",
+  "uses: ./.github/workflows/ci-node-diagnostics.yml",
+  "uses: ./.github/workflows/ci-node-verification.yml",
+  "uses: ./.github/workflows/ci-backends.yml",
+  "uses: ./.github/workflows/ci-runtime.yml",
+  "name: BThwani CI result",
+  "if: ${{ always() }}",
+  "Enforce fail-closed aggregate result",
+]);
+if ((ci.match(/^\s*concurrency:\s*$/gm) ?? []).length !== 1) {
+  violations.push({ file: `${workflowsRoot}/ci.yml`, line: 0, message: "ONE_WORKFLOW_LEVEL_CONCURRENCY_REQUIRED" });
+}
 
-  for (const marker of [
-    "statuses: write",
-    fullVerificationTrigger,
-    "full_verification",
-    "pnpm run guard:required-command-integrity",
-    "pnpm run nx:typecheck",
-    "pnpm run nx:lint",
-    "pnpm run nx:test",
-    "pnpm run nx:build",
-    "pnpm run runtime:full:smoke",
-    "bthwani/full-verification",
-    "EXPECTED_POLICY",
-    "EXPECTED_NODE",
-    "EXPECTED_DSH",
-    "EXPECTED_WLT",
-    "EXPECTED_IDENTITY",
-    "EXPECTED_WORKFORCE",
-    "EXPECTED_PLATFORM",
-    "EXPECTED_PROVIDERS",
-    "EXPECTED_RUNTIME",
-  ]) {
-    if (!workflow.includes(marker)) {
-      violations.push({
-        file: canonicalWorkflowFile,
-        message: `FAIL_CLOSED_CI_MARKER_MISSING: ${marker}`,
-      });
-    }
-  }
+requireMarkers(`${workflowsRoot}/ci-policy.yml`, [
+  "permissions:",
+  "contents: read",
+  "guard:governance-schema",
+  "guard:agent-governance",
+  "guard:authority-separation",
+  "guard:saas-governance",
+  "guard:guard-registry",
+  "guard:sdlc",
+  "guard:cleanup-policy",
+  "check-portable-tracked-config.mjs",
+  "check-repository-hygiene.mjs",
+  "guard:required-command-integrity",
+  "guard:actions-pin",
+  "guard:workflow-lint",
+  "guard:workflow-security",
+  "guard:opa-policies",
+]);
+
+requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, [
+  "pnpm exec knip",
+  "guard:logic-coverage",
+  "guard:a11y",
+  "guard:dependency-graph",
+  "guard:ast-grep-rules",
+  "guard:repo-naming",
+  "guard:repo-structure",
+  "pnpm --dir contracts typecheck",
+  "guard:api-binding",
+  "guard:backend-api-binding",
+  "guard:frontend-feature-binding",
+]);
+
+requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, [
+  "pnpm exec nx run-many -t test --all --outputStyle=stream",
+  "pnpm exec nx affected -t test --outputStyle=stream",
+  "pnpm run nx:typecheck",
+  "pnpm run nx:lint",
+  "pnpm run nx:build",
+  "run-journey-gate.ps1",
+  "tsconfig.platform-change-sets.json",
+  "contracts/platform-change-sets.openapi.yaml",
+  "tools/guards/platform-change-sets-gate.mjs",
+]);
+
+requireMarkers(`${workflowsRoot}/ci-backends.yml`, [
+  "Select affected backends",
+  "Apply migrations",
+  "go test ./...",
+  "go build ./...",
+]);
+
+requireMarkers(`${workflowsRoot}/ci-runtime.yml`, [
+  "runtime:full:smoke",
+  "Stop runtime",
+]);
+
+const remediation = requireMarkers(`${workflowsRoot}/remediation-analysis.yml`, [
+  "workflow_run:",
+  "contents: read",
+]);
+if (/actions\/checkout@/i.test(remediation)) {
+  violations.push({ file: `${workflowsRoot}/remediation-analysis.yml`, line: 0, message: "PRIVILEGED_ANALYSIS_MUST_NOT_CHECKOUT_SOURCE" });
+}
+
+requireMarkers(`${workflowsRoot}/dsh-database.yml`, [
+  "contents: read",
+  "postgres:16-alpine",
+  "invoke-dsh-database.ps1",
+]);
+
+if (enforcement.targetBranch !== "master") {
+  violations.push({ file: enforcementFile, line: 0, message: "TARGET_BRANCH_MUST_BE_MASTER" });
 }
 
 fail(guardId, violations);
