@@ -1,6 +1,10 @@
 name: Contextual CI Status Finalizer
 
 on:
+  push:
+    branches:
+      - main
+      - lianbassam
   workflow_run:
     workflows:
       - BThwani Contextual CI
@@ -8,27 +12,70 @@ on:
       - completed
 
 permissions:
+  actions: read
   contents: read
   statuses: write
+
+concurrency:
+  group: contextual-status-${{ github.event.workflow_run.id || github.sha }}
+  cancel-in-progress: true
 
 jobs:
   finalize:
     name: Finalize contextual CI status
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - name: Publish final contextual CI locator status
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
-          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_SHA: ${{ github.sha }}
+          WORKFLOW_RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WORKFLOW_RUN_URL: ${{ github.event.workflow_run.html_url }}
         run: |
           set -euo pipefail
 
+          head_sha="${PUSH_SHA}"
+          conclusion=""
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions"
+
+          if [[ "${EVENT_NAME}" == "workflow_run" ]]; then
+            head_sha="${WORKFLOW_RUN_SHA}"
+            conclusion="${WORKFLOW_RUN_CONCLUSION}"
+            run_url="${WORKFLOW_RUN_URL}"
+          else
+            for attempt in $(seq 1 90); do
+              response="$(gh api \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${head_sha}&event=push&per_page=20")"
+              run_id="$(jq -r --arg sha "${head_sha}" \
+                '.workflow_runs | map(select(.head_sha == $sha)) | sort_by(.run_number) | last | .id // empty' \
+                <<<"${response}")"
+
+              if [[ -n "${run_id}" ]]; then
+                run_status="$(jq -r --argjson id "${run_id}" \
+                  '.workflow_runs[] | select(.id == $id) | .status' <<<"${response}")"
+                run_url="$(jq -r --argjson id "${run_id}" \
+                  '.workflow_runs[] | select(.id == $id) | .html_url' <<<"${response}")"
+                if [[ "${run_status}" == "completed" ]]; then
+                  conclusion="$(jq -r --argjson id "${run_id}" \
+                    '.workflow_runs[] | select(.id == $id) | .conclusion' <<<"${response}")"
+                  break
+                fi
+              fi
+
+              sleep 10
+            done
+          fi
+
+          if [[ -z "${conclusion}" || "${conclusion}" == "null" ]]; then
+            conclusion="timed_out"
+          fi
+
           state=error
-          description="contextual CI ended with ${RUN_CONCLUSION}"
-          case "${RUN_CONCLUSION}" in
+          description="contextual CI ended with ${conclusion}"
+          case "${conclusion}" in
             success)
               state=success
               description="contextual CI routing and verification passed"
@@ -39,13 +86,15 @@ jobs:
               ;;
             cancelled|neutral|skipped|stale)
               state=error
-              description="contextual CI ended with ${RUN_CONCLUSION}"
+              description="contextual CI ended with ${conclusion}"
               ;;
           esac
 
           gh api --method POST \
-            "repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
+            "repos/${GITHUB_REPOSITORY}/statuses/${head_sha}" \
             -f state="${state}" \
             -f context="bthwani/contextual-ci" \
             -f description="${description}" \
-            -f target_url="${RUN_URL}"
+            -f target_url="${run_url}"
+
+          test "${state}" = success
