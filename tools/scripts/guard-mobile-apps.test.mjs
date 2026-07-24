@@ -15,9 +15,39 @@ function cleanupTmp() {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 }
 
-function createDummyFirebaseFile(filename, packageName) {
+function createCompleteFirebaseFile(filename, packageName, overrides = {}) {
   const filepath = path.join(tmpDir, filename);
-  const content = JSON.stringify({
+  const content = {
+    project_info: {
+      project_number: "806591977022",
+      project_id: "bthwani",
+      storage_bucket: "bthwani.firebasestorage.app",
+    },
+    client: [
+      {
+        client_info: {
+          mobilesdk_app_id: `1:806591977022:android:${packageName.replace(/[^a-z0-9]/gi, "")}`,
+          android_client_info: {
+            package_name: packageName,
+          },
+        },
+        api_key: [
+          {
+            current_key: "test-only-firebase-api-key",
+          },
+        ],
+      },
+    ],
+    configuration_version: "1",
+    ...overrides,
+  };
+  fs.writeFileSync(filepath, JSON.stringify(content), "utf8");
+  return filepath;
+}
+
+function createIncompleteFirebaseFile(filename, packageName) {
+  const filepath = path.join(tmpDir, filename);
+  fs.writeFileSync(filepath, JSON.stringify({
     client: [
       {
         client_info: {
@@ -27,8 +57,7 @@ function createDummyFirebaseFile(filename, packageName) {
         },
       },
     ],
-  });
-  fs.writeFileSync(filepath, content, "utf8");
+  }), "utf8");
   return filepath;
 }
 
@@ -43,17 +72,17 @@ function runGuard(args, env = {}) {
         ...process.env,
         ...env,
       },
-    }
+    },
   );
 }
 
-test("guard-mobile-apps: Development without Maps succeeds when correct Firebase is present", () => {
+test("guard-mobile-apps: development without Maps succeeds when complete Firebase is present", () => {
   setupTmp();
   try {
-    const clientFb = createDummyFirebaseFile("client-fb.json", "com.bthwani.client.next");
+    const clientFb = createCompleteFirebaseFile("client-fb.json", "com.bthwani.client.next");
     const res = runGuard(
       ["--app", "app-client", "--require-build-secrets", "--platform", "android", "--profile", "development"],
-      { GOOGLE_SERVICES_JSON_APP_CLIENT: clientFb }
+      { GOOGLE_SERVICES_JSON_APP_CLIENT: clientFb },
     );
     assert.equal(res.status, 0, `Expected status 0, stderr: ${res.stderr}, stdout: ${res.stdout}`);
   } finally {
@@ -61,13 +90,31 @@ test("guard-mobile-apps: Development without Maps succeeds when correct Firebase
   }
 });
 
-test("guard-mobile-apps: Internal without Maps fails when app has maps feature", () => {
+test("guard-mobile-apps: captain development does not require a Maps key", () => {
   setupTmp();
   try {
-    const captainFb = createDummyFirebaseFile("captain-fb.json", "com.bthwani.captain.next");
+    const captainFb = createCompleteFirebaseFile("captain-dev-fb.json", "com.bthwani.captain.next");
+    const res = runGuard(
+      ["--app", "app-captain", "--require-build-secrets", "--platform", "android", "--profile", "development"],
+      {
+        GOOGLE_SERVICES_JSON_APP_CAPTAIN: captainFb,
+        GOOGLE_MAPS_ANDROID_API_KEY: "",
+        GOOGLE_MAPS_ANDROID_API_KEY_APP_CAPTAIN: "",
+      },
+    );
+    assert.equal(res.status, 0, `Development must allow the captain fallback without Maps. Stderr: ${res.stderr}`);
+  } finally {
+    cleanupTmp();
+  }
+});
+
+test("guard-mobile-apps: internal without Maps fails when app has maps feature", () => {
+  setupTmp();
+  try {
+    const captainFb = createCompleteFirebaseFile("captain-fb.json", "com.bthwani.captain.next");
     const res = runGuard(
       ["--app", "app-captain", "--require-build-secrets", "--platform", "android", "--profile", "internal"],
-      { GOOGLE_SERVICES_JSON_APP_CAPTAIN: captainFb, GOOGLE_MAPS_ANDROID_API_KEY: "" }
+      { GOOGLE_SERVICES_JSON_APP_CAPTAIN: captainFb, GOOGLE_MAPS_ANDROID_API_KEY: "" },
     );
     assert.notEqual(res.status, 0, "Expected failure for internal without Maps key");
     assert.match(res.stderr, /GOOGLE_MAPS_ANDROID_API_KEY is required/);
@@ -76,13 +123,13 @@ test("guard-mobile-apps: Internal without Maps fails when app has maps feature",
   }
 });
 
-test("guard-mobile-apps: Production without Maps fails when app has maps feature", () => {
+test("guard-mobile-apps: production without Maps fails when app has maps feature", () => {
   setupTmp();
   try {
-    const captainFb = createDummyFirebaseFile("captain-fb.json", "com.bthwani.captain.next");
+    const captainFb = createCompleteFirebaseFile("captain-fb.json", "com.bthwani.captain.next");
     const res = runGuard(
       ["--app", "app-captain", "--require-build-secrets", "--platform", "android", "--profile", "production"],
-      { GOOGLE_SERVICES_JSON_APP_CAPTAIN: captainFb, GOOGLE_MAPS_ANDROID_API_KEY: "" }
+      { GOOGLE_SERVICES_JSON_APP_CAPTAIN: captainFb, GOOGLE_MAPS_ANDROID_API_KEY: "" },
     );
     assert.notEqual(res.status, 0, "Expected failure for production without Maps key");
     assert.match(res.stderr, /GOOGLE_MAPS_ANDROID_API_KEY is required/);
@@ -94,13 +141,30 @@ test("guard-mobile-apps: Production without Maps fails when app has maps feature
 test("guard-mobile-apps: Firebase file with wrong package fails", () => {
   setupTmp();
   try {
-    const wrongFb = createDummyFirebaseFile("wrong-fb.json", "com.wrong.package");
+    const wrongFb = createCompleteFirebaseFile("wrong-fb.json", "com.wrong.package");
     const res = runGuard(
       ["--app", "app-client", "--require-build-secrets", "--platform", "android", "--profile", "development"],
-      { GOOGLE_SERVICES_JSON_APP_CLIENT: wrongFb }
+      { GOOGLE_SERVICES_JSON_APP_CLIENT: wrongFb },
     );
     assert.notEqual(res.status, 0, "Expected failure for wrong package name in Firebase file");
-    assert.match(res.stderr, /must contain Android package 'com\.bthwani\.client\.next'/);
+    assert.match(res.stderr, /Android package 'com\.bthwani\.client\.next' is required/);
+  } finally {
+    cleanupTmp();
+  }
+});
+
+test("guard-mobile-apps: incomplete placeholder Firebase file fails", () => {
+  setupTmp();
+  try {
+    const incompleteFb = createIncompleteFirebaseFile("incomplete-fb.json", "com.bthwani.client.next");
+    const res = runGuard(
+      ["--app", "app-client", "--require-build-secrets", "--platform", "android", "--profile", "development"],
+      { GOOGLE_SERVICES_JSON_APP_CLIENT: incompleteFb },
+    );
+    assert.notEqual(res.status, 0, "Expected failure for a package-only placeholder file");
+    assert.match(res.stderr, /project_info is required/);
+    assert.match(res.stderr, /mobilesdk_app_id/);
+    assert.match(res.stderr, /api_key\.current_key/);
   } finally {
     cleanupTmp();
   }
@@ -113,29 +177,29 @@ test("guard-mobile-apps: Firebase file with invalid JSON fails", () => {
     fs.writeFileSync(invalidFb, "{ invalid json ...", "utf8");
     const res = runGuard(
       ["--app", "app-client", "--require-build-secrets", "--platform", "android", "--profile", "development"],
-      { GOOGLE_SERVICES_JSON_APP_CLIENT: invalidFb }
+      { GOOGLE_SERVICES_JSON_APP_CLIENT: invalidFb },
     );
-    assert.notEqual(res.status, 0, "Expected failure for invalid JSON in Firebase file");
-    assert.match(res.stderr, /is not valid JSON/);
+    assert.notEqual(res.status, 0, "Expected failure for invalid JSON");
+    assert.match(res.stderr, /file is not valid JSON/);
   } finally {
     cleanupTmp();
   }
 });
 
-test("guard-mobile-apps: Non-existent Firebase file fails", () => {
+test("guard-mobile-apps: non-existent Firebase file fails", () => {
   const nonExistent = path.join(root, ".tmp", "non-existent-fb.json");
   const res = runGuard(
     ["--app", "app-client", "--require-build-secrets", "--platform", "android", "--profile", "development"],
-    { GOOGLE_SERVICES_JSON_APP_CLIENT: nonExistent }
+    { GOOGLE_SERVICES_JSON_APP_CLIENT: nonExistent },
   );
   assert.notEqual(res.status, 0, "Expected failure for non-existent Firebase file");
-  assert.match(res.stderr, /GOOGLE_SERVICES_JSON does not point to an existing file/);
+  assert.match(res.stderr, /file does not exist/);
 });
 
-test("guard-mobile-apps: Building a single app does NOT require Firebase files for other apps", () => {
+test("guard-mobile-apps: building a single app does not require Firebase files for other apps", () => {
   setupTmp();
   try {
-    const clientFb = createDummyFirebaseFile("client-fb.json", "com.bthwani.client.next");
+    const clientFb = createCompleteFirebaseFile("client-fb.json", "com.bthwani.client.next");
     const res = runGuard(
       ["--app", "app-client", "--require-build-secrets", "--platform", "android", "--profile", "development"],
       {
@@ -144,7 +208,7 @@ test("guard-mobile-apps: Building a single app does NOT require Firebase files f
         GOOGLE_SERVICES_JSON_APP_CAPTAIN: "",
         GOOGLE_SERVICES_JSON_APP_FIELD: "",
         GOOGLE_SERVICES_JSON: "",
-      }
+      },
     );
     assert.equal(res.status, 0, `Single app check failed when other app files were absent. Stderr: ${res.stderr}`);
   } finally {
