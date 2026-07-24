@@ -64,3 +64,10 @@ x-bthwani-contracts:
     dshSupportMessageDelivery: ../services/dsh/contracts/dsh.support-message-delivery.openapi.yaml
     dshWorkforceScopes: ../services/dsh/contracts/dsh.jrn-003-workforce-scopes.openapi.yaml
     wlt: ../services/wlt/contracts/wlt.openapi.yaml
+    wltPayments: ../services/wlt/contracts/wlt.payments.openapi.yaml
+    wltRefunds: ../services/wlt/contracts/jrn-035-refunds.openapi.yaml
+    wltSettlementsCommissions: ../services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml
+    wltPayoutsDestinations: ../services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml
+    wltCommercialBenefits: ../services/wlt/contracts/wlt.commercial.openapi.yaml
+    wltCommercialBenefitsSummary: ../services/wlt/contracts/wlt.commercial-summary.openapi.yaml
+    wltPromotionFunding: ../services/wlt/contracts/wlt.promotion-funding.openapi.yaml
