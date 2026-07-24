@@ -93,8 +93,8 @@ jobs:
         uses: ./.github/actions/setup-node-workspace
       - name: Verify imports resolve
         run: pnpm run guard:no-broken-imports
-      - name: Verify contract foundation
-        run: pnpm run contracts:lint
+      - name: Verify OpenAPI contracts and generated types without warnings
+        run: pnpm --dir contracts typecheck
       - name: Verify frontend API binding
         run: pnpm run guard:api-binding
       - name: Verify backend API binding
