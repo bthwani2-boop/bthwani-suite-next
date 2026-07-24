@@ -31,10 +31,7 @@ function sanitizeUrl(value: string | undefined): string | undefined {
  */
 export function initSentry(): boolean {
   const config = resolveSentryRuntimeConfig();
-  if (!config.dsn) {
-    console.log("[sentry] disabled: EXPO_PUBLIC_SENTRY_DSN not set");
-    return false;
-  }
+  if (!config.dsn) return false;
 
   const extra = Constants.expoConfig?.extra as Record<string, unknown> | undefined;
   const surface = typeof extra?.["appKey"] === "string" ? extra["appKey"] : "app-partner";
@@ -79,7 +76,6 @@ export function initSentry(): boolean {
     },
   });
 
-  console.log(`[sentry] enabled: ${surface} (${config.environment})`);
   if (config.startupProbe) {
     Sentry.captureMessage("bthwani.mobile.sentry.startup", "info");
   }
