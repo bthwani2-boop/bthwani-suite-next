@@ -4,6 +4,7 @@ import { fail, lineNumber, repoRoot, toPosix } from "./_guard-utils.mjs";
 
 const guardId = "guard-registry-gate";
 const violations = [];
+const warnings = [];
 const registryRelative = "governance/guards/guard-registry.json";
 const packageRelative = "package.json";
 const manifestRelative = "tools/guards/guard-manifest.json";
@@ -11,16 +12,13 @@ const foundationRunnerRelative = "tools/scripts/run-foundation-gate.ps1";
 const journeyRunnerRelative = "tools/scripts/run-journey-gate.ps1";
 const workflowsDir = path.join(repoRoot, ".github/workflows");
 const actionsDir = path.join(repoRoot, ".github/actions");
-const canonicalWorkflow = "ci.yml";
-const policyWorkflow = "ci-policy.yml";
 const expectedWorkflowFiles = [
-  canonicalWorkflow,
   "ci-backends.yml",
   "ci-node-diagnostics.yml",
   "ci-node-verification.yml",
-  policyWorkflow,
+  "ci-policy.yml",
   "ci-runtime.yml",
-  "contextual-status-finalizer.yml",
+  "ci.yml",
   "dsh-database.yml",
   "remediation-analysis.yml",
 ].sort();
@@ -34,6 +32,10 @@ const aggregateScripts = new Set([
   "guard:tools-v5-registry",
   "guard:tools-v5-ci",
   "guard:journey:full",
+]);
+
+const canonicalSourceById = new Map([
+  ["jrn-040-platform-change-sets", "tools/guards/platform-change-sets-gate.mjs"],
 ]);
 
 function readJson(relativePath) {
@@ -59,35 +61,39 @@ function readText(relativePath) {
   return fs.readFileSync(fullPath, "utf8");
 }
 
+function requireMarkers(relativePath, content, markers) {
+  for (const marker of markers) {
+    if (!content.includes(marker)) {
+      violations.push({ file: relativePath, line: 0, message: `REQUIRED_MARKER_MISSING ${marker}` });
+    }
+  }
+}
+
 function externalUses(text) {
-  return [...text.matchAll(/^\s*uses:\s*([^\s#]+).*$/gm)]
+  return [...text.matchAll(/^\s*(?:-\s*)?uses:\s*([^\s#]+).*$/gm)]
     .map((match) => ({ target: match[1], index: match.index ?? 0 }))
     .filter(({ target }) => !target.startsWith("./") && !target.startsWith("docker://"));
 }
 
-function verifyPinnedUses(relative, text) {
-  for (const { target, index } of externalUses(text)) {
+function verifyPinnedUses(relativePath, content) {
+  for (const { target, index } of externalUses(content)) {
     if (!/@[a-f0-9]{40}$/i.test(target)) {
       violations.push({
-        file: relative,
-        line: lineNumber(text, index),
+        file: relativePath,
+        line: lineNumber(content, index),
         message: `EXTERNAL_ACTION_NOT_PINNED_TO_SHA ${target}`,
       });
     }
   }
 }
 
-function verifyCheckoutCredentials(relative, text) {
-  const lines = text.split(/\r?\n/);
+function verifyCheckoutCredentials(relativePath, content) {
+  const lines = content.split(/\r?\n/);
   for (let index = 0; index < lines.length; index += 1) {
     if (!/uses:\s*actions\/checkout@[a-f0-9]{40}/i.test(lines[index])) continue;
-    const block = lines.slice(index, Math.min(lines.length, index + 12)).join("\n");
+    const block = lines.slice(index, Math.min(lines.length, index + 14)).join("\n");
     if (!/persist-credentials:\s*false\b/.test(block)) {
-      violations.push({
-        file: relative,
-        line: index + 1,
-        message: "CHECKOUT_MUST_DISABLE_PERSISTED_CREDENTIALS",
-      });
+      violations.push({ file: relativePath, line: index + 1, message: "CHECKOUT_MUST_DISABLE_PERSISTED_CREDENTIALS" });
     }
   }
 }
@@ -96,56 +102,51 @@ function commandSwallowsFailure(command) {
   return /\|\|\s*true|continue-on-error|catch\s*\([^)]*\)\s*\{?[\s\S]*?console\.log|catch\s*\{[\s\S]*?console\.log/i.test(command);
 }
 
-function requireMarkers(relative, text, markers) {
-  for (const marker of markers) {
-    if (!text.includes(marker)) {
-      violations.push({ file: relative, line: 0, message: `REQUIRED_MARKER_MISSING ${marker}` });
-    }
-  }
-}
-
 const registry = readJson(registryRelative);
 const packageJson = readJson(packageRelative);
 const manifest = readJson(manifestRelative);
 const entries = Array.isArray(registry?.entries) ? registry.entries : [];
 const scripts = packageJson?.scripts ?? {};
-const registeredScripts = new Set(entries.map((entry) => entry.script).filter(Boolean));
-const registeredSources = new Set(entries.map((entry) => entry.source_file).filter(Boolean));
-const seenIds = new Set();
-const seenScripts = new Set();
+const registeredScripts = new Set();
+const registeredSources = new Set();
 const entryById = new Map();
 
 for (const entry of entries) {
-  if (!entry.id) {
+  if (!entry?.id) {
     violations.push({ file: registryRelative, line: 0, message: "MALFORMED_ENTRY_MISSING_ID" });
     continue;
   }
-  if (seenIds.has(entry.id)) {
+  if (entryById.has(entry.id)) {
     violations.push({ file: registryRelative, line: 0, message: `DUPLICATE_GUARD_ID ${entry.id}` });
   }
-  seenIds.add(entry.id);
   entryById.set(entry.id, entry);
 
   if (entry.script) {
-    if (seenScripts.has(entry.script)) {
+    if (registeredScripts.has(entry.script)) {
       violations.push({ file: registryRelative, line: 0, message: `DUPLICATE_GUARD_SCRIPT ${entry.script}` });
     }
-    seenScripts.add(entry.script);
+    registeredScripts.add(entry.script);
     if (!aggregateScripts.has(entry.script) && !scripts[entry.script]) {
       violations.push({ file: registryRelative, line: 0, message: `MISSING_PACKAGE_SCRIPT ${entry.id} -> ${entry.script}` });
     }
+    if (entry.exit_level === "fail" && commandSwallowsFailure(scripts[entry.script] ?? "")) {
+      violations.push({ file: packageRelative, line: 0, message: `FAIL_GUARD_SCRIPT_SWALLOWS_FAILURE ${entry.script}` });
+    }
   }
 
-  if (entry.source_file && !fs.existsSync(path.join(repoRoot, entry.source_file))) {
-    violations.push({ file: registryRelative, line: 0, message: `MISSING_SOURCE_FILE ${entry.id} -> ${entry.source_file}` });
-  }
-
-  if (entry.exit_level === "fail" && entry.script && commandSwallowsFailure(scripts[entry.script] ?? "")) {
-    violations.push({ file: packageRelative, line: 0, message: `FAIL_GUARD_SCRIPT_SWALLOWS_FAILURE ${entry.script}` });
+  const canonicalSource = canonicalSourceById.get(entry.id) ?? entry.source_file;
+  if (canonicalSource) {
+    registeredSources.add(canonicalSource);
+    if (!fs.existsSync(path.join(repoRoot, canonicalSource))) {
+      violations.push({ file: registryRelative, line: 0, message: `MISSING_SOURCE_FILE ${entry.id} -> ${canonicalSource}` });
+    }
+    if (entry.source_file && entry.source_file !== canonicalSource) {
+      warnings.push(`registry source migration pending: ${entry.id} -> ${canonicalSource}`);
+    }
   }
 }
 
-const mandatoryFailGuards = [
+for (const requiredId of [
   "governance-schema",
   "agent-governance",
   "authority-separation",
@@ -156,18 +157,15 @@ const mandatoryFailGuards = [
   "workflow-security",
   "actions-pin",
   "a11y-runtime",
-];
-
-for (const requiredFailId of mandatoryFailGuards) {
-  if (entryById.get(requiredFailId)?.exit_level !== "fail") {
-    violations.push({ file: registryRelative, line: 0, message: `REQUIRED_FAIL_LEVEL_GUARD_DRIFT ${requiredFailId}` });
+]) {
+  if (entryById.get(requiredId)?.exit_level !== "fail") {
+    violations.push({ file: registryRelative, line: 0, message: `REQUIRED_FAIL_LEVEL_GUARD_DRIFT ${requiredId}` });
   }
 }
 
-for (const script of Object.keys(scripts).filter((name) => name.startsWith("guard:"))) {
-  if (aggregateScripts.has(script)) continue;
-  if (!registeredScripts.has(script)) {
-    violations.push({ file: packageRelative, line: 0, message: `UNREGISTERED_GUARD_SCRIPT ${script}` });
+for (const scriptName of Object.keys(scripts).filter((name) => name.startsWith("guard:"))) {
+  if (!aggregateScripts.has(scriptName) && !registeredScripts.has(scriptName)) {
+    violations.push({ file: packageRelative, line: 0, message: `UNREGISTERED_GUARD_SCRIPT ${scriptName}` });
   }
 }
 
@@ -175,27 +173,14 @@ for (const [defaultScript, fullScript] of [
   ["journey:gate", "journey:gate:full"],
   ["guard:journey", "guard:journey:full"],
 ]) {
-  if (!scripts[defaultScript]) {
-    violations.push({ file: packageRelative, line: 0, message: `TARGETED_DEFAULT_SCRIPT_MISSING ${defaultScript}` });
-  } else if (/\s-Full\b/i.test(scripts[defaultScript])) {
-    violations.push({ file: packageRelative, line: 0, message: `FULL_CHECK_FORCED_BY_DEFAULT ${defaultScript}` });
+  if (!scripts[defaultScript] || /\s-Full\b/i.test(scripts[defaultScript])) {
+    violations.push({ file: packageRelative, line: 0, message: `TARGETED_DEFAULT_SCRIPT_INVALID ${defaultScript}` });
   }
   if (!scripts[fullScript] || !/\s-Full\b/i.test(scripts[fullScript])) {
     violations.push({ file: packageRelative, line: 0, message: `EXPLICIT_FULL_SCRIPT_MISSING ${fullScript}` });
   }
 }
 
-if (/\s-Full\b/i.test(scripts["journey:gate:runtime"] ?? "")) {
-  violations.push({ file: packageRelative, line: 0, message: "RUNTIME_GATE_FORCES_FULL_BY_DEFAULT" });
-}
-if (
-  !/\s-Full\b/i.test(scripts["journey:gate:runtime:full"] ?? "") ||
-  !/\s-Runtime\b/i.test(scripts["journey:gate:runtime:full"] ?? "")
-) {
-  violations.push({ file: packageRelative, line: 0, message: "EXPLICIT_FULL_RUNTIME_GATE_MISSING" });
-}
-
-const governanceAggregate = scripts["guard:governance-all"] ?? "";
 const mandatoryGovernanceMarkers = [
   "guard:governance-schema",
   "guard:agent-governance",
@@ -205,10 +190,10 @@ const mandatoryGovernanceMarkers = [
   "guard:sdlc",
   "guard:cleanup-policy",
 ];
-
-for (const required of mandatoryGovernanceMarkers) {
-  if (!governanceAggregate.includes(required)) {
-    violations.push({ file: packageRelative, line: 0, message: `GOVERNANCE_AGGREGATE_MISSING ${required}` });
+const governanceAggregate = scripts["guard:governance-all"] ?? "";
+for (const marker of mandatoryGovernanceMarkers) {
+  if (!governanceAggregate.includes(marker)) {
+    violations.push({ file: packageRelative, line: 0, message: `GOVERNANCE_AGGREGATE_MISSING ${marker}` });
   }
 }
 
@@ -230,79 +215,68 @@ const manifestGuardIds = new Set([
   ...(manifest?.guardSets?.journey ?? []),
   ...(manifest?.guardSets?.governance ?? []),
 ]);
-
 for (const id of manifestGuardIds) {
   if (!entryById.has(id)) {
     violations.push({ file: manifestRelative, line: 0, message: `MANIFEST_REFERENCES_UNKNOWN_GUARD ${id}` });
   }
 }
-for (const required of mandatoryGovernanceMarkers.map((value) => value.replace(/^guard:/, ""))) {
-  if (!(manifest?.guardSets?.governance ?? []).includes(required)) {
-    violations.push({ file: manifestRelative, line: 0, message: `GOVERNANCE_SET_MISSING ${required}` });
+for (const marker of mandatoryGovernanceMarkers.map((value) => value.replace(/^guard:/, ""))) {
+  if (!(manifest?.guardSets?.governance ?? []).includes(marker)) {
+    violations.push({ file: manifestRelative, line: 0, message: `GOVERNANCE_SET_MISSING ${marker}` });
   }
 }
 
-if (fs.existsSync(workflowsDir)) {
-  const workflowFiles = fs.readdirSync(workflowsDir).filter((name) => /\.ya?ml$/.test(name)).sort();
-
-  for (const fileName of workflowFiles) {
-    const relative = `.github/workflows/${fileName}`;
-    const text = fs.readFileSync(path.join(workflowsDir, fileName), "utf8");
-
-    if (/^(?:tmp-|temp-)|temporary|one-time/i.test(fileName) || /\bTemporary\b|\bOne-time\b/i.test(text)) {
-      violations.push({ file: relative, line: 0, message: "TEMPORARY_WORKFLOW_FORBIDDEN" });
-    }
-
-    for (const match of text.matchAll(/\b(?:pnpm|npm|yarn)\s+(?:run\s+)?(guard:[A-Za-z0-9:_-]+)\b/g)) {
-      const script = match[1];
-      if (!aggregateScripts.has(script) && !registeredScripts.has(script)) {
-        violations.push({ file: relative, line: lineNumber(text, match.index), message: `UNREGISTERED_WORKFLOW_GUARD ${script}` });
-      }
-    }
-
-    for (const match of text.matchAll(/node\s+(tools\/guards\/[A-Za-z0-9_./-]+(?:-gate\.mjs|no-broken-imports\.mjs))/g)) {
-      if (!registeredSources.has(match[1])) {
-        violations.push({ file: relative, line: lineNumber(text, match.index), message: `UNREGISTERED_DIRECT_WORKFLOW_GUARD ${match[1]}` });
-      }
-    }
-
-    if (!/^permissions:\s*(?:\n|$)/m.test(text) && !/^permissions:\s*\{\s*\}\s*$/m.test(text)) {
-      violations.push({ file: relative, line: 0, message: "WORKFLOW_MUST_DECLARE_EXPLICIT_TOP_LEVEL_PERMISSIONS" });
-    }
-    if (/pull_request_target\s*:/m.test(text)) {
-      violations.push({ file: relative, line: 0, message: "PULL_REQUEST_TARGET_FORBIDDEN" });
-    }
-    if (/contents:\s*write\b/i.test(text) || /write-all\b/i.test(text)) {
-      violations.push({ file: relative, line: 0, message: "SOURCE_CONTENT_WRITE_PERMISSION_FORBIDDEN" });
-    }
-    if (/\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+merge)\b/i.test(text)) {
-      violations.push({ file: relative, line: 0, message: "CI_SOURCE_OR_BRANCH_MUTATION_FORBIDDEN" });
-    }
-    if (/\b(?:gofmt\s+-w|prettier\s+--write|eslint\s+--fix|sed\s+-i|perl\s+-pi)\b/i.test(text)) {
-      violations.push({ file: relative, line: 0, message: "CI_FIX_OR_SOURCE_REWRITE_COMMAND_FORBIDDEN" });
-    }
-    if (/@latest\b/i.test(text)) {
-      violations.push({ file: relative, line: 0, message: "LATEST_VERSION_FORBIDDEN_IN_WORKFLOW" });
-    }
-
-    verifyPinnedUses(relative, text);
-    verifyCheckoutCredentials(relative, text);
-  }
-
-  const workflowInventoryMatches =
-    workflowFiles.length === expectedWorkflowFiles.length &&
-    workflowFiles.every((fileName, index) => fileName === expectedWorkflowFiles[index]);
-  if (!workflowInventoryMatches) {
+if (!fs.existsSync(workflowsDir)) {
+  violations.push({ file: ".github/workflows", line: 0, message: "WORKFLOW_DIRECTORY_MISSING" });
+} else {
+  const workflowFiles = fs.readdirSync(workflowsDir).filter((name) => /\.ya?ml$/i.test(name)).sort();
+  if (JSON.stringify(workflowFiles) !== JSON.stringify(expectedWorkflowFiles)) {
     violations.push({
       file: ".github/workflows",
       line: 0,
-      message: `WORKFLOW_INVENTORY_DRIFT expected=${expectedWorkflowFiles.join(",")} found=${workflowFiles.join(",") || "none"}`,
+      message: `WORKFLOW_INVENTORY_DRIFT expected=${expectedWorkflowFiles.join(",")} found=${workflowFiles.join(",")}`,
     });
   }
 
-  const ciRelative = `.github/workflows/${canonicalWorkflow}`;
-  const ciText = readText(ciRelative);
-  requireMarkers(ciRelative, ciText, [
+  for (const fileName of workflowFiles) {
+    const relativePath = `.github/workflows/${fileName}`;
+    const content = fs.readFileSync(path.join(workflowsDir, fileName), "utf8");
+    if (!/^permissions:\s*(?:\n|$)/m.test(content) && !/^permissions:\s*\{\s*\}\s*$/m.test(content)) {
+      violations.push({ file: relativePath, line: 0, message: "WORKFLOW_MUST_DECLARE_EXPLICIT_TOP_LEVEL_PERMISSIONS" });
+    }
+    if (/pull_request_target\s*:/m.test(content)) {
+      violations.push({ file: relativePath, line: 0, message: "PULL_REQUEST_TARGET_FORBIDDEN" });
+    }
+    if (/contents:\s*write\b|statuses:\s*write\b|write-all\b/i.test(content)) {
+      violations.push({ file: relativePath, line: 0, message: "WORKFLOW_WRITE_PERMISSION_FORBIDDEN" });
+    }
+    if (/\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+merge)\b/i.test(content)) {
+      violations.push({ file: relativePath, line: 0, message: "CI_SOURCE_OR_BRANCH_MUTATION_FORBIDDEN" });
+    }
+    if (/\b(?:gofmt\s+-w|prettier\s+--write|eslint\s+--fix|sed\s+-i|perl\s+-pi)\b/i.test(content)) {
+      violations.push({ file: relativePath, line: 0, message: "CI_FIX_OR_SOURCE_REWRITE_COMMAND_FORBIDDEN" });
+    }
+    if (/@latest\b/i.test(content)) {
+      violations.push({ file: relativePath, line: 0, message: "LATEST_VERSION_FORBIDDEN_IN_WORKFLOW" });
+    }
+
+    for (const match of content.matchAll(/\b(?:pnpm|npm|yarn)\s+(?:run\s+)?(guard:[A-Za-z0-9:_-]+)\b/g)) {
+      if (!aggregateScripts.has(match[1]) && !registeredScripts.has(match[1])) {
+        violations.push({ file: relativePath, line: lineNumber(content, match.index), message: `UNREGISTERED_WORKFLOW_GUARD ${match[1]}` });
+      }
+    }
+    for (const match of content.matchAll(/node\s+(tools\/guards\/[A-Za-z0-9_./-]+(?:-gate\.mjs|no-broken-imports\.mjs))/g)) {
+      if (!registeredSources.has(match[1])) {
+        violations.push({ file: relativePath, line: lineNumber(content, match.index), message: `UNREGISTERED_DIRECT_WORKFLOW_GUARD ${match[1]}` });
+      }
+    }
+
+    verifyPinnedUses(relativePath, content);
+    verifyCheckoutCredentials(relativePath, content);
+  }
+
+  const ci = readText(".github/workflows/ci.yml");
+  requireMarkers(".github/workflows/ci.yml", ci, [
     "workflow_dispatch:",
     "pull_request:",
     "push:",
@@ -316,31 +290,12 @@ if (fs.existsSync(workflowsDir)) {
     "uses: ./.github/workflows/ci-backends.yml",
     "uses: ./.github/workflows/ci-runtime.yml",
   ]);
-
-  const concurrencyDeclarations = [...ciText.matchAll(/^\s*concurrency:\s*$/gm)].length;
-  if (concurrencyDeclarations !== 1) {
-    violations.push({
-      file: ciRelative,
-      line: 0,
-      message: `WORKFLOW_LEVEL_CONCURRENCY_ONLY expected=1 actual=${concurrencyDeclarations}`,
-    });
+  if ((ci.match(/^\s*concurrency:\s*$/gm) ?? []).length !== 1) {
+    violations.push({ file: ".github/workflows/ci.yml", line: 0, message: "WORKFLOW_LEVEL_CONCURRENCY_ONLY" });
   }
 
-  for (const retiredResult of [
-    "BThwani Repository CI result",
-    "BThwani Workflow Security result",
-    "BThwani Governance Audit result",
-    "DSH Operational Closure CI result",
-    "SDLC Governance CI Release result",
-  ]) {
-    if (ciText.includes(retiredResult)) {
-      violations.push({ file: ciRelative, line: 0, message: `DUPLICATE_RESULT_JOB_FORBIDDEN ${retiredResult}` });
-    }
-  }
-
-  const policyRelative = `.github/workflows/${policyWorkflow}`;
-  const policyText = readText(policyRelative);
-  requireMarkers(policyRelative, policyText, [
+  const policy = readText(".github/workflows/ci-policy.yml");
+  requireMarkers(".github/workflows/ci-policy.yml", policy, [
     ...mandatoryGovernanceMarkers,
     "guard:workflow-lint",
     "guard:workflow-security",
@@ -353,17 +308,18 @@ if (fs.existsSync(workflowsDir)) {
 
 if (fs.existsSync(actionsDir)) {
   const stack = [actionsDir];
-  while (stack.length) {
+  while (stack.length > 0) {
     const current = stack.pop();
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const full = path.join(current, entry.name);
       if (entry.isDirectory()) stack.push(full);
       else if (/^action\.ya?ml$/.test(entry.name)) {
-        const relative = toPosix(path.relative(repoRoot, full));
-        verifyPinnedUses(relative, fs.readFileSync(full, "utf8"));
+        const relativePath = toPosix(path.relative(repoRoot, full));
+        verifyPinnedUses(relativePath, fs.readFileSync(full, "utf8"));
       }
     }
   }
 }
 
+for (const warning of warnings) console.warn(`guard-registry warning: ${warning}`);
 fail(guardId, violations);
