@@ -1,0 +1,335 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Fulfillment Operations API
+  version: 1.0.0
+  description: >-
+    Governed operational extensions for partner pickup windows and operator SLA
+    alert management across pickup and partner-owned delivery fulfillment.
+  contact:
+    name: BThwani API Governance
+servers:
+  - url: http://localhost:58080
+    description: Local DSH runtime
+x-bthwani-owner: services/dsh
+x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+x-bthwani-runtime-dependency: true
+tags:
+  - name: DshPickupOperations
+    description: Partner pickup-window and operator pickup-SLA operations.
+  - name: DshPartnerDeliveryOperations
+    description: Operator SLA operations for partner-owned delivery.
+security:
+  - bearerAuth: []
+paths:
+  /dsh/partner/orders/{orderId}/pickup/extend-window:
+    post:
+      operationId: extendDshPartnerPickupWindow
+      summary: Extend an active partner pickup window within governed limits.
+      description: Extends the pickup expiry using optimistic version control and an auditable reason.
+      tags: [DshPickupOperations]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        $ref: '#/components/requestBodies/PickupWindowMutation'
+      responses:
+        '200': { $ref: '#/components/responses/PickupSessionResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/partner/orders/{orderId}/pickup/reschedule:
+    post:
+      operationId: rescheduleDshPartnerPickupWindow
+      summary: Reopen a governed partner pickup session with a new window.
+      description: Reschedules an eligible pickup session using optimistic version control and an auditable reason.
+      tags: [DshPickupOperations]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        $ref: '#/components/requestBodies/PickupWindowMutation'
+      responses:
+        '200': { $ref: '#/components/responses/PickupSessionResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/pickups/sla-alerts/refresh:
+    post:
+      operationId: refreshDshPickupSlaAlerts
+      summary: Reconcile pickup SLA alerts from current session state.
+      description: Opens newly breached alerts and resolves alerts whose pickup session is no longer breached.
+      tags: [DshPickupOperations]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        '200': { $ref: '#/components/responses/SlaRefreshResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/pickups/sla-alerts:
+    get:
+      operationId: listDshPickupSlaAlerts
+      summary: List governed pickup SLA alerts.
+      description: Returns operator-scoped pickup SLA alerts filtered by status and bounded result limit.
+      tags: [DshPickupOperations]
+      parameters:
+        - $ref: '#/components/parameters/SlaStatus'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { $ref: '#/components/responses/PickupSlaAlertListResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/pickups/sla-alerts/{alertId}/acknowledge:
+    post:
+      operationId: acknowledgeDshPickupSlaAlert
+      summary: Acknowledge an open pickup SLA alert.
+      description: Records the authenticated operator and enforces the expected alert version.
+      tags: [DshPickupOperations]
+      parameters:
+        - $ref: '#/components/parameters/AlertId'
+      requestBody:
+        $ref: '#/components/requestBodies/AcknowledgeAlert'
+      responses:
+        '200': { $ref: '#/components/responses/PickupSlaAlertResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/partner-delivery/sla-alerts/refresh:
+    post:
+      operationId: refreshDshPartnerDeliverySlaAlerts
+      summary: Reconcile partner-delivery SLA alerts from current task state.
+      description: Opens newly breached alerts and resolves alerts whose partner-delivery task is no longer breached.
+      tags: [DshPartnerDeliveryOperations]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        '200': { $ref: '#/components/responses/SlaRefreshResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/partner-delivery/sla-alerts:
+    get:
+      operationId: listDshPartnerDeliverySlaAlerts
+      summary: List governed partner-delivery SLA alerts.
+      description: Returns operator-scoped partner-delivery SLA alerts filtered by status and bounded result limit.
+      tags: [DshPartnerDeliveryOperations]
+      parameters:
+        - $ref: '#/components/parameters/SlaStatus'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200': { $ref: '#/components/responses/DeliverySlaAlertListResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/partner-delivery/sla-alerts/{alertId}/acknowledge:
+    post:
+      operationId: acknowledgeDshPartnerDeliverySlaAlert
+      summary: Acknowledge an open partner-delivery SLA alert.
+      description: Records the authenticated operator and enforces the expected alert version.
+      tags: [DshPartnerDeliveryOperations]
+      parameters:
+        - $ref: '#/components/parameters/AlertId'
+      requestBody:
+        $ref: '#/components/requestBodies/AcknowledgeAlert'
+      responses:
+        '200': { $ref: '#/components/responses/DeliverySlaAlertResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '500': { $ref: '#/components/responses/ErrorResponse' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AlertId:
+      name: alertId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    SlaStatus:
+      name: status
+      in: query
+      required: false
+      schema: { $ref: '#/components/schemas/SlaAlertStatus' }
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+  requestBodies:
+    PickupWindowMutation:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/PickupWindowMutationRequest' }
+    AcknowledgeAlert:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/AcknowledgeAlertRequest' }
+  schemas:
+    PickupWindowMutationRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, reason, newExpiry, commandId]
+      properties:
+        expectedVersion: { type: integer, minimum: 0 }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+        newExpiry: { type: string, format: date-time }
+        commandId: { type: string, minLength: 1, maxLength: 160 }
+        correlationId: { type: string, minLength: 1, maxLength: 128 }
+    AcknowledgeAlertRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion: { type: integer, minimum: 0 }
+    SlaAlertStatus:
+      type: string
+      enum: [open, acknowledged, resolved]
+    SlaRefreshResult:
+      type: object
+      additionalProperties: false
+      required: [opened, resolved, active]
+      properties:
+        opened: { type: integer, minimum: 0 }
+        resolved: { type: integer, minimum: 0 }
+        active: { type: integer, minimum: 0 }
+    PickupSlaAlert:
+      type: object
+      additionalProperties: false
+      required: [id, sessionId, orderId, storeId, leg, status, detectedAt, version]
+      properties:
+        id: { type: string, minLength: 1 }
+        sessionId: { type: string, minLength: 1 }
+        orderId: { type: string, format: uuid }
+        storeId: { type: string, minLength: 1 }
+        leg: { type: string, minLength: 1 }
+        status: { $ref: '#/components/schemas/SlaAlertStatus' }
+        detectedAt: { type: string, format: date-time }
+        acknowledgedByActorId: { type: [string, 'null'] }
+        acknowledgedAt: { type: [string, 'null'], format: date-time }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+    DeliverySlaAlert:
+      type: object
+      additionalProperties: false
+      required: [id, taskId, orderId, storeId, leg, status, detectedAt, version]
+      properties:
+        id: { type: string, minLength: 1 }
+        taskId: { type: string, minLength: 1 }
+        orderId: { type: string, format: uuid }
+        storeId: { type: string, minLength: 1 }
+        leg: { type: string, minLength: 1 }
+        status: { $ref: '#/components/schemas/SlaAlertStatus' }
+        detectedAt: { type: string, format: date-time }
+        acknowledgedByActorId: { type: [string, 'null'] }
+        acknowledgedAt: { type: [string, 'null'], format: date-time }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+    ErrorEnvelope:
+      type: object
+      additionalProperties: true
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+  responses:
+    PickupSessionResponse:
+      description: Governed pickup session returned.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [session]
+            properties:
+              session: { type: object, additionalProperties: true }
+    SlaRefreshResponse:
+      description: SLA alert reconciliation completed.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [result]
+            properties:
+              result: { $ref: '#/components/schemas/SlaRefreshResult' }
+    PickupSlaAlertResponse:
+      description: Pickup SLA alert returned.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [alert]
+            properties:
+              alert: { $ref: '#/components/schemas/PickupSlaAlert' }
+    PickupSlaAlertListResponse:
+      description: Pickup SLA alerts returned.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [alerts, total]
+            properties:
+              alerts:
+                type: array
+                items: { $ref: '#/components/schemas/PickupSlaAlert' }
+              total: { type: integer, minimum: 0 }
+    DeliverySlaAlertResponse:
+      description: Partner-delivery SLA alert returned.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [alert]
+            properties:
+              alert: { $ref: '#/components/schemas/DeliverySlaAlert' }
+    DeliverySlaAlertListResponse:
+      description: Partner-delivery SLA alerts returned.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [alerts, total]
+            properties:
+              alerts:
+                type: array
+                items: { $ref: '#/components/schemas/DeliverySlaAlert' }
+              total: { type: integer, minimum: 0 }
+    ErrorResponse:
+      description: Fulfillment operation failed.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
