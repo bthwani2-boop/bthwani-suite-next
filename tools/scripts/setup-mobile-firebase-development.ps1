@@ -1,6 +1,11 @@
 # tools/scripts/setup-mobile-firebase-development.ps1
-# Configure the minimum native provider baseline for BThwani development builds:
-# Firebase Cloud Messaging for all four Android apps and Google Maps for captain only.
+# Validate all four Android Firebase configs before any EAS mutation.
+# Default mode is validation-only. Pass -Apply to upload project-scoped EAS variables.
+
+[CmdletBinding()]
+param(
+    [switch] $Apply
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -9,10 +14,12 @@ if (Test-Path Variable:PSNativeCommandUseErrorActionPreference) {
 }
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$RepoRoot = Resolve-Path (Join-Path $ScriptDir "..\..")
+$RepoRoot = (Resolve-Path (Join-Path $ScriptDir "..\..")).Path
 $MobileEnvPath = Join-Path $RepoRoot "infra\local\mobile.env"
 $ManifestPath = Join-Path $RepoRoot "tools\mobile\mobile-apps.manifest.json"
+$ValidatorPath = Join-Path $RepoRoot "tools\mobile\google-services-config.mjs"
 $SecretsDir = "C:\bthwani-secrets\firebase"
+$LocalSecretsJsonPath = Join-Path $RepoRoot "secrets.local.mobile.json"
 Set-Location $RepoRoot
 
 function Import-BthwaniEnvironmentFile {
@@ -62,6 +69,42 @@ function Resolve-AppScopedValue {
     return $null
 }
 
+function Invoke-GoogleServicesValidation {
+    param(
+        [Parameter(Mandatory)][string] $Path,
+        [Parameter(Mandatory)][string] $ExpectedPackage
+    )
+
+    $output = & node $ValidatorPath `
+        --file $Path `
+        --package $ExpectedPackage `
+        --json 2>&1
+    $exitCode = $LASTEXITCODE
+    $text = ($output | Out-String).Trim()
+    $jsonStart = $text.IndexOf("{")
+
+    if ($jsonStart -lt 0) {
+        throw "Firebase validator returned no JSON for '$Path': $text"
+    }
+
+    try {
+        $result = $text.Substring($jsonStart) | ConvertFrom-Json -Depth 20
+    } catch {
+        throw "Firebase validator returned invalid JSON for '$Path': $text"
+    }
+
+    if ($exitCode -ne 0 -or $result.ok -ne $true) {
+        $message = if (-not [string]::IsNullOrWhiteSpace([string]$result.error)) {
+            [string]$result.error
+        } else {
+            "unknown validation failure"
+        }
+        throw $message
+    }
+
+    return $result
+}
+
 function Set-EasDevelopmentVariable {
     param(
         [Parameter(Mandatory)][string] $AppDirectory,
@@ -88,49 +131,34 @@ function Set-EasDevelopmentVariable {
     }
 }
 
-function Get-GoogleServicesPackages {
-    param([Parameter(Mandatory)][string] $Path)
+Write-Host "BThwani Mobile Firebase Development Setup" -ForegroundColor Cyan
+Write-Host "Repo Root: $RepoRoot"
+Write-Host "Mode: $(if ($Apply) { 'APPLY TO EAS' } else { 'VALIDATION ONLY' })`n"
 
-    try {
-        $jsonContent = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
-    } catch {
-        throw "File is not valid JSON: $Path"
+foreach ($requiredPath in @($ManifestPath, $ValidatorPath)) {
+    if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
+        throw "Required file is missing: $requiredPath"
     }
-
-    $packages = @()
-    foreach ($client in @($jsonContent.client)) {
-        $packageName = $client.client_info.android_client_info.package_name
-        if (-not [string]::IsNullOrWhiteSpace($packageName)) {
-            $packages += [string] $packageName
-        }
-    }
-    return $packages
 }
-
-Write-Host "BThwani Mobile Native Development Provider Setup" -ForegroundColor Cyan
-Write-Host "Repo Root: $RepoRoot`n"
 
 Import-BthwaniEnvironmentFile -Path $MobileEnvPath
 
-Write-Host "--> Checking Node.js, pnpm, and EAS authentication..." -ForegroundColor Yellow
 $nodeVersion = (& node -v).Trim()
 $pnpmVersion = (& pnpm -v).Trim()
-$easUser = (& pnpm dlx eas-cli@latest whoami 2>&1 | Out-String).Trim()
-if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($easUser)) {
-    throw "EAS CLI authentication is required. Run 'pnpm dlx eas-cli@latest login' first."
-}
-Write-Host "Node: $nodeVersion | pnpm: $pnpmVersion | EAS: $easUser" -ForegroundColor Green
+Write-Host "Node: $nodeVersion | pnpm: $pnpmVersion" -ForegroundColor Green
 
-$manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
+$manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json -Depth 100
 New-Item -ItemType Directory -Path $SecretsDir -Force | Out-Null
 
-$summaryTable = @()
-$localSecretsMap = @{}
-$hasErrors = $false
+$validationPlan = [System.Collections.Generic.List[object]]::new()
+$localSecretsMap = [ordered]@{}
+$validationErrors = [System.Collections.Generic.List[string]]::new()
+
+Write-Host "`nPHASE 1: Validate every local Firebase input before EAS mutation" -ForegroundColor Yellow
 
 foreach ($appKey in $manifest.apps.PSObject.Properties.Name) {
     $app = $manifest.apps.$appKey
-    $expectedPackage = [string] $app.androidPackage
+    $expectedPackage = [string]$app.androidPackage
     $features = @($app.features)
     $requiresMaps = $features -contains "maps"
     $appDirectory = Join-Path $RepoRoot "apps\$appKey\runtime"
@@ -146,78 +174,125 @@ foreach ($appKey in $manifest.apps.PSObject.Properties.Name) {
     }
 
     $firebaseState = "Missing"
-    $firebaseUploadState = "Not uploaded"
-    if (Test-Path -LiteralPath $firebasePath -PathType Leaf) {
-        try {
-            $packages = Get-GoogleServicesPackages -Path $firebasePath
-            if ($packages -notcontains $expectedPackage) {
-                throw "expected package '$expectedPackage'; found '$($packages -join ', ')'"
-            }
-            $firebaseState = "Valid"
-            $localSecretsMap[$appKey] = (Resolve-Path -LiteralPath $firebasePath).Path
-            Set-EasDevelopmentVariable -AppDirectory $appDirectory -Name "GOOGLE_SERVICES_JSON" -Value $firebasePath -Type "file"
-            $firebaseUploadState = "Uploaded"
-        } catch {
-            $firebaseState = "Invalid"
-            $firebaseUploadState = "Failed"
-            $hasErrors = $true
-            Write-Warning "${appKey}: Firebase configuration failed: $_"
+    $projectId = "-"
+    $mobileSdkAppId = "-"
+    $resolvedFirebasePath = $firebasePath
+
+    try {
+        if (-not (Test-Path -LiteralPath $firebasePath -PathType Leaf)) {
+            throw "missing google-services.json at $firebasePath"
         }
-    } else {
-        $hasErrors = $true
-        Write-Warning "${appKey}: missing google-services.json at $firebasePath"
+
+        $resolvedFirebasePath = (Resolve-Path -LiteralPath $firebasePath).Path
+        $validation = Invoke-GoogleServicesValidation `
+            -Path $resolvedFirebasePath `
+            -ExpectedPackage $expectedPackage
+
+        $firebaseState = "Valid"
+        $projectId = [string]$validation.projectId
+        $mobileSdkAppId = [string]$validation.mobileSdkAppId
+        $localSecretsMap[$appKey] = $resolvedFirebasePath
+    } catch {
+        $firebaseState = "Invalid"
+        $validationErrors.Add("${appKey}: $($_.Exception.Message)")
     }
 
+    $androidMapsKey = $null
+    $iosMapsKey = $null
     $mapsState = "Not required"
     if ($requiresMaps) {
         $androidMapsKey = Resolve-AppScopedValue -BaseName "GOOGLE_MAPS_ANDROID_API_KEY" -AppKey $appKey
-        if ([string]::IsNullOrWhiteSpace($androidMapsKey)) {
-            $mapsState = "Missing"
-            $hasErrors = $true
-            Write-Warning "${appKey}: GOOGLE_MAPS_ANDROID_API_KEY is required because the manifest enables maps."
-        } else {
-            try {
-                Set-EasDevelopmentVariable -AppDirectory $appDirectory -Name "GOOGLE_MAPS_ANDROID_API_KEY" -Value $androidMapsKey -Type "string"
-                $mapsState = "Uploaded"
-            } catch {
-                $mapsState = "Failed"
-                $hasErrors = $true
-                Write-Warning "${appKey}: Google Maps configuration failed: $_"
-            }
-        }
-
         $iosMapsKey = Resolve-AppScopedValue -BaseName "GOOGLE_MAPS_IOS_API_KEY" -AppKey $appKey
-        if (-not [string]::IsNullOrWhiteSpace($iosMapsKey)) {
-            try {
-                Set-EasDevelopmentVariable -AppDirectory $appDirectory -Name "GOOGLE_MAPS_IOS_API_KEY" -Value $iosMapsKey -Type "string"
-            } catch {
-                $hasErrors = $true
-                Write-Warning "${appKey}: optional iOS Google Maps configuration failed: $_"
-            }
+        $mapsState = if ([string]::IsNullOrWhiteSpace($androidMapsKey)) {
+            "Optional in development"
+        } else {
+            "Ready for optional upload"
         }
     }
 
-    $summaryTable += [PSCustomObject]@{
+    $validationPlan.Add([pscustomobject]@{
         App = $appKey
         Package = $expectedPackage
+        AppDirectory = $appDirectory
+        FirebasePath = $resolvedFirebasePath
         Firebase = $firebaseState
-        "EAS FCM" = $firebaseUploadState
+        ProjectId = $projectId
+        MobileSdkAppId = $mobileSdkAppId
+        AndroidMapsKey = $androidMapsKey
+        IosMapsKey = $iosMapsKey
         Maps = $mapsState
-    }
+        EasFcm = if ($Apply) { "Pending" } else { "Not changed" }
+    })
 }
 
-$localSecretsJsonPath = Join-Path $RepoRoot "secrets.local.mobile.json"
-if ($localSecretsMap.Count -gt 0) {
-    $localSecretsMap | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $localSecretsJsonPath -Encoding UTF8
+$validationPlan |
+    Select-Object App, Package, Firebase, ProjectId, Maps, EasFcm |
+    Format-Table -AutoSize
+
+if ($validationErrors.Count -gt 0) {
+    Write-Host "`nFirebase validation failed. No EAS variables were changed." -ForegroundColor Red
+    foreach ($validationError in $validationErrors) {
+        Write-Host " - $validationError" -ForegroundColor Red
+    }
+    throw "All four complete Firebase files must pass validation before any EAS upload."
+}
+
+$localSecretsMap |
+    ConvertTo-Json -Depth 5 |
+    Set-Content -LiteralPath $LocalSecretsJsonPath -Encoding UTF8
+Write-Host "`nLocal path map updated: $LocalSecretsJsonPath" -ForegroundColor Green
+
+if (-not $Apply) {
+    Write-Host "`nPASS: all four Firebase files are complete and package-isolated." -ForegroundColor Green
+    Write-Host "Validation-only mode made no EAS changes. Re-run with -Apply after review." -ForegroundColor Yellow
+    return
+}
+
+Write-Host "`nPHASE 2: Verify EAS authentication" -ForegroundColor Yellow
+$easUser = (& pnpm dlx eas-cli@latest whoami 2>&1 | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($easUser)) {
+    throw "EAS CLI authentication is required. Run 'pnpm dlx eas-cli@latest login' first. No EAS variables were changed."
+}
+Write-Host "EAS account: $easUser" -ForegroundColor Green
+
+Write-Host "`nPHASE 3: Upload validated project-scoped EAS variables" -ForegroundColor Yellow
+foreach ($entry in $validationPlan) {
+    Set-EasDevelopmentVariable `
+        -AppDirectory $entry.AppDirectory `
+        -Name "GOOGLE_SERVICES_JSON" `
+        -Value $entry.FirebasePath `
+        -Type "file"
+    $entry.EasFcm = "Uploaded"
+
+    if (-not [string]::IsNullOrWhiteSpace([string]$entry.AndroidMapsKey)) {
+        Set-EasDevelopmentVariable `
+            -AppDirectory $entry.AppDirectory `
+            -Name "GOOGLE_MAPS_ANDROID_API_KEY" `
+            -Value $entry.AndroidMapsKey `
+            -Type "string"
+        $entry.Maps = "Android uploaded"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace([string]$entry.IosMapsKey)) {
+        Set-EasDevelopmentVariable `
+            -AppDirectory $entry.AppDirectory `
+            -Name "GOOGLE_MAPS_IOS_API_KEY" `
+            -Value $entry.IosMapsKey `
+            -Type "string"
+        $entry.Maps = if ($entry.Maps -eq "Android uploaded") {
+            "Android + iOS uploaded"
+        } else {
+            "iOS uploaded"
+        }
+    }
 }
 
 Write-Host "`n==========================================================" -ForegroundColor Cyan
-Write-Host " BThwani Development Native Provider Status" -ForegroundColor Cyan
+Write-Host " BThwani Development Firebase / EAS Status" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
-$summaryTable | Format-Table -AutoSize
+$validationPlan |
+    Select-Object App, Package, Firebase, ProjectId, Maps, EasFcm |
+    Format-Table -AutoSize
 
-if ($hasErrors) {
-    throw "Development provider setup is incomplete. Resolve the reported Firebase or captain maps inputs, then rerun this command."
-}
-
-Write-Host "PASS: Firebase is isolated across all four apps and Google Maps is configured only for app-captain." -ForegroundColor Green
+Write-Host "PASS: all Firebase files were validated before EAS mutation and uploaded only to their matching projects." -ForegroundColor Green
+Write-Host "Google Maps remained optional for development and was uploaded only when an app-scoped key existed." -ForegroundColor Green
