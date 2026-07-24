@@ -24,6 +24,10 @@ if (!sentry.authToken) missing.push("SENTRY_AUTH_TOKEN");
 if (!sentry.appEnvironment) missing.push("EXPO_PUBLIC_APP_ENV");
 
 if (missing.length > 0) {
+  if (profile === "development") {
+    console.log(`PASS: ${appKey} Sentry build environment is optional for development (not configured)`);
+    process.exit(0);
+  }
   throw new Error(`${appKey}: missing Sentry build configuration: ${missing.join(", ")}`);
 }
 
