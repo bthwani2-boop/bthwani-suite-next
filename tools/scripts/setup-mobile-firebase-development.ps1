@@ -1,128 +1,223 @@
 # tools/scripts/setup-mobile-firebase-development.ps1
-# Set up Firebase Development configuration for BThwani mobile applications.
+# Configure the minimum native provider baseline for BThwani development builds:
+# Firebase Cloud Messaging for all four Android apps and Google Maps for captain only.
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+if (Test-Path Variable:PSNativeCommandUseErrorActionPreference) {
+    $PSNativeCommandUseErrorActionPreference = $true
+}
 
-# 1. Ensure working directory is repo root
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = Resolve-Path (Join-Path $ScriptDir "..\..")
+$MobileEnvPath = Join-Path $RepoRoot "infra\local\mobile.env"
+$ManifestPath = Join-Path $RepoRoot "tools\mobile\mobile-apps.manifest.json"
+$SecretsDir = "C:\bthwani-secrets\firebase"
 Set-Location $RepoRoot
 
-Write-Host "BThwani Mobile Firebase Development Setup" -ForegroundColor Cyan
+function Import-BthwaniEnvironmentFile {
+    param([Parameter(Mandatory)][string] $Path)
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return
+    }
+
+    foreach ($rawLine in Get-Content -LiteralPath $Path) {
+        $line = $rawLine.Trim()
+        if (-not $line -or $line.StartsWith("#") -or -not $line.Contains("=")) {
+            continue
+        }
+
+        $parts = $line.Split("=", 2)
+        $name = $parts[0].Trim()
+        $value = $parts[1].Trim()
+        if (-not $name) {
+            continue
+        }
+        if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+            $value = $value.Substring(1, $value.Length - 2)
+        }
+        if (-not [Environment]::GetEnvironmentVariable($name, "Process")) {
+            [Environment]::SetEnvironmentVariable($name, $value, "Process")
+        }
+    }
+}
+
+function Resolve-AppScopedValue {
+    param(
+        [Parameter(Mandatory)][string] $BaseName,
+        [Parameter(Mandatory)][string] $AppKey
+    )
+
+    $suffix = $AppKey.Replace("-", "_").ToUpperInvariant()
+    $scopedValue = [Environment]::GetEnvironmentVariable("${BaseName}_${suffix}", "Process")
+    if (-not [string]::IsNullOrWhiteSpace($scopedValue)) {
+        return $scopedValue.Trim()
+    }
+
+    $commonValue = [Environment]::GetEnvironmentVariable($BaseName, "Process")
+    if (-not [string]::IsNullOrWhiteSpace($commonValue)) {
+        return $commonValue.Trim()
+    }
+    return $null
+}
+
+function Set-EasDevelopmentVariable {
+    param(
+        [Parameter(Mandatory)][string] $AppDirectory,
+        [Parameter(Mandatory)][string] $Name,
+        [Parameter(Mandatory)][string] $Value,
+        [Parameter(Mandatory)][ValidateSet("file", "string")][string] $Type
+    )
+
+    Push-Location -LiteralPath $AppDirectory
+    try {
+        & pnpm dlx eas-cli@latest env:create development `
+            --name $Name `
+            --value $Value `
+            --type $Type `
+            --visibility secret `
+            --scope project `
+            --force `
+            --non-interactive | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "EAS env:create failed for $Name with exit code $LASTEXITCODE"
+        }
+    } finally {
+        Pop-Location
+    }
+}
+
+function Get-GoogleServicesPackages {
+    param([Parameter(Mandatory)][string] $Path)
+
+    try {
+        $jsonContent = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    } catch {
+        throw "File is not valid JSON: $Path"
+    }
+
+    $packages = @()
+    foreach ($client in @($jsonContent.client)) {
+        $packageName = $client.client_info.android_client_info.package_name
+        if (-not [string]::IsNullOrWhiteSpace($packageName)) {
+            $packages += [string] $packageName
+        }
+    }
+    return $packages
+}
+
+Write-Host "BThwani Mobile Native Development Provider Setup" -ForegroundColor Cyan
 Write-Host "Repo Root: $RepoRoot`n"
 
-# 2. Check Node and pnpm
-Write-Host "--> Checking Node.js and pnpm..." -ForegroundColor Yellow
-$nodeVer = node -v
-$pnpmVer = pnpm -v
-Write-Host "Node: $nodeVer | pnpm: $pnpmVer" -ForegroundColor Green
+Import-BthwaniEnvironmentFile -Path $MobileEnvPath
 
-# 3. Check EAS CLI authentication
-Write-Host "`n--> Checking EAS CLI authentication..." -ForegroundColor Yellow
-try {
-    $whoami = pnpm dlx eas-cli@latest whoami 2>&1
-    Write-Host "EAS Logged-in User: $whoami" -ForegroundColor Green
-} catch {
-    Write-Warning "EAS CLI login required. Run 'pnpm dlx eas-cli@latest login' first."
+Write-Host "--> Checking Node.js, pnpm, and EAS authentication..." -ForegroundColor Yellow
+$nodeVersion = (& node -v).Trim()
+$pnpmVersion = (& pnpm -v).Trim()
+$easUser = (& pnpm dlx eas-cli@latest whoami 2>&1 | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($easUser)) {
+    throw "EAS CLI authentication is required. Run 'pnpm dlx eas-cli@latest login' first."
 }
+Write-Host "Node: $nodeVersion | pnpm: $pnpmVersion | EAS: $easUser" -ForegroundColor Green
 
-# Load manifest
-$manifestPath = Join-Path $RepoRoot "tools\mobile\mobile-apps.manifest.json"
-$manifest = Get-Content $manifestPath | ConvertFrom-Json
-
-$secretsDir = "C:\bthwani-secrets\firebase"
-if (-not (Test-Path $secretsDir)) {
-    New-Item -ItemType Directory -Path $secretsDir -Force | Out-Null
-}
+$manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
+New-Item -ItemType Directory -Path $SecretsDir -Force | Out-Null
 
 $summaryTable = @()
 $localSecretsMap = @{}
+$hasErrors = $false
 
 foreach ($appKey in $manifest.apps.PSObject.Properties.Name) {
-    $appObj = $manifest.apps.$appKey
-    $expectedPackage = $appObj.androidPackage
-    $appDir = Join-Path $RepoRoot "apps\$appKey\runtime"
-    $appSecretsDir = Join-Path $secretsDir $appKey
+    $app = $manifest.apps.$appKey
+    $expectedPackage = [string] $app.androidPackage
+    $features = @($app.features)
+    $requiresMaps = $features -contains "maps"
+    $appDirectory = Join-Path $RepoRoot "apps\$appKey\runtime"
+    $appSecretsDirectory = Join-Path $SecretsDir $appKey
+    New-Item -ItemType Directory -Path $appSecretsDirectory -Force | Out-Null
 
-    if (-not (Test-Path $appSecretsDir)) {
-        New-Item -ItemType Directory -Path $appSecretsDir -Force | Out-Null
+    $configuredFirebasePath = Resolve-AppScopedValue -BaseName "GOOGLE_SERVICES_JSON" -AppKey $appKey
+    $defaultFirebasePath = Join-Path $appSecretsDirectory "google-services.json"
+    $firebasePath = if (-not [string]::IsNullOrWhiteSpace($configuredFirebasePath)) {
+        $configuredFirebasePath
+    } else {
+        $defaultFirebasePath
     }
 
-    $localJsonPath = Join-Path $appSecretsDir "google-services.json"
-    $fileFound = Test-Path $localJsonPath
-    $packageMatched = $false
-    $easVarSet = "Not attempted"
-
-    if ($fileFound) {
+    $firebaseState = "Missing"
+    $firebaseUploadState = "Not uploaded"
+    if (Test-Path -LiteralPath $firebasePath -PathType Leaf) {
         try {
-            $jsonContent = Get-Content $localJsonPath -Raw | ConvertFrom-Json
-            $packages = @()
-            if ($jsonContent.client) {
-                foreach ($client in $jsonContent.client) {
-                    if ($client.client_info -and $client.client_info.android_client_info) {
-                        $packages += $client.client_info.android_client_info.package_name
-                    }
-                }
+            $packages = Get-GoogleServicesPackages -Path $firebasePath
+            if ($packages -notcontains $expectedPackage) {
+                throw "expected package '$expectedPackage'; found '$($packages -join ', ')'"
             }
-            if ($packages -contains $expectedPackage) {
-                $packageMatched = $true
-                $localSecretsMap[$appKey] = $localJsonPath
-            } else {
-                Write-Warning "File at $localJsonPath does NOT contain expected package '$expectedPackage' (found: $($packages -join ', '))"
-            }
+            $firebaseState = "Valid"
+            $localSecretsMap[$appKey] = (Resolve-Path -LiteralPath $firebasePath).Path
+            Set-EasDevelopmentVariable -AppDirectory $appDirectory -Name "GOOGLE_SERVICES_JSON" -Value $firebasePath -Type "file"
+            $firebaseUploadState = "Uploaded"
         } catch {
-            Write-Warning "File at $localJsonPath is not valid JSON."
-        }
-    }
-
-    if ($packageMatched) {
-        Write-Host "`n--> Configuring EAS environment for $appKey ($appDir)..." -ForegroundColor Yellow
-        Push-Location $appDir
-        try {
-            # Upload file variable to EAS development environment
-            pnpm dlx eas-cli@latest env:create development `
-                --name GOOGLE_SERVICES_JSON `
-                --value $localJsonPath `
-                --type file `
-                --visibility secret `
-                --scope project `
-                --force `
-                --non-interactive 2>&1 | Out-Null
-
-            $easVarSet = "Uploaded (development)"
-            Write-Host "EAS GOOGLE_SERVICES_JSON updated for $appKey" -ForegroundColor Green
-        } catch {
-            $easVarSet = "Upload Failed: $_"
-            Write-Warning "Failed to set EAS env for ${appKey}: $_"
-        } finally {
-            Pop-Location
+            $firebaseState = "Invalid"
+            $firebaseUploadState = "Failed"
+            $hasErrors = $true
+            Write-Warning "${appKey}: Firebase configuration failed: $_"
         }
     } else {
-        Write-Host "`nSkipping EAS upload for $appKey (valid local google-services.json not found)." -ForegroundColor DarkGray
+        $hasErrors = $true
+        Write-Warning "${appKey}: missing google-services.json at $firebasePath"
+    }
+
+    $mapsState = "Not required"
+    if ($requiresMaps) {
+        $androidMapsKey = Resolve-AppScopedValue -BaseName "GOOGLE_MAPS_ANDROID_API_KEY" -AppKey $appKey
+        if ([string]::IsNullOrWhiteSpace($androidMapsKey)) {
+            $mapsState = "Missing"
+            $hasErrors = $true
+            Write-Warning "${appKey}: GOOGLE_MAPS_ANDROID_API_KEY is required because the manifest enables maps."
+        } else {
+            try {
+                Set-EasDevelopmentVariable -AppDirectory $appDirectory -Name "GOOGLE_MAPS_ANDROID_API_KEY" -Value $androidMapsKey -Type "string"
+                $mapsState = "Uploaded"
+            } catch {
+                $mapsState = "Failed"
+                $hasErrors = $true
+                Write-Warning "${appKey}: Google Maps configuration failed: $_"
+            }
+        }
+
+        $iosMapsKey = Resolve-AppScopedValue -BaseName "GOOGLE_MAPS_IOS_API_KEY" -AppKey $appKey
+        if (-not [string]::IsNullOrWhiteSpace($iosMapsKey)) {
+            try {
+                Set-EasDevelopmentVariable -AppDirectory $appDirectory -Name "GOOGLE_MAPS_IOS_API_KEY" -Value $iosMapsKey -Type "string"
+            } catch {
+                $hasErrors = $true
+                Write-Warning "${appKey}: optional iOS Google Maps configuration failed: $_"
+            }
+        }
     }
 
     $summaryTable += [PSCustomObject]@{
-        "App"             = $appKey
-        "Package"         = $expectedPackage
-        "Local File"      = if ($fileFound) { $localJsonPath } else { "Missing" }
-        "Package Match"   = if ($packageMatched) { "YES" } else { "NO" }
-        "EAS File Var"    = $easVarSet
+        App = $appKey
+        Package = $expectedPackage
+        Firebase = $firebaseState
+        "EAS FCM" = $firebaseUploadState
+        Maps = $mapsState
     }
 }
 
-# 10. Create secrets.local.mobile.json in root if files matched
 $localSecretsJsonPath = Join-Path $RepoRoot "secrets.local.mobile.json"
 if ($localSecretsMap.Count -gt 0) {
-    $localSecretsMap | ConvertTo-Json -Depth 5 | Set-Content $localSecretsJsonPath -Encoding UTF8
-    Write-Host "`nCreated $localSecretsJsonPath with $($localSecretsMap.Count) entries." -ForegroundColor Green
+    $localSecretsMap | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $localSecretsJsonPath -Encoding UTF8
 }
 
-# 11. Verify .gitignore rule
-$gitIgnored = git check-ignore secrets.local.mobile.json 2>&1
-Write-Host "Gitignore check for secrets.local.mobile.json: $gitIgnored" -ForegroundColor Gray
-
-# 12. Safe Summary Table
 Write-Host "`n==========================================================" -ForegroundColor Cyan
-Write-Host "       BThwani Mobile Firebase Setup Status Table        " -ForegroundColor Cyan
+Write-Host " BThwani Development Native Provider Status" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 $summaryTable | Format-Table -AutoSize
+
+if ($hasErrors) {
+    throw "Development provider setup is incomplete. Resolve the reported Firebase or captain maps inputs, then rerun this command."
+}
+
+Write-Host "PASS: Firebase is isolated across all four apps and Google Maps is configured only for app-captain." -ForegroundColor Green
