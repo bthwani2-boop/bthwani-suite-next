@@ -73,7 +73,7 @@ export function PlatformGovernanceVisual() {
         <View style={styles.headingCopy}>
           <Text role="titleSm">المسار التنفيذي للفول ستاك SaaS</Text>
           <Text role="caption">
-            قراءة حية لدورة JRN-040 من الجلسة الموثوقة إلى platform-control ثم PostgreSQL؛ لا توجد قيم تجريبية أو مستأجر محلي مفروض من الواجهة.
+            قراءة حية لدورة تغييرات المنصة من الجلسة الموثوقة إلى platform-control ثم PostgreSQL؛ لا توجد قيم تجريبية أو مستأجر محلي مفروض من الواجهة.
           </Text>
         </View>
         <Badge
