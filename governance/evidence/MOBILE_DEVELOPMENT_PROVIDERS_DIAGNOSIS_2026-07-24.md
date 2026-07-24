@@ -3,7 +3,8 @@
 ## Scope
 
 - Repository: `bthwani2-boop/bthwani-suite-next`
-- Branch: `fix/lianbassam-pr-ci-trigger`
+- Original branch: `fix/lianbassam-pr-ci-trigger`
+- Remediation branch: `fix/mobile-firebase-bootstrap`
 - Target: Android development clients for `app-client`, `app-partner`, `app-captain`, and `app-field`.
 - Secret policy: no Firebase file, map key, SMS credential, or provider secret is committed.
 
@@ -13,8 +14,10 @@
 | --- | --- | --- | --- | --- |
 | `app-client` | required | required | no | no |
 | `app-partner` | required | required | no | no |
-| `app-captain` | required | required | required | required |
+| `app-captain` | required | required | required | optional fallback in development |
 | `app-field` | required | required | no | no |
+
+Native Google Maps remains mandatory for captain `internal` and `production` builds. Development may omit the key and use the governed non-map fallback.
 
 ## Findings before remediation
 
@@ -28,85 +31,129 @@ All four applications declared the notifications capability and depended on `exp
 
 The repository correctly ignores `google-services.json`; activation cannot be completed from GitHub source alone.
 
-### 3. Firebase setup did not configure the complete native baseline
+### 3. Firebase validation accepted package-only placeholders
 
-The existing setup command validated and uploaded the four Firebase files, but it did not configure the Google Maps key required by `app-captain`.
+The original guard and setup script treated a JSON file as valid when it contained the expected `package_name`. They did not require `project_info`, `configuration_version`, `mobilesdk_app_id`, or an Android API key. Package-only placeholders could therefore pass repository checks and be uploaded to EAS.
 
-### 4. Development preflight allowed a captain build without maps
+### 4. Firebase setup mutated EAS during validation
 
-The generic mobile guard required Google Maps keys only for non-development profiles. This allowed an Android development build to be submitted while `app-captain` declared native maps but had no map key.
+The original setup command validated and uploaded one application at a time. A failure on a later application could leave earlier EAS projects partially updated.
 
-### 5. OTP is development-local; real SMS is not active
+### 5. Runtime policy drift
+
+The generated Expo configuration used `runtimeVersion.policy=appVersion` while the central guard still required `fingerprint`. This guaranteed a preflight conflict unrelated to Firebase credentials.
+
+### 6. Development Maps policy drift
+
+A later build-runner change required the captain Maps key during development. This contradicted the accepted development policy that allows the captain non-map fallback.
+
+### 7. OTP is development-local; real SMS is not active
 
 The Identity service provides an internal OTP/activation flow. The local bootstrap code `000000` is blocked by `ActivationSafetyMiddleware` whenever `IDENTITY_LOCAL_BOOTSTRAP` is not explicitly `true`. This is acceptable for the governed local development runtime.
 
 No real SMS delivery integration is required or activated for the current development phase. A Twilio record with mock credentials must not be interpreted as working SMS delivery.
 
-## Remediation applied
+## Remediation applied on `fix/mobile-firebase-bootstrap`
 
-1. Added `location` to the central `app-partner` feature manifest without adding `maps`.
-2. Kept native `maps` and background location exclusive to `app-captain`.
-3. Added scoped local variables for the captain Android and iOS map keys.
-4. Extended `mobile:firebase:setup:dev` to:
-   - validate each Firebase file against its exact Android package;
-   - upload `GOOGLE_SERVICES_JSON` to the matching EAS project only;
-   - upload `GOOGLE_MAPS_ANDROID_API_KEY` only to the captain EAS project;
-   - optionally upload the captain iOS map key;
-   - fail instead of reporting success when any required native input is missing.
-5. Updated the EAS build runner to require the captain map key during development preflight as well as preview and production.
-6. Added a regression test locking the capability matrix and map-key isolation.
-7. Updated the governed EAS activation runbook with the exact development baseline and commands.
+1. Added a shared strict validator for Firebase Android SDK configuration files.
+2. Required all of the following before a file can pass:
+   - `project_info.project_number`;
+   - `project_info.project_id`;
+   - `configuration_version`;
+   - an exact Android package match;
+   - `client_info.mobilesdk_app_id`;
+   - at least one `api_key.current_key`.
+3. Updated the central mobile guard to use the strict validator.
+4. Aligned the central guard with `runtimeVersion.policy=appVersion`.
+5. Replaced package-only test fixtures with structurally complete Firebase fixtures.
+6. Added a regression proving that package-only placeholders fail.
+7. Restored the policy that Maps is optional for captain development and mandatory outside development.
+8. Changed Firebase/EAS setup to validate all four files before its first EAS write.
+9. Made Firebase/EAS setup validation-only by default; `-Apply` is required for EAS mutation.
+10. Added an idempotent Firebase bootstrap script that:
+    - performs a dry run by default;
+    - creates only missing Android apps with `-Apply`;
+    - downloads all four SDK configurations into isolated staging;
+    - validates every staged file before secure installation;
+    - never changes EAS variables, credentials, builds, or workflows.
+11. Updated the governed activation runbook and regression contracts.
 
-## External inputs still required
+## Firebase project state at diagnosis
 
-The following cannot be generated or verified from repository source:
+The authenticated Firebase account can access:
 
-1. Four real Firebase Android configuration files matching:
-   - `com.bthwani.client.next`
-   - `com.bthwani.partner.next`
-   - `com.bthwani.captain.next`
-   - `com.bthwani.field.next`
-2. One restricted Android Google Maps key for:
-   - package: `com.bthwani.captain.next`
-   - API: `Maps SDK for Android`
-   - development signing SHA certificate
-3. Valid EAS authentication with access to all four EAS projects.
+```text
+Project ID: bthwani
+Project Number: 806591977022
+Registered apps: none
+```
 
-## Required local secure configuration
+The project is therefore suitable for the controlled development bootstrap, subject to explicit `-Apply` execution by the authenticated operator.
 
-Copy `infra/local/mobile.env.example` to the ignored file `infra/local/mobile.env`, then set:
+## Required local secure paths
+
+The bootstrap installs the validated files at:
+
+```text
+C:\bthwani-secrets\firebase\app-client\google-services.json
+C:\bthwani-secrets\firebase\app-partner\google-services.json
+C:\bthwani-secrets\firebase\app-captain\google-services.json
+C:\bthwani-secrets\firebase\app-field\google-services.json
+```
+
+Equivalent paths may be supplied through the ignored `infra/local/mobile.env` file:
 
 ```text
 GOOGLE_SERVICES_JSON_APP_CLIENT=<secure path>
 GOOGLE_SERVICES_JSON_APP_PARTNER=<secure path>
 GOOGLE_SERVICES_JSON_APP_CAPTAIN=<secure path>
 GOOGLE_SERVICES_JSON_APP_FIELD=<secure path>
-GOOGLE_MAPS_ANDROID_API_KEY_APP_CAPTAIN=<restricted key>
+GOOGLE_MAPS_ANDROID_API_KEY_APP_CAPTAIN=<optional in development>
 ```
 
 Do not define a Google Maps key for client, partner, or field.
 
-## Execution sequence
+## Safe execution sequence
 
 ```powershell
+# Dry run: no Firebase or EAS mutation
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/bootstrap-mobile-firebase-development.ps1
+
+# Explicit Firebase app creation and SDK config download; no EAS mutation
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/bootstrap-mobile-firebase-development.ps1 -Apply
+
+# Validate all local files; no EAS mutation
 pnpm run mobile:firebase:setup:dev
+
+# Explicit EAS development-variable upload
+pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/setup-mobile-firebase-development.ps1 -Apply
+
+# Preflight only; no remote build
 pnpm run mobile:eas:preflight:all:dev
-pnpm run mobile:eas:build:all:dev
+
+# Prove one development artifact before all applications
+pnpm run mobile:eas:build:client:dev
 ```
 
-A new development client must be installed after the builds complete. Metro reloads and EAS Updates cannot add missing native Firebase or Google Maps configuration to an existing binary.
+A new development client must be installed after the builds complete. Metro reloads and EAS Updates cannot add missing native Firebase or Maps configuration to an existing binary.
 
 ## Acceptance criteria
 
-- Setup reports `Firebase=Valid` and `EAS FCM=Uploaded` for all four applications.
-- Setup reports `Maps=Uploaded` only for `app-captain`.
-- Development preflight fails when the captain map key or any Firebase file is absent.
+- Dry run lists four exact Android package targets and performs no mutation.
+- `-Apply` creates only missing Firebase Android apps.
+- Downloaded files all report Firebase project ID `bthwani`.
+- Every downloaded `mobilesdk_app_id` equals the Firebase App ID returned by `apps:list`.
+- Package-only placeholder files fail validation.
+- Local validation succeeds for all four files before any EAS mutation.
+- EAS apply uploads `GOOGLE_SERVICES_JSON` only to the matching project.
+- Development preflight succeeds without a captain Maps key when Firebase inputs are complete.
+- Internal and production preflight reject a missing captain Maps key.
 - Partner Expo configuration contains `expo-location` and no native Google Maps configuration.
-- Captain Expo configuration contains both location support and the restricted map key.
 - Push token registration no longer logs `Default FirebaseApp is not initialized` in newly built clients.
 
 ## Deferred by design
 
+- FCM V1 service-account activation and end-to-end push delivery proof.
 - Real SMS/Twilio activation.
 - Stripe and production payment providers.
 - AWS S3 production storage.
