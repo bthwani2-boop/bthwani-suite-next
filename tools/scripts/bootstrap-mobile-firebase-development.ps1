@@ -30,6 +30,35 @@ $LocalSecretsMapPath = Join-Path $RepoRoot "secrets.local.mobile.json"
 New-Item -ItemType Directory -Force -Path $ReportRoot, $DownloadRoot | Out-Null
 Set-Location $RepoRoot
 
+function Convert-EmbeddedJson {
+    param([Parameter(Mandatory)][string] $Text)
+
+    $start = $Text.IndexOf("{")
+    $end = $Text.LastIndexOf("}")
+    if ($start -lt 0 -or $end -lt $start) {
+        throw "No JSON object was found in command output: $Text"
+    }
+
+    $jsonText = $Text.Substring($start, ($end - $start + 1))
+    try {
+        return $jsonText | ConvertFrom-Json -Depth 100
+    } catch {
+        throw "Command output did not contain valid JSON: $Text"
+    }
+}
+
+function Test-EmbeddedJsonSuccess {
+    param([Parameter(Mandatory)][string] $Text)
+
+    try {
+        $json = Convert-EmbeddedJson -Text $Text
+        $statusProperty = $json.PSObject.Properties["status"]
+        return ($null -ne $statusProperty -and [string]$statusProperty.Value -eq "success")
+    } catch {
+        return $false
+    }
+}
+
 function Invoke-FirebaseCli {
     param(
         [Parameter(Mandatory)][string[]] $Arguments,
@@ -41,27 +70,16 @@ function Invoke-FirebaseCli {
     $text = ($output | Out-String).Trim()
 
     if (-not $AllowFailure -and $exitCode -ne 0) {
-        throw "Firebase CLI failed ($exitCode): firebase $($Arguments -join ' ')`n$text"
+        if (($Arguments -contains "--json") -and (Test-EmbeddedJsonSuccess -Text $text)) {
+            Write-Host "WARN: Firebase CLI returned exit code $exitCode after emitting successful JSON; continuing with parsed JSON output." -ForegroundColor DarkYellow
+        } else {
+            throw "Firebase CLI failed ($exitCode): firebase $($Arguments -join ' ')`n$text"
+        }
     }
 
     return [pscustomobject]@{
         ExitCode = $exitCode
         Output = $text
-    }
-}
-
-function Convert-EmbeddedJson {
-    param([Parameter(Mandatory)][string] $Text)
-
-    $start = $Text.IndexOf("{")
-    if ($start -lt 0) {
-        throw "No JSON object was found in command output: $Text"
-    }
-
-    try {
-        return $Text.Substring($start) | ConvertFrom-Json -Depth 100
-    } catch {
-        throw "Command output did not contain valid JSON: $Text"
     }
 }
 
