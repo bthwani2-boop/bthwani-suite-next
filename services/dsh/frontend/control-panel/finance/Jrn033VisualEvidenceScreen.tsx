@@ -96,16 +96,16 @@ export function Jrn033VisualEvidenceScreen({ mode }: Props) {
     return () => { globalThis.fetch = originalFetch; };
   }, [mode]);
 
-  if (!ready) return <div dir="rtl" style={{ padding: 32 }}>تهيئة دليل JRN-033 المرئي…</div>;
+  if (!ready) return <div dir="rtl" style={{ padding: 32 }}>تهيئة الدليل المالي المرئي…</div>;
 
   const actors: RepresentativeActorType[] = ["client", "partner", "captain", "field"];
   return (
     <main dir="rtl" style={{ minHeight: "100vh", background: colorRoles.surfaceWarm, padding: 28, fontFamily: "system-ui", color: colorRoles.textPrimary }}>
       <header style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: colorRoles.brandAction }}>JRN-033 · VISUAL EVIDENCE · {mode.toUpperCase()}</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: colorRoles.brandAction }}>الدليل المالي المرئي · {mode.toUpperCase()}</div>
         <h1 style={{ margin: "8px 0", fontSize: 32 }}>محافظ الممثلين والمالية المرجعية</h1>
         <p style={{ margin: 0, maxWidth: 900, lineHeight: 1.8 }}>
-          عرض آلي للمكوّنات الفعلية فقط. البيانات في هذه الصفحة fixture بصري محكوم، بينما الحقيقة التشغيلية تُثبت منفصلًا عبر Identity → DSH → WLT.
+          عرض آلي للمكوّنات الفعلية فقط. بيانات هذه الصفحة مخصصة لإثبات العرض المرئي، بينما الحقيقة التشغيلية تُثبت منفصلًا عبر Identity → DSH → WLT.
         </p>
       </header>
       <section style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 18, alignItems: "start" }}>
