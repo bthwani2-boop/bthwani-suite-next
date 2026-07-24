@@ -76,7 +76,7 @@ if (separator < 0 || separator === process.argv.length - 1) {
 const [rawCommand, ...commandArgs] = process.argv.slice(separator + 1);
 const executable = rawCommand === "node" ? process.execPath : rawCommand;
 const childEnvironment = { ...process.env };
-if (rawCommand === "node" && !/(?:^|\s)--trace-warnings(?:\s|$)/.test(childEnvironment.NODE_OPTIONS ?? "")) {
+if (!/(?:^|\s)--trace-warnings(?:\s|$)/.test(childEnvironment.NODE_OPTIONS ?? "")) {
   childEnvironment.NODE_OPTIONS = `${childEnvironment.NODE_OPTIONS ?? ""} --trace-warnings`.trim();
 }
 const result = spawnSync(executable, commandArgs, {

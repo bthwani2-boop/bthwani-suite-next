@@ -13,7 +13,7 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "node tools/scripts/guard-mobile-apps.mjs"
+        "command": "node tools/scripts/run-command-check.mjs --label app-partner-config -- node tools/scripts/guard-mobile-apps.mjs"
       }
     },
     "build": {
@@ -24,6 +24,7 @@
     }
   },
   "tags": [
-    "scope:app-partner type:app"
+    "scope:app-partner",
+    "type:app"
   ]
 }

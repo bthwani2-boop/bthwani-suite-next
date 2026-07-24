@@ -3,7 +3,7 @@ name: Contextual CI Status Finalizer
 on:
   push:
     branches:
-      - main
+      - master
       - lianbassam
   workflow_run:
     workflows:
