@@ -10,6 +10,28 @@ $SentryCli = "sentry@0.38.0"
 $EasCli = "eas-cli@latest"
 $token = $null
 
+function Format-RedactedArguments {
+    param([Parameter(Mandatory)][string[]]$Arguments)
+
+    $redacted = [System.Collections.Generic.List[string]]::new()
+    $hideNext = $false
+
+    foreach ($argument in $Arguments) {
+        if ($hideNext) {
+            $redacted.Add("<redacted>")
+            $hideNext = $false
+            continue
+        }
+
+        $redacted.Add($argument)
+        if ($argument -in @("--value", "--auth-token", "--token")) {
+            $hideNext = $true
+        }
+    }
+
+    return ($redacted -join " ")
+}
+
 function Invoke-Eas {
     param(
         [Parameter(Mandatory)][string]$WorkingDirectory,
@@ -27,7 +49,8 @@ function Invoke-Eas {
     }
 
     if ($exitCode -ne 0 -and -not $AllowFailure) {
-        throw "EAS command failed: eas $($Arguments -join ' ')"
+        $safeArguments = Format-RedactedArguments -Arguments $Arguments
+        throw "EAS command failed: eas $safeArguments"
     }
 
     return $exitCode
