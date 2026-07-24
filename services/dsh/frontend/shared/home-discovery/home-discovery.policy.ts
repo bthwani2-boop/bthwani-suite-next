@@ -35,10 +35,10 @@ export function applyDiscoveryFilter(
 
     case 'nearest':
       return [...stores].sort((a, b) => {
-        if (a.distanceDisplay == null && b.distanceDisplay == null) return 0;
-        if (a.distanceDisplay == null) return 1;
-        if (b.distanceDisplay == null) return -1;
-        return 0;
+        if (a.distanceKm == null && b.distanceKm == null) return 0;
+        if (a.distanceKm == null) return 1;
+        if (b.distanceKm == null) return -1;
+        return a.distanceKm - b.distanceKm;
       });
 
     case 'offers':
