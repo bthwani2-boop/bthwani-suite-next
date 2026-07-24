@@ -92,6 +92,14 @@ func LinkPartnerStoreForTenantGoverned(
 		if hasOpenOperations {
 			return nil, ErrOpenStoreOperations
 		}
+
+		// The database guard accepts partner replacement only inside this local
+		// transaction context. A deferred constraint trigger still requires the
+		// exact matching audit row below before COMMIT, so the flag alone cannot
+		// produce an untracked ownership change.
+		if _, err := tx.Exec(`SELECT set_config('bthwani.governed_store_partner_transfer', 'on', true)`); err != nil {
+			return nil, err
+		}
 	} else {
 		if input.ExpectedStoreVersion > 0 && input.ExpectedStoreVersion != currentVersion {
 			return nil, ErrVersionConflict
