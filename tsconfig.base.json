@@ -43,6 +43,9 @@
       "@bthwani/core-platform-control": [
         "core/platform-control/clients/generated/platform-control-api.ts"
       ],
+      "@bthwani/core-platform-control/*": [
+        "core/platform-control/*"
+      ],
       "@bthwani/core-providers": [
         "core/providers/clients/generated/providers-api.ts"
       ],
