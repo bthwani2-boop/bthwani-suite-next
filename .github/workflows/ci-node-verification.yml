@@ -226,10 +226,10 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/platform-change-sets"
           set -o pipefail
           {
-            pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false
-            pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml -o /tmp/platform-change-sets-api.ts
-            node tools/guards/jrn-040-platform-change-sets-gate.mjs
-          } 2>&1 | tee "${RUNNER_TEMP}/platform-change-sets/jrn-040.log"
+            pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false
+            pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/platform-change-sets.openapi.yaml -o /tmp/platform-change-sets-api.ts
+            node tools/guards/platform-change-sets-gate.mjs
+          } 2>&1 | tee "${RUNNER_TEMP}/platform-change-sets/platform-change-sets.log"
       - name: Upload platform change-set evidence
         if: ${{ failure() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
