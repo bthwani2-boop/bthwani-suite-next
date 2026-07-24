@@ -14,7 +14,7 @@
     "database:test:seed": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite seed",
     "database:contract": "node ../../tools/scripts/check-dsh-database-contract.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
     "test": "pnpm run build && node --test ../../services/dsh/tests/*.test.mjs",
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
   },
