@@ -12,7 +12,18 @@ const journeyRunnerRelative = "tools/scripts/run-journey-gate.ps1";
 const workflowsDir = path.join(repoRoot, ".github/workflows");
 const actionsDir = path.join(repoRoot, ".github/actions");
 const canonicalWorkflow = "ci.yml";
-const expectedWorkflowFiles = [canonicalWorkflow, "contextual-status-finalizer.yml", "dsh-database.yml"].sort();
+const policyWorkflow = "ci-policy.yml";
+const expectedWorkflowFiles = [
+  canonicalWorkflow,
+  "ci-backends.yml",
+  "ci-node-diagnostics.yml",
+  "ci-node-verification.yml",
+  policyWorkflow,
+  "ci-runtime.yml",
+  "contextual-status-finalizer.yml",
+  "dsh-database.yml",
+  "remediation-analysis.yml",
+].sort();
 
 const aggregateScripts = new Set([
   "guard:logic-all",
@@ -83,6 +94,14 @@ function verifyCheckoutCredentials(relative, text) {
 
 function commandSwallowsFailure(command) {
   return /\|\|\s*true|continue-on-error|catch\s*\([^)]*\)\s*\{?[\s\S]*?console\.log|catch\s*\{[\s\S]*?console\.log/i.test(command);
+}
+
+function requireMarkers(relative, text, markers) {
+  for (const marker of markers) {
+    if (!text.includes(marker)) {
+      violations.push({ file: relative, line: 0, message: `REQUIRED_MARKER_MISSING ${marker}` });
+    }
+  }
 }
 
 const registry = readJson(registryRelative);
@@ -281,51 +300,55 @@ if (fs.existsSync(workflowsDir)) {
     });
   }
 
-  const ciPath = path.join(workflowsDir, canonicalWorkflow);
-  if (!fs.existsSync(ciPath)) {
-    violations.push({ file: `.github/workflows/${canonicalWorkflow}`, line: 0, message: "REQUIRED_WORKFLOW_MISSING" });
-  } else {
-    const text = fs.readFileSync(ciPath, "utf8");
+  const ciRelative = `.github/workflows/${canonicalWorkflow}`;
+  const ciText = readText(ciRelative);
+  requireMarkers(ciRelative, ciText, [
+    "workflow_dispatch:",
+    "pull_request:",
+    "push:",
+    "branches: [master]",
+    "cancel-in-progress: true",
+    "BThwani CI result",
+    "if: ${{ always() }}",
+    "uses: ./.github/workflows/ci-policy.yml",
+    "uses: ./.github/workflows/ci-node-diagnostics.yml",
+    "uses: ./.github/workflows/ci-node-verification.yml",
+    "uses: ./.github/workflows/ci-backends.yml",
+    "uses: ./.github/workflows/ci-runtime.yml",
+  ]);
 
-    for (const marker of [
-      "workflow_dispatch:",
-      "pull_request:",
-      "push:",
-      "branches: [master, lianbassam]",
-      "cancel-in-progress: true",
-      "BThwani CI result",
-      "if: ${{ always() }}",
-      ...mandatoryGovernanceMarkers,
-      "guard:workflow-lint",
-      "guard:workflow-security",
-      "guard:actions-pin",
-    ]) {
-      if (!text.includes(marker)) {
-        violations.push({ file: `.github/workflows/${canonicalWorkflow}`, line: 0, message: `CANONICAL_CI_MARKER_MISSING ${marker}` });
-      }
-    }
+  const concurrencyDeclarations = [...ciText.matchAll(/^\s*concurrency:\s*$/gm)].length;
+  if (concurrencyDeclarations !== 1) {
+    violations.push({
+      file: ciRelative,
+      line: 0,
+      message: `WORKFLOW_LEVEL_CONCURRENCY_ONLY expected=1 actual=${concurrencyDeclarations}`,
+    });
+  }
 
-    const concurrencyDeclarations = [...text.matchAll(/^\s*concurrency:\s*$/gm)].length;
-    if (concurrencyDeclarations !== 1) {
-      violations.push({
-        file: `.github/workflows/${canonicalWorkflow}`,
-        line: 0,
-        message: `WORKFLOW_LEVEL_CONCURRENCY_ONLY expected=1 actual=${concurrencyDeclarations}`,
-      });
-    }
-
-    for (const retiredResult of [
-      "BThwani Repository CI result",
-      "BThwani Workflow Security result",
-      "BThwani Governance Audit result",
-      "DSH Operational Closure CI result",
-      "JRN-043 SDLC Governance CI Release result",
-    ]) {
-      if (text.includes(retiredResult)) {
-        violations.push({ file: `.github/workflows/${canonicalWorkflow}`, line: 0, message: `DUPLICATE_RESULT_JOB_FORBIDDEN ${retiredResult}` });
-      }
+  for (const retiredResult of [
+    "BThwani Repository CI result",
+    "BThwani Workflow Security result",
+    "BThwani Governance Audit result",
+    "DSH Operational Closure CI result",
+    "SDLC Governance CI Release result",
+  ]) {
+    if (ciText.includes(retiredResult)) {
+      violations.push({ file: ciRelative, line: 0, message: `DUPLICATE_RESULT_JOB_FORBIDDEN ${retiredResult}` });
     }
   }
+
+  const policyRelative = `.github/workflows/${policyWorkflow}`;
+  const policyText = readText(policyRelative);
+  requireMarkers(policyRelative, policyText, [
+    ...mandatoryGovernanceMarkers,
+    "guard:workflow-lint",
+    "guard:workflow-security",
+    "guard:actions-pin",
+    "check-ci-source-immutability.mjs",
+    "check-repository-hygiene.mjs",
+    "check-portable-tracked-config.mjs",
+  ]);
 }
 
 if (fs.existsSync(actionsDir)) {
