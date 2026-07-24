@@ -1,6 +1,6 @@
 # tools/scripts/diagnose-mobile-firebase-push.ps1
-# Deep, read-only probe for Android Firebase push setup across local secrets,
-# dynamic Expo config, clean native prebuild output, optional EAS visibility, and optional installed APK.
+# Read-only Android Firebase push diagnostic for local config, Expo config,
+# clean native prebuild, EAS environment metadata, and the installed APK.
 
 [CmdletBinding()]
 param(
@@ -25,13 +25,13 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = (Resolve-Path (Join-Path $ScriptDir "..\..")).Path
 $ManifestPath = Join-Path $RepoRoot "tools\mobile\mobile-apps.manifest.json"
 $ValidatorPath = Join-Path $RepoRoot "tools\mobile\google-services-config.mjs"
-$SentryEnvPath = Join-Path $RepoRoot "tools\mobile\sentry-env.js"
 $LocalSecretsJsonPath = Join-Path $RepoRoot "secrets.local.mobile.json"
 $ReportRoot = Join-Path $RepoRoot ".tmp\mobile-firebase-diagnostics"
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $ReportDir = Join-Path $ReportRoot "$Timestamp-$AppKey"
 $ReportJsonPath = Join-Path $ReportDir "result.json"
 $ReportTextPath = Join-Path $ReportDir "result.txt"
+$PulledApkPath = Join-Path $ReportDir "$AppKey-base.apk"
 New-Item -ItemType Directory -Force -Path $ReportDir | Out-Null
 Set-Location $RepoRoot
 
@@ -64,47 +64,77 @@ function Invoke-Captured {
     param(
         [Parameter(Mandatory)][string] $FilePath,
         [Parameter(Mandatory)][string[]] $Arguments,
-        [string] $WorkingDirectory = $RepoRoot,
-        [hashtable] $Environment = @{}
+        [string] $WorkingDirectory = $RepoRoot
     )
 
-    $psi = [System.Diagnostics.ProcessStartInfo]::new()
-    $psi.FileName = $FilePath
-    foreach ($arg in $Arguments) { [void]$psi.ArgumentList.Add($arg) }
-    $psi.WorkingDirectory = $WorkingDirectory
-    $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError = $true
-    $psi.UseShellExecute = $false
-    $psi.CreateNoWindow = $true
-    foreach ($entry in $Environment.GetEnumerator()) {
-        $psi.Environment[$entry.Key] = [string]$entry.Value
-    }
+    Push-Location -LiteralPath $WorkingDirectory
+    try {
+        $captured = [System.Collections.Generic.List[string]]::new()
+        $exitCode = 0
+        $previousErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try {
+            $global:LASTEXITCODE = 0
+            $raw = & $FilePath @Arguments 2>&1
+            foreach ($item in @($raw)) {
+                if ($null -ne $item) { $captured.Add([string]$item) }
+            }
+            $exitCode = [int]$global:LASTEXITCODE
+        } catch {
+            $captured.Add($_.Exception.Message)
+            $exitCode = 1
+        } finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+        }
 
-    $process = [System.Diagnostics.Process]::Start($psi)
-    $stdout = $process.StandardOutput.ReadToEnd()
-    $stderr = $process.StandardError.ReadToEnd()
-    $process.WaitForExit()
-
-    return [pscustomobject]@{
-        command = "$FilePath $($Arguments -join ' ')"
-        cwd = $WorkingDirectory
-        exitCode = $process.ExitCode
-        stdout = $stdout
-        stderr = $stderr
-        text = (($stdout, $stderr) -join "`n").Trim()
+        $text = ($captured -join "`n").Trim()
+        return [pscustomobject]@{
+            command = "$FilePath $($Arguments -join ' ')"
+            cwd = $WorkingDirectory
+            exitCode = $exitCode
+            stdout = $text
+            stderr = ""
+            text = $text
+        }
+    } finally {
+        Pop-Location
     }
 }
 
-function Get-JsonFromText {
+function Convert-CommandJson {
     param([Parameter(Mandatory)][string] $Text)
-    $start = $Text.IndexOf("{")
-    if ($start -lt 0) { throw "No JSON object was found in command output." }
-    return $Text.Substring($start) | ConvertFrom-Json -Depth 100
+
+    $trimmed = $Text.Trim()
+    if (-not $trimmed) { throw "Command returned no JSON." }
+
+    try {
+        return $trimmed | ConvertFrom-Json -Depth 100
+    } catch {
+        $objectStart = $trimmed.IndexOf("{")
+        $arrayStart = $trimmed.IndexOf("[")
+        $starts = @($objectStart, $arrayStart | Where-Object { $_ -ge 0 } | Sort-Object)
+        foreach ($start in $starts) {
+            if ($start -lt 0) { continue }
+            try {
+                return $trimmed.Substring($start) | ConvertFrom-Json -Depth 100
+            } catch {
+                continue
+            }
+        }
+    }
+
+    throw "No valid JSON object or array was found in command output."
+}
+
+function Read-JsonFile {
+    param([Parameter(Mandatory)][string] $Path)
+    return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -Depth 100
 }
 
 function Get-HashPrefix {
     param([AllowNull()][string] $Value)
     if ([string]::IsNullOrWhiteSpace($Value)) { return $null }
+
     $sha = [System.Security.Cryptography.SHA256]::Create()
     try {
         $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
@@ -113,11 +143,6 @@ function Get-HashPrefix {
     } finally {
         $sha.Dispose()
     }
-}
-
-function Read-JsonFile {
-    param([Parameter(Mandatory)][string] $Path)
-    return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -Depth 100
 }
 
 function Get-GoogleServicesSummary {
@@ -131,14 +156,20 @@ function Get-GoogleServicesSummary {
     $matching = @($clients | Where-Object {
         $_.client_info.android_client_info.package_name -eq $ExpectedPackage
     })
+
     $apiKeys = @()
     foreach ($client in $matching) {
         foreach ($key in @($client.api_key)) {
-            if (-not [string]::IsNullOrWhiteSpace([string]$key.current_key)) {
-                $apiKeys += [string]$key.current_key
-            }
+            $currentKey = [string]$key.current_key
+            if (-not [string]::IsNullOrWhiteSpace($currentKey)) { $apiKeys += $currentKey }
         }
     }
+
+    $apiKeyHash = $null
+    if ($apiKeys.Count -gt 0) { $apiKeyHash = Get-HashPrefix -Value $apiKeys[0] }
+
+    $mobileSdkAppId = $null
+    if ($matching.Count -gt 0) { $mobileSdkAppId = [string]$matching[0].client_info.mobilesdk_app_id }
 
     return [pscustomobject]@{
         path = $Path
@@ -152,8 +183,8 @@ function Get-GoogleServicesSummary {
         packageNames = @($clients | ForEach-Object { [string]$_.client_info.android_client_info.package_name })
         apiKeyPresent = $apiKeys.Count -gt 0
         apiKeyCount = $apiKeys.Count
-        apiKeyHash16 = if ($apiKeys.Count -gt 0) { Get-HashPrefix -Value $apiKeys[0] } else { $null }
-        mobileSdkAppId = if ($matching.Count -gt 0) { [string]$matching[0].client_info.mobilesdk_app_id } else { $null }
+        apiKeyHash16 = $apiKeyHash
+        mobileSdkAppId = $mobileSdkAppId
     }
 }
 
@@ -162,23 +193,33 @@ function Find-Executable {
     foreach ($candidate in $Candidates) {
         if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
         if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
-        $cmd = Get-Command $candidate -ErrorAction SilentlyContinue
-        if ($cmd) { return $cmd.Source }
+        $command = Get-Command $candidate -ErrorAction SilentlyContinue
+        if ($command) { return $command.Source }
     }
     return $null
 }
 
+function Find-Aapt2 {
+    $sdkRoot = Join-Path $env:LOCALAPPDATA "Android\Sdk\build-tools"
+    if (-not (Test-Path -LiteralPath $sdkRoot -PathType Container)) { return $null }
+    $candidates = @(Get-ChildItem -LiteralPath $sdkRoot -Directory -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending |
+        ForEach-Object { Join-Path $_.FullName "aapt2.exe" } |
+        Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })
+    if ($candidates.Count -gt 0) { return $candidates[0] }
+    return $null
+}
+
 function Resolve-GoogleServicesFromNode {
-    param([Parameter(Mandatory)][string] $AppKey)
-    $script = @"
+    param([Parameter(Mandatory)][string] $TargetAppKey)
+
+    $nodeScript = @"
 const { resolveGoogleServicesFile } = require('./tools/mobile/sentry-env.js');
-const value = resolveGoogleServicesFile('$AppKey', process.env);
+const value = resolveGoogleServicesFile('$TargetAppKey', process.env);
 if (value) console.log(value);
 "@
-    $node = Invoke-Captured -FilePath "node" -Arguments @("-e", $script) -WorkingDirectory $RepoRoot
-    if ($node.exitCode -ne 0) {
-        throw $node.text
-    }
+    $node = Invoke-Captured -FilePath "node" -Arguments @("-e", $nodeScript) -WorkingDirectory $RepoRoot
+    if ($node.exitCode -ne 0) { throw $node.text }
     return $node.stdout.Trim()
 }
 
@@ -190,13 +231,16 @@ Write-Host "Repo:    $RepoRoot"
 Write-Host "Report:  $ReportDir`n"
 
 try {
-    if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) { throw "Missing manifest: $ManifestPath" }
-    if (-not (Test-Path -LiteralPath $ValidatorPath -PathType Leaf)) { throw "Missing Firebase validator: $ValidatorPath" }
-    if (-not (Test-Path -LiteralPath $SentryEnvPath -PathType Leaf)) { throw "Missing sentry-env resolver: $SentryEnvPath" }
+    foreach ($requiredPath in @($ManifestPath, $ValidatorPath)) {
+        if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
+            throw "Missing required file: $requiredPath"
+        }
+    }
 
     $manifest = Read-JsonFile -Path $ManifestPath
     $app = $manifest.apps.$AppKey
     if ($null -eq $app) { throw "Unknown app key: $AppKey" }
+
     $expectedPackage = [string]$app.androidPackage
     $appDir = Join-Path $RepoRoot "apps\$AppKey\runtime"
 
@@ -213,121 +257,166 @@ try {
         @{ name = "pnpm"; args = @("-v") },
         @{ name = "firebase"; args = @("--version") }
     )) {
-        try {
-            $run = Invoke-Captured -FilePath $tool.name -Arguments $tool.args
-            $status = if ($run.exitCode -eq 0) { "PASS" } else { "WARN" }
-            Add-Result -Area "tools" -Check $tool.name -Status $status -Message ($run.text.Split("`n") | Select-Object -First 1) -Data ([pscustomobject]@{ exitCode = $run.exitCode })
-        } catch {
-            Add-Result -Area "tools" -Check $tool.name -Status "WARN" -Message $_.Exception.Message -Data $null
-        }
+        $run = Invoke-Captured -FilePath $tool.name -Arguments $tool.args
+        $toolStatus = "WARN"
+        if ($run.exitCode -eq 0) { $toolStatus = "PASS" }
+        $firstLine = ($run.text.Split("`n") | Select-Object -First 1)
+        Add-Result -Area "tools" -Check $tool.name -Status $toolStatus -Message $firstLine -Data ([pscustomobject]@{ exitCode = $run.exitCode })
     }
 
-    try {
-        $branch = (Invoke-Captured -FilePath "git" -Arguments @("branch", "--show-current")).stdout.Trim()
-        $head = (Invoke-Captured -FilePath "git" -Arguments @("rev-parse", "HEAD")).stdout.Trim()
-        $status = (Invoke-Captured -FilePath "git" -Arguments @("status", "--short")).stdout.Trim()
-        Add-Result -Area "repo" -Check "git-state" -Status (if ($status) { "WARN" } else { "PASS" }) -Message (if ($status) { "working tree has changes" } else { "working tree is clean" }) -Data ([pscustomobject]@{
-            branch = $branch
-            head = $head
-            status = $status
-        })
-    } catch {
-        Add-Result -Area "repo" -Check "git-state" -Status "WARN" -Message $_.Exception.Message -Data $null
+    $branchRun = Invoke-Captured -FilePath "git" -Arguments @("branch", "--show-current")
+    $headRun = Invoke-Captured -FilePath "git" -Arguments @("rev-parse", "HEAD")
+    $statusRun = Invoke-Captured -FilePath "git" -Arguments @("status", "--short")
+    $workingTreeStatus = $statusRun.stdout.Trim()
+    $gitCheckStatus = "PASS"
+    $gitMessage = "working tree is clean"
+    if ($workingTreeStatus) {
+        $gitCheckStatus = "WARN"
+        $gitMessage = "working tree has changes"
     }
+    Add-Result -Area "repo" -Check "git-state" -Status $gitCheckStatus -Message $gitMessage -Data ([pscustomobject]@{
+        branch = $branchRun.stdout.Trim()
+        head = $headRun.stdout.Trim()
+        status = $workingTreeStatus
+    })
 
-    $localSecretsMap = $null
+    $mappedPath = $null
+    $mappedPathExists = $false
     if (Test-Path -LiteralPath $LocalSecretsJsonPath -PathType Leaf) {
         $localSecretsMap = Read-JsonFile -Path $LocalSecretsJsonPath
-        $mapped = [string]$localSecretsMap.$AppKey
-        Add-Result -Area "local-secrets" -Check "secrets.local.mobile.json" -Status (if ($mapped) { "PASS" } else { "WARN" }) -Message (if ($mapped) { "app key is mapped" } else { "app key is not mapped" }) -Data ([pscustomobject]@{
+        $property = $localSecretsMap.PSObject.Properties[$AppKey]
+        if ($null -ne $property) { $mappedPath = [string]$property.Value }
+        if ($mappedPath) { $mappedPathExists = Test-Path -LiteralPath $mappedPath -PathType Leaf }
+
+        $mapStatus = "WARN"
+        $mapMessage = "app key is not mapped to an existing file"
+        if ($mappedPath -and $mappedPathExists) {
+            $mapStatus = "PASS"
+            $mapMessage = "app key is mapped to an existing file"
+        }
+        Add-Result -Area "local-secrets" -Check "secrets.local.mobile.json" -Status $mapStatus -Message $mapMessage -Data ([pscustomobject]@{
             path = $LocalSecretsJsonPath
-            mappedPath = $mapped
-            mappedPathExists = if ($mapped) { Test-Path -LiteralPath $mapped -PathType Leaf } else { $false }
+            mappedPath = $mappedPath
+            mappedPathExists = $mappedPathExists
         })
     } else {
         Add-Result -Area "local-secrets" -Check "secrets.local.mobile.json" -Status "WARN" -Message "local secrets map does not exist" -Data ([pscustomobject]@{ path = $LocalSecretsJsonPath })
     }
 
-    $resolvedGoogleServices = Resolve-GoogleServicesFromNode -AppKey $AppKey
+    $resolvedGoogleServices = Resolve-GoogleServicesFromNode -TargetAppKey $AppKey
     if ([string]::IsNullOrWhiteSpace($resolvedGoogleServices)) {
         Add-Result -Area "resolver" -Check "resolveGoogleServicesFile" -Status "FAIL" -Message "resolver returned no google-services.json path" -Data $null
     } elseif (-not (Test-Path -LiteralPath $resolvedGoogleServices -PathType Leaf)) {
         Add-Result -Area "resolver" -Check "resolveGoogleServicesFile" -Status "FAIL" -Message "resolver returned a missing path" -Data ([pscustomobject]@{ path = $resolvedGoogleServices })
     } else {
         Add-Result -Area "resolver" -Check "resolveGoogleServicesFile" -Status "PASS" -Message "resolver returned an existing file" -Data ([pscustomobject]@{ path = $resolvedGoogleServices })
-    }
 
-    if ($resolvedGoogleServices -and (Test-Path -LiteralPath $resolvedGoogleServices -PathType Leaf)) {
         $validator = Invoke-Captured -FilePath "node" -Arguments @($ValidatorPath, "--file", $resolvedGoogleServices, "--package", $expectedPackage, "--json")
         if ($validator.exitCode -ne 0) {
             Add-Result -Area "firebase-file" -Check "validator" -Status "FAIL" -Message $validator.text -Data ([pscustomobject]@{ path = $resolvedGoogleServices })
         } else {
             $summary = Get-GoogleServicesSummary -Path $resolvedGoogleServices -ExpectedPackage $expectedPackage
-            $status = if ($summary.matchingClientCount -gt 0 -and $summary.apiKeyPresent) { "PASS" } else { "FAIL" }
-            Add-Result -Area "firebase-file" -Check "google-services.json" -Status $status -Message (if ($status -eq "PASS") { "package and API key are present" } else { "package or API key is missing" }) -Data $summary
+            $firebaseStatus = "FAIL"
+            $firebaseMessage = "package or API key is missing"
+            if ($summary.matchingClientCount -gt 0 -and $summary.apiKeyPresent) {
+                $firebaseStatus = "PASS"
+                $firebaseMessage = "package and API key are present"
+            }
+            Add-Result -Area "firebase-file" -Check "google-services.json" -Status $firebaseStatus -Message $firebaseMessage -Data $summary
         }
     }
 
-    $expoConfig = Invoke-Captured -FilePath "pnpm" -Arguments @("exec", "expo", "config", "--json") -WorkingDirectory $appDir
-    if ($expoConfig.exitCode -ne 0) {
-        Add-Result -Area "expo-config" -Check "expo config --json" -Status "FAIL" -Message $expoConfig.text -Data ([pscustomobject]@{ cwd = $appDir })
+    $expoConfigRun = Invoke-Captured -FilePath "pnpm" -Arguments @("exec", "expo", "config", "--json") -WorkingDirectory $appDir
+    if ($expoConfigRun.exitCode -ne 0) {
+        Add-Result -Area "expo-config" -Check "expo config --json" -Status "FAIL" -Message $expoConfigRun.text -Data ([pscustomobject]@{ cwd = $appDir })
     } else {
         try {
-            $config = Get-JsonFromText -Text $expoConfig.text
+            $config = Convert-CommandJson -Text $expoConfigRun.text
             $googleServicesFile = [string]$config.android.googleServicesFile
             $configured = [bool]$config.extra.notifications.androidNativeConfigured
-            $configFileExists = if ($googleServicesFile) {
-                $configPath = if ([System.IO.Path]::IsPathRooted($googleServicesFile)) { $googleServicesFile } else { Join-Path $appDir $googleServicesFile }
-                Test-Path -LiteralPath $configPath -PathType Leaf
-            } else { $false }
-            Add-Result -Area "expo-config" -Check "android.googleServicesFile" -Status (if ($configured -and $googleServicesFile -and $configFileExists) { "PASS" } else { "FAIL" }) -Message (if ($configured -and $googleServicesFile -and $configFileExists) { "Expo config points to an existing Firebase file" } else { "Expo config is not pointing to a usable Firebase file" }) -Data ([pscustomobject]@{
+            $configPath = $null
+            $configFileExists = $false
+            if ($googleServicesFile) {
+                if ([System.IO.Path]::IsPathRooted($googleServicesFile)) {
+                    $configPath = $googleServicesFile
+                } else {
+                    $configPath = Join-Path $appDir $googleServicesFile
+                }
+                $configFileExists = Test-Path -LiteralPath $configPath -PathType Leaf
+            }
+
+            $expoStatus = "FAIL"
+            $expoMessage = "Expo config is not pointing to a usable Firebase file"
+            if ($configured -and $googleServicesFile -and $configFileExists) {
+                $expoStatus = "PASS"
+                $expoMessage = "Expo config points to an existing Firebase file"
+            }
+            Add-Result -Area "expo-config" -Check "android.googleServicesFile" -Status $expoStatus -Message $expoMessage -Data ([pscustomobject]@{
                 androidNativeConfigured = $configured
                 googleServicesFile = $googleServicesFile
+                resolvedPath = $configPath
                 googleServicesFileExists = $configFileExists
                 package = [string]$config.android.package
                 projectId = [string]$config.extra.eas.projectId
             })
         } catch {
-            Add-Result -Area "expo-config" -Check "parse" -Status "FAIL" -Message $_.Exception.Message -Data ([pscustomobject]@{ raw = $expoConfig.text })
+            Add-Result -Area "expo-config" -Check "parse" -Status "FAIL" -Message $_.Exception.Message -Data ([pscustomobject]@{ output = $expoConfigRun.text })
         }
     }
 
     if ($SkipEas) {
-        Add-Result -Area "eas" -Check "env-list" -Status "SKIP" -Message "EAS checks skipped" -Data $null
+        Add-Result -Area "eas" -Check "environment" -Status "SKIP" -Message "EAS checks skipped" -Data $null
     } else {
         $easUser = Invoke-Captured -FilePath "pnpm" -Arguments @("dlx", "eas-cli@latest", "whoami") -WorkingDirectory $appDir
-        Add-Result -Area "eas" -Check "whoami" -Status (if ($easUser.exitCode -eq 0) { "PASS" } else { "WARN" }) -Message $easUser.text -Data ([pscustomobject]@{ exitCode = $easUser.exitCode })
+        $whoamiStatus = "WARN"
+        if ($easUser.exitCode -eq 0) { $whoamiStatus = "PASS" }
+        Add-Result -Area "eas" -Check "whoami" -Status $whoamiStatus -Message $easUser.text -Data ([pscustomobject]@{ exitCode = $easUser.exitCode })
 
-        $envListAttempts = @(
+        $envAttempts = @(
             @("dlx", "eas-cli@latest", "env:list", "development", "--json", "--non-interactive"),
             @("dlx", "eas-cli@latest", "env:list", "--environment", "development", "--json", "--non-interactive")
         )
-        $envListed = $false
-        foreach ($args in $envListAttempts) {
-            if ($envListed) { continue }
-            $envList = Invoke-Captured -FilePath "pnpm" -Arguments $args -WorkingDirectory $appDir
-            if ($envList.exitCode -eq 0) {
-                $envListed = $true
-                $names = @()
-                try {
-                    $parsedEnv = Get-JsonFromText -Text $envList.text
-                    foreach ($item in @($parsedEnv)) {
-                        if ($item.name) { $names += [string]$item.name }
-                    }
-                } catch {
-                    # Some EAS versions do not return stable JSON here; raw text is still kept in the report.
+        $envListSucceeded = $false
+        $lastEnvError = ""
+        foreach ($attempt in $envAttempts) {
+            if ($envListSucceeded) { break }
+            $envRun = Invoke-Captured -FilePath "pnpm" -Arguments $attempt -WorkingDirectory $appDir
+            if ($envRun.exitCode -ne 0) {
+                $lastEnvError = $envRun.text
+                continue
+            }
+
+            try {
+                $parsed = Convert-CommandJson -Text $envRun.text
+                $items = @($parsed)
+                $firebaseVariable = @($items | Where-Object { [string]$_.name -eq "GOOGLE_SERVICES_JSON" }) | Select-Object -First 1
+                $mapsVariable = @($items | Where-Object { [string]$_.name -eq "GOOGLE_MAPS_ANDROID_API_KEY" }) | Select-Object -First 1
+                $envListSucceeded = $true
+
+                $envStatus = "FAIL"
+                $envMessage = "GOOGLE_SERVICES_JSON is absent from the development environment"
+                if ($null -ne $firebaseVariable) {
+                    $envStatus = "PASS"
+                    $envMessage = "GOOGLE_SERVICES_JSON exists in the development environment"
                 }
-                Add-Result -Area "eas" -Check "env-list" -Status "PASS" -Message "EAS environment list command succeeded" -Data ([pscustomobject]@{
-                    attemptedCommand = "pnpm $($args -join ' ')"
-                    hasGoogleServicesJson = $names -contains "GOOGLE_SERVICES_JSON"
-                    hasGoogleMapsAndroidApiKey = $names -contains "GOOGLE_MAPS_ANDROID_API_KEY"
-                    variableNames = $names
-                    raw = $envList.text
+
+                Add-Result -Area "eas" -Check "env-list" -Status $envStatus -Message $envMessage -Data ([pscustomobject]@{
+                    command = "pnpm $($attempt -join ' ')"
+                    googleServicesJson = if ($null -ne $firebaseVariable) { [pscustomobject]@{
+                        name = [string]$firebaseVariable.name
+                        type = [string]$firebaseVariable.type
+                        visibility = [string]$firebaseVariable.visibility
+                        environment = [string]$firebaseVariable.environment
+                    } } else { $null }
+                    googleMapsAndroidApiKeyPresent = $null -ne $mapsVariable
                 })
+            } catch {
+                $lastEnvError = $_.Exception.Message
             }
         }
-        if (-not $envListed) {
-            Add-Result -Area "eas" -Check "env-list" -Status "WARN" -Message "EAS env:list failed or is unsupported by this CLI/account state" -Data $null
+
+        if (-not $envListSucceeded) {
+            Add-Result -Area "eas" -Check "env-list" -Status "WARN" -Message "EAS environment query failed; the remote GraphQL state remains unproven" -Data ([pscustomobject]@{ error = $lastEnvError })
         }
     }
 
@@ -336,27 +425,35 @@ try {
     } else {
         $androidDir = Join-Path $appDir "android"
         if (Test-Path -LiteralPath $androidDir) {
-            Add-Result -Area "prebuild" -Check "clean-state" -Status "FAIL" -Message "android/ already exists; remove it or rerun after cleaning because CNG verification requires a clean app" -Data ([pscustomobject]@{ path = $androidDir })
+            Add-Result -Area "prebuild" -Check "clean-state" -Status "FAIL" -Message "android/ already exists; clean CNG verification requires it to be absent" -Data ([pscustomobject]@{ path = $androidDir })
         } else {
-            $prebuild = Invoke-Captured -FilePath "pnpm" -Arguments @("exec", "expo", "prebuild", "--clean", "--no-install", "--platform", "android") -WorkingDirectory $appDir
-            if ($prebuild.exitCode -ne 0) {
-                Add-Result -Area "prebuild" -Check "expo-prebuild" -Status "FAIL" -Message $prebuild.text -Data ([pscustomobject]@{ cwd = $appDir })
-            } else {
-                $generatedFiles = @(Get-ChildItem -LiteralPath $androidDir -Recurse -Filter "google-services.json" -ErrorAction SilentlyContinue)
-                if ($generatedFiles.Count -eq 0) {
-                    Add-Result -Area "prebuild" -Check "google-services-copy" -Status "FAIL" -Message "prebuild did not copy google-services.json into android output" -Data ([pscustomobject]@{ androidDir = $androidDir })
+            try {
+                $prebuild = Invoke-Captured -FilePath "pnpm" -Arguments @("exec", "expo", "prebuild", "--clean", "--no-install", "--platform", "android") -WorkingDirectory $appDir
+                if ($prebuild.exitCode -ne 0) {
+                    Add-Result -Area "prebuild" -Check "expo-prebuild" -Status "FAIL" -Message $prebuild.text -Data ([pscustomobject]@{ cwd = $appDir })
                 } else {
-                    $summaries = @()
-                    foreach ($file in $generatedFiles) {
-                        $summaries += Get-GoogleServicesSummary -Path $file.FullName -ExpectedPackage $expectedPackage
+                    $generatedFiles = @(Get-ChildItem -LiteralPath $androidDir -Recurse -Filter "google-services.json" -ErrorAction SilentlyContinue)
+                    if ($generatedFiles.Count -eq 0) {
+                        Add-Result -Area "prebuild" -Check "google-services-copy" -Status "FAIL" -Message "prebuild did not copy google-services.json into Android output" -Data ([pscustomobject]@{ androidDir = $androidDir })
+                    } else {
+                        $summaries = @()
+                        foreach ($file in $generatedFiles) {
+                            $summaries += Get-GoogleServicesSummary -Path $file.FullName -ExpectedPackage $expectedPackage
+                        }
+                        $validNativeFiles = @($summaries | Where-Object { $_.matchingClientCount -gt 0 -and $_.apiKeyPresent })
+                        $nativeStatus = "FAIL"
+                        $nativeMessage = "native prebuild Firebase file is missing package or API key"
+                        if ($validNativeFiles.Count -gt 0) {
+                            $nativeStatus = "PASS"
+                            $nativeMessage = "native prebuild contains matching package and API key"
+                        }
+                        Add-Result -Area "prebuild" -Check "google-services-copy" -Status $nativeStatus -Message $nativeMessage -Data $summaries
                     }
-                    $ok = @($summaries | Where-Object { $_.matchingClientCount -gt 0 -and $_.apiKeyPresent }).Count -gt 0
-                    Add-Result -Area "prebuild" -Check "google-services-copy" -Status (if ($ok) { "PASS" } else { "FAIL" }) -Message (if ($ok) { "native prebuild contains google-services.json with matching package and API key" } else { "native prebuild google-services.json is missing package or API key" }) -Data $summaries
                 }
-            }
-
-            if (-not $KeepNativeOutput) {
-                Remove-Item -LiteralPath $androidDir -Recurse -Force -ErrorAction SilentlyContinue
+            } finally {
+                if (-not $KeepNativeOutput) {
+                    Remove-Item -LiteralPath $androidDir -Recurse -Force -ErrorAction SilentlyContinue
+                }
             }
         }
     }
@@ -364,26 +461,69 @@ try {
     if ($SkipAdb) {
         Add-Result -Area "installed-apk" -Check "adb" -Status "SKIP" -Message "ADB checks skipped" -Data $null
     } else {
-        $resolvedAdb = if ($AdbPath) { $AdbPath } else { Find-Executable -Candidates @("adb", "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe") }
+        $adbCandidates = @()
+        if ($AdbPath) { $adbCandidates += $AdbPath }
+        $adbCandidates += "adb"
+        $adbCandidates += (Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe")
+        $resolvedAdb = Find-Executable -Candidates $adbCandidates
+
         if (-not $resolvedAdb) {
             Add-Result -Area "installed-apk" -Check "adb" -Status "WARN" -Message "adb was not found" -Data $null
         } else {
-            $device = Invoke-Captured -FilePath $resolvedAdb -Arguments @("devices")
-            $packagePath = Invoke-Captured -FilePath $resolvedAdb -Arguments @("shell", "pm", "path", $expectedPackage)
-            if ($packagePath.exitCode -ne 0 -or [string]::IsNullOrWhiteSpace($packagePath.stdout)) {
-                Add-Result -Area "installed-apk" -Check "package-installed" -Status "WARN" -Message "package is not installed on the connected device or adb cannot read it" -Data ([pscustomobject]@{
+            $deviceRun = Invoke-Captured -FilePath $resolvedAdb -Arguments @("devices")
+            $packageRun = Invoke-Captured -FilePath $resolvedAdb -Arguments @("shell", "pm", "path", $expectedPackage)
+            $packageOutput = $packageRun.stdout.Trim()
+            if ($packageRun.exitCode -ne 0 -or -not $packageOutput) {
+                Add-Result -Area "installed-apk" -Check "package-installed" -Status "WARN" -Message "package is not installed on the connected device or ADB cannot read it" -Data ([pscustomobject]@{
                     adb = $resolvedAdb
-                    devices = $device.stdout.Trim()
+                    devices = $deviceRun.stdout
                     package = $expectedPackage
-                    output = $packagePath.text
+                    output = $packageRun.text
                 })
             } else {
-                Add-Result -Area "installed-apk" -Check "package-installed" -Status "PASS" -Message "package exists on connected Android device" -Data ([pscustomobject]@{
-                    adb = $resolvedAdb
-                    devices = $device.stdout.Trim()
-                    package = $expectedPackage
-                    apkPaths = @($packagePath.stdout.Trim().Split("`n") | ForEach-Object { $_.Trim() })
-                })
+                $remoteApk = ($packageOutput.Split("`n") | ForEach-Object { $_.Trim() } | Where-Object { $_ -like "package:*base.apk" } | Select-Object -First 1)
+                if (-not $remoteApk) {
+                    $remoteApk = ($packageOutput.Split("`n") | ForEach-Object { $_.Trim() } | Select-Object -First 1)
+                }
+                $remoteApk = $remoteApk -replace "^package:", ""
+
+                $pullRun = Invoke-Captured -FilePath $resolvedAdb -Arguments @("pull", $remoteApk, $PulledApkPath)
+                if ($pullRun.exitCode -ne 0 -or -not (Test-Path -LiteralPath $PulledApkPath -PathType Leaf)) {
+                    Add-Result -Area "installed-apk" -Check "apk-pull" -Status "WARN" -Message "installed APK exists but could not be pulled for resource inspection" -Data ([pscustomobject]@{
+                        package = $expectedPackage
+                        remoteApk = $remoteApk
+                        output = $pullRun.text
+                    })
+                } else {
+                    Add-Result -Area "installed-apk" -Check "apk-pull" -Status "PASS" -Message "installed base APK was pulled" -Data ([pscustomobject]@{
+                        package = $expectedPackage
+                        remoteApk = $remoteApk
+                        localApk = $PulledApkPath
+                        sizeBytes = (Get-Item -LiteralPath $PulledApkPath).Length
+                    })
+
+                    $aapt2 = Find-Aapt2
+                    if (-not $aapt2) {
+                        Add-Result -Area "installed-apk" -Check "firebase-resources" -Status "WARN" -Message "aapt2 was not found; APK Firebase resources could not be proven" -Data $null
+                    } else {
+                        $resourceRun = Invoke-Captured -FilePath $aapt2 -Arguments @("dump", "resources", $PulledApkPath)
+                        $hasGoogleAppId = $resourceRun.text -match "google_app_id"
+                        $hasGoogleApiKey = $resourceRun.text -match "google_api_key"
+                        $hasSenderId = $resourceRun.text -match "gcm_defaultSenderId"
+                        $apkResourceStatus = "FAIL"
+                        $apkResourceMessage = "installed APK is missing Firebase-generated Android resources"
+                        if ($hasGoogleAppId -and $hasGoogleApiKey -and $hasSenderId) {
+                            $apkResourceStatus = "PASS"
+                            $apkResourceMessage = "installed APK contains Firebase app id, API key, and sender id resources"
+                        }
+                        Add-Result -Area "installed-apk" -Check "firebase-resources" -Status $apkResourceStatus -Message $apkResourceMessage -Data ([pscustomobject]@{
+                            aapt2 = $aapt2
+                            googleAppIdPresent = $hasGoogleAppId
+                            googleApiKeyPresent = $hasGoogleApiKey
+                            senderIdPresent = $hasSenderId
+                        })
+                    }
+                }
             }
         }
     }
@@ -430,10 +570,10 @@ try {
     }
 
     if ($warnings.Count -gt 0) {
-        Write-Host "`nWARN: No local blocking failure was found, but warnings need review." -ForegroundColor Yellow
+        Write-Host "`nWARN: no local blocking failure was found, but warnings need review." -ForegroundColor Yellow
         foreach ($warning in $warnings) { Write-Host " - $warning" -ForegroundColor Yellow }
         exit 2
     }
 
-    Write-Host "`nPASS: local Firebase push configuration chain is consistent for $AppKey." -ForegroundColor Green
+    Write-Host "`nPASS: Firebase push configuration chain is consistent for $AppKey." -ForegroundColor Green
 }
