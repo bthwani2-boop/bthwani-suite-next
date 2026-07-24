@@ -9,7 +9,8 @@ const strictBoundaryFile = "core/platform-control/backend/internal/platformcontr
 const strictBoundaryProofFile = "core/platform-control/backend/internal/platformcontrol/jrn040_strict_boundary_test.go";
 const databaseProofFile = "core/platform-control/backend/internal/platformcontrol/jrn040_database_sensitive_guard_test.go";
 const httpProofFile = "core/platform-control/backend/internal/http/jrn040_workflow_handlers_test.go";
-const workflowFile = ".github/workflows/ci.yml";
+const callerWorkflowFile = ".github/workflows/ci.yml";
+const verificationWorkflowFile = ".github/workflows/reusable/node-verification.yml";
 const requiredFiles = [
   productTruthFile,
   validationMigrationFile,
@@ -29,7 +30,8 @@ const requiredFiles = [
   "services/dsh/frontend/shared/platform/platform-control.api.ts",
   "services/dsh/frontend/shared/platform/use-platform-change-workflow-controller.tsx",
   "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx",
-  workflowFile,
+  callerWorkflowFile,
+  verificationWorkflowFile,
 ];
 
 const failures = [];
@@ -161,8 +163,12 @@ if (failures.length === 0) {
     "proposedValue",
     "draftItems",
   ]);
-  requireText(workflowFile, [
-    "node_jrn040:",
+  requireText(callerWorkflowFile, [
+    "uses: ./.github/workflows/reusable/node-verification.yml",
+    "platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}",
+  ]);
+  requireText(verificationWorkflowFile, [
+    "node_platform_change_sets:",
     "name: Verify JRN-040 platform binding",
     "pnpm --dir services/dsh exec tsc -p tsconfig.jrn-040.json --noEmit --pretty false",
     "openapi-typescript ../../core/platform-control/contracts/jrn-040-platform-change-sets.openapi.yaml",
