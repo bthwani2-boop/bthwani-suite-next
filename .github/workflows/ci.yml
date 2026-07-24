@@ -102,7 +102,7 @@ jobs:
       jrn040: ${{ steps.scope.outputs.jrn040 }}
     steps:
       - name: Checkout immutable source history
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -191,7 +191,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - name: Set up locked Node workspace
@@ -235,7 +235,7 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout immutable source history
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -331,7 +331,7 @@ jobs:
       DSH_REQUIRE_DB_TESTS: "true"
       PGPASSWORD: dsh_runtime_password
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false, show-progress: false }
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -386,7 +386,7 @@ jobs:
       WLT_REQUIRE_DB_TESTS: "true"
       PGPASSWORD: wlt_runtime_password
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false, show-progress: false }
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -440,7 +440,7 @@ jobs:
       DATABASE_URL: postgres://identity_runtime:identity_runtime_password@localhost:5432/identity_runtime?sslmode=disable
       PGPASSWORD: identity_runtime_password
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -476,7 +476,7 @@ jobs:
       DATABASE_URL: postgres://workforce_runtime:workforce_runtime_password@localhost:5432/workforce_runtime?sslmode=disable
       PGPASSWORD: workforce_runtime_password
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -512,7 +512,7 @@ jobs:
       DATABASE_URL: postgres://platform:platform@localhost:5432/platform?sslmode=disable
       PGPASSWORD: platform
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -548,7 +548,7 @@ jobs:
       DATABASE_URL: postgres://providers_runtime:providers_runtime_password@localhost:5432/providers_runtime?sslmode=disable
       PGPASSWORD: providers_runtime_password
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
@@ -570,7 +570,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { persist-credentials: false }
       - uses: ./.github/actions/setup-node-workspace
       - name: Start and verify full runtime
