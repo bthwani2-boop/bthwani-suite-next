@@ -1,10 +1,14 @@
 import fs from "node:fs";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 const productTruthFile = "governance/product/contracts/jrn-040-platform-change-sets.product-truth.json";
 const validationMigrationFile = "core/platform-control/database/migrations/platform-005_change_set_validation.sql";
 const sensitiveBoundaryMigrationFile = "core/platform-control/database/migrations/platform-006_sensitive_change_boundary.sql";
 const contractFile = "core/platform-control/contracts/platform-change-sets.openapi.yaml";
 const generatedClientFile = "core/platform-control/clients/generated/platform-change-sets-api.ts";
+const typecheckFile = "services/dsh/tsconfig.platform-change-sets.json";
+const visualizationProofFile = "services/dsh/tests/platform-governance-visualization.test.mjs";
 const strictBoundaryFile = "core/platform-control/backend/internal/platformcontrol/change_set_strict_boundary.go";
 const strictBoundaryProofFile = "core/platform-control/backend/internal/platformcontrol/change_set_strict_boundary_test.go";
 const databaseProofFile = "core/platform-control/backend/internal/platformcontrol/change_set_database_sensitive_guard_test.go";
@@ -27,9 +31,11 @@ const requiredFiles = [
   httpProofFile,
   contractFile,
   generatedClientFile,
+  typecheckFile,
   "services/dsh/frontend/shared/platform/platform-control.api.ts",
   "services/dsh/frontend/shared/platform/use-platform-change-workflow-controller.tsx",
   "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx",
+  visualizationProofFile,
   callerWorkflowFile,
   verificationWorkflowFile,
 ];
@@ -46,10 +52,41 @@ function requireText(file, tokens) {
   }
 }
 
-function rejectJourneyIdentifiers(file) {
-  const content = fs.readFileSync(file, "utf8");
-  if (/JRN[-_]?040|jrn[-_]?040/i.test(content)) {
-    failures.push(`journey-identifier-in-runtime:${file}`);
+function trackedFiles() {
+  const result = spawnSync("git", ["ls-files", "-z"], {
+    encoding: "utf8",
+    maxBuffer: 32 * 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) {
+    failures.push(`git-ls-files:${result.error?.message ?? result.stderr.trim()}`);
+    return [];
+  }
+  return result.stdout.split("\0").filter(Boolean);
+}
+
+function rejectRuntimeJourneyIdentifiers() {
+  const pattern = /JRN[-_]?040|jrn[-_]?040/i;
+  const textExtensions = new Set([
+    ".cjs", ".go", ".js", ".json", ".jsx", ".md", ".mjs", ".ps1", ".py", ".sh", ".sql", ".ts", ".tsx", ".txt", ".yaml", ".yml",
+  ]);
+
+  for (const file of trackedFiles()) {
+    const normalized = file.replaceAll("\\", "/");
+    if (normalized.startsWith("governance/")) continue;
+    if (pattern.test(normalized)) {
+      failures.push(`journey-identifier-in-runtime-path:${normalized}`);
+      continue;
+    }
+    if (!textExtensions.has(path.extname(normalized).toLowerCase())) continue;
+    let content;
+    try {
+      content = fs.readFileSync(normalized, "utf8");
+    } catch {
+      continue;
+    }
+    if (pattern.test(content)) {
+      failures.push(`journey-identifier-in-runtime-content:${normalized}`);
+    }
   }
 }
 
@@ -159,10 +196,16 @@ if (failures.length === 0) {
     "itemValidatedAt",
     "CreatePlatformChangeSetItemInput",
   ]);
+  requireText(typecheckFile, [
+    "platform-change-sets-api.ts",
+    "PlatformChangeWorkflowPanel.tsx",
+    "dist-platform-change-sets",
+  ]);
   requireText("services/dsh/frontend/shared/platform/platform-control.api.ts", [
     "RollbackPlatformChangeSetInput",
     "rollbackPlatformChangeSet",
     "body: input",
+    "clients/generated/platform-change-sets-api",
   ]);
   requireText("services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx", [
     "تفاصيل الطلب والفرق المتوقع",
@@ -170,6 +213,10 @@ if (failures.length === 0) {
     "preconditionSnapshot",
     "proposedValue",
     "draftItems",
+  ]);
+  requireText(visualizationProofFile, [
+    "platform governance renders the live visualization",
+    "platform governance exposes the complete governed lifecycle",
   ]);
   requireText(callerWorkflowFile, [
     "uses: ./.github/workflows/ci-node-verification.yml",
@@ -183,9 +230,7 @@ if (failures.length === 0) {
     "node tools/guards/platform-change-sets-gate.mjs",
   ]);
 
-  for (const file of requiredFiles.filter((file) => !file.startsWith("governance/"))) {
-    rejectJourneyIdentifiers(file);
-  }
+  rejectRuntimeJourneyIdentifiers();
 }
 
 if (failures.length > 0) {
