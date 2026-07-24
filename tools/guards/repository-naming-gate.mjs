@@ -16,14 +16,13 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { fail, repoRoot, toPosix } from "./_guard-utils.mjs";
 
 const guardId = "repository-naming-gate";
 const violations = [];
 const warnings = [];
 
-// ── Patterns ──────────────────────────────────────────────────────────────────
 const PASCAL_CASE   = /^[A-Z][a-zA-Z0-9]*(\.[a-z]+)+$/;
 const KEBAB_CASE    = /^[a-z][a-z0-9]*(-[a-z0-9]+)*(\.[a-z]+)+$/;
 const SNAKE_CASE_GO = /^[a-z][a-z0-9]*(_[a-z0-9]+)*\.go$/;
@@ -31,34 +30,27 @@ const SQL_MIGRATION = /^\d{3,4}_[a-z0-9_]+\.sql$/;
 const GUARD_FILE    = /^[a-z][a-z0-9]*(-[a-z0-9]+)*-gate\.mjs$/;
 const SCRIPT_FILE   = /^[a-z][a-z0-9]*(-[a-z0-9]+)*\.(mjs|ps1|sh)$/;
 
-// Folder names that indicate disorder
 const FORBIDDEN_FOLDER_NAMES = new Set([
   "temp", "tmp", "test2", "final", "new", "old", "copy",
   "backup", "bak", "archive", "misc", "stuff", "junk",
   "TEMP", "TMP", "BACKUP",
 ]);
 
-// ── Exclusions ────────────────────────────────────────────────────────────────
 const EXCLUDED_DIRS = new Set([
   ".git", "node_modules", ".pnpm-store", ".next", ".expo", ".turbo", ".nx",
   ".cache", "dist", "build", "out", "coverage", "android", "ios",
   "graphify-out", ".diagnostics", "__generated__", "generated",
 ]);
 
-// Known allowlisted filenames that break pattern rules intentionally
 const NAMING_ALLOWLIST_FILES = new Set([
-  // React Native / Expo entry points
   "index.ts", "index.tsx", "index.js",
-  // Config / meta files
   "App.tsx", "App.ts", "_app.tsx", "_document.tsx",
   "_layout.tsx", "_layout.ts",
-  // This gate itself
   "repository-naming-gate.mjs",
 ]);
 
-// Allowlisted path patterns (prefixes) — skip naming checks inside these
 const ALLOWLIST_PATH_PREFIXES = [
-  "services/dsh/database/migrations", // already checked via SQL_MIGRATION
+  "services/dsh/database/migrations",
   "services/wlt/database/migrations",
   "tools/registry",
   ".agents",
@@ -66,7 +58,6 @@ const ALLOWLIST_PATH_PREFIXES = [
   "docs",
 ];
 
-// ── Walker ────────────────────────────────────────────────────────────────────
 function walk(dir, cb) {
   let entries;
   try {
@@ -90,13 +81,10 @@ function walk(dir, cb) {
   }
 }
 
-// ── Scan roots ────────────────────────────────────────────────────────────────
 const SCAN_ROOTS = ["apps", "services", "shared", "tools/guards", "tools/scripts"];
 
 for (const root of SCAN_ROOTS) {
   walk(path.join(repoRoot, root), ({ rel, name, isDir }) => {
-
-    // ── 1. Forbidden folder names ───────────────────────────────────────────
     if (isDir) {
       if (FORBIDDEN_FOLDER_NAMES.has(name)) {
         violations.push({
@@ -108,12 +96,10 @@ for (const root of SCAN_ROOTS) {
       return;
     }
 
-    // ── File-level checks ───────────────────────────────────────────────────
     if (NAMING_ALLOWLIST_FILES.has(name)) return;
 
     const ext = path.extname(name).toLowerCase();
 
-    // ── 2. Go files — snake_case.go (FAIL) ─────────────────────────────────
     if (ext === ".go") {
       if (!SNAKE_CASE_GO.test(name)) {
         violations.push({
@@ -125,7 +111,6 @@ for (const root of SCAN_ROOTS) {
       return;
     }
 
-    // ── 3. SQL migrations — 0001_description.sql (FAIL) ────────────────────
     if (ext === ".sql" && rel.includes("/migrations/")) {
       if (!SQL_MIGRATION.test(name)) {
         violations.push({
@@ -137,7 +122,6 @@ for (const root of SCAN_ROOTS) {
       return;
     }
 
-    // ── 4. Guards — kebab-case-gate.mjs (WARN) ─────────────────────────────
     if (rel.startsWith("tools/guards/") && ext === ".mjs" && !name.startsWith("_")) {
       if (!GUARD_FILE.test(name)) {
         warnings.push({
@@ -149,7 +133,6 @@ for (const root of SCAN_ROOTS) {
       return;
     }
 
-    // ── 5. Scripts — kebab-case.mjs/.ps1 (WARN) ────────────────────────────
     if (rel.startsWith("tools/scripts/") && (ext === ".mjs" || ext === ".ps1" || ext === ".sh")) {
       if (!SCRIPT_FILE.test(name)) {
         warnings.push({
@@ -161,9 +144,7 @@ for (const root of SCAN_ROOTS) {
       return;
     }
 
-    // ── 6. React/RN components (.tsx) — PascalCase (WARN) ──────────────────
     if (ext === ".tsx") {
-      // Skip non-component files: hooks, adapters, view-models, etc.
       const looksLikeComponent =
         rel.includes("/components/") ||
         rel.includes("/screens/") ||
@@ -184,8 +165,6 @@ for (const root of SCAN_ROOTS) {
   });
 }
 
-// ── SQL migration coverage check (additional) ─────────────────────────────────
-// Verify that SQL migration filenames under migrations/ are sequential (warn on gaps)
 const migrationDirs = [
   "services/dsh/database/migrations",
   "services/wlt/database/migrations",
@@ -211,7 +190,6 @@ for (const migDir of migrationDirs) {
   }
 }
 
-// ── Report ────────────────────────────────────────────────────────────────────
 if (warnings.length > 0) {
   console.log(`\n${guardId} WARNINGS (${warnings.length} naming issues — fix progressively):`);
   for (const w of warnings) {
@@ -219,16 +197,34 @@ if (warnings.length > 0) {
   }
 }
 
-// Run ls-lint naming checks
-try {
-  console.log("Running ls-lint naming checks...");
-  const cmd = process.platform === "win32" ? "npx.cmd @ls-lint/ls-lint" : "npx @ls-lint/ls-lint";
-  execSync(cmd, { stdio: "inherit", cwd: repoRoot });
-} catch (e) {
+console.log("Running repository-pinned ls-lint naming checks...");
+const lsLint = spawnSync("pnpm", ["exec", "ls-lint"], {
+  cwd: repoRoot,
+  env: process.env,
+  encoding: "utf8",
+  shell: process.platform === "win32",
+  maxBuffer: 16 * 1024 * 1024,
+});
+
+if (lsLint.stdout) process.stdout.write(lsLint.stdout);
+if (lsLint.stderr) process.stderr.write(lsLint.stderr);
+
+if (lsLint.error || lsLint.status !== 0) {
+  const output = `${lsLint.stdout ?? ""}\n${lsLint.stderr ?? ""}`
+    .replace(/\u001b\[[0-9;]*m/g, "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const diagnostic = output.find((line) => /(?:fail|error|invalid|must|expected|not\s+)/i.test(line))
+    ?? output.at(-1)
+    ?? lsLint.error?.message
+    ?? `ls-lint exited with ${lsLint.status ?? 1}`;
+  const file = diagnostic.match(/(?:^|\s)([.\w@\[\]/-]+\.(?:ts|tsx|js|jsx|mjs|cjs|go|sql|yml|yaml|json|ps1|sh))(?:\s|:|$)/i)?.[1]
+    ?? ".ls-lint.yml";
   violations.push({
-    file: ".ls-lint.yml",
+    file,
     line: 0,
-    message: "LS_LINT_FAILED: Directory structure naming conventions violated. Run 'npx @ls-lint/ls-lint' for details."
+    message: `LS_LINT_FAILED: ${diagnostic.slice(0, 220)}`,
   });
 }
 
