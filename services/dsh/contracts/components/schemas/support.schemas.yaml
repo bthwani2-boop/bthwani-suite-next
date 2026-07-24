@@ -119,6 +119,7 @@ DshRichMessageRequest:
         attachments:
           type: array
           minItems: 1
+          items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSupportMessageAttachmentInput" }
 
 DshSupportMessage:
   type: object

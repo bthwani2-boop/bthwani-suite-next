@@ -227,6 +227,7 @@ export function useOperatorPartnerDeliveriesController(params: UseOperatorPartne
     orderIdValue: string,
     expectedVersion: number,
     reason: string,
+    ticketReference: string,
     evidenceReferences: readonly string[] = [],
   ) => {
     const commandKey = `${orderIdValue}:${expectedVersion}:${reason}:${evidenceReferences.join("|")}`;
@@ -235,6 +236,7 @@ export function useOperatorPartnerDeliveriesController(params: UseOperatorPartne
     return raisePartnerDeliveryException(orderIdValue, {
       expectedVersion,
       reason,
+      ticketReference,
       evidenceReferences,
       commandId: existing,
     })

@@ -1,6 +1,6 @@
 export * from "./marketing.types";
 export * from "./campaign.types";
-export * from "./use-marketing-controller";
+export * from "./use-marketing-crud-controller";
 export {
   buildMarketingTickerPlan,
   createMarketingTickerDraft,

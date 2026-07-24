@@ -1,5 +1,6 @@
 {
   "name": "@bthwani/dsh",
+  "description": "BThwani DSH service workspace.",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -14,7 +15,7 @@
     "database:contract": "node ../../tools/scripts/check-dsh-database-contract.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json",
-    "test": "node --test tests/*.test.mjs",
+    "test": "pnpm run build && node --test ../../services/dsh/tests/*.test.mjs",
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
   },
   "peerDependencies": {

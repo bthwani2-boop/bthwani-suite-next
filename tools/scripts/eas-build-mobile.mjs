@@ -27,6 +27,7 @@ const all = process.argv.includes("--all");
 const clearCache = process.argv.includes("--clear-cache");
 const nonInteractive = process.argv.includes("--non-interactive");
 const skipExport = process.argv.includes("--skip-local-export");
+const preflightOnly = process.argv.includes("--preflight-only");
 
 if (!["android", "ios", "all"].includes(platform)) throw new Error("--platform must be android, ios, or all");
 if (!["development", "internal", "production"].includes(profile)) throw new Error("--profile must be development, internal, or production");
@@ -40,19 +41,25 @@ for (const key of targets) {
 }
 
 function resolveInvocation(command, args) {
-  if (command !== "pnpm") return { executable: command, args };
-  const pnpmCli = process.env.npm_execpath;
-  if (!pnpmCli) throw new Error("npm_execpath is unavailable. Run the EAS runner through a pnpm script.");
-  return { executable: process.execPath, args: [pnpmCli, ...args] };
+  if (command === "pnpm") {
+    const pnpmCli = process.env.npm_execpath;
+    if (pnpmCli && fs.existsSync(pnpmCli)) return { executable: process.execPath, args: [pnpmCli, ...args] };
+    return { executable: process.platform === "win32" ? "pnpm.cmd" : "pnpm", args };
+  }
+  if (command === "npx" && process.platform === "win32") {
+    return { executable: "npx.cmd", args };
+  }
+  return { executable: command, args };
 }
 
 function run(command, args, cwd = root, env = process.env) {
   console.log(`\n> ${command} ${args.join(" ")}`);
   const invocation = resolveInvocation(command, args);
+  const isCmd = invocation.executable.endsWith(".cmd") || invocation.executable.endsWith(".bat");
   const result = spawnSync(invocation.executable, invocation.args, {
     cwd,
     stdio: "inherit",
-    shell: false,
+    shell: isCmd,
     windowsHide: true,
     env: { ...env, CI: "1", EXPO_NO_TELEMETRY: "1" },
   });
@@ -83,6 +90,23 @@ function withMobileBuildEnvironmentForApp(appKey, environment = process.env) {
   return next;
 }
 
+function requireNativeProviderInputs(appKey, app, environment) {
+  const features = app.features ?? [];
+  if (!features.includes("maps")) return;
+
+  if ((platform === "android" || platform === "all")
+    && !optionalEnvironmentValue(environment.GOOGLE_MAPS_ANDROID_API_KEY)) {
+    throw new Error(`${appKey}: GOOGLE_MAPS_ANDROID_API_KEY is required for ${profile}/${platform} because the app enables native maps`);
+  }
+
+  if ((platform === "ios" || platform === "all")
+    && !optionalEnvironmentValue(environment.GOOGLE_MAPS_IOS_API_KEY)) {
+    throw new Error(`${appKey}: GOOGLE_MAPS_IOS_API_KEY is required for ${profile}/${platform} because the app enables native maps`);
+  }
+}
+
+console.log("=== PHASE 1: Comprehensive Preflight ===");
+
 run(process.execPath, ["tools/scripts/sync-mobile-apps.mjs", "--check"]);
 
 if (all && profile !== "development") {
@@ -101,6 +125,7 @@ if (all && profile !== "development") {
 for (const key of targets) {
   const appDir = path.join(root, "apps", key, "runtime");
   const appEnvironment = withMobileBuildEnvironmentForApp(key, process.env);
+  requireNativeProviderInputs(key, manifest.apps[key], appEnvironment);
 
   run(process.execPath, [
     "tools/scripts/verify-mobile-sentry-env.mjs",
@@ -112,6 +137,8 @@ for (const key of targets) {
 
   run(process.execPath, [
     "tools/scripts/guard-mobile-apps.mjs",
+    "--app",
+    key,
     "--require-build-secrets",
     "--platform",
     platform,
@@ -120,7 +147,7 @@ for (const key of targets) {
   ], root, appEnvironment);
 
   run("pnpm", ["typecheck"], appDir, appEnvironment);
-  run("pnpm", ["dlx", "expo-doctor@latest"], appDir, appEnvironment);
+  run("npx", ["--yes", "expo-doctor@latest"], appDir, appEnvironment);
 
   if (!skipExport) {
     const outputDir = path.join(root, ".tmp", "eas-preflight", key, platform);
@@ -135,6 +162,21 @@ for (const key of targets) {
     "--platform",
     platform,
   ], root, appEnvironment);
+}
+
+console.log("\nPASS: All target app preflight checks completed successfully!");
+
+if (preflightOnly) {
+  console.log("Preflight-only mode requested. Skipping remote builds.");
+  process.exit(0);
+}
+
+console.log("\n=== PHASE 2: Remote EAS Build Submission ===");
+
+for (const key of targets) {
+  console.log(`\nSubmitting remote build for '${key}'...`);
+  const appDir = path.join(root, "apps", key, "runtime");
+  const appEnvironment = withMobileBuildEnvironmentForApp(key, process.env);
 
   const args = [
     "dlx",

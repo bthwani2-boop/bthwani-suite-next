@@ -550,14 +550,14 @@ export function CatalogDashboardScreen() {
                   cursor: "pointer",
                   transition: "all 0.2s ease-in-out",
                   border: isActive
-                    ? "1px solid color-mix(in srgb, var(--bth-colors-brandAction, #0052FF) 40%, transparent)"
+                    ? `1px solid ${colorRoles.focusRing}`
                     : "1px solid transparent",
                   background: isActive
-                    ? "color-mix(in srgb, var(--bth-colors-brandAction, #0052FF) 12%, transparent)"
+                    ? colorRoles.brandActionTint
                     : "transparent",
                   color: isActive ? colorRoles.brandAction : "currentColor",
                   boxShadow: isActive
-                    ? "0 4px 14px color-mix(in srgb, var(--bth-colors-brandAction, #0052FF) 15%, transparent)"
+                    ? `0 4px 14px ${colorRoles.brandActionTint}`
                     : "none",
                   whiteSpace: "nowrap",
                 }}
@@ -623,7 +623,7 @@ export function CatalogDashboardScreen() {
                     : "color-mix(in srgb, currentColor 2%, transparent)",
                   color: isSubActive ? colorRoles.surfaceBase : "currentColor",
                   boxShadow: isSubActive
-                    ? "0 2px 8px color-mix(in srgb, var(--bth-colors-brandAction, #0052FF) 30%, transparent)"
+                    ? `0 2px 8px ${colorRoles.focusRing}`
                     : "none",
                   whiteSpace: "nowrap",
                 }}

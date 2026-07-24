@@ -9,7 +9,7 @@ import {
   isPartnerWorkspaceTabId,
   resolvePartnerSubTab,
 } from './partner-registry';
-import { usePartnerAdminController } from './use-partner-admin-controller';
+import { usePartnerWorkspaceListController } from './partner-workspace.controller';
 
 export type UsePartnersControllerProps = {
   readonly initialWorkspace?: PartnerWorkspaceTabId;
@@ -57,20 +57,18 @@ export function usePartnersController({
     }));
   }, [subTabDefinitions, activeSubTab]);
 
-  const adminController = usePartnerAdminController(authKind);
+  const adminController = usePartnerWorkspaceListController(authKind);
 
   const activePartnersCount = useMemo(() => {
-    if (adminController.listState.kind !== 'success') return 0;
-    return adminController.listState.partners.filter((partner) => ACTIVE_PARTNER_STATUSES.has(partner.activationStatus)).length;
-  }, [adminController.listState]);
+    return adminController.partners.filter((partner) => ACTIVE_PARTNER_STATUSES.has(partner.activationStatus)).length;
+  }, [adminController.partners]);
 
   const pendingCount = useMemo(() => {
-    if (adminController.listState.kind !== 'success') return 0;
-    return adminController.listState.partners.filter((partner) => (
+    return adminController.partners.filter((partner) => (
       !ACTIVE_PARTNER_STATUSES.has(partner.activationStatus)
       && !CLOSED_PARTNER_STATUSES.has(partner.activationStatus)
     )).length;
-  }, [adminController.listState]);
+  }, [adminController.partners]);
 
   const handleSelectTab = useCallback((id: PartnerWorkspaceTabId) => {
     if (router) router.push(buildPartnersHref(id));

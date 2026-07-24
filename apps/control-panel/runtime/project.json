@@ -13,7 +13,7 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "node --test apps/control-panel/runtime/tests/*.test.mjs"
+        "command": "node tools/scripts/run-command-check.mjs --label control-panel-contracts -- node --test apps/control-panel/runtime/tests/*.test.mjs"
       }
     },
     "build": {

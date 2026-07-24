@@ -126,6 +126,7 @@ export async function raisePartnerDeliveryException(
   input: {
     readonly expectedVersion: number;
     readonly reason: string;
+    readonly ticketReference: string;
     readonly evidenceReferences?: readonly string[];
     readonly commandId?: string;
   },

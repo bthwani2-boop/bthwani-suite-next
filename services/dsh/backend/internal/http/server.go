@@ -165,9 +165,27 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/customer-arrived", protected.handlePickupCustomerArrived)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/verify", protected.handlePickupVerify)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/no-show", protected.handlePickupNoShow)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/extend-window", protected.handlePartnerExtendPickupWindow)
+	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/pickup/reschedule", protected.handlePartnerReschedulePickupWindow)
 	mux.HandleFunc("GET /dsh/operator/pickups", protected.handleListOperatorPickups)
 	mux.HandleFunc("GET /dsh/operator/pickups/{orderId}", protected.handleGetOperatorPickup)
 	mux.HandleFunc("POST /dsh/operator/pickups/{orderId}/extend-window", protected.handleExtendPickupWindow)
+
+	// Sovereign platform interventions (cancel/suspend/raise_exception),
+	// gated by IncidentPermissionOverride rather than ordinary read/manage.
+	// Named distinctly from /dsh/operator/incidents (customer support incidents).
+	mux.HandleFunc("POST /dsh/operator/operational-incidents", protected.handleReportOperationalIncident)
+	mux.HandleFunc("GET /dsh/operator/operational-incidents", protected.handleListOperatorIncidents)
+	mux.HandleFunc("GET /dsh/operator/operational-incidents/{incidentId}", protected.handleGetOperatorIncident)
+
+	// Persisted SLA breach alerts (JRN-032-style reconcile pattern), distinct
+	// from the volatile slaState embedded in each read response.
+	mux.HandleFunc("POST /dsh/operator/partner-delivery/sla-alerts/refresh", protected.handleRefreshDeliverySLAAlerts)
+	mux.HandleFunc("GET /dsh/operator/partner-delivery/sla-alerts", protected.handleListDeliverySLAAlerts)
+	mux.HandleFunc("POST /dsh/operator/partner-delivery/sla-alerts/{alertId}/acknowledge", protected.handleAcknowledgeDeliverySLAAlert)
+	mux.HandleFunc("POST /dsh/operator/pickups/sla-alerts/refresh", protected.handleRefreshPickupSLAAlerts)
+	mux.HandleFunc("GET /dsh/operator/pickups/sla-alerts", protected.handleListPickupSLAAlerts)
+	mux.HandleFunc("POST /dsh/operator/pickups/sla-alerts/{alertId}/acknowledge", protected.handleAcknowledgePickupSLAAlert)
 
 	// Governed finance proxy — WLT remains the sole owner of financial truth.
 	mux.HandleFunc("GET /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline", protected.handleFinancePaymentSessionTimeline)

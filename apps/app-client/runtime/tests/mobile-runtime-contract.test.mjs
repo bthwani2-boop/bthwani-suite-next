@@ -17,7 +17,7 @@ const mobileApps = new Map([
 test("all mobile wrappers bind their canonical app key and fixed Metro port", () => {
   for (const [appKey, port] of mobileApps) {
     const wrapper = read(`apps/${appKey}/runtime/start.ps1`);
-    assert.match(wrapper, new RegExp(`-AppKey\\s+\"${appKey}\"`));
+    assert.match(wrapper, new RegExp(`-AppKey\\s+"${appKey}"`));
     assert.match(wrapper, new RegExp(`-MetroPort\\s+${port}\\b`));
   }
 });
@@ -31,7 +31,7 @@ test("the shared launcher is deterministic and declares verified adb reverse", (
     "Invoke-BthwaniAdbReverse",
     "WatchPortsCsv",
     '"--localhost"',
-    '"reverse-only"',
+    "reverse-only",
   ]) {
     assert.ok(launcher.includes(marker), `missing launcher contract marker: ${marker}`);
   }

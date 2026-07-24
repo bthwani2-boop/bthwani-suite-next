@@ -33,6 +33,7 @@ import {
   useSpecialRequestsController,
 } from "../shared/special-requests";
 import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
+import { notificationActionFromDeepLink } from "../shared/notifications/client-notification-deep-link";
 
 type ClientTab = "home" | "stores" | "orders" | "special" | "profile" | "cart";
 type ProfileRoute =
@@ -79,17 +80,6 @@ function isClientTab(value: string): value is ClientTab {
     || value === "special"
     || value === "profile"
     || value === "cart";
-}
-
-function notificationActionFromDeepLink(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "bthwani-client-next:") return null;
-    const path = `${parsed.hostname}${parsed.pathname}`.replace(/^\/+|\/+$/g, "");
-    return path ? `/${path}` : null;
-  } catch {
-    return null;
-  }
 }
 
 export function DshClientSurface() {

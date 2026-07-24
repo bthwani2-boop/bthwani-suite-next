@@ -1,0 +1,58 @@
+{
+  "$schema": "./single-owner-mode.schema.json",
+  "schemaVersion": 1,
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "mode": "SOLE_OWNER",
+  "status": "ACTIVE",
+  "ownerIdentity": "bthwani2-boop",
+  "authoritySource": "CURRENT_USER_INSTRUCTION",
+  "authorizedAt": "2026-07-24",
+  "acknowledgements": {
+    "reducedHumanSeparationOfDuties": true,
+    "automatedChecksRemainMandatory": true,
+    "blanketAuthorizationIsNotOutcomeAcceptance": true
+  },
+  "approvalPolicy": {
+    "ownerMayApproveOwnChanges": true,
+    "allowedDomains": [
+      "product_model_approval",
+      "implementation_readiness",
+      "product_acceptance",
+      "ux_acceptance",
+      "architecture_approval",
+      "governance_contract_approval",
+      "ci_workflow_approval",
+      "implementation_review",
+      "qa_approval"
+    ],
+    "protectedDomains": [
+      "authentication_authorization_sessions",
+      "pii_privacy_secrets_credentials",
+      "tenant_isolation",
+      "security_approval",
+      "financial_control",
+      "migrations_and_production_data",
+      "critical_high_vulnerability_acceptance",
+      "residual_risk_acceptance",
+      "release_approval",
+      "deployment",
+      "production_verification",
+      "final_closure"
+    ],
+    "requirements": {
+      "explicitCurrentTaskApproval": true,
+      "exactScopeRecorded": true,
+      "exactCommitRequiredForOutcomeApproval": true,
+      "sameCommitAutomatedChecksRequired": true,
+      "githubAuditEvidenceRequired": true,
+      "failedChecksMayNotBeWaived": true
+    }
+  },
+  "executorPolicy": {
+    "mayImpersonateOwner": false,
+    "mayConvertBlanketAuthorizationIntoOutcomeAcceptance": false,
+    "maySelfApproveProtectedDomains": false,
+    "mayMergeFailingCommit": false,
+    "mayBypassRepositoryProtection": false
+  }
+}

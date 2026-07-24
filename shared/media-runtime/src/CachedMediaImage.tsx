@@ -10,6 +10,6 @@ export function CachedMediaImage({ transitionMs = 150, ...props }: CachedMediaIm
     ...props,
     cachePolicy: "memory-disk",
     transition: transitionMs,
-    recyclingKey: typeof props.source === "string" ? props.source : undefined,
+    recyclingKey: typeof props.source === "string" ? props.source : null,
   });
 }

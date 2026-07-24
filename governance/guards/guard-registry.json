@@ -245,7 +245,7 @@
       "name": "Authority Separation Gate",
       "script": "guard:authority-separation",
       "exit_level": "fail",
-      "description": "Enforces complete SDLC roles, advisory-only supervision, independent governance and CI skills, distinct approval owners, and forward stage ownership.",
+      "description": "Enforces complete SDLC roles, advisory-only supervision, separate governance and CI logical skills, bounded sole-owner identity exceptions, protected approval domains, and forward stage ownership.",
       "source_file": "tools/guards/authority-separation-gate.mjs"
     },
     {

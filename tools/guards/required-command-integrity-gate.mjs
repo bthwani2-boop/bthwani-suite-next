@@ -7,6 +7,11 @@ const violations = [];
 const packageFile = "package.json";
 const enforcementFile = "governance/github/repository-enforcement.json";
 const canonicalWorkflowFile = ".github/workflows/ci.yml";
+const expectedWorkflowFiles = [
+  "ci.yml",
+  "contextual-status-finalizer.yml",
+  "dsh-database.yml",
+];
 const fullVerificationTrigger =
   "governance/github/lianbassam-full-verification.trigger.json";
 const packageJson = JSON.parse(read(packageFile));
@@ -137,10 +142,13 @@ if (!workflowFiles.includes("ci.yml")) {
     message: "CANONICAL_WORKFLOW_MISSING: .github/workflows/ci.yml is required",
   });
 }
-if (workflowFiles.length !== 1) {
+const workflowInventoryMatches =
+  workflowFiles.length === expectedWorkflowFiles.length &&
+  workflowFiles.every((name, index) => name === expectedWorkflowFiles[index]);
+if (!workflowInventoryMatches) {
   violations.push({
     file: ".github/workflows",
-    message: `CANONICAL_WORKFLOW_COUNT_INVALID:${workflowFiles.length}:${workflowFiles.join(",")}`,
+    message: `CANONICAL_WORKFLOW_INVENTORY_INVALID:expected=${expectedWorkflowFiles.join(",")}:actual=${workflowFiles.join(",")}`,
   });
 }
 for (const workflowFile of workflowFiles) {

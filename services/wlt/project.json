@@ -7,7 +7,7 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir services/wlt typecheck"
+        "command": "node tools/scripts/run-command-check.mjs --label w-type -- pnpm --dir services/wlt typecheck"
       }
     },
     "build": {
@@ -19,13 +19,13 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir services/wlt lint"
+        "command": "node tools/scripts/run-command-check.mjs --label wlt-lint -- pnpm --dir services/wlt lint"
       }
     },
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --dir services/wlt test"
+        "command": "node tools/scripts/run-command-check.mjs --label wlt-tests -- pnpm --dir services/wlt test"
       }
     }
   },

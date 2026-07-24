@@ -88,8 +88,10 @@ function visit(file) {
   });
 
   for (const match of source.matchAll(/\bexport\s+(?:\*|\{[^}]+\})\s+from\s+["']([^"']+)["']/g)) {
-    const resolved = resolveModule(normalized, match[1]);
-    if (!resolved) fail(`${relative} exports missing module ${match[1]}`);
+    const specifier = match[1];
+    if (!specifier.startsWith(".") && !specifier.startsWith("/")) continue;
+    const resolved = resolveModule(normalized, specifier);
+    if (!resolved) fail(`${relative} exports missing module ${specifier}`);
     visit(resolved);
   }
 }

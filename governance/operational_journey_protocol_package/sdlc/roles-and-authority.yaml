@@ -61,6 +61,30 @@ authorities:
     owns: [residual_risk_acceptance]
     must_not_be_change_author: true
     must_not_be_implementation_executor: true
+single_owner_human_identity_exception:
+  authority: governance/authority/single-owner-mode.json
+  active_when: mode_is_SOLE_OWNER_and_status_is_ACTIVE
+  owner_identity_may_fulfill_multiple_eligible_approval_roles: true
+  logical_authorities_and_owner_skills_remain_separate: true
+  blanket_authorization_is_not_outcome_acceptance: true
+  exact_commit_required_for_outcome_approval: true
+  same_commit_automated_checks_required: true
+  failed_checks_may_not_be_waived: true
+  execution_agent_may_impersonate_owner: false
+  execution_agent_may_issue_owner_approval: false
+  protected_domains_remain_independent_or_unclosed:
+    - authentication_authorization_sessions
+    - pii_privacy_secrets_credentials
+    - tenant_isolation
+    - security_approval
+    - financial_control
+    - migrations_and_production_data
+    - critical_high_vulnerability_acceptance
+    - residual_risk_acceptance
+    - release_approval
+    - deployment
+    - production_verification
+    - final_closure
 separation_of_duties_required_for:
   - product_model_approval
   - product_acceptance

@@ -3,7 +3,7 @@ name: DSH Database Contract
 on:
   push:
     branches:
-      - main
+      - master
       - lianbassam
     paths:
       - "package.json"
@@ -58,7 +58,7 @@ jobs:
 
     steps:
       - name: Checkout immutable source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
           show-progress: false
@@ -75,7 +75,7 @@ jobs:
           -f target_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
       - name: Set up Go
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
@@ -142,7 +142,7 @@ jobs:
 
       - name: Upload DSH backend failure log
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dsh-backend-verification-${{ github.run_id }}
           path: ${{ runner.temp }}/dsh-backend-verification.log

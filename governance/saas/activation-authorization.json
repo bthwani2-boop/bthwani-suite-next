@@ -8,9 +8,17 @@
   "scope": [
     "ENABLE_SAAS_RUNTIME_MODE",
     "REMOVE_COMMERCIAL_ACTIVATION_POLICY_BLOCK",
-    "EXECUTE_SAAS_ACTIVATION_VERIFICATION"
+    "EXECUTE_SAAS_ACTIVATION_VERIFICATION",
+    "EXECUTE_SAAS_IMPLEMENTATION_WORK",
+    "EXECUTE_SAAS_ACTIVATION_WORK"
   ],
+  "scopeAmendment": {
+    "date": "2026-07-24",
+    "source": "USER_EXPLICIT_INSTRUCTION",
+    "change": "Scope widened from readiness/verification-only to explicitly cover doing the SaaS implementation and activation engineering work itself (tenant isolation, activation gates, related code), not just assessing or verifying readiness.",
+    "doesNotChange": "commercialActivationState, saasReadinessMode, and activationEvidence in governance/saas/saas-governance.json are unaffected by this amendment. Each activationEvidence item still requires same-commit proof before it may move from NOT_PROVEN to PROVEN, and commercialActivationState may not move to ACTIVE without all of them proven plus the protected-domain approvals in governance/authority/single-owner-mode.json (tenant_isolation, security_approval, financial_control are excluded from owner self-approval)."
+  },
   "productionDeploymentAuthorized": false,
   "evidencePolicy": "NO_UNPROVEN_EVIDENCE_MAY_BE_MARKED_PROVEN",
-  "notes": "The user explicitly authorized SaaS activation. Production deployment remains a separate authorization and the final commercial ACTIVE state still requires same-commit evidence."
+  "notes": "The user explicitly authorized SaaS activation, and on 2026-07-24 explicitly widened that authorization to cover implementation and activation work, not just readiness preparation. Production deployment remains a separate authorization and the final commercial ACTIVE state still requires same-commit evidence and independent approval of the protected domains listed in single-owner-mode.json."
 }

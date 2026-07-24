@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import Constants from 'expo-constants';
 import {
   Badge,
   Box,
@@ -35,6 +36,12 @@ export interface DshCaptainMapScreenProps {
   readonly onPushLocation: (push: DshCaptainLocationPush) => Promise<unknown>;
 }
 
+export function isNativeMapConfigured(): boolean {
+  const maps = Constants.expoConfig?.extra?.maps as { androidNativeConfigured?: boolean; iosNativeConfigured?: boolean } | undefined;
+  if (!maps) return false;
+  return Platform.OS === 'android' ? Boolean(maps.androidNativeConfigured) : Boolean(maps.iosNativeConfigured);
+}
+
 function locationSyncKind(result: unknown): 'sent' | 'queued' {
   if (
     typeof result === 'object'
@@ -60,6 +67,7 @@ export function DshCaptainMapScreen({
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [lastLocation, setLastLocation] = React.useState<LastLocation | null>(null);
 
+  const mapsConfigured = isNativeMapConfigured();
   const mapFlowPolicy = getDshCaptainFlowPolicy('captain-map-navigation');
   const mapFlowSummary = getDshFlowPolicySummary('captain-map-navigation');
 
@@ -103,6 +111,17 @@ export function DshCaptainMapScreen({
       subtitle={`الطلب ${orderId} · الإسناد ${assignmentId}`}
       content={
         <Box gap={3}>
+          {!mapsConfigured ? (
+            <Surface tone="raised" padding={3} gap={1}>
+              <Text role="bodyStrong" tone="warning">
+                الخرائط غير مفعلة في بيئة التطوير الحالية.
+              </Text>
+              <Text role="bodySm" tone="muted">
+                يمكن متابعة تفاصيل المهمة والموقع النصي دون الخريطة.
+              </Text>
+            </Surface>
+          ) : null}
+
           {errorMessage ? (
             <Surface tone="danger" padding={3} gap={1}>
               <Text role="bodyStrong" tone="danger">تعذر تحديث الموقع</Text>

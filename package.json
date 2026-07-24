@@ -209,6 +209,8 @@
     "mobile:eas:build:captain:dev": "node tools/scripts/eas-build-mobile.mjs --app app-captain --platform android --profile development",
     "mobile:eas:build:field:dev": "node tools/scripts/eas-build-mobile.mjs --app app-field --platform android --profile development",
     "mobile:eas:build:all:dev": "node tools/scripts/eas-build-mobile.mjs --all --platform android --profile development",
+    "mobile:eas:preflight:all:dev": "node tools/scripts/eas-build-mobile.mjs --all --platform android --profile development --preflight-only",
+    "mobile:firebase:setup:dev": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/setup-mobile-firebase-development.ps1",
     "client:mirror": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-client/runtime/start.ps1 -MirrorDevice",
     "partner:mirror": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-partner/runtime/start.ps1 -MirrorDevice",
     "captain:mirror": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-captain/runtime/start.ps1 -MirrorDevice",

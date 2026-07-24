@@ -1,6 +1,10 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const { appEnvSuffix, resolveGoogleServicesFile } = require("../mobile/sentry-env.js");
 
 const root = process.cwd();
 const requireBuildSecrets = process.argv.includes("--require-build-secrets");
@@ -8,6 +12,8 @@ const platformArgIndex = process.argv.indexOf("--platform");
 const platform = platformArgIndex >= 0 ? process.argv[platformArgIndex + 1] : "android";
 const profileArgIndex = process.argv.indexOf("--profile");
 const profile = profileArgIndex >= 0 ? process.argv[profileArgIndex + 1] : "development";
+const appArgIndex = process.argv.indexOf("--app");
+const requestedApp = appArgIndex >= 0 ? process.argv[appArgIndex + 1] : undefined;
 
 if (!["android", "ios", "all"].includes(platform)) {
   console.error("FAIL: --platform must be android, ios, or all");
@@ -27,6 +33,15 @@ function fail(message) {
   process.exit(1);
 }
 
+const manifest = readJson("tools/mobile/mobile-apps.manifest.json");
+const allowedAppKeys = Object.keys(manifest.apps);
+
+if (requestedApp && !manifest.apps[requestedApp]) {
+  fail(`Unknown app '${requestedApp}'. Allowed: ${allowedAppKeys.join(", ")}`);
+}
+
+const buildSecretsTargetApps = requestedApp ? [requestedApp] : allowedAppKeys;
+
 function requireFile(file, label = file) {
   if (!fs.existsSync(path.resolve(root, file))) fail(`${label} is required`);
 }
@@ -34,15 +49,17 @@ function requireFile(file, label = file) {
 function resolveInvocation(command, args) {
   if (command !== "pnpm") return { executable: command, args };
   const pnpmCli = process.env.npm_execpath;
-  if (!pnpmCli) fail("npm_execpath is unavailable. Run this guard through a pnpm script.");
-  return { executable: process.execPath, args: [pnpmCli, ...args] };
+  if (pnpmCli && fs.existsSync(pnpmCli)) return { executable: process.execPath, args: [pnpmCli, ...args] };
+  const isWin = process.platform === "win32";
+  return { executable: isWin ? "pnpm.cmd" : "pnpm", args };
 }
 
 function run(command, args, cwd) {
   const invocation = resolveInvocation(command, args);
+  const isCmd = invocation.executable.endsWith(".cmd") || invocation.executable.endsWith(".bat");
   const result = spawnSync(invocation.executable, invocation.args, {
     cwd,
-    shell: false,
+    shell: isCmd,
     encoding: "utf8",
     windowsHide: true,
     env: { ...process.env, COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" },
@@ -63,13 +80,39 @@ function pluginMap(plugins) {
   }));
 }
 
-function requireEnv(name, key) {
-  const value = process.env[key]?.trim();
-  if (!value) fail(`${name}: ${key} is required for ${profile}/${platform} build preflight`);
+function requireEnv(appKey, envVarName) {
+  const suffix = appEnvSuffix(appKey);
+  const value = process.env[`${envVarName}_${suffix}`]?.trim() || process.env[envVarName]?.trim();
+  if (!value) fail(`${appKey}: ${envVarName} is required for ${profile}/${platform} build preflight`);
   return value;
 }
 
-const manifest = readJson("tools/mobile/mobile-apps.manifest.json");
+function validateGoogleServicesFile(appKey, file, expectedPackage) {
+  if (!file) {
+    fail(`${appKey}: GOOGLE_SERVICES_JSON is required for ${profile}/${platform} build preflight`);
+  }
+  const absolute = path.resolve(file);
+  if (!fs.existsSync(absolute)) {
+    fail(`${appKey}: GOOGLE_SERVICES_JSON does not point to an existing file: ${absolute}`);
+  }
+
+  let googleServices;
+  try {
+    googleServices = JSON.parse(fs.readFileSync(absolute, "utf8"));
+  } catch (error) {
+    fail(`${appKey}: GOOGLE_SERVICES_JSON is not valid JSON: ${error.message}`);
+  }
+
+  const packageNames = (googleServices.client ?? [])
+    .map((client) => client?.client_info?.android_client_info?.package_name)
+    .filter((value) => typeof value === "string" && value.length > 0);
+
+  if (!packageNames.includes(expectedPackage)) {
+    const actual = packageNames.length > 0 ? packageNames.join(", ") : "none";
+    fail(`${appKey}: GOOGLE_SERVICES_JSON must contain Android package '${expectedPackage}' (found: ${actual})`);
+  }
+}
+
 const rootPkg = readJson("package.json");
 
 if (rootPkg.packageManager !== `pnpm@${manifest.global.pnpm}`) {
@@ -145,9 +188,14 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (Array.isArray(expo.platforms) && expo.platforms.includes("web")) fail(`${key}: web is forbidden in Expo mobile config`);
 
   const plugins = pluginMap(expo.plugins);
-  for (const basePlugin of ["expo-image-picker", "expo-document-picker", "@sentry/react-native/expo"]) {
+  for (const basePlugin of ["expo-image-picker", "expo-document-picker"]) {
     if (!plugins.has(basePlugin)) fail(`${key}: missing ${basePlugin} plugin`);
   }
+  const sentryNativeConfigured = expo.extra?.sentry?.nativeConfigured === true;
+  const sentryEnabled = expo.extra?.sentry?.enabled === true;
+  const hasSentryPlugin = plugins.has("@sentry/react-native/expo");
+  if (sentryEnabled !== sentryNativeConfigured) fail(`${key}: Sentry enabled/nativeConfigured state mismatch`);
+  if (hasSentryPlugin !== sentryNativeConfigured) fail(`${key}: Sentry Expo plugin must match native configuration state`);
 
   const featurePlugins = {
     router: "expo-router",
@@ -234,12 +282,12 @@ for (const [key, app] of Object.entries(manifest.apps)) {
     if (!sentryRuntime.includes(marker)) fail(`${key}: Sentry SaaS privacy marker missing: ${marker}`);
   }
 
-  if (requireBuildSecrets) {
+  if (requireBuildSecrets && buildSecretsTargetApps.includes(key)) {
     if ((platform === "android" || platform === "all") && features.includes("notifications")) {
-      const googleServices = requireEnv(key, "GOOGLE_SERVICES_JSON");
-      if (!fs.existsSync(path.resolve(googleServices))) fail(`${key}: GOOGLE_SERVICES_JSON does not point to an existing file`);
+      const googleServices = resolveGoogleServicesFile(key, process.env);
+      validateGoogleServicesFile(key, googleServices, app.androidPackage);
     }
-    if (features.includes("maps")) {
+    if (features.includes("maps") && profile !== "development") {
       if (platform === "android" || platform === "all") requireEnv(key, "GOOGLE_MAPS_ANDROID_API_KEY");
       if (platform === "ios" || platform === "all") requireEnv(key, "GOOGLE_MAPS_IOS_API_KEY");
     }
@@ -250,6 +298,7 @@ for (const [key, app] of Object.entries(manifest.apps)) {
     }
   }
 }
+
 
 const workspace = fs.readFileSync(path.join(root, "pnpm-workspace.yaml"), "utf8");
 if (!workspace.includes("apps/*/runtime")) fail("pnpm-workspace.yaml must include apps/*/runtime");

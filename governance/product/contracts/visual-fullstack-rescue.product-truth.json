@@ -1,0 +1,449 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "VISUAL_FULLSTACK_RESCUE",
+  "state": "READY_FOR_IMPLEMENTATION",
+  "problem": {
+    "statement": "The current multi-surface product preserves much of its live operational behavior but has inconsistent visual shells, weakened hierarchy, and incomplete parity after broad functional rewrites.",
+    "affectedActors": [
+      "customer",
+      "partner",
+      "captain",
+      "field-agent",
+      "control-panel-operator"
+    ],
+    "currentWorkaround": "Actors use the current functional screens despite degraded or inconsistent visual hierarchy; missing live values must remain omitted or explicitly unavailable rather than replaced with fixtures.",
+    "frequency": "continuous",
+    "severity": "high",
+    "evidenceState": "VALIDATED",
+    "evidenceReferences": [
+      "apps/control-panel/runtime/src/app/page.tsx",
+      "apps/control-panel/runtime/stubs/ionicons-stub.js",
+      "services/dsh/frontend/control-panel/dashboard/DshOperationalDashboardScreen.tsx",
+      "services/dsh/frontend/app-captain/DshCaptainSurface.tsx",
+      "services/dsh/frontend/app-captain/components/BottomNavBar.tsx",
+      "services/dsh/frontend/app-captain/components/ModernPremiumHeader.tsx",
+      "services/dsh/frontend/app-client/DshClientSurface.tsx",
+      "services/dsh/frontend/app-partner/DshPartnerSurface.tsx",
+      "services/dsh/frontend/app-field/components/DshFieldSurface.tsx",
+      "https://github.com/bthwani2-boop/bthwani-suite-next/pull/149#issuecomment-5065633113",
+      "https://github.com/bthwani2-boop/bthwani-suite-next/pull/146#issuecomment-5065633187"
+    ]
+  },
+  "actors": [
+    {
+      "id": "customer",
+      "role": "Uses discovery, commerce, orders, account, notifications, support, and governed special-request journeys.",
+      "permittedActions": [
+        "navigate existing client journeys",
+        "invoke actions backed by owned controllers",
+        "read truthful loading, empty, success, failure, forbidden, and retry states"
+      ],
+      "forbiddenActions": [
+        "see operator, partner, captain, or field controls",
+        "receive fixture location, metrics, catalog, order, payment, or marketing truth"
+      ]
+    },
+    {
+      "id": "partner",
+      "role": "Operates authorized store, order, inventory, team, account, support, and financial-reference journeys.",
+      "permittedActions": [
+        "navigate existing partner journeys",
+        "invoke store-scoped actions backed by owned controllers",
+        "read truthful operational and financial-reference states"
+      ],
+      "forbiddenActions": [
+        "access another partner scope",
+        "receive fake store, inventory, order, team, or financial truth"
+      ]
+    },
+    {
+      "id": "captain",
+      "role": "Operates governed assignment, map, pickup, delivery, proof, account, support, and financial-reference journeys.",
+      "permittedActions": [
+        "navigate existing captain journeys",
+        "invoke assignment and delivery actions backed by DSH controllers",
+        "read truthful availability, GPS, assignment, and WLT-reference states"
+      ],
+      "forbiddenActions": [
+        "see partner or operator controls",
+        "receive fake assignment, GPS, balance, ticker, badge, or availability truth"
+      ]
+    },
+    {
+      "id": "field-agent",
+      "role": "Operates governed field onboarding, readiness, verification, catalog-assistance, finance-reference, and profile journeys.",
+      "permittedActions": [
+        "navigate existing field journeys",
+        "invoke authorized field actions backed by owned controllers",
+        "read truthful online, offline, synchronization, and failure states"
+      ],
+      "forbiddenActions": [
+        "see partner, captain, or operator controls",
+        "receive fake workforce, store, catalog, visit, escalation, or financial truth"
+      ]
+    },
+    {
+      "id": "control-panel-operator",
+      "role": "Uses authorized DSH control-panel dashboards and operational workspaces.",
+      "permittedActions": [
+        "navigate registered operator sections",
+        "read live controller-backed metrics and operational state",
+        "invoke only role-authorized control-panel actions"
+      ],
+      "forbiddenActions": [
+        "see invented KPI, health, service, financial, campaign, partner, or catalog values",
+        "bypass role boundaries or owning service contracts"
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": [
+        "customer"
+      ],
+      "routesOrScreens": [
+        "DshClientSurface",
+        "AppHeader",
+        "BottomNavBar",
+        "HomeDiscoveryRoute",
+        "StoreDiscoveryRoute",
+        "ClientCheckoutRoute",
+        "OrdersListScreen",
+        "MySpaceScreen"
+      ],
+      "operationIds": [],
+      "states": [
+        "loading",
+        "empty",
+        "success",
+        "failure",
+        "forbidden",
+        "retry",
+        "offline-when-applicable"
+      ],
+      "actions": [
+        "navigate",
+        "search when backed",
+        "open notifications",
+        "open cart",
+        "open existing client journeys"
+      ]
+    },
+    {
+      "id": "app-partner",
+      "required": true,
+      "actors": [
+        "partner"
+      ],
+      "routesOrScreens": [
+        "DshPartnerSurface",
+        "DshPartnerOrderJourneyRenderer",
+        "PartnerStoreScopeSheet",
+        "partner account",
+        "partner catalog",
+        "partner orders",
+        "partner support"
+      ],
+      "operationIds": [],
+      "states": [
+        "loading",
+        "empty",
+        "success",
+        "failure",
+        "forbidden",
+        "retry",
+        "scope-unavailable"
+      ],
+      "actions": [
+        "navigate",
+        "select store scope",
+        "search orders",
+        "open notifications",
+        "open existing partner journeys"
+      ]
+    },
+    {
+      "id": "app-captain",
+      "required": true,
+      "actors": [
+        "captain"
+      ],
+      "routesOrScreens": [
+        "DshCaptainSurface",
+        "ModernPremiumHeader",
+        "BottomNavBar",
+        "DshCaptainOrderJourneyRenderer",
+        "captain map",
+        "captain orders",
+        "captain account",
+        "captain support"
+      ],
+      "operationIds": [],
+      "states": [
+        "loading",
+        "empty",
+        "success",
+        "failure",
+        "forbidden",
+        "retry",
+        "assignment-offered",
+        "assignment-active",
+        "assignment-closed",
+        "gps-unavailable"
+      ],
+      "actions": [
+        "navigate",
+        "accept or decline governed offers",
+        "operate pickup and delivery",
+        "open notifications",
+        "open account and support"
+      ]
+    },
+    {
+      "id": "app-field",
+      "required": true,
+      "actors": [
+        "field-agent"
+      ],
+      "routesOrScreens": [
+        "DshFieldSurface",
+        "FieldBottomNavBar",
+        "DshFieldRouteRenderer",
+        "field onboarding",
+        "field readiness",
+        "field catalog",
+        "field profile"
+      ],
+      "operationIds": [],
+      "states": [
+        "restoring",
+        "unauthenticated",
+        "loading",
+        "empty",
+        "success",
+        "failure",
+        "forbidden",
+        "retry",
+        "offline",
+        "synchronizing",
+        "corrupt-queue-recovery"
+      ],
+      "actions": [
+        "navigate",
+        "launch onboarding",
+        "operate authorized field journeys",
+        "recover or retry offline synchronization"
+      ]
+    },
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": [
+        "control-panel-operator"
+      ],
+      "routesOrScreens": [
+        "/dsh/dashboard",
+        "DshOperationalDashboardScreen",
+        "ControlPanelShell",
+        "ControlPanelNavigation",
+        "ControlPanelTopBar"
+      ],
+      "operationIds": [],
+      "states": [
+        "loading",
+        "empty",
+        "success",
+        "partial",
+        "failure",
+        "forbidden",
+        "retry",
+        "upstream-unavailable"
+      ],
+      "actions": [
+        "navigate registered sections",
+        "read live operational metrics",
+        "retry failed reads",
+        "open authorized workspaces"
+      ]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": [
+        "customer",
+        "partner",
+        "captain",
+        "field-agent",
+        "control-panel-operator"
+      ],
+      "routesOrScreens": [
+        "@bthwani/ui-kit public exports",
+        "Icon",
+        "shared DSH controllers and view models"
+      ],
+      "operationIds": [],
+      "states": [
+        "tokenized",
+        "accessible",
+        "rtl",
+        "light-premium",
+        "dark-premium-when-supported"
+      ],
+      "actions": [
+        "render governed visual primitives",
+        "expose visible and accessible icons",
+        "preserve owned controller bindings"
+      ]
+    },
+    {
+      "id": "backend",
+      "required": false,
+      "exclusionReason": "The rescue must preserve and verify existing owned API bindings but does not authorize new public operations, routes, or backend behavior.",
+      "actors": [
+        "customer",
+        "partner",
+        "captain",
+        "field-agent",
+        "control-panel-operator"
+      ],
+      "operationIds": [],
+      "states": [
+        "unchanged"
+      ],
+      "actions": []
+    },
+    {
+      "id": "database",
+      "required": false,
+      "exclusionReason": "No schema, migration, seed, fixture, or production-data change is authorized by visual rescue.",
+      "actors": [
+        "control-panel-operator"
+      ],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": [
+        "unchanged"
+      ],
+      "actions": []
+    }
+  ],
+  "outcome": {
+    "statement": "Every required surface retains truthful existing behavior while restoring coherent BThwani visual hierarchy, visible icons, reachable navigation, RTL, accessibility, and complete state presentation.",
+    "primaryMetric": "required_surface_shells_with_visual_and_binding_acceptance",
+    "guardrailMetrics": [
+      "missing icon",
+      "dead navigation",
+      "fake runtime data",
+      "role leakage",
+      "raw color drift",
+      "UI-kit bypass",
+      "controller bypass",
+      "missing state",
+      "visual regression"
+    ],
+    "baselineState": "Web icons are visible at the pinned commit, client and field shells remain designed, captain premium shell components are orphaned, partner semantic colors collapse hierarchy, and the operational dashboard is visually compressed.",
+    "targetState": "All five required surfaces and shared UI ownership pass static, rendered, runtime, RTL, accessibility, and recorded product acceptance without fixtures or backend ownership changes.",
+    "observationWindow": "Same-commit targeted checks, rendered visual review, actor-specific runtime smoke, independent QA, and release verification."
+  },
+  "acceptance": {
+    "criteria": [
+      "Every registered shell icon renders visibly and has an accessible name where interactive.",
+      "Captain uses the governed premium header and icon-based bottom navigation without losing current assignment, delivery, identity, WLT-reference, or failure behavior.",
+      "Client preserves its governed header and bottom navigation and shows location, search, ticker, badges, or marketing state only when backed by live controllers.",
+      "Partner uses semantic UI-kit roles for background, surfaces, text, muted text, borders, success, warning, and danger without collapsing contrast.",
+      "Control-panel dashboard preserves live controller-backed metrics while restoring a rich navigable visual hierarchy without hardcoded KPI or health claims.",
+      "Field shell remains behaviorally and visually intact unless rendered evidence proves a bounded regression.",
+      "Loading, empty, success, failure, forbidden, retry, and applicable offline states remain reachable and visually distinct.",
+      "No screen, tab, CTA, controller, route, contract operation, or role-visible action is removed by the rescue.",
+      "No donor folder, fixture, preview, seed, hardcoded location, hardcoded metric, fake badge, or fake service-health claim enters runtime paths.",
+      "Reusable visual patterns remain owned by public UI-kit exports and supported shell owners."
+    ],
+    "failureStates": [
+      "an icon renders as null, an empty placeholder, or an unlabeled interactive glyph",
+      "a required route, tab, action, controller binding, or actor state becomes unreachable",
+      "a visual restoration reintroduces fixture or hardcoded runtime truth",
+      "semantic roles collapse background, surface, text, border, or status contrast",
+      "a required surface is omitted without product approval permitted by the active repository owner mode",
+      "static checks are represented as visual, runtime, QA, release, production, or final closure"
+    ],
+    "requiredChecks": [
+      "Product Truth schema validation",
+      "targeted TypeScript checks for all affected surfaces and UI kit",
+      "UI provider, icon contract, UI-kit boundary, design token, accessibility, broken import, frontend binding, fullstack boundary, runtime anti-stub, and cleanup checks",
+      "same-commit rendered visual checks for every affected shell in RTL and applicable appearance modes",
+      "same-commit actor-specific runtime navigation and failure-state smoke",
+      "recorded Product Owner acceptance under the active repository owner mode",
+      "independent QA and accessibility acceptance",
+      "same-commit CI, release, and production evidence before final closure"
+    ],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": [
+      "Visual restoration preserves current service ownership, contracts, actor permissions, state machines, and live controller bindings.",
+      "DSH remains the owner of operational commerce and delivery truth while WLT remains the owner of financial truth.",
+      "Every visible metric, location, badge, ticker, health label, order, store, catalog item, financial value, and actor identity comes from an owning live state or is explicitly unavailable.",
+      "All reusable tokens, icons, primitives, and shared visual patterns remain governed through the public UI-kit contract."
+    ],
+    "negative": [
+      "No hardcoded runtime KPI, location, badge count, catalog, order, store, balance, health, campaign, or actor data.",
+      "No raw network request in a screen when an owned client, adapter, or controller exists.",
+      "No role leakage or cross-surface action ownership.",
+      "No donor code dump, parallel design system, deep UI-kit import, or screen-local reusable framework.",
+      "No backend, database, dependency, lockfile, CI, secret, environment, or production-data change under this visual-rescue capability.",
+      "No deletion, move, merge, or retirement without current-commit linkage proof and a declared cleanup disposition.",
+      "No final closure without same-commit all-applicable evidence and every protected approval required by the active repository owner mode."
+    ]
+  },
+  "owners": {
+    "productManager": "CURRENT_USER_INSTRUCTION",
+    "productOwner": "bthwani2-boop (SOLE_OWNER_MODE)",
+    "uxJourneyOwner": "UX_JOURNEY_AUTHORITY",
+    "engineeringOwner": "BTHWANI_UI_AND_SURFACE_ENGINEERING",
+    "productManagerApproval": "APPROVED",
+    "productOwnerApproval": "APPROVED",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Execute the rescue surface by surface on the pinned branch, preserving live behavior and stopping at the strongest independently proven stage.",
+    "fixedConstraints": [
+      "Use governed pull-request branches targeting pinned lianbassam commit 8c61745ad27cea87ce3b213e051535cf0de464dd.",
+      "Do not write to lianbassam or master.",
+      "Preserve current API, controller, identity, role, DSH, WLT, and persistence ownership.",
+      "Use UI-kit tokens and public contracts.",
+      "Do not reintroduce fake, seed, fixture, preview, fallback, or hardcoded runtime truth.",
+      "Require every approval and same-commit evidence demanded by the active sole-owner policy before protected closure."
+    ],
+    "variableScope": [
+      "visual composition and density",
+      "tokenized gradients and surface hierarchy",
+      "icon selection and web compatibility rendering",
+      "shell placement of existing live states",
+      "bounded extraction of reusable visual patterns into the owning UI-kit or shell path"
+    ],
+    "forbiddenScope": [
+      "new backend or public API operations",
+      "database or migration changes",
+      "dependency or lockfile changes",
+      "CI workflow changes",
+      "secret or environment changes",
+      "production deployment",
+      "commercial SaaS activation",
+      "fake runtime claims",
+      "self-approved product, QA, security, release, production, or final closure"
+    ],
+    "forecastRange": "Implementation is authorized by the recorded sole owner; final closure still requires the complete applicable G0-G10 evidence chain and protected approvals.",
+    "confidence": "high",
+    "unknowns": [
+      "exact-commit Product Owner acceptance decision",
+      "approved visual references for every affected state",
+      "same-commit rendered mobile evidence",
+      "same-commit actor-specific runtime evidence",
+      "independent QA, accessibility, security, release, and production decisions",
+      "live GitHub branch-protection and independent-review enforcement"
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { colorRoles } from "@bthwani/ui-kit";
 import { ActorWalletPanel, type RepresentativeActorType } from "../../shared/finance-wlt-link/actor-wallet";
 import { resolveVisualEvidenceRequestPath } from "../../shared/finance-wlt-link/visual-evidence/request-path";
 import { RepresentativeWalletLookup } from "./RepresentativeWalletLookup";
@@ -99,9 +100,9 @@ export function Jrn033VisualEvidenceScreen({ mode }: Props) {
 
   const actors: RepresentativeActorType[] = ["client", "partner", "captain", "field"];
   return (
-    <main dir="rtl" style={{ minHeight: "100vh", background: "#fffaf5", padding: 28, fontFamily: "system-ui", color: "#0A2F5C" }}>
+    <main dir="rtl" style={{ minHeight: "100vh", background: colorRoles.surfaceWarm, padding: 28, fontFamily: "system-ui", color: colorRoles.textPrimary }}>
       <header style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: "#FF500D" }}>JRN-033 · VISUAL EVIDENCE · {mode.toUpperCase()}</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: colorRoles.brandAction }}>JRN-033 · VISUAL EVIDENCE · {mode.toUpperCase()}</div>
         <h1 style={{ margin: "8px 0", fontSize: 32 }}>محافظ الممثلين والمالية المرجعية</h1>
         <p style={{ margin: 0, maxWidth: 900, lineHeight: 1.8 }}>
           عرض آلي للمكوّنات الفعلية فقط. البيانات في هذه الصفحة fixture بصري محكوم، بينما الحقيقة التشغيلية تُثبت منفصلًا عبر Identity → DSH → WLT.
@@ -109,7 +110,7 @@ export function Jrn033VisualEvidenceScreen({ mode }: Props) {
       </header>
       <section style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 18, alignItems: "start" }}>
         {actors.map((actorType) => (
-          <article key={actorType} style={{ border: "1px solid rgba(10,47,92,.14)", borderRadius: 18, padding: 14, background: "white", boxShadow: "0 10px 26px rgba(10,47,92,.08)" }}>
+          <article key={actorType} style={{ border: `1px solid ${colorRoles.borderStrong}`, borderRadius: 18, padding: 14, background: colorRoles.surfaceBase, boxShadow: `0 10px 26px ${colorRoles.brandStructureTint}` }}>
             <h2 style={{ margin: "0 0 10px", fontSize: 18 }}>{actorLabels[actorType]}</h2>
             <ActorWalletPanel actorType={actorType} title={`محفظة ${actorLabels[actorType]}`} embedded />
           </article>

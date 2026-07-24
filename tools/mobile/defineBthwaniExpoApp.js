@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const manifest = require("./mobile-apps.manifest.json");
-const { appEnvSuffix, resolveSentryEnvironment } = require("./sentry-env.js");
+const { appEnvSuffix, resolveGoogleServicesFile, resolveSentryEnvironment } = require("./sentry-env.js");
 
 const PERMISSION_TEXT = {
   photos: "نحتاج الوصول إلى معرض الصور لاختيار الصور ومشاركتها.",
@@ -80,10 +80,11 @@ function buildAndroidConfig(appKey, app, features, googleServicesFile) {
     android.googleServicesFile = googleServicesFile;
   }
 
-  if (features.includes("maps")) {
+  const androidMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_ANDROID_API_KEY", appKey);
+  if (features.includes("maps") && androidMapsKey) {
     android.config = {
       googleMaps: {
-        apiKey: resolveAppEnvironmentValue("GOOGLE_MAPS_ANDROID_API_KEY", appKey) || "",
+        apiKey: androidMapsKey,
       },
     };
   }
@@ -98,9 +99,10 @@ function buildIosConfig(appKey, app, features) {
     infoPlist: buildInfoPlist(features),
   };
 
-  if (features.includes("maps")) {
+  const iosMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_IOS_API_KEY", appKey);
+  if (features.includes("maps") && iosMapsKey) {
     ios.config = {
-      googleMapsApiKey: resolveAppEnvironmentValue("GOOGLE_MAPS_IOS_API_KEY", appKey) || "",
+      googleMapsApiKey: iosMapsKey,
     };
   }
 
@@ -235,7 +237,9 @@ function defineBthwaniExpoApp(appKey) {
 
   const features = app.features || [];
   const sentry = resolveSentryEnvironment(appKey);
-  const googleServicesFile = resolveAppEnvironmentValue("GOOGLE_SERVICES_JSON", appKey);
+  const googleServicesFile = resolveGoogleServicesFile(appKey, process.env);
+  const androidMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_ANDROID_API_KEY", appKey);
+  const iosMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_IOS_API_KEY", appKey);
   const sentryNativeConfigured = Boolean(sentry.dsn && sentry.organization && sentry.project);
   return {
     name: app.name,
@@ -246,7 +250,7 @@ function defineBthwaniExpoApp(appKey) {
     scheme: app.scheme,
     version: manifest.global.version,
     icon: appAsset(appKey, "icon.png"),
-    runtimeVersion: { policy: "fingerprint" },
+    runtimeVersion: { policy: "appVersion" },
     updates: {
       url: `https://u.expo.dev/${app.projectId}`,
       checkAutomatically: "ON_LOAD",
@@ -274,6 +278,10 @@ function defineBthwaniExpoApp(appKey) {
       },
       notifications: {
         androidNativeConfigured: Boolean(googleServicesFile),
+      },
+      maps: {
+        androidNativeConfigured: Boolean(androidMapsKey),
+        iosNativeConfigured: Boolean(iosMapsKey),
       },
       eas: { projectId: app.projectId },
     },
