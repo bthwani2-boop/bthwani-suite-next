@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
+  Box,
   Button,
   Card,
   Header,
@@ -19,7 +20,11 @@ import {
   useStoreRoleContextController,
 } from "../../shared/store";
 
-export function CaptainStorePickupContextScreen() {
+export type CaptainStorePickupContextScreenProps = {
+  readonly embedded?: boolean;
+};
+
+export function CaptainStorePickupContextScreen({ embedded = true }: CaptainStorePickupContextScreenProps) {
   const identity = useIdentitySession();
   const controller = useStoreRoleContextController("captain", identity.state.kind);
   const [reason, setReason] = React.useState("");
@@ -49,27 +54,16 @@ export function CaptainStorePickupContextScreen() {
     return (
       <StateView
         {...presentation}
-        {...(retryable
-          ? { actionLabel: "إعادة المحاولة", onActionPress: controller.retry }
-          : {})}
+        {...(retryable ? { actionLabel: "إعادة المحاولة", onActionPress: controller.retry } : {})}
       />
     );
   }
 
   const captain = controller.experience?.captain;
   if (!captain) return null;
-  return (
-    <ScrollScreen>
-      <Header
-        title="جاهزية نقطة الاستلام"
-        subtitle="تحقق من المتجر والموقع قبل بدء مهمة التوصيل"
-        actions={
-          <Badge
-            label={captain.operatingLabel}
-            tone={captain.store.isOpen ? "success" : "warning"}
-          />
-        }
-      />
+
+  const content = (
+    <Box gap={4}>
       <Card>
         <View style={styles.hero}>
           <Text role="titleLg">{captain.store.displayName}</Text>
@@ -120,19 +114,19 @@ export function CaptainStorePickupContextScreen() {
               })}
             />
           </View>
-          {controller.actionState.kind === "submitting" && (
+          {controller.actionState.kind === "submitting" ? (
             <Text tone="secondary">جاري إرسال تقرير جاهزية نقطة الاستلام…</Text>
-          )}
-          {controller.actionState.kind === "success" && (
+          ) : null}
+          {controller.actionState.kind === "success" ? (
             <Text tone="success">
               {controller.actionState.replayed
                 ? "تم تأكيد تقرير الجاهزية السابق دون إنشاء سجل مكرر."
                 : "تم إرسال تقرير الجاهزية دون تغيير دورة الطلب."}
             </Text>
-          )}
-          {(controller.actionState.kind === "error" || controller.actionState.kind === "conflict") && (
+          ) : null}
+          {(controller.actionState.kind === "error" || controller.actionState.kind === "conflict") ? (
             <Text tone="danger">{controller.actionState.message}</Text>
-          )}
+          ) : null}
         </View>
       </Card>
 
@@ -164,6 +158,19 @@ export function CaptainStorePickupContextScreen() {
           </Text>
         </View>
       </Card>
+    </Box>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <ScrollScreen>
+      <Header
+        title="جاهزية نقطة الاستلام"
+        subtitle="تحقق من المتجر والموقع قبل بدء مهمة التوصيل"
+        actions={<Badge label={captain.operatingLabel} tone={captain.store.isOpen ? "success" : "warning"} />}
+      />
+      {content}
     </ScrollScreen>
   );
 }
