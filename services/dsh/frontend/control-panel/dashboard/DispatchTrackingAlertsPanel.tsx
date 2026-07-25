@@ -3,9 +3,7 @@
 import { CpBadge, CpButton, CpMutedInline, CpRetryButton, CpStatePanel } from "@bthwani/control-panel/components";
 import { WebCompactSurfaceHeader } from "@bthwani/ui-kit/web";
 import { useOperatorDispatchTrackingAlerts } from "../../shared/dispatch/use-operator-dispatch-tracking-alerts";
-// surfaceInfoCard is a shared, token-driven layout primitive (CSS custom
-// properties, no hardcoded colors) reused across dozens of control-panel
-// screens; there is no Cp* list-item equivalent yet, so it is kept here.
+import { GoogleMapsWebCanvas } from "../maps/GoogleMapsWebCanvas";
 import styles from "../shared/control-panel-surface.module.css";
 
 function alertLabel(code: string): string {
@@ -15,53 +13,91 @@ function alertLabel(code: string): string {
   return code;
 }
 
+function freshnessLabel(value: string): string {
+  if (value === "fresh") return "حديث";
+  if (value === "stale") return "متأخر";
+  if (value === "lost") return "مفقود";
+  return value;
+}
+
 export function DispatchTrackingAlertsPanel() {
   const { state, reload } = useOperatorDispatchTrackingAlerts();
 
   return (
-    <section aria-label="تنبيهات تتبع الكابتن">
+    <section aria-label="تنبيهات وتتبع الكابتن الحي">
       <WebCompactSurfaceHeader
-        title="تنبيهات التتبع الحي"
-        description="مهام مقبولة لم يصل موقعها أو تأخر أو انقطع تحديثه. لا ينشئ هذا العرض حقيقة تشغيلية بديلة."
+        title="خريطة العمليات والتتبع الحي"
+        description="تعرض مواقع المهام النشطة المصرح بها وحالة حداثة كل عينة GPS، مع تنبيهات الانقطاع والتأخر."
       />
 
       {state.kind === "loading" ? (
-        <CpStatePanel role="status" title="جارٍ تحميل تنبيهات التتبع…" />
+        <CpStatePanel role="status" title="جارٍ تحميل خريطة التتبع…" />
       ) : state.kind === "error" ? (
-        <CpStatePanel role="alert" title="تعذر تحميل تنبيهات التتبع" description={state.message}>
+        <CpStatePanel role="alert" title="تعذر تحميل التتبع" description={state.message}>
           <CpRetryButton onClick={() => void reload()}>إعادة المحاولة</CpRetryButton>
         </CpStatePanel>
-      ) : state.alerts.length === 0 ? (
-        <div className={styles.surfaceInfoCard}>
-          <div>
-            <span className={styles.surfaceInfoCardTitle}>لا توجد تنبيهات موقع نشطة</span>
-            <span className={styles.surfaceInfoCardDescription}>
-              جميع المهام النشطة الملتقطة ضمن نافذة الموقع المصدق الحالية.
-            </span>
-          </div>
-        </div>
       ) : (
-        <div aria-live="polite">
-          {state.alerts.map((alert) => (
-            <div key={`${alert.assignmentId}-${alert.code}`} className={styles.surfaceInfoCard}>
+        <>
+          <GoogleMapsWebCanvas
+            points={state.locations.map((location) => ({
+              id: location.assignmentId,
+              latitude: location.latitude,
+              longitude: location.longitude,
+              title: `الكابتن ${location.captainId}`,
+              description: `الطلب ${location.orderId} · ${freshnessLabel(location.freshnessState)} · منذ ${location.ageSeconds} ثانية`,
+            }))}
+            height={480}
+            ariaLabel="خريطة مواقع الكباتن والمهام النشطة"
+          />
+
+          <div className={styles.surfaceInfoCard}>
+            <div>
+              <span className={styles.surfaceInfoCardTitle}>حالة الخريطة التشغيلية</span>
+              <span className={styles.surfaceInfoCardDescription}>
+                {state.locations.length === 0
+                  ? "لم تصل مواقع مصدقة لمهام نشطة حتى الآن."
+                  : `تُعرض ${state.locations.length} مهمة ذات موقع مصدق.`}
+              </span>
+            </div>
+            <CpBadge tone={state.locations.length > 0 ? "success" : "neutral"}>
+              {`${state.locations.length} موقع`}
+            </CpBadge>
+          </div>
+
+          {state.alerts.length === 0 ? (
+            <div className={styles.surfaceInfoCard}>
               <div>
-                <span className={styles.surfaceInfoCardTitle}>
-                  {`${alertLabel(alert.code)} · الطلب ${alert.orderId}`}
-                </span>
+                <span className={styles.surfaceInfoCardTitle}>لا توجد تنبيهات موقع نشطة</span>
                 <span className={styles.surfaceInfoCardDescription}>
-                  {`الإسناد ${alert.assignmentId} · الكابتن ${alert.captainId}${alert.ageSeconds == null ? "" : ` · منذ ${alert.ageSeconds} ثانية`}`}
+                  جميع المهام النشطة الملتقطة ضمن نافذة الموقع المصدق الحالية.
                 </span>
               </div>
-              <CpBadge tone={alert.severity === "critical" ? "danger" : "warning"}>
-                {alert.severity === "critical" ? "حرج" : "تحذير"}
-              </CpBadge>
             </div>
-          ))}
-          <CpButton variant="secondary" onClick={() => void reload()}>تحديث التنبيهات</CpButton>
+          ) : (
+            <div aria-live="polite">
+              {state.alerts.map((alert) => (
+                <div key={`${alert.assignmentId}-${alert.code}`} className={styles.surfaceInfoCard}>
+                  <div>
+                    <span className={styles.surfaceInfoCardTitle}>
+                      {`${alertLabel(alert.code)} · الطلب ${alert.orderId}`}
+                    </span>
+                    <span className={styles.surfaceInfoCardDescription}>
+                      {`الإسناد ${alert.assignmentId} · الكابتن ${alert.captainId}${alert.ageSeconds == null ? "" : ` · منذ ${alert.ageSeconds} ثانية`}`}
+                    </span>
+                  </div>
+                  <CpBadge tone={alert.severity === "critical" ? "danger" : "warning"}>
+                    {alert.severity === "critical" ? "حرج" : "تحذير"}
+                  </CpBadge>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <CpButton variant="secondary" onClick={() => void reload()}>تحديث الخريطة والتنبيهات</CpButton>
           <CpMutedInline>
-            تظهر الإحداثيات الكاملة في الباك إند المصرح فقط؛ هذه القائمة تعرض حالة الاتصال والمرجع التشغيلي.
+            مواقع العمليات لا تُنشئ حقيقة بديلة؛ المصدر هو آخر عينة GPS قبلها DSH من المهمة النشطة.
           </CpMutedInline>
-        </div>
+        </>
       )}
     </section>
   );
