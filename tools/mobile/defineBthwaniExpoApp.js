@@ -145,6 +145,18 @@ function buildPlugins(appKey, features, sentry) {
   const sentryPlugin = buildSentryPlugin(sentry);
   if (sentryPlugin) plugins.push(sentryPlugin);
 
+  if (features.includes("maps")) {
+    const androidMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_ANDROID_API_KEY", appKey);
+    const iosMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_IOS_API_KEY", appKey);
+    const mapPluginOptions = {
+      ...(androidMapsKey ? { androidGoogleMapsApiKey: androidMapsKey } : {}),
+      ...(iosMapsKey ? { iosGoogleMapsApiKey: iosMapsKey } : {}),
+    };
+    plugins.push(Object.keys(mapPluginOptions).length > 0
+      ? ["react-native-maps", mapPluginOptions]
+      : "react-native-maps");
+  }
+
   if (features.includes("router")) plugins.push("expo-router");
   if (features.includes("updates")) plugins.push("expo-updates");
 
