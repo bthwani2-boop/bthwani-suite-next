@@ -36,6 +36,17 @@ type dispatchLocationProjection struct {
 	AgeSeconds     int64     `json:"ageSeconds"`
 }
 
+type operatorDispatchLocationProjection struct {
+	AssignmentID  string    `json:"assignmentId"`
+	OrderID       string    `json:"orderId"`
+	CaptainID     string    `json:"captainId"`
+	Latitude      float64   `json:"latitude"`
+	Longitude     float64   `json:"longitude"`
+	RecordedAt    time.Time `json:"recordedAt"`
+	FreshnessState string   `json:"freshnessState"`
+	AgeSeconds    int64     `json:"ageSeconds"`
+}
+
 func roundTrackingCoordinate(value float64) float64 {
 	return math.Round(value*clientTrackingCoordinatePrecision) / clientTrackingCoordinatePrecision
 }
@@ -251,14 +262,17 @@ func (s *protectedStoreServer) handleListDispatchTrackingAlerts(w http.ResponseW
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list dispatch tracking alerts")
 		return
 	}
+
 	now := time.Now().UTC()
 	alerts := make([]map[string]any, 0)
+	locations := make([]operatorDispatchLocationProjection, 0)
 	for index := range assignments {
 		assignment := assignments[index]
 		if assignment.Status != dispatch.AssignmentAccepted || assignment.Delivery.Status == dispatch.DeliveryDelivered || assignment.Delivery.Status == dispatch.DeliveryCancelled {
 			continue
 		}
-		if assignment.LocationRecordedAt == nil {
+
+		if assignment.LastLatitude == nil || assignment.LastLongitude == nil || assignment.LocationRecordedAt == nil {
 			alerts = append(alerts, map[string]any{
 				"assignmentId": assignment.ID,
 				"orderId":      assignment.OrderID,
@@ -269,7 +283,18 @@ func (s *protectedStoreServer) handleListDispatchTrackingAlerts(w http.ResponseW
 			})
 			continue
 		}
+
 		freshness, ageSeconds := trackingFreshness(*assignment.LocationRecordedAt, now)
+		locations = append(locations, operatorDispatchLocationProjection{
+			AssignmentID:  assignment.ID,
+			OrderID:       assignment.OrderID,
+			CaptainID:     assignment.CaptainID,
+			Latitude:      roundTrackingCoordinate(*assignment.LastLatitude),
+			Longitude:     roundTrackingCoordinate(*assignment.LastLongitude),
+			RecordedAt:    assignment.LocationRecordedAt.UTC(),
+			FreshnessState: freshness,
+			AgeSeconds:    ageSeconds,
+		})
 		if freshness == "fresh" {
 			continue
 		}
@@ -287,5 +312,11 @@ func (s *protectedStoreServer) handleListDispatchTrackingAlerts(w http.ResponseW
 			"message":      "Captain location requires operational attention.",
 		})
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{"alerts": alerts, "total": len(alerts)})
+
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"alerts":         alerts,
+		"total":          len(alerts),
+		"locations":      locations,
+		"locationsTotal": len(locations),
+	})
 }
