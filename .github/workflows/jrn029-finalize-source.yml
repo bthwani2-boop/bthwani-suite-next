@@ -1,0 +1,55 @@
+name: JRN-029 Finalize Source
+
+on:
+  push:
+    branches: [reemsam]
+    paths: [.github/workflows/jrn029-finalize-source.yml]
+  pull_request:
+    branches: [master]
+    paths: [.github/workflows/jrn029-finalize-source.yml]
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: jrn029-finalize-source-reemsam
+  cancel-in-progress: true
+
+jobs:
+  finalize:
+    name: Finalize generated bundle and tests
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Commit source corrections
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh auth setup-git
+          gh repo clone bthwani2-boop/bthwani-suite-next workspace -- --depth 1 --branch reemsam --single-branch --quiet
+          cd workspace
+          artifact_dir="${RUNNER_TEMP}/jrn029-openapi"
+          gh run download 30147430390 --repo bthwani2-boop/bthwani-suite-next --name jrn029-openapi-remediation-30147430390 --dir "${artifact_dir}"
+          install -D "${artifact_dir}/contracts/generated/dsh.bundle.openapi.yaml" services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+          python - <<'PY'
+from pathlib import Path
+path = Path('services/dsh/tests/jrn-020-delivery-exception-closure.test.mjs')
+text = path.read_text()
+old = r'CorsMiddleware\(authMode, deliveryExceptionGovernedRouter\)'
+new = r'CorsMiddleware\(authMode, governedIncidentRouter\)'
+if old not in text:
+    raise SystemExit('expected JRN-020 middleware assertion not found')
+path.write_text(text.replace(old, new))
+PY
+          git add -f services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+          git add services/dsh/tests/jrn-020-delivery-exception-closure.test.mjs
+          git rm services/dsh/contracts/dsh.jrn-029.openapi.yaml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(dsh): finalize modular JRN-029 contract ownership"
+          git push origin HEAD:reemsam
