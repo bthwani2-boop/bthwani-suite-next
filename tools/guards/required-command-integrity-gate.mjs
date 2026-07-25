@@ -65,16 +65,13 @@ function verifyRemediationBoundary(content) {
     "backend and database",
     "Dependency, secret, workflow, and container security",
     "Integrated SaaS runtime proof",
-    "Publish reviewed remediation pull request",
-    "actions: read",
-    "contents: write",
-    "pull-requests: write",
+    "Export evidence-backed remediation patch",
     "persist-credentials: false",
     "patch_sha256",
-    "sha256sum --check",
+    "sha256sum",
     "Unapproved deletion rejected",
     "Protected deletion rejected",
-    "--draft",
+    "manual-patch-only-no-privileged-write",
   ]);
 
   if (/^\s{2}(?:workflow_run|pull_request_target|schedule|repository_dispatch):/m.test(content)) {
@@ -83,25 +80,14 @@ function verifyRemediationBoundary(content) {
   if (/\bsecrets\.[A-Za-z0-9_]+\b/.test(content)) {
     violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_REPOSITORY_SECRET_FORBIDDEN" });
   }
-  if ((content.match(/^\s*contents:\s*write\s*$/gm) ?? []).length !== 1) {
-    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_SINGLE_WRITE_BOUNDARY_REQUIRED" });
+  if (/contents:\s*write\b|pull-requests:\s*write\b|statuses:\s*write\b|write-all\b/i.test(content)) {
+    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_PRIVILEGED_WRITE_FORBIDDEN" });
   }
-  if (/git\s+push\s+(?:--force|-f)\b|gh\s+pr\s+merge\b/i.test(content)) {
-    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_FORCE_PUSH_OR_MERGE_FORBIDDEN" });
+  if (/\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+(?:create|merge))\b/i.test(content)) {
+    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_BRANCH_OR_PR_MUTATION_FORBIDDEN" });
   }
   if (/uses:\s*[^\s#]+@(?:latest|master|main)\b/i.test(content)) {
     violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_DYNAMIC_ACTION_VERSION_FORBIDDEN" });
-  }
-
-  const publishStart = content.search(/^\s{2}publish:\s*$/m);
-  const resultStart = content.search(/^\s{2}result:\s*$/m);
-  if (publishStart < 0 || resultStart <= publishStart) {
-    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_PUBLISH_JOB_BOUNDARY_MISSING" });
-  } else {
-    const publish = content.slice(publishStart, resultStart);
-    if (/uses:\s*\.\//m.test(publish) || /^\s*(?:pnpm|npm|npx|yarn|node|go)\b/m.test(publish)) {
-      violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_WRITE_JOB_MUST_NOT_EXECUTE_REPOSITORY_CODE" });
-    }
   }
 }
 
