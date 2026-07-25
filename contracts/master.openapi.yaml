@@ -44,7 +44,6 @@ x-bthwani-contracts:
     dshLiveTracking: ../services/dsh/contracts/dsh.live-tracking.openapi.yaml
     dshMarketingCommercial: ../services/dsh/contracts/dsh.marketing-commercial.openapi.yaml
     dshNotificationsGovernance: ../services/dsh/contracts/dsh.notifications-governance.openapi.yaml
-    dshOperationalPolicy: ../services/dsh/contracts/dsh.jrn-029.openapi.yaml
     dshOrderRescue: ../services/dsh/contracts/dsh.order-rescue.openapi.yaml
     dshOrderTruth: ../services/dsh/contracts/dsh.order-truth.openapi.yaml
     dshOrderWorkboards: ../services/dsh/contracts/dsh.order-workboards.openapi.yaml
