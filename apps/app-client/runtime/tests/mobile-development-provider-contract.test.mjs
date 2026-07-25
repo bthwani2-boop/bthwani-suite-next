@@ -15,14 +15,16 @@ const { defineBthwaniExpoApp } = require(
   path.join(repoRoot, "tools/mobile/defineBthwaniExpoApp.js"),
 );
 
+const mobileApps = ["app-client", "app-partner", "app-captain", "app-field"];
+
 function pluginNames(config) {
   return new Set((config.plugins ?? []).map((plugin) => (Array.isArray(plugin) ? plugin[0] : plugin)));
 }
 
 function clearProviderEnvironment() {
-  const providerVariablePattern = /^(?:GOOGLE_SERVICES_JSON|GOOGLE_MAPS_(?:ANDROID|IOS)_API_KEY|SENTRY_|EXPO_PUBLIC_SENTRY_|BTHWANI_SENTRY_|BTHWANI_APP_ENV)/;
+  const pattern = /^(?:GOOGLE_SERVICES_JSON|GOOGLE_MAPS_(?:ANDROID|IOS)_API_KEY|SENTRY_|EXPO_PUBLIC_SENTRY_|BTHWANI_SENTRY_|BTHWANI_APP_ENV)/;
   for (const key of Object.keys(process.env)) {
-    if (providerVariablePattern.test(key)) delete process.env[key];
+    if (pattern.test(key)) delete process.env[key];
   }
 }
 
@@ -43,32 +45,30 @@ function appEnvSuffix(appKey) {
   return appKey.replaceAll("-", "_").toUpperCase();
 }
 
-const mobileApps = ["app-client", "app-partner", "app-captain", "app-field"];
-
-test("development provider capabilities remain all-surface and role-specific", () => {
-  const apps = manifest.apps;
+test("all four mobile apps keep the required provider capabilities", () => {
   for (const appKey of mobileApps) {
-    assert.ok(apps[appKey].features.includes("notifications"), `${appKey}: FCM capability is required`);
-    assert.ok(apps[appKey].features.includes("location"), `${appKey}: location capability is required`);
-    assert.ok(apps[appKey].features.includes("maps"), `${appKey}: native maps capability is required`);
+    const features = manifest.apps[appKey].features;
+    assert.ok(features.includes("notifications"), `${appKey}: notifications are required`);
+    assert.ok(features.includes("location"), `${appKey}: location is required`);
+    assert.ok(features.includes("maps"), `${appKey}: native maps are required`);
   }
 
-  assert.equal(apps["app-client"].features.includes("backgroundLocation"), false);
-  assert.equal(apps["app-partner"].features.includes("backgroundLocation"), false);
-  assert.equal(apps["app-field"].features.includes("backgroundLocation"), false);
-  assert.equal(apps["app-captain"].features.includes("backgroundLocation"), true);
+  assert.equal(manifest.apps["app-client"].features.includes("backgroundLocation"), false);
+  assert.equal(manifest.apps["app-partner"].features.includes("backgroundLocation"), false);
+  assert.equal(manifest.apps["app-field"].features.includes("backgroundLocation"), false);
+  assert.equal(manifest.apps["app-captain"].features.includes("backgroundLocation"), true);
 });
 
-test("every app receives Google Maps only when its scoped key exists", () => {
+test("each app receives its own scoped Android Maps key", () => {
   for (const appKey of mobileApps) {
     withRestoredEnvironment(() => {
       const disabled = defineBthwaniExpoApp(appKey);
-      assert.equal(disabled.android.config?.googleMaps, undefined, `${appKey}: maps must remain disabled without a key`);
+      assert.equal(disabled.android.config?.googleMaps, undefined);
       assert.equal(disabled.extra.maps.androidNativeConfigured, false);
-      assert.ok(pluginNames(disabled).has("react-native-maps"), `${appKey}: maps native plugin must remain registered`);
+      assert.ok(pluginNames(disabled).has("react-native-maps"));
 
-      const scopedName = `GOOGLE_MAPS_ANDROID_API_KEY_${appEnvSuffix(appKey)}`;
-      process.env[scopedName] = `development-${appKey}-map-key`;
+      const variable = `GOOGLE_MAPS_ANDROID_API_KEY_${appEnvSuffix(appKey)}`;
+      process.env[variable] = `development-${appKey}-map-key`;
       const configured = defineBthwaniExpoApp(appKey);
       assert.equal(configured.android.config?.googleMaps?.apiKey, `development-${appKey}-map-key`);
       assert.equal(configured.extra.maps.androidNativeConfigured, true);
@@ -76,63 +76,44 @@ test("every app receives Google Maps only when its scoped key exists", () => {
   }
 });
 
-test("all map-enabled build profiles require scoped Maps inputs", () => {
-  const buildRunner = fs.readFileSync(
-    path.join(repoRoot, "tools/scripts/eas-build-mobile.mjs"),
-    "utf8",
+test("one governed command owns Android EAS initialization, preflight, and build", () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+  assert.equal(
+    packageJson.scripts["mobile:eas"],
+    "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/mobile-eas.ps1",
   );
-  for (const marker of [
-    "requireNativeProviderInputs",
-    "GOOGLE_MAPS_ANDROID_API_KEY is required",
-    "GOOGLE_MAPS_IOS_API_KEY is required",
-    "because the app enables native maps",
-  ]) {
-    assert.ok(buildRunner.includes(marker), `missing build policy marker: ${marker}`);
-  }
 
-  const setupScript = fs.readFileSync(
-    path.join(repoRoot, "tools/scripts/setup-mobile-firebase-development.ps1"),
-    "utf8",
-  );
-  assert.ok(setupScript.includes("Validate every local Firebase input before EAS mutation"));
-  assert.ok(setupScript.includes("Optional in development"));
-  assert.ok(setupScript.includes('Name "GOOGLE_SERVICES_JSON"'));
+  const easAliases = Object.keys(packageJson.scripts).filter((name) => name.startsWith("mobile:eas:"));
+  assert.deepEqual(easAliases, []);
 
-  const bootstrapScript = fs.readFileSync(
-    path.join(repoRoot, "tools/scripts/bootstrap-mobile-firebase-development.ps1"),
-    "utf8",
-  );
-  assert.ok(bootstrapScript.includes("DRY RUN"));
-  assert.ok(bootstrapScript.includes("No EAS project, variable, credential, build, or workflow was changed"));
+  const entrypoint = fs.readFileSync(path.join(repoRoot, "tools/scripts/mobile-eas.ps1"), "utf8");
+  for (const appKey of mobileApps) assert.ok(entrypoint.includes(`'${appKey}'`));
+  for (const mode of ["Initialize", "Preflight", "Build"]) assert.ok(entrypoint.includes(`'${mode}'`));
+  assert.equal(entrypoint.includes("--all"), false);
+  assert.equal(entrypoint.includes("prepare-google-platform-all-surfaces.ps1"), false);
+  assert.equal(entrypoint.includes("bootstrap-mobile-eas-android-development.ps1"), false);
+  assert.equal(entrypoint.includes("setup-mobile-firebase-development.ps1"), false);
+
+  const engine = fs.readFileSync(path.join(repoRoot, "tools/scripts/eas-build-mobile.mjs"), "utf8");
+  assert.ok(engine.includes("All-app mobile preflight/build was removed"));
+  assert.ok(engine.includes("Use one explicit --app <app-key> target"));
 });
 
-test("Android development EAS bootstrap is non-interactive and uses local signing", () => {
-  const bootstrapPath = path.join(
-    repoRoot,
-    "tools/scripts/bootstrap-mobile-eas-android-development.ps1",
-  );
-  const bootstrap = fs.readFileSync(bootstrapPath, "utf8");
-
-  for (const marker of [
-    "credentials.json",
-    "google-platform-input.local.json",
-    "project:info",
-    "--non-interactive",
-    "-UploadMapsToEas",
-    "mobile:eas:preflight:all:dev",
-    "-SubmitBuilds",
-  ]) {
-    assert.ok(bootstrap.includes(marker), `missing non-interactive bootstrap marker: ${marker}`);
-  }
-
+test("every app uses isolated local signing and identical EAS archive policy", () => {
   for (const appKey of mobileApps) {
-    const eas = JSON.parse(
-      fs.readFileSync(path.join(repoRoot, "apps", appKey, "runtime", "eas.json"), "utf8"),
-    );
-    assert.equal(
-      eas.build.development.credentialsSource,
-      "local",
-      `${appKey}: development builds must use generated local credentials`,
-    );
+    const runtime = path.join(repoRoot, "apps", appKey, "runtime");
+    const eas = JSON.parse(fs.readFileSync(path.join(runtime, "eas.json"), "utf8"));
+    assert.equal(eas.build.development.credentialsSource, "local");
+
+    const easIgnore = fs.readFileSync(path.join(runtime, ".easignore"), "utf8");
+    for (const marker of [
+      "credentials.json",
+      "*.jks",
+      "*.keystore",
+      "!google-services.json",
+      "!.env.local",
+    ]) {
+      assert.ok(easIgnore.includes(marker), `${appKey}: missing .easignore marker ${marker}`);
+    }
   }
 });
