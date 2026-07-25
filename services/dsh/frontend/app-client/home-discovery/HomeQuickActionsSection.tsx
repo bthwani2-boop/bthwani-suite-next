@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: spacing[2],
-    ...elevation.raised,
+    ...elevation.overlay,
   },
   videoCard: {
     backgroundColor: alpha(statusScale.danger, 0.055),
