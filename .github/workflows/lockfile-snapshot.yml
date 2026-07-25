@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: lockfile-snapshot-reemsam
@@ -50,3 +51,11 @@ jobs:
           path: pnpm-lock.yaml
           if-no-files-found: error
           retention-days: 2
+      - name: Publish snapshot run identifier
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SNAPSHOT_RUN_ID: ${{ github.run_id }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/issues/157/comments" \
+            --method POST \
+            -f body="LOCKFILE_SNAPSHOT_RUN=${SNAPSHOT_RUN_ID}"
