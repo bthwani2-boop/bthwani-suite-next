@@ -76,7 +76,11 @@ function rejectRuntimeJourneyIdentifiers() {
 
   for (const file of trackedFiles()) {
     const normalized = file.replaceAll("\\", "/");
-    if (normalized.startsWith("governance/")) continue;
+    if (
+      normalized.startsWith("governance/") ||
+      normalized.startsWith("tools/") ||
+      normalized.startsWith(".github/")
+    ) continue;
     if (pattern.test(normalized)) {
       failures.push(`journey-identifier-in-runtime-path:${normalized}`);
       continue;
