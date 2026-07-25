@@ -1,5 +1,6 @@
 # tools/scripts/google-cloud/create-android-maps-api-key.ps1
-# Create or update a restricted Android Google Maps API key and optionally upload it to EAS.
+# Create or update a restricted Android Google Maps API key, optionally upload it
+# to EAS, and optionally persist its app-scoped value to an ignored local env file.
 
 [CmdletBinding()]
 param(
@@ -17,6 +18,8 @@ param(
     [string] $Sha1Fingerprint,
 
     [string] $DisplayName = 'bthwani-app-field-android-maps-dev',
+
+    [string] $WriteEnvironmentFile,
 
     [switch] $ForceNewKey,
     [switch] $UploadToEas,
@@ -57,7 +60,7 @@ function Invoke-CommandChecked {
         Write-Host "> $rendered" -ForegroundColor DarkGray
     }
     $output = & $Command @Arguments 2>&1
-    $exitCode = [int]$global:LASTEXITCODE
+    $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
     $text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
     if ($text -and -not $CaptureOnly) { Write-Host $text }
     if ($exitCode -ne 0 -and -not $AllowFailure) {
@@ -153,6 +156,41 @@ function Assert-PackageForApp {
     }
 }
 
+function Set-EnvironmentFileValue {
+    param(
+        [Parameter(Mandatory)][string] $Path,
+        [Parameter(Mandatory)][string] $Name,
+        [Parameter(Mandatory)][string] $Value
+    )
+
+    $resolvedPath = [System.IO.Path]::GetFullPath($Path)
+    $parent = Split-Path -Parent $resolvedPath
+    if (-not [string]::IsNullOrWhiteSpace($parent)) {
+        New-Item -ItemType Directory -Force -Path $parent | Out-Null
+    }
+
+    $lines = if (Test-Path -LiteralPath $resolvedPath -PathType Leaf) {
+        @(Get-Content -LiteralPath $resolvedPath)
+    } else {
+        @()
+    }
+    $prefix = "$Name="
+    $updated = $false
+    $next = foreach ($line in $lines) {
+        if ($line.TrimStart().StartsWith($prefix, [System.StringComparison]::Ordinal)) {
+            $updated = $true
+            "$Name=$Value"
+        } else {
+            $line
+        }
+    }
+    if (-not $updated) {
+        $next = @($next) + "$Name=$Value"
+    }
+    $next | Set-Content -LiteralPath $resolvedPath -Encoding UTF8
+    return $resolvedPath
+}
+
 Write-Host '============================================================' -ForegroundColor Cyan
 Write-Host ' BTHWANI ANDROID GOOGLE MAPS API KEY AUTOMATION' -ForegroundColor Cyan
 Write-Host '============================================================' -ForegroundColor Cyan
@@ -162,6 +200,7 @@ Write-Host "Package:      $PackageName"
 Write-Host "SHA-1:        $Sha1Fingerprint"
 Write-Host "Display name: $DisplayName"
 Write-Host "Upload EAS:   $UploadToEas"
+Write-Host "Local env:    $WriteEnvironmentFile"
 Write-Host "Dry run:      $DryRun"
 
 Assert-PackageForApp -Key $AppKey -Package $PackageName
@@ -193,7 +232,7 @@ if ($keyName) {
         '--project', $ProjectId,
         '--format=json'
     ) | Out-Null
-    $keyString = Get-KeyString -KeyName $keyName
+    if (-not $DryRun) { $keyString = Get-KeyString -KeyName $keyName }
 } else {
     Write-Step 'Create a new restricted Android Maps API key'
     $createOutput = Invoke-CommandChecked -Command 'gcloud' -Arguments @(
@@ -223,11 +262,17 @@ if ([string]::IsNullOrWhiteSpace($keyName) -or [string]::IsNullOrWhiteSpace($key
     throw 'API key creation/update did not produce a usable key resource and key string.'
 }
 
-Write-Step 'Restricted API key created/updated'
+Write-Step 'Restricted API key created or updated'
 Write-Host "Key resource: $keyName"
-Write-Host 'Key string: intentionally not written to disk.'
-Write-Host "`nLoad it into this PowerShell process if you need manual EAS upload:" -ForegroundColor Yellow
-Write-Host "`$env:GOOGLE_MAPS_ANDROID_API_KEY_$($AppKey.Replace('-', '_').ToUpperInvariant()) = '<key-string-from-this-script>'"
+Write-Host 'Key string: intentionally not printed.'
+
+$scopedVariableName = "GOOGLE_MAPS_ANDROID_API_KEY_$($AppKey.Replace('-', '_').ToUpperInvariant())"
+[Environment]::SetEnvironmentVariable($scopedVariableName, $keyString, 'Process')
+
+if (-not [string]::IsNullOrWhiteSpace($WriteEnvironmentFile)) {
+    $writtenPath = Set-EnvironmentFileValue -Path $WriteEnvironmentFile -Name $scopedVariableName -Value $keyString
+    Write-Host "Ignored local environment updated: $writtenPath" -ForegroundColor Green
+}
 
 if ($UploadToEas) {
     if (-not (Test-Path -LiteralPath $EasMapsRepairScript -PathType Leaf)) {
