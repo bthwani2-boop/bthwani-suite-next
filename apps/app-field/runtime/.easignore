@@ -1,7 +1,8 @@
 # App-field EAS archive rules.
-# This runtime may generate google-services.json locally immediately before
-# submitting an EAS remote Android build. The file is intentionally not tracked,
-# but it must remain available to Expo config during the remote build archive.
+# This runtime may generate native build inputs locally immediately before
+# submitting an EAS remote Android build. These files are intentionally not
+# tracked, but they must remain available to Expo config during the remote build
+# archive.
 
 node_modules/
 .expo/
@@ -10,3 +11,4 @@ build/
 .tmp/
 
 !google-services.json
+!.env.local
