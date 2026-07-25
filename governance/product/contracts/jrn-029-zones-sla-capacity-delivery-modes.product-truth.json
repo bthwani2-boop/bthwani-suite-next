@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_029_ZONES_SLA_CAPACITY_DELIVERY_MODES",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Service areas, operational zones, SLA, capacity pressure, pauses and fulfillment modes must produce one deterministic DSH decision consumed by cart, checkout, order and dispatch instead of independent surface assumptions.",
+    "affectedActors": ["client", "partner", "captain", "operator"],
+    "currentWorkaround": "Zones, SLA and capacity can be edited, but assignment SLA, pause state, delivery-mode eligibility, operational effects, audit readback and rollback are not represented as one governed journey.",
+    "frequency": "continuous",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-029",
+      "services/dsh/backend/internal/platformpolicies/policies.go",
+      "services/dsh/backend/internal/http/platform_operational_policies.go",
+      "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx"
+    ]
+  },
+  "actors": [
+    {
+      "id": "operator",
+      "role": "Authorized platform operations controller",
+      "permittedActions": ["manage operational zones", "manage SLA and capacity", "pause or resume a zone", "manage fulfillment-mode eligibility", "read audit history", "rollback a reversible policy revision"],
+      "forbiddenActions": ["mutate WLT ledger truth", "change policy without reason and idempotency", "rollback across aggregate boundaries", "hide a capacity or serviceability denial"]
+    },
+    {
+      "id": "client",
+      "role": "Authenticated customer receiving serviceability and fulfillment eligibility",
+      "permittedActions": ["read effective serviceability", "select an allowed fulfillment mode", "retry after canonical policy refresh"],
+      "forbiddenActions": ["override zone pause", "select a disabled fulfillment mode", "continue checkout after a canonical denial", "read operator audit data"]
+    },
+    {
+      "id": "partner",
+      "role": "Authorized store operator consuming store-scoped policy readback",
+      "permittedActions": ["read store coverage", "read effective fulfillment modes", "read SLA and pause impact"],
+      "forbiddenActions": ["enable BThwani delivery without operator policy", "mutate another store policy", "override platform capacity"]
+    },
+    {
+      "id": "captain",
+      "role": "Eligible courier receiving dispatch consequences",
+      "permittedActions": ["receive assignments allowed by effective policy", "read effective assignment SLA"],
+      "forbiddenActions": ["receive dispatch while the effective mode or zone is paused", "mutate platform policy"]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["operator"],
+      "routesOrScreens": ["PlatformPoliciesScreen", "JRN-029 operational governance panel"],
+      "operationIds": ["listDshOperationalDeliveryModes", "upsertDshOperationalDeliveryMode", "evaluateDshOperationalPolicy", "listDshOperationalPolicyAudit", "rollbackDshOperationalPolicy"],
+      "states": ["loading", "empty", "success", "paused", "throttled", "conflict", "forbidden", "offline", "error"],
+      "actions": ["create", "edit", "pause", "resume", "enable mode", "disable mode", "inspect", "rollback", "refresh"]
+    },
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": ["client"],
+      "routesOrScreens": ["cart serviceability", "checkout fulfillment selection"],
+      "operationIds": ["evaluateDshOperationalPolicy"],
+      "states": ["serviceable", "unserviceable", "paused", "throttled", "mode_disabled", "offline", "error"],
+      "actions": ["select allowed mode", "refresh", "change address or store"]
+    },
+    {
+      "id": "app-partner",
+      "required": true,
+      "actors": ["partner"],
+      "routesOrScreens": ["store coverage", "courier settings", "order workboard"],
+      "operationIds": ["evaluateDshOperationalPolicy"],
+      "states": ["serviceable", "paused", "throttled", "mode_disabled", "offline", "error"],
+      "actions": ["read policy impact", "refresh"]
+    },
+    {
+      "id": "app-captain",
+      "required": true,
+      "actors": ["captain"],
+      "routesOrScreens": ["dispatch assignment", "active order SLA"],
+      "operationIds": ["evaluateDshOperationalPolicy"],
+      "states": ["assignable", "paused", "capacity_blocked", "mode_disabled", "offline", "error"],
+      "actions": ["read assignment consequence", "refresh"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["operator", "client", "partner", "captain"],
+      "routesOrScreens": ["DSH platform policy routes", "cart", "checkout", "order", "dispatch"],
+      "operationIds": ["listDshOperationalDeliveryModes", "upsertDshOperationalDeliveryMode", "evaluateDshOperationalPolicy", "listDshOperationalPolicyAudit", "rollbackDshOperationalPolicy"],
+      "states": ["authorized", "forbidden", "invalid", "conflict", "serviceable", "paused", "throttled", "mode_disabled"],
+      "actions": ["authorize", "validate", "evaluate", "audit", "rollback", "fail closed"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["operator"],
+      "routesOrScreens": ["dsh_platform_zones", "dsh_platform_sla_rules", "dsh_platform_capacity_configs", "dsh_platform_delivery_mode_policies", "dsh_platform_policy_events"],
+      "operationIds": [],
+      "states": ["versioned", "idempotent", "append_only_audit", "reversible"],
+      "actions": ["enforce constraints", "retain snapshots", "prevent stale writes"]
+    },
+    {
+      "id": "app-field",
+      "required": false,
+      "exclusionReason": "Field visits consume service-area readiness through JRN-024 and do not mutate or execute JRN-029 operational routing decisions.",
+      "actors": ["operator"],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": ["not_affected"],
+      "actions": []
+    }
+  ],
+  "outcome": {
+    "statement": "Every affected surface receives one versioned DSH operational decision that combines active zone, SLA, capacity pause and pressure, fulfillment mode and service-area truth, with explicit effects for cart, checkout, order and dispatch.",
+    "primaryMetric": "canonical operational-policy decision coverage",
+    "guardrailMetrics": ["checkout allowed after denial count", "dispatch during pause count", "disabled mode selection count", "stale version mutation count", "rollback without audit snapshot count"],
+    "baselineState": "Editing primitives exist without a complete decision, impact and rollback model.",
+    "targetState": "One governed decision and audit lifecycle is used across all required surfaces.",
+    "observationWindow": "targeted contract, database, backend, frontend, runtime and independent product review"
+  },
+  "acceptance": {
+    "criteria": [
+      "Assignment SLA is represented alongside preparation and delivery SLA.",
+      "Capacity supports explicit pause and resume with a reason and version guard.",
+      "BThwani delivery, partner delivery and client pickup are independently governed per zone.",
+      "Evaluation fails closed for inactive zones, paused capacity, disabled modes and exhausted pressure thresholds.",
+      "The decision returns explicit cart, checkout, order and dispatch effects.",
+      "Every mutation is authorized, idempotent, correlated, versioned and audited.",
+      "Audit snapshots can rollback only the same reversible aggregate.",
+      "The control panel exposes loading, empty, success, conflict, forbidden and recovery states.",
+      "Affected client, partner and captain integrations consume the canonical decision rather than local truth.",
+      "The onboarding-fee definition remains DSH-owned and creates no WLT balance or ledger mutation."
+    ],
+    "failureStates": ["local serviceability truth", "dispatch during pause", "checkout after denial", "disabled fulfillment mode", "stale update", "cross-aggregate rollback", "DSH financial mutation"],
+    "requiredChecks": ["product-truth schema validation", "migration invariant test", "targeted Go policy tests", "route registration test", "OpenAPI contract check", "shared TypeScript typecheck", "control-panel binding check", "runtime evaluation smoke", "independent product acceptance"],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": ["DSH owns operational policy and serviceability decisions.", "Service-area geofences remain the spatial boundary truth.", "Every affected workflow consumes the same decision version.", "Policy history is append-only and rollback creates a new version."],
+    "negative": ["No frontend derives serviceability from local constants.", "No disabled or paused path creates checkout or dispatch success.", "No stale expected version overwrites newer policy.", "No DSH policy mutation writes WLT financial truth."]
+  },
+  "owners": {
+    "productManager": "DSH Operations Product Management",
+    "productOwner": "DSH Fulfillment Operations Product Owner",
+    "uxJourneyOwner": "Multi-Surface Fulfillment Experience Owner",
+    "engineeringOwner": "DSH Full-Stack Engineering",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close JRN-029 code, data, contract, impact and verification gaps without deploying production or changing WLT ownership.",
+    "fixedConstraints": ["Repository mode is REMOTE_ONLY on sambassam.", "No PR merge force push release or production deployment is authorized.", "Service-area geofences remain the spatial truth owner.", "Independent approvals cannot be self-issued by engineering."],
+    "variableScope": ["Arabic operator wording", "diagnostic presentation", "non-financial policy labels"],
+    "forbiddenScope": ["WLT ledger mutation", "production deployment", "commercial SaaS activation", "self-approval", "fake runtime evidence"],
+    "forecastRange": "one sequential journey closure",
+    "confidence": "high",
+    "unknowns": ["Independent product approval outcome", "runtime and visual verification outcome", "production telemetry outcome"]
+  }
+}

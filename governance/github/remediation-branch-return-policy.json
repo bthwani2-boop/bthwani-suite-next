@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 2,
+  "decision": "WORK_BRANCHES_REQUIRE_HUMAN_MASTER_MERGE_AND_AUTOMATED_SUBBRANCHES_RETURN_TO_WORK_BRANCH",
+  "activeTargetBranch": "reemsam",
+  "closureInstruction": "Reflect the verified remediation achievements into reemsam only, then stop. Do not continue toward master without a separate explicit human command.",
+  "branchClasses": {
+    "workBranch": {
+      "definition": "A primary human-owned work branch created from master, such as reemsam, lianbassam, sambassam, or a similar named delivery branch.",
+      "source": "master",
+      "mergeBackTarget": "master",
+      "mergeBackMode": "human_explicit_command_only",
+      "automaticMergeToMaster": false
+    },
+    "automaticRemediationSubBranch": {
+      "definition": "A temporary branch created automatically from a work branch to repair, diagnose, or remediate a bounded task.",
+      "source": "workBranch",
+      "mergeBackTarget": "origin_work_branch",
+      "mergeBackMode": "automatic_after_successful_checks_and_policy_scope_match",
+      "automaticMergeToMaster": false
+    }
+  },
+  "rules": [
+    {
+      "id": "work-branch-master-merge-human-only",
+      "requirement": "A work branch created from master must never be merged into master automatically; merging it into master requires an explicit human command."
+    },
+    {
+      "id": "automatic-subbranch-return-to-origin-work-branch",
+      "requirement": "Any automatically created remediation or correction subbranch must open and complete its merge back into the exact work branch it was created from."
+    },
+    {
+      "id": "automatic-subbranch-master-target-forbidden",
+      "requirement": "An automatic remediation subbranch must not target master unless its origin branch is master and the task explicitly records that origin."
+    },
+    {
+      "id": "origin-work-branch-preservation-proof",
+      "requirement": "Before merging an automatic subbranch, compare origin work branch, automatic subbranch, and master to prove no work-branch commits are dropped or overwritten."
+    },
+    {
+      "id": "fast-forward-and-force-push-protection",
+      "requirement": "Do not force-move a work branch or master to absorb remediation output. Use pull-request merge semantics or a reviewed fast-forward that preserves the origin branch commits."
+    },
+    {
+      "id": "no-privileged-direct-publish",
+      "requirement": "Automated remediation must not push, merge, or publish directly with write permissions unless a separate reviewed policy explicitly allows it for the same origin work branch."
+    }
+  ],
+  "safeFlows": [
+    "master -> work_branch -> human_reviewed_pull_request_to_master",
+    "work_branch -> automatic_remediation_subbranch -> successful_checks -> merge_back_to_same_work_branch"
+  ],
+  "forbiddenFlows": [
+    "work_branch -> automatic_merge_to_master",
+    "work_branch -> automatic_remediation_subbranch -> pull_request_to_master",
+    "automatic_remediation_subbranch -> force_push_origin_work_branch",
+    "automatic_remediation_subbranch -> force_push_master"
+  ],
+  "requiredEvidenceBeforeMerge": [
+    "origin_work_branch_name",
+    "origin_work_branch_sha_before_subbranch",
+    "automatic_subbranch_head_sha",
+    "comparison_origin_to_subbranch",
+    "comparison_master_to_origin_work_branch",
+    "successful_required_checks_for_automatic_subbranch"
+  ],
+  "appliesTo": [
+    ".github/workflows/remediation-analysis.yml",
+    "tools/guards/required-command-integrity-gate.mjs",
+    "tools/scripts/check-ci-source-immutability.mjs",
+    "governance/github/repository-enforcement.json"
+  ]
+}

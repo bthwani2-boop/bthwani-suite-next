@@ -151,11 +151,14 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
 }
 
 export function toDetailViewModel(dto: DshStoreDetailDto): DshStoreDetailViewModel {
+  if (dto.operatingHours == null) {
+    dto = { ...dto, operatingHours: "" };
+  }
   return {
     ...toCardViewModel(dto),
     addressLine: (dto.addressLine ?? "").trim(),
     coverageSummary: (dto.coverageSummary ?? "").trim(),
-    operatingHours: (dto.operatingHours ?? "").trim(),
+    operatingHours: dto.operatingHours.trim(),
     deliveryReadiness: (dto.deliveryReadiness ?? "").trim(),
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,

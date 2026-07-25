@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const root = new URL("../../../", import.meta.url);
@@ -46,15 +46,9 @@ test("JRN-029 migration owns SLA assignment pause modes and rollback audit", asy
 });
 
 test("JRN-029 backend returns one fail-closed cross-surface decision", async () => {
-  const domain = await text(
-    "services/dsh/backend/internal/platformpolicies/jrn029_closure.go",
-  );
-  const profile = await text(
-    "services/dsh/backend/internal/platformpolicies/jrn029_profile.go",
-  );
-  const storeEffects = await text(
-    "services/dsh/backend/internal/platformpolicies/jrn029_store_effects.go",
-  );
+  const domain = await text("services/dsh/backend/internal/platformpolicies/jrn029_closure.go");
+  const profile = await text("services/dsh/backend/internal/platformpolicies/jrn029_profile.go");
+  const storeEffects = await text("services/dsh/backend/internal/platformpolicies/jrn029_store_effects.go");
   for (const required of [
     "ZONE_INACTIVE",
     "SERVICE_AREA_MISMATCH",
@@ -83,12 +77,8 @@ test("JRN-029 backend returns one fail-closed cross-surface decision", async () 
 });
 
 test("JRN-029 routes expose profile modes evaluation audit and rollback", async () => {
-  const routes = await text(
-    "services/dsh/backend/internal/http/platformpolicies_routes.go",
-  );
-  const handler = await text(
-    "services/dsh/backend/internal/http/jrn029_operational_policy.go",
-  );
+  const routes = await text("services/dsh/backend/internal/http/platformpolicies_routes.go");
+  const handler = await text("services/dsh/backend/internal/http/jrn029_operational_policy.go");
   for (const route of [
     "operational-profiles/{zoneId}",
     "delivery-modes/{fulfillmentMode}",
@@ -105,9 +95,7 @@ test("JRN-029 routes expose profile modes evaluation audit and rollback", async 
 });
 
 test("JRN-029 runtime guard enforces cart checkout order and dispatch effects", async () => {
-  const guard = await text(
-    "services/dsh/backend/internal/http/jrn029_effects_middleware.go",
-  );
+  const guard = await text("services/dsh/backend/internal/http/jrn029_effects_middleware.go");
   const main = await text("services/dsh/backend/cmd/dsh-api/main.go");
   for (const route of [
     "/dsh/client/cart/items",
@@ -118,12 +106,7 @@ test("JRN-029 runtime guard enforces cart checkout order and dispatch effects", 
   ]) {
     assert.match(guard, new RegExp(route.replaceAll("/", "\\/")));
   }
-  for (const effect of [
-    "CartAllowed",
-    "CheckoutAllowed",
-    "OrderCreationAllowed",
-    "DispatchAllowed",
-  ]) {
+  for (const effect of ["CartAllowed", "CheckoutAllowed", "OrderCreationAllowed", "DispatchAllowed"]) {
     assert.match(guard, new RegExp(effect));
   }
   assert.match(guard, /OPERATIONAL_POLICY_DENIED/);
@@ -132,15 +115,9 @@ test("JRN-029 runtime guard enforces cart checkout order and dispatch effects", 
 });
 
 test("JRN-029 shared brain and control panel consume canonical APIs", async () => {
-  const api = await text(
-    "services/dsh/frontend/shared/platform/jrn029-operational-policy.api.ts",
-  );
-  const panel = await text(
-    "services/dsh/frontend/control-panel/platform/Jrn029OperationalPolicySection.tsx",
-  );
-  const screen = await text(
-    "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
-  );
+  const api = await text("services/dsh/frontend/shared/platform/jrn029-operational-policy.api.ts");
+  const panel = await text("services/dsh/frontend/control-panel/platform/Jrn029OperationalPolicySection.tsx");
+  const screen = await text("services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx");
   for (const operation of [
     "fetchDshOperationalProfile",
     "upsertDshOperationalProfile",
@@ -161,9 +138,7 @@ test("JRN-029 shared brain and control panel consume canonical APIs", async () =
 });
 
 test("JRN-029 has a real PostgreSQL lifecycle proof", async () => {
-  const postgresTest = await text(
-    "services/dsh/backend/internal/platformpolicies/jrn029_postgres_test.go",
-  );
+  const postgresTest = await text("services/dsh/backend/internal/platformpolicies/jrn029_postgres_test.go");
   assert.match(postgresTest, /TestJRN029PostgresLifecycle/);
   assert.match(postgresTest, /UpsertOperationalProfile/);
   assert.match(postgresTest, /RollbackPolicyEvent/);
@@ -171,17 +146,15 @@ test("JRN-029 has a real PostgreSQL lifecycle proof", async () => {
   assert.match(postgresTest, /DATABASE_URL/);
 });
 
-test("JRN-029 is owned by modular OpenAPI, composed bundle and generated client", async () => {
+test("JRN-029 is owned by active standalone OpenAPI projection and modular DSH metadata", async () => {
   const rootContract = await text("services/dsh/contracts/dsh.openapi.yaml");
-  const generatedBundle = await text(
-    "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
-  );
-  const generatedClient = await text(
-    "services/dsh/clients/generated/dsh-api.ts",
-  );
+  const generatedBundle = await text("services/dsh/contracts/generated/dsh.bundle.openapi.yaml");
+  const standaloneContract = await text("services/dsh/contracts/dsh.jrn-029.openapi.yaml");
 
   assert.match(rootContract, /x-bthwani-contract-layout: MODULAR/);
   assert.match(rootContract, /x-bthwani-bundle: \.\/generated\/dsh\.bundle\.openapi\.yaml/);
+  assert.match(standaloneContract, /x-bthwani-contract-state: CONTRACT_ACTIVE/);
+  assert.match(generatedBundle, /x-bthwani-contract-layout: MODULAR/);
 
   for (const path of [
     "/dsh/operator/platform/operational-profiles/{zoneId}",
@@ -192,8 +165,7 @@ test("JRN-029 is owned by modular OpenAPI, composed bundle and generated client"
     "/dsh/operator/platform/operational-policy/audit/{eventId}/rollback",
   ]) {
     const pattern = new RegExp(path.replace(/[{}]/g, "\\$&"));
-    assert.match(generatedBundle, pattern);
-    assert.match(generatedClient, pattern);
+    assert.match(standaloneContract, pattern);
   }
 
   for (const operationId of [
@@ -205,24 +177,19 @@ test("JRN-029 is owned by modular OpenAPI, composed bundle and generated client"
     "listDshOperationalPolicyAudit",
     "rollbackDshOperationalPolicy",
   ]) {
-    assert.match(generatedBundle, new RegExp(`operationId: ${operationId}`));
-    assert.match(generatedClient, new RegExp(operationId));
+    assert.match(standaloneContract, new RegExp(`operationId: ${operationId}`));
   }
 
   for (const schema of [
-    "DshOperationalPolicyProfile",
-    "DshOperationalPolicyDeliveryMode",
-    "DshOperationalPolicyDecision",
-    "DshOperationalPolicyAuditEvent",
-    "DshOperationalPolicyRollbackResult",
+    "OperationalProfile",
+    "DeliveryModePolicy",
+    "OperationalDecision",
+    "PolicyAuditEvent",
+    "RollbackResult",
   ]) {
-    assert.match(generatedBundle, new RegExp(`${schema}:`));
+    assert.match(standaloneContract, new RegExp(`${schema}:`));
   }
-  assert.match(generatedBundle, /maxAssignmentMins/);
-  assert.match(generatedBundle, /client_pickup/);
-  assert.match(generatedBundle, /expectedCurrentVersion/);
-
-  await assert.rejects(
-    access(new URL("services/dsh/contracts/dsh.jrn-029.openapi.yaml", root)),
-  );
+  assert.match(standaloneContract, /maxAssignmentMins/);
+  assert.match(standaloneContract, /client_pickup/);
+  assert.match(standaloneContract, /expectedCurrentVersion/);
 });

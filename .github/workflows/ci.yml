@@ -19,7 +19,6 @@ on:
         default: false
         type: boolean
   pull_request:
-    branches: [master]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "AGENTS.md"

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-014",
+  "bindings": [
+    {
+      "surface": "control-panel",
+      "entry": "frontend/control-panel/operations/OrderJourneyDispatchAssignmentScreen.tsx",
+      "sharedBrain": ["frontend/shared/operations/use-dispatch-captain-options.ts", "frontend/shared/operations/use-dispatch-operations.ts", "frontend/shared/dispatch/dispatch.api.ts"],
+      "reads": ["ready orders", "store service area", "ranked candidates", "active assignments", "decision log"],
+      "writes": ["create offer", "expire offers", "cancel assignment", "atomic reassignment"]
+    },
+    {
+      "surface": "app-captain",
+      "entry": "frontend/app-captain/DshCaptainSurface.tsx",
+      "sharedBrain": ["frontend/shared/delivery/captain-inbox.model.ts", "frontend/shared/delivery/delivery.actions.ts", "frontend/shared/dispatch/dispatch.api.ts"],
+      "reads": ["own actionable offers", "assignment deadline", "distance", "priority", "service area"],
+      "writes": ["accept own offer", "decline own offer with reason", "execute accepted assignment"]
+    },
+    {
+      "surface": "app-client",
+      "entry": "frontend/shared/dispatch/use-dispatch-controller.ts",
+      "sharedBrain": ["frontend/shared/dispatch/dispatch.api.ts", "frontend/shared/dispatch/dispatch.controller-core.ts"],
+      "reads": ["redacted owned-order tracking"],
+      "writes": []
+    }
+  ],
+  "crossSurfaceInvariants": [
+    "operator create read-after-write appears in captain inbox",
+    "captain accept read-after-write appears in operator assignment list and client tracking",
+    "captain decline or timeout removes the offer from captain inbox and restores order readiness",
+    "operator reassignment closes the prior assignment and creates one replacement offer",
+    "all surfaces consume DSH API truth; none synthesizes assignment success"
+  ]
+}

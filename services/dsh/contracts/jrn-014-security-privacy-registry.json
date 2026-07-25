@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-014",
+  "defaultEffect": "DENY",
+  "controls": [
+    {"id":"authentication","requirement":"All operator and captain endpoints require a valid protected actor session."},
+    {"id":"permission-boundary","requirement":"Operator reads require operations.read; writes require operations.manage."},
+    {"id":"captain-ownership","requirement":"Captain accept, decline, status, proof, exception and location actions resolve identity.subject and match assignment captain_id."},
+    {"id":"tenant-isolation","requirement":"Operator and captain assignment lists filter by tenant_id; create and reassign validate tenant equality."},
+    {"id":"service-area-isolation","requirement":"The request service area must equal the live order store area and an active captain scope."},
+    {"id":"idempotency","requirement":"Create and reassign require 16-200 character keys and reject reuse for a different request."},
+    {"id":"atomic-capacity","requirement":"Captain dispatch profile is locked before active capacity is counted."},
+    {"id":"pii-minimization","requirement":"Candidate and decision responses contain actor/order/assignment identifiers and operational metadata only; no customer phone or address."},
+    {"id":"client-redaction","requirement":"Client tracking exposes owned-order operational tracking and never candidate eligibility, capacity or internal decisions."},
+    {"id":"audit","requirement":"Every offer response, timeout, cancellation, reassignment and eligibility/capacity rejection is persisted in dsh_dispatch_decisions."},
+    {"id":"financial-boundary","requirement":"No DSH dispatch operation mutates wallet, COD liability, commission, earning, settlement or payout."}
+  ],
+  "sensitiveFieldsForbiddenInCandidateOrDecisionPayload": ["customerPhone", "deliveryAddress", "walletBalance", "bankAccount", "identityDocument"],
+  "securityReviewPending": true
+}

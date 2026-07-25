@@ -16,6 +16,10 @@ export function canViewHomeDiscovery(_ctx: DshClientContext): boolean {
   return true;
 }
 
+function hasDistance(store: HomeStoreCardViewModel): boolean {
+  return store.distanceKm != null || store.distanceDisplay != null;
+}
+
 /**
  * Applies a client-side discovery filter to a list of store view-models.
  *
@@ -35,10 +39,12 @@ export function applyDiscoveryFilter(
 
     case 'nearest':
       return [...stores].sort((a, b) => {
-        if (a.distanceKm == null && b.distanceKm == null) return 0;
-        if (a.distanceKm == null) return 1;
-        if (b.distanceKm == null) return -1;
-        return a.distanceKm - b.distanceKm;
+        const aHasDistance = hasDistance(a);
+        const bHasDistance = hasDistance(b);
+        if (!aHasDistance && !bHasDistance) return 0;
+        if (!aHasDistance) return 1;
+        if (!bHasDistance) return -1;
+        return (a.distanceKm ?? 0) - (b.distanceKm ?? 0);
       });
 
     case 'offers':

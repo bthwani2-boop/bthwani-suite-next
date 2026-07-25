@@ -55,6 +55,26 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify workflow security preflight (guard:workflow-security)
+        id: workflow_security
+        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
+        continue-on-error: true
+        env:
+          BTHWANI_ZIZMOR_REPORT: ${{ runner.temp }}/zizmor/zizmor.json
+        run: node tools/scripts/run-zizmor.mjs
+      - name: Upload workflow security findings
+        if: ${{ steps.workflow_security.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workflow-security-${{ github.run_id }}
+          path: ${{ runner.temp }}/zizmor/zizmor.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Fail closed on workflow security findings
+        if: ${{ steps.workflow_security.outcome == 'failure' }}
+        run: |
+          echo "::error title=Workflow security failed::Review the machine-readable Zizmor artifact."
+          exit 1
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Test CI source immutability guard
@@ -95,8 +115,25 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Verify SDLC governance
+        id: sdlc
         if: ${{ inputs.policy == 'true' }}
-        run: pnpm run guard:sdlc
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/sdlc"
+          set -o pipefail
+          pnpm run guard:sdlc 2>&1 | tee "${RUNNER_TEMP}/sdlc/sdlc.log"
+      - name: Upload SDLC governance evidence
+        if: ${{ inputs.policy == 'true' && steps.sdlc.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sdlc-governance-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/sdlc/sdlc.log
+            governance/operational_journey_protocol_package/sdlc/**
+            governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+          if-no-files-found: error
+          retention-days: 14
       - name: Verify cleanup policy
         if: ${{ inputs.policy == 'true' }}
         run: pnpm run guard:cleanup-policy
@@ -111,7 +148,7 @@ jobs:
           BTHWANI_HYGIENE_REPORT: ${{ runner.temp }}/repository-hygiene/report.json
         run: node tools/scripts/check-repository-hygiene.mjs
       - name: Upload repository hygiene report
-        if: ${{ inputs.policy == 'true' && always() }}
+        if: ${{ inputs.policy == 'true' && steps.repository_hygiene.outcome != 'skipped' && always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: repository-hygiene-${{ github.run_id }}
@@ -127,21 +164,6 @@ jobs:
       - name: Verify workflow syntax
         if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
         run: pnpm run guard:workflow-lint
-      - name: Verify workflow security
-        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
-        shell: bash
-        run: |
-          mkdir -p "${RUNNER_TEMP}/workflow-security"
-          set -o pipefail
-          pnpm run guard:workflow-security 2>&1 | tee "${RUNNER_TEMP}/workflow-security/zizmor.log"
-      - name: Upload workflow security evidence
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: workflow-security-${{ github.run_id }}
-          path: ${{ runner.temp }}/workflow-security/zizmor.log
-          if-no-files-found: error
-          retention-days: 7
       - name: Verify workflow policy
         if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
         run: pnpm run guard:opa-policies
@@ -153,11 +175,11 @@ jobs:
         run: pnpm run guard:opa-policies
       - name: Verify immutable commit diff
         env:
-          CI_BASE_SHA: ${{ inputs.base_sha }}
-          CI_HEAD_SHA: ${{ inputs.head_sha }}
-        run: git diff --check "$CI_BASE_SHA" "$CI_HEAD_SHA"
+          BASE_SHA: ${{ inputs.base_sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: git diff --check "${BASE_SHA}" "${HEAD_SHA}"
       - name: Fail closed on deferred policy violations
-        if: ${{ always() && (steps.guard_registry.outcome == 'failure' || steps.repository_hygiene.outcome == 'failure') }}
+        if: ${{ always() && (steps.guard_registry.outcome == 'failure' || steps.sdlc.outcome == 'failure' || steps.repository_hygiene.outcome == 'failure') }}
         run: |
-          echo "::error title=Policy verification failed::Review the guard-registry and repository-hygiene artifacts."
+          echo "::error title=Policy verification failed::Review the guard-registry, SDLC, and repository-hygiene artifacts."
           exit 1

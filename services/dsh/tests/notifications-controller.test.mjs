@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
+import { composeDshOpenApi } from "../../../tools/scripts/dsh-openapi-modular-lib.mjs";
 
 describe("notifications states", () => {
   it("notifIdle returns kind=idle", async () => {
@@ -166,7 +167,7 @@ describe("notifications journey maps", () => {
   ];
 
   it("keeps contract operations in the composed OpenAPI and generated client", () => {
-    const openapi = readFileSync(new URL("../contracts/generated/dsh.bundle.openapi.yaml", import.meta.url), "utf8");
+    const openapi = composeDshOpenApi({ write: false });
     const generatedClient = readFileSync(new URL("../clients/generated/dsh-api.ts", import.meta.url), "utf8");
 
     for (const operation of operations) {
