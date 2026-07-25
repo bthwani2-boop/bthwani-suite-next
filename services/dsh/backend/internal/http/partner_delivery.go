@@ -227,6 +227,10 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	if strings.TrimSpace(body.CommandID) == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "commandId is required")
+		return
+	}
 	if strings.TrimSpace(body.Reason) == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "reason is required")
 		return
@@ -254,6 +258,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 		CorrelationID:      correlationID,
 		ExpectedVersion:    body.ExpectedVersion,
 		EvidenceReferences: body.EvidenceReferences,
+		CommandID:          body.CommandID,
 	})
 	if err != nil {
 		writePartnerDeliveryError(w, err)
