@@ -6,7 +6,7 @@ import test from 'node:test';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const basePath = resolve(repositoryRoot, 'services/dsh/contracts/dsh.openapi.yaml');
-const outputPath = resolve(repositoryRoot, 'services/dsh/contracts/generated/dsh.openapi.yaml');
+const outputPath = resolve(repositoryRoot, 'services/dsh/contracts/generated/dsh.bundle.openapi.yaml');
 
 function countOccurrences(content, needle) {
   return content.split(needle).length - 1;
@@ -24,6 +24,7 @@ test('DSH composed contract contains one governed partner workboard', () => {
 
   const base = readFileSync(basePath, 'utf8');
   const composed = readFileSync(outputPath, 'utf8');
+  assert.match(base, /x-bthwani-bundle: \.\/generated\/dsh\.bundle\.openapi\.yaml/);
   assert.equal(base.includes('/dsh/partner/order-workboard:'), false);
   assert.equal(countOccurrences(composed, '/dsh/partner/order-workboard:'), 1);
   assert.equal(countOccurrences(composed, 'DshPartnerOrderAction:'), 1);
