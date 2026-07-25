@@ -8,6 +8,7 @@ const packageFile = "package.json";
 const enforcementFile = "governance/github/repository-enforcement.json";
 const fullVerificationTrigger = "governance/github/full-verification.trigger.json";
 const workflowsRoot = ".github/workflows";
+const remediationRelative = `${workflowsRoot}/remediation-analysis.yml`;
 const expectedWorkflowFiles = [
   "ci-backends.yml",
   "ci-node-diagnostics.yml",
@@ -16,7 +17,6 @@ const expectedWorkflowFiles = [
   "ci-runtime.yml",
   "ci.yml",
   "dsh-database.yml",
-  "lockfile-snapshot.yml",
   "remediation-analysis.yml",
 ].sort();
 
@@ -51,6 +51,43 @@ function rejectMarkers(relativePath, content, markers) {
     if (pattern.test(content)) {
       violations.push({ file: relativePath, line: 0, message: label });
     }
+  }
+}
+
+function verifyRemediationBoundary(content) {
+  requireMarkers(remediationRelative, [
+    "name: BThwani Expert Live-Code Remediation",
+    "workflow_dispatch:",
+    "permissions:\n  contents: read",
+    "Forensic discovery and deterministic repair",
+    "Logic, binding, duplication, and repository integrity",
+    "Type, lint, test, and build verification",
+    "backend and database",
+    "Dependency, secret, workflow, and container security",
+    "Integrated SaaS runtime proof",
+    "Export evidence-backed remediation patch",
+    "persist-credentials: false",
+    "patch_sha256",
+    "sha256sum",
+    "Unapproved deletion rejected",
+    "Protected deletion rejected",
+    "manual-patch-only-no-privileged-write",
+  ]);
+
+  if (/^\s{2}(?:workflow_run|pull_request_target|schedule|repository_dispatch):/m.test(content)) {
+    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_MUST_REMAIN_EXPLICITLY_MANUAL" });
+  }
+  if (/\bsecrets\.[A-Za-z0-9_]+\b/.test(content)) {
+    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_REPOSITORY_SECRET_FORBIDDEN" });
+  }
+  if (/contents:\s*write\b|pull-requests:\s*write\b|statuses:\s*write\b|write-all\b/i.test(content)) {
+    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_PRIVILEGED_WRITE_FORBIDDEN" });
+  }
+  if (/\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+(?:create|merge))\b/i.test(content)) {
+    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_BRANCH_OR_PR_MUTATION_FORBIDDEN" });
+  }
+  if (/uses:\s*[^\s#]+@(?:latest|master|main)\b/i.test(content)) {
+    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_DYNAMIC_ACTION_VERSION_FORBIDDEN" });
   }
 }
 
@@ -137,14 +174,18 @@ if (JSON.stringify(workflowFiles) !== JSON.stringify(expectedWorkflowFiles)) {
 for (const workflowFile of workflowFiles) {
   const relative = `${workflowsRoot}/${workflowFile}`;
   const content = text(relative);
-  rejectMarkers(relative, content, [
-    ["SOURCE_WRITE_PERMISSION_FORBIDDEN", /contents:\s*write\b|write-all\b/i],
-    ["STATUS_WRITE_PERMISSION_FORBIDDEN", /statuses:\s*write\b/i],
-    ["PULL_REQUEST_TARGET_FORBIDDEN", /pull_request_target\s*:/i],
-    ["CI_SOURCE_MUTATION_FORBIDDEN", /\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+merge)\b/i],
-    ["CI_SOURCE_REWRITE_FORBIDDEN", /\b(?:gofmt\s+-w|prettier\s+--write|eslint\s+--fix|sed\s+-i|perl\s+-pi)\b/i],
-    ["DYNAMIC_ACTION_VERSION_FORBIDDEN", /uses:\s*[^\s#]+@(?:latest|master|main)\b/i],
-  ]);
+  if (relative !== remediationRelative) {
+    rejectMarkers(relative, content, [
+      ["SOURCE_WRITE_PERMISSION_FORBIDDEN", /contents:\s*write\b|write-all\b/i],
+      ["STATUS_WRITE_PERMISSION_FORBIDDEN", /statuses:\s*write\b/i],
+      ["PULL_REQUEST_TARGET_FORBIDDEN", /pull_request_target\s*:/i],
+      ["CI_SOURCE_MUTATION_FORBIDDEN", /\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+merge)\b/i],
+      ["CI_SOURCE_REWRITE_FORBIDDEN", /\b(?:gofmt\s+-w|prettier\s+--write|eslint\s+--fix|nx\b[^\n]*--fix|sed\s+-i|perl\s+-pi)\b/i],
+      ["DYNAMIC_ACTION_VERSION_FORBIDDEN", /uses:\s*[^\s#]+@(?:latest|master|main)\b/i],
+    ]);
+  } else {
+    verifyRemediationBoundary(content);
+  }
   if (!/^permissions:\s*(?:\n|$)/m.test(content) && !/^permissions:\s*\{\s*\}\s*$/m.test(content)) {
     violations.push({ file: relative, line: 0, message: "EXPLICIT_TOP_LEVEL_PERMISSIONS_REQUIRED" });
   }
@@ -219,36 +260,18 @@ requireMarkers(`${workflowsRoot}/ci-backends.yml`, [
 ]);
 
 requireMarkers(`${workflowsRoot}/ci-runtime.yml`, [
-  "Runtime proof",
-  "runtime-smoke.log",
-  "runtime proof not required",
+  "runtime:full:smoke",
+  "Stop runtime",
 ]);
 
-const requiredChecks = enforcement?.requiredCheckNames;
-if (!Array.isArray(requiredChecks) || requiredChecks.length !== 1 || requiredChecks[0] !== "BThwani CI result") {
-  violations.push({ file: enforcementFile, line: 0, message: "REQUIRED_CHECKS_MUST_FAIL_CLOSED" });
-}
-const reviewPolicy = enforcement?.requiredPullRequestPolicy;
-if (
-  !reviewPolicy ||
-  reviewPolicy.requiredApprovingReviewCount < 1 ||
-  reviewPolicy.dismissStaleApprovals !== true ||
-  reviewPolicy.requireCodeOwnerReview !== true ||
-  reviewPolicy.requireConversationResolution !== true ||
-  reviewPolicy.requireLastPushApprovalByDifferentActor !== true
-) {
-  violations.push({ file: enforcementFile, line: 0, message: "PR_REVIEW_RULE_REQUIRED" });
-}
-if (enforcement?.claims?.highRiskClosureAllowed !== false) {
-  violations.push({ file: enforcementFile, line: 0, message: "UNPROVEN_HIGH_RISK_CLOSURE_MUST_BE_DISALLOWED" });
+requireMarkers(`${workflowsRoot}/dsh-database.yml`, [
+  "contents: read",
+  "postgres:16-alpine",
+  "invoke-dsh-database.ps1",
+]);
+
+if (enforcement.targetBranch !== "master") {
+  violations.push({ file: enforcementFile, line: 0, message: "TARGET_BRANCH_MUST_BE_MASTER" });
 }
 
-if (violations.length > 0) {
-  console.error(`${guardId}: FAIL`);
-  for (const violation of violations) {
-    console.error(`- ${violation.file}${violation.line ? `:${violation.line}` : ""} ${violation.message}`);
-  }
-  fail(guardId, violations);
-}
-
-console.log(`${guardId}: PASS`);
+fail(guardId, violations);

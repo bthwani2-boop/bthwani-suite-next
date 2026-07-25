@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "decision": "REMEDIATION_BRANCH_RETURNS_TO_ORIGIN_BRANCH",
+  "rules": [
+    {
+      "id": "remediation-origin-branch-return",
+      "requirement": "Any automatically created remediation branch must open its pull request back into the branch it was created from, not directly into master."
+    },
+    {
+      "id": "master-only-when-origin",
+      "requirement": "master may be the pull request base only when the remediation branch was created from master itself."
+    },
+    {
+      "id": "no-cross-branch-loss",
+      "requirement": "Before proposing any remediation merge, compare the origin branch, remediation branch, and master to prove that branch-specific commits are preserved."
+    },
+    {
+      "id": "no-privileged-direct-publish",
+      "requirement": "Automated remediation must not push, merge, or publish directly with write permissions unless a separate reviewed policy explicitly allows it for the same origin branch."
+    }
+  ],
+  "safeFlow": "origin_branch -> remediation_branch -> pull_request_to_origin_branch -> reviewed_merge",
+  "forbiddenFlow": "origin_branch -> remediation_branch -> direct_pull_request_to_master",
+  "appliesTo": [
+    ".github/workflows/remediation-analysis.yml",
+    "tools/guards/required-command-integrity-gate.mjs",
+    "tools/scripts/check-ci-source-immutability.mjs"
+  ]
+}
