@@ -35,13 +35,15 @@ test("Initialize is mandatory and bound to immutable provider inputs", () => {
   assert.ok(workflow.indexOf("Assert-StateStamp -Path $PreflightStampPath") < workflow.indexOf("Write-Step 'Submit remote build'"));
 });
 
-test("EAS provider variables use one unambiguous environment selector", () => {
-  assert.ok(providers.includes("'env:get', 'development'"));
-  assert.ok(providers.includes("'env:update', 'development'"));
-  assert.ok(providers.includes("'env:create', 'development'"));
+test("EAS provider variables use idempotent env:set and metadata-only verification", () => {
+  assert.ok(providers.includes("'env:set', 'development'"));
+  assert.ok(providers.includes("'env:list', 'development'"));
+  assert.equal(providers.includes("'env:get', 'development'"), false);
+  assert.equal(providers.includes("'env:update', 'development'"), false);
+  assert.equal(providers.includes("'env:create', 'development'"), false);
   assert.equal(providers.includes("'--variable-environment', 'development'"), false);
-  assert.equal(providers.includes("'--force', '--non-interactive'"), false);
-  assert.ok(providers.includes("if (Test-EasVariable -Name $Name)"));
+  assert.equal(providers.includes("if (Test-EasVariable -Name $Name)"), false);
+  assert.ok(providers.includes("$commandText = $commandText.Replace($secret, '<redacted>')"));
   assert.equal(signing.includes("Add-KeytoolCandidate"), false);
   const listAdds = signing.match(/[^\n]*\$candidates\.Add\([^\n]*/g) ?? [];
   assert.ok(listAdds.length > 0);
