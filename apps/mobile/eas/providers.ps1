@@ -104,32 +104,46 @@ function Invoke-EasEnvironmentCommand {
     )
 
     Push-Location -LiteralPath $AppDir
+    $previousNoColor = $env:NO_COLOR
     try {
+        $env:NO_COLOR = '1'
         $global:LASTEXITCODE = 0
         $output = & pnpm @Arguments 2>&1
         $exitCode = if ($null -eq $global:LASTEXITCODE) { 0 } else { [int]$global:LASTEXITCODE }
         $text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
+        $commandText = "pnpm $($Arguments -join ' ')"
         foreach ($secret in $SecretValues) {
-            if (-not [string]::IsNullOrWhiteSpace($secret)) { $text = $text.Replace($secret, '<redacted>') }
+            if (-not [string]::IsNullOrWhiteSpace($secret)) {
+                $text = $text.Replace($secret, '<redacted>')
+                $commandText = $commandText.Replace($secret, '<redacted>')
+            }
         }
         if ($text -and (-not $Quiet -or ($exitCode -ne 0 -and -not $AllowFailure))) { Write-Host $text }
         if ($exitCode -ne 0 -and -not $AllowFailure) {
-            throw "EAS environment command failed with exit code ${exitCode}: pnpm $($Arguments -join ' ')"
+            throw "EAS environment command failed with exit code ${exitCode}: $commandText"
         }
         return [pscustomobject]@{ ExitCode = $exitCode; Text = $text }
     } finally {
+        if ($null -eq $previousNoColor) {
+            Remove-Item Env:NO_COLOR -ErrorAction SilentlyContinue
+        } else {
+            $env:NO_COLOR = $previousNoColor
+        }
         Pop-Location
     }
 }
 
 function Test-EasVariable {
     param([Parameter(Mandatory)][string] $Name)
+
     $result = Invoke-EasEnvironmentCommand -Arguments @(
-        'dlx', 'eas-cli@latest', 'env:get', 'development',
-        '--variable-name', $Name,
-        '--format', 'long', '--scope', 'project', '--non-interactive'
+        'dlx', 'eas-cli@latest', 'env:list', 'development',
+        '--format', 'short', '--scope', 'project', '--non-interactive'
     ) -AllowFailure -Quiet
-    return $result.ExitCode -eq 0
+    if ($result.ExitCode -ne 0) { return $false }
+
+    $pattern = "(?m)^\s*$([regex]::Escape($Name))="
+    return [regex]::IsMatch($result.Text, $pattern)
 }
 
 function Set-EasVariable {
@@ -141,18 +155,8 @@ function Set-EasVariable {
         [string[]] $SecretValues = @()
     )
 
-    if (Test-EasVariable -Name $Name) {
-        Invoke-EasEnvironmentCommand -Arguments @(
-            'dlx', 'eas-cli@latest', 'env:update', 'development',
-            '--variable-name', $Name,
-            '--value', $Value, '--type', $Type,
-            '--visibility', $Visibility, '--scope', 'project', '--non-interactive'
-        ) -SecretValues $SecretValues | Out-Null
-        return
-    }
-
     Invoke-EasEnvironmentCommand -Arguments @(
-        'dlx', 'eas-cli@latest', 'env:create', 'development',
+        'dlx', 'eas-cli@latest', 'env:set', 'development',
         '--name', $Name, '--value', $Value, '--type', $Type,
         '--visibility', $Visibility, '--scope', 'project', '--non-interactive'
     ) -SecretValues $SecretValues | Out-Null
