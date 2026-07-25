@@ -28,6 +28,9 @@ coverage/
 .DS_Store
 Thumbs.db
 
+# Generated local Firebase configs for EAS remote build packaging.
+apps/*/runtime/google-services.json
+
 
 graphify-out/
 .graphify/
@@ -118,27 +121,3 @@ node-gates*.log
 *.key
 *.p8
 *.p12
-*.jks
-*.keystore
-*credentials*.json
-service-account*.json
-**/google-services.json
-**/GoogleService-Info.plist
-secrets.local.*
-passwords.local.*
-credentials.local.*
-tools/scripts/google-cloud/google-platform-input.local.json
-
-.tmp/
-
-# Database backups and generated environment files
-infra/data-plane/backups/
-**/*.env
-!**/*.env.example
-
-# Generated same-commit runtime evidence
-/artifacts/
-
-# Composed OpenAPI intermediates (source of truth is the fragment files under
-# */contracts/*.openapi.yaml; only the generated client is a tracked deliverable)
-**/contracts/generated/
