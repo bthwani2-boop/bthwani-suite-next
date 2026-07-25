@@ -15,10 +15,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$EasScript = Join-Path $PSScriptRoot 'mobile\eas.ps1'
-$EnsureRuntimeScript = Join-Path $RepoRoot 'tools\scripts\ensure-mobile-dev-runtime.ps1'
-$RuntimeScript = Join-Path $RepoRoot 'tools\scripts\start-mobile-runtime.ps1'
+$SharedDirectory = Join-Path $PSScriptRoot 'mobile'
+$EasScript = Join-Path $SharedDirectory 'eas.ps1'
+$EnsureRuntimeScript = Join-Path $SharedDirectory 'ensure-mobile-dev-runtime.ps1'
+$RuntimeScript = Join-Path $SharedDirectory 'start-mobile-runtime.ps1'
 
 if ($Mode -eq 'Run') {
     $ports = @{
