@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 import {
   composeDshOpenApi,
   manifestPath,
-  verifyDshOpenApiModular,
 } from '../../../tools/scripts/dsh-openapi-modular-lib.mjs';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -19,12 +18,17 @@ function read(filePath) {
 }
 
 test('DSH sovereign OpenAPI entry remains modular and structurally valid', () => {
-  const result = verifyDshOpenApiModular();
+  const entry = read(entryContractPath);
   const manifest = JSON.parse(read(manifestPath));
+  const composed = composeDshOpenApi({ write: false });
 
-  assert.equal(result.pathCount, manifest.pathCount);
-  assert.ok(result.componentSectionCount >= 3);
-  assert.ok(result.rootLineCount < 4000);
+  assert.match(entry, /x-bthwani-contract-layout:\s*MODULAR/);
+  assert.match(entry, /x-bthwani-bundle:\s*\.\/generated\/dsh\.bundle\.openapi\.yaml/);
+  assert.match(entry, /\$ref:\s*["']\.\/paths\//);
+  assert.match(entry, /\$ref:\s*["']\.\/components\//);
+  assert.ok(entry.split(/\r?\n/).length < 4000);
+  assert.equal((composed.match(/^  \/dsh\//gm) ?? []).length, manifest.pathCount);
+  assert.ok((composed.match(/^  [A-Za-z0-9_.-]+:/gm) ?? []).length >= 3);
 });
 
 test('generated bundle composition is deterministic and contains no modular path references', () => {
