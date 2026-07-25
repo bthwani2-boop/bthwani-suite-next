@@ -158,12 +158,12 @@ function Get-EasDevelopmentVariableNames {
     ) -Quiet
 
     $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
-    foreach ($line in ($result.Text -split "`r?`n")) {
+    foreach ($line in ($result.Text -split '\r?\n')) {
         if ($line -match '^\s*(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\|') {
             [void]$names.Add([string]$Matches.name)
         }
     }
-    return @($names)
+    return [string[]]@($names)
 }
 
 function Set-EasVariable {
