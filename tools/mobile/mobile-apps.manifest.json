@@ -15,7 +15,7 @@
       "androidPackage": "com.bthwani.client.next",
       "iosBundleIdentifier": "com.bthwani.client.next",
       "projectId": "abec897b-1f5f-409d-8286-607a5a6b69e2",
-      "features": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "sqlite", "location"]
+      "features": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "sqlite", "location", "maps"]
     },
     "app-partner": {
       "name": "بثواني الشريك",
@@ -24,7 +24,7 @@
       "androidPackage": "com.bthwani.partner.next",
       "iosBundleIdentifier": "com.bthwani.partner.next",
       "projectId": "4cde7be0-7582-4a6b-9ae0-d74f2d149580",
-      "features": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "keepAwake", "sqlite", "location"]
+      "features": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "keepAwake", "sqlite", "location", "maps"]
     },
     "app-captain": {
       "name": "بثواني الكابتن",
