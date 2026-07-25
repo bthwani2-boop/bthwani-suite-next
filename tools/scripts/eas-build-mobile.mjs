@@ -15,6 +15,25 @@ const manifest = JSON.parse(
   fs.readFileSync(path.join(root, "tools/mobile/mobile-apps.manifest.json"), "utf8"),
 );
 
+function importEnvironmentFile(file) {
+  if (!fs.existsSync(file)) return;
+  for (const rawLine of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#") || !line.includes("=")) continue;
+    const [rawName, ...rawValueParts] = line.split("=");
+    const name = rawName.trim();
+    if (!name) continue;
+    let value = rawValueParts.join("=").trim();
+    if ((value.startsWith('"') && value.endsWith('"'))
+      || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (!process.env[name]?.trim()) process.env[name] = value;
+  }
+}
+
+importEnvironmentFile(path.join(root, "infra/local/mobile.env"));
+
 function valueAfter(flag, fallback) {
   const index = process.argv.indexOf(flag);
   return index >= 0 ? process.argv[index + 1] : fallback;
