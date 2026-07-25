@@ -6,7 +6,8 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "eas-build-pre-install": "node ../../mobile/verify-eas-provider-inputs.mjs --app app-field"
   },
   "devDependencies": {
     "typescript": "~6.0.3"
