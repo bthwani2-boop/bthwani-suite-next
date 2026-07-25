@@ -86,8 +86,9 @@ test('JRN-015 binds client, partner and operator surfaces to the shared pickup b
   assert.match(partnerPanel, /customerArrived/);
   assert.match(partnerPanel, /noShow/);
   assert.match(operatorScreen, /currentStatus === 'no_show'/);
-  assert.match(operatorScreen, /rescheduleWindow/);
-  assert.match(operatorScreen, /إعادة جدولة ساعتين/);
+  assert.match(operatorScreen, /للقراءة والمتابعة فقط/);
+  assert.doesNotMatch(operatorScreen, /rescheduleWindow/);
+  assert.doesNotMatch(operatorScreen, /إعادة جدولة ساعتين/);
 });
 
 test('JRN-015 never returns the plaintext OTP from a pickup HTTP response', () => {
