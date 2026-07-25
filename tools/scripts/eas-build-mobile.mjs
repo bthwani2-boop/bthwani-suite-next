@@ -153,7 +153,7 @@ if (!skipPreflight) {
     ], root, appEnvironment);
 
     run("pnpm", ["typecheck"], appDir, appEnvironment);
-    run("npx", ["--yes", "expo-doctor@latest"], appDir, appEnvironment);
+    run("pnpm", ["dlx", "expo-doctor@latest"], appDir, appEnvironment);
 
     if (!skipExport) {
       const outputDir = path.join(root, ".tmp", "eas-preflight", key, platform);
