@@ -31,11 +31,13 @@ test("Initialize is mandatory and bound to immutable provider inputs", () => {
   assert.ok(workflow.indexOf("Assert-StateStamp -Path $PreflightStampPath") < workflow.indexOf("Write-Step 'Submit remote build'"));
 });
 
-test("EAS provider variables use the documented idempotent CLI contract", () => {
-  assert.ok(providers.includes("'env:create', 'development'"));
-  assert.ok(providers.includes("'--force', '--non-interactive'"));
+test("EAS provider variables use one unambiguous environment selector", () => {
   assert.ok(providers.includes("'env:get', 'development'"));
-  assert.equal(providers.includes("'env:set'"), false);
+  assert.ok(providers.includes("'env:update', 'development'"));
+  assert.ok(providers.includes("'env:create', 'development'"));
+  assert.equal(providers.includes("'--variable-environment', 'development'"), false);
+  assert.equal(providers.includes("'--force', '--non-interactive'"), false);
+  assert.ok(providers.includes("if (Test-EasVariable -Name $Name)"));
   assert.equal(signing.includes("Add-KeytoolCandidate"), false);
   const listAdds = signing.match(/[^\n]*\$candidates\.Add\([^\n]*/g) ?? [];
   assert.ok(listAdds.length > 0);
