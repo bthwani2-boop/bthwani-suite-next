@@ -224,7 +224,7 @@ export function FinanceDashboardScreen() {
             <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", justifyContent: "space-between" }}>
               <div style={{ flex: 1, minWidth: "150px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                 <Text role="caption" tone="muted">الخطر المالي</Text>
-                <Text role="body" tone={hasBlockingVariances ? "danger" : undefined} style={{ fontWeight: "bold" }}>{financeHubView.operationalRisk}</Text>
+                <Text role="body" tone={hasBlockingVariances ? "danger" : "default"} style={{ fontWeight: "bold" }}>{financeHubView.operationalRisk}</Text>
               </div>
               <div style={{ flex: 1, minWidth: "150px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                 <Text role="caption" tone="muted">الجهة المتأثرة</Text>
