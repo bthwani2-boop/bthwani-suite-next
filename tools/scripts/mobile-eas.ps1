@@ -78,15 +78,13 @@ function Invoke-Checked {
         $exitCode = if ($null -eq $global:LASTEXITCODE) { 0 } else { [int]$global:LASTEXITCODE }
         $text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
 
-        foreach ($secretValue in $SecretValues) {
-            if (-not [string]::IsNullOrWhiteSpace($secretValue)) {
-                $text = $text.Replace($secretValue, '<redacted>')
+        foreach ($secret in $SecretValues) {
+            if (-not [string]::IsNullOrWhiteSpace($secret)) {
+                $text = $text.Replace($secret, '<redacted>')
             }
         }
 
-        if ($text -and (-not $Quiet -or $exitCode -ne 0)) {
-            Write-Host $text
-        }
+        if ($text -and (-not $Quiet -or $exitCode -ne 0)) { Write-Host $text }
         if ($exitCode -ne 0) {
             throw "Command failed with exit code ${exitCode}: $Command $($Arguments -join ' ')"
         }
@@ -101,10 +99,10 @@ function Convert-EmbeddedJson {
 
     for ($start = 0; $start -lt $Text.Length; $start++) {
         if ($Text[$start] -ne '{') { continue }
-
         $depth = 0
         $inString = $false
         $escaped = $false
+
         for ($index = $start; $index -lt $Text.Length; $index++) {
             $char = $Text[$index]
             if ($inString) {
@@ -126,6 +124,14 @@ function Convert-EmbeddedJson {
     }
 
     throw 'Command output did not contain a valid JSON object.'
+}
+
+function Assert-CleanTrackedTree {
+    param([string] $Stage = 'Mobile EAS workflow')
+    $status = Invoke-Checked -Command 'git' -Arguments @('status', '--porcelain=v1', '--untracked-files=no') -Quiet
+    if (-not [string]::IsNullOrWhiteSpace($status)) {
+        throw "$Stage requires a clean tracked Git tree. Modified files:`n$status"
+    }
 }
 
 function Import-EnvFile {
@@ -161,9 +167,7 @@ function Resolve-ScopedValue {
 
 function Resolve-AppPath {
     param([Parameter(Mandatory)][string] $Path)
-    if ([System.IO.Path]::IsPathRooted($Path)) {
-        return [System.IO.Path]::GetFullPath($Path)
-    }
+    if ([System.IO.Path]::IsPathRooted($Path)) { return [System.IO.Path]::GetFullPath($Path) }
     return [System.IO.Path]::GetFullPath((Join-Path $AppDir $Path))
 }
 
@@ -176,26 +180,60 @@ function Test-ValidMapsKey {
     )
 }
 
+function Add-KeytoolCandidate {
+    param(
+        [Parameter(Mandatory)][System.Collections.Generic.List[string]] $List,
+        [AllowNull()][string] $Path
+    )
+    if (-not [string]::IsNullOrWhiteSpace($Path)) { $List.Add($Path) }
+}
+
 function Find-Keytool {
     $command = Get-Command keytool -ErrorAction SilentlyContinue
     if ($command) { return $command.Source }
 
-    $candidates = @()
-    if (-not [string]::IsNullOrWhiteSpace($env:JAVA_HOME)) {
-        $candidates += Join-Path $env:JAVA_HOME 'bin\keytool.exe'
+    $candidates = [System.Collections.Generic.List[string]]::new()
+    $java = Get-Command java -ErrorAction SilentlyContinue
+    if ($java -and $java.Source) {
+        Add-KeytoolCandidate -List $candidates -Path (Join-Path (Split-Path -Parent $java.Source) 'keytool.exe')
     }
-    if (-not [string]::IsNullOrWhiteSpace($env:JDK_HOME)) {
-        $candidates += Join-Path $env:JDK_HOME 'bin\keytool.exe'
+    foreach ($home in @($env:JAVA_HOME, $env:JDK_HOME)) {
+        if ($home) { Add-KeytoolCandidate -List $candidates -Path (Join-Path $home 'bin\keytool.exe') }
     }
-    if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
-        $candidates += Join-Path $env:ProgramFiles 'Android\Android Studio\jbr\bin\keytool.exe'
+    if ($env:ProgramFiles) {
+        Add-KeytoolCandidate -List $candidates -Path (Join-Path $env:ProgramFiles 'Android\Android Studio\jbr\bin\keytool.exe')
+    }
+    if (${env:ProgramFiles(x86)}) {
+        Add-KeytoolCandidate -List $candidates -Path (Join-Path ${env:ProgramFiles(x86)} 'Android\Android Studio\jbr\bin\keytool.exe')
+    }
+    if ($env:LOCALAPPDATA) {
+        Add-KeytoolCandidate -List $candidates -Path (Join-Path $env:LOCALAPPDATA 'Programs\Android Studio\jbr\bin\keytool.exe')
     }
 
-    $match = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
-    if ([string]::IsNullOrWhiteSpace([string]$match)) {
-        throw 'keytool was not found. Install a JDK or Android Studio JBR.'
+    $searchRoots = [System.Collections.Generic.List[string]]::new()
+    if ($env:ProgramFiles) {
+        foreach ($name in @('Java', 'Eclipse Adoptium', 'Microsoft')) {
+            Add-KeytoolCandidate -List $searchRoots -Path (Join-Path $env:ProgramFiles $name)
+        }
     }
-    return [string]$match
+    if ($env:USERPROFILE) {
+        Add-KeytoolCandidate -List $searchRoots -Path (Join-Path $env:USERPROFILE '.jdks')
+        Add-KeytoolCandidate -List $searchRoots -Path (Join-Path $env:USERPROFILE '.gradle\jdks')
+    }
+
+    foreach ($root in $searchRoots) {
+        if (-not (Test-Path -LiteralPath $root -PathType Container)) { continue }
+        Get-ChildItem -LiteralPath $root -Filter keytool.exe -File -Recurse -ErrorAction SilentlyContinue |
+            ForEach-Object { Add-KeytoolCandidate -List $candidates -Path $_.FullName }
+    }
+
+    $match = $candidates |
+        Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } |
+        Select-Object -First 1
+    if (-not $match) {
+        throw 'keytool was not found. Install a JDK or Android Studio JBR, or set JAVA_HOME.'
+    }
+    return [System.IO.Path]::GetFullPath([string]$match)
 }
 
 function New-RandomSecret {
@@ -204,30 +242,11 @@ function New-RandomSecret {
     return ([Convert]::ToBase64String($bytes).Replace('+', 'A').Replace('/', 'B').Replace('=', '')).Substring(0, 40)
 }
 
-function Get-KeystoreSha1 {
-    param(
-        [Parameter(Mandatory)][string] $Keytool,
-        [Parameter(Mandatory)][string] $StorePassword,
-        [Parameter(Mandatory)][string] $Alias
-    )
-
-    $output = Invoke-Checked -Command $Keytool -Arguments @(
-        '-J-Duser.language=en', '-list', '-v',
-        '-keystore', $SecureKeystorePath,
-        '-storepass', $StorePassword,
-        '-alias', $Alias
-    ) -Quiet -SecretValues @($StorePassword)
-
-    $match = [regex]::Match($output, '(?im)^\s*SHA1:\s*((?:[A-F0-9]{2}:){19}[A-F0-9]{2})\s*$')
-    if (-not $match.Success) { throw "Could not read SHA-1 from $SecureKeystorePath" }
-    return $match.Groups[1].Value.ToUpperInvariant()
-}
-
 function Ensure-Signing {
     $credentialsExists = Test-Path -LiteralPath $CredentialsPath -PathType Leaf
     $keystoreExists = Test-Path -LiteralPath $SecureKeystorePath -PathType Leaf
     if ($credentialsExists -xor $keystoreExists) {
-        throw "Incomplete signing state for $App. Both credentials.json and the keystore must exist or both must be absent."
+        throw "Incomplete signing state for $App. Both credentials.json and development.jks must exist or both must be absent."
     }
 
     $keytool = Find-Keytool
@@ -270,35 +289,60 @@ function Ensure-Signing {
         throw "$CredentialsPath points to an unexpected keystore."
     }
 
-    return Get-KeystoreSha1 `
-        -Keytool $keytool `
-        -StorePassword ([string]$keystore.keystorePassword) `
-        -Alias ([string]$keystore.keyAlias)
+    $output = Invoke-Checked -Command $keytool -Arguments @(
+        '-J-Duser.language=en', '-list', '-v',
+        '-keystore', $SecureKeystorePath,
+        '-storepass', ([string]$keystore.keystorePassword),
+        '-alias', ([string]$keystore.keyAlias)
+    ) -Quiet -SecretValues @([string]$keystore.keystorePassword)
+    $match = [regex]::Match($output, '(?im)^\s*SHA1:\s*((?:[A-F0-9]{2}:){19}[A-F0-9]{2})\s*$')
+    if (-not $match.Success) { throw "Could not read SHA-1 from $SecureKeystorePath" }
+    return $match.Groups[1].Value.ToUpperInvariant()
 }
 
 function Update-GoogleInput {
     param([Parameter(Mandatory)][string] $Sha1)
-
     if (-not (Test-Path -LiteralPath $GoogleInputLocalPath -PathType Leaf)) {
         Assert-File -Path $GoogleInputExamplePath
         Copy-Item -LiteralPath $GoogleInputExamplePath -Destination $GoogleInputLocalPath
     }
+    $input = Get-Content -LiteralPath $GoogleInputLocalPath -Raw | ConvertFrom-Json -Depth 100
+    $entry = $input.apps.$App
+    if ($null -eq $entry) { throw "$GoogleInputLocalPath does not define $App." }
+    $entry.packageName = [string]$appConfig.androidPackage
+    $entry.sha1Fingerprint = $Sha1
+    $input | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $GoogleInputLocalPath -Encoding UTF8
+}
+
+function Refresh-ProviderInputs {
+    param([Parameter(Mandatory)][string] $Sha1)
+
+    Write-Step 'Refresh Firebase config'
+    Invoke-Checked -Command 'pwsh' -Arguments @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $FirebaseHelperPath,
+        '-App', $App
+    ) | Out-Null
 
     $input = Get-Content -LiteralPath $GoogleInputLocalPath -Raw | ConvertFrom-Json -Depth 100
-    if ($null -eq $input.apps.$App) { throw "$GoogleInputLocalPath does not define $App." }
-    $input.apps.$App.sha1Fingerprint = $Sha1
-    $input | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $GoogleInputLocalPath -Encoding UTF8
+    $entry = $input.apps.$App
+    Write-Step 'Create or update restricted Maps key'
+    Invoke-Checked -Command 'pwsh' -Arguments @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $MapsHelperPath,
+        '-ProjectId', 'bthwani-platform',
+        '-AppKey', $App,
+        '-PackageName', ([string]$appConfig.androidPackage),
+        '-Sha1Fingerprint', $Sha1,
+        '-DisplayName', ([string]$entry.mapsKeyDisplayName),
+        '-WriteEnvironmentFile', $MobileEnvPath
+    ) | Out-Null
 }
 
 function Resolve-FirebaseSource {
     if (Test-Path -LiteralPath $SecretsMapPath -PathType Leaf) {
         $map = Get-Content -LiteralPath $SecretsMapPath -Raw | ConvertFrom-Json -Depth 20
-        $entry = $map.PSObject.Properties[$App]
-        if ($null -ne $entry) {
-            $candidate = [string]$entry.Value
-            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-                return (Resolve-Path -LiteralPath $candidate).Path
-            }
+        $property = $map.PSObject.Properties[$App]
+        if ($null -ne $property -and (Test-Path -LiteralPath ([string]$property.Value) -PathType Leaf)) {
+            return (Resolve-Path -LiteralPath ([string]$property.Value)).Path
         }
     }
     if (Test-Path -LiteralPath $SecureFirebasePath -PathType Leaf) {
@@ -307,45 +351,16 @@ function Resolve-FirebaseSource {
     return $null
 }
 
-function Refresh-ProviderInputs {
-    param([Parameter(Mandatory)][string] $Sha1)
-
-    Write-Step 'Refresh Firebase config for the selected package'
-    Invoke-Checked -Command 'pwsh' -Arguments @(
-        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $FirebaseHelperPath,
-        '-App', $App
-    ) | Out-Null
-
-    Assert-File -Path $GoogleInputLocalPath
-    $input = Get-Content -LiteralPath $GoogleInputLocalPath -Raw | ConvertFrom-Json -Depth 100
-    $appInput = $input.apps.$App
-    if ($null -eq $appInput) { throw "$GoogleInputLocalPath does not define $App." }
-
-    Write-Step 'Create or update the package-and-SHA-1-restricted Maps key'
-    Invoke-Checked -Command 'pwsh' -Arguments @(
-        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $MapsHelperPath,
-        '-ProjectId', 'bthwani-platform',
-        '-AppKey', $App,
-        '-PackageName', ([string]$appConfig.androidPackage),
-        '-Sha1Fingerprint', $Sha1,
-        '-DisplayName', ([string]$appInput.mapsKeyDisplayName),
-        '-WriteEnvironmentFile', $MobileEnvPath
-    ) | Out-Null
-}
-
 function Assert-ArchivePolicy {
     Assert-File -Path $RuntimeEasIgnorePath
     $rules = @(Get-Content -LiteralPath $RuntimeEasIgnorePath)
     foreach ($required in @('credentials.json', '*.jks', '*.keystore', '!google-services.json', '!.env.local')) {
-        if ($rules -notcontains $required) {
-            throw "$RuntimeEasIgnorePath must contain '$required'."
-        }
+        if ($rules -notcontains $required) { throw "$RuntimeEasIgnorePath must contain '$required'." }
     }
 }
 
 function Stage-Inputs {
     Assert-ArchivePolicy
-
     $firebaseSource = Resolve-FirebaseSource
     if ([string]::IsNullOrWhiteSpace($firebaseSource)) {
         throw "Firebase config is missing for $App. Run Initialize first."
@@ -401,13 +416,6 @@ function Stage-Inputs {
 
 function Get-HeadCommit {
     return (Invoke-Checked -Command 'git' -Arguments @('rev-parse', 'HEAD') -Quiet).Trim()
-}
-
-function Assert-CleanTrackedTree {
-    $status = Invoke-Checked -Command 'git' -Arguments @('status', '--porcelain', '--untracked-files=no') -Quiet
-    if (-not [string]::IsNullOrWhiteSpace($status)) {
-        throw 'Tracked files are modified. Commit or discard them before running this workflow.'
-    }
 }
 
 function Get-InputState {
@@ -466,13 +474,13 @@ Write-Host "Mode: $Mode"
 Assert-CleanTrackedTree
 
 if ($Mode -eq 'Initialize') {
-    Write-Step 'Prepare or reuse isolated local signing'
+    Write-Step 'Prepare signing and provider inputs'
     $sha1 = Ensure-Signing
     Update-GoogleInput -Sha1 $sha1
     Refresh-ProviderInputs -Sha1 $sha1
     $null = Stage-Inputs
     Remove-Item -LiteralPath $StampPath -Force -ErrorAction SilentlyContinue
-    Write-Host "`nPASS: $App initialization completed. Run Preflight next." -ForegroundColor Green
+    Write-Host "`nPASS: $App initialization completed." -ForegroundColor Green
     exit 0
 }
 
@@ -481,7 +489,7 @@ Assert-File -Path $SecureKeystorePath
 $mapsKey = Stage-Inputs
 
 if ($Mode -eq 'Preflight') {
-    Write-Step 'Run Preflight only'
+    Write-Step 'Run Preflight'
     Remove-Item -LiteralPath $StampPath -Force -ErrorAction SilentlyContinue
     Invoke-Checked -Command 'node' -Arguments @(
         $EasEnginePath,
@@ -491,15 +499,14 @@ if ($Mode -eq 'Preflight') {
         '--preflight-only',
         '--non-interactive'
     ) -SecretValues @($mapsKey) | Out-Null
+    Assert-CleanTrackedTree -Stage 'Preflight cleanup'
     Write-PreflightStamp -MapsKey $mapsKey
     Write-Host "`nPASS: $App Preflight completed. No build was submitted." -ForegroundColor Green
     exit 0
 }
 
-Write-Step 'Verify the current successful Preflight'
 Assert-PreflightStamp -MapsKey $mapsKey
-
-Write-Step 'Submit one remote EAS build'
+Write-Step 'Submit remote build'
 $arguments = @(
     $EasEnginePath,
     '--app', $App,
