@@ -21,12 +21,13 @@ export type DshAttachActorSupportMessageAssetInput = {
 };
 
 export async function attachActorSupportMessageAsset(
+  ticketId: string,
   messageId: string,
   input: DshAttachActorSupportMessageAssetInput,
   context: SupportMutationContext,
 ): Promise<DshSupportMessageAttachment> {
   const data = await request<{ attachment: DshSupportMessageAttachment }>(
-    `/dsh/support/messages/${encodeURIComponent(messageId)}/attachments`,
+    `/dsh/support/tickets/${encodeURIComponent(ticketId)}/messages/${encodeURIComponent(messageId)}/attachments`,
     {
       method: "POST",
       body: input,
