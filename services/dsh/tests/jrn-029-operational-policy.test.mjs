@@ -171,20 +171,16 @@ test("JRN-029 has a real PostgreSQL lifecycle proof", async () => {
   assert.match(postgresTest, /DATABASE_URL/);
 });
 
-test("JRN-029 is owned by sovereign modular OpenAPI and generated client", async () => {
+test("JRN-029 is owned by canonical OpenAPI, composed bundle and generated client", async () => {
   const rootContract = await text("services/dsh/contracts/dsh.openapi.yaml");
-  const pathModule = await text(
-    "services/dsh/contracts/paths/platform-policies.paths.yaml",
-  );
-  const schemaModule = await text(
-    "services/dsh/contracts/components/schemas/platform-policies.schemas.yaml",
-  );
   const generatedBundle = await text(
     "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
   );
   const generatedClient = await text(
     "services/dsh/clients/generated/dsh-api.ts",
   );
+
+  assert.match(rootContract, /x-bthwani-bundle: \.\/generated\/dsh\.bundle\.openapi\.yaml/);
 
   for (const path of [
     "/dsh/operator/platform/operational-profiles/{zoneId}",
@@ -194,9 +190,10 @@ test("JRN-029 is owned by sovereign modular OpenAPI and generated client", async
     "/dsh/operator/platform/operational-policy/audit",
     "/dsh/operator/platform/operational-policy/audit/{eventId}/rollback",
   ]) {
-    assert.match(rootContract, new RegExp(path.replace(/[{}]/g, "\\$&")));
-    assert.match(generatedBundle, new RegExp(path.replace(/[{}]/g, "\\$&")));
-    assert.match(generatedClient, new RegExp(path.replace(/[{}]/g, "\\$&")));
+    const pattern = new RegExp(path.replace(/[{}]/g, "\\$&"));
+    assert.match(rootContract, pattern);
+    assert.match(generatedBundle, pattern);
+    assert.match(generatedClient, pattern);
   }
 
   for (const operationId of [
@@ -208,7 +205,9 @@ test("JRN-029 is owned by sovereign modular OpenAPI and generated client", async
     "listDshOperationalPolicyAudit",
     "rollbackDshOperationalPolicy",
   ]) {
-    assert.match(pathModule, new RegExp(`operationId: ${operationId}`));
+    assert.match(rootContract, new RegExp(`operationId: ${operationId}`));
+    assert.match(generatedBundle, new RegExp(`operationId: ${operationId}`));
+    assert.match(generatedClient, new RegExp(operationId));
   }
 
   for (const schema of [
@@ -219,12 +218,11 @@ test("JRN-029 is owned by sovereign modular OpenAPI and generated client", async
     "DshOperationalPolicyRollbackResult",
   ]) {
     assert.match(rootContract, new RegExp(`${schema}:`));
-    assert.match(schemaModule, new RegExp(`${schema}:`));
     assert.match(generatedBundle, new RegExp(`${schema}:`));
   }
-  assert.match(schemaModule, /maxAssignmentMins/);
-  assert.match(schemaModule, /client_pickup/);
-  assert.match(schemaModule, /expectedCurrentVersion/);
+  assert.match(rootContract, /maxAssignmentMins/);
+  assert.match(rootContract, /client_pickup/);
+  assert.match(rootContract, /expectedCurrentVersion/);
 
   await assert.rejects(
     access(new URL("services/dsh/contracts/dsh.jrn-029.openapi.yaml", root)),
