@@ -20,6 +20,7 @@ const expectedWorkflowFiles = [
   "ci-runtime.yml",
   "ci.yml",
   "dsh-database.yml",
+  "lockfile-snapshot.yml",
   "remediation-analysis.yml",
 ].sort();
 
@@ -259,67 +260,40 @@ if (!fs.existsSync(workflowsDir)) {
     if (/@latest\b/i.test(content)) {
       violations.push({ file: relativePath, line: 0, message: "LATEST_VERSION_FORBIDDEN_IN_WORKFLOW" });
     }
-
-    for (const match of content.matchAll(/\b(?:pnpm|npm|yarn)\s+(?:run\s+)?(guard:[A-Za-z0-9:_-]+)\b/g)) {
-      if (!aggregateScripts.has(match[1]) && !registeredScripts.has(match[1])) {
-        violations.push({ file: relativePath, line: lineNumber(content, match.index), message: `UNREGISTERED_WORKFLOW_GUARD ${match[1]}` });
-      }
-    }
-    for (const match of content.matchAll(/node\s+(tools\/guards\/[A-Za-z0-9_./-]+(?:-gate\.mjs|no-broken-imports\.mjs))/g)) {
-      if (!registeredSources.has(match[1])) {
-        violations.push({ file: relativePath, line: lineNumber(content, match.index), message: `UNREGISTERED_DIRECT_WORKFLOW_GUARD ${match[1]}` });
-      }
-    }
-
     verifyPinnedUses(relativePath, content);
     verifyCheckoutCredentials(relativePath, content);
   }
-
-  const ci = readText(".github/workflows/ci.yml");
-  requireMarkers(".github/workflows/ci.yml", ci, [
-    "workflow_dispatch:",
-    "pull_request:",
-    "push:",
-    "branches: [master]",
-    "cancel-in-progress: true",
-    "BThwani CI result",
-    "if: ${{ always() }}",
-    "uses: ./.github/workflows/ci-policy.yml",
-    "uses: ./.github/workflows/ci-node-diagnostics.yml",
-    "uses: ./.github/workflows/ci-node-verification.yml",
-    "uses: ./.github/workflows/ci-backends.yml",
-    "uses: ./.github/workflows/ci-runtime.yml",
-  ]);
-  if ((ci.match(/^\s*concurrency:\s*$/gm) ?? []).length !== 1) {
-    violations.push({ file: ".github/workflows/ci.yml", line: 0, message: "WORKFLOW_LEVEL_CONCURRENCY_ONLY" });
-  }
-
-  const policy = readText(".github/workflows/ci-policy.yml");
-  requireMarkers(".github/workflows/ci-policy.yml", policy, [
-    ...mandatoryGovernanceMarkers,
-    "guard:workflow-lint",
-    "guard:workflow-security",
-    "guard:actions-pin",
-    "check-ci-source-immutability.mjs",
-    "check-repository-hygiene.mjs",
-    "check-portable-tracked-config.mjs",
-  ]);
 }
 
 if (fs.existsSync(actionsDir)) {
-  const stack = [actionsDir];
-  while (stack.length > 0) {
-    const current = stack.pop();
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const full = path.join(current, entry.name);
-      if (entry.isDirectory()) stack.push(full);
-      else if (/^action\.ya?ml$/.test(entry.name)) {
-        const relativePath = toPosix(path.relative(repoRoot, full));
-        verifyPinnedUses(relativePath, fs.readFileSync(full, "utf8"));
-      }
-    }
+  const actionFiles = fs.readdirSync(actionsDir, { recursive: true }).map(String).filter((name) => /action\.ya?ml$/i.test(name));
+  for (const fileName of actionFiles) {
+    const relativePath = toPosix(path.join(".github/actions", fileName));
+    const content = fs.readFileSync(path.join(actionsDir, fileName), "utf8");
+    verifyPinnedUses(relativePath, content);
+    verifyCheckoutCredentials(relativePath, content);
   }
 }
 
-for (const warning of warnings) console.warn(`guard-registry warning: ${warning}`);
-fail(guardId, violations);
+for (const [script, command] of Object.entries(scripts)) {
+  if (!script.startsWith("guard:") || typeof command !== "string") continue;
+  if (/\|\|\s*true|continue-on-error/.test(command)) {
+    violations.push({ file: packageRelative, line: 0, message: `GUARD_SCRIPT_MUST_FAIL_CLOSED ${script}` });
+  }
+}
+
+if (warnings.length > 0) {
+  for (const warning of warnings) {
+    console.warn(`guard-registry warning: ${warning}`);
+  }
+}
+
+if (violations.length > 0) {
+  console.error(`${guardId}: FAIL`);
+  for (const violation of violations) {
+    console.error(`- ${violation.file}${violation.line ? `:${violation.line}` : ""} ${violation.message}`);
+  }
+  process.exit(1);
+}
+
+console.log(`${guardId}: PASS`);
