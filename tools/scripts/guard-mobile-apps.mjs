@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { validateGoogleServicesConfigFile } from "../mobile/google-services-config.mjs";
+import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
 
 const require = createRequire(import.meta.url);
 const { appEnvSuffix, resolveGoogleServicesFile } = require("../mobile/sentry-env.js");
@@ -47,23 +48,15 @@ function requireFile(file, label = file) {
   if (!fs.existsSync(path.resolve(root, file))) fail(`${label} is required`);
 }
 
-function resolveInvocation(command, args) {
-  if (command !== "pnpm") return { executable: command, args };
-  const pnpmCli = process.env.npm_execpath;
-  if (pnpmCli && fs.existsSync(pnpmCli)) return { executable: process.execPath, args: [pnpmCli, ...args] };
-  const isWin = process.platform === "win32";
-  return { executable: isWin ? "pnpm.cmd" : "pnpm", args };
-}
-
 function run(command, args, cwd) {
-  const invocation = resolveInvocation(command, args);
-  const isCmd = invocation.executable.endsWith(".cmd") || invocation.executable.endsWith(".bat");
+  const environment = { ...process.env, COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" };
+  const invocation = resolvePackageManagerInvocation(command, args, environment);
   const result = spawnSync(invocation.executable, invocation.args, {
     cwd,
-    shell: isCmd,
+    shell: false,
     encoding: "utf8",
     windowsHide: true,
-    env: { ...process.env, COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" },
+    env: environment,
   });
   if (result.error) fail(`${command} could not start: ${result.error.message}`);
   if (result.status !== 0) {
