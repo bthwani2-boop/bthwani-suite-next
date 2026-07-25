@@ -19,6 +19,7 @@ const expectedWorkflowFiles = [
   "ci-runtime.yml",
   "ci.yml",
   "dsh-database.yml",
+  "jrn-020-025-sambassam-verify.yml",
   "lockfile-snapshot.yml",
   "remediation-analysis.yml",
 ].sort();
@@ -158,6 +159,7 @@ if (!fs.existsSync(workflowsDir)) {
   requireMarkers(`${workflowsRoot}/ci.yml`, readText(`${workflowsRoot}/ci.yml`), ["workflow_dispatch:", "pull_request:", "push:", "branches: [master]", "BThwani CI result", "uses: ./.github/workflows/ci-policy.yml"]);
   requireMarkers(`${workflowsRoot}/ci-policy.yml`, readText(`${workflowsRoot}/ci-policy.yml`), ["guard:governance-schema", "guard:agent-governance", "guard:authority-separation", "guard:saas-governance", "guard:guard-registry", "guard:sdlc", "guard:workflow-lint", "guard:workflow-security", "guard:actions-pin", "check-ci-source-immutability.mjs", "check-repository-hygiene.mjs", "check-portable-tracked-config.mjs"]);
   requireMarkers(`${workflowsRoot}/lockfile-snapshot.yml`, readText(`${workflowsRoot}/lockfile-snapshot.yml`), ["name: BThwani Lockfile Snapshot", "contents: read", "persist-credentials: false", "Upload lockfile candidate"]);
+  requireMarkers(`${workflowsRoot}/jrn-020-025-sambassam-verify.yml`, readText(`${workflowsRoot}/jrn-020-025-sambassam-verify.yml`), ["guard:fullstack-boundary", "guard:wlt-financial-boundary", "TestJourneys020To025ExposeGovernedRoutes", "persist-credentials: false"]);
 }
 
 for (const warning of warnings) console.warn(`guard-registry warning: ${warning}`);

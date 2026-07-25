@@ -17,6 +17,7 @@ const expectedWorkflowFiles = [
   "ci-runtime.yml",
   "ci.yml",
   "dsh-database.yml",
+  "jrn-020-025-sambassam-verify.yml",
   "lockfile-snapshot.yml",
   "remediation-analysis.yml",
 ].sort();
@@ -235,6 +236,13 @@ requireMarkers(`${workflowsRoot}/lockfile-snapshot.yml`, [
   "pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts",
   "pnpm install --lockfile-only --frozen-lockfile --ignore-scripts --offline",
   "Upload lockfile candidate",
+]);
+
+requireMarkers(`${workflowsRoot}/jrn-020-025-sambassam-verify.yml`, [
+  "guard:fullstack-boundary",
+  "guard:wlt-financial-boundary",
+  "TestJourneys020To025ExposeGovernedRoutes",
+  "persist-credentials: false",
 ]);
 
 requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, [
