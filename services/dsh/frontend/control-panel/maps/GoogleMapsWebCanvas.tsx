@@ -58,7 +58,7 @@ function loadGoogleMaps(apiKey: string): Promise<GoogleMapsRuntime> {
 
   const promise = new Promise<GoogleMapsRuntime>((resolve, reject) => {
     const callbackName = `__bthwaniGoogleMapsReady_${Date.now()}`;
-    const runtimeWindow = window as Window & Record<string, unknown>;
+    const runtimeWindow = window as unknown as Window & Record<string, unknown>;
     runtimeWindow[callbackName] = () => {
       delete runtimeWindow[callbackName];
       const runtime = window.google?.maps;
