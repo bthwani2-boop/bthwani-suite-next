@@ -117,7 +117,7 @@ export function OnboardingLocationSection({
 
         <BthwaniNativeMap
           selectedCoordinate={selectedCoordinate}
-          onCoordinatePress={readOnly ? undefined : applyRealCoordinates}
+          {...(!readOnly ? { onCoordinatePress: applyRealCoordinates } : {})}
           showsUserLocation={!readOnly}
           height={280}
           accessibilityLabel="خريطة تحديد موقع فرع الشريك"
