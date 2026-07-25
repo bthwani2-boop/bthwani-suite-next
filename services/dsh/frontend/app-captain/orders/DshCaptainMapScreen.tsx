@@ -1,6 +1,6 @@
-import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
-import Constants from 'expo-constants';
+import React from "react";
+import { Platform, StyleSheet, View } from "react-native";
+import Constants from "expo-constants";
 import {
   Badge,
   Box,
@@ -10,21 +10,22 @@ import {
   Text,
   colorRoles,
   spacing,
-} from '@bthwani/ui-kit';
-import { DshOperationScreen, type DshOperationScreenState } from '../DshOperationScreen';
-import { getDshCaptainFlowPolicy } from '../dsh-captain-binding.contracts';
-import { getDshFlowPolicySummary } from '../../shared/operations/dsh-operational-registry';
+} from "@bthwani/ui-kit";
+import { DshOperationScreen, type DshOperationScreenState } from "../DshOperationScreen";
+import { getDshCaptainFlowPolicy } from "../dsh-captain-binding.contracts";
+import { getDshFlowPolicySummary } from "../../shared/operations/dsh-operational-registry";
 import {
   readCaptainForegroundLocation,
   type DshCaptainLocationPush,
-} from '../../shared/delivery/use-captain-order-runtime';
+} from "../../shared/delivery/use-captain-order-runtime";
+import { BthwaniNativeMap } from "../../shared/maps";
 
 type LastLocation = {
   readonly latitude: number;
   readonly longitude: number;
   readonly accuracyMeters: number;
   readonly recordedAt: string;
-  readonly syncState: 'sent' | 'queued';
+  readonly syncState: "sent" | "queued";
 };
 
 export interface DshCaptainMapScreenProps {
@@ -37,21 +38,26 @@ export interface DshCaptainMapScreenProps {
 }
 
 export function isNativeMapConfigured(): boolean {
-  const maps = Constants.expoConfig?.extra?.maps as { androidNativeConfigured?: boolean; iosNativeConfigured?: boolean } | undefined;
+  const maps = Constants.expoConfig?.extra?.maps as {
+    androidNativeConfigured?: boolean;
+    iosNativeConfigured?: boolean;
+  } | undefined;
   if (!maps) return false;
-  return Platform.OS === 'android' ? Boolean(maps.androidNativeConfigured) : Boolean(maps.iosNativeConfigured);
+  return Platform.OS === "android"
+    ? Boolean(maps.androidNativeConfigured)
+    : Boolean(maps.iosNativeConfigured);
 }
 
-function locationSyncKind(result: unknown): 'sent' | 'queued' {
+function locationSyncKind(result: unknown): "sent" | "queued" {
   if (
-    typeof result === 'object'
+    typeof result === "object"
     && result !== null
-    && 'kind' in result
-    && (result as { readonly kind?: unknown }).kind === 'queued'
+    && "kind" in result
+    && (result as { readonly kind?: unknown }).kind === "queued"
   ) {
-    return 'queued';
+    return "queued";
   }
-  return 'sent';
+  return "sent";
 }
 
 export function DshCaptainMapScreen({
@@ -62,22 +68,22 @@ export function DshCaptainMapScreen({
   onBack,
   onPushLocation,
 }: DshCaptainMapScreenProps) {
-  const [screenState, setScreenState] = React.useState<DshOperationScreenState>('ready');
+  const [screenState, setScreenState] = React.useState<DshOperationScreenState>("ready");
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [lastLocation, setLastLocation] = React.useState<LastLocation | null>(null);
 
   const mapsConfigured = isNativeMapConfigured();
-  const mapFlowPolicy = getDshCaptainFlowPolicy('captain-map-navigation');
-  const mapFlowSummary = getDshFlowPolicySummary('captain-map-navigation');
+  const mapFlowPolicy = getDshCaptainFlowPolicy("captain-map-navigation");
+  const mapFlowSummary = getDshFlowPolicySummary("captain-map-navigation");
 
   const pushCurrentLocation = async () => {
     if (!assignmentId || !orderId || !captainId) {
-      setErrorMessage('لا توجد مهمة حية مكتملة لربط تحديث الموقع.');
+      setErrorMessage("لا توجد مهمة حية مكتملة لربط تحديث الموقع.");
       return;
     }
 
-    setScreenState('loading');
+    setScreenState("loading");
     setErrorMessage(null);
     setSuccessMessage(null);
     try {
@@ -93,14 +99,14 @@ export function DshCaptainMapScreen({
       const syncState = locationSyncKind(result);
       setLastLocation({ ...point, recordedAt, syncState });
       setSuccessMessage(
-        syncState === 'sent'
-          ? 'تم إرسال الموقع المصدق وربطه بالإسناد النشط.'
-          : 'الشبكة غير مستقرة. حُفظت آخر عينة للنقل وستعاد مزامنتها عند عودة الاتصال.',
+        syncState === "sent"
+          ? "تم إرسال الموقع المصدق وربطه بالإسناد النشط."
+          : "الشبكة غير مستقرة. حُفظت آخر عينة للنقل وستعاد مزامنتها عند عودة الاتصال.",
       );
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'تعذر تحديث الموقع الفعلي.');
+      setErrorMessage(error instanceof Error ? error.message : "تعذر تحديث الموقع الفعلي.");
     } finally {
-      setScreenState('ready');
+      setScreenState("ready");
     }
   };
 
@@ -109,18 +115,33 @@ export function DshCaptainMapScreen({
       state={screenState}
       title="الموقع الحي للمهمة"
       subtitle={`الطلب ${orderId} · الإسناد ${assignmentId}`}
-      content={
+      content={(
         <Box gap={3}>
           {!mapsConfigured ? (
             <Surface tone="raised" padding={3} gap={1}>
               <Text role="bodyStrong" tone="warning">
-                الخرائط غير مفعلة في بيئة التطوير الحالية.
+                الخرائط غير مفعلة في هذا البناء.
               </Text>
               <Text role="bodySm" tone="muted">
-                يمكن متابعة تفاصيل المهمة والموقع النصي دون الخريطة.
+                يجب تثبيت Development Client جديد مبني بمفتاح Maps الخاص بالكابتن.
               </Text>
             </Surface>
-          ) : null}
+          ) : (
+            <BthwaniNativeMap
+              selectedCoordinate={lastLocation}
+              markers={lastLocation ? [{
+                id: assignmentId,
+                title: `الكابتن · ${currentStageLabel}`,
+                description: `آخر تحديث ${new Date(lastLocation.recordedAt).toLocaleString("ar-YE")}`,
+                latitude: lastLocation.latitude,
+                longitude: lastLocation.longitude,
+              }] : []}
+              showsUserLocation
+              height={300}
+              accessibilityLabel="خريطة موقع الكابتن الحي"
+              emptyLabel="حدّث موقعك لربط أول عينة GPS بالمهمة."
+            />
+          )}
 
           {errorMessage ? (
             <Surface tone="danger" padding={3} gap={1}>
@@ -142,7 +163,7 @@ export function DshCaptainMapScreen({
               <Text role="bodyStrong" style={styles.inverted}>{currentStageLabel}</Text>
             </View>
             <Text role="bodySm" style={styles.inverted}>
-              لا تُعرض أو تُرسل إحداثيات افتراضية. لا يقبل DSH العينة إلا بدقة لا تتجاوز 100 متر ومن مقدمة التطبيق فقط.
+              لا تُعرض أو تُرسل إحداثيات افتراضية. لا يقبل DSH العينة إلا بدقة لا تتجاوز 100 متر ومن المهمة النشطة.
             </Text>
           </Surface>
 
@@ -153,10 +174,10 @@ export function DshCaptainMapScreen({
             />
             <KeyValueList
               items={[
-                { label: 'معرف الإسناد', value: assignmentId },
-                { label: 'معرف الطلب', value: orderId },
-                { label: 'معرف الكابتن', value: captainId },
-                { label: 'الحالة التشغيلية', value: currentStageLabel },
+                { label: "معرف الإسناد", value: assignmentId },
+                { label: "معرف الطلب", value: orderId },
+                { label: "معرف الكابتن", value: captainId },
+                { label: "الحالة التشغيلية", value: currentStageLabel },
               ]}
             />
           </Surface>
@@ -169,13 +190,13 @@ export function DshCaptainMapScreen({
             {lastLocation ? (
               <KeyValueList
                 items={[
-                  { label: 'خط العرض', value: lastLocation.latitude.toFixed(6) },
-                  { label: 'خط الطول', value: lastLocation.longitude.toFixed(6) },
-                  { label: 'الدقة', value: `${Math.round(lastLocation.accuracyMeters)} متر` },
-                  { label: 'المزامنة', value: lastLocation.syncState === 'sent' ? 'أرسلت إلى DSH' : 'بانتظار الشبكة' },
+                  { label: "خط العرض", value: lastLocation.latitude.toFixed(6) },
+                  { label: "خط الطول", value: lastLocation.longitude.toFixed(6) },
+                  { label: "الدقة", value: `${Math.round(lastLocation.accuracyMeters)} متر` },
+                  { label: "المزامنة", value: lastLocation.syncState === "sent" ? "أرسلت إلى DSH" : "بانتظار الشبكة" },
                   {
-                    label: 'وقت أخذ العينة',
-                    value: new Date(lastLocation.recordedAt).toLocaleString('ar-YE'),
+                    label: "وقت أخذ العينة",
+                    value: new Date(lastLocation.recordedAt).toLocaleString("ar-YE"),
                   },
                 ]}
               />
@@ -189,14 +210,14 @@ export function DshCaptainMapScreen({
           <Surface tone="inset" gap={2} padding={3}>
             <Text role="bodyStrong">سياسة الملاحة</Text>
             <Text role="bodySm" tone="muted">
-              {mapFlowSummary?.nextPolicyActionPreview ?? 'تعرض الشاشة حقيقة المهمة وتحديث الموقع فقط.'}
+              {mapFlowSummary?.nextPolicyActionPreview ?? "تعرض الشاشة حقيقة المهمة وتحديث الموقع فقط."}
             </Text>
             <Text role="caption" tone="muted">
-              {`النمط: ${mapFlowPolicy ?? 'live-location-only'}`}
+              {`النمط: ${mapFlowPolicy ?? "live-location-only"}`}
             </Text>
           </Surface>
         </Box>
-      }
+      )}
       primaryActionLabel="تحديث موقعي المصدق"
       tertiaryActionLabel="العودة للتفاصيل"
       onPrimaryAction={() => void pushCurrentLocation()}
@@ -207,13 +228,13 @@ export function DshCaptainMapScreen({
 
 const styles = StyleSheet.create({
   headerRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: spacing[2],
   },
   inverted: {
     color: colorRoles.surfaceBase,
-    textAlign: 'right',
+    textAlign: "right",
   },
 });
