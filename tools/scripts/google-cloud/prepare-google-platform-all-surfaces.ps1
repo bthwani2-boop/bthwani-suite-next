@@ -41,6 +41,7 @@ $CreateBrowserMapsKeyScript = Join-Path $ScriptDir 'create-browser-maps-api-key.
 $PreflightScript = Join-Path $RepoRoot 'tools\scripts\guard-google-platform-prebuild.mjs'
 $DefaultInputPath = Join-Path $ScriptDir 'google-platform-input.local.json'
 $ExampleInputPath = Join-Path $ScriptDir 'google-platform-input.example.json'
+$MobileEnvPath = Join-Path $RepoRoot 'infra\local\mobile.env'
 $ControlPanelEnvPath = Join-Path $RepoRoot 'infra\local\control-panel.google.env'
 
 if ([string]::IsNullOrWhiteSpace($InputPath)) {
@@ -205,7 +206,11 @@ function Invoke-CreateMapsKeysPhase {
             '-Sha1Fingerprint', [string]$entry.sha1Fingerprint,
             '-DisplayName', [string]$entry.mapsKeyDisplayName
         )
-        if (-not $Apply) { $arguments += '-DryRun' }
+        if (-not $Apply) {
+            $arguments += '-DryRun'
+        } else {
+            $arguments += @('-WriteEnvironmentFile', $MobileEnvPath)
+        }
         if ($Apply -and $UploadMapsToEas) { $arguments += '-UploadToEas' }
         Invoke-ChildPowerShell -File $CreateAndroidMapsKeyScript -Arguments $arguments
     }
@@ -253,6 +258,8 @@ Write-Host "Project:     $($platformManifest.projectId)"
 Write-Host "Mobile apps: $(@($platformManifest.firebase.androidApps) -join ', ')"
 Write-Host 'Web surface: control-panel'
 Write-Host "Input:       $InputPath"
+Write-Host "Mobile env:  $MobileEnvPath"
+Write-Host "Web env:     $ControlPanelEnvPath"
 
 Write-Step 'Verify central Google Cloud project and billing'
 Assert-CloudState -ProjectId ([string]$platformManifest.projectId) -BillingAccountId ([string]$platformManifest.billingAccountId)
@@ -263,7 +270,8 @@ if ($Phase -eq 'Plan') {
     Write-Host '2. Register and download configs for all four Android apps.'
     Write-Host '3. Upload each validated Firebase file to its matching EAS project.'
     Write-Host '4. Create four Android Maps keys plus one browser Maps key.'
-    Write-Host '5. Run all-surface preflight before any remote build.'
+    Write-Host '5. Save only ignored local runtime values and upload mobile keys to EAS.'
+    Write-Host '6. Run all-surface preflight before any remote build.'
     return
 }
 
