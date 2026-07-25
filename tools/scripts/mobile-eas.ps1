@@ -307,34 +307,30 @@ function Resolve-FirebaseSource {
     return $null
 }
 
-function Ensure-ProviderInputs {
+function Refresh-ProviderInputs {
     param([Parameter(Mandatory)][string] $Sha1)
 
-    if ($null -eq (Resolve-FirebaseSource)) {
-        Invoke-Checked -Command 'pwsh' -Arguments @(
-            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $FirebaseHelperPath,
-            '-App', $App
-        ) | Out-Null
-    }
+    Write-Step 'Refresh Firebase config for the selected package'
+    Invoke-Checked -Command 'pwsh' -Arguments @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $FirebaseHelperPath,
+        '-App', $App
+    ) | Out-Null
 
-    Import-EnvFile -Path $MobileEnvPath
-    $mapsKey = Resolve-ScopedValue -BaseName 'GOOGLE_MAPS_ANDROID_API_KEY'
-    if (-not (Test-ValidMapsKey -Value $mapsKey)) {
-        Assert-File -Path $GoogleInputLocalPath
-        $input = Get-Content -LiteralPath $GoogleInputLocalPath -Raw | ConvertFrom-Json -Depth 100
-        $appInput = $input.apps.$App
-        if ($null -eq $appInput) { throw "$GoogleInputLocalPath does not define $App." }
+    Assert-File -Path $GoogleInputLocalPath
+    $input = Get-Content -LiteralPath $GoogleInputLocalPath -Raw | ConvertFrom-Json -Depth 100
+    $appInput = $input.apps.$App
+    if ($null -eq $appInput) { throw "$GoogleInputLocalPath does not define $App." }
 
-        Invoke-Checked -Command 'pwsh' -Arguments @(
-            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $MapsHelperPath,
-            '-ProjectId', 'bthwani-platform',
-            '-AppKey', $App,
-            '-PackageName', ([string]$appConfig.androidPackage),
-            '-Sha1Fingerprint', $Sha1,
-            '-DisplayName', ([string]$appInput.mapsKeyDisplayName),
-            '-WriteEnvironmentFile', $MobileEnvPath
-        ) | Out-Null
-    }
+    Write-Step 'Create or update the package-and-SHA-1-restricted Maps key'
+    Invoke-Checked -Command 'pwsh' -Arguments @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $MapsHelperPath,
+        '-ProjectId', 'bthwani-platform',
+        '-AppKey', $App,
+        '-PackageName', ([string]$appConfig.androidPackage),
+        '-Sha1Fingerprint', $Sha1,
+        '-DisplayName', ([string]$appInput.mapsKeyDisplayName),
+        '-WriteEnvironmentFile', $MobileEnvPath
+    ) | Out-Null
 }
 
 function Assert-ArchivePolicy {
@@ -470,10 +466,10 @@ Write-Host "Mode: $Mode"
 Assert-CleanTrackedTree
 
 if ($Mode -eq 'Initialize') {
-    Write-Step 'Prepare missing local and provider inputs'
+    Write-Step 'Prepare or reuse isolated local signing'
     $sha1 = Ensure-Signing
     Update-GoogleInput -Sha1 $sha1
-    Ensure-ProviderInputs -Sha1 $sha1
+    Refresh-ProviderInputs -Sha1 $sha1
     $null = Stage-Inputs
     Remove-Item -LiteralPath $StampPath -Force -ErrorAction SilentlyContinue
     Write-Host "`nPASS: $App initialization completed. Run Preflight next." -ForegroundColor Green
