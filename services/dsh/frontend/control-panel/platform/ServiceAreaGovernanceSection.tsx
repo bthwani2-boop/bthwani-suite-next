@@ -20,6 +20,7 @@ import {
   useServiceAreaController,
   type DshServiceArea,
 } from "../../shared/client-map";
+import { GoogleMapsWebCanvas } from "../maps/GoogleMapsWebCanvas";
 
 type FormState = {
   serviceAreaCode: string;
@@ -34,7 +35,7 @@ type FormState = {
 const EMPTY_FORM: FormState = {
   serviceAreaCode: "",
   displayName: "",
-  polygonText: "",
+  polygonText: "[]",
   priority: "100",
   active: true,
   expectedVersion: 0,
@@ -45,33 +46,37 @@ function polygonToText(polygon: DshServiceArea["polygon"]): string {
   return JSON.stringify(polygon, null, 2);
 }
 
-function parsePolygon(text: string): readonly (readonly [number, number])[] {
+function readPolygonArray(text: string): unknown[] {
   let value: unknown;
   try {
-    value = JSON.parse(text);
+    value = JSON.parse(text || "[]");
   } catch {
     throw new Error("المضلع يجب أن يكون JSON صالحًا.");
   }
-  if (!Array.isArray(value) || value.length < 3 || value.length > 10000) {
+  if (!Array.isArray(value)) throw new Error("المضلع يجب أن يكون مصفوفة نقاط.");
+  return value;
+}
+
+function parsePolygon(text: string): readonly (readonly [number, number])[] {
+  const value = readPolygonArray(text);
+  if (value.length < 3 || value.length > 10000) {
     throw new Error("المضلع يحتاج ثلاث نقاط على الأقل وبحد أقصى 10000 نقطة.");
   }
   const polygon: [number, number][] = [];
   for (const point of value) {
     if (
-      !Array.isArray(point) ||
-      point.length !== 2 ||
-      typeof point[0] !== "number" ||
-      typeof point[1] !== "number" ||
-      !Number.isFinite(point[0]) ||
-      !Number.isFinite(point[1]) ||
-      point[0] < -180 ||
-      point[0] > 180 ||
-      point[1] < -90 ||
-      point[1] > 90
+      !Array.isArray(point)
+      || point.length !== 2
+      || typeof point[0] !== "number"
+      || typeof point[1] !== "number"
+      || !Number.isFinite(point[0])
+      || !Number.isFinite(point[1])
+      || point[0] < -180
+      || point[0] > 180
+      || point[1] < -90
+      || point[1] > 90
     ) {
-      throw new Error(
-        "كل نقطة يجب أن تكون [longitude, latitude] ضمن الحدود الجغرافية.",
-      );
+      throw new Error("كل نقطة يجب أن تكون [longitude, latitude] ضمن الحدود الجغرافية.");
     }
     polygon.push([point[0], point[1]]);
   }
@@ -86,9 +91,7 @@ function formatBounds(area: DshServiceArea): string {
 export function ServiceAreaGovernanceSection() {
   const controller = useServiceAreaController(true);
   const [form, setForm] = React.useState<FormState>(EMPTY_FORM);
-  const [validationError, setValidationError] = React.useState<string | null>(
-    null,
-  );
+  const [validationError, setValidationError] = React.useState<string | null>(null);
 
   const edit = React.useCallback((area: DshServiceArea) => {
     setForm({
@@ -109,13 +112,26 @@ export function ServiceAreaGovernanceSection() {
     controller.clearMutationError();
   }, [controller]);
 
+  const appendMapPoint = React.useCallback((coordinate: { readonly latitude: number; readonly longitude: number }) => {
+    try {
+      const current = readPolygonArray(form.polygonText);
+      if (current.length >= 10000) throw new Error("بلغ المضلع الحد الأعلى للنقاط.");
+      const next = [...current, [
+        Number(coordinate.longitude.toFixed(7)),
+        Number(coordinate.latitude.toFixed(7)),
+      ]];
+      setForm((value) => ({ ...value, polygonText: JSON.stringify(next, null, 2) }));
+      setValidationError(null);
+    } catch (error) {
+      setValidationError(error instanceof Error ? error.message : "تعذر إضافة النقطة.");
+    }
+  }, [form.polygonText]);
+
   const save = React.useCallback(async () => {
     try {
       const serviceAreaCode = form.serviceAreaCode.trim().toLowerCase();
       if (!/^[a-z0-9][a-z0-9_-]{1,79}$/.test(serviceAreaCode)) {
-        throw new Error(
-          "رمز المنطقة يجب أن يتكون من أحرف إنجليزية صغيرة أو أرقام أو - أو _.",
-        );
+        throw new Error("رمز المنطقة يجب أن يتكون من أحرف إنجليزية صغيرة أو أرقام أو - أو _.");
       }
       const displayName = form.displayName.trim();
       if (displayName.length < 2 || displayName.length > 160) {
@@ -141,18 +157,20 @@ export function ServiceAreaGovernanceSection() {
       });
       if (saved) reset();
     } catch (error) {
-      setValidationError(
-        error instanceof Error ? error.message : "تعذر التحقق من المنطقة.",
-      );
+      setValidationError(error instanceof Error ? error.message : "تعذر التحقق من المنطقة.");
     }
   }, [controller, form, reset]);
 
-  const tableRows =
-    controller.state.kind === "success"
-      ? (controller.state.data as unknown as (
-          DshServiceArea & Record<string, unknown>
-        )[])
-      : [];
+  const tableRows = controller.state.kind === "success"
+    ? (controller.state.data as unknown as (DshServiceArea & Record<string, unknown>)[])
+    : [];
+
+  const mapPolygons = tableRows.map((area) => ({
+    id: area.serviceAreaCode,
+    label: area.displayName,
+    points: area.polygon,
+    active: area.active,
+  }));
 
   return (
     <View style={styles.section}>
@@ -160,16 +178,23 @@ export function ServiceAreaGovernanceSection() {
         <View style={styles.headerText}>
           <Text role="titleSm">المضلعات الجغرافية لمناطق الخدمة</Text>
           <Text role="caption" tone="muted">
-            مزود الخرائط يحدد المكان فقط؛ DSH هو المصدر الوحيد لاعتماد رمز
-            منطقة الخدمة عبر هذه المضلعات.
+            Google Maps تعرض المكان؛ DSH هو المصدر الوحيد لاعتماد رمز منطقة الخدمة والتحقق من بنية المضلع.
           </Text>
         </View>
         <CpButton variant="secondary" onClick={reset}>منطقة جديدة</CpButton>
       </View>
 
-      {controller.state.kind === "loading" ? (
-        <CpStatePanel role="status" title="جارٍ تحميل مناطق الخدمة…" />
-      ) : null}
+      <GoogleMapsWebCanvas
+        polygons={mapPolygons}
+        height={460}
+        onMapClick={appendMapPoint}
+        ariaLabel="خريطة إدارة مناطق الخدمة في بثواني"
+      />
+      <Text role="caption" tone="muted">
+        النقر على الخريطة يضيف نقطة إلى مسودة المنطقة الحالية بصيغة [longitude, latitude].
+      </Text>
+
+      {controller.state.kind === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل مناطق الخدمة…" /> : null}
       {controller.state.kind === "error" ? (
         <CpStatePanel role="alert" title="تعذر تحميل مناطق الخدمة" description={controller.state.message}>
           <CpRetryButton onClick={controller.reload}>إعادة المحاولة</CpRetryButton>
@@ -177,11 +202,7 @@ export function ServiceAreaGovernanceSection() {
       ) : null}
       {controller.state.kind === "success" ? (
         controller.state.data.length === 0 ? (
-          <CpStatePanel
-            role="status"
-            title="لا توجد مضلعات معتمدة"
-            description="لن يتم قبول أي عنوان للتوصيل حتى إنشاء منطقة خدمة نشطة."
-          />
+          <CpStatePanel role="status" title="لا توجد مضلعات معتمدة" description="لن يتم قبول أي عنوان للتوصيل حتى إنشاء منطقة خدمة نشطة." />
         ) : (
           <CpTable aria-label="مناطق الخدمة">
             <thead>
@@ -203,9 +224,7 @@ export function ServiceAreaGovernanceSection() {
                   <CpTableCell>{String(row.priority)}</CpTableCell>
                   <CpTableCell>{String(row.pointCount)}</CpTableCell>
                   <CpTableCell>{formatBounds(row)}</CpTableCell>
-                  <CpTableCell>
-                    <CpBadge tone={row.active ? "success" : "neutral"}>{row.active ? "نشطة" : "معطلة"}</CpBadge>
-                  </CpTableCell>
+                  <CpTableCell><CpBadge tone={row.active ? "success" : "neutral"}>{row.active ? "نشطة" : "معطلة"}</CpBadge></CpTableCell>
                   <CpTableCell>{String(row.version)}</CpTableCell>
                 </tr>
               ))}
@@ -215,87 +234,24 @@ export function ServiceAreaGovernanceSection() {
       ) : null}
 
       <Card style={styles.formCard}>
-        <Text role="titleSm">
-          {form.expectedVersion > 0 ? "تعديل المنطقة" : "إنشاء منطقة"}
-        </Text>
-        {form.expectedVersion > 0 ? (
-          <CpBadge tone="info">{`الإصدار ${form.expectedVersion}`}</CpBadge>
-        ) : null}
-        <CpTextInput
-          aria-label="رمز منطقة الخدمة"
-          value={form.serviceAreaCode}
-          disabled={form.expectedVersion > 0}
-          onChange={(serviceAreaCode) =>
-            setForm((current) => ({ ...current, serviceAreaCode }))
-          }
-          placeholder="sanaa-old-city"
-        />
-        <CpTextInput
-          aria-label="الاسم المعروض"
-          value={form.displayName}
-          onChange={(displayName) =>
-            setForm((current) => ({ ...current, displayName }))
-          }
-        />
-        {/* TextField kept: CpTextInput has no multiline support */}
-        <TextField
-          label="المضلع [longitude, latitude]"
-          value={form.polygonText}
-          onChangeText={(polygonText) =>
-            setForm((current) => ({ ...current, polygonText }))
-          }
-          multiline
-          placeholder={'[[44.1,15.3],[44.2,15.3],[44.2,15.4]]'}
-        />
-        <CpTextInput
-          aria-label="الأولوية عند تداخل المضلعات"
-          value={form.priority}
-          onChange={(priority) =>
-            setForm((current) => ({ ...current, priority }))
-          }
-        />
+        <Text role="titleSm">{form.expectedVersion > 0 ? "تعديل المنطقة" : "إنشاء منطقة"}</Text>
+        {form.expectedVersion > 0 ? <CpBadge tone="info">{`الإصدار ${form.expectedVersion}`}</CpBadge> : null}
+        <CpTextInput aria-label="رمز منطقة الخدمة" value={form.serviceAreaCode} disabled={form.expectedVersion > 0} onChange={(serviceAreaCode) => setForm((current) => ({ ...current, serviceAreaCode }))} placeholder="sanaa-old-city" />
+        <CpTextInput aria-label="الاسم المعروض" value={form.displayName} onChange={(displayName) => setForm((current) => ({ ...current, displayName }))} />
+        <TextField label="المضلع [longitude, latitude]" value={form.polygonText} onChangeText={(polygonText) => setForm((current) => ({ ...current, polygonText }))} multiline placeholder={'[[44.1,15.3],[44.2,15.3],[44.2,15.4]]'} />
+        <CpTextInput aria-label="الأولوية عند تداخل المضلعات" value={form.priority} onChange={(priority) => setForm((current) => ({ ...current, priority }))} />
         <View style={styles.actions}>
-          <CpButton
-            variant={form.active ? "primary" : "secondary"}
-            onClick={() =>
-              setForm((current) => ({
-                ...current,
-                active: !current.active,
-              }))
-            }
-          >
+          <CpButton variant={form.active ? "primary" : "secondary"} onClick={() => setForm((current) => ({ ...current, active: !current.active }))}>
             {form.active ? "المنطقة نشطة" : "المنطقة معطلة"}
           </CpButton>
+          <CpButton variant="secondary" onClick={() => setForm((current) => ({ ...current, polygonText: "[]" }))}>مسح النقاط</CpButton>
         </View>
-        <CpTextInput
-          aria-label="سبب التغيير"
-          value={form.reason}
-          onChange={(reason) =>
-            setForm((current) => ({ ...current, reason }))
-          }
-          placeholder="سبب تشغيلي قابل للتدقيق"
-        />
-        {validationError ? (
-          <Text tone="danger">{validationError}</Text>
-        ) : null}
-        {controller.mutationError ? (
-          <Text tone="danger">{controller.mutationError}</Text>
-        ) : null}
+        <CpTextInput aria-label="سبب التغيير" value={form.reason} onChange={(reason) => setForm((current) => ({ ...current, reason }))} placeholder="سبب تشغيلي قابل للتدقيق" />
+        {validationError ? <Text tone="danger">{validationError}</Text> : null}
+        {controller.mutationError ? <Text tone="danger">{controller.mutationError}</Text> : null}
         <View style={styles.actions}>
-          <CpButton
-            variant="primary"
-            disabled={controller.mutating}
-            onClick={() => void save()}
-          >
-            {controller.mutating ? "جارٍ الحفظ…" : "حفظ المنطقة"}
-          </CpButton>
-          <CpButton
-            variant="ghost"
-            disabled={controller.mutating}
-            onClick={reset}
-          >
-            إلغاء
-          </CpButton>
+          <CpButton variant="primary" disabled={controller.mutating} onClick={() => void save()}>{controller.mutating ? "جارٍ الحفظ…" : "حفظ المنطقة"}</CpButton>
+          <CpButton variant="ghost" disabled={controller.mutating} onClick={reset}>إلغاء</CpButton>
         </View>
       </Card>
     </View>
@@ -304,12 +260,7 @@ export function ServiceAreaGovernanceSection() {
 
 const styles = StyleSheet.create({
   section: { margin: spacing[4], gap: spacing[3] },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: spacing[3],
-  },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing[3] },
   headerText: { gap: spacing[1] },
   formCard: { padding: spacing[4], gap: spacing[3] },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
