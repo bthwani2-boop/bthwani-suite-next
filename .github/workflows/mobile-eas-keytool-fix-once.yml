@@ -1,0 +1,173 @@
+name: One-time mobile EAS keytool remediation
+
+on:
+  push:
+    branches: [reemsam]
+    paths:
+      - ".github/workflows/mobile-eas-keytool-fix-once.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  remediate:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: reemsam
+          fetch-depth: 0
+
+      - name: Harden Windows keytool discovery and existing-signing reuse
+        shell: pwsh
+        run: |
+          $path = 'tools/scripts/mobile-eas.ps1'
+          $text = Get-Content -LiteralPath $path -Raw
+
+          $replacement = @'
+          function Find-Keytool {
+              param([switch] $AllowMissing)
+
+              $command = Get-Command keytool -ErrorAction SilentlyContinue
+              if ($command) { return $command.Source }
+
+              $candidates = [System.Collections.Generic.List[string]]::new()
+              function Add-Candidate {
+                  param([AllowNull()][string] $Candidate)
+                  if ([string]::IsNullOrWhiteSpace($Candidate)) { return }
+                  try { $resolved = [System.IO.Path]::GetFullPath($Candidate) } catch { return }
+                  if (-not $candidates.Contains($resolved)) { $candidates.Add($resolved) }
+              }
+
+              foreach ($home in @($env:JAVA_HOME, $env:JDK_HOME, $env:ANDROID_STUDIO_JDK, $env:GRADLE_JAVA_HOME)) {
+                  if (-not [string]::IsNullOrWhiteSpace($home)) {
+                      Add-Candidate (Join-Path $home 'bin\keytool.exe')
+                  }
+              }
+
+              $java = Get-Command java -ErrorAction SilentlyContinue
+              if ($java) {
+                  Add-Candidate (Join-Path (Split-Path -Parent $java.Source) 'keytool.exe')
+                  $settings = (& $java.Source '-XshowSettings:properties' '-version' 2>&1 | Out-String)
+                  $javaHomeMatch = [regex]::Match($settings, '(?im)^\s*java\.home\s*=\s*(.+?)\s*$')
+                  if ($javaHomeMatch.Success) {
+                      Add-Candidate (Join-Path $javaHomeMatch.Groups[1].Value.Trim() 'bin\keytool.exe')
+                  }
+              }
+
+              foreach ($base in @($env:ProgramFiles, ${env:ProgramFiles(x86)}, $env:LOCALAPPDATA)) {
+                  if ([string]::IsNullOrWhiteSpace($base)) { continue }
+                  Add-Candidate (Join-Path $base 'Android\Android Studio\jbr\bin\keytool.exe')
+                  Add-Candidate (Join-Path $base 'Programs\Android Studio\jbr\bin\keytool.exe')
+              }
+
+              if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
+                  foreach ($pattern in @('Microsoft\jdk-*', 'Eclipse Adoptium\jdk-*', 'Java\jdk-*', 'Zulu\zulu-*')) {
+                      Get-ChildItem -Path (Join-Path $env:ProgramFiles $pattern) -Directory -ErrorAction SilentlyContinue |
+                          Sort-Object Name -Descending |
+                          ForEach-Object { Add-Candidate (Join-Path $_.FullName 'bin\keytool.exe') }
+                  }
+              }
+
+              $match = $candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
+              if (-not [string]::IsNullOrWhiteSpace([string]$match)) { return [string]$match }
+              if ($AllowMissing) { return $null }
+
+              throw "keytool was not found. Set JAVA_HOME to a JDK, install Android Studio JBR, or install a supported JDK. Checked:`n - $($candidates -join "`n - ")"
+          }
+
+          function Get-RecordedSigningSha1 {
+              if (-not (Test-Path -LiteralPath $GoogleInputLocalPath -PathType Leaf)) { return $null }
+              $input = Get-Content -LiteralPath $GoogleInputLocalPath -Raw | ConvertFrom-Json -Depth 100
+              $recorded = [string]$input.apps.$App.sha1Fingerprint
+              if ($recorded -match '^([A-Fa-f0-9]{2}:){19}[A-Fa-f0-9]{2}$') {
+                  return $recorded.ToUpperInvariant()
+              }
+              return $null
+          }
+          '@
+          $replacement = $replacement -replace '(?m)^          ', ''
+
+          $pattern = '(?s)function Find-Keytool \{.*?\n\}\n\nfunction New-RandomSecret'
+          if ($text -notmatch $pattern) { throw 'Find-Keytool block was not found.' }
+          $text = [regex]::Replace($text, $pattern, "$replacement`n`nfunction New-RandomSecret", 1)
+
+          $old = @'
+              $keytool = Find-Keytool
+              if (-not $credentialsExists) {
+          '@ -replace '(?m)^              ', ''
+          $new = @'
+              $keytool = Find-Keytool -AllowMissing
+              if (-not $credentialsExists) {
+                  if ([string]::IsNullOrWhiteSpace([string]$keytool)) {
+                      [void](Find-Keytool)
+                  }
+          '@ -replace '(?m)^              ', ''
+          if (-not $text.Contains($old)) { throw 'Ensure-Signing keytool initialization block was not found.' }
+          $text = $text.Replace($old, $new)
+
+          $oldReturn = @'
+              return Get-KeystoreSha1 `
+                  -Keytool $keytool `
+                  -StorePassword ([string]$keystore.keystorePassword) `
+                  -Alias ([string]$keystore.keyAlias)
+          '@ -replace '(?m)^              ', ''
+          $newReturn = @'
+              if (-not [string]::IsNullOrWhiteSpace([string]$keytool)) {
+                  return Get-KeystoreSha1 `
+                      -Keytool $keytool `
+                      -StorePassword ([string]$keystore.keystorePassword) `
+                      -Alias ([string]$keystore.keyAlias)
+              }
+
+              $recordedSha1 = Get-RecordedSigningSha1
+              if (-not [string]::IsNullOrWhiteSpace($recordedSha1)) {
+                  Write-Host "Reusing the recorded signing SHA-1 because the existing keystore is unchanged and keytool is unavailable." -ForegroundColor DarkYellow
+                  return $recordedSha1
+              }
+
+              [void](Find-Keytool)
+          '@ -replace '(?m)^              ', ''
+          if (-not $text.Contains($oldReturn)) { throw 'Ensure-Signing return block was not found.' }
+          $text = $text.Replace($oldReturn, $newReturn)
+
+          Set-Content -LiteralPath $path -Value $text -Encoding UTF8
+
+      - name: Remove npm warning source from Expo Doctor
+        shell: pwsh
+        run: |
+          $path = 'tools/scripts/eas-build-mobile.mjs'
+          $text = Get-Content -LiteralPath $path -Raw
+          $old = 'run("npx", ["--yes", "expo-doctor@latest"], appDir, appEnvironment);'
+          $new = 'run("pnpm", ["dlx", "expo-doctor@latest"], appDir, appEnvironment);'
+          if (-not $text.Contains($old)) { throw 'Expo Doctor invocation was not found.' }
+          Set-Content -LiteralPath $path -Value ($text.Replace($old, $new)) -Encoding UTF8
+
+      - name: Validate remediation
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'tools/scripts/mobile-eas.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          )
+          if (@($errors).Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+          node --check tools/scripts/eas-build-mobile.mjs
+          node --test apps/app-client/runtime/tests/mobile-development-provider-contract.test.mjs
+
+      - name: Remove temporary workflow and commit
+        shell: pwsh
+        run: |
+          Remove-Item .github/workflows/mobile-eas-keytool-fix-once.yml
+          git config user.name "bthwani-ci"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/scripts/mobile-eas.ps1 tools/scripts/eas-build-mobile.mjs .github/workflows/mobile-eas-keytool-fix-once.yml
+          git commit -m "fix(mobile): harden Windows signing tool discovery"
+          git push origin HEAD:reemsam
