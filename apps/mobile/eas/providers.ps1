@@ -150,8 +150,8 @@ function Invoke-EasEnvironmentCommand {
 }
 
 function Get-EasDevelopmentVariableNames {
-    # env:list is already non-interactive when the environment is supplied.
-    # Unlike env:set, EAS CLI does not define a --non-interactive flag for env:list.
+    # Supplying the environment makes env:list non-interactive. Unlike env:set,
+    # env:list does not define a --non-interactive flag.
     $result = Invoke-EasEnvironmentCommand -Arguments @(
         'dlx', 'eas-cli@latest', 'env:list', 'development',
         '--format', 'short', '--scope', 'project'
@@ -159,7 +159,9 @@ function Get-EasDevelopmentVariableNames {
 
     $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
     foreach ($line in ($result.Text -split '\r?\n')) {
-        if ($line -match '^\s*(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\|') {
+        # Current EAS short format is NAME=value. Accept NAME | metadata as a
+        # compatibility fallback for older or alternate CLI renderers.
+        if ($line -match '^\s*(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*(?:=|\|)') {
             [void]$names.Add([string]$Matches.name)
         }
     }
