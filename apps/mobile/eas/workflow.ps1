@@ -130,7 +130,7 @@ if ($Mode -eq 'Initialize') {
     $inputs = Stage-ProviderInputs
     Sync-EasDevelopmentEnvironment -MapsKey $inputs.MapsKey
     Write-StateStamp -Path $InitializeStampPath -Stage 'Initialize' -MapsKey $inputs.MapsKey -FirebaseKey $inputs.FirebaseKey
-    Write-Host "`nPASS: $App initialization completed and EAS provider inputs were verified." -ForegroundColor Green
+    Write-Host "`nPASS: $App initialization completed and EAS provider inputs were synchronized." -ForegroundColor Green
     exit 0
 }
 
@@ -138,7 +138,7 @@ Assert-File -Path $CredentialsPath
 Assert-File -Path $SecureKeystorePath
 $inputs = Stage-ProviderInputs
 Assert-StateStamp -Path $InitializeStampPath -ExpectedStage 'Initialize' -MapsKey $inputs.MapsKey -FirebaseKey $inputs.FirebaseKey
-Assert-EasDevelopmentEnvironment
+Sync-EasDevelopmentEnvironment -MapsKey $inputs.MapsKey
 
 if ($Mode -eq 'Preflight') {
     Remove-Item -LiteralPath $PreflightStampPath -Force -ErrorAction SilentlyContinue
