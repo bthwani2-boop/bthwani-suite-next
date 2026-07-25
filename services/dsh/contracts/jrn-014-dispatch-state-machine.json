@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0.0",
+  "journeyId": "JRN-014",
+  "initialOrderState": "ready_for_pickup",
+  "assignmentStates": ["offered", "accepted", "declined", "cancelled", "completed"],
+  "deliveryStates": ["assigned", "driver_assigned", "driver_arrived_store", "picked_up", "arrived_customer", "returning_to_store", "return_arrived_store", "returned_to_store", "delivered", "cancelled"],
+  "transitions": [
+    {"operation":"createOffer","assignmentFrom":null,"assignmentTo":"offered","deliveryTo":"assigned","orderFrom":"ready_for_pickup","orderTo":"driver_assigned","actor":"operator","guards":["tenantMatch","bthwaniDelivery","storeAreaMatch","captainApproved","captainAvailable","captainInArea","capacityAvailable","noActiveAssignment","idempotency"]},
+    {"operation":"acceptOffer","assignmentFrom":"offered","assignmentTo":"accepted","deliveryFrom":"assigned","deliveryTo":"driver_assigned","orderFrom":"driver_assigned","orderTo":"driver_assigned","actor":"captain","guards":["assignmentCaptainMatch","deadlineNotExpired","captainStillApprovedAndAvailable"]},
+    {"operation":"declineOffer","assignmentFrom":"offered","assignmentTo":"declined","deliveryFrom":"assigned","deliveryTo":"assigned","orderFrom":"driver_assigned","orderTo":"ready_for_pickup","actor":"captain","guards":["assignmentCaptainMatch","deadlineNotExpired","reasonRequired"]},
+    {"operation":"expireOffer","assignmentFrom":"offered","assignmentTo":"cancelled","deliveryFrom":"assigned","deliveryTo":"cancelled","orderFrom":"driver_assigned","orderTo":"ready_for_pickup","actor":"system|operator","guards":["deadlineExpired"]},
+    {"operation":"cancelAssignment","assignmentFrom":"offered|accepted","assignmentTo":"cancelled","deliveryFrom":"assigned|driver_assigned","deliveryTo":"cancelled","orderFrom":"driver_assigned","orderTo":"ready_for_pickup","actor":"operator","guards":["pickupNotStarted","reasonRequired"]},
+    {"operation":"reassignAssignment","assignmentFrom":"offered|accepted","assignmentTo":"cancelled","replacementAssignmentTo":"offered","replacementDeliveryTo":"assigned","orderRoundTrip":["driver_assigned","ready_for_pickup","driver_assigned"],"actor":"operator","guards":["pickupNotStarted","replacementEligible","replacementCapacity","sameTenant","sameArea","reasonRequired","idempotency"],"atomic":true},
+    {"operation":"startExecution","assignmentFrom":"accepted","assignmentTo":"accepted","deliveryFrom":"driver_assigned","actor":"captain","guards":["acceptedBeforeExecution"]}
+  ],
+  "terminalAssignmentStates": ["declined", "cancelled", "completed"],
+  "forbiddenTransitions": [
+    "offered -> pickup execution",
+    "expired offer -> accepted",
+    "picked_up -> cancel or reassign",
+    "terminal assignment -> active",
+    "cross-tenant reassignment"
+  ]
+}
