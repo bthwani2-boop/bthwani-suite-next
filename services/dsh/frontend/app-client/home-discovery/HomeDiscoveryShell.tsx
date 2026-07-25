@@ -74,6 +74,7 @@ export function HomeDiscoveryShell({
     contentId: string,
   ) => {
     if (state.kind !== "success") return;
+    if (contentId.startsWith("derived-store-")) return;
     void recordHomeMarketingEvent({
       eventType,
       contentKind,
