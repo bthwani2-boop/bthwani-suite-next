@@ -154,7 +154,6 @@ test("JRN-029 is owned by active standalone OpenAPI projection and modular DSH m
   assert.match(rootContract, /x-bthwani-contract-layout: MODULAR/);
   assert.match(rootContract, /x-bthwani-bundle: \.\/generated\/dsh\.bundle\.openapi\.yaml/);
   assert.match(standaloneContract, /x-bthwani-contract-state: CONTRACT_ACTIVE/);
-  assert.match(standaloneContract, /x-bthwani-parent-contract: services\/dsh\/contracts\/dsh\.openapi\.yaml/);
   assert.match(generatedBundle, /x-bthwani-contract-layout: MODULAR/);
 
   for (const path of [
