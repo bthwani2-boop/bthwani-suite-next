@@ -28,17 +28,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Checkout branch
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 1
-          ref: reemsam
       - name: Materialize and commit verified JRN-029 artifact
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euxo pipefail
+          gh auth setup-git
+          gh repo clone bthwani2-boop/bthwani-suite-next workspace -- --depth 1 --branch reemsam --single-branch --quiet
+          cd workspace
+
           artifact_dir="${RUNNER_TEMP}/jrn029-openapi"
           mkdir -p "${artifact_dir}"
           gh run download 30147430390 \
@@ -46,6 +45,7 @@ jobs:
             --name jrn029-openapi-remediation-30147430390 \
             --dir "${artifact_dir}"
 
+          find "${artifact_dir}" -maxdepth 5 -type f -print
           test -f "${artifact_dir}/contracts/dsh.openapi.yaml"
           test -f "${artifact_dir}/contracts/paths/platform-policies.paths.yaml"
           test -f "${artifact_dir}/contracts/components/schemas/platform-policies.schemas.yaml"
@@ -62,7 +62,7 @@ jobs:
           install -D "${artifact_dir}/contracts/generated/dsh.bundle.openapi.yaml" services/dsh/contracts/generated/dsh.bundle.openapi.yaml
           install -D "${artifact_dir}/clients/generated/dsh-api.ts" services/dsh/clients/generated/dsh-api.ts
 
-          git fetch --depth=1 origin 4bff994125cf4d3f3296c5af85f5d70b17eaf49e
+          git fetch --depth=1 origin 4bff994125cf4d3f3296c5af85f5d70b17eaf49e --quiet
           git checkout FETCH_HEAD -- .github/workflows/ci-node-verification.yml
           git add \
             services/dsh/contracts/dsh.openapi.yaml \
