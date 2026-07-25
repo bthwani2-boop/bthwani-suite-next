@@ -14,6 +14,10 @@ const signing = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/signing.ps1
 const firebaseHelperPath = path.join(repoRoot, "apps/mobile/eas/firebase.ps1");
 const mapsHelperPath = path.join(repoRoot, "apps/mobile/eas/maps.ps1");
 const easEnginePath = path.join(repoRoot, "apps/mobile/eas-build-mobile.mjs");
+const legacyEasEnginePath = path.join(repoRoot, "tools/scripts/eas-build-mobile.mjs");
+const packageManagerGuardPath = path.join(repoRoot, "tools/scripts/guard-mobile-package-manager-invocation.mjs");
+const packageManagerBridgePath = path.join(repoRoot, "tools/scripts/lib/package-manager-invocation.mjs");
+const canonicalPackageManagerHelperPath = path.join(repoRoot, "apps/mobile/lib/package-manager-invocation.mjs");
 const firebaseHelper = fs.readFileSync(firebaseHelperPath, "utf8");
 
 function runtimePackage(app) {
@@ -70,13 +74,43 @@ test("active mobile build executors live under apps/mobile", () => {
   }
   const oldFirebase = fs.readFileSync(path.join(repoRoot, "tools/scripts/mobile-eas/ensure-firebase-app.ps1"), "utf8");
   const oldMaps = fs.readFileSync(path.join(repoRoot, "tools/scripts/google-cloud/create-android-maps-api-key.ps1"), "utf8");
-  const oldEngine = fs.readFileSync(path.join(repoRoot, "tools/scripts/eas-build-mobile.mjs"), "utf8");
+  const oldEngine = fs.readFileSync(legacyEasEnginePath, "utf8");
   assert.ok(oldFirebase.includes("apps\\mobile\\eas\\firebase.ps1"));
   assert.ok(oldMaps.includes("apps\\mobile\\eas\\maps.ps1"));
-  assert.ok(oldEngine.includes("apps/mobile/eas-build-mobile.mjs"));
+  assert.equal(oldEngine.trim(), 'await import("../../apps/mobile/eas-build-mobile.mjs");');
   assert.ok(oldFirebase.split(/\r?\n/).length < 30);
   assert.ok(oldMaps.split(/\r?\n/).length < 40);
   assert.ok(oldEngine.split(/\r?\n/).length < 5);
+});
+
+test("package-manager governance checks the active executor and canonical helper", () => {
+  const activeEngine = fs.readFileSync(easEnginePath, "utf8");
+  const guard = fs.readFileSync(packageManagerGuardPath, "utf8");
+  const bridge = fs.readFileSync(packageManagerBridgePath, "utf8");
+  const canonicalHelper = fs.readFileSync(canonicalPackageManagerHelperPath, "utf8");
+
+  assert.ok(activeEngine.includes('from "./lib/package-manager-invocation.mjs"'));
+  assert.ok(activeEngine.includes("resolvePackageManagerInvocation"));
+  assert.ok(canonicalHelper.includes("export function resolvePackageManagerInvocation"));
+  assert.equal(
+    bridge.trim(),
+    'export { resolvePackageManagerInvocation } from "../../../apps/mobile/lib/package-manager-invocation.mjs";',
+  );
+
+  const governedStart = guard.indexOf("const governedFiles = [");
+  const governedEnd = guard.indexOf("];", governedStart);
+  assert.ok(governedStart >= 0 && governedEnd > governedStart);
+  const governedBlock = guard.slice(governedStart, governedEnd);
+  assert.ok(governedBlock.includes('"apps/mobile/eas-build-mobile.mjs"'));
+  assert.equal(governedBlock.includes('"tools/scripts/eas-build-mobile.mjs"'), false);
+
+  const wrappersStart = guard.indexOf("const compatibilityWrappers = [");
+  const wrappersEnd = guard.indexOf("];", wrappersStart);
+  assert.ok(wrappersStart >= 0 && wrappersEnd > wrappersStart);
+  const wrappersBlock = guard.slice(wrappersStart, wrappersEnd);
+  assert.ok(wrappersBlock.includes('"tools/scripts/eas-build-mobile.mjs"'));
+  assert.ok(wrappersBlock.includes("apps/mobile/eas-build-mobile.mjs"));
+  assert.ok(guard.includes('const canonicalHelperPath = "apps/mobile/lib/package-manager-invocation.mjs"'));
 });
 
 test("Firebase Android configuration uses the official Management REST API", () => {
