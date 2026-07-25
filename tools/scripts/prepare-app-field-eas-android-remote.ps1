@@ -43,6 +43,24 @@ function Assert-File {
     }
 }
 
+function ConvertTo-FullPath {
+    param([Parameter(Mandatory)][string] $Path)
+    if ([System.IO.Path]::IsPathRooted($Path)) {
+        return [System.IO.Path]::GetFullPath($Path)
+    }
+    return [System.IO.Path]::GetFullPath((Join-Path $AppDir $Path))
+}
+
+function Test-SameFilePath {
+    param(
+        [Parameter(Mandatory)][string] $Left,
+        [Parameter(Mandatory)][string] $Right
+    )
+    $leftFull = ConvertTo-FullPath -Path $Left
+    $rightFull = ConvertTo-FullPath -Path $Right
+    return [string]::Equals($leftFull, $rightFull, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
 function Import-EnvFile {
     param([Parameter(Mandatory)][string] $Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return }
@@ -80,7 +98,8 @@ function Invoke-Checked {
         [Parameter(Mandatory)][string] $Command,
         [Parameter(Mandatory)][string[]] $Arguments,
         [string] $WorkingDirectory = $RepoRoot,
-        [string[]] $SecretValues = @()
+        [string[]] $SecretValues = @(),
+        [switch] $Quiet
     )
     Push-Location -LiteralPath $WorkingDirectory
     try {
@@ -93,7 +112,7 @@ function Invoke-Checked {
                 $text = $text.Replace($secretValue, '<redacted>')
             }
         }
-        if ($text) { Write-Host $text }
+        if ($text -and -not $Quiet) { Write-Host $text }
         if ($exitCode -ne 0) {
             throw "Command failed with exit code ${exitCode}: $Command $($Arguments -join ' ')"
         }
@@ -180,15 +199,18 @@ $previousScopedGoogleServices = [Environment]::GetEnvironmentVariable('GOOGLE_SE
 try {
     [Environment]::SetEnvironmentVariable('GOOGLE_SERVICES_JSON', './google-services.json', 'Process')
     [Environment]::SetEnvironmentVariable('GOOGLE_SERVICES_JSON_APP_FIELD', './google-services.json', 'Process')
-    $configText = Invoke-Checked -Command 'pnpm' -Arguments @('exec', 'expo', 'config', '--json') -WorkingDirectory $AppDir
+    $configText = Invoke-Checked -Command 'pnpm' -Arguments @('exec', 'expo', 'config', '--json') -WorkingDirectory $AppDir -Quiet
     $jsonStart = $configText.IndexOf('{')
     if ($jsonStart -lt 0) { throw 'Expo config did not return JSON.' }
     $config = $configText.Substring($jsonStart) | ConvertFrom-Json -Depth 100
     if ([string]$config.owner -ne [string]$manifest.global.owner) { throw 'app-field owner mismatch.' }
     if ([string]$config.slug -ne [string]$app.slug) { throw 'app-field slug mismatch.' }
     if ([string]$config.extra.eas.projectId -ne $projectId) { throw 'app-field EAS project ID mismatch.' }
-    if ([string]$config.android.googleServicesFile -ne './google-services.json') { throw 'app-field android.googleServicesFile did not resolve to ./google-services.json.' }
-    Write-Host 'PASS: app-field Expo config resolves project identity and Firebase file.' -ForegroundColor Green
+    $resolvedConfigGoogleServicesFile = [string]$config.android.googleServicesFile
+    if (-not (Test-SameFilePath -Left $resolvedConfigGoogleServicesFile -Right $RuntimeGoogleServicesPath)) {
+        throw "app-field android.googleServicesFile resolved to '$resolvedConfigGoogleServicesFile', expected the runtime-local file '$RuntimeGoogleServicesPath'."
+    }
+    Write-Host "PASS: app-field Expo config resolves project identity and Firebase file: $resolvedConfigGoogleServicesFile" -ForegroundColor Green
 } finally {
     [Environment]::SetEnvironmentVariable('GOOGLE_SERVICES_JSON', $previousGoogleServices, 'Process')
     [Environment]::SetEnvironmentVariable('GOOGLE_SERVICES_JSON_APP_FIELD', $previousScopedGoogleServices, 'Process')
