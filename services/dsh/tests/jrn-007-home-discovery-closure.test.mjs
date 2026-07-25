@@ -23,6 +23,48 @@ describe("JRN-007 home discovery slice closure", () => {
     assert.match(mediaUrl, /new URL\(value, apiBaseUrl\)/);
   });
 
+  test("S1.1 keeps categories and video independent from promos", () => {
+    const shell = read("services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx");
+    const quickActions = read("services/dsh/frontend/app-client/home-discovery/HomeQuickActionsSection.tsx");
+    const reels = read("services/dsh/frontend/app-client/home-discovery/HomeReelsSection.tsx");
+    const reelsApi = read("services/dsh/frontend/shared/home-discovery/home-reels.api.ts");
+    const promo = read("services/dsh/frontend/app-client/home-discovery/HomePromoSection.tsx");
+
+    assert.match(shell, /HomeQuickActionsSection/);
+    assert.match(shell, /hasCategories=\{categories\.length > 0\}/);
+    assert.match(shell, /fetchHomePublicReels\(10\)/);
+    assert.match(shell, /HomeReelsSection/);
+    assert.match(quickActions, /title="الفئات"/);
+    assert.match(quickActions, /title="فيديو"/);
+    assert.doesNotMatch(promo, /onCategoriesPress|onVideoPress/);
+    assert.match(reels, /مختارات مرئية/);
+    assert.match(reelsApi, /\/dsh\/public\/reels\?limit=/);
+  });
+
+  test("S1.2 keeps store cards compact and marketing-led", () => {
+    const card = read("services/dsh/frontend/app-client/store/StoreCardPremium.tsx");
+
+    assert.match(card, /buildMarketingChips/);
+    assert.match(card, /compactDeliveryMode/);
+    assert.match(card, /مجاني/);
+    assert.match(card, /كوبون/);
+    assert.match(card, /استلام/);
+    assert.match(card, /توصيل المتجر/);
+    assert.doesNotMatch(card, /deliveryModeLabels\.map/);
+    assert.doesNotMatch(card, /توصيل المتجر الشريك/);
+  });
+
+  test("S1.3 publishes local governed banners and promos through public media", () => {
+    const seed = read("services/dsh/database/seeds/local/dsh-960_home_discovery_marketing.local.sql");
+
+    assert.match(seed, /dsh_home_banners/);
+    assert.match(seed, /dsh_home_promos/);
+    assert.match(seed, /publication_status = 'published'/);
+    assert.match(seed, /approved_at = NOW\(\)/);
+    assert.match(seed, /\/dsh\/public\/media\/asset-local-home-banner-restaurants\/original/);
+    assert.match(seed, /DELETE FROM dsh_home_content_targets/);
+  });
+
   test("S2 governs promotional links, actions, and media", () => {
     const admin = read("services/dsh/backend/internal/homediscovery/admin.go");
     const repository = read("services/dsh/backend/internal/homediscovery/repository.go");
