@@ -95,7 +95,7 @@ function Stage-ProviderInputs {
     return [pscustomobject]@{ MapsKey = $mapsKey; FirebaseKey = $firebaseKey }
 }
 
-function Set-EasVariable {
+function Create-OrReplaceEasVariable {
     param(
         [Parameter(Mandatory)][string] $Name,
         [Parameter(Mandatory)][string] $Value,
@@ -104,10 +104,10 @@ function Set-EasVariable {
         [string[]] $SecretValues = @()
     )
     Invoke-Checked -Command 'pnpm' -Arguments @(
-        'dlx', 'eas-cli@latest', 'env:set', 'development',
+        'dlx', 'eas-cli@latest', 'env:create', 'development',
         '--name', $Name, '--value', $Value, '--type', $Type,
         '--visibility', $Visibility, '--scope', 'project',
-        '--json', '--non-interactive'
+        '--force', '--non-interactive'
     ) -WorkingDirectory $AppDir -SecretValues $SecretValues | Out-Null
 }
 
@@ -124,8 +124,8 @@ function Assert-EasVariable {
 function Sync-EasDevelopmentEnvironment {
     param([Parameter(Mandatory)][string] $MapsKey)
     Write-Step 'Synchronize EAS development provider inputs'
-    Set-EasVariable -Name 'GOOGLE_SERVICES_JSON' -Value $SecureFirebasePath -Type 'file' -Visibility 'secret'
-    Set-EasVariable -Name 'GOOGLE_MAPS_ANDROID_API_KEY' -Value $MapsKey -Type 'string' -Visibility 'sensitive' -SecretValues @($MapsKey)
+    Create-OrReplaceEasVariable -Name 'GOOGLE_SERVICES_JSON' -Value $SecureFirebasePath -Type 'file' -Visibility 'secret'
+    Create-OrReplaceEasVariable -Name 'GOOGLE_MAPS_ANDROID_API_KEY' -Value $MapsKey -Type 'string' -Visibility 'sensitive' -SecretValues @($MapsKey)
     Assert-EasDevelopmentEnvironment
 }
 

@@ -31,11 +31,11 @@ test("Initialize is mandatory and bound to immutable provider inputs", () => {
   assert.ok(workflow.indexOf("Assert-StateStamp -Path $PreflightStampPath") < workflow.indexOf("Write-Step 'Submit remote build'"));
 });
 
-test("EAS provider variables use current idempotent CLI contract", () => {
-  assert.ok(providers.includes("'env:set', 'development'"));
+test("EAS provider variables use the documented idempotent CLI contract", () => {
+  assert.ok(providers.includes("'env:create', 'development'"));
+  assert.ok(providers.includes("'--force', '--non-interactive'"));
   assert.ok(providers.includes("'env:get', 'development'"));
-  assert.equal(providers.includes("'env:create'"), false);
-  assert.equal(providers.includes("'--force'"), false);
+  assert.equal(providers.includes("'env:set'"), false);
   assert.equal(signing.includes("Add-KeytoolCandidate"), false);
 });
 
