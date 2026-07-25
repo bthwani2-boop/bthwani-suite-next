@@ -33,10 +33,12 @@ test('JRN-016 persists command replay and exception evidence truth', () => {
 
 test('JRN-016 binds every JSON mutation to a stable command identity', () => {
   const handlers = source('services/dsh/backend/internal/http/partner_delivery.go');
+  const incidentService = source('services/dsh/backend/internal/incident/service.go');
   const commands = source('services/dsh/backend/internal/partnerdelivery/lifecycle_commands.go');
   const api = source('services/dsh/frontend/shared/partner-delivery/partner-delivery.api.ts');
   const types = source('services/dsh/frontend/shared/partner-delivery/partner-delivery.types.ts');
   const controller = source('services/dsh/frontend/shared/partner-delivery/use-partner-delivery-controller.tsx');
+  const mutationBindings = `${handlers}\n${incidentService}`;
 
   for (const operation of [
     'AssignCourierCommand',
@@ -46,8 +48,11 @@ test('JRN-016 binds every JSON mutation to a stable command identity', () => {
     'SubmitProofCommand',
     'RaiseExceptionCommand',
   ]) {
-    assert.match(handlers, new RegExp(operation), `HTTP route is not command-bound: ${operation}`);
+    assert.match(mutationBindings, new RegExp(operation), `mutation path is not command-bound: ${operation}`);
   }
+  assert.match(handlers, /CommandID:\s+body\.CommandID/);
+  assert.match(incidentService, /input\.CommandID/);
+  assert.match(incidentService, /commandId is required/);
   assert.match(commands, /commandFingerprint/);
   assert.match(api, /suppliedCommandId/);
   assert.match(types, /IDEMPOTENCY_CONFLICT/);
