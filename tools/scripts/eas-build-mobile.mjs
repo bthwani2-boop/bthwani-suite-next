@@ -124,9 +124,11 @@ function requireNativeProviderInputs(appKey, app, environment) {
   }
 }
 
-console.log("=== PHASE 1: Comprehensive Preflight ===");
+console.log("=== PHASE 1: Target App Preflight ===");
 
-run(process.execPath, ["tools/scripts/sync-mobile-apps.mjs", "--check"]);
+const syncArgs = ["tools/scripts/sync-mobile-apps.mjs", "--check"];
+if (!all && requestedApp) syncArgs.push("--app", requestedApp);
+run(process.execPath, syncArgs);
 run(process.execPath, ["tools/scripts/guard-mobile-expo-sdk56-versions.mjs"]);
 
 if (all && (platform === "android" || platform === "all")) {
