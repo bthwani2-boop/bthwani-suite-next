@@ -117,7 +117,7 @@
       "name": "Client unified lifecycle readback",
       "codeStatus": "CLOSED",
       "requiredFiles": ["services/dsh/frontend/shared/orders/use-client-order-journey-controller.ts", "services/dsh/frontend/shared/orders/orders.types.ts"],
-      "requiredMarkers": ["fetchClientOrderTruthDetail", "fetchClientOrderTracking", "setInterval", "store_handoff_confirmed"]
+      "requiredMarkers": ["fetchClientOrderTruthDetail", "fetchClientLiveTracking", "setInterval", "store_handoff_confirmed"]
     },
     {
       "id": "FS-17",
