@@ -23,7 +23,6 @@ export type DshContractRegistration = {
     | "dsh-checkout"
     | "dsh-order-truth"
     | "dsh-order-workboards"
-    | "dsh-operational-policy"
     | "dsh-representative-finance"
     | "dsh-refunds"
     | "dsh-partner-onboarding"
@@ -157,14 +156,6 @@ export const DSH_CONTRACT_REGISTRY = [
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
     adapterOwner: "frontend/shared/orders",
-  },
-  {
-    id: "dsh-operational-policy",
-    path: "contracts/dsh.jrn-029.openapi.yaml",
-    state: "CONTRACT_ACTIVE",
-    runtimeDependency: true,
-    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared/platform",
   },
   {
     id: "dsh-representative-finance",
