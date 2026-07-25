@@ -61,6 +61,19 @@ function parameterKeys(parameters: ExternalProvider["parameters"]): readonly str
   return Object.keys(parameters as Record<string, unknown>).sort();
 }
 
+function visibleRuntimeConfig(
+  parameters: ExternalProvider["parameters"],
+): Record<string, string | number | boolean> {
+  if (!parameters || typeof parameters !== "object") return {};
+  const visible: Record<string, string | number | boolean> = {};
+  for (const [key, value] of Object.entries(parameters as Record<string, unknown>)) {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+      visible[key] = value;
+    }
+  }
+  return visible;
+}
+
 function isWltBoundaryProvider(kind: string): boolean {
   return WLT_BOUNDARY_PROVIDER_KINDS.some(
     (boundaryKind) => boundaryKind === kind || (boundaryKind === "payments" && kind === "payment"),
@@ -89,7 +102,7 @@ function toRegistryItem(
     environment: stringParameter(provider.parameters, "environment") ?? "unknown",
     status: provider.active ? "active" : "inactive",
     credentialVisibility: "backend_secret_only",
-    maskedCredential: null,
+    maskedCredential: provider.credentialConfigured ? "AIza••••••••••••••••••••••••XXXX" : null,
     lastHealthStatus: healthStatus,
     lastHealthCheckedAt: healthItem?.checkedAt ?? null,
     affectedSurfaces: PROVIDER_AFFECTED_SURFACES[
@@ -98,7 +111,7 @@ function toRegistryItem(
     wltBoundary: isWltBoundaryProvider(provider.kind),
     auditRequired: true,
     rollbackTarget: null,
-    publicRuntimeConfig: {},
+    publicRuntimeConfig: visibleRuntimeConfig(provider.parameters),
     healthMessage: healthItem?.message ?? null,
   };
 }
@@ -110,6 +123,7 @@ export function useProviderRegistryController(enabled: boolean): {
   readonly reload: () => Promise<void>;
   readonly selectProvider: (providerId: string) => Promise<void>;
   readonly setProviderActive: (providerId: string, active: boolean) => Promise<void>;
+  readonly setMapsAndroidKey: (providerId: string, apiKey: string) => Promise<void>;
 } {
   const [state, setState] = useState<ProviderRegistryState>({ kind: "idle" });
   const [detailState, setDetailState] = useState<ProviderDetailState>({ kind: "idle" });
@@ -162,9 +176,56 @@ export function useProviderRegistryController(enabled: boolean): {
     }
   }, [load]);
 
+  const setMapsAndroidKey = useCallback(async (providerId: string, apiKey: string) => {
+    const trimmed = apiKey.trim();
+    if (!/^AIza[0-9A-Za-z_-]{20,}$/.test(trimmed)) {
+      setMutationState({
+        kind: "error",
+        providerId,
+        message: "GOOGLE_MAPS_ANDROID_API_KEY_INVALID",
+      });
+      return;
+    }
+
+    setMutationState({ kind: "loading", providerId });
+    try {
+      const provider = await updateProvider(providerId, {
+        credentials: {
+          googleMapsAndroidApiKey: trimmed,
+        },
+        parameters: {
+          environment: "development",
+          nativeMobileCredentialSource: "platform-control-provider-credentials",
+          nativeMobileBuildRequired: true,
+          nativeMobileBuildTarget: "app-field",
+          nativeMobileAndroidPackage: "com.bthwani.field.next",
+          nativeMobileEasVariable: "GOOGLE_MAPS_ANDROID_API_KEY",
+          runtimeEffect: "stored_for_governed_provider_runtime_requires_eas_sync_and_new_binary",
+        },
+      });
+      setMutationState({ kind: "success", providerId });
+      setDetailState({ kind: "success", provider });
+      await load();
+    } catch (error) {
+      setMutationState({
+        kind: "error",
+        providerId,
+        message: resolveProviderError(error),
+      });
+    }
+  }, [load]);
+
   useEffect(() => {
     void load();
   }, [load]);
 
-  return { state, detailState, mutationState, reload: load, selectProvider, setProviderActive };
+  return {
+    state,
+    detailState,
+    mutationState,
+    reload: load,
+    selectProvider,
+    setProviderActive,
+    setMapsAndroidKey,
+  };
 }
