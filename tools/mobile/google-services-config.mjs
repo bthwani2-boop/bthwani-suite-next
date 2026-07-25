@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+const GOOGLE_API_KEY_PATTERN = /^AIza[0-9A-Za-z_-]{35}$/;
+
 function nonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -11,6 +13,15 @@ function validationError(errors) {
   error.name = "GoogleServicesConfigValidationError";
   error.details = errors;
   return error;
+}
+
+function normalizedApiKeys(client) {
+  return Array.isArray(client?.api_key)
+    ? client.api_key
+      .map((entry) => entry?.current_key)
+      .filter(nonEmptyString)
+      .map((value) => value.trim())
+    : [];
 }
 
 export function validateGoogleServicesConfigObject(config, expectedPackage) {
@@ -48,6 +59,7 @@ export function validateGoogleServicesConfigObject(config, expectedPackage) {
     )
     : undefined;
 
+  let apiKeys = [];
   if (!matchingClient) {
     const actual = packageNames.length > 0 ? packageNames.join(", ") : "none";
     errors.push(`Android package '${expectedPackage}' is required (found: ${actual})`);
@@ -56,14 +68,17 @@ export function validateGoogleServicesConfigObject(config, expectedPackage) {
       errors.push(`client '${expectedPackage}' is missing client_info.mobilesdk_app_id`);
     }
 
-    const apiKeys = Array.isArray(matchingClient.api_key)
-      ? matchingClient.api_key
-        .map((entry) => entry?.current_key)
-        .filter(nonEmptyString)
-      : [];
-
+    apiKeys = normalizedApiKeys(matchingClient);
     if (apiKeys.length === 0) {
       errors.push(`client '${expectedPackage}' is missing api_key.current_key`);
+    } else {
+      const invalidKeys = apiKeys.filter((key) => !GOOGLE_API_KEY_PATTERN.test(key));
+      if (invalidKeys.length > 0) {
+        errors.push(`client '${expectedPackage}' contains an invalid Google API key`);
+      }
+      if (new Set(apiKeys).size !== 1) {
+        errors.push(`client '${expectedPackage}' must contain exactly one unique Firebase API key`);
+      }
     }
   }
 
@@ -74,7 +89,7 @@ export function validateGoogleServicesConfigObject(config, expectedPackage) {
     projectNumber: projectInfo.project_number.trim(),
     packageName: expectedPackage,
     mobileSdkAppId: matchingClient.client_info.mobilesdk_app_id.trim(),
-    apiKeyCount: matchingClient.api_key.filter((entry) => nonEmptyString(entry?.current_key)).length,
+    apiKeyCount: apiKeys.length,
     configurationVersion: config.configuration_version.trim(),
   };
 }
