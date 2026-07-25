@@ -69,7 +69,7 @@ function Invoke-ChildPowerShell {
     Write-Host "> pwsh -NoProfile -ExecutionPolicy Bypass -File $File $($Arguments -join ' ')" -ForegroundColor DarkGray
     & pwsh -NoProfile -ExecutionPolicy Bypass -File $File @Arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "Child script failed with exit code $LASTEXITCODE: $File"
+        throw "Child script failed with exit code ${LASTEXITCODE}: $File"
     }
 }
 
@@ -82,7 +82,7 @@ function Invoke-NodeChecked {
     Write-Host "> node $File $($Arguments -join ' ')" -ForegroundColor DarkGray
     & node $File @Arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "Node preflight failed with exit code $LASTEXITCODE: $File"
+        throw "Node preflight failed with exit code ${LASTEXITCODE}: $File"
     }
 }
 
