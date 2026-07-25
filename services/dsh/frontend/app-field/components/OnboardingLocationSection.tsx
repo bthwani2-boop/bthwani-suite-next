@@ -1,10 +1,25 @@
 // app-field — OnboardingLocationSection
-// Presentational step for the field onboarding wizard. No business logic here.
-import React, { useState } from 'react';
-import { Pressable, View, StyleSheet } from 'react-native';
-import * as Location from 'expo-location';
-import { TextField, Text, spacing, radius, colorRoles, neutralScale, alpha, Icon, Button, Surface } from '@bthwani/ui-kit';
-import type { FieldPartnerDraftForm, FieldOnboardingValidationErrors } from '../../shared/field-onboarding';
+// Uses native Google Maps and device GPS. Service-area truth remains backend-owned.
+import React, { useState } from "react";
+import { View } from "react-native";
+import * as Location from "expo-location";
+import {
+  TextField,
+  Text,
+  spacing,
+  radius,
+  colorRoles,
+  Button,
+  Surface,
+} from "@bthwani/ui-kit";
+import type {
+  FieldPartnerDraftForm,
+  FieldOnboardingValidationErrors,
+} from "../../shared/field-onboarding";
+import {
+  BthwaniNativeMap,
+  type BthwaniMapCoordinate,
+} from "../../shared/maps";
 
 type Props = {
   readonly form: Partial<FieldPartnerDraftForm>;
@@ -16,14 +31,6 @@ type Props = {
   readonly onLocationChange: (lat: number, lon: number) => void;
 };
 
-const LANDMARKS = [
-  { lat: 15.3560, lng: 44.1800, name: "صنعاء، المدينة القديمة، باب اليمن", x: 160, y: 120 },
-  { lat: 15.3400, lng: 44.1900, name: "صنعاء، حي حدة، شارع بيروت", x: 220, y: 190 },
-  { lat: 15.3300, lng: 44.2000, name: "صنعاء، حي السبعين، ميدان السبعين", x: 240, y: 210 },
-  { lat: 15.3200, lng: 44.1800, name: "صنعاء، شارع تعز، جولة تعز", x: 160, y: 230 },
-  { lat: 15.3700, lng: 44.1900, name: "صنعاء، حي معين، شارع الستين", x: 120, y: 60 },
-];
-
 export function OnboardingLocationSection({
   form,
   errors,
@@ -33,65 +40,19 @@ export function OnboardingLocationSection({
   locationLongitude,
   onLocationChange,
 }: Props) {
-  const isRtl = true;
-
-  // Local pin position states derived from latitude/longitude
-  const initialPinX = locationLongitude ? Math.round((locationLongitude - 44.1500) * 320.0 / 0.0600) : 160;
-  const initialPinY = locationLatitude ? Math.round((15.3800 - locationLatitude) * 220.0 / 0.0800) : 140;
-
-  const [pinPos, setPinPos] = useState({ x: initialPinX, y: initialPinY });
-
-  const handleMapPress = (event: any) => {
-    if (readOnly) return;
-    const { locationX, locationY } = event.nativeEvent;
-    const x = Math.max(10, Math.min(310, locationX));
-    const y = Math.max(10, Math.min(210, locationY));
-    
-    setPinPos({ x, y });
-
-    // Map SVG coordinates to latitude/longitude
-    const lat = 15.3800 - (y / 220.0) * 0.0800;
-    const lng = 44.1500 + (x / 320.0) * 0.0600;
-
-    onLocationChange(lat, lng);
-
-    // Auto-update short address description based on closest landmark
-    let closestLandmark = LANDMARKS[0];
-    let minDistance = 999999.0;
-    for (const lm of LANDMARKS) {
-      const dx = lm.x - x;
-      const dy = lm.y - y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestLandmark = lm;
-      }
-    }
-    onChange({ addressLine: closestLandmark!.name });
-  };
-
   const [locating, setLocating] = useState(false);
   const [locateError, setLocateError] = useState<string | null>(null);
 
-  const applyRealCoordinates = (latitude: number, longitude: number) => {
-    const x = Math.max(10, Math.min(310, Math.round((longitude - 44.1500) * 320.0 / 0.0600)));
-    const y = Math.max(10, Math.min(210, Math.round((15.3800 - latitude) * 220.0 / 0.0800)));
-    setPinPos({ x, y });
-    onLocationChange(latitude, longitude);
+  const selectedCoordinate: BthwaniMapCoordinate | null =
+    locationLatitude !== null && locationLongitude !== null
+      ? { latitude: locationLatitude, longitude: locationLongitude }
+      : null;
 
-    let closestLandmark = LANDMARKS[0];
-    let minDistance = 999999.0;
-    for (const lm of LANDMARKS) {
-      const dx = lm.x - x;
-      const dy = lm.y - y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestLandmark = lm;
-      }
-    }
-    onChange({ addressLine: closestLandmark!.name });
-  };
+  const applyRealCoordinates = React.useCallback((coordinate: BthwaniMapCoordinate) => {
+    if (readOnly) return;
+    setLocateError(null);
+    onLocationChange(coordinate.latitude, coordinate.longitude);
+  }, [onLocationChange, readOnly]);
 
   const handleLocateMe = async () => {
     if (readOnly) return;
@@ -100,13 +61,22 @@ export function OnboardingLocationSection({
     try {
       const permission = await Location.requestForegroundPermissionsAsync();
       if (!permission.granted) {
-        setLocateError('لم يُسمح بالوصول لموقع الجهاز. فعّل صلاحية الموقع للمتابعة.');
+        setLocateError("لم يُسمح بالوصول لموقع الجهاز. فعّل صلاحية الموقع للمتابعة.");
         return;
       }
-      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      applyRealCoordinates(position.coords.latitude, position.coords.longitude);
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      if (position.mocked === true) {
+        setLocateError("تم رفض موقع صادر من مزود وهمي. استخدم موقع الجهاز الفعلي.");
+        return;
+      }
+      applyRealCoordinates({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
     } catch {
-      setLocateError('تعذر تحديد الموقع الحالي. تأكد من تفعيل خدمة الموقع بالجهاز والمحاولة مجددًا.');
+      setLocateError("تعذر تحديد الموقع الحالي. تأكد من تفعيل خدمة الموقع والمحاولة مجددًا.");
     } finally {
       setLocating(false);
     }
@@ -114,158 +84,97 @@ export function OnboardingLocationSection({
 
   return (
     <View style={{ gap: spacing[4] }}>
-      <Text role="bodyStrong" style={{ textAlign: 'right', fontWeight: 'bold', color: colorRoles.textPrimary }}>
+      <Text
+        role="bodyStrong"
+        style={{ textAlign: "right", fontWeight: "bold", color: colorRoles.textPrimary }}
+      >
         الموقع الجغرافي ونطاق التغطية
       </Text>
 
-      {/* الخريطة التفاعلية لتحديد إحداثيات الفرع */}
-      <View style={{ gap: spacing[1] }}>
-        <Text role="bodySm" style={{ color: colorRoles.textPrimary, textAlign: 'right', fontWeight: 'bold' }}>
+      <View style={{ gap: spacing[2] }}>
+        <Text
+          role="bodySm"
+          style={{ color: colorRoles.textPrimary, textAlign: "right", fontWeight: "bold" }}
+        >
           تحديد موقع الفرع على الخريطة
         </Text>
-        
-        {!readOnly && (
+
+        {!readOnly ? (
           <Button
-            label={locating ? 'جارٍ تحديد الموقع…' : 'تحديد موقع الفرع الحالي بالـ GPS 🎯'}
+            label={locating ? "جارٍ تحديد الموقع…" : "استخدام موقع الجهاز الحالي"}
             tone="secondary"
             size="sm"
-            onPress={handleLocateMe}
+            onPress={() => void handleLocateMe()}
             disabled={locating}
-            style={{ alignSelf: 'center', marginVertical: 4, width: 320 }}
           />
-        )}
-        {locateError && (
-          <Text role="caption" style={{ color: colorRoles.danger, textAlign: 'center' }}>
+        ) : null}
+
+        {locateError ? (
+          <Text role="caption" tone="danger" style={{ textAlign: "right" }}>
             {locateError}
           </Text>
-        )}
+        ) : null}
 
-        <View style={styles.mapContainer}>
-          <Pressable onPress={handleMapPress} style={styles.mapPressable}>
-            {/* Grid / concentric circles background */}
-            <View style={[styles.mapCircle, { width: 100, height: 100, borderRadius: 50, top: 70, left: 110 }]} />
-            <View style={[styles.mapCircle, { width: 200, height: 200, borderRadius: 100, top: 20, left: 60 }]} />
-            
-            {/* Major roads representation */}
-            <View style={[styles.mapRoad, { height: 2, width: "100%", top: 120, left: 0 }]} />
-            <View style={[styles.mapRoad, { width: 2, height: "100%", left: 160, top: 0 }]} />
+        <BthwaniNativeMap
+          selectedCoordinate={selectedCoordinate}
+          onCoordinatePress={readOnly ? undefined : applyRealCoordinates}
+          showsUserLocation={!readOnly}
+          height={280}
+          accessibilityLabel="خريطة تحديد موقع فرع الشريك"
+          emptyLabel="استخدم GPS أو اضغط على الخريطة لتحديد موقع الفرع الحقيقي."
+        />
 
-            {/* Landmark Pins */}
-            {LANDMARKS.map(lm => (
-              <View key={lm.name} style={[styles.landmarkPin, { top: lm.y - 4, left: lm.x - 4 }]}>
-                <View style={styles.landmarkDot} />
-              </View>
-            ))}
-
-            {/* Store Location Pin */}
-            <View style={[styles.userPin, { top: pinPos.y - 20, left: pinPos.x - 10 }]}>
-              <View style={styles.userPinPulse} />
-              <Icon name="pin" size={20} color={colorRoles.brandStructure} />
-            </View>
-          </Pressable>
-        </View>
-        <Text role="caption" style={{ color: colorRoles.textSecondary, textAlign: 'right', marginBottom: 4 }}>
-          انقر على الخريطة لتحديد موقع فرع الشريك بدقة.
+        <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+          الموقع المرئي يساعد على اختيار الإحداثيات؛ اعتماد نطاق الخدمة يتم في DSH ولا يُنشأ محليًا.
         </Text>
-        {locationLatitude !== null && locationLongitude !== null && (
-          <Surface tone="inset" style={{ padding: 8, borderRadius: radius.sm, alignItems: 'flex-end' }}>
-            <Text role="caption" style={{ color: colorRoles.brandAction, fontWeight: 'bold' }}>
-              إحداثيات الفرع المحددة: {locationLatitude.toFixed(6)}، {locationLongitude.toFixed(6)}
+
+        {selectedCoordinate ? (
+          <Surface
+            tone="inset"
+            style={{ padding: 8, borderRadius: radius.sm, alignItems: "flex-end" }}
+          >
+            <Text role="caption" style={{ color: colorRoles.brandAction, fontWeight: "bold" }}>
+              إحداثيات الفرع: {selectedCoordinate.latitude.toFixed(6)}، {selectedCoordinate.longitude.toFixed(6)}
             </Text>
           </Surface>
-        )}
+        ) : null}
       </View>
 
       <TextField
         label="المدينة"
-        value={form.city ?? ''}
+        value={form.city ?? ""}
         disabled={readOnly}
-        {...((errors as any).city ? { error: (errors as any).city } : {})}
-        onChangeText={(v) => onChange({ city: v })}
+        {...((errors as { readonly city?: string }).city
+          ? { error: (errors as { readonly city?: string }).city }
+          : {})}
+        onChangeText={(city) => onChange({ city })}
         placeholder="مثال: صنعاء"
       />
 
       <TextField
         label="نطاق الخدمة"
-        value={form.serviceAreaCode ?? ''}
+        value={form.serviceAreaCode ?? ""}
         disabled={readOnly}
-        onChangeText={(v) => onChange({ serviceAreaCode: v })}
-        placeholder="مثال: haddah أو old-city"
+        onChangeText={(serviceAreaCode) => onChange({ serviceAreaCode })}
+        placeholder="يُعتمد بعد التحقق من DSH"
       />
 
       <TextField
         label="العنوان المختصر ووصف الشارع"
-        value={form.addressLine ?? ''}
+        value={form.addressLine ?? ""}
         disabled={readOnly}
-        onChangeText={(v) => onChange({ addressLine: v })}
-        placeholder="مثال: صنعاء، المدينة القديمة، باب اليمن"
+        onChangeText={(addressLine) => onChange({ addressLine })}
+        placeholder="مثال: صنعاء، حدة، شارع بيروت"
         multiline
       />
 
       <TextField
         label="ملخص التغطية الجغرافية"
-        value={form.coverageSummary ?? ''}
+        value={form.coverageSummary ?? ""}
         disabled={readOnly}
-        onChangeText={(v) => onChange({ coverageSummary: v })}
+        onChangeText={(coverageSummary) => onChange({ coverageSummary })}
         placeholder="وصف إضافي لحدود التوصيل المتفق عليها"
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  mapContainer: {
-    width: 320,
-    height: 220,
-    backgroundColor: colorRoles.surfaceBase,
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    borderRadius: radius.md,
-    overflow: "hidden",
-    alignSelf: "center",
-    position: "relative",
-    marginVertical: 4,
-  },
-  mapPressable: {
-    width: "100%",
-    height: "100%",
-  },
-  mapCircle: {
-    position: "absolute",
-    borderWidth: 1,
-    borderColor: colorRoles.surfaceBase,
-    borderStyle: "dashed",
-  },
-  mapRoad: {
-    position: "absolute",
-    backgroundColor: colorRoles.surfaceBase,
-  },
-  landmarkPin: {
-    position: "absolute",
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: alpha(neutralScale[500], 0.4),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  landmarkDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colorRoles.brandStructure,
-  },
-  userPin: {
-    position: "absolute",
-    zIndex: 10,
-  },
-  userPinPulse: {
-    position: "absolute",
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: alpha(colorRoles.info, 0.3),
-    top: -5,
-    left: -5,
-  },
-});
