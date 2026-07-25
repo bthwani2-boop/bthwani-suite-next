@@ -1,0 +1,185 @@
+# BThwani DSH OpenAPI path-items module: platform-policies.
+# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
+
+/dsh/operator/platform/operational-profiles/{zoneId}:
+  parameters:
+    - name: zoneId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  get:
+    operationId: getDshOperationalProfile
+    summary: Read the canonical SLA and capacity profile for a zone.
+    tags: [DshPlatformPolicies]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: category
+        in: query
+        schema: { type: string, default: default, maxLength: 120 }
+    responses:
+      "200":
+        description: Canonical operational profile.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyProfileResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  put:
+    operationId: upsertDshOperationalProfile
+    summary: Upsert assignment, preparation, delivery SLA and capacity pause state.
+    tags: [DshPlatformPolicies]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyProfileMutation" }
+    responses:
+      "200":
+        description: Versioned operational profile.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyProfileResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes:
+  parameters:
+    - name: zoneId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  get:
+    operationId: listDshOperationalDeliveryModes
+    summary: List the three canonical fulfillment-mode policies for a zone.
+    tags: [DshPlatformPolicies]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Zone delivery-mode policies.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyDeliveryModesResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes/{fulfillmentMode}:
+  parameters:
+    - name: zoneId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    - name: fulfillmentMode
+      in: path
+      required: true
+      schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyFulfillmentMode" }
+  put:
+    operationId: upsertDshOperationalDeliveryMode
+    summary: Enable or disable one canonical fulfillment mode for a zone.
+    tags: [DshPlatformPolicies]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyDeliveryModeMutation" }
+    responses:
+      "200":
+        description: Versioned delivery-mode policy.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyDeliveryModeResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/platform/operational-policy/evaluate:
+  post:
+    operationId: evaluateDshOperationalPolicy
+    summary: Evaluate one fail-closed operational decision across affected surfaces.
+    tags: [DshPlatformPolicies]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyEvaluationInput" }
+    responses:
+      "200":
+        description: Canonical operational decision and workflow effects.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyDecisionResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/platform/operational-policy/audit:
+  get:
+    operationId: listDshOperationalPolicyAudit
+    summary: List append-only operational-policy audit events.
+    tags: [DshPlatformPolicies]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: aggregateType
+        in: query
+        schema: { type: string }
+      - name: aggregateId
+        in: query
+        schema: { type: string }
+      - name: limit
+        in: query
+        schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    responses:
+      "200":
+        description: Operational-policy audit timeline.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyAuditResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/platform/operational-policy/audit/{eventId}/rollback:
+  parameters:
+    - name: eventId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  post:
+    operationId: rollbackDshOperationalPolicy
+    summary: Restore an audited snapshot as a new version of the same aggregate.
+    tags: [DshPlatformPolicies]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyRollbackRequest" }
+    responses:
+      "200":
+        description: Rollback result applied as a new audited version.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyRollbackResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }

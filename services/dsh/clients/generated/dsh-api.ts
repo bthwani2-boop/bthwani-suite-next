@@ -2390,10 +2390,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List messages in a support ticket thread. */
+        /** List messages and governed media references in a support ticket thread. */
         get: operations["listDshTicketMessages"];
         put?: never;
-        /** Add a message to a support ticket thread. */
+        /** Add a text, image, audio, video, or document message atomically to a support ticket thread. */
         post: operations["addDshTicketMessage"];
         delete?: never;
         options?: never;
@@ -2883,6 +2883,118 @@ export interface paths {
         /** Upsert capacity configuration for a zone. */
         put: operations["upsertDshCapacityConfig"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/platform/operational-profiles/{zoneId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zoneId: string;
+            };
+            cookie?: never;
+        };
+        /** Read the canonical SLA and capacity profile for a zone. */
+        get: operations["getDshOperationalProfile"];
+        /** Upsert assignment, preparation, delivery SLA and capacity pause state. */
+        put: operations["upsertDshOperationalProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zoneId: string;
+            };
+            cookie?: never;
+        };
+        /** List the three canonical fulfillment-mode policies for a zone. */
+        get: operations["listDshOperationalDeliveryModes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes/{fulfillmentMode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zoneId: string;
+                fulfillmentMode: components["schemas"]["DshOperationalPolicyFulfillmentMode"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Enable or disable one canonical fulfillment mode for a zone. */
+        put: operations["upsertDshOperationalDeliveryMode"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/platform/operational-policy/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Evaluate one fail-closed operational decision across affected surfaces. */
+        post: operations["evaluateDshOperationalPolicy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/platform/operational-policy/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List append-only operational-policy audit events. */
+        get: operations["listDshOperationalPolicyAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/platform/operational-policy/audit/{eventId}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore an audited snapshot as a new version of the same aggregate. */
+        post: operations["rollbackDshOperationalPolicy"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5722,14 +5834,53 @@ export interface components {
             assignedTo?: string;
         };
         DshSupportMessage: {
+            /** Format: uuid */
             id: string;
+            /** Format: uuid */
             ticketId: string;
             senderId: string;
             senderRole: components["schemas"]["DshSenderRole"];
             body: string;
             isInternal: boolean;
+            attachments: components["schemas"]["DshSupportMessageAttachment"][];
             /** Format: date-time */
             createdAt: string;
+        };
+        /** @enum {string} */
+        DshSupportMediaKind: "image" | "audio" | "video" | "document";
+        /** @enum {string} */
+        DshSupportMediaUploadStatus: "uploaded" | "processing" | "ready" | "failed";
+        DshSupportMessageAttachmentInput: {
+            mediaAssetId: string;
+            fileName: string;
+            mimeType: string;
+            sizeBytes: number;
+            kind: components["schemas"]["DshSupportMediaKind"];
+            durationMs?: number | null;
+            thumbnailMediaAssetId?: string;
+            waveformRef?: string;
+            /** @default ready */
+            uploadStatus: components["schemas"]["DshSupportMediaUploadStatus"];
+        };
+        DshSupportMessageAttachment: components["schemas"]["DshSupportMessageAttachmentInput"] & {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            ticketId: string;
+            /** Format: uuid */
+            messageId: string;
+            attachedBy: string;
+            isInternal: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DshRichMessageRequest: {
+            body?: string;
+            /** @default false */
+            isInternal: boolean;
+            attachments?: components["schemas"]["DshSupportMessageAttachmentInput"][];
+        } | unknown | {
+            attachments: components["schemas"]["DshSupportMessageAttachmentInput"][];
         };
         DshMessageResponse: {
             message: components["schemas"]["DshSupportMessage"];
@@ -6455,6 +6606,160 @@ export interface components {
             isActive: boolean;
             activeOrders: number;
             capacityPct: number;
+        };
+        /** @enum {string} */
+        DshOperationalPolicyFulfillmentMode: "bthwani_delivery" | "partner_delivery" | "client_pickup";
+        DshOperationalPolicySla: {
+            configured: boolean;
+            /** Format: uuid */
+            ruleId?: string;
+            category?: string;
+            maxPrepMins?: number;
+            maxAssignmentMins?: number;
+            maxDeliveryMins?: number;
+            version?: number;
+        };
+        DshOperationalPolicyCapacity: {
+            configured: boolean;
+            /** Format: uuid */
+            configId?: string;
+            maxConcurrentOrders?: number;
+            maxCaptainsOnline?: number;
+            throttleThreshold?: number;
+            isPaused: boolean;
+            pauseReason?: string;
+            version?: number;
+        };
+        DshOperationalPolicyProfile: {
+            /** Format: uuid */
+            zoneId: string;
+            sla: components["schemas"]["DshOperationalPolicySla"];
+            capacity: components["schemas"]["DshOperationalPolicyCapacity"];
+        };
+        DshOperationalPolicyProfileMutation: {
+            slaCategory: string;
+            maxPrepMins: number;
+            maxAssignmentMins: number;
+            maxDeliveryMins: number;
+            expectedSlaVersion: number;
+            maxConcurrentOrders: number;
+            maxCaptainsOnline: number;
+            throttleThreshold: number;
+            isPaused: boolean;
+            pauseReason: string;
+            expectedCapacityVersion: number;
+            reason: string;
+        };
+        DshOperationalPolicyDeliveryMode: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            zoneId: string;
+            fulfillmentMode: components["schemas"]["DshOperationalPolicyFulfillmentMode"];
+            isEnabled: boolean;
+            slaCategory: string;
+            version: number;
+            updatedBy: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshOperationalPolicyDeliveryModeMutation: {
+            isEnabled: boolean;
+            slaCategory: string;
+            expectedVersion: number;
+            reason: string;
+        };
+        DshOperationalPolicyEvaluationInput: {
+            /** Format: uuid */
+            zoneId: string;
+            serviceAreaCode?: string;
+            fulfillmentMode: components["schemas"]["DshOperationalPolicyFulfillmentMode"];
+            /** @default default */
+            slaCategory: string;
+            activeOrders: number;
+            captainsOnline: number;
+        };
+        DshOperationalPolicyEffects: {
+            cartAllowed: boolean;
+            checkoutAllowed: boolean;
+            orderCreationAllowed: boolean;
+            dispatchAllowed: boolean;
+            partnerHandoffRequired: boolean;
+            clientPickupRequired: boolean;
+        };
+        DshOperationalPolicyDecision: {
+            /** Format: uuid */
+            zoneId: string;
+            serviceAreaCode: string;
+            fulfillmentMode: components["schemas"]["DshOperationalPolicyFulfillmentMode"];
+            /** @enum {string} */
+            decision: "serviceable" | "unserviceable" | "policy_incomplete" | "paused" | "mode_disabled" | "capacity_exhausted" | "throttled";
+            serviceable: boolean;
+            reasonCodes: string[];
+            allowedActions: string[];
+            activeStores: number;
+            pressureRatio: number;
+            sla: components["schemas"]["DshOperationalPolicySla"];
+            capacity: components["schemas"]["DshOperationalPolicyCapacity"];
+            modePolicy?: components["schemas"]["DshOperationalPolicyDeliveryMode"];
+            effects: components["schemas"]["DshOperationalPolicyEffects"];
+            policyVersions: {
+                [key: string]: number;
+            };
+            /** Format: date-time */
+            evaluatedAt: string;
+        };
+        DshOperationalPolicyAuditEvent: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            aggregateType: "zone" | "sla_rule" | "capacity_config" | "delivery_mode" | "store_onboarding_fee";
+            aggregateId: string;
+            /** @enum {string} */
+            action: "created" | "updated" | "activated" | "deactivated" | "rolled_back";
+            actorId: string;
+            actorSurface: string;
+            correlationId?: string;
+            reason: string;
+            fromVersion?: number;
+            toVersion: number;
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DshOperationalPolicyRollbackRequest: {
+            expectedCurrentVersion: number;
+            reason: string;
+        };
+        DshOperationalPolicyRollbackResult: {
+            /** Format: uuid */
+            targetEventId: string;
+            aggregateType: string;
+            aggregateId: string;
+            fromVersion: number;
+            toVersion: number;
+        };
+        DshOperationalPolicyProfileResponse: {
+            profile: components["schemas"]["DshOperationalPolicyProfile"];
+        };
+        DshOperationalPolicyDeliveryModesResponse: {
+            deliveryModes: components["schemas"]["DshOperationalPolicyDeliveryMode"][];
+        };
+        DshOperationalPolicyDeliveryModeResponse: {
+            deliveryMode: components["schemas"]["DshOperationalPolicyDeliveryMode"];
+        };
+        DshOperationalPolicyDecisionResponse: {
+            decision: components["schemas"]["DshOperationalPolicyDecision"];
+        };
+        DshOperationalPolicyAuditResponse: {
+            events: components["schemas"]["DshOperationalPolicyAuditEvent"][];
+        };
+        DshOperationalPolicyRollbackResponse: {
+            rollback: components["schemas"]["DshOperationalPolicyRollbackResult"];
         };
         DshStoreOnboardingFeePolicy: {
             enabled: boolean;
@@ -11636,7 +11941,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description List of messages. */
+            /** @description List of messages including an attachments array for every message. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -11659,11 +11964,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshAddMessageRequest"];
+                "application/json": components["schemas"]["DshRichMessageRequest"];
             };
         };
         responses: {
-            /** @description Message added. */
+            /** @description Message and its governed media references were added atomically. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -11672,6 +11977,7 @@ export interface operations {
                     "application/json": components["schemas"]["DshMessageResponse"];
                 };
             };
+            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
         };
@@ -12784,6 +13090,215 @@ export interface operations {
             };
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["Unauthenticated"];
+        };
+    };
+    getDshOperationalProfile: {
+        parameters: {
+            query?: {
+                category?: string;
+            };
+            header?: never;
+            path: {
+                zoneId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Canonical operational profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOperationalPolicyProfileResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    upsertDshOperationalProfile: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                zoneId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshOperationalPolicyProfileMutation"];
+            };
+        };
+        responses: {
+            /** @description Versioned operational profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOperationalPolicyProfileResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listDshOperationalDeliveryModes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                zoneId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Zone delivery-mode policies. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOperationalPolicyDeliveryModesResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    upsertDshOperationalDeliveryMode: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                zoneId: string;
+                fulfillmentMode: components["schemas"]["DshOperationalPolicyFulfillmentMode"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshOperationalPolicyDeliveryModeMutation"];
+            };
+        };
+        responses: {
+            /** @description Versioned delivery-mode policy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOperationalPolicyDeliveryModeResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    evaluateDshOperationalPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshOperationalPolicyEvaluationInput"];
+            };
+        };
+        responses: {
+            /** @description Canonical operational decision and workflow effects. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOperationalPolicyDecisionResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDshOperationalPolicyAudit: {
+        parameters: {
+            query?: {
+                aggregateType?: string;
+                aggregateId?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Operational-policy audit timeline. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOperationalPolicyAuditResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    rollbackDshOperationalPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshOperationalPolicyRollbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Rollback result applied as a new audited version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOperationalPolicyRollbackResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     getDshZoneServiceability: {

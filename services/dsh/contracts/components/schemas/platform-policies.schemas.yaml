@@ -37,3 +37,220 @@ DshUpsertStoreOnboardingFeePolicyRequest:
     notes: { type: string }
 
 # ── Administration Schemas ───────────────────────────────────────
+
+# ── JRN-029 Operational Policy Schemas ────────────────────────────
+
+DshOperationalPolicyFulfillmentMode:
+  type: string
+  enum: [bthwani_delivery, partner_delivery, client_pickup]
+
+DshOperationalPolicySla:
+  type: object
+  additionalProperties: false
+  required: [configured]
+  properties:
+    configured: { type: boolean }
+    ruleId: { type: string, format: uuid }
+    category: { type: string }
+    maxPrepMins: { type: integer, minimum: 1, maximum: 1440 }
+    maxAssignmentMins: { type: integer, minimum: 1, maximum: 1440 }
+    maxDeliveryMins: { type: integer, minimum: 1, maximum: 1440 }
+    version: { type: integer, minimum: 1 }
+
+DshOperationalPolicyCapacity:
+  type: object
+  additionalProperties: false
+  required: [configured, isPaused]
+  properties:
+    configured: { type: boolean }
+    configId: { type: string, format: uuid }
+    maxConcurrentOrders: { type: integer, minimum: 1 }
+    maxCaptainsOnline: { type: integer, minimum: 0 }
+    throttleThreshold: { type: number, minimum: 0, maximum: 1 }
+    isPaused: { type: boolean }
+    pauseReason: { type: string, maxLength: 500 }
+    version: { type: integer, minimum: 1 }
+
+DshOperationalPolicyProfile:
+  type: object
+  additionalProperties: false
+  required: [zoneId, sla, capacity]
+  properties:
+    zoneId: { type: string, format: uuid }
+    sla: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicySla" }
+    capacity: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyCapacity" }
+
+DshOperationalPolicyProfileMutation:
+  type: object
+  additionalProperties: false
+  required: [slaCategory, maxPrepMins, maxAssignmentMins, maxDeliveryMins, expectedSlaVersion, maxConcurrentOrders, maxCaptainsOnline, throttleThreshold, isPaused, pauseReason, expectedCapacityVersion, reason]
+  properties:
+    slaCategory: { type: string, minLength: 1, maxLength: 120 }
+    maxPrepMins: { type: integer, minimum: 1, maximum: 1440 }
+    maxAssignmentMins: { type: integer, minimum: 1, maximum: 1440 }
+    maxDeliveryMins: { type: integer, minimum: 1, maximum: 1440 }
+    expectedSlaVersion: { type: integer, minimum: 0 }
+    maxConcurrentOrders: { type: integer, minimum: 1 }
+    maxCaptainsOnline: { type: integer, minimum: 0 }
+    throttleThreshold: { type: number, minimum: 0, maximum: 1 }
+    isPaused: { type: boolean }
+    pauseReason: { type: string, maxLength: 500 }
+    expectedCapacityVersion: { type: integer, minimum: 0 }
+    reason: { type: string, minLength: 3, maxLength: 500 }
+
+DshOperationalPolicyDeliveryMode:
+  type: object
+  additionalProperties: false
+  required: [id, zoneId, fulfillmentMode, isEnabled, slaCategory, version, updatedBy, createdAt, updatedAt]
+  properties:
+    id: { type: string, format: uuid }
+    zoneId: { type: string, format: uuid }
+    fulfillmentMode: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyFulfillmentMode" }
+    isEnabled: { type: boolean }
+    slaCategory: { type: string }
+    version: { type: integer, minimum: 1 }
+    updatedBy: { type: string }
+    createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
+
+DshOperationalPolicyDeliveryModeMutation:
+  type: object
+  additionalProperties: false
+  required: [isEnabled, slaCategory, expectedVersion, reason]
+  properties:
+    isEnabled: { type: boolean }
+    slaCategory: { type: string, minLength: 1, maxLength: 120 }
+    expectedVersion: { type: integer, minimum: 0 }
+    reason: { type: string, minLength: 3, maxLength: 500 }
+
+DshOperationalPolicyEvaluationInput:
+  type: object
+  additionalProperties: false
+  required: [zoneId, fulfillmentMode, activeOrders, captainsOnline]
+  properties:
+    zoneId: { type: string, format: uuid }
+    serviceAreaCode: { type: string }
+    fulfillmentMode: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyFulfillmentMode" }
+    slaCategory: { type: string, default: default }
+    activeOrders: { type: integer, minimum: 0 }
+    captainsOnline: { type: integer, minimum: 0 }
+
+DshOperationalPolicyEffects:
+  type: object
+  additionalProperties: false
+  required: [cartAllowed, checkoutAllowed, orderCreationAllowed, dispatchAllowed, partnerHandoffRequired, clientPickupRequired]
+  properties:
+    cartAllowed: { type: boolean }
+    checkoutAllowed: { type: boolean }
+    orderCreationAllowed: { type: boolean }
+    dispatchAllowed: { type: boolean }
+    partnerHandoffRequired: { type: boolean }
+    clientPickupRequired: { type: boolean }
+
+DshOperationalPolicyDecision:
+  type: object
+  additionalProperties: false
+  required: [zoneId, serviceAreaCode, fulfillmentMode, decision, serviceable, reasonCodes, allowedActions, activeStores, pressureRatio, sla, capacity, effects, policyVersions, evaluatedAt]
+  properties:
+    zoneId: { type: string, format: uuid }
+    serviceAreaCode: { type: string }
+    fulfillmentMode: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyFulfillmentMode" }
+    decision:
+      type: string
+      enum: [serviceable, unserviceable, policy_incomplete, paused, mode_disabled, capacity_exhausted, throttled]
+    serviceable: { type: boolean }
+    reasonCodes: { type: array, items: { type: string } }
+    allowedActions: { type: array, items: { type: string } }
+    activeStores: { type: integer, minimum: 0 }
+    pressureRatio: { type: number, minimum: 0 }
+    sla: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicySla" }
+    capacity: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyCapacity" }
+    modePolicy: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyDeliveryMode" }
+    effects: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyEffects" }
+    policyVersions:
+      type: object
+      additionalProperties: { type: integer }
+    evaluatedAt: { type: string, format: date-time }
+
+DshOperationalPolicyAuditEvent:
+  type: object
+  additionalProperties: false
+  required: [id, aggregateType, aggregateId, action, actorId, actorSurface, reason, toVersion, payload, createdAt]
+  properties:
+    id: { type: string, format: uuid }
+    aggregateType: { type: string, enum: [zone, sla_rule, capacity_config, delivery_mode, store_onboarding_fee] }
+    aggregateId: { type: string }
+    action: { type: string, enum: [created, updated, activated, deactivated, rolled_back] }
+    actorId: { type: string }
+    actorSurface: { type: string }
+    correlationId: { type: string }
+    reason: { type: string }
+    fromVersion: { type: integer }
+    toVersion: { type: integer }
+    payload: { type: object, additionalProperties: true }
+    createdAt: { type: string, format: date-time }
+
+DshOperationalPolicyRollbackRequest:
+  type: object
+  additionalProperties: false
+  required: [expectedCurrentVersion, reason]
+  properties:
+    expectedCurrentVersion: { type: integer, minimum: 1 }
+    reason: { type: string, minLength: 3, maxLength: 500 }
+
+DshOperationalPolicyRollbackResult:
+  type: object
+  additionalProperties: false
+  required: [targetEventId, aggregateType, aggregateId, fromVersion, toVersion]
+  properties:
+    targetEventId: { type: string, format: uuid }
+    aggregateType: { type: string }
+    aggregateId: { type: string }
+    fromVersion: { type: integer, minimum: 1 }
+    toVersion: { type: integer, minimum: 1 }
+
+DshOperationalPolicyProfileResponse:
+  type: object
+  additionalProperties: false
+  required: [profile]
+  properties:
+    profile: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyProfile" }
+
+DshOperationalPolicyDeliveryModesResponse:
+  type: object
+  additionalProperties: false
+  required: [deliveryModes]
+  properties:
+    deliveryModes:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyDeliveryMode" }
+
+DshOperationalPolicyDeliveryModeResponse:
+  type: object
+  additionalProperties: false
+  required: [deliveryMode]
+  properties:
+    deliveryMode: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyDeliveryMode" }
+
+DshOperationalPolicyDecisionResponse:
+  type: object
+  additionalProperties: false
+  required: [decision]
+  properties:
+    decision: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyDecision" }
+
+DshOperationalPolicyAuditResponse:
+  type: object
+  additionalProperties: false
+  required: [events]
+  properties:
+    events:
+      type: array
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyAuditEvent" }
+
+DshOperationalPolicyRollbackResponse:
+  type: object
+  additionalProperties: false
+  required: [rollback]
+  properties:
+    rollback: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyRollbackResult" }

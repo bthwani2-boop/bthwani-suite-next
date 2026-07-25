@@ -2,13 +2,13 @@
   "formatVersion": 1,
   "entryContract": "services/dsh/contracts/dsh.openapi.yaml",
   "generatedBundle": "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
-  "pathCount": 269,
-  "operationIdCount": 317,
+  "pathCount": 275,
+  "operationIdCount": 324,
   "componentCounts": {
     "securitySchemes": 1,
     "parameters": 4,
     "responses": 6,
-    "schemas": 297
+    "schemas": 316
   },
   "pathDomains": {
     "field": 28,
@@ -17,21 +17,22 @@
     "home-discovery": 4,
     "workforce": 1,
     "misc": 32,
-    "operator": 23,
+    "operator": 25,
     "partner": 50,
     "captain": 8,
     "catalog": 48,
     "cart-serviceability": 6,
     "checkout": 6,
-    "orders": 8,
+    "orders": 9,
     "dispatch": 17,
     "support": 8,
     "analytics": 5,
     "marketing-commercial": 7,
+    "platform-policies": 3,
     "preparation-handoff": 11
   },
   "schemaDomains": {
-    "common": 93,
+    "common": 94,
     "analytics": 4,
     "store": 11,
     "cart-serviceability": 11,
@@ -44,9 +45,9 @@
     "checkout": 4,
     "finance-reference": 3,
     "dispatch": 6,
-    "support": 14,
+    "support": 13,
     "marketing-commercial": 11,
-    "platform-policies": 3,
+    "platform-policies": 22,
     "captain": 5,
     "preparation-handoff": 21
   }

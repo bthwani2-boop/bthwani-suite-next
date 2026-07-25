@@ -357,6 +357,18 @@ paths:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1platform~1sla-rules"
   /dsh/operator/platform/capacity:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1platform~1capacity"
+  /dsh/operator/platform/operational-profiles/{zoneId}:
+    $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1operator~1platform~1operational-profiles~1{zoneId}"
+  /dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes:
+    $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1operator~1platform~1operational-profiles~1{zoneId}~1delivery-modes"
+  /dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes/{fulfillmentMode}:
+    $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1operator~1platform~1operational-profiles~1{zoneId}~1delivery-modes~1{fulfillmentMode}"
+  /dsh/platform/operational-policy/evaluate:
+    $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1platform~1operational-policy~1evaluate"
+  /dsh/operator/platform/operational-policy/audit:
+    $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1operator~1platform~1operational-policy~1audit"
+  /dsh/operator/platform/operational-policy/audit/{eventId}/rollback:
+    $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1operator~1platform~1operational-policy~1audit~1{eventId}~1rollback"
   /dsh/operator/platform/serviceability/{zoneId}:
     $ref: "./paths/cart-serviceability.paths.yaml#/~1dsh~1operator~1platform~1serviceability~1{zoneId}"
   /dsh/operator/platform/store-onboarding-fee:
@@ -1017,6 +1029,44 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshUpsertCapacityConfigRequest"
     DshZoneServiceabilityResponse:
       $ref: "./components/schemas/cart-serviceability.schemas.yaml#/DshZoneServiceabilityResponse"
+    DshOperationalPolicyFulfillmentMode:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyFulfillmentMode"
+    DshOperationalPolicySla:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicySla"
+    DshOperationalPolicyCapacity:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyCapacity"
+    DshOperationalPolicyProfile:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyProfile"
+    DshOperationalPolicyProfileMutation:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyProfileMutation"
+    DshOperationalPolicyDeliveryMode:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyDeliveryMode"
+    DshOperationalPolicyDeliveryModeMutation:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyDeliveryModeMutation"
+    DshOperationalPolicyEvaluationInput:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyEvaluationInput"
+    DshOperationalPolicyEffects:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyEffects"
+    DshOperationalPolicyDecision:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyDecision"
+    DshOperationalPolicyAuditEvent:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyAuditEvent"
+    DshOperationalPolicyRollbackRequest:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyRollbackRequest"
+    DshOperationalPolicyRollbackResult:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyRollbackResult"
+    DshOperationalPolicyProfileResponse:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyProfileResponse"
+    DshOperationalPolicyDeliveryModesResponse:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyDeliveryModesResponse"
+    DshOperationalPolicyDeliveryModeResponse:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyDeliveryModeResponse"
+    DshOperationalPolicyDecisionResponse:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyDecisionResponse"
+    DshOperationalPolicyAuditResponse:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyAuditResponse"
+    DshOperationalPolicyRollbackResponse:
+      $ref: "./components/schemas/platform-policies.schemas.yaml#/DshOperationalPolicyRollbackResponse"
     DshStoreOnboardingFeePolicy:
       $ref: "./components/schemas/platform-policies.schemas.yaml#/DshStoreOnboardingFeePolicy"
     DshStoreOnboardingFeePolicyResponse:
