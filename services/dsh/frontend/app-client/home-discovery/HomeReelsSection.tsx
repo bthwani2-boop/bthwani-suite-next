@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
     overflow: "hidden",
-    ...elevation.raised,
+    ...elevation.overlay,
   },
   cardPressed: {
     opacity: 0.9,
