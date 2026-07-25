@@ -14,6 +14,7 @@
     },
     "development": {
       "extends": "base",
+      "credentialsSource": "local",
       "environment": "development",
       "channel": "development",
       "developmentClient": true,
