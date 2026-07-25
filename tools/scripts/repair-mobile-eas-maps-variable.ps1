@@ -118,6 +118,32 @@ function Get-RemoteVariable {
     )
 }
 
+function Test-ReactNativeMapsPlugin {
+    param([AllowNull()] $Plugins)
+
+    foreach ($plugin in @($Plugins)) {
+        if ($plugin -is [string] -and $plugin -eq "react-native-maps") {
+            return $true
+        }
+        if ($plugin -is [System.Collections.IList] -and $plugin.Count -gt 0 -and [string]$plugin[0] -eq "react-native-maps") {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Test-AndroidGoogleMapsConfig {
+    param([Parameter(Mandatory)] $Config)
+
+    if ($null -eq $Config.android) { return $false }
+    if ($null -eq $Config.android.config) { return $false }
+    if ($null -eq $Config.android.config.googleMaps) { return $false }
+
+    $configuredApiKey = [string]$Config.android.config.googleMaps.apiKey
+    return -not [string]::IsNullOrWhiteSpace($configuredApiKey)
+}
+
 if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
     throw "Required mobile manifest is missing: $ManifestPath"
 }
@@ -213,6 +239,7 @@ if ($after.ExitCode -ne 0) {
 }
 
 $previousMapsKey = [Environment]::GetEnvironmentVariable("GOOGLE_MAPS_ANDROID_API_KEY", "Process")
+$nativeMapsConfigProof = "unproven"
 try {
     [Environment]::SetEnvironmentVariable("GOOGLE_MAPS_ANDROID_API_KEY", $resolvedApiKey, "Process")
     Push-Location -LiteralPath $appDirectory
@@ -230,21 +257,20 @@ try {
     }
 
     $config = $configText.Substring($jsonStart) | ConvertFrom-Json -Depth 100
-    $plugins = @($config.plugins)
-    $hasMapsPlugin = $false
-    foreach ($plugin in $plugins) {
-        if ($plugin -is [string] -and $plugin -eq "react-native-maps") {
-            $hasMapsPlugin = $true
-        } elseif ($plugin -is [System.Collections.IList] -and $plugin.Count -gt 0 -and [string]$plugin[0] -eq "react-native-maps") {
-            $hasMapsPlugin = $true
-        }
-    }
+    $hasMapsPlugin = Test-ReactNativeMapsPlugin -Plugins $config.plugins
+    $hasAndroidMapsConfig = Test-AndroidGoogleMapsConfig -Config $config
 
     if ($config.extra.maps.androidNativeConfigured -ne $true) {
         throw "Expo config did not mark Android maps as natively configured."
     }
-    if (-not $hasMapsPlugin) {
-        throw "Expo config did not include the react-native-maps config plugin."
+    if (-not ($hasMapsPlugin -or $hasAndroidMapsConfig)) {
+        throw "Expo config did not expose a Google Maps Android native config path."
+    }
+
+    $nativeMapsConfigProof = if ($hasMapsPlugin) {
+        "react-native-maps config plugin"
+    } else {
+        "android.config.googleMaps.apiKey"
     }
 } finally {
     [Environment]::SetEnvironmentVariable("GOOGLE_MAPS_ANDROID_API_KEY", $previousMapsKey, "Process")
@@ -259,7 +285,7 @@ try {
     "Visibility: sensitive",
     "Type: string",
     "Environment: development",
-    "Expo react-native-maps plugin: present",
+    "Expo Google Maps config path: $nativeMapsConfigProof",
     "Expo Android native maps flag: true",
     "Value: intentionally not recorded"
 ) | Set-Content -LiteralPath $ReportPath -Encoding UTF8
