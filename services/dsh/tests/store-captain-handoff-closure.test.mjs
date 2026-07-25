@@ -20,6 +20,7 @@ const paths = {
   main: "services/dsh/backend/cmd/dsh-api/main.go",
   workboard: "services/dsh/backend/internal/http/partner_order_workboard.go",
   baseContract: "services/dsh/contracts/dsh.openapi.yaml",
+  bundledContract: "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
   contract: "services/dsh/contracts/dsh.store-captain-handoff.openapi.yaml",
   contractRegistry: "services/dsh/contracts/contract-registry.ts",
   sliceManifest: "services/dsh/contracts/jrn-013-slice-closure.json",
@@ -79,6 +80,7 @@ test("runtime and OpenAPI have one governed operation owner", () => {
   const server = read(paths.server);
   const main = read(paths.main);
   const baseContract = read(paths.baseContract);
+  const bundledContract = read(paths.bundledContract);
   const contract = read(paths.contract);
   const registry = read(paths.contractRegistry);
   for (const route of [
@@ -97,7 +99,8 @@ test("runtime and OpenAPI have one governed operation owner", () => {
   assert.match(contract, /x-bthwani-parent-operation/);
   assert.equal((contract.match(/^  \/dsh\//gm) ?? []).length, 3);
   assert.doesNotMatch(contract, /operationId: updateCaptainDeliveryStatusWithCustodyGuard/);
-  assert.match(baseContract, /operationId: updateDshDeliveryStatus/);
+  assert.match(baseContract, /x-bthwani-bundle: \.\/generated\/dsh\.bundle\.openapi\.yaml/);
+  assert.match(bundledContract, /operationId: updateDshDeliveryStatus/);
   assert.match(registry, /dsh-store-captain-handoff/);
 });
 
@@ -139,7 +142,7 @@ test("operator resolution and client tracking consume the same DSH truth", () =>
   assert.match(client, /fetchClientOrderTruthDetail/);
   assert.match(client, /fetchClientLiveTracking/);
   assert.match(client, /setInterval/);
-  assert.match(client, /cannot override order truth/);
+  assert.match(client, /cannot[\s*]+override order truth/);
 });
 
 test("product truth closes code without claiming release approval", () => {
