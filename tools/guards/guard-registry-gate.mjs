@@ -10,6 +10,7 @@ const packageRelative = "package.json";
 const manifestRelative = "tools/guards/guard-manifest.json";
 const foundationRunnerRelative = "tools/scripts/run-foundation-gate.ps1";
 const journeyRunnerRelative = "tools/scripts/run-journey-gate.ps1";
+const remediationRelative = ".github/workflows/remediation-analysis.yml";
 const workflowsDir = path.join(repoRoot, ".github/workflows");
 const actionsDir = path.join(repoRoot, ".github/actions");
 const expectedWorkflowFiles = [
@@ -100,6 +101,48 @@ function verifyCheckoutCredentials(relativePath, content) {
 
 function commandSwallowsFailure(command) {
   return /\|\|\s*true|continue-on-error|catch\s*\([^)]*\)\s*\{?[\s\S]*?console\.log|catch\s*\{[\s\S]*?console\.log/i.test(command);
+}
+
+function verifyRemediationWorkflow(relativePath, content) {
+  requireMarkers(relativePath, content, [
+    "name: BThwani Expert Live-Code Remediation",
+    "workflow_dispatch:",
+    "Forensic discovery and deterministic repair",
+    "Logic, binding, duplication, and repository integrity",
+    "Type, lint, test, and build verification",
+    "Backend and database",
+    "Dependency, secret, workflow, and container security",
+    "Integrated SaaS runtime proof",
+    "Publish reviewed remediation pull request",
+    "patch_sha256",
+    "Unapproved deletion rejected",
+    "contents: write",
+    "pull-requests: write",
+  ]);
+
+  if (/^\s{2}(?:workflow_run|pull_request_target|schedule|repository_dispatch):/m.test(content)) {
+    violations.push({ file: relativePath, line: 0, message: "REMEDIATION_MUST_REMAIN_MANUAL" });
+  }
+  if (/\bsecrets\.[A-Za-z0-9_]+\b/.test(content)) {
+    violations.push({ file: relativePath, line: 0, message: "REMEDIATION_REPOSITORY_SECRET_FORBIDDEN" });
+  }
+  if ((content.match(/^\s*contents:\s*write\s*$/gm) ?? []).length !== 1) {
+    violations.push({ file: relativePath, line: 0, message: "REMEDIATION_SINGLE_CONTENT_WRITE_BOUNDARY_REQUIRED" });
+  }
+  if (/git\s+push\s+(?:--force|-f)\b|gh\s+pr\s+merge\b/i.test(content)) {
+    violations.push({ file: relativePath, line: 0, message: "REMEDIATION_FORCE_PUSH_OR_MERGE_FORBIDDEN" });
+  }
+
+  const publishStart = content.search(/^\s{2}publish:\s*$/m);
+  const resultStart = content.search(/^\s{2}result:\s*$/m);
+  if (publishStart < 0 || resultStart <= publishStart) {
+    violations.push({ file: relativePath, line: 0, message: "REMEDIATION_PUBLISH_BOUNDARY_MISSING" });
+  } else {
+    const publish = content.slice(publishStart, resultStart);
+    if (/^\s*(?:pnpm|npm|npx|yarn|node|go)\b/m.test(publish) || /uses:\s*\.\//m.test(publish)) {
+      violations.push({ file: relativePath, line: 0, message: "REMEDIATION_WRITE_JOB_EXECUTES_REPOSITORY_CODE" });
+    }
+  }
 }
 
 const registry = readJson(registryRelative);
@@ -241,24 +284,27 @@ if (!fs.existsSync(workflowsDir)) {
   for (const fileName of workflowFiles) {
     const relativePath = `.github/workflows/${fileName}`;
     const content = fs.readFileSync(path.join(workflowsDir, fileName), "utf8");
+    const isRemediation = relativePath === remediationRelative;
+
     if (!/^permissions:\s*(?:\n|$)/m.test(content) && !/^permissions:\s*\{\s*\}\s*$/m.test(content)) {
       violations.push({ file: relativePath, line: 0, message: "WORKFLOW_MUST_DECLARE_EXPLICIT_TOP_LEVEL_PERMISSIONS" });
     }
     if (/pull_request_target\s*:/m.test(content)) {
       violations.push({ file: relativePath, line: 0, message: "PULL_REQUEST_TARGET_FORBIDDEN" });
     }
-    if (/contents:\s*write\b|statuses:\s*write\b|write-all\b/i.test(content)) {
+    if (!isRemediation && /contents:\s*write\b|statuses:\s*write\b|write-all\b/i.test(content)) {
       violations.push({ file: relativePath, line: 0, message: "WORKFLOW_WRITE_PERMISSION_FORBIDDEN" });
     }
-    if (/\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+merge)\b/i.test(content)) {
+    if (!isRemediation && /\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+merge)\b/i.test(content)) {
       violations.push({ file: relativePath, line: 0, message: "CI_SOURCE_OR_BRANCH_MUTATION_FORBIDDEN" });
     }
-    if (/\b(?:gofmt\s+-w|prettier\s+--write|eslint\s+--fix|sed\s+-i|perl\s+-pi)\b/i.test(content)) {
+    if (!isRemediation && /\b(?:gofmt\s+-w|prettier\s+--write|eslint\s+--fix|sed\s+-i|perl\s+-pi)\b/i.test(content)) {
       violations.push({ file: relativePath, line: 0, message: "CI_FIX_OR_SOURCE_REWRITE_COMMAND_FORBIDDEN" });
     }
     if (/@latest\b/i.test(content)) {
       violations.push({ file: relativePath, line: 0, message: "LATEST_VERSION_FORBIDDEN_IN_WORKFLOW" });
     }
+    if (isRemediation) verifyRemediationWorkflow(relativePath, content);
 
     for (const match of content.matchAll(/\b(?:pnpm|npm|yarn)\s+(?:run\s+)?(guard:[A-Za-z0-9:_-]+)\b/g)) {
       if (!aggregateScripts.has(match[1]) && !registeredScripts.has(match[1])) {
