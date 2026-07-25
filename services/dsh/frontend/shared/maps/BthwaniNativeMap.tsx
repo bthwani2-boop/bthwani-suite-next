@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: spacing[4],
-    backgroundColor: "rgba(255,255,255,0.66)",
+    backgroundColor: colorRoles.surfaceBase,
   },
   rtl: {
     textAlign: "right",
