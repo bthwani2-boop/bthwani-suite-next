@@ -21,30 +21,30 @@ test("JRN-033 visual evidence renders actual wallet components for all represent
     'captain: "تطبيق الكابتن"',
     'field: "تطبيق الميداني"',
     '"success" | "empty" | "frozen" | "error" | "loading"',
-    "fixture بصري محكوم",
+    "بيانات هذه الصفحة مخصصة لإثبات العرض المرئي",
     "Identity → DSH → WLT",
   ], "visual evidence screen");
 });
 
 test("JRN-033 visual route is disabled outside the explicit evidence environment", () => {
   const page = read("apps/control-panel/runtime/src/app/dsh/finance/jrn-033-visual-evidence/page.tsx");
+  const flags = read("apps/control-panel/runtime/src/config/public-runtime-flags.ts");
   const layout = read("apps/control-panel/runtime/src/app/dsh/layout.tsx");
-  includesAll(page, ["NEXT_PUBLIC_JRN_033_VISUAL_EVIDENCE", '!== "1"', "notFound()"], "visual evidence page");
+  includesAll(page, ["publicRuntimeFlags.jrn033VisualEvidenceEnabled", "notFound()"], "visual evidence page");
+  includesAll(flags, ["NEXT_PUBLIC_JRN_033_VISUAL_EVIDENCE", '=== "1"'], "public runtime evidence flag");
   includesAll(layout, [
     'pathname === "/dsh/finance/jrn-033-visual-evidence"',
-    'process.env.NEXT_PUBLIC_JRN_033_VISUAL_EVIDENCE === "1"',
+    "publicRuntimeFlags.jrn033VisualEvidenceEnabled",
   ], "control-panel evidence auth isolation");
 });
 
-test("JRN-033 visual workflow captures hashed immutable evidence and distinguishes fixtures from runtime truth", () => {
-  const workflow = read(".github/workflows/jrn-033-visual-evidence.yml");
+test("JRN-033 visual evidence remains governed by unified immutable CI", () => {
+  const dedicatedWorkflow = path.join(repositoryRoot, ".github/workflows/jrn-033-visual-evidence.yml");
+  const workflow = read(".github/workflows/ci-node-verification.yml");
+  assert.equal(fs.existsSync(dedicatedWorkflow), false, "dedicated journey workflow must remain consolidated into unified CI");
   includesAll(workflow, [
-    "NEXT_PUBLIC_JRN_033_VISUAL_EVIDENCE=1",
-    "NEXT_PUBLIC_DSH_API_BASE_URL=/api/dsh",
-    "success empty frozen error loading",
-    "--headless=new",
-    "SHA256SUMS",
-    "jrn-033-visual-evidence-${{ github.sha }}",
-    "Fixtures are visual-state data only; Docker runtime workflow owns live financial evidence.",
-  ], "visual evidence workflow");
+    "pnpm exec nx run-many -t test --all --outputStyle=stream",
+    "pnpm run nx:build",
+    "Upload Node test evidence",
+  ], "unified visual-component verification workflow");
 });
