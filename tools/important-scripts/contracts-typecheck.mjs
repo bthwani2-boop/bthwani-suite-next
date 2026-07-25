@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { normalizeOpenApiMetadata } from "../contracts/normalize-openapi-metadata.mjs";
+import { composeDshOpenApi } from "../scripts/dsh-openapi-modular-lib.mjs";
 
 const contracts = [
   "contracts/master.openapi.yaml",
@@ -85,6 +86,7 @@ try {
   run("contracts-foundation", "node", ["tools/important-scripts/contracts-foundation.mjs"], {
     stdio: "inherit",
   });
+  composeDshOpenApi({ write: true });
   run("dsh-openapi-modular", "node", ["tools/guards/dsh-openapi-modular-gate.mjs"], {
     stdio: "inherit",
   });
