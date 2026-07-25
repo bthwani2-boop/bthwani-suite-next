@@ -62,9 +62,15 @@
         "apps/app-partner/runtime/src/index.ts"
       ],
       "react-native": [
+        "apps/app-field/runtime/node_modules/react-native",
+        "apps/app-captain/runtime/node_modules/react-native",
+        "apps/app-partner/runtime/node_modules/react-native",
         "apps/app-client/runtime/node_modules/react-native"
       ],
       "react-native-maps": [
+        "apps/app-field/runtime/node_modules/react-native-maps",
+        "apps/app-captain/runtime/node_modules/react-native-maps",
+        "apps/app-partner/runtime/node_modules/react-native-maps",
         "apps/app-client/runtime/node_modules/react-native-maps"
       ],
       "@tanstack/react-query": [
