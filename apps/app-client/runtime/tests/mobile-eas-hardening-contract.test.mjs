@@ -35,14 +35,16 @@ test("Initialize is mandatory and bound to immutable provider inputs", () => {
   assert.ok(workflow.indexOf("Assert-StateStamp -Path $PreflightStampPath") < workflow.indexOf("Write-Step 'Submit remote build'"));
 });
 
-test("EAS provider verification uses supported flags and fail-closed metadata parsing", () => {
+test("EAS provider verification uses supported flags and actual short output parsing", () => {
   assert.ok(providers.includes("'env:set', 'development'"));
   assert.ok(providers.includes("'env:list', 'development'"));
   assert.ok(providers.includes("Get-EasDevelopmentVariableNames"));
   assert.ok(providers.includes("Remove-AnsiEscapeSequences"));
   assert.ok(providers.includes("$env:FORCE_COLOR = '0'"));
-  assert.ok(providers.includes("EAS CLI does not define a --non-interactive flag for env:list"));
+  assert.ok(providers.includes("env:list does not define a --non-interactive flag"));
   assert.ok(providers.includes("$result.Text -split '\\r?\\n'"));
+  assert.ok(providers.includes("Current EAS short format is NAME=value"));
+  assert.ok(providers.includes("(?:=|\\|)"));
   assert.ok(providers.includes("Available project variables:"));
   assert.equal(providers.includes("function Test-EasVariable"), false);
   assert.equal(providers.includes("-AllowFailure -Quiet"), false);
