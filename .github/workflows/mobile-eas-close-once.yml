@@ -1,0 +1,118 @@
+name: Close mobile EAS workflow once
+
+on:
+  push:
+    branches: [reemsam]
+    paths: [".github/workflows/mobile-eas-close-once.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  close:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: reemsam
+          fetch-depth: 0
+
+      - name: Harden the single entrypoint
+        shell: pwsh
+        run: |
+          $path = 'tools/scripts/mobile-eas.ps1'
+          $text = Get-Content -LiteralPath $path -Raw
+
+          $start = $text.IndexOf('function Find-Keytool {')
+          $end = $text.IndexOf('function New-RandomSecret {')
+          if ($start -lt 0 -or $end -le $start) { throw 'Find-Keytool block not found.' }
+          $replacement = @'
+function Find-Keytool {
+    $command = Get-Command keytool -ErrorAction SilentlyContinue
+    if ($command) { return $command.Source }
+
+    $candidates = [System.Collections.Generic.List[string]]::new()
+    $java = Get-Command java -ErrorAction SilentlyContinue
+    if ($java -and $java.Source) {
+        $candidates.Add((Join-Path (Split-Path -Parent $java.Source) 'keytool.exe'))
+    }
+    foreach ($home in @($env:JAVA_HOME, $env:JDK_HOME)) {
+        if ($home) { $candidates.Add((Join-Path $home 'bin\keytool.exe')) }
+    }
+    foreach ($candidate in @(
+        (Join-Path $env:ProgramFiles 'Android\Android Studio\jbr\bin\keytool.exe'),
+        (Join-Path ${env:ProgramFiles(x86)} 'Android\Android Studio\jbr\bin\keytool.exe'),
+        (Join-Path $env:LOCALAPPDATA 'Programs\Android Studio\jbr\bin\keytool.exe')
+    )) {
+        if ($candidate) { $candidates.Add($candidate) }
+    }
+    foreach ($root in @(
+        (Join-Path $env:ProgramFiles 'Java'),
+        (Join-Path $env:ProgramFiles 'Eclipse Adoptium'),
+        (Join-Path $env:ProgramFiles 'Microsoft'),
+        (Join-Path $env:USERPROFILE '.jdks'),
+        (Join-Path $env:USERPROFILE '.gradle\jdks')
+    )) {
+        if (-not $root -or -not (Test-Path -LiteralPath $root -PathType Container)) { continue }
+        Get-ChildItem -LiteralPath $root -Filter keytool.exe -File -Recurse -ErrorAction SilentlyContinue |
+            ForEach-Object { $candidates.Add($_.FullName) }
+    }
+
+    $match = $candidates |
+        Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } |
+        Select-Object -First 1
+    if (-not $match) {
+        throw 'keytool was not found. Install a JDK or Android Studio JBR, or set JAVA_HOME.'
+    }
+    return [System.IO.Path]::GetFullPath([string]$match)
+}
+
+'@
+          $text = $text.Substring(0, $start) + $replacement + $text.Substring($end)
+
+          $start = $text.IndexOf('function Assert-CleanTrackedTree {')
+          $end = $text.IndexOf('function Get-InputState {')
+          if ($start -lt 0 -or $end -le $start) { throw 'Assert-CleanTrackedTree block not found.' }
+          $replacement = @'
+function Assert-CleanTrackedTree {
+    param([string] $Stage = 'Mobile EAS workflow')
+    $status = Invoke-Checked -Command 'git' -Arguments @('status', '--porcelain=v1', '--untracked-files=no') -Quiet
+    if ($status) {
+        throw "$Stage requires a clean tracked Git tree. Modified files:`n$status"
+    }
+}
+
+'@
+          $text = $text.Substring(0, $start) + $replacement + $text.Substring($end)
+
+          $needle = "    Write-PreflightStamp -MapsKey `$mapsKey"
+          if (-not $text.Contains($needle)) { throw 'Preflight stamp call not found.' }
+          $text = $text.Replace($needle, "    Assert-CleanTrackedTree -Stage 'Preflight cleanup'`n$needle")
+          Set-Content -LiteralPath $path -Value $text -Encoding UTF8
+
+      - name: Verify contracts
+        shell: pwsh
+        run: |
+          foreach ($file in @(
+            'tools/scripts/mobile-eas.ps1',
+            'tools/scripts/mobile-eas/ensure-firebase-app.ps1',
+            'tools/scripts/google-cloud/create-android-maps-api-key.ps1'
+          )) {
+            $tokens = $null; $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors)
+            if (@($errors).Count) { $errors | ForEach-Object { Write-Error "${file}: $($_.Message)" }; exit 1 }
+          }
+          node --check tools/scripts/eas-build-mobile.mjs
+          node --check tools/scripts/verify-mobile-prebuild.mjs
+          node --test apps/app-client/runtime/tests/mobile-development-provider-contract.test.mjs
+
+      - name: Commit and remove this workflow
+        shell: bash
+        run: |
+          rm .github/workflows/mobile-eas-close-once.yml
+          git config user.name bthwani-ci
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tools/scripts/mobile-eas.ps1 tools/scripts/eas-build-mobile.mjs tools/scripts/verify-mobile-prebuild.mjs .github/workflows/mobile-eas-close-once.yml
+          git commit -m "fix(mobile): finalize clean single-app EAS workflow"
+          git push origin HEAD:reemsam
