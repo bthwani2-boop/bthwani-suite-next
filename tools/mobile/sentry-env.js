@@ -48,7 +48,12 @@ function scopedNames(baseName, appKey, aliases = []) {
 function resolveRuntimeGoogleServicesFile(appKey) {
   const rootDir = path.resolve(__dirname, "../..");
   const absolute = path.join(rootDir, "apps", appKey, "runtime", "google-services.json");
-  return fs.existsSync(absolute) ? "./google-services.json" : undefined;
+
+  // Return the canonical absolute path. Local preflight gates execute from the
+  // repository root, while Expo/EAS config evaluation executes from the app
+  // runtime. A relative value such as ./google-services.json is therefore
+  // ambiguous and can resolve to the wrong directory.
+  return fs.existsSync(absolute) ? absolute : undefined;
 }
 
 function resolveGoogleServicesFile(appKey, environment = process.env) {
