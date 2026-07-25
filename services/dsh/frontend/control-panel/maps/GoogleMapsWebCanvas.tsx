@@ -53,9 +53,10 @@ function browserApiKey(): string | null {
 
 function loadGoogleMaps(apiKey: string): Promise<GoogleMapsRuntime> {
   if (window.google?.maps) return Promise.resolve(window.google.maps);
-  if (window.__bthwaniGoogleMapsPromise) return window.__bthwaniGoogleMapsPromise;
+  const existingPromise = window.__bthwaniGoogleMapsPromise;
+  if (existingPromise) return existingPromise;
 
-  window.__bthwaniGoogleMapsPromise = new Promise<GoogleMapsRuntime>((resolve, reject) => {
+  const promise = new Promise<GoogleMapsRuntime>((resolve, reject) => {
     const callbackName = `__bthwaniGoogleMapsReady_${Date.now()}`;
     const runtimeWindow = window as Window & Record<string, unknown>;
     runtimeWindow[callbackName] = () => {
@@ -75,13 +76,14 @@ function loadGoogleMaps(apiKey: string): Promise<GoogleMapsRuntime> {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&callback=${callbackName}`;
     script.onerror = () => {
       delete runtimeWindow[callbackName];
-      window.__bthwaniGoogleMapsPromise = undefined;
+      delete window.__bthwaniGoogleMapsPromise;
       reject(new Error("تعذر تحميل Google Maps JavaScript API."));
     };
     document.head.appendChild(script);
   });
 
-  return window.__bthwaniGoogleMapsPromise;
+  window.__bthwaniGoogleMapsPromise = promise;
+  return promise;
 }
 
 function finiteCoordinate(latitude: number, longitude: number): boolean {
@@ -137,19 +139,18 @@ export function GoogleMapsWebCanvas({
       }
 
       for (const polygon of polygons) {
-        const path = polygon.points
+        const polygonPath = polygon.points
           .filter(([longitude, latitude]) => finiteCoordinate(latitude, longitude))
           .map(([longitude, latitude]) => ({ lat: latitude, lng: longitude }));
-        if (path.length < 3) continue;
-        for (const coordinate of path) bounds.extend(coordinate);
+        if (polygonPath.length < 3) continue;
+        for (const coordinate of polygonPath) bounds.extend(coordinate);
         new maps.Polygon({
           map,
-          paths: path,
+          paths: polygonPath,
           clickable: false,
           strokeOpacity: polygon.active ? 0.9 : 0.4,
           strokeWeight: 2,
           fillOpacity: polygon.active ? 0.18 : 0.06,
-          title: polygon.label,
         });
       }
 
