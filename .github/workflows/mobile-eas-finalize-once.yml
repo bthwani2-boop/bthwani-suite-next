@@ -26,16 +26,11 @@ jobs:
           const fs = require('node:fs');
           const file = 'tools/scripts/mobile-eas.ps1';
           let text = fs.readFileSync(file, 'utf8');
-          const removals = [
-            "$FcmHelperPath = Join-Path $RepoRoot 'tools\\scripts\\google-cloud\\prepare-fcm-v1-service-account.ps1'\n",
-            "$FcmServiceAccountPath = 'C:\\bthwani-secrets\\firebase\\bthwani-platform-fcm-v1-service-account.json'\n",
-            "        if (-not (Test-Path -LiteralPath $FcmServiceAccountPath -PathType Leaf)) {\n            Invoke-Checked -Command 'pwsh' -Arguments @(\n                '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $FcmHelperPath, '-Apply'\n            ) | Out-Null\n        }\n",
-            "    $FcmHelperPath,\n",
-          ];
-          for (const value of removals) {
-            if (!text.includes(value)) throw new Error(`Expected mobile EAS fragment was not found: ${value}`);
-            text = text.replace(value, '');
-          }
+          text = text
+            .replace(/^\$FcmHelperPath = .*\n/m, '')
+            .replace(/^\$FcmServiceAccountPath = .*\n/m, '')
+            .replace(/\n        if \(-not \(Test-Path -LiteralPath \$FcmServiceAccountPath[\s\S]*?\n        }\n/, '\n')
+            .replace(/^    \$FcmHelperPath,\n/m, '');
           if (/FcmHelperPath|FcmServiceAccountPath/.test(text)) {
             throw new Error('FCM sending credential is still coupled to the build workflow.');
           }
@@ -59,7 +54,7 @@ jobs:
               [ref]$errors
             )
             if (@($errors).Count -gt 0) {
-              $errors | ForEach-Object { Write-Error "$file: $($_.Message)" }
+              $errors | ForEach-Object { Write-Error "${file}: $($_.Message)" }
               exit 1
             }
           }
@@ -78,7 +73,9 @@ jobs:
         run: |
           set -euo pipefail
           forbidden='bootstrap-mobile-eas-android-development\.ps1|setup-mobile-firebase-development\.ps1|prepare-google-platform-all-surfaces\.ps1|configure-eas-fcm-v1-all-apps\.ps1|mobile:eas:build:all:dev|mobile:eas:preflight:all:dev'
-          if git grep -n -E "${forbidden}" -- ':!governance/evidence/**'; then
+          if git grep -n -E "${forbidden}" -- \
+            ':!governance/evidence/**' \
+            ':!.github/workflows/mobile-eas-finalize-once.yml'; then
             echo 'Obsolete mobile EAS references remain.' >&2
             exit 1
           fi
