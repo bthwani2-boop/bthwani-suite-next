@@ -1,0 +1,32 @@
+{
+  "projectId": "bthwani-platform",
+  "apps": {
+    "app-client": {
+      "packageName": "com.bthwani.client.next",
+      "sha1Fingerprint": "AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA:AA",
+      "mapsKeyDisplayName": "bthwani-app-client-android-maps-development"
+    },
+    "app-partner": {
+      "packageName": "com.bthwani.partner.next",
+      "sha1Fingerprint": "BB:BB:BB:BB:BB:BB:BB:BB:BB:BB:BB:BB:BB:BB:BB:BB:BB:BB:BB:BB",
+      "mapsKeyDisplayName": "bthwani-app-partner-android-maps-development"
+    },
+    "app-captain": {
+      "packageName": "com.bthwani.captain.next",
+      "sha1Fingerprint": "CC:CC:CC:CC:CC:CC:CC:CC:CC:CC:CC:CC:CC:CC:CC:CC:CC:CC:CC:CC",
+      "mapsKeyDisplayName": "bthwani-app-captain-android-maps-development"
+    },
+    "app-field": {
+      "packageName": "com.bthwani.field.next",
+      "sha1Fingerprint": "DD:DD:DD:DD:DD:DD:DD:DD:DD:DD:DD:DD:DD:DD:DD:DD:DD:DD:DD:DD",
+      "mapsKeyDisplayName": "bthwani-app-field-android-maps-development"
+    }
+  },
+  "controlPanel": {
+    "mapsKeyDisplayName": "bthwani-control-panel-browser-maps-development",
+    "allowedReferrers": [
+      "http://localhost:13000/*",
+      "http://127.0.0.1:13000/*"
+    ]
+  }
+}
