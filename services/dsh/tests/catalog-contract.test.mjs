@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
+import { composeDshOpenApi } from "../../../tools/scripts/dsh-openapi-modular-lib.mjs";
+
+const dshContract = () => composeDshOpenApi({ write: false });
 
 test("catalog UI roots delegate runtime logic to shared", () => {
   for (const file of [
@@ -14,23 +17,20 @@ test("catalog UI roots delegate runtime logic to shared", () => {
   }
 });
 
-test("Cart & Serviceability cart operations are implemented in dsh.openapi.yaml and registered at runtime", () => {
-  const contract = fs.readFileSync(new URL("../contracts/dsh.openapi.yaml", import.meta.url), "utf8");
+test("Cart & Serviceability cart operations are implemented in composed DSH OpenAPI and registered at runtime", () => {
+  const contract = dshContract();
   const router = fs.readFileSync(new URL("../backend/internal/http/server.go", import.meta.url), "utf8");
-  // Cart & Serviceability real operations are in the contract
   assert.match(contract, /checkDshCartServiceability/);
   assert.match(contract, /upsertDshCartItem/);
   assert.match(contract, /getDshClientCart/);
   assert.match(contract, /listOperatorCarts/);
-  // Cart & Serviceability cart routes are registered in server.go
   assert.match(router, /dsh\/client\/cart/);
   assert.doesNotMatch(contract, /\bledger entry\b|\brefund finalization\b/i);
 });
 
 test("Order Fulfillment order fulfillment routes are implemented and registered at runtime", () => {
-  const contract = fs.readFileSync(new URL("../contracts/dsh.openapi.yaml", import.meta.url), "utf8");
+  const contract = dshContract();
   const router = fs.readFileSync(new URL("../backend/internal/http/server.go", import.meta.url), "utf8");
-  // Order Fulfillment operations are in the contract
   assert.match(contract, /createDshOrder/);
   assert.match(contract, /listDshClientOrders/);
   assert.match(contract, /getDshClientOrder/);
@@ -40,18 +40,16 @@ test("Order Fulfillment order fulfillment routes are implemented and registered 
   assert.match(contract, /markDshOrderPreparing/);
   assert.match(contract, /markDshOrderReadyForPickup/);
   assert.match(contract, /listDshOperatorOrders/);
-  // Order Fulfillment routes are registered in server.go
   assert.match(router, /dsh\/client\/orders/);
   assert.match(router, /dsh\/partner\/orders/);
   assert.match(router, /dsh\/operator\/orders/);
   assert.match(router, /handleAcceptOrder/);
   assert.match(router, /handleRejectOrder/);
-  // No financial mutation — wlt_payment_ref_id is a read-only reference only
   assert.doesNotMatch(contract, /\bledger mutation\b|\brefund finalization\b|\bsettlement posting\b/i);
 });
 
 test("Dispatch & Captain Delivery dispatch routes are implemented and registered at runtime", () => {
-  const contract = fs.readFileSync(new URL("../contracts/dsh.openapi.yaml", import.meta.url), "utf8");
+  const contract = dshContract();
   const router = fs.readFileSync(new URL("../backend/internal/http/server.go", import.meta.url), "utf8");
   assert.match(contract, /createDshAssignment/);
   assert.match(contract, /listDshCaptainAssignments/);
@@ -65,21 +63,15 @@ test("Dispatch & Captain Delivery dispatch routes are implemented and registered
 });
 
 test("Checkout & WLT Handoff checkout intent routes are implemented and registered at runtime; WLT payment-session-event callback is implemented", () => {
-  const contract = fs.readFileSync(new URL("../contracts/dsh.openapi.yaml", import.meta.url), "utf8");
+  const contract = dshContract();
   const router = fs.readFileSync(new URL("../backend/internal/http/server.go", import.meta.url), "utf8");
-  // Checkout & WLT Handoff real operations are in the contract
   assert.match(contract, /createDshCheckoutIntent/);
   assert.match(contract, /getDshCheckoutIntent/);
   assert.match(contract, /cancelDshCheckoutIntent/);
   assert.match(contract, /listOperatorCheckoutIntents/);
-  // Checkout & WLT Handoff checkout-intent routes are registered at runtime
   assert.match(router, /checkout-intents/);
-  // WLT payment-session-event callback is implemented (no longer CONTRACT_DRAFT):
-  // WLT (the sole owner of payment authorization/capture truth) reports terminal
-  // payment outcomes to DSH, which only ever consumes opaque status references.
   assert.match(contract, /reportWltPaymentSessionEvent/);
   assert.doesNotMatch(contract, /x-contract-state: CONTRACT_DRAFT/);
   assert.match(router, /payment-session-events/);
-  // No financial mutation language in DSH contract
-  assert.doesNotMatch(contract, /ledger entry|refund finalization/i);
+  assert.doesNotMatch(contract, /\bledger entry\b|\brefund finalization\b/i);
 });
