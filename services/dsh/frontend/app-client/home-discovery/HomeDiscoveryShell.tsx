@@ -1,6 +1,7 @@
 import React from "react";
 import {
   I18nManager,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -203,7 +204,7 @@ export function HomeDiscoveryShell({
         ) : null}
         <HomeQuickActionsSection
           hasCategories={categories.length > 0}
-          hasReels
+          hasReels={reels.length > 0}
           onCategoriesPress={() => setShowDropdown(true)}
           onVideoPress={handleVideoPress}
         />
@@ -300,6 +301,8 @@ function CategoryOption({
   readonly isRtl: boolean;
   readonly onPress: () => void;
 }) {
+  const iconIsImageUrl = /^https?:\/\//i.test(icon) || icon.startsWith("/");
+
   return (
     <Pressable
       style={({ pressed }) => [
@@ -317,7 +320,16 @@ function CategoryOption({
       </View>
       <Text style={[styles.dropdownLabel, selected && styles.dropdownLabelActive]}>{label}</Text>
       <View style={[styles.emojiContainer, selected && styles.emojiContainerActive]}>
-        <Text style={styles.dropdownEmoji}>{icon}</Text>
+        {iconIsImageUrl ? (
+          <Image
+            source={{ uri: icon }}
+            style={styles.dropdownIconImage}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          <Text style={styles.dropdownEmoji}>{icon}</Text>
+        )}
       </View>
     </Pressable>
   );
@@ -394,7 +406,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colorRoles.surfaceMuted,
+    overflow: "hidden",
   },
   emojiContainerActive: { backgroundColor: alpha(colorRoles.brandAction, 0.1) },
   dropdownEmoji: { fontSize: 18 },
+  dropdownIconImage: {
+    width: 24,
+    height: 24,
+  },
 });
