@@ -5,7 +5,8 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const policyPath = path.join(repoRoot, "governance/cleanup/repository-retention-policy.json");
+const policyRelative = "governance/cleanup/repository-retention-policy.json";
+const policyPath = path.join(repoRoot, policyRelative);
 const reportPath = path.resolve(
   repoRoot,
   process.env.BTHWANI_HYGIENE_REPORT ?? ".diagnostics/repository-hygiene/report.json",
@@ -91,6 +92,10 @@ const permanentEvidenceRoots = policy.evidence?.permanentRoots ?? [];
 const documentRoots = policy.documents?.roots ?? [];
 const archiveRoot = policy.documents?.archiveRoot ?? "governance/archive/";
 const retiredMarkers = policy.documents?.retiredMarkers ?? [];
+const documentPolicyFiles = new Set([
+  policyRelative,
+  "governance/cleanup/repository-retention-policy.schema.json",
+]);
 
 const referenceText = (policy.evidence?.referenceIndexes ?? [])
   .filter((file) => fs.existsSync(path.join(repoRoot, file)))
@@ -165,7 +170,7 @@ for (const file of files) {
   }
 
   const isDocument = documentRoots.some((root) => lower.startsWith(root.toLowerCase()));
-  if (isDocument && isTextFile(file)) {
+  if (isDocument && isTextFile(file) && !documentPolicyFiles.has(file)) {
     const content = searchableText.get(file) ?? "";
     const retiredMarker = retiredMarkers.find((marker) =>
       content.toLowerCase().includes(String(marker).toLowerCase()),
