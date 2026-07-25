@@ -85,6 +85,7 @@
     "affected:build": "nx affected -t build",
     "affected:lint": "nx affected -t lint",
     "affected:test": "nx affected -t test",
+    "repair": "pnpm -r --if-present run lint --fix",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test",
     "reverse": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/reverse-all.ps1",
