@@ -23,14 +23,14 @@ import {
 } from "@bthwani/ui-kit";
 import {
   applyDiscoveryFilter,
+  fetchHomePublicReels,
   recordHomeMarketingEvent,
   type BannerViewModel,
   type DiscoveryFilterKind,
   type HomeDiscoveryState,
+  type HomePublicReel,
   type PromoViewModel,
 } from "../../shared/home-discovery";
-import { fetchPublicReels } from "../../shared/catalog/central-catalog.api";
-import type { PublicReel } from "../../shared/catalog/central-catalog.types";
 import { HomeFilterRailSection } from "./HomeFilterRailSection";
 import { HomeHeroBannerSection } from "./HomeHeroBannerSection";
 import { HomePromoSection } from "./HomePromoSection";
@@ -60,7 +60,7 @@ export function HomeDiscoveryShell({
   const isRtl = I18nManager.isRTL;
   const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
   const [showDropdown, setShowDropdown] = React.useState(false);
-  const [reels, setReels] = React.useState<readonly PublicReel[]>([]);
+  const [reels, setReels] = React.useState<readonly HomePublicReel[]>([]);
   const scrollRef = React.useRef<ScrollView>(null);
   const reelsOffsetY = React.useRef(0);
   const recordedImpressions = React.useRef(new Set<string>());
@@ -92,7 +92,7 @@ export function HomeDiscoveryShell({
     }
 
     let cancelled = false;
-    void fetchPublicReels(10)
+    void fetchHomePublicReels(10)
       .then((items) => {
         if (!cancelled) setReels(items);
       })
@@ -103,7 +103,11 @@ export function HomeDiscoveryShell({
     return () => {
       cancelled = true;
     };
-  }, [state.kind, state.kind === "success" ? state.data.context.cityCode : "", state.kind === "success" ? state.data.context.serviceAreaCode : ""]);
+  }, [
+    state.kind,
+    state.kind === "success" ? state.data.context.cityCode : "",
+    state.kind === "success" ? state.data.context.serviceAreaCode : "",
+  ]);
 
   React.useEffect(() => {
     if (state.kind !== "success") return;
@@ -143,7 +147,7 @@ export function HomeDiscoveryShell({
     scrollRef.current?.scrollTo({ y: reelsOffsetY.current, animated: true });
   }, []);
 
-  const handleReelPress = React.useCallback((reel: PublicReel) => {
+  const handleReelPress = React.useCallback((reel: HomePublicReel) => {
     if (reel.targetType === "store") {
       onMarketingAction?.("store", reel.targetId);
     }
