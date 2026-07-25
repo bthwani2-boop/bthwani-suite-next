@@ -10,6 +10,12 @@ param(
 
     [string] $FirebaseToolsVersion = '15.24.0',
 
+    [ValidateRange(1, 20)]
+    [int] $VerificationAttempts = 8,
+
+    [ValidateRange(1, 30)]
+    [int] $VerificationDelaySeconds = 5,
+
     [switch] $Login,
     [switch] $Apply
 )
@@ -62,9 +68,84 @@ function Assert-CommandExists {
     }
 }
 
-function Test-FirebaseProjectVisible {
+function ConvertFrom-FirebaseCliJson {
     param([Parameter(Mandatory)][string] $Text)
-    return $Text -match "(?m)(^|\s)$([regex]::Escape($ProjectId))(\s|$)"
+
+    $firstBrace = $Text.IndexOf('{')
+    $lastBrace = $Text.LastIndexOf('}')
+    if ($firstBrace -lt 0 -or $lastBrace -lt $firstBrace) {
+        return $null
+    }
+
+    $jsonText = $Text.Substring($firstBrace, $lastBrace - $firstBrace + 1)
+    try {
+        return $jsonText | ConvertFrom-Json -Depth 100
+    } catch {
+        return $null
+    }
+}
+
+function Test-FirebaseProjectInList {
+    $result = Invoke-NativeChecked -Command 'pnpm' -Arguments @(
+        'dlx', "firebase-tools@$FirebaseToolsVersion",
+        'projects:list', '--json', '--non-interactive'
+    ) -AllowFailure -CaptureOnly
+
+    if ($result.ExitCode -ne 0) {
+        return $false
+    }
+
+    $payload = ConvertFrom-FirebaseCliJson -Text $result.Output
+    if ($null -eq $payload -or [string]$payload.status -ne 'success') {
+        return $false
+    }
+
+    foreach ($project in @($payload.result)) {
+        if ([string]$project.projectId -eq $ProjectId) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Test-FirebaseProjectDirectly {
+    $result = Invoke-NativeChecked -Command 'pnpm' -Arguments @(
+        'dlx', "firebase-tools@$FirebaseToolsVersion",
+        'apps:list', '--project', $ProjectId,
+        '--json', '--non-interactive'
+    ) -AllowFailure -CaptureOnly
+
+    if ($result.ExitCode -ne 0) {
+        return $false
+    }
+
+    $payload = ConvertFrom-FirebaseCliJson -Text $result.Output
+    return $null -ne $payload -and [string]$payload.status -eq 'success'
+}
+
+function Test-FirebaseProjectVisible {
+    return (Test-FirebaseProjectInList) -or (Test-FirebaseProjectDirectly)
+}
+
+function Wait-FirebaseProjectVisible {
+    param(
+        [Parameter(Mandatory)][int] $Attempts,
+        [Parameter(Mandatory)][int] $DelaySeconds
+    )
+
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        if (Test-FirebaseProjectVisible) {
+            return $true
+        }
+
+        if ($attempt -lt $Attempts) {
+            Write-Host "Firebase visibility is still propagating (attempt $attempt/$Attempts). Retrying in $DelaySeconds seconds..." -ForegroundColor Yellow
+            Start-Sleep -Seconds $DelaySeconds
+        }
+    }
+
+    return $false
 }
 
 Write-Host '============================================================' -ForegroundColor Cyan
@@ -119,11 +200,7 @@ if ($firebaseLogin.Output -notmatch 'Logged in as') {
 Write-Host $firebaseLogin.Output -ForegroundColor Green
 
 Write-Step 'Inspect whether Firebase is already enabled'
-$projectsBefore = Invoke-NativeChecked -Command 'pnpm' -Arguments @(
-    'dlx', "firebase-tools@$FirebaseToolsVersion", 'projects:list'
-) -AllowFailure -CaptureOnly
-
-if (Test-FirebaseProjectVisible -Text $projectsBefore.Output) {
+if (Test-FirebaseProjectVisible) {
     Write-Host "PASS: Firebase is already enabled for '$ProjectId'." -ForegroundColor Green
     Write-Host 'No Firebase app, EAS variable, credential, workflow, or build was changed.' -ForegroundColor Green
     return
@@ -133,7 +210,7 @@ if (-not $Apply) {
     Write-Host "`nDRY RUN: Firebase is not currently visible for '$ProjectId'." -ForegroundColor Yellow
     Write-Host 'Planned command:' -ForegroundColor Yellow
     Write-Host "pnpm dlx firebase-tools@$FirebaseToolsVersion projects:addfirebase $ProjectId" -ForegroundColor DarkYellow
-    Write-Host '`nThis operation adds Firebase-specific services and configuration to the existing Google Cloud project.' -ForegroundColor Yellow
+    Write-Host "`nThis operation adds Firebase-specific services and configuration to the existing Google Cloud project." -ForegroundColor Yellow
     Write-Host 'It does not create the four Android apps or modify EAS.' -ForegroundColor Yellow
     Write-Host 'Re-run with -Apply after reviewing the plan.' -ForegroundColor Yellow
     return
@@ -146,11 +223,8 @@ Write-Step 'Add Firebase to the existing Google Cloud project'
 ))
 
 Write-Step 'Verify Firebase project visibility'
-$projectsAfter = Invoke-NativeChecked -Command 'pnpm' -Arguments @(
-    'dlx', "firebase-tools@$FirebaseToolsVersion", 'projects:list'
-) -AllowFailure -CaptureOnly
-if (-not (Test-FirebaseProjectVisible -Text $projectsAfter.Output)) {
-    throw "Firebase enablement command completed, but '$ProjectId' is still not visible. Open Firebase Console once and accept Firebase Terms, then retry."
+if (-not (Wait-FirebaseProjectVisible -Attempts $VerificationAttempts -DelaySeconds $VerificationDelaySeconds)) {
+    throw "Firebase enablement command completed, but '$ProjectId' could not yet be verified after $VerificationAttempts attempts. The addFirebase operation may still be propagating. Run this phase again without -Apply after a short wait."
 }
 
 Write-Host "`nPASS: Firebase is enabled for '$ProjectId'." -ForegroundColor Green
