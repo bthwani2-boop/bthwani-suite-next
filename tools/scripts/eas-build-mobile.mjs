@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
 
 const require = createRequire(import.meta.url);
 const {
@@ -63,28 +64,20 @@ for (const key of targets) {
   if (!manifest.apps[key]) throw new Error(`Unknown app '${key}'. Allowed: ${appKeys.join(", ")}`);
 }
 
-function resolveInvocation(command, args) {
-  if (command === "pnpm") {
-    const pnpmCli = process.env.npm_execpath;
-    if (pnpmCli && fs.existsSync(pnpmCli)) return { executable: process.execPath, args: [pnpmCli, ...args] };
-    return { executable: process.platform === "win32" ? "pnpm.cmd" : "pnpm", args };
-  }
-  if (command === "npx" && process.platform === "win32") {
-    return { executable: "npx.cmd", args };
-  }
-  return { executable: command, args };
+function resolveInvocation(command, args, environment) {
+  return resolvePackageManagerInvocation(command, args, environment);
 }
 
 function run(command, args, cwd = root, env = process.env) {
   console.log(`\n> ${command} ${args.join(" ")}`);
-  const invocation = resolveInvocation(command, args);
-  const isCmd = invocation.executable.endsWith(".cmd") || invocation.executable.endsWith(".bat");
+  const environment = { ...env, CI: "1", EXPO_NO_TELEMETRY: "1" };
+  const invocation = resolveInvocation(command, args, environment);
   const result = spawnSync(invocation.executable, invocation.args, {
     cwd,
     stdio: "inherit",
-    shell: isCmd,
+    shell: false,
     windowsHide: true,
-    env: { ...env, CI: "1", EXPO_NO_TELEMETRY: "1" },
+    env: environment,
   });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
