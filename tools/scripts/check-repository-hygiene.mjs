@@ -5,7 +5,8 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const policyPath = path.join(repoRoot, "governance/cleanup/repository-retention-policy.json");
+const policyRelative = "governance/cleanup/repository-retention-policy.json";
+const policyPath = path.join(repoRoot, policyRelative);
 const reportPath = path.resolve(
   repoRoot,
   process.env.BTHWANI_HYGIENE_REPORT ?? ".diagnostics/repository-hygiene/report.json",
@@ -67,45 +68,6 @@ function normalizedDocumentHash(content) {
   return crypto.createHash("sha256").update(normalized).digest("hex");
 }
 
-function markerStatus(marker) {
-  const normalized = String(marker).trim().toLowerCase();
-  const colon = normalized.lastIndexOf(":");
-  return (colon >= 0 ? normalized.slice(colon + 1) : normalized).trim();
-}
-
-function declaredRetiredMarker(file, content, markers) {
-  const markerStatuses = new Map(
-    markers.map((marker) => [markerStatus(marker), marker]),
-  );
-
-  if (file.toLowerCase().endsWith(".json")) {
-    try {
-      const document = JSON.parse(content);
-      const candidates = [
-        document?.status,
-        document?.documentStatus,
-        document?.metadata?.status,
-        document?.lifecycle?.status,
-      ];
-      for (const candidate of candidates) {
-        if (typeof candidate !== "string") continue;
-        const matched = markerStatuses.get(candidate.trim().toLowerCase());
-        if (matched) return matched;
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  }
-
-  const declaredLines = content
-    .split(/\r?\n/, 80)
-    .map((line) => line.trim().replace(/^[-*#>]+\s*/, "").toLowerCase());
-  return markers.find((marker) =>
-    declaredLines.includes(String(marker).trim().toLowerCase()),
-  ) ?? null;
-}
-
 const policy = readJson(policyPath);
 const files = trackedFiles();
 const errors = [];
@@ -130,6 +92,10 @@ const permanentEvidenceRoots = policy.evidence?.permanentRoots ?? [];
 const documentRoots = policy.documents?.roots ?? [];
 const archiveRoot = policy.documents?.archiveRoot ?? "governance/archive/";
 const retiredMarkers = policy.documents?.retiredMarkers ?? [];
+const documentPolicyFiles = new Set([
+  policyRelative,
+  "governance/cleanup/repository-retention-policy.schema.json",
+]);
 
 const referenceText = (policy.evidence?.referenceIndexes ?? [])
   .filter((file) => fs.existsSync(path.join(repoRoot, file)))
@@ -204,9 +170,11 @@ for (const file of files) {
   }
 
   const isDocument = documentRoots.some((root) => lower.startsWith(root.toLowerCase()));
-  if (isDocument && isTextFile(file)) {
+  if (isDocument && isTextFile(file) && !documentPolicyFiles.has(file)) {
     const content = searchableText.get(file) ?? "";
-    const retiredMarker = declaredRetiredMarker(file, content, retiredMarkers);
+    const retiredMarker = retiredMarkers.find((marker) =>
+      content.toLowerCase().includes(String(marker).toLowerCase()),
+    );
     if (retiredMarker && !lower.startsWith(archiveRoot.toLowerCase())) {
       add(errors, {
         code: "RETIRED_DOCUMENT_OUTSIDE_ARCHIVE",
