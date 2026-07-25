@@ -5,7 +5,7 @@ import test from "node:test";
 
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const proxy = fs.readFileSync(
-  path.join(repoRoot, "apps/control-panel/runtime/src/server/bff-proxy.ts"),
+  path.join(repoRoot, "apps/control-panel/runtime/src/server/bff-proxy.adapter.ts"),
   "utf8",
 );
 
