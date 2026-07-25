@@ -1,0 +1,55 @@
+name: One-time mobile EAS package cleanup
+
+on:
+  push:
+    branches: [reemsam]
+    paths:
+      - ".github/workflows/mobile-eas-package-cleanup-once.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout reemsam
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: reemsam
+          fetch-depth: 0
+
+      - name: Keep one clear mobile EAS command
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'package.json';
+          const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const obsolete = [
+            'mobile:eas:preflight',
+            'mobile:eas:preflight:android',
+            'mobile:eas:build',
+            'mobile:eas:build:client:dev',
+            'mobile:eas:build:partner:dev',
+            'mobile:eas:build:captain:dev',
+            'mobile:eas:build:field:dev',
+            'mobile:eas:build:all:dev',
+            'mobile:eas:preflight:all:dev',
+            'mobile:firebase:setup:dev'
+          ];
+          for (const name of obsolete) delete pkg.scripts[name];
+          pkg.scripts['mobile:eas'] = 'pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/mobile-eas.ps1';
+          fs.writeFileSync(file, `${JSON.stringify(pkg, null, 2)}\n`);
+          NODE
+          node -e "JSON.parse(require('node:fs').readFileSync('package.json','utf8'))"
+
+      - name: Remove this one-time workflow
+        run: rm .github/workflows/mobile-eas-package-cleanup-once.yml
+
+      - name: Commit cleanup
+        run: |
+          git config user.name "bthwani-ci"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json .github/workflows/mobile-eas-package-cleanup-once.yml
+          git commit -m "chore(mobile): expose one clear EAS command"
+          git push origin HEAD:reemsam
