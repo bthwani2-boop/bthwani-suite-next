@@ -120,7 +120,7 @@ export function BthwaniNativeMap({
             key={marker.id}
             coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
             title={marker.title}
-            description={marker.description}
+            {...(marker.description ? { description: marker.description } : {})}
           />
         ))}
         {hasSelectedCoordinate ? (
