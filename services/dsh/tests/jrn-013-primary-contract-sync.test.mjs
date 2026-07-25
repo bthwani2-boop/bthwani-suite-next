@@ -6,18 +6,23 @@ import test from 'node:test';
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), 'utf8');
 
-test('JRN-013 handoff reasons remain aligned across primary contract and generated client', () => {
-  const contract = read('services/dsh/contracts/dsh.openapi.yaml');
+test('JRN-013 handoff reasons remain aligned across modular schema and generated client', () => {
+  const rootContract = read('services/dsh/contracts/dsh.openapi.yaml');
+  const schemaModule = read('services/dsh/contracts/components/schemas/common.schemas.yaml');
   const client = read('services/dsh/clients/generated/dsh-api.ts');
   const synchronizer = read('tools/contracts/sync-jrn-013-handoff-reasons.mjs');
 
-  const schemaStart = contract.indexOf('    DshDeliveryExceptionReasonCode:');
-  const schemaEnd = contract.indexOf('    DshDeliveryExceptionStatus:', schemaStart);
-  assert.ok(schemaStart >= 0 && schemaEnd > schemaStart, 'primary reason schema is missing');
-  const reasonSchema = contract.slice(schemaStart, schemaEnd);
+  assert.match(
+    rootContract,
+    /DshDeliveryExceptionReasonCode:\n\s+\$ref: "\.\/components\/schemas\/common\.schemas\.yaml#\/DshDeliveryExceptionReasonCode"/,
+  );
+  const schemaStart = schemaModule.indexOf('DshDeliveryExceptionReasonCode:');
+  const schemaEnd = schemaModule.indexOf('DshDeliveryExceptionStatus:', schemaStart);
+  assert.ok(schemaStart >= 0 && schemaEnd > schemaStart, 'modular reason schema is missing');
+  const reasonSchema = schemaModule.slice(schemaStart, schemaEnd);
 
-  assert.match(reasonSchema, /        - handoff_shortage/);
-  assert.match(reasonSchema, /        - handoff_mismatch/);
+  assert.match(reasonSchema, /    - handoff_shortage/);
+  assert.match(reasonSchema, /    - handoff_mismatch/);
   assert.match(
     client,
     /DshDeliveryExceptionReasonCode: .*"handoff_shortage" \| "handoff_mismatch" \| "other";/,
