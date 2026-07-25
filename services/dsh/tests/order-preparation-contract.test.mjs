@@ -32,8 +32,18 @@ test('DSH composed contract contains one governed partner workboard', () => {
   assert.equal(countOccurrences(composed, 'DshPartnerOrderWorkboardResponse:'), 1);
   assert.match(composed, /operationId: getDshPartnerOrderWorkboard/);
   assert.match(composed, /required:\s*(?:\[allowedActions\]|\r?\n\s+-\s+allowedActions)/);
-  assert.match(
-    composed,
-    /enum:\s*(?:\[accept, reject, prepare, ready, handoff\]|\r?\n\s+-\s+accept[\s\S]{0,240}?\r?\n\s+-\s+handoff)/,
-  );
+
+  const actionSchemaStart = composed.indexOf('DshPartnerOrderAction:');
+  const actionSchemaEnd = composed.indexOf('DshPartnerOrderWorkboardOrder:', actionSchemaStart);
+  assert.ok(actionSchemaStart >= 0, 'DshPartnerOrderAction schema is missing');
+  assert.ok(actionSchemaEnd > actionSchemaStart, 'DshPartnerOrderAction schema boundary is missing');
+  const actionSchema = composed.slice(actionSchemaStart, actionSchemaEnd);
+  assert.match(actionSchema, /enum:/);
+  for (const action of ['accept', 'reject', 'prepare', 'ready', 'handoff']) {
+    assert.match(
+      actionSchema,
+      new RegExp(`(?:^|[\\s\\[,])${action}(?:[\\s\\],]|$)`, 'm'),
+      `DshPartnerOrderAction is missing ${action}`,
+    );
+  }
 });
