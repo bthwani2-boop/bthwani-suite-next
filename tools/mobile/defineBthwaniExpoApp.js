@@ -44,6 +44,21 @@ function appAsset(appKey, fileName) {
   return fs.existsSync(absolute) ? relative : undefined;
 }
 
+function readRuntimePackageJson(appKey) {
+  const packagePath = path.resolve(__dirname, "../..", "apps", appKey, "runtime", "package.json");
+  return JSON.parse(fs.readFileSync(packagePath, "utf8"));
+}
+
+function hasRuntimeDependency(appKey, packageName) {
+  const packageJson = readRuntimePackageJson(appKey);
+  return [
+    packageJson.dependencies,
+    packageJson.devDependencies,
+    packageJson.peerDependencies,
+    packageJson.optionalDependencies,
+  ].some((section) => section && Object.prototype.hasOwnProperty.call(section, packageName));
+}
+
 function buildInfoPlist(features) {
   const { hasCamera, needsMicrophone } = nativeCapabilities(features);
   const infoPlist = {
@@ -145,7 +160,7 @@ function buildPlugins(appKey, features, sentry) {
   const sentryPlugin = buildSentryPlugin(sentry);
   if (sentryPlugin) plugins.push(sentryPlugin);
 
-  if (features.includes("maps")) {
+  if (features.includes("maps") && hasRuntimeDependency(appKey, "react-native-maps")) {
     const androidMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_ANDROID_API_KEY", appKey);
     const iosMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_IOS_API_KEY", appKey);
     const mapPluginOptions = {
@@ -254,6 +269,7 @@ function defineBthwaniExpoApp(appKey) {
   const iosMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_IOS_API_KEY", appKey);
   const sentryNativeConfigured = Boolean(sentry.dsn && sentry.organization && sentry.project);
   const hasMapsFeature = features.includes("maps");
+  const mapsNativeDependencyInstalled = hasRuntimeDependency(appKey, "react-native-maps");
   return {
     name: app.name,
     slug: app.slug,
@@ -295,6 +311,7 @@ function defineBthwaniExpoApp(appKey) {
       maps: {
         androidNativeConfigured: Boolean(hasMapsFeature && androidMapsKey),
         iosNativeConfigured: Boolean(hasMapsFeature && iosMapsKey),
+        nativeDependencyInstalled: mapsNativeDependencyInstalled,
       },
       eas: { projectId: app.projectId },
     },
