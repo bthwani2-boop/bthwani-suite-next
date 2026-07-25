@@ -18,6 +18,25 @@
   "requiredCheckNames": [
     "BThwani CI result"
   ],
+  "rules": {
+    "requiredChecks": {
+      "mode": "fail-closed",
+      "names": [
+        "BThwani CI result"
+      ]
+    },
+    "pullRequestReview": {
+      "required": true,
+      "requiredApprovingReviewCount": 1,
+      "dismissStaleApprovals": true,
+      "requireCodeOwnerReview": true,
+      "requireConversationResolution": true,
+      "requireLastPushApprovalByDifferentActor": true
+    },
+    "codexRemoteWrite": {
+      "allowed": false
+    }
+  },
   "requiredPullRequestPolicy": {
     "requiredApprovingReviewCount": 1,
     "dismissStaleApprovals": true,
