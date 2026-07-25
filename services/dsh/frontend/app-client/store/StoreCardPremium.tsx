@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Image,
   Platform,
@@ -8,10 +8,13 @@ import {
   View,
 } from "react-native";
 import {
-  brandScale,
+  alpha,
   colorRoles,
-  statusScale,
+  elevation,
   neutralScale,
+  radius,
+  spacing,
+  statusScale,
 } from "@bthwani/ui-kit";
 import type { DshStoreCardViewModel } from "../../shared/store";
 
@@ -22,20 +25,10 @@ export type StoreCardPremiumProps = Readonly<{
   isFavorite?: boolean | undefined;
 }>;
 
-// ─── Layout constants ──────────────────────────────────────────────────────────
-
-const CARD_HEIGHT  = 118;
-const IMAGE_SIZE   = CARD_HEIGHT;
-const LOGO_SIZE    = 52;
-const LOCK_BOX     = 30;
-const LEFT_COL_W   = 42;
-
-const SVC_ICON: Record<string, string> = {
-  توصيل : "🛵",
-  استلام: "🏃",
-  استلم : "🏃",
-  ثواني : "⚡",
-};
+const CARD_HEIGHT = 136;
+const MEDIA_WIDTH = 132;
+const LOGO_SIZE = 46;
+const ACTION_COL_W = 40;
 
 const PLACEHOLDER_COLORS: Record<string, string> = {
   brandAction: colorRoles.brandAction,
@@ -45,15 +38,13 @@ const PLACEHOLDER_COLORS: Record<string, string> = {
   default: colorRoles.brandStructure,
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export function StoreCardPremium({
   store,
   onPress,
   onFavoritePress,
   isFavorite = false,
 }: StoreCardPremiumProps) {
-  const placeholderBgColor = PLACEHOLDER_COLORS[store.placeholderTone];
+  const placeholderBgColor = PLACEHOLDER_COLORS[store.placeholderTone] ?? colorRoles.brandStructure;
   const heroUri = store.heroImageSource?.uri ?? null;
   const logoUri = store.logoImageSource?.uri ?? null;
   const [heroFailed, setHeroFailed] = useState(false);
@@ -69,6 +60,8 @@ export function StoreCardPremium({
 
   const showHeroImage = heroUri !== null && !heroFailed;
   const showLogoImage = logoUri !== null && !logoFailed;
+  const metaLine = useMemo(() => buildMetaLine(store), [store]);
+  const chips = useMemo(() => buildMarketingChips(store), [store]);
 
   return (
     <Pressable
@@ -77,19 +70,8 @@ export function StoreCardPremium({
       accessibilityRole="button"
       accessibilityLabel={store.displayName}
     >
-
-      {/* ══ COL 1 — Lock (top) + Heart (bottom) ══ */}
-      <View style={styles.leftCol}>
-
-        {/* Lock box — white chip with green padlock + status dot */}
-        <View style={[styles.lockBox, store.isOpen ? styles.lockBoxOpen : styles.lockBoxClosed]}>
-          <Text style={[styles.lockIcon, store.isOpen ? styles.lockIconOpen : styles.lockIconClosed]}>
-            {store.isOpen ? "🔓" : "🔒"}
-          </Text>
-          <View style={[styles.lockDot, store.isOpen ? styles.dotOpen : styles.dotClosed]} />
-        </View>
-
-        {/* Favourite heart — solid when active */}
+      <View style={styles.actionCol}>
+        <StatusChip isOpen={store.isOpen} />
         <Pressable
           onPress={(event) => {
             event.stopPropagation();
@@ -104,109 +86,49 @@ export function StoreCardPremium({
             {isFavorite ? "♥" : "♡"}
           </Text>
         </Pressable>
-
       </View>
 
-      {/* ══ COL 2 — Main content ══ */}
       <View style={styles.content}>
-
-        {/* Store name */}
-        <Text style={styles.storeName} numberOfLines={1}>
-          {store.displayName}
+        <Text style={styles.storeName} numberOfLines={1}>{store.displayName}</Text>
+        <Text style={styles.locationLine} numberOfLines={1}>
+          {store.locationLabel}
         </Text>
-
-        {/* Location + distance */}
-        <View style={styles.inlineRow}>
-          <Text style={styles.metaText} numberOfLines={1}>
-            {"📍 "}{store.locationLabel}
-          </Text>
-          {store.distanceLabel != null && (
-            <Text style={styles.distText}>
-              {"↗ "}{store.distanceLabel}
-            </Text>
-          )}
-        </View>
-
-        {/* ETA */}
-        {store.etaLabel != null && (
-          <Text style={styles.metaText}>{"⏱ "}{store.etaLabel}</Text>
-        )}
-
-        {/* Service modes */}
-        {store.deliveryModeLabels.length > 0 && (
-          <View style={styles.serviceRow}>
-            {store.deliveryModeLabels.map((label) => {
-              const clean = label.replace("⚡ ", "");
-              return (
-                <View key={label} style={styles.svcItem}>
-                  <Text style={styles.svcIcon}>{SVC_ICON[clean] ?? "•"}</Text>
-                  <Text style={styles.svcLabel} numberOfLines={1}>{clean}</Text>
-                </View>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Closed status */}
-        {!store.isOpen && store.statusBadge != null && (
-          <View style={styles.closedTag}>
-            <Text style={styles.closedTagTxt}>{store.statusBadge}</Text>
-          </View>
-        )}
-
-        {/* Promo badges */}
-        <View style={styles.badgeRow}>
-          {store.hasProBadge && (
-            <View style={styles.badgePro}>
-              <Text style={styles.badgeProTxt}>برو</Text>
-            </View>
-          )}
-          {store.isFreeDelivery && (
-            <View style={styles.badgeFree}>
-              <Text style={styles.badgeFreeTxt}>مجاني</Text>
-            </View>
-          )}
-          {store.hasCouponBadge && (
-            <View style={styles.badgeCoupon}>
-              <Text style={styles.badgeCouponTxt}>كوبون</Text>
-            </View>
-          )}
-          {store.pointsMultiplier != null && (
-            <View style={styles.badgePoints}>
-              <Text style={styles.badgePointsTxt}>
-                {"نقاط "}{store.pointsMultiplier}{"x"}
+        {metaLine ? (
+          <Text style={styles.metaLine} numberOfLines={1}>{metaLine}</Text>
+        ) : null}
+        <View style={styles.chipRow}>
+          {chips.map((chip) => (
+            <View key={chip.label} style={[styles.chip, chip.kind === "strong" && styles.chipStrong]}>
+              <Text style={[styles.chipText, chip.kind === "strong" && styles.chipStrongText]} numberOfLines={1}>
+                {chip.label}
               </Text>
             </View>
-          )}
-          {store.isPopular && (
-            <View style={styles.badgePopular}>
-              <Text style={styles.badgePopularTxt}>{"🔥 رائج"}</Text>
-            </View>
-          )}
+          ))}
         </View>
-
       </View>
 
-      {/* ══ COL 3 — Square image ══ */}
-      <View style={styles.imgBlock}>
-
-        {/* Main square image */}
-        <View style={[styles.imageSquare, { backgroundColor: placeholderBgColor }]}>
+      <View style={styles.mediaBlock}>
+        <View style={[styles.heroWrap, { backgroundColor: placeholderBgColor }]}> 
           {showHeroImage ? (
             <Image
               source={{ uri: heroUri }}
               style={StyleSheet.absoluteFill}
-              accessibilityIgnoresInvertColors
               resizeMode="cover"
+              accessibilityIgnoresInvertColors
               alt=""
               onError={() => setHeroFailed(true)}
             />
           ) : (
-            <Text style={styles.squareEmoji}>{store.placeholderEmoji}</Text>
+            <Text style={styles.heroEmoji}>{store.placeholderEmoji}</Text>
           )}
+          <View style={styles.mediaScrim} />
+          {store.isPopular ? (
+            <View style={styles.popularPill}>
+              <Text style={styles.popularText}>رائج</Text>
+            </View>
+          ) : null}
         </View>
 
-        {/* Store logo — bottom-right corner of image block, white ring border */}
         <View style={styles.logoRing}>
           {showLogoImage ? (
             <Image
@@ -222,105 +144,115 @@ export function StoreCardPremium({
             </View>
           )}
         </View>
-
-        {/* Unified compact rating & followers pill — bottom-left of image block */}
-        {store.ratingAverage != null && (
-          <View style={styles.ratingPill}>
-            <Text style={styles.ratingStar}>{"★"}</Text>
-            <Text style={styles.ratingVal}>{store.ratingAverage.toFixed(1)}</Text>
-            {store.followerCountLabel != null && (
-              <>
-                <Text style={styles.separator}>{"•"}</Text>
-                <Text style={styles.followerVal}>{store.followerCountLabel}</Text>
-              </>
-            )}
-          </View>
-        )}
-
       </View>
     </Pressable>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+function StatusChip({ isOpen }: { readonly isOpen: boolean }) {
+  return (
+    <View style={[styles.statusChip, isOpen ? styles.statusOpen : styles.statusClosed]}>
+      <Text style={[styles.statusText, isOpen ? styles.statusOpenText : styles.statusClosedText]}>
+        {isOpen ? "مفتوح" : "مغلق"}
+      </Text>
+    </View>
+  );
+}
+
+function buildMetaLine(store: DshStoreCardViewModel): string {
+  const pieces: string[] = [];
+  if (store.ratingAverage != null) pieces.push(`★ ${store.ratingAverage.toFixed(1)}`);
+  if (store.etaLabel != null) pieces.push(store.etaLabel);
+  if (store.distanceLabel != null) pieces.push(store.distanceLabel);
+  return pieces.join(" • ");
+}
+
+function buildMarketingChips(store: DshStoreCardViewModel): readonly { label: string; kind?: "strong" }[] {
+  const chips: { label: string; kind?: "strong" }[] = [];
+  if (store.isFreeDelivery) chips.push({ label: "مجاني", kind: "strong" });
+  if (store.hasCouponBadge) chips.push({ label: "كوبون", kind: "strong" });
+  if (store.pointsMultiplier != null) chips.push({ label: `${store.pointsMultiplier}x نقاط` });
+  if (store.hasProBadge) chips.push({ label: "Pro" });
+
+  for (const label of store.deliveryModeLabels) {
+    const shortLabel = compactDeliveryMode(label);
+    if (shortLabel && !chips.some((chip) => chip.label === shortLabel)) {
+      chips.push({ label: shortLabel });
+    }
+  }
+
+  if (!store.isOpen && store.statusBadge != null) chips.push({ label: store.statusBadge });
+  return chips.slice(0, 5);
+}
+
+function compactDeliveryMode(label: string): string | null {
+  const value = label.replace("⚡", "").trim();
+  if (!value) return null;
+  if (value.includes("استلام") || value.includes("استلم")) return "استلام";
+  if (value.includes("الشريك")) return "توصيل المتجر";
+  if (value.includes("ثواني") || value.includes("سريع")) return "سريع";
+  if (value.includes("توصيل")) return "توصيل";
+  return value.length > 11 ? null : value;
+}
 
 const SHADOW = Platform.select({
-  ios:     { shadowColor: colorRoles.shadowBase, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8 },
+  ios: { shadowColor: colorRoles.shadowBase, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.09, shadowRadius: 10 },
   android: { elevation: 3 },
   default: {},
 });
 
-const LOCK_SHADOW = Platform.select({
-  ios:     { shadowColor: colorRoles.shadowBase, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
-  android: { elevation: 2 },
-  default: {},
-});
-
 const LOGO_SHADOW = Platform.select({
-  ios:     { shadowColor: colorRoles.shadowBase, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.18, shadowRadius: 5 },
+  ios: { shadowColor: colorRoles.shadowBase, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.18, shadowRadius: 5 },
   android: { elevation: 5 },
   default: {},
 });
 
 const styles = StyleSheet.create({
-
-  /* ── Card shell ── */
   card: {
-    height: CARD_HEIGHT,
+    minHeight: CARD_HEIGHT,
     backgroundColor: colorRoles.surfaceBase,
-    borderRadius: 16,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
+    borderColor: alpha(colorRoles.brandStructure, 0.08),
     flexDirection: "row",
     overflow: "hidden",
     ...SHADOW,
   },
   cardPressed: {
-    opacity: 0.91,
-    transform: [{ scale: 0.984 }],
+    opacity: 0.93,
+    transform: [{ scale: 0.988 }],
   },
-
-  /* ── Col 1: Left icons ── */
-  leftCol: {
-    width: LEFT_COL_W,
-    height: CARD_HEIGHT,
-    paddingVertical: 10,
-    paddingLeft: 10,
-    justifyContent: "space-between",
+  actionCol: {
+    width: ACTION_COL_W,
+    paddingVertical: spacing[2],
+    paddingLeft: spacing[2],
     alignItems: "center",
+    justifyContent: "space-between",
   },
-
-  /* Lock box */
-  lockBox: {
-    width: LOCK_BOX,
-    height: LOCK_BOX,
-    borderRadius: 8,
-    backgroundColor: colorRoles.surfaceBase,
-    borderWidth: 1,
+  statusChip: {
+    minWidth: 34,
+    minHeight: 21,
+    borderRadius: radius.round,
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
-    ...LOCK_SHADOW,
+    paddingHorizontal: 5,
   },
-  lockBoxOpen:   { borderColor: statusScale.success + "44" },
-  lockBoxClosed: { borderColor: colorRoles.borderSubtle },
-  lockIcon:      { fontSize: 15 },
-  lockIconOpen:  { opacity: 1 },
-  lockIconClosed:{ opacity: 0.5 },
-  lockDot: {
-    position: "absolute",
-    bottom: -3,
-    right: -3,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    borderWidth: 1.5,
-    borderColor: colorRoles.surfaceBase,
+  statusOpen: {
+    backgroundColor: alpha(statusScale.success, 0.12),
   },
-  dotOpen:   { backgroundColor: statusScale.success },
-  dotClosed: { backgroundColor: statusScale.danger },
-
-  /* Heart button */
+  statusClosed: {
+    backgroundColor: alpha(statusScale.danger, 0.1),
+  },
+  statusText: {
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  statusOpenText: {
+    color: statusScale.success,
+  },
+  statusClosedText: {
+    color: statusScale.danger,
+  },
   heartBtn: {
     width: 28,
     height: 28,
@@ -328,181 +260,134 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   heartIcon: {
-    fontSize: 19,
+    fontSize: 20,
     color: colorRoles.borderStrong,
   },
   heartIconActive: {
     color: statusScale.danger,
   },
-
-  /* ── Col 2: Content ── */
   content: {
     flex: 1,
-    paddingRight: 10,
-    paddingVertical: 9,
-    justifyContent: "space-between",
-    alignItems: "flex-end",
     minWidth: 0,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[3],
+    alignItems: "flex-end",
+    justifyContent: "center",
+    gap: 5,
   },
-
   storeName: {
-    fontSize: 15,
+    width: "100%",
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: "900",
+    color: colorRoles.textPrimary,
+    textAlign: "right",
+  },
+  locationLine: {
+    width: "100%",
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "700",
+    color: colorRoles.textSecondary,
+    textAlign: "right",
+  },
+  metaLine: {
+    width: "100%",
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: "800",
     color: colorRoles.brandStructure,
     textAlign: "right",
-    width: "100%",
   },
-
-  inlineRow: {
-    flexDirection: "row",
+  chipRow: {
+    width: "100%",
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
     alignItems: "center",
-    justifyContent: "flex-end",
     gap: 5,
-    width: "100%",
+    marginTop: 2,
   },
-  metaText: {
-    fontSize: 11,
-    color: colorRoles.textMuted,
-    textAlign: "right",
-    flex: 1,
-  },
-  distText: {
-    fontSize: 11,
-    color: colorRoles.textMuted,
-    fontWeight: "600",
-    flexShrink: 0,
-  },
-
-  serviceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 8,
-    width: "100%",
-    overflow: "hidden",
-  },
-  svcItem: { flexDirection: "row", alignItems: "center", gap: 2, flexShrink: 1 },
-  svcIcon:  { fontSize: 11 },
-  svcLabel: { fontSize: 11, color: colorRoles.textSecondary, fontWeight: "500", flexShrink: 1 },
-
-  closedTag: {
-    alignSelf: "flex-end",
-    backgroundColor: statusScale.dangerSoft,
+  chip: {
+    maxWidth: 92,
+    borderRadius: radius.round,
+    paddingHorizontal: spacing[2],
+    paddingVertical: 3,
+    backgroundColor: colorRoles.surfaceMuted,
     borderWidth: 1,
-    borderColor: statusScale.danger,
-    borderRadius: 20,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    borderColor: colorRoles.borderSubtle,
   },
-  closedTagTxt: { fontSize: 10, fontWeight: "600", color: statusScale.danger },
-
-  badgeRow: {
-    flexDirection: "row",
-    gap: 5,
-    alignItems: "center",
-    justifyContent: "flex-end",
-    width: "100%",
-    flexWrap: "nowrap",
-    overflow: "hidden",
+  chipStrong: {
+    backgroundColor: alpha(colorRoles.brandAction, 0.1),
+    borderColor: alpha(colorRoles.brandAction, 0.18),
   },
-
-  /* Promo badges */
-  badgePro: {
-    backgroundColor: colorRoles.brandAction,
-    borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2,
+  chipText: {
+    fontSize: 10,
+    lineHeight: 13,
+    fontWeight: "800",
+    color: colorRoles.textSecondary,
+    textAlign: "center",
   },
-  badgeProTxt: { fontSize: 10, fontWeight: "700", color: neutralScale[0] },
-
-  badgeFree: {
-    backgroundColor: statusScale.successSoft,
-    borderWidth: 1, borderColor: statusScale.success,
-    borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2,
+  chipStrongText: {
+    color: colorRoles.brandAction,
   },
-  badgeFreeTxt: { fontSize: 10, fontWeight: "700", color: statusScale.success },
-
-  badgeCoupon: {
-    backgroundColor: brandScale.action[50],
-    borderWidth: 1, borderColor: colorRoles.brandAction,
-    borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2,
-  },
-  badgeCouponTxt: { fontSize: 10, fontWeight: "600", color: colorRoles.brandAction },
-
-  badgePoints: {
-    backgroundColor: brandScale.structure[50],
-    borderWidth: 1, borderColor: brandScale.structure[200],
-    borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2,
-  },
-  badgePointsTxt: { fontSize: 10, fontWeight: "600", color: colorRoles.brandStructure },
-
-  badgePopular: {
-    backgroundColor: statusScale.warningSoft,
-    borderWidth: 1, borderColor: statusScale.warning,
-    borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2,
-  },
-  badgePopularTxt: { fontSize: 10, fontWeight: "600", color: statusScale.warningStrong },
-
-  /* ── Col 3: Image block ── */
-  imgBlock: {
-    width: IMAGE_SIZE,
-    height: CARD_HEIGHT,
+  mediaBlock: {
+    width: MEDIA_WIDTH,
+    minHeight: CARD_HEIGHT,
     position: "relative",
   },
-
-  /* Main square image */
-  imageSquare: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: IMAGE_SIZE,
-    height: IMAGE_SIZE,
+  heroWrap: {
+    flex: 1,
+    minHeight: CARD_HEIGHT,
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
-    borderTopRightRadius: 15,
-    borderBottomRightRadius: 15,
   },
-  squareEmoji: { fontSize: 40 },
-
-  /* Logo ring — prominent circular logo positioned at the bottom-right corner, overlapping the borders */
+  mediaScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: alpha(neutralScale[1000], 0.05),
+  },
+  heroEmoji: {
+    fontSize: 32,
+  },
+  popularPill: {
+    position: "absolute",
+    top: spacing[2],
+    right: spacing[2],
+    borderRadius: radius.round,
+    backgroundColor: alpha(statusScale.warning, 0.94),
+    paddingHorizontal: spacing[2],
+    paddingVertical: 3,
+  },
+  popularText: {
+    fontSize: 9,
+    fontWeight: "900",
+    color: neutralScale[0],
+  },
   logoRing: {
     position: "absolute",
-    bottom: 5,
-    right: 5,
+    right: spacing[2],
+    bottom: spacing[2],
     width: LOGO_SIZE,
     height: LOGO_SIZE,
-    borderRadius: LOGO_SIZE / 2,
+    borderRadius: radius.round,
+    backgroundColor: colorRoles.surfaceBase,
     borderWidth: 3,
     borderColor: colorRoles.surfaceBase,
-    backgroundColor: colorRoles.surfaceBase,
+    alignItems: "center",
+    justifyContent: "center",
     overflow: "hidden",
     ...LOGO_SHADOW,
   },
   logoImg: {
     width: "100%",
     height: "100%",
+    borderRadius: radius.round,
   },
   logoFallback: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: brandScale.surface[100],
+    backgroundColor: colorRoles.surfaceMuted,
   },
-  logoEmoji: { fontSize: 18 },
-
-  /* Unified compact rating/followers pill — bottom-left of imageBlock */
-  ratingPill: {
-    position: "absolute",
-    bottom: 8,
-    left: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2.5,
-    backgroundColor: colorRoles.mediaScrimStrong,
-    borderRadius: 5,
-    paddingHorizontal: 5,
-    paddingVertical: 2.5,
+  logoEmoji: {
+    fontSize: 18,
   },
-  ratingStar:   { fontSize: 9, color: statusScale.warning },
-  ratingVal:    { fontSize: 9.5, fontWeight: "800", color: neutralScale[0], letterSpacing: -0.2 },
-  separator:    { fontSize: 8, color: colorRoles.textOnMediaMuted, marginHorizontal: 0.5 },
-  followerVal:  { fontSize: 9, fontWeight: "700", color: colorRoles.textOnMediaStrong, letterSpacing: -0.2 },
 });
