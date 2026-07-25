@@ -115,8 +115,25 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Verify SDLC governance
+        id: sdlc
         if: ${{ inputs.policy == 'true' }}
-        run: pnpm run guard:sdlc
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/sdlc"
+          set -o pipefail
+          pnpm run guard:sdlc 2>&1 | tee "${RUNNER_TEMP}/sdlc/sdlc.log"
+      - name: Upload SDLC governance evidence
+        if: ${{ inputs.policy == 'true' && steps.sdlc.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sdlc-governance-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/sdlc/sdlc.log
+            governance/operational_journey_protocol_package/sdlc/**
+            governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+          if-no-files-found: error
+          retention-days: 14
       - name: Verify cleanup policy
         if: ${{ inputs.policy == 'true' }}
         run: pnpm run guard:cleanup-policy
@@ -162,7 +179,7 @@ jobs:
           HEAD_SHA: ${{ inputs.head_sha }}
         run: git diff --check "${BASE_SHA}" "${HEAD_SHA}"
       - name: Fail closed on deferred policy violations
-        if: ${{ always() && (steps.guard_registry.outcome == 'failure' || steps.repository_hygiene.outcome == 'failure') }}
+        if: ${{ always() && (steps.guard_registry.outcome == 'failure' || steps.sdlc.outcome == 'failure' || steps.repository_hygiene.outcome == 'failure') }}
         run: |
-          echo "::error title=Policy verification failed::Review the guard-registry and repository-hygiene artifacts."
+          echo "::error title=Policy verification failed::Review the guard-registry, SDLC, and repository-hygiene artifacts."
           exit 1
