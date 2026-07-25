@@ -1,46 +1,73 @@
-name: BThwani Live Code Remediation
+name: BThwani Expert Live-Code Remediation
 
 on:
   workflow_dispatch:
     inputs:
       source_ref:
-        description: Branch, tag, or commit to repair; defaults to the selected workflow ref
-        required: false
-        default: ""
+        description: Immutable branch, tag, or commit to diagnose and repair
+        required: true
+        default: master
+        type: string
+      base_branch:
+        description: Pull request target branch
+        required: true
+        default: master
         type: string
       mode:
-        description: Repair and verification depth
+        description: Verification depth
         required: true
         default: full
         type: choice
         options: [full, affected]
+      runtime_proof:
+        description: Execute the full integrated runtime smoke proof
+        required: true
+        default: true
+        type: boolean
+      cleanup_records:
+        description: Delete policy-approved stale logs, evidence, and documents
+        required: true
+        default: true
+        type: boolean
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
-  group: live-code-remediation-${{ inputs.source_ref || github.ref }}
+  group: expert-live-code-remediation-${{ inputs.source_ref }}
   cancel-in-progress: false
 
+env:
+  ARTIFACT_NAME: live-code-remediation-${{ github.run_id }}-${{ github.run_attempt }}
+
 jobs:
-  remediate:
-    name: Repair and verify live code
+  prepare:
+    name: Forensic discovery and deterministic repair
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
-    env:
-      BASE_BRANCH: master
-      SOURCE_REF: ${{ inputs.source_ref || github.ref_name }}
-      REMEDIATION_BRANCH: automation/live-code-remediation-${{ github.run_id }}-${{ github.run_attempt }}
-      NX_BASE: origin/master
-      NX_HEAD: HEAD
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
+      has_changes: ${{ steps.package.outputs.has_changes }}
+      patch_sha256: ${{ steps.package.outputs.patch_sha256 }}
     steps:
-      - name: Checkout requested live source
+      - name: Checkout requested source without credentials
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.source_ref || github.ref_name }}
+          ref: ${{ inputs.source_ref }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Capture immutable source identity
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(git rev-parse HEAD)"
+          echo "sha=${sha}" >> "${GITHUB_OUTPUT}"
+          mkdir -p /tmp/remediation-evidence
+          printf '%s\n' "${sha}" > /tmp/remediation-evidence/source-sha.txt
 
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
@@ -57,94 +84,82 @@ jobs:
             core/platform-control/backend/go.sum
             core/providers/backend/go.sum
 
-      - name: Create isolated remediation branch
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch --no-tags origin "${BASE_BRANCH}"
-          git switch -c "${REMEDIATION_BRANCH}"
-          {
-            echo "### Live-code remediation"
-            echo "- Source ref: ${SOURCE_REF}"
-            echo "- Source commit: $(git rev-parse HEAD)"
-            echo "- Repair mode: ${{ inputs.mode }}"
-            echo "- Output branch: ${REMEDIATION_BRANCH}"
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-      - name: Apply deterministic code repairs
-        id: repair
+      - name: Apply deterministic source repairs
         shell: bash
         run: |
           set +e
-          mobile_status=0
-          openapi_status=0
-          lint_status=0
-          gofmt_status=0
+          : > /tmp/remediation-evidence/repair-status.tsv
 
-          pnpm run mobile:apps:sync
-          mobile_status=$?
+          run_repair() {
+            local name="$1"
+            shift
+            echo "=== ${name} ==="
+            "$@"
+            local status=$?
+            printf '%s\t%s\n' "${name}" "${status}" >> /tmp/remediation-evidence/repair-status.tsv
+            return 0
+          }
 
-          pnpm run openapi:generate
-          openapi_status=$?
+          run_repair mobile-source-sync pnpm run mobile:apps:sync
+          run_repair openapi-generation pnpm run openapi:generate
+          run_repair dependency-deduplication pnpm dedupe
 
           if [[ "${{ inputs.mode }}" == "full" ]]; then
-            pnpm exec nx run-many -t lint --all --fix --outputStyle=stream
+            run_repair eslint-autofix pnpm exec nx run-many -t lint --all --fix --outputStyle=stream
           else
-            pnpm exec nx affected -t lint --fix --outputStyle=stream
+            export NX_BASE="origin/${{ inputs.base_branch }}"
+            export NX_HEAD=HEAD
+            git fetch --no-tags origin "${{ inputs.base_branch }}"
+            run_repair eslint-autofix pnpm exec nx affected -t lint --fix --outputStyle=stream
           fi
-          lint_status=$?
+
+          while IFS= read -r module; do
+            module_dir="$(dirname "${module}")"
+            (
+              cd "${module_dir}"
+              go mod tidy
+            )
+            printf '%s\t%s\n' "go-mod-tidy:${module_dir}" "$?" >> /tmp/remediation-evidence/repair-status.tsv
+          done < <(git ls-files | grep '/go.mod$' | sort)
 
           mapfile -t go_files < <(git ls-files '*.go')
           if [[ "${#go_files[@]}" -gt 0 ]]; then
             gofmt -w "${go_files[@]}"
-            gofmt_status=$?
+            printf '%s\t%s\n' gofmt "$?" >> /tmp/remediation-evidence/repair-status.tsv
           fi
 
-          set -e
-          {
-            echo "- Mobile source synchronization exit: ${mobile_status}"
-            echo "- OpenAPI generation exit: ${openapi_status}"
-            echo "- Lint auto-fix exit: ${lint_status}"
-            echo "- Go formatting exit: ${gofmt_status}"
-          } >> "${GITHUB_STEP_SUMMARY}"
+          exit 0
 
-      - name: Exclude documents, governance records, and logs
+      - name: Apply policy-governed records cleanup
+        if: ${{ inputs.cleanup_records }}
+        shell: bash
+        env:
+          BTHWANI_CLEANUP_REPORT: .diagnostics/repository-cleanup/report.json
+        run: node tools/scripts/apply-repository-cleanup.mjs --apply
+
+      - name: Freeze allowed remediation scope
         shell: bash
         run: |
           set -euo pipefail
 
-          is_non_code_record() {
-            local path="$1"
-            [[ "${path}" == *.md ]] ||
-              [[ "${path}" == docs/* ]] ||
-              [[ "${path}" == governance/* ]] ||
-              [[ "${path}" == .agents/* ]] ||
-              [[ "${path}" == AGENTS.md ]] ||
-              [[ "${path}" == GEMINI.md ]] ||
-              [[ "${path}" == *.log ]] ||
-              [[ "${path}" == .diagnostics/* ]]
-          }
+          git restore --source=HEAD --staged --worktree -- .github
 
-          while IFS= read -r -d '' path; do
-            if is_non_code_record "${path}"; then
-              git restore --source=HEAD --staged --worktree -- "${path}"
-            fi
-          done < <(git diff --name-only -z)
-
-          while IFS= read -r -d '' path; do
-            if is_non_code_record "${path}"; then
-              rm -rf -- "${path}"
-            fi
-          done < <(git ls-files --others --exclude-standard -z)
+          if [[ -f .diagnostics/repository-cleanup/report.json ]]; then
+            cp .diagnostics/repository-cleanup/report.json /tmp/remediation-evidence/repository-cleanup.json
+          else
+            printf '%s\n' '{"schemaVersion":1,"mode":"disabled","deleted":[],"planned":[],"blocked":[]}' \
+              > /tmp/remediation-evidence/repository-cleanup.json
+          fi
+          rm -rf .diagnostics
 
           invalid=0
           while IFS= read -r path; do
             [[ -z "${path}" ]] && continue
             case "${path}" in
-              apps/*|core/*|services/*|shared/*|contracts/*|infra/*|tools/*|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|nx.json)
+              apps/*|core/*|services/*|shared/*|contracts/*|infra/*|tools/*|docs/*|governance/*|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|nx.json)
                 ;;
               *)
-                echo "::error title=Non-code remediation blocked::${path} is outside the live-code allowlist."
+                echo "::error title=Remediation scope violation::${path} is outside the approved source and cleanup roots."
                 invalid=1
                 ;;
             esac
@@ -154,25 +169,144 @@ jobs:
             exit 1
           fi
 
-      - name: Verify live bindings and imports
-        id: bindings
-        continue-on-error: true
+          if git diff --summary | grep -Eq 'mode 120000|create mode 160000'; then
+            echo "::error title=Unsafe filesystem mutation::Symlink and submodule creation are forbidden."
+            exit 1
+          fi
+
+      - name: Package immutable remediation patch
+        id: package
         shell: bash
         run: |
           set -euo pipefail
+          git diff --binary --full-index --no-ext-diff > /tmp/remediation-evidence/remediation.patch
+          git diff --name-status > /tmp/remediation-evidence/changed-files.tsv
+
+          if [[ -s /tmp/remediation-evidence/remediation.patch ]]; then
+            has_changes=true
+          else
+            has_changes=false
+          fi
+          patch_sha256="$(sha256sum /tmp/remediation-evidence/remediation.patch | awk '{print $1}')"
+
+          jq -n \
+            --arg sourceRef "${{ inputs.source_ref }}" \
+            --arg sourceSha "${{ steps.source.outputs.sha }}" \
+            --arg baseBranch "${{ inputs.base_branch }}" \
+            --arg mode "${{ inputs.mode }}" \
+            --arg patchSha256 "${patch_sha256}" \
+            --argjson hasChanges "${has_changes}" \
+            '{
+              schemaVersion: 1,
+              sourceRef: $sourceRef,
+              sourceSha: $sourceSha,
+              baseBranch: $baseBranch,
+              mode: $mode,
+              hasChanges: $hasChanges,
+              patchSha256: $patchSha256
+            }' > /tmp/remediation-evidence/manifest.json
+
+          echo "has_changes=${has_changes}" >> "${GITHUB_OUTPUT}"
+          echo "patch_sha256=${patch_sha256}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload remediation patch and digital evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: /tmp/remediation-evidence
+          if-no-files-found: error
+          retention-days: 14
+
+  static_integrity:
+    name: Logic, binding, duplication, and repository integrity
+    needs: [prepare]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.prepare.outputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download immutable remediation patch
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: .remediation
+      - name: Verify and apply remediation patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ needs.prepare.outputs.patch_sha256 }}  .remediation/remediation.patch" | sha256sum --check
+          if [[ -s .remediation/remediation.patch ]]; then git apply --index --binary .remediation/remediation.patch; fi
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Execute full-stack static integrity panel
+        shell: bash
+        env:
+          BTHWANI_HYGIENE_REPORT: /tmp/repository-hygiene.json
+        run: |
+          set -euo pipefail
           pnpm run guard:no-broken-imports
+          pnpm run guard:fullstack-boundary
+          pnpm run guard:wlt-financial-boundary
           pnpm run guard:api-binding
           pnpm run guard:backend-api-binding
+          pnpm run guard:service-manifest-drift
           pnpm run guard:frontend-feature-binding
           pnpm run guard:runtime-real-bindings
           pnpm run guard:live-cross-journey-integrity
-          pnpm run mobile:expo:verify
-          pnpm --dir contracts typecheck
+          pnpm run guard:logic-all
+          pnpm run diagnostics:ui-kit
+          pnpm exec knip --reporter compact --reporter github-actions
+          pnpm run diagnostics:jscpd
+          pnpm run guard:repo-all
+          pnpm run guard:performance-all
+          pnpm run guard:runtime-config
+          pnpm run guard:a11y-runtime
+          node tools/scripts/check-repository-hygiene.mjs
 
-      - name: Verify Node code
-        id: node_verification
-        continue-on-error: true
+  node_verification:
+    name: Type, lint, test, and build verification
+    needs: [prepare]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.prepare.outputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download immutable remediation patch
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: .remediation
+      - name: Verify and apply remediation patch
         shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ needs.prepare.outputs.patch_sha256 }}  .remediation/remediation.patch" | sha256sum --check
+          if [[ -s .remediation/remediation.patch ]]; then git apply --index --binary .remediation/remediation.patch; fi
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify generated contracts and mobile configuration
+        run: |
+          pnpm --dir contracts typecheck
+          pnpm run contracts:lint
+          pnpm run openapi:verify:dsh
+          pnpm run mobile:expo:verify
+      - name: Verify Node graph
+        shell: bash
+        env:
+          NX_BASE: origin/${{ inputs.base_branch }}
+          NX_HEAD: HEAD
         run: |
           set -euo pipefail
           if [[ "${{ inputs.mode }}" == "full" ]]; then
@@ -181,99 +315,358 @@ jobs:
             pnpm run nx:test
             pnpm run nx:build
           else
+            git fetch --no-tags origin "${{ inputs.base_branch }}"
             pnpm run affected:typecheck
             pnpm run affected:lint
             pnpm run affected:test
             pnpm run affected:build
           fi
 
-      - name: Verify Go code
-        id: go_verification
-        continue-on-error: true
+  backend_verification:
+    name: Verify ${{ matrix.key }} backend and database
+    needs: [prepare]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: dsh
+            go_mod: services/dsh/backend/go.mod
+            workdir: services/dsh/backend
+            migrations: services/dsh/database/migrations/*.sql
+          - key: wlt
+            go_mod: services/wlt/backend/go.mod
+            workdir: services/wlt/backend
+            migrations: services/wlt/database/migrations/*.sql
+          - key: identity
+            go_mod: core/identity/backend/go.mod
+            workdir: core/identity/backend
+            migrations: core/identity/database/migrations/*.sql
+          - key: workforce
+            go_mod: core/workforce/backend/go.mod
+            workdir: core/workforce/backend
+            migrations: core/workforce/database/migrations/*.sql
+          - key: platform
+            go_mod: core/platform-control/backend/go.mod
+            workdir: core/platform-control/backend
+            migrations: core/platform-control/database/migrations/*.sql
+          - key: providers
+            go_mod: core/providers/backend/go.mod
+            workdir: core/providers/backend
+            migrations: core/providers/database/migrations/*.sql
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: remediation
+          POSTGRES_PASSWORD: remediation_password
+          POSTGRES_DB: remediation
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U remediation -d remediation"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://remediation:remediation_password@localhost:5432/remediation?sslmode=disable
+      PGPASSWORD: remediation_password
+      DSH_REQUIRE_DB_TESTS: ${{ matrix.key == 'dsh' && 'true' || 'false' }}
+      WLT_REQUIRE_DB_TESTS: ${{ matrix.key == 'wlt' && 'true' || 'false' }}
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.prepare.outputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download immutable remediation patch
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: .remediation
+      - name: Verify and apply remediation patch
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -t modules < <(git ls-files | grep '/go.mod$' | sort)
-          for module in "${modules[@]}"; do
-            module_dir="$(dirname "${module}")"
-            echo "=== ${module_dir} ==="
-            (
-              cd "${module_dir}"
-              go test ./... -count=1
-              go build ./...
-            )
+          echo "${{ needs.prepare.outputs.patch_sha256 }}  .remediation/remediation.patch" | sha256sum --check
+          if [[ -s .remediation/remediation.patch ]]; then git apply --index --binary .remediation/remediation.patch; fi
+      - name: Set up locked Go runtime
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: ${{ matrix.go_mod }}
+          cache-dependency-path: ${{ matrix.workdir }}/go.sum
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+      - name: Apply database migrations
+        shell: bash
+        env:
+          MIGRATIONS: ${{ matrix.migrations }}
+        run: |
+          set -euo pipefail
+          found=0
+          for migration in ${MIGRATIONS}; do
+            found=1
+            psql "${DATABASE_URL}" -q -v ON_ERROR_STOP=1 -f "${migration}" >/dev/null
           done
+          [[ "${found}" -eq 1 ]]
+      - name: Vet, test, and build backend
+        working-directory: ${{ matrix.workdir }}
+        run: |
+          go vet ./...
+          go test ./... -count=1
+          go build ./...
 
-      - name: Commit repaired live code
-        id: commit
+  security_verification:
+    name: Dependency, secret, workflow, and container security
+    needs: [prepare]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.prepare.outputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download immutable remediation patch
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: .remediation
+      - name: Verify and apply remediation patch
         shell: bash
         run: |
           set -euo pipefail
+          echo "${{ needs.prepare.outputs.patch_sha256 }}  .remediation/remediation.patch" | sha256sum --check
+          if [[ -s .remediation/remediation.patch ]]; then git apply --index --binary .remediation/remediation.patch; fi
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Execute security panel
+        run: |
+          pnpm audit --audit-level high
+          pnpm run security:osv
+          pnpm run security:trivy
+          pnpm run guard:workflow-lint
+          pnpm run guard:workflow-security
+          pnpm run guard:actions-pin
+          pnpm run guard:opa-policies
 
-          git add --all -- apps core services shared contracts infra tools package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json
-          if git diff --cached --quiet; then
-            echo "created=false" >> "${GITHUB_OUTPUT}"
-            echo "No deterministic live-code change was produced." >> "${GITHUB_STEP_SUMMARY}"
-            exit 0
+  runtime_verification:
+    name: Integrated SaaS runtime proof
+    if: ${{ inputs.runtime_proof }}
+    needs: [prepare]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.prepare.outputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download immutable remediation patch
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: .remediation
+      - name: Verify and apply remediation patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ needs.prepare.outputs.patch_sha256 }}  .remediation/remediation.patch" | sha256sum --check
+          if [[ -s .remediation/remediation.patch ]]; then git apply --index --binary .remediation/remediation.patch; fi
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Start, bootstrap, and prove integrated runtime
+        shell: pwsh
+        run: |
+          pnpm run runtime:full:up
+          pnpm run runtime:full:bootstrap-dev
+          pnpm run runtime:full:smoke
+      - name: Stop integrated runtime
+        if: always()
+        shell: pwsh
+        run: pnpm run runtime:full:down
+
+  publish:
+    name: Publish reviewed remediation pull request
+    if: ${{ always() && needs.prepare.result == 'success' && needs.prepare.outputs.has_changes == 'true' }}
+    needs:
+      - prepare
+      - static_integrity
+      - node_verification
+      - backend_verification
+      - security_verification
+      - runtime_verification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout immutable source without executing repository code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ needs.prepare.outputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download verified remediation patch
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: .remediation
+      - name: Validate patch boundaries and deletions
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ needs.prepare.outputs.patch_sha256 }}  .remediation/remediation.patch" | sha256sum --check
+          git apply --check --binary .remediation/remediation.patch
+
+          if git apply --numstat .remediation/remediation.patch | cut -f3- | grep -E '^\.github/'; then
+            echo "::error title=Privileged patch rejected::Workflow and GitHub configuration mutation is forbidden."
+            exit 1
           fi
 
-          git config user.name "bthwani-live-code-remediation[bot]"
-          git config user.email "bthwani-live-code-remediation[bot]@users.noreply.github.com"
-          git commit -m "fix: apply deterministic live-code remediation"
-          echo "created=true" >> "${GITHUB_OUTPUT}"
-          echo "commit_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+          git apply --index --binary .remediation/remediation.patch
 
-      - name: Push remediation branch and open pull request
-        if: ${{ steps.commit.outputs.created == 'true' }}
+          if git diff --cached --summary | grep -Eq 'mode 120000|create mode 160000'; then
+            echo "::error title=Unsafe patch rejected::Symlink and submodule creation are forbidden."
+            exit 1
+          fi
+
+          while IFS=$'\t' read -r status path; do
+            [[ "${status}" != D* ]] && continue
+            if [[ "${path}" =~ (^|/)(contracts?|migrations?|audit)(/|$) ]] || [[ "${path}" =~ \.openapi\.ya?ml$ ]]; then
+              echo "::error title=Protected deletion rejected::${path}"
+              exit 1
+            fi
+            if ! jq -e --arg path "${path}" '.deleted[]? | select(.file == $path)' \
+              .remediation/repository-cleanup.json >/dev/null; then
+              echo "::error title=Unapproved deletion rejected::${path} was not produced by the cleanup policy."
+              exit 1
+            fi
+          done < <(git diff --cached --name-status)
+
+      - name: Commit and push isolated remediation branch
+        id: branch
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          BINDINGS_RESULT: ${{ steps.bindings.outcome }}
-          NODE_RESULT: ${{ steps.node_verification.outcome }}
-          GO_RESULT: ${{ steps.go_verification.outcome }}
         run: |
           set -euo pipefail
+          branch="automation/expert-remediation-${{ github.run_id }}-${{ github.run_attempt }}"
+          git switch -c "${branch}"
+          git config user.name "bthwani-expert-remediation[bot]"
+          git config user.email "bthwani-expert-remediation[bot]@users.noreply.github.com"
+          git commit -m "fix: apply verified full-stack remediation"
           gh auth setup-git
-          git push --force-with-lease origin "HEAD:${REMEDIATION_BRANCH}"
+          git push origin "HEAD:${branch}"
+          echo "name=${branch}" >> "${GITHUB_OUTPUT}"
 
-          cat > /tmp/remediation-pr.md <<EOF
-          ## Live-code remediation
-
-          This pull request contains deterministic repairs applied to executable source only.
-
-          - Source ref: \`${SOURCE_REF}\`
-          - Mode: \`${{ inputs.mode }}\`
-          - Live bindings/imports: \`${BINDINGS_RESULT}\`
-          - Node verification: \`${NODE_RESULT}\`
-          - Go verification: \`${GO_RESULT}\`
-
-          Markdown documents, governance records, diagnostic folders, and log files were explicitly excluded from automatic modification.
-          EOF
-
-          gh pr create \
-            --base "${BASE_BRANCH}" \
-            --head "${REMEDIATION_BRANCH}" \
-            --title "fix: remediate live-code failures" \
-            --body-file /tmp/remediation-pr.md
-
-      - name: Enforce remediation result
-        if: ${{ always() }}
+      - name: Open evidence-backed pull request
         shell: bash
         env:
-          CREATED: ${{ steps.commit.outputs.created }}
-          BINDINGS_RESULT: ${{ steps.bindings.outcome }}
-          NODE_RESULT: ${{ steps.node_verification.outcome }}
-          GO_RESULT: ${{ steps.go_verification.outcome }}
+          GH_TOKEN: ${{ github.token }}
+          STATIC_RESULT: ${{ needs.static_integrity.result }}
+          NODE_RESULT: ${{ needs.node_verification.result }}
+          BACKEND_RESULT: ${{ needs.backend_verification.result }}
+          SECURITY_RESULT: ${{ needs.security_verification.result }}
+          RUNTIME_RESULT: ${{ needs.runtime_verification.result }}
         run: |
           set -euo pipefail
-          if [[ "${CREATED}" != "true" ]]; then
-            echo "::error title=No safe automatic repair::The workflow found no deterministic code change to commit. Semantic repair is still required."
+          ready=true
+          for result in "${STATIC_RESULT}" "${NODE_RESULT}" "${BACKEND_RESULT}" "${SECURITY_RESULT}"; do
+            [[ "${result}" == success ]] || ready=false
+          done
+          if [[ "${RUNTIME_RESULT}" != success && "${RUNTIME_RESULT}" != skipped ]]; then ready=false; fi
+
+          cat > /tmp/pr-body.md <<EOF
+          ## Evidence-backed full-stack remediation
+
+          - Source ref: \`${{ inputs.source_ref }}\`
+          - Source commit: \`${{ needs.prepare.outputs.source_sha }}\`
+          - Patch SHA-256: \`${{ needs.prepare.outputs.patch_sha256 }}\`
+          - Static and logical integrity: \`${STATIC_RESULT}\`
+          - Node type/lint/test/build: \`${NODE_RESULT}\`
+          - Backend/database matrix: \`${BACKEND_RESULT}\`
+          - Security panel: \`${SECURITY_RESULT}\`
+          - Integrated runtime proof: \`${RUNTIME_RESULT}\`
+
+          The workflow modified executable source through deterministic repair operations and removed only records approved by the repository retention policy. Protected contracts, migrations, audits, workflow files, symlinks, and submodules were blocked from deletion or mutation.
+          EOF
+
+          args=(
+            --base "${{ inputs.base_branch }}"
+            --head "${{ steps.branch.outputs.name }}"
+            --title "fix: verified expert full-stack remediation"
+            --body-file /tmp/pr-body.md
+          )
+          if [[ "${ready}" != true ]]; then args+=(--draft); fi
+          gh pr create "${args[@]}"
+
+  result:
+    name: Expert remediation result
+    if: ${{ always() }}
+    needs:
+      - prepare
+      - static_integrity
+      - node_verification
+      - backend_verification
+      - security_verification
+      - runtime_verification
+      - publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions: {}
+    steps:
+      - name: Enforce evidence-based closure
+        shell: bash
+        env:
+          PREPARE_RESULT: ${{ needs.prepare.result }}
+          HAS_CHANGES: ${{ needs.prepare.outputs.has_changes }}
+          STATIC_RESULT: ${{ needs.static_integrity.result }}
+          NODE_RESULT: ${{ needs.node_verification.result }}
+          BACKEND_RESULT: ${{ needs.backend_verification.result }}
+          SECURITY_RESULT: ${{ needs.security_verification.result }}
+          RUNTIME_RESULT: ${{ needs.runtime_verification.result }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+        run: |
+          set -euo pipefail
+          failed=0
+
+          require_success() {
+            local name="$1"
+            local result="$2"
+            if [[ "${result}" != success && "${result}" != skipped ]]; then
+              echo "::error title=${name} failed::Result=${result}"
+              failed=1
+            fi
+          }
+
+          require_success prepare "${PREPARE_RESULT}"
+          require_success static-integrity "${STATIC_RESULT}"
+          require_success node-verification "${NODE_RESULT}"
+          require_success backend-verification "${BACKEND_RESULT}"
+          require_success security-verification "${SECURITY_RESULT}"
+          require_success runtime-verification "${RUNTIME_RESULT}"
+
+          if [[ "${HAS_CHANGES}" == true ]]; then
+            require_success publish "${PUBLISH_RESULT}"
+          fi
+
+          if [[ "${failed}" -ne 0 ]]; then
+            echo "The workflow did not prove closure. Every failed bundle is an explicit unresolved code, logic, security, database, or runtime gap."
             exit 1
           fi
 
-          if [[ "${BINDINGS_RESULT}" != "success" || "${NODE_RESULT}" != "success" || "${GO_RESULT}" != "success" ]]; then
-            echo "::error title=Remediation PR created with unresolved checks::Review the created pull request and finish the remaining semantic fixes in live code."
-            exit 1
+          if [[ "${HAS_CHANGES}" == true ]]; then
+            echo "All proof bundles passed and a reviewable remediation pull request was published."
+          else
+            echo "All proof bundles passed and no deterministic source or cleanup change was required."
           fi
-
-          echo "Deterministic live-code remediation completed and all verification bundles passed."
