@@ -1,5 +1,5 @@
 # Internal helper used only by tools/scripts/mobile-eas.ps1.
-# Ensures one Android Firebase app and a package/SHA-1 restricted Firebase API key.
+# Ensures one Android Firebase app and one valid package/SHA-1 restricted runtime API key.
 
 [CmdletBinding()]
 param(
@@ -7,10 +7,7 @@ param(
     [ValidateSet('app-client', 'app-partner', 'app-captain', 'app-field')]
     [string] $App,
 
-    [Parameter(Mandatory)]
-    [ValidatePattern('^([A-Fa-f0-9]{2}:){19}[A-Fa-f0-9]{2}$')]
     [string] $Sha1Fingerprint,
-
     [string] $ProjectId = 'bthwani-platform',
     [string] $FirebaseToolsVersion = '15.24.0',
     [string] $SecretsRoot = 'C:\bthwani-secrets\firebase'
@@ -26,13 +23,12 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = (Resolve-Path (Join-Path $ScriptDir '..\..\..')).Path
 $ManifestPath = Join-Path $RepoRoot 'tools\mobile\mobile-apps.manifest.json'
 $ValidatorPath = Join-Path $RepoRoot 'tools\mobile\google-services-config.mjs'
+$GoogleInputLocalPath = Join-Path $RepoRoot 'tools\scripts\google-cloud\google-platform-input.local.json'
 $SecretsMapPath = Join-Path $RepoRoot 'secrets.local.mobile.json'
 $DestinationDirectory = Join-Path $SecretsRoot $App
 $DestinationPath = Join-Path $DestinationDirectory 'google-services.json'
 $FirebaseKeyDisplayName = "bthwani-$App-android-firebase-development"
 $FirebaseApiServices = @(
-    'firebase.googleapis.com',
-    'logging.googleapis.com',
     'firebaseinstallations.googleapis.com',
     'fcmregistrations.googleapis.com'
 )
@@ -65,7 +61,7 @@ function Invoke-Gcloud {
         [switch] $CaptureOnly
     )
 
-    $output = & gcloud @Arguments 2>&1
+    $output = & gcloud @Arguments '--quiet' 2>&1
     $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
     $text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
     if ($exitCode -ne 0) {
@@ -143,6 +139,20 @@ function Collect-AppRecords {
     return @($records)
 }
 
+function Resolve-Sha1Fingerprint {
+    if ($Sha1Fingerprint -match '^([A-Fa-f0-9]{2}:){19}[A-Fa-f0-9]{2}$') {
+        return $Sha1Fingerprint.ToUpperInvariant()
+    }
+
+    Assert-File -Path $GoogleInputLocalPath
+    $input = Get-Content -LiteralPath $GoogleInputLocalPath -Raw | ConvertFrom-Json -Depth 100
+    $value = [string]$input.apps.$App.sha1Fingerprint
+    if ($value -notmatch '^([A-Fa-f0-9]{2}:){19}[A-Fa-f0-9]{2}$') {
+        throw "$GoogleInputLocalPath does not contain a valid SHA-1 for $App."
+    }
+    return $value.ToUpperInvariant()
+}
+
 function Get-FirebaseAndroidApps {
     $result = Invoke-Firebase -Arguments @(
         'apps:list', 'ANDROID', '--project', $ProjectId, '--json', '--non-interactive'
@@ -155,6 +165,7 @@ function Find-AppByPackage {
         [Parameter(Mandatory)][object[]] $Records,
         [Parameter(Mandatory)][string] $Package
     )
+
     $matches = @($Records | Where-Object {
         [string](Get-PropertyValue -Object $_ -Names @('namespace', 'packageName', 'package_name', 'androidPackage')) -eq $Package
     })
@@ -173,20 +184,40 @@ function Get-KeyNameByDisplayName {
     return [string]$match.name
 }
 
+function Get-KeyResourceName {
+    param([Parameter(Mandatory)] $Payload)
+    foreach ($node in @($Payload.response, $Payload.result, $Payload)) {
+        if ($null -eq $node) { continue }
+        $name = [string](Get-PropertyValue -Object $node -Names @('name'))
+        if ($name -match '/locations/global/keys/') { return $name }
+    }
+    return $null
+}
+
 function Get-KeyString {
     param([Parameter(Mandatory)][string] $KeyName)
-    $payload = Get-BalancedJson -Text (Invoke-Gcloud -Arguments @(
-        'services', 'api-keys', 'get-key-string', $KeyName, '--format=json'
-    ) -CaptureOnly)
-    $value = if ($payload.keyString) { [string]$payload.keyString } else { [string]$payload.response.keyString }
-    if ($value -notmatch '^AIza[0-9A-Za-z_-]{35}$') {
-        throw "Firebase API key '$FirebaseKeyDisplayName' is missing or invalid."
+
+    for ($attempt = 1; $attempt -le 10; $attempt++) {
+        try {
+            $payload = Get-BalancedJson -Text (Invoke-Gcloud -Arguments @(
+                'services', 'api-keys', 'get-key-string', $KeyName, '--format=json'
+            ) -CaptureOnly)
+            $value = if ($payload.keyString) { [string]$payload.keyString } else { [string]$payload.response.keyString }
+            if ($value -match '^AIza[0-9A-Za-z_-]{35}$') { return $value }
+        } catch {
+            if ($attempt -eq 10) { throw }
+        }
+        Start-Sleep -Seconds 2
     }
-    return $value
+
+    throw "Firebase API key '$FirebaseKeyDisplayName' is missing or invalid."
 }
 
 function Ensure-FirebaseApiKey {
-    param([Parameter(Mandatory)][string] $PackageName)
+    param(
+        [Parameter(Mandatory)][string] $PackageName,
+        [Parameter(Mandatory)][string] $Sha1
+    )
 
     [void](Invoke-Gcloud -Arguments (@(
         'services', 'enable', 'apikeys.googleapis.com'
@@ -202,18 +233,14 @@ function Ensure-FirebaseApiKey {
         $arguments += @('--api-target', "service=$service")
     }
     $arguments += @(
-        '--allowed-application', "sha1_fingerprint=$Sha1Fingerprint,package_name=$PackageName",
+        '--allowed-application', "sha1_fingerprint=$Sha1,package_name=$PackageName",
         '--project', $ProjectId,
         '--format=json'
     )
 
     $resultText = Invoke-Gcloud -Arguments $arguments -CaptureOnly
     if (-not $keyName) {
-        $payload = Get-BalancedJson -Text $resultText
-        $keyName = [string](Get-PropertyValue -Object $payload -Names @('name'))
-        if (-not $keyName -and $payload.response) {
-            $keyName = [string](Get-PropertyValue -Object $payload.response -Names @('name'))
-        }
+        $keyName = Get-KeyResourceName -Payload (Get-BalancedJson -Text $resultText)
         if (-not $keyName) { throw "Unable to identify Firebase API key '$FirebaseKeyDisplayName'." }
     }
 
@@ -260,6 +287,7 @@ $manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json -Dept
 $appConfig = $manifest.apps.$App
 if ($null -eq $appConfig) { throw "Mobile manifest does not define $App." }
 $packageName = [string]$appConfig.androidPackage
+$resolvedSha1 = Resolve-Sha1Fingerprint
 
 $login = Invoke-Firebase -Arguments @('login:list') -AllowFailure
 if ($login.ExitCode -ne 0 -or $login.Text -notmatch 'Logged in as') {
@@ -283,7 +311,7 @@ if ($null -eq $record) {
     if ($null -eq $record) { throw "Firebase app '$packageName' was not visible after creation." }
 }
 
-$firebaseApiKey = Ensure-FirebaseApiKey -PackageName $packageName
+$firebaseApiKey = Ensure-FirebaseApiKey -PackageName $packageName -Sha1 $resolvedSha1
 $appId = [string](Get-PropertyValue -Object $record -Names @('appId', 'app_id'))
 $sdkConfig = Invoke-Firebase -Arguments @(
     'apps:sdkconfig', 'ANDROID', $appId, '--project', $ProjectId, '--non-interactive'
