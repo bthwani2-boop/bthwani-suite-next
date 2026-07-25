@@ -29,42 +29,34 @@ test("Initialize is mandatory and bound to immutable provider inputs", () => {
     "firebaseFileSha256",
     "firebaseKeySha256",
     "mapsKeySha256",
-    "Assert-EasDevelopmentEnvironment",
+    "Sync-EasDevelopmentEnvironment",
   ]) assert.ok(workflow.includes(marker), `missing marker: ${marker}`);
   assert.ok(workflow.indexOf("Assert-StateStamp -Path $InitializeStampPath") < workflow.indexOf("if ($Mode -eq 'Preflight')"));
   assert.ok(workflow.indexOf("Assert-StateStamp -Path $PreflightStampPath") < workflow.indexOf("Write-Step 'Submit remote build'"));
+  const syncCalls = workflow.match(/Sync-EasDevelopmentEnvironment -MapsKey \$inputs\.MapsKey/g) ?? [];
+  assert.ok(syncCalls.length >= 2, "EAS inputs must be synchronized during Initialize and again before Preflight/Build");
 });
 
-test("EAS provider verification uses supported flags and actual short output parsing", () => {
+test("EAS provider synchronization is idempotent and does not parse CLI listings", () => {
   assert.ok(providers.includes("'env:set', 'development'"));
-  assert.ok(providers.includes("'env:list', 'development'"));
-  assert.ok(providers.includes("Get-EasDevelopmentVariableNames"));
-  assert.ok(providers.includes("Remove-AnsiEscapeSequences"));
-  assert.ok(providers.includes("$env:FORCE_COLOR = '0'"));
-  assert.ok(providers.includes("env:list does not define a --non-interactive flag"));
-  assert.ok(providers.includes("$result.Text -split '\\r?\\n'"));
-  assert.ok(providers.includes("Current EAS short format is NAME=value"));
-  assert.ok(providers.includes("(?:=|\\|)"));
-  assert.ok(providers.includes("Available project variables:"));
+  assert.ok(providers.includes("PASS: EAS development provider inputs were created or updated."));
+  assert.equal(providers.includes("'env:list', 'development'"), false);
+  assert.equal(providers.includes("Get-EasDevelopmentVariableNames"), false);
+  assert.equal(providers.includes("Assert-EasDevelopmentEnvironment"), false);
   assert.equal(providers.includes("function Test-EasVariable"), false);
-  assert.equal(providers.includes("-AllowFailure -Quiet"), false);
-
-  const listStart = providers.indexOf("'env:list', 'development'");
-  const listEnd = providers.indexOf(") -Quiet", listStart);
-  assert.ok(listStart >= 0 && listEnd > listStart);
-  const listInvocation = providers.slice(listStart, listEnd);
-  assert.equal(listInvocation.includes("--non-interactive"), false);
+  assert.equal(providers.includes("-AllowFailure"), false);
+  assert.equal(providers.includes("'env:get', 'development'"), false);
+  assert.equal(providers.includes("'env:update', 'development'"), false);
+  assert.equal(providers.includes("'env:create', 'development'"), false);
+  assert.equal(providers.includes("'--variable-environment', 'development'"), false);
 
   const setStart = providers.indexOf("'env:set', 'development'");
   const setEnd = providers.indexOf(") -SecretValues", setStart);
   assert.ok(setStart >= 0 && setEnd > setStart);
   const setInvocation = providers.slice(setStart, setEnd);
   assert.ok(setInvocation.includes("--non-interactive"));
+  assert.ok(setInvocation.includes("--scope', 'project"));
 
-  assert.equal(providers.includes("'env:get', 'development'"), false);
-  assert.equal(providers.includes("'env:update', 'development'"), false);
-  assert.equal(providers.includes("'env:create', 'development'"), false);
-  assert.equal(providers.includes("'--variable-environment', 'development'"), false);
   assert.ok(providers.includes("$commandText = $commandText.Replace($secret, '<redacted>')"));
   assert.equal(signing.includes("Add-KeytoolCandidate"), false);
   const listAdds = signing.match(/[^\n]*\$candidates\.Add\([^\n]*/g) ?? [];
