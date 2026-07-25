@@ -64,6 +64,9 @@
       "react-native": [
         "apps/app-client/runtime/node_modules/react-native"
       ],
+      "react-native-maps": [
+        "apps/app-client/runtime/node_modules/react-native-maps"
+      ],
       "@tanstack/react-query": [
         "apps/app-client/runtime/node_modules/@tanstack/react-query"
       ],
