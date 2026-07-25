@@ -15,11 +15,11 @@ import {
   spacing,
   statusScale,
 } from "@bthwani/ui-kit";
-import type { PublicReel } from "../../shared/catalog/central-catalog.types";
+import type { HomePublicReel } from "../../shared/home-discovery";
 
 type Props = {
-  readonly reels: readonly PublicReel[];
-  readonly onReelPress?: ((reel: PublicReel) => void) | undefined;
+  readonly reels: readonly HomePublicReel[];
+  readonly onReelPress?: ((reel: HomePublicReel) => void) | undefined;
 };
 
 export function HomeReelsSection({ reels, onReelPress }: Props) {
