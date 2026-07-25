@@ -29,6 +29,7 @@ type ReportInput struct {
 	// raise_exception consequence.
 	ExpectedVersion    int
 	EvidenceReferences []string
+	CommandID          string
 
 	// cancel consequence.
 	ReasonCode string
@@ -64,6 +65,12 @@ func (s *Service) Report(ctx context.Context, input ReportInput) (*Incident, err
 	}
 	if input.ActorID == "" || input.ActorRole == "" {
 		return nil, fmt.Errorf("%w: actorId and actorRole are required", ErrInvalid)
+	}
+	if input.IncidentType == TypeRaiseException {
+		input.CommandID = strings.TrimSpace(input.CommandID)
+		if input.CommandID == "" {
+			return nil, fmt.Errorf("%w: commandId is required", ErrInvalid)
+		}
 	}
 
 	before, err := s.snapshotState(input.TargetEntityType, input.TargetEntityID)
@@ -137,7 +144,7 @@ func (s *Service) dispatch(ctx context.Context, input ReportInput) ([]byte, erro
 		}
 		task, err := partnerdelivery.NewService(s.db).RaiseExceptionCommand(
 			ctx, input.TargetEntityID, input.ExpectedVersion, input.Reason, input.EvidenceReferences,
-			input.ActorID, input.ActorRole, input.CorrelationID, "incident:"+input.TargetEntityID+":"+input.CorrelationID,
+			input.ActorID, input.ActorRole, input.CorrelationID, input.CommandID,
 		)
 		if err != nil {
 			return nil, err
