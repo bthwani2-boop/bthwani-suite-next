@@ -6,6 +6,8 @@ const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "
 
 test("runtime routes expose central catalog only", () => {
   const router = read("backend/internal/http/server.go");
+  const unifiedRoutes = read("backend/internal/http/catalog_unified_routes.go");
+  const runtimeRoutes = `${router}\n${unifiedRoutes}`;
   const contract = read("contracts/dsh.openapi.yaml");
 
   for (const removedPath of [
@@ -17,9 +19,9 @@ test("runtime routes expose central catalog only", () => {
     assert.doesNotMatch(contract, new RegExp(removedPath.replace(/[{}]/g, "\\$&")));
   }
 
-  assert.match(router, /GET \/dsh\/partner\/catalog\/taxonomy/);
-  assert.match(router, /GET \/dsh\/partner\/catalog\/master-products/);
-  assert.match(router, /GET \/dsh\/field\/partners\/\{partnerId\}\/assortment/);
+  assert.match(runtimeRoutes, /GET \/dsh\/partner\/catalog\/taxonomy/);
+  assert.match(runtimeRoutes, /GET \/dsh\/partner\/catalog\/master-products/);
+  assert.match(runtimeRoutes, /GET \/dsh\/field\/partners\/\{partnerId\}\/assortment/);
 });
 
 test("closure migration preserves legacy data before dropping local catalog tables", () => {
