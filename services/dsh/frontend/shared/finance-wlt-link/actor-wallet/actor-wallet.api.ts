@@ -46,6 +46,8 @@ const { request } = createDshHttpClient(
   "dsh-representative-wallet",
 );
 
+// Canonical boundary: `/dsh/${actorType}/me/finance`; explicit maps keep each
+// wallet and ledger endpoint typed and prevent arbitrary path construction.
 const walletPathByActor: Record<RepresentativeActorType, string> = {
   client: "/dsh/client/me/finance/wallet",
   partner: "/dsh/partner/me/finance/wallet",
