@@ -35,7 +35,6 @@ import {
 import { HomeFilterRailSection } from "./HomeFilterRailSection";
 import { HomeHeroBannerSection } from "./HomeHeroBannerSection";
 import { HomePromoSection } from "./HomePromoSection";
-import { HomeQuickActionsSection } from "./HomeQuickActionsSection";
 import { HomeReelsSection } from "./HomeReelsSection";
 import { HomeStoreFeedSection } from "./HomeStoreFeedSection";
 
@@ -202,9 +201,9 @@ export function HomeDiscoveryShell({
         {banners.length > 0 ? (
           <HomeHeroBannerSection banners={banners} onBannerPress={handleBannerPress} />
         ) : null}
-        <HomeQuickActionsSection
-          hasCategories={categories.length > 0}
-          hasReels={reels.length > 0}
+        <HomePromoSection
+          promos={promos}
+          onPromoPress={handlePromoPress}
           onCategoriesPress={() => setShowDropdown(true)}
           onVideoPress={handleVideoPress}
         />
@@ -215,12 +214,6 @@ export function HomeDiscoveryShell({
         >
           <HomeReelsSection reels={reels} onReelPress={handleReelPress} />
         </View>
-        {promos.length > 0 ? (
-          <HomePromoSection
-            promos={promos}
-            onPromoPress={handlePromoPress}
-          />
-        ) : null}
         <HomeFilterRailSection
           filters={filters}
           activeFilter={activeFilter}
