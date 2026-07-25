@@ -148,18 +148,29 @@
         "contracts/contract-registry.ts",
         "runtime-map.ts",
         "service.manifest.ts",
+        "tests/*.test.mjs",
         "frontend/app-*/index.{ts,tsx}",
         "frontend/app-*/**/index.{ts,tsx}",
         "frontend/app-*/**/*Surface.tsx",
         "frontend/app-*/**/*Screen.tsx",
         "frontend/app-*/**/*Panel.tsx",
         "frontend/app-*/**/*Sheet.tsx",
+        "frontend/app-*/**/*Header.tsx",
+        "frontend/app-*/**/*context.tsx",
+        "frontend/app-*/*.navigation-bridge.ts",
         "frontend/control-panel/**/index.{ts,tsx}",
         "frontend/control-panel/**/*Screen.tsx",
         "frontend/control-panel/**/*Panel.tsx",
+        "frontend/control-panel/**/*View.tsx",
+        "frontend/control-panel/**/*Inspector.tsx",
+        "frontend/control-panel/**/*Workspace.tsx",
+        "frontend/control-panel/**/*Section.tsx",
+        "frontend/control-panel/**/*Diagnostic.tsx",
+        "frontend/control-panel/**/*.types.ts",
+        "frontend/control-panel/**/*.helpers.ts",
         "frontend/shared/**/index.{ts,tsx}",
         "frontend/shared/**/*.registry.ts",
-        "frontend/shared/**/*.contract.ts",
+        "frontend/shared/**/*contract*.ts",
         "frontend/shared/**/*.policy.ts",
         "frontend/shared/**/*.view-model.ts",
         "frontend/shared/**/*.adapter.ts",
@@ -169,7 +180,12 @@
         "frontend/shared/**/*.types.ts",
         "frontend/shared/**/*.model.ts",
         "frontend/shared/**/*.api.ts",
-        "frontend/shared/**/*.client.ts"
+        "frontend/shared/**/*.client.ts",
+        "frontend/shared/**/*controller*.{ts,tsx}",
+        "frontend/shared/**/*journey.ts",
+        "frontend/shared/**/*classifier.ts",
+        "frontend/shared/**/*image-source.ts",
+        "frontend/shared/**/*notification-action.ts"
       ],
       "ignoreFiles": [
         "frontend/shared/**/generated/**"
@@ -189,7 +205,6 @@
     },
     "services/wlt": {
       "entry": [
-        "service.manifest.ts",
         "frontend/shared/**/*.{ts,tsx}",
         "frontend/app-*/operational-surface.classification.ts",
         "frontend/control-panel/_skeleton-proof/*.tsx"
@@ -206,35 +221,33 @@
       ],
       "ignoreDependencies": [
         "react-native"
-      ]
+      ],
+      "ignoreIssues": {
+        "src/components/_shared.js": [
+          "exports"
+        ],
+        "src/index.js": [
+          "exports"
+        ]
+      }
     },
     "core/identity": {
       "entry": [
-        "clients/index.ts",
         "clients/index.js",
         "clients/use-identity-session.js"
       ]
     },
     "core/platform-control": {
-      "entry": [
-        "service.manifest.ts"
-      ],
       "ignoreDependencies": [
         "react"
       ]
     },
     "core/providers": {
-      "entry": [
-        "service.manifest.ts"
-      ],
       "ignoreDependencies": [
         "react"
       ]
     },
     "core/workforce": {
-      "entry": [
-        "service.manifest.ts"
-      ],
       "ignoreDependencies": [
         "react"
       ]
