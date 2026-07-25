@@ -134,6 +134,25 @@ function Resolve-Keytool {
     return Add-ExecutableDirectoryToPath -CommandName 'keytool' -Candidates $candidates.ToArray()
 }
 
+function Format-CommandForLog {
+    param(
+        [Parameter(Mandatory)][string] $Command,
+        [Parameter(Mandatory)][AllowEmptyCollection()][string[]] $Arguments
+    )
+
+    $sensitiveFlags = @('-storepass', '-keypass', '--value', '--password', '--secret')
+    $masked = [System.Collections.Generic.List[string]]::new()
+    for ($index = 0; $index -lt $Arguments.Count; $index++) {
+        $argument = [string]$Arguments[$index]
+        $masked.Add($argument)
+        if ($sensitiveFlags -contains $argument -and ($index + 1) -lt $Arguments.Count) {
+            $index++
+            $masked.Add('<redacted>')
+        }
+    }
+    return "$Command $($masked -join ' ')"
+}
+
 function Invoke-Checked {
     param(
         [Parameter(Mandatory)][string] $Command,
@@ -142,6 +161,7 @@ function Invoke-Checked {
         [switch] $Capture
     )
 
+    $rendered = Format-CommandForLog -Command $Command -Arguments $Arguments
     Push-Location -LiteralPath $WorkingDirectory
     try {
         $global:LASTEXITCODE = 0
@@ -150,16 +170,16 @@ function Invoke-Checked {
             $exitCode = if ($null -eq $global:LASTEXITCODE) { 0 } else { [int]$global:LASTEXITCODE }
             $text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
             if ($exitCode -ne 0) {
-                throw "Command failed with exit code ${exitCode}: $Command $($Arguments -join ' ')`n$text"
+                throw "Command failed with exit code ${exitCode}: $rendered`n$text"
             }
             return $text
         }
 
-        Write-Host "> $Command $($Arguments -join ' ')" -ForegroundColor DarkGray
+        Write-Host "> $rendered" -ForegroundColor DarkGray
         & $Command @Arguments
         $exitCode = if ($null -eq $global:LASTEXITCODE) { 0 } else { [int]$global:LASTEXITCODE }
         if ($exitCode -ne 0) {
-            throw "Command failed with exit code ${exitCode}: $Command $($Arguments -join ' ')"
+            throw "Command failed with exit code ${exitCode}: $rendered"
         }
     } finally {
         Pop-Location
