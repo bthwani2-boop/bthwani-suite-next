@@ -127,6 +127,7 @@ service-account*.json
 secrets.local.*
 passwords.local.*
 credentials.local.*
+tools/scripts/google-cloud/google-platform-input.local.json
 
 .tmp/
 
