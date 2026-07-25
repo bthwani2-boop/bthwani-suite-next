@@ -1,0 +1,81 @@
+name: One-time mobile EAS validation
+
+on:
+  push:
+    branches: [reemsam]
+    paths:
+      - ".github/workflows/mobile-eas-validate-once.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout reemsam
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: reemsam
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24.17.0"
+
+      - name: Validate PowerShell syntax
+        shell: pwsh
+        run: |
+          $files = @(
+            'tools/scripts/mobile-eas.ps1',
+            'tools/scripts/mobile-eas/ensure-firebase-app.ps1',
+            'tools/scripts/google-cloud/create-android-maps-api-key.ps1'
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $file),
+              [ref]$tokens,
+              [ref]$errors
+            )
+            if (@($errors).Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "${file}: $($_.Message)" }
+              exit 1
+            }
+          }
+
+      - name: Validate Node tools and mobile contract
+        run: |
+          node --check tools/scripts/eas-build-mobile.mjs
+          node --check tools/scripts/sync-mobile-apps.mjs
+          node --check tools/scripts/guard-mobile-apps.mjs
+          node --check tools/scripts/verify-mobile-prebuild.mjs
+          node --check tools/scripts/lib/package-manager-invocation.mjs
+          node --test apps/app-client/runtime/tests/mobile-development-provider-contract.test.mjs
+          node -e "JSON.parse(require('node:fs').readFileSync('package.json','utf8'))"
+
+      - name: Reject obsolete paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden='bootstrap-mobile-eas-android-development\.ps1|setup-mobile-firebase-development\.ps1|prepare-google-platform-all-surfaces\.ps1|configure-eas-fcm-v1-all-apps\.ps1|mobile:eas:build:all:dev|mobile:eas:preflight:all:dev'
+          if git grep -n -E "${forbidden}" -- \
+            ':!governance/evidence/**' \
+            ':!.github/workflows/mobile-eas-validate-once.yml'; then
+            echo 'Obsolete mobile EAS references remain.' >&2
+            exit 1
+          fi
+
+      - name: Remove this workflow after success
+        run: rm .github/workflows/mobile-eas-validate-once.yml
+
+      - name: Commit validation closure
+        run: |
+          git config user.name "bthwani-ci"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/mobile-eas-validate-once.yml
+          git commit -m "test(mobile): close single-app EAS validation"
+          git push origin HEAD:reemsam
