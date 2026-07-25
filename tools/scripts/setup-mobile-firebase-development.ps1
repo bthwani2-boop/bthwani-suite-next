@@ -26,22 +26,16 @@ Set-Location $RepoRoot
 function Import-BthwaniEnvironmentFile {
     param([Parameter(Mandatory)][string] $Path)
 
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        return
-    }
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return }
 
     foreach ($rawLine in Get-Content -LiteralPath $Path) {
         $line = $rawLine.Trim()
-        if (-not $line -or $line.StartsWith("#") -or -not $line.Contains("=")) {
-            continue
-        }
+        if (-not $line -or $line.StartsWith("#") -or -not $line.Contains("=")) { continue }
 
         $parts = $line.Split("=", 2)
         $name = $parts[0].Trim()
         $value = $parts[1].Trim()
-        if (-not $name) {
-            continue
-        }
+        if (-not $name) { continue }
         if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
             $value = $value.Substring(1, $value.Length - 2)
         }
@@ -51,31 +45,30 @@ function Import-BthwaniEnvironmentFile {
     }
 }
 
+function Get-AppEnvironmentSuffix {
+    param([Parameter(Mandatory)][string] $AppKey)
+    return $AppKey.Replace("-", "_").ToUpperInvariant()
+}
+
 function Resolve-AppScopedValue {
     param(
         [Parameter(Mandatory)][string] $BaseName,
         [Parameter(Mandatory)][string] $AppKey
     )
 
-    $suffix = $AppKey.Replace("-", "_").ToUpperInvariant()
+    $suffix = Get-AppEnvironmentSuffix -AppKey $AppKey
     $scopedValue = [Environment]::GetEnvironmentVariable("${BaseName}_${suffix}", "Process")
-    if (-not [string]::IsNullOrWhiteSpace($scopedValue)) {
-        return $scopedValue.Trim()
-    }
+    if (-not [string]::IsNullOrWhiteSpace($scopedValue)) { return $scopedValue.Trim() }
 
     $commonValue = [Environment]::GetEnvironmentVariable($BaseName, "Process")
-    if (-not [string]::IsNullOrWhiteSpace($commonValue)) {
-        return $commonValue.Trim()
-    }
+    if (-not [string]::IsNullOrWhiteSpace($commonValue)) { return $commonValue.Trim() }
     return $null
 }
 
 function Read-LocalSecretsMap {
     param([Parameter(Mandatory)][string] $Path)
 
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        return $null
-    }
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
 
     try {
         return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -Depth 20
@@ -90,20 +83,12 @@ function Get-LocalSecretsMapValue {
         [Parameter(Mandatory)][string] $AppKey
     )
 
-    if ($null -eq $Map) {
-        return $null
-    }
-
+    if ($null -eq $Map) { return $null }
     $property = $Map.PSObject.Properties[$AppKey]
-    if ($null -eq $property) {
-        return $null
-    }
+    if ($null -eq $property) { return $null }
 
     $value = [string]$property.Value
-    if ([string]::IsNullOrWhiteSpace($value)) {
-        return $null
-    }
-
+    if ([string]::IsNullOrWhiteSpace($value)) { return $null }
     return $value.Trim()
 }
 
@@ -119,36 +104,18 @@ function Resolve-FirebaseInputPath {
 
     if (-not $AllowEnvironmentFirebaseOverride) {
         if (-not [string]::IsNullOrWhiteSpace($mappedFirebasePath)) {
-            return [pscustomobject]@{
-                Path = $mappedFirebasePath
-                Source = "secrets.local.mobile.json"
-            }
+            return [pscustomobject]@{ Path = $mappedFirebasePath; Source = "secrets.local.mobile.json" }
         }
-
-        return [pscustomobject]@{
-            Path = $DefaultFirebasePath
-            Source = "secure-default"
-        }
+        return [pscustomobject]@{ Path = $DefaultFirebasePath; Source = "secure-default" }
     }
 
     if (-not [string]::IsNullOrWhiteSpace($configuredFirebasePath)) {
-        return [pscustomobject]@{
-            Path = $configuredFirebasePath
-            Source = "environment-override"
-        }
+        return [pscustomobject]@{ Path = $configuredFirebasePath; Source = "environment-override" }
     }
-
     if (-not [string]::IsNullOrWhiteSpace($mappedFirebasePath)) {
-        return [pscustomobject]@{
-            Path = $mappedFirebasePath
-            Source = "secrets.local.mobile.json"
-        }
+        return [pscustomobject]@{ Path = $mappedFirebasePath; Source = "secrets.local.mobile.json" }
     }
-
-    return [pscustomobject]@{
-        Path = $DefaultFirebasePath
-        Source = "secure-default"
-    }
+    return [pscustomobject]@{ Path = $DefaultFirebasePath; Source = "secure-default" }
 }
 
 function Invoke-GoogleServicesValidation {
@@ -157,17 +124,11 @@ function Invoke-GoogleServicesValidation {
         [Parameter(Mandatory)][string] $ExpectedPackage
     )
 
-    $output = & node $ValidatorPath `
-        --file $Path `
-        --package $ExpectedPackage `
-        --json 2>&1
-    $exitCode = $LASTEXITCODE
-    $text = ($output | Out-String).Trim()
+    $output = & node $ValidatorPath --file $Path --package $ExpectedPackage --json 2>&1
+    $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
+    $text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
     $jsonStart = $text.IndexOf("{")
-
-    if ($jsonStart -lt 0) {
-        throw "Firebase validator returned no JSON for '$Path': $text"
-    }
+    if ($jsonStart -lt 0) { throw "Firebase validator returned no JSON for '$Path': $text" }
 
     try {
         $result = $text.Substring($jsonStart) | ConvertFrom-Json -Depth 20
@@ -176,11 +137,7 @@ function Invoke-GoogleServicesValidation {
     }
 
     if ($exitCode -ne 0 -or $result.ok -ne $true) {
-        $message = if (-not [string]::IsNullOrWhiteSpace([string]$result.error)) {
-            [string]$result.error
-        } else {
-            "unknown validation failure"
-        }
+        $message = if (-not [string]::IsNullOrWhiteSpace([string]$result.error)) { [string]$result.error } else { "unknown validation failure" }
         throw $message
     }
 
@@ -188,9 +145,7 @@ function Invoke-GoogleServicesValidation {
 }
 
 function Format-EasCommandForLog {
-    param(
-        [Parameter(Mandatory)][string[]] $Arguments
-    )
+    param([Parameter(Mandatory)][string[]] $Arguments)
 
     $sensitiveFlags = @("--value", "--password", "--secret")
     $masked = [System.Collections.Generic.List[string]]::new()
@@ -209,8 +164,15 @@ function Invoke-EasCliCommand {
     param(
         [Parameter(Mandatory)][string] $AppDirectory,
         [Parameter(Mandatory)][string[]] $Arguments,
+        [hashtable] $EnvironmentOverrides = @{},
         [string[]] $SecretValues = @()
     )
+
+    $previous = @{}
+    foreach ($name in $EnvironmentOverrides.Keys) {
+        $previous[$name] = [Environment]::GetEnvironmentVariable($name, "Process")
+        [Environment]::SetEnvironmentVariable($name, [string]$EnvironmentOverrides[$name], "Process")
+    }
 
     Push-Location -LiteralPath $AppDirectory
     try {
@@ -230,63 +192,48 @@ function Invoke-EasCliCommand {
         }
     } finally {
         Pop-Location
+        foreach ($name in $EnvironmentOverrides.Keys) {
+            [Environment]::SetEnvironmentVariable($name, $previous[$name], "Process")
+        }
     }
 }
 
 function Set-EasDevelopmentVariable {
     param(
+        [Parameter(Mandatory)][string] $AppKey,
         [Parameter(Mandatory)][string] $AppDirectory,
         [Parameter(Mandatory)][string] $Name,
         [Parameter(Mandatory)][string] $Value,
         [Parameter(Mandatory)][ValidateSet("file", "string")][string] $Type
     )
 
-    # google-services.json and Google Maps keys are embedded into client APKs.
-    # Use sensitive rather than secret so EAS CLI can resolve dynamic app config
-    # consistently while still avoiding plain log output.
     $visibility = "sensitive"
-    $createArguments = @(
-        "dlx", "eas-cli@latest", "env:create",
+    $suffix = Get-AppEnvironmentSuffix -AppKey $AppKey
+    $environmentOverrides = @{
+        $Name = $Value
+        "${Name}_${suffix}" = $Value
+    }
+
+    $arguments = @(
+        "dlx", "eas-cli@latest", "env:set", "development",
         "--name", $Name,
         "--value", $Value,
         "--type", $Type,
         "--visibility", $visibility,
         "--scope", "project",
-        "--environment", "development",
-        "--force",
         "--non-interactive"
     )
 
-    Write-Host "> $(Format-EasCommandForLog -Arguments $createArguments)" -ForegroundColor DarkGray
-    $create = Invoke-EasCliCommand -AppDirectory $AppDirectory -Arguments $createArguments -SecretValues @($Value)
-    if ($create.ExitCode -eq 0) {
-        return
-    }
+    Write-Host "> $(Format-EasCommandForLog -Arguments $arguments)" -ForegroundColor DarkGray
+    $result = Invoke-EasCliCommand `
+        -AppDirectory $AppDirectory `
+        -Arguments $arguments `
+        -EnvironmentOverrides $environmentOverrides `
+        -SecretValues @($Value)
 
-    $alreadyExists = $create.Text -match "already exists|duplicate|exists"
-    if ($alreadyExists) {
-        $updateArguments = @(
-            "dlx", "eas-cli@latest", "env:update",
-            "development",
-            "--variable-name", $Name,
-            "--variable-environment", "development",
-            "--name", $Name,
-            "--value", $Value,
-            "--type", $Type,
-            "--visibility", $visibility,
-            "--scope", "project",
-            "--environment", "development",
-            "--non-interactive"
-        )
-        Write-Host "> $(Format-EasCommandForLog -Arguments $updateArguments)" -ForegroundColor DarkGray
-        $update = Invoke-EasCliCommand -AppDirectory $AppDirectory -Arguments $updateArguments -SecretValues @($Value)
-        if ($update.ExitCode -eq 0) {
-            return
-        }
-        throw "EAS env:update failed for $Name with exit code $($update.ExitCode). Command: $($update.Rendered)`n$($update.Text)"
+    if ($result.ExitCode -ne 0) {
+        throw "EAS env:set failed for $Name with exit code $($result.ExitCode). Command: $($result.Rendered)`n$($result.Text)"
     }
-
-    throw "EAS env:create failed for $Name with exit code $($create.ExitCode). Command: $($create.Rendered)`n$($create.Text)"
 }
 
 Write-Host "BThwani Mobile Firebase Development Setup" -ForegroundColor Cyan
@@ -295,9 +242,7 @@ Write-Host "Mode: $(if ($Apply) { 'APPLY TO EAS' } else { 'VALIDATION ONLY' })"
 Write-Host "Firebase path priority: $(if ($AllowEnvironmentFirebaseOverride) { 'environment override enabled' } else { 'bootstrapped local secrets first' })`n"
 
 foreach ($requiredPath in @($ManifestPath, $ValidatorPath)) {
-    if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
-        throw "Required file is missing: $requiredPath"
-    }
+    if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) { throw "Required file is missing: $requiredPath" }
 }
 
 Import-BthwaniEnvironmentFile -Path $MobileEnvPath
@@ -326,10 +271,7 @@ foreach ($appKey in $manifest.apps.PSObject.Properties.Name) {
     New-Item -ItemType Directory -Path $appSecretsDirectory -Force | Out-Null
 
     $defaultFirebasePath = Join-Path $appSecretsDirectory "google-services.json"
-    $firebaseInput = Resolve-FirebaseInputPath `
-        -AppKey $appKey `
-        -DefaultFirebasePath $defaultFirebasePath `
-        -LocalSecretsMap $bootstrapSecretsMap
+    $firebaseInput = Resolve-FirebaseInputPath -AppKey $appKey -DefaultFirebasePath $defaultFirebasePath -LocalSecretsMap $bootstrapSecretsMap
     $firebasePath = [string]$firebaseInput.Path
     $firebaseSource = [string]$firebaseInput.Source
 
@@ -339,15 +281,9 @@ foreach ($appKey in $manifest.apps.PSObject.Properties.Name) {
     $resolvedFirebasePath = $firebasePath
 
     try {
-        if (-not (Test-Path -LiteralPath $firebasePath -PathType Leaf)) {
-            throw "missing google-services.json at $firebasePath"
-        }
-
+        if (-not (Test-Path -LiteralPath $firebasePath -PathType Leaf)) { throw "missing google-services.json at $firebasePath" }
         $resolvedFirebasePath = (Resolve-Path -LiteralPath $firebasePath).Path
-        $validation = Invoke-GoogleServicesValidation `
-            -Path $resolvedFirebasePath `
-            -ExpectedPackage $expectedPackage
-
+        $validation = Invoke-GoogleServicesValidation -Path $resolvedFirebasePath -ExpectedPackage $expectedPackage
         $firebaseState = "Valid"
         $projectId = [string]$validation.projectId
         $mobileSdkAppId = [string]$validation.mobileSdkAppId
@@ -363,11 +299,7 @@ foreach ($appKey in $manifest.apps.PSObject.Properties.Name) {
     if ($requiresMaps) {
         $androidMapsKey = Resolve-AppScopedValue -BaseName "GOOGLE_MAPS_ANDROID_API_KEY" -AppKey $appKey
         $iosMapsKey = Resolve-AppScopedValue -BaseName "GOOGLE_MAPS_IOS_API_KEY" -AppKey $appKey
-        $mapsState = if ([string]::IsNullOrWhiteSpace($androidMapsKey)) {
-            "Optional in development"
-        } else {
-            "Ready for optional upload"
-        }
+        $mapsState = if ([string]::IsNullOrWhiteSpace($androidMapsKey)) { "Optional in development" } else { "Ready for optional upload" }
     }
 
     $validationPlan.Add([pscustomobject]@{
@@ -386,21 +318,15 @@ foreach ($appKey in $manifest.apps.PSObject.Properties.Name) {
     })
 }
 
-$validationPlan |
-    Select-Object App, Package, Firebase, FirebaseSource, ProjectId, Maps, EasFcm |
-    Format-Table -AutoSize
+$validationPlan | Select-Object App, Package, Firebase, FirebaseSource, ProjectId, Maps, EasFcm | Format-Table -AutoSize
 
 if ($validationErrors.Count -gt 0) {
     Write-Host "`nFirebase validation failed. No EAS variables were changed." -ForegroundColor Red
-    foreach ($validationError in $validationErrors) {
-        Write-Host " - $validationError" -ForegroundColor Red
-    }
+    foreach ($validationError in $validationErrors) { Write-Host " - $validationError" -ForegroundColor Red }
     throw "All four complete Firebase files must pass validation before any EAS upload."
 }
 
-$localSecretsMap |
-    ConvertTo-Json -Depth 5 |
-    Set-Content -LiteralPath $LocalSecretsJsonPath -Encoding UTF8
+$localSecretsMap | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $LocalSecretsJsonPath -Encoding UTF8
 Write-Host "`nLocal path map updated: $LocalSecretsJsonPath" -ForegroundColor Green
 
 if (-not $Apply) {
@@ -416,44 +342,26 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($easUser)) {
 }
 Write-Host "EAS account: $easUser" -ForegroundColor Green
 
-Write-Host "`nPHASE 3: Upload validated project-scoped EAS variables" -ForegroundColor Yellow
+Write-Host "`nPHASE 3: Set validated project-scoped EAS variables" -ForegroundColor Yellow
 foreach ($entry in $validationPlan) {
-    Set-EasDevelopmentVariable `
-        -AppDirectory $entry.AppDirectory `
-        -Name "GOOGLE_SERVICES_JSON" `
-        -Value $entry.FirebasePath `
-        -Type "file"
-    $entry.EasFcm = "Uploaded"
+    Set-EasDevelopmentVariable -AppKey $entry.App -AppDirectory $entry.AppDirectory -Name "GOOGLE_SERVICES_JSON" -Value $entry.FirebasePath -Type "file"
+    $entry.EasFcm = "Set"
 
     if (-not [string]::IsNullOrWhiteSpace([string]$entry.AndroidMapsKey)) {
-        Set-EasDevelopmentVariable `
-            -AppDirectory $entry.AppDirectory `
-            -Name "GOOGLE_MAPS_ANDROID_API_KEY" `
-            -Value $entry.AndroidMapsKey `
-            -Type "string"
-        $entry.Maps = "Android uploaded"
+        Set-EasDevelopmentVariable -AppKey $entry.App -AppDirectory $entry.AppDirectory -Name "GOOGLE_MAPS_ANDROID_API_KEY" -Value $entry.AndroidMapsKey -Type "string"
+        $entry.Maps = "Android set"
     }
 
     if (-not [string]::IsNullOrWhiteSpace([string]$entry.IosMapsKey)) {
-        Set-EasDevelopmentVariable `
-            -AppDirectory $entry.AppDirectory `
-            -Name "GOOGLE_MAPS_IOS_API_KEY" `
-            -Value $entry.IosMapsKey `
-            -Type "string"
-        $entry.Maps = if ($entry.Maps -eq "Android uploaded") {
-            "Android + iOS uploaded"
-        } else {
-            "iOS uploaded"
-        }
+        Set-EasDevelopmentVariable -AppKey $entry.App -AppDirectory $entry.AppDirectory -Name "GOOGLE_MAPS_IOS_API_KEY" -Value $entry.IosMapsKey -Type "string"
+        $entry.Maps = if ($entry.Maps -eq "Android set") { "Android + iOS set" } else { "iOS set" }
     }
 }
 
 Write-Host "`n==========================================================" -ForegroundColor Cyan
 Write-Host " BThwani Development Firebase / EAS Status" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
-$validationPlan |
-    Select-Object App, Package, Firebase, FirebaseSource, ProjectId, Maps, EasFcm |
-    Format-Table -AutoSize
+$validationPlan | Select-Object App, Package, Firebase, FirebaseSource, ProjectId, Maps, EasFcm | Format-Table -AutoSize
 
-Write-Host "PASS: all Firebase files were validated before EAS mutation and uploaded only to their matching projects." -ForegroundColor Green
-Write-Host "Google Maps remained optional for development and was uploaded only when an app-scoped key existed." -ForegroundColor Green
+Write-Host "PASS: all Firebase files were validated before EAS mutation and set only on their matching EAS projects." -ForegroundColor Green
+Write-Host "Google Maps remained optional in this phase and was set only when an app-scoped key already existed." -ForegroundColor Green
