@@ -159,7 +159,8 @@ function Test-EasVariable {
     if ($result.ExitCode -ne 0) { return $false }
 
     $escapedName = [regex]::Escape($Name)
-    $shortPattern = "(?m)^\s*$escapedName="
+    # EAS short format is: NAME | scope | type | visibility | environments | Updated at: ...
+    $shortPattern = "(?mi)^\s*$escapedName\s*\|"
     $longPattern = "(?mi)^\s*Name\s*:\s*$escapedName\s*$"
     return [regex]::IsMatch($result.Text, $shortPattern) -or [regex]::IsMatch($result.Text, $longPattern)
 }
