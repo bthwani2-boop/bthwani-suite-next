@@ -149,20 +149,21 @@ function Invoke-EasEnvironmentCommand {
     }
 }
 
-function Test-EasVariable {
-    param([Parameter(Mandatory)][string] $Name)
-
+function Get-EasDevelopmentVariableNames {
+    # env:list is already non-interactive when the environment is supplied.
+    # Unlike env:set, EAS CLI does not define a --non-interactive flag for env:list.
     $result = Invoke-EasEnvironmentCommand -Arguments @(
         'dlx', 'eas-cli@latest', 'env:list', 'development',
-        '--format', 'short', '--scope', 'project', '--non-interactive'
-    ) -AllowFailure -Quiet
-    if ($result.ExitCode -ne 0) { return $false }
+        '--format', 'short', '--scope', 'project'
+    ) -Quiet
 
-    $escapedName = [regex]::Escape($Name)
-    # EAS short format is: NAME | scope | type | visibility | environments | Updated at: ...
-    $shortPattern = "(?mi)^\s*$escapedName\s*\|"
-    $longPattern = "(?mi)^\s*Name\s*:\s*$escapedName\s*$"
-    return [regex]::IsMatch($result.Text, $shortPattern) -or [regex]::IsMatch($result.Text, $longPattern)
+    $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    foreach ($line in ($result.Text -split "`r?`n")) {
+        if ($line -match '^\s*(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*\|') {
+            [void]$names.Add([string]$Matches.name)
+        }
+    }
+    return @($names)
 }
 
 function Set-EasVariable {
@@ -181,13 +182,6 @@ function Set-EasVariable {
     ) -SecretValues $SecretValues | Out-Null
 }
 
-function Assert-EasVariable {
-    param([Parameter(Mandatory)][string] $Name)
-    if (-not (Test-EasVariable -Name $Name)) {
-        throw "Required EAS development variable is missing: $Name"
-    }
-}
-
 function Sync-EasDevelopmentEnvironment {
     param([Parameter(Mandatory)][string] $MapsKey)
     Write-Step 'Synchronize EAS development provider inputs'
@@ -198,6 +192,11 @@ function Sync-EasDevelopmentEnvironment {
 
 function Assert-EasDevelopmentEnvironment {
     Write-Step 'Verify EAS development provider inputs'
-    Assert-EasVariable -Name 'GOOGLE_SERVICES_JSON'
-    Assert-EasVariable -Name 'GOOGLE_MAPS_ANDROID_API_KEY'
+    $availableNames = @(Get-EasDevelopmentVariableNames)
+    foreach ($requiredName in @('GOOGLE_SERVICES_JSON', 'GOOGLE_MAPS_ANDROID_API_KEY')) {
+        if ($availableNames -notcontains $requiredName) {
+            $availableText = if ($availableNames.Count -gt 0) { $availableNames -join ', ' } else { '<none>' }
+            throw "Required EAS development variable is missing: $requiredName. Available project variables: $availableText"
+        }
+    }
 }
