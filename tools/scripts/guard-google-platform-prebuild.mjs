@@ -27,6 +27,15 @@ function readJson(file) {
   return JSON.parse(fs.readFileSync(resolved, "utf8"));
 }
 
+function readAbsoluteJson(file) {
+  if (!fs.existsSync(file)) fail(`required JSON file is missing: ${file}`);
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch (error) {
+    fail(`invalid JSON file '${file}': ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 function run(command, args, cwd = root) {
   const executable = process.platform === "win32" && command === "pwsh" ? "pwsh.exe" : command;
   console.log(`\n> ${command} ${args.join(" ")}`);
@@ -39,6 +48,22 @@ function run(command, args, cwd = root) {
   });
   if (result.error) fail(`${command} could not start: ${result.error.message}`);
   if (result.status !== 0) fail(`${command} ${args.join(" ")} failed with exit code ${result.status}`);
+}
+
+function runCapture(command, args) {
+  const executable = process.platform === "win32" && command === "gcloud" ? "gcloud.cmd" : command;
+  const result = spawnSync(executable, args, {
+    cwd: root,
+    encoding: "utf8",
+    windowsHide: true,
+    shell: process.platform === "win32" && executable.endsWith(".cmd"),
+    env: { ...process.env, CI: "1" },
+  });
+  if (result.error) fail(`${command} could not start: ${result.error.message}`);
+  if (result.status !== 0) {
+    fail(`${command} ${args.join(" ")} failed: ${(result.stderr || result.stdout || "").trim()}`);
+  }
+  return String(result.stdout || "").trim();
 }
 
 function validateSha1(appKey, value) {
@@ -75,10 +100,12 @@ if (localInput.projectId !== requestedProject) {
 
 const firebaseApps = [...platform.firebase.androidApps];
 const mapsApps = [...platform.maps.androidApps];
+const fcmApps = [...(platform.firebase.fcmV1?.easApplications ?? [])];
 const expectedApps = Object.keys(mobile.apps);
 for (const appKey of expectedApps) {
   if (!firebaseApps.includes(appKey)) fail(`${appKey}: missing from Firebase all-surface manifest`);
   if (!mapsApps.includes(appKey)) fail(`${appKey}: missing from Maps all-surface manifest`);
+  if (!fcmApps.includes(appKey)) fail(`${appKey}: missing from FCM V1 all-surface manifest`);
 
   const app = mobile.apps[appKey];
   const features = app.features ?? [];
@@ -105,6 +132,30 @@ for (const appKey of expectedApps) {
   if (validation.projectId !== requestedProject) {
     fail(`${appKey}: google-services.json belongs to '${validation.projectId}', expected '${requestedProject}'`);
   }
+}
+
+const fcm = platform.firebase.fcmV1;
+if (!fcm) fail("central FCM V1 configuration is missing from the Google platform manifest");
+const fcmKeyPath = path.normalize(fcm.localKeyPath);
+const fcmKey = readAbsoluteJson(fcmKeyPath);
+if (fcmKey.project_id !== requestedProject) {
+  fail(`FCM V1 key belongs to '${fcmKey.project_id}', expected '${requestedProject}'`);
+}
+if (fcmKey.client_email !== fcm.serviceAccountEmail) {
+  fail(`FCM V1 service account mismatch; expected '${fcm.serviceAccountEmail}'`);
+}
+if (typeof fcmKey.private_key !== "string" || !fcmKey.private_key.includes("BEGIN PRIVATE KEY")) {
+  fail("FCM V1 key does not contain a valid private key");
+}
+const enabledFcmService = runCapture("gcloud", [
+  "services", "list",
+  "--enabled",
+  "--project", requestedProject,
+  `--filter=name:${fcm.apiService}`,
+  "--format=value(name)",
+]);
+if (!enabledFcmService.includes(fcm.apiService)) {
+  fail(`${fcm.apiService} is not enabled for ${requestedProject}`);
 }
 
 const configuredReferrers = localInput.controlPanel?.allowedReferrers;
@@ -144,4 +195,4 @@ if (!skipEas) {
   }
 }
 
-console.log("\nPASS: Firebase and Google Maps prebuild readiness is proven for all four apps and the control panel.");
+console.log("\nPASS: Firebase, FCM V1, and Google Maps prebuild readiness is proven for all four apps and the control panel.");
