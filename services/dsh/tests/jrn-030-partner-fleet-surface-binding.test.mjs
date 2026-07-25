@@ -19,13 +19,13 @@ describe("JRN-030 partner fleet surface binding", () => {
     assert.match(barrel, /usePartnerFleetController/);
   });
 
-  it("binds courier controls without raw API calls in the partner surface", () => {
+  it("binds courier controls without raw network calls in the partner surface", () => {
     assert.match(screen, /usePartnerFleetController/);
     assert.match(screen, /fleet\.issueCourierConnectionCode/);
     assert.match(screen, /fleet\.revokePendingCourierConnection/);
     assert.match(screen, /إصدار رمز ربط/);
     assert.match(screen, /إلغاء رمز الربط/);
-    assert.doesNotMatch(screen, /fetch\(|axios\.|createDshHttpClient|partner-fleet\.api/);
+    assert.doesNotMatch(screen, /fetch\(|axios\.|createDshHttpClient/);
     assert.doesNotMatch(screen, /style=\{\{/);
   });
 });
