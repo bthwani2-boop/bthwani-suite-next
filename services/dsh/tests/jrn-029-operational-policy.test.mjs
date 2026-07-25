@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const root = new URL("../../../", import.meta.url);
@@ -179,9 +179,11 @@ test("JRN-029 is owned by modular OpenAPI, composed bundle and generated client"
   const generatedClient = await text(
     "services/dsh/clients/generated/dsh-api.ts",
   );
+  const standaloneContract = await text("services/dsh/contracts/dsh.jrn-029.openapi.yaml");
 
   assert.match(rootContract, /x-bthwani-contract-layout: MODULAR/);
   assert.match(rootContract, /x-bthwani-bundle: \.\/generated\/dsh\.bundle\.openapi\.yaml/);
+  assert.match(standaloneContract, /x-bthwani-contract-state: CONTRACT_ACTIVE/);
 
   for (const path of [
     "/dsh/operator/platform/operational-profiles/{zoneId}",
@@ -221,8 +223,4 @@ test("JRN-029 is owned by modular OpenAPI, composed bundle and generated client"
   assert.match(generatedBundle, /maxAssignmentMins/);
   assert.match(generatedBundle, /client_pickup/);
   assert.match(generatedBundle, /expectedCurrentVersion/);
-
-  await assert.rejects(
-    access(new URL("services/dsh/contracts/dsh.jrn-029.openapi.yaml", root)),
-  );
 });
