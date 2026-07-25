@@ -1,3 +1,4 @@
+import "./guard-mobile-package-manager-invocation.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
