@@ -110,7 +110,7 @@ function verifyRemediationWorkflow(relativePath, content) {
     "Forensic discovery and deterministic repair",
     "Logic, binding, duplication, and repository integrity",
     "Type, lint, test, and build verification",
-    "Backend and database",
+    "backend and database",
     "Dependency, secret, workflow, and container security",
     "Integrated SaaS runtime proof",
     "Publish reviewed remediation pull request",
