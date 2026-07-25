@@ -89,7 +89,7 @@ export function ExceptionsExceptionInspector({
 
         {actionFeedback ? (
           <Box padding={3} background="surfaceInset" radiusToken="md">
-            <Text role="bodySm" tone="brand">{actionFeedback}</Text>
+            <Text role="bodySm" tone="action">{actionFeedback}</Text>
           </Box>
         ) : null}
 
@@ -97,7 +97,7 @@ export function ExceptionsExceptionInspector({
           <StateView stateId="loading" title="جاري معالجة الإجراء وحفظ التغييرات..." />
         ) : activeForm === 'escalate' ? (
           <Box gap={2} padding={3} background="surfaceInset" radiusToken="md">
-            <Text role="bodyStrong" tone="brand">تصعيد وتعيين المالك الجديد</Text>
+            <Text role="bodyStrong" tone="action">تصعيد وتعيين المالك الجديد</Text>
 
             <Box gap={1}>
               <Text role="caption" tone="muted">طابور التصعيد المستهدف:</Text>
