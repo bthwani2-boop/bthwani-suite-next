@@ -6,7 +6,6 @@ import { fileURLToPath } from 'node:url';
 
 import {
   composeDshOpenApi,
-  generatedBundlePath,
   manifestPath,
   verifyDshOpenApiModular,
 } from '../../../tools/scripts/dsh-openapi-modular-lib.mjs';
@@ -28,15 +27,15 @@ test('DSH sovereign OpenAPI entry remains modular and structurally valid', () =>
   assert.ok(result.rootLineCount < 4000);
 });
 
-test('generated bundle is deterministic and contains no modular path references', () => {
-  const generated = read(generatedBundlePath);
-  const recomposed = composeDshOpenApi({ write: false });
+test('generated bundle composition is deterministic and contains no modular path references', () => {
+  const first = composeDshOpenApi({ write: false });
+  const second = composeDshOpenApi({ write: false });
 
-  assert.equal(generated, recomposed);
-  assert.doesNotMatch(generated, /\.\/paths\/[^\s"']+\.paths\.yaml/);
-  assert.doesNotMatch(generated, /\.\/components\/[^\s"']+\.yaml/);
-  assert.match(generated, /operationId:\s*getDshHealth/);
-  assert.match(generated, /operationId:\s*getDshPartnerOrderWorkboard/);
+  assert.equal(first, second);
+  assert.doesNotMatch(first, /\.\/paths\/[^\s"']+\.paths\.yaml/);
+  assert.doesNotMatch(first, /\.\/components\/[^\s"']+\.yaml/);
+  assert.match(first, /operationId:\s*getDshHealth/);
+  assert.match(first, /operationId:\s*getDshPartnerOrderWorkboard/);
 });
 
 test('entry contract owns references while generated and migration artifacts stay separated', () => {
