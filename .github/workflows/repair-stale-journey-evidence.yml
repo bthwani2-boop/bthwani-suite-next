@@ -28,6 +28,24 @@ jobs:
           ref: reemsam
           fetch-depth: 0
           persist-credentials: true
+      - name: Correct transformation escapes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('tools/scripts/repair-stale-journey-evidence.py')
+          text = path.read_text()
+          old = "text, count = re.subn(r'test\\(\"JRN-011 CI is required[\\s\\S]*?\\n\\}\\);\\s*$', replacement, text)"
+          new = "text, count = re.subn(r'test\\(\"JRN-011 CI is required[\\s\\S]*?\\n\\}\\);\\s*$', lambda _match: replacement, text)"
+          if old not in text:
+              raise SystemExit('JRN-011 transformation call not found')
+          text = text.replace(old, new)
+          text = text.replace(
+              'same-commit BThwani Contextual CI and detected JRN-012 journey gate must be success',
+              'same-commit CI status for BThwani Contextual CI and detected JRN-012 journey gate must be success',
+          )
+          path.write_text(text)
+          PY
       - name: Align journey evidence with contextual architecture
         run: python tools/scripts/repair-stale-journey-evidence.py
       - name: Verify repaired journey evidence
