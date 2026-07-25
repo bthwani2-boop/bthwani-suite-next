@@ -7,7 +7,6 @@ import { resolvePackageManagerInvocation } from "./lib/package-manager-invocatio
 const require = createRequire(import.meta.url);
 const {
   appEnvSuffix,
-  resolveSentryEnvironment,
   withSentryEnvironmentForApp,
 } = require("../mobile/sentry-env.js");
 
@@ -43,35 +42,32 @@ function valueAfter(flag, fallback) {
 const requestedApp = valueAfter("--app", null);
 const platform = valueAfter("--platform", "android");
 const profile = valueAfter("--profile", "development");
-const all = process.argv.includes("--all");
 const clearCache = process.argv.includes("--clear-cache");
 const nonInteractive = process.argv.includes("--non-interactive");
 const skipExport = process.argv.includes("--skip-local-export");
 const skipPreflight = process.argv.includes("--skip-preflight");
 const preflightOnly = process.argv.includes("--preflight-only");
 
+if (process.argv.includes("--all")) {
+  throw new Error("All-app mobile preflight/build was removed. Run one explicit --app target at a time.");
+}
 if (["--skip-preflight", "--preflight-only"].every((flag) => process.argv.includes(flag))) {
   throw new Error("Use either --skip-preflight or --preflight-only, not both");
 }
 if (!["android", "ios", "all"].includes(platform)) throw new Error("--platform must be android, ios, or all");
 if (!["development", "internal", "production"].includes(profile)) throw new Error("--profile must be development, internal, or production");
-if (all && requestedApp) throw new Error("Use either --all or --app, not both");
-if (!all && !requestedApp) throw new Error("Use --app <app-key> or --all");
+if (!requestedApp) throw new Error("Use one explicit --app <app-key> target");
 
 const appKeys = Object.keys(manifest.apps);
-const targets = all ? appKeys : [requestedApp];
-for (const key of targets) {
-  if (!manifest.apps[key]) throw new Error(`Unknown app '${key}'. Allowed: ${appKeys.join(", ")}`);
+if (!manifest.apps[requestedApp]) {
+  throw new Error(`Unknown app '${requestedApp}'. Allowed: ${appKeys.join(", ")}`);
 }
-
-function resolveInvocation(command, args, environment) {
-  return resolvePackageManagerInvocation(command, args, environment);
-}
+const targets = [requestedApp];
 
 function run(command, args, cwd = root, env = process.env) {
   console.log(`\n> ${command} ${args.join(" ")}`);
   const environment = { ...env, CI: "1", EXPO_NO_TELEMETRY: "1" };
-  const invocation = resolveInvocation(command, args, environment);
+  const invocation = resolvePackageManagerInvocation(command, args, environment);
   const result = spawnSync(invocation.executable, invocation.args, {
     cwd,
     stdio: "inherit",
@@ -122,33 +118,15 @@ function requireNativeProviderInputs(appKey, app, environment) {
 }
 
 if (!skipPreflight) {
-  console.log("=== PHASE 1: Target App Preflight ===");
+  console.log("=== PHASE 1: Single-App Preflight ===");
 
-  const syncArgs = ["tools/scripts/sync-mobile-apps.mjs", "--check"];
-  if (!all && requestedApp) syncArgs.push("--app", requestedApp);
-  run(process.execPath, syncArgs);
+  run(process.execPath, [
+    "tools/scripts/sync-mobile-apps.mjs",
+    "--check",
+    "--app",
+    requestedApp,
+  ]);
   run(process.execPath, ["tools/scripts/guard-mobile-expo-sdk56-versions.mjs"]);
-
-  if (all && (platform === "android" || platform === "all")) {
-    run(process.execPath, [
-      "tools/scripts/guard-google-platform-prebuild.mjs",
-      "--project",
-      "bthwani-platform",
-    ]);
-  }
-
-  if (all && profile !== "development") {
-    const projects = new Map();
-    for (const key of targets) {
-      const sentry = resolveSentryEnvironment(key, process.env);
-      if (!sentry.project) continue;
-      const existing = projects.get(sentry.project);
-      if (existing) {
-        throw new Error(`Sentry project '${sentry.project}' is shared by ${existing} and ${key}. Use one project per mobile application for release and source-map isolation.`);
-      }
-      projects.set(sentry.project, key);
-    }
-  }
 
   for (const key of targets) {
     const appDir = path.join(root, "apps", key, "runtime");
@@ -192,18 +170,18 @@ if (!skipPreflight) {
     ], root, appEnvironment);
   }
 
-  console.log("\nPASS: All target app preflight checks completed successfully!");
+  console.log("\nPASS: Single-app preflight completed successfully.");
 } else {
-  console.log("=== PHASE 1: Target App Preflight Skipped ===");
-  console.log("--skip-preflight was requested. Submit build only for the selected target app.");
+  console.log("=== PHASE 1: Single-App Preflight Skipped ===");
+  console.log("--skip-preflight was requested for the selected app only.");
 }
 
 if (preflightOnly) {
-  console.log("Preflight-only mode requested. Skipping remote builds.");
+  console.log("Preflight-only mode requested. No remote build was submitted.");
   process.exit(0);
 }
 
-console.log("\n=== PHASE 2: Remote EAS Build Submission ===");
+console.log("\n=== PHASE 2: Single-App Remote EAS Build Submission ===");
 
 for (const key of targets) {
   console.log(`\nSubmitting remote build for '${key}'...`);
@@ -222,6 +200,5 @@ for (const key of targets) {
   if (clearCache) args.push("--clear-cache");
   if (nonInteractive) args.push("--non-interactive");
 
-  // Expo requires EAS commands to run from each app root in a monorepo.
   run("pnpm", args, appDir, appEnvironment);
 }
