@@ -165,8 +165,8 @@ describe("notifications journey maps", () => {
     "app-captain",
   ];
 
-  it("keeps contract operations in OpenAPI and generated client", () => {
-    const openapi = readFileSync(new URL("../contracts/dsh.openapi.yaml", import.meta.url), "utf8");
+  it("keeps contract operations in the composed OpenAPI and generated client", () => {
+    const openapi = readFileSync(new URL("../contracts/generated/dsh.bundle.openapi.yaml", import.meta.url), "utf8");
     const generatedClient = readFileSync(new URL("../clients/generated/dsh-api.ts", import.meta.url), "utf8");
 
     for (const operation of operations) {
@@ -175,7 +175,7 @@ describe("notifications journey maps", () => {
     }
   });
 
-  it("keeps dsh.notifications surfaces consistent across capability and surface maps", () => {
+  it("keeps dsh.notifications surfaces consistent across capability and derived surface maps", () => {
     const capabilityMap = readFileSync(new URL("../capability-map.ts", import.meta.url), "utf8");
     const surfaceMap = readFileSync(new URL("../surface-map.ts", import.meta.url), "utf8");
     const notificationCapability = capabilityMap.slice(
@@ -185,10 +185,8 @@ describe("notifications journey maps", () => {
 
     for (const surface of surfaces) {
       assert.ok(notificationCapability.includes(`"${surface}"`), `missing notifications capability surface ${surface}`);
+      assert.ok(surfaceMap.includes(`capabilityIds: capabilityIdsFor("${surface}")`), `surface map must derive capabilities for ${surface}`);
     }
-
-    const surfaceEntries = [...surfaceMap.matchAll(/capabilityIds: \[([^\]]+)\]/g)]
-      .filter((match) => match[1]?.includes("dsh.notifications"));
-    assert.equal(surfaceEntries.length, surfaces.length);
+    assert.match(surfaceMap, /getDshCapabilitiesForSurface/);
   });
 });
