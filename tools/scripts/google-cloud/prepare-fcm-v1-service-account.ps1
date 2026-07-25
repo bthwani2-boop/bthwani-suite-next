@@ -56,6 +56,23 @@ function Invoke-Gcloud {
     return $text
 }
 
+function Invoke-GcloudResult {
+    param([Parameter(Mandatory)][string[]] $Arguments)
+
+    $rendered = "gcloud $($Arguments -join ' ')"
+    if (-not $Apply) {
+        Write-Host "DRY-RUN: $rendered" -ForegroundColor DarkYellow
+        return [pscustomobject]@{ ExitCode = 0; Text = ''; Rendered = $rendered }
+    }
+
+    Write-Host "> $rendered" -ForegroundColor DarkGray
+    $output = & gcloud @Arguments 2>&1
+    $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
+    $text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
+    if ($text) { Write-Host $text }
+    return [pscustomobject]@{ ExitCode = $exitCode; Text = $text; Rendered = $rendered }
+}
+
 function Assert-Gcloud {
     if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {
         throw 'gcloud CLI is required and must be available on PATH.'
@@ -70,6 +87,56 @@ function Test-ServiceAccountExists {
         '--format=value(email)'
     ) -AllowFailure -CaptureOnly
     return $output.Trim() -eq $ServiceAccountEmail
+}
+
+function Wait-ServiceAccountVisible {
+    param(
+        [ValidateRange(1, 60)][int] $Attempts = 12,
+        [ValidateRange(1, 60)][int] $DelaySeconds = 5
+    )
+
+    if (-not $Apply) { return }
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        if (Test-ServiceAccountExists) {
+            Write-Host "PASS: service account is visible to IAM: $ServiceAccountEmail" -ForegroundColor Green
+            return
+        }
+        if ($attempt -lt $Attempts) {
+            Write-Host "Waiting for service account propagation ($attempt/$Attempts): $ServiceAccountEmail" -ForegroundColor Yellow
+            Start-Sleep -Seconds $DelaySeconds
+        }
+    }
+    throw "Service account was created but is still not visible to IAM after $Attempts checks: $ServiceAccountEmail"
+}
+
+function Grant-FcmRole {
+    $arguments = @(
+        'projects', 'add-iam-policy-binding', $ProjectId,
+        '--member', "serviceAccount:$ServiceAccountEmail",
+        '--role', $FcmRole,
+        '--quiet'
+    )
+
+    if (-not $Apply) {
+        Invoke-Gcloud -Arguments $arguments | Out-Null
+        return
+    }
+
+    $last = $null
+    for ($attempt = 1; $attempt -le 8; $attempt++) {
+        $last = Invoke-GcloudResult -Arguments $arguments
+        if ($last.ExitCode -eq 0) { return }
+
+        $isPropagationFailure = $last.Text -match 'does not exist|not found|not visible|INVALID_ARGUMENT'
+        if ($attempt -lt 8 -and $isPropagationFailure) {
+            Write-Host "IAM binding not ready yet; retrying after propagation delay ($attempt/8)." -ForegroundColor Yellow
+            Start-Sleep -Seconds (5 * $attempt)
+            Wait-ServiceAccountVisible -Attempts 3 -DelaySeconds 3
+            continue
+        }
+
+        throw "Command failed with exit code $($last.ExitCode): $($last.Rendered)`n$($last.Text)"
+    }
 }
 
 function Assert-SecureKeyPath {
@@ -109,15 +176,10 @@ if (Test-ServiceAccountExists) {
         '--project', $ProjectId
     ) | Out-Null
 }
+Wait-ServiceAccountVisible
 
 Write-Step 'Grant only Firebase Cloud Messaging API Admin'
-Invoke-Gcloud -Arguments @(
-    'projects', 'add-iam-policy-binding', $ProjectId,
-    '--member', "serviceAccount:$ServiceAccountEmail",
-    '--role', $FcmRole,
-    '--condition=None',
-    '--quiet'
-) | Out-Null
+Grant-FcmRole
 
 Write-Step 'Create or preserve the private key file'
 if (-not $Apply) {
