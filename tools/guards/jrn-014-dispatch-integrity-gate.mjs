@@ -99,7 +99,7 @@ requireMarkers('services/dsh/contracts/dsh.dispatch-governance.openapi.yaml', [
 requireMarkers('services/dsh/contracts/contract-registry.ts', [
   'dsh-dispatch-governance',
   'contracts/dsh.dispatch-governance.openapi.yaml',
-  'frontend/shared/dispatch,frontend/shared/operations',
+  'frontend/shared/dispatch',
 ]);
 requireMarkers('services/dsh/frontend/shared/operations/use-dispatch-captain-options.ts', [
   'fetchStoreDetail',

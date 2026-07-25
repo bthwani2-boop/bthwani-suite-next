@@ -155,7 +155,7 @@ export function toDetailViewModel(dto: DshStoreDetailDto): DshStoreDetailViewMod
     ...toCardViewModel(dto),
     addressLine: (dto.addressLine ?? "").trim(),
     coverageSummary: (dto.coverageSummary ?? "").trim(),
-    operatingHours: (dto.operatingHours ?? "").trim(),
+    operatingHours: dto.operatingHours.trim(),
     deliveryReadiness: (dto.deliveryReadiness ?? "").trim(),
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
