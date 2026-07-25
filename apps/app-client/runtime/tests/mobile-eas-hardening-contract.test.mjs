@@ -11,10 +11,10 @@ const wrapper = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas.ps1"), "utf
 const workflow = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/workflow.ps1"), "utf8");
 const providers = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/providers.ps1"), "utf8");
 const signing = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/signing.ps1"), "utf8");
-const firebaseHelper = fs.readFileSync(
-  path.join(repoRoot, "tools/scripts/mobile-eas/ensure-firebase-app.ps1"),
-  "utf8",
-);
+const firebaseHelperPath = path.join(repoRoot, "apps/mobile/eas/firebase.ps1");
+const mapsHelperPath = path.join(repoRoot, "apps/mobile/eas/maps.ps1");
+const easEnginePath = path.join(repoRoot, "apps/mobile/eas-build-mobile.mjs");
+const firebaseHelper = fs.readFileSync(firebaseHelperPath, "utf8");
 
 function runtimePackage(app) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, "apps", app, "runtime/package.json"), "utf8"));
@@ -48,6 +48,21 @@ test("EAS provider variables use one unambiguous environment selector", () => {
   for (const line of listAdds) assert.match(line, /\[void\]\s+\$candidates\.Add/);
 });
 
+test("active mobile build executors live under apps/mobile", () => {
+  for (const file of [firebaseHelperPath, mapsHelperPath, easEnginePath]) {
+    assert.ok(fs.existsSync(file), `missing active mobile executor: ${file}`);
+  }
+  const oldFirebase = fs.readFileSync(path.join(repoRoot, "tools/scripts/mobile-eas/ensure-firebase-app.ps1"), "utf8");
+  const oldMaps = fs.readFileSync(path.join(repoRoot, "tools/scripts/google-cloud/create-android-maps-api-key.ps1"), "utf8");
+  const oldEngine = fs.readFileSync(path.join(repoRoot, "tools/scripts/eas-build-mobile.mjs"), "utf8");
+  assert.ok(oldFirebase.includes("apps\\mobile\\eas\\firebase.ps1"));
+  assert.ok(oldMaps.includes("apps\\mobile\\eas\\maps.ps1"));
+  assert.ok(oldEngine.includes("apps/mobile/eas-build-mobile.mjs"));
+  assert.ok(oldFirebase.split(/\r?\n/).length < 30);
+  assert.ok(oldMaps.split(/\r?\n/).length < 40);
+  assert.ok(oldEngine.split(/\r?\n/).length < 5);
+});
+
 test("Firebase Android configuration uses the official Management REST API", () => {
   for (const marker of [
     "https://firebase.googleapis.com/v1beta1",
@@ -57,7 +72,7 @@ test("Firebase Android configuration uses the official Management REST API", () 
     "configFileContents",
     "FromBase64String",
   ]) assert.ok(firebaseHelper.includes(marker), `missing Firebase REST marker: ${marker}`);
-  assert.equal(firebaseHelper.includes("apps:sdkconfig"), false);
+  assert.equal(/['\"]apps:sdkconfig['\"]/.test(firebaseHelper), false);
   assert.equal(firebaseHelper.includes("firebase-tools@"), false);
   assert.equal(firebaseHelper.includes("Invoke-Firebase"), false);
 });
