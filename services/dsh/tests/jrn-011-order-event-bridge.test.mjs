@@ -23,13 +23,18 @@ test("JRN-011 starts a real bridge from order outbox to operational outbox", () 
 
 test("canonical operational consumer resolves order recipient and emits notification copy", () => {
   const worker = readDsh("backend/internal/operationaloutbox/worker.go");
+  const policy = readDsh("backend/internal/operationaloutbox/notification_policy.go");
 
   assert.match(worker, /case "order":\s+var clientID string/s);
   assert.match(worker, /SELECT client_id::text\s+FROM dsh_orders/s);
-  assert.match(worker, /case "order\.created":/);
-  assert.match(worker, /تم إنشاء طلبك/);
-  assert.match(worker, /actionURL = "\/orders\/" \+ event\.EntityID/);
+  assert.match(worker, /plan\.ActionURL/);
   assert.match(worker, /ON CONFLICT \(id\) DO NOTHING/);
+
+  assert.match(policy, /fallbackTitle, fallbackBody := notificationCopy\(event\.EventType\)/);
+  assert.match(policy, /ActionURL:\s+notificationActionURL\(event\)/);
+  assert.match(policy, /case "order":\s+return "\/orders\/" \+ event\.EntityID/s);
+  assert.match(policy, /case "order\.created":/);
+  assert.match(policy, /تم إنشاء طلبك/);
 });
 
 test("JRN-011 runbook treats outbox delivery as an operational obligation", () => {
