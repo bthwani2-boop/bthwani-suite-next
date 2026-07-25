@@ -9,7 +9,7 @@ on:
         default: master
         type: string
       base_branch:
-        description: Pull request target branch
+        description: Comparison branch used for affected mode
         required: true
         default: master
         type: string
@@ -25,7 +25,7 @@ on:
         default: true
         type: boolean
       cleanup_records:
-        description: Delete policy-approved stale logs, evidence, and documents
+        description: Delete policy-approved stale logs, evidence, and documents inside the generated patch
         required: true
         default: true
         type: boolean
@@ -34,7 +34,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: expert-live-code-remediation-${{ inputs.source_ref }}
+  group: expert-live-code-remediation-${{ github.run_id }}
   cancel-in-progress: false
 
 env:
@@ -52,11 +52,6 @@ jobs:
     timeout-minutes: 240
     permissions:
       contents: read
-    outputs:
-      source_sha: ${{ steps.identity.outputs.source_sha }}
-      has_changes: ${{ steps.package.outputs.has_changes }}
-      patch_sha256: ${{ steps.package.outputs.patch_sha256 }}
-      verification_passed: ${{ steps.decision.outputs.verification_passed }}
     services:
       postgres:
         image: postgres:16-alpine
@@ -95,7 +90,6 @@ jobs:
           git ls-remote --exit-code --heads origin "${BASE_BRANCH_INPUT}" >/dev/null
 
           source_sha="$(git rev-parse HEAD)"
-          echo "source_sha=${source_sha}" >> "${GITHUB_OUTPUT}"
           mkdir -p /tmp/remediation-evidence
           printf '%s\n' "${source_sha}" > /tmp/remediation-evidence/source-sha.txt
           printf '%s\n' "${SOURCE_REF_INPUT}" > /tmp/remediation-evidence/source-ref.txt
@@ -217,6 +211,27 @@ jobs:
             exit 1
           fi
 
+          while IFS=$'\t' read -r status path; do
+            [[ -z "${path}" ]] && continue
+            if [[ "${path}" == docs/* || "${path}" == governance/* ]]; then
+              if [[ "${status}" != D* ]]; then
+                echo "::error title=Records mutation rejected::Only policy-approved deletion is allowed for ${path}."
+                exit 1
+              fi
+            fi
+            if [[ "${status}" == D* ]]; then
+              if [[ "${path}" =~ (^|/)(contracts?|migrations?|audit)(/|$) ]] || [[ "${path}" =~ \.openapi\.ya?ml$ ]]; then
+                echo "::error title=Protected deletion rejected::${path}"
+                exit 1
+              fi
+              if ! jq -e --arg path "${path}" '.deleted[]? | select(.file == $path)' \
+                /tmp/remediation-evidence/repository-cleanup.json >/dev/null; then
+                echo "::error title=Unapproved deletion rejected::${path} was not produced by cleanup policy."
+                exit 1
+              fi
+            fi
+          done < <(git diff --name-status)
+
       - name: Package immutable remediation patch
         id: package
         shell: bash
@@ -231,6 +246,7 @@ jobs:
             has_changes=false
           fi
           patch_sha256="$(sha256sum /tmp/remediation-evidence/remediation.patch | awk '{print $1}')"
+          printf '%s\n' "${patch_sha256}" > /tmp/remediation-evidence/patch-sha256.txt
           echo "has_changes=${has_changes}" >> "${GITHUB_OUTPUT}"
           echo "patch_sha256=${patch_sha256}" >> "${GITHUB_OUTPUT}"
 
@@ -403,7 +419,6 @@ jobs:
         id: decision
         shell: bash
         env:
-          SOURCE_SHA: ${{ steps.identity.outputs.source_sha }}
           HAS_CHANGES: ${{ steps.package.outputs.has_changes }}
           PATCH_SHA256: ${{ steps.package.outputs.patch_sha256 }}
         run: |
@@ -423,7 +438,7 @@ jobs:
 
           jq -n \
             --arg sourceRef "${SOURCE_REF_INPUT}" \
-            --arg sourceSha "${SOURCE_SHA}" \
+            --arg sourceSha "$(cat /tmp/remediation-evidence/source-sha.txt)" \
             --arg baseBranch "${BASE_BRANCH_INPUT}" \
             --arg mode "${MODE_INPUT}" \
             --arg patchSha256 "${PATCH_SHA256}" \
@@ -439,12 +454,11 @@ jobs:
               hasChanges: $hasChanges,
               patchSha256: $patchSha256,
               verificationPassed: $verificationPassed,
-              unresolvedGateCount: $unresolvedGateCount
+              unresolvedGateCount: $unresolvedGateCount,
+              publication: "manual-patch-only-no-privileged-write"
             }' > /tmp/remediation-evidence/manifest.json
 
-          echo "verification_passed=${verification_passed}" >> "${GITHUB_OUTPUT}"
-
-      - name: Upload remediation patch and digital evidence
+      - name: Export evidence-backed remediation patch
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.ARTIFACT_NAME }}
@@ -452,151 +466,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  publish:
-    name: Publish reviewed remediation pull request
-    if: ${{ always() && needs.remediate.result == 'success' && needs.remediate.outputs.has_changes == 'true' }}
-    needs: [remediate]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    permissions:
-      actions: read
-      contents: write
-      pull-requests: write
-    env:
-      SOURCE_SHA: ${{ needs.remediate.outputs.source_sha }}
-      PATCH_SHA256: ${{ needs.remediate.outputs.patch_sha256 }}
-      VERIFICATION_PASSED: ${{ needs.remediate.outputs.verification_passed }}
-      RUN_BRANCH: automation/expert-remediation-${{ github.run_id }}-${{ github.run_attempt }}
-    steps:
-      - name: Checkout immutable source without executing repository code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ needs.remediate.outputs.source_sha }}
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Download verified remediation patch
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: ${{ env.ARTIFACT_NAME }}
-          path: .remediation
-
-      - name: Validate patch boundaries and deletions
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "${PATCH_SHA256}  .remediation/remediation.patch" | sha256sum --check
-          git apply --check --binary .remediation/remediation.patch
-
-          if git apply --numstat .remediation/remediation.patch | cut -f3- | grep -E '^\.github/'; then
-            echo "::error title=Privileged patch rejected::Workflow and GitHub configuration mutation is forbidden."
-            exit 1
-          fi
-
-          git apply --index --binary .remediation/remediation.patch
-
-          if git diff --cached --summary | grep -Eq 'mode 120000|create mode 160000'; then
-            echo "::error title=Unsafe patch rejected::Symlink and submodule creation are forbidden."
-            exit 1
-          fi
-
-          while IFS=$'\t' read -r status path; do
-            [[ -z "${path}" ]] && continue
-            case "${path}" in
-              apps/*|core/*|services/*|shared/*|contracts/*|infra/*|tools/*|docs/*|governance/*|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|nx.json)
-                ;;
-              *)
-                echo "::error title=Unapproved patch path::${path}"
-                exit 1
-                ;;
-            esac
-
-            if [[ "${path}" == docs/* || "${path}" == governance/* ]]; then
-              if [[ "${status}" != D* ]]; then
-                echo "::error title=Records mutation rejected::Only policy-approved deletion is allowed for ${path}."
-                exit 1
-              fi
-            fi
-
-            if [[ "${status}" == D* ]]; then
-              if [[ "${path}" =~ (^|/)(contracts?|migrations?|audit)(/|$) ]] || [[ "${path}" =~ \.openapi\.ya?ml$ ]]; then
-                echo "::error title=Protected deletion rejected::${path}"
-                exit 1
-              fi
-              if ! jq -e --arg path "${path}" '.deleted[]? | select(.file == $path)' \
-                .remediation/repository-cleanup.json >/dev/null; then
-                echo "::error title=Unapproved deletion rejected::${path} was not produced by cleanup policy."
-                exit 1
-              fi
-            fi
-          done < <(git diff --cached --name-status)
-
-      - name: Commit and push isolated remediation branch
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          git switch -c "${RUN_BRANCH}"
-          git config user.name "bthwani-expert-remediation[bot]"
-          git config user.email "bthwani-expert-remediation[bot]@users.noreply.github.com"
-          git commit -m "fix: apply verified full-stack remediation"
-          gh auth setup-git
-          git push origin "HEAD:${RUN_BRANCH}"
-
-      - name: Open evidence-backed pull request
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          cat > /tmp/pr-body.md <<EOF
-          ## Evidence-backed full-stack remediation
-
-          - Source ref: \`${SOURCE_REF_INPUT}\`
-          - Source commit: \`${SOURCE_SHA}\`
-          - Patch SHA-256: \`${PATCH_SHA256}\`
-          - Verification passed: \`${VERIFICATION_PASSED}\`
-
-          Deterministic repairs were applied to executable source. Records were deleted only through the retention policy. Workflow files, protected contracts, migrations, audits, symlinks, submodules, force-push, and automatic merge are blocked.
-          EOF
-
-          args=(
-            --base "${BASE_BRANCH_INPUT}"
-            --head "${RUN_BRANCH}"
-            --title "fix: verified expert full-stack remediation"
-            --body-file /tmp/pr-body.md
-          )
-          if [[ "${VERIFICATION_PASSED}" != "true" ]]; then args+=(--draft); fi
-          gh pr create "${args[@]}"
-
-  result:
-    name: Expert remediation result
-    if: ${{ always() }}
-    needs: [remediate, publish]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions: {}
-    env:
-      REMEDIATE_RESULT: ${{ needs.remediate.result }}
-      HAS_CHANGES: ${{ needs.remediate.outputs.has_changes }}
-      VERIFICATION_PASSED: ${{ needs.remediate.outputs.verification_passed }}
-      PUBLISH_RESULT: ${{ needs.publish.result }}
-    steps:
       - name: Enforce evidence-based closure
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${REMEDIATE_RESULT}" != "success" ]]; then
-            echo "::error title=Remediation execution failed::Result=${REMEDIATE_RESULT}"
+          if jq -e '.verificationPassed == true' /tmp/remediation-evidence/manifest.json >/dev/null; then
+            echo "All covered repair, logic, build, test, database, security, cleanup, and runtime gates passed."
+          else
+            echo "::error title=Unresolved code or runtime gaps::Review manifest.json and status TSV files in the remediation artifact."
             exit 1
           fi
-          if [[ "${VERIFICATION_PASSED}" != "true" ]]; then
-            echo "::error title=Unresolved code or runtime gaps::A draft remediation PR was published when a patch existed."
-            exit 1
-          fi
-          if [[ "${HAS_CHANGES}" == "true" && "${PUBLISH_RESULT}" != "success" ]]; then
-            echo "::error title=Remediation publication failed::Result=${PUBLISH_RESULT}"
-            exit 1
-          fi
-          echo "All covered repair, logic, build, test, database, security, cleanup, and runtime gates passed."
