@@ -45,6 +45,12 @@ function scopedNames(baseName, appKey, aliases = []) {
   ];
 }
 
+function resolveRuntimeGoogleServicesFile(appKey) {
+  const rootDir = path.resolve(__dirname, "../..");
+  const absolute = path.join(rootDir, "apps", appKey, "runtime", "google-services.json");
+  return fs.existsSync(absolute) ? "./google-services.json" : undefined;
+}
+
 function resolveGoogleServicesFile(appKey, environment = process.env) {
   const suffix = appEnvSuffix(appKey);
 
@@ -60,7 +66,13 @@ function resolveGoogleServicesFile(appKey, environment = process.env) {
     return common;
   }
 
-  // 3. secrets.local.mobile.json in project root
+  // 3. Runtime-local generated config used by EAS remote build packaging.
+  const runtimeLocal = resolveRuntimeGoogleServicesFile(appKey);
+  if (runtimeLocal) {
+    return runtimeLocal;
+  }
+
+  // 4. secrets.local.mobile.json in project root
   const rootDir = path.resolve(__dirname, "../..");
   const secretsConfigPath = path.join(rootDir, "secrets.local.mobile.json");
   if (fs.existsSync(secretsConfigPath)) {
@@ -75,7 +87,7 @@ function resolveGoogleServicesFile(appKey, environment = process.env) {
     }
   }
 
-  // 4. Default path under C:\bthwani-secrets\firebase\<appKey>\google-services.json
+  // 5. Default path under C:\bthwani-secrets\firebase\<appKey>\google-services.json
   const defaultPath = path.join("C:", "bthwani-secrets", "firebase", appKey, "google-services.json");
   if (fs.existsSync(defaultPath)) {
     return defaultPath;
