@@ -1,7 +1,8 @@
 # tools/scripts/bootstrap-mobile-eas-android-development.ps1
 # Non-interactive Android development bootstrap for all four BThwani mobile apps.
 # Generates local signing credentials outside Git, derives SHA-1 fingerprints,
-# prepares Firebase/FCM/Maps, verifies EAS project linkage, and runs preflight.
+# prepares Firebase/FCM/Maps, verifies EAS project linkage from Expo config,
+# and runs the remote-build preflight.
 
 [CmdletBinding()]
 param(
@@ -95,15 +96,40 @@ function Resolve-Keytool {
     if (-not [string]::IsNullOrWhiteSpace($env:JAVA_HOME)) {
         $candidates.Add((Join-Path $env:JAVA_HOME 'bin\keytool.exe'))
     }
+    if (-not [string]::IsNullOrWhiteSpace($env:JDK_HOME)) {
+        $candidates.Add((Join-Path $env:JDK_HOME 'bin\keytool.exe'))
+    }
     if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
-        $javaRoot = Join-Path $env:ProgramFiles 'Java'
-        if (Test-Path -LiteralPath $javaRoot -PathType Container) {
-            Get-ChildItem -LiteralPath $javaRoot -Directory -ErrorAction SilentlyContinue |
-                Sort-Object Name -Descending |
-                ForEach-Object { $candidates.Add((Join-Path $_.FullName 'bin\keytool.exe')) }
+        foreach ($parent in @('Java', 'Eclipse Adoptium', 'Microsoft')) {
+            $javaRoot = Join-Path $env:ProgramFiles $parent
+            if (Test-Path -LiteralPath $javaRoot -PathType Container) {
+                Get-ChildItem -LiteralPath $javaRoot -Directory -ErrorAction SilentlyContinue |
+                    Sort-Object Name -Descending |
+                    ForEach-Object { $candidates.Add((Join-Path $_.FullName 'bin\keytool.exe')) }
+            }
         }
         $androidStudioJbr = Join-Path $env:ProgramFiles 'Android\Android Studio\jbr\bin\keytool.exe'
         $candidates.Add($androidStudioJbr)
+    }
+    if (-not [string]::IsNullOrWhiteSpace(${env:ProgramFiles(x86)})) {
+        foreach ($parent in @('Java', 'Eclipse Adoptium', 'Microsoft')) {
+            $javaRoot = Join-Path ${env:ProgramFiles(x86)} $parent
+            if (Test-Path -LiteralPath $javaRoot -PathType Container) {
+                Get-ChildItem -LiteralPath $javaRoot -Directory -ErrorAction SilentlyContinue |
+                    Sort-Object Name -Descending |
+                    ForEach-Object { $candidates.Add((Join-Path $_.FullName 'bin\keytool.exe')) }
+            }
+        }
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
+        foreach ($parent in @('Programs\Eclipse Adoptium', 'Programs\Microsoft')) {
+            $javaRoot = Join-Path $env:LOCALAPPDATA $parent
+            if (Test-Path -LiteralPath $javaRoot -PathType Container) {
+                Get-ChildItem -LiteralPath $javaRoot -Directory -ErrorAction SilentlyContinue |
+                    Sort-Object Name -Descending |
+                    ForEach-Object { $candidates.Add((Join-Path $_.FullName 'bin\keytool.exe')) }
+            }
+        }
     }
     return Add-ExecutableDirectoryToPath -CommandName 'keytool' -Candidates $candidates.ToArray()
 }
@@ -308,7 +334,7 @@ $whoami = Invoke-Eas -AppDirectory $firstAppDirectory -Arguments @('whoami') -Ca
 if ([string]::IsNullOrWhiteSpace($whoami)) { throw 'EAS authentication could not be proven.' }
 Write-Host "EAS account: $whoami" -ForegroundColor Green
 
-Write-Step 'Verify all four configured EAS projects from their actual app roots'
+Write-Step 'Verify all four configured EAS projects from Expo config'
 foreach ($appKey in $AppKeys) {
     $app = $manifest.apps.$appKey
     if ($null -eq $app) { throw "Mobile manifest does not define $appKey." }
@@ -325,7 +351,6 @@ foreach ($appKey in $AppKeys) {
         throw "$appKey EAS project ID mismatch. Expected '$($app.projectId)'."
     }
 
-    Invoke-Eas -AppDirectory $appDirectory -Arguments @('project:info') | Out-Null
     Write-Host "PASS: $appKey -> @$($config.owner)/$($config.slug) [$($app.projectId)]" -ForegroundColor Green
 }
 
@@ -362,7 +387,7 @@ Write-Step 'Run complete all-app Android EAS preflight'
 Invoke-Checked -Command 'pnpm' -Arguments @('mobile:eas:preflight:all:dev')
 
 if ($SubmitBuilds) {
-    Write-Step 'Submit all four Android development builds non-interactively'
+    Write-Step 'Submit all four Android development builds to EAS Remote Build'
     Invoke-Checked -Command 'node' -Arguments @(
         'tools/scripts/eas-build-mobile.mjs',
         '--all',
