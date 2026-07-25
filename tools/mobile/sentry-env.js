@@ -54,22 +54,25 @@ function resolveRuntimeGoogleServicesFile(appKey) {
 function resolveGoogleServicesFile(appKey, environment = process.env) {
   const suffix = appEnvSuffix(appKey);
 
-  // 1. App-specific environment variable (e.g. GOOGLE_SERVICES_JSON_APP_CLIENT)
+  // 1. Runtime-local generated config used by EAS remote build packaging.
+  // It must win over stale or differently-scoped EAS variables because it is
+  // created from the validated Firebase file immediately before submitting the
+  // build archive.
+  const runtimeLocal = resolveRuntimeGoogleServicesFile(appKey);
+  if (runtimeLocal) {
+    return runtimeLocal;
+  }
+
+  // 2. App-specific environment variable (e.g. GOOGLE_SERVICES_JSON_APP_CLIENT)
   const scoped = configuredFilePath(environment[`GOOGLE_SERVICES_JSON_${suffix}`]);
   if (scoped) {
     return scoped;
   }
 
-  // 2. Common environment variable (GOOGLE_SERVICES_JSON)
+  // 3. Common environment variable (GOOGLE_SERVICES_JSON)
   const common = configuredFilePath(environment.GOOGLE_SERVICES_JSON);
   if (common) {
     return common;
-  }
-
-  // 3. Runtime-local generated config used by EAS remote build packaging.
-  const runtimeLocal = resolveRuntimeGoogleServicesFile(appKey);
-  if (runtimeLocal) {
-    return runtimeLocal;
   }
 
   // 4. secrets.local.mobile.json in project root
