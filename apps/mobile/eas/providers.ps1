@@ -95,7 +95,44 @@ function Stage-ProviderInputs {
     return [pscustomobject]@{ MapsKey = $mapsKey; FirebaseKey = $firebaseKey }
 }
 
-function Create-OrReplaceEasVariable {
+function Invoke-EasEnvironmentCommand {
+    param(
+        [Parameter(Mandatory)][string[]] $Arguments,
+        [string[]] $SecretValues = @(),
+        [switch] $AllowFailure,
+        [switch] $Quiet
+    )
+
+    Push-Location -LiteralPath $AppDir
+    try {
+        $global:LASTEXITCODE = 0
+        $output = & pnpm @Arguments 2>&1
+        $exitCode = if ($null -eq $global:LASTEXITCODE) { 0 } else { [int]$global:LASTEXITCODE }
+        $text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
+        foreach ($secret in $SecretValues) {
+            if (-not [string]::IsNullOrWhiteSpace($secret)) { $text = $text.Replace($secret, '<redacted>') }
+        }
+        if ($text -and (-not $Quiet -or ($exitCode -ne 0 -and -not $AllowFailure))) { Write-Host $text }
+        if ($exitCode -ne 0 -and -not $AllowFailure) {
+            throw "EAS environment command failed with exit code ${exitCode}: pnpm $($Arguments -join ' ')"
+        }
+        return [pscustomobject]@{ ExitCode = $exitCode; Text = $text }
+    } finally {
+        Pop-Location
+    }
+}
+
+function Test-EasVariable {
+    param([Parameter(Mandatory)][string] $Name)
+    $result = Invoke-EasEnvironmentCommand -Arguments @(
+        'dlx', 'eas-cli@latest', 'env:get', 'development',
+        '--variable-name', $Name,
+        '--format', 'long', '--scope', 'project', '--non-interactive'
+    ) -AllowFailure -Quiet
+    return $result.ExitCode -eq 0
+}
+
+function Set-EasVariable {
     param(
         [Parameter(Mandatory)][string] $Name,
         [Parameter(Mandatory)][string] $Value,
@@ -103,29 +140,36 @@ function Create-OrReplaceEasVariable {
         [Parameter(Mandatory)][ValidateSet('plaintext', 'sensitive', 'secret')][string] $Visibility,
         [string[]] $SecretValues = @()
     )
-    Invoke-Checked -Command 'pnpm' -Arguments @(
+
+    if (Test-EasVariable -Name $Name) {
+        Invoke-EasEnvironmentCommand -Arguments @(
+            'dlx', 'eas-cli@latest', 'env:update', 'development',
+            '--variable-name', $Name,
+            '--value', $Value, '--type', $Type,
+            '--visibility', $Visibility, '--scope', 'project', '--non-interactive'
+        ) -SecretValues $SecretValues | Out-Null
+        return
+    }
+
+    Invoke-EasEnvironmentCommand -Arguments @(
         'dlx', 'eas-cli@latest', 'env:create', 'development',
         '--name', $Name, '--value', $Value, '--type', $Type,
-        '--visibility', $Visibility, '--scope', 'project',
-        '--force', '--non-interactive'
-    ) -WorkingDirectory $AppDir -SecretValues $SecretValues | Out-Null
+        '--visibility', $Visibility, '--scope', 'project', '--non-interactive'
+    ) -SecretValues $SecretValues | Out-Null
 }
 
 function Assert-EasVariable {
     param([Parameter(Mandatory)][string] $Name)
-    Invoke-Checked -Command 'pnpm' -Arguments @(
-        'dlx', 'eas-cli@latest', 'env:get', 'development',
-        '--variable-name', $Name,
-        '--variable-environment', 'development',
-        '--format', 'long', '--scope', 'project', '--non-interactive'
-    ) -WorkingDirectory $AppDir -Quiet | Out-Null
+    if (-not (Test-EasVariable -Name $Name)) {
+        throw "Required EAS development variable is missing: $Name"
+    }
 }
 
 function Sync-EasDevelopmentEnvironment {
     param([Parameter(Mandatory)][string] $MapsKey)
     Write-Step 'Synchronize EAS development provider inputs'
-    Create-OrReplaceEasVariable -Name 'GOOGLE_SERVICES_JSON' -Value $SecureFirebasePath -Type 'file' -Visibility 'secret'
-    Create-OrReplaceEasVariable -Name 'GOOGLE_MAPS_ANDROID_API_KEY' -Value $MapsKey -Type 'string' -Visibility 'sensitive' -SecretValues @($MapsKey)
+    Set-EasVariable -Name 'GOOGLE_SERVICES_JSON' -Value $SecureFirebasePath -Type 'file' -Visibility 'secret'
+    Set-EasVariable -Name 'GOOGLE_MAPS_ANDROID_API_KEY' -Value $MapsKey -Type 'string' -Visibility 'sensitive' -SecretValues @($MapsKey)
     Assert-EasDevelopmentEnvironment
 }
 
