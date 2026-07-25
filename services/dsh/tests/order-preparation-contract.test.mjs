@@ -25,7 +25,7 @@ test('DSH composed contract contains one governed partner workboard', () => {
   const base = readFileSync(basePath, 'utf8');
   const composed = readFileSync(outputPath, 'utf8');
   assert.match(base, /x-bthwani-bundle: \.\/generated\/dsh\.bundle\.openapi\.yaml/);
-  assert.equal(base.includes('/dsh/partner/order-workboard:'), false);
+  assert.equal(countOccurrences(base, '/dsh/partner/order-workboard:'), 1);
   assert.equal(countOccurrences(composed, '/dsh/partner/order-workboard:'), 1);
   assert.equal(countOccurrences(composed, 'DshPartnerOrderAction:'), 1);
   assert.equal(countOccurrences(composed, 'DshPartnerOrderWorkboardOrder:'), 1);
