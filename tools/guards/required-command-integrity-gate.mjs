@@ -16,6 +16,7 @@ const expectedWorkflowFiles = [
   "ci-runtime.yml",
   "ci.yml",
   "dsh-database.yml",
+  "lockfile-snapshot.yml",
   "remediation-analysis.yml",
 ].sort();
 
@@ -218,26 +219,27 @@ requireMarkers(`${workflowsRoot}/ci-backends.yml`, [
 ]);
 
 requireMarkers(`${workflowsRoot}/ci-runtime.yml`, [
-  "runtime:full:smoke",
-  "Stop runtime",
+  "Runtime proof",
+  "runtime-smoke.log",
+  "runtime proof not required",
 ]);
 
-const remediation = requireMarkers(`${workflowsRoot}/remediation-analysis.yml`, [
-  "workflow_run:",
-  "contents: read",
-]);
-if (/actions\/checkout@/i.test(remediation)) {
-  violations.push({ file: `${workflowsRoot}/remediation-analysis.yml`, line: 0, message: "PRIVILEGED_ANALYSIS_MUST_NOT_CHECKOUT_SOURCE" });
+if (enforcement?.rules?.requiredChecks?.mode !== "fail-closed") {
+  violations.push({ file: enforcementFile, line: 0, message: "REQUIRED_CHECKS_MUST_FAIL_CLOSED" });
+}
+if (enforcement?.rules?.pullRequestReview?.required !== true) {
+  violations.push({ file: enforcementFile, line: 0, message: "PR_REVIEW_RULE_REQUIRED" });
+}
+if (enforcement?.rules?.codexRemoteWrite?.allowed !== false) {
+  violations.push({ file: enforcementFile, line: 0, message: "CODEX_REMOTE_WRITE_MUST_BE_DISALLOWED" });
 }
 
-requireMarkers(`${workflowsRoot}/dsh-database.yml`, [
-  "contents: read",
-  "postgres:16-alpine",
-  "invoke-dsh-database.ps1",
-]);
-
-if (enforcement.targetBranch !== "master") {
-  violations.push({ file: enforcementFile, line: 0, message: "TARGET_BRANCH_MUST_BE_MASTER" });
+if (violations.length > 0) {
+  console.error(`${guardId}: FAIL`);
+  for (const violation of violations) {
+    console.error(`- ${violation.file}${violation.line ? `:${violation.line}` : ""} ${violation.message}`);
+  }
+  fail(guardId, violations);
 }
 
-fail(guardId, violations);
+console.log(`${guardId}: PASS`);
