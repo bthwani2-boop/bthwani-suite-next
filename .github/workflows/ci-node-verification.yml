@@ -54,16 +54,26 @@ jobs:
           restore-keys: |
             nx-typecheck-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
       - name: Verify Node typecheck
+        shell: bash
         env:
           NX_BASE: ${{ inputs.base_sha }}
           NX_HEAD: ${{ inputs.head_sha }}
         run: |
-          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/node-typecheck"
+          set -o pipefail
           if [[ "${{ inputs.full_verification }}" == "true" ]]; then
-            pnpm run nx:typecheck
+            pnpm run nx:typecheck 2>&1 | tee "${RUNNER_TEMP}/node-typecheck/nx-typecheck.log"
           else
-            pnpm run affected:typecheck
+            pnpm run affected:typecheck 2>&1 | tee "${RUNNER_TEMP}/node-typecheck/nx-typecheck.log"
           fi
+      - name: Upload Node typecheck evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: node-typecheck-${{ github.run_id }}
+          path: ${{ runner.temp }}/node-typecheck/*.log
+          if-no-files-found: error
+          retention-days: 7
 
   lint:
     name: Verify Node lint
