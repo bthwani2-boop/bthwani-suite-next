@@ -85,6 +85,8 @@ func HandleHomeDiscovery(db *sql.DB, respCache *cache.Client) http.HandlerFunc {
 			return
 		}
 
+		banners, promos = ensureHomeMarketingContent(banners, promos, stores)
+
 		result := map[string]interface{}{
 			"banners":     banners,
 			"promos":      promos,
@@ -100,6 +102,90 @@ func HandleHomeDiscovery(db *sql.DB, respCache *cache.Client) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result) //nolint:errcheck
 	}
+}
+
+func ensureHomeMarketingContent(banners []HomeBanner, promos []HomePromo, stores []HomeStore) ([]HomeBanner, []HomePromo) {
+	if len(banners) == 0 {
+		banners = deriveLiveStoreBanners(stores)
+	}
+	if len(promos) == 0 {
+		promos = deriveLiveStorePromos(stores)
+	}
+	return banners, promos
+}
+
+func deriveLiveStoreBanners(stores []HomeStore) []HomeBanner {
+	banners := []HomeBanner{}
+	for _, store := range stores {
+		imageURL := homeStoreHeroImageURL(store)
+		if imageURL == "" {
+			continue
+		}
+		banners = append(banners, HomeBanner{
+			ID:           "derived-store-banner-" + store.ID,
+			Title:        store.DisplayName,
+			Subtitle:     homeStoreMarketingSubtitle(store),
+			ImageURL:     imageURL,
+			ActionType:   "store",
+			ActionTarget: store.ID,
+		})
+		if len(banners) >= 3 {
+			break
+		}
+	}
+	return banners
+}
+
+func deriveLiveStorePromos(stores []HomeStore) []HomePromo {
+	promos := []HomePromo{}
+	for _, store := range stores {
+		imageURL := homeStoreHeroImageURL(store)
+		promos = append(promos, HomePromo{
+			ID:           "derived-store-promo-" + store.ID,
+			Title:        "اختيارات قريبة منك",
+			Subtitle:     store.DisplayName,
+			BadgeLabel:   homeStorePromoBadge(store),
+			ImageURL:     imageURL,
+			ActionType:   "store",
+			ActionTarget: store.ID,
+		})
+		break
+	}
+	return promos
+}
+
+func homeStoreHeroImageURL(store HomeStore) string {
+	if store.HeroImageURL == nil {
+		return ""
+	}
+	return strings.TrimSpace(*store.HeroImageURL)
+}
+
+func homeStoreMarketingSubtitle(store HomeStore) string {
+	parts := []string{}
+	if strings.TrimSpace(store.CategoryLabel) != "" {
+		parts = append(parts, strings.TrimSpace(store.CategoryLabel))
+	}
+	if strings.TrimSpace(store.ServiceAreaCode) != "" {
+		parts = append(parts, strings.TrimSpace(store.ServiceAreaCode))
+	}
+	if len(parts) == 0 {
+		return "متجر متاح الآن"
+	}
+	return strings.Join(parts, " • ")
+}
+
+func homeStorePromoBadge(store HomeStore) string {
+	if store.IsFreeDelivery {
+		return "توصيل مجاني"
+	}
+	if store.IsPopular {
+		return "رائج الآن"
+	}
+	if store.HasCouponBadge {
+		return "كوبون"
+	}
+	return "مختار لك"
 }
 
 func sendError(w http.ResponseWriter, status int, code, message string) {
