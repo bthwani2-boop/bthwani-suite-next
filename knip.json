@@ -56,19 +56,105 @@
     "duplicates": "off"
   },
   "workspaces": {
-    "apps/*/runtime": {
+    ".": {
+      "ignoreFiles": [
+        "tools/contracts/**/*.mjs",
+        "tools/guards/**/*.mjs",
+        "tools/mobile/*.d.ts",
+        "tools/performance/**/*.{js,cjs}",
+        "tools/scripts/*.mjs",
+        "tools/verification/**/*.mjs"
+      ],
+      "ignoreDependencies": [
+        "expo-linking"
+      ],
+      "ignoreIssues": {
+        "tools/guards/_guard-utils.mjs": [
+          "exports"
+        ],
+        "tools/scripts/dsh-openapi-modular-lib.mjs": [
+          "exports"
+        ]
+      }
+    },
+    "apps/app-client/runtime": {
       "entry": [
-        "fingerprint.config.js",
-        "src/index.ts"
+        "fingerprint.config.js"
+      ],
+      "ignoreDependencies": [
+        "@bthwani/media-runtime",
+        "@expo/fingerprint",
+        "@tanstack/react-query",
+        "expo-application",
+        "expo-crypto",
+        "expo-device",
+        "expo-image",
+        "expo-image-manipulator",
+        "expo-localization"
+      ]
+    },
+    "apps/app-partner/runtime": {
+      "entry": [
+        "fingerprint.config.js"
+      ],
+      "ignoreDependencies": [
+        "@bthwani/media-runtime",
+        "@expo/fingerprint",
+        "@tanstack/react-query",
+        "expo-application",
+        "expo-crypto",
+        "expo-device",
+        "expo-image",
+        "expo-image-manipulator",
+        "expo-keep-awake",
+        "expo-localization"
+      ]
+    },
+    "apps/app-captain/runtime": {
+      "entry": [
+        "fingerprint.config.js"
+      ],
+      "ignoreDependencies": [
+        "@bthwani/media-runtime",
+        "@expo/fingerprint",
+        "expo-application",
+        "expo-battery",
+        "expo-crypto",
+        "expo-device",
+        "expo-image",
+        "expo-image-manipulator",
+        "expo-keep-awake",
+        "expo-localization"
+      ]
+    },
+    "apps/app-field/runtime": {
+      "entry": [
+        "fingerprint.config.js"
+      ],
+      "ignoreDependencies": [
+        "@bthwani/media-runtime",
+        "@expo/fingerprint",
+        "expo-application",
+        "expo-battery",
+        "expo-crypto",
+        "expo-device",
+        "expo-image",
+        "expo-image-manipulator",
+        "expo-localization"
       ]
     },
     "services/dsh": {
       "entry": [
+        "contracts/contract-registry.ts",
+        "runtime-map.ts",
+        "service.manifest.ts",
         "frontend/app-*/index.{ts,tsx}",
+        "frontend/app-*/**/index.{ts,tsx}",
         "frontend/app-*/**/*Surface.tsx",
         "frontend/app-*/**/*Screen.tsx",
         "frontend/app-*/**/*Panel.tsx",
         "frontend/app-*/**/*Sheet.tsx",
+        "frontend/control-panel/**/index.{ts,tsx}",
         "frontend/control-panel/**/*Screen.tsx",
         "frontend/control-panel/**/*Panel.tsx",
         "frontend/shared/**/index.{ts,tsx}",
@@ -84,29 +170,74 @@
         "frontend/shared/**/*.model.ts",
         "frontend/shared/**/*.api.ts",
         "frontend/shared/**/*.client.ts"
-      ]
+      ],
+      "ignoreFiles": [
+        "frontend/shared/**/generated/**"
+      ],
+      "ignoreDependencies": [
+        "expo-constants",
+        "expo-crypto",
+        "expo-notifications",
+        "expo-secure-store"
+      ],
+      "ignoreIssues": {
+        "frontend/shared/**/generated/**": [
+          "exports",
+          "types"
+        ]
+      }
     },
     "services/wlt": {
       "entry": [
-        "frontend/shared/**/*.ts"
+        "service.manifest.ts",
+        "frontend/shared/**/*.{ts,tsx}",
+        "frontend/app-*/operational-surface.classification.ts",
+        "frontend/control-panel/_skeleton-proof/*.tsx"
+      ]
+    },
+    "shared/data-runtime": {
+      "ignoreDependencies": [
+        "expo-battery"
       ]
     },
     "shared/ui-kit": {
       "entry": [
         "src/**/*.{ts,tsx}"
+      ],
+      "ignoreDependencies": [
+        "react-native"
       ]
     },
     "core/identity": {
-      "entry": ["clients/index.ts", "clients/index.js", "clients/use-identity-session.js"]
+      "entry": [
+        "clients/index.ts",
+        "clients/index.js",
+        "clients/use-identity-session.js"
+      ]
     },
     "core/platform-control": {
-      "entry": ["service.manifest.ts"]
+      "entry": [
+        "service.manifest.ts"
+      ],
+      "ignoreDependencies": [
+        "react"
+      ]
     },
     "core/providers": {
-      "entry": ["service.manifest.ts"]
+      "entry": [
+        "service.manifest.ts"
+      ],
+      "ignoreDependencies": [
+        "react"
+      ]
     },
     "core/workforce": {
-      "entry": ["service.manifest.ts"]
+      "entry": [
+        "service.manifest.ts"
+      ],
+      "ignoreDependencies": [
+        "react"
+      ]
     }
   }
 }
