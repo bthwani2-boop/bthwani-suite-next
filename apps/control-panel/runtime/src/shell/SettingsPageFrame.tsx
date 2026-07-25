@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
+import { useCpFrameTokens } from "./frameTokens";
 
 export type SettingsPageFrameProps = {
   readonly header?: ReactNode;
@@ -16,11 +17,12 @@ export function SettingsPageFrame({
   stateView,
   dir = "rtl",
 }: SettingsPageFrameProps) {
+  const frameTokens = useCpFrameTokens();
   return (
-    <section dir={dir} style={styles.section}>
+    <section dir={dir} style={{ ...styles.section, ...frameTokens.page }}>
       {header != null ? <div style={styles.header}>{header}</div> : null}
       <div style={styles.body}>
-        {nav != null ? <div style={styles.nav}>{nav}</div> : null}
+        {nav != null ? <div style={{ ...styles.nav, ...frameTokens.panelEnd }}>{nav}</div> : null}
         <div style={styles.content}>
           {stateView != null ? stateView : children}
         </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { colorRoles } from "@bthwani/ui-kit";
+import { Card } from "@bthwani/ui-kit";
+import { CpBadge, CpMutedInline, CpPageHeader } from "@bthwani/control-panel/components";
 import { ActorWalletPanel, type RepresentativeActorType } from "../../shared/finance-wlt-link/actor-wallet";
 import { resolveVisualEvidenceRequestPath } from "../../shared/finance-wlt-link/visual-evidence/request-path";
 import { RepresentativeWalletLookup } from "./RepresentativeWalletLookup";
@@ -100,26 +101,25 @@ export function Jrn033VisualEvidenceScreen({ mode }: Props) {
 
   const actors: RepresentativeActorType[] = ["client", "partner", "captain", "field"];
   return (
-    <main dir="rtl" style={{ minHeight: "100vh", background: colorRoles.surfaceWarm, padding: 28, fontFamily: "system-ui", color: colorRoles.textPrimary }}>
-      <header style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: colorRoles.brandAction }}>الدليل المالي المرئي · {mode.toUpperCase()}</div>
-        <h1 style={{ margin: "8px 0", fontSize: 32 }}>محافظ الممثلين والمالية المرجعية</h1>
-        <p style={{ margin: 0, maxWidth: 900, lineHeight: 1.8 }}>
+    <div dir="rtl" style={{ padding: 28, display: "flex", flexDirection: "column", gap: 22 }}>
+      <CpPageHeader title="محافظ الممثلين والمالية المرجعية">
+        <CpBadge tone="brand">الدليل المالي المرئي · {mode.toUpperCase()}</CpBadge>
+        <CpMutedInline tight>
           عرض آلي للمكوّنات الفعلية فقط. بيانات هذه الصفحة مخصصة لإثبات العرض المرئي، بينما الحقيقة التشغيلية تُثبت منفصلًا عبر Identity → DSH → WLT.
-        </p>
-      </header>
+        </CpMutedInline>
+      </CpPageHeader>
       <section style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 18, alignItems: "start" }}>
         {actors.map((actorType) => (
-          <article key={actorType} style={{ border: `1px solid ${colorRoles.borderStrong}`, borderRadius: 18, padding: 14, background: colorRoles.surfaceBase, boxShadow: `0 10px 26px ${colorRoles.brandStructureTint}` }}>
+          <Card key={actorType} style={{ padding: 14 }}>
             <h2 style={{ margin: "0 0 10px", fontSize: 18 }}>{actorLabels[actorType]}</h2>
             <ActorWalletPanel actorType={actorType} title={`محفظة ${actorLabels[actorType]}`} embedded />
-          </article>
+          </Card>
         ))}
       </section>
-      <section style={{ marginTop: 22 }}>
+      <section>
         <RepresentativeWalletLookup />
       </section>
-    </main>
+    </div>
   );
 }
 

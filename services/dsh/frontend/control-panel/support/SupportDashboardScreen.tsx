@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from "react";
 import {
+  CpBadge,
   CpButton,
   CpFilterBar,
   CpKpiCard,
   CpKpiStrip,
+  CpMutedInline,
   CpPageHeader,
   CpSearchInput,
   CpStatePanel,
@@ -13,6 +15,7 @@ import {
   CpTableCell,
   CpTableHeaderCell,
   CpSelectableTableRow,
+  CpTabs,
   CpTextInput,
   CpDetailPanel,
   CpDescriptionList,
@@ -34,7 +37,6 @@ import {
   filterTicketsBySearch,
   type SupportMainTabId,
   type SupportQueueFilterId,
-  type SupportTicketTone,
   type DshSupportTicketEvent,
 } from "../../shared/support";
 import {
@@ -43,78 +45,6 @@ import {
   ComplianceRiskWorkspace,
   MessagesWorkspace,
 } from "./SupportWorkspaces";
-import { lightThemeColors, colorRoles } from "@bthwani/ui-kit";
-
-function StatusBadge({ label, tone }: { label: string; tone: SupportTicketTone }) {
-  const toneColors: Record<SupportTicketTone, { bg: string; color: string }> = {
-    warning: { bg: lightThemeColors.warningSoft, color: lightThemeColors.warning },
-    success: { bg: lightThemeColors.successSoft, color: lightThemeColors.success },
-    danger: { bg: lightThemeColors.dangerSoft, color: lightThemeColors.danger },
-    neutral: { bg: lightThemeColors.surfaceInset, color: lightThemeColors.colorMuted },
-    info: { bg: lightThemeColors.infoSoft, color: lightThemeColors.info },
-  };
-  const selected = toneColors[tone];
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "0.125rem 0.5rem",
-        borderRadius: "999px",
-        fontSize: "0.72rem",
-        fontWeight: 600,
-        background: selected.bg,
-        color: selected.color,
-        whiteSpace: "nowrap",
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
-function MainTabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: "0.625rem 1rem",
-        background: active ? colorRoles.brandAction : "transparent",
-        color: active ? colorRoles.surfaceBase : "currentColor",
-        border: active ? "none" : "1px solid color-mix(in srgb, currentColor 20%, transparent)",
-        borderRadius: "0.5rem",
-        fontWeight: active ? 700 : 500,
-        fontSize: "0.813rem",
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        padding: "0.25rem 0.75rem",
-        background: active ? colorRoles.brandAction : "transparent",
-        color: active ? colorRoles.surfaceBase : "currentColor",
-        border: "1px solid color-mix(in srgb, currentColor 18%, transparent)",
-        borderRadius: "999px",
-        fontSize: "0.775rem",
-        fontWeight: active ? 600 : 400,
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
 
 function formatEvent(event: DshSupportTicketEvent): string {
   const labels: Record<DshSupportTicketEvent["eventType"], string> = {
@@ -190,9 +120,9 @@ export function SupportDashboardScreen() {
       dir="rtl"
       header={
         <CpPageHeader title="دعم DSH">
-          <p style={{ margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" }}>
+          <CpMutedInline tight>
             تذاكر العميل والشريك، المحادثات، الحوادث، وسجل التدقيق من Runtime الفعلي.
-          </p>
+          </CpMutedInline>
           <CpKpiStrip>
             <CpKpiCard label="صفوف مقترحة" value={metrics.suggestedQueues} />
             <CpKpiCard label="نزاعات" value={metrics.disputes} />
@@ -202,22 +132,20 @@ export function SupportDashboardScreen() {
       }
       stateView={isLoading ? <CpStatePanel role="status" title="جاري تحميل دعم DSH…" /> : undefined}
     >
-      <CpFilterBar label="تبويبات الدعم الرئيسية">
-        {SUPPORT_MAIN_TABS.map((tab) => (
-          <MainTabButton key={tab.id} active={mainTab === tab.id} onClick={() => setMainTab(tab.id)}>
-            {tab.label}
-          </MainTabButton>
-        ))}
-      </CpFilterBar>
+      <CpTabs
+        items={SUPPORT_MAIN_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
+        value={mainTab}
+        onChange={(value) => setMainTab(value as SupportMainTabId)}
+        aria-label="تبويبات الدعم الرئيسية"
+      />
 
       {mainTab === "queues" ? (
-        <CpFilterBar label="فلاتر الصفوف">
-          {SUPPORT_QUEUE_FILTERS.map((filter) => (
-            <FilterChip key={filter.id} active={queueFilter === filter.id} onClick={() => setQueueFilter(filter.id)}>
-              {filter.label}
-            </FilterChip>
-          ))}
-        </CpFilterBar>
+        <CpTabs
+          items={SUPPORT_QUEUE_FILTERS.map((filter) => ({ value: filter.id, label: filter.label }))}
+          value={queueFilter}
+          onChange={(value) => setQueueFilter(value as SupportQueueFilterId)}
+          aria-label="فلاتر الصفوف"
+        />
       ) : null}
 
       <CpFilterBar label="بحث وأدوات">
@@ -233,8 +161,8 @@ export function SupportDashboardScreen() {
         </CpButton>
       </CpFilterBar>
 
-      <div dir="rtl" style={{ padding: "0.25rem 1rem", fontSize: "0.75rem", opacity: 0.55 }}>
-        {breadcrumb}
+      <div dir="rtl" style={{ padding: "0.25rem 1rem" }}>
+        <CpMutedInline tight>{breadcrumb}</CpMutedInline>
       </div>
 
       {mainTab === "queues" ? (
@@ -272,8 +200,8 @@ export function SupportDashboardScreen() {
                         <CpTableCell>{ticket.subject}</CpTableCell>
                         <CpTableCell>{raw?.reporterRole ?? "—"}</CpTableCell>
                         <CpTableCell>{ticket.category}</CpTableCell>
-                        <CpTableCell><StatusBadge label={ticket.priorityLabel} tone={ticket.priorityTone} /></CpTableCell>
-                        <CpTableCell><StatusBadge label={ticket.statusLabel} tone={ticket.statusTone} /></CpTableCell>
+                        <CpTableCell><CpBadge tone={ticket.priorityTone}>{ticket.priorityLabel}</CpBadge></CpTableCell>
+                        <CpTableCell><CpBadge tone={ticket.statusTone}>{ticket.statusLabel}</CpBadge></CpTableCell>
                         <CpTableCell>{ticket.storeId || "—"}</CpTableCell>
                       </CpSelectableTableRow>
                     );
@@ -286,7 +214,7 @@ export function SupportDashboardScreen() {
                   <CpDescriptionList>
                     <CpDescriptionRow label="الموضوع">{selectedTicket.subject}</CpDescriptionRow>
                     <CpDescriptionRow label="الجهة">{selectedTicketRaw.reporterRole}</CpDescriptionRow>
-                    <CpDescriptionRow label="الحالة"><StatusBadge label={selectedTicket.statusLabel} tone={selectedTicket.statusTone} /></CpDescriptionRow>
+                    <CpDescriptionRow label="الحالة"><CpBadge tone={selectedTicket.statusTone}>{selectedTicket.statusLabel}</CpBadge></CpDescriptionRow>
                     <CpDescriptionRow label="الطلب">{selectedTicketRaw.orderId || "—"}</CpDescriptionRow>
                     <CpDescriptionRow label="المُسند إليه">{selectedTicket.assignedTo || "غير مسند"}</CpDescriptionRow>
                   </CpDescriptionList>
@@ -364,7 +292,7 @@ export function SupportDashboardScreen() {
                   {filteredIncidents.map((incident) => (
                     <CpSelectableTableRow key={incident.id} selected={selectedIncidentId === incident.id} onClick={() => setSelectedIncidentId(incident.id)}>
                       <CpTableCell>{incident.title}</CpTableCell>
-                      <CpTableCell><StatusBadge label={incident.severityLabel} tone={incident.severityTone} /></CpTableCell>
+                      <CpTableCell><CpBadge tone={incident.severityTone}>{incident.severityLabel}</CpBadge></CpTableCell>
                       <CpTableCell>{incident.statusLabel}</CpTableCell>
                       <CpTableCell>{incident.affectedScopeLabel}</CpTableCell>
                     </CpSelectableTableRow>

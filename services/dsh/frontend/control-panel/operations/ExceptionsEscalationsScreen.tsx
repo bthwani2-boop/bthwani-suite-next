@@ -2,7 +2,18 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { Badge, Box, Button, Card, StateView, Text, TextField } from '@bthwani/ui-kit';
+import { Card, Text } from '@bthwani/ui-kit';
+import {
+  CpBadge,
+  CpButton,
+  CpDetailPanel,
+  CpMutedInline,
+  CpPageHeader,
+  CpRetryButton,
+  CpSelect,
+  CpStatePanel,
+} from '@bthwani/control-panel/components';
+import { OperationsRoomFrame } from '@bthwani/control-panel/shell';
 import {
   ESCALATION_CATEGORY_LABELS,
   ESCALATION_SEVERITY_LABELS,
@@ -108,6 +119,8 @@ function canReturnToStore(item: DshDeliveryException): boolean {
   return item.deliveryStatusAtReport === 'picked_up'
     || item.deliveryStatusAtReport === 'arrived_customer';
 }
+
+const PAGE_TITLE = 'الاستثناءات والتصعيدات';
 
 export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsScreenProps) {
   const router = useRouter();
@@ -278,17 +291,27 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
   }, [load, note]);
 
   if (state.kind === 'loading') {
-    return <StateView loading title="جارٍ تحميل الاستثناءات الحية من DSH" />;
+    return (
+      <OperationsRoomFrame
+        header={<CpPageHeader title={PAGE_TITLE} />}
+        stateView={<CpStatePanel role="status" title="جارٍ تحميل الاستثناءات الحية من DSH" />}
+      >
+        {null}
+      </OperationsRoomFrame>
+    );
   }
   if (state.kind === 'error') {
     return (
-      <StateView
-        tone="danger"
-        title="تعذر تحميل مساحة الاستثناءات"
-        description={state.message}
-        actionLabel="إعادة المحاولة"
-        onActionPress={load}
-      />
+      <OperationsRoomFrame
+        header={<CpPageHeader title={PAGE_TITLE} />}
+        stateView={(
+          <CpStatePanel role="alert" title="تعذر تحميل مساحة الاستثناءات" description={state.message}>
+            <CpRetryButton onClick={load}>إعادة المحاولة</CpRetryButton>
+          </CpStatePanel>
+        )}
+      >
+        {null}
+      </OperationsRoomFrame>
     );
   }
 
@@ -299,385 +322,381 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
     ? captains.filter((captain) => captain.actorId !== selectedDelivery.captainId)
     : [];
   const activeHandoffExceptions = state.delivery.filter(isHandoffException);
+  const replacementCaptainOptions = [
+    { value: '', label: 'اختر كابتنًا بديلًا' },
+    ...replacementCaptains.map((captain) => ({
+      value: captain.actorId,
+      label: `${captain.fullNameAr} · ${captain.captainProfile?.vehicleType ?? ''} · ${captain.captainProfile?.serviceZoneId ?? ''}`,
+    })),
+  ];
 
-  return (
-    <Box gap={4}>
-      <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-        <Box gap={1}>
-          <Text role="titleMd" align="start">الاستثناءات والتصعيدات</Text>
-          <Text role="caption" tone="muted" align="start">
-            طابور حقيقي من DSH. استثناءات العهدة توقف تأكيد المتجر والتقاط الكابتن حتى قرار العمليات.
-          </Text>
-        </Box>
-        <Box gap={2} style={{ flexDirection: 'row' }}>
-          <Button label="تحديث" tone="secondary" onPress={() => { void load(); void loadCaptains(); }} />
-          <Button label="العودة لمركز العمليات" tone="ghost" onPress={() => router.push(hubHref)} />
-        </Box>
-      </Box>
-
-      {captainsState === 'error' ? (
-        <StateView
-          tone="warning"
-          title="تعذر تحميل الكباتن البدلاء"
-          description={captainsError}
-          actionLabel="إعادة المحاولة"
-          onActionPress={loadCaptains}
-        />
-      ) : null}
-
-      <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-        <Badge label={`استثناءات نشطة: ${state.delivery.length}`} tone={state.delivery.length ? 'warning' : 'success'} />
-        <Badge label={`استثناءات عهدة: ${activeHandoffExceptions.length}`} tone={activeHandoffExceptions.length ? 'danger' : 'success'} />
-        <Badge label={`كباتن مؤهلون: ${captainsState === 'ready' ? captains.length : '—'}`} tone={captains.length ? 'success' : 'warning'} />
-        <Badge label={`مرتجعات في الطريق: ${state.returns.filter((item) => !item.returnArrivedAt).length}`} tone="warning" />
-        <Badge label={`بانتظار المتجر: ${state.returns.filter((item) => Boolean(item.returnArrivedAt) && !item.returnedAt).length}`} tone="warning" />
-        <Badge label={`تصعيدات جاهزية: ${state.readiness.filter((item) => item.status !== 'resolved').length}`} tone="neutral" />
-      </Box>
-
-      <Box gap={4} style={{ flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <Box gap={3} style={{ flex: 1, minWidth: 340 }}>
-          <Text role="titleSm" align="start">استثناءات التوصيل والعهدة</Text>
-          {state.delivery.length === 0 ? (
-            <StateView tone="success" title="لا توجد استثناءات نشطة" />
-          ) : state.delivery.map((item) => (
-            <Card key={item.id} padding={4} gap={2}>
-              <Box gap={2} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box gap={1} style={{ flex: 1 }}>
-                  <Text role="bodyStrong" align="start">{DELIVERY_EXCEPTION_REASON_LABELS[item.reasonCode]}</Text>
-                  <Text role="caption" tone="muted" align="start">
-                    الطلب: {item.orderId} · الكابتن: {item.captainId}
-                  </Text>
-                  <Text role="caption" tone="muted" align="start">
-                    المرحلة المحفوظة: {item.deliveryStatusAtReport}
-                  </Text>
-                  {item.note ? <Text role="bodySm" align="start">{item.note}</Text> : null}
-                </Box>
-                <Box gap={1} style={{ alignItems: 'flex-end' }}>
-                  {isHandoffException(item) ? <Badge label="عهدة متجر–كابتن" tone="danger" /> : null}
-                  <Badge label={item.severity} tone={exceptionTone(item.severity)} />
-                  <Badge
-                    label={item.status === 'open' ? 'جديد' : 'قيد المراجعة'}
-                    tone={item.status === 'open' ? 'danger' : 'warning'}
-                  />
-                </Box>
-              </Box>
-              <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                <Button
-                  label="فتح القرار"
-                  tone="secondary"
-                  size="sm"
-                  onPress={() => {
-                    setSelectedReadinessId(null);
-                    setSelectedReturnId(null);
-                    setSelectedDeliveryId(item.id);
-                  }}
-                />
-                <Button
-                  label="فتح الطلب الحي"
-                  tone="ghost"
-                  size="sm"
-                  onPress={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))}
-                />
-              </Box>
-            </Card>
-          ))}
-        </Box>
-
-        <Box gap={3} style={{ flex: 1, minWidth: 340 }}>
-          <Text role="titleSm" align="start">تصعيدات الجاهزية</Text>
-          {state.readiness.length === 0 ? (
-            <StateView tone="neutral" title="لا توجد تصعيدات جاهزية" />
-          ) : state.readiness.map((item) => (
-            <Card key={item.id} padding={4} gap={2}>
-              <Text role="bodyStrong" align="start">{ESCALATION_CATEGORY_LABELS[item.category] ?? item.category}</Text>
-              <Text role="caption" tone="muted" align="start">{item.description}</Text>
-              <Badge
-                label={ESCALATION_SEVERITY_LABELS[item.severity] ?? item.severity}
-                tone={item.severity === 'critical' || item.severity === 'high' ? 'danger' : 'neutral'}
-              />
-              {item.status !== 'resolved' ? (
-                <Button
-                  label="فتح التصعيد"
-                  tone="secondary"
-                  size="sm"
-                  onPress={() => {
-                    setSelectedDeliveryId(null);
-                    setSelectedReturnId(null);
-                    setSelectedReadinessId(item.id);
-                  }}
-                />
-              ) : null}
-            </Card>
-          ))}
-        </Box>
-      </Box>
-
-      <Box gap={3}>
-        <Text role="titleSm" align="start">رحلات الإرجاع إلى المتجر</Text>
-        {state.returns.length === 0 ? (
-          <StateView tone="neutral" title="لا توجد رحلات إرجاع" />
-        ) : state.returns.map((item) => {
-          const cancellation = returnCancellations[item.orderId];
-          return (
-            <Card key={`return-${item.id}`} padding={4} gap={2}>
-              <Text role="bodyStrong" align="start">الطلب: {item.orderId}</Text>
-              <Text role="caption" tone="muted" align="start">الكابتن: {item.captainId}</Text>
-              <Badge
-                label={item.returnedAt
-                  ? 'استلم المتجر المرتجع'
-                  : item.returnArrivedAt
-                    ? 'وصل المرتجع وينتظر تأكيد المتجر'
-                    : 'في طريق العودة إلى المتجر'}
-                tone={item.returnedAt ? 'success' : 'warning'}
-              />
-              <Text role="bodySm" align="start">{item.resolutionNote}</Text>
-              {cancellation ? (
-                <>
-                  <Badge
-                    label={FINANCIAL_CLOSURE_LABELS[cancellation.financialClosureStatus]}
-                    tone={financialTone(cancellation.financialClosureStatus)}
-                  />
-                  {cancellation.financialReference ? (
-                    <Text role="caption" align="start">المرجع المالي: {cancellation.financialReference}</Text>
-                  ) : null}
-                  {cancellation.financialFailure ? (
-                    <Text role="caption" tone="danger" align="start">{cancellation.financialFailure}</Text>
-                  ) : null}
-                </>
-              ) : item.returnedAt ? <Badge label="بانتظار قرار الإلغاء المالي" tone="warning" /> : null}
-              <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {item.returnedAt ? (
-                  <Button
-                    label={cancellation ? 'فتح الإغلاق المالي' : 'بدء الإغلاق المالي'}
-                    tone="secondary"
-                    size="sm"
-                    onPress={() => {
-                      setSelectedDeliveryId(null);
-                      setSelectedReadinessId(null);
-                      setSelectedReturnId(item.id);
-                    }}
-                  />
-                ) : null}
-                <Button
-                  label="فتح الطلب الحي"
-                  tone="ghost"
-                  size="sm"
-                  onPress={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))}
-                />
-              </Box>
-            </Card>
-          );
-        })}
-      </Box>
-
-      {selectedDelivery ? (
-        <Card padding={4} gap={3}>
-          <Text role="titleSm" align="start">
-            {isHandoffException(selectedDelivery) ? 'قرار استثناء عهدة المتجر والكابتن' : 'قرار استثناء التوصيل'}
-          </Text>
-          <Text role="bodySm" align="start">
-            {isHandoffException(selectedDelivery)
-              ? 'إعادة المحاولة ترفع حظر العهدة بعد التحقق. إعادة الإسناد تبطل محاولة العهدة الحالية فورًا وتفتح محاولة جديدة للكابتن البديل عند وصوله.'
-              : 'إعادة المحاولة ترفع الحظر فقط. إعادة الإسناد متاحة قبل الاستلام وتلغي الإسناد القديم ذريًا.'}
-          </Text>
-          <TextField
-            label="قرار العمليات"
+  const detailPanel = selectedDelivery ? (
+    <CpDetailPanel
+      title={isHandoffException(selectedDelivery) ? 'قرار استثناء عهدة المتجر والكابتن' : 'قرار استثناء التوصيل'}
+      onClose={() => setSelectedDeliveryId(null)}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Text role="bodySm" align="start">
+          {isHandoffException(selectedDelivery)
+            ? 'إعادة المحاولة ترفع حظر العهدة بعد التحقق. إعادة الإسناد تبطل محاولة العهدة الحالية فورًا وتفتح محاولة جديدة للكابتن البديل عند وصوله.'
+            : 'إعادة المحاولة ترفع الحظر فقط. إعادة الإسناد متاحة قبل الاستلام وتلغي الإسناد القديم ذريًا.'}
+        </Text>
+        <div>
+          <Text role="label">قرار العمليات</Text>
+          <textarea
             value={note}
-            onChangeText={setNote}
+            onChange={(event) => setNote(event.target.value)}
             placeholder="سجل سبب القرار وخطوات التحقق"
-            multiline
+            rows={4}
+            dir="rtl"
           />
-          {canReassign(selectedDelivery) ? (
-            <>
-              <label htmlFor="replacement-captain-select" style={{ fontWeight: 700 }}>الكابتن البديل المؤهل</label>
-              <select
-                id="replacement-captain-select"
-                value={selectedReplacementCaptainId}
-                onChange={(event) => setSelectedReplacementCaptainId(event.target.value)}
-                disabled={captainsState !== 'ready' || actionState.kind === 'submitting'}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid var(--bthwani-control-panel-border)',
-                  borderRadius: 8,
-                  background: 'var(--bthwani-control-panel-surface-base)',
-                }}
-              >
-                <option value="">اختر كابتنًا بديلًا</option>
-                {replacementCaptains.map((captain) => (
-                  <option key={captain.actorId} value={captain.actorId}>
-                    {`${captain.fullNameAr} · ${captain.captainProfile?.vehicleType ?? ''} · ${captain.captainProfile?.serviceZoneId ?? ''}`}
-                  </option>
-                ))}
-              </select>
-            </>
-          ) : (
-            <Text role="caption" tone="muted">
-              بعد الاستلام لا يُسمح بإعادة الإسناد؛ استخدم رحلة الإرجاع أو الإلغاء الحاكمة.
-            </Text>
-          )}
-          {actionState.kind === 'error' && actionState.id === selectedDelivery.id ? (
-            <Text role="caption" tone="danger">{actionState.message}</Text>
-          ) : null}
-          <Box gap={2} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {selectedDelivery.status === 'open' ? (
-              <Button
-                label="اعتماد وبدء المراجعة"
-                tone="secondary"
-                disabled={actionState.kind === 'submitting'}
-                onPress={() => void acknowledge(selectedDelivery)}
-              />
-            ) : null}
-            <Button
-              label={isHandoffException(selectedDelivery)
-                ? 'حل: السماح باستكمال العهدة مع الكابتن نفسه'
-                : 'حل: إعادة المحاولة مع الكابتن نفسه'}
-              tone="primary"
+        </div>
+        {canReassign(selectedDelivery) ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <Text role="label">الكابتن البديل المؤهل</Text>
+            <CpSelect
+              value={selectedReplacementCaptainId}
+              onChange={setSelectedReplacementCaptainId}
+              options={replacementCaptainOptions}
+              aria-label="الكابتن البديل المؤهل"
+            />
+          </div>
+        ) : (
+          <Text role="caption" tone="muted">
+            بعد الاستلام لا يُسمح بإعادة الإسناد؛ استخدم رحلة الإرجاع أو الإلغاء الحاكمة.
+          </Text>
+        )}
+        {actionState.kind === 'error' && actionState.id === selectedDelivery.id ? (
+          <Text role="caption" tone="danger">{actionState.message}</Text>
+        ) : null}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {selectedDelivery.status === 'open' ? (
+            <CpButton
+              variant="secondary"
               disabled={actionState.kind === 'submitting'}
-              onPress={() => void runDeliveryAction(
+              onClick={() => void acknowledge(selectedDelivery)}
+            >
+              اعتماد وبدء المراجعة
+            </CpButton>
+          ) : null}
+          <CpButton
+            variant="primary"
+            disabled={actionState.kind === 'submitting'}
+            onClick={() => void runDeliveryAction(
+              selectedDelivery,
+              () => resolveDeliveryExceptionRetrySameCaptain(
+                selectedDelivery.id,
+                selectedDelivery.version,
+                note.trim(),
+              ),
+              'تعذر حل الاستثناء.',
+            )}
+          >
+            {isHandoffException(selectedDelivery)
+              ? 'حل: السماح باستكمال العهدة مع الكابتن نفسه'
+              : 'حل: إعادة المحاولة مع الكابتن نفسه'}
+          </CpButton>
+          {canReassign(selectedDelivery) ? (
+            <CpButton
+              variant="secondary"
+              disabled={!selectedReplacementCaptainId || actionState.kind === 'submitting'}
+              onClick={() => void runDeliveryAction(
                 selectedDelivery,
-                () => resolveDeliveryExceptionRetrySameCaptain(
+                () => resolveDeliveryExceptionReassignCaptain(
+                  selectedDelivery.id,
+                  selectedDelivery.version,
+                  selectedReplacementCaptainId,
+                  note.trim(),
+                ),
+                'تعذر إعادة إسناد المهمة.',
+              )}
+            >
+              حل: إعادة الإسناد للكابتن البديل
+            </CpButton>
+          ) : null}
+          {canReassign(selectedDelivery) ? (
+            <CpButton
+              variant="danger"
+              disabled={actionState.kind === 'submitting'}
+              onClick={() => void runDeliveryAction(
+                selectedDelivery,
+                () => resolveDeliveryExceptionCancelOrder(
                   selectedDelivery.id,
                   selectedDelivery.version,
                   note.trim(),
                 ),
-                'تعذر حل الاستثناء.',
+                'تعذر إلغاء الطلب مباشرة.',
               )}
-            />
-            {canReassign(selectedDelivery) ? (
-              <Button
-                label="حل: إعادة الإسناد للكابتن البديل"
-                tone="secondary"
-                disabled={!selectedReplacementCaptainId || actionState.kind === 'submitting'}
-                onPress={() => void runDeliveryAction(
-                  selectedDelivery,
-                  () => resolveDeliveryExceptionReassignCaptain(
-                    selectedDelivery.id,
-                    selectedDelivery.version,
-                    selectedReplacementCaptainId,
-                    note.trim(),
-                  ),
-                  'تعذر إعادة إسناد المهمة.',
-                )}
-              />
-            ) : null}
-            {canReassign(selectedDelivery) ? (
-              <Button
-                label="حل: إلغاء الطلب قبل الاستلام"
-                tone="danger"
-                disabled={actionState.kind === 'submitting'}
-                onPress={() => void runDeliveryAction(
-                  selectedDelivery,
-                  () => resolveDeliveryExceptionCancelOrder(
-                    selectedDelivery.id,
-                    selectedDelivery.version,
-                    note.trim(),
-                  ),
-                  'تعذر إلغاء الطلب مباشرة.',
-                )}
-              />
-            ) : null}
-            {canReturnToStore(selectedDelivery) ? (
-              <Button
-                label="حل: إرجاع الطلب إلى المتجر"
-                tone="secondary"
-                disabled={actionState.kind === 'submitting'}
-                onPress={() => void runDeliveryAction(
-                  selectedDelivery,
-                  () => resolveDeliveryExceptionReturnToStore(
-                    selectedDelivery.id,
-                    selectedDelivery.version,
-                    note.trim(),
-                  ),
-                  'تعذر بدء إرجاع الطلب.',
-                )}
-              />
-            ) : null}
-            <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedDeliveryId(null)} />
-          </Box>
-        </Card>
-      ) : null}
-
-      {selectedReturn ? (
-        <Card padding={4} gap={3}>
-          <Text role="titleSm" align="start">إغلاق المرتجع ماليًا</Text>
-          <Text role="bodySm" align="start">الطلب: {selectedReturn.orderId}</Text>
-          {returnCancellations[selectedReturn.orderId] ? (
-            <>
-              <Badge
-                label={FINANCIAL_CLOSURE_LABELS[returnCancellations[selectedReturn.orderId]!.financialClosureStatus]}
-                tone={financialTone(returnCancellations[selectedReturn.orderId]!.financialClosureStatus)}
-              />
-              {returnCancellations[selectedReturn.orderId]!.financialReference ? (
-                <Text role="caption">
-                  المرجع المالي: {returnCancellations[selectedReturn.orderId]!.financialReference}
-                </Text>
-              ) : null}
-              {returnCancellations[selectedReturn.orderId]!.financialFailure ? (
-                <Text role="caption" tone="danger">
-                  {returnCancellations[selectedReturn.orderId]!.financialFailure}
-                </Text>
-              ) : null}
-              <Button label="تحديث نتيجة WLT" tone="secondary" onPress={() => void load()} />
-            </>
-          ) : (
-            <>
-              <Text role="bodySm" tone="muted">
-                لن ينشئ DSH استردادًا مباشرًا. ينشئ أمر الإلغاء سجلًا وOutbox واحدًا، ثم يقرر WLT تحرير الجلسة أو طلب الاسترداد.
-              </Text>
-              <TextField
-                label="سبب الإلغاء بعد فحص المرتجع"
-                value={note}
-                onChangeText={setNote}
-                placeholder="سجل حالة المرتجع وسبب عدم إعادة التنفيذ"
-                multiline
-              />
-              {actionState.kind === 'error' && actionState.id === selectedReturn.id ? (
-                <Text role="caption" tone="danger">{actionState.message}</Text>
-              ) : null}
-              <Button
-                label="إلغاء الطلب وبدء الإغلاق المالي"
-                tone="danger"
-                disabled={actionState.kind === 'submitting' || note.trim().length < 5}
-                onPress={() => void cancelReturnedOrder(selectedReturn)}
-              />
-            </>
-          )}
-          <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedReturnId(null)} />
-        </Card>
-      ) : null}
-
-      {selectedReadiness ? (
-        <Card padding={4} gap={3}>
-          <Text role="titleSm" align="start">إجراء على تصعيد الجاهزية {selectedReadiness.id}</Text>
-          <TextField
-            label="ملاحظات المراجعة أو الحل"
-            value={note}
-            onChangeText={setNote}
-            placeholder="اكتب نتيجة تشغيلية قابلة للتدقيق"
-            multiline
-          />
-          {actionState.kind === 'error' && actionState.id === selectedReadiness.id ? (
-            <Text role="caption" tone="danger">{actionState.message}</Text>
+            >
+              حل: إلغاء الطلب قبل الاستلام
+            </CpButton>
           ) : null}
-          <Box gap={2} style={{ flexDirection: 'row' }}>
-            {selectedReadiness.status === 'open' ? (
-              <Button
-                label="تأكيد الاستلام"
-                tone="secondary"
-                onPress={() => void resolveReadiness(selectedReadiness, 'acknowledged')}
-              />
+          {canReturnToStore(selectedDelivery) ? (
+            <CpButton
+              variant="secondary"
+              disabled={actionState.kind === 'submitting'}
+              onClick={() => void runDeliveryAction(
+                selectedDelivery,
+                () => resolveDeliveryExceptionReturnToStore(
+                  selectedDelivery.id,
+                  selectedDelivery.version,
+                  note.trim(),
+                ),
+                'تعذر بدء إرجاع الطلب.',
+              )}
+            >
+              حل: إرجاع الطلب إلى المتجر
+            </CpButton>
+          ) : null}
+        </div>
+      </div>
+    </CpDetailPanel>
+  ) : selectedReturn ? (
+    <CpDetailPanel title="إغلاق المرتجع ماليًا" onClose={() => setSelectedReturnId(null)}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Text role="bodySm" align="start">الطلب: {selectedReturn.orderId}</Text>
+        {returnCancellations[selectedReturn.orderId] ? (
+          <>
+            <CpBadge tone={financialTone(returnCancellations[selectedReturn.orderId]!.financialClosureStatus)}>
+              {FINANCIAL_CLOSURE_LABELS[returnCancellations[selectedReturn.orderId]!.financialClosureStatus]}
+            </CpBadge>
+            {returnCancellations[selectedReturn.orderId]!.financialReference ? (
+              <Text role="caption">
+                المرجع المالي: {returnCancellations[selectedReturn.orderId]!.financialReference}
+              </Text>
             ) : null}
-            <Button
-              label="حل وإغلاق"
-              tone="primary"
-              onPress={() => void resolveReadiness(selectedReadiness, 'resolved')}
-            />
-            <Button label="إغلاق التفاصيل" tone="ghost" onPress={() => setSelectedReadinessId(null)} />
-          </Box>
-        </Card>
-      ) : null}
-    </Box>
+            {returnCancellations[selectedReturn.orderId]!.financialFailure ? (
+              <Text role="caption" tone="danger">
+                {returnCancellations[selectedReturn.orderId]!.financialFailure}
+              </Text>
+            ) : null}
+            <CpButton variant="secondary" onClick={() => void load()}>تحديث نتيجة WLT</CpButton>
+          </>
+        ) : (
+          <>
+            <Text role="bodySm" tone="muted">
+              لن ينشئ DSH استردادًا مباشرًا. ينشئ أمر الإلغاء سجلًا وOutbox واحدًا، ثم يقرر WLT تحرير الجلسة أو طلب الاسترداد.
+            </Text>
+            <div>
+              <Text role="label">سبب الإلغاء بعد فحص المرتجع</Text>
+              <textarea
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="سجل حالة المرتجع وسبب عدم إعادة التنفيذ"
+                rows={4}
+                dir="rtl"
+              />
+            </div>
+            {actionState.kind === 'error' && actionState.id === selectedReturn.id ? (
+              <Text role="caption" tone="danger">{actionState.message}</Text>
+            ) : null}
+            <CpButton
+              variant="danger"
+              disabled={actionState.kind === 'submitting' || note.trim().length < 5}
+              onClick={() => void cancelReturnedOrder(selectedReturn)}
+            >
+              إلغاء الطلب وبدء الإغلاق المالي
+            </CpButton>
+          </>
+        )}
+      </div>
+    </CpDetailPanel>
+  ) : selectedReadiness ? (
+    <CpDetailPanel title={`إجراء على تصعيد الجاهزية ${selectedReadiness.id}`} onClose={() => setSelectedReadinessId(null)}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <Text role="label">ملاحظات المراجعة أو الحل</Text>
+          <textarea
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="اكتب نتيجة تشغيلية قابلة للتدقيق"
+            rows={4}
+            dir="rtl"
+          />
+        </div>
+        {actionState.kind === 'error' && actionState.id === selectedReadiness.id ? (
+          <Text role="caption" tone="danger">{actionState.message}</Text>
+        ) : null}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {selectedReadiness.status === 'open' ? (
+            <CpButton variant="secondary" onClick={() => void resolveReadiness(selectedReadiness, 'acknowledged')}>
+              تأكيد الاستلام
+            </CpButton>
+          ) : null}
+          <CpButton variant="primary" onClick={() => void resolveReadiness(selectedReadiness, 'resolved')}>
+            حل وإغلاق
+          </CpButton>
+        </div>
+      </div>
+    </CpDetailPanel>
+  ) : (
+    <CpStatePanel role="status" title="لا يوجد عنصر محدد" description="اختر استثناءً أو تصعيدًا أو رحلة إرجاع لعرض قرار العمليات." />
+  );
+
+  return (
+    <OperationsRoomFrame
+      header={(
+        <CpPageHeader title={PAGE_TITLE}>
+          <CpMutedInline tight>
+            طابور حقيقي من DSH. استثناءات العهدة توقف تأكيد المتجر والتقاط الكابتن حتى قرار العمليات.
+          </CpMutedInline>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+            <CpButton variant="secondary" onClick={() => { void load(); void loadCaptains(); }}>تحديث</CpButton>
+            <CpButton variant="ghost" onClick={() => router.push(hubHref)}>العودة لمركز العمليات</CpButton>
+          </div>
+          {captainsState === 'error' ? (
+            <div style={{ marginTop: 8 }}>
+              <CpStatePanel role="alert" title="تعذر تحميل الكباتن البدلاء" description={captainsError}>
+                <CpRetryButton onClick={loadCaptains}>إعادة المحاولة</CpRetryButton>
+              </CpStatePanel>
+            </div>
+          ) : null}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+            <CpBadge tone={state.delivery.length ? 'warning' : 'success'}>استثناءات نشطة: {state.delivery.length}</CpBadge>
+            <CpBadge tone={activeHandoffExceptions.length ? 'danger' : 'success'}>استثناءات عهدة: {activeHandoffExceptions.length}</CpBadge>
+            <CpBadge tone={captains.length ? 'success' : 'warning'}>كباتن مؤهلون: {captainsState === 'ready' ? captains.length : '—'}</CpBadge>
+            <CpBadge tone="warning">مرتجعات في الطريق: {state.returns.filter((item) => !item.returnArrivedAt).length}</CpBadge>
+            <CpBadge tone="warning">بانتظار المتجر: {state.returns.filter((item) => Boolean(item.returnArrivedAt) && !item.returnedAt).length}</CpBadge>
+            <CpBadge tone="neutral">تصعيدات جاهزية: {state.readiness.filter((item) => item.status !== 'resolved').length}</CpBadge>
+          </div>
+        </CpPageHeader>
+      )}
+      sidePanel={detailPanel}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, padding: 16 }}>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 340 }}>
+            <Text role="titleSm" align="start">استثناءات التوصيل والعهدة</Text>
+            {state.delivery.length === 0 ? (
+              <CpStatePanel role="status" title="لا توجد استثناءات نشطة" />
+            ) : state.delivery.map((item) => (
+              <Card key={item.id} padding={4} gap={2}>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+                    <Text role="bodyStrong" align="start">{DELIVERY_EXCEPTION_REASON_LABELS[item.reasonCode]}</Text>
+                    <Text role="caption" tone="muted" align="start">
+                      الطلب: {item.orderId} · الكابتن: {item.captainId}
+                    </Text>
+                    <Text role="caption" tone="muted" align="start">
+                      المرحلة المحفوظة: {item.deliveryStatusAtReport}
+                    </Text>
+                    {item.note ? <Text role="bodySm" align="start">{item.note}</Text> : null}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                    {isHandoffException(item) ? <CpBadge tone="danger">عهدة متجر–كابتن</CpBadge> : null}
+                    <CpBadge tone={exceptionTone(item.severity)}>{item.severity}</CpBadge>
+                    <CpBadge tone={item.status === 'open' ? 'danger' : 'warning'}>
+                      {item.status === 'open' ? 'جديد' : 'قيد المراجعة'}
+                    </CpBadge>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <CpButton
+                    variant="secondary"
+                    onClick={() => {
+                      setSelectedReadinessId(null);
+                      setSelectedReturnId(null);
+                      setSelectedDeliveryId(item.id);
+                    }}
+                  >
+                    فتح القرار
+                  </CpButton>
+                  <CpButton
+                    variant="ghost"
+                    onClick={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))}
+                  >
+                    فتح الطلب الحي
+                  </CpButton>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1, minWidth: 340 }}>
+            <Text role="titleSm" align="start">تصعيدات الجاهزية</Text>
+            {state.readiness.length === 0 ? (
+              <CpStatePanel role="status" title="لا توجد تصعيدات جاهزية" />
+            ) : state.readiness.map((item) => (
+              <Card key={item.id} padding={4} gap={2}>
+                <Text role="bodyStrong" align="start">{ESCALATION_CATEGORY_LABELS[item.category] ?? item.category}</Text>
+                <Text role="caption" tone="muted" align="start">{item.description}</Text>
+                <CpBadge tone={item.severity === 'critical' || item.severity === 'high' ? 'danger' : 'neutral'}>
+                  {ESCALATION_SEVERITY_LABELS[item.severity] ?? item.severity}
+                </CpBadge>
+                {item.status !== 'resolved' ? (
+                  <CpButton
+                    variant="secondary"
+                    onClick={() => {
+                      setSelectedDeliveryId(null);
+                      setSelectedReturnId(null);
+                      setSelectedReadinessId(item.id);
+                    }}
+                  >
+                    فتح التصعيد
+                  </CpButton>
+                ) : null}
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Text role="titleSm" align="start">رحلات الإرجاع إلى المتجر</Text>
+          {state.returns.length === 0 ? (
+            <CpStatePanel role="status" title="لا توجد رحلات إرجاع" />
+          ) : state.returns.map((item) => {
+            const cancellation = returnCancellations[item.orderId];
+            return (
+              <Card key={`return-${item.id}`} padding={4} gap={2}>
+                <Text role="bodyStrong" align="start">الطلب: {item.orderId}</Text>
+                <Text role="caption" tone="muted" align="start">الكابتن: {item.captainId}</Text>
+                <CpBadge tone={item.returnedAt ? 'success' : 'warning'}>
+                  {item.returnedAt
+                    ? 'استلم المتجر المرتجع'
+                    : item.returnArrivedAt
+                      ? 'وصل المرتجع وينتظر تأكيد المتجر'
+                      : 'في طريق العودة إلى المتجر'}
+                </CpBadge>
+                <Text role="bodySm" align="start">{item.resolutionNote}</Text>
+                {cancellation ? (
+                  <>
+                    <CpBadge tone={financialTone(cancellation.financialClosureStatus)}>
+                      {FINANCIAL_CLOSURE_LABELS[cancellation.financialClosureStatus]}
+                    </CpBadge>
+                    {cancellation.financialReference ? (
+                      <Text role="caption" align="start">المرجع المالي: {cancellation.financialReference}</Text>
+                    ) : null}
+                    {cancellation.financialFailure ? (
+                      <Text role="caption" tone="danger" align="start">{cancellation.financialFailure}</Text>
+                    ) : null}
+                  </>
+                ) : item.returnedAt ? <CpBadge tone="warning">بانتظار قرار الإلغاء المالي</CpBadge> : null}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {item.returnedAt ? (
+                    <CpButton
+                      variant="secondary"
+                      onClick={() => {
+                        setSelectedDeliveryId(null);
+                        setSelectedReadinessId(null);
+                        setSelectedReturnId(item.id);
+                      }}
+                    >
+                      {cancellation ? 'فتح الإغلاق المالي' : 'بدء الإغلاق المالي'}
+                    </CpButton>
+                  ) : null}
+                  <CpButton
+                    variant="ghost"
+                    onClick={() => router.push(buildOperationsHref('live-orders', { subGroup: 'queue', orderId: item.orderId }))}
+                  >
+                    فتح الطلب الحي
+                  </CpButton>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+    </OperationsRoomFrame>
   );
 }
 

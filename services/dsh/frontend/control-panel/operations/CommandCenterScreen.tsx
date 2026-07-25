@@ -7,7 +7,8 @@ import {
   WebControlPanelRecommendation,
   WebControlPanelDecisionRow,
 } from '@bthwani/ui-kit/web';
-import { DSH_NAV_ITEMS } from '@bthwani/control-panel/shell';
+import { DSH_NAV_ITEMS, OverviewPageFrame } from '@bthwani/control-panel/shell';
+import { CpMutedInline, CpPageHeader } from '@bthwani/control-panel/components';
 import { getDshControlPanelGovernanceEntry } from '../../shared/orders/orders.contract';
 import { buildOperationsHref, NON_OPERATIONS_SECTION_SHORTCUTS } from '../../shared/operations';
 import { useZonesController } from '../../shared/platform/use-platform-policies-controller';
@@ -221,58 +222,62 @@ export function CommandCenterScreen({ subGroup = 'overview' }: CommandCenterScre
   }
 
   return (
-    <Box gap={3}>
-      <div className={styles.surfaceSectionHeader}>
-        <h2 className={styles.surfaceSectionTitleCompact}>مركز القيادة التشغيلي</h2>
-        <p className={styles.surfaceSectionSubtitleCompact}>مؤشرات وقرارات مبنية على قراءة DSH الفعلية دون ادعاءات اتصال ثابتة</p>
-      </div>
-
-      <div className={styles.surfaceGridTwoCol}>
-        <div className={styles.surfaceCompactPanel}>
-          <h3 className={styles.surfacePanelTitleCompact}>السعة المباشرة لمناطق الخدمة</h3>
-          <div className={styles.surfaceStackSmall}>
-            <LiveZonesStatusRow router={router} />
-          </div>
-        </div>
-      </div>
-
-      {content}
-
-      <div className={styles.surfaceFootnoteGrid}>
-        <div className={styles.surfaceFootnoteCard}>
-          <div>
-            <div className={styles.surfaceInfoCardTitleCompact}>حدود ملكية العمليات</div>
-            <div className={styles.surfaceInfoCardDescriptionCompact}>{operationsGovernance.notes}</div>
-          </div>
-          <div className={styles.surfaceMetaWrapCompact}>
-            {operationsGovernance.onDemandPolicySummary.map((policy) => (
-              <span key={policy} className={styles.surfaceMetaChipCompact}>{policy}</span>
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.surfaceFootnoteCard}>
-          <div>
-            <div className={styles.surfaceInfoCardTitleCompact}>تحويلات الملكية والحوكمة</div>
-            <div className={styles.surfaceInfoCardDescriptionCompact}>
-              الدعم والمالية والكتالوجات والشركاء والمنصة والإدارة أقسام مستقلة؛ العمليات تفتحها ولا تكرر منطقها.
+    <OverviewPageFrame
+      dir="rtl"
+      header={(
+        <CpPageHeader title="مركز القيادة التشغيلي">
+          <CpMutedInline tight>مؤشرات وقرارات مبنية على قراءة DSH الفعلية دون ادعاءات اتصال ثابتة</CpMutedInline>
+        </CpPageHeader>
+      )}
+    >
+      <Box gap={3}>
+        <div className={styles.surfaceGridTwoCol}>
+          <div className={styles.surfaceCompactPanel}>
+            <h3 className={styles.surfacePanelTitleCompact}>السعة المباشرة لمناطق الخدمة</h3>
+            <div className={styles.surfaceStackSmall}>
+              <LiveZonesStatusRow router={router} />
             </div>
           </div>
-          <div className={styles.surfaceMetaWrapCompact}>
-            {NON_OPERATIONS_SECTION_SHORTCUTS.map((shortcut) => (
-              <button
-                key={shortcut.id}
-                type="button"
-                className={`${styles.surfaceMetaChipCompact} ${styles.surfaceMetaChipButton}`}
-                onClick={() => router.push(shortcut.href)}
-              >
-                {shortcut.label}
-              </button>
-            ))}
+        </div>
+
+        {content}
+
+        <div className={styles.surfaceFootnoteGrid}>
+          <div className={styles.surfaceFootnoteCard}>
+            <div>
+              <div className={styles.surfaceInfoCardTitleCompact}>حدود ملكية العمليات</div>
+              <div className={styles.surfaceInfoCardDescriptionCompact}>{operationsGovernance.notes}</div>
+            </div>
+            <div className={styles.surfaceMetaWrapCompact}>
+              {operationsGovernance.onDemandPolicySummary.map((policy) => (
+                <span key={policy} className={styles.surfaceMetaChipCompact}>{policy}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.surfaceFootnoteCard}>
+            <div>
+              <div className={styles.surfaceInfoCardTitleCompact}>تحويلات الملكية والحوكمة</div>
+              <div className={styles.surfaceInfoCardDescriptionCompact}>
+                الدعم والمالية والكتالوجات والشركاء والمنصة والإدارة أقسام مستقلة؛ العمليات تفتحها ولا تكرر منطقها.
+              </div>
+            </div>
+            <div className={styles.surfaceMetaWrapCompact}>
+              {NON_OPERATIONS_SECTION_SHORTCUTS.map((shortcut) => (
+                <button
+                  key={shortcut.id}
+                  type="button"
+                  className={`${styles.surfaceMetaChipCompact} ${styles.surfaceMetaChipButton}`}
+                  onClick={() => router.push(shortcut.href)}
+                >
+                  {shortcut.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-    </Box>
+      </Box>
+    </OverviewPageFrame>
   );
 }
 

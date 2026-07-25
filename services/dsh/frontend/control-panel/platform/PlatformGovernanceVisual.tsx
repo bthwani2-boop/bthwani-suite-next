@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { Badge, Card, Text, spacing } from "@bthwani/ui-kit";
+import { Card, Text, spacing } from "@bthwani/ui-kit";
 import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
 import {
+  CpBadge,
   CpButton,
   CpKpiCard,
   CpKpiStrip,
@@ -76,10 +77,9 @@ export function PlatformGovernanceVisual() {
             قراءة حية لدورة تغييرات المنصة من الجلسة الموثوقة إلى platform-control ثم PostgreSQL؛ لا توجد قيم تجريبية أو مستأجر محلي مفروض من الواجهة.
           </Text>
         </View>
-        <Badge
-          label={tenantId ? `المستأجر: ${tenantId}` : "سياق المستأجر غير متاح"}
-          tone={tenantId ? "info" : "danger"}
-        />
+        <CpBadge tone={tenantId ? "info" : "danger"}>
+          {tenantId ? `المستأجر: ${tenantId}` : "سياق المستأجر غير متاح"}
+        </CpBadge>
       </View>
 
       {!canRead ? (
@@ -115,10 +115,9 @@ export function PlatformGovernanceVisual() {
                   <View style={styles.stageCard}>
                     <View style={styles.stageHeader}>
                       <Text role="titleSm">{index + 1}. {stage.label}</Text>
-                      <Badge
-                        label={String(stageCount(changeSets, stage.status))}
-                        tone={stageTone(stage.status)}
-                      />
+                      <CpBadge tone={stageTone(stage.status)}>
+                        {String(stageCount(changeSets, stage.status))}
+                      </CpBadge>
                     </View>
                     <Text role="caption">{stage.description}</Text>
                   </View>

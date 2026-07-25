@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { KeyValueList } from '@bthwani/ui-kit';
+import { Box, Button, KeyValueList, StateView, Text } from '@bthwani/ui-kit';
 import { WebControlPanelInspectorShell, WebControlPanelStatusTag } from '@bthwani/ui-kit/web';
 import { EXCEPTION_TICKET_MAP } from '../../../shared/orders';
 import { DSH_CONTROL_PANEL_TONE_MAP } from '../../shared/ControlPanelDshDecisionBoard';
@@ -10,6 +10,7 @@ import {
   SURFACE_LABELS,
   QUEUE_LABELS,
 } from './ExceptionsEscalations.types';
+import styles from '../../shared/control-panel-surface.module.css';
 
 export type ExceptionsExceptionInspectorProps = {
   exc: ExceptionsStateItem;
@@ -53,17 +54,18 @@ export function ExceptionsExceptionInspector({
   const auditEntryId = linkage?.auditEntryId;
   const statusTone = DSH_CONTROL_PANEL_TONE_MAP[exc.customStatusTone] ?? 'neutral';
   const slaStateLabel = exc.customSlaState === 'نشط' ? 'نشط (مفتوح)' : exc.customSlaState === 'مصعّد' ? 'مصعّد (تحت المراجعة)' : 'مستقر (محلول)';
+  const resolved = exc.customSlaState === 'محلول';
 
   return (
     <WebControlPanelInspectorShell
       title={`تفاصيل الاستثناء — ${exc.id}`}
       onClose={onClose}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px', overflowY: 'auto', flex: 1, direction: 'rtl', textAlign: 'right' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '12px', fontWeight: 800 }}>الخطورة:</span>
+      <Box gap={4} padding={4} style={{ overflowY: 'auto', flex: 1 }}>
+        <Box layoutDirection="row" justify="space-between" align="center">
+          <Text role="label">الخطورة:</Text>
           <WebControlPanelStatusTag label={exc.severity} tone={statusTone} />
-        </div>
+        </Box>
 
         <KeyValueList
           items={[
@@ -80,263 +82,128 @@ export function ExceptionsExceptionInspector({
           ]}
         />
 
-        <div style={{ background: 'var(--bthwani-control-panel-surface-inset)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--bthwani-control-panel-border)' }}>
-          <div style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)', fontWeight: 700 }}>سجل الملاحظات والإجراءات:</div>
-          <div style={{ fontSize: '12px', color: 'var(--bthwani-control-panel-text)', marginTop: '4px', lineHeight: 1.5 }}>{exc.customNote}</div>
-        </div>
+        <Box gap={1} padding={3} background="surfaceInset" radiusToken="md">
+          <Text role="caption" tone="muted">سجل الملاحظات والإجراءات:</Text>
+          <Text role="bodySm">{exc.customNote}</Text>
+        </Box>
 
-        {actionFeedback && (
-          <div style={{ background: 'var(--bthwani-control-panel-brand-surface)', border: '1px solid var(--bthwani-control-panel-brand)', color: 'var(--bthwani-control-panel-brand)', borderRadius: '8px', padding: '10px', fontSize: '12px', fontWeight: 700, textAlign: 'center' }}>
-            {actionFeedback}
-          </div>
-        )}
+        {actionFeedback ? (
+          <Box padding={3} background="surfaceInset" radiusToken="md">
+            <Text role="bodySm" tone="brand">{actionFeedback}</Text>
+          </Box>
+        ) : null}
 
         {actionStatus === 'pending' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px', gap: '8px' }}>
-            <div style={{
-              width: '24px',
-              height: '24px',
-              border: '3px solid var(--bthwani-control-panel-border)',
-              borderTop: '3px solid var(--bthwani-control-panel-brand)',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-            }} />
-            <span style={{ fontSize: '12px', color: 'var(--bthwani-control-panel-text-muted)' }}>جاري معالجة الإجراء وحفظ التغييرات...</span>
-            <style>{`
-              @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-              }
-            `}</style>
-          </div>
+          <StateView stateId="loading" title="جاري معالجة الإجراء وحفظ التغييرات..." />
         ) : activeForm === 'escalate' ? (
-          <div style={{ background: 'var(--bthwani-control-panel-surface-inset)', border: '1px solid var(--bthwani-control-panel-border)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--bthwani-control-panel-brand)' }}>تصعيد وتعيين المالك الجديد</div>
+          <Box gap={2} padding={3} background="surfaceInset" radiusToken="md">
+            <Text role="bodyStrong" tone="brand">تصعيد وتعيين المالك الجديد</Text>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label htmlFor="escalation-queue-select" style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)' }}>طابور التصعيد المستهدف:</label>
+            <Box gap={1}>
+              <Text role="caption" tone="muted">طابور التصعيد المستهدف:</Text>
               <select
                 id="escalation-queue-select"
+                aria-label="طابور التصعيد المستهدف"
+                className={styles.inspectorSelect}
                 value={selectedEscalationQueue}
                 onChange={(e) => onSetSelectedEscalationQueue(e.target.value)}
-                style={{
-                  padding: '8px',
-                  fontSize: '12px',
-                  background: 'var(--bthwani-control-panel-surface)',
-                  color: 'var(--bthwani-control-panel-text)',
-                  border: '1px solid var(--bthwani-control-panel-border)',
-                  borderRadius: '6px',
-                  outline: 'none',
-                }}
               >
                 {Object.entries(QUEUE_LABELS).map(([key, value]) => (
                   <option key={key} value={key}>{value.label}</option>
                 ))}
               </select>
-            </div>
+            </Box>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label htmlFor="handoff-note-textarea" style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)' }}>ملاحظات تسليم الدعم:</label>
+            <Box gap={1}>
+              <Text role="caption" tone="muted">ملاحظات تسليم الدعم:</Text>
               <textarea
                 id="handoff-note-textarea"
+                aria-label="ملاحظات تسليم الدعم"
                 rows={3}
+                className={styles.inspectorTextarea}
                 value={handoffNote}
                 onChange={(e) => onSetHandoffNote(e.target.value)}
                 placeholder="اكتب مبررات التصعيد وتعليمات المتابعة للفريق المستلم..."
-                style={{
-                  padding: '8px',
-                  fontSize: '12px',
-                  background: 'var(--bthwani-control-panel-surface)',
-                  color: 'var(--bthwani-control-panel-text)',
-                  border: '1px solid var(--bthwani-control-panel-border)',
-                  borderRadius: '6px',
-                  outline: 'none',
-                  resize: 'vertical',
-                }}
               />
-            </div>
+            </Box>
 
-            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button
-                type="button"
-                onClick={() => onEscalate(exc.id, selectedEscalationQueue, handoffNote)}
-                style={{
-                  flex: 1,
-                  padding: '8px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  background: 'var(--bthwani-control-panel-brand)',
-                  color: 'var(--bthwani-brand-contrast)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                }}
-              >
-                تأكيد التصعيد
-              </button>
-              <button
-                type="button"
-                onClick={() => onSetActiveForm(null)}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  background: 'transparent',
-                  border: '1px solid var(--bthwani-control-panel-border-strong)',
-                  color: 'var(--bthwani-control-panel-text)',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                }}
-              >
-                إلغاء
-              </button>
-            </div>
-          </div>
+            <Box layoutDirection="row" gap={2}>
+              <Button
+                label="تأكيد التصعيد"
+                tone="brand"
+                fullWidth
+                onPress={() => onEscalate(exc.id, selectedEscalationQueue, handoffNote)}
+              />
+              <Button label="إلغاء" tone="secondary" onPress={() => onSetActiveForm(null)} />
+            </Box>
+          </Box>
         ) : activeForm === 'resolve' ? (
-          <div style={{ background: 'var(--bthwani-control-panel-surface-inset)', border: '1px solid var(--bthwani-control-panel-border)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--bthwani-control-panel-success)' }}>حل وإغلاق الاستثناء</div>
+          <Box gap={2} padding={3} background="surfaceInset" radiusToken="md">
+            <Text role="bodyStrong" tone="success">حل وإغلاق الاستثناء</Text>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label htmlFor="resolution-note-textarea" style={{ fontSize: '11px', color: 'var(--bthwani-control-panel-text-muted)' }}>ملاحظات الحل والإغلاق (Resolution Details):</label>
+            <Box gap={1}>
+              <Text role="caption" tone="muted">ملاحظات الحل والإغلاق (Resolution Details):</Text>
               <textarea
                 id="resolution-note-textarea"
+                aria-label="ملاحظات الحل والإغلاق"
                 rows={3}
+                className={styles.inspectorTextarea}
                 value={resolutionNote}
                 onChange={(e) => onSetResolutionNote(e.target.value)}
                 placeholder="اكتب كيفية معالجة الاستثناء والحل النهائي المطبق..."
-                style={{
-                  padding: '8px',
-                  fontSize: '12px',
-                  background: 'var(--bthwani-control-panel-surface)',
-                  color: 'var(--bthwani-control-panel-text)',
-                  border: '1px solid var(--bthwani-control-panel-border)',
-                  borderRadius: '6px',
-                  outline: 'none',
-                  resize: 'vertical',
-                }}
               />
-            </div>
+            </Box>
 
-            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button
-                type="button"
-                onClick={() => onResolve(exc.id, resolutionNote)}
-                style={{
-                  flex: 1,
-                  padding: '8px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  background: 'var(--bthwani-control-panel-success)',
-                  color: 'var(--bthwani-brand-contrast)',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                }}
-              >
-                تأكيد الحل والإغلاق
-              </button>
-              <button
-                type="button"
-                onClick={() => onSetActiveForm(null)}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  background: 'transparent',
-                  border: '1px solid var(--bthwani-control-panel-border-strong)',
-                  color: 'var(--bthwani-control-panel-text)',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                }}
-              >
-                إلغاء
-              </button>
-            </div>
-          </div>
+            <Box layoutDirection="row" gap={2}>
+              <Button
+                label="تأكيد الحل والإغلاق"
+                tone="success"
+                fullWidth
+                onPress={() => onResolve(exc.id, resolutionNote)}
+              />
+              <Button label="إلغاء" tone="secondary" onPress={() => onSetActiveForm(null)} />
+            </Box>
+          </Box>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
-            {exc.customSlaState !== 'محلول' ? (
+          <Box gap={2} style={{ marginTop: 'auto' }}>
+            {!resolved ? (
               <>
-                <button
-                  type="button"
-                  onClick={() => onSetActiveForm('resolve')}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    background: 'var(--bthwani-control-panel-success)',
-                    color: 'var(--bthwani-brand-contrast)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: 700,
-                    fontSize: '12px',
-                  }}
-                >
-                  حل وإغلاق الاستثناء (Resolve SLA)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSetActiveForm('escalate')}
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    background: 'var(--bthwani-control-panel-brand)',
-                    color: 'var(--bthwani-brand-contrast)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: 700,
-                    fontSize: '12px',
-                  }}
-                >
-                  تصعيد ونقل المالك (Escalate & Transfer)
-                </button>
+                <Button
+                  label="حل وإغلاق الاستثناء (Resolve SLA)"
+                  tone="success"
+                  fullWidth
+                  onPress={() => onSetActiveForm('resolve')}
+                />
+                <Button
+                  label="تصعيد ونقل المالك (Escalate & Transfer)"
+                  tone="brand"
+                  fullWidth
+                  onPress={() => onSetActiveForm('escalate')}
+                />
               </>
             ) : (
-              <div style={{ background: 'var(--bthwani-success-surface)', border: '1px solid var(--bthwani-control-panel-success)', color: 'var(--bthwani-control-panel-success)', borderRadius: '8px', padding: '12px', fontSize: '12px', fontWeight: 700, textAlign: 'center' }}>
-                ✓ تم حل هذا الاستثناء وإغلاق الـ SLA المرتبط بنجاح.
-              </div>
+              <Box padding={3} background="surfaceInset" radiusToken="md">
+                <Text role="bodySm" tone="success">تم حل هذا الاستثناء وإغلاق الـ SLA المرتبط بنجاح.</Text>
+              </Box>
             )}
 
-            <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-              <button
-                type="button"
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  background: 'transparent',
-                  border: '1px solid var(--bthwani-control-panel-border-strong)',
-                  color: 'var(--bthwani-control-panel-text)',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  fontSize: '11px',
-                }}
-                onClick={() => onNavigateToRescue(exc.routeHint)}
-              >
-                🔗 الانتقال لمسار الحل المساعد
-              </button>
-              <button
-                type="button"
-                style={{
-                  flex: 1,
-                  padding: '8px 12px',
-                  background: 'transparent',
-                  border: '1px solid var(--bthwani-control-panel-border-strong)',
-                  color: 'var(--bthwani-control-panel-text)',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  fontSize: '11px',
-                }}
-                onClick={() => onNavigateToAudit(auditEntryId ? auditEntryId : supportTicketId, !!auditEntryId)}
-              >
-                {auditEntryId ? 'فتح التدقيق' : 'فتح تذكرة الدعم'}
-              </button>
-            </div>
-          </div>
+            <Box layoutDirection="row" gap={2}>
+              <Button
+                label="الانتقال لمسار الحل المساعد"
+                tone="secondary"
+                fullWidth
+                onPress={() => onNavigateToRescue(exc.routeHint)}
+              />
+              <Button
+                label={auditEntryId ? 'فتح التدقيق' : 'فتح تذكرة الدعم'}
+                tone="secondary"
+                fullWidth
+                onPress={() => onNavigateToAudit(auditEntryId ? auditEntryId : supportTicketId, !!auditEntryId)}
+              />
+            </Box>
+          </Box>
         )}
-      </div>
+      </Box>
     </WebControlPanelInspectorShell>
   );
 }

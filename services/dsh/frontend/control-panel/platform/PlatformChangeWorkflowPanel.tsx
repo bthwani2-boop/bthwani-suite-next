@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Card, Text, spacing } from "@bthwani/ui-kit";
+import { Card, Text, spacing } from "@bthwani/ui-kit";
 import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
 import {
+  CpBadge,
   CpButton,
   CpRetryButton,
   CpSelect,
@@ -311,7 +312,7 @@ export function PlatformChangeWorkflowPanel({ onChanged }: PlatformChangeWorkflo
                 {filteredChangeSets.map((changeSet) => (
                   <tr key={changeSet.id}>
                     <CpTableCell>{changeSet.title}</CpTableCell>
-                    <CpTableCell><Badge label={changeSet.status} tone={STATUS_TONE[changeSet.status] ?? "neutral"} /></CpTableCell>
+                    <CpTableCell><CpBadge tone={STATUS_TONE[changeSet.status] ?? "neutral"}>{changeSet.status}</CpBadge></CpTableCell>
                     <CpTableCell>{changeSet.proposerActorId}</CpTableCell>
                     <CpTableCell>{changeSet.items.length}</CpTableCell>
                     <CpTableCell>{changeSet.version}</CpTableCell>

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
+import { useCpFrameTokens } from "./frameTokens";
 
 export type QueuePageFrameProps = {
   readonly header?: ReactNode;
@@ -18,8 +19,9 @@ export function QueuePageFrame({
   stateView,
   dir = "rtl",
 }: QueuePageFrameProps) {
+  const frameTokens = useCpFrameTokens();
   return (
-    <section dir={dir} style={styles.section}>
+    <section dir={dir} style={{ ...styles.section, ...frameTokens.page }}>
       {header != null ? <div style={styles.header}>{header}</div> : null}
       {toolbar != null ? <div style={styles.toolbar}>{toolbar}</div> : null}
       {filters != null ? <div style={styles.filters}>{filters}</div> : null}

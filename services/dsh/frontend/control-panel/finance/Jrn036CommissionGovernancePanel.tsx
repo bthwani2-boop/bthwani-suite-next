@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Button, Card, Text, lightThemeColors } from "@bthwani/ui-kit";
+import { Card, Text } from "@bthwani/ui-kit";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
+import { CpBadge, CpButton, CpSelect, CpTextInput } from "@bthwani/control-panel/components";
 import { resolveDshApiBaseUrl } from "../../shared/finance-wlt-link/_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../../shared/finance-wlt-link/_kernel/dsh-http-request";
 import {
@@ -23,10 +25,7 @@ const { request } = createDshHttpClient(
 
 type BusyAction = { readonly commissionId: string; readonly action: string } | null;
 
-const STATUS_META: Record<
-  string,
-  { readonly label: string; readonly tone: "neutral" | "success" | "warning" | "danger" }
-> = {
+const STATUS_META: Record<string, { readonly label: string; readonly tone: CpBadgeTone }> = {
   pending: { label: "قيد المراجعة", tone: "warning" },
   confirmed: { label: "مؤكدة", tone: "success" },
   settled: { label: "مسوّاة", tone: "success" },
@@ -34,13 +33,21 @@ const STATUS_META: Record<
   reversed: { label: "معكوسة", tone: "danger" },
 };
 
-const inputStyle = {
-  width: "100%",
-  padding: "0.65rem",
-  borderRadius: "0.5rem",
-  border: `1px solid ${lightThemeColors.borderColor}`,
-  background: lightThemeColors.surface,
-};
+const BENEFICIARY_OPTIONS = [
+  { value: "partner", label: "شريك" },
+  { value: "captain", label: "كابتن" },
+  { value: "field", label: "ميداني" },
+] as const;
+
+const CALCULATION_OPTIONS = [
+  { value: "fixed", label: "ثابت" },
+  { value: "basis_points", label: "نقاط أساس" },
+] as const;
+
+const STATUS_OPTIONS = [
+  { value: "active", label: "فعالة" },
+  { value: "inactive", label: "غير فعالة" },
+] as const;
 
 function formatMoney(amountMinorUnits: number, currency: string): string {
   return `${(amountMinorUnits / 100).toLocaleString("ar-YE", {
@@ -205,35 +212,20 @@ export function Jrn036CommissionGovernancePanel() {
             WLT يحسب القيمة من الدليل وإصدار السياسة. تعرض القائمة آخر 100 سجل حاكم دون حساب محلي.
           </Text>
         </div>
-        <Button
-          label={loading ? "جارٍ التحديث…" : "تحديث"}
-          tone="secondary"
-          disabled={loading}
-          onPress={() => void load()}
-        />
+        <CpButton variant="secondary" disabled={loading} onClick={() => void load()}>
+          {loading ? "جارٍ التحديث…" : "تحديث"}
+        </CpButton>
       </div>
 
       {error ? (
-        <Card
-          style={{
-            padding: "0.75rem",
-            marginTop: "1rem",
-            borderLeft: `4px solid ${lightThemeColors.danger}`,
-          }}
-        >
+        <Card style={{ padding: "0.75rem", marginTop: "1rem" }}>
           <Text role="body" tone="danger">
             {error}
           </Text>
         </Card>
       ) : null}
       {notice ? (
-        <Card
-          style={{
-            padding: "0.75rem",
-            marginTop: "1rem",
-            borderLeft: `4px solid ${lightThemeColors.success}`,
-          }}
-        >
+        <Card style={{ padding: "0.75rem", marginTop: "1rem" }}>
           <Text role="body" tone="success">
             {notice}
           </Text>
@@ -255,157 +247,130 @@ export function Jrn036CommissionGovernancePanel() {
             marginTop: "0.75rem",
           }}
         >
-          <label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">معرف السياسة</Text>
-            <input
+            <CpTextInput
               aria-label="معرف سياسة العمولة"
               value={policy.policyId}
-              onChange={(event) => setPolicy({ ...policy, policyId: event.target.value })}
-              style={inputStyle}
+              onChange={(value) => setPolicy({ ...policy, policyId: value })}
             />
           </label>
-          <label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">نوع العمولة</Text>
-            <input
+            <CpTextInput
               aria-label="نوع العمولة"
               value={policy.commissionType}
-              onChange={(event) => setPolicy({ ...policy, commissionType: event.target.value })}
-              style={inputStyle}
+              onChange={(value) => setPolicy({ ...policy, commissionType: value })}
             />
           </label>
-          <label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">نوع المصدر</Text>
-            <input
+            <CpTextInput
               aria-label="نوع مصدر العمولة"
               value={policy.sourceType}
-              onChange={(event) => setPolicy({ ...policy, sourceType: event.target.value })}
-              style={inputStyle}
+              onChange={(value) => setPolicy({ ...policy, sourceType: value })}
             />
           </label>
-          <label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">المستفيد</Text>
-            <select
+            <CpSelect
               aria-label="نوع مستفيد العمولة"
               value={policy.beneficiaryActorType}
-              onChange={(event) =>
+              options={BENEFICIARY_OPTIONS}
+              onChange={(value) =>
                 setPolicy({
                   ...policy,
-                  beneficiaryActorType: event.target.value as Jrn036RepresentativeActorType,
+                  beneficiaryActorType: value as Jrn036RepresentativeActorType,
                 })
               }
-              style={inputStyle}
-            >
-              <option value="partner">شريك</option>
-              <option value="captain">كابتن</option>
-              <option value="field">ميداني</option>
-            </select>
+            />
           </label>
-          <label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">طريقة الحساب</Text>
-            <select
+            <CpSelect
               aria-label="طريقة حساب العمولة"
               value={policy.calculationType}
-              onChange={(event) =>
+              options={CALCULATION_OPTIONS}
+              onChange={(value) =>
                 setPolicy({
                   ...policy,
-                  calculationType: event.target.value as "fixed" | "basis_points",
+                  calculationType: value as "fixed" | "basis_points",
                 })
               }
-              style={inputStyle}
-            >
-              <option value="fixed">ثابت</option>
-              <option value="basis_points">نقاط أساس</option>
-            </select>
+            />
           </label>
-          <label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">القيمة الثابتة</Text>
-            <input
+            <CpTextInput
               aria-label="قيمة العمولة الثابتة بالوحدات الصغرى"
-              type="number"
-              min={0}
-              value={policy.fixedAmountMinorUnits}
+              type="text"
+              value={String(policy.fixedAmountMinorUnits)}
               disabled={policy.calculationType !== "fixed"}
-              onChange={(event) =>
-                setPolicy({ ...policy, fixedAmountMinorUnits: Number(event.target.value) })
+              onChange={(value) =>
+                setPolicy({ ...policy, fixedAmountMinorUnits: Number(value) || 0 })
               }
-              style={inputStyle}
             />
           </label>
-          <label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">نقاط الأساس</Text>
-            <input
+            <CpTextInput
               aria-label="نقاط أساس العمولة"
-              type="number"
-              min={0}
-              max={10000}
-              value={policy.basisPoints}
+              type="text"
+              value={String(policy.basisPoints)}
               disabled={policy.calculationType !== "basis_points"}
-              onChange={(event) =>
-                setPolicy({ ...policy, basisPoints: Number(event.target.value) })
+              onChange={(value) =>
+                setPolicy({ ...policy, basisPoints: Number(value) || 0 })
               }
-              style={inputStyle}
             />
           </label>
-          <label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">الحد الأدنى</Text>
-            <input
+            <CpTextInput
               aria-label="الحد الأدنى للعمولة"
-              type="number"
-              min={0}
-              value={policy.minimumAmountMinorUnits}
-              onChange={(event) =>
-                setPolicy({ ...policy, minimumAmountMinorUnits: Number(event.target.value) })
+              type="text"
+              value={String(policy.minimumAmountMinorUnits)}
+              onChange={(value) =>
+                setPolicy({ ...policy, minimumAmountMinorUnits: Number(value) || 0 })
               }
-              style={inputStyle}
             />
           </label>
-          <label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">الحد الأعلى — اختياري</Text>
-            <input
+            <CpTextInput
               aria-label="الحد الأعلى للعمولة"
-              type="number"
-              min={0}
-              value={policy.maximumAmountMinorUnits ?? ""}
-              onChange={(event) =>
+              type="text"
+              value={policy.maximumAmountMinorUnits === null || policy.maximumAmountMinorUnits === undefined ? "" : String(policy.maximumAmountMinorUnits)}
+              onChange={(value) =>
                 setPolicy({
                   ...policy,
-                  maximumAmountMinorUnits:
-                    event.target.value.trim() === "" ? null : Number(event.target.value),
+                  maximumAmountMinorUnits: value.trim() === "" ? null : Number(value) || 0,
                 })
               }
-              style={inputStyle}
             />
           </label>
-          <label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">العملة</Text>
-            <input
+            <CpTextInput
               aria-label="عملة سياسة العمولة"
               value={policy.currency}
-              onChange={(event) => setPolicy({ ...policy, currency: event.target.value })}
-              style={inputStyle}
+              onChange={(value) => setPolicy({ ...policy, currency: value })}
             />
           </label>
-          <label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">الحالة</Text>
-            <select
+            <CpSelect
               aria-label="حالة سياسة العمولة"
               value={policy.status}
-              onChange={(event) =>
-                setPolicy({ ...policy, status: event.target.value as "active" | "inactive" })
-              }
-              style={inputStyle}
-            >
-              <option value="active">فعالة</option>
-              <option value="inactive">غير فعالة</option>
-            </select>
+              options={STATUS_OPTIONS}
+              onChange={(value) => setPolicy({ ...policy, status: value as "active" | "inactive" })}
+            />
           </label>
-          <label>
+          <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <Text role="caption">سبب التغيير</Text>
-            <input
+            <CpTextInput
               aria-label="سبب تغيير سياسة العمولة"
               value={policy.changeReason}
-              onChange={(event) => setPolicy({ ...policy, changeReason: event.target.value })}
-              style={inputStyle}
+              onChange={(value) => setPolicy({ ...policy, changeReason: value })}
             />
           </label>
         </div>
@@ -415,12 +380,9 @@ export function Jrn036CommissionGovernancePanel() {
           </Text>
         ) : null}
         <div style={{ marginTop: "0.75rem" }}>
-          <Button
-            label={savingPolicy ? "جارٍ حفظ إصدار السياسة…" : "حفظ إصدار السياسة"}
-            tone="primary"
-            disabled={savingPolicy || policyError !== null}
-            onPress={() => void savePolicy()}
-          />
+          <CpButton variant="primary" disabled={savingPolicy || policyError !== null} onClick={() => void savePolicy()}>
+            {savingPolicy ? "جارٍ حفظ إصدار السياسة…" : "حفظ إصدار السياسة"}
+          </CpButton>
         </div>
       </Card>
 
@@ -449,19 +411,7 @@ export function Jrn036CommissionGovernancePanel() {
           };
           const disabled = busy !== null;
           return (
-            <Card
-              key={commission.id}
-              style={{
-                padding: "1rem",
-                borderLeft: `4px solid ${
-                  commission.status === "settled"
-                    ? lightThemeColors.success
-                    : commission.status === "rejected" || commission.status === "reversed"
-                      ? lightThemeColors.danger
-                      : lightThemeColors.warning
-                }`,
-              }}
-            >
+            <Card key={commission.id} style={{ padding: "1rem" }}>
               <div
                 style={{
                   display: "flex",
@@ -483,7 +433,7 @@ export function Jrn036CommissionGovernancePanel() {
                     <Text role="body" style={{ fontWeight: "bold" }}>
                       {commission.id}
                     </Text>
-                    <Badge label={meta.label} tone={meta.tone} />
+                    <CpBadge tone={meta.tone}>{meta.label}</CpBadge>
                   </div>
                   <Text role="caption">
                     {commission.beneficiaryActorType}: {commission.beneficiaryActorId}
@@ -507,44 +457,29 @@ export function Jrn036CommissionGovernancePanel() {
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   {commission.status === "pending" ? (
-                    <Button
-                      label="تأكيد"
-                      tone="success"
-                      disabled={disabled}
-                      onPress={() => void run(commission, "confirm")}
-                    />
+                    <CpButton variant="primary" disabled={disabled} onClick={() => void run(commission, "confirm")}>
+                      تأكيد
+                    </CpButton>
                   ) : null}
                   {commission.status === "confirmed" ? (
-                    <Button
-                      label="تسوية"
-                      tone="primary"
-                      disabled={disabled}
-                      onPress={() => void run(commission, "settle")}
-                    />
+                    <CpButton variant="primary" disabled={disabled} onClick={() => void run(commission, "settle")}>
+                      تسوية
+                    </CpButton>
                   ) : null}
                   {commission.status === "pending" ? (
-                    <Button
-                      label="رفض"
-                      tone="danger"
-                      disabled={disabled}
-                      onPress={() => void run(commission, "reject")}
-                    />
+                    <CpButton variant="danger" disabled={disabled} onClick={() => void run(commission, "reject")}>
+                      رفض
+                    </CpButton>
                   ) : null}
                   {commission.status === "settled" ? (
-                    <Button
-                      label="عكس"
-                      tone="danger"
-                      disabled={disabled}
-                      onPress={() => void run(commission, "reverse")}
-                    />
+                    <CpButton variant="danger" disabled={disabled} onClick={() => void run(commission, "reverse")}>
+                      عكس
+                    </CpButton>
                   ) : null}
                   {commission.status === "pending" || commission.status === "confirmed" ? (
-                    <Button
-                      label="تعديل"
-                      tone="secondary"
-                      disabled={disabled}
-                      onPress={() => void run(commission, "adjust")}
-                    />
+                    <CpButton variant="secondary" disabled={disabled} onClick={() => void run(commission, "adjust")}>
+                      تعديل
+                    </CpButton>
                   ) : null}
                 </div>
               </div>

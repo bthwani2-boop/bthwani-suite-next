@@ -1,11 +1,22 @@
 'use client';
 
 import React from 'react';
-import { Box, Button, KeyValueList, StateView, Text } from '@bthwani/ui-kit';
+import { Text, TextField } from '@bthwani/ui-kit';
 import {
   WebControlPanelDecisionRow,
   WebControlPanelQueue,
 } from '@bthwani/ui-kit/web';
+import {
+  CpBadge,
+  CpButton,
+  CpDescriptionList,
+  CpDescriptionRow,
+  CpMutedInline,
+  CpPageHeader,
+  CpRetryButton,
+  CpStatePanel,
+} from '@bthwani/control-panel/components';
+import { OperationsRoomFrame } from '@bthwani/control-panel/shell';
 import { useDispatchOperations } from '../../shared/operations';
 import type { DshDispatchDecision } from '../../shared/dispatch';
 
@@ -19,6 +30,8 @@ const ACTION_LABELS: Record<DshDispatchDecision['action'], string> = {
   eligibility_rejected: 'رفض الأهلية',
   capacity_rejected: 'رفض السعة',
 };
+
+const PAGE_TITLE = 'مراقبة التوزيع وسجل القرارات';
 
 function formatDistance(value: number | null | undefined): string {
   if (value === null || value === undefined) return 'غير محسوبة';
@@ -46,23 +59,33 @@ export function DispatchOperationsPanel() {
 
   if (state.kind === 'loading' && state.assignments.length === 0) {
     return (
-      <StateView
-        stateId="loading"
-        title="جاري تحميل الإسنادات النشطة"
-        description="نقرأ الإسنادات وسجل القرارات من DSH."
-      />
+      <OperationsRoomFrame
+        header={<CpPageHeader title={PAGE_TITLE} />}
+        stateView={(
+          <CpStatePanel
+            role="status"
+            title="جاري تحميل الإسنادات النشطة"
+            description="نقرأ الإسنادات وسجل القرارات من DSH."
+          />
+        )}
+      >
+        {null}
+      </OperationsRoomFrame>
     );
   }
 
   if (state.kind === 'error' && state.assignments.length === 0) {
     return (
-      <StateView
-        stateId="recoverableError"
-        title="تعذر تحميل إدارة الإسناد"
-        description={state.message}
-        actionLabel="إعادة المحاولة"
-        onActionPress={() => void controller.reload()}
-      />
+      <OperationsRoomFrame
+        header={<CpPageHeader title={PAGE_TITLE} />}
+        stateView={(
+          <CpStatePanel role="alert" title="تعذر تحميل إدارة الإسناد" description={state.message}>
+            <CpRetryButton onClick={() => void controller.reload()}>إعادة المحاولة</CpRetryButton>
+          </CpStatePanel>
+        )}
+      >
+        {null}
+      </OperationsRoomFrame>
     );
   }
 
@@ -70,147 +93,143 @@ export function DispatchOperationsPanel() {
   const busy = state.mutationKind !== 'idle';
 
   return (
-    <Box gap={3}>
-      <Box layoutDirection="row" gap={2} style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box gap={1}>
-          <Text role="titleSm">مراقبة التوزيع وسجل القرارات</Text>
-          <Text role="bodySm" tone="muted">
+    <OperationsRoomFrame
+      header={(
+        <CpPageHeader title={PAGE_TITLE}>
+          <CpMutedInline tight>
             الإلغاء وإعادة الإسناد ينفذان داخل معاملة واحدة مع read-after-write وسجل قرار دائم.
-          </Text>
-        </Box>
-        <Box layoutDirection="row" gap={2}>
-          <Button
-            label={state.mutationKind === 'expiring' ? 'جاري إنهاء المتأخر…' : 'إنهاء العروض المتأخرة'}
-            tone="secondary"
-            fullWidth={false}
-            disabled={busy}
-            onPress={() => void controller.expire()}
+          </CpMutedInline>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+            <CpButton variant="secondary" disabled={busy} onClick={() => void controller.expire()}>
+              {state.mutationKind === 'expiring' ? 'جاري إنهاء المتأخر…' : 'إنهاء العروض المتأخرة'}
+            </CpButton>
+            <CpButton variant="ghost" disabled={busy} onClick={() => void controller.reload({ preserveSelection: true })}>
+              تحديث
+            </CpButton>
+          </div>
+          {state.message ? (
+            <div style={{ marginTop: 8 }}>
+              <CpStatePanel role="alert" title={state.message} />
+            </div>
+          ) : null}
+        </CpPageHeader>
+      )}
+      sidePanel={
+        !selected ? (
+          <CpStatePanel
+            role="status"
+            title="اختر إسنادًا"
+            description="اختر إسنادًا نشطًا لقراءة القرار أو الإلغاء أو إعادة الإسناد."
           />
-          <Button
-            label="تحديث"
-            tone="ghost"
-            fullWidth={false}
-            disabled={busy}
-            onPress={() => void controller.reload({ preserveSelection: true })}
-          />
-        </Box>
-      </Box>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, padding: 16 }}>
+            <CpDescriptionList>
+              <CpDescriptionRow label="معرف الإسناد">{selected.id}</CpDescriptionRow>
+              <CpDescriptionRow label="الطلب">{selected.orderId || 'طلب خاص'}</CpDescriptionRow>
+              <CpDescriptionRow label="الكابتن الحالي">{selected.captainId}</CpDescriptionRow>
+              <CpDescriptionRow label="الحالة">
+                <CpBadge tone={selected.status === 'offered' ? 'warning' : 'success'}>{selected.status}</CpBadge>
+              </CpDescriptionRow>
+              <CpDescriptionRow label="منطقة الخدمة">{selected.serviceAreaCode || 'غير محددة'}</CpDescriptionRow>
+              <CpDescriptionRow label="المسافة">{formatDistance(selected.distanceMeters)}</CpDescriptionRow>
+              <CpDescriptionRow label="الأولوية">{String(selected.priority ?? 0)}</CpDescriptionRow>
+              <CpDescriptionRow label="سبب العرض">{selected.offerReason?.trim() || 'غير مسجل'}</CpDescriptionRow>
+            </CpDescriptionList>
 
-      {state.message ? <Text role="bodySm" tone="warning">{state.message}</Text> : null}
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 16 }}>
-        <WebControlPanelQueue title="الإسنادات النشطة" meta={String(state.assignments.length)}>
-          {state.assignments.length === 0 ? (
-            <StateView
-              stateId="empty"
-              title="لا توجد إسنادات نشطة"
-              description="لا توجد عروض معلقة أو مهام مقبولة حاليًا."
-              actionLabel="تحديث"
-              onActionPress={() => void controller.reload()}
-            />
-          ) : state.assignments.map((assignment) => (
-            <WebControlPanelDecisionRow
-              key={assignment.id}
-              entityId={assignment.id}
-              entityLabel={`طلب: ${assignment.orderId || 'خاص'} · كابتن: ${assignment.captainId}`}
-              status={assignment.status}
-              statusTone={assignment.status === 'offered' ? 'warning' : 'success'}
-              reason={`منطقة ${assignment.serviceAreaCode || '—'} · ${formatDistance(assignment.distanceMeters)}`}
-              sla={assignment.status === 'offered' ? `المهلة: ${deadlineLabel(assignment.responseDeadlineAt)}` : 'مهمة مقبولة'}
-              onInspect={() => void controller.selectAssignment(assignment)}
-            />
-          ))}
-        </WebControlPanelQueue>
-
-        <Box gap={3}>
-          {!selected ? (
-            <StateView
-              stateId="empty"
-              title="اختر إسنادًا"
-              description="اختر إسنادًا نشطًا لقراءة القرار أو الإلغاء أو إعادة الإسناد."
-            />
-          ) : (
-            <>
-              <KeyValueList
-                items={[
-                  { label: 'معرف الإسناد', value: selected.id },
-                  { label: 'الطلب', value: selected.orderId || 'طلب خاص' },
-                  { label: 'الكابتن الحالي', value: selected.captainId },
-                  { label: 'الحالة', value: selected.status, tone: selected.status === 'offered' ? 'warning' : 'success' },
-                  { label: 'منطقة الخدمة', value: selected.serviceAreaCode || 'غير محددة' },
-                  { label: 'المسافة', value: formatDistance(selected.distanceMeters) },
-                  { label: 'الأولوية', value: String(selected.priority ?? 0) },
-                  { label: 'سبب العرض', value: selected.offerReason?.trim() || 'غير مسجل' },
-                ]}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <TextField
+                label="سبب الإلغاء أو إعادة الإسناد"
+                value={reason}
+                onChangeText={setReason}
+                disabled={busy}
+                multiline
+                placeholder="اكتب سببًا تشغيليًا واضحًا"
               />
+              <CpButton
+                variant="danger"
+                disabled={busy || reason.trim().length < 3}
+                onClick={() => void controller.cancel(selected.id, reason)}
+              >
+                {state.mutationKind === 'cancelling' ? 'جاري الإلغاء…' : 'إلغاء الإسناد'}
+              </CpButton>
+            </div>
 
-              <Box gap={2}>
-                <Text role="label">سبب الإلغاء أو إعادة الإسناد</Text>
-                <textarea
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  disabled={busy}
-                  rows={4}
-                  dir="rtl"
-                  placeholder="اكتب سببًا تشغيليًا واضحًا"
-                  style={{ width: '100%', resize: 'vertical', padding: 12, borderRadius: 8, border: '1px solid currentColor' }}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <Text role="label">كابتن بديل مؤهل</Text>
+              {state.candidates.length === 0 ? (
+                <CpStatePanel
+                  role="status"
+                  title="لا يوجد بديل مؤهل"
+                  description="لا يوجد كابتن آخر معتمد ومتاح ولديه سعة في نفس المنطقة."
                 />
-                <Button
-                  label={state.mutationKind === 'cancelling' ? 'جاري الإلغاء…' : 'إلغاء الإسناد'}
-                  tone="danger"
-                  disabled={busy || reason.trim().length < 3}
-                  onPress={() => void controller.cancel(selected.id, reason)}
-                />
-              </Box>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {state.candidates.map((candidate) => (
+                    <CpButton
+                      key={candidate.captainId}
+                      variant={replacementCaptainId === candidate.captainId ? 'brand' : 'secondary'}
+                      disabled={busy}
+                      onClick={() => setReplacementCaptainId(candidate.captainId)}
+                    >
+                      {`${candidate.captainId} — السعة ${candidate.remainingCapacity}/${candidate.maxActiveAssignments}`}
+                    </CpButton>
+                  ))}
+                </div>
+              )}
+              <CpButton
+                disabled={busy || !replacementCaptainId || reason.trim().length < 3}
+                onClick={() => void controller.reassign(selected, replacementCaptainId, reason)}
+              >
+                {state.mutationKind === 'reassigning' ? 'جاري إعادة الإسناد…' : 'إعادة الإسناد بأمان'}
+              </CpButton>
+            </div>
 
-              <Box gap={2}>
-                <Text role="label">كابتن بديل مؤهل</Text>
-                {state.candidates.length === 0 ? (
-                  <StateView
-                    stateId="empty"
-                    title="لا يوجد بديل مؤهل"
-                    description="لا يوجد كابتن آخر معتمد ومتاح ولديه سعة في نفس المنطقة."
-                  />
-                ) : state.candidates.map((candidate) => (
-                  <Button
-                    key={candidate.captainId}
-                    label={`${candidate.captainId} — السعة ${candidate.remainingCapacity}/${candidate.maxActiveAssignments}`}
-                    tone={replacementCaptainId === candidate.captainId ? 'brand' : 'secondary'}
-                    disabled={busy}
-                    onPress={() => setReplacementCaptainId(candidate.captainId)}
-                  />
-                ))}
-                <Button
-                  label={state.mutationKind === 'reassigning' ? 'جاري إعادة الإسناد…' : 'إعادة الإسناد بأمان'}
-                  disabled={busy || !replacementCaptainId || reason.trim().length < 3}
-                  onPress={() => void controller.reassign(selected, replacementCaptainId, reason)}
+            <WebControlPanelQueue title="سجل القرار" meta={String(state.decisions.length)}>
+              {state.decisions.length === 0 ? (
+                <CpStatePanel
+                  role="status"
+                  title="لا توجد قرارات مقروءة"
+                  description="قد يكون الإسناد قديمًا أو تعذر تحميل سجله."
                 />
-              </Box>
-
-              <WebControlPanelQueue title="سجل القرار" meta={String(state.decisions.length)}>
-                {state.decisions.length === 0 ? (
-                  <StateView
-                    stateId="empty"
-                    title="لا توجد قرارات مقروءة"
-                    description="قد يكون الإسناد قديمًا أو تعذر تحميل سجله."
-                  />
-                ) : state.decisions.map((decision) => (
-                  <WebControlPanelDecisionRow
-                    key={decision.id}
-                    entityId={decision.id}
-                    entityLabel={ACTION_LABELS[decision.action]}
-                    status={decision.reasonCode || decision.action}
-                    statusTone={decision.action.includes('rejected') || decision.action === 'cancelled' ? 'danger' : 'info'}
-                    reason={decision.reason || `نفذه ${decision.actorRole}: ${decision.actorId}`}
-                    sla={new Date(decision.createdAt).toLocaleString('ar-YE')}
-                  />
-                ))}
-              </WebControlPanelQueue>
-            </>
-          )}
-        </Box>
-      </div>
-    </Box>
+              ) : state.decisions.map((decision) => (
+                <WebControlPanelDecisionRow
+                  key={decision.id}
+                  entityId={decision.id}
+                  entityLabel={ACTION_LABELS[decision.action]}
+                  status={decision.reasonCode || decision.action}
+                  statusTone={decision.action.includes('rejected') || decision.action === 'cancelled' ? 'danger' : 'info'}
+                  reason={decision.reason || `نفذه ${decision.actorRole}: ${decision.actorId}`}
+                  sla={new Date(decision.createdAt).toLocaleString('ar-YE')}
+                />
+              ))}
+            </WebControlPanelQueue>
+          </div>
+        )
+      }
+    >
+      <WebControlPanelQueue title="الإسنادات النشطة" meta={String(state.assignments.length)}>
+        {state.assignments.length === 0 ? (
+          <CpStatePanel
+            role="status"
+            title="لا توجد إسنادات نشطة"
+            description="لا توجد عروض معلقة أو مهام مقبولة حاليًا."
+          >
+            <CpRetryButton onClick={() => void controller.reload()}>تحديث</CpRetryButton>
+          </CpStatePanel>
+        ) : state.assignments.map((assignment) => (
+          <WebControlPanelDecisionRow
+            key={assignment.id}
+            entityId={assignment.id}
+            entityLabel={`طلب: ${assignment.orderId || 'خاص'} · كابتن: ${assignment.captainId}`}
+            status={assignment.status}
+            statusTone={assignment.status === 'offered' ? 'warning' : 'success'}
+            reason={`منطقة ${assignment.serviceAreaCode || '—'} · ${formatDistance(assignment.distanceMeters)}`}
+            sla={assignment.status === 'offered' ? `المهلة: ${deadlineLabel(assignment.responseDeadlineAt)}` : 'مهمة مقبولة'}
+            onInspect={() => void controller.selectAssignment(assignment)}
+          />
+        ))}
+      </WebControlPanelQueue>
+    </OperationsRoomFrame>
   );
 }
 

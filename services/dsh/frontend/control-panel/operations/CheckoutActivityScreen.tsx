@@ -1,7 +1,10 @@
 "use client";
 
 import {
+  CpBadge,
   CpButton,
+  CpFilterBar,
+  CpMutedInline,
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
@@ -9,8 +12,8 @@ import {
   CpTableCell,
   CpTableHeaderCell,
 } from "@bthwani/control-panel/components";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { WebStyleSheet } from "@bthwani/ui-kit/web";
 import { useOperatorCheckoutController } from "../../shared/checkout";
 import type { DshCheckoutIntent, DshFulfillmentMode, DshIntentState } from "../../shared/checkout";
 
@@ -50,29 +53,27 @@ export function CheckoutActivityScreen() {
   return (
     <DataTablePageFrame
       dir="rtl"
-      header={<CpPageHeader title="نشاط checkout ومرجع WLT" />}
-      toolbar={(
-        <section style={styles.toolbar}>
-          <strong>حدود الخدمة والرحلة التشغيلية</strong>
-          <p style={styles.toolbarDescription}>
-            هذه الشاشة مراقبة تشغيلية فقط: DSH يعرض نية checkout، وWLT يملك مرجع جلسة الدفع. لا توجد أزرار خصم أو استرداد أو تسوية هنا.
-          </p>
-          <div style={styles.filters} aria-label="مرشحات حالة checkout">
-            <CpButton onClick={() => controller.reload()}>كل الحالات</CpButton>
-            <CpButton onClick={() => controller.reload("wlt_outcome_unknown")}>تحتاج مصالحة</CpButton>
-            <CpButton onClick={() => controller.reload("wlt_handoff_failed")}>فشل التسليم إلى WLT</CpButton>
-            <CpButton onClick={() => controller.reload("payment_pending")}>في انتظار نتيجة الدفع</CpButton>
-          </div>
-        </section>
+      header={(
+        <CpPageHeader title="نشاط checkout ومرجع WLT">
+          <CpMutedInline tight>
+            حدود الخدمة والرحلة التشغيلية: هذه الشاشة مراقبة تشغيلية فقط، DSH يعرض نية checkout وWLT يملك مرجع جلسة الدفع. لا توجد أزرار خصم أو استرداد أو تسوية هنا.
+          </CpMutedInline>
+        </CpPageHeader>
+      )}
+      filters={(
+        <CpFilterBar label="مرشحات حالة checkout">
+          <CpButton onClick={() => controller.reload()}>كل الحالات</CpButton>
+          <CpButton onClick={() => controller.reload("wlt_outcome_unknown")}>تحتاج مصالحة</CpButton>
+          <CpButton onClick={() => controller.reload("wlt_handoff_failed")}>فشل التسليم إلى WLT</CpButton>
+          <CpButton onClick={() => controller.reload("payment_pending")}>في انتظار نتيجة الدفع</CpButton>
+        </CpFilterBar>
       )}
       stateView={stateView}
     >
       {controller.reconcileError ? (
-        <div style={styles.alertWrap}>
-          <CpStatePanel role="alert" title="تعذر تنفيذ المصالحة" description={controller.reconcileError}>
-            <CpButton onClick={controller.clearReconcileError} style={styles.dismissButton}>إغلاق الرسالة</CpButton>
-          </CpStatePanel>
-        </div>
+        <CpStatePanel role="alert" title="تعذر تنفيذ المصالحة" description={controller.reconcileError}>
+          <CpButton onClick={controller.clearReconcileError} variant="ghost">إغلاق الرسالة</CpButton>
+        </CpStatePanel>
       ) : null}
 
       {controller.loadState === "success" && (
@@ -133,7 +134,6 @@ function CheckoutIntentRow({
             onClick={() => void onReconcile(intent.id)}
             disabled={reconciliationLocked}
             aria-label={`إعادة مصالحة checkout ${intent.id}`}
-            style={styles.reconcileButton}
           >
             {isReconciling
               ? "جاري تنفيذ المصالحة…"
@@ -147,90 +147,17 @@ function CheckoutIntentRow({
 }
 
 function StatusBadge({ state }: { readonly state: DshIntentState }) {
-  const style = {
-    ...styles.badge,
-    ...(STATUS_TONE_STYLES[state] ?? styles.statusNeutral),
-  };
-  return <span style={style}>{STATE_LABELS[state] ?? state}</span>;
+  return <CpBadge tone={STATUS_TONE[state] ?? "neutral"}>{STATE_LABELS[state] ?? state}</CpBadge>;
 }
 
-const styles = WebStyleSheet.create({
-  toolbar: {
-    margin: "0 1rem 1rem",
-    padding: "1rem",
-    border: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
-    borderRadius: "0.75rem",
-    background: "Canvas",
-  },
-  toolbarDescription: {
-    margin: "0.35rem 0 0",
-    opacity: 0.75,
-  },
-  filters: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "0.5rem",
-    marginTop: "0.85rem",
-  },
-  alertWrap: {
-    margin: "0 1rem 1rem",
-  },
-  reconcileButton: {
-    minHeight: "2.25rem",
-    padding: "0.45rem 0.75rem",
-    border: "1px solid currentColor",
-    borderRadius: "0.55rem",
-    background: "Canvas",
-    color: "CanvasText",
-    cursor: "pointer",
-    fontWeight: 700,
-  },
-  dismissButton: {
-    marginTop: "0.75rem",
-    minHeight: "2.1rem",
-    padding: "0.4rem 0.7rem",
-    border: "1px solid currentColor",
-    borderRadius: "0.5rem",
-    background: "Canvas",
-    color: "CanvasText",
-    cursor: "pointer",
-  },
-  badge: {
-    display: "inline-flex",
-    alignItems: "center",
-    minHeight: "1.7rem",
-    padding: "0.15rem 0.6rem",
-    borderRadius: "999px",
-    fontSize: "0.8rem",
-    fontWeight: 700,
-    whiteSpace: "nowrap",
-    color: "CanvasText",
-  },
-  statusNeutral: {
-    background: "color-mix(in srgb, CanvasText 8%, transparent)",
-  },
-  statusDanger: {
-    background: "color-mix(in srgb, Mark 16%, transparent)",
-  },
-  statusWarning: {
-    background: "color-mix(in srgb, Highlight 22%, transparent)",
-  },
-  statusInfo: {
-    background: "color-mix(in srgb, Highlight 16%, transparent)",
-  },
-  statusSuccess: {
-    background: "color-mix(in srgb, ActiveText 16%, transparent)",
-  },
-});
-
-const STATUS_TONE_STYLES: Record<DshIntentState, typeof styles.statusNeutral> = {
-  pending: styles.statusNeutral,
-  wlt_handoff_failed: styles.statusDanger,
-  wlt_outcome_unknown: styles.statusWarning,
-  payment_pending: styles.statusInfo,
-  payment_confirmed: styles.statusSuccess,
-  payment_failed: styles.statusDanger,
-  confirmed: styles.statusSuccess,
-  cancelled: styles.statusDanger,
-  expired: styles.statusNeutral,
+const STATUS_TONE: Record<DshIntentState, CpBadgeTone> = {
+  pending: "neutral",
+  wlt_handoff_failed: "danger",
+  wlt_outcome_unknown: "warning",
+  payment_pending: "info",
+  payment_confirmed: "success",
+  payment_failed: "danger",
+  confirmed: "success",
+  cancelled: "danger",
+  expired: "neutral",
 };

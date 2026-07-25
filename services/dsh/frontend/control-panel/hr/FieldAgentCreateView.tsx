@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Box, Button, Card, ScrollScreen, Text, TextField, spacing, colorRoles, alpha } from "@bthwani/ui-kit";
+import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
+import { EditorPageFrame } from "@bthwani/control-panel/shell";
+import { Text } from "@bthwani/ui-kit";
 import { useFieldAgentCreateAndActivationController } from "../../shared/workforce";
 import type { FieldAgent, SupervisorCandidate } from "../../shared/workforce";
 import { SupervisorPicker } from "./SupervisorPicker";
@@ -52,112 +54,92 @@ export function FieldAgentCreateView(props: {
     setCopied(false);
   };
 
-  const content = (
-    <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-      {!props.inline && (
-        <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-          <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>
-            إضافة مقدم خدمة — ميداني
-          </Text>
-          {props.onBack && <Button label="رجوع" tone="ghost" onPress={props.onBack} />}
-        </Box>
-      )}
-      <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+  const body = (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <CpMutedInline>
         مقدم خدمة مستقل — يتقاضى عمولة عن كل انضمام متجر. رقم الهاتف يُسجَّل في خدمة الهوية ولا
         يُخزَّن في Workforce.
-      </Text>
+      </CpMutedInline>
 
-      <TextField label="الاسم الكامل *" value={fullNameAr} onChangeText={setFullNameAr} placeholder="أحمد محمد" disabled={Boolean(createdAgent)} />
-      <TextField label="رقم الهاتف *" value={phone} onChangeText={setPhone} placeholder="مثال: 777123456" disabled={Boolean(createdAgent)} />
+      <div>
+        <Text role="bodySm">الاسم الكامل *</Text>
+        <CpTextInput value={fullNameAr} onChange={setFullNameAr} placeholder="أحمد محمد" disabled={Boolean(createdAgent)} aria-label="الاسم الكامل" />
+      </div>
+      <div>
+        <Text role="bodySm">رقم الهاتف *</Text>
+        <CpTextInput value={phone} onChange={setPhone} placeholder="مثال: 777123456" disabled={Boolean(createdAgent)} aria-label="رقم الهاتف" />
+      </div>
 
-      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>التشغيل والنطاق</Text>
-      <ZonePicker
-        value={zoneId}
-        disabled={Boolean(createdAgent)}
-        onChange={(zone) => setZoneId(zone?.id ?? "")}
-      />
+      <Text role="bodySm" style={{ fontWeight: "bold" }}>التشغيل والنطاق</Text>
+      <ZonePicker value={zoneId} disabled={Boolean(createdAgent)} onChange={(zone) => setZoneId(zone?.id ?? "")} />
 
-      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>الإشراف</Text>
+      <Text role="bodySm" style={{ fontWeight: "bold" }}>الإشراف</Text>
       <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} disabled={Boolean(createdAgent)} />
 
-      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>تفعيل حساب الدخول</Text>
-      <Box style={{ flexDirection: "row-reverse", gap: spacing[2], alignItems: "center" }}>
-        <Button
-          label={autoActivate ? "إصدار كود دخول بعد الإنشاء ✓" : "إنشاء بدون كود دخول"}
-          tone={autoActivate ? "primary" : "ghost"}
-          disabled={Boolean(createdAgent)}
-          onPress={() => setAutoActivate((value) => !value)}
-        />
-      </Box>
+      <Text role="bodySm" style={{ fontWeight: "bold" }}>تفعيل حساب الدخول</Text>
+      <CpButton
+        variant={autoActivate ? "primary" : "ghost"}
+        disabled={Boolean(createdAgent)}
+        onClick={() => setAutoActivate((value) => !value)}
+      >
+        {autoActivate ? "إصدار كود دخول بعد الإنشاء" : "إنشاء بدون كود دخول"}
+      </CpButton>
 
-      {state.kind === "error" && (
-        <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>{state.message}</Text>
-      )}
+      {state.kind === "error" ? <CpStatePanel role="alert" title="تعذر إنشاء مقدم الخدمة" description={state.message} /> : null}
 
       {createdAgent ? (
-        <Box style={{ gap: spacing[3], marginTop: spacing[3], padding: spacing[3], backgroundColor: alpha(colorRoles.success, 0.08), border: `1px solid ${alpha(colorRoles.success, 0.3)}`, borderRadius: 8 }}>
-          <Text role="bodyStrong" tone="success" style={{ textAlign: "right" }}>
-            تم إنشاء مقدم الخدمة وتأكيده من Workforce.
-          </Text>
-
+        <CpStatePanel role="status" title="تم إنشاء مقدم الخدمة وتأكيده من Workforce.">
           {issuedCode ? (
-            <Box style={{ gap: spacing[2] }}>
-              <Text role="bodySm" style={{ textAlign: "right" }}>كود التفعيل الصادر من خدمة الهوية:</Text>
-              <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", backgroundColor: colorRoles.surfaceBase, padding: spacing[2], borderRadius: 4, border: `1px solid ${colorRoles.borderSubtle}` }}>
-                <Text role="titleMd" style={{ color: colorRoles.success, letterSpacing: 2, fontWeight: "bold" }}>{issuedCode}</Text>
-                <Button
-                  label={copied ? "تم النسخ ✓" : "نسخ الكود"}
-                  tone="ghost"
-                  onPress={() => {
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <Text role="bodySm">كود التفعيل الصادر من خدمة الهوية:</Text>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
+                <Text role="titleMd" style={{ letterSpacing: 2, fontWeight: "bold" }}>{issuedCode}</Text>
+                <CpButton
+                  variant="ghost"
+                  onClick={() => {
                     if (typeof navigator !== "undefined") {
                       void navigator.clipboard.writeText(issuedCode);
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     }
                   }}
-                />
-              </Box>
-            </Box>
+                >
+                  {copied ? "تم النسخ" : "نسخ الكود"}
+                </CpButton>
+              </div>
+            </div>
           ) : activationError ? (
-            <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>
-              تم إنشاء مقدم الخدمة، لكن تعذر إصدار كود الدخول: {activationError}
-            </Text>
+            <Text role="bodySm">تم إنشاء مقدم الخدمة، لكن تعذر إصدار كود الدخول: {activationError}</Text>
           ) : (
-            <Text role="bodySm" tone="warning" style={{ textAlign: "right" }}>
-              تم الإنشاء بدون تفعيل حساب الدخول. يمكن إصدار الكود من ملف مقدم الخدمة.
-            </Text>
+            <Text role="bodySm">تم الإنشاء بدون تفعيل حساب الدخول. يمكن إصدار الكود من ملف مقدم الخدمة.</Text>
           )}
 
-          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-            <Button
-              label="فتح ملف مقدم الخدمة"
-              tone="primary"
-              onPress={() => props.onCreated(createdAgent)}
-            />
-            <Button
-              label="إضافة مقدم خدمة جديد"
-              tone="secondary"
-              onPress={resetForm}
-            />
-          </Box>
-        </Box>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.75rem" }}>
+            <CpButton variant="primary" onClick={() => props.onCreated(createdAgent)}>فتح ملف مقدم الخدمة</CpButton>
+            <CpButton variant="secondary" onClick={resetForm}>إضافة مقدم خدمة جديد</CpButton>
+          </div>
+        </CpStatePanel>
       ) : (
-        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], marginTop: spacing[2] }}>
-          <Button
-            label="إنشاء مقدم الخدمة"
-            tone="primary"
-            disabled={!canSubmit}
-            loading={state.kind === "submitting"}
-            onPress={() => void handleSubmit()}
-          />
-        </Box>
+        <CpButton variant="primary" disabled={!canSubmit} onClick={() => void handleSubmit()}>
+          {state.kind === "submitting" ? "جارٍ الإنشاء…" : "إنشاء مقدم الخدمة"}
+        </CpButton>
       )}
-    </Card>
+    </div>
   );
 
-  if (props.inline) return content;
+  if (props.inline) return body;
 
-  return <ScrollScreen>{content}</ScrollScreen>;
+  return (
+    <EditorPageFrame
+      header={
+        <CpPageHeader title="إضافة مقدم خدمة — ميداني">
+          {props.onBack ? <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton> : null}
+        </CpPageHeader>
+      }
+    >
+      {body}
+    </EditorPageFrame>
+  );
 }
 
 export default FieldAgentCreateView;

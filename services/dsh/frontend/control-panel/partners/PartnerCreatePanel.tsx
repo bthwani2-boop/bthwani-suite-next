@@ -1,13 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Button,
-  Card,
-  StateView,
-  Text,
-  TextField,
-} from "@bthwani/ui-kit";
+import { useId, useState, type ReactNode } from "react";
+import { CpButton, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { usePartnerWorkspaceListController } from "../../shared/partner";
 
 type Controller = ReturnType<typeof usePartnerWorkspaceListController>;
@@ -17,6 +11,16 @@ type Props = {
   readonly onClose: () => void;
   readonly onCreated?: (partnerId: string) => void;
 };
+
+function LabeledField({ label, children }: { readonly label: string; readonly children: ReactNode }) {
+  const id = useId();
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+      <label htmlFor={id}>{label}</label>
+      {children}
+    </div>
+  );
+}
 
 export function PartnerCreatePanel({ controller, onClose, onCreated }: Props) {
   const [legalNameAr, setLegalNameAr] = useState("");
@@ -52,32 +56,48 @@ export function PartnerCreatePanel({ controller, onClose, onCreated }: Props) {
   }
 
   return (
-    <Card style={{ padding: "1rem", display: "grid", gap: "0.75rem" }}>
+    <section aria-label="إضافة شريك قانوني" style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
       <div>
-        <Text role="titleMd">إضافة شريك قانوني</Text>
-        <Text role="body" tone="muted">ينشئ DSH شريكًا ومسودة متجر أولية غير منشورة ضمن المستأجر الحالي.</Text>
+        <strong>إضافة شريك قانوني</strong>
+        <p style={{ margin: "0.25rem 0 0" }}>ينشئ DSH شريكًا ومسودة متجر أولية غير منشورة ضمن المستأجر الحالي.</p>
       </div>
-      <TextField label="الاسم القانوني بالعربية" value={legalNameAr} onChangeText={setLegalNameAr} />
-      <TextField label="الاسم الظاهر" value={displayName} onChangeText={setDisplayName} />
-      <TextField label="رقم السجل التجاري" value={legalIdentityNumber} onChangeText={setLegalIdentityNumber} />
-      <TextField label="اسم المالك" value={ownerName} onChangeText={setOwnerName} />
-      <TextField label="رقم الجوال" value={primaryPhone} onChangeText={setPrimaryPhone} />
-      <TextField label="الفئة: restaurant / grocery / pharmacy / bakery / default" value={category} onChangeText={setCategory} />
-      <TextField label="ملاحظات" value={notes} onChangeText={setNotes} multiline />
+
+      <LabeledField label="الاسم القانوني بالعربية">
+        <CpTextInput value={legalNameAr} onChange={setLegalNameAr} aria-label="الاسم القانوني بالعربية" />
+      </LabeledField>
+      <LabeledField label="الاسم الظاهر">
+        <CpTextInput value={displayName} onChange={setDisplayName} aria-label="الاسم الظاهر" />
+      </LabeledField>
+      <LabeledField label="رقم السجل التجاري">
+        <CpTextInput value={legalIdentityNumber} onChange={setLegalIdentityNumber} aria-label="رقم السجل التجاري" />
+      </LabeledField>
+      <LabeledField label="اسم المالك">
+        <CpTextInput value={ownerName} onChange={setOwnerName} aria-label="اسم المالك" />
+      </LabeledField>
+      <LabeledField label="رقم الجوال">
+        <CpTextInput value={primaryPhone} onChange={setPrimaryPhone} aria-label="رقم الجوال" />
+      </LabeledField>
+      <LabeledField label="الفئة: restaurant / grocery / pharmacy / bakery / default">
+        <CpTextInput value={category} onChange={setCategory} aria-label="الفئة" />
+      </LabeledField>
+      <LabeledField label="ملاحظات">
+        <CpTextInput value={notes} onChange={setNotes} aria-label="ملاحظات" />
+      </LabeledField>
 
       {controller.mutationState.kind === "error" ? (
-        <StateView stateId="recoverableError" title="تعذر إنشاء الشريك" description={controller.mutationState.message} />
+        <CpStatePanel role="alert" title="تعذر إنشاء الشريك" description={controller.mutationState.message} />
       ) : null}
 
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-        <Button
-          label={controller.mutationState.kind === "loading" ? "جاري الإنشاء…" : "إنشاء الشريك والمسودة"}
-          tone="primary"
+        <CpButton
+          variant="primary"
           disabled={!valid || controller.mutationState.kind === "loading"}
-          onPress={() => void submit()}
-        />
-        <Button label="إلغاء" tone="secondary" onPress={onClose} />
+          onClick={() => void submit()}
+        >
+          {controller.mutationState.kind === "loading" ? "جاري الإنشاء…" : "إنشاء الشريك والمسودة"}
+        </CpButton>
+        <CpButton onClick={onClose}>إلغاء</CpButton>
       </div>
-    </Card>
+    </section>
   );
 }

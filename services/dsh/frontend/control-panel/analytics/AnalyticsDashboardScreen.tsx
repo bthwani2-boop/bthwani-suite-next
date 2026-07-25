@@ -2,17 +2,18 @@
 
 import React from "react";
 import { useControlPanelSession } from "../../shared/session/control-panel-session";
+import { Box, Card, Text, spacing } from "@bthwani/ui-kit";
 import {
-  Badge,
-  Box,
-  Button,
-  Card,
-  Header,
-  ScrollScreen,
-  StateView,
-  Text,
-  spacing,
-} from "@bthwani/ui-kit";
+  CpBadge,
+  CpKpiCard,
+  CpKpiStrip,
+  CpMutedInline,
+  CpPageHeader,
+  CpRetryButton,
+  CpStatePanel,
+  CpTabs,
+} from "@bthwani/control-panel/components";
+import { MetricsPageFrame } from "@bthwani/control-panel/shell";
 import {
   useOperatorAnalyticsDashboardController,
   buildPlatformKpisViewModel,
@@ -27,6 +28,11 @@ const PERIOD_LABELS: Record<DshAnalyticsPeriod, string> = {
   week: "الأسبوع",
   month: "الشهر",
 };
+
+const PERIOD_TABS = (["today", "week", "month"] as DshAnalyticsPeriod[]).map((value) => ({
+  value,
+  label: PERIOD_LABELS[value],
+}));
 
 export function AnalyticsDashboardScreen() {
   const { state } = useControlPanelSession();
@@ -48,29 +54,13 @@ export function AnalyticsDashboardScreen() {
   const storeVm = storeState.kind === "success" ? buildStoreAnalyticsViewModel(storeState.data) : null;
 
   return (
-    <ScrollScreen>
-      <Header
-        title="التحليلات التشغيلية"
-        subtitle="لوحة مؤشرات الأداء الرئيسية لمنصة DSH"
-      />
-
-      <Card>
-        <Box style={styles.periodRow}>
-          <Text role="titleSm">الفترة الزمنية</Text>
-          <Box style={styles.periodChips}>
-            {(["today", "week", "month"] as DshAnalyticsPeriod[]).map((item) => (
-              <Button
-                key={item}
-                label={PERIOD_LABELS[item]}
-                tone={period === item ? "primary" : "ghost"}
-                onPress={() => setPeriod(item)}
-              />
-            ))}
-          </Box>
-        </Box>
-      </Card>
-
-      {isLoading ? <StateView title="جاري تحميل البيانات من DSH…" /> : null}
+    <MetricsPageFrame
+      header={<CpPageHeader title="التحليلات التشغيلية">
+        <CpMutedInline tight>لوحة مؤشرات الأداء الرئيسية لمنصة DSH</CpMutedInline>
+      </CpPageHeader>}
+      toolbar={<CpTabs items={PERIOD_TABS} value={period} onChange={(value) => setPeriod(value as DshAnalyticsPeriod)} aria-label="الفترة الزمنية" />}
+    >
+      {isLoading ? <CpStatePanel role="status" title="جاري تحميل البيانات من DSH…" /> : null}
 
       {platformState.kind === "error" ? (
         <AnalyticsError title="تعذّر تحميل مؤشرات المنصة" message={platformState.message} reload={reload} />
@@ -79,18 +69,18 @@ export function AnalyticsDashboardScreen() {
         <Card>
           <Box style={styles.sectionHeader}>
             <Text role="titleSm">مؤشرات المنصة</Text>
-            <Badge label={`معدل التنفيذ: ${platformVm.fulfillmentRate}`} tone={platformVm.healthTone} />
+            <CpBadge tone={platformVm.healthTone}>{`معدل التنفيذ: ${platformVm.fulfillmentRate}`}</CpBadge>
           </Box>
-          <Box style={styles.kpiGrid}>
-            <KpiCard label="إجمالي الطلبات" value={String(platformState.kpis.totalOrders)} tone="info" />
-            <KpiCard label="طلبات مكتملة" value={String(platformState.kpis.deliveredOrders)} tone="success" />
-            <KpiCard label="طلبات ملغاة" value={String(platformState.kpis.cancelledOrders)} tone="danger" />
-            <KpiCard label="متاجر نشطة" value={String(platformState.kpis.activeStores)} tone="success" />
-            <KpiCard label="تذاكر مفتوحة" value={String(platformState.kpis.openTickets)} tone={platformState.kpis.openTickets > 0 ? "warning" : "success"} />
-            <KpiCard label="زيارات ميدانية مكتملة" value={String(platformState.kpis.fieldVisitsCompleted)} tone="info" />
-            <KpiCard label="تصعيدات مفتوحة" value={String(platformState.kpis.openEscalations)} tone={platformState.kpis.openEscalations > 0 ? "warning" : "success"} />
-            <KpiCard label="حوادث مفتوحة" value={String(platformState.kpis.openIncidents)} tone={platformState.kpis.openIncidents > 0 ? "danger" : "success"} />
-          </Box>
+          <CpKpiStrip>
+            <CpKpiCard label="إجمالي الطلبات" value={platformState.kpis.totalOrders} />
+            <CpKpiCard label="طلبات مكتملة" value={platformState.kpis.deliveredOrders} />
+            <CpKpiCard label="طلبات ملغاة" value={platformState.kpis.cancelledOrders} />
+            <CpKpiCard label="متاجر نشطة" value={platformState.kpis.activeStores} />
+            <CpKpiCard label="تذاكر مفتوحة" value={platformState.kpis.openTickets} />
+            <CpKpiCard label="زيارات ميدانية مكتملة" value={platformState.kpis.fieldVisitsCompleted} />
+            <CpKpiCard label="تصعيدات مفتوحة" value={platformState.kpis.openEscalations} />
+            <CpKpiCard label="حوادث مفتوحة" value={platformState.kpis.openIncidents} />
+          </CpKpiStrip>
           <Freshness generatedAt={platformState.kpis.generatedAt} />
         </Card>
       ) : null}
@@ -102,16 +92,16 @@ export function AnalyticsDashboardScreen() {
         <Card>
           <Box style={styles.sectionHeader}>
             <Text role="titleSm">تحليلات الطلبات</Text>
-            <Badge label={`معدل الإتمام: ${orderVm.fulfillmentRate}`} tone="info" />
+            <CpBadge tone="info">{`معدل الإتمام: ${orderVm.fulfillmentRate}`}</CpBadge>
           </Box>
           {orderVm.statusRows.map((row) => (
             <Box key={row.label} style={styles.statusRow}>
               <Text role="body">{row.label}</Text>
-              <Badge label={String(row.count)} tone={row.tone} />
+              <CpBadge tone={row.tone}>{String(row.count)}</CpBadge>
             </Box>
           ))}
           {orderVm.statusRows.length === 0 ? (
-            <Text role="body" tone="muted" style={styles.emptyNote}>لا توجد طلبات في هذه الفترة، ولم تُنشأ أرقام بديلة.</Text>
+            <CpMutedInline>لا توجد طلبات في هذه الفترة، ولم تُنشأ أرقام بديلة.</CpMutedInline>
           ) : null}
           <Freshness generatedAt={orderState.data.generatedAt} />
         </Card>
@@ -124,17 +114,17 @@ export function AnalyticsDashboardScreen() {
         <Card>
           <Box style={styles.sectionHeader}>
             <Text role="titleSm">تحليلات التوصيل</Text>
-            <Badge label={`إتمام: ${deliveryVm.completionRate}`} tone={deliveryVm.healthTone} />
+            <CpBadge tone={deliveryVm.healthTone}>{`إتمام: ${deliveryVm.completionRate}`}</CpBadge>
           </Box>
-          <Box style={styles.kpiGrid}>
-            <KpiCard label="إجمالي الإسنادات" value={String(deliveryState.data.totalAssignments)} tone="info" />
-            <KpiCard label="مقبولة" value={String(deliveryState.data.acceptedAssignments)} tone="success" />
-            <KpiCard label="مكتملة" value={String(deliveryState.data.completedAssignments)} tone="success" />
-            <KpiCard label="مرفوضة" value={String(deliveryState.data.declinedAssignments)} tone="danger" />
-          </Box>
+          <CpKpiStrip>
+            <CpKpiCard label="إجمالي الإسنادات" value={deliveryState.data.totalAssignments} />
+            <CpKpiCard label="مقبولة" value={deliveryState.data.acceptedAssignments} />
+            <CpKpiCard label="مكتملة" value={deliveryState.data.completedAssignments} />
+            <CpKpiCard label="مرفوضة" value={deliveryState.data.declinedAssignments} />
+          </CpKpiStrip>
           <Box style={styles.deliveryRates}>
-            <Text role="caption" tone="muted">معدل القبول: {deliveryVm.acceptanceRate}</Text>
-            <Text role="caption" tone="muted">معدل الإتمام: {deliveryVm.completionRate}</Text>
+            <CpMutedInline tight>معدل القبول: {deliveryVm.acceptanceRate}</CpMutedInline>
+            <CpMutedInline tight>معدل الإتمام: {deliveryVm.completionRate}</CpMutedInline>
           </Box>
           <Freshness generatedAt={deliveryState.data.generatedAt} />
         </Card>
@@ -147,25 +137,25 @@ export function AnalyticsDashboardScreen() {
         <Card>
           <Box style={styles.sectionHeader}>
             <Text role="titleSm">تحليلات الدعم</Text>
-            <Badge label={`${supportState.data.openTickets} مفتوحة`} tone={supportState.data.openTickets > 5 ? "warning" : "success"} />
+            <CpBadge tone={supportState.data.openTickets > 5 ? "warning" : "success"}>{`${supportState.data.openTickets} مفتوحة`}</CpBadge>
           </Box>
-          <Box style={styles.kpiGrid}>
-            <KpiCard label="إجمالي التذاكر" value={String(supportState.data.totalTickets)} tone="info" />
-            <KpiCard label="مفتوحة" value={String(supportState.data.openTickets)} tone={supportState.data.openTickets > 0 ? "warning" : "success"} />
-            <KpiCard label="محلولة" value={String(supportState.data.resolvedTickets)} tone="success" />
-          </Box>
+          <CpKpiStrip>
+            <CpKpiCard label="إجمالي التذاكر" value={supportState.data.totalTickets} />
+            <CpKpiCard label="مفتوحة" value={supportState.data.openTickets} />
+            <CpKpiCard label="محلولة" value={supportState.data.resolvedTickets} />
+          </CpKpiStrip>
           {supportState.data.byCategory.length > 0 ? (
             <>
-              <Text role="caption" tone="muted" style={styles.categoryTitle}>التوزيع حسب الفئة</Text>
+              <CpMutedInline tight>التوزيع حسب الفئة</CpMutedInline>
               {supportState.data.byCategory.map((category) => (
                 <Box key={category.category} style={styles.statusRow}>
                   <Text role="body">{category.category}</Text>
-                  <Badge label={String(category.count)} tone="info" />
+                  <CpBadge tone="info">{String(category.count)}</CpBadge>
                 </Box>
               ))}
             </>
           ) : (
-            <Text role="body" tone="muted" style={styles.emptyNote}>لا توجد تذاكر في هذه الفترة.</Text>
+            <CpMutedInline>لا توجد تذاكر في هذه الفترة.</CpMutedInline>
           )}
           <Freshness generatedAt={supportState.data.generatedAt} />
         </Card>
@@ -178,65 +168,40 @@ export function AnalyticsDashboardScreen() {
         <Card>
           <Box style={styles.sectionHeader}>
             <Text role="titleSm">تحليلات المتاجر</Text>
-            <Badge label={`جاهزية: ${storeVm.readinessRate}`} tone={storeVm.healthTone} />
+            <CpBadge tone={storeVm.healthTone}>{`جاهزية: ${storeVm.readinessRate}`}</CpBadge>
           </Box>
-          <Box style={styles.kpiGrid}>
-            <KpiCard label="إجمالي المتاجر" value={String(storeState.data.totalStores)} tone="info" />
-            <KpiCard label="نشطة ومرئية" value={String(storeState.data.activeStores)} tone="success" />
-            <KpiCard label="غير متاحة أو مخفية" value={String(storeState.data.suspendedStores)} tone="danger" />
-            <KpiCard label="تحتاج زيارة ميدانية" value={String(storeState.data.pendingReadiness)} tone="warning" />
-            <KpiCard label="اكتملت جاهزيتها" value={String(storeState.data.readinessComplete)} tone="success" />
-          </Box>
+          <CpKpiStrip>
+            <CpKpiCard label="إجمالي المتاجر" value={storeState.data.totalStores} />
+            <CpKpiCard label="نشطة ومرئية" value={storeState.data.activeStores} />
+            <CpKpiCard label="غير متاحة أو مخفية" value={storeState.data.suspendedStores} />
+            <CpKpiCard label="تحتاج زيارة ميدانية" value={storeState.data.pendingReadiness} />
+            <CpKpiCard label="اكتملت جاهزيتها" value={storeState.data.readinessComplete} />
+          </CpKpiStrip>
           <Freshness generatedAt={storeState.data.generatedAt} />
         </Card>
       ) : null}
-    </ScrollScreen>
+    </MetricsPageFrame>
   );
 }
 
 function AnalyticsError({ title, message, reload }: { title: string; message: string; reload: () => void }) {
   return (
-    <StateView
-      title={title}
-      description={message}
-      actionLabel="إعادة المحاولة"
-      onActionPress={reload}
-    />
+    <CpStatePanel role="alert" title={title} description={message}>
+      <CpRetryButton onClick={reload}>إعادة المحاولة</CpRetryButton>
+    </CpStatePanel>
   );
 }
 
 function Freshness({ generatedAt }: { generatedAt: string }) {
   return (
-    <Text role="caption" tone="muted" style={styles.freshness}>
+    <CpMutedInline tight>
       المصدر DSH • آخر تحديث {new Date(generatedAt).toLocaleString("ar")}
-    </Text>
-  );
-}
-
-type KpiCardProps = {
-  readonly label: string;
-  readonly value: string;
-  readonly tone: "success" | "warning" | "danger" | "info";
-};
-
-function KpiCard({ label, value, tone }: KpiCardProps) {
-  return (
-    <Box style={styles.kpiCard}>
-      <Text role="caption" tone="muted">{label}</Text>
-      <Badge label={value} tone={tone} />
-    </Box>
+    </CpMutedInline>
   );
 }
 
 const styles = {
-  periodRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", padding: spacing[3] },
-  periodChips: { flexDirection: "row-reverse", gap: spacing[2] },
-  sectionHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", padding: spacing[3] },
-  kpiGrid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[3], padding: spacing[3] },
-  kpiCard: { alignItems: "center", gap: spacing[1], minWidth: 80 },
-  statusRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", paddingHorizontal: spacing[3], paddingVertical: spacing[2] },
-  emptyNote: { padding: spacing[3] },
-  deliveryRates: { flexDirection: "row-reverse", justifyContent: "space-around", paddingHorizontal: spacing[3], paddingBottom: spacing[3] },
-  categoryTitle: { paddingHorizontal: spacing[3], paddingTop: spacing[2] },
-  freshness: { paddingHorizontal: spacing[3], paddingBottom: spacing[3] },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing[3] },
+  statusRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: spacing[3], paddingVertical: spacing[2] },
+  deliveryRates: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: spacing[3], paddingBottom: spacing[3] },
 } as const;

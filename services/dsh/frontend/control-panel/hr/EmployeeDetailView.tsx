@@ -1,7 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Box, Button, Card, ScrollScreen, Text, TextField, spacing } from "@bthwani/ui-kit";
+import {
+  CpButton,
+  CpDescriptionList,
+  CpDescriptionRow,
+  CpPageHeader,
+  CpMutedInline,
+  CpStatePanel,
+  CpTextInput,
+} from "@bthwani/control-panel/components";
+import { DetailPageFrame } from "@bthwani/control-panel/shell";
+import { Text } from "@bthwani/ui-kit";
 
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
@@ -50,25 +60,29 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
 
   if (controller.state.kind === "loading") {
     return (
-      <ScrollScreen>
-        <Card style={{ padding: spacing[4] }}>
-          <Text role="bodySm" tone="muted" align="center">جارٍ تحميل ملف الموظف…</Text>
-        </Card>
-      </ScrollScreen>
+      <DetailPageFrame stateView={<CpStatePanel role="status" title="جارٍ تحميل ملف الموظف…" />}>
+        <div />
+      </DetailPageFrame>
     );
   }
 
   if (controller.state.kind === "error" || !employee) {
     const errorState = controller.state.kind === "error" ? controller.state : null;
     return (
-      <ScrollScreen>
-        <WorkforceErrorState
-          message={errorState?.message ?? "تعذر تحميل ملف الموظف"}
-          isSessionExpired={errorState?.isSessionExpired ?? false}
-          onRetry={() => void controller.reload()}
-        />
-        <Button label="رجوع" tone="ghost" onPress={props.onBack} />
-      </ScrollScreen>
+      <DetailPageFrame
+        stateView={
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <WorkforceErrorState
+              message={errorState?.message ?? "تعذر تحميل ملف الموظف"}
+              isSessionExpired={errorState?.isSessionExpired ?? false}
+              onRetry={() => void controller.reload()}
+            />
+            <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+          </div>
+        }
+      >
+        <div />
+      </DetailPageFrame>
     );
   }
 
@@ -113,90 +127,116 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
   };
 
   return (
-    <ScrollScreen>
-      <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-        <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-          <Box style={{ alignItems: "flex-end", gap: spacing[1] }}>
-            <Text role="titleSm">ملف الموظف الإداري</Text>
-            <Text role="caption" tone="muted">{employee.workforceCode} · {ENGAGEMENT_STATUS_LABEL_AR[employee.engagementStatus]}</Text>
-          </Box>
-          <Button label="رجوع" tone="ghost" onPress={props.onBack} />
-        </Box>
+    <DetailPageFrame
+      header={
+        <CpPageHeader title="ملف الموظف الإداري">
+          <CpMutedInline tight>{employee.workforceCode} · {ENGAGEMENT_STATUS_LABEL_AR[employee.engagementStatus]}</CpMutedInline>
+          <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+        </CpPageHeader>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div>
+            <Text role="bodySm">الاسم بالعربية *</Text>
+            <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" />
+          </div>
+          <div>
+            <Text role="bodySm">الاسم بالإنجليزية</Text>
+            <CpTextInput value={fullNameEn} onChange={setFullNameEn} aria-label="الاسم بالإنجليزية" />
+          </div>
+          <div>
+            <Text role="bodySm">الإدارة أو القسم *</Text>
+            <CpTextInput value={department} onChange={setDepartment} aria-label="الإدارة أو القسم" />
+          </div>
+          <div>
+            <Text role="bodySm">المسمى الوظيفي *</Text>
+            <CpTextInput value={role} onChange={setRole} aria-label="المسمى الوظيفي" />
+          </div>
+          <div>
+            <Text role="bodySm">موقع العمل</Text>
+            <CpTextInput value={officeLocation} onChange={setOfficeLocation} aria-label="موقع العمل" />
+          </div>
+          <div>
+            <Text role="bodySm">تاريخ بداية العمل</Text>
+            <CpTextInput value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية العمل" />
+          </div>
 
-        <TextField label="الاسم بالعربية *" value={fullNameAr} onChangeText={setFullNameAr} />
-        <TextField label="الاسم بالإنجليزية" value={fullNameEn} onChangeText={setFullNameEn} />
-        <TextField label="الإدارة أو القسم *" value={department} onChangeText={setDepartment} />
-        <TextField label="المسمى الوظيفي *" value={role} onChangeText={setRole} />
-        <TextField label="موقع العمل" value={officeLocation} onChangeText={setOfficeLocation} />
-        <TextField label="تاريخ بداية العمل" value={engagementStartDate} onChangeText={setEngagementStartDate} placeholder="YYYY-MM-DD" />
+          <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف والتسلسل الإداري</Text>
+          <SupervisorPicker kind="employee" selected={supervisor} onSelect={setSupervisor} />
+          {controller.actionError ? <CpStatePanel role="alert" title={controller.actionError} /> : null}
 
-        <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>المشرف والتسلسل الإداري</Text>
-        <SupervisorPicker kind="employee" selected={supervisor} onSelect={setSupervisor} />
-        {controller.actionError ? <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>{controller.actionError}</Text> : null}
+          <CpButton
+            variant="primary"
+            disabled={!canSave}
+            onClick={() =>
+              void controller.update({
+                expectedVersion: employee.version,
+                fullNameAr: fullNameAr.trim(),
+                fullNameEn: fullNameEn.trim() || undefined,
+                department: department.trim(),
+                role: role.trim(),
+                officeLocation: officeLocation.trim() || undefined,
+                engagementStartDate: engagementStartDate.trim() || undefined,
+                supervisorActorId: supervisor?.actorId,
+              })
+            }
+          >
+            {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ التعديلات"}
+          </CpButton>
+        </div>
 
-        <Button
-          label="حفظ التعديلات"
-          tone="primary"
-          disabled={!canSave}
-          loading={controller.actionBusy}
-          onPress={() =>
-            void controller.update({
-              expectedVersion: employee.version,
-              fullNameAr: fullNameAr.trim(),
-              fullNameEn: fullNameEn.trim() || undefined,
-              department: department.trim(),
-              role: role.trim(),
-              officeLocation: officeLocation.trim() || undefined,
-              engagementStartDate: engagementStartDate.trim() || undefined,
-              supervisorActorId: supervisor?.actorId,
-            })
-          }
-        />
-      </Card>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <Text role="titleSm">الصورة والوثائق الوظيفية</Text>
+          <Text role="bodySm">الصورة: {employee.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
+          <Text role="bodySm">الوثائق: {profile?.documentMediaRefs.length ?? 0}</Text>
+          {uploadError ? <CpStatePanel role="alert" title={uploadError} /> : null}
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>
+              {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}
+            </CpButton>
+            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("document")}>
+              {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة وظيفية"}
+            </CpButton>
+          </div>
+        </div>
 
-      <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-        <Text role="titleSm" style={{ textAlign: "right" }}>الصورة والوثائق الوظيفية</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>الصورة: {employee.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>الوثائق: {profile?.documentMediaRefs.length ?? 0}</Text>
-        {uploadError ? <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>{uploadError}</Text> : null}
-        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-          <Button label="رفع صورة شخصية" tone="secondary" loading={uploadBusy} disabled={uploadBusy} onPress={() => pickFile("photo")} />
-          <Button label="رفع وثيقة وظيفية" tone="secondary" loading={uploadBusy} disabled={uploadBusy} onPress={() => pickFile("document")} />
-        </Box>
-      </Card>
-
-      <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-        <Text role="titleSm" style={{ textAlign: "right" }}>إدارة الحالة الوظيفية</Text>
-        <TextField label="سبب الإيقاف أو إعادة التفعيل *" value={reason} onChangeText={setReason} placeholder="اكتب سببًا تشغيليًا واضحًا" />
-        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <Text role="titleSm">إدارة الحالة الوظيفية</Text>
+          <div>
+            <Text role="bodySm">سبب الإيقاف أو إعادة التفعيل *</Text>
+            <CpTextInput value={reason} onChange={setReason} placeholder="اكتب سببًا تشغيليًا واضحًا" aria-label="سبب الإيقاف أو إعادة التفعيل" />
+          </div>
           {employee.engagementStatus === "suspended" ? (
-            <Button
-              label="إعادة تفعيل الموظف"
-              tone="primary"
+            <CpButton
+              variant="primary"
               disabled={!canChangeStatus}
-              loading={controller.actionBusy}
-              onPress={() => void controller.reactivate(employee.version, reason.trim()).then((ok) => { if (ok) setReason(""); })}
-            />
+              onClick={() => void controller.reactivate(employee.version, reason.trim()).then((ok) => { if (ok) setReason(""); })}
+            >
+              {controller.actionBusy ? "جارٍ التنفيذ…" : "إعادة تفعيل الموظف"}
+            </CpButton>
           ) : (
-            <Button
-              label="تعليق الموظف"
-              tone="danger"
+            <CpButton
+              variant="danger"
               disabled={!canChangeStatus}
-              loading={controller.actionBusy}
-              onPress={() => void controller.suspend(employee.version, reason.trim()).then((ok) => { if (ok) setReason(""); })}
-            />
+              onClick={() => void controller.suspend(employee.version, reason.trim()).then((ok) => { if (ok) setReason(""); })}
+            >
+              {controller.actionBusy ? "جارٍ التنفيذ…" : "تعليق الموظف"}
+            </CpButton>
           )}
-        </Box>
-      </Card>
+        </div>
 
-      <Card style={{ padding: spacing[4], gap: spacing[2] }}>
-        <Text role="titleSm" style={{ textAlign: "right" }}>ملخص الملف</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>الهاتف: {employee.phoneMasked ?? "—"}</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>القسم: {profile?.department ?? "—"}</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>الدور: {profile?.role ?? "—"}</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>الموقع: {profile?.officeLocation ?? "—"}</Text>
-      </Card>
-    </ScrollScreen>
+        <div>
+          <Text role="titleSm">ملخص الملف</Text>
+          <CpDescriptionList>
+            <CpDescriptionRow label="الهاتف">{employee.phoneMasked ?? "—"}</CpDescriptionRow>
+            <CpDescriptionRow label="القسم">{profile?.department ?? "—"}</CpDescriptionRow>
+            <CpDescriptionRow label="الدور">{profile?.role ?? "—"}</CpDescriptionRow>
+            <CpDescriptionRow label="الموقع">{profile?.officeLocation ?? "—"}</CpDescriptionRow>
+          </CpDescriptionList>
+        </div>
+      </div>
+    </DetailPageFrame>
   );
 }
 

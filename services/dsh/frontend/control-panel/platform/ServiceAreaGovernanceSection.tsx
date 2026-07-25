@@ -1,20 +1,21 @@
 "use client";
 
 import React from "react";
-import {
-  Badge,
-  Button,
-  Card,
-  DataTable,
-  StateView,
-  Text,
-  TextField,
-  spacing,
-} from "@bthwani/ui-kit";
+import { Card, Text, TextField, spacing } from "@bthwani/ui-kit";
 import {
   WebStyleSheet as StyleSheet,
   WebView as View,
 } from "@bthwani/ui-kit/web";
+import {
+  CpBadge,
+  CpButton,
+  CpRetryButton,
+  CpStatePanel,
+  CpTable,
+  CpTableCell,
+  CpTableHeaderCell,
+  CpTextInput,
+} from "@bthwani/control-panel/components";
 import {
   useServiceAreaController,
   type DshServiceArea,
@@ -163,74 +164,53 @@ export function ServiceAreaGovernanceSection() {
             منطقة الخدمة عبر هذه المضلعات.
           </Text>
         </View>
-        <Button label="منطقة جديدة" tone="secondary" onPress={reset} />
+        <CpButton variant="secondary" onClick={reset}>منطقة جديدة</CpButton>
       </View>
 
       {controller.state.kind === "loading" ? (
-        <StateView title="جارٍ تحميل مناطق الخدمة…" />
+        <CpStatePanel role="status" title="جارٍ تحميل مناطق الخدمة…" />
       ) : null}
       {controller.state.kind === "error" ? (
-        <StateView
-          title="تعذر تحميل مناطق الخدمة"
-          description={controller.state.message}
-          actionLabel="إعادة المحاولة"
-          onActionPress={controller.reload}
-        />
+        <CpStatePanel role="alert" title="تعذر تحميل مناطق الخدمة" description={controller.state.message}>
+          <CpRetryButton onClick={controller.reload}>إعادة المحاولة</CpRetryButton>
+        </CpStatePanel>
       ) : null}
       {controller.state.kind === "success" ? (
         controller.state.data.length === 0 ? (
-          <StateView
+          <CpStatePanel
+            role="status"
             title="لا توجد مضلعات معتمدة"
             description="لن يتم قبول أي عنوان للتوصيل حتى إنشاء منطقة خدمة نشطة."
           />
         ) : (
-          <DataTable<DshServiceArea & Record<string, unknown>>
-            columns={[
-              {
-                key: "displayName",
-                header: "المنطقة",
-                render: (row) => row.displayName,
-              },
-              {
-                key: "serviceAreaCode",
-                header: "الرمز",
-                render: (row) => row.serviceAreaCode,
-              },
-              {
-                key: "priority",
-                header: "الأولوية",
-                render: (row) => String(row.priority),
-              },
-              {
-                key: "pointCount",
-                header: "النقاط",
-                render: (row) => String(row.pointCount),
-              },
-              {
-                key: "bounds",
-                header: "الحدود",
-                render: (row) => formatBounds(row),
-              },
-              {
-                key: "active",
-                header: "الحالة",
-                render: (row) => (
-                  <Badge
-                    label={row.active ? "نشطة" : "معطلة"}
-                    tone={row.active ? "success" : "neutral"}
-                  />
-                ),
-              },
-              {
-                key: "version",
-                header: "الإصدار",
-                render: (row) => String(row.version),
-              },
-            ]}
-            rows={tableRows}
-            getRowKey={(row) => row.serviceAreaCode}
-            onRowPress={edit}
-          />
+          <CpTable aria-label="مناطق الخدمة">
+            <thead>
+              <tr>
+                <CpTableHeaderCell>المنطقة</CpTableHeaderCell>
+                <CpTableHeaderCell>الرمز</CpTableHeaderCell>
+                <CpTableHeaderCell>الأولوية</CpTableHeaderCell>
+                <CpTableHeaderCell>النقاط</CpTableHeaderCell>
+                <CpTableHeaderCell>الحدود</CpTableHeaderCell>
+                <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+                <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
+              </tr>
+            </thead>
+            <tbody>
+              {tableRows.map((row) => (
+                <tr key={row.serviceAreaCode} onClick={() => edit(row)}>
+                  <CpTableCell>{row.displayName}</CpTableCell>
+                  <CpTableCell>{row.serviceAreaCode}</CpTableCell>
+                  <CpTableCell>{String(row.priority)}</CpTableCell>
+                  <CpTableCell>{String(row.pointCount)}</CpTableCell>
+                  <CpTableCell>{formatBounds(row)}</CpTableCell>
+                  <CpTableCell>
+                    <CpBadge tone={row.active ? "success" : "neutral"}>{row.active ? "نشطة" : "معطلة"}</CpBadge>
+                  </CpTableCell>
+                  <CpTableCell>{String(row.version)}</CpTableCell>
+                </tr>
+              ))}
+            </tbody>
+          </CpTable>
         )
       ) : null}
 
@@ -239,24 +219,25 @@ export function ServiceAreaGovernanceSection() {
           {form.expectedVersion > 0 ? "تعديل المنطقة" : "إنشاء منطقة"}
         </Text>
         {form.expectedVersion > 0 ? (
-          <Badge label={`الإصدار ${form.expectedVersion}`} tone="info" />
+          <CpBadge tone="info">{`الإصدار ${form.expectedVersion}`}</CpBadge>
         ) : null}
-        <TextField
-          label="رمز منطقة الخدمة"
+        <CpTextInput
+          aria-label="رمز منطقة الخدمة"
           value={form.serviceAreaCode}
           disabled={form.expectedVersion > 0}
-          onChangeText={(serviceAreaCode) =>
+          onChange={(serviceAreaCode) =>
             setForm((current) => ({ ...current, serviceAreaCode }))
           }
           placeholder="sanaa-old-city"
         />
-        <TextField
-          label="الاسم المعروض"
+        <CpTextInput
+          aria-label="الاسم المعروض"
           value={form.displayName}
-          onChangeText={(displayName) =>
+          onChange={(displayName) =>
             setForm((current) => ({ ...current, displayName }))
           }
         />
+        {/* TextField kept: CpTextInput has no multiline support */}
         <TextField
           label="المضلع [longitude, latitude]"
           value={form.polygonText}
@@ -266,30 +247,30 @@ export function ServiceAreaGovernanceSection() {
           multiline
           placeholder={'[[44.1,15.3],[44.2,15.3],[44.2,15.4]]'}
         />
-        <TextField
-          label="الأولوية عند تداخل المضلعات"
+        <CpTextInput
+          aria-label="الأولوية عند تداخل المضلعات"
           value={form.priority}
-          onChangeText={(priority) =>
+          onChange={(priority) =>
             setForm((current) => ({ ...current, priority }))
           }
-          keyboardType="numeric"
         />
         <View style={styles.actions}>
-          <Button
-            label={form.active ? "المنطقة نشطة" : "المنطقة معطلة"}
-            tone={form.active ? "primary" : "secondary"}
-            onPress={() =>
+          <CpButton
+            variant={form.active ? "primary" : "secondary"}
+            onClick={() =>
               setForm((current) => ({
                 ...current,
                 active: !current.active,
               }))
             }
-          />
+          >
+            {form.active ? "المنطقة نشطة" : "المنطقة معطلة"}
+          </CpButton>
         </View>
-        <TextField
-          label="سبب التغيير"
+        <CpTextInput
+          aria-label="سبب التغيير"
           value={form.reason}
-          onChangeText={(reason) =>
+          onChange={(reason) =>
             setForm((current) => ({ ...current, reason }))
           }
           placeholder="سبب تشغيلي قابل للتدقيق"
@@ -301,18 +282,20 @@ export function ServiceAreaGovernanceSection() {
           <Text tone="danger">{controller.mutationError}</Text>
         ) : null}
         <View style={styles.actions}>
-          <Button
-            label={controller.mutating ? "جارٍ الحفظ…" : "حفظ المنطقة"}
-            tone="primary"
+          <CpButton
+            variant="primary"
             disabled={controller.mutating}
-            onPress={() => void save()}
-          />
-          <Button
-            label="إلغاء"
-            tone="ghost"
+            onClick={() => void save()}
+          >
+            {controller.mutating ? "جارٍ الحفظ…" : "حفظ المنطقة"}
+          </CpButton>
+          <CpButton
+            variant="ghost"
             disabled={controller.mutating}
-            onPress={reset}
-          />
+            onClick={reset}
+          >
+            إلغاء
+          </CpButton>
         </View>
       </Card>
     </View>

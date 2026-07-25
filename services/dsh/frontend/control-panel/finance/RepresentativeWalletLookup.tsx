@@ -1,7 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Button, Card, StateView, Text, lightThemeColors } from "@bthwani/ui-kit";
+import { Card, StateView, Text } from "@bthwani/ui-kit";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
+import {
+  CpBadge,
+  CpButton,
+  CpMutedInline,
+  CpSelect,
+  CpTable,
+  CpTableCell,
+  CpTableHeaderCell,
+  CpTextInput,
+} from "@bthwani/control-panel/components";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import type {
@@ -33,12 +44,19 @@ function amountLabel(value: number, currency: string): string {
   })} ${currency}`;
 }
 
-function statusTone(status: string): "success" | "warning" | "danger" | "neutral" {
+function statusTone(status: string): CpBadgeTone {
   if (status === "active") return "success";
   if (status === "suspended" || status === "frozen") return "warning";
   if (status === "closed") return "danger";
   return "neutral";
 }
+
+const ACTOR_TYPE_OPTIONS = [
+  { value: "client", label: "عميل" },
+  { value: "partner", label: "شريك" },
+  { value: "captain", label: "كابتن" },
+  { value: "field", label: "ميداني" },
+] as const;
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -96,43 +114,38 @@ export function RepresentativeWalletLookup() {
             قراءة محكومة بصلاحية finance.read؛ الرصيد والدفتر يظلان مملوكين لـ WLT.
           </Text>
         </div>
-        <Badge label="قراءة فقط" tone="info" />
+        <CpBadge tone="info">قراءة فقط</CpBadge>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(150px, 0.35fr) minmax(220px, 1fr) auto", gap: "0.75rem", alignItems: "end" }}>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void lookup();
+        }}
+        style={{ display: "grid", gridTemplateColumns: "minmax(150px, 0.35fr) minmax(220px, 1fr) auto", gap: "0.75rem", alignItems: "end" }}
+      >
         <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
           <Text role="caption" tone="muted">نوع الممثل</Text>
-          <select
+          <CpSelect
+            aria-label="نوع الممثل"
             value={actorType}
-            onChange={(event) => setActorType(event.target.value as RepresentativeActorType)}
-            style={{ minHeight: 42, border: `1px solid ${lightThemeColors.borderColor}`, borderRadius: 8, padding: "0.5rem" }}
-          >
-            <option value="client">عميل</option>
-            <option value="partner">شريك</option>
-            <option value="captain">كابتن</option>
-            <option value="field">ميداني</option>
-          </select>
+            onChange={(value) => setActorType(value as RepresentativeActorType)}
+            options={ACTOR_TYPE_OPTIONS}
+          />
         </label>
         <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
           <Text role="caption" tone="muted">معرف الممثل</Text>
-          <input
+          <CpTextInput
+            aria-label="معرف الممثل"
             value={actorId}
-            onChange={(event) => setActorId(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") void lookup();
-            }}
+            onChange={setActorId}
             placeholder="actor-id"
-            autoComplete="off"
-            style={{ minHeight: 42, border: `1px solid ${lightThemeColors.borderColor}`, borderRadius: 8, padding: "0.5rem", direction: "ltr" }}
           />
         </label>
-        <Button
-          label={state.kind === "loading" ? "جارٍ الاستعلام..." : "استعلام"}
-          tone="primary"
-          disabled={state.kind === "loading"}
-          onPress={() => void lookup()}
-        />
-      </div>
+        <CpButton type="submit" variant="primary" disabled={state.kind === "loading"}>
+          {state.kind === "loading" ? "جارٍ الاستعلام..." : "استعلام"}
+        </CpButton>
+      </form>
 
       {state.kind === "idle" ? (
         <StateView tone="neutral" title="حدد نوع الممثل ومعرفه" description="لن يتم إرسال أي معرف من تطبيقات الممثلين؛ هذا الإدخال مخصص للمشغّل المخوّل فقط." />
@@ -145,11 +158,11 @@ export function RepresentativeWalletLookup() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
             <div>
               <Text role="caption" tone="muted">الرصيد المتاح</Text>
-              <Text role="titleLg" style={{ color: lightThemeColors.success }}>
+              <Text role="titleLg" tone="success">
                 {amountLabel(state.wallet.availableBalanceMinorUnits, state.wallet.currency)}
               </Text>
             </div>
-            <Badge label={state.wallet.status} tone={statusTone(state.wallet.status)} />
+            <CpBadge tone={statusTone(state.wallet.status)}>{state.wallet.status}</CpBadge>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))", gap: "0.75rem" }}>
             {[
@@ -169,10 +182,10 @@ export function RepresentativeWalletLookup() {
             المالك: {state.wallet.actorType}/{state.wallet.actorId} · آخر تحديث: {state.wallet.updatedAt ?? "غير متاح"} · آخر قيد: {state.wallet.lastLedgerEntryAt ?? "لا يوجد"}
           </Text>
 
-          <div style={{ borderTop: `1px solid ${lightThemeColors.borderColor}`, paddingTop: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={{ paddingTop: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
               <Text role="titleSm">دفتر الممثل المرجعي</Text>
-              <Badge label={`${state.ledgerEntries.length.toLocaleString("ar-YE")} قيد`} tone="neutral" />
+              <CpBadge tone="neutral">{`${state.ledgerEntries.length.toLocaleString("ar-YE")} قيد`}</CpBadge>
             </div>
             {state.ledgerError ? (
               <StateView
@@ -186,27 +199,33 @@ export function RepresentativeWalletLookup() {
               <StateView tone="neutral" title="لا توجد قيود لهذا الممثل" description="لم يسجل WLT حركة مالية مطابقة لنوع الممثل ومعرفه حتى الآن." />
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
+                <CpTable aria-label="دفتر الممثل المرجعي">
                   <thead>
-                    <tr style={{ borderBottom: `1px solid ${lightThemeColors.borderColor}` }}>
+                    <tr>
                       {["التاريخ", "نوع القيد", "الاتجاه", "المبلغ", "الرصيد بعد القيد", "المرجع"].map((label) => (
-                        <th key={label} style={{ padding: "0.65rem", textAlign: "right" }}><Text role="caption" tone="muted">{label}</Text></th>
+                        <CpTableHeaderCell key={label}>{label}</CpTableHeaderCell>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {state.ledgerEntries.map((entry) => (
-                      <tr key={entry.id} style={{ borderBottom: `1px solid ${lightThemeColors.borderColor}` }}>
-                        <td style={{ padding: "0.65rem" }}><Text role="caption">{entry.createdAt}</Text></td>
-                        <td style={{ padding: "0.65rem" }}><Text role="body">{entry.entryType || "قيد مالي"}</Text></td>
-                        <td style={{ padding: "0.65rem" }}><Badge label={ledgerDirectionLabel(entry)} tone={entry.debitCredit === "credit" ? "success" : "warning"} /></td>
-                        <td style={{ padding: "0.65rem" }}><Text role="body" tone={entry.debitCredit === "credit" ? "success" : "danger"}>{amountLabel(entry.amountMinorUnits, entry.currency)}</Text></td>
-                        <td style={{ padding: "0.65rem" }}><Text role="body">{amountLabel(entry.balanceAfter, entry.currency)}</Text></td>
-                        <td style={{ padding: "0.65rem" }}><Text role="caption" tone="muted">{entry.referenceId || entry.sourceId || entry.description}</Text></td>
+                      <tr key={entry.id}>
+                        <CpTableCell>{entry.createdAt}</CpTableCell>
+                        <CpTableCell>{entry.entryType || "قيد مالي"}</CpTableCell>
+                        <CpTableCell>
+                          <CpBadge tone={entry.debitCredit === "credit" ? "success" : "warning"}>{ledgerDirectionLabel(entry)}</CpBadge>
+                        </CpTableCell>
+                        <CpTableCell>
+                          <Text role="body" tone={entry.debitCredit === "credit" ? "success" : "danger"}>{amountLabel(entry.amountMinorUnits, entry.currency)}</Text>
+                        </CpTableCell>
+                        <CpTableCell>{amountLabel(entry.balanceAfter, entry.currency)}</CpTableCell>
+                        <CpTableCell>
+                          <CpMutedInline tight>{entry.referenceId || entry.sourceId || entry.description}</CpMutedInline>
+                        </CpTableCell>
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </CpTable>
               </div>
             )}
           </div>

@@ -1,7 +1,23 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Box, Button, Card, ScrollScreen, Surface, Text, TextField, spacing } from "@bthwani/ui-kit";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
+import {
+  CpBadge,
+  CpButton,
+  CpFilterBar,
+  CpKpiCard,
+  CpKpiStrip,
+  CpMutedInline,
+  CpPageHeader,
+  CpSearchInput,
+  CpStatePanel,
+  CpTable,
+  CpTableCell,
+  CpTableHeaderCell,
+  CpTabs,
+} from "@bthwani/control-panel/components";
+import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
   PROVIDER_KIND_LABEL_AR,
@@ -15,8 +31,8 @@ import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState"
 
 type TypeFilter = "all" | ProviderKind;
 
-const STATUS_TABS: Array<{ label: string; value: EngagementStatus | undefined }> = [
-  { label: "الكل", value: undefined },
+const STATUS_TABS: Array<{ label: string; value: string }> = [
+  { label: "الكل", value: "" },
   { label: "بانتظار التفعيل", value: "pending_activation" },
   { label: "نشط", value: "active" },
   { label: "موقوف", value: "suspended" },
@@ -29,7 +45,7 @@ const TYPE_TABS: Array<{ label: string; value: TypeFilter }> = [
   { label: "موظف إداري", value: "employee" },
 ];
 
-function statusTone(status: EngagementStatus): "success" | "warning" | "danger" | "muted" {
+function statusTone(status: EngagementStatus): CpBadgeTone {
   switch (status) {
     case "active":
       return "success";
@@ -38,7 +54,7 @@ function statusTone(status: EngagementStatus): "success" | "warning" | "danger" 
     case "suspended":
       return "danger";
     default:
-      return "muted";
+      return "neutral";
   }
 }
 
@@ -110,78 +126,74 @@ export function ProviderListView(props: {
     void employeeList.reload();
   };
 
+  const stateView = loading ? (
+    <CpStatePanel role="status" title="جارٍ تحميل سجل Workforce…" />
+  ) : errorState?.kind === "error" ? (
+    <WorkforceErrorState message={errorState.message} isSessionExpired={errorState.isSessionExpired} onRetry={reload} />
+  ) : combined.length === 0 ? (
+    <CpStatePanel role="status" title="لا توجد نتائج مطابقة." />
+  ) : undefined;
+
   return (
-    <ScrollScreen>
-      <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-        <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-          <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>سجل Workforce الموحد</Text>
-          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-            <Button label="إضافة عضو" tone="primary" onPress={props.onCreate} />
-            <Button label="تفعيل مقدمي الخدمة" tone="secondary" onPress={props.onActivation} />
-            <Button label="المدن والورديات" tone="ghost" onPress={props.onReference} />
-          </Box>
-        </Box>
-
-        <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
-          إجمالي {counts.total} · بانتظار التفعيل {counts.pending} · نشط {counts.active} · موقوف {counts.suspended}
-        </Text>
-
-        <TextField
-          label="بحث بالاسم أو الرقم الوظيفي"
-          value={query}
-          onChangeText={setQuery}
-          placeholder="FLD-000123 أو CAP-000123 أو EMP-000123"
-        />
-
-        <Text role="bodySm" style={{ textAlign: "right" }}>النوع</Text>
-        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-          {TYPE_TABS.map((tab) => (
-            <Button key={tab.value} label={tab.label} tone={typeFilter === tab.value ? "primary" : "ghost"} onPress={() => setTypeFilter(tab.value)} />
+    <DataTablePageFrame
+      header={
+        <CpPageHeader title="سجل Workforce الموحد">
+          <CpButton variant="primary" onClick={props.onCreate}>إضافة عضو</CpButton>
+          <CpButton variant="secondary" onClick={props.onActivation}>تفعيل مقدمي الخدمة</CpButton>
+          <CpButton variant="ghost" onClick={props.onReference}>المدن والورديات</CpButton>
+        </CpPageHeader>
+      }
+      filters={
+        <CpFilterBar label="فلاتر Workforce">
+          <CpSearchInput value={query} onChange={setQuery} placeholder="FLD-000123 أو CAP-000123 أو EMP-000123" aria-label="بحث بالاسم أو الرقم الوظيفي" wide />
+          <CpTabs aria-label="النوع" value={typeFilter} onChange={(value) => setTypeFilter(value as TypeFilter)} items={TYPE_TABS} />
+          <CpTabs aria-label="الحالة" value={status ?? ""} onChange={(value) => setStatus(value === "" ? undefined : (value as EngagementStatus))} items={STATUS_TABS} />
+        </CpFilterBar>
+      }
+      toolbar={
+        <CpKpiStrip>
+          <CpKpiCard label="إجمالي" value={counts.total} />
+          <CpKpiCard label="بانتظار التفعيل" value={counts.pending} />
+          <CpKpiCard label="نشط" value={counts.active} />
+          <CpKpiCard label="موقوف" value={counts.suspended} />
+        </CpKpiStrip>
+      }
+      stateView={stateView}
+    >
+      <CpTable aria-label="سجل Workforce">
+        <thead>
+          <tr>
+            <CpTableHeaderCell>الاسم</CpTableHeaderCell>
+            <CpTableHeaderCell>الرقم الوظيفي</CpTableHeaderCell>
+            <CpTableHeaderCell>النوع</CpTableHeaderCell>
+            <CpTableHeaderCell>القسم / المدينة</CpTableHeaderCell>
+            <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+            <CpTableHeaderCell>الإجراءات</CpTableHeaderCell>
+          </tr>
+        </thead>
+        <tbody>
+          {combined.map((member) => (
+            <tr key={member.actorId}>
+              <CpTableCell>{member.fullNameAr}</CpTableCell>
+              <CpTableCell>{member.workforceCode}</CpTableCell>
+              <CpTableCell>{PROVIDER_KIND_LABEL_AR[member.workforceKind]}</CpTableCell>
+              <CpTableCell>
+                {member.workforceKind === "employee"
+                  ? member.employeeProfile?.department || "بدون قسم"
+                  : reference.cityLabel(member.fieldProfile?.cityCode ?? member.captainProfile?.operatingCityCode)}
+              </CpTableCell>
+              <CpTableCell>
+                <CpBadge tone={statusTone(member.engagementStatus)}>{ENGAGEMENT_STATUS_LABEL_AR[member.engagementStatus]}</CpBadge>
+              </CpTableCell>
+              <CpTableCell>
+                <CpButton variant="secondary" onClick={() => props.onOpen(member.actorId, member.workforceKind)}>فتح</CpButton>
+              </CpTableCell>
+            </tr>
           ))}
-        </Box>
-
-        <Text role="bodySm" style={{ textAlign: "right" }}>الحالة</Text>
-        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-          {STATUS_TABS.map((tab) => (
-            <Button key={tab.label} label={tab.label} tone={status === tab.value ? "primary" : "ghost"} onPress={() => setStatus(tab.value)} />
-          ))}
-        </Box>
-      </Card>
-
-      {loading ? (
-        <Surface tone="default" padding={4}>
-          <Text role="bodySm" tone="muted" align="center">جارٍ تحميل سجل Workforce…</Text>
-        </Surface>
-      ) : null}
-      {errorState?.kind === "error" ? (
-        <WorkforceErrorState message={errorState.message} isSessionExpired={errorState.isSessionExpired} onRetry={reload} />
-      ) : null}
-      {!loading && !errorState && combined.length === 0 ? (
-        <Surface tone="default" padding={4}>
-          <Text role="bodySm" tone="muted" align="center">لا توجد نتائج مطابقة.</Text>
-        </Surface>
-      ) : null}
-      {!loading && !errorState
-        ? combined.map((member) => (
-            <Card key={member.actorId} style={{ padding: spacing[3], gap: spacing[1] }}>
-              <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-                <Box style={{ alignItems: "flex-end", gap: 2 }}>
-                  <Text role="bodyStrong">{member.fullNameAr}</Text>
-                  <Text role="caption" tone="muted">
-                    {member.workforceCode} · {PROVIDER_KIND_LABEL_AR[member.workforceKind]} · {member.workforceKind === "employee"
-                      ? member.employeeProfile?.department || "بدون قسم"
-                      : reference.cityLabel(member.fieldProfile?.cityCode ?? member.captainProfile?.operatingCityCode)}
-                  </Text>
-                </Box>
-                <Box style={{ flexDirection: "row-reverse", gap: spacing[2], alignItems: "center" }}>
-                  <Text role="bodySm" tone={statusTone(member.engagementStatus)}>{ENGAGEMENT_STATUS_LABEL_AR[member.engagementStatus]}</Text>
-                  <Button label="فتح" tone="secondary" onPress={() => props.onOpen(member.actorId, member.workforceKind)} />
-                </Box>
-              </Box>
-            </Card>
-          ))
-        : null}
-    </ScrollScreen>
+        </tbody>
+      </CpTable>
+      {!loading && !errorState ? <CpMutedInline tight>{combined.length} سجل</CpMutedInline> : null}
+    </DataTablePageFrame>
   );
 }
 

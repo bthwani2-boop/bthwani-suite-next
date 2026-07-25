@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Badge, Button, Card, Text, lightThemeColors } from "@bthwani/ui-kit";
+import { Card, Text } from "@bthwani/ui-kit";
+import type { CpBadgeTone, CpButtonVariant } from "@bthwani/control-panel/components";
+import { CpBadge, CpButton } from "@bthwani/control-panel/components";
 import {
   approvePayoutRequest,
   completePayoutRequest,
@@ -22,11 +24,11 @@ type PayoutRequestsPanelProps = {
 type PayoutAction = {
   readonly id: "approve" | "reject" | "process" | "complete" | "reconcile";
   readonly label: string;
-  readonly tone: "success" | "danger" | "primary" | "secondary";
+  readonly tone: CpButtonVariant;
   readonly run: (payoutId: string) => Promise<FinanceActionResult>;
 };
 
-const STATUS_META: Record<string, { readonly label: string; readonly tone: "neutral" | "success" | "warning" | "danger" }> = {
+const STATUS_META: Record<string, { readonly label: string; readonly tone: CpBadgeTone }> = {
   pending: { label: "بانتظار المراجعة", tone: "warning" },
   approved: { label: "معتمد بانتظار الإرسال", tone: "warning" },
   provider_pending: { label: "قيد الإرسال إلى المزود", tone: "warning" },
@@ -41,7 +43,7 @@ function actionsForStatus(status: string): readonly PayoutAction[] {
   switch (status) {
     case "pending":
       return [
-        { id: "approve", label: "اعتماد الطلب", tone: "success", run: approvePayoutRequest },
+        { id: "approve", label: "اعتماد الطلب", tone: "primary", run: approvePayoutRequest },
         { id: "reject", label: "رفض وإعادة الحجز", tone: "danger", run: rejectPayoutRequest },
       ];
     case "approved":
@@ -50,7 +52,7 @@ function actionsForStatus(status: string): readonly PayoutAction[] {
         { id: "reject", label: "إلغاء قبل الإرسال", tone: "danger", run: rejectPayoutRequest },
       ];
     case "processing":
-      return [{ id: "complete", label: "تأكيد الاكتمال والترحيل", tone: "success", run: completePayoutRequest }];
+      return [{ id: "complete", label: "تأكيد الاكتمال والترحيل", tone: "primary", run: completePayoutRequest }];
     case "provider_pending":
     case "provider_result_unknown":
       return [{ id: "reconcile", label: "استعلام ومطابقة نتيجة المزود", tone: "secondary", run: reconcilePayoutRequest }];
@@ -121,7 +123,7 @@ export function PayoutRequestsPanel({ requests, reload }: PayoutRequestsPanelPro
           WLT يملك الوجهة والرصيد والحجز ودليل المزود والقيد. كل زر ظاهر فقط عندما تسمح به الحالة، وهوية المشغّل تُحل في DSH ولا تُقبل من المتصفح.
         </Text>
         {actionError ? (
-          <Card style={{ padding: "0.75rem", marginBottom: "1rem", borderLeft: `4px solid ${lightThemeColors.danger}` }}>
+          <Card style={{ padding: "0.75rem", marginBottom: "1rem" }}>
             <Text role="body" tone="danger">{actionError}</Text>
           </Card>
         ) : null}
@@ -134,12 +136,12 @@ export function PayoutRequestsPanel({ requests, reload }: PayoutRequestsPanelPro
               const actions = actionsForStatus(request.status);
               const message = terminalOrHoldMessage(request);
               return (
-                <Card key={request.id} style={{ padding: "1rem", borderLeft: `4px solid ${request.status === "provider_result_unknown" ? lightThemeColors.danger : lightThemeColors.warning}` }}>
+                <Card key={request.id} style={{ padding: "1rem" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", minWidth: "260px" }}>
                       <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
                         <Text role="body" style={{ fontWeight: "bold" }}>طلب: {request.id}</Text>
-                        <Badge label={status.label} tone={status.tone} />
+                        <CpBadge tone={status.tone}>{status.label}</CpBadge>
                       </div>
                       <Text role="caption" tone="muted">المستفيد: {request.beneficiaryActorId} ({request.beneficiaryActorType})</Text>
                       <Text role="caption" tone="muted">المبلغ: {formatMoney(request.amountMinorUnits, request.currency)}</Text>
@@ -153,13 +155,14 @@ export function PayoutRequestsPanel({ requests, reload }: PayoutRequestsPanelPro
                           const key = `${request.id}:${action.id}`;
                           const busy = busyKey === key;
                           return (
-                            <Button
+                            <CpButton
                               key={action.id}
-                              label={busy ? "جارٍ التنفيذ…" : action.label}
-                              tone={action.tone}
+                              variant={action.tone}
                               disabled={busyKey !== null}
-                              onPress={() => runAction(request, action)}
-                            />
+                              onClick={() => runAction(request, action)}
+                            >
+                              {busy ? "جارٍ التنفيذ…" : action.label}
+                            </CpButton>
                           );
                         })}
                       </div>

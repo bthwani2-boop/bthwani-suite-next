@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
+import { useCpFrameTokens } from "./frameTokens";
 
 export type EditorPageFrameProps = {
   readonly header?: ReactNode;
@@ -18,8 +19,9 @@ export function EditorPageFrame({
   stateView,
   dir = "rtl",
 }: EditorPageFrameProps) {
+  const frameTokens = useCpFrameTokens();
   return (
-    <section dir={dir} style={styles.section}>
+    <section dir={dir} style={{ ...styles.section, ...frameTokens.page }}>
       {header != null ? <div style={styles.header}>{header}</div> : null}
       {toolbar != null ? <div style={styles.toolbar}>{toolbar}</div> : null}
       <div style={styles.content}>

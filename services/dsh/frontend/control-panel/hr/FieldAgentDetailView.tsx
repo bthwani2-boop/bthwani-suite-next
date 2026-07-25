@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Box, Button, Card, ScrollScreen, Text, TextField, spacing } from "@bthwani/ui-kit";
+import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
+import { DetailPageFrame } from "@bthwani/control-panel/shell";
+import { Text } from "@bthwani/ui-kit";
 
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
@@ -47,23 +49,29 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
 
   if (controller.state.kind === "loading") {
     return (
-      <ScrollScreen>
-        <Card style={{ padding: spacing[4] }}><Text role="bodySm" tone="muted" align="center">جارٍ تحميل ملف الميداني…</Text></Card>
-      </ScrollScreen>
+      <DetailPageFrame stateView={<CpStatePanel role="status" title="جارٍ تحميل ملف الميداني…" />}>
+        <div />
+      </DetailPageFrame>
     );
   }
 
   if (controller.state.kind === "error" || !agent) {
     const errorState = controller.state.kind === "error" ? controller.state : null;
     return (
-      <ScrollScreen>
-        <WorkforceErrorState
-          message={errorState?.message ?? "تعذر تحميل ملف الميداني"}
-          isSessionExpired={errorState?.isSessionExpired ?? false}
-          onRetry={() => void controller.reload()}
-        />
-        <Button label="رجوع" tone="ghost" onPress={props.onBack} />
-      </ScrollScreen>
+      <DetailPageFrame
+        stateView={
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <WorkforceErrorState
+              message={errorState?.message ?? "تعذر تحميل ملف الميداني"}
+              isSessionExpired={errorState?.isSessionExpired ?? false}
+              onRetry={() => void controller.reload()}
+            />
+            <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+          </div>
+        }
+      >
+        <div />
+      </DetailPageFrame>
     );
   }
 
@@ -106,72 +114,83 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
     zoneId.length > 0 &&
     shiftCode.length > 0 &&
     !controller.actionBusy;
+  const activeShifts = reference.shifts.filter((shift) => shift.active !== false);
 
   return (
-    <ScrollScreen>
-      <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-        <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-          <Box style={{ alignItems: "flex-end", gap: spacing[1] }}>
-            <Text role="titleSm">ملف مقدم الخدمة الميداني</Text>
-            <Text role="caption" tone="muted">{agent.workforceCode} · {ENGAGEMENT_STATUS_LABEL_AR[agent.engagementStatus]}</Text>
-          </Box>
-          <Button label="رجوع" tone="ghost" onPress={props.onBack} />
-        </Box>
+    <DetailPageFrame
+      header={
+        <CpPageHeader title="ملف مقدم الخدمة الميداني">
+          <CpMutedInline tight>{agent.workforceCode} · {ENGAGEMENT_STATUS_LABEL_AR[agent.engagementStatus]}</CpMutedInline>
+          <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+        </CpPageHeader>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div>
+            <Text role="bodySm">الاسم بالعربية *</Text>
+            <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" />
+          </div>
+          <div>
+            <Text role="bodySm">الاسم بالإنجليزية</Text>
+            <CpTextInput value={fullNameEn} onChange={setFullNameEn} aria-label="الاسم بالإنجليزية" />
+          </div>
+          <div>
+            <Text role="bodySm">تاريخ بداية الارتباط</Text>
+            <CpTextInput value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
+          </div>
+          <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
 
-        <TextField label="الاسم بالعربية *" value={fullNameAr} onChangeText={setFullNameAr} />
-        <TextField label="الاسم بالإنجليزية" value={fullNameEn} onChangeText={setFullNameEn} />
-        <TextField label="تاريخ بداية الارتباط" value={engagementStartDate} onChangeText={setEngagementStartDate} placeholder="YYYY-MM-DD" />
-        <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
+          <Text role="bodySm" style={{ fontWeight: "bold" }}>الوردية</Text>
+          <CpTabs
+            aria-label="اختيار الوردية"
+            value={shiftCode}
+            onChange={setShiftCode}
+            items={activeShifts.map((shift) => ({ value: shift.code, label: shift.nameAr }))}
+          />
 
-        <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>الوردية</Text>
-        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-          {reference.shifts.filter((shift) => shift.active !== false).map((shift) => (
-            <Button
-              key={shift.code}
-              label={shift.nameAr}
-              tone={shiftCode === shift.code ? "primary" : "ghost"}
-              onPress={() => setShiftCode(shift.code)}
-            />
-          ))}
-        </Box>
+          <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف</Text>
+          <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} />
+          {controller.actionError ? <CpStatePanel role="alert" title={controller.actionError} /> : null}
 
-        <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>المشرف</Text>
-        <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} />
-        {controller.actionError ? <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>{controller.actionError}</Text> : null}
+          <CpButton
+            variant="primary"
+            disabled={!canSave}
+            onClick={() =>
+              void controller.update({
+                expectedVersion: agent.version,
+                fullNameAr: fullNameAr.trim(),
+                fullNameEn: fullNameEn.trim() || undefined,
+                engagementStartDate: engagementStartDate.trim() || undefined,
+                serviceZoneId: zoneId,
+                shiftCode,
+                supervisorActorId: supervisor?.actorId,
+              })
+            }
+          >
+            {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ الملف التشغيلي"}
+          </CpButton>
+        </div>
 
-        <Button
-          label="حفظ الملف التشغيلي"
-          tone="primary"
-          disabled={!canSave}
-          loading={controller.actionBusy}
-          onPress={() =>
-            void controller.update({
-              expectedVersion: agent.version,
-              fullNameAr: fullNameAr.trim(),
-              fullNameEn: fullNameEn.trim() || undefined,
-              engagementStartDate: engagementStartDate.trim() || undefined,
-              serviceZoneId: zoneId,
-              shiftCode,
-              supervisorActorId: supervisor?.actorId,
-            })
-          }
-        />
-      </Card>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <Text role="titleSm">الصورة والوثائق</Text>
+          <Text role="bodySm">الصورة: {agent.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
+          <Text role="bodySm">الوثائق: {profile?.documentMediaRefs.length ?? 0}</Text>
+          {uploadError ? <CpStatePanel role="alert" title={uploadError} /> : null}
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>
+              {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}
+            </CpButton>
+            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("document")}>
+              {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة مهنية"}
+            </CpButton>
+          </div>
+        </div>
 
-      <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-        <Text role="titleSm" style={{ textAlign: "right" }}>الصورة والوثائق</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>الصورة: {agent.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>الوثائق: {profile?.documentMediaRefs.length ?? 0}</Text>
-        {uploadError ? <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>{uploadError}</Text> : null}
-        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-          <Button label="رفع صورة شخصية" tone="secondary" loading={uploadBusy} disabled={uploadBusy} onPress={() => pickFile("photo")} />
-          <Button label="رفع وثيقة مهنية" tone="secondary" loading={uploadBusy} disabled={uploadBusy} onPress={() => pickFile("document")} />
-        </Box>
-      </Card>
-
-      <WorkforceScopeManager actorId={agent.actorId} actorRole="field" />
-      <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
-    </ScrollScreen>
+        <WorkforceScopeManager actorId={agent.actorId} actorRole="field" />
+        <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
+      </div>
+    </DetailPageFrame>
   );
 }
 

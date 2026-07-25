@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Box, Button, Card, ScrollScreen, Text, TextField, spacing, colorRoles, alpha } from "@bthwani/ui-kit";
+import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
+import { EditorPageFrame } from "@bthwani/control-panel/shell";
+import { Text } from "@bthwani/ui-kit";
 import { useCaptainCreateAndActivationController } from "../../shared/workforce";
 import type { Captain, SupervisorCandidate } from "../../shared/workforce";
 import { SupervisorPicker } from "./SupervisorPicker";
@@ -70,144 +72,117 @@ export function CaptainCreateView(props: {
     setCopied(false);
   };
 
-  const content = (
-    <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-      {!props.inline && (
-        <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-          <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>
-            إضافة مقدم خدمة — كابتن
-          </Text>
-          {props.onBack && <Button label="رجوع" tone="ghost" onPress={props.onBack} />}
-        </Box>
-      )}
-      <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+  const body = (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <CpMutedInline>
         مقدم خدمة مستقل — يتقاضى رسوم التوصيل عن كل طلب. رقم الهاتف يُسجَّل في خدمة الهوية ولا
         يُخزَّن في Workforce.
-      </Text>
+      </CpMutedInline>
 
-      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>البيانات الأساسية</Text>
-      <TextField label="الاسم الكامل *" value={fullNameAr} onChangeText={setFullNameAr} placeholder="أحمد محمد" disabled={Boolean(createdCaptain)} />
-      <TextField label="رقم الهاتف *" value={phone} onChangeText={setPhone} placeholder="مثال: 777123456" disabled={Boolean(createdCaptain)} />
+      <Text role="bodySm" style={{ fontWeight: "bold" }}>البيانات الأساسية</Text>
+      <div>
+        <Text role="bodySm">الاسم الكامل *</Text>
+        <CpTextInput value={fullNameAr} onChange={setFullNameAr} placeholder="أحمد محمد" disabled={Boolean(createdCaptain)} aria-label="الاسم الكامل" />
+      </div>
+      <div>
+        <Text role="bodySm">رقم الهاتف *</Text>
+        <CpTextInput value={phone} onChange={setPhone} placeholder="مثال: 777123456" disabled={Boolean(createdCaptain)} aria-label="رقم الهاتف" />
+      </div>
 
-      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>التشغيل والنطاق</Text>
-      <ZonePicker
-        value={zoneId}
-        disabled={Boolean(createdCaptain)}
-        onChange={(zone) => setZoneId(zone?.id ?? "")}
-      />
+      <Text role="bodySm" style={{ fontWeight: "bold" }}>التشغيل والنطاق</Text>
+      <ZonePicker value={zoneId} disabled={Boolean(createdCaptain)} onChange={(zone) => setZoneId(zone?.id ?? "")} />
 
-      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>المركبة</Text>
-      <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-        {VEHICLE_TYPES.map((option) => (
-          <Button
-            key={option.value}
-            label={option.label}
-            tone={vehicleType === option.value ? "primary" : "ghost"}
-            disabled={Boolean(createdCaptain)}
-            onPress={() => setVehicleType(option.value === vehicleType ? "" : option.value)}
-          />
-        ))}
-      </Box>
-      <TextField
-        label="رقم أو لوحة المركبة *"
-        value={vehicleIdentifier}
-        onChangeText={setVehicleIdentifier}
-        placeholder="مثال: صنعاء 12345"
-        disabled={Boolean(createdCaptain)}
-      />
-      <TextField
-        label="تاريخ انتهاء الرخصة"
-        value={licenseExpiresAt}
-        onChangeText={setLicenseExpiresAt}
-        placeholder="YYYY-MM-DD"
-        disabled={Boolean(createdCaptain)}
-      />
-      <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+      <Text role="bodySm" style={{ fontWeight: "bold" }}>المركبة</Text>
+      {!createdCaptain ? (
+        <CpTabs
+          aria-label="نوع المركبة"
+          value={vehicleType}
+          onChange={(value) => setVehicleType(value === vehicleType ? "" : value)}
+          items={VEHICLE_TYPES}
+        />
+      ) : (
+        <Text role="bodySm">{VEHICLE_TYPES.find((v) => v.value === vehicleType)?.label ?? "—"}</Text>
+      )}
+      <div>
+        <Text role="bodySm">رقم أو لوحة المركبة *</Text>
+        <CpTextInput value={vehicleIdentifier} onChange={setVehicleIdentifier} placeholder="مثال: صنعاء 12345" disabled={Boolean(createdCaptain)} aria-label="رقم أو لوحة المركبة" />
+      </div>
+      <div>
+        <Text role="bodySm">تاريخ انتهاء الرخصة</Text>
+        <CpTextInput value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" disabled={Boolean(createdCaptain)} aria-label="تاريخ انتهاء الرخصة" />
+      </div>
+      <CpMutedInline>
         حالة الرخصة الأولية دائمًا «بانتظار المراجعة». إصدار كود الدخول لا يثبت صلاحية الرخصة ولا
         يتجاوز مراجعة الوثائق.
-      </Text>
+      </CpMutedInline>
 
-      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>الإشراف</Text>
+      <Text role="bodySm" style={{ fontWeight: "bold" }}>الإشراف</Text>
       <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} disabled={Boolean(createdCaptain)} />
 
-      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>تفعيل حساب الدخول</Text>
-      <Box style={{ flexDirection: "row-reverse", gap: spacing[2], alignItems: "center" }}>
-        <Button
-          label={autoActivate ? "إصدار كود دخول بعد الإنشاء ✓" : "إنشاء بدون كود دخول"}
-          tone={autoActivate ? "primary" : "ghost"}
-          disabled={Boolean(createdCaptain)}
-          onPress={() => setAutoActivate((value) => !value)}
-        />
-      </Box>
+      <Text role="bodySm" style={{ fontWeight: "bold" }}>تفعيل حساب الدخول</Text>
+      <CpButton
+        variant={autoActivate ? "primary" : "ghost"}
+        disabled={Boolean(createdCaptain)}
+        onClick={() => setAutoActivate((value) => !value)}
+      >
+        {autoActivate ? "إصدار كود دخول بعد الإنشاء" : "إنشاء بدون كود دخول"}
+      </CpButton>
 
-      {state.kind === "error" && (
-        <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>{state.message}</Text>
-      )}
+      {state.kind === "error" ? <CpStatePanel role="alert" title="تعذر إنشاء مقدم الخدمة" description={state.message} /> : null}
 
       {createdCaptain ? (
-        <Box style={{ gap: spacing[3], marginTop: spacing[3], padding: spacing[3], backgroundColor: alpha(colorRoles.success, 0.08), border: `1px solid ${alpha(colorRoles.success, 0.3)}`, borderRadius: 8 }}>
-          <Text role="bodyStrong" tone="success" style={{ textAlign: "right" }}>
-            تم إنشاء الكابتن وتأكيده من Workforce، والرخصة ما تزال بانتظار المراجعة.
-          </Text>
-
+        <CpStatePanel role="status" title="تم إنشاء الكابتن وتأكيده من Workforce، والرخصة ما تزال بانتظار المراجعة.">
           {issuedCode ? (
-            <Box style={{ gap: spacing[2] }}>
-              <Text role="bodySm" style={{ textAlign: "right" }}>كود التفعيل الصادر من خدمة الهوية:</Text>
-              <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", backgroundColor: colorRoles.surfaceBase, padding: spacing[2], borderRadius: 4, border: `1px solid ${colorRoles.borderSubtle}` }}>
-                <Text role="titleMd" style={{ color: colorRoles.success, letterSpacing: 2, fontWeight: "bold" }}>{issuedCode}</Text>
-                <Button
-                  label={copied ? "تم النسخ ✓" : "نسخ الكود"}
-                  tone="ghost"
-                  onPress={() => {
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <Text role="bodySm">كود التفعيل الصادر من خدمة الهوية:</Text>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
+                <Text role="titleMd" style={{ letterSpacing: 2, fontWeight: "bold" }}>{issuedCode}</Text>
+                <CpButton
+                  variant="ghost"
+                  onClick={() => {
                     if (typeof navigator !== "undefined") {
                       void navigator.clipboard.writeText(issuedCode);
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     }
                   }}
-                />
-              </Box>
-            </Box>
+                >
+                  {copied ? "تم النسخ" : "نسخ الكود"}
+                </CpButton>
+              </div>
+            </div>
           ) : activationError ? (
-            <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>
-              تم إنشاء الكابتن، لكن تعذر إصدار كود الدخول: {activationError}
-            </Text>
+            <Text role="bodySm">تم إنشاء الكابتن، لكن تعذر إصدار كود الدخول: {activationError}</Text>
           ) : (
-            <Text role="bodySm" tone="warning" style={{ textAlign: "right" }}>
-              تم الإنشاء بدون تفعيل حساب الدخول. يمكن إصدار الكود من ملف الكابتن.
-            </Text>
+            <Text role="bodySm">تم الإنشاء بدون تفعيل حساب الدخول. يمكن إصدار الكود من ملف الكابتن.</Text>
           )}
 
-          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-            <Button
-              label="فتح ملف الكابتن"
-              tone="primary"
-              onPress={() => props.onCreated(createdCaptain)}
-            />
-            <Button
-              label="إضافة كابتن جديد"
-              tone="secondary"
-              onPress={resetForm}
-            />
-          </Box>
-        </Box>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.75rem" }}>
+            <CpButton variant="primary" onClick={() => props.onCreated(createdCaptain)}>فتح ملف الكابتن</CpButton>
+            <CpButton variant="secondary" onClick={resetForm}>إضافة كابتن جديد</CpButton>
+          </div>
+        </CpStatePanel>
       ) : (
-        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], marginTop: spacing[2] }}>
-          <Button
-            label="إنشاء مقدم الخدمة"
-            tone="primary"
-            disabled={!canSubmit}
-            loading={state.kind === "submitting"}
-            onPress={() => void handleSubmit()}
-          />
-        </Box>
+        <CpButton variant="primary" disabled={!canSubmit} onClick={() => void handleSubmit()}>
+          {state.kind === "submitting" ? "جارٍ الإنشاء…" : "إنشاء مقدم الخدمة"}
+        </CpButton>
       )}
-    </Card>
+    </div>
   );
 
-  if (props.inline) return content;
+  if (props.inline) return body;
 
-  return <ScrollScreen>{content}</ScrollScreen>;
+  return (
+    <EditorPageFrame
+      header={
+        <CpPageHeader title="إضافة مقدم خدمة — كابتن">
+          {props.onBack ? <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton> : null}
+        </CpPageHeader>
+      }
+    >
+      {body}
+    </EditorPageFrame>
+  );
 }
 
 export default CaptainCreateView;

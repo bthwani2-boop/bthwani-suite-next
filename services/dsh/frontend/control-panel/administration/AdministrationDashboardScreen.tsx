@@ -2,18 +2,21 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
+  CpBadge,
   CpButton,
   CpKpiCard,
   CpKpiStrip,
+  CpMutedInline,
   CpPageHeader,
   CpStatePanel,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
+  CpTabs,
 } from "@bthwani/control-panel/components";
-import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { WebStyleSheet } from "@bthwani/ui-kit/web";
+import { OverviewPageFrame } from "@bthwani/control-panel/shell";
 import {
   ADMIN_MAIN_TABS,
   ADMINISTRATION_TRUTH_NOTICE,
@@ -39,6 +42,27 @@ function statePanel(state: CountableState, loadingTitle: string) {
   return null;
 }
 
+function statusTone(status: string): CpBadgeTone {
+  switch (status) {
+    case "active":
+    case "approved":
+    case "partner_active":
+    case "ops_approved":
+      return "success";
+    case "pending":
+    case "submitted":
+      return "warning";
+    case "rejected":
+    case "suspended":
+    case "blocked":
+      return "danger";
+    default:
+      return "neutral";
+  }
+}
+
+const MAIN_TAB_ITEMS = ADMIN_MAIN_TABS.map((tab) => ({ value: tab.id, label: tab.label }));
+
 export function AdministrationDashboardScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<AdminMainTabId>("overview");
@@ -62,7 +86,7 @@ export function AdministrationDashboardScreen() {
   };
 
   const renderOverview = () => (
-    <section style={styles.sectionStack}>
+    <>
       <CpKpiStrip>
         <CpKpiCard label="الأدوار المعرّفة" value={count(roles.state)} />
         <CpKpiCard label="إسنادات الأدوار المعتمدة" value={count(staff.state)} />
@@ -74,8 +98,8 @@ export function AdministrationDashboardScreen() {
         title={ADMINISTRATION_TRUTH_NOTICE.title}
         description={ADMINISTRATION_TRUTH_NOTICE.description}
       />
-      <article style={styles.card}>
-        <h2 style={styles.heading}>حالة القراءة التشغيلية</h2>
+      <section aria-label="حالة القراءة التشغيلية">
+        <h2>حالة القراءة التشغيلية</h2>
         {statePanel(roles.state, "جارٍ تحميل الأدوار…")}
         {statePanel(staff.state, "جارٍ تحميل إسنادات الأدوار…")}
         {statePanel(partners.state, "جارٍ تحميل إسقاطات الشركاء…")}
@@ -84,12 +108,12 @@ export function AdministrationDashboardScreen() {
         {roles.state.kind === "success" && staff.state.kind === "success" && audit.state.kind === "success" ? (
           <CpStatePanel role="status" title="تم تحميل الحقيقة الإدارية من DSH." />
         ) : null}
-      </article>
-    </section>
+      </section>
+    </>
   );
 
   const renderRoles = () => (
-    <section style={styles.sectionStack}>
+    <>
       {statePanel(roles.state, "جارٍ تحميل الأدوار…")}
       {roles.state.kind === "success" && roles.state.data.length === 0 ? (
         <CpStatePanel role="status" title="لا توجد أدوار معرفة في DSH." />
@@ -113,20 +137,23 @@ export function AdministrationDashboardScreen() {
                 <CpTableCell>{role.description || "—"}</CpTableCell>
                 <CpTableCell>{role.permissions.length > 0 ? role.permissions.join("، ") : "لا توجد صلاحيات مرتبطة"}</CpTableCell>
                 <CpTableCell>{role.surfaces.length > 0 ? role.surfaces.join("، ") : "—"}</CpTableCell>
-                <CpTableCell>{role.active ? "فعال" : "غير فعال"} · v{role.version}</CpTableCell>
+                <CpTableCell>
+                  <CpBadge tone={role.active ? "success" : "neutral"}>{role.active ? "فعال" : "غير فعال"}</CpBadge>{" "}
+                  <CpMutedInline tight>v{role.version}</CpMutedInline>
+                </CpTableCell>
                 <CpTableCell>{role.createdAt}</CpTableCell>
               </tr>
             ))}
           </tbody>
         </CpTable>
       ) : null}
-    </section>
+    </>
   );
 
   const renderUsers = () => (
-    <section style={styles.sectionStack}>
-      <article style={styles.card}>
-        <h2 style={styles.heading}>إسنادات الأدوار المعتمدة</h2>
+    <>
+      <section aria-label="إسنادات الأدوار المعتمدة">
+        <h2>إسنادات الأدوار المعتمدة</h2>
         {statePanel(staff.state, "جارٍ تحميل الإسنادات…")}
         {staff.state.kind === "success" && staff.state.data.length === 0 ? (
           <CpStatePanel role="status" title="لا توجد إسنادات أدوار معتمدة." />
@@ -153,54 +180,82 @@ export function AdministrationDashboardScreen() {
             </tbody>
           </CpTable>
         ) : null}
-      </article>
+      </section>
 
-      <article style={styles.card}>
-        <div style={styles.ownerHeader}>
-          <div>
-            <h2 style={styles.heading}>تفعيل الشركاء أو حظرهم</h2>
-            <span>التنفيذ يتم داخل مالك دورة حياة الشريك مع بوابات الجاهزية والنسخة والسبب.</span>
-          </div>
+      <section aria-label="تفعيل الشركاء أو حظرهم">
+        <h2>تفعيل الشركاء أو حظرهم</h2>
+        <CpMutedInline tight>التنفيذ يتم داخل مالك دورة حياة الشريك مع بوابات الجاهزية والنسخة والسبب.</CpMutedInline>
+        <div>
           <CpButton onClick={() => openPartnerOwner()}>فتح طابور الشركاء</CpButton>
         </div>
         {statePanel(partners.state, "جارٍ تحميل الشركاء…")}
         {partners.state.kind === "success" && partners.state.data.length === 0 ? (
           <CpStatePanel role="status" title="لا توجد إسقاطات شركاء متاحة حاليًا." />
         ) : null}
-        {partners.state.kind === "success" ? partners.state.data.map((item) => (
-          <div key={item.id} style={styles.readOnlyRow}>
-            <div style={styles.rowText}>
-              <strong>{item.partnerId}</strong>
-              <span>{administrationStatusLabel(item.status)}</span>
-            </div>
-            <CpButton onClick={() => openPartnerOwner(item.partnerId)}>فتح التفعيل/الحظر</CpButton>
-          </div>
-        )) : null}
-      </article>
+        {partners.state.kind === "success" && partners.state.data.length > 0 ? (
+          <CpTable aria-label="إسقاطات الشركاء">
+            <thead>
+              <tr>
+                <CpTableHeaderCell>الشريك</CpTableHeaderCell>
+                <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+                <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
+              </tr>
+            </thead>
+            <tbody>
+              {partners.state.data.map((item) => (
+                <tr key={item.id}>
+                  <CpTableCell>{item.partnerId}</CpTableCell>
+                  <CpTableCell>
+                    <CpBadge tone={statusTone(item.status)}>{administrationStatusLabel(item.status)}</CpBadge>
+                  </CpTableCell>
+                  <CpTableCell>
+                    <CpButton onClick={() => openPartnerOwner(item.partnerId)}>فتح التفعيل/الحظر</CpButton>
+                  </CpTableCell>
+                </tr>
+              ))}
+            </tbody>
+          </CpTable>
+        ) : null}
+      </section>
 
-      <article style={styles.card}>
-        <div style={styles.ownerHeader}>
-          <div>
-            <h2 style={styles.heading}>بيانات اعتماد الكابتن</h2>
-            <span>الإنشاء والتحديث ورفع الوثائق واعتماد الرخصة يتم في Workforce، لا في إسقاط DSH.</span>
-          </div>
+      <section aria-label="بيانات اعتماد الكابتن">
+        <h2>بيانات اعتماد الكابتن</h2>
+        <CpMutedInline tight>الإنشاء والتحديث ورفع الوثائق واعتماد الرخصة يتم في Workforce، لا في إسقاط DSH.</CpMutedInline>
+        <div>
           <CpButton onClick={() => openCaptainOwner()}>إنشاء ملف كابتن</CpButton>
         </div>
         {statePanel(captains.state, "جارٍ تحميل الكباتن…")}
         {captains.state.kind === "success" && captains.state.data.length === 0 ? (
           <CpStatePanel role="status" title="لا توجد إسقاطات اعتماد كباتن متاحة حاليًا." />
         ) : null}
-        {captains.state.kind === "success" ? captains.state.data.map((item) => (
-          <div key={item.id} style={styles.readOnlyRow}>
-            <div style={styles.rowText}>
-              <strong>{item.captainId}</strong>
-              <span>{administrationStatusLabel(item.status)} · {item.vehicleType || "بلا مركبة"}</span>
-            </div>
-            <CpButton onClick={() => openCaptainOwner(item.captainId)}>فتح ملف الاعتماد</CpButton>
-          </div>
-        )) : null}
-      </article>
-    </section>
+        {captains.state.kind === "success" && captains.state.data.length > 0 ? (
+          <CpTable aria-label="إسقاطات اعتماد الكباتن">
+            <thead>
+              <tr>
+                <CpTableHeaderCell>الكابتن</CpTableHeaderCell>
+                <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+                <CpTableHeaderCell>المركبة</CpTableHeaderCell>
+                <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
+              </tr>
+            </thead>
+            <tbody>
+              {captains.state.data.map((item) => (
+                <tr key={item.id}>
+                  <CpTableCell>{item.captainId}</CpTableCell>
+                  <CpTableCell>
+                    <CpBadge tone={statusTone(item.status)}>{administrationStatusLabel(item.status)}</CpBadge>
+                  </CpTableCell>
+                  <CpTableCell>{item.vehicleType || "بلا مركبة"}</CpTableCell>
+                  <CpTableCell>
+                    <CpButton onClick={() => openCaptainOwner(item.captainId)}>فتح ملف الاعتماد</CpButton>
+                  </CpTableCell>
+                </tr>
+              ))}
+            </tbody>
+          </CpTable>
+        ) : null}
+      </section>
+    </>
   );
 
   const renderApprovalChain = () => (
@@ -212,7 +267,7 @@ export function AdministrationDashboardScreen() {
   );
 
   const renderAudit = () => (
-    <section style={styles.sectionStack}>
+    <>
       {statePanel(audit.state, "جارٍ تحميل سجل التدقيق…")}
       {audit.state.kind === "success" && audit.state.data.length === 0 ? (
         <CpStatePanel role="status" title="لا توجد أحداث تدقيق إدارية." />
@@ -245,7 +300,7 @@ export function AdministrationDashboardScreen() {
           </tbody>
         </CpTable>
       ) : null}
-    </section>
+    </>
   );
 
   const content = tab === "overview" ? renderOverview()
@@ -255,80 +310,12 @@ export function AdministrationDashboardScreen() {
           : renderAudit();
 
   return (
-    <DataTablePageFrame
+    <OverviewPageFrame
       dir="rtl"
       header={<CpPageHeader title="الإدارة والصلاحيات" />}
-      toolbar={(
-        <nav style={styles.tabs} aria-label="أقسام الإدارة">
-          {ADMIN_MAIN_TABS.map((item) => (
-            <CpButton
-              key={item.id}
-              onClick={() => setTab(item.id)}
-              aria-label={item.label}
-              style={tab === item.id ? styles.activeTab : styles.tab}
-            >
-              {item.label}
-            </CpButton>
-          ))}
-        </nav>
-      )}
+      toolbar={<CpTabs items={MAIN_TAB_ITEMS} value={tab} onChange={(value) => setTab(value as AdminMainTabId)} aria-label="أقسام الإدارة" />}
     >
-      <div style={styles.content}>{content}</div>
-    </DataTablePageFrame>
+      {content}
+    </OverviewPageFrame>
   );
 }
-
-const styles = WebStyleSheet.create({
-  content: {
-    display: "grid",
-    gap: "1rem",
-    padding: "1rem",
-  },
-  tabs: {
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "0.5rem",
-    padding: "0.75rem 1rem",
-  },
-  tab: {
-    opacity: 0.75,
-  },
-  activeTab: {
-    fontWeight: 700,
-    opacity: 1,
-  },
-  sectionStack: {
-    display: "grid",
-    gap: "1rem",
-  },
-  card: {
-    display: "grid",
-    gap: "0.75rem",
-    padding: "1rem",
-    border: "1px solid var(--card-border, currentColor)",
-    borderRadius: "1rem",
-  },
-  heading: {
-    margin: 0,
-    fontSize: "1rem",
-  },
-  ownerHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "1rem",
-    flexWrap: "wrap",
-  },
-  readOnlyRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "1rem",
-    padding: "0.75rem",
-    borderBlockEnd: "1px solid var(--card-border, currentColor)",
-  },
-  rowText: {
-    display: "grid",
-    gap: "0.25rem",
-  },
-});

@@ -1,15 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  Badge,
-  Button,
-  Card,
-  ScrollScreen,
-  StateView,
-  Text,
-  lightThemeColors,
-} from "@bthwani/ui-kit";
+import { Card, StateView, Text } from "@bthwani/ui-kit";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
+import { CpBadge, CpButton, CpMutedInline, CpPageHeader, CpTextInput } from "@bthwani/control-panel/components";
+import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
 import {
   presentWltPaymentSessionStatus,
   requiresWltPaymentReconciliation,
@@ -23,22 +18,16 @@ import {
 
 type ScreenState = "idle" | "loading" | "ready" | "refreshing" | "offline" | "forbidden" | "not_found" | "conflict" | "error";
 
-const inputStyle = {
-  width: "100%",
-  border: `1px solid ${lightThemeColors.borderColor}`,
-  borderRadius: "10px",
-  padding: "0.75rem",
-  background: lightThemeColors.surface,
-  color: lightThemeColors.color,
-  direction: "ltr" as const,
-};
-
 function formatAmount(minorUnits: number, currency: string): string {
   return `${new Intl.NumberFormat("ar-YE").format(minorUnits)} ${currency === "YER" ? "ر.ي" : currency}`;
 }
 
 function errorState(error: PaymentSessionRuntimeError): ScreenState {
   return error.state;
+}
+
+function toBadgeTone(tone: "action" | "success" | "warning" | "danger" | "info"): CpBadgeTone {
+  return tone === "action" ? "brand" : tone;
 }
 
 export function PaymentSessionOperationsScreen() {
@@ -110,13 +99,13 @@ export function PaymentSessionOperationsScreen() {
     const unknown = requiresWltPaymentReconciliation(timeline.paymentSession.status);
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <Card style={{ padding: "1.25rem", borderRight: `4px solid ${unknown ? lightThemeColors.danger : lightThemeColors.success}` }}>
+        <Card style={{ padding: "1.25rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
             <div>
               <Text role="titleMd">{presentation.label}</Text>
               <Text role="body" tone="muted" style={{ marginTop: "0.35rem" }}>{presentation.description}</Text>
             </div>
-            <Badge label={timeline.paymentSession.status} tone={presentation.tone} />
+            <CpBadge tone={toBadgeTone(presentation.tone)}>{timeline.paymentSession.status}</CpBadge>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem", marginTop: "1rem" }}>
             <div><Text role="caption" tone="muted">المبلغ</Text><Text role="body">{formatAmount(timeline.paymentSession.amountMinorUnits, timeline.paymentSession.currency)}</Text></div>
@@ -125,26 +114,27 @@ export function PaymentSessionOperationsScreen() {
             <div><Text role="caption" tone="muted">قيد التحصيل</Text><Text role="body">{timeline.captureLedgerTransactionId || "غير موجود"}</Text></div>
           </div>
           {unknown ? (
-            <Card style={{ padding: "1rem", marginTop: "1rem", background: lightThemeColors.surfaceInset }}>
+            <Card style={{ padding: "1rem", marginTop: "1rem" }}>
               <Text role="body">ممنوع إعادة التفويض أو التحصيل. استخدم تحديث حالة المزود، ثم عالج حالة المطابقة المفتوحة بناءً على دليل مزود موثوق.</Text>
             </Card>
           ) : null}
           <div style={{ marginTop: "1rem" }}>
-            <Button
-              label={state === "refreshing" ? "جارٍ الاستعلام من المزود..." : "تحديث حالة المزود"}
-              tone="secondary"
-              onPress={refreshProvider}
+            <CpButton
+              variant="secondary"
+              onClick={refreshProvider}
               disabled={state === "refreshing" || presentation.terminal}
-            />
+            >
+              {state === "refreshing" ? "جارٍ الاستعلام من المزود..." : "تحديث حالة المزود"}
+            </CpButton>
           </div>
         </Card>
 
         <Card style={{ padding: "1.25rem" }}>
           <Text role="titleMd">إيصالات العمليات ({timeline.operationReceipts.length})</Text>
           {timeline.operationReceipts.length === 0 ? <Text role="body" tone="muted" style={{ marginTop: "0.75rem" }}>لا توجد عمليات authorize/capture مسجلة.</Text> : timeline.operationReceipts.map((receipt) => (
-            <div key={receipt.id} style={{ borderTop: `1px solid ${lightThemeColors.borderColor}`, padding: "0.75rem 0" }}>
+            <div key={receipt.id} style={{ padding: "0.75rem 0" }}>
               <Text role="body">{receipt.operation} · {receipt.state}</Text>
-              <Text role="caption" tone="muted">{receipt.correlationId || "بدون correlation"} · {receipt.responseStatus || "—"}</Text>
+              <CpMutedInline tight>{receipt.correlationId || "بدون correlation"} · {receipt.responseStatus || "—"}</CpMutedInline>
             </div>
           ))}
         </Card>
@@ -152,9 +142,9 @@ export function PaymentSessionOperationsScreen() {
         <Card style={{ padding: "1.25rem" }}>
           <Text role="titleMd">أحداث المزود الموقعة ({timeline.providerEvents.length})</Text>
           {timeline.providerEvents.length === 0 ? <Text role="body" tone="muted" style={{ marginTop: "0.75rem" }}>لا توجد أحداث مزود مستلمة.</Text> : timeline.providerEvents.map((event) => (
-            <div key={event.providerEventId} style={{ borderTop: `1px solid ${lightThemeColors.borderColor}`, padding: "0.75rem 0" }}>
+            <div key={event.providerEventId} style={{ padding: "0.75rem 0" }}>
               <Text role="body">{event.eventType} · {event.processingState}</Text>
-              <Text role="caption" tone="muted">{event.providerEventId} · {event.providerStatus}</Text>
+              <CpMutedInline tight>{event.providerEventId} · {event.providerStatus}</CpMutedInline>
             </div>
           ))}
         </Card>
@@ -162,9 +152,9 @@ export function PaymentSessionOperationsScreen() {
         <Card style={{ padding: "1.25rem" }}>
           <Text role="titleMd">المطابقة والتسوية ({timeline.reconciliationCases.length})</Text>
           {timeline.reconciliationCases.length === 0 ? <Text role="body" tone="muted" style={{ marginTop: "0.75rem" }}>لا توجد حالة مطابقة مرتبطة.</Text> : timeline.reconciliationCases.map((item) => (
-            <div key={item.id} style={{ borderTop: `1px solid ${lightThemeColors.borderColor}`, padding: "0.75rem 0" }}>
+            <div key={item.id} style={{ padding: "0.75rem 0" }}>
               <Text role="body">{item.operation} · {item.status}</Text>
-              <Text role="caption" tone="muted">{item.triggerReason}{item.resolutionAction ? ` · ${item.resolutionAction}` : ""}</Text>
+              <CpMutedInline tight>{item.triggerReason}{item.resolutionAction ? ` · ${item.resolutionAction}` : ""}</CpMutedInline>
             </div>
           ))}
         </Card>
@@ -173,21 +163,38 @@ export function PaymentSessionOperationsScreen() {
   };
 
   return (
-    <ScrollScreen>
-      <div dir="rtl" style={{ padding: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <div>
-          <Text role="titleLg">عمليات جلسات الدفع</Text>
-          <Text role="body" tone="muted">خط زمني موحد لإيصالات العمليات، أحداث المزود، قيد Ledger وحالات المطابقة.</Text>
-        </div>
+    <FinanceReadOnlyFrame
+      header={
+        <CpPageHeader title="عمليات جلسات الدفع">
+          <CpMutedInline tight>خط زمني موحد لإيصالات العمليات، أحداث المزود، قيد Ledger وحالات المطابقة.</CpMutedInline>
+        </CpPageHeader>
+      }
+      summary={
         <Card style={{ padding: "1.25rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
-            <label><Text role="caption">معرف المستأجر</Text><input aria-label="معرف المستأجر" value={tenantId} onChange={(event) => setTenantId(event.target.value)} style={inputStyle} placeholder="tenant-main" /></label>
-            <label><Text role="caption">معرف جلسة الدفع</Text><input aria-label="معرف جلسة الدفع" value={paymentSessionId} onChange={(event) => setPaymentSessionId(event.target.value)} style={inputStyle} placeholder="payment-session-id" /></label>
-          </div>
-          <div style={{ marginTop: "1rem" }}><Button label="تحميل الخط الزمني" tone="primary" onPress={readTimeline} disabled={!canSubmit} /></div>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void readTimeline();
+            }}
+          >
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <Text role="caption">معرف المستأجر</Text>
+                <CpTextInput aria-label="معرف المستأجر" value={tenantId} onChange={setTenantId} placeholder="tenant-main" />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                <Text role="caption">معرف جلسة الدفع</Text>
+                <CpTextInput aria-label="معرف جلسة الدفع" value={paymentSessionId} onChange={setPaymentSessionId} placeholder="payment-session-id" />
+              </label>
+            </div>
+            <div style={{ marginTop: "1rem" }}>
+              <CpButton type="submit" variant="primary" disabled={!canSubmit}>تحميل الخط الزمني</CpButton>
+            </div>
+          </form>
         </Card>
-        {renderState()}
-      </div>
-    </ScrollScreen>
+      }
+    >
+      {renderState()}
+    </FinanceReadOnlyFrame>
   );
 }

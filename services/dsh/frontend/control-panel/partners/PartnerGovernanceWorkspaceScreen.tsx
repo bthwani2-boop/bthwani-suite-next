@@ -1,13 +1,18 @@
 "use client";
 
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
-  Badge,
-  Button,
-  Card,
-  StateView,
-  Text,
-  lightThemeColors,
-} from "@bthwani/ui-kit";
+  CpBadge,
+  CpButton,
+  CpMutedInline,
+  CpPageHeader,
+  CpRetryButton,
+  CpStatePanel,
+  CpTable,
+  CpTableCell,
+  CpTableHeaderCell,
+} from "@bthwani/control-panel/components";
+import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import {
   getDshPartnerActivationStatusLabel,
   type PartnerWorkspaceTabId,
@@ -127,7 +132,7 @@ function definition(workspace: PartnerWorkspaceTabId, subTab: string): Workspace
   }
 }
 
-function statusTone(status: string): "success" | "warning" | "danger" | "info" | "neutral" {
+function statusTone(status: string): CpBadgeTone {
   if (status === "client_visible" || status === "partner_active" || status === "ops_approved") return "success";
   if (status === "ops_rejected" || status === "partner_deactivated") return "danger";
   if (status === "client_hidden" || status.includes("missing") || status.includes("not_ready")) return "warning";
@@ -143,67 +148,92 @@ export function PartnerGovernanceWorkspaceScreen({
   const config = definition(workspace, subTab);
 
   if (controller.listState.kind === "idle" || controller.listState.kind === "loading") {
-    return <StateView stateId="loading" title={`جاري تحميل ${config.title}`} description="تتم القراءة من DSH Runtime ضمن المستأجر الحالي." />;
+    return (
+      <DataTablePageFrame stateView={<CpStatePanel role="status" title={`جاري تحميل ${config.title}`} description="تتم القراءة من DSH Runtime ضمن المستأجر الحالي." />}>
+        {null}
+      </DataTablePageFrame>
+    );
   }
   if (controller.listState.kind === "offline") {
-    return <StateView stateId="offline" tone="warning" title="خدمة الشركاء غير متاحة" description="لا يتم استخدام بيانات محلية بديلة عن الحقيقة التشغيلية." actionLabel="إعادة المحاولة" onActionPress={controller.retry} />;
+    return (
+      <DataTablePageFrame stateView={(
+        <CpStatePanel role="alert" title="خدمة الشركاء غير متاحة" description="لا يتم استخدام بيانات محلية بديلة عن الحقيقة التشغيلية.">
+          <CpRetryButton onClick={controller.retry}>إعادة المحاولة</CpRetryButton>
+        </CpStatePanel>
+      )}>
+        {null}
+      </DataTablePageFrame>
+    );
   }
   if (controller.listState.kind === "error") {
-    return <StateView stateId="recoverableError" title="تعذر تحميل مساحة العمل" description={controller.listState.message} actionLabel="إعادة المحاولة" onActionPress={controller.retry} />;
+    return (
+      <DataTablePageFrame stateView={(
+        <CpStatePanel role="alert" title="تعذر تحميل مساحة العمل" code={controller.listState.message}>
+          <CpRetryButton onClick={controller.retry}>إعادة المحاولة</CpRetryButton>
+        </CpStatePanel>
+      )}>
+        {null}
+      </DataTablePageFrame>
+    );
   }
 
   const partners = controller.partners.filter((partner) => !config.statuses || config.statuses.has(partner.activationStatus));
   if (partners.length === 0) {
-    return <StateView stateId="empty" title={`لا توجد عناصر في ${config.title}`} description={config.description} actionLabel="تحديث" onActionPress={controller.retry} />;
+    return (
+      <DataTablePageFrame stateView={(
+        <CpStatePanel role="status" title={`لا توجد عناصر في ${config.title}`} description={config.description}>
+          <CpRetryButton onClick={controller.retry}>تحديث</CpRetryButton>
+        </CpStatePanel>
+      )}>
+        {null}
+      </DataTablePageFrame>
+    );
   }
 
   return (
-    <div style={{ display: "grid", gap: "1rem" }}>
-      <Card style={{ padding: "1rem", display: "grid", gap: "0.25rem" }}>
-        <Text role="titleMd">{config.title}</Text>
-        <Text role="body" tone="muted">{config.description}</Text>
-        <Text role="caption" tone="muted">{partners.length} نتيجة ضمن الصفحة الحالية</Text>
-      </Card>
-
-      <Card style={{ padding: "1rem" }}>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "right" }}>
-            <thead>
-              <tr style={{ borderBottom: `2px solid ${lightThemeColors.borderColor}` }}>
-                <th style={{ padding: "0.75rem" }}>الشريك القانوني</th>
-                <th style={{ padding: "0.75rem" }}>الفئة</th>
-                <th style={{ padding: "0.75rem" }}>الجوال</th>
-                <th style={{ padding: "0.75rem" }}>الحالة</th>
-                <th style={{ padding: "0.75rem" }}>آخر تحديث</th>
-                <th style={{ padding: "0.75rem" }}>الإجراء</th>
-              </tr>
-            </thead>
-            <tbody>
-              {partners.map((partner) => (
-                <tr key={partner.id} style={{ borderBottom: `1px solid ${lightThemeColors.borderColor}` }}>
-                  <td style={{ padding: "0.75rem" }}>
-                    <Text style={{ fontWeight: "700" }}>{partner.displayName}</Text>
-                    <Text role="caption" tone="muted">{partner.legalNameAr}</Text>
-                  </td>
-                  <td style={{ padding: "0.75rem" }}>{partner.category}</td>
-                  <td style={{ padding: "0.75rem" }}>{partner.primaryPhone || "—"}</td>
-                  <td style={{ padding: "0.75rem" }}>
-                    <Badge label={getDshPartnerActivationStatusLabel(partner.activationStatus)} tone={statusTone(partner.activationStatus)} />
-                  </td>
-                  <td style={{ padding: "0.75rem" }}>{new Date(partner.updatedAt).toLocaleString("ar-SA")}</td>
-                  <td style={{ padding: "0.75rem" }}>
-                    {onOpenPartner ? (
-                      <Button label="فتح الملف السيادي" tone="secondary" onPress={() => onOpenPartner(partner.id)} />
-                    ) : (
-                      <Text role="caption" tone="muted">مسار التفاصيل غير متاح</Text>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
+    <DataTablePageFrame
+      header={(
+        <CpPageHeader title={config.title}>
+          <CpMutedInline tight>{config.description}</CpMutedInline>
+          <CpMutedInline>{partners.length} نتيجة ضمن الصفحة الحالية</CpMutedInline>
+        </CpPageHeader>
+      )}
+    >
+      <CpTable aria-label={config.title}>
+        <thead>
+          <tr>
+            <CpTableHeaderCell>الشريك القانوني</CpTableHeaderCell>
+            <CpTableHeaderCell>الفئة</CpTableHeaderCell>
+            <CpTableHeaderCell>الجوال</CpTableHeaderCell>
+            <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+            <CpTableHeaderCell>آخر تحديث</CpTableHeaderCell>
+            <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
+          </tr>
+        </thead>
+        <tbody>
+          {partners.map((partner) => (
+            <tr key={partner.id}>
+              <CpTableCell>
+                <div style={{ fontWeight: 700 }}>{partner.displayName}</div>
+                <CpMutedInline tight>{partner.legalNameAr}</CpMutedInline>
+              </CpTableCell>
+              <CpTableCell>{partner.category}</CpTableCell>
+              <CpTableCell>{partner.primaryPhone || "—"}</CpTableCell>
+              <CpTableCell>
+                <CpBadge tone={statusTone(partner.activationStatus)}>{getDshPartnerActivationStatusLabel(partner.activationStatus)}</CpBadge>
+              </CpTableCell>
+              <CpTableCell>{new Date(partner.updatedAt).toLocaleString("ar-SA")}</CpTableCell>
+              <CpTableCell>
+                {onOpenPartner ? (
+                  <CpButton onClick={() => onOpenPartner(partner.id)}>فتح الملف السيادي</CpButton>
+                ) : (
+                  <CpMutedInline tight>مسار التفاصيل غير متاح</CpMutedInline>
+                )}
+              </CpTableCell>
+            </tr>
+          ))}
+        </tbody>
+      </CpTable>
+    </DataTablePageFrame>
   );
 }

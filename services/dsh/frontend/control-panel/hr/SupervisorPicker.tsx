@@ -4,7 +4,8 @@
 // box. The operator can only pick a validated candidate returned by the
 // server; there is no way to type an arbitrary actor id here.
 import React from "react";
-import { Box, Button, Text, TextField, spacing } from "@bthwani/ui-kit";
+import { CpButton, CpMutedInline, CpTextInput } from "@bthwani/control-panel/components";
+import { Text } from "@bthwani/ui-kit";
 import { useSupervisorSearchController } from "../../shared/workforce";
 import type { ProviderKind, SupervisorCandidate } from "../../shared/workforce";
 
@@ -18,51 +19,48 @@ export function SupervisorPicker(props: {
 
   if (props.selected) {
     return (
-      <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <Text role="bodySm">
           {props.selected.username}
           {props.selected.phoneMasked ? ` — ${props.selected.phoneMasked}` : ""}
         </Text>
-        {!props.disabled && <Button label="تغيير" tone="ghost" onPress={() => props.onSelect(null)} />}
-      </Box>
+        {!props.disabled ? <CpButton variant="ghost" onClick={() => props.onSelect(null)}>تغيير</CpButton> : null}
+      </div>
     );
   }
 
   return (
-    <Box style={{ gap: spacing[2] }}>
-      <TextField
-        label="المشرف المسؤول"
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+      <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف المسؤول</Text>
+      <CpTextInput
         value={search.query}
-        onChangeText={search.setQuery}
+        onChange={search.setQuery}
         placeholder="ابحث بالاسم أو الرقم (حرفان على الأقل)"
         disabled={props.disabled ?? false}
+        aria-label="المشرف المسؤول"
       />
-      {!props.disabled && (
+      {!props.disabled ? (
         <>
-          {search.loading && (
-            <Text role="caption" tone="muted" style={{ textAlign: "right" }}>جارٍ البحث…</Text>
-          )}
-          {search.error && (
-            <Text role="caption" tone="danger" style={{ textAlign: "right" }}>{search.error}</Text>
-          )}
-          {!search.loading && search.query.trim().length >= 2 && search.candidates.length === 0 && !search.error && (
-            <Text role="caption" tone="muted" style={{ textAlign: "right" }}>لا توجد نتائج مطابقة</Text>
-          )}
+          {search.loading ? <CpMutedInline tight>جارٍ البحث…</CpMutedInline> : null}
+          {search.error ? <CpMutedInline tight>{search.error}</CpMutedInline> : null}
+          {!search.loading && search.query.trim().length >= 2 && search.candidates.length === 0 && !search.error ? (
+            <CpMutedInline tight>لا توجد نتائج مطابقة</CpMutedInline>
+          ) : null}
           {search.candidates.map((candidate) => (
-            <Box
+            <div
               key={candidate.actorId}
-              style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
             >
               <Text role="bodySm">
                 {candidate.username}
                 {candidate.phoneMasked ? ` — ${candidate.phoneMasked}` : ""}
               </Text>
-              <Button label="اختيار" tone="secondary" onPress={() => props.onSelect(candidate)} />
-            </Box>
+              <CpButton variant="secondary" onClick={() => props.onSelect(candidate)}>اختيار</CpButton>
+            </div>
           ))}
         </>
-      )}
-    </Box>
+      ) : null}
+    </div>
   );
 }
 

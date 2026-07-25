@@ -1,42 +1,36 @@
 "use client";
 
 import React from "react";
-import { Box, Button, Card, ScrollScreen, Text, spacing } from "@bthwani/ui-kit";
+import { CpButton, CpMutedInline, CpPageHeader } from "@bthwani/control-panel/components";
+import { EditorPageFrame } from "@bthwani/control-panel/shell";
+import { Text } from "@bthwani/ui-kit";
 import type { ProviderKind } from "../../shared/workforce";
 
 export function ProviderTypeSelectView(props: { readonly onBack: () => void; readonly onSelect: (kind: ProviderKind) => void }) {
   return (
-    <ScrollScreen>
-      <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-        <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-          <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>إضافة مقدم خدمة</Text>
-          <Button label="رجوع" tone="ghost" onPress={props.onBack} />
-        </Box>
-        <Text role="bodySm" tone="muted" style={{ textAlign: "right" }}>
-          اختر نوع مقدم الخدمة المراد إنشاؤه
-        </Text>
-      </Card>
+    <EditorPageFrame
+      header={
+        <CpPageHeader title="إضافة مقدم خدمة">
+          <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+        </CpPageHeader>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <CpMutedInline>اختر نوع مقدم الخدمة المراد إنشاؤه</CpMutedInline>
 
-      <Card style={{ padding: spacing[4], gap: spacing[2] }}>
-        <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>ميداني</Text>
-        <Text role="bodySm" tone="muted" style={{ textAlign: "right" }}>
-          تسجيل وتأهيل المتاجر ومتابعة جاهزيتها
-        </Text>
-        <Box style={{ alignItems: "flex-end" }}>
-          <Button label="إنشاء ميداني" tone="primary" onPress={() => props.onSelect("field")} />
-        </Box>
-      </Card>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <Text role="titleSm">ميداني</Text>
+          <CpMutedInline>تسجيل وتأهيل المتاجر ومتابعة جاهزيتها</CpMutedInline>
+          <CpButton variant="primary" onClick={() => props.onSelect("field")}>إنشاء ميداني</CpButton>
+        </div>
 
-      <Card style={{ padding: spacing[4], gap: spacing[2] }}>
-        <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>كابتن</Text>
-        <Text role="bodySm" tone="muted" style={{ textAlign: "right" }}>
-          استلام وتنفيذ وتسليم الطلبات
-        </Text>
-        <Box style={{ alignItems: "flex-end" }}>
-          <Button label="إنشاء كابتن" tone="primary" onPress={() => props.onSelect("captain")} />
-        </Box>
-      </Card>
-    </ScrollScreen>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <Text role="titleSm">كابتن</Text>
+          <CpMutedInline>استلام وتنفيذ وتسليم الطلبات</CpMutedInline>
+          <CpButton variant="primary" onClick={() => props.onSelect("captain")}>إنشاء كابتن</CpButton>
+        </div>
+      </div>
+    </EditorPageFrame>
   );
 }
 

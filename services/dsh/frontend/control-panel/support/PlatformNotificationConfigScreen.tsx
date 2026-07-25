@@ -1,7 +1,21 @@
 "use client";
 
-import React from "react";
-import { Badge, Box, Button, DataTable, Header, ScrollScreen, StateView, Text, TextField, spacing } from "@bthwani/ui-kit";
+import React, { type ReactNode } from "react";
+import {
+  CpBadge,
+  CpButton,
+  CpFilterBar,
+  CpMutedInline,
+  CpPageHeader,
+  CpRetryButton,
+  CpStatePanel,
+  CpTable,
+  CpTableCell,
+  CpTableHeaderCell,
+  CpTextInput,
+  type CpBadgeTone,
+} from "@bthwani/control-panel/components";
+import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import {
   useNotificationDeliveryAuditController,
   usePlatformNotificationConfigController,
@@ -20,13 +34,13 @@ const OUTCOME_LABELS: Readonly<Record<DshNotificationDeliveryOutcome, string>> =
   dead_letter: "Dead letter",
 };
 
-function outcomeTone(outcome: DshNotificationDeliveryOutcome): "success" | "warning" | "danger" {
+function outcomeTone(outcome: DshNotificationDeliveryOutcome): CpBadgeTone {
   if (outcome === "sent") return "success";
   if (outcome === "dead_letter") return "danger";
   return "warning";
 }
 
-function pushStatusTone(status: DshPushDeliveryAudit["status"]): "success" | "warning" | "danger" {
+function pushStatusTone(status: DshPushDeliveryAudit["status"]): CpBadgeTone {
   if (status === "sent") return "success";
   if (status === "failed") return "danger";
   return "warning";
@@ -50,6 +64,47 @@ function parseChannels(value: string): DshNotificationChannel[] {
     (item): item is DshNotificationChannel => item === "in_app" || item === "push",
   );
   return channels.length > 0 ? channels : ["in_app"];
+}
+
+let labeledFieldSeq = 0;
+
+function LabeledField({ label, children }: { readonly label: string; readonly children: ReactNode }) {
+  const id = React.useMemo(() => `platform-notification-field-${++labeledFieldSeq}`, []);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+      <label htmlFor={id}>{label}</label>
+      {React.isValidElement(children) ? React.cloneElement(children as React.ReactElement<{ id?: string }>, { id }) : children}
+    </div>
+  );
+}
+
+// CpTextInput has no multiline mode and CpPrimitives.tsx is off-limits for this
+// migration, so multi-line fields keep a plain <textarea> instead of losing the
+// multiline affordance.
+function LabeledTextArea({
+  label,
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+}: {
+  readonly label: string;
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+  readonly placeholder?: string;
+  readonly rows?: number;
+}) {
+  return (
+    <LabeledField label={label}>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        style={{ width: "100%", font: "inherit", padding: "0.5rem 0.75rem", borderRadius: "0.75rem" }}
+      />
+    </LabeledField>
+  );
 }
 
 export function PlatformNotificationConfigScreen() {
@@ -135,140 +190,195 @@ export function PlatformNotificationConfigScreen() {
     }
   }
 
-  if (state.kind === "loading" || state.kind === "idle") return <StateView title="جارٍ التحميل…" />;
-  if (state.kind === "error") {
-    return <StateView title="خطأ" description={state.message} actionLabel="إعادة المحاولة" onActionPress={reload} />;
+  const stateView =
+    state.kind === "loading" || state.kind === "idle" ? (
+      <CpStatePanel role="status" title="جارٍ التحميل…" />
+    ) : state.kind === "error" ? (
+      <CpStatePanel role="alert" title="خطأ" description={state.message}>
+        <CpRetryButton onClick={reload}>إعادة المحاولة</CpRetryButton>
+      </CpStatePanel>
+    ) : undefined;
+
+  const header = (
+    <CpPageHeader title="إعدادات الإشعارات">
+      <CpMutedInline tight>إدارة الاستهداف والقنوات والقوالب والروابط وتدقيق التسليم</CpMutedInline>
+    </CpPageHeader>
+  );
+
+  if (state.kind !== "success") {
+    return (
+      <DataTablePageFrame dir="rtl" header={header} stateView={stateView}>
+        {null}
+      </DataTablePageFrame>
+    );
   }
 
   return (
-    <ScrollScreen>
-      <Header title="إعدادات الإشعارات" subtitle="إدارة الاستهداف والقنوات والقوالب والروابط وتدقيق التسليم" />
-      <Box style={styles.container}>
+    <DataTablePageFrame dir="rtl" header={header}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", padding: "1rem" }}>
         {state.configs.length === 0 ? (
-          <StateView title="لا توجد إعدادات" description="لم يتم تهيئة أي إشعارات منصة بعد." />
+          <CpStatePanel role="status" title="لا توجد إعدادات" description="لم يتم تهيئة أي إشعارات منصة بعد." />
         ) : (
-          <DataTable<DshPlatformNotificationConfig>
-            columns={[
-              { key: "topic", header: "الموضوع", render: (row) => <Text role="bodySm">{row.topic}</Text> },
-              {
-                key: "isEnabled",
-                header: "الحالة",
-                render: (row) => <Badge label={row.isEnabled ? "مفعّل" : "معطّل"} tone={row.isEnabled ? "success" : "neutral"} />,
-              },
-              { key: "actors", header: "الممثلون", render: (row) => <Text role="bodySm">{row.actorTypes.join(", ") || "الكل"}</Text> },
-              { key: "channels", header: "القنوات", render: (row) => <Text role="bodySm">{row.defaultChannels.join(", ")}</Text> },
-              { key: "description", header: "الوصف", render: (row) => <Text role="bodySm">{row.description}</Text> },
-              { key: "updatedBy", header: "عُدِّل من", render: (row) => <Text role="bodySm">{row.updatedBy}</Text> },
-              {
-                key: "actions",
-                header: "الإجراء",
-                render: (row) => <Button label="تعديل" tone="secondary" size="sm" fullWidth={false} onPress={() => startEdit(row)} />,
-              },
-            ]}
-            rows={state.configs}
-            getRowKey={(row) => row.id}
-          />
+          <CpTable aria-label="إعدادات إشعارات المنصة">
+            <thead>
+              <tr>
+                <CpTableHeaderCell>الموضوع</CpTableHeaderCell>
+                <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+                <CpTableHeaderCell>الممثلون</CpTableHeaderCell>
+                <CpTableHeaderCell>القنوات</CpTableHeaderCell>
+                <CpTableHeaderCell>الوصف</CpTableHeaderCell>
+                <CpTableHeaderCell>عُدِّل من</CpTableHeaderCell>
+                <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
+              </tr>
+            </thead>
+            <tbody>
+              {state.configs.map((row) => (
+                <tr key={row.id}>
+                  <CpTableCell>{row.topic}</CpTableCell>
+                  <CpTableCell>
+                    <CpBadge tone={row.isEnabled ? "success" : "neutral"}>{row.isEnabled ? "مفعّل" : "معطّل"}</CpBadge>
+                  </CpTableCell>
+                  <CpTableCell>{row.actorTypes.join(", ") || "الكل"}</CpTableCell>
+                  <CpTableCell>{row.defaultChannels.join(", ")}</CpTableCell>
+                  <CpTableCell>{row.description}</CpTableCell>
+                  <CpTableCell>{row.updatedBy}</CpTableCell>
+                  <CpTableCell>
+                    <CpButton onClick={() => startEdit(row)}>تعديل</CpButton>
+                  </CpTableCell>
+                </tr>
+              ))}
+            </tbody>
+          </CpTable>
         )}
 
-        <Box style={styles.editor}>
-          <Text role="label" style={styles.editorTitle}>
-            {editingConfig ? `تعديل ${editingConfig.topic}` : "تهيئة إشعار منصة"}
-          </Text>
-          <TextField label="الموضوع" value={topic} onChangeText={setTopic} placeholder="order.status_changed" />
-          <TextField label="أنواع الممثلين" value={actorTypes} onChangeText={setActorTypes} placeholder="client, partner, captain, field" />
-          <TextField label="القنوات الافتراضية" value={defaultChannels} onChangeText={setDefaultChannels} placeholder="in_app, push" />
-          <TextField label="الوصف" value={description} onChangeText={setDescription} multiline numberOfLines={2} />
-          <TextField label="العنوان العربي" value={titleAr} onChangeText={setTitleAr} placeholder="تم تحديث طلبك" />
-          <TextField label="النص العربي" value={bodyAr} onChangeText={setBodyAr} multiline numberOfLines={3} placeholder="تغيرت حالة الطلب إلى {{status}}" />
-          <TextField label="English title" value={titleEn} onChangeText={setTitleEn} placeholder="Your order was updated" />
-          <TextField label="English body" value={bodyEn} onChangeText={setBodyEn} multiline numberOfLines={3} placeholder="Order status changed to {{status}}" />
-          <TextField label="متغيرات القالب" value={variables} onChangeText={setVariables} placeholder="status, entityId" />
-          <TextField label="نمط الرابط العميق" value={deepLinkPattern} onChangeText={setDeepLinkPattern} placeholder="/orders/{{entityId}}" />
-          {saveMessage ? <Text role="bodySm" tone="muted" style={styles.editorTitle}>{saveMessage}</Text> : null}
-          <Box style={styles.actions}>
-            <Button label="حفظ مفعّل" loading={isSaving} disabled={isSaving} fullWidth={false} onPress={() => { void handleSave(true); }} />
-            <Button label="حفظ معطّل" tone="secondary" loading={isSaving} disabled={isSaving} fullWidth={false} onPress={() => { void handleSave(false); }} />
-            {editingConfig ? <Button label="إلغاء" tone="ghost" fullWidth={false} onPress={resetEditor} /> : null}
-          </Box>
-        </Box>
+        <section style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <strong>{editingConfig ? `تعديل ${editingConfig.topic}` : "تهيئة إشعار منصة"}</strong>
+          <LabeledField label="الموضوع">
+            <CpTextInput value={topic} onChange={setTopic} placeholder="order.status_changed" aria-label="الموضوع" />
+          </LabeledField>
+          <LabeledField label="أنواع الممثلين">
+            <CpTextInput value={actorTypes} onChange={setActorTypes} placeholder="client, partner, captain, field" aria-label="أنواع الممثلين" />
+          </LabeledField>
+          <LabeledField label="القنوات الافتراضية">
+            <CpTextInput value={defaultChannels} onChange={setDefaultChannels} placeholder="in_app, push" aria-label="القنوات الافتراضية" />
+          </LabeledField>
+          <LabeledTextArea label="الوصف" value={description} onChange={setDescription} rows={2} />
+          <LabeledField label="العنوان العربي">
+            <CpTextInput value={titleAr} onChange={setTitleAr} placeholder="تم تحديث طلبك" aria-label="العنوان العربي" />
+          </LabeledField>
+          <LabeledTextArea label="النص العربي" value={bodyAr} onChange={setBodyAr} rows={3} placeholder="تغيرت حالة الطلب إلى {{status}}" />
+          <LabeledField label="English title">
+            <CpTextInput value={titleEn} onChange={setTitleEn} placeholder="Your order was updated" aria-label="English title" />
+          </LabeledField>
+          <LabeledTextArea label="English body" value={bodyEn} onChange={setBodyEn} rows={3} placeholder="Order status changed to {{status}}" />
+          <LabeledField label="متغيرات القالب">
+            <CpTextInput value={variables} onChange={setVariables} placeholder="status, entityId" aria-label="متغيرات القالب" />
+          </LabeledField>
+          <LabeledField label="نمط الرابط العميق">
+            <CpTextInput value={deepLinkPattern} onChange={setDeepLinkPattern} placeholder="/orders/{{entityId}}" aria-label="نمط الرابط العميق" />
+          </LabeledField>
+          {saveMessage ? <CpMutedInline tight>{saveMessage}</CpMutedInline> : null}
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <CpButton variant="brand" disabled={isSaving} onClick={() => { void handleSave(true); }}>حفظ مفعّل</CpButton>
+            <CpButton disabled={isSaving} onClick={() => { void handleSave(false); }}>حفظ معطّل</CpButton>
+            {editingConfig ? <CpButton variant="ghost" onClick={resetEditor}>إلغاء</CpButton> : null}
+          </div>
+        </section>
 
-        <Box style={styles.auditSection}>
-          <Text role="titleSm" style={styles.editorTitle}>تدقيق تسليم الإشعارات</Text>
+        <section style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <strong>تدقيق تسليم الإشعارات</strong>
           {deliveryAudit.state.kind === "idle" || deliveryAudit.state.kind === "loading" ? (
-            <StateView title="جارٍ تحميل سجل التسليم…" />
+            <CpStatePanel role="status" title="جارٍ تحميل سجل التسليم…" />
           ) : deliveryAudit.state.kind === "error" ? (
-            <StateView
-              title="تعذر تحميل سجل التسليم"
-              description={deliveryAudit.state.message}
-              actionLabel="إعادة المحاولة"
-              onActionPress={deliveryAudit.reload}
-            />
+            <CpStatePanel role="alert" title="تعذر تحميل سجل التسليم" description={deliveryAudit.state.message}>
+              <CpRetryButton onClick={deliveryAudit.reload}>إعادة المحاولة</CpRetryButton>
+            </CpStatePanel>
           ) : (
             <>
-              <Box style={styles.auditSummary}>
-                <Badge label={`Outbox مرسل: ${deliveryAudit.state.summary.sent}`} tone="success" />
-                <Badge label={`Outbox يعاد: ${deliveryAudit.state.summary.retryScheduled}`} tone="warning" />
-                <Badge label={`Outbox dead letter: ${deliveryAudit.state.summary.deadLetter}`} tone="danger" />
-                <Badge label={`Outbox معلّق: ${deliveryAudit.state.summary.pendingOutbox}`} tone="neutral" />
-                <Badge label={`Outbox فاشل: ${deliveryAudit.state.summary.failedOutbox}`} tone="danger" />
-                <Badge label={`Push مرسل: ${deliveryAudit.state.summary.sentPush}`} tone="success" />
-                <Badge label={`Push معلّق: ${deliveryAudit.state.summary.pendingPush}`} tone="warning" />
-                <Badge label={`Push فاشل: ${deliveryAudit.state.summary.failedPush}`} tone="danger" />
-              </Box>
-              <Box style={styles.actions}>
-                <Button label="الكل" tone={deliveryAudit.outcome ? "secondary" : "brand"} size="sm" fullWidth={false} onPress={() => { void deliveryAudit.filter(); }} />
-                <Button label="تم الإرسال" tone={deliveryAudit.outcome === "sent" ? "brand" : "secondary"} size="sm" fullWidth={false} onPress={() => { void deliveryAudit.filter("sent"); }} />
-                <Button label="إعادة محاولة" tone={deliveryAudit.outcome === "retry_scheduled" ? "brand" : "secondary"} size="sm" fullWidth={false} onPress={() => { void deliveryAudit.filter("retry_scheduled"); }} />
-                <Button label="Dead letter" tone={deliveryAudit.outcome === "dead_letter" ? "brand" : "secondary"} size="sm" fullWidth={false} onPress={() => { void deliveryAudit.filter("dead_letter"); }} />
-              </Box>
+              <CpFilterBar label="ملخص تسليم الإشعارات">
+                <CpBadge tone="success">{`Outbox مرسل: ${deliveryAudit.state.summary.sent}`}</CpBadge>
+                <CpBadge tone="warning">{`Outbox يعاد: ${deliveryAudit.state.summary.retryScheduled}`}</CpBadge>
+                <CpBadge tone="danger">{`Outbox dead letter: ${deliveryAudit.state.summary.deadLetter}`}</CpBadge>
+                <CpBadge tone="neutral">{`Outbox معلّق: ${deliveryAudit.state.summary.pendingOutbox}`}</CpBadge>
+                <CpBadge tone="danger">{`Outbox فاشل: ${deliveryAudit.state.summary.failedOutbox}`}</CpBadge>
+                <CpBadge tone="success">{`Push مرسل: ${deliveryAudit.state.summary.sentPush}`}</CpBadge>
+                <CpBadge tone="warning">{`Push معلّق: ${deliveryAudit.state.summary.pendingPush}`}</CpBadge>
+                <CpBadge tone="danger">{`Push فاشل: ${deliveryAudit.state.summary.failedPush}`}</CpBadge>
+              </CpFilterBar>
+              <CpFilterBar label="فلاتر تدقيق التسليم">
+                <CpButton variant={deliveryAudit.outcome ? "secondary" : "brand"} onClick={() => { void deliveryAudit.filter(); }}>الكل</CpButton>
+                <CpButton variant={deliveryAudit.outcome === "sent" ? "brand" : "secondary"} onClick={() => { void deliveryAudit.filter("sent"); }}>تم الإرسال</CpButton>
+                <CpButton variant={deliveryAudit.outcome === "retry_scheduled" ? "brand" : "secondary"} onClick={() => { void deliveryAudit.filter("retry_scheduled"); }}>إعادة محاولة</CpButton>
+                <CpButton variant={deliveryAudit.outcome === "dead_letter" ? "brand" : "secondary"} onClick={() => { void deliveryAudit.filter("dead_letter"); }}>Dead letter</CpButton>
+              </CpFilterBar>
               {deliveryAudit.state.attempts.length === 0 ? (
-                <StateView title="لا توجد محاولات Outbox" description="لا توجد محاولات مطابقة للفلتر الحالي." />
+                <CpStatePanel role="status" title="لا توجد محاولات Outbox" description="لا توجد محاولات مطابقة للفلتر الحالي." />
               ) : (
-                <DataTable<DshNotificationDeliveryAttempt>
-                  columns={[
-                    { key: "eventType", header: "الحدث", render: (row) => <Text role="bodySm">{row.eventType}</Text> },
-                    { key: "entity", header: "الكيان", render: (row) => <Text role="bodySm">{row.entityType} · {row.entityId}</Text> },
-                    { key: "attemptNumber", header: "المحاولة", render: (row) => <Text role="bodySm">{String(row.attemptNumber)}</Text> },
-                    { key: "outcome", header: "النتيجة", render: (row) => <Badge label={OUTCOME_LABELS[row.outcome]} tone={outcomeTone(row.outcome)} /> },
-                    { key: "errorMessage", header: "الخطأ", render: (row) => <Text role="bodySm">{row.errorMessage || "—"}</Text> },
-                    { key: "createdAt", header: "الوقت", render: (row) => <Text role="bodySm">{new Date(row.createdAt).toLocaleString("ar-YE")}</Text> },
-                  ]}
-                  rows={deliveryAudit.state.attempts}
-                  getRowKey={(row) => row.id}
-                />
+                <CpTable aria-label="محاولات تسليم Outbox">
+                  <thead>
+                    <tr>
+                      <CpTableHeaderCell>الحدث</CpTableHeaderCell>
+                      <CpTableHeaderCell>الكيان</CpTableHeaderCell>
+                      <CpTableHeaderCell>المحاولة</CpTableHeaderCell>
+                      <CpTableHeaderCell>النتيجة</CpTableHeaderCell>
+                      <CpTableHeaderCell>الخطأ</CpTableHeaderCell>
+                      <CpTableHeaderCell>الوقت</CpTableHeaderCell>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deliveryAudit.state.attempts.map((row: DshNotificationDeliveryAttempt) => (
+                      <tr key={row.id}>
+                        <CpTableCell>{row.eventType}</CpTableCell>
+                        <CpTableCell>{row.entityType} · {row.entityId}</CpTableCell>
+                        <CpTableCell>{String(row.attemptNumber)}</CpTableCell>
+                        <CpTableCell>
+                          <CpBadge tone={outcomeTone(row.outcome)}>{OUTCOME_LABELS[row.outcome]}</CpBadge>
+                        </CpTableCell>
+                        <CpTableCell>{row.errorMessage || "—"}</CpTableCell>
+                        <CpTableCell>{new Date(row.createdAt).toLocaleString("ar-YE")}</CpTableCell>
+                      </tr>
+                    ))}
+                  </tbody>
+                </CpTable>
               )}
 
-              <Text role="titleSm" style={styles.editorTitle}>تسليم قناة Push</Text>
+              <strong>تسليم قناة Push</strong>
               {deliveryAudit.state.pushDeliveries.length === 0 ? (
-                <StateView title="لا توجد عمليات Push" description="لم تنشأ عمليات تسليم Push بعد." />
+                <CpStatePanel role="status" title="لا توجد عمليات Push" description="لم تنشأ عمليات تسليم Push بعد." />
               ) : (
-                <DataTable<DshPushDeliveryAudit>
-                  columns={[
-                    { key: "topic", header: "الموضوع", render: (row) => <Text role="bodySm">{row.topic}</Text> },
-                    { key: "actor", header: "الممثل", render: (row) => <Text role="bodySm">{row.actorType} · {row.actorId}</Text> },
-                    { key: "status", header: "الحالة", render: (row) => <Badge label={pushStatusLabel(row.status)} tone={pushStatusTone(row.status)} /> },
-                    { key: "attemptCount", header: "المحاولات", render: (row) => <Text role="bodySm">{String(row.attemptCount)}</Text> },
-                    { key: "providerMessageId", header: "معرّف المزود", render: (row) => <Text role="bodySm">{row.providerMessageId || "—"}</Text> },
-                    { key: "lastError", header: "آخر خطأ", render: (row) => <Text role="bodySm">{row.lastError || "—"}</Text> },
-                    { key: "updatedAt", header: "آخر تحديث", render: (row) => <Text role="bodySm">{new Date(row.updatedAt).toLocaleString("ar-YE")}</Text> },
-                  ]}
-                  rows={deliveryAudit.state.pushDeliveries}
-                  getRowKey={(row) => row.id}
-                />
+                <CpTable aria-label="تسليم قناة Push">
+                  <thead>
+                    <tr>
+                      <CpTableHeaderCell>الموضوع</CpTableHeaderCell>
+                      <CpTableHeaderCell>الممثل</CpTableHeaderCell>
+                      <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+                      <CpTableHeaderCell>المحاولات</CpTableHeaderCell>
+                      <CpTableHeaderCell>معرّف المزود</CpTableHeaderCell>
+                      <CpTableHeaderCell>آخر خطأ</CpTableHeaderCell>
+                      <CpTableHeaderCell>آخر تحديث</CpTableHeaderCell>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deliveryAudit.state.pushDeliveries.map((row: DshPushDeliveryAudit) => (
+                      <tr key={row.id}>
+                        <CpTableCell>{row.topic}</CpTableCell>
+                        <CpTableCell>{row.actorType} · {row.actorId}</CpTableCell>
+                        <CpTableCell>
+                          <CpBadge tone={pushStatusTone(row.status)}>{pushStatusLabel(row.status)}</CpBadge>
+                        </CpTableCell>
+                        <CpTableCell>{String(row.attemptCount)}</CpTableCell>
+                        <CpTableCell>{row.providerMessageId || "—"}</CpTableCell>
+                        <CpTableCell>{row.lastError || "—"}</CpTableCell>
+                        <CpTableCell>{new Date(row.updatedAt).toLocaleString("ar-YE")}</CpTableCell>
+                      </tr>
+                    ))}
+                  </tbody>
+                </CpTable>
               )}
             </>
           )}
-        </Box>
-      </Box>
-    </ScrollScreen>
+        </section>
+      </div>
+    </DataTablePageFrame>
   );
 }
-
-const styles = {
-  container: { margin: spacing[4] },
-  editor: { marginTop: spacing[4], gap: spacing[3] },
-  editorTitle: { textAlign: "right" },
-  actions: { flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" },
-  auditSection: { marginTop: spacing[6], gap: spacing[3] },
-  auditSummary: { flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" },
-} as const;

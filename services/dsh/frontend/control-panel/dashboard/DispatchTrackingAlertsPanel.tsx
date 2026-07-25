@@ -1,8 +1,11 @@
 "use client";
 
-import { Badge, Button, StateView, Text } from "@bthwani/ui-kit";
+import { CpBadge, CpButton, CpMutedInline, CpRetryButton, CpStatePanel } from "@bthwani/control-panel/components";
 import { WebCompactSurfaceHeader } from "@bthwani/ui-kit/web";
 import { useOperatorDispatchTrackingAlerts } from "../../shared/dispatch/use-operator-dispatch-tracking-alerts";
+// surfaceInfoCard is a shared, token-driven layout primitive (CSS custom
+// properties, no hardcoded colors) reused across dozens of control-panel
+// screens; there is no Cp* list-item equivalent yet, so it is kept here.
 import styles from "../shared/control-panel-surface.module.css";
 
 function alertLabel(code: string): string {
@@ -23,15 +26,11 @@ export function DispatchTrackingAlertsPanel() {
       />
 
       {state.kind === "loading" ? (
-        <StateView title="جارٍ تحميل تنبيهات التتبع…" />
+        <CpStatePanel role="status" title="جارٍ تحميل تنبيهات التتبع…" />
       ) : state.kind === "error" ? (
-        <StateView
-          title="تعذر تحميل تنبيهات التتبع"
-          description={state.message}
-          tone="danger"
-          actionLabel="إعادة المحاولة"
-          onActionPress={() => void reload()}
-        />
+        <CpStatePanel role="alert" title="تعذر تحميل تنبيهات التتبع" description={state.message}>
+          <CpRetryButton onClick={() => void reload()}>إعادة المحاولة</CpRetryButton>
+        </CpStatePanel>
       ) : state.alerts.length === 0 ? (
         <div className={styles.surfaceInfoCard}>
           <div>
@@ -53,16 +52,15 @@ export function DispatchTrackingAlertsPanel() {
                   {`الإسناد ${alert.assignmentId} · الكابتن ${alert.captainId}${alert.ageSeconds == null ? "" : ` · منذ ${alert.ageSeconds} ثانية`}`}
                 </span>
               </div>
-              <Badge
-                label={alert.severity === "critical" ? "حرج" : "تحذير"}
-                tone={alert.severity === "critical" ? "danger" : "warning"}
-              />
+              <CpBadge tone={alert.severity === "critical" ? "danger" : "warning"}>
+                {alert.severity === "critical" ? "حرج" : "تحذير"}
+              </CpBadge>
             </div>
           ))}
-          <Button label="تحديث التنبيهات" tone="secondary" onPress={() => void reload()} />
-          <Text role="caption" tone="muted">
+          <CpButton variant="secondary" onClick={() => void reload()}>تحديث التنبيهات</CpButton>
+          <CpMutedInline>
             تظهر الإحداثيات الكاملة في الباك إند المصرح فقط؛ هذه القائمة تعرض حالة الاتصال والمرجع التشغيلي.
-          </Text>
+          </CpMutedInline>
         </div>
       )}
     </section>

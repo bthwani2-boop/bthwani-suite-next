@@ -2,8 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
+  CpBadge,
   CpButton,
+  CpMutedInline,
   CpPageHeader,
+  CpSelect,
   CpStatePanel,
   CpTable,
   CpTableCell,
@@ -50,14 +53,6 @@ const panelStyle: CSSProperties = {
   gap: "0.75rem",
 };
 const rowStyle: CSSProperties = { display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" };
-const selectStyle: CSSProperties = {
-  minHeight: "2.5rem",
-  padding: "0.4rem 0.6rem",
-  borderRadius: "0.5rem",
-  border: "1px solid color-mix(in srgb, currentColor 18%, transparent)",
-  background: "transparent",
-  color: "inherit",
-};
 const codeStyle: CSSProperties = { direction: "ltr", fontFamily: "monospace", fontSize: "0.78rem" };
 
 const ATTRIBUTE_DATA_TYPES: readonly CatalogAttributeDataType[] = [
@@ -210,9 +205,12 @@ export function CatalogGovernanceScreen() {
           <CpTextInput value={attributeCode} onChange={setAttributeCode} placeholder="رمز الخاصية مثل size" />
           <CpTextInput value={attributeNameAr} onChange={setAttributeNameAr} placeholder="اسم الخاصية بالعربية" />
           <CpTextInput value={attributeNameEn} onChange={setAttributeNameEn} placeholder="Name in English" />
-          <select value={attributeDataType} onChange={(event) => setAttributeDataType(event.target.value as CatalogAttributeDataType)} style={selectStyle} aria-label="نوع بيانات الخاصية">
-            {ATTRIBUTE_DATA_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
-          </select>
+          <CpSelect
+            value={attributeDataType}
+            onChange={(value) => setAttributeDataType(value as CatalogAttributeDataType)}
+            options={ATTRIBUTE_DATA_TYPES.map((type) => ({ value: type, label: type }))}
+            aria-label="نوع بيانات الخاصية"
+          />
           <CpButton disabled={saving} onClick={() => void runMutation(async () => {
             const created = await createOperatorCatalogAttribute({
               code: attributeCode.trim(), nameAr: attributeNameAr.trim(), nameEn: attributeNameEn.trim(),
@@ -224,11 +222,16 @@ export function CatalogGovernanceScreen() {
             setAttributeCode(""); setAttributeNameAr(""); setAttributeNameEn("");
           }, "تم إنشاء الخاصية المركزية.")}>إنشاء خاصية</CpButton>
 
-          <select value={selectedAttributeId} onChange={(event) => setSelectedAttributeId(event.target.value)} style={selectStyle} aria-label="الخاصية المحددة">
-            <option value="">اختر خاصية</option>
-            {attributes.map((item) => <option key={item.id} value={item.id}>{item.nameAr} ({item.code})</option>)}
-          </select>
-          {selectedAttribute ? <div>النوع: <code>{selectedAttribute.dataType}</code> — الإصدار {selectedAttribute.version}</div> : null}
+          <CpSelect
+            value={selectedAttributeId}
+            onChange={setSelectedAttributeId}
+            options={[
+              { value: "", label: "اختر خاصية" },
+              ...attributes.map((item) => ({ value: item.id, label: `${item.nameAr} (${item.code})` })),
+            ]}
+            aria-label="الخاصية المحددة"
+          />
+          {selectedAttribute ? <CpMutedInline tight>النوع: <code>{selectedAttribute.dataType}</code> — الإصدار {selectedAttribute.version}</CpMutedInline> : null}
           {(selectedAttribute?.dataType === "enum" || selectedAttribute?.dataType === "multi_enum") ? (
             <>
               <CpTextInput value={optionCode} onChange={setOptionCode} placeholder="رمز الخيار" />
@@ -240,7 +243,7 @@ export function CatalogGovernanceScreen() {
                 setOptions((items) => [...items, created]);
                 setOptionCode(""); setOptionLabelAr("");
               }, "تم إنشاء خيار الخاصية.")}>إضافة خيار</CpButton>
-              <div>{options.map((item) => <span key={item.id}>[{item.labelAr}] </span>)}</div>
+              <div style={rowStyle}>{options.map((item) => <CpBadge key={item.id} tone="neutral">{item.labelAr}</CpBadge>)}</div>
             </>
           ) : null}
           <CpTextInput value={nodeId} onChange={setNodeId} placeholder="معرف فئة L2-L4 لربط الخاصية" />
@@ -272,9 +275,12 @@ export function CatalogGovernanceScreen() {
           <div>{attributeValues.map((item) => <div key={item.id}><code>{item.attributeId}</code>: {JSON.stringify(item.value)} (v{item.version})</div>)}</div>
 
           <CpTextInput value={targetProductId} onChange={setTargetProductId} placeholder="معرف المنتج البديل/المرتبط" />
-          <select value={relationshipType} onChange={(event) => setRelationshipType(event.target.value as MasterProductRelationshipType)} style={selectStyle} aria-label="نوع علاقة المنتج">
-            {RELATIONSHIP_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
-          </select>
+          <CpSelect
+            value={relationshipType}
+            onChange={(value) => setRelationshipType(value as MasterProductRelationshipType)}
+            options={RELATIONSHIP_TYPES.map((type) => ({ value: type, label: type }))}
+            aria-label="نوع علاقة المنتج"
+          />
           <CpTextInput value={relationshipReason} onChange={setRelationshipReason} placeholder="سبب العلاقة" />
           <CpButton disabled={saving} onClick={() => void runMutation(async () => {
             const current = relationships.find((item) => item.targetMasterProductId === targetProductId.trim() && item.relationshipType === relationshipType);
@@ -287,7 +293,7 @@ export function CatalogGovernanceScreen() {
           }, "تم حفظ علاقة المنتج.")}>حفظ البديل/العلاقة</CpButton>
           {relationships.map((item) => (
             <div key={item.id} style={rowStyle}>
-              <code>{item.relationshipType}</code><span>{item.targetMasterProductId}</span><span>v{item.version}</span>
+              <CpBadge tone="info">{item.relationshipType}</CpBadge><span>{item.targetMasterProductId}</span><CpMutedInline tight>v{item.version}</CpMutedInline>
               <CpButton disabled={saving} onClick={() => void runMutation(async () => {
                 await deleteOperatorMasterProductRelationship(productId.trim(), item.id, item.version);
                 setRelationships((items) => items.filter((candidate) => candidate.id !== item.id));
@@ -313,7 +319,9 @@ export function CatalogGovernanceScreen() {
           }, "تم إيقاف المنتج مؤقتاً.")}>إيقاف مؤقت</CpButton>
           {pauses.map((item) => (
             <div key={item.assortmentId} style={rowStyle}>
-              <code>{item.masterProductId}</code><span>{item.paused ? `موقوف: ${item.reason}` : "يعمل"}</span><span>v{item.version}</span>
+              <code>{item.masterProductId}</code>
+              <CpBadge tone={item.paused ? "warning" : "success"}>{item.paused ? `موقوف: ${item.reason}` : "يعمل"}</CpBadge>
+              <CpMutedInline tight>v{item.version}</CpMutedInline>
               {item.paused ? <CpButton disabled={saving} onClick={() => void runMutation(async () => {
                 const result = await resumeOperatorStoreAssortment(storeId.trim(), item.masterProductId, item.version);
                 setPauses((items) => [...items.filter((candidate) => candidate.masterProductId !== result.pause.masterProductId), result.pause]);

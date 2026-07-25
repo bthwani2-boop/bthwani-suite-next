@@ -3,16 +3,15 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  Badge,
-  Button,
-  Card,
-  ScrollScreen,
-  StateView,
-  Text,
-  lightThemeColors,
-  colorPalette,
-  alpha,
-} from "@bthwani/ui-kit";
+  CpBadge,
+  CpButton,
+  CpKpiCard,
+  CpKpiStrip,
+  CpPageHeader,
+  CpStatePanel,
+  CpTabs,
+} from "@bthwani/control-panel/components";
+import { QueuePageFrame } from "@bthwani/control-panel/shell";
 import { useControlPanelSession } from "@dsh-shared/session/control-panel-session";
 import { usePartnersController } from "../../shared/partner";
 import { PartnerListScreen } from "./PartnerListScreen";
@@ -50,15 +49,17 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
   if (sessionState.kind !== "authenticated") {
     const restoring = sessionState.kind === "restoring" || sessionState.kind === "authenticating";
     return (
-      <ScrollScreen>
-        <StateView
-          stateId={restoring ? "loading" : "recoverableError"}
-          loading={restoring}
-          tone={restoring ? "neutral" : "warning"}
-          title={restoring ? "جاري استعادة جلسة لوحة التحكم" : "جلسة مصادق عليها مطلوبة"}
-          description="لا يتم تحميل أو عرض بيانات الشركاء قبل استعادة جلسة المشغل وصلاحيات المستأجر."
-        />
-      </ScrollScreen>
+      <QueuePageFrame
+        stateView={(
+          <CpStatePanel
+            role={restoring ? "status" : "alert"}
+            title={restoring ? "جاري استعادة جلسة لوحة التحكم" : "جلسة مصادق عليها مطلوبة"}
+            description="لا يتم تحميل أو عرض بيانات الشركاء قبل استعادة جلسة المشغل وصلاحيات المستأجر."
+          />
+        )}
+      >
+        {null}
+      </QueuePageFrame>
     );
   }
 
@@ -79,31 +80,41 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
   };
 
   return (
-    <ScrollScreen>
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", borderBottom: `1px solid ${lightThemeColors.borderColor}`, paddingBottom: "1rem" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Text role="titleMd">الشركاء والمتاجر</Text>
-              <Badge label="فول ستاك متعدد المستأجرين" tone="action" />
-            </div>
-            <Text role="body" tone="muted" style={{ fontSize: "12px", marginTop: "0.25rem" }}>
-              الهوية القانونية، التفعيل، الوثائق، الفروع، الجاهزية، الكتالوج، الأداء، الترويج، مستوى الخدمة والعقود ضمن مساحة موحدة
-            </Text>
+    <QueuePageFrame
+      header={(
+        <CpPageHeader title="الشركاء والمتاجر">
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            <CpBadge tone="brand">فول ستاك متعدد المستأجرين</CpBadge>
+            <CpKpiStrip>
+              <CpKpiCard label="نشطون أو ظاهرون" value={activePartnersCount} />
+              <CpKpiCard label="قيد المعالجة" value={pendingCount} />
+            </CpKpiStrip>
+            <CpButton variant="primary" onClick={() => setCreateOpen((current) => !current)}>
+              {createOpen ? "إغلاق نموذج الإضافة" : "+ إضافة شريك"}
+            </CpButton>
           </div>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
-            <Card style={{ padding: "0.5rem 0.75rem", alignItems: "center" }}>
-              <Text role="caption" tone="muted">نشطون أو ظاهرون</Text>
-              <Text role="titleMd" style={{ fontWeight: "bold", marginTop: "0.25rem" }}>{activePartnersCount}</Text>
-            </Card>
-            <Card style={{ padding: "0.5rem 0.75rem", alignItems: "center" }}>
-              <Text role="caption" tone="muted">قيد المعالجة</Text>
-              <Text role="titleMd" style={{ fontWeight: "bold", color: lightThemeColors.warning, marginTop: "0.25rem" }}>{pendingCount}</Text>
-            </Card>
-            <Button label={createOpen ? "إغلاق نموذج الإضافة" : "+ إضافة شريك"} tone="primary" onPress={() => setCreateOpen((current) => !current)} />
-          </div>
+        </CpPageHeader>
+      )}
+      filters={(
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <CpTabs
+            items={tabItems.map((tab) => ({ value: tab.id, label: tab.label }))}
+            value={activeTab}
+            onChange={(value) => handleSelectTab(value as typeof activeTab)}
+            aria-label="مساحات عمل الشركاء"
+          />
+          {subTabItems.length > 0 ? (
+            <CpTabs
+              items={subTabItems.map((subTab) => ({ value: subTab.id, label: subTab.label }))}
+              value={activeSubTab}
+              onChange={handleSelectSubTab}
+              aria-label="تصنيفات فرعية"
+            />
+          ) : null}
         </div>
-
+      )}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         {createOpen ? (
           <PartnerCreatePanel
             controller={adminController}
@@ -111,33 +122,8 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
             {...(onOpenPartner ? { onCreated: onOpenPartner } : {})}
           />
         ) : null}
-
-        <div style={{ display: "flex", gap: "0.5rem", padding: "0.5rem 0", flexWrap: "wrap" }}>
-          {tabItems.map((tab) => (
-            <Button
-              key={tab.id}
-              label={tab.label}
-              tone={tab.active ? "primary" : "secondary"}
-              onPress={() => handleSelectTab(tab.id)}
-            />
-          ))}
-        </div>
-
-        {subTabItems.length > 0 ? (
-          <div style={{ display: "flex", gap: "0.5rem", padding: "0.5rem", flexWrap: "wrap", background: alpha(colorPalette.black, 0.02), borderRadius: "4px" }}>
-            {subTabItems.map((subTab) => (
-              <Button
-                key={subTab.id}
-                label={subTab.label}
-                tone={subTab.active ? "success" : "secondary"}
-                onPress={() => handleSelectSubTab(subTab.id)}
-              />
-            ))}
-          </div>
-        ) : null}
-
-        <div style={{ marginTop: "0.5rem" }}>{renderContent()}</div>
+        {renderContent()}
       </div>
-    </ScrollScreen>
+    </QueuePageFrame>
   );
 }

@@ -1,21 +1,28 @@
 "use client";
-import { colorRoles, neutralScale, statusScale, DataGrid as DataTable } from '@bthwani/ui-kit';
+// dynamic-exception: DataGrid used directly for master-products bulk multi-select + numeric pagination,
+// a feature CpTable/CpSelectableTableRow do not provide (see banned-pattern #6 migration exception).
+import { DataGrid as DataTable } from '@bthwani/ui-kit';
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
+  CpBadge,
   CpButton,
   CpFilterBar,
   CpKpiCard,
   CpKpiStrip,
+  CpMutedInline,
   CpPageHeader,
   CpSearchInput,
+  CpSelect,
   CpStatePanel,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
+  CpTabs,
   CpTextInput,
 } from "@bthwani/control-panel/components";
-import { DataTablePageFrame, OperationsRoomFrame } from "@bthwani/control-panel/shell";
+import { OperationsRoomFrame } from "@bthwani/control-panel/shell";
 import { useControlPanelSession } from "../../shared/session/control-panel-session";
 import {
   useCentralCatalogController,
@@ -47,72 +54,13 @@ type StatusTone = "warning" | "success" | "danger" | "neutral" | "info";
 type DamEntityType = "domains" | "nodes" | "master-products" | "product-proposals";
 
 // ─── Style constants (static/layout styles reused across the screen) ────────
-const pageDescStyle: CSSProperties = { margin: "0 0 0.75rem", opacity: 0.65, fontSize: "0.875rem" };
-const seedWarningBoxStyle: CSSProperties = {
-  margin: "0 0 1rem",
-  padding: "0.85rem 1.25rem",
-  borderRadius: "0.75rem",
-  backgroundColor: statusScale.warningSoft,
-  border: `1px solid ${statusScale.warning}`,
-  color: statusScale.warningStrong,
-  fontWeight: "bold",
-  display: "flex",
-  flexDirection: "column",
-  gap: "0.25rem",
-};
-const seedWarningDetailStyle: CSSProperties = { fontSize: "0.8rem", fontWeight: "normal" };
-const tabNavStyle: CSSProperties = {
-  display: "flex",
-  borderBottom: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
-  padding: "0 1rem 0.75rem",
-  gap: "0.5rem",
-  marginBottom: "0.75rem",
-  flexWrap: "wrap",
-};
-const tabButtonContainerStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: "2px" };
-const tabButtonBaseStyle: CSSProperties = {
-  padding: "0.5rem 1rem",
-  borderRadius: "0.5rem",
-  fontSize: "0.813rem",
-  whiteSpace: "nowrap",
-  transition: "all 0.15s",
-};
-const tabDisabledReasonStyle: CSSProperties = { fontSize: "0.65rem", opacity: 0.5, textAlign: "center" };
-const filterRowStyle: CSSProperties = { display: "flex", alignItems: "center", gap: "0.5rem" };
-const filterLabelStyle: CSSProperties = { fontSize: "0.813rem" };
 const contentWrapperStyle: CSSProperties = { marginTop: "1rem", padding: "0 1rem" };
 const overviewGridStyle: CSSProperties = { display: "grid", gap: "1.5rem", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" };
-const overviewCardStyle: CSSProperties = { padding: "1.5rem", border: `1px solid ${neutralScale[200]}`, borderRadius: "0.5rem" };
+const overviewCardStyle: CSSProperties = { padding: "1.5rem", border: "1px solid color-mix(in srgb, currentColor 14%, transparent)", borderRadius: "0.5rem" };
 const overviewListStyle: CSSProperties = { paddingRight: "1.25rem", lineHeight: "1.8" };
 const sectionHeaderRowStyle: CSSProperties = { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" };
-const paginationRowStyle: CSSProperties = { display: "flex", gap: "0.5rem", marginTop: "1rem", justifyContent: "center" };
-const paginationPageLabelStyle: CSSProperties = { alignSelf: "center" };
-const qualityWarningsStyle: CSSProperties = { fontSize: "0.7rem", color: colorRoles.textMuted, marginRight: "0.5rem" };
-const missingImageBadgeStyle: CSSProperties = {
-  display: "inline-block",
-  marginRight: "0.35rem",
-  padding: "0.05rem 0.4rem",
-  borderRadius: "999px",
-  fontSize: "0.65rem",
-  fontWeight: 700,
-  background: statusScale.dangerSoft,
-  color: statusScale.dangerStrong,
-};
+const filterRowStyle: CSSProperties = { display: "flex", alignItems: "center", gap: "0.5rem" };
 const proposalsColumnStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: "1rem", width: "100%" };
-const proposalStatusTabsRowStyle: CSSProperties = {
-  display: "flex",
-  gap: "0.5rem",
-  marginBottom: "1rem",
-  flexWrap: "wrap",
-  borderBottom: "1px solid color-mix(in srgb, currentColor 10%, transparent)",
-  paddingBottom: "1rem",
-};
-const proposalStatusButtonBaseStyle: CSSProperties = {
-  border: "1px solid color-mix(in srgb, currentColor 14%, transparent)",
-  borderRadius: "0.5rem",
-  padding: "0.35rem 0.75rem",
-  cursor: "pointer",
-};
 const proposalNameEnStyle: CSSProperties = { fontSize: "0.8rem", opacity: 0.7 };
 const proposalActionColumnStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: "0.5rem", width: "100%", maxWidth: "400px" };
 const marketingReviewBoxStyle: CSSProperties = {
@@ -126,48 +74,29 @@ const marketingReviewBoxStyle: CSSProperties = {
 const marketingReviewLabelStyle: CSSProperties = { display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", cursor: "pointer" };
 const proposalNoteRowStyle: CSSProperties = { display: "flex", gap: "0.25rem" };
 const damSectionStyle: CSSProperties = { display: "flex", flexDirection: "column", gap: "1.25rem" };
-const damPanelStyle: CSSProperties = { padding: "1rem", border: `1px solid ${neutralScale[200]}`, borderRadius: "0.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" };
+const damPanelStyle: CSSProperties = { padding: "1rem", border: "1px solid color-mix(in srgb, currentColor 14%, transparent)", borderRadius: "0.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" };
 const damPanelTitleStyle: CSSProperties = { margin: 0, fontSize: "0.95rem" };
 const damFormRowStyle: CSSProperties = { display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" };
-const damSelectStyle: CSSProperties = { padding: "0.4rem 0.5rem", borderRadius: "0.375rem", border: `1px solid ${neutralScale[300]}` };
 const assetPreviewImgStyle: CSSProperties = { width: "50px", height: "50px", objectFit: "cover", borderRadius: "4px" };
 const assetReviewRowStyle: CSSProperties = { display: "flex", gap: "0.25rem", maxWidth: "340px", flexWrap: "wrap" };
-const visibilityGateBoxStyle: CSSProperties = { display: "grid", gap: "1rem", maxWidth: "600px", padding: "1rem", border: `1px solid ${neutralScale[300]}`, borderRadius: "8px" };
-const csvTextareaStyle: CSSProperties = { width: "100%", height: "150px", fontFamily: "monospace", padding: "0.5rem", borderRadius: "4px", border: `1px solid ${neutralScale[300]}`, direction: "ltr" };
+const visibilityGateBoxStyle: CSSProperties = { display: "grid", gap: "1rem", maxWidth: "600px", padding: "1rem", border: "1px solid color-mix(in srgb, currentColor 18%, transparent)", borderRadius: "8px" };
+const csvTextareaStyle: CSSProperties = { width: "100%", height: "150px", fontFamily: "monospace", padding: "0.5rem", borderRadius: "4px", border: "1px solid color-mix(in srgb, currentColor 18%, transparent)", direction: "ltr" };
 const csvActionsRowStyle: CSSProperties = { marginTop: "0.5rem", display: "flex", gap: "0.5rem" };
-const csvErrorStyle: CSSProperties = { color: statusScale.danger, fontWeight: "bold" };
 const csvErrorListStyle: CSSProperties = { fontWeight: "normal" };
-const csvSuccessStyle: CSSProperties = { color: statusScale.success, fontWeight: "bold" };
-const cleanupBoxStyle: CSSProperties = { padding: "1rem", border: `1px solid ${neutralScale[300]}`, borderRadius: "8px", backgroundColor: neutralScale[50] };
-const cleanupResultStyle: CSSProperties = { marginTop: "0.5rem", color: statusScale.success };
+const cleanupBoxStyle: CSSProperties = { padding: "1rem", border: "1px solid color-mix(in srgb, currentColor 18%, transparent)", borderRadius: "8px", background: "color-mix(in srgb, currentColor 3%, transparent)" };
 const proposalCellVerticalAlignStyle: CSSProperties = { verticalAlign: "middle" };
 const importPreviewResultBoxStyle: CSSProperties = { marginTop: "1rem" };
 
+const STATUS_BADGE_TONE: Record<StatusTone, CpBadgeTone> = {
+  warning: "warning",
+  success: "success",
+  danger: "danger",
+  neutral: "neutral",
+  info: "info",
+};
+
 function StatusBadge({ label, tone }: { label: string; tone: StatusTone }) {
-  const toneColors: Record<StatusTone, { bg: string; color: string }> = {
-    warning: { bg: statusScale.warningSoft, color: statusScale.warningStrong },
-    success: { bg: statusScale.successSoft, color: statusScale.successStrong },
-    danger: { bg: statusScale.dangerSoft, color: statusScale.dangerStrong },
-    neutral: { bg: colorRoles.surfaceMuted, color: colorRoles.textSecondary },
-    info: { bg: statusScale.infoSoft, color: statusScale.infoStrong },
-  };
-  const { bg, color } = toneColors[tone]; // dynamic-exception: tone-derived colors computed per badge instance
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "0.125rem 0.5rem",
-        borderRadius: "999px",
-        fontSize: "0.72rem",
-        fontWeight: 600,
-        background: bg,
-        color,
-        whiteSpace: "nowrap",
-      }}
-    >
-      {label}
-    </span>
-  );
+  return <CpBadge tone={STATUS_BADGE_TONE[tone]}>{label}</CpBadge>;
 }
 
 type TabId =
@@ -190,7 +119,7 @@ const TABS: { id: TabId; label: string; disabled?: boolean; reason?: string }[] 
   { id: "master_products", label: "المنتجات المركزية L5" },
   { id: "proposals", label: "اقتراحات المنتجات" },
   { id: "marketing_media", label: "مراجعة التسويق والصور" },
-  { id: "reels", label: "مراجعة الريلز 🎬" },
+  { id: "reels", label: "مراجعة الريلز" },
   { id: "policies", label: "السياسات والصلاحيات" },
   { id: "assortment", label: "ربط المتاجر بالمنتجات" },
   { id: "visibility", label: "النشر والرؤية" },
@@ -204,7 +133,6 @@ export type MainGroupId = "overview_analytics" | "taxonomy_products" | "media_co
 export type MainTabGroup = {
   id: MainGroupId;
   label: string;
-  icon: string;
   subTabs: TabId[];
 };
 
@@ -212,25 +140,21 @@ export const MAIN_TAB_GROUPS: MainTabGroup[] = [
   {
     id: "overview_analytics",
     label: "النظرة العامة والتحليلات",
-    icon: "📊",
     subTabs: ["overview", "audit_logs"],
   },
   {
     id: "taxonomy_products",
     label: "إدارة التصنيف والمنتجات",
-    icon: "🗂️",
     subTabs: ["taxonomy", "master_products", "proposals", "assortment"],
   },
   {
     id: "media_content",
     label: "الوسائط والقصص",
-    icon: "🖼️",
     subTabs: ["marketing_media", "reels"],
   },
   {
     id: "tools_governance",
     label: "الحوكمة والجودة والأدوات",
-    icon: "⚡",
     subTabs: ["cleanup_quality", "import_export", "visibility", "policies"],
   },
 ];
@@ -489,9 +413,9 @@ export function CatalogDashboardScreen() {
       dir="rtl"
       header={
         <CpPageHeader title="كتالوج DSH السيادي وPIM">
-          <p style={pageDescStyle}>
+          <CpMutedInline>
             الإدارة السيادية للفئات الرئيسية، الفئات الفرعية، التصنيفات، المنتجات المركزية، والسياسات.
-          </p>
+          </CpMutedInline>
 
           <CpKpiStrip>
             <CpKpiCard label="الفئات الرئيسية L1" value={domainsCount} />
@@ -507,149 +431,35 @@ export function CatalogDashboardScreen() {
         ) : null
       }
     >
-      {/* ─── 2-TIER TOP HORIZONTAL TAB NAVIGATION (2026 PREMIUM REDESIGN) ─── */}
-      <div
-        dir="rtl"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.75rem",
-          padding: "0.75rem 1rem",
-          margin: "0 1rem 1.25rem",
-          background: "color-mix(in srgb, currentColor 3%, transparent)",
-          borderRadius: "1rem",
-          border: "1px solid color-mix(in srgb, currentColor 8%, transparent)",
-          backdropFilter: "blur(12px)",
-        }}
-      >
-        {/* Tier 1: Main Horizontal Tabs */}
-        <div
-          style={{
-            display: "flex",
-            gap: "0.5rem",
-            borderBottom: "1px solid color-mix(in srgb, currentColor 10%, transparent)",
-            paddingBottom: "0.75rem",
-            overflowX: "auto",
-          }}
-        >
-          {MAIN_TAB_GROUPS.map((group) => {
-            const isActive = activeMainGroup.id === group.id;
-            return (
-              <button
-                key={group.id}
-                type="button"
-                onClick={() => handleSelectMainGroup(group.id)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.6rem 1.25rem",
-                  borderRadius: "0.75rem",
-                  fontSize: "0.875rem",
-                  fontWeight: isActive ? 700 : 500,
-                  cursor: "pointer",
-                  transition: "all 0.2s ease-in-out",
-                  border: isActive
-                    ? `1px solid ${colorRoles.focusRing}`
-                    : "1px solid transparent",
-                  background: isActive
-                    ? colorRoles.brandActionTint
-                    : "transparent",
-                  color: isActive ? colorRoles.brandAction : "currentColor",
-                  boxShadow: isActive
-                    ? `0 4px 14px ${colorRoles.brandActionTint}`
-                    : "none",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <span style={{ fontSize: "1rem" }}>{group.icon}</span>
-                <span>{group.label}</span>
-                <span
-                  style={{
-                    fontSize: "0.7rem",
-                    padding: "0.1rem 0.45rem",
-                    borderRadius: "999px",
-                    background: isActive
-                      ? colorRoles.brandAction
-                      : "color-mix(in srgb, currentColor 10%, transparent)",
-                    color: isActive ? colorRoles.surfaceBase : "currentColor",
-                    fontWeight: 600,
-                  }}
-                >
-                  {group.subTabs.length}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tier 2: Secondary Horizontal Sub-Tabs */}
-        <div
-          style={{
-            display: "flex",
-            gap: "0.375rem",
-            overflowX: "auto",
-            paddingTop: "0.25rem",
-            flexWrap: "wrap",
-          }}
-        >
-          {activeMainGroup.subTabs.map((subTabId) => {
-            const tabDef = TABS.find((t) => t.id === subTabId);
-            if (!tabDef) return null;
-            const isSubActive = activeTab === subTabId;
-            return (
-              <button
-                key={tabDef.id}
-                type="button"
-                disabled={tabDef.disabled}
-                onClick={() => setActiveTab(tabDef.id)}
-                title={tabDef.reason}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.35rem",
-                  padding: "0.45rem 0.95rem",
-                  borderRadius: "999px",
-                  fontSize: "0.813rem",
-                  fontWeight: isSubActive ? 700 : 500,
-                  cursor: tabDef.disabled ? "not-allowed" : "pointer",
-                  opacity: tabDef.disabled ? 0.5 : 1,
-                  transition: "all 0.15s ease",
-                  border: isSubActive
-                    ? "none"
-                    : "1px solid color-mix(in srgb, currentColor 15%, transparent)",
-                  background: isSubActive
-                    ? colorRoles.brandAction
-                    : "color-mix(in srgb, currentColor 2%, transparent)",
-                  color: isSubActive ? colorRoles.surfaceBase : "currentColor",
-                  boxShadow: isSubActive
-                    ? `0 2px 8px ${colorRoles.focusRing}`
-                    : "none",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <span>{tabDef.label}</span>
-                {tabDef.disabled && tabDef.reason && (
-                  <span style={{ fontSize: "0.65rem", opacity: 0.75 }}>({tabDef.reason})</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+      {/* ─── 2-TIER TOP HORIZONTAL TAB NAVIGATION ─── */}
+      <div dir="rtl" style={{ display: "flex", flexDirection: "column", gap: "0.75rem", padding: "0 1rem 1.25rem" }}>
+        <CpTabs
+          items={MAIN_TAB_GROUPS.map((group) => ({ value: group.id, label: `${group.label} (${group.subTabs.length})` }))}
+          value={activeMainGroup.id}
+          onChange={(value) => handleSelectMainGroup(value as MainGroupId)}
+          aria-label="مجموعات تبويبات الكتالوج"
+        />
+        <CpTabs
+          items={activeMainGroup.subTabs
+            .map((subTabId) => TABS.find((t) => t.id === subTabId))
+            .filter((tabDef): tabDef is (typeof TABS)[number] => Boolean(tabDef) && !tabDef?.disabled)
+            .map((tabDef) => ({ value: tabDef.id, label: tabDef.label }))}
+          value={activeTab}
+          onChange={(value) => setActiveTab(value as TabId)}
+          aria-label="تبويبات الكتالوج الفرعية"
+        />
       </div>
 
       {/* Seed status warning banner */}
       {seedStatus && seedStatus.missingSeeds.length > 0 && (
-        <div style={{ ...seedWarningBoxStyle, margin: "0 1rem 1rem" }}>
-          <div>⚠️ بذور الكتالوج المركزي غير مطبقة بالكامل في هذه البيئة!</div>
-          <div style={seedWarningDetailStyle}>
-            العناصر المفقودة: {seedStatus.missingSeeds.join(", ")}. يرجى تشغيل برنامج التهيئة `apply-central-catalog-seed.ps1` لتثبيتها.
-          </div>
+        <div style={{ margin: "0 1rem 1rem" }}>
+          <CpStatePanel
+            role="alert"
+            title="بذور الكتالوج المركزي غير مطبقة بالكامل في هذه البيئة"
+            description={`العناصر المفقودة: ${seedStatus.missingSeeds.join(", ")}. يرجى تشغيل برنامج التهيئة apply-central-catalog-seed.ps1 لتثبيتها.`}
+          />
         </div>
       )}
-
-      {/* Tab bar */}
-      
 
       {/* Filter and query options */}
       {activeTab !== "overview" && activeTab !== "import_export" && (
@@ -685,7 +495,7 @@ export function CatalogDashboardScreen() {
         {activeTab === "overview" && (
           <div style={overviewGridStyle}>
             <div style={overviewCardStyle}>
-              <h3>📊 جودة وحالة البيانات</h3>
+              <h3>جودة وحالة البيانات</h3>
               <ul style={overviewListStyle}>
                 <li>إجمالي الفئات الرئيسية: <strong>{domainsCount}</strong></li>
                 <li>إجمالي التصنيفات الفرعية: <strong>{nodesCount}</strong></li>
@@ -697,12 +507,12 @@ export function CatalogDashboardScreen() {
               </ul>
             </div>
             <div style={overviewCardStyle}>
-              <h3>🔒 الصلاحيات المتاحة</h3>
+              <h3>الصلاحيات المتاحة</h3>
               <ul style={overviewListStyle}>
                 <li>دور المستخدم الحالي: <strong>{currentUserRole || ""}</strong></li>
-                <li>تعديل هيكل الكتالوج: {isOperator ? "✅ متاح" : "❌ غير متاح"}</li>
-                <li>اعتماد المنتجات وتفعيلها: {hasCatalogPermission(currentUserRole, "catalog.product.approve") ? "✅ متاح" : "❌ غير متاح"}</li>
-                <li>نشر وإدارة الوسائط DAM: {hasCatalogPermission(currentUserRole, "catalog.media.manage") ? "✅ متاح" : "❌ غير متاح"}</li>
+                <li>تعديل هيكل الكتالوج: <CpBadge tone={isOperator ? "success" : "neutral"}>{isOperator ? "متاح" : "غير متاح"}</CpBadge></li>
+                <li>اعتماد المنتجات وتفعيلها: <CpBadge tone={hasCatalogPermission(currentUserRole, "catalog.product.approve") ? "success" : "neutral"}>{hasCatalogPermission(currentUserRole, "catalog.product.approve") ? "متاح" : "غير متاح"}</CpBadge></li>
+                <li>نشر وإدارة الوسائط DAM: <CpBadge tone={hasCatalogPermission(currentUserRole, "catalog.media.manage") ? "success" : "neutral"}>{hasCatalogPermission(currentUserRole, "catalog.media.manage") ? "متاح" : "غير متاح"}</CpBadge></li>
               </ul>
             </div>
           </div>
@@ -711,7 +521,7 @@ export function CatalogDashboardScreen() {
         {/* TAB 2: TAXONOMY */}
         {activeTab === "taxonomy" && (
           <div>
-            <h3>🌳 الهيكل الهرمي L1 - L4</h3>
+            <h3>الهيكل الهرمي L1 - L4</h3>
             <CategoryControlRoom
               domains={controller.state.domains.items}
               nodes={controller.state.nodes.items}
@@ -728,7 +538,7 @@ export function CatalogDashboardScreen() {
         {activeTab === "master_products" && (
           <div>
             <div style={sectionHeaderRowStyle}>
-              <h3>📦 المنتجات المركزية L5</h3>
+              <h3>المنتجات المركزية L5</h3>
               <CpButton onClick={() => {
                 const csv = exportProductsToCSV(controller.state.masterProducts.items);
                 const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -755,7 +565,7 @@ export function CatalogDashboardScreen() {
                   header: "الاسم المركزي",
                   render: (m: any) => (
                     <>
-                      {missingImageProductIds.has(m.id) && <span style={missingImageBadgeStyle}>صورة مفقودة</span>}
+                      {missingImageProductIds.has(m.id) && <CpBadge tone="danger">صورة مفقودة</CpBadge>}
                       <strong>{m.canonicalNameAr}</strong>
                     </>
                   ),
@@ -772,15 +582,12 @@ export function CatalogDashboardScreen() {
                   header: "مؤشر جودة المنتج",
                   render: (m: any) => {
                     const quality = auditProductQuality(m);
+                    const qualityTone = quality.score >= 80 ? "success" : quality.score >= 50 ? "warning" : "danger";
                     return (
                       <>
-                        <span style={{ color: quality.score >= 80 ? "green" : quality.score >= 50 ? "orange" : "red", fontWeight: "bold" }}>
-                          {quality.score}%
-                        </span>
+                        <CpBadge tone={qualityTone}>{quality.score}%</CpBadge>
                         {quality.warnings.length > 0 && (
-                          <span style={qualityWarningsStyle}>
-                            ({quality.warnings.join(", ")})
-                          </span>
+                          <CpMutedInline tight>({quality.warnings.join(", ")})</CpMutedInline>
                         )}
                       </>
                     );
@@ -806,27 +613,16 @@ export function CatalogDashboardScreen() {
         {/* TAB 4: PROPOSALS */}
         {activeTab === "proposals" && (
           <div style={proposalsColumnStyle}>
-            <div style={proposalStatusTabsRowStyle}>
-              {(Object.keys(PRODUCT_PROPOSAL_PIPELINE_METADATA) as ProductProposalPipelineStatus[]).map((status) => {
+            <CpTabs
+              items={(Object.keys(PRODUCT_PROPOSAL_PIPELINE_METADATA) as ProductProposalPipelineStatus[]).map((status) => {
                 const meta = PRODUCT_PROPOSAL_PIPELINE_METADATA[status];
                 const count = controller.state.proposals.items.filter((p) => p.status === status).length;
-                const isSelected = selectedProposalStatus === status;
-                return (
-                  <CpButton
-                    key={status}
-                    style={{
-                      ...proposalStatusButtonBaseStyle,
-                      // dynamic-exception: selected-status tone
-                      backgroundColor: isSelected ? colorRoles.brandAction : "transparent",
-                      color: isSelected ? "white" : "currentColor",
-                    }}
-                    onClick={() => setSelectedProposalStatus(status)}
-                  >
-                    {meta.labelAr} ({count})
-                  </CpButton>
-                );
+                return { value: status, label: `${meta.labelAr} (${count})` };
               })}
-            </div>
+              value={selectedProposalStatus}
+              onChange={(value) => setSelectedProposalStatus(value as ProductProposalPipelineStatus)}
+              aria-label="تصفية اقتراحات المنتجات حسب الحالة"
+            />
 
             <CpTable aria-label="جدول اقتراحات المنتجات">
               <thead>
@@ -930,22 +726,18 @@ export function CatalogDashboardScreen() {
         {/* TAB 5: MARKETING & MEDIA */}
         {activeTab === "marketing_media" && (
           <div style={damSectionStyle}>
-            <h3>🖼️ مكتبة ومراجعة الصور DAM</h3>
+            <h3>مكتبة ومراجعة الصور DAM</h3>
 
             <div style={damPanelStyle}>
               <h4 style={damPanelTitleStyle}>رفع صورة جديدة وربطها بعنصر</h4>
               <div style={damFormRowStyle}>
                 <input ref={uploadFileInputRef} type="file" accept="image/*" aria-label="اختيار ملف الصورة" />
-                <select
+                <CpSelect
                   value={uploadEntityType}
-                  onChange={(e) => setUploadEntityType(e.target.value as DamEntityType)}
+                  onChange={(value) => setUploadEntityType(value as DamEntityType)}
+                  options={DAM_ENTITY_TYPES.map((t) => ({ value: t, label: t }))}
                   aria-label="نوع العنصر المستهدف للرفع"
-                  style={damSelectStyle}
-                >
-                  {DAM_ENTITY_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                />
                 {uploadEntityType === "master-products" ? (
                   <ProductPicker value={uploadEntityId} onChange={setUploadEntityId} label="المنتج المستهدف" />
                 ) : uploadEntityType === "domains" || uploadEntityType === "nodes" ? (
@@ -963,16 +755,12 @@ export function CatalogDashboardScreen() {
               <h4 style={damPanelTitleStyle}>ضبط صورة عنصر من صور معتمدة موجودة</h4>
               <div style={damFormRowStyle}>
                 <CpTextInput value={linkAssetId} onChange={setLinkAssetId} placeholder="معرف الصورة (Asset ID)" aria-label="معرف الصورة" />
-                <select
+                <CpSelect
                   value={linkEntityType}
-                  onChange={(e) => setLinkEntityType(e.target.value as DamEntityType)}
+                  onChange={(value) => setLinkEntityType(value as DamEntityType)}
+                  options={DAM_ENTITY_TYPES.map((t) => ({ value: t, label: t }))}
                   aria-label="نوع العنصر المستهدف للربط"
-                  style={damSelectStyle}
-                >
-                  {DAM_ENTITY_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                />
                 {linkEntityType === "master-products" ? (
                   <ProductPicker value={linkEntityId} onChange={setLinkEntityId} label="المنتج المستهدف" />
                 ) : linkEntityType === "domains" || linkEntityType === "nodes" ? (
@@ -1051,7 +839,7 @@ export function CatalogDashboardScreen() {
         {/* TAB 6: POLICIES */}
         {activeTab === "policies" && (
           <div>
-            <h3>⚖️ سياسات الفئة والمنصة</h3>
+            <h3>سياسات الفئة والمنصة</h3>
             <CpTable aria-label="جدول السياسات">
               <thead>
                 <tr dir="rtl">
@@ -1086,7 +874,7 @@ export function CatalogDashboardScreen() {
         {/* TAB 7: ASSORTMENT */}
         {activeTab === "assortment" && (
           <div>
-            <h3>🔗 تشكيلة المتجر الفعالة ({selectedStoreId})</h3>
+            <h3>تشكيلة المتجر الفعالة ({selectedStoreId})</h3>
             <div style={filterRowStyle}>
               <CpTextInput value={assortmentProductId} onChange={setAssortmentProductId} placeholder="معرف المنتج المركزي" />
               <CpTextInput value={assortmentPrice} onChange={setAssortmentPrice} placeholder="السعر المحلي YER" />
@@ -1156,14 +944,14 @@ export function CatalogDashboardScreen() {
         {/* TAB 8: VISIBILITY */}
         {activeTab === "visibility" && (
           <div>
-            <h3>🚀 بوابة النشر والرؤية (Publishing Gates)</h3>
+            <h3>بوابة النشر والرؤية (Publishing Gates)</h3>
             <p>يتم تفعيل رؤية المنتج للعملاء تلقائيًا بمجرد توافق شروط البوابة التالية:</p>
             <div style={visibilityGateBoxStyle}>
-              <div>🟢 <strong>متجر نشط ومرئي</strong>: يجب أن يكون المتجر مفعل ومرئي.</div>
-              <div>🟢 <strong>تصنيف مفعل</strong>: يجب أن تكون الفئة الرئيسية والفرعية نشطة.</div>
-              <div>🟢 <strong>منتج مركزي معتمد</strong>: يجب أن يكون المنتج المركزي L5 معتمدًا.</div>
-              <div>🟢 <strong>صورة معتمدة</strong>: إذا تطلبت سياسة الفئة صورة، يجب إرفاق صورة معتمدة من DAM.</div>
-              <div>🟢 <strong>سعر متاح</strong>: يجب أن يحدد الشريك سعرًا أكبر من 0 ومتوفرًا للبيع.</div>
+              <div><CpBadge tone="success">شرط</CpBadge> <strong>متجر نشط ومرئي</strong>: يجب أن يكون المتجر مفعل ومرئي.</div>
+              <div><CpBadge tone="success">شرط</CpBadge> <strong>تصنيف مفعل</strong>: يجب أن تكون الفئة الرئيسية والفرعية نشطة.</div>
+              <div><CpBadge tone="success">شرط</CpBadge> <strong>منتج مركزي معتمد</strong>: يجب أن يكون المنتج المركزي L5 معتمدًا.</div>
+              <div><CpBadge tone="success">شرط</CpBadge> <strong>صورة معتمدة</strong>: إذا تطلبت سياسة الفئة صورة، يجب إرفاق صورة معتمدة من DAM.</div>
+              <div><CpBadge tone="success">شرط</CpBadge> <strong>سعر متاح</strong>: يجب أن يحدد الشريك سعرًا أكبر من 0 ومتوفرًا للبيع.</div>
             </div>
           </div>
         )}
@@ -1171,7 +959,7 @@ export function CatalogDashboardScreen() {
         {/* TAB 9: IMPORT/EXPORT */}
         {activeTab === "import_export" && (
           <div>
-            <h3>📥 استيراد المنتجات المركزية عبر CSV</h3>
+            <h3>استيراد المنتجات المركزية عبر CSV</h3>
             <textarea
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
@@ -1220,18 +1008,15 @@ export function CatalogDashboardScreen() {
               <div style={importPreviewResultBoxStyle}>
                 <h4>نتائج التدقيق والمعاينة:</h4>
                 {importPreview.errors.length > 0 ? (
-                  <div style={csvErrorStyle}>
-                    ⚠️ تم العثور على أخطاء في المدخلات:
+                  <CpStatePanel role="alert" title="تم العثور على أخطاء في المدخلات">
                     <ul style={csvErrorListStyle}>
-                      {importPreview.errors.map((err, idx) => (
-                        <li key={idx}>السطر {err.rowIndex}: {err.error} ({err.column})</li>
+                      {importPreview.errors.map((err) => (
+                        <li key={`${err.rowIndex}-${err.column}`}>السطر {err.rowIndex}: {err.error} ({err.column})</li>
                       ))}
                     </ul>
-                  </div>
+                  </CpStatePanel>
                 ) : (
-                  <div style={csvSuccessStyle}>
-                    ✅ جميع الأسطر ({importPreview.rows.length} منتج) صالحة ومستعدة للاستيراد.
-                  </div>
+                  <CpStatePanel role="status" title={`جميع الأسطر (${importPreview.rows.length} منتج) صالحة ومستعدة للاستيراد.`} />
                 )}
               </div>
             )}
@@ -1241,12 +1026,12 @@ export function CatalogDashboardScreen() {
         {/* TAB 10: CLEANUP & QUALITY */}
         {activeTab === "cleanup_quality" && (
           <div>
-            <h3>🧹 التنظيف واكتشاف المنتجات المكررة</h3>
+            <h3>التنظيف واكتشاف المنتجات المكررة</h3>
             <p>يقوم النظام تلقائياً بالتحقق من جودة الكتالوج والبحث عن منتجات مكررة عبر الباركود أو الأسماء المتقاربة.</p>
             <div style={cleanupBoxStyle}>
               <strong>النتائج الحالية:</strong>
               {duplicateCandidates.length === 0 ? (
-                <div style={cleanupResultStyle}>✅ لم تُكتشف مجموعات مكررة في البيانات المحملة حالياً.</div>
+                <CpMutedInline>لم تُكتشف مجموعات مكررة في البيانات المحملة حالياً.</CpMutedInline>
               ) : (
                 <ul>
                   {duplicateCandidates.map(([key, products]) => (

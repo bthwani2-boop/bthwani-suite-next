@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Card, Text, spacing } from "@bthwani/ui-kit";
+import { Card, Text, spacing } from "@bthwani/ui-kit";
 import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
 import {
+  CpBadge,
   CpButton,
   CpRetryButton,
   CpSelect,
@@ -254,7 +255,7 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
               <tr key={rollout.id}>
                 <CpTableCell>{rollout.featureFlagKey}</CpTableCell>
                 <CpTableCell><Text role="caption">{JSON.stringify(rollout.targetScope)}</Text></CpTableCell>
-                <CpTableCell><Badge label={rollout.status} tone={STATUS_TONE[rollout.status] ?? "neutral"} /></CpTableCell>
+                <CpTableCell><CpBadge tone={STATUS_TONE[rollout.status] ?? "neutral"}>{rollout.status}</CpBadge></CpTableCell>
                 <CpTableCell>{rollout.currentPercentage}%</CpTableCell>
                 <CpTableCell>{rollout.currentStepIndex + 1}/{rollout.steps.length}</CpTableCell>
                 <CpTableCell>{rollout.flagRevision}</CpTableCell>

@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Box, Button, Card, ScrollScreen, Text, TextField, spacing } from "@bthwani/ui-kit";
+import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
+import { DetailPageFrame } from "@bthwani/control-panel/shell";
+import { Text } from "@bthwani/ui-kit";
 
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
@@ -61,23 +63,29 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
 
   if (controller.state.kind === "loading") {
     return (
-      <ScrollScreen>
-        <Card style={{ padding: spacing[4] }}><Text role="bodySm" tone="muted" align="center">جارٍ تحميل ملف الكابتن…</Text></Card>
-      </ScrollScreen>
+      <DetailPageFrame stateView={<CpStatePanel role="status" title="جارٍ تحميل ملف الكابتن…" />}>
+        <div />
+      </DetailPageFrame>
     );
   }
 
   if (controller.state.kind === "error" || !captain) {
     const errorState = controller.state.kind === "error" ? controller.state : null;
     return (
-      <ScrollScreen>
-        <WorkforceErrorState
-          message={errorState?.message ?? "تعذر تحميل ملف الكابتن"}
-          isSessionExpired={errorState?.isSessionExpired ?? false}
-          onRetry={() => void controller.reload()}
-        />
-        <Button label="رجوع" tone="ghost" onPress={props.onBack} />
-      </ScrollScreen>
+      <DetailPageFrame
+        stateView={
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <WorkforceErrorState
+              message={errorState?.message ?? "تعذر تحميل ملف الكابتن"}
+              isSessionExpired={errorState?.isSessionExpired ?? false}
+              onRetry={() => void controller.reload()}
+            />
+            <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+          </div>
+        }
+      >
+        <div />
+      </DetailPageFrame>
     );
   }
 
@@ -135,76 +143,100 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
     !controller.actionBusy;
 
   return (
-    <ScrollScreen>
-      <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-        <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-          <Box style={{ alignItems: "flex-end", gap: spacing[1] }}>
-            <Text role="titleSm">ملف الكابتن</Text>
-            <Text role="caption" tone="muted">{captain.workforceCode} · {ENGAGEMENT_STATUS_LABEL_AR[captain.engagementStatus]}</Text>
-          </Box>
-          <Button label="رجوع" tone="ghost" onPress={props.onBack} />
-        </Box>
+    <DetailPageFrame
+      header={
+        <CpPageHeader title="ملف الكابتن">
+          <CpMutedInline tight>{captain.workforceCode} · {ENGAGEMENT_STATUS_LABEL_AR[captain.engagementStatus]}</CpMutedInline>
+          <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+        </CpPageHeader>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div>
+            <Text role="bodySm">الاسم بالعربية *</Text>
+            <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" />
+          </div>
+          <div>
+            <Text role="bodySm">الاسم بالإنجليزية</Text>
+            <CpTextInput value={fullNameEn} onChange={setFullNameEn} aria-label="الاسم بالإنجليزية" />
+          </div>
+          <div>
+            <Text role="bodySm">تاريخ بداية الارتباط</Text>
+            <CpTextInput value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
+          </div>
+          <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
+          <div>
+            <Text role="bodySm">نوع المركبة *</Text>
+            <CpTextInput value={vehicleType} onChange={setVehicleType} aria-label="نوع المركبة" />
+          </div>
+          <div>
+            <Text role="bodySm">رقم أو لوحة المركبة *</Text>
+            <CpTextInput value={vehicleIdentifier} onChange={setVehicleIdentifier} aria-label="رقم أو لوحة المركبة" />
+          </div>
+          <div>
+            <Text role="bodySm">نطاق التشغيل</Text>
+            <CpTextInput value={operatingScopeCode} onChange={setOperatingScopeCode} aria-label="نطاق التشغيل" />
+          </div>
+          <div>
+            <Text role="bodySm">تاريخ انتهاء الرخصة</Text>
+            <CpTextInput value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" aria-label="تاريخ انتهاء الرخصة" />
+          </div>
 
-        <TextField label="الاسم بالعربية *" value={fullNameAr} onChangeText={setFullNameAr} />
-        <TextField label="الاسم بالإنجليزية" value={fullNameEn} onChangeText={setFullNameEn} />
-        <TextField label="تاريخ بداية الارتباط" value={engagementStartDate} onChangeText={setEngagementStartDate} placeholder="YYYY-MM-DD" />
-        <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
-        <TextField label="نوع المركبة *" value={vehicleType} onChangeText={setVehicleType} />
-        <TextField label="رقم أو لوحة المركبة *" value={vehicleIdentifier} onChangeText={setVehicleIdentifier} />
-        <TextField label="نطاق التشغيل" value={operatingScopeCode} onChangeText={setOperatingScopeCode} />
-        <TextField label="تاريخ انتهاء الرخصة" value={licenseExpiresAt} onChangeText={setLicenseExpiresAt} placeholder="YYYY-MM-DD" />
+          <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف</Text>
+          <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} />
+          {controller.actionError ? <CpStatePanel role="alert" title={controller.actionError} /> : null}
 
-        <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>المشرف</Text>
-        <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} />
-        {controller.actionError ? <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>{controller.actionError}</Text> : null}
+          <CpButton
+            variant="primary"
+            disabled={!canSave}
+            onClick={() =>
+              void controller.update({
+                expectedVersion: captain.version,
+                fullNameAr: fullNameAr.trim(),
+                fullNameEn: fullNameEn.trim() || undefined,
+                engagementStartDate: engagementStartDate.trim() || undefined,
+                serviceZoneId: zoneId,
+                vehicleType: vehicleType.trim(),
+                vehicleIdentifier: vehicleIdentifier.trim(),
+                licenseExpiresAt: licenseExpiresAt.trim() || undefined,
+                operatingScopeCode: operatingScopeCode.trim() || undefined,
+                supervisorActorId: supervisor?.actorId,
+              })
+            }
+          >
+            {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ الملف التشغيلي"}
+          </CpButton>
+        </div>
 
-        <Button
-          label="حفظ الملف التشغيلي"
-          tone="primary"
-          disabled={!canSave}
-          loading={controller.actionBusy}
-          onPress={() =>
-            void controller.update({
-              expectedVersion: captain.version,
-              fullNameAr: fullNameAr.trim(),
-              fullNameEn: fullNameEn.trim() || undefined,
-              engagementStartDate: engagementStartDate.trim() || undefined,
-              serviceZoneId: zoneId,
-              vehicleType: vehicleType.trim(),
-              vehicleIdentifier: vehicleIdentifier.trim(),
-              licenseExpiresAt: licenseExpiresAt.trim() || undefined,
-              operatingScopeCode: operatingScopeCode.trim() || undefined,
-              supervisorActorId: supervisor?.actorId,
-            })
-          }
-        />
-      </Card>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <Text role="titleSm">الصورة ووثائق الرخصة</Text>
+          <Text role="bodySm">الصورة: {captain.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
+          <Text role="bodySm">الوثائق: {documentCount}</Text>
+          <Text role="bodySm">حالة الرخصة: {LICENSE_LABEL[profile?.licenseStatus ?? "missing"]}</Text>
+          {uploadError ? <CpStatePanel role="alert" title={uploadError} /> : null}
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>
+              {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}
+            </CpButton>
+            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("document")}>
+              {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة رخصة"}
+            </CpButton>
+          </div>
+          {!canApproveLicense ? (
+            <CpMutedInline>اعتماد الرخصة يتطلب وثيقة مرتبطة وتاريخ انتهاء صالحًا.</CpMutedInline>
+          ) : null}
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <CpButton variant="primary" disabled={!canApproveLicense || controller.actionBusy} onClick={() => void updateLicenseStatus("valid")}>اعتماد الرخصة</CpButton>
+            <CpButton variant="danger" disabled={controller.actionBusy} onClick={() => void updateLicenseStatus("rejected")}>رفض الرخصة</CpButton>
+            <CpButton variant="secondary" disabled={controller.actionBusy} onClick={() => void updateLicenseStatus("missing")}>طلب استكمال</CpButton>
+          </div>
+        </div>
 
-      <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-        <Text role="titleSm" style={{ textAlign: "right" }}>الصورة ووثائق الرخصة</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>الصورة: {captain.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>الوثائق: {documentCount}</Text>
-        <Text role="bodySm" style={{ textAlign: "right" }}>حالة الرخصة: {LICENSE_LABEL[profile?.licenseStatus ?? "missing"]}</Text>
-        {uploadError ? <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>{uploadError}</Text> : null}
-        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-          <Button label="رفع صورة شخصية" tone="secondary" loading={uploadBusy} disabled={uploadBusy} onPress={() => pickFile("photo")} />
-          <Button label="رفع وثيقة رخصة" tone="secondary" loading={uploadBusy} disabled={uploadBusy} onPress={() => pickFile("document")} />
-        </Box>
-        {!canApproveLicense ? (
-          <Text role="caption" tone="warning" style={{ textAlign: "right" }}>
-            اعتماد الرخصة يتطلب وثيقة مرتبطة وتاريخ انتهاء صالحًا.
-          </Text>
-        ) : null}
-        <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-          <Button label="اعتماد الرخصة" tone="primary" disabled={!canApproveLicense || controller.actionBusy} onPress={() => void updateLicenseStatus("valid")} />
-          <Button label="رفض الرخصة" tone="danger" disabled={controller.actionBusy} onPress={() => void updateLicenseStatus("rejected")} />
-          <Button label="طلب استكمال" tone="secondary" disabled={controller.actionBusy} onPress={() => void updateLicenseStatus("missing")} />
-        </Box>
-      </Card>
-
-      <WorkforceScopeManager actorId={captain.actorId} actorRole="captain" />
-      <ProviderActivationWorkspace providerKind="captain" initialActorId={captain.actorId} entrySource="hr" />
-    </ScrollScreen>
+        <WorkforceScopeManager actorId={captain.actorId} actorRole="captain" />
+        <ProviderActivationWorkspace providerKind="captain" initialActorId={captain.actorId} entrySource="hr" />
+      </div>
+    </DetailPageFrame>
   );
 }
 

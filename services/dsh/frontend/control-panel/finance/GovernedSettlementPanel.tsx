@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Button, Card, Text, lightThemeColors } from "@bthwani/ui-kit";
-import { CpTextInput } from "@bthwani/control-panel/components";
+import { Card, Text } from "@bthwani/ui-kit";
+import { CpButton, CpTextInput } from "@bthwani/control-panel/components";
 import {
   createSettlementFromDeliveredOrders,
   upsertSettlementPolicy,
@@ -215,18 +215,12 @@ export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps
       </div>
 
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "1rem" }}>
-        <Button
-          label={busy === "policy" ? "جارٍ حفظ السياسة…" : "حفظ إصدار سياسة التسوية في WLT"}
-          tone="secondary"
-          disabled={!policyValid || busy !== null}
-          onPress={savePolicy}
-        />
-        <Button
-          label={busy === "settlement" ? "جارٍ احتساب التسوية…" : "إنشاء التسوية من delivered orders"}
-          tone="primary"
-          disabled={!settlementValid || busy !== null}
-          onPress={createSettlement}
-        />
+        <CpButton variant="secondary" disabled={!policyValid || busy !== null} onClick={savePolicy}>
+          {busy === "policy" ? "جارٍ حفظ السياسة…" : "حفظ إصدار سياسة التسوية في WLT"}
+        </CpButton>
+        <CpButton variant="primary" disabled={!settlementValid || busy !== null} onClick={createSettlement}>
+          {busy === "settlement" ? "جارٍ احتساب التسوية…" : "إنشاء التسوية من delivered orders"}
+        </CpButton>
       </div>
 
       {policyReadyForPartner === partnerId.trim() ? (
@@ -235,13 +229,7 @@ export function GovernedSettlementPanel({ reload }: GovernedSettlementPanelProps
         </Text>
       ) : null}
       {message ? (
-        <Card
-          style={{
-            padding: "0.75rem",
-            marginTop: "0.75rem",
-            borderLeft: `4px solid ${error ? lightThemeColors.danger : lightThemeColors.success}`,
-          }}
-        >
+        <Card style={{ padding: "0.75rem", marginTop: "0.75rem" }}>
           <Text role="body" tone={error ? "danger" : "success"}>
             {message}
           </Text>

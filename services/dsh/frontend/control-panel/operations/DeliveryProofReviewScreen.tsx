@@ -10,6 +10,7 @@ import {
   Text,
   TextField,
 } from '@bthwani/ui-kit';
+import { CpTabs } from '@bthwani/control-panel/components';
 import {
   useOperatorDeliveryProofReviewController,
   type DshDeliveryProof,
@@ -98,17 +99,16 @@ export function DeliveryProofReviewScreen({ hubHref }: DeliveryProofReviewScreen
           </Box>
           <Badge label={`${controller.proofs.length} إثبات`} tone={controller.proofs.length > 0 ? 'warning' : 'success'} />
         </Box>
-        <Box layoutDirection="row" gap={2}>
-          {(['pending_review', 'accepted', 'rejected'] as const).map((status) => (
-            <Button
-              key={status}
-              label={STATUS_LABELS[status]}
-              size="sm"
-              fullWidth={false}
-              tone={controller.status === status ? 'brand' : 'secondary'}
-              onPress={() => controller.setStatus(status)}
-            />
-          ))}
+        <Box layoutDirection="row" gap={2} align="center">
+          <CpTabs
+            items={(['pending_review', 'accepted', 'rejected'] as const).map((status) => ({
+              value: status,
+              label: STATUS_LABELS[status],
+            }))}
+            value={controller.status}
+            onChange={(status) => controller.setStatus(status as DshDeliveryProofStatus)}
+            aria-label="فلتر حالة إثبات التسليم"
+          />
           <Button
             label="تحديث"
             size="sm"

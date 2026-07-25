@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, type CSSProperties, type ReactNode } from "react";
-import { neutralScale, statusScale } from "@bthwani/ui-kit";
+import { useState, type ReactNode } from "react";
+import { neutralScale } from "@bthwani/ui-kit";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
+  CpBadge,
   CpButton,
   CpDescriptionList,
   CpDescriptionRow,
@@ -12,6 +14,7 @@ import {
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
+  CpTabs,
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
@@ -49,15 +52,8 @@ function card(title: string, children: ReactNode): ReactNode {
   );
 }
 
-function statusStyle(tone: string): CSSProperties {
-  const color = tone === "success"
-    ? statusScale.success
-    : tone === "danger"
-      ? statusScale.danger
-      : tone === "warning"
-        ? statusScale.warning
-        : statusScale.info;
-  return { color, border: `1px solid ${color}`, borderRadius: 999, padding: "4px 10px", fontWeight: 700 };
+function toBadgeTone(tone: "success" | "warning" | "danger" | "info" | "muted"): CpBadgeTone {
+  return tone === "muted" ? "neutral" : tone;
 }
 
 export type PartnerDetailOperationalScreenProps = {
@@ -148,25 +144,17 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
         <CpPageHeader title={vm.displayName}>
           <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             {onBack ? <CpButton onClick={onBack}>← رجوع</CpButton> : null}
-            <span style={statusStyle(vm.statusTone)}>{vm.statusLabel}</span>
+            <CpBadge tone={toBadgeTone(vm.statusTone)}>{vm.statusLabel}</CpBadge>
           </div>
         </CpPageHeader>
       )}
     >
-      <div role="tablist" aria-label="أقسام تفاصيل الشريك" style={{ display: "flex", overflowX: "auto", borderBottom: `1px solid ${neutralScale[200]}` }}>
-        {TABS.map((candidate) => (
-          <button
-            key={candidate}
-            type="button"
-            role="tab"
-            aria-selected={tab === candidate}
-            onClick={() => setTab(candidate)}
-            style={{ padding: "12px 16px", border: 0, borderBottom: tab === candidate ? `3px solid ${statusScale.info}` : "3px solid transparent", background: "transparent", cursor: "pointer", fontWeight: tab === candidate ? 700 : 400, whiteSpace: "nowrap" }}
-          >
-            {TAB_LABELS[candidate]}
-          </button>
-        ))}
-      </div>
+      <CpTabs
+        items={TABS.map((candidate) => ({ value: candidate, label: TAB_LABELS[candidate] }))}
+        value={tab}
+        onChange={(value) => setTab(value as Tab)}
+        aria-label="أقسام تفاصيل الشريك"
+      />
 
       <div style={{ display: "grid", gap: 16, padding: 16 }}>
         {vm.nextAction ? <CpStatePanel role="status" title={`الإجراء التالي: ${vm.nextAction}`} /> : null}
@@ -258,7 +246,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                         </div>
                       </div>
                     ) : null}
-                    {docs.actionState.kind === "error" ? <p role="alert" style={{ color: statusScale.danger, margin: 0 }}>{docs.actionState.message}</p> : null}
+                    {docs.actionState.kind === "error" ? <CpStatePanel role="alert" title={docs.actionState.message} /> : null}
                   </div>
                 )
         ) : null}
@@ -282,7 +270,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
               <CpButton disabled={!storeIdToLink.trim() || stores.actionState.kind === "loading"} onClick={() => void confirmStoreLink()}>
                 {stores.actionState.kind === "loading" ? "جارٍ الربط…" : "ربط المتجر بالشريك"}
               </CpButton>
-              {stores.actionState.kind === "error" ? <p role="alert" style={{ color: statusScale.danger, margin: 0 }}>{stores.actionState.message}</p> : null}
+              {stores.actionState.kind === "error" ? <CpStatePanel role="alert" title={stores.actionState.message} /> : null}
             </section>
             {stores.state.kind === "loading" || stores.state.kind === "idle" ? <CpStatePanel role="status" title="جاري تحميل المتاجر…" />
               : stores.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد متاجر مرتبطة بهذا الشريك بعد." />

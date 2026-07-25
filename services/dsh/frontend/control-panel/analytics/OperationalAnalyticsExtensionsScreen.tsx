@@ -1,17 +1,17 @@
 "use client";
 
 import React from "react";
+import { Box, Text, spacing } from "@bthwani/ui-kit";
 import {
-  Badge,
-  Box,
-  Button,
-  Card,
-  Header,
-  ScrollScreen,
-  StateView,
-  Text,
-  spacing,
-} from "@bthwani/ui-kit";
+  CpBadge,
+  CpButton,
+  CpMutedInline,
+  CpPageHeader,
+  CpRetryButton,
+  CpStatePanel,
+  CpTabs,
+} from "@bthwani/control-panel/components";
+import { MetricsPageFrame } from "@bthwani/control-panel/shell";
 import {
   fetchCaptainPerformanceAnalytics,
   fetchFieldPerformanceAnalytics,
@@ -34,6 +34,14 @@ const periodLabels: Record<DshAnalyticsPeriod, string> = {
   month: "شهر",
 };
 
+const PERIOD_TABS = (["today", "week", "month"] as DshAnalyticsPeriod[]).map((value) => ({
+  value,
+  label: periodLabels[value],
+}));
+
+// CpTextInput has no date-picker mode; a native <input type="date"> is kept here
+// (structural styling only, no hardcoded color) since a Cp* replacement would
+// drop the browser's native date picker.
 const dateInputStyle: React.CSSProperties = {
   minHeight: 42,
   minWidth: 170,
@@ -164,74 +172,67 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
     ? periodLabels[analyticsWindow.period]
     : `${analyticsWindow.from} — ${analyticsWindow.to}`;
 
-  return (
-    <ScrollScreen>
-      <Header
-        title="تحليلات التشغيل وSLA"
-        subtitle="مؤشرات التحضير والكباتن والميدانيين والسجلات المصدر ولقطة WLT للقراءة فقط"
-      />
-      <Card>
-        <Box style={styles.toolbar}>
-          <Box style={styles.periods}>
-            {(["today", "week", "month"] as DshAnalyticsPeriod[]).map((item) => (
-              <Button
-                key={item}
-                label={periodLabels[item]}
-                tone={analyticsWindow.period === item ? "primary" : "ghost"}
-                onPress={() => applyNamedPeriod(item)}
-              />
-            ))}
-          </Box>
-          <Button
-            label={exporting ? "جاري التصدير…" : "تصدير CSV"}
-            tone="secondary"
-            onPress={() => void openExport()}
-          />
-        </Box>
-        <Box style={styles.customRange}>
-          <label>
-            <Text role="caption">من</Text>
-            <input
-              aria-label="بداية نطاق التحليلات"
-              type="date"
-              value={customFrom}
-              onChange={(event) => setCustomFrom(event.target.value)}
-              style={dateInputStyle}
-            />
-          </label>
-          <label>
-            <Text role="caption">إلى</Text>
-            <input
-              aria-label="نهاية نطاق التحليلات"
-              type="date"
-              value={customTo}
-              onChange={(event) => setCustomTo(event.target.value)}
-              style={dateInputStyle}
-            />
-          </label>
-          <Button label="تطبيق النطاق" tone="secondary" onPress={applyCustomRange} />
-          <Badge label={`الفترة النشطة: ${activeWindowLabel}`} tone="info" />
-        </Box>
-        {filterError ? <Text role="bodySm" tone="danger">{filterError}</Text> : null}
-        {exportError ? <Text role="bodySm" tone="danger">{exportError}</Text> : null}
-      </Card>
+  const activePeriodValue = analyticsWindow.period ?? "";
 
-      {state.kind === "loading" ? <StateView title="جاري احتساب المؤشرات من السجلات التشغيلية…" /> : null}
+  return (
+    <MetricsPageFrame
+      header={
+        <CpPageHeader title="تحليلات التشغيل وSLA">
+          <CpMutedInline tight>مؤشرات التحضير والكباتن والميدانيين والسجلات المصدر ولقطة WLT للقراءة فقط</CpMutedInline>
+        </CpPageHeader>
+      }
+      toolbar={
+        <Box style={styles.toolbar}>
+          <CpTabs items={PERIOD_TABS} value={activePeriodValue} onChange={(value) => applyNamedPeriod(value as DshAnalyticsPeriod)} aria-label="الفترة الزمنية" />
+          <CpButton variant="secondary" onClick={() => void openExport()} disabled={exporting}>
+            {exporting ? "جاري التصدير…" : "تصدير CSV"}
+          </CpButton>
+        </Box>
+      }
+      summary={
+        <Box style={styles.summary}>
+          <Box style={styles.customRange}>
+            <label>
+              <Text role="caption">من</Text>
+              <input
+                aria-label="بداية نطاق التحليلات"
+                type="date"
+                value={customFrom}
+                onChange={(event) => setCustomFrom(event.target.value)}
+                style={dateInputStyle}
+              />
+            </label>
+            <label>
+              <Text role="caption">إلى</Text>
+              <input
+                aria-label="نهاية نطاق التحليلات"
+                type="date"
+                value={customTo}
+                onChange={(event) => setCustomTo(event.target.value)}
+                style={dateInputStyle}
+              />
+            </label>
+            <CpButton variant="secondary" onClick={applyCustomRange}>تطبيق النطاق</CpButton>
+            <CpBadge tone="info">{`الفترة النشطة: ${activeWindowLabel}`}</CpBadge>
+          </Box>
+          {filterError ? <CpMutedInline>{filterError}</CpMutedInline> : null}
+          {exportError ? <CpMutedInline>{exportError}</CpMutedInline> : null}
+        </Box>
+      }
+    >
+      {state.kind === "loading" ? <CpStatePanel role="status" title="جاري احتساب المؤشرات من السجلات التشغيلية…" /> : null}
       {state.kind === "error" ? (
-        <StateView
-          title="تعذر تحميل التحليلات الممتدة"
-          description={state.message}
-          actionLabel="إعادة المحاولة"
-          onActionPress={() => setReloadToken((value) => value + 1)}
-        />
+        <CpStatePanel role="alert" title="تعذر تحميل التحليلات الممتدة" description={state.message}>
+          <CpRetryButton onClick={() => setReloadToken((value) => value + 1)}>إعادة المحاولة</CpRetryButton>
+        </CpStatePanel>
       ) : null}
 
       {state.kind === "success" ? (
         <>
-          <Card>
+          <Box style={styles.card}>
             <Box style={styles.sectionHeader}>
               <Text role="titleSm">SLA التحضير</Text>
-              <Badge label={`المصدر ${state.preparation.metadata.sourceSystem}`} tone="info" />
+              <CpBadge tone="info">{`المصدر ${state.preparation.metadata.sourceSystem}`}</CpBadge>
             </Box>
             <Box style={styles.grid}>
               <Metric label="طلبات مقاسة" value={state.preparation.totalMeasured} />
@@ -240,16 +241,16 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
               <Metric label="مفتوحة بعد الموعد" value={state.preparation.openPastEstimate} danger={state.preparation.openPastEstimate > 0} />
               <Metric label="متوسط التحضير بالدقائق" value={state.preparation.averagePreparationMinutes.toFixed(1)} />
             </Box>
-            <Text role="caption" tone="muted">
+            <CpMutedInline tight>
               آخر تحديث {new Date(state.preparation.metadata.generatedAt).toLocaleString("ar")} • من {new Date(state.preparation.metadata.windowFrom).toLocaleString("ar")} إلى {new Date(state.preparation.metadata.windowTo).toLocaleString("ar")}
-            </Text>
-            <Text role="caption" tone="muted">lineage: {state.preparation.metadata.lineage.join("، ")}</Text>
-          </Card>
+            </CpMutedInline>
+            <CpMutedInline tight>lineage: {state.preparation.metadata.lineage.join("، ")}</CpMutedInline>
+          </Box>
 
-          <Card>
+          <Box style={styles.card}>
             <Text role="titleSm">أداء الكباتن</Text>
             {state.captains.rows.length === 0 ? (
-              <StateView title="لا توجد إسنادات في الفترة" description="لم تُنشأ صفوف أو نسب بديلة." />
+              <CpStatePanel role="status" title="لا توجد إسنادات في الفترة" description="لم تُنشأ صفوف أو نسب بديلة." />
             ) : (
               <Box style={styles.rows}>
                 {state.captains.rows.map((row) => (
@@ -260,12 +261,12 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
                 ))}
               </Box>
             )}
-          </Card>
+          </Box>
 
-          <Card>
+          <Box style={styles.card}>
             <Text role="titleSm">أداء الميدانيين</Text>
             {state.field.rows.length === 0 ? (
-              <StateView title="لا توجد زيارات في الفترة" description="تعرض الحالة الفارغة بدل أرقام مصطنعة." />
+              <CpStatePanel role="status" title="لا توجد زيارات في الفترة" description="تعرض الحالة الفارغة بدل أرقام مصطنعة." />
             ) : (
               <Box style={styles.rows}>
                 {state.field.rows.map((row) => (
@@ -276,38 +277,40 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
                 ))}
               </Box>
             )}
-          </Card>
+          </Box>
 
-          <Card>
+          <Box style={styles.card}>
             <Text role="titleSm">النزول إلى السجل التشغيلي</Text>
             {state.drilldown.records.length === 0 ? (
-              <StateView title="لا توجد سجلات طلبات في الفترة" />
+              <CpStatePanel role="status" title="لا توجد سجلات طلبات في الفترة" />
             ) : (
               <Box style={styles.rows}>
                 {state.drilldown.records.map((record) => (
                   <Box key={record.id} style={styles.row}>
                     <Text role="bodyStrong">{record.id}</Text>
                     <Text role="bodySm">{record.status} • المتجر {record.storeId} • {new Date(record.updatedAt).toLocaleString("ar")}</Text>
-                    <Button
-                      label="فتح السجل"
-                      tone="ghost"
-                      onPress={() => {
+                    <CpButton
+                      variant="ghost"
+                      onClick={() => {
                         if (typeof window !== "undefined") window.location.assign(record.detailUrl);
                       }}
-                    />
+                    >
+                      فتح السجل
+                    </CpButton>
                   </Box>
                 ))}
               </Box>
             )}
-          </Card>
+          </Box>
 
-          <Card>
+          <Box style={styles.card}>
             <Box style={styles.sectionHeader}>
               <Text role="titleSm">اللقطة المالية المرجعية</Text>
-              <Badge label="WLT • قراءة فقط" tone="warning" />
+              <CpBadge tone="warning">WLT • قراءة فقط</CpBadge>
             </Box>
             {state.financeUnavailable || !state.finance || state.finance.readState !== "available" ? (
-              <StateView
+              <CpStatePanel
+                role="status"
                 title="WLT غير متاح"
                 description="لم تُحوّل الحالة إلى أصفار مالية؛ تبقى الحقيقة المالية غير متاحة صراحة."
               />
@@ -321,29 +324,30 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
                 ))}
               </Box>
             ) : (
-              <StateView title="لا توجد قيود مالية" description="أعاد WLT لقطة متاحة بلا عملات أو أرصدة." />
+              <CpStatePanel role="status" title="لا توجد قيود مالية" description="أعاد WLT لقطة متاحة بلا عملات أو أرصدة." />
             )}
-          </Card>
+          </Box>
         </>
       ) : null}
-    </ScrollScreen>
+    </MetricsPageFrame>
   );
 }
 
 function Metric({ label, value, danger = false }: { label: string; value: string | number; danger?: boolean }): React.ReactElement {
   return (
     <Box style={styles.metric}>
-      <Text role="caption" tone="muted">{label}</Text>
+      <CpMutedInline tight>{label}</CpMutedInline>
       <Text role="titleMd" {...(danger ? { tone: "danger" as const } : {})}>{String(value)}</Text>
     </Box>
   );
 }
 
 const styles = {
-  toolbar: { display: "flex", flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: spacing[3] },
-  periods: { display: "flex", flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
-  customRange: { display: "flex", flexDirection: "row", flexWrap: "wrap", alignItems: "flex-end", gap: spacing[3], marginTop: spacing[3] },
+  toolbar: { display: "flex", flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: spacing[3] },
+  summary: { display: "flex", flexDirection: "column", gap: spacing[2] },
+  customRange: { display: "flex", flexDirection: "row", flexWrap: "wrap", alignItems: "flex-end", gap: spacing[3] },
   sectionHeader: { display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing[2] },
+  card: { display: "flex", flexDirection: "column", gap: spacing[2], padding: spacing[3] },
   grid: { display: "flex", flexDirection: "row", flexWrap: "wrap", gap: spacing[3], marginTop: spacing[3], marginBottom: spacing[3] },
   metric: { minWidth: 150, flex: 1, gap: spacing[1] },
   rows: { gap: spacing[2], marginTop: spacing[3] },

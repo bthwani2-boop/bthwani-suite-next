@@ -2,17 +2,9 @@
 
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Badge,
-  Button,
-  Card,
-  ScrollScreen,
-  StateView,
-  Text,
-  lightThemeColors,
-  colorPalette,
-  alpha,
-} from "@bthwani/ui-kit";
+import { Card, StateView, Text } from "@bthwani/ui-kit";
+import { CpBadge, CpButton, CpKpiCard, CpKpiStrip, CpTabs } from "@bthwani/control-panel/components";
+import { OverviewPageFrame } from "@bthwani/control-panel/shell";
 import { useFinanceController } from "../../shared/finance-wlt-link/finance/finance.controller";
 import { PayoutRequestsPanel } from "./PayoutRequestsPanel";
 import { ReconciliationCasesPanel } from "./ReconciliationCasesPanel";
@@ -94,7 +86,7 @@ export function FinanceDashboardScreen() {
   const renderFinancialCenterPosition = (center: WltFinancialCenter) => (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginTop: "1rem" }}>
       {center.dataCompletenessNotes.length > 0 ? (
-        <Card style={{ padding: "1rem", borderLeft: `4px solid ${lightThemeColors.warning}` }}>
+        <Card style={{ padding: "1rem" }}>
           <Text role="body" tone="muted">
             ملاحظة اكتمال البيانات: هذا الملخص لا يشمل بعد {center.dataCompletenessNotes.join("، ")} — الأرقام أقل من الواقع لتلك الأحداث حتى تُنقل إلى Ledger Kernel.
           </Text>
@@ -102,7 +94,7 @@ export function FinanceDashboardScreen() {
       ) : null}
       {center.sections.map((section: WltFinancialCenterSection) => (
         <Card key={section.sectionType} style={{ padding: "1.5rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", borderBottom: `2px solid ${lightThemeColors.borderColor}`, paddingBottom: "0.75rem", marginBottom: "0.75rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "0.75rem", marginBottom: "0.75rem" }}>
             <Text role="titleMd" style={{ fontWeight: "bold" }}>{section.sectionLabel}</Text>
             <Text role="titleMd" style={{ fontWeight: "bold" }}>{section.totalLabel}</Text>
           </div>
@@ -138,10 +130,9 @@ export function FinanceDashboardScreen() {
       const blockedReason = describeFinanceBlockedReason(runtimeFinance?.state === "blocked" ? runtimeFinance.error : undefined);
       return (
         <Card style={{ padding: "3rem", alignItems: "center", justifyContent: "center", textAlign: "center", gap: "1rem" }}>
-          <Text role="titleLg" style={{ fontSize: "3rem" }}>🔌</Text>
-          <Text role="titleMd" style={{ color: lightThemeColors.danger }}>{blockedReason.title}</Text>
+          <CpBadge tone="danger">{blockedReason.title}</CpBadge>
           <Text role="body" tone="muted" style={{ maxWidth: "450px" }}>{blockedReason.description}</Text>
-          <Button label="إعادة المحاولة" tone="primary" onPress={reload} />
+          <CpButton variant="primary" onClick={reload}>إعادة المحاولة</CpButton>
         </Card>
       );
     }
@@ -168,73 +159,90 @@ export function FinanceDashboardScreen() {
     );
   };
 
+  const hasBlockingVariances = (financeHubView.center?.blockingVariances.length ?? 0) > 0;
+  const readinessTone = hasBlockingVariances ? "danger" : financeHubView.pendingCount > 0 ? "warning" : "success";
+  const readinessLabel = hasBlockingVariances
+    ? "محجوب / يوجد مخاطر (Blocked / Risk)"
+    : financeHubView.pendingCount > 0
+      ? "يحتاج إجراء (Needs action)"
+      : "جاهز للمطابقة (Ready)";
+
   return (
-    <ScrollScreen>
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem", borderBottom: `1px solid ${lightThemeColors.borderColor}`, paddingBottom: "1rem" }}>
+    <OverviewPageFrame
+      header={
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <Text role="titleMd">غرفة القيادة المالية</Text>
-              <Badge label={runtimeFinance?.state === "runtime" ? "WLT runtime" : "WLT runtime غير متاح"} tone={runtimeFinance?.state === "runtime" ? "success" : "danger"} />
+              <CpBadge tone={runtimeFinance?.state === "runtime" ? "success" : "danger"}>
+                {runtimeFinance?.state === "runtime" ? "WLT runtime" : "WLT runtime غير متاح"}
+              </CpBadge>
             </div>
             <Text role="body" tone="muted" style={{ fontSize: "12px", marginTop: "0.25rem" }}>
-              العملة: <strong style={{ color: lightThemeColors.color }}>ر.ي (ريال يمني)</strong> · {runtimeSourceLabel}
+              العملة: <strong>ر.ي (ريال يمني)</strong> · {runtimeSourceLabel}
             </Text>
           </div>
-          <Button label="تحديث فوري" tone="secondary" onPress={reload} />
+          <CpButton variant="secondary" onClick={reload}>تحديث فوري</CpButton>
         </div>
-
-        <div style={{ display: "flex", gap: "1rem", margin: "0.5rem 0", flexWrap: "wrap" }}>
-          <Card style={{ flex: 1, minWidth: "200px", padding: "1rem", borderTop: `3px solid ${lightThemeColors.info}` }}>
-            <Text role="caption" tone="muted">صافي المركز المالي</Text>
-            <Text role="titleLg" style={{ marginTop: "0.5rem", color: (financeHubView.center?.netPosition ?? 0) >= 0 ? lightThemeColors.success : lightThemeColors.danger }}>{financeHubView.center?.netPositionLabel ?? "—"}</Text>
-          </Card>
-          <Card style={{ flex: 1, minWidth: "200px", padding: "1rem", borderTop: `3px solid ${lightThemeColors.success}` }}>
-            <Text role="caption" tone="muted">مبالغ معلقة</Text>
-            <Text role="titleLg" style={{ marginTop: "0.5rem" }}>{financeHubView.pendingCount.toLocaleString("ar-YE")} ذمة</Text>
-          </Card>
-          <Card style={{ flex: 1, minWidth: "200px", padding: "1rem", borderTop: `3px solid ${(financeHubView.center?.blockingVariances.length ?? 0) > 0 ? lightThemeColors.danger : lightThemeColors.success}` }}>
-            <Text role="caption" tone="muted">فوارق مطابقة</Text>
-            <Text role="titleLg" style={{ marginTop: "0.5rem", color: (financeHubView.center?.blockingVariances.length ?? 0) > 0 ? lightThemeColors.danger : lightThemeColors.success }}>{(financeHubView.center?.blockingVariances.length ?? 0).toLocaleString("ar-YE")} فوارق</Text>
-          </Card>
-          <Card style={{ flex: 1, minWidth: "200px", padding: "1rem", borderTop: `3px solid ${financeHubView.openRisksCount > 0 ? lightThemeColors.danger : lightThemeColors.success}` }}>
-            <Text role="caption" tone="muted">مخاطر مفتوحة</Text>
-            <Text role="titleLg" style={{ marginTop: "0.5rem", color: financeHubView.openRisksCount > 0 ? lightThemeColors.danger : lightThemeColors.success }}>{financeHubView.openRisksCount.toLocaleString("ar-YE")} مخاطر</Text>
-          </Card>
+      }
+      toolbar={
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <CpTabs
+            aria-label="أقسام لوحة القيادة المالية"
+            items={tabItems.map((tab: FinanceTabItem) => ({ value: tab.id, label: tab.label }))}
+            value={tabItems.find((tab: FinanceTabItem) => tab.active)?.id ?? activeGroup}
+            onChange={onTabSelect}
+          />
+          {subTabItems.length > 0 ? (
+            <CpTabs
+              aria-label="تبويبات فرعية"
+              items={subTabItems.map((subTab: FinanceTabItem) => ({ value: subTab.id, label: subTab.label }))}
+              value={subTabItems.find((subTab: FinanceTabItem) => subTab.active)?.id ?? activeSubGroup ?? ""}
+              onChange={onSubTabSelect}
+            />
+          ) : null}
         </div>
-
-        <div style={{ display: "flex", gap: "0.5rem", padding: "0.5rem 0", flexWrap: "wrap" }}>
-          {tabItems.map((tab: FinanceTabItem) => <Button key={tab.id} label={tab.label} tone={tab.active ? "primary" : "secondary"} onPress={() => onTabSelect(tab.id)} />)}
-        </div>
-        {subTabItems.length > 0 ? (
-          <div style={{ display: "flex", gap: "0.5rem", padding: "0.5rem 0", flexWrap: "wrap", background: alpha(colorPalette.black, 0.02), borderRadius: "4px", paddingLeft: "0.5rem" }}>
-            {subTabItems.map((subTab: FinanceTabItem) => (
-              <Button key={subTab.id} label={subTab.label} tone={subTab.active ? "success" : "secondary"} style={{ padding: "0.25rem 0.75rem", fontSize: "12px" }} onPress={() => onSubTabSelect(subTab.id)} />
-            ))}
-          </div>
-        ) : null}
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <CpKpiStrip>
+          <CpKpiCard label="صافي المركز المالي" value={financeHubView.center?.netPositionLabel ?? "—"} />
+          <CpKpiCard label="مبالغ معلقة" value={`${financeHubView.pendingCount.toLocaleString("ar-YE")} ذمة`} />
+          <CpKpiCard label="فوارق مطابقة" value={`${(financeHubView.center?.blockingVariances.length ?? 0).toLocaleString("ar-YE")} فوارق`} />
+          <CpKpiCard label="مخاطر مفتوحة" value={`${financeHubView.openRisksCount.toLocaleString("ar-YE")} مخاطر`} />
+        </CpKpiStrip>
 
         {activeState === "ready" ? (
-          <Card style={{ padding: "1rem", margin: "0.5rem 0", backgroundColor: alpha(colorPalette.black, 0.01) }}>
+          <Card style={{ padding: "1rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
-              <div style={{ width: "12px", height: "12px", borderRadius: "50%", backgroundColor: (financeHubView.center?.blockingVariances.length ?? 0) > 0 ? lightThemeColors.danger : financeHubView.pendingCount > 0 ? lightThemeColors.warning : lightThemeColors.success }} />
+              <CpBadge tone={readinessTone}>{readinessLabel}</CpBadge>
               <div>
-                <Text role="body" style={{ fontWeight: "bold" }}>
-                  حالة الجاهزية التشغيلية: {(financeHubView.center?.blockingVariances.length ?? 0) > 0 ? "محجوب / يوجد مخاطر (Blocked / Risk)" : financeHubView.pendingCount > 0 ? "يحتاج إجراء (Needs action)" : "جاهز للمطابقة (Ready)"}
-                </Text>
+                <Text role="body" style={{ fontWeight: "bold" }}>حالة الجاهزية التشغيلية</Text>
                 <Text role="caption" tone="muted">الجهد المالي للمنصة</Text>
               </div>
             </div>
             <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", justifyContent: "space-between" }}>
-              <div style={{ flex: 1, minWidth: "150px", display: "flex", flexDirection: "column", gap: "0.25rem" }}><Text role="caption" tone="muted">⚠️ الخطر المالي:</Text><Text role="body" style={{ fontWeight: "bold", color: (financeHubView.center?.blockingVariances.length ?? 0) > 0 ? lightThemeColors.danger : "inherit" }}>{financeHubView.operationalRisk}</Text></div>
-              <div style={{ flex: 1, minWidth: "150px", display: "flex", flexDirection: "column", gap: "0.25rem" }}><Text role="caption" tone="muted">👥 الجهة المتأثرة:</Text><Text role="body" style={{ fontWeight: "bold" }}>{financeHubView.affectedSurfaces}</Text></div>
-              <div style={{ flex: 1, minWidth: "150px", display: "flex", flexDirection: "column", gap: "0.25rem" }}><Text role="caption" tone="muted">⚙️ الإجراء المطلوب:</Text><Text role="body" style={{ fontWeight: "bold", color: lightThemeColors.info }}>{financeHubView.requiredAction}</Text></div>
-              <div style={{ flex: 1, minWidth: "150px", display: "flex", flexDirection: "column", gap: "0.25rem" }}><Text role="caption" tone="muted">🔒 حظر الصرف/التسوية:</Text><Text role="body" style={{ fontWeight: "bold" }}>{financeHubView.holdsStatus}</Text></div>
+              <div style={{ flex: 1, minWidth: "150px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                <Text role="caption" tone="muted">الخطر المالي</Text>
+                <Text role="body" tone={hasBlockingVariances ? "danger" : undefined} style={{ fontWeight: "bold" }}>{financeHubView.operationalRisk}</Text>
+              </div>
+              <div style={{ flex: 1, minWidth: "150px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                <Text role="caption" tone="muted">الجهة المتأثرة</Text>
+                <Text role="body" style={{ fontWeight: "bold" }}>{financeHubView.affectedSurfaces}</Text>
+              </div>
+              <div style={{ flex: 1, minWidth: "150px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                <Text role="caption" tone="muted">الإجراء المطلوب</Text>
+                <Text role="body" tone="info" style={{ fontWeight: "bold" }}>{financeHubView.requiredAction}</Text>
+              </div>
+              <div style={{ flex: 1, minWidth: "150px", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                <Text role="caption" tone="muted">حظر الصرف/التسوية</Text>
+                <Text role="body" style={{ fontWeight: "bold" }}>{financeHubView.holdsStatus}</Text>
+              </div>
             </div>
           </Card>
         ) : null}
-        <div style={{ marginTop: "0.5rem" }}>{renderContent()}</div>
+        {renderContent()}
       </div>
-    </ScrollScreen>
+    </OverviewPageFrame>
   );
 }

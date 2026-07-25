@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button, Card, Text, lightThemeColors } from "@bthwani/ui-kit";
-import { CpTextInput } from "@bthwani/control-panel/components";
+import { Card, Text } from "@bthwani/ui-kit";
+import { CpButton, CpTextInput } from "@bthwani/control-panel/components";
 import {
   assignReconciliationCase,
   loadOpenReconciliationCases,
@@ -70,7 +70,7 @@ export function ReconciliationCasesPanel() {
             const busy = busyCaseId === reconciliationCase.id;
             const note = noteDrafts[reconciliationCase.id] ?? "";
             return (
-              <Card key={reconciliationCase.id} style={{ padding: "1rem", borderLeft: `4px solid ${lightThemeColors.warning}` }}>
+              <Card key={reconciliationCase.id} style={{ padding: "1rem" }}>
                 <Text role="body" style={{ fontWeight: "bold" }}>قضية: {reconciliationCase.id}</Text>
                 <Text role="caption" tone="muted">
                   جلسة الدفع: {reconciliationCase.paymentSessionId} · العملية: {reconciliationCase.operation}
@@ -78,36 +78,40 @@ export function ReconciliationCasesPanel() {
                 <Text role="caption" tone="muted">السبب: {reconciliationCase.triggerReason}</Text>
                 <Text role="caption" tone="muted">مُسندة إلى: {reconciliationCase.assignedToOperatorId || "—"}</Text>
                 <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem", flexWrap: "wrap" }}>
-                  <Button
-                    label={busy ? "جارٍ التنفيذ…" : "إسناد لنفسي"}
-                    tone="secondary"
+                  <CpButton
+                    variant="secondary"
                     disabled={busy}
-                    onPress={() => runAction(reconciliationCase.id, () => assignReconciliationCase(reconciliationCase.id))}
-                  />
+                    onClick={() => runAction(reconciliationCase.id, () => assignReconciliationCase(reconciliationCase.id))}
+                  >
+                    {busy ? "جارٍ التنفيذ…" : "إسناد لنفسي"}
+                  </CpButton>
                   <CpTextInput
                     placeholder="ملاحظة القرار"
                     value={note}
                     onChange={(value) => setNoteDrafts((previous) => ({ ...previous, [reconciliationCase.id]: value }))}
                     aria-label={`ملاحظة القرار لقضية ${reconciliationCase.id}`}
                   />
-                  <Button
-                    label="تأكيد النجاح"
-                    tone="success"
+                  <CpButton
+                    variant="primary"
                     disabled={busy || note.trim().length === 0}
-                    onPress={() => runAction(reconciliationCase.id, () => resolveReconciliationCase(reconciliationCase.id, "confirmed_success", note))}
-                  />
-                  <Button
-                    label="تأكيد الفشل"
-                    tone="danger"
+                    onClick={() => runAction(reconciliationCase.id, () => resolveReconciliationCase(reconciliationCase.id, "confirmed_success", note))}
+                  >
+                    تأكيد النجاح
+                  </CpButton>
+                  <CpButton
+                    variant="danger"
                     disabled={busy || note.trim().length === 0}
-                    onPress={() => runAction(reconciliationCase.id, () => resolveReconciliationCase(reconciliationCase.id, "confirmed_failed", note))}
-                  />
-                  <Button
-                    label="تعديل يدوي"
-                    tone="secondary"
+                    onClick={() => runAction(reconciliationCase.id, () => resolveReconciliationCase(reconciliationCase.id, "confirmed_failed", note))}
+                  >
+                    تأكيد الفشل
+                  </CpButton>
+                  <CpButton
+                    variant="secondary"
                     disabled={busy || note.trim().length === 0}
-                    onPress={() => runAction(reconciliationCase.id, () => resolveReconciliationCase(reconciliationCase.id, "manual_adjustment", note))}
-                  />
+                    onClick={() => runAction(reconciliationCase.id, () => resolveReconciliationCase(reconciliationCase.id, "manual_adjustment", note))}
+                  >
+                    تعديل يدوي
+                  </CpButton>
                 </div>
               </Card>
             );

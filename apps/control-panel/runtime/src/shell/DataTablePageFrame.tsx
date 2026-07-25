@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
+import { useCpFrameTokens } from "./frameTokens";
 
 export type DataTablePageFrameProps = {
   readonly header?: ReactNode;
@@ -12,15 +13,16 @@ export type DataTablePageFrameProps = {
 };
 
 export function DataTablePageFrame({ header, toolbar, filters, children, stateView, sidePanel, dir = "rtl" }: DataTablePageFrameProps) {
+  const frameTokens = useCpFrameTokens();
   return (
-    <section dir={dir} style={styles.section}>
+    <section dir={dir} style={{ ...styles.section, ...frameTokens.page }}>
       {header != null && <div style={styles.header}>{header}</div>}
       {toolbar != null && <div style={styles.toolbar}>{toolbar}</div>}
       {filters != null && <div style={styles.filters}>{filters}</div>}
       <div style={styles.body}>
         <div style={styles.content}>{stateView ?? children}</div>
         {sidePanel != null && (
-          <aside style={styles.sidePanel}>
+          <aside style={{ ...styles.sidePanel, ...frameTokens.panelStart }}>
             {sidePanel}
           </aside>
         )}

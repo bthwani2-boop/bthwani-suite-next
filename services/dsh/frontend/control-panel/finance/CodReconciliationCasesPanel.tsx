@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button, Card, Text, colorRoles } from "@bthwani/ui-kit";
+import { Card, Text } from "@bthwani/ui-kit";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
-import { CpSelect, CpTextInput } from "@bthwani/control-panel/components";
+import { CpBadge, CpButton, CpSelect, CpTextInput } from "@bthwani/control-panel/components";
 import {
   assignCodReconciliationCase,
   loadCodReconciliationCases,
@@ -113,7 +113,7 @@ export function CodReconciliationCasesPanel() {
               const note = notes[item.id] ?? "";
               const assigned = item.status === "investigating";
               return (
-                <div key={item.id} style={item.differenceMinorUnits < 0 ? styles.caseCardShortage : styles.caseCard}>
+                <div key={item.id} style={styles.caseCard}>
                   <Card>
                     <div style={styles.caseTopRow}>
                       <div style={styles.caseIdentity}>
@@ -121,9 +121,9 @@ export function CodReconciliationCasesPanel() {
                         <Text role="caption" tone="muted">سجل COD: {item.codRecordId} · إثبات: {item.custodyEvidenceId}</Text>
                       </div>
                       <div style={styles.difference}>
-                        <Text role="body" tone={item.differenceMinorUnits < 0 ? "danger" : "warning"}>
+                        <CpBadge tone={item.differenceMinorUnits < 0 ? "danger" : "warning"}>
                           الفرق: {amount(item.differenceMinorUnits, item.currency)}
-                        </Text>
+                        </CpBadge>
                       </div>
                     </div>
                     <div style={styles.facts}>
@@ -154,9 +154,13 @@ export function CodReconciliationCasesPanel() {
                     </div>
                     <div style={styles.actions}>
                       {!assigned ? (
-                        <Button label={busy ? "جارٍ الإسناد..." : "إسناد القضية لنفسي"} tone="secondary" disabled={busy} onPress={() => void assign(item.id)} />
+                        <CpButton variant="secondary" disabled={busy} onClick={() => void assign(item.id)}>
+                          {busy ? "جارٍ الإسناد..." : "إسناد القضية لنفسي"}
+                        </CpButton>
                       ) : (
-                        <Button label={busy ? "جارٍ الحسم..." : "تسجيل قرار المصالحة"} tone="primary" disabled={busy || note.trim().length === 0} onPress={() => void resolve(item.id)} />
+                        <CpButton variant="primary" disabled={busy || note.trim().length === 0} onClick={() => void resolve(item.id)}>
+                          {busy ? "جارٍ الحسم..." : "تسجيل قرار المصالحة"}
+                        </CpButton>
                       )}
                     </div>
                   </Card>
@@ -169,11 +173,6 @@ export function CodReconciliationCasesPanel() {
     </div>
   );
 }
-
-const caseCardBase = {
-  padding: "1rem",
-  borderInlineStart: `4px solid ${colorRoles.warning}`,
-};
 
 const styles = WebStyleSheet.create({
   panel: {
@@ -197,10 +196,8 @@ const styles = WebStyleSheet.create({
     flexDirection: "column",
     gap: "0.75rem",
   },
-  caseCard: caseCardBase,
-  caseCardShortage: {
-    ...caseCardBase,
-    borderInlineStartColor: colorRoles.danger,
+  caseCard: {
+    padding: "1rem",
   },
   caseTopRow: {
     display: "flex",

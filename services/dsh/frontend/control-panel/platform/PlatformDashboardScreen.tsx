@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Card, Text, spacing } from "@bthwani/ui-kit";
+import { Card, Text, spacing } from "@bthwani/ui-kit";
 import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
 import {
-  CpButton,
+  CpBadge,
   CpKpiCard,
   CpKpiStrip,
   CpPageHeader,
@@ -13,6 +13,7 @@ import {
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
+  CpTabs,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import {
@@ -146,7 +147,7 @@ function VariablesTab({ data }: { readonly data: PlatformControlReadModel }) {
                 <CpTableCell>{variable.scopeType}{variable.scopeId ? ` / ${variable.scopeId}` : ""}</CpTableCell>
                 <CpTableCell>{variable.valueType}</CpTableCell>
                 <CpTableCell>{variable.revision}</CpTableCell>
-                <CpTableCell><Badge label={variable.status} tone={statusTone(variable.status)} /></CpTableCell>
+                <CpTableCell><CpBadge tone={statusTone(variable.status)}>{variable.status}</CpBadge></CpTableCell>
               </tr>
             ))}
           </tbody>
@@ -176,7 +177,7 @@ function VariablesTab({ data }: { readonly data: PlatformControlReadModel }) {
                 <CpTableCell>{flag.ownerService}</CpTableCell>
                 <CpTableCell>{flag.enabled == null ? "غير محدد" : flag.enabled ? "مفعّل" : "متوقف"}</CpTableCell>
                 <CpTableCell>{flag.revision}</CpTableCell>
-                <CpTableCell><Badge label={flag.status} tone={statusTone(flag.status)} /></CpTableCell>
+                <CpTableCell><CpBadge tone={statusTone(flag.status)}>{flag.status}</CpBadge></CpTableCell>
               </tr>
             ))}
           </tbody>
@@ -217,7 +218,7 @@ function ServicesTab({ data }: { readonly data: PlatformControlReadModel }) {
         {data.services.map((service) => (
           <tr key={service.service}>
             <CpTableCell>{service.service}</CpTableCell>
-            <CpTableCell><Badge label={service.state} tone={statusTone(service.state)} /></CpTableCell>
+            <CpTableCell><CpBadge tone={statusTone(service.state)}>{service.state}</CpBadge></CpTableCell>
             <CpTableCell>{service.latencyMs == null ? "—" : `${service.latencyMs} ms`}</CpTableCell>
             <CpTableCell>{service.evidenceSource}</CpTableCell>
             <CpTableCell>{service.message || "—"}</CpTableCell>
@@ -373,16 +374,13 @@ export function PlatformDashboardScreen() {
         </CpPageHeader>
       }
     >
-      <View style={styles.tabs}>
-        {EXECUTIVE_TABS.map((tab) => (
-          <CpButton
-            key={tab.id}
-            onClick={() => setMainTab(tab.id)}
-            aria-label={`${tab.label}${mainTab === tab.id ? " — التبويب الحالي" : ""}`}
-          >
-            {mainTab === tab.id ? `● ${tab.label}` : tab.label}
-          </CpButton>
-        ))}
+      <View style={styles.tabsWrap}>
+        <CpTabs
+          items={EXECUTIVE_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
+          value={mainTab}
+          onChange={(value) => setMainTab(value as ExecutiveTabId)}
+          aria-label="تبويبات المنصة"
+        />
       </View>
 
       <View style={styles.content}>
@@ -428,10 +426,7 @@ export function PlatformDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  tabs: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing[2],
+  tabsWrap: {
     padding: spacing[4],
   },
   content: {

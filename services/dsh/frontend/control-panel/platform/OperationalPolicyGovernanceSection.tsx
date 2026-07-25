@@ -1,20 +1,21 @@
 "use client";
 
 import React from "react";
-import {
-  Badge,
-  Button,
-  Card,
-  DataTable,
-  StateView,
-  Text,
-  TextField,
-  spacing,
-} from "@bthwani/ui-kit";
+import { Card, Text, TextField, spacing } from "@bthwani/ui-kit";
 import {
   WebStyleSheet as StyleSheet,
   WebView as View,
 } from "@bthwani/ui-kit/web";
+import {
+  CpBadge,
+  CpButton,
+  CpRetryButton,
+  CpStatePanel,
+  CpTable,
+  CpTableCell,
+  CpTableHeaderCell,
+  CpTextInput,
+} from "@bthwani/control-panel/components";
 import {
   useAreaCapacityController,
   useOperationalPolicyEditor,
@@ -296,65 +297,65 @@ export function OperationalPolicyGovernanceSection() {
             كل كتابة تعتمد الإصدار الحالي وتُسجّل بسبب واضح ومفتاح idempotency.
           </Text>
         </View>
-        <Button label="منطقة تشغيلية جديدة" tone="secondary" onPress={beginZoneCreate} />
+        <CpButton variant="secondary" onClick={beginZoneCreate}>منطقة تشغيلية جديدة</CpButton>
       </View>
 
-      {zones.state.kind === "loading" ? <StateView title="جارٍ تحميل المناطق…" /> : null}
+      {zones.state.kind === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل المناطق…" /> : null}
       {zones.state.kind === "error" ? (
-        <StateView
-          title="تعذر تحميل المناطق"
-          description={zones.state.message}
-          actionLabel="إعادة المحاولة"
-          onActionPress={zones.reload}
-        />
+        <CpStatePanel role="alert" title="تعذر تحميل المناطق" description={zones.state.message}>
+          <CpRetryButton onClick={zones.reload}>إعادة المحاولة</CpRetryButton>
+        </CpStatePanel>
       ) : null}
       {zones.state.kind === "success" && zones.state.data.length > 0 ? (
-        <DataTable<DshZone & Record<string, unknown>>
-          columns={[
-            { key: "name", header: "المنطقة", render: (row) => row.name },
-            { key: "cityCode", header: "رمز المدينة", render: (row) => row.cityCode },
-            {
-              key: "isActive",
-              header: "الحالة",
-              render: (row) => (
-                <Badge
-                  label={row.isActive ? "نشطة" : "معطلة"}
-                  tone={row.isActive ? "success" : "neutral"}
-                />
-              ),
-            },
-            { key: "version", header: "الإصدار", render: (row) => String(row.version) },
-          ]}
-          rows={zoneRows}
-          getRowKey={(row) => row.id}
-          onRowPress={chooseZone}
-        />
+        <CpTable aria-label="المناطق التشغيلية">
+          <thead>
+            <tr>
+              <CpTableHeaderCell>المنطقة</CpTableHeaderCell>
+              <CpTableHeaderCell>رمز المدينة</CpTableHeaderCell>
+              <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+              <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
+            </tr>
+          </thead>
+          <tbody>
+            {zoneRows.map((row) => (
+              <tr key={row.id} onClick={() => chooseZone(row)}>
+                <CpTableCell>{row.name}</CpTableCell>
+                <CpTableCell>{row.cityCode}</CpTableCell>
+                <CpTableCell>
+                  <CpBadge tone={row.isActive ? "success" : "neutral"}>{row.isActive ? "نشطة" : "معطلة"}</CpBadge>
+                </CpTableCell>
+                <CpTableCell>{String(row.version)}</CpTableCell>
+              </tr>
+            ))}
+          </tbody>
+        </CpTable>
       ) : null}
 
       <Card style={styles.card}>
         <Text role="titleSm">{selectedZone ? "تعديل المنطقة التشغيلية" : "إنشاء منطقة تشغيلية"}</Text>
-        {selectedZone ? <Badge label={`الإصدار ${selectedZone.version}`} tone="info" /> : null}
+        {selectedZone ? <CpBadge tone="info">{`الإصدار ${selectedZone.version}`}</CpBadge> : null}
         {!selectedZone ? (
-          <TextField
-            label="معرف ثابت اختياري"
+          <CpTextInput
+            aria-label="معرف ثابت اختياري"
             value={zoneForm.id}
-            onChangeText={(id) => setZoneForm((current) => ({ ...current, id }))}
+            onChange={(id) => setZoneForm((current) => ({ ...current, id }))}
             placeholder="sanaa"
           />
         ) : null}
-        <TextField
-          label="اسم المنطقة"
+        <CpTextInput
+          aria-label="اسم المنطقة"
           value={zoneForm.name}
-          onChangeText={(name) => setZoneForm((current) => ({ ...current, name }))}
+          onChange={(name) => setZoneForm((current) => ({ ...current, name }))}
         />
-        <TextField
-          label="رمز المدينة أو منطقة الخدمة"
+        <CpTextInput
+          aria-label="رمز المدينة أو منطقة الخدمة"
           value={zoneForm.cityCode}
           disabled={Boolean(selectedZone)}
-          onChangeText={(cityCode) =>
+          onChange={(cityCode) =>
             setZoneForm((current) => ({ ...current, cityCode }))
           }
         />
+        {/* TextField kept: CpTextInput has no multiline support */}
         <TextField
           label="الوصف"
           value={zoneForm.description}
@@ -363,24 +364,26 @@ export function OperationalPolicyGovernanceSection() {
           }
           multiline
         />
-        <Button
-          label={zoneForm.isActive ? "نشطة" : "معطلة"}
-          tone={zoneForm.isActive ? "primary" : "secondary"}
-          onPress={() =>
+        <CpButton
+          variant={zoneForm.isActive ? "primary" : "secondary"}
+          onClick={() =>
             setZoneForm((current) => ({ ...current, isActive: !current.isActive }))
           }
-        />
-        <TextField
-          label="سبب التغيير"
+        >
+          {zoneForm.isActive ? "نشطة" : "معطلة"}
+        </CpButton>
+        <CpTextInput
+          aria-label="سبب التغيير"
           value={zoneForm.reason}
-          onChangeText={(reason) => setZoneForm((current) => ({ ...current, reason }))}
+          onChange={(reason) => setZoneForm((current) => ({ ...current, reason }))}
         />
-        <Button
-          label={editor.mutating ? "جارٍ الحفظ…" : "حفظ المنطقة"}
-          tone="primary"
+        <CpButton
+          variant="primary"
           disabled={editor.mutating}
-          onPress={() => void saveZone()}
-        />
+          onClick={() => void saveZone()}
+        >
+          {editor.mutating ? "جارٍ الحفظ…" : "حفظ المنطقة"}
+        </CpButton>
       </Card>
 
       {selectedZoneId ? (
@@ -388,117 +391,117 @@ export function OperationalPolicyGovernanceSection() {
           <Card style={styles.card}>
             <Text role="titleSm">قواعد SLA للمنطقة المحددة</Text>
             {slaRows.length > 0 ? (
-              <DataTable<DshSlaRule & Record<string, unknown>>
-                columns={[
-                  { key: "category", header: "الفئة", render: (row) => row.category },
-                  { key: "maxPrepMins", header: "التحضير", render: (row) => String(row.maxPrepMins) },
-                  { key: "maxDeliveryMins", header: "التوصيل", render: (row) => String(row.maxDeliveryMins) },
-                  { key: "version", header: "الإصدار", render: (row) => String(row.version) },
-                ]}
-                rows={slaRows.filter((row) => row.zoneId === selectedZoneId)}
-                getRowKey={(row) => `${row.zoneId}:${row.category}`}
-                onRowPress={(row) => setSelectedSlaKey(`${row.zoneId}:${row.category}`)}
-              />
+              <CpTable aria-label="قواعد SLA">
+                <thead>
+                  <tr>
+                    <CpTableHeaderCell>الفئة</CpTableHeaderCell>
+                    <CpTableHeaderCell>التحضير</CpTableHeaderCell>
+                    <CpTableHeaderCell>التوصيل</CpTableHeaderCell>
+                    <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
+                  </tr>
+                </thead>
+                <tbody>
+                  {slaRows
+                    .filter((row) => row.zoneId === selectedZoneId)
+                    .map((row) => (
+                      <tr key={`${row.zoneId}:${row.category}`} onClick={() => setSelectedSlaKey(`${row.zoneId}:${row.category}`)}>
+                        <CpTableCell>{row.category}</CpTableCell>
+                        <CpTableCell>{String(row.maxPrepMins)}</CpTableCell>
+                        <CpTableCell>{String(row.maxDeliveryMins)}</CpTableCell>
+                        <CpTableCell>{String(row.version)}</CpTableCell>
+                      </tr>
+                    ))}
+                </tbody>
+              </CpTable>
             ) : null}
-            <TextField
-              label="الفئة"
+            <CpTextInput
+              aria-label="الفئة"
               value={slaForm.category}
-              onChangeText={(category) => setSlaForm((current) => ({ ...current, category }))}
+              onChange={(category) => setSlaForm((current) => ({ ...current, category }))}
             />
-            <TextField
-              label="حد التحضير بالدقائق"
+            <CpTextInput
+              aria-label="حد التحضير بالدقائق"
               value={slaForm.maxPrepMins}
-              keyboardType="numeric"
-              onChangeText={(maxPrepMins) =>
+              onChange={(maxPrepMins) =>
                 setSlaForm((current) => ({ ...current, maxPrepMins }))
               }
             />
-            <TextField
-              label="حد التوصيل بالدقائق"
+            <CpTextInput
+              aria-label="حد التوصيل بالدقائق"
               value={slaForm.maxDeliveryMins}
-              keyboardType="numeric"
-              onChangeText={(maxDeliveryMins) =>
+              onChange={(maxDeliveryMins) =>
                 setSlaForm((current) => ({ ...current, maxDeliveryMins }))
               }
             />
-            <TextField
-              label="سبب التغيير"
+            <CpTextInput
+              aria-label="سبب التغيير"
               value={slaForm.reason}
-              onChangeText={(reason) => setSlaForm((current) => ({ ...current, reason }))}
+              onChange={(reason) => setSlaForm((current) => ({ ...current, reason }))}
             />
-            <Button
-              label={editor.mutating ? "جارٍ الحفظ…" : "حفظ SLA"}
-              tone="primary"
+            <CpButton
+              variant="primary"
               disabled={editor.mutating}
-              onPress={() => void saveSla()}
-            />
+              onClick={() => void saveSla()}
+            >
+              {editor.mutating ? "جارٍ الحفظ…" : "حفظ SLA"}
+            </CpButton>
           </Card>
 
           <Card style={styles.card}>
             <Text role="titleSm">السعة التشغيلية</Text>
-            {capacity.state.kind === "loading" ? <StateView title="جارٍ تحميل السعة…" /> : null}
+            {capacity.state.kind === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل السعة…" /> : null}
             {capacity.state.kind === "error" ? (
-              <StateView
-                title="تعذر تحميل السعة"
-                description={capacity.state.message}
-                actionLabel="إعادة المحاولة"
-                onActionPress={capacity.reload}
-              />
+              <CpStatePanel role="alert" title="تعذر تحميل السعة" description={capacity.state.message}>
+                <CpRetryButton onClick={capacity.reload}>إعادة المحاولة</CpRetryButton>
+              </CpStatePanel>
             ) : null}
             {capacity.state.kind === "success" ? (
               <View style={styles.badges}>
-                <Badge
-                  label={capacity.state.data.serviceability.isActive ? "المنطقة نشطة" : "المنطقة معطلة"}
-                  tone={capacity.state.data.serviceability.isActive ? "success" : "warning"}
-                />
-                <Badge
-                  label={`${capacity.state.data.serviceability.activeStores} متجر ظاهر`}
-                  tone="info"
-                />
-                <Badge
-                  label={capacity.state.data.serviceability.slaAvailable ? "SLA متاح" : "SLA غير معرف"}
-                  tone={capacity.state.data.serviceability.slaAvailable ? "success" : "warning"}
-                />
-                {currentCapacity ? <Badge label={`الإصدار ${currentCapacity.version}`} tone="info" /> : null}
+                <CpBadge tone={capacity.state.data.serviceability.isActive ? "success" : "warning"}>
+                  {capacity.state.data.serviceability.isActive ? "المنطقة نشطة" : "المنطقة معطلة"}
+                </CpBadge>
+                <CpBadge tone="info">{`${capacity.state.data.serviceability.activeStores} متجر ظاهر`}</CpBadge>
+                <CpBadge tone={capacity.state.data.serviceability.slaAvailable ? "success" : "warning"}>
+                  {capacity.state.data.serviceability.slaAvailable ? "SLA متاح" : "SLA غير معرف"}
+                </CpBadge>
+                {currentCapacity ? <CpBadge tone="info">{`الإصدار ${currentCapacity.version}`}</CpBadge> : null}
               </View>
             ) : null}
-            <TextField
-              label="أقصى طلبات متزامنة"
+            <CpTextInput
+              aria-label="أقصى طلبات متزامنة"
               value={capacityForm.maxConcurrentOrders}
-              keyboardType="numeric"
-              onChangeText={(maxConcurrentOrders) =>
+              onChange={(maxConcurrentOrders) =>
                 setCapacityForm((current) => ({ ...current, maxConcurrentOrders }))
               }
             />
-            <TextField
-              label="أقصى كباتن متصلين"
+            <CpTextInput
+              aria-label="أقصى كباتن متصلين"
               value={capacityForm.maxCaptainsOnline}
-              keyboardType="numeric"
-              onChangeText={(maxCaptainsOnline) =>
+              onChange={(maxCaptainsOnline) =>
                 setCapacityForm((current) => ({ ...current, maxCaptainsOnline }))
               }
             />
-            <TextField
-              label="عتبة الخنق 0-1"
+            <CpTextInput
+              aria-label="عتبة الخنق 0-1"
               value={capacityForm.throttleThreshold}
-              keyboardType="numeric"
-              onChangeText={(throttleThreshold) =>
+              onChange={(throttleThreshold) =>
                 setCapacityForm((current) => ({ ...current, throttleThreshold }))
               }
             />
-            <TextField
-              label="سبب التغيير"
+            <CpTextInput
+              aria-label="سبب التغيير"
               value={capacityForm.reason}
-              onChangeText={(reason) =>
+              onChange={(reason) =>
                 setCapacityForm((current) => ({ ...current, reason }))
               }
             />
-            <Button
-              label={editor.mutating ? "جارٍ الحفظ…" : "حفظ السعة"}
-              tone="primary"
+            <CpButton
+              variant="primary"
               disabled={editor.mutating}
-              onPress={() => void saveCapacity()}
-            />
+              onClick={() => void saveCapacity()}
+            >
+              {editor.mutating ? "جارٍ الحفظ…" : "حفظ السعة"}
+            </CpButton>
           </Card>
         </>
       ) : null}

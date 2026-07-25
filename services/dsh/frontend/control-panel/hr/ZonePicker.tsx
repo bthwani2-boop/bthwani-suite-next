@@ -5,7 +5,8 @@
 // city table — Workforce mirrors the chosen zone's city locally only to
 // keep its existing city_code foreign key satisfied.
 import React, { useEffect, useState } from "react";
-import { Box, Button, Text, spacing } from "@bthwani/ui-kit";
+import { CpMutedInline, CpTabs } from "@bthwani/control-panel/components";
+import { Text } from "@bthwani/ui-kit";
 import { fetchZones } from "../../shared/platform";
 import type { DshZone } from "../../shared/platform";
 
@@ -40,29 +41,27 @@ export function ZonePicker(props: {
   }, []);
 
   return (
-    <Box style={{ gap: spacing[2] }}>
-      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>نطاق الخدمة *</Text>
-      {loading && (
-        <Text role="caption" tone="muted" style={{ textAlign: "right" }}>جارٍ تحميل مناطق الخدمة…</Text>
+    <div>
+      <Text role="bodySm" style={{ fontWeight: "bold" }}>نطاق الخدمة *</Text>
+      {loading ? <CpMutedInline>جارٍ تحميل مناطق الخدمة…</CpMutedInline> : null}
+      {error ? <CpMutedInline>{error}</CpMutedInline> : null}
+      {!loading && !error && zones.length === 0 ? (
+        <CpMutedInline>لا توجد مناطق خدمة نشطة حاليًا</CpMutedInline>
+      ) : null}
+      {!props.disabled ? (
+        <CpTabs
+          aria-label="اختيار نطاق الخدمة"
+          value={props.value}
+          onChange={(zoneId) => {
+            const zone = zones.find((z) => z.id === zoneId) ?? null;
+            props.onChange(props.value === zoneId ? null : zone);
+          }}
+          items={zones.map((zone) => ({ value: zone.id, label: zone.name }))}
+        />
+      ) : (
+        <Text role="bodySm">{zones.find((z) => z.id === props.value)?.name ?? "—"}</Text>
       )}
-      {error && (
-        <Text role="caption" tone="danger" style={{ textAlign: "right" }}>{error}</Text>
-      )}
-      {!loading && !error && zones.length === 0 && (
-        <Text role="caption" tone="muted" style={{ textAlign: "right" }}>لا توجد مناطق خدمة نشطة حاليًا</Text>
-      )}
-      <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-        {zones.map((zone) => (
-          <Button
-            key={zone.id}
-            label={zone.name}
-            tone={props.value === zone.id ? "primary" : "ghost"}
-            disabled={props.disabled}
-            onPress={() => props.onChange(props.value === zone.id ? null : zone)}
-          />
-        ))}
-      </Box>
-    </Box>
+    </div>
   );
 }
 

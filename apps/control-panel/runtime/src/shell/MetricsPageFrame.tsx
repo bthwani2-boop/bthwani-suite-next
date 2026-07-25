@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
+import { useCpFrameTokens } from "./frameTokens";
 
 export type MetricsPageFrameProps = {
   readonly header?: ReactNode;
@@ -18,12 +19,13 @@ export function MetricsPageFrame({
   stateView,
   dir = "rtl",
 }: MetricsPageFrameProps) {
+  const frameTokens = useCpFrameTokens();
   return (
-    <section dir={dir} style={styles.section}>
+    <section dir={dir} style={{ ...styles.section, ...frameTokens.page }}>
       {header != null ? <div style={styles.header}>{header}</div> : null}
       {toolbar != null ? <div style={styles.toolbar}>{toolbar}</div> : null}
       {summary != null ? <div style={styles.summary}>{summary}</div> : null}
-      <div style={styles.content}>
+      <div style={{ ...styles.content, ...frameTokens.chartSurface }}>
         {stateView != null ? stateView : children}
       </div>
     </section>

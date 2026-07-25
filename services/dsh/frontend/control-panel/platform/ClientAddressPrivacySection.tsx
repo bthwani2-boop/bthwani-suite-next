@@ -1,25 +1,22 @@
 "use client";
 
 import React from "react";
-import {
-  Badge,
-  Button,
-  Card,
-  DataTable,
-  StateView,
-  Text,
-  TextField,
-  colorRoles,
-  spacing,
-} from "@bthwani/ui-kit";
+import { Card, Text, spacing } from "@bthwani/ui-kit";
 import {
   WebStyleSheet as StyleSheet,
   WebView as View,
 } from "@bthwani/ui-kit/web";
 import {
-  useClientAddressPrivacyController,
-  type DshClientAddressPrivacyAuditEvent,
-} from "../../shared/privacy";
+  CpBadge,
+  CpButton,
+  CpRetryButton,
+  CpStatePanel,
+  CpTable,
+  CpTableCell,
+  CpTableHeaderCell,
+  CpTextInput,
+} from "@bthwani/control-panel/components";
+import { useClientAddressPrivacyController } from "../../shared/privacy";
 
 export function ClientAddressPrivacySection() {
   const controller = useClientAddressPrivacyController(true);
@@ -95,49 +92,51 @@ export function ClientAddressPrivacySection() {
         العناوين النشطة تبقى حقيقة تشغيلية. بعد الحذف تُجدول البيانات الحساسة للإخفاء النهائي حسب مدة الاحتفاظ، بينما سجل التدقيق يعرض hash للعميل ولا يعرض الهاتف أو العنوان أو الإحداثيات.
       </Text>
 
-      {controller.state.kind === "loading" ? <StateView title="جارٍ تحميل سياسة الخصوصية وطابور الإخفاء…" /> : null}
+      {controller.state.kind === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل سياسة الخصوصية وطابور الإخفاء…" /> : null}
       {controller.state.kind === "error" ? (
-        <StateView
-          title="تعذر تحميل خصوصية العناوين"
-          description={controller.state.message}
-          actionLabel="إعادة المحاولة"
-          onActionPress={controller.reload}
-        />
+        <CpStatePanel role="alert" title="تعذر تحميل خصوصية العناوين" description={controller.state.message}>
+          <CpRetryButton onClick={controller.reload}>إعادة المحاولة</CpRetryButton>
+        </CpStatePanel>
       ) : null}
 
       {controller.state.kind === "success" ? (
         <>
           <Card style={styles.card}>
             <View style={styles.badges}>
-              <Badge label={enabled ? "الجدولة مفعّلة" : "الجدولة معطلة"} tone={enabled ? "success" : "warning"} />
-              <Badge label={`الإصدار ${controller.state.policy.version}`} tone="info" />
-              <Badge label={`آخر تعديل: ${controller.state.policy.updatedBy}`} tone="neutral" />
+              <CpBadge tone={enabled ? "success" : "warning"}>{enabled ? "الجدولة مفعّلة" : "الجدولة معطلة"}</CpBadge>
+              <CpBadge tone="info">{`الإصدار ${controller.state.policy.version}`}</CpBadge>
+              <CpBadge tone="neutral">{`آخر تعديل: ${controller.state.policy.updatedBy}`}</CpBadge>
             </View>
 
             <View style={styles.metrics}>
-              <Badge label={`المجدول: ${controller.state.status.scheduledCount}`} tone="info" />
-              <Badge label={`المستحق الآن: ${controller.state.status.dueCount}`} tone={controller.state.status.dueCount > 0 ? "warning" : "success"} />
-              <Badge label={`المخفي نهائيًا: ${controller.state.status.anonymizedCount}`} tone="neutral" />
+              <CpBadge tone="info">{`المجدول: ${controller.state.status.scheduledCount}`}</CpBadge>
+              <CpBadge tone={controller.state.status.dueCount > 0 ? "warning" : "success"}>{`المستحق الآن: ${controller.state.status.dueCount}`}</CpBadge>
+              <CpBadge tone="neutral">{`المخفي نهائيًا: ${controller.state.status.anonymizedCount}`}</CpBadge>
             </View>
             <Text role="caption" tone="muted">
               الإخفاء التالي: {controller.state.status.nextPurgeAt ? new Date(controller.state.status.nextPurgeAt).toLocaleString("ar") : "لا توجد عناوين مجدولة"}
             </Text>
 
-            <Button label={enabled ? "تعطيل الجدولة" : "تفعيل الجدولة"} tone={enabled ? "secondary" : "primary"} onPress={() => setEnabled((current) => !current)} />
-            <TextField label="مدة الاحتفاظ بعد الحذف بالأيام" value={retentionDays} keyboardType="numeric" onChangeText={setRetentionDays} />
-            <TextField label="حجم دفعة anonymization" value={batchLimit} keyboardType="numeric" onChangeText={setBatchLimit} />
-            <TextField label="سبب تغيير السياسة" value={reason} onChangeText={setReason} placeholder="سبب قابل للتدقيق" />
-            <Button label={controller.mutating ? "جارٍ الحفظ…" : "حفظ سياسة الخصوصية"} tone="primary" disabled={controller.mutating} onPress={() => void save()} />
+            <CpButton variant={enabled ? "secondary" : "primary"} onClick={() => setEnabled((current) => !current)}>
+              {enabled ? "تعطيل الجدولة" : "تفعيل الجدولة"}
+            </CpButton>
+            <CpTextInput aria-label="مدة الاحتفاظ بعد الحذف بالأيام" value={retentionDays} onChange={setRetentionDays} />
+            <CpTextInput aria-label="حجم دفعة anonymization" value={batchLimit} onChange={setBatchLimit} />
+            <CpTextInput aria-label="سبب تغيير السياسة" value={reason} onChange={setReason} placeholder="سبب قابل للتدقيق" />
+            <CpButton variant="primary" disabled={controller.mutating} onClick={() => void save()}>
+              {controller.mutating ? "جارٍ الحفظ…" : "حفظ سياسة الخصوصية"}
+            </CpButton>
 
-            <View style={styles.divider} />
             <Text role="titleSm">تشغيل دفعة الإخفاء المستحقة</Text>
             <Text role="caption" tone="muted">
               معرف التشغيل هو مفتاح idempotency وcorrelation الفعلي. استخدم معرفًا جديدًا لكل دفعة، وكرر المعرف نفسه فقط لإعادة محاولة الدفعة نفسها.
             </Text>
-            <TextField label="معرف التشغيل" value={runId} onChangeText={setRunId} placeholder="privacy-2026-07-21-run-001" />
-            <Button label={controller.mutating ? "جارٍ التنفيذ…" : "تشغيل anonymization"} tone="danger" disabled={controller.mutating || controller.state.status.dueCount === 0} onPress={() => void anonymize()} />
+            <CpTextInput aria-label="معرف التشغيل" value={runId} onChange={setRunId} placeholder="privacy-2026-07-21-run-001" />
+            <CpButton variant="danger" disabled={controller.mutating || controller.state.status.dueCount === 0} onClick={() => void anonymize()}>
+              {controller.mutating ? "جارٍ التنفيذ…" : "تشغيل anonymization"}
+            </CpButton>
 
-            {controller.lastResult ? <Badge label={`تم إخفاء ${controller.lastResult.anonymizedCount} عنوانًا`} tone="success" /> : null}
+            {controller.lastResult ? <CpBadge tone="success">{`تم إخفاء ${controller.lastResult.anonymizedCount} عنوانًا`}</CpBadge> : null}
             {validationError ? <Text tone="danger">{validationError}</Text> : null}
             {controller.mutationError ? <Text tone="danger">{controller.mutationError}</Text> : null}
           </Card>
@@ -148,23 +147,35 @@ export function ClientAddressPrivacySection() {
                 <Text role="titleSm">سجل تدقيق الخصوصية الآمن</Text>
                 <Text role="caption" tone="muted">يعرض آخر 50 حدثًا من projection لا تحتوي PII خامًا.</Text>
               </View>
-              <Button label="تحديث" tone="secondary" size="sm" onPress={() => void controller.reload()} />
+              <CpButton variant="secondary" onClick={() => void controller.reload()}>تحديث</CpButton>
             </View>
             {controller.state.events.length === 0 ? (
-              <StateView title="لا توجد أحداث خصوصية" description="ستظهر جدولة الحذف وتحديثات السياسة وعمليات الإخفاء هنا." />
+              <CpStatePanel role="status" title="لا توجد أحداث خصوصية" description="ستظهر جدولة الحذف وتحديثات السياسة وعمليات الإخفاء هنا." />
             ) : (
-              <DataTable<DshClientAddressPrivacyAuditEvent & Record<string, unknown>>
-                columns={[
-                  { key: "action", header: "الحدث", render: (row) => row.action },
-                  { key: "addressId", header: "معرف العنوان", render: (row) => row.addressId },
-                  { key: "clientSubjectHash", header: "Hash العميل", render: (row) => `${row.clientSubjectHash.slice(0, 12)}…` },
-                  { key: "actorId", header: "المنفذ", render: (row) => row.actorId },
-                  { key: "policyVersion", header: "السياسة", render: (row) => String(row.policyVersion) },
-                  { key: "createdAt", header: "الوقت", render: (row) => new Date(row.createdAt).toLocaleString("ar") },
-                ]}
-                rows={controller.state.events as (DshClientAddressPrivacyAuditEvent & Record<string, unknown>)[]}
-                getRowKey={(row) => row.eventId}
-              />
+              <CpTable aria-label="سجل تدقيق الخصوصية">
+                <thead>
+                  <tr>
+                    <CpTableHeaderCell>الحدث</CpTableHeaderCell>
+                    <CpTableHeaderCell>معرف العنوان</CpTableHeaderCell>
+                    <CpTableHeaderCell>Hash العميل</CpTableHeaderCell>
+                    <CpTableHeaderCell>المنفذ</CpTableHeaderCell>
+                    <CpTableHeaderCell>السياسة</CpTableHeaderCell>
+                    <CpTableHeaderCell>الوقت</CpTableHeaderCell>
+                  </tr>
+                </thead>
+                <tbody>
+                  {controller.state.events.map((row) => (
+                    <tr key={row.eventId}>
+                      <CpTableCell>{row.action}</CpTableCell>
+                      <CpTableCell>{row.addressId}</CpTableCell>
+                      <CpTableCell>{`${row.clientSubjectHash.slice(0, 12)}…`}</CpTableCell>
+                      <CpTableCell>{row.actorId}</CpTableCell>
+                      <CpTableCell>{String(row.policyVersion)}</CpTableCell>
+                      <CpTableCell>{new Date(row.createdAt).toLocaleString("ar")}</CpTableCell>
+                    </tr>
+                  ))}
+                </tbody>
+              </CpTable>
             )}
           </Card>
         </>
@@ -178,7 +189,6 @@ const styles = StyleSheet.create({
   card: { padding: spacing[4], gap: spacing[3] },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
   metrics: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
-  divider: { height: 1, backgroundColor: colorRoles.borderSubtle },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: spacing[3] },
   headerText: { gap: spacing[1] },
 });

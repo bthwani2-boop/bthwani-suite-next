@@ -5,10 +5,12 @@ import {
   CpButton,
   CpPageHeader,
   CpStatePanel,
+  CpTable,
+  CpTableCell,
+  CpTableHeaderCell,
   CpTextInput,
 } from "@bthwani/control-panel/components";
-import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { WebStyleSheet } from "@bthwani/ui-kit/web";
+import { QueuePageFrame } from "@bthwani/control-panel/shell";
 import {
   useRoleAssignmentApprovalController,
   useStaffController,
@@ -68,7 +70,7 @@ export function RoleAssignmentApprovalQueue() {
     || reason.trim().length < 5;
 
   return (
-    <DataTablePageFrame
+    <QueuePageFrame
       dir="rtl"
       header={<CpPageHeader title="تغييرات أدوار الموظفين — Maker / Checker" />}
       stateView={
@@ -77,91 +79,84 @@ export function RoleAssignmentApprovalQueue() {
           : undefined
       }
     >
-      <section style={styles.content}>
-        <article style={styles.card}>
-          <strong>إنشاء طلب تغيير دور</strong>
-          <div style={styles.formGrid}>
-            <CpTextInput
-              value={targetActorId}
-              onChange={setTargetActorId}
-              placeholder="معرّف الموظف المستفيد"
-              aria-label="معرّف الموظف المستفيد"
-            />
-            <CpTextInput
-              value={roleId}
-              onChange={setRoleId}
-              placeholder="معرّف الدور"
-              aria-label="معرّف الدور"
-            />
-            <CpTextInput
-              value={reason}
-              onChange={setReason}
-              placeholder="سبب التغيير — خمسة أحرف على الأقل"
-              aria-label="سبب طلب تغيير الدور"
-            />
-          </div>
-          <div style={styles.actions}>
-            <CpButton disabled={formInvalid} onClick={() => void requestChange("staff_role_assignment")}>
-              إرسال طلب إسناد
-            </CpButton>
-            <CpButton disabled={formInvalid} onClick={() => void requestChange("staff_role_revocation")}>
-              إرسال طلب سحب
-            </CpButton>
-          </div>
-        </article>
-
-        {actionError ? <CpStatePanel role="alert" title={actionError} /> : null}
-
-        {approvals.state.kind === "success" && approvals.state.data.length === 0 ? (
-          <CpStatePanel role="status" title="لا توجد طلبات تغيير أدوار معلقة." />
-        ) : null}
-
-        {approvals.state.kind === "success" ? approvals.state.data.map((approval) => (
-          <article key={approval.id} style={styles.card}>
-            <strong>{actionLabel(approval.actionType)}: {approval.targetActorId} ← {approval.roleName}</strong>
-            <div style={styles.metadata}>
-              <span>المنشئ: {approval.requestedBy}</span>
-              <span>السبب: {approval.reason}</span>
-              <span>النسخة: {approval.version}</span>
-            </div>
-            <CpTextInput
-              value={reviewNotes[approval.id] ?? ""}
-              onChange={(value) => setReviewNotes((current) => ({ ...current, [approval.id]: value }))}
-              placeholder="ملاحظة المراجع — إلزامية عند الرفض"
-              aria-label={`ملاحظة مراجعة ${approval.targetActorId}`}
-            />
-            <div style={styles.actions}>
-              <CpButton disabled={submitting} onClick={() => void review(approval.id, approval.version, "approved")}>
-                اعتماد من مراجع مستقل
-              </CpButton>
-              <CpButton
-                disabled={submitting || (reviewNotes[approval.id] ?? "").trim().length < 5}
-                onClick={() => void review(approval.id, approval.version, "rejected")}
-              >
-                رفض
-              </CpButton>
-            </div>
-          </article>
-        )) : null}
+      <section aria-label="إنشاء طلب تغيير دور">
+        <strong>إنشاء طلب تغيير دور</strong>
+        <CpTextInput
+          value={targetActorId}
+          onChange={setTargetActorId}
+          placeholder="معرّف الموظف المستفيد"
+          aria-label="معرّف الموظف المستفيد"
+        />
+        <CpTextInput
+          value={roleId}
+          onChange={setRoleId}
+          placeholder="معرّف الدور"
+          aria-label="معرّف الدور"
+        />
+        <CpTextInput
+          value={reason}
+          onChange={setReason}
+          placeholder="سبب التغيير — خمسة أحرف على الأقل"
+          aria-label="سبب طلب تغيير الدور"
+        />
+        <CpButton variant="primary" disabled={formInvalid} onClick={() => void requestChange("staff_role_assignment")}>
+          إرسال طلب إسناد
+        </CpButton>{" "}
+        <CpButton variant="secondary" disabled={formInvalid} onClick={() => void requestChange("staff_role_revocation")}>
+          إرسال طلب سحب
+        </CpButton>
       </section>
-    </DataTablePageFrame>
+
+      {actionError ? <CpStatePanel role="alert" title={actionError} /> : null}
+
+      {approvals.state.kind === "success" && approvals.state.data.length === 0 ? (
+        <CpStatePanel role="status" title="لا توجد طلبات تغيير أدوار معلقة." />
+      ) : null}
+
+      {approvals.state.kind === "success" && approvals.state.data.length > 0 ? (
+        <CpTable aria-label="طلبات تغيير الأدوار المعلقة">
+          <thead>
+            <tr>
+              <CpTableHeaderCell>الطلب</CpTableHeaderCell>
+              <CpTableHeaderCell>المنشئ</CpTableHeaderCell>
+              <CpTableHeaderCell>السبب</CpTableHeaderCell>
+              <CpTableHeaderCell>النسخة</CpTableHeaderCell>
+              <CpTableHeaderCell>ملاحظة المراجع</CpTableHeaderCell>
+              <CpTableHeaderCell>الإجراءات</CpTableHeaderCell>
+            </tr>
+          </thead>
+          <tbody>
+            {approvals.state.data.map((approval) => (
+              <tr key={approval.id}>
+                <CpTableCell>{actionLabel(approval.actionType)}: {approval.targetActorId} ← {approval.roleName}</CpTableCell>
+                <CpTableCell>{approval.requestedBy}</CpTableCell>
+                <CpTableCell>{approval.reason}</CpTableCell>
+                <CpTableCell>{approval.version}</CpTableCell>
+                <CpTableCell>
+                  <CpTextInput
+                    value={reviewNotes[approval.id] ?? ""}
+                    onChange={(value) => setReviewNotes((current) => ({ ...current, [approval.id]: value }))}
+                    placeholder="ملاحظة المراجع — إلزامية عند الرفض"
+                    aria-label={`ملاحظة مراجعة ${approval.targetActorId}`}
+                  />
+                </CpTableCell>
+                <CpTableCell>
+                  <CpButton variant="brand" disabled={submitting} onClick={() => void review(approval.id, approval.version, "approved")}>
+                    اعتماد من مراجع مستقل
+                  </CpButton>{" "}
+                  <CpButton
+                    variant="danger"
+                    disabled={submitting || (reviewNotes[approval.id] ?? "").trim().length < 5}
+                    onClick={() => void review(approval.id, approval.version, "rejected")}
+                  >
+                    رفض
+                  </CpButton>
+                </CpTableCell>
+              </tr>
+            ))}
+          </tbody>
+        </CpTable>
+      ) : null}
+    </QueuePageFrame>
   );
 }
-
-const styles = WebStyleSheet.create({
-  content: { display: "grid", gap: "1rem" },
-  card: {
-    display: "grid",
-    gap: "0.75rem",
-    padding: "1rem",
-    border: "1px solid var(--card-border, currentColor)",
-    borderRadius: "1rem",
-  },
-  formGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))",
-    gap: "0.75rem",
-  },
-  actions: { display: "flex", gap: "0.75rem", flexWrap: "wrap" },
-  metadata: { display: "grid", gap: "0.25rem", fontSize: "0.875rem" },
-});

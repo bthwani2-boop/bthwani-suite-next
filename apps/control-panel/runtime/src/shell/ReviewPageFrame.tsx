@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { WebStyleSheet } from "@bthwani/ui-kit/web";
+import { useCpFrameTokens } from "./frameTokens";
 
 export type ReviewPageFrameProps = {
   readonly header?: ReactNode;
@@ -16,8 +17,9 @@ export function ReviewPageFrame({
   stateView,
   dir = "rtl",
 }: ReviewPageFrameProps) {
+  const frameTokens = useCpFrameTokens();
   return (
-    <section dir={dir} style={styles.section}>
+    <section dir={dir} style={{ ...styles.section, ...frameTokens.page }}>
       {header != null ? <div style={styles.header}>{header}</div> : null}
       <div style={styles.content}>
         {stateView != null ? stateView : reviewContent}

@@ -5,7 +5,8 @@
 import React, { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ProviderKind } from "../../shared/workforce";
-import { Box, Button, Card, Header, ScrollScreen, Text, spacing } from "@bthwani/ui-kit";
+import { CpButton, CpPageHeader, CpTabs } from "@bthwani/control-panel/components";
+import { EditorPageFrame } from "@bthwani/control-panel/shell";
 
 import { ProviderListView } from "./ProviderListView";
 import { FieldAgentCreateView } from "./FieldAgentCreateView";
@@ -15,6 +16,12 @@ import { FieldAgentDetailView } from "./FieldAgentDetailView";
 import { CaptainDetailView } from "./CaptainDetailView";
 import { EmployeeDetailView } from "./EmployeeDetailView";
 import { WorkforceReferenceView } from "./WorkforceReferenceView";
+
+const KIND_TABS: Array<{ label: string; value: ProviderKind }> = [
+  { label: "كابتن", value: "captain" },
+  { label: "ميداني", value: "field" },
+  { label: "موظف إداري", value: "employee" },
+];
 
 function WorkforceHrScreenInner() {
   const router = useRouter();
@@ -35,28 +42,25 @@ function WorkforceHrScreenInner() {
 
   if (view === "create" || view === "manage" || view === "type-select" || view === "activation") {
     return (
-      <ScrollScreen>
-        <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-          <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-            <Header title="إضافة عضو Workforce" subtitle="أنشئ الميداني والكابتن والموظف الإداري من المصدر السيادي نفسه." />
-            <Button label="رجوع" tone="ghost" onPress={() => navigateTo("list")} />
-          </Box>
-          <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>نوع العضو:</Text>
-          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-            <Button label="كابتن" tone={kind === "captain" ? "primary" : "secondary"} onPress={() => navigateTo("create", "captain")} />
-            <Button label="ميداني" tone={kind === "field" ? "primary" : "secondary"} onPress={() => navigateTo("create", "field")} />
-            <Button label="موظف إداري" tone={kind === "employee" ? "primary" : "secondary"} onPress={() => navigateTo("create", "employee")} />
-          </Box>
-        </Card>
+      <EditorPageFrame
+        header={
+          <CpPageHeader title="إضافة عضو Workforce">
+            <CpButton variant="ghost" onClick={() => navigateTo("list")}>رجوع</CpButton>
+          </CpPageHeader>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <CpTabs aria-label="نوع العضو" value={kind} onChange={(value) => navigateTo("create", value as ProviderKind)} items={KIND_TABS} />
 
-        {kind === "captain" ? (
-          <CaptainCreateView inline onCreated={(captain) => navigateTo("detail", "captain", captain.actorId)} />
-        ) : kind === "employee" ? (
-          <EmployeeCreateView inline onCreated={(employee) => navigateTo("detail", "employee", employee.actorId)} />
-        ) : (
-          <FieldAgentCreateView inline onCreated={(agent) => navigateTo("detail", "field", agent.actorId)} />
-        )}
-      </ScrollScreen>
+          {kind === "captain" ? (
+            <CaptainCreateView inline onCreated={(captain) => navigateTo("detail", "captain", captain.actorId)} />
+          ) : kind === "employee" ? (
+            <EmployeeCreateView inline onCreated={(employee) => navigateTo("detail", "employee", employee.actorId)} />
+          ) : (
+            <FieldAgentCreateView inline onCreated={(agent) => navigateTo("detail", "field", agent.actorId)} />
+          )}
+        </div>
+      </EditorPageFrame>
     );
   }
 

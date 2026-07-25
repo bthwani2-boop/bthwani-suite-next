@@ -2,19 +2,18 @@
 
 // Control-panel owns the policy definition only. DSH never creates a WLT
 // ledger entry for this fee; WLT remains the sole financial truth owner.
-import {
-  Badge,
-  Button,
-  SegmentedControl,
-  StateView,
-  Text,
-  TextField,
-  spacing,
-} from "@bthwani/ui-kit";
+import { SegmentedControl, Text, spacing } from "@bthwani/ui-kit";
 import {
   WebStyleSheet as StyleSheet,
   WebView as View,
 } from "@bthwani/ui-kit/web";
+import {
+  CpBadge,
+  CpButton,
+  CpRetryButton,
+  CpStatePanel,
+  CpTextInput,
+} from "@bthwani/control-panel/components";
 import {
   STORE_ONBOARDING_FEE_APPLIES_TO_ITEMS,
   STORE_ONBOARDING_FEE_CHARGE_TIMING_ITEMS,
@@ -38,58 +37,48 @@ export function StoreOnboardingFeePolicySection({
       </Text>
 
       {controller.state.kind === "loading" ? (
-        <StateView title="جارٍ تحميل السياسة…" />
+        <CpStatePanel role="status" title="جارٍ تحميل السياسة…" />
       ) : null}
       {controller.state.kind === "error" ? (
-        <StateView
-          title="تعذر تحميل السياسة"
-          description={controller.state.message}
-          actionLabel="إعادة المحاولة"
-          onActionPress={controller.reload}
-        />
+        <CpStatePanel role="alert" title="تعذر تحميل السياسة" description={controller.state.message}>
+          <CpRetryButton onClick={controller.reload}>إعادة المحاولة</CpRetryButton>
+        </CpStatePanel>
       ) : null}
 
       {controller.state.kind === "success" ? (
         <View style={styles.form}>
           <View style={styles.badges}>
-            <Badge
-              label={`الإصدار ${controller.state.data.version}`}
-              tone="info"
-            />
-            <Badge
-              label={
-                controller.state.data.isConfigured
-                  ? "سياسة مكتملة"
-                  : controller.state.data.blockedReason ?? "السياسة غير مكتملة"
-              }
-              tone={
-                controller.state.data.isConfigured ? "success" : "warning"
-              }
-            />
+            <CpBadge tone="info">{`الإصدار ${controller.state.data.version}`}</CpBadge>
+            <CpBadge tone={controller.state.data.isConfigured ? "success" : "warning"}>
+              {controller.state.data.isConfigured
+                ? "سياسة مكتملة"
+                : controller.state.data.blockedReason ?? "السياسة غير مكتملة"}
+            </CpBadge>
           </View>
 
           <Text role="bodySm">حالة الرسم</Text>
+          {/* SegmentedControl kept: no Cp equivalent for a settings toggle control (CpTabs is for navigation tabs) */}
           <SegmentedControl
             items={STORE_ONBOARDING_FEE_ENABLED_ITEMS}
             value={controller.form.enabledValue}
             onValueChange={controller.setEnabledValue}
           />
 
-          <TextField
-            label="المبلغ"
+          <CpTextInput
+            aria-label="المبلغ"
             value={controller.form.amount}
-            onChangeText={controller.setAmount}
+            onChange={controller.setAmount}
             placeholder="0"
-            keyboardType="numeric"
           />
-          <TextField
-            label="العملة"
+          <CpTextInput
+            aria-label="العملة"
             value={controller.form.currency}
-            onChangeText={controller.setCurrency}
+            onChange={controller.setCurrency}
             placeholder="YER"
           />
 
           <Text role="bodySm">ينطبق على</Text>
+          {/* SegmentedControl kept: no Cp equivalent for a settings toggle control (CpTabs is for navigation tabs) */}
           <SegmentedControl
             items={STORE_ONBOARDING_FEE_APPLIES_TO_ITEMS}
             value={controller.form.appliesTo}
@@ -97,22 +86,23 @@ export function StoreOnboardingFeePolicySection({
           />
 
           <Text role="bodySm">توقيت التحصيل</Text>
+          {/* SegmentedControl kept: no Cp equivalent for a settings toggle control (CpTabs is for navigation tabs) */}
           <SegmentedControl
             items={STORE_ONBOARDING_FEE_CHARGE_TIMING_ITEMS}
             value={controller.form.chargeTiming}
             onValueChange={controller.setChargeTiming}
           />
 
-          <TextField
-            label="ملاحظات"
+          <CpTextInput
+            aria-label="ملاحظات"
             value={controller.form.notes}
-            onChangeText={controller.setNotes}
+            onChange={controller.setNotes}
             placeholder="اختياري"
           />
-          <TextField
-            label="سبب التغيير"
+          <CpTextInput
+            aria-label="سبب التغيير"
             value={controller.form.reason}
-            onChangeText={controller.setReason}
+            onChange={controller.setReason}
             placeholder="سبب تشغيلي قابل للتدقيق"
           />
 
@@ -120,12 +110,13 @@ export function StoreOnboardingFeePolicySection({
             <Text tone="danger">{controller.validationError}</Text>
           ) : null}
 
-          <Button
-            label={controller.saving ? "جارٍ الحفظ…" : "حفظ السياسة"}
-            tone="primary"
+          <CpButton
+            variant="primary"
             disabled={controller.saving}
-            onPress={() => void controller.save()}
-          />
+            onClick={() => void controller.save()}
+          >
+            {controller.saving ? "جارٍ الحفظ…" : "حفظ السياسة"}
+          </CpButton>
         </View>
       ) : null}
     </View>

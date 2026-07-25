@@ -1,20 +1,20 @@
 "use client";
 
 import React from "react";
-import {
-  Badge,
-  Button,
-  Card,
-  DataTable,
-  StateView,
-  Text,
-  TextField,
-  spacing,
-} from "@bthwani/ui-kit";
+import { Card, Text, spacing } from "@bthwani/ui-kit";
 import {
   WebStyleSheet as StyleSheet,
   WebView as View,
 } from "@bthwani/ui-kit/web";
+import {
+  CpBadge,
+  CpButton,
+  CpStatePanel,
+  CpTable,
+  CpTableCell,
+  CpTableHeaderCell,
+  CpTextInput,
+} from "@bthwani/control-panel/components";
 import {
   evaluateDshOperationalPolicy,
   fetchDshOperationalDeliveryModes,
@@ -295,74 +295,96 @@ export function Jrn029OperationalPolicySection() {
             يربط حدود منطقة الخدمة وSLA للتحضير والإسناد والتوصيل والسعة والإيقاف وأنماط التنفيذ بأثر واحد على السلة والدفع والطلب والتوزيع.
           </Text>
         </View>
-        <Button label="تحديث" tone="secondary" onPress={() => void load()} disabled={loading} />
+        <CpButton variant="secondary" onClick={() => void load()} disabled={loading}>تحديث</CpButton>
       </View>
 
       {error ? <Text tone="danger">{error}</Text> : null}
-      {loading ? <StateView title="جارٍ مزامنة الحقيقة التشغيلية…" /> : null}
+      {loading ? <CpStatePanel role="status" title="جارٍ مزامنة الحقيقة التشغيلية…" /> : null}
 
       {zones.state.kind === "success" && zoneRows.length > 0 ? (
-        <DataTable<DshZone & Record<string, unknown>>
-          columns={[
-            { key: "name", header: "المنطقة", render: (row) => row.name },
-            { key: "cityCode", header: "منطقة الخدمة", render: (row) => row.cityCode },
-            { key: "version", header: "الإصدار", render: (row) => String(row.version) },
-            {
-              key: "isActive",
-              header: "الحالة",
-              render: (row) => <Badge label={row.isActive ? "نشطة" : "معطلة"} tone={row.isActive ? "success" : "neutral"} />,
-            },
-          ]}
-          rows={zoneRows}
-          getRowKey={(row) => row.id}
-          onRowPress={(row) => {
-            setSelectedZoneId(row.id);
-            setDecision(null);
-            setSelectedAudit(null);
-          }}
-        />
+        <CpTable aria-label="مناطق الرحلة 29">
+          <thead>
+            <tr>
+              <CpTableHeaderCell>المنطقة</CpTableHeaderCell>
+              <CpTableHeaderCell>منطقة الخدمة</CpTableHeaderCell>
+              <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
+              <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+            </tr>
+          </thead>
+          <tbody>
+            {zoneRows.map((row) => (
+              <tr
+                key={row.id}
+                onClick={() => {
+                  setSelectedZoneId(row.id);
+                  setDecision(null);
+                  setSelectedAudit(null);
+                }}
+              >
+                <CpTableCell>{row.name}</CpTableCell>
+                <CpTableCell>{row.cityCode}</CpTableCell>
+                <CpTableCell>{String(row.version)}</CpTableCell>
+                <CpTableCell>
+                  <CpBadge tone={row.isActive ? "success" : "neutral"}>{row.isActive ? "نشطة" : "معطلة"}</CpBadge>
+                </CpTableCell>
+              </tr>
+            ))}
+          </tbody>
+        </CpTable>
       ) : null}
 
       {selectedZoneId ? (
         <Card style={styles.card}>
           <Text role="titleSm">SLA والسعة والإيقاف</Text>
           <View style={styles.grid}>
-            <TextField label="فئة SLA" value={form.slaCategory} onChangeText={(slaCategory) => setForm((current) => ({ ...current, slaCategory }))} />
-            <TextField label="حد التحضير (د)" value={form.maxPrepMins} onChangeText={(maxPrepMins) => setForm((current) => ({ ...current, maxPrepMins }))} />
-            <TextField label="حد الإسناد (د)" value={form.maxAssignmentMins} onChangeText={(maxAssignmentMins) => setForm((current) => ({ ...current, maxAssignmentMins }))} />
-            <TextField label="حد التوصيل (د)" value={form.maxDeliveryMins} onChangeText={(maxDeliveryMins) => setForm((current) => ({ ...current, maxDeliveryMins }))} />
-            <TextField label="الطلبات المتزامنة" value={form.maxConcurrentOrders} onChangeText={(maxConcurrentOrders) => setForm((current) => ({ ...current, maxConcurrentOrders }))} />
-            <TextField label="الحد الأعلى للكباتن" value={form.maxCaptainsOnline} onChangeText={(maxCaptainsOnline) => setForm((current) => ({ ...current, maxCaptainsOnline }))} />
-            <TextField label="عتبة الضغط 0..1" value={form.throttleThreshold} onChangeText={(throttleThreshold) => setForm((current) => ({ ...current, throttleThreshold }))} />
+            <CpTextInput aria-label="فئة SLA" value={form.slaCategory} onChange={(slaCategory) => setForm((current) => ({ ...current, slaCategory }))} />
+            <CpTextInput aria-label="حد التحضير (د)" value={form.maxPrepMins} onChange={(maxPrepMins) => setForm((current) => ({ ...current, maxPrepMins }))} />
+            <CpTextInput aria-label="حد الإسناد (د)" value={form.maxAssignmentMins} onChange={(maxAssignmentMins) => setForm((current) => ({ ...current, maxAssignmentMins }))} />
+            <CpTextInput aria-label="حد التوصيل (د)" value={form.maxDeliveryMins} onChange={(maxDeliveryMins) => setForm((current) => ({ ...current, maxDeliveryMins }))} />
+            <CpTextInput aria-label="الطلبات المتزامنة" value={form.maxConcurrentOrders} onChange={(maxConcurrentOrders) => setForm((current) => ({ ...current, maxConcurrentOrders }))} />
+            <CpTextInput aria-label="الحد الأعلى للكباتن" value={form.maxCaptainsOnline} onChange={(maxCaptainsOnline) => setForm((current) => ({ ...current, maxCaptainsOnline }))} />
+            <CpTextInput aria-label="عتبة الضغط 0..1" value={form.throttleThreshold} onChange={(throttleThreshold) => setForm((current) => ({ ...current, throttleThreshold }))} />
           </View>
           <View style={styles.headerRow}>
-            <Badge label={form.isPaused ? "المنطقة متوقفة" : "المنطقة تعمل"} tone={form.isPaused ? "danger" : "success"} />
-            <Button
-              label={form.isPaused ? "إلغاء الإيقاف" : "إيقاف تشغيلي"}
-              tone={form.isPaused ? "secondary" : "danger"}
-              onPress={() => setForm((current) => ({ ...current, isPaused: !current.isPaused, pauseReason: current.isPaused ? "" : current.pauseReason }))}
-            />
+            <CpBadge tone={form.isPaused ? "danger" : "success"}>{form.isPaused ? "المنطقة متوقفة" : "المنطقة تعمل"}</CpBadge>
+            <CpButton
+              variant={form.isPaused ? "secondary" : "danger"}
+              onClick={() => setForm((current) => ({ ...current, isPaused: !current.isPaused, pauseReason: current.isPaused ? "" : current.pauseReason }))}
+            >
+              {form.isPaused ? "إلغاء الإيقاف" : "إيقاف تشغيلي"}
+            </CpButton>
           </View>
-          {form.isPaused ? <TextField label="سبب الإيقاف" value={form.pauseReason} onChangeText={(pauseReason) => setForm((current) => ({ ...current, pauseReason }))} /> : null}
-          <TextField label="سبب تغيير السياسة" value={form.reason} onChangeText={(reason) => setForm((current) => ({ ...current, reason }))} />
-          <Button label="حفظ SLA والسعة" onPress={() => void saveProfile()} disabled={loading} />
+          {form.isPaused ? <CpTextInput aria-label="سبب الإيقاف" value={form.pauseReason} onChange={(pauseReason) => setForm((current) => ({ ...current, pauseReason }))} /> : null}
+          <CpTextInput aria-label="سبب تغيير السياسة" value={form.reason} onChange={(reason) => setForm((current) => ({ ...current, reason }))} />
+          <CpButton onClick={() => void saveProfile()} disabled={loading}>حفظ SLA والسعة</CpButton>
         </Card>
       ) : null}
 
       <Card style={styles.card}>
         <Text role="titleSm">أنماط التوصيل والتنفيذ</Text>
-        {modeRows.length === 0 ? <StateView title="لا توجد أنماط معرفة" description="شغّل ترحيل الرحلة 29 ثم حدّث البيانات." /> : (
-          <DataTable<DshDeliveryModePolicy & Record<string, unknown>>
-            columns={[
-              { key: "fulfillmentMode", header: "النمط", render: (row) => MODE_LABELS[row.fulfillmentMode] },
-              { key: "slaCategory", header: "فئة SLA", render: (row) => row.slaCategory },
-              { key: "version", header: "الإصدار", render: (row) => String(row.version) },
-              { key: "isEnabled", header: "الإتاحة", render: (row) => <Badge label={row.isEnabled ? "متاح" : "موقوف"} tone={row.isEnabled ? "success" : "neutral"} /> },
-            ]}
-            rows={modeRows}
-            getRowKey={(row) => row.id}
-            onRowPress={(row) => void toggleMode(row)}
-          />
+        {modeRows.length === 0 ? <CpStatePanel role="status" title="لا توجد أنماط معرفة" description="شغّل ترحيل الرحلة 29 ثم حدّث البيانات." /> : (
+          <CpTable aria-label="أنماط التوصيل والتنفيذ">
+            <thead>
+              <tr>
+                <CpTableHeaderCell>النمط</CpTableHeaderCell>
+                <CpTableHeaderCell>فئة SLA</CpTableHeaderCell>
+                <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
+                <CpTableHeaderCell>الإتاحة</CpTableHeaderCell>
+              </tr>
+            </thead>
+            <tbody>
+              {modeRows.map((row) => (
+                <tr key={row.id} onClick={() => void toggleMode(row)}>
+                  <CpTableCell>{MODE_LABELS[row.fulfillmentMode]}</CpTableCell>
+                  <CpTableCell>{row.slaCategory}</CpTableCell>
+                  <CpTableCell>{String(row.version)}</CpTableCell>
+                  <CpTableCell>
+                    <CpBadge tone={row.isEnabled ? "success" : "neutral"}>{row.isEnabled ? "متاح" : "موقوف"}</CpBadge>
+                  </CpTableCell>
+                </tr>
+              ))}
+            </tbody>
+          </CpTable>
         )}
       </Card>
 
@@ -370,17 +392,19 @@ export function Jrn029OperationalPolicySection() {
         <Text role="titleSm">محاكاة الأثر على السلة وCheckout والطلب والتوزيع</Text>
         <View style={styles.modeRow}>
           {(Object.keys(MODE_LABELS) as DshFulfillmentMode[]).map((mode) => (
-            <Button key={mode} label={MODE_LABELS[mode]} tone={evaluationMode === mode ? "primary" : "secondary"} onPress={() => setEvaluationMode(mode)} />
+            <CpButton key={mode} variant={evaluationMode === mode ? "primary" : "secondary"} onClick={() => setEvaluationMode(mode)}>
+              {MODE_LABELS[mode]}
+            </CpButton>
           ))}
         </View>
         <View style={styles.grid}>
-          <TextField label="الطلبات الحالية" value={activeOrders} onChangeText={setActiveOrders} />
-          <TextField label="الكباتن المتصلون" value={captainsOnline} onChangeText={setCaptainsOnline} />
+          <CpTextInput aria-label="الطلبات الحالية" value={activeOrders} onChange={setActiveOrders} />
+          <CpTextInput aria-label="الكباتن المتصلون" value={captainsOnline} onChange={setCaptainsOnline} />
         </View>
-        <Button label="تقييم القرار" onPress={() => void evaluate()} disabled={!selectedZoneId || loading} />
+        <CpButton onClick={() => void evaluate()} disabled={!selectedZoneId || loading}>تقييم القرار</CpButton>
         {decision ? (
           <View style={styles.result}>
-            <Badge label={decision.serviceable ? "قابل للخدمة" : decision.decision} tone={decision.serviceable ? "success" : "danger"} />
+            <CpBadge tone={decision.serviceable ? "success" : "danger"}>{decision.serviceable ? "قابل للخدمة" : decision.decision}</CpBadge>
             <Text role="body">ضغط السعة: {(decision.pressureRatio * 100).toFixed(1)}%</Text>
             <Text role="caption" tone="muted">الأسباب: {decision.reasonCodes.join("، ") || "لا توجد موانع"}</Text>
             <Text role="caption" tone="muted">
@@ -392,25 +416,35 @@ export function Jrn029OperationalPolicySection() {
 
       <Card style={styles.card}>
         <Text role="titleSm">التدقيق والإصدارات والتراجع</Text>
-        {auditRows.length === 0 ? <StateView title="لا توجد أحداث للمنطقة المختارة" /> : (
-          <DataTable<DshOperationalPolicyAuditEvent & Record<string, unknown>>
-            columns={[
-              { key: "aggregateType", header: "النوع", render: (row) => row.aggregateType },
-              { key: "action", header: "الإجراء", render: (row) => row.action },
-              { key: "toVersion", header: "الإصدار", render: (row) => String(row.toVersion) },
-              { key: "reason", header: "السبب", render: (row) => row.reason },
-              { key: "createdAt", header: "التوقيت", render: (row) => new Date(row.createdAt).toLocaleString("ar-YE") },
-            ]}
-            rows={auditRows}
-            getRowKey={(row) => row.id}
-            onRowPress={setSelectedAudit}
-          />
+        {auditRows.length === 0 ? <CpStatePanel role="status" title="لا توجد أحداث للمنطقة المختارة" /> : (
+          <CpTable aria-label="تدقيق السياسة التشغيلية">
+            <thead>
+              <tr>
+                <CpTableHeaderCell>النوع</CpTableHeaderCell>
+                <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
+                <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
+                <CpTableHeaderCell>السبب</CpTableHeaderCell>
+                <CpTableHeaderCell>التوقيت</CpTableHeaderCell>
+              </tr>
+            </thead>
+            <tbody>
+              {auditRows.map((row) => (
+                <tr key={row.id} onClick={() => setSelectedAudit(row)}>
+                  <CpTableCell>{row.aggregateType}</CpTableCell>
+                  <CpTableCell>{row.action}</CpTableCell>
+                  <CpTableCell>{String(row.toVersion)}</CpTableCell>
+                  <CpTableCell>{row.reason}</CpTableCell>
+                  <CpTableCell>{new Date(row.createdAt).toLocaleString("ar-YE")}</CpTableCell>
+                </tr>
+              ))}
+            </tbody>
+          </CpTable>
         )}
         {selectedAudit ? (
           <View style={styles.result}>
             <Text role="caption">العودة إلى الحدث {selectedAudit.toVersion} من {selectedAudit.aggregateType}</Text>
-            <TextField label="سبب التراجع" value={rollbackReason} onChangeText={setRollbackReason} />
-            <Button label="تنفيذ تراجع بإصدار جديد" tone="danger" onPress={() => void rollback()} disabled={loading} />
+            <CpTextInput aria-label="سبب التراجع" value={rollbackReason} onChange={setRollbackReason} />
+            <CpButton variant="danger" onClick={() => void rollback()} disabled={loading}>تنفيذ تراجع بإصدار جديد</CpButton>
           </View>
         ) : null}
       </Card>

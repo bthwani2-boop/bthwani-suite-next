@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Box, Button, Card, Text, spacing } from "@bthwani/ui-kit";
+import { CpBadge, CpButton, CpMutedInline, CpStatePanel } from "@bthwani/control-panel/components";
+import { Text } from "@bthwani/ui-kit";
 
 import {
   fetchWorkforceScopeOptions,
@@ -97,62 +98,64 @@ export function WorkforceScopeManager(props: {
   };
 
   return (
-    <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-      <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-        <Text role="titleSm" style={{ textAlign: "right" }}>نطاقات DSH التشغيلية</Text>
-        <Button label="إعادة تحميل" tone="ghost" disabled={loading || saving} onPress={() => void reload()} />
-      </Box>
-      <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Text role="titleSm">نطاقات DSH التشغيلية</Text>
+        <CpButton variant="ghost" disabled={loading || saving} onClick={() => void reload()}>إعادة تحميل</CpButton>
+      </div>
+      <CpMutedInline>
         التعيينات مرتبطة مباشرةً بـ actor_id. نطاق المتجر يصرح بمتجر محدد، ونطاق المنطقة يصرح بكل المتاجر الحالية والمستقبلية داخل رمز منطقة الخدمة.
-      </Text>
+      </CpMutedInline>
 
-      {loading ? <Text role="bodySm" tone="muted" align="center">جارٍ تحميل النطاقات…</Text> : null}
-      {error ? <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>{error}</Text> : null}
-      {saved ? <Text role="bodySm" tone="success" style={{ textAlign: "right" }}>تم حفظ النطاقات وتسجيل التغيير.</Text> : null}
+      {loading ? <CpStatePanel role="status" title="جارٍ تحميل النطاقات…" /> : null}
+      {error ? <CpStatePanel role="alert" title={error} /> : null}
+      {saved ? <CpBadge tone="success">تم حفظ النطاقات وتسجيل التغيير.</CpBadge> : null}
 
       {!loading ? (
         <>
-          <Text role="bodyStrong" style={{ textAlign: "right" }}>مناطق الخدمة</Text>
-          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
+          <Text role="bodyStrong">مناطق الخدمة</Text>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             {areas.map((area) => (
-              <Button
+              <CpButton
                 key={area.code}
-                label={`${area.code} · ${area.stores} متجر`}
-                tone={selectedAreaCodes.includes(area.code) ? "primary" : "ghost"}
+                variant={selectedAreaCodes.includes(area.code) ? "primary" : "ghost"}
                 disabled={saving}
-                onPress={() => toggleArea(area.code)}
-              />
+                onClick={() => toggleArea(area.code)}
+              >
+                {area.code} · {area.stores} متجر
+              </CpButton>
             ))}
-          </Box>
+          </div>
 
-          <Text role="bodyStrong" style={{ textAlign: "right" }}>المتاجر المحددة</Text>
-          <Box style={{ gap: spacing[2] }}>
+          <Text role="bodyStrong">المتاجر المحددة</Text>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {options.map((store) => (
-              <Box key={store.id} style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", gap: spacing[2] }}>
-                <Box style={{ alignItems: "flex-end", flex: 1 }}>
+              <div key={store.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
+                <div style={{ flex: 1 }}>
                   <Text role="bodySm">{store.displayName}</Text>
-                  <Text role="caption" tone="muted">{store.id} · {store.serviceAreaCode}</Text>
-                </Box>
-                <Button
-                  label={selectedStoreIds.includes(store.id) ? "محدد ✓" : "تحديد"}
-                  tone={selectedStoreIds.includes(store.id) ? "primary" : "secondary"}
+                  <CpMutedInline tight>{store.id} · {store.serviceAreaCode}</CpMutedInline>
+                </div>
+                <CpButton
+                  variant={selectedStoreIds.includes(store.id) ? "primary" : "secondary"}
                   disabled={saving}
-                  onPress={() => toggleStore(store.id)}
-                />
-              </Box>
+                  onClick={() => toggleStore(store.id)}
+                >
+                  {selectedStoreIds.includes(store.id) ? "محدد" : "تحديد"}
+                </CpButton>
+              </div>
             ))}
-          </Box>
+          </div>
 
-          <Button
-            label="حفظ نطاقات DSH"
-            tone="primary"
-            loading={saving}
+          <CpButton
+            variant="primary"
             disabled={saving || (selectedStoreIds.length === 0 && selectedAreaCodes.length === 0)}
-            onPress={() => void save()}
-          />
+            onClick={() => void save()}
+          >
+            {saving ? "جارٍ الحفظ…" : "حفظ نطاقات DSH"}
+          </CpButton>
         </>
       ) : null}
-    </Card>
+    </div>
   );
 }
 

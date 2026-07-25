@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Badge, Card, Text, lightThemeColors } from "@bthwani/ui-kit";
+import { Card, Text } from "@bthwani/ui-kit";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
+import { CpBadge, CpButton, CpTextInput } from "@bthwani/control-panel/components";
 import {
   useWltRefundAuditController,
   useWltRefundController,
@@ -9,24 +11,7 @@ import {
 } from "../../shared/finance-wlt-link/wlt-refund/use-wlt-refund-controller";
 import type { DshWltRefundView } from "../../shared/finance-wlt-link/wlt-refund/wlt-refund.types";
 
-const inputStyle = {
-  width: "100%",
-  border: `1px solid ${lightThemeColors.borderColor}`,
-  borderRadius: "0.5rem",
-  padding: "0.7rem",
-  background: lightThemeColors.backgroundAlt,
-  color: lightThemeColors.color,
-} as const;
-
-const buttonStyle = {
-  border: 0,
-  borderRadius: "0.5rem",
-  padding: "0.65rem 0.9rem",
-  cursor: "pointer",
-  fontWeight: 700,
-} as const;
-
-function refundTone(refund: DshWltRefundView): "success" | "warning" | "danger" | "neutral" {
+function refundTone(refund: DshWltRefundView): CpBadgeTone {
   if (refund.statusBadge === "error") return "danger";
   return refund.statusBadge;
 }
@@ -113,16 +98,22 @@ export function RefundsCommandPanel() {
           المبلغ صفر يعني استرداد كامل المبلغ المتبقي. لا يعتمد النجاح إلا بعد تأكيد WLT والمزود ودفتر الأستاذ.
         </Text>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: "0.7rem" }}>
-          <input aria-label="رقم الطلب" placeholder="رقم الطلب" value={orderId} onChange={(event) => setOrderId(event.target.value)} style={inputStyle} />
-          <input aria-label="جلسة الدفع" placeholder="معرّف جلسة الدفع" value={paymentSessionId} onChange={(event) => setPaymentSessionId(event.target.value)} style={inputStyle} />
-          <input aria-label="العميل" placeholder="معرّف العميل" value={clientId} onChange={(event) => setClientId(event.target.value)} style={inputStyle} />
-          <input aria-label="المبلغ" type="number" min={0} placeholder="المبلغ بالوحدة الصغرى" value={amountMinorUnits} onChange={(event) => setAmountMinorUnits(event.target.value)} style={inputStyle} />
-          <input aria-label="سبب الاسترداد" placeholder="سبب الاسترداد" value={reason} onChange={(event) => setReason(event.target.value)} style={inputStyle} />
-          <input aria-label="مرجع الأهلية" placeholder="مرجع أهلية DSH" value={eligibilityReference} onChange={(event) => setEligibilityReference(event.target.value)} style={inputStyle} />
+          <CpTextInput aria-label="رقم الطلب" placeholder="رقم الطلب" value={orderId} onChange={setOrderId} />
+          <CpTextInput aria-label="جلسة الدفع" placeholder="معرّف جلسة الدفع" value={paymentSessionId} onChange={setPaymentSessionId} />
+          <CpTextInput aria-label="العميل" placeholder="معرّف العميل" value={clientId} onChange={setClientId} />
+          <CpTextInput aria-label="المبلغ" placeholder="المبلغ بالوحدة الصغرى" value={amountMinorUnits} onChange={setAmountMinorUnits} />
+          <CpTextInput aria-label="سبب الاسترداد" placeholder="سبب الاسترداد" value={reason} onChange={setReason} />
+          <CpTextInput aria-label="مرجع الأهلية" placeholder="مرجع أهلية DSH" value={eligibilityReference} onChange={setEligibilityReference} />
         </div>
         <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
-          <button type="button" disabled={busy || !orderId.trim()} onClick={() => void search()} style={{ ...buttonStyle, background: lightThemeColors.info, color: "white" }}>تحميل الاستردادات</button>
-          <button type="button" disabled={busy || !paymentSessionId.trim() || !clientId.trim() || !reason.trim() || !eligibilityReference.trim()} onClick={() => void createRefund()} style={{ ...buttonStyle, background: lightThemeColors.success, color: "white" }}>إنشاء طلب استرداد</button>
+          <CpButton variant="secondary" disabled={busy || !orderId.trim()} onClick={() => void search()}>تحميل الاستردادات</CpButton>
+          <CpButton
+            variant="primary"
+            disabled={busy || !paymentSessionId.trim() || !clientId.trim() || !reason.trim() || !eligibilityReference.trim()}
+            onClick={() => void createRefund()}
+          >
+            إنشاء طلب استرداد
+          </CpButton>
         </div>
         {busy ? (
           <div role="status" aria-live="polite">
@@ -133,14 +124,14 @@ export function RefundsCommandPanel() {
 
       {command.state.kind === "error" ? (
         <div role="alert" aria-live="assertive">
-          <Card style={{ padding: "1rem", borderInlineStart: `4px solid ${lightThemeColors.danger}` }}>
+          <Card style={{ padding: "1rem" }}>
             <Text role="body">{command.state.message}</Text>
           </Card>
         </div>
       ) : null}
       {command.state.kind === "provider_unknown" ? (
         <div role="alert" aria-live="assertive">
-          <Card style={{ padding: "1rem", borderInlineStart: `4px solid ${lightThemeColors.warning}` }}>
+          <Card style={{ padding: "1rem" }}>
             <Text role="titleSm">نتيجة المزود غير محسومة</Text>
             <Text role="body" tone="muted">{command.state.message} لا تعِد التنفيذ؛ استخدم المصالحة أدناه بعد الحصول على دليل المزود.</Text>
           </Card>
@@ -162,11 +153,11 @@ export function RefundsCommandPanel() {
               aria-pressed={selected?.id === refund.id}
               aria-label={`اختيار الاسترداد ${refund.id}، ${refund.amountLabel} ${refund.currency}، ${refund.statusLabel}`}
               onClick={() => setSelectedRefundId(refund.id)}
-              style={{ textAlign: "start", border: `1px solid ${selected?.id === refund.id ? lightThemeColors.info : lightThemeColors.borderColor}`, borderRadius: "0.6rem", padding: "0.8rem", background: "transparent", color: "inherit", cursor: "pointer" }}
+              style={{ textAlign: "start", borderRadius: "0.6rem", padding: "0.8rem", background: "transparent", cursor: "pointer" }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem" }}>
                 <strong>{refund.amountLabel} {refund.currency}</strong>
-                <Badge label={refund.statusLabel} tone={refundTone(refund)} />
+                <CpBadge tone={refundTone(refund)}>{refund.statusLabel}</CpBadge>
               </div>
               <small>{refund.id}</small>
             </button>
@@ -179,27 +170,33 @@ export function RefundsCommandPanel() {
             <>
               <div style={{ display: "flex", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
                 <Text role="body">{selected.id}</Text>
-                <Badge label={selected.statusLabel} tone={refundTone(selected)} />
+                <CpBadge tone={refundTone(selected)}>{selected.statusLabel}</CpBadge>
               </div>
               <Text role="body" tone="muted">{selected.amountLabel} {selected.currency} · {selected.reason ?? "بدون سبب ظاهر"}</Text>
-              <input aria-label="سبب القرار" placeholder="سبب الاعتماد أو الرفض" value={decisionReason} onChange={(event) => setDecisionReason(event.target.value)} style={inputStyle} />
+              <CpTextInput aria-label="سبب القرار" placeholder="سبب الاعتماد أو الرفض" value={decisionReason} onChange={setDecisionReason} />
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                <button type="button" disabled={busy || selected.status !== "requested" || !decisionReason.trim()} onClick={() => void decide("approve")} style={{ ...buttonStyle, background: lightThemeColors.success, color: "white" }}>اعتماد مستقل</button>
-                <button type="button" disabled={busy || selected.status !== "requested" || !decisionReason.trim()} onClick={() => void decide("reject")} style={{ ...buttonStyle, background: lightThemeColors.danger, color: "white" }}>رفض</button>
-                <button type="button" disabled={busy || selected.status !== "approved"} onClick={() => void execute()} style={{ ...buttonStyle, background: lightThemeColors.info, color: "white" }}>تنفيذ لدى المزود</button>
+                <CpButton variant="primary" disabled={busy || selected.status !== "requested" || !decisionReason.trim()} onClick={() => void decide("approve")}>اعتماد مستقل</CpButton>
+                <CpButton variant="danger" disabled={busy || selected.status !== "requested" || !decisionReason.trim()} onClick={() => void decide("reject")}>رفض</CpButton>
+                <CpButton variant="secondary" disabled={busy || selected.status !== "approved"} onClick={() => void execute()}>تنفيذ لدى المزود</CpButton>
               </div>
               {selected.status === "provider_unknown" ? (
-                <div role="region" aria-label="مصالحة النتيجة غير المحسومة" style={{ display: "grid", gap: "0.6rem", paddingTop: "0.5rem", borderTop: `1px solid ${lightThemeColors.borderColor}` }}>
+                <div role="region" aria-label="مصالحة النتيجة غير المحسومة" style={{ display: "grid", gap: "0.6rem", paddingTop: "0.5rem" }}>
                   <Text role="titleSm">مصالحة النتيجة غير المحسومة</Text>
-                  <input aria-label="مرجع المزود" placeholder="مرجع المزود عند تأكيد النجاح" value={providerReference} onChange={(event) => setProviderReference(event.target.value)} style={inputStyle} />
-                  <textarea aria-label="دليل المصالحة" placeholder="ملخص الدليل الخارجي" value={evidenceNote} onChange={(event) => setEvidenceNote(event.target.value)} style={{ ...inputStyle, minHeight: "5rem" }} />
+                  <CpTextInput aria-label="مرجع المزود" placeholder="مرجع المزود عند تأكيد النجاح" value={providerReference} onChange={setProviderReference} />
+                  <textarea
+                    aria-label="دليل المصالحة"
+                    placeholder="ملخص الدليل الخارجي"
+                    value={evidenceNote}
+                    onChange={(event) => setEvidenceNote(event.target.value)}
+                    style={{ minHeight: "5rem", borderRadius: "0.5rem", padding: "0.7rem", width: "100%" }}
+                  />
                   <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                    <button type="button" disabled={busy || !providerReference.trim() || !evidenceNote.trim()} onClick={() => void reconcile("confirmed_success")} style={{ ...buttonStyle, background: lightThemeColors.success, color: "white" }}>تأكيد نجاح موثق</button>
-                    <button type="button" disabled={busy || !evidenceNote.trim()} onClick={() => void reconcile("confirmed_failed")} style={{ ...buttonStyle, background: lightThemeColors.danger, color: "white" }}>تأكيد فشل موثق</button>
+                    <CpButton variant="primary" disabled={busy || !providerReference.trim() || !evidenceNote.trim()} onClick={() => void reconcile("confirmed_success")}>تأكيد نجاح موثق</CpButton>
+                    <CpButton variant="danger" disabled={busy || !evidenceNote.trim()} onClick={() => void reconcile("confirmed_failed")}>تأكيد فشل موثق</CpButton>
                   </div>
                 </div>
               ) : null}
-              <div role="region" aria-label="سجل تدقيق الاسترداد" style={{ display: "grid", gap: "0.35rem", paddingTop: "0.5rem", borderTop: `1px solid ${lightThemeColors.borderColor}` }}>
+              <div role="region" aria-label="سجل تدقيق الاسترداد" style={{ display: "grid", gap: "0.35rem", paddingTop: "0.5rem" }}>
                 <Text role="titleSm">سجل التدقيق</Text>
                 {audit.state.kind === "loading" ? (
                   <div role="status" aria-live="polite"><Text role="body">جارٍ تحميل سجل التدقيق...</Text></div>
@@ -209,10 +206,10 @@ export function RefundsCommandPanel() {
                 ) : null}
                 {audit.state.kind === "loaded" && audit.state.events.length === 0 ? <Text role="body" tone="muted">لا توجد أحداث.</Text> : null}
                 {audit.state.kind === "loaded" ? audit.state.events.map((event) => (
-                  <div key={event.id} style={{ padding: "0.5rem", borderRadius: "0.4rem", background: lightThemeColors.surfaceInset }}>
+                  <Card key={event.id} style={{ padding: "0.5rem" }}>
                     <Text role="body">{event.eventType}: {event.fromStatus ?? "—"} ← {event.toStatus}</Text>
                     <Text role="caption" tone="muted">{event.actorType} · {event.createdAt} · {event.reason ?? "بدون ملاحظة"}</Text>
-                  </div>
+                  </Card>
                 )) : null}
               </div>
             </>

@@ -1,17 +1,15 @@
 import React, { useState } from "react";
-import { WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
+import { Box, Card, Text, TextField } from "@bthwani/ui-kit";
 import {
-  Box,
-  borders,
-  Button,
-  Card,
-  Text,
-  TextField,
-  spacing,
-  radius,
-  colorRoles,
-  statusScale,
-} from "@bthwani/ui-kit";
+  CpBadge,
+  CpButton,
+  CpDescriptionList,
+  CpDescriptionRow,
+  CpMutedInline,
+  CpStatePanel,
+  CpTabs,
+} from "@bthwani/control-panel/components";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
   useProviderActivationController,
@@ -27,6 +25,8 @@ type ProviderActivationWorkspaceProps = {
   readonly entrySource: "hr" | "partners" | "operations";
   readonly onBack?: () => void;
 };
+
+const ALL_STATUS_TAB_VALUE = "__all__";
 
 const STATUS_TABS: Array<{ label: string; value: EngagementStatus | undefined }> = [
   { label: "بانتظار التفعيل", value: "pending_activation" },
@@ -60,53 +60,51 @@ export function ProviderActivationWorkspace({
   const reference = useWorkforceReferenceData();
 
   if (isHrDetail && !selectedActorId) {
-    return (
-      <Card style={styles.errorCard}>
-        <Text role="bodySm" tone="danger" align="center">معرف مقدم الخدمة غير محدد</Text>
-      </Card>
-    );
+    return <CpStatePanel role="alert" title="معرف مقدم الخدمة غير محدد" />;
   }
 
   return (
-    <Box style={styles.container}>
+    <Box gap={3}>
       {!isHrDetail && (
-        <Card style={styles.listCard}>
-          <StatusTabs
-            status={listController.status}
-            onStatusChange={(status) => {
-              listController.setStatus(status);
-              setSelectedActorId(undefined);
-            }}
-          />
-
-          <TextField
-            label="بحث بالاسم أو رقم مقدم الخدمة"
-            value={listController.query}
-            onChangeText={(value) => {
-              listController.setQuery(value);
-            }}
-            placeholder="مثال: FLD-000123 أو أحمد"
-          />
-
-          {listController.state.kind === "loading" && (
-            <Text role="bodySm" tone="muted" style={styles.errorText}>جارٍ التحميل…</Text>
-          )}
-
-          {listController.state.kind === "ready" && providersList.length === 0 && (
-            <Text role="bodySm" tone="muted" style={styles.errorText}>
-              لا يوجد مقدمو خدمة مطابقون — أنشئ الملف من قسم الموارد البشرية أولًا.
-            </Text>
-          )}
-
-          {listController.state.kind === "ready" && (
-            <ProviderList
-              providers={providersList}
-              providerKind={providerKind}
-              selectedActorId={selectedActorId}
-              onSelect={setSelectedActorId}
-              cityLabel={reference.cityLabel}
+        <Card>
+          <Box gap={3}>
+            <StatusTabs
+              status={listController.status}
+              onStatusChange={(status) => {
+                listController.setStatus(status);
+                setSelectedActorId(undefined);
+              }}
             />
-          )}
+
+            <TextField
+              label="بحث بالاسم أو رقم مقدم الخدمة"
+              value={listController.query}
+              onChangeText={(value) => {
+                listController.setQuery(value);
+              }}
+              placeholder="مثال: FLD-000123 أو أحمد"
+            />
+
+            {listController.state.kind === "loading" && (
+              <CpMutedInline tight>جارٍ التحميل…</CpMutedInline>
+            )}
+
+            {listController.state.kind === "ready" && providersList.length === 0 && (
+              <CpMutedInline tight>
+                لا يوجد مقدمو خدمة مطابقون — أنشئ الملف من قسم الموارد البشرية أولًا.
+              </CpMutedInline>
+            )}
+
+            {listController.state.kind === "ready" && (
+              <ProviderList
+                providers={providersList}
+                providerKind={providerKind}
+                selectedActorId={selectedActorId}
+                onSelect={setSelectedActorId}
+                cityLabel={reference.cityLabel}
+              />
+            )}
+          </Box>
         </Card>
       )}
 
@@ -130,16 +128,12 @@ type StatusTabsProps = {
 
 function StatusTabs({ status, onStatusChange }: StatusTabsProps) {
   return (
-    <Box style={styles.tabsContainer}>
-      {STATUS_TABS.map((tab) => (
-        <Button
-          key={tab.label}
-          label={tab.label}
-          tone={status === tab.value ? "primary" : "ghost"}
-          onPress={() => onStatusChange(tab.value)}
-        />
-      ))}
-    </Box>
+    <CpTabs
+      aria-label="حالة الارتباط"
+      value={status ?? ALL_STATUS_TAB_VALUE}
+      items={STATUS_TABS.map((tab) => ({ value: tab.value ?? ALL_STATUS_TAB_VALUE, label: tab.label }))}
+      onChange={(value) => onStatusChange(value === ALL_STATUS_TAB_VALUE ? undefined : (value as EngagementStatus))}
+    />
   );
 }
 
@@ -153,10 +147,10 @@ type ProviderListProps = {
 
 function ProviderList({ providers, providerKind, selectedActorId, onSelect, cityLabel }: ProviderListProps) {
   return (
-    <Box>
+    <Box gap={2}>
       {providers.map((provider) => (
-        <Box key={provider.actorId} style={styles.providerRow}>
-          <Box style={styles.providerInfo}>
+        <Box key={provider.actorId} layoutDirection="row" justify="space-between" align="center">
+          <Box gap={0}>
             <Text role="bodyStrong">{provider.fullNameAr}</Text>
             <Text role="caption" tone="muted">
               {provider.workforceCode} ·{" "}
@@ -166,11 +160,12 @@ function ProviderList({ providers, providerKind, selectedActorId, onSelect, city
               · {ENGAGEMENT_STATUS_LABEL_AR[provider.engagementStatus as EngagementStatus]}
             </Text>
           </Box>
-          <Button
-            label={selectedActorId === provider.actorId ? "محدد ✓" : "اختيار"}
-            tone={selectedActorId === provider.actorId ? "primary" : "secondary"}
-            onPress={() => onSelect(provider.actorId)}
-          />
+          <CpButton
+            variant={selectedActorId === provider.actorId ? "primary" : "secondary"}
+            onClick={() => onSelect(provider.actorId)}
+          >
+            {selectedActorId === provider.actorId ? "محدد ✓" : "اختيار"}
+          </CpButton>
         </Box>
       ))}
     </Box>
@@ -226,23 +221,21 @@ function ProviderActivationWorkspaceInner({
 
   if (loading) {
     return (
-      <Card style={styles.innerCard}>
-        <Text role="bodySm" tone="muted" align="center">جارٍ تحميل بيانات التفعيل…</Text>
+      <Card>
+        <CpMutedInline tight>جارٍ تحميل بيانات التفعيل…</CpMutedInline>
       </Card>
     );
   }
 
   if (error || !detail) {
     return (
-      <Card style={styles.errorDetailCard}>
-        <Text role="bodySm" tone="danger" align="center">
-          {error || "حدث خطأ أثناء تحميل بيانات مقدم الخدمة"}
-        </Text>
-        {onBack && (
-          <Box style={styles.backButtonContainer}>
-            <Button label="رجوع" tone="ghost" onPress={onBack} />
-          </Box>
-        )}
+      <Card>
+        <Box gap={3}>
+          <Text role="bodySm" tone="danger" align="center">
+            {error || "حدث خطأ أثناء تحميل بيانات مقدم الخدمة"}
+          </Text>
+          {onBack && <CpButton variant="ghost" onClick={onBack}>رجوع</CpButton>}
+        </Box>
       </Card>
     );
   }
@@ -276,59 +269,73 @@ function ProviderActivationWorkspaceInner({
   const activeCode = issuedCode;
 
   return (
-    <Box style={styles.container}>
-      <Card style={styles.innerCard}>
-        <Box style={styles.cardHeader}>
-          <Text role="titleSm" style={styles.cardTitle}>
-            إدارة حالة الدخول وتفعيل التطبيق
-          </Text>
-          {onBack && <Button label="إلغاء التحديد" tone="ghost" onPress={onBack} />}
+    <Box gap={3}>
+      <Card>
+        <Box gap={3}>
+          <Box layoutDirection="row" justify="space-between" align="center">
+            <Text role="titleSm">إدارة حالة الدخول وتفعيل التطبيق</Text>
+            {onBack && <CpButton variant="ghost" onClick={onBack}>إلغاء التحديد</CpButton>}
+          </Box>
+
+          <ActivationCodeManager
+            activeCode={activeCode}
+            latest={latest}
+            actionBusy={actionBusy}
+            isReadyToIssue={isReadyToIssue}
+            missingReasons={missingReasons}
+            onIssue={() => void issueCode().then(onReloadList)}
+            onRevoke={() => void revokeCode().then(onReloadList)}
+            formatTime={formatTime}
+            copied={copied}
+            onCopy={handleCopy}
+          />
+
+          {actionError && (
+            <Text role="caption" tone="danger">{actionError}</Text>
+          )}
+
+          <OperationalStatusManager
+            engagementStatus={detail.engagementStatus}
+            reason={reason}
+            onChangeReason={setReason}
+            actionBusy={actionBusy}
+            onSuspend={() =>
+              void suspend(reason.trim()).then((success) => {
+                if (success) {
+                  setReason("");
+                  onReloadList();
+                }
+              })
+            }
+            onReactivate={() =>
+              void reactivate(reason.trim()).then((success) => {
+                if (success) {
+                  setReason("");
+                  onReloadList();
+                }
+              })
+            }
+          />
         </Box>
-
-        <ActivationCodeManager
-          activeCode={activeCode}
-          latest={latest}
-          actionBusy={actionBusy}
-          isReadyToIssue={isReadyToIssue}
-          missingReasons={missingReasons}
-          onIssue={() => void issueCode().then(onReloadList)}
-          onRevoke={() => void revokeCode().then(onReloadList)}
-          formatTime={formatTime}
-          copied={copied}
-          onCopy={handleCopy}
-        />
-
-        {actionError && (
-          <Text role="caption" tone="danger" style={styles.errorText}>
-            {actionError}
-          </Text>
-        )}
-
-        <OperationalStatusManager
-          engagementStatus={detail.engagementStatus}
-          reason={reason}
-          onChangeReason={setReason}
-          actionBusy={actionBusy}
-          onSuspend={() =>
-            void suspend(reason.trim()).then((success) => {
-              if (success) {
-                setReason("");
-                onReloadList();
-              }
-            })
-          }
-          onReactivate={() =>
-            void reactivate(reason.trim()).then((success) => {
-              if (success) {
-                setReason("");
-                onReloadList();
-              }
-            })
-          }
-        />
       </Card>
     </Box>
   );
+}
+
+function activationStatusTone(status: string | undefined): CpBadgeTone {
+  if (status === "pending") return "success";
+  if (status === "consumed") return "info";
+  if (status === "revoked") return "danger";
+  if (status === "expired") return "warning";
+  return "neutral";
+}
+
+function activationStatusLabel(status: string | undefined): string {
+  if (status === "pending") return "صالح للاستخدام";
+  if (status === "consumed") return "مستخدم";
+  if (status === "revoked") return "مبطل";
+  if (status === "expired") return "منتهي الصلاحية";
+  return status ?? "—";
 }
 
 type ActivationCodeManagerProps = {
@@ -358,126 +365,79 @@ function ActivationCodeManager({
 }: ActivationCodeManagerProps) {
   if (!isReadyToIssue) {
     return (
-      <Box style={styles.dangerCard}>
-        <Text role="bodySm" style={styles.dangerTitle}>
-          لا يمكن إصدار كود التفعيل — الملف غير مكتمل:
-        </Text>
-        {missingReasons.map((reasonStr, index) => (
-          <Text key={index} role="bodySm" style={styles.dangerBullet}>
-            • {reasonStr}
-          </Text>
-        ))}
-      </Box>
+      <CpStatePanel role="alert" title="لا يمكن إصدار كود التفعيل — الملف غير مكتمل:">
+        <Box gap={1}>
+          {missingReasons.map((reasonStr, index) => (
+            <Text key={index} role="bodySm">{`• ${reasonStr}`}</Text>
+          ))}
+        </Box>
+      </CpStatePanel>
     );
   }
 
   if (!latest && !activeCode) {
     return (
-      <Box style={styles.codeRow}>
-        <Box style={styles.codeRowInner}>
+      <Box layoutDirection="row" justify="space-between" align="center">
+        <Box layoutDirection="row" gap={3} align="center">
           <Text role="bodyStrong" tone="muted">كود التفعيل</Text>
           <Text role="body" tone="muted">لم يصدر بعد</Text>
         </Box>
-        <Button
-          label="إصدار كود"
-          tone="primary"
-          loading={actionBusy}
-          disabled={actionBusy}
-          onPress={onIssue}
-        />
+        <CpButton variant="primary" disabled={actionBusy} onClick={onIssue}>
+          {actionBusy ? "جارٍ الإصدار…" : "إصدار كود"}
+        </CpButton>
       </Box>
     );
   }
 
   return (
-    <Box style={styles.codeContainer}>
+    <Box gap={2}>
       {activeCode ? (
-        <Box style={styles.dataContainer}>
-          <Box style={styles.codeRow}>
-            <Box style={styles.codeRowInner}>
+        <Box gap={2}>
+          <Box layoutDirection="row" justify="space-between" align="center">
+            <Box layoutDirection="row" gap={3} align="center">
               <Text role="bodyStrong" tone="muted">كود التفعيل</Text>
-              <Text role="titleSm" style={styles.codeText}>{activeCode.code}</Text>
+              <Text role="titleSm">{activeCode.code}</Text>
             </Box>
-            <Button
-              label={copied ? "نسخ ✓" : "نسخ الكود"}
-              tone="secondary"
-              onPress={() => onCopy(activeCode.code)}
-            />
+            <CpButton variant="secondary" onClick={() => onCopy(activeCode.code)}>
+              {copied ? "نسخ ✓" : "نسخ الكود"}
+            </CpButton>
           </Box>
-          <Box style={styles.dataRow}>
-            <Text role="bodySm" tone="muted">الهاتف</Text>
-            <Text role="bodyStrong">{activeCode.maskedPhone}</Text>
-          </Box>
-          <Box style={styles.dataRow}>
-            <Text role="bodySm" tone="muted">ينتهي</Text>
-            <Text role="bodyStrong">{formatTime(activeCode.expiresAt)}</Text>
-          </Box>
-          <Box style={styles.dataRow}>
-            <Text role="bodySm" tone="muted">الحالة</Text>
-            <Text role="bodyStrong" style={{ color: colorRoles.success }}>صالح للاستخدام</Text>
-          </Box>
+          <CpDescriptionList>
+            <CpDescriptionRow label="الهاتف">{activeCode.maskedPhone}</CpDescriptionRow>
+            <CpDescriptionRow label="ينتهي">{formatTime(activeCode.expiresAt)}</CpDescriptionRow>
+            <CpDescriptionRow label="الحالة">
+              <CpBadge tone="success">صالح للاستخدام</CpBadge>
+            </CpDescriptionRow>
+          </CpDescriptionList>
         </Box>
       ) : (
         latest && (
-          <Box style={styles.dataContainer}>
-            <Box style={styles.codeRow}>
-              <Box style={styles.codeRowInner}>
+          <Box gap={2}>
+            <Box layoutDirection="row" justify="space-between" align="center">
+              <Box layoutDirection="row" gap={3} align="center">
                 <Text role="bodyStrong" tone="muted">كود التفعيل</Text>
                 <Text role="body" tone="muted">******</Text>
               </Box>
-              <Button
-                label="إصدار كود جديد"
-                tone="primary"
-                loading={actionBusy}
-                disabled={actionBusy}
-                onPress={onIssue}
-              />
+              <CpButton variant="primary" disabled={actionBusy} onClick={onIssue}>
+                {actionBusy ? "جارٍ الإصدار…" : "إصدار كود جديد"}
+              </CpButton>
             </Box>
-            <Box style={styles.dataRow}>
-              <Text role="bodySm" tone="muted">الهاتف</Text>
-              <Text role="bodyStrong">{latest.maskedPhone}</Text>
-            </Box>
-            <Box style={styles.dataRow}>
-              <Text role="bodySm" tone="muted">ينتهي</Text>
-              <Text role="bodyStrong">{formatTime(latest.expiresAt)}</Text>
-            </Box>
-            <Box style={styles.dataRow}>
-              <Text role="bodySm" tone="muted">الحالة</Text>
-              <Text
-                role="bodyStrong"
-                style={{
-                  color:
-                    latest.status === "pending"
-                      ? colorRoles.success
-                      : latest.status === "consumed"
-                      ? colorRoles.info
-                      : colorRoles.textSecondary,
-                }}
-              >
-                {latest.status === "pending"
-                  ? "صالح للاستخدام"
-                  : latest.status === "consumed"
-                  ? "مستخدم"
-                  : latest.status === "revoked"
-                  ? "مبطل"
-                  : latest.status === "expired"
-                  ? "منتهي الصلاحية"
-                  : latest.status}
-              </Text>
-            </Box>
+            <CpDescriptionList>
+              <CpDescriptionRow label="الهاتف">{latest.maskedPhone}</CpDescriptionRow>
+              <CpDescriptionRow label="ينتهي">{formatTime(latest.expiresAt)}</CpDescriptionRow>
+              <CpDescriptionRow label="الحالة">
+                <CpBadge tone={activationStatusTone(latest.status)}>{activationStatusLabel(latest.status)}</CpBadge>
+              </CpDescriptionRow>
+            </CpDescriptionList>
           </Box>
         )
       )}
 
       {((latest && latest.status === "pending") || activeCode) && (
-        <Box style={styles.revokeContainer}>
-          <Button
-            label="إبطال الكود"
-            tone="danger"
-            loading={actionBusy}
-            disabled={actionBusy}
-            onPress={onRevoke}
-          />
+        <Box layoutDirection="row" justify="flex-end">
+          <CpButton variant="danger" disabled={actionBusy} onClick={onRevoke}>
+            {actionBusy ? "جارٍ الإبطال…" : "إبطال الكود"}
+          </CpButton>
         </Box>
       )}
     </Box>
@@ -502,12 +462,13 @@ function OperationalStatusManager({
   onReactivate,
 }: OperationalStatusManagerProps) {
   return (
-    <Box style={styles.statusSection}>
-      <Text role="bodyStrong" style={styles.statusTitle}>الحالة التشغيلية والارتباط</Text>
-      <Box style={styles.dataRow}>
-        <Text role="bodySm" tone="muted">حالة الارتباط الحالية</Text>
-        <Text role="bodyStrong">{ENGAGEMENT_STATUS_LABEL_AR[engagementStatus]}</Text>
-      </Box>
+    <Box gap={3}>
+      <Text role="bodyStrong">الحالة التشغيلية والارتباط</Text>
+      <CpDescriptionList>
+        <CpDescriptionRow label="حالة الارتباط الحالية">
+          {ENGAGEMENT_STATUS_LABEL_AR[engagementStatus]}
+        </CpDescriptionRow>
+      </CpDescriptionList>
 
       <TextField
         label="سبب الإيقاف / إعادة التفعيل"
@@ -516,138 +477,22 @@ function OperationalStatusManager({
         placeholder="مطلوب للإيقاف، اختياري لإعادة التفعيل"
       />
 
-      <Box style={styles.buttonRow}>
+      <Box layoutDirection="row" gap={2}>
         {engagementStatus !== "suspended" && engagementStatus !== "terminated" && (
-          <Button
-            label="إيقاف الحساب"
-            tone="danger"
-            loading={actionBusy}
+          <CpButton
+            variant="danger"
             disabled={actionBusy || reason.trim().length === 0}
-            onPress={onSuspend}
-          />
+            onClick={onSuspend}
+          >
+            {actionBusy ? "جارٍ التنفيذ…" : "إيقاف الحساب"}
+          </CpButton>
         )}
         {engagementStatus === "suspended" && (
-          <Button
-            label="إعادة تفعيل"
-            tone="primary"
-            loading={actionBusy}
-            disabled={actionBusy}
-            onPress={onReactivate}
-          />
+          <CpButton variant="primary" disabled={actionBusy} onClick={onReactivate}>
+            {actionBusy ? "جارٍ التنفيذ…" : "إعادة تفعيل"}
+          </CpButton>
         )}
       </Box>
     </Box>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    gap: spacing[3],
-  },
-  listCard: {
-    padding: spacing[4],
-    gap: spacing[3],
-  },
-  innerCard: {
-    padding: spacing[4],
-    gap: spacing[3],
-  },
-  errorCard: {
-    padding: spacing[4],
-  },
-  errorDetailCard: {
-    padding: spacing[4],
-    gap: spacing[3],
-  },
-  backButtonContainer: {
-    flexDirection: "row-reverse",
-    justifyContent: "center",
-  },
-  tabsContainer: {
-    flexDirection: "row-reverse",
-    gap: spacing[2],
-    flexWrap: "wrap",
-  },
-  providerRow: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: spacing[2],
-    borderBottomWidth: borders.hairline,
-    borderBottomColor: colorRoles.borderSubtle,
-  },
-  providerInfo: {
-    alignItems: "flex-end",
-  },
-  dangerCard: {
-    padding: spacing[3],
-    backgroundColor: statusScale.dangerSoft,
-    borderColor: statusScale.danger,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    alignItems: "flex-end",
-    gap: spacing[1],
-  },
-  dangerTitle: {
-    color: statusScale.dangerStrong,
-    fontWeight: "bold",
-  },
-  dangerBullet: {
-    color: statusScale.dangerStrong,
-  },
-  cardHeader: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  cardTitle: {
-    textAlign: "right",
-    fontWeight: "bold",
-  },
-  codeRow: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  codeRowInner: {
-    flexDirection: "row-reverse",
-    gap: spacing[4],
-    alignItems: "center",
-  },
-  codeText: {
-    fontFamily: "monospace",
-    letterSpacing: 1,
-    fontWeight: "bold",
-    color: colorRoles.textPrimary,
-  },
-  codeContainer: {
-    gap: spacing[2],
-    borderBottomWidth: borders.hairline,
-    borderBottomColor: colorRoles.borderSubtle,
-    paddingBottom: spacing[3],
-  },
-  dataContainer: {
-    gap: spacing[2],
-  },
-  dataRow: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-  },
-  revokeContainer: {
-    alignItems: "flex-end",
-  },
-  errorText: {
-    textAlign: "right",
-  },
-  statusSection: {
-    gap: spacing[3],
-    marginTop: spacing[2],
-  },
-  statusTitle: {
-    textAlign: "right",
-  },
-  buttonRow: {
-    flexDirection: "row-reverse",
-    gap: spacing[2],
-  },
-});

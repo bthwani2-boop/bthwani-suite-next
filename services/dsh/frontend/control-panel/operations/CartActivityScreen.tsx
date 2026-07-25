@@ -1,8 +1,7 @@
 "use client";
 
-import { CpPageHeader } from "@bthwani/control-panel/components";
+import { CpPageHeader, CpStatePanel, CpTable, CpTableCell, CpTableHeaderCell } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { DataTable, Text } from "@bthwani/ui-kit";
 import { useOperatorCartsController } from "../../shared/cart";
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
 
@@ -30,17 +29,6 @@ function validationLabel(cart: DshCart): string {
   return changes.join(" · ") || "تحتاج مراجعة";
 }
 
-const CART_COLUMNS = [
-  { key: "clientId", header: "معرف العميل", render: (cart: DshCart) => <Text role="body">{cart.clientId}</Text> },
-  { key: "storeId", header: "معرف المتجر", render: (cart: DshCart) => <Text role="body">{cart.storeId}</Text> },
-  { key: "fulfillmentMode", header: "طريقة التنفيذ", render: (cart: DshCart) => <Text role="body">{FULFILLMENT_LABELS[cart.fulfillmentMode] ?? cart.fulfillmentMode}</Text> },
-  { key: "state", header: "الحالة", render: (cart: DshCart) => <Text role="body">{STATE_LABELS[cart.state] ?? cart.state}</Text> },
-  { key: "items", header: "المنتجات", render: (cart: DshCart) => <Text role="body">{String(cart.items.length)}</Text> },
-  { key: "validation", header: "سلامة التشكيلة", render: (cart: DshCart) => <Text role="body">{validationLabel(cart)}</Text> },
-  { key: "version", header: "نسخة السلة", render: (cart: DshCart) => <Text role="body">{String(cart.version)}</Text> },
-  { key: "updatedAt", header: "آخر تحديث", render: (cart: DshCart) => <Text role="body">{new Date(cart.updatedAt).toLocaleString("ar-SA")}</Text> },
-] as const;
-
 export function CartActivityScreen() {
   const controller = useOperatorCartsController("authenticated");
 
@@ -53,19 +41,41 @@ export function CartActivityScreen() {
         </CpPageHeader>
       )}
       stateView={
-        controller.loadState === "loading" ? <Text role="body">جاري تحميل السلال…</Text>
-          : controller.loadState === "empty" ? <Text role="body">لا توجد سلال في هذه الحالة.</Text>
-          : controller.loadState === "error" ? <Text role="body">تعذر تحميل السلال. تحقق من الصلاحيات.</Text>
+        controller.loadState === "loading" ? <CpStatePanel role="status" title="جاري تحميل السلال…" />
+          : controller.loadState === "empty" ? <CpStatePanel role="status" title="لا توجد سلال في هذه الحالة." />
+          : controller.loadState === "error" ? <CpStatePanel role="alert" title="تعذر تحميل السلال" description="تحقق من الصلاحيات." />
           : undefined
       }
     >
       {controller.loadState === "success" && (
-        <DataTable
-          columns={CART_COLUMNS}
-          rows={controller.carts}
-          getRowKey={(cart) => cart.id}
-          emptyTitle="لا توجد سلال"
-        />
+        <CpTable aria-label="نشاط سلال التسوق">
+          <thead>
+            <tr>
+              <CpTableHeaderCell>معرف العميل</CpTableHeaderCell>
+              <CpTableHeaderCell>معرف المتجر</CpTableHeaderCell>
+              <CpTableHeaderCell>طريقة التنفيذ</CpTableHeaderCell>
+              <CpTableHeaderCell>الحالة</CpTableHeaderCell>
+              <CpTableHeaderCell>المنتجات</CpTableHeaderCell>
+              <CpTableHeaderCell>سلامة التشكيلة</CpTableHeaderCell>
+              <CpTableHeaderCell>نسخة السلة</CpTableHeaderCell>
+              <CpTableHeaderCell>آخر تحديث</CpTableHeaderCell>
+            </tr>
+          </thead>
+          <tbody>
+            {controller.carts.map((cart) => (
+              <tr key={cart.id}>
+                <CpTableCell>{cart.clientId}</CpTableCell>
+                <CpTableCell>{cart.storeId}</CpTableCell>
+                <CpTableCell>{FULFILLMENT_LABELS[cart.fulfillmentMode] ?? cart.fulfillmentMode}</CpTableCell>
+                <CpTableCell>{STATE_LABELS[cart.state] ?? cart.state}</CpTableCell>
+                <CpTableCell>{String(cart.items.length)}</CpTableCell>
+                <CpTableCell>{validationLabel(cart)}</CpTableCell>
+                <CpTableCell>{String(cart.version)}</CpTableCell>
+                <CpTableCell>{new Date(cart.updatedAt).toLocaleString("ar-SA")}</CpTableCell>
+              </tr>
+            ))}
+          </tbody>
+        </CpTable>
       )}
     </DataTablePageFrame>
   );

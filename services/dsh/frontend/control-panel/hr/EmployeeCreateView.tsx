@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Box, Button, Card, ScrollScreen, Text, TextField, spacing } from "@bthwani/ui-kit";
+import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
+import { EditorPageFrame } from "@bthwani/control-panel/shell";
+import { Text } from "@bthwani/ui-kit";
 
 import {
   useEmployeeCreateController,
@@ -46,51 +48,60 @@ export function EmployeeCreateView(props: {
     setSupervisor(null);
   };
 
-  const content = (
-    <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-      {!props.inline && (
-        <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-          <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>إضافة موظف إداري</Text>
-          {props.onBack ? <Button label="رجوع" tone="ghost" onPress={props.onBack} /> : null}
-        </Box>
-      )}
-
-      <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+  const body = (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <CpMutedInline>
         ينشئ Workforce الرقم الوظيفي تلقائيًا، بينما تحتفظ Identity برقم الهاتف والدور والجلسات.
-      </Text>
+      </CpMutedInline>
 
-      <TextField label="الاسم الكامل بالعربية *" value={fullNameAr} onChangeText={setFullNameAr} disabled={Boolean(created)} />
-      <TextField label="الاسم بالإنجليزية" value={fullNameEn} onChangeText={setFullNameEn} disabled={Boolean(created)} />
-      <TextField label="رقم الهاتف *" value={phone} onChangeText={setPhone} placeholder="مثال: 777123456" disabled={Boolean(created)} />
-      <TextField label="الإدارة أو القسم *" value={department} onChangeText={setDepartment} placeholder="العمليات" disabled={Boolean(created)} />
-      <TextField label="المسمى الوظيفي *" value={role} onChangeText={setRole} placeholder="مشرف عمليات" disabled={Boolean(created)} />
-      <TextField label="موقع العمل" value={officeLocation} onChangeText={setOfficeLocation} placeholder="المقر الرئيسي" disabled={Boolean(created)} />
-      <TextField label="تاريخ بداية العمل" value={engagementStartDate} onChangeText={setEngagementStartDate} placeholder="YYYY-MM-DD" disabled={Boolean(created)} />
+      <div>
+        <Text role="bodySm">الاسم الكامل بالعربية *</Text>
+        <CpTextInput value={fullNameAr} onChange={setFullNameAr} disabled={Boolean(created)} aria-label="الاسم الكامل بالعربية" />
+      </div>
+      <div>
+        <Text role="bodySm">الاسم بالإنجليزية</Text>
+        <CpTextInput value={fullNameEn} onChange={setFullNameEn} disabled={Boolean(created)} aria-label="الاسم بالإنجليزية" />
+      </div>
+      <div>
+        <Text role="bodySm">رقم الهاتف *</Text>
+        <CpTextInput value={phone} onChange={setPhone} placeholder="مثال: 777123456" disabled={Boolean(created)} aria-label="رقم الهاتف" />
+      </div>
+      <div>
+        <Text role="bodySm">الإدارة أو القسم *</Text>
+        <CpTextInput value={department} onChange={setDepartment} placeholder="العمليات" disabled={Boolean(created)} aria-label="الإدارة أو القسم" />
+      </div>
+      <div>
+        <Text role="bodySm">المسمى الوظيفي *</Text>
+        <CpTextInput value={role} onChange={setRole} placeholder="مشرف عمليات" disabled={Boolean(created)} aria-label="المسمى الوظيفي" />
+      </div>
+      <div>
+        <Text role="bodySm">موقع العمل</Text>
+        <CpTextInput value={officeLocation} onChange={setOfficeLocation} placeholder="المقر الرئيسي" disabled={Boolean(created)} aria-label="موقع العمل" />
+      </div>
+      <div>
+        <Text role="bodySm">تاريخ بداية العمل</Text>
+        <CpTextInput value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" disabled={Boolean(created)} aria-label="تاريخ بداية العمل" />
+      </div>
 
-      <Text role="bodySm" style={{ textAlign: "right", fontWeight: "bold" }}>التسلسل الإداري</Text>
+      <Text role="bodySm" style={{ fontWeight: "bold" }}>التسلسل الإداري</Text>
       <SupervisorPicker kind="employee" selected={supervisor} onSelect={setSupervisor} disabled={Boolean(created)} />
 
       {controller.state.kind === "error" ? (
-        <Text role="bodySm" tone="danger" style={{ textAlign: "right" }}>{controller.state.message}</Text>
+        <CpStatePanel role="alert" title="تعذر إنشاء الموظف الإداري" description={controller.state.message} />
       ) : null}
 
       {created ? (
-        <Box style={{ gap: spacing[2] }}>
-          <Text role="bodyStrong" tone="success" style={{ textAlign: "right" }}>
-            تم إنشاء الموظف الإداري برقم {created.workforceCode}.
-          </Text>
-          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], flexWrap: "wrap" }}>
-            <Button label="فتح الملف" tone="primary" onPress={() => props.onCreated(created)} />
-            <Button label="إضافة موظف آخر" tone="secondary" onPress={reset} />
-          </Box>
-        </Box>
+        <CpStatePanel role="status" title={`تم إنشاء الموظف الإداري برقم ${created.workforceCode}.`}>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            <CpButton variant="primary" onClick={() => props.onCreated(created)}>فتح الملف</CpButton>
+            <CpButton variant="secondary" onClick={reset}>إضافة موظف آخر</CpButton>
+          </div>
+        </CpStatePanel>
       ) : (
-        <Button
-          label="إنشاء الموظف الإداري"
-          tone="primary"
+        <CpButton
+          variant="primary"
           disabled={!canSubmit}
-          loading={controller.state.kind === "submitting"}
-          onPress={() =>
+          onClick={() =>
             void controller.submit({
               fullNameAr: fullNameAr.trim(),
               fullNameEn: fullNameEn.trim() || undefined,
@@ -103,12 +114,26 @@ export function EmployeeCreateView(props: {
               supervisorActorId: supervisor?.actorId,
             })
           }
-        />
+        >
+          {controller.state.kind === "submitting" ? "جارٍ الإنشاء…" : "إنشاء الموظف الإداري"}
+        </CpButton>
       )}
-    </Card>
+    </div>
   );
 
-  return props.inline ? content : <ScrollScreen>{content}</ScrollScreen>;
+  if (props.inline) return body;
+
+  return (
+    <EditorPageFrame
+      header={
+        <CpPageHeader title="إضافة موظف إداري">
+          {props.onBack ? <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton> : null}
+        </CpPageHeader>
+      }
+    >
+      {body}
+    </EditorPageFrame>
+  );
 }
 
 export default EmployeeCreateView;

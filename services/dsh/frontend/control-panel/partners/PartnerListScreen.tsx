@@ -1,10 +1,11 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { neutralScale, statusScale } from "@bthwani/ui-kit";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
+  CpBadge,
   CpButton,
   CpFilterBar,
+  CpMutedInline,
   CpPageHeader,
   CpRetryButton,
   CpSelect,
@@ -46,27 +47,8 @@ const CATEGORY_OPTIONS = [
   { value: "default", label: "أخرى" },
 ];
 
-const TONE_COLOR: Record<string, string> = {
-  success: statusScale.success,
-  danger: statusScale.danger,
-  warning: statusScale.warning,
-  info: statusScale.info,
-};
-
-function statusBadgeStyle(tone: string): CSSProperties {
-  const color = TONE_COLOR[tone] ?? neutralScale[500];
-  return {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "0.2rem 0.6rem",
-    borderRadius: "9999px",
-    fontSize: "0.75rem",
-    fontWeight: 600,
-    background: `${color}22`,
-    color,
-    border: `1px solid ${color}44`,
-    whiteSpace: "nowrap",
-  };
+function toBadgeTone(tone: "success" | "warning" | "danger" | "info" | "muted"): CpBadgeTone {
+  return tone === "muted" ? "neutral" : tone;
 }
 
 type Props = {
@@ -102,11 +84,7 @@ export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
     <DataTablePageFrame
       header={
         <CpPageHeader title="إدارة الشركاء">
-          {controller.total > 0 ? (
-            <span style={{ fontSize: "0.8rem", color: neutralScale[500] }}>
-              {controller.total} شريك
-            </span>
-          ) : null}
+          {controller.total > 0 ? <CpMutedInline>{controller.total} شريك</CpMutedInline> : null}
           {onCreatePartner ? <CpButton onClick={onCreatePartner}>+ إضافة شريك</CpButton> : null}
         </CpPageHeader>
       }
@@ -153,14 +131,14 @@ export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
             <tr key={row.id}>
               <CpTableCell>
                 <div style={{ fontWeight: 600 }}>{row.displayName}</div>
-                <div style={{ fontSize: "0.75rem", color: neutralScale[500] }}>{row.legalNameAr}</div>
+                <CpMutedInline tight>{row.legalNameAr}</CpMutedInline>
               </CpTableCell>
               <CpTableCell>{row.category}</CpTableCell>
               <CpTableCell>
-                <span style={statusBadgeStyle(row.statusTone)}>{row.statusLabel}</span>
+                <CpBadge tone={toBadgeTone(row.statusTone)}>{row.statusLabel}</CpBadge>
               </CpTableCell>
               <CpTableCell>
-                <span style={{ color: neutralScale[500], fontSize: "0.75rem" }}>{row.nextAction}</span>
+                <CpMutedInline>{row.nextAction}</CpMutedInline>
               </CpTableCell>
               <CpTableCell>
                 <CpButton onClick={() => onSelectPartner?.(row.id)}>عرض التفاصيل</CpButton>

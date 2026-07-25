@@ -5,9 +5,9 @@ import {
   CpButton,
   CpKpiCard,
   CpKpiStrip,
+  CpMutedInline,
   CpStatePanel,
 } from "@bthwani/control-panel/components";
-import { WebStyleSheet } from "@bthwani/ui-kit/web";
 import { useAdministrationDiagnosticsController } from "../../shared/administration";
 
 export function AdministrationDiagnosticsPanel() {
@@ -18,16 +18,16 @@ export function AdministrationDiagnosticsPanel() {
   }
   if (diagnostics.state.kind === "error") {
     return (
-      <section style={styles.stack}>
+      <>
         <CpStatePanel role="alert" title={diagnostics.state.message} />
         <CpButton onClick={() => void diagnostics.reload()}>إعادة المحاولة</CpButton>
-      </section>
+      </>
     );
   }
 
   const data = diagnostics.state.data;
   return (
-    <section style={styles.stack} aria-label="تشخيص الإدارة المنقح">
+    <section aria-label="تشخيص الإدارة المنقح">
       <CpStatePanel
         role="status"
         title={data.status === "healthy" ? "الحالة الإدارية مستقرة" : "توجد طلبات إدارية تحتاج متابعة"}
@@ -41,12 +41,10 @@ export function AdministrationDiagnosticsPanel() {
         <CpKpiCard label="تراجعات معلقة" value={data.pendingRollbackCount} />
         <CpKpiCard label="أحداث حساسة خلال 24 ساعة" value={data.recentRestrictedAuditCount} />
       </CpKpiStrip>
-      <span>آخر تحديث: {data.generatedAt}</span>
-      <CpButton onClick={() => void diagnostics.reload()}>تحديث التشخيص</CpButton>
+      <CpMutedInline tight>آخر تحديث: {data.generatedAt}</CpMutedInline>
+      <div>
+        <CpButton onClick={() => void diagnostics.reload()}>تحديث التشخيص</CpButton>
+      </div>
     </section>
   );
 }
-
-const styles = WebStyleSheet.create({
-  stack: { display: "grid", gap: "1rem", padding: "1rem" },
-});

@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
-import { Box, Button, Card, ScrollScreen, Text, spacing } from "@bthwani/ui-kit";
+import {
+  CpButton,
+  CpDescriptionList,
+  CpDescriptionRow,
+  CpMutedInline,
+  CpPageHeader,
+  CpStatePanel,
+} from "@bthwani/control-panel/components";
+import { DetailPageFrame } from "@bthwani/control-panel/shell";
+import { Text } from "@bthwani/ui-kit";
 import {
   ENGAGEMENT_STATUS_LABEL_AR,
   ENGAGEMENT_TYPE_LABEL_AR,
@@ -51,16 +60,20 @@ function FieldAgentDetailBody(props: { readonly actorId: string; readonly onBack
 
   if (controller.state.kind === "error") {
     return (
-      <ScrollScreen>
-        <WorkforceErrorState
-          message={controller.state.message}
-          isSessionExpired={controller.state.isSessionExpired}
-          onRetry={() => void controller.reload()}
-        />
-        <Box style={{ alignItems: "center", marginTop: spacing[2] }}>
-          <Button label="رجوع" tone="ghost" onPress={props.onBack} />
-        </Box>
-      </ScrollScreen>
+      <DetailPageFrame
+        stateView={
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <WorkforceErrorState
+              message={controller.state.message}
+              isSessionExpired={controller.state.isSessionExpired}
+              onRetry={() => void controller.reload()}
+            />
+            <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+          </div>
+        }
+      >
+        <div />
+      </DetailPageFrame>
     );
   }
 
@@ -80,31 +93,26 @@ function FieldAgentDetailBody(props: { readonly actorId: string; readonly onBack
   ];
 
   return (
-    <ScrollScreen>
-      <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-        <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-          <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>ملف مقدم الخدمة</Text>
-          <Button label="رجوع" tone="ghost" onPress={props.onBack} />
-        </Box>
-        {rows.map(([label, value]) => (
-          <Box key={label} style={{ flexDirection: "row-reverse", justifyContent: "space-between" }}>
-            <Text role="bodySm" tone="muted">{label}</Text>
-            <Text role="bodyStrong">{value}</Text>
-          </Box>
-        ))}
-        {(reference.error || zones.error) && (
-          <Text role="caption" tone="warning" style={{ textAlign: "right" }}>
-            تعذر تحميل بعض المسميات المرجعية؛ المعرفات المعروضة تبقى من البيانات السيادية نفسها.
-          </Text>
-        )}
-      </Card>
+    <DetailPageFrame
+      header={
+        <CpPageHeader title="ملف مقدم الخدمة">
+          <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+        </CpPageHeader>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <CpDescriptionList>
+          {rows.map(([label, value]) => (
+            <CpDescriptionRow key={label} label={label}>{value}</CpDescriptionRow>
+          ))}
+        </CpDescriptionList>
+        {reference.error || zones.error ? (
+          <CpMutedInline>تعذر تحميل بعض المسميات المرجعية؛ المعرفات المعروضة تبقى من البيانات السيادية نفسها.</CpMutedInline>
+        ) : null}
 
-      <ProviderActivationWorkspace
-        providerKind="field"
-        initialActorId={agent.actorId}
-        entrySource="hr"
-      />
-    </ScrollScreen>
+        <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
+      </div>
+    </DetailPageFrame>
   );
 }
 
@@ -119,16 +127,20 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
 
   if (controller.state.kind === "error") {
     return (
-      <ScrollScreen>
-        <WorkforceErrorState
-          message={controller.state.message}
-          isSessionExpired={controller.state.isSessionExpired}
-          onRetry={() => void controller.reload()}
-        />
-        <Box style={{ alignItems: "center", marginTop: spacing[2] }}>
-          <Button label="رجوع" tone="ghost" onPress={props.onBack} />
-        </Box>
-      </ScrollScreen>
+      <DetailPageFrame
+        stateView={
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <WorkforceErrorState
+              message={controller.state.message}
+              isSessionExpired={controller.state.isSessionExpired}
+              onRetry={() => void controller.reload()}
+            />
+            <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+          </div>
+        }
+      >
+        <div />
+      </DetailPageFrame>
     );
   }
 
@@ -192,100 +204,71 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
   const isBusy = controller.actionBusy || uploadBusy;
 
   return (
-    <ScrollScreen>
-      <Card style={{ padding: spacing[4], gap: spacing[3] }}>
-        <Box style={{ flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" }}>
-          <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>ملف مقدم الخدمة</Text>
-          <Button label="رجوع" tone="ghost" onPress={props.onBack} />
-        </Box>
-        {rows.map(([label, value]) => (
-          <Box key={label} style={{ flexDirection: "row-reverse", justifyContent: "space-between" }}>
-            <Text role="bodySm" tone="muted">{label}</Text>
-            <Text role="bodyStrong">{value}</Text>
-          </Box>
-        ))}
-        {(reference.error || zones.error) && (
-          <Text role="caption" tone="warning" style={{ textAlign: "right" }}>
-            تعذر تحميل بعض المسميات المرجعية؛ المعرفات المعروضة تبقى من البيانات السيادية نفسها.
-          </Text>
-        )}
-      </Card>
+    <DetailPageFrame
+      header={
+        <CpPageHeader title="ملف مقدم الخدمة">
+          <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
+        </CpPageHeader>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <CpDescriptionList>
+          {rows.map(([label, value]) => (
+            <CpDescriptionRow key={label} label={label}>{value}</CpDescriptionRow>
+          ))}
+        </CpDescriptionList>
+        {reference.error || zones.error ? (
+          <CpMutedInline>تعذر تحميل بعض المسميات المرجعية؛ المعرفات المعروضة تبقى من البيانات السيادية نفسها.</CpMutedInline>
+        ) : null}
 
-      <Card style={{ padding: spacing[4], gap: spacing[2] }}>
-        <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>الوثائق المرفوعة</Text>
-        {uploadError && <Text role="caption" tone="danger" style={{ textAlign: "right" }}>{uploadError}</Text>}
-        <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
-          {documentCount > 0 ? `${documentCount} ملف مرفوع` : "لا توجد ملفات مرفوعة بعد"}
-        </Text>
-        <Box style={{ alignItems: "flex-end" }}>
-          <Button label="رفع وثيقة" tone="secondary" loading={uploadBusy} disabled={isBusy} onPress={() => void pickAndUpload()} />
-        </Box>
-      </Card>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <Text role="titleSm">الوثائق المرفوعة</Text>
+          {uploadError ? <CpStatePanel role="alert" title={uploadError} /> : null}
+          <CpMutedInline>{documentCount > 0 ? `${documentCount} ملف مرفوع` : "لا توجد ملفات مرفوعة بعد"}</CpMutedInline>
+          <CpButton variant="secondary" disabled={isBusy} onClick={() => void pickAndUpload()}>
+            {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة"}
+          </CpButton>
+        </div>
 
-      {profile?.licenseStatus !== "valid" && (
-        <Card style={{ padding: spacing[4], gap: spacing[2] }}>
-          <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }}>مراجعة رخصة القيادة والعمل</Text>
-          <Text role="bodySm" style={{ textAlign: "right" }}>
-            الحالة الحالية: {LICENSE_STATUS_LABEL_AR[profile?.licenseStatus ?? "missing"]}
-          </Text>
-          <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
-            اعتماد الرخصة لا يتاح إلا بعد وجود وثيقة وتاريخ انتهاء صالح. قاعدة Workforce تفرض الشرط نفسه حتى عند استدعاء API مباشرة.
-          </Text>
+        {profile?.licenseStatus !== "valid" ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <Text role="titleSm">مراجعة رخصة القيادة والعمل</Text>
+            <Text role="bodySm">الحالة الحالية: {LICENSE_STATUS_LABEL_AR[profile?.licenseStatus ?? "missing"]}</Text>
+            <CpMutedInline>
+              اعتماد الرخصة لا يتاح إلا بعد وجود وثيقة وتاريخ انتهاء صالح. قاعدة Workforce تفرض الشرط نفسه حتى عند استدعاء API مباشرة.
+            </CpMutedInline>
 
-          {!canApproveLicence && (
-            <Box style={{ gap: spacing[1] }}>
-              {licenceApprovalBlockers.map((reason) => (
-                <Text key={reason} role="caption" tone="warning" style={{ textAlign: "right" }}>• {reason}</Text>
-              ))}
-            </Box>
-          )}
+            {!canApproveLicence ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                {licenceApprovalBlockers.map((reason) => (
+                  <CpMutedInline key={reason}>• {reason}</CpMutedInline>
+                ))}
+              </div>
+            ) : null}
 
-          {controller.actionError && (
-            <Text role="caption" tone="danger" style={{ textAlign: "right" }}>{controller.actionError}</Text>
-          )}
+            {controller.actionError ? <CpStatePanel role="alert" title={controller.actionError} /> : null}
 
-          <Box style={{ flexDirection: "row-reverse", gap: spacing[2], marginTop: spacing[1], flexWrap: "wrap" }}>
-            <Button
-              label="اعتماد الرخصة (صالحة)"
-              tone="primary"
-              loading={controller.actionBusy}
-              disabled={isBusy || !canApproveLicence}
-              onPress={() => void handleUpdateLicense("valid")}
-            />
-            <Button
-              label="رفض الرخصة"
-              tone="danger"
-              loading={controller.actionBusy}
-              disabled={isBusy}
-              onPress={() => void handleUpdateLicense("rejected")}
-            />
-            <Button
-              label="طلب استكمال"
-              tone="secondary"
-              loading={controller.actionBusy}
-              disabled={isBusy}
-              onPress={() => void handleUpdateLicense("missing")}
-            />
-          </Box>
-        </Card>
-      )}
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              <CpButton variant="primary" disabled={isBusy || !canApproveLicence} onClick={() => void handleUpdateLicense("valid")}>
+                اعتماد الرخصة (صالحة)
+              </CpButton>
+              <CpButton variant="danger" disabled={isBusy} onClick={() => void handleUpdateLicense("rejected")}>رفض الرخصة</CpButton>
+              <CpButton variant="secondary" disabled={isBusy} onClick={() => void handleUpdateLicense("missing")}>طلب استكمال</CpButton>
+            </div>
+          </div>
+        ) : null}
 
-      <ProviderActivationWorkspace
-        providerKind="captain"
-        initialActorId={captain.actorId}
-        entrySource="hr"
-      />
-    </ScrollScreen>
+        <ProviderActivationWorkspace providerKind="captain" initialActorId={captain.actorId} entrySource="hr" />
+      </div>
+    </DetailPageFrame>
   );
 }
 
 function LoadingScreen() {
   return (
-    <ScrollScreen>
-      <Card style={{ padding: spacing[4] }}>
-        <Text role="bodySm" tone="muted" align="center">جارٍ تحميل الملف…</Text>
-      </Card>
-    </ScrollScreen>
+    <DetailPageFrame stateView={<CpStatePanel role="status" title="جارٍ تحميل الملف…" />}>
+      <div />
+    </DetailPageFrame>
   );
 }
 

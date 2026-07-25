@@ -3,12 +3,15 @@
 import React, { useState } from "react";
 import {
   CpButton,
+  CpMutedInline,
   CpPageHeader,
   CpStatePanel,
+  CpTable,
+  CpTableCell,
+  CpTableHeaderCell,
   CpTextInput,
 } from "@bthwani/control-panel/components";
-import { DataTablePageFrame } from "@bthwani/control-panel/shell";
-import { WebStyleSheet } from "@bthwani/ui-kit/web";
+import { QueuePageFrame } from "@bthwani/control-panel/shell";
 import {
   useRoleDefinitionApprovalController,
   type DshAdministrationSurface,
@@ -98,7 +101,7 @@ export function RoleDefinitionApprovalQueue() {
   };
 
   return (
-    <DataTablePageFrame
+    <QueuePageFrame
       dir="rtl"
       header={<CpPageHeader title="تعريف الأدوار — Maker / Checker" />}
       stateView={
@@ -107,123 +110,123 @@ export function RoleDefinitionApprovalQueue() {
           : undefined
       }
     >
-      <section style={styles.content}>
-        <article style={styles.card}>
-          <strong>طلب تعريف دور جديد</strong>
-          <div style={styles.formGrid}>
-            <CpTextInput
-              value={name}
-              onChange={setName}
-              placeholder="اسم تقني مثل support-supervisor"
-              aria-label="اسم الدور"
-            />
-            <CpTextInput
-              value={description}
-              onChange={setDescription}
-              placeholder="وصف مسؤوليات الدور"
-              aria-label="وصف الدور"
-            />
-            <CpTextInput
-              value={reason}
-              onChange={setReason}
-              placeholder="سبب إنشاء الدور"
-              aria-label="سبب إنشاء الدور"
-            />
-          </div>
-          <strong>صلاحيات العمليات</strong>
-          <div style={styles.optionRow} aria-label="صلاحيات الدور">
-            {AVAILABLE_PERMISSIONS.map((permission) => (
-              <CpButton
-                key={permission}
-                onClick={() => togglePermission(permission)}
-                aria-pressed={permissions.includes(permission)}
-                style={permissions.includes(permission) ? styles.selectedOption : styles.option}
-              >
-                {permission}
-              </CpButton>
-            ))}
-          </div>
-          <strong>الأسطح المتأثرة</strong>
-          <div style={styles.optionRow} aria-label="أسطح الدور">
-            {AVAILABLE_SURFACES.map((surface) => (
-              <CpButton
-                key={surface}
-                onClick={() => toggleSurface(surface)}
-                aria-pressed={surfaces.includes(surface)}
-                disabled={surface === "control-panel"}
-                style={surfaces.includes(surface) ? styles.selectedOption : styles.option}
-              >
-                {surface}
-              </CpButton>
-            ))}
-          </div>
-          <CpStatePanel
-            role="status"
-            title="لوحة التحكم سطح إلزامي"
-            description="تحديد التطبيقات الأخرى يوثق أثر الدور، ولا يمنح مسار إدارة داخل تلك التطبيقات."
-          />
-          <CpButton
-            disabled={submitting || name.trim().length < 3 || reason.trim().length < 5 || permissions.length === 0}
-            onClick={() => void requestRole()}
-          >
-            إرسال تعريف الدور للمراجعة
-          </CpButton>
-        </article>
-
-        {actionError ? <CpStatePanel role="alert" title={actionError} /> : null}
-
-        {roleRequests.state.kind === "success" && roleRequests.state.data.length === 0 ? (
-          <CpStatePanel role="status" title="لا توجد طلبات تعريف أدوار معلقة." />
-        ) : null}
-
-        {roleRequests.state.kind === "success" ? roleRequests.state.data.map((request) => (
-          <article key={request.id} style={styles.card}>
-            <strong>{request.roleName}</strong>
-            <span>{request.description || "بلا وصف"}</span>
-            <span>الصلاحيات: {request.permissions.join("، ")}</span>
-            <span>الأسطح: {request.surfaces.join("، ")}</span>
-            <span>المنشئ: {request.requestedBy}</span>
-            <span>السبب: {request.reason}</span>
-            <CpTextInput
-              value={reviewNotes[request.id] ?? ""}
-              onChange={(value) => setReviewNotes((current) => ({ ...current, [request.id]: value }))}
-              placeholder="ملاحظة المراجع — إلزامية عند الرفض"
-              aria-label={`ملاحظة مراجعة الدور ${request.roleName}`}
-            />
-            <div style={styles.actionRow}>
-              <CpButton disabled={submitting} onClick={() => void review(request.id, request.version, "approved")}>
-                اعتماد تعريف الدور
-              </CpButton>
-              <CpButton
-                disabled={submitting || (reviewNotes[request.id] ?? "").trim().length < 5}
-                onClick={() => void review(request.id, request.version, "rejected")}
-              >
-                رفض التعريف
-              </CpButton>
-            </div>
-          </article>
-        )) : null}
+      <section aria-label="طلب تعريف دور جديد">
+        <strong>طلب تعريف دور جديد</strong>
+        <CpTextInput
+          value={name}
+          onChange={setName}
+          placeholder="اسم تقني مثل support-supervisor"
+          aria-label="اسم الدور"
+        />
+        <CpTextInput
+          value={description}
+          onChange={setDescription}
+          placeholder="وصف مسؤوليات الدور"
+          aria-label="وصف الدور"
+        />
+        <CpTextInput
+          value={reason}
+          onChange={setReason}
+          placeholder="سبب إنشاء الدور"
+          aria-label="سبب إنشاء الدور"
+        />
+        <strong>صلاحيات العمليات</strong>
+        <div role="group" aria-label="صلاحيات الدور">
+          {AVAILABLE_PERMISSIONS.map((permission) => (
+            <CpButton
+              key={permission}
+              variant={permissions.includes(permission) ? "brand" : "secondary"}
+              onClick={() => togglePermission(permission)}
+              aria-pressed={permissions.includes(permission)}
+            >
+              {permission}
+            </CpButton>
+          ))}
+        </div>
+        <strong>الأسطح المتأثرة</strong>
+        <div role="group" aria-label="أسطح الدور">
+          {AVAILABLE_SURFACES.map((surface) => (
+            <CpButton
+              key={surface}
+              variant={surfaces.includes(surface) ? "brand" : "secondary"}
+              onClick={() => toggleSurface(surface)}
+              aria-pressed={surfaces.includes(surface)}
+              disabled={surface === "control-panel"}
+            >
+              {surface}
+            </CpButton>
+          ))}
+        </div>
+        <CpStatePanel
+          role="status"
+          title="لوحة التحكم سطح إلزامي"
+          description="تحديد التطبيقات الأخرى يوثق أثر الدور، ولا يمنح مسار إدارة داخل تلك التطبيقات."
+        />
+        <CpButton
+          variant="primary"
+          disabled={submitting || name.trim().length < 3 || reason.trim().length < 5 || permissions.length === 0}
+          onClick={() => void requestRole()}
+        >
+          إرسال تعريف الدور للمراجعة
+        </CpButton>
       </section>
-    </DataTablePageFrame>
+
+      {actionError ? <CpStatePanel role="alert" title={actionError} /> : null}
+
+      {roleRequests.state.kind === "success" && roleRequests.state.data.length === 0 ? (
+        <CpStatePanel role="status" title="لا توجد طلبات تعريف أدوار معلقة." />
+      ) : null}
+
+      {roleRequests.state.kind === "success" && roleRequests.state.data.length > 0 ? (
+        <CpTable aria-label="طلبات تعريف الأدوار المعلقة">
+          <thead>
+            <tr>
+              <CpTableHeaderCell>الدور</CpTableHeaderCell>
+              <CpTableHeaderCell>الوصف</CpTableHeaderCell>
+              <CpTableHeaderCell>الصلاحيات</CpTableHeaderCell>
+              <CpTableHeaderCell>الأسطح</CpTableHeaderCell>
+              <CpTableHeaderCell>المنشئ / السبب</CpTableHeaderCell>
+              <CpTableHeaderCell>ملاحظة المراجع</CpTableHeaderCell>
+              <CpTableHeaderCell>الإجراءات</CpTableHeaderCell>
+            </tr>
+          </thead>
+          <tbody>
+            {roleRequests.state.data.map((request) => (
+              <tr key={request.id}>
+                <CpTableCell>{request.roleName}</CpTableCell>
+                <CpTableCell>{request.description || "بلا وصف"}</CpTableCell>
+                <CpTableCell>{request.permissions.join("، ")}</CpTableCell>
+                <CpTableCell>{request.surfaces.join("، ")}</CpTableCell>
+                <CpTableCell>
+                  {request.requestedBy}
+                  <br />
+                  <CpMutedInline tight>{request.reason}</CpMutedInline>
+                </CpTableCell>
+                <CpTableCell>
+                  <CpTextInput
+                    value={reviewNotes[request.id] ?? ""}
+                    onChange={(value) => setReviewNotes((current) => ({ ...current, [request.id]: value }))}
+                    placeholder="ملاحظة المراجع — إلزامية عند الرفض"
+                    aria-label={`ملاحظة مراجعة الدور ${request.roleName}`}
+                  />
+                </CpTableCell>
+                <CpTableCell>
+                  <CpButton variant="brand" disabled={submitting} onClick={() => void review(request.id, request.version, "approved")}>
+                    اعتماد تعريف الدور
+                  </CpButton>{" "}
+                  <CpButton
+                    variant="danger"
+                    disabled={submitting || (reviewNotes[request.id] ?? "").trim().length < 5}
+                    onClick={() => void review(request.id, request.version, "rejected")}
+                  >
+                    رفض التعريف
+                  </CpButton>
+                </CpTableCell>
+              </tr>
+            ))}
+          </tbody>
+        </CpTable>
+      ) : null}
+    </QueuePageFrame>
   );
 }
-
-const styles = WebStyleSheet.create({
-  content: { display: "grid", gap: "1rem" },
-  card: {
-    display: "grid",
-    gap: "0.75rem",
-    padding: "1rem",
-    border: "1px solid var(--card-border, currentColor)",
-    borderRadius: "1rem",
-  },
-  formGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))",
-    gap: "0.75rem",
-  },
-  optionRow: { display: "flex", flexWrap: "wrap", gap: "0.5rem" },
-  option: { opacity: 0.7 },
-  selectedOption: { opacity: 1, fontWeight: 700 },
-  actionRow: { display: "flex", flexWrap: "wrap", gap: "0.75rem" },
-});

@@ -1,6 +1,18 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { CpButton, CpStatePanel, CpTable, CpTableCell, CpTableHeaderCell, CpTextInput } from "@bthwani/control-panel/components";
+import type { CpBadgeTone } from "@bthwani/control-panel/components";
+import {
+  CpBadge,
+  CpButton,
+  CpFilterBar,
+  CpMutedInline,
+  CpStatePanel,
+  CpTable,
+  CpTableCell,
+  CpTableHeaderCell,
+  CpTabs,
+  CpTextInput,
+} from "@bthwani/control-panel/components";
 import { fetchReels } from "../../shared/catalog";
 import type { Reel } from "../../shared/catalog/central-catalog.types";
 
@@ -12,14 +24,25 @@ interface ReelsReviewPanelProps {
   ) => Promise<void>;
 }
 
-const panelStyle = { padding: "1rem" };
-const tableWrapStyle = { overflowX: "auto" as const };
-const filterBarStyle = { display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" as const };
 const reviewRowStyle = { display: "flex", gap: "0.5rem", alignItems: "center" };
-const videoPreviewStyle = { width: 120, height: 80, borderRadius: 6, objectFit: "cover" as const };
 
 const STATUS_OPTIONS = ["all", "pending_review", "approved", "rejected", "archived"] as const;
 type StatusFilter = (typeof STATUS_OPTIONS)[number];
+
+const STATUS_TAB_LABELS: Record<StatusFilter, string> = {
+  all: "الكل",
+  pending_review: "بانتظار المراجعة",
+  approved: "معتمدة",
+  rejected: "مرفوضة",
+  archived: "مؤرشفة",
+};
+
+const REEL_STATUS_TONE: Record<Reel["status"], CpBadgeTone> = {
+  pending_review: "warning",
+  approved: "success",
+  rejected: "danger",
+  archived: "neutral",
+};
 
 export function ReelsReviewPanel({ onReviewReel }: ReelsReviewPanelProps) {
   const [reels, setReels] = useState<readonly Reel[]>([]);
@@ -57,24 +80,21 @@ export function ReelsReviewPanel({ onReviewReel }: ReelsReviewPanelProps) {
   };
 
   return (
-    <div style={panelStyle}>
-      <h3>🎬 مراجعة الريلز (مقاطع الفيديو)</h3>
-      <p style={{ opacity: 0.65, fontSize: "0.875rem" }}>
+    <div>
+      <h3>مراجعة الريلز (مقاطع الفيديو)</h3>
+      <CpMutedInline>
         مقاطع فيديو MP4 مقدمة من الشركاء — تحتاج إلى موافقة المشغل قبل الظهور على الشاشة الرئيسية.
-      </p>
+      </CpMutedInline>
 
-      <div style={filterBarStyle}>
-        {STATUS_OPTIONS.map((s) => (
-          <CpButton
-            key={s}
-            onClick={() => setStatusFilter(s)}
-            aria-pressed={statusFilter === s}
-          >
-            {s === "all" ? "الكل" : s === "pending_review" ? "بانتظار المراجعة" : s === "approved" ? "معتمدة" : s === "rejected" ? "مرفوضة" : "مؤرشفة"}
-          </CpButton>
-        ))}
-        <CpButton onClick={() => void load()} aria-label="تحديث قائمة الريلز">🔄 تحديث</CpButton>
-      </div>
+      <CpFilterBar label="تصفية الريلز">
+        <CpTabs
+          items={STATUS_OPTIONS.map((s) => ({ value: s, label: STATUS_TAB_LABELS[s] }))}
+          value={statusFilter}
+          onChange={(value) => setStatusFilter(value as StatusFilter)}
+          aria-label="تصفية حالة الريلز"
+        />
+        <CpButton onClick={() => void load()} aria-label="تحديث قائمة الريلز">تحديث</CpButton>
+      </CpFilterBar>
 
       {error && <CpStatePanel role="alert" title="خطأ" description={error} />}
 
@@ -83,7 +103,7 @@ export function ReelsReviewPanel({ onReviewReel }: ReelsReviewPanelProps) {
       ) : reels.length === 0 ? (
         <CpStatePanel role="status" title="لا توجد ريلز" description="لا توجد ريلز بهذه الحالة حالياً." />
       ) : (
-        <div style={tableWrapStyle}>
+        <div>
           <CpTable aria-label="جدول مراجعة الريلز">
             <thead>
               <tr dir="rtl">
@@ -109,7 +129,7 @@ export function ReelsReviewPanel({ onReviewReel }: ReelsReviewPanelProps) {
                       <small>{reel.targetId}</small>
                     </CpTableCell>
                     <CpTableCell>
-                      <code>{reel.status}</code>
+                      <CpBadge tone={REEL_STATUS_TONE[reel.status]}>{STATUS_TAB_LABELS[reel.status]}</CpBadge>
                     </CpTableCell>
                     <CpTableCell>
                       {reel.submittedBy}

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Button, Card, ListItem, StateView, Text, spacing } from "@bthwani/ui-kit";
+import { Button, Card, ListItem, Text, spacing } from "@bthwani/ui-kit";
 import { WebView as View, WebStyleSheet as StyleSheet } from "@bthwani/ui-kit/web";
-import { CpTextInput } from "@bthwani/control-panel/components";
+import { CpBadge, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import type { ProviderVisibleFields } from "../../shared/platform";
 import { MAPS_SURFACE_POLICY } from "../../shared/geo";
 
@@ -63,7 +63,7 @@ export function MapsProviderInspector({
         <Text role="caption" style={styles.sectionTitle}>الأسطح المتأثرة</Text>
         <View style={styles.badgeRow}>
           {(provider.affectedSurfaces as string[]).map((s) => (
-            <Badge key={s} label={s} tone="neutral" />
+            <CpBadge key={s} tone="neutral">{s}</CpBadge>
           ))}
         </View>
 
@@ -72,12 +72,12 @@ export function MapsProviderInspector({
           <ListItem
             key={surface}
             title={surface}
-            subtitle={policy.captainMarkerAllowed ? "⚠ captain marker allowed" : "تتبع الكابتن ممنوع ✓"}
+            subtitle={policy.captainMarkerAllowed ? "captain marker allowed" : "تتبع الكابتن ممنوع"}
           />
         ))}
 
-        <StateView
-          tone="info"
+        <CpStatePanel
+          role="status"
           title="الأسرار الحقيقية في Backend فقط"
           description="مفاتيح الخادم (Geocoding / Routes / Places) محفوظة في Backend فقط ولا تظهر في الواجهة. المفتاح المدخل هنا يرسل كـ credential كتابة فقط ولا يُعاد إلى المتصفح."
         />
@@ -111,16 +111,16 @@ export function MapsProviderInspector({
               ) : null}
             </View>
           ) : (
-            <StateView
-              tone="warning"
+            <CpStatePanel
+              role="alert"
               title="صلاحية تحديث المزود مطلوبة"
               description="إدخال المفتاح يظهر فقط لمن يملك provider:update."
             />
           )}
         </View>
 
-        <StateView
-          tone="warning"
+        <CpStatePanel
+          role="alert"
           title="التفعيل يمر عبر Change Workflow ثم Build جديد"
           description="بعد حفظ المفتاح من المنصة يجب مزامنته إلى EAS development وتشغيل build جديد لتطبيق الميداني حتى يدخل في AndroidManifest."
         />
