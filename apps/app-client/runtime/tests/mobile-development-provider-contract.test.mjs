@@ -39,51 +39,52 @@ function withRestoredEnvironment(run) {
   }
 }
 
-test("development provider capabilities remain surface-specific", () => {
+function appEnvSuffix(appKey) {
+  return appKey.replaceAll("-", "_").toUpperCase();
+}
+
+const mobileApps = ["app-client", "app-partner", "app-captain", "app-field"];
+
+test("development provider capabilities remain all-surface and role-specific", () => {
   const apps = manifest.apps;
-  for (const appKey of ["app-client", "app-partner", "app-captain", "app-field"]) {
+  for (const appKey of mobileApps) {
     assert.ok(apps[appKey].features.includes("notifications"), `${appKey}: FCM capability is required`);
     assert.ok(apps[appKey].features.includes("location"), `${appKey}: location capability is required`);
+    assert.ok(apps[appKey].features.includes("maps"), `${appKey}: native maps capability is required`);
   }
 
-  assert.equal(apps["app-client"].features.includes("maps"), false);
-  assert.equal(apps["app-partner"].features.includes("maps"), false);
-  assert.equal(apps["app-field"].features.includes("maps"), false);
-  assert.equal(apps["app-captain"].features.includes("maps"), true);
+  assert.equal(apps["app-client"].features.includes("backgroundLocation"), false);
+  assert.equal(apps["app-partner"].features.includes("backgroundLocation"), false);
+  assert.equal(apps["app-field"].features.includes("backgroundLocation"), false);
   assert.equal(apps["app-captain"].features.includes("backgroundLocation"), true);
 });
 
-test("partner receives location native configuration without Google Maps", () => {
-  withRestoredEnvironment(() => {
-    process.env.GOOGLE_MAPS_ANDROID_API_KEY_APP_PARTNER = "must-not-be-used";
-    const config = defineBthwaniExpoApp("app-partner");
-    assert.ok(pluginNames(config).has("expo-location"));
-    assert.equal(config.android.config?.googleMaps, undefined);
-    assert.equal(config.extra.maps.androidNativeConfigured, false);
-  });
+test("every app receives Google Maps only when its scoped key exists", () => {
+  for (const appKey of mobileApps) {
+    withRestoredEnvironment(() => {
+      const disabled = defineBthwaniExpoApp(appKey);
+      assert.equal(disabled.android.config?.googleMaps, undefined, `${appKey}: maps must remain disabled without a key`);
+      assert.equal(disabled.extra.maps.androidNativeConfigured, false);
+      assert.ok(pluginNames(disabled).has("react-native-maps"), `${appKey}: maps native plugin must remain registered`);
+
+      const scopedName = `GOOGLE_MAPS_ANDROID_API_KEY_${appEnvSuffix(appKey)}`;
+      process.env[scopedName] = `development-${appKey}-map-key`;
+      const configured = defineBthwaniExpoApp(appKey);
+      assert.equal(configured.android.config?.googleMaps?.apiKey, `development-${appKey}-map-key`);
+      assert.equal(configured.extra.maps.androidNativeConfigured, true);
+    });
+  }
 });
 
-test("captain receives Google Maps only when its scoped key exists", () => {
-  withRestoredEnvironment(() => {
-    const disabled = defineBthwaniExpoApp("app-captain");
-    assert.equal(disabled.android.config?.googleMaps, undefined);
-    assert.equal(disabled.extra.maps.androidNativeConfigured, false);
-
-    process.env.GOOGLE_MAPS_ANDROID_API_KEY_APP_CAPTAIN = "development-captain-map-key";
-    const configured = defineBthwaniExpoApp("app-captain");
-    assert.equal(configured.android.config?.googleMaps?.apiKey, "development-captain-map-key");
-    assert.equal(configured.extra.maps.androidNativeConfigured, true);
-  });
-});
-
-test("development permits the captain map fallback while release profiles require Maps", () => {
+test("all map-enabled build profiles require scoped Maps inputs", () => {
   const buildRunner = fs.readFileSync(
     path.join(repoRoot, "tools/scripts/eas-build-mobile.mjs"),
     "utf8",
   );
   for (const marker of [
-    'profile === "development"',
+    "requireNativeProviderInputs",
     "GOOGLE_MAPS_ANDROID_API_KEY is required",
+    "GOOGLE_MAPS_IOS_API_KEY is required",
     "because the app enables native maps",
   ]) {
     assert.ok(buildRunner.includes(marker), `missing build policy marker: ${marker}`);
