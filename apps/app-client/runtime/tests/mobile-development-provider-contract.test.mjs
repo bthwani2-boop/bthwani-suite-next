@@ -105,3 +105,34 @@ test("all map-enabled build profiles require scoped Maps inputs", () => {
   assert.ok(bootstrapScript.includes("DRY RUN"));
   assert.ok(bootstrapScript.includes("No EAS project, variable, credential, build, or workflow was changed"));
 });
+
+test("Android development EAS bootstrap is non-interactive and uses local signing", () => {
+  const bootstrapPath = path.join(
+    repoRoot,
+    "tools/scripts/bootstrap-mobile-eas-android-development.ps1",
+  );
+  const bootstrap = fs.readFileSync(bootstrapPath, "utf8");
+
+  for (const marker of [
+    "credentials.json",
+    "google-platform-input.local.json",
+    "project:info",
+    "--non-interactive",
+    "-UploadMapsToEas",
+    "mobile:eas:preflight:all:dev",
+    "-SubmitBuilds",
+  ]) {
+    assert.ok(bootstrap.includes(marker), `missing non-interactive bootstrap marker: ${marker}`);
+  }
+
+  for (const appKey of mobileApps) {
+    const eas = JSON.parse(
+      fs.readFileSync(path.join(repoRoot, "apps", appKey, "runtime", "eas.json"), "utf8"),
+    );
+    assert.equal(
+      eas.build.development.credentialsSource,
+      "local",
+      `${appKey}: development builds must use generated local credentials`,
+    );
+  }
+});
