@@ -204,4 +204,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Verify immutable commit diff
-        run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
+        env:
+          CI_BASE_SHA: ${{ inputs.base_sha }}
+          CI_HEAD_SHA: ${{ inputs.head_sha }}
+        run: git diff --check "$CI_BASE_SHA" "$CI_HEAD_SHA"
