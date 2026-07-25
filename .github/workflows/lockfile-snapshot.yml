@@ -1,8 +1,9 @@
 name: BThwani Lockfile Snapshot
 
 on:
-  push:
-    branches: [reemsam]
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened]
     paths:
       - "package.json"
       - "apps/**/package.json"
@@ -15,10 +16,9 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
-  group: lockfile-snapshot-reemsam
+  group: lockfile-snapshot-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -51,11 +51,3 @@ jobs:
           path: pnpm-lock.yaml
           if-no-files-found: error
           retention-days: 2
-      - name: Publish snapshot run identifier
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SNAPSHOT_RUN_ID: ${{ github.run_id }}
-        run: |
-          gh api "repos/${GITHUB_REPOSITORY}/issues/157/comments" \
-            --method POST \
-            -f body="LOCKFILE_SNAPSHOT_RUN=${SNAPSHOT_RUN_ID}"
