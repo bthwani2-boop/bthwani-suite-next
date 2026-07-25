@@ -6,6 +6,7 @@ import test from "node:test";
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const read = (relative) => fs.readFileSync(path.join(repoRoot, relative), "utf8");
 const stripComments = (source) => source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+const bffProxyPath = "apps/control-panel/runtime/src/server/bff-proxy.adapter.ts";
 
 test("control-panel emits governed browser security headers", () => {
   const config = read("apps/control-panel/runtime/next.config.ts");
@@ -29,7 +30,7 @@ test("browser identity storage contains no durable real token store", () => {
   assert.doesNotMatch(storage, /\blocalStorage\b/);
   assert.match(storage, /window\.sessionStorage/);
 
-  const proxy = read("apps/control-panel/runtime/src/server/bff-proxy.ts");
+  const proxy = read(bffProxyPath);
   assert.match(proxy, /BFF_HTTP_ONLY_COOKIE_SESSION/);
   assert.match(proxy, /accessToken:\s*BFF_OPAQUE_TOKEN/);
   assert.match(proxy, /refreshToken:\s*BFF_OPAQUE_TOKEN/);
@@ -64,7 +65,7 @@ test("identity and service clients switch to cookie transport for relative bases
 
 test("all control-panel BFF routes share one HttpOnly cookie owner", () => {
   const sessionCookies = read("apps/control-panel/runtime/src/server/session-cookies.ts");
-  const proxy = read("apps/control-panel/runtime/src/server/bff-proxy.ts");
+  const proxy = read(bffProxyPath);
   const authCookies = read("apps/control-panel/runtime/src/app/api/auth/_lib/cookies.ts");
 
   assert.match(sessionCookies, /ACCESS_TOKEN_COOKIE = "dsh_cp_at"/);
@@ -79,7 +80,7 @@ test("all control-panel BFF routes share one HttpOnly cookie owner", () => {
 });
 
 test("all identity token rotation paths require control-panel operator role", () => {
-  const proxy = read("apps/control-panel/runtime/src/server/bff-proxy.ts");
+  const proxy = read(bffProxyPath);
   const loginRoute = read("apps/control-panel/runtime/src/app/api/auth/login/route.ts");
   const refreshRoute = read("apps/control-panel/runtime/src/app/api/auth/refresh/route.ts");
   const sessionRoute = read("apps/control-panel/runtime/src/app/api/auth/session/route.ts");
@@ -95,7 +96,7 @@ test("all identity token rotation paths require control-panel operator role", ()
 });
 
 test("dynamic BFF is limited to Identity and read-only WLT references", () => {
-  const proxy = read("apps/control-panel/runtime/src/server/bff-proxy.ts");
+  const proxy = read(bffProxyPath);
   const route = read("apps/control-panel/runtime/src/app/api/[service]/[...path]/route.ts");
   const forwardedHeaders = proxy.match(
     /const FORWARDED_REQUEST_HEADERS = \[([\s\S]*?)\] as const;/,
@@ -134,7 +135,7 @@ test("authenticated business services use explicit static BFF routes", () => {
 });
 
 test("production BFF upstreams are server-only and fail closed when absent", () => {
-  const proxy = read("apps/control-panel/runtime/src/server/bff-proxy.ts");
+  const proxy = read(bffProxyPath);
   for (const variable of ["IDENTITY_API_BASE_URL", "WLT_API_BASE_URL"]) {
     assert.match(proxy, new RegExp(`env: "${variable}"`));
   }
