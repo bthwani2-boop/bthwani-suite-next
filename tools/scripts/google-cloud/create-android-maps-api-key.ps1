@@ -80,15 +80,80 @@ https://cloud.google.com/sdk/docs/install
     }
 }
 
+function Get-BalancedJsonDocument {
+    param(
+        [Parameter(Mandatory)][string] $Text,
+        [Parameter(Mandatory)][int] $Start
+    )
+
+    if ($Start -lt 0 -or $Start -ge $Text.Length) { return $null }
+    $first = $Text[$Start]
+    if ($first -ne '{' -and $first -ne '[') { return $null }
+
+    $stack = [System.Collections.Generic.Stack[char]]::new()
+    $inString = $false
+    $escaped = $false
+
+    for ($index = $Start; $index -lt $Text.Length; $index++) {
+        $char = $Text[$index]
+
+        if ($inString) {
+            if ($escaped) {
+                $escaped = $false
+            } elseif ($char -eq '\') {
+                $escaped = $true
+            } elseif ($char -eq '"') {
+                $inString = $false
+            }
+            continue
+        }
+
+        if ($char -eq '"') {
+            $inString = $true
+            continue
+        }
+
+        if ($char -eq '{' -or $char -eq '[') {
+            $stack.Push($char)
+            continue
+        }
+
+        if ($char -eq '}' -or $char -eq ']') {
+            if ($stack.Count -eq 0) { return $null }
+            $opening = $stack.Peek()
+            $expected = if ($opening -eq '{') { '}' } else { ']' }
+            if ($char -ne $expected) { return $null }
+            [void] $stack.Pop()
+            if ($stack.Count -eq 0) {
+                return $Text.Substring($Start, $index - $Start + 1)
+            }
+        }
+    }
+
+    return $null
+}
+
 function ConvertFrom-JsonSafe {
     param([Parameter(Mandatory)][string] $Text)
-    $start = $Text.IndexOf('[')
-    $objectStart = $Text.IndexOf('{')
-    if ($start -lt 0 -or ($objectStart -ge 0 -and $objectStart -lt $start)) {
-        $start = $objectStart
+
+    $lastError = $null
+    for ($index = 0; $index -lt $Text.Length; $index++) {
+        $char = $Text[$index]
+        if ($char -ne '{' -and $char -ne '[') { continue }
+
+        $candidate = Get-BalancedJsonDocument -Text $Text -Start $index
+        if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
+
+        try {
+            return $candidate | ConvertFrom-Json -Depth 100
+        } catch {
+            $lastError = $_.Exception.Message
+        }
     }
-    if ($start -lt 0) { throw 'Expected JSON output but no JSON start was found.' }
-    return $Text.Substring($start) | ConvertFrom-Json -Depth 100
+
+    $previewLength = [Math]::Min(1000, $Text.Length)
+    $preview = if ($previewLength -gt 0) { $Text.Substring(0, $previewLength) } else { '<empty>' }
+    throw "Expected parseable JSON in gcloud output. Last parse error: $lastError`nOutput preview:`n$preview"
 }
 
 function Get-KeyNameByDisplayName {
