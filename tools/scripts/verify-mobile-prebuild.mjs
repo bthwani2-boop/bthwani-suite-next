@@ -20,6 +20,24 @@ for (const appKey of appKeys) {
   if (!manifest.apps[appKey]) throw new Error(`unknown mobile app: ${appKey}`);
 }
 
+function run(command, args, cwd, { capture = false, environment = process.env } = {}) {
+  const invocation = resolvePackageManagerInvocation(command, args, environment);
+  const result = spawnSync(invocation.executable, invocation.args, {
+    cwd,
+    encoding: capture ? "utf8" : undefined,
+    stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit",
+    shell: false,
+    windowsHide: true,
+    env: environment,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    const details = capture ? `${result.stdout ?? ""}${result.stderr ?? ""}`.trim() : "";
+    throw new Error(`${command} ${args.join(" ")} failed with exit code ${result.status ?? 1}${details ? `\n${details}` : ""}`);
+  }
+  return capture ? String(result.stdout ?? "").trim() : "";
+}
+
 function runPnpm(args, cwd) {
   const environment = {
     ...process.env,
@@ -27,22 +45,39 @@ function runPnpm(args, cwd) {
     EXPO_NO_TELEMETRY: "1",
     COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
   };
-  const invocation = resolvePackageManagerInvocation("pnpm", args, environment);
-  const result = spawnSync(invocation.executable, invocation.args, {
-    cwd,
-    stdio: "inherit",
-    shell: false,
-    windowsHide: true,
-    env: environment,
-  });
-  if (result.error) throw result.error;
-  if (result.status !== 0) process.exit(result.status ?? 1);
+  run("pnpm", args, cwd, { environment });
+}
+
+function trackedStatus() {
+  return run("git", ["status", "--porcelain=v1", "--untracked-files=no"], root, { capture: true });
+}
+
+function assertTrackedTreeClean(stage) {
+  const status = trackedStatus();
+  if (status) {
+    throw new Error(`${stage} requires a clean tracked Git tree. Modified files:\n${status}`);
+  }
+}
+
+function restorePrebuildTrackedFiles(appKey) {
+  const appPath = `apps/${appKey}/runtime`;
+  run("git", [
+    "restore",
+    "--worktree",
+    "--source=HEAD",
+    "--",
+    appPath,
+    "package.json",
+    "pnpm-lock.yaml",
+  ], root);
 }
 
 function nativeDirsFor(targetPlatform) {
   if (targetPlatform === "all") return ["android", "ios"];
   return [targetPlatform];
 }
+
+assertTrackedTreeClean("Expo prebuild verification");
 
 for (const appKey of appKeys) {
   const appDir = path.join(root, "apps", appKey, "runtime");
@@ -80,7 +115,10 @@ for (const appKey of appKeys) {
     for (const nativeDir of nativeDirs) {
       fs.rmSync(path.join(appDir, nativeDir), { recursive: true, force: true });
     }
+    restorePrebuildTrackedFiles(appKey);
   }
+
+  assertTrackedTreeClean(`Expo prebuild cleanup for ${appKey}`);
 }
 
-console.log(`PASS: clean Expo ${platform} prebuild verified for ${appKeys.join(", ")}`);
+console.log(`PASS: clean, side-effect-free Expo ${platform} prebuild verified for ${appKeys.join(", ")}`);
