@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: spacing[3],
-    ...elevation.raised,
+    ...elevation.overlay,
   },
   cardPressed: {
     opacity: 0.9,
