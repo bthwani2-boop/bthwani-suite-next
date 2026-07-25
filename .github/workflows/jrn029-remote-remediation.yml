@@ -2,15 +2,11 @@ name: JRN-029 Remote Remediation
 
 on:
   push:
-    branches:
-      - reemsam
-    paths:
-      - .github/workflows/jrn029-remote-remediation.yml
+    branches: [reemsam]
+    paths: [.github/workflows/jrn029-remote-remediation.yml]
   pull_request:
-    branches:
-      - master
-    paths:
-      - .github/workflows/jrn029-remote-remediation.yml
+    branches: [master]
+    paths: [.github/workflows/jrn029-remote-remediation.yml]
 
 permissions:
   actions: read
@@ -28,53 +24,21 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Materialize and commit verified JRN-029 artifact
+      - name: Commit verified JRN-029 artifact
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           gh auth setup-git
           gh repo clone bthwani2-boop/bthwani-suite-next workspace -- --depth 1 --branch reemsam --single-branch --quiet
           cd workspace
-
           artifact_dir="${RUNNER_TEMP}/jrn029-openapi"
-          mkdir -p "${artifact_dir}"
-          gh run download 30147430390 \
-            --repo bthwani2-boop/bthwani-suite-next \
-            --name jrn029-openapi-remediation-30147430390 \
-            --dir "${artifact_dir}"
-
-          find "${artifact_dir}" -maxdepth 5 -type f -print
-          test -f "${artifact_dir}/contracts/dsh.openapi.yaml"
-          test -f "${artifact_dir}/contracts/paths/platform-policies.paths.yaml"
-          test -f "${artifact_dir}/contracts/components/schemas/platform-policies.schemas.yaml"
-          test -f "${artifact_dir}/contracts/dsh.modular.manifest.json"
-          test -f "${artifact_dir}/contracts/dsh.contract-ownership.json"
-          test -f "${artifact_dir}/contracts/generated/dsh.bundle.openapi.yaml"
-          test -f "${artifact_dir}/clients/generated/dsh-api.ts"
-
-          install -D "${artifact_dir}/contracts/dsh.openapi.yaml" services/dsh/contracts/dsh.openapi.yaml
-          install -D "${artifact_dir}/contracts/paths/platform-policies.paths.yaml" services/dsh/contracts/paths/platform-policies.paths.yaml
-          install -D "${artifact_dir}/contracts/components/schemas/platform-policies.schemas.yaml" services/dsh/contracts/components/schemas/platform-policies.schemas.yaml
-          install -D "${artifact_dir}/contracts/dsh.modular.manifest.json" services/dsh/contracts/dsh.modular.manifest.json
-          install -D "${artifact_dir}/contracts/dsh.contract-ownership.json" services/dsh/contracts/dsh.contract-ownership.json
-          install -D "${artifact_dir}/contracts/generated/dsh.bundle.openapi.yaml" services/dsh/contracts/generated/dsh.bundle.openapi.yaml
-          install -D "${artifact_dir}/clients/generated/dsh-api.ts" services/dsh/clients/generated/dsh-api.ts
-
-          git fetch --depth=1 origin 4bff994125cf4d3f3296c5af85f5d70b17eaf49e --quiet
-          git checkout FETCH_HEAD -- .github/workflows/ci-node-verification.yml
-          git add \
-            services/dsh/contracts/dsh.openapi.yaml \
-            services/dsh/contracts/paths/platform-policies.paths.yaml \
-            services/dsh/contracts/components/schemas/platform-policies.schemas.yaml \
-            services/dsh/contracts/dsh.modular.manifest.json \
-            services/dsh/contracts/dsh.contract-ownership.json \
-            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
-            services/dsh/clients/generated/dsh-api.ts \
-            .github/workflows/ci-node-verification.yml
+          gh run download 30147430390 --repo bthwani2-boop/bthwani-suite-next --name jrn029-openapi-remediation-30147430390 --dir "${artifact_dir}"
+          cp -a "${artifact_dir}/contracts/." services/dsh/contracts/
+          cp -a "${artifact_dir}/clients/generated/dsh-api.ts" services/dsh/clients/generated/dsh-api.ts
+          git add services/dsh/contracts services/dsh/clients/generated/dsh-api.ts
           git rm tools/scripts/integrate-jrn029-openapi.mjs
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "fix(openapi): integrate JRN-029 operational policy contracts"
