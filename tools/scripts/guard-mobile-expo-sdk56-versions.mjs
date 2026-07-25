@@ -17,6 +17,8 @@ const expoSdk56Policy = Object.freeze({
   "expo-linking": "~56.0.16",
   "expo-router": "~56.2.16",
   "expo-task-manager": "~56.0.23",
+  "react-native": "0.85.3",
+  "react-native-maps": "1.27.2",
 });
 
 const forcedPnpmPolicy = Object.freeze({
