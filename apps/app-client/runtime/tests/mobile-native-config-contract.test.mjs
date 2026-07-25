@@ -65,7 +65,7 @@ test("push registration is fail-closed when Firebase or native APIs are absent",
   );
   for (const marker of [
     "androidNativePushConfigured",
-    "Firebase is not configured in the native Android build",
+    'Platform.OS === "android" && !androidNativePushConfigured()',
     'typeof getLastResponse === "function"',
     'typeof addPushTokenListener === "function"',
     "rebuild the development client after configuring GOOGLE_SERVICES_JSON",
