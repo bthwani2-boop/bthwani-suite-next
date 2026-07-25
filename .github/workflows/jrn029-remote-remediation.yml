@@ -6,10 +6,16 @@ on:
       - reemsam
     paths:
       - .github/workflows/jrn029-remote-remediation.yml
+  pull_request:
+    branches:
+      - master
+    paths:
+      - .github/workflows/jrn029-remote-remediation.yml
 
 permissions:
   actions: read
   contents: write
+  pull-requests: read
 
 concurrency:
   group: jrn029-remote-remediation-reemsam
@@ -18,6 +24,7 @@ concurrency:
 jobs:
   remediate:
     name: Commit generated OpenAPI remediation
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
