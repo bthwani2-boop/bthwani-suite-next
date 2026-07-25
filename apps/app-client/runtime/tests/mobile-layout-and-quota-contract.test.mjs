@@ -14,26 +14,28 @@ function read(...segments) {
 }
 
 test("Firebase REST authentication always supplies the governed quota project", () => {
-  const wrapper = read("apps", "mobile", "eas", "firebase.ps1");
-  const core = read("apps", "mobile", "eas", "firebase-core.ps1");
+  const firebase = read("apps", "mobile", "eas", "firebase.ps1");
 
   for (const marker of [
     "X-Goog-User-Project",
     "billing/quota_project",
     "serviceusage.googleapis.com",
     "firebase.googleapis.com",
-    "firebase-core.ps1",
-  ]) assert.ok(wrapper.includes(marker), `missing Firebase quota marker: ${marker}`);
+    "Microsoft.PowerShell.Utility\\Invoke-RestMethod",
+    "Get-FirebaseErrorText",
+  ]) assert.ok(firebase.includes(marker), `missing Firebase quota marker: ${marker}`);
 
   for (const marker of [
     "https://firebase.googleapis.com/v1beta1",
     "projects/$ProjectId/androidApps",
     "configFileContents",
     "FromBase64String",
-  ]) assert.ok(core.includes(marker), `missing Firebase core marker: ${marker}`);
+  ]) assert.ok(firebase.includes(marker), `missing Firebase REST marker: ${marker}`);
 
-  assert.equal(core.includes("apps:sdkconfig"), false);
-  assert.equal(core.includes("firebase-tools@"), false);
+  assert.equal(firebase.includes("$_.ErrorDetails.Message"), false);
+  assert.equal(firebase.includes("apps:sdkconfig"), false);
+  assert.equal(firebase.includes("firebase-tools@"), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, "apps", "mobile", "eas", "firebase-core.ps1")), false);
 });
 
 test("mobile operational scripts live under apps/mobile", () => {
