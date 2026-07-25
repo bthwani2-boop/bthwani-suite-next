@@ -58,8 +58,8 @@ export function StoreCardPremium({
     setLogoFailed(false);
   }, [logoUri]);
 
-  const showHeroImage = heroUri !== null && !heroFailed;
-  const showLogoImage = logoUri !== null && !logoFailed;
+  const heroImageUri = heroUri !== null && !heroFailed ? heroUri : null;
+  const logoImageUri = logoUri !== null && !logoFailed ? logoUri : null;
   const metaLine = useMemo(() => buildMetaLine(store), [store]);
   const chips = useMemo(() => buildMarketingChips(store), [store]);
 
@@ -108,10 +108,10 @@ export function StoreCardPremium({
       </View>
 
       <View style={styles.mediaBlock}>
-        <View style={[styles.heroWrap, { backgroundColor: placeholderBgColor }]}>
-          {showHeroImage ? (
+        <View style={[styles.heroWrap, { backgroundColor: placeholderBgColor }]}> 
+          {heroImageUri ? (
             <Image
-              source={{ uri: heroUri }}
+              source={{ uri: heroImageUri }}
               style={StyleSheet.absoluteFill}
               resizeMode="cover"
               accessibilityIgnoresInvertColors
@@ -130,9 +130,9 @@ export function StoreCardPremium({
         </View>
 
         <View style={styles.logoRing}>
-          {showLogoImage ? (
+          {logoImageUri ? (
             <Image
-              source={{ uri: logoUri }}
+              source={{ uri: logoImageUri }}
               style={styles.logoImg}
               resizeMode="contain"
               alt=""
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   },
   mediaScrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: alpha(neutralScale[1000], 0.05),
+    backgroundColor: alpha(neutralScale[950], 0.05),
   },
   heroEmoji: {
     fontSize: 32,
