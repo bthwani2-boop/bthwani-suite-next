@@ -1,12 +1,14 @@
 # tools/scripts/prepare-app-field-eas-android-remote.ps1
-# Prepare app-field only for an Android EAS Remote Build.
-# This script intentionally avoids the all-app bootstrap path so field builds can
-# be prepared, verified, and submitted independently.
+# Sovereign single-app Android EAS workflow for app-field.
+# Modes are intentionally separated:
+#   Initialize - provision missing cloud inputs once.
+#   Preflight  - verify local inputs and app-field only; no cloud mutations.
+#   Build      - submit app-field only after a successful preflight; no cloud mutations.
 
 [CmdletBinding()]
 param(
-    [switch] $SubmitBuild,
-    [switch] $SkipPreflight,
+    [ValidateSet('Initialize', 'Preflight', 'Build')]
+    [string] $Mode = 'Preflight',
     [switch] $ClearCache
 )
 
@@ -31,6 +33,7 @@ $PrepareFcmScript = Join-Path $RepoRoot 'tools\scripts\google-cloud\prepare-fcm-
 $CreateMapsKeyScript = Join-Path $RepoRoot 'tools\scripts\google-cloud\create-android-maps-api-key.ps1'
 $EasBuildScript = Join-Path $RepoRoot 'tools\scripts\eas-build-mobile.mjs'
 $DefaultFirebasePath = 'C:\bthwani-secrets\firebase\app-field\google-services.json'
+$FcmServiceAccountPath = 'C:\bthwani-secrets\firebase\bthwani-platform-fcm-v1-service-account.json'
 
 function Write-Step {
     param([Parameter(Mandatory)][string] $Message)
@@ -57,9 +60,11 @@ function Test-SameFilePath {
         [Parameter(Mandatory)][string] $Left,
         [Parameter(Mandatory)][string] $Right
     )
-    $leftFull = ConvertTo-FullPath -Path $Left
-    $rightFull = ConvertTo-FullPath -Path $Right
-    return [string]::Equals($leftFull, $rightFull, [System.StringComparison]::OrdinalIgnoreCase)
+    return [string]::Equals(
+        (ConvertTo-FullPath -Path $Left),
+        (ConvertTo-FullPath -Path $Right),
+        [System.StringComparison]::OrdinalIgnoreCase
+    )
 }
 
 function Get-AppEnvironmentSuffix {
@@ -103,7 +108,9 @@ function Resolve-FieldFirebaseSource {
         $entry = $map.PSObject.Properties[$AppKey]
         if ($null -ne $entry -and -not [string]::IsNullOrWhiteSpace([string]$entry.Value)) {
             $candidate = [string]$entry.Value
-            if (Test-Path -LiteralPath $candidate -PathType Leaf) { return (Resolve-Path -LiteralPath $candidate).Path }
+            if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                return (Resolve-Path -LiteralPath $candidate).Path
+            }
         }
     }
     if (Test-Path -LiteralPath $DefaultFirebasePath -PathType Leaf) {
@@ -141,12 +148,18 @@ function Invoke-Checked {
     }
 }
 
+function Test-ValidMapsKey {
+    param([AllowNull()][string] $Value)
+    if ([string]::IsNullOrWhiteSpace($Value)) { return $false }
+    if ($Value -match 'placeholder|bthwani_dev_maps_key_placeholder') { return $false }
+    return $Value -match '^AIza[0-9A-Za-z_-]{20,}$'
+}
+
 function Write-FieldRuntimeEnvironmentFile {
     param([Parameter(Mandatory)][string] $AndroidMapsKey)
-
     @(
-        '# Generated locally by prepare-app-field-eas-android-remote.ps1.',
-        '# This file is intentionally untracked but must be included in the EAS archive.',
+        '# Generated locally for app-field EAS archive.',
+        '# Untracked by Git and intentionally included by apps/app-field/runtime/.easignore.',
         'GOOGLE_SERVICES_JSON=./google-services.json',
         'GOOGLE_SERVICES_JSON_APP_FIELD=./google-services.json',
         "GOOGLE_MAPS_ANDROID_API_KEY=$AndroidMapsKey",
@@ -162,8 +175,8 @@ function Invoke-AppFieldExpoConfigProof {
     $previousMaps = [Environment]::GetEnvironmentVariable('GOOGLE_MAPS_ANDROID_API_KEY', 'Process')
     $previousScopedMaps = [Environment]::GetEnvironmentVariable('GOOGLE_MAPS_ANDROID_API_KEY_APP_FIELD', 'Process')
     try {
-        [Environment]::SetEnvironmentVariable('GOOGLE_SERVICES_JSON', './google-services.json', 'Process')
-        [Environment]::SetEnvironmentVariable('GOOGLE_SERVICES_JSON_APP_FIELD', './google-services.json', 'Process')
+        [Environment]::SetEnvironmentVariable('GOOGLE_SERVICES_JSON', $RuntimeGoogleServicesPath, 'Process')
+        [Environment]::SetEnvironmentVariable('GOOGLE_SERVICES_JSON_APP_FIELD', $RuntimeGoogleServicesPath, 'Process')
         [Environment]::SetEnvironmentVariable('GOOGLE_MAPS_ANDROID_API_KEY', $ExpectedMapsKey, 'Process')
         [Environment]::SetEnvironmentVariable('GOOGLE_MAPS_ANDROID_API_KEY_APP_FIELD', $ExpectedMapsKey, 'Process')
         $configText = Invoke-Checked -Command 'pnpm' -Arguments @('exec', 'expo', 'config', '--json') -WorkingDirectory $AppDir -Quiet -SecretValues @($ExpectedMapsKey)
@@ -173,14 +186,14 @@ function Invoke-AppFieldExpoConfigProof {
         if ([string]$config.owner -ne [string]$manifest.global.owner) { throw 'app-field owner mismatch.' }
         if ([string]$config.slug -ne [string]$app.slug) { throw 'app-field slug mismatch.' }
         if ([string]$config.extra.eas.projectId -ne $projectId) { throw 'app-field EAS project ID mismatch.' }
-        $resolvedConfigGoogleServicesFile = [string]$config.android.googleServicesFile
-        if (-not (Test-SameFilePath -Left $resolvedConfigGoogleServicesFile -Right $RuntimeGoogleServicesPath)) {
-            throw "app-field android.googleServicesFile resolved to '$resolvedConfigGoogleServicesFile', expected the runtime-local file '$RuntimeGoogleServicesPath'."
+        $resolvedGoogleServices = [string]$config.android.googleServicesFile
+        if (-not (Test-SameFilePath -Left $resolvedGoogleServices -Right $RuntimeGoogleServicesPath)) {
+            throw "app-field android.googleServicesFile resolved to '$resolvedGoogleServices', expected '$RuntimeGoogleServicesPath'."
         }
         if ($config.extra.maps.androidNativeConfigured -ne $true) {
             throw 'app-field Android Maps native flag is not configured.'
         }
-        Write-Host "PASS: app-field Expo config resolves Firebase and Android Maps from runtime-local build inputs." -ForegroundColor Green
+        Write-Host 'PASS: app-field Expo config resolves the staged Firebase and Maps inputs.' -ForegroundColor Green
     } finally {
         [Environment]::SetEnvironmentVariable('GOOGLE_SERVICES_JSON', $previousGoogleServices, 'Process')
         [Environment]::SetEnvironmentVariable('GOOGLE_SERVICES_JSON_APP_FIELD', $previousScopedGoogleServices, 'Process')
@@ -189,13 +202,69 @@ function Invoke-AppFieldExpoConfigProof {
     }
 }
 
-foreach ($required in @(
-    $ManifestPath,
-    $FirebaseValidatorPath,
-    $PrepareFcmScript,
-    $CreateMapsKeyScript,
-    $EasBuildScript
-)) {
+function Initialize-CloudInputsWhenMissing {
+    Write-Step 'Initialize missing app-field cloud inputs once'
+
+    if (-not (Test-Path -LiteralPath $FcmServiceAccountPath -PathType Leaf)) {
+        Assert-File -Path $PrepareFcmScript
+        Invoke-Checked -Command 'pwsh' -Arguments @(
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PrepareFcmScript, '-Apply'
+        ) | Out-Null
+    } else {
+        Write-Host "PASS: existing FCM service-account key preserved: $FcmServiceAccountPath" -ForegroundColor Green
+    }
+
+    Import-EnvFile -Path $MobileEnvPath
+    $mapsKey = Resolve-AppScopedValue -BaseName 'GOOGLE_MAPS_ANDROID_API_KEY' -Key $AppKey
+    if (-not (Test-ValidMapsKey -Value $mapsKey)) {
+        Assert-File -Path $GoogleInputPath
+        Assert-File -Path $CreateMapsKeyScript
+        $googleInput = Get-Content -LiteralPath $GoogleInputPath -Raw | ConvertFrom-Json -Depth 100
+        $fieldInput = $googleInput.apps.$AppKey
+        if ($null -eq $fieldInput) { throw 'google-platform-input.local.json does not define app-field.' }
+        $sha1 = [string]$fieldInput.sha1Fingerprint
+        $displayName = [string]$fieldInput.mapsKeyDisplayName
+        if ($sha1 -notmatch '^([A-Fa-f0-9]{2}:){19}[A-Fa-f0-9]{2}$') {
+            throw 'app-field SHA-1 fingerprint is invalid.'
+        }
+        Invoke-Checked -Command 'pwsh' -Arguments @(
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $CreateMapsKeyScript,
+            '-ProjectId', 'bthwani-platform',
+            '-AppKey', $AppKey,
+            '-PackageName', $expectedPackage,
+            '-Sha1Fingerprint', $sha1,
+            '-DisplayName', $displayName,
+            '-WriteEnvironmentFile', $MobileEnvPath
+        ) | Out-Null
+    } else {
+        Write-Host 'PASS: existing restricted app-field Maps key preserved; no Google Cloud mutation performed.' -ForegroundColor Green
+    }
+}
+
+function Stage-And-ValidateRuntimeInputs {
+    Write-Step 'Stage and validate app-field runtime inputs'
+    $firebaseSource = Resolve-FieldFirebaseSource
+    Copy-Item -LiteralPath $firebaseSource -Destination $RuntimeGoogleServicesPath -Force
+    Invoke-Checked -Command 'node' -Arguments @(
+        $FirebaseValidatorPath,
+        '--file', $RuntimeGoogleServicesPath,
+        '--package', $expectedPackage,
+        '--json'
+    ) | Out-Null
+
+    Import-EnvFile -Path $MobileEnvPath
+    $mapsKey = Resolve-AppScopedValue -BaseName 'GOOGLE_MAPS_ANDROID_API_KEY' -Key $AppKey
+    if (-not (Test-ValidMapsKey -Value $mapsKey)) {
+        throw 'A valid GOOGLE_MAPS_ANDROID_API_KEY_APP_FIELD is required. Run this script once with -Mode Initialize.'
+    }
+
+    Write-FieldRuntimeEnvironmentFile -AndroidMapsKey $mapsKey
+    Invoke-AppFieldExpoConfigProof -ExpectedMapsKey $mapsKey
+    Write-Host 'PASS: app-field runtime inputs are staged without changing cloud resources.' -ForegroundColor Green
+    return $mapsKey
+}
+
+foreach ($required in @($ManifestPath, $FirebaseValidatorPath, $EasBuildScript)) {
     Assert-File -Path $required
 }
 
@@ -206,73 +275,24 @@ $expectedPackage = [string]$app.androidPackage
 $projectId = [string]$app.projectId
 
 Write-Host '============================================================' -ForegroundColor Cyan
-Write-Host ' BTHWANI APP-FIELD ANDROID EAS REMOTE PREPARATION' -ForegroundColor Cyan
+Write-Host ' BTHWANI APP-FIELD ANDROID EAS' -ForegroundColor Cyan
 Write-Host '============================================================' -ForegroundColor Cyan
+Write-Host "Mode:      $Mode"
 Write-Host "App:       $AppKey"
 Write-Host "Package:   $expectedPackage"
 Write-Host "ProjectId: $projectId"
-Write-Host "Build:     $(if ($SubmitBuild) { 'submit remote build' } else { 'prepare only' })"
 
-Write-Step 'Load ignored local mobile environment'
-Import-EnvFile -Path $MobileEnvPath
-
-Write-Step 'Install runtime-local Firebase config shim for app-field'
-$firebaseSource = Resolve-FieldFirebaseSource
-Copy-Item -LiteralPath $firebaseSource -Destination $RuntimeGoogleServicesPath -Force
-Invoke-Checked -Command 'node' -Arguments @(
-    $FirebaseValidatorPath,
-    '--file', $RuntimeGoogleServicesPath,
-    '--package', $expectedPackage,
-    '--json'
-) | Out-Null
-Write-Host "PASS: app-field runtime Firebase config is valid and locally staged: $RuntimeGoogleServicesPath" -ForegroundColor Green
-
-Write-Step 'Skip stale EAS GOOGLE_SERVICES_JSON mutation'
-Write-Host 'PASS: no EAS GOOGLE_SERVICES_JSON visibility change is attempted. The runtime-local google-services.json is packaged with the EAS archive.' -ForegroundColor Green
-
-Write-Step 'Prepare central FCM V1 service account'
-Invoke-Checked -Command 'pwsh' -Arguments @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PrepareFcmScript, '-Apply') | Out-Null
-
-Write-Step 'Create or update restricted Android Maps key for app-field'
-Assert-File -Path $GoogleInputPath
-$googleInput = Get-Content -LiteralPath $GoogleInputPath -Raw | ConvertFrom-Json -Depth 100
-$fieldInput = $googleInput.apps.$AppKey
-if ($null -eq $fieldInput) { throw 'google-platform-input.local.json does not define app-field.' }
-$sha1 = [string]$fieldInput.sha1Fingerprint
-$displayName = [string]$fieldInput.mapsKeyDisplayName
-if ($sha1 -notmatch '^([A-Fa-f0-9]{2}:){19}[A-Fa-f0-9]{2}$') { throw 'app-field SHA-1 fingerprint is invalid.' }
-Invoke-Checked -Command 'pwsh' -Arguments @(
-    '-NoProfile',
-    '-ExecutionPolicy', 'Bypass',
-    '-File', $CreateMapsKeyScript,
-    '-ProjectId', 'bthwani-platform',
-    '-AppKey', $AppKey,
-    '-PackageName', $expectedPackage,
-    '-Sha1Fingerprint', $sha1,
-    '-DisplayName', $displayName,
-    '-WriteEnvironmentFile', $MobileEnvPath
-) | Out-Null
-
-Write-Step 'Stage app-field runtime environment for the remote archive'
-Import-EnvFile -Path $MobileEnvPath
-$androidMapsKey = Resolve-AppScopedValue -BaseName 'GOOGLE_MAPS_ANDROID_API_KEY' -Key $AppKey
-if ([string]::IsNullOrWhiteSpace($androidMapsKey)) {
-    throw 'GOOGLE_MAPS_ANDROID_API_KEY_APP_FIELD was not found after the Maps key preparation step.'
+if ($Mode -eq 'Initialize') {
+    Initialize-CloudInputsWhenMissing
+    $null = Stage-And-ValidateRuntimeInputs
+    Write-Host "`nPASS: app-field one-time initialization is complete." -ForegroundColor Green
+    exit 0
 }
-if ($androidMapsKey -match 'placeholder|bthwani_dev_maps_key_placeholder') {
-    throw 'app-field still has a placeholder Google Maps Android API key. A real restricted key is required before remote build.'
-}
-if ($androidMapsKey -notmatch '^AIza[0-9A-Za-z_-]{20,}$') {
-    throw 'app-field Google Maps Android API key does not have the expected Google API key format.'
-}
-Write-FieldRuntimeEnvironmentFile -AndroidMapsKey $androidMapsKey
-Write-Host "PASS: app-field runtime .env.local was generated for the EAS archive without printing secrets: $RuntimeEnvPath" -ForegroundColor Green
 
-Write-Step 'Verify Expo config resolves app-field Firebase, Maps, and EAS identity'
-Invoke-AppFieldExpoConfigProof -ExpectedMapsKey $androidMapsKey
+$androidMapsKey = Stage-And-ValidateRuntimeInputs
 
-Write-Step 'Run app-field remote-build preflight'
-if (-not $SkipPreflight) {
+if ($Mode -eq 'Preflight') {
+    Write-Step 'Run app-field-only preflight'
     Invoke-Checked -Command 'node' -Arguments @(
         $EasBuildScript,
         '--app', $AppKey,
@@ -281,24 +301,19 @@ if (-not $SkipPreflight) {
         '--preflight-only',
         '--non-interactive'
     ) -SecretValues @($androidMapsKey) | Out-Null
-    Write-Host 'PASS: app-field preflight completed.' -ForegroundColor Green
-} else {
-    Write-Host 'SKIP: preflight was explicitly skipped.' -ForegroundColor Yellow
+    Write-Host "`nPASS: app-field preflight completed. No remote build was submitted." -ForegroundColor Green
+    exit 0
 }
 
-if ($SubmitBuild) {
-    Write-Step 'Submit app-field Android development build to EAS Remote Build'
-    $buildArgs = @(
-        $EasBuildScript,
-        '--app', $AppKey,
-        '--platform', 'android',
-        '--profile', 'development',
-        '--non-interactive'
-    )
-    if ($ClearCache) { $buildArgs += '--clear-cache' }
-    Invoke-Checked -Command 'node' -Arguments $buildArgs -SecretValues @($androidMapsKey) | Out-Null
-    Write-Host 'PASS: app-field EAS Remote Build submission completed.' -ForegroundColor Green
-} else {
-    Write-Host "`nPASS: app-field is prepared for Android EAS Remote Build." -ForegroundColor Green
-    Write-Host 'To submit only app-field, rerun this script with -SubmitBuild.' -ForegroundColor Cyan
-}
+Write-Step 'Submit app-field-only Android development build'
+$buildArgs = @(
+    $EasBuildScript,
+    '--app', $AppKey,
+    '--platform', 'android',
+    '--profile', 'development',
+    '--skip-preflight',
+    '--non-interactive'
+)
+if ($ClearCache) { $buildArgs += '--clear-cache' }
+Invoke-Checked -Command 'node' -Arguments $buildArgs -SecretValues @($androidMapsKey) | Out-Null
+Write-Host "`nPASS: app-field EAS Remote Build was submitted." -ForegroundColor Green
