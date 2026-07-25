@@ -224,14 +224,23 @@ requireMarkers(`${workflowsRoot}/ci-runtime.yml`, [
   "runtime proof not required",
 ]);
 
-if (enforcement?.rules?.requiredChecks?.mode !== "fail-closed") {
+const requiredChecks = enforcement?.requiredCheckNames;
+if (!Array.isArray(requiredChecks) || requiredChecks.length !== 1 || requiredChecks[0] !== "BThwani CI result") {
   violations.push({ file: enforcementFile, line: 0, message: "REQUIRED_CHECKS_MUST_FAIL_CLOSED" });
 }
-if (enforcement?.rules?.pullRequestReview?.required !== true) {
+const reviewPolicy = enforcement?.requiredPullRequestPolicy;
+if (
+  !reviewPolicy ||
+  reviewPolicy.requiredApprovingReviewCount < 1 ||
+  reviewPolicy.dismissStaleApprovals !== true ||
+  reviewPolicy.requireCodeOwnerReview !== true ||
+  reviewPolicy.requireConversationResolution !== true ||
+  reviewPolicy.requireLastPushApprovalByDifferentActor !== true
+) {
   violations.push({ file: enforcementFile, line: 0, message: "PR_REVIEW_RULE_REQUIRED" });
 }
-if (enforcement?.rules?.codexRemoteWrite?.allowed !== false) {
-  violations.push({ file: enforcementFile, line: 0, message: "CODEX_REMOTE_WRITE_MUST_BE_DISALLOWED" });
+if (enforcement?.claims?.highRiskClosureAllowed !== false) {
+  violations.push({ file: enforcementFile, line: 0, message: "UNPROVEN_HIGH_RISK_CLOSURE_MUST_BE_DISALLOWED" });
 }
 
 if (violations.length > 0) {
