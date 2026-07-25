@@ -10,6 +10,4 @@ credentials.json
 *.jks
 *.keystore
 .env*
-
-!google-services.json
-!.env.local
+google-services.json

@@ -86,20 +86,26 @@ test("one governed command owns Android EAS initialization, preflight, and build
   const easAliases = Object.keys(packageJson.scripts).filter((name) => name.startsWith("mobile:eas:"));
   assert.deepEqual(easAliases, []);
 
-  const entrypoint = fs.readFileSync(path.join(repoRoot, "tools/scripts/mobile-eas.ps1"), "utf8");
-  for (const appKey of mobileApps) assert.ok(entrypoint.includes(`'${appKey}'`));
-  for (const mode of ["Initialize", "Preflight", "Build"]) assert.ok(entrypoint.includes(`'${mode}'`));
-  assert.equal(entrypoint.includes("--all"), false);
-  assert.equal(entrypoint.includes("prepare-google-platform-all-surfaces.ps1"), false);
-  assert.equal(entrypoint.includes("bootstrap-mobile-eas-android-development.ps1"), false);
-  assert.equal(entrypoint.includes("setup-mobile-firebase-development.ps1"), false);
-
-  const engine = fs.readFileSync(path.join(repoRoot, "tools/scripts/eas-build-mobile.mjs"), "utf8");
-  assert.ok(engine.includes("All-app mobile preflight/build was removed"));
-  assert.ok(engine.includes("Use one explicit --app <app-key> target"));
+  const compatibilityEntrypoint = fs.readFileSync(path.join(repoRoot, "tools/scripts/mobile-eas.ps1"), "utf8");
+  const sharedEntrypoint = fs.readFileSync(path.join(repoRoot, "apps/mobile.ps1"), "utf8");
+  const easImplementation = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas.ps1"), "utf8");
+  for (const appKey of mobileApps) {
+    assert.ok(compatibilityEntrypoint.includes(`'${appKey}'`));
+    assert.ok(sharedEntrypoint.includes(`'${appKey}'`));
+    assert.ok(fs.existsSync(path.join(repoRoot, "apps", appKey, "runtime", "mobile.ps1")));
+  }
+  for (const mode of ["Initialize", "Preflight", "Build"]) {
+    assert.ok(compatibilityEntrypoint.includes(`'${mode}'`));
+    assert.ok(sharedEntrypoint.includes(`'${mode}'`));
+    assert.ok(easImplementation.includes(`'${mode}'`));
+  }
+  assert.equal(easImplementation.includes("foreach ($home in"), false);
+  assert.equal(easImplementation.includes("--all"), false);
+  assert.ok(easImplementation.includes("GOOGLE_SERVICES_JSON"));
+  assert.ok(easImplementation.includes("GOOGLE_MAPS_ANDROID_API_KEY"));
 });
 
-test("every app uses isolated local signing and identical EAS archive policy", () => {
+test("every app uses isolated local signing and EAS file variables for providers", () => {
   for (const appKey of mobileApps) {
     const runtime = path.join(repoRoot, "apps", appKey, "runtime");
     const eas = JSON.parse(fs.readFileSync(path.join(runtime, "eas.json"), "utf8"));
@@ -110,10 +116,12 @@ test("every app uses isolated local signing and identical EAS archive policy", (
       "credentials.json",
       "*.jks",
       "*.keystore",
-      "!google-services.json",
-      "!.env.local",
+      ".env*",
+      "google-services.json",
     ]) {
       assert.ok(easIgnore.includes(marker), `${appKey}: missing .easignore marker ${marker}`);
     }
+    assert.equal(easIgnore.includes("!google-services.json"), false);
+    assert.equal(easIgnore.includes("!.env.local"), false);
   }
 });
