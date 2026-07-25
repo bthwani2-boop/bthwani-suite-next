@@ -326,6 +326,7 @@ function CategoryOption({
             style={styles.dropdownIconImage}
             resizeMode="contain"
             accessibilityIgnoresInvertColors
+            alt=""
           />
         ) : (
           <Text style={styles.dropdownEmoji}>{icon}</Text>
