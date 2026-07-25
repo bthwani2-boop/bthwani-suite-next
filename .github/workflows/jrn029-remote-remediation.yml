@@ -28,17 +28,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Checkout branch history
+      - name: Checkout branch
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           ref: reemsam
       - name: Materialize and commit verified JRN-029 artifact
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           artifact_dir="${RUNNER_TEMP}/jrn029-openapi"
           mkdir -p "${artifact_dir}"
           gh run download 30147430390 \
@@ -62,7 +62,8 @@ jobs:
           install -D "${artifact_dir}/contracts/generated/dsh.bundle.openapi.yaml" services/dsh/contracts/generated/dsh.bundle.openapi.yaml
           install -D "${artifact_dir}/clients/generated/dsh-api.ts" services/dsh/clients/generated/dsh-api.ts
 
-          git checkout 4bff994125cf4d3f3296c5af85f5d70b17eaf49e -- .github/workflows/ci-node-verification.yml
+          git fetch --depth=1 origin 4bff994125cf4d3f3296c5af85f5d70b17eaf49e
+          git checkout FETCH_HEAD -- .github/workflows/ci-node-verification.yml
           git add \
             services/dsh/contracts/dsh.openapi.yaml \
             services/dsh/contracts/paths/platform-policies.paths.yaml \
@@ -73,7 +74,6 @@ jobs:
             services/dsh/clients/generated/dsh-api.ts \
             .github/workflows/ci-node-verification.yml
           git rm tools/scripts/integrate-jrn029-openapi.mjs
-          git rm .github/workflows/jrn029-remote-remediation.yml
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
