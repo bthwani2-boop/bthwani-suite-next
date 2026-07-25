@@ -78,6 +78,26 @@ function Add-GcloudToProcessPath {
 
 Add-GcloudToProcessPath
 
+if ($Phase -eq 'UploadFirebaseToEas') {
+    $uploader = Join-Path $PSScriptRoot 'upload-firebase-to-eas-all-apps.ps1'
+    if (-not (Test-Path -LiteralPath $uploader -PathType Leaf)) {
+        throw "Governed Firebase/EAS uploader is missing: $uploader"
+    }
+
+    $uploaderArguments = @()
+    if ($Apply) { $uploaderArguments += '-Apply' }
+
+    Write-Host "> pwsh -NoProfile -ExecutionPolicy Bypass -File $uploader $($uploaderArguments -join ' ')" -ForegroundColor DarkGray
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File $uploader @uploaderArguments
+    $uploaderExitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
+    if ($uploaderExitCode -ne 0) {
+        throw "Firebase/EAS all-app upload failed with exit code ${uploaderExitCode}."
+    }
+
+    Write-Host "`nPASS: Google Cloud CLI resolution and all-surface phase '$Phase' completed." -ForegroundColor Green
+    return
+}
+
 $orchestrator = Join-Path $PSScriptRoot 'prepare-google-platform-all-surfaces.ps1'
 if (-not (Test-Path -LiteralPath $orchestrator -PathType Leaf)) {
     throw "Governed Google platform orchestrator is missing: $orchestrator"
