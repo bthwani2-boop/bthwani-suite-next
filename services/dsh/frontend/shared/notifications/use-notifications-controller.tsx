@@ -38,6 +38,15 @@ type PreferenceState =
   | { readonly kind: "success"; readonly preferences: readonly DshNotificationPreference[] }
   | { readonly kind: "error"; readonly message: string };
 
+function canUseTopicEnabledPreferenceUpdate(input: DshUpdateNotificationPreferenceInput): boolean {
+  return input.channels.length === 1
+    && input.channels[0] === "in_app"
+    && input.quietHoursStart == null
+    && input.quietHoursEnd == null
+    && input.locale === "ar"
+    && input.timezone === "Asia/Aden";
+}
+
 export function useNotificationsController(authKind: string) {
   const [state, setState] = useState<DshNotificationsState>(notifIdle());
   const [preferenceState, setPreferenceState] = useState<PreferenceState>({ kind: "idle" });
@@ -77,7 +86,12 @@ export function useNotificationsController(authKind: string) {
   }, [loadNotifications]);
 
   const savePreference = useCallback(async (input: DshUpdateNotificationPreferenceInput) => {
-    await updateNotificationPreferences(input);
+    const { topic, enabled } = input;
+    if (canUseTopicEnabledPreferenceUpdate(input)) {
+      await updateNotificationPreferences(topic, enabled);
+    } else {
+      await updateNotificationPreferences(input);
+    }
     await loadPreferences();
   }, [loadPreferences]);
 

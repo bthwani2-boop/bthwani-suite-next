@@ -1,0 +1,360 @@
+openapi: 3.0.3
+x-bthwani-contract-state: CONTRACT_ACTIVE
+info:
+  title: BThwani DSH JRN-029 Operational Policy API
+  version: 1.0.0
+  description: >-
+    Governed DSH contract for operational zones, assignment/preparation/delivery
+    SLA, capacity pause and pressure, fulfillment modes, cross-surface effects,
+    audit history and rollback. Service-area geofences remain the spatial truth.
+servers:
+  - url: http://localhost:58080
+security:
+  - bearerAuth: []
+paths:
+  /dsh/operator/platform/operational-profiles/{zoneId}:
+    parameters:
+      - $ref: '#/components/parameters/ZoneId'
+    get:
+      operationId: getDshOperationalProfile
+      tags: [JRN-029]
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string, default: default, maxLength: 120 }
+      responses:
+        '200':
+          description: Canonical operational SLA and capacity profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [profile]
+                properties:
+                  profile: { $ref: '#/components/schemas/OperationalProfile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      operationId: upsertDshOperationalProfile
+      tags: [JRN-029]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OperationalProfileMutation' }
+      responses:
+        '200':
+          description: Versioned profile readback.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [profile]
+                properties:
+                  profile: { $ref: '#/components/schemas/OperationalProfile' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes:
+    parameters:
+      - $ref: '#/components/parameters/ZoneId'
+    get:
+      operationId: listDshOperationalDeliveryModes
+      tags: [JRN-029]
+      responses:
+        '200':
+          description: Fulfillment-mode policies for the zone.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deliveryModes]
+                properties:
+                  deliveryModes:
+                    type: array
+                    items: { $ref: '#/components/schemas/DeliveryModePolicy' }
+  /dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes/{fulfillmentMode}:
+    parameters:
+      - $ref: '#/components/parameters/ZoneId'
+      - name: fulfillmentMode
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/FulfillmentMode' }
+    put:
+      operationId: upsertDshOperationalDeliveryMode
+      tags: [JRN-029]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isEnabled, slaCategory, expectedVersion, reason]
+              properties:
+                isEnabled: { type: boolean }
+                slaCategory: { type: string, minLength: 1, maxLength: 120 }
+                expectedVersion: { type: integer, minimum: 0 }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '200':
+          description: Versioned delivery-mode policy readback.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [deliveryMode]
+                properties:
+                  deliveryMode: { $ref: '#/components/schemas/DeliveryModePolicy' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /dsh/platform/operational-policy/evaluate:
+    post:
+      operationId: evaluateDshOperationalPolicy
+      tags: [JRN-029]
+      description: >-
+        Returns one fail-closed decision for client, partner, captain or operator
+        consumers, including explicit cart, checkout, order and dispatch effects.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OperationalEvaluationInput' }
+      responses:
+        '200':
+          description: Canonical operational decision.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [decision]
+                properties:
+                  decision: { $ref: '#/components/schemas/OperationalDecision' }
+        '400': { $ref: '#/components/responses/Invalid' }
+  /dsh/operator/platform/operational-policy/audit:
+    get:
+      operationId: listDshOperationalPolicyAudit
+      tags: [JRN-029]
+      parameters:
+        - name: aggregateType
+          in: query
+          schema: { type: string }
+        - name: aggregateId
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: Append-only policy audit events.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [events]
+                properties:
+                  events:
+                    type: array
+                    items: { $ref: '#/components/schemas/PolicyAuditEvent' }
+  /dsh/operator/platform/operational-policy/audit/{eventId}/rollback:
+    parameters:
+      - name: eventId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: rollbackDshOperationalPolicy
+      tags: [JRN-029]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedCurrentVersion, reason]
+              properties:
+                expectedCurrentVersion: { type: integer, minimum: 1 }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '200':
+          description: Rollback is applied as a new audited version.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rollback]
+                properties:
+                  rollback: { $ref: '#/components/schemas/RollbackResult' }
+        '409': { $ref: '#/components/responses/Conflict' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ZoneId:
+      name: zoneId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 8 }
+  responses:
+    Invalid:
+      description: Invalid governed policy request.
+    Unauthorized:
+      description: Missing or invalid actor authentication.
+    Forbidden:
+      description: Actor lacks the required platform permission.
+    Conflict:
+      description: Version or idempotency conflict; canonical readback is required.
+  schemas:
+    FulfillmentMode:
+      type: string
+      enum: [bthwani_delivery, partner_delivery, client_pickup]
+    OperationalSla:
+      type: object
+      required: [configured]
+      properties:
+        configured: { type: boolean }
+        ruleId: { type: string, format: uuid }
+        category: { type: string }
+        maxPrepMins: { type: integer, minimum: 1, maximum: 1440 }
+        maxAssignmentMins: { type: integer, minimum: 1, maximum: 1440 }
+        maxDeliveryMins: { type: integer, minimum: 1, maximum: 1440 }
+        version: { type: integer, minimum: 1 }
+    OperationalCapacity:
+      type: object
+      required: [configured, isPaused]
+      properties:
+        configured: { type: boolean }
+        configId: { type: string, format: uuid }
+        maxConcurrentOrders: { type: integer, minimum: 1 }
+        maxCaptainsOnline: { type: integer, minimum: 0 }
+        throttleThreshold: { type: number, minimum: 0, maximum: 1 }
+        isPaused: { type: boolean }
+        pauseReason: { type: string, maxLength: 500 }
+        version: { type: integer, minimum: 1 }
+    OperationalProfile:
+      type: object
+      required: [zoneId, sla, capacity]
+      properties:
+        zoneId: { type: string, format: uuid }
+        sla: { $ref: '#/components/schemas/OperationalSla' }
+        capacity: { $ref: '#/components/schemas/OperationalCapacity' }
+    OperationalProfileMutation:
+      type: object
+      required: [slaCategory, maxPrepMins, maxAssignmentMins, maxDeliveryMins, expectedSlaVersion, maxConcurrentOrders, maxCaptainsOnline, throttleThreshold, isPaused, pauseReason, expectedCapacityVersion, reason]
+      properties:
+        slaCategory: { type: string, minLength: 1, maxLength: 120 }
+        maxPrepMins: { type: integer, minimum: 1, maximum: 1440 }
+        maxAssignmentMins: { type: integer, minimum: 1, maximum: 1440 }
+        maxDeliveryMins: { type: integer, minimum: 1, maximum: 1440 }
+        expectedSlaVersion: { type: integer, minimum: 0 }
+        maxConcurrentOrders: { type: integer, minimum: 1 }
+        maxCaptainsOnline: { type: integer, minimum: 0 }
+        throttleThreshold: { type: number, minimum: 0, maximum: 1 }
+        isPaused: { type: boolean }
+        pauseReason: { type: string, maxLength: 500 }
+        expectedCapacityVersion: { type: integer, minimum: 0 }
+        reason: { type: string, minLength: 3, maxLength: 500 }
+    DeliveryModePolicy:
+      type: object
+      required: [id, zoneId, fulfillmentMode, isEnabled, slaCategory, version, updatedBy, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        zoneId: { type: string, format: uuid }
+        fulfillmentMode: { $ref: '#/components/schemas/FulfillmentMode' }
+        isEnabled: { type: boolean }
+        slaCategory: { type: string }
+        version: { type: integer, minimum: 1 }
+        updatedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    OperationalEvaluationInput:
+      type: object
+      required: [zoneId, fulfillmentMode, activeOrders, captainsOnline]
+      properties:
+        zoneId: { type: string, format: uuid }
+        serviceAreaCode: { type: string }
+        fulfillmentMode: { $ref: '#/components/schemas/FulfillmentMode' }
+        slaCategory: { type: string, default: default }
+        activeOrders: { type: integer, minimum: 0 }
+        captainsOnline: { type: integer, minimum: 0 }
+    OperationalEffects:
+      type: object
+      required: [cartAllowed, checkoutAllowed, orderCreationAllowed, dispatchAllowed, partnerHandoffRequired, clientPickupRequired]
+      properties:
+        cartAllowed: { type: boolean }
+        checkoutAllowed: { type: boolean }
+        orderCreationAllowed: { type: boolean }
+        dispatchAllowed: { type: boolean }
+        partnerHandoffRequired: { type: boolean }
+        clientPickupRequired: { type: boolean }
+    OperationalDecision:
+      type: object
+      required: [zoneId, serviceAreaCode, fulfillmentMode, decision, serviceable, reasonCodes, allowedActions, activeStores, pressureRatio, sla, capacity, effects, policyVersions, evaluatedAt]
+      properties:
+        zoneId: { type: string, format: uuid }
+        serviceAreaCode: { type: string }
+        fulfillmentMode: { $ref: '#/components/schemas/FulfillmentMode' }
+        decision:
+          type: string
+          enum: [serviceable, unserviceable, policy_incomplete, paused, mode_disabled, capacity_exhausted, throttled]
+        serviceable: { type: boolean }
+        reasonCodes: { type: array, items: { type: string } }
+        allowedActions: { type: array, items: { type: string } }
+        activeStores: { type: integer, minimum: 0 }
+        pressureRatio: { type: number, minimum: 0 }
+        sla: { $ref: '#/components/schemas/OperationalSla' }
+        capacity: { $ref: '#/components/schemas/OperationalCapacity' }
+        modePolicy: { $ref: '#/components/schemas/DeliveryModePolicy' }
+        effects: { $ref: '#/components/schemas/OperationalEffects' }
+        policyVersions:
+          type: object
+          additionalProperties: { type: integer }
+        evaluatedAt: { type: string, format: date-time }
+    PolicyAuditEvent:
+      type: object
+      required: [id, aggregateType, aggregateId, action, actorId, actorSurface, reason, toVersion, payload, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        aggregateType:
+          type: string
+          enum: [zone, sla_rule, capacity_config, delivery_mode, store_onboarding_fee]
+        aggregateId: { type: string }
+        action:
+          type: string
+          enum: [created, updated, activated, deactivated, rolled_back]
+        actorId: { type: string }
+        actorSurface: { type: string }
+        correlationId: { type: string }
+        reason: { type: string }
+        fromVersion: { type: integer }
+        toVersion: { type: integer }
+        payload: { type: object, additionalProperties: true }
+        createdAt: { type: string, format: date-time }
+    RollbackResult:
+      type: object
+      required: [targetEventId, aggregateType, aggregateId, fromVersion, toVersion]
+      properties:
+        targetEventId: { type: string, format: uuid }
+        aggregateType: { type: string }
+        aggregateId: { type: string }
+        fromVersion: { type: integer, minimum: 1 }
+        toVersion: { type: integer, minimum: 1 }
