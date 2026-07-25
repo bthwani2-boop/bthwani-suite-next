@@ -161,7 +161,7 @@
   },
   "execution": {
     "appetite": "Close JRN-036 code data contract lifecycle and surface gaps without moving financial truth out of WLT, deploying production or self-approving protected evidence.",
-    "fixedConstraints": ["Repository mode is REMOTE_ONLY on sambassam.", "WLT remains the sole financial truth owner.", "DSH provides durable operational evidence only.", "No PR merge force push release production deployment or SaaS activation is authorized.", "Independent product finance security QA release and risk approvals cannot be self-issued by engineering."],
+    "fixedConstraints": ["Repository mode is REMOTE_ONLY on reemsam.", "WLT remains the sole financial truth owner.", "DSH provides durable operational evidence only.", "No PR merge force push release production deployment or SaaS activation is authorized.", "Independent product finance security QA release and risk approvals cannot be self-issued by engineering."],
     "variableScope": ["Arabic status wording", "representative finance card presentation", "policy cycle labels", "non-financial operational diagnostics"],
     "forbiddenScope": ["DSH-owned financial calculation", "frontend-owned financial derivation", "production provider enablement", "production deployment", "commercial SaaS activation", "fake runtime or financial evidence", "self-approval of protected gates"],
     "forecastRange": "one sequential journey closure",
