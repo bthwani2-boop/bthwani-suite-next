@@ -37,6 +37,9 @@ test("EAS provider variables use the documented idempotent CLI contract", () => 
   assert.ok(providers.includes("'env:get', 'development'"));
   assert.equal(providers.includes("'env:set'"), false);
   assert.equal(signing.includes("Add-KeytoolCandidate"), false);
+  const listAdds = signing.match(/[^\n]*\$candidates\.Add\([^\n]*/g) ?? [];
+  assert.ok(listAdds.length > 0);
+  for (const line of listAdds) assert.match(line, /\[void\]\s+\$candidates\.Add/);
 });
 
 test("every remote Android build verifies Firebase and Maps on the EAS worker", () => {

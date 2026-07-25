@@ -4,32 +4,32 @@ function Resolve-Keytool {
 
     $candidates = [System.Collections.Generic.List[string]]::new()
     $java = Get-Command java -ErrorAction SilentlyContinue
-    if ($java -and $java.Source) { $candidates.Add((Join-Path (Split-Path -Parent $java.Source) 'keytool.exe')) }
+    if ($java -and $java.Source) { [void] $candidates.Add((Join-Path (Split-Path -Parent $java.Source) 'keytool.exe')) }
     foreach ($javaHome in @($env:JAVA_HOME, $env:JDK_HOME)) {
-        if (-not [string]::IsNullOrWhiteSpace($javaHome)) { $candidates.Add((Join-Path $javaHome 'bin\keytool.exe')) }
+        if (-not [string]::IsNullOrWhiteSpace($javaHome)) { [void] $candidates.Add((Join-Path $javaHome 'bin\keytool.exe')) }
     }
     if ($env:ProgramFiles) {
-        $candidates.Add((Join-Path $env:ProgramFiles 'Android\Android Studio\jbr\bin\keytool.exe'))
+        [void] $candidates.Add((Join-Path $env:ProgramFiles 'Android\Android Studio\jbr\bin\keytool.exe'))
         foreach ($vendor in @('Java', 'Eclipse Adoptium', 'Microsoft')) {
             $root = Join-Path $env:ProgramFiles $vendor
             if (Test-Path -LiteralPath $root -PathType Container) {
                 foreach ($item in Get-ChildItem -LiteralPath $root -Filter keytool.exe -File -Recurse -ErrorAction SilentlyContinue) {
-                    $candidates.Add($item.FullName)
+                    [void] $candidates.Add($item.FullName)
                 }
             }
         }
     }
     if (${env:ProgramFiles(x86)}) {
-        $candidates.Add((Join-Path ${env:ProgramFiles(x86)} 'Android\Android Studio\jbr\bin\keytool.exe'))
+        [void] $candidates.Add((Join-Path ${env:ProgramFiles(x86)} 'Android\Android Studio\jbr\bin\keytool.exe'))
     }
     if ($env:LOCALAPPDATA) {
-        $candidates.Add((Join-Path $env:LOCALAPPDATA 'Programs\Android Studio\jbr\bin\keytool.exe'))
+        [void] $candidates.Add((Join-Path $env:LOCALAPPDATA 'Programs\Android Studio\jbr\bin\keytool.exe'))
     }
     if ($env:USERPROFILE) {
         foreach ($root in @((Join-Path $env:USERPROFILE '.jdks'), (Join-Path $env:USERPROFILE '.gradle\jdks'))) {
             if (Test-Path -LiteralPath $root -PathType Container) {
                 foreach ($item in Get-ChildItem -LiteralPath $root -Filter keytool.exe -File -Recurse -ErrorAction SilentlyContinue) {
-                    $candidates.Add($item.FullName)
+                    [void] $candidates.Add($item.FullName)
                 }
             }
         }
