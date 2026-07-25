@@ -2,6 +2,10 @@
 
 import React from "react";
 import { CpStatePanel } from "@bthwani/control-panel/components";
+import {
+  buildGoogleMapsJavaScriptApiUrl,
+  readGoogleMapsBrowserApiKey,
+} from "../../shared/_kernel/google-maps-web-config";
 
 export type GoogleMapsWebPoint = {
   readonly id: string;
@@ -46,11 +50,6 @@ declare global {
   }
 }
 
-function browserApiKey(): string | null {
-  const value = process.env.NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY?.trim();
-  return value ? value : null;
-}
-
 function loadGoogleMaps(apiKey: string): Promise<GoogleMapsRuntime> {
   if (window.google?.maps) return Promise.resolve(window.google.maps);
   const existingPromise = window.__bthwaniGoogleMapsPromise;
@@ -73,7 +72,7 @@ function loadGoogleMaps(apiKey: string): Promise<GoogleMapsRuntime> {
     script.id = "bthwani-google-maps-js";
     script.async = true;
     script.defer = true;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&callback=${callbackName}`;
+    script.src = buildGoogleMapsJavaScriptApiUrl(apiKey, callbackName);
     script.onerror = () => {
       delete runtimeWindow[callbackName];
       delete window.__bthwaniGoogleMapsPromise;
@@ -107,7 +106,7 @@ export function GoogleMapsWebCanvas({
   const [errorMessage, setErrorMessage] = React.useState<string>("");
 
   React.useEffect(() => {
-    const apiKey = browserApiKey();
+    const apiKey = readGoogleMapsBrowserApiKey();
     if (!apiKey) {
       setState("missing-key");
       return;
