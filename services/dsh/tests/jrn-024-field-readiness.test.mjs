@@ -56,8 +56,8 @@ test("JRN-024 keeps escalated-further cases blocking and operable", () => {
   assert.match(governedDomain, /status IN \('open','acknowledged','escalated_further'\)/);
   assert.match(governedDomain, /EscalationEscalatedFurther/);
   assert.match(operatorScreen, /value: "escalated_further"/);
-  assert.match(operatorScreen, /label="تصعيد أعلى"/);
-  assert.match(operatorScreen, /label="حل التصعيد"/);
+  assert.match(operatorScreen, />تصعيد أعلى<\/CpButton>/);
+  assert.match(operatorScreen, />حل التصعيد<\/CpButton>/);
 });
 
 test("JRN-024 source and generated contracts require both GPS captures", () => {
