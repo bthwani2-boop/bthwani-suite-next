@@ -18,8 +18,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: lockfile-snapshot-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: lockfile-snapshot-${{ github.event.pull_request.number }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   generate:
