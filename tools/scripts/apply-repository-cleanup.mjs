@@ -191,6 +191,14 @@ if (apply) {
   for (const item of approved) {
     fs.rmSync(path.join(repoRoot, item.file), { force: true, recursive: true });
   }
+
+  const untracked = runGit(["ls-files", "--others", "--exclude-standard", "-z"])
+    .split("\0")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (untracked.length > 0) {
+    runGit(["add", "--intent-to-add", "--", ...untracked]);
+  }
 }
 
 const report = {
