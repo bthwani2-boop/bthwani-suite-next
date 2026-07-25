@@ -35,21 +35,34 @@ test("Initialize is mandatory and bound to immutable provider inputs", () => {
   assert.ok(workflow.indexOf("Assert-StateStamp -Path $PreflightStampPath") < workflow.indexOf("Write-Step 'Submit remote build'"));
 });
 
-test("EAS provider variables use idempotent env:set and exact short metadata parsing", () => {
+test("EAS provider verification uses supported flags and fail-closed metadata parsing", () => {
   assert.ok(providers.includes("'env:set', 'development'"));
   assert.ok(providers.includes("'env:list', 'development'"));
+  assert.ok(providers.includes("Get-EasDevelopmentVariableNames"));
   assert.ok(providers.includes("Remove-AnsiEscapeSequences"));
   assert.ok(providers.includes("$env:FORCE_COLOR = '0'"));
-  assert.ok(providers.includes("$escapedName = [regex]::Escape($Name)"));
-  assert.ok(providers.includes("EAS short format is: NAME | scope | type"));
-  assert.ok(providers.includes('$shortPattern = "(?mi)^\\s*$escapedName\\s*\\|"'));
-  assert.equal(providers.includes('$shortPattern = "(?m)^\\s*$escapedName="'), false);
-  assert.ok(providers.includes("$longPattern"));
+  assert.ok(providers.includes("EAS CLI does not define a --non-interactive flag for env:list"));
+  assert.ok(providers.includes("$result.Text -split '\\r?\\n'"));
+  assert.ok(providers.includes("Available project variables:"));
+  assert.equal(providers.includes("function Test-EasVariable"), false);
+  assert.equal(providers.includes("-AllowFailure -Quiet"), false);
+
+  const listStart = providers.indexOf("'env:list', 'development'");
+  const listEnd = providers.indexOf(") -Quiet", listStart);
+  assert.ok(listStart >= 0 && listEnd > listStart);
+  const listInvocation = providers.slice(listStart, listEnd);
+  assert.equal(listInvocation.includes("--non-interactive"), false);
+
+  const setStart = providers.indexOf("'env:set', 'development'");
+  const setEnd = providers.indexOf(") -SecretValues", setStart);
+  assert.ok(setStart >= 0 && setEnd > setStart);
+  const setInvocation = providers.slice(setStart, setEnd);
+  assert.ok(setInvocation.includes("--non-interactive"));
+
   assert.equal(providers.includes("'env:get', 'development'"), false);
   assert.equal(providers.includes("'env:update', 'development'"), false);
   assert.equal(providers.includes("'env:create', 'development'"), false);
   assert.equal(providers.includes("'--variable-environment', 'development'"), false);
-  assert.equal(providers.includes("if (Test-EasVariable -Name $Name)"), false);
   assert.ok(providers.includes("$commandText = $commandText.Replace($secret, '<redacted>')"));
   assert.equal(signing.includes("Add-KeytoolCandidate"), false);
   const listAdds = signing.match(/[^\n]*\$candidates\.Add\([^\n]*/g) ?? [];
