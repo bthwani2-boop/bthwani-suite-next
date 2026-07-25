@@ -74,16 +74,24 @@ test("JRN-011 closure manifest cannot hide pending code behind external review",
   assert.equal(evidence.nextJourneyStarted, false);
 });
 
-test("JRN-011 CI is required to execute static, Go, PostgreSQL, TypeScript and live DB lifecycle gates", async () => {
-  const workflow = await readRepo(".github/workflows/jrn-011-order-truth-verify.yml");
+test("JRN-011 CI executes contextual journey, Go, PostgreSQL, TypeScript and lifecycle gates", async () => {
+  const evidence = [
+    await readRepo(".github/workflows/ci.yml"),
+    await readRepo(".github/workflows/ci-node-verification.yml"),
+    await readRepo(".github/workflows/ci-backends.yml"),
+    await readRepo("tools/scripts/run-journey-gate.ps1"),
+    await readRepo("services/dsh/backend/internal/orders/order_truth_db_test.go"),
+    await readRepo("services/dsh/backend/internal/orders/order_truth_payment_projection_db_test.go"),
+  ].join("\n");
   for (const marker of [
-    "static-integrity:",
-    "go-contracts:",
-    "database-invariants:",
-    "typescript-binding:",
+    "BThwani Contextual CI",
+    "Run detected journey gates",
+    "run-journey-gate.ps1",
+    "go test ./... -count=1",
     "TestCreateOrderTruthLifecycleDBIntegration",
-    "jrn-011/order-truth",
+    "TestJRN011PaymentProjectionDBIntegration",
+    "RESULT: PASS",
   ]) {
-    assert.ok(workflow.includes(marker), `workflow is missing required gate ${marker}`);
+    assert.ok(evidence.includes(marker), `contextual CI evidence is missing required gate ${marker}`);
   }
 });

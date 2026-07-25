@@ -104,17 +104,19 @@
       "name": "OpenAPI, contract fragments, composition, generated clients, and approved adapters",
       "codeStatus": "CLOSED",
       "requiredFiles": [
-        "services/dsh/contracts/fragments/order-preparation-handoff.fragment.yaml",
-        "tools/scripts/compose-dsh-openapi.mjs",
-        ".github/workflows/jrn-012-order-preparation-verify.yml"
+        "services/dsh/contracts/paths/preparation-handoff.paths.yaml",
+        "services/dsh/contracts/components/schemas/preparation-handoff.schemas.yaml",
+        "services/dsh/contracts/dsh.openapi.yaml",
+        "tools/scripts/dsh-openapi-modular-lib.mjs",
+        ".github/workflows/ci-node-diagnostics.yml"
       ],
       "requiredMarkers": [
         "decideDshClientOrderPreparationIssue",
         "refreshDshOperatorOrderPreparationAlerts",
         "DshPreparationIssueCustomerDecision",
         "DshPreparationAlert",
-        "openapi-typescript",
-        "Composed DSH OpenAPI contract"
+        "preparation-handoff",
+        "Verify OpenAPI contracts and generated types without warnings"
       ]
     },
     {
@@ -317,12 +319,14 @@
       "codeStatus": "CLOSED",
       "requiredFiles": [
         "services/dsh/frontend/shared/partner/partner.adapters.ts",
-        "tools/scripts/compose-dsh-openapi.mjs",
+        "tools/scripts/dsh-openapi-modular-lib.mjs",
+        "services/dsh/contracts/dsh.modular.manifest.json",
         "services/dsh/tests/jrn-012-order-preparation-closure.test.mjs"
       ],
       "requiredMarkers": [
         "No compatibility projection for legacy rows",
-        "Order preparation contract is duplicated",
+        "classifyPath",
+        "preparation-handoff",
         "contains forbidden",
         "missing immutable order items"
       ]
@@ -337,15 +341,19 @@
         "services/dsh/backend/internal/http/partner_order_workboard_test.go",
         "services/dsh/database/tests/dsh-912_jrn012_order_preparation_invariants.sql",
         "services/dsh/tsconfig.jrn-012.json",
-        ".github/workflows/jrn-012-order-preparation-verify.yml"
+        ".github/workflows/ci.yml",
+        ".github/workflows/ci-node-verification.yml",
+        ".github/workflows/ci-backends.yml",
+        "tools/scripts/run-journey-gate.ps1"
       ],
       "requiredMarkers": [
-        "node --test services/dsh/tests/jrn-012-*.test.mjs",
-        "go test ./internal/orders ./internal/http",
-        "dsh-912_jrn012_order_preparation_invariants.sql",
-        "tsconfig.jrn-012.json",
-        "guard:wlt-financial-boundary",
-        "jrn-012/order-preparation"
+        "Run detected journey gates",
+        "run-journey-gate.ps1",
+        "pnpm exec nx affected -t test",
+        "go test ./... -count=1",
+        "forbidden_financial_columns",
+        "\"noEmit\"",
+        "RESULT: PASS"
       ]
     },
     {
@@ -355,21 +363,23 @@
       "requiredFiles": [
         "governance/product/contracts/jrn-012-order-preparation-readiness.product-truth.json",
         "services/dsh/contracts/jrn-012-slice-closure.json",
-        ".github/workflows/jrn-012-order-preparation-verify.yml"
+        ".github/workflows/ci.yml",
+        ".github/workflows/ci-node-verification.yml",
+        "tools/scripts/run-journey-gate.ps1"
       ],
       "requiredMarkers": [
         "READY_FOR_INDEPENDENT_REVIEW",
         "PENDING_INDEPENDENT_APPROVALS",
         "independentReviewPending",
         "rollback",
-        "Publish result on the exact verified commit",
-        "FS-17/18 publish governed closure"
+        "Run detected journey gates",
+        "RESULT: PASS"
       ]
     }
   ],
   "openCodeGaps": [],
   "remainingReleaseGates": [
-    "same-commit CI status jrn-012/order-preparation must be success",
+    "same-commit CI status for BThwani Contextual CI and detected JRN-012 journey gate must be success",
     "product-owner approval",
     "QA device and accessibility approval",
     "security approval",

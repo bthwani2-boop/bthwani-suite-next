@@ -28,26 +28,21 @@ test('JRN-015 persists one durable pickup lifecycle and command truth', () => {
 });
 
 test('JRN-015 composes the governed reschedule route and lifecycle projection', () => {
-  const fragment = source('services/dsh/contracts/fragments/pickup-recovery.fragment.yaml');
+  const paths = source('services/dsh/contracts/paths/operator.paths.yaml');
+  const schemas = source('services/dsh/contracts/components/schemas/orders.schemas.yaml');
   const rootContract = source('services/dsh/contracts/dsh.openapi.yaml');
-  const bundle = source('services/dsh/contracts/generated/dsh.bundle.openapi.yaml');
-  const composer = source('tools/scripts/compose-dsh-openapi.mjs');
-  const modularComposer = source('tools/scripts/dsh-openapi-modular-lib.mjs');
 
-  assert.match(fragment, /\/dsh\/operator\/pickups\/\{orderId\}\/reschedule:/);
-  assert.match(fragment, /operationId: rescheduleDshPickupWindow/);
-  assert.match(fragment, /DshReschedulePickupWindowRequest:/);
-  assert.match(fragment, /customerNotifiedAt:/);
-  assert.match(fragment, /customerArrivedAt:/);
-  assert.match(fragment, /noShowReason:/);
-  assert.match(fragment, /rescheduledAt:/);
-  assert.match(rootContract, /\/dsh\/operator\/pickups\/\{orderId\}\/reschedule:/);
-  assert.match(bundle, /operationId: rescheduleDshPickupWindow/);
-  assert.match(bundle, /DshPickupSession:/);
-  assert.match(composer, /composeDshOpenApi/);
-  assert.match(composer, /generatedBundlePath/);
-  assert.match(modularComposer, /generatedBundlePath/);
-  assert.match(modularComposer, /composeDshOpenApi/);
+  assert.match(paths, /\/dsh\/operator\/pickups\/\{orderId\}\/reschedule:/);
+  assert.match(paths, /operationId: rescheduleDshPickupWindow/);
+  assert.match(paths, /DshReschedulePickupWindowRequest/);
+  assert.match(schemas, /DshReschedulePickupWindowRequest:/);
+  assert.match(schemas, /customerNotifiedAt:/);
+  assert.match(schemas, /customerArrivedAt:/);
+  assert.match(schemas, /noShowReason:/);
+  assert.match(schemas, /rescheduledAt:/);
+  assert.match(rootContract, /x-bthwani-contract-layout: MODULAR/);
+  assert.match(rootContract, /paths\/operator\.paths\.yaml/);
+  assert.match(rootContract, /components\/schemas\/orders\.schemas\.yaml/);
 });
 
 test('JRN-015 guards every pickup mutation with command and version semantics', () => {

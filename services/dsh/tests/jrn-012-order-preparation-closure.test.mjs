@@ -141,7 +141,9 @@ test("JRN-012 backend owns decisions issue lifecycle alerts permissions and atom
 });
 
 test("JRN-012 OpenAPI declares every live preparation capability and projection", () => {
-  const contract = readDsh("contracts/fragments/order-preparation-handoff.fragment.yaml");
+  const paths = readDsh("contracts/paths/preparation-handoff.paths.yaml");
+  const schemas = readDsh("contracts/components/schemas/preparation-handoff.schemas.yaml");
+  const contract = `${paths}\n${schemas}`;
   assertAll(contract, [
     /\/dsh\/partner\/order-workboard:/,
     /\/dsh\/orders\/\{orderId\}\/preparation:/,
@@ -156,7 +158,7 @@ test("JRN-012 OpenAPI declares every live preparation capability and projection"
     /pendingCustomerDecisionCount/,
     /resolvablePreparationIssueCount/,
     /openStoreCaptainHandoffExceptionId/,
-  ], "preparation OpenAPI fragment");
+  ], "preparation OpenAPI modules");
 });
 
 test("JRN-012 shared brain rejects incomplete truth and exposes recovery states", () => {
