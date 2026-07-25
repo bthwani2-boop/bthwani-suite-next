@@ -74,7 +74,7 @@ function Test-ServiceAccountExists {
 
 function Assert-SecureKeyPath {
     $resolved = [System.IO.Path]::GetFullPath($KeyPath)
-    $repoMarker = [System.IO.Path]::GetFullPath('C:\bthwani-suite-next')
+    $repoMarker = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\..'))
     if ($resolved.StartsWith($repoMarker, [System.StringComparison]::OrdinalIgnoreCase)) {
         throw "FCM service-account keys must not be written inside the repository: $resolved"
     }
