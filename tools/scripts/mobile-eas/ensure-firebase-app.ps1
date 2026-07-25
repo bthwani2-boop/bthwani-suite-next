@@ -1,5 +1,7 @@
-# Internal helper used only by tools/scripts/mobile-eas.ps1.
-# Ensures one Android Firebase app and one valid package/SHA-1 restricted runtime API key.
+# Internal helper used by apps/mobile/eas/workflow.ps1.
+# Provisions Firebase Android configuration through the official Firebase Management REST API.
+# firebase-tools is intentionally not used here because its Windows process may crash after
+# successfully printing apps:sdkconfig output.
 
 [CmdletBinding()]
 param(
@@ -9,7 +11,6 @@ param(
 
     [string] $Sha1Fingerprint,
     [string] $ProjectId = 'bthwani-platform',
-    [string] $FirebaseToolsVersion = '15.24.0',
     [string] $SecretsRoot = 'C:\bthwani-secrets\firebase'
 )
 
@@ -27,32 +28,19 @@ $GoogleInputLocalPath = Join-Path $RepoRoot 'tools\scripts\google-cloud\google-p
 $SecretsMapPath = Join-Path $RepoRoot 'secrets.local.mobile.json'
 $DestinationDirectory = Join-Path $SecretsRoot $App
 $DestinationPath = Join-Path $DestinationDirectory 'google-services.json'
+$FirebaseManagementBaseUri = 'https://firebase.googleapis.com/v1beta1'
 $FirebaseKeyDisplayName = "bthwani-$App-android-firebase-development"
 $FirebaseApiServices = @(
     'firebaseinstallations.googleapis.com',
     'fcmregistrations.googleapis.com'
 )
+$script:FirebaseAccessToken = $null
 
 function Assert-File {
     param([Parameter(Mandatory)][string] $Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
         throw "Required file is missing: $Path"
     }
-}
-
-function Invoke-Firebase {
-    param(
-        [Parameter(Mandatory)][string[]] $Arguments,
-        [switch] $AllowFailure
-    )
-
-    $output = & pnpm dlx "firebase-tools@$FirebaseToolsVersion" @Arguments 2>&1
-    $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
-    $text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
-    if (-not $AllowFailure -and $exitCode -ne 0) {
-        throw "Firebase CLI failed ($exitCode): firebase $($Arguments -join ' ')`n$text"
-    }
-    return [pscustomobject]@{ ExitCode = $exitCode; Text = $text }
 }
 
 function Invoke-Gcloud {
@@ -118,27 +106,6 @@ function Get-PropertyValue {
     return $null
 }
 
-function Collect-AppRecords {
-    param([AllowNull()] $Node)
-    $records = [System.Collections.Generic.List[object]]::new()
-
-    function Visit {
-        param([AllowNull()] $Value)
-        if ($null -eq $Value -or $Value -is [string] -or $Value -is [ValueType]) { return }
-        if ($Value -is [System.Collections.IEnumerable] -and $Value -isnot [pscustomobject]) {
-            foreach ($item in $Value) { Visit -Value $item }
-            return
-        }
-        $appId = Get-PropertyValue -Object $Value -Names @('appId', 'app_id')
-        $platform = Get-PropertyValue -Object $Value -Names @('platform')
-        if ($appId -and $platform) { $records.Add($Value) }
-        foreach ($property in $Value.PSObject.Properties) { Visit -Value $property.Value }
-    }
-
-    Visit -Value $Node
-    return @($records)
-}
-
 function Resolve-Sha1Fingerprint {
     if ($Sha1Fingerprint -match '^([A-Fa-f0-9]{2}:){19}[A-Fa-f0-9]{2}$') {
         return $Sha1Fingerprint.ToUpperInvariant()
@@ -153,11 +120,69 @@ function Resolve-Sha1Fingerprint {
     return $value.ToUpperInvariant()
 }
 
-function Get-FirebaseAndroidApps {
-    $result = Invoke-Firebase -Arguments @(
-        'apps:list', 'ANDROID', '--project', $ProjectId, '--json', '--non-interactive'
+function Get-FirebaseAccessToken {
+    if (-not [string]::IsNullOrWhiteSpace($script:FirebaseAccessToken)) {
+        return $script:FirebaseAccessToken
+    }
+
+    $token = (Invoke-Gcloud -Arguments @('auth', 'print-access-token') -CaptureOnly).Trim()
+    if ([string]::IsNullOrWhiteSpace($token)) {
+        throw 'gcloud did not return an access token. Run: gcloud auth login'
+    }
+    $script:FirebaseAccessToken = $token
+    return $script:FirebaseAccessToken
+}
+
+function Invoke-FirebaseManagement {
+    param(
+        [Parameter(Mandatory)][ValidateSet('GET', 'POST')][string] $Method,
+        [Parameter(Mandatory)][string] $Path,
+        [AllowNull()] $Body
     )
-    return @(Collect-AppRecords -Node (Get-BalancedJson -Text $result.Text))
+
+    $uri = if ($Path.StartsWith('https://', [System.StringComparison]::OrdinalIgnoreCase)) {
+        $Path
+    } else {
+        "$FirebaseManagementBaseUri/$Path"
+    }
+
+    $request = @{
+        Method = $Method
+        Uri = $uri
+        Headers = @{ Authorization = "Bearer $(Get-FirebaseAccessToken)" }
+        ErrorAction = 'Stop'
+    }
+    if ($null -ne $Body) {
+        $request.Body = $Body | ConvertTo-Json -Depth 100 -Compress
+        $request.ContentType = 'application/json'
+    }
+
+    try {
+        return Invoke-RestMethod @request
+    } catch {
+        $details = [string]$_.ErrorDetails.Message
+        if ([string]::IsNullOrWhiteSpace($details)) { $details = [string]$_.Exception.Message }
+        throw "Firebase Management API failed ($Method $Path): $details"
+    }
+}
+
+function Get-FirebaseAndroidApps {
+    $apps = [System.Collections.Generic.List[object]]::new()
+    $pageToken = $null
+
+    do {
+        $path = "projects/$ProjectId/androidApps?pageSize=100"
+        if (-not [string]::IsNullOrWhiteSpace($pageToken)) {
+            $path += "&pageToken=$([System.Uri]::EscapeDataString($pageToken))"
+        }
+        $response = Invoke-FirebaseManagement -Method GET -Path $path
+        foreach ($record in @($response.apps)) {
+            if ($null -ne $record) { [void] $apps.Add($record) }
+        }
+        $pageToken = [string]$response.nextPageToken
+    } while (-not [string]::IsNullOrWhiteSpace($pageToken))
+
+    return @($apps)
 }
 
 function Find-AppByPackage {
@@ -166,12 +191,64 @@ function Find-AppByPackage {
         [Parameter(Mandatory)][string] $Package
     )
 
-    $matches = @($Records | Where-Object {
-        [string](Get-PropertyValue -Object $_ -Names @('namespace', 'packageName', 'package_name', 'androidPackage')) -eq $Package
-    })
+    $matches = @($Records | Where-Object { [string]$_.packageName -eq $Package })
     if ($matches.Count -gt 1) { throw "Firebase contains duplicate Android apps for '$Package'." }
     if ($matches.Count -eq 1) { return $matches[0] }
     return $null
+}
+
+function Wait-FirebaseOperation {
+    param([Parameter(Mandatory)] $Operation)
+
+    $operationName = [string]$Operation.name
+    if ([string]::IsNullOrWhiteSpace($operationName)) {
+        throw 'Firebase Management API did not return an operation name.'
+    }
+
+    for ($attempt = 1; $attempt -le 30; $attempt++) {
+        $status = Invoke-FirebaseManagement -Method GET -Path $operationName
+        if ($status.done -eq $true) {
+            if ($null -ne $status.error) {
+                throw "Firebase operation failed: $($status.error | ConvertTo-Json -Depth 20 -Compress)"
+            }
+            if ($null -eq $status.response) {
+                throw 'Firebase operation completed without an Android app response.'
+            }
+            return $status.response
+        }
+        Start-Sleep -Seconds 2
+    }
+
+    throw "Firebase operation '$operationName' did not complete within 60 seconds."
+}
+
+function New-FirebaseAndroidApp {
+    param([Parameter(Mandatory)][string] $PackageName)
+
+    $operation = Invoke-FirebaseManagement -Method POST -Path "projects/$ProjectId/androidApps" -Body @{
+        displayName = "BThwani $App Android Development"
+        packageName = $PackageName
+    }
+    return Wait-FirebaseOperation -Operation $operation
+}
+
+function Get-FirebaseSdkConfig {
+    param([Parameter(Mandatory)][string] $AppId)
+
+    $encodedAppId = [System.Uri]::EscapeDataString($AppId)
+    $response = Invoke-FirebaseManagement -Method GET -Path "projects/-/androidApps/$encodedAppId/config"
+    $encodedContents = [string]$response.configFileContents
+    if ([string]::IsNullOrWhiteSpace($encodedContents)) {
+        throw "Firebase config response is empty for Android app '$AppId'."
+    }
+
+    try {
+        $bytes = [Convert]::FromBase64String($encodedContents)
+        $json = [System.Text.Encoding]::UTF8.GetString($bytes)
+        return $json | ConvertFrom-Json -Depth 100
+    } catch {
+        throw "Firebase config response could not be decoded for Android app '$AppId': $($_.Exception.Message)"
+    }
 }
 
 function Get-KeyNameByDisplayName {
@@ -278,7 +355,7 @@ function Update-SecretsMap {
 Assert-File -Path $ManifestPath
 Assert-File -Path $ValidatorPath
 if (-not (Get-Command gcloud -ErrorAction SilentlyContinue)) {
-    throw 'gcloud CLI is required to provision the Firebase Android API key.'
+    throw 'gcloud CLI is required to provision Firebase Android configuration.'
 }
 
 $manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json -Depth 100
@@ -287,34 +364,26 @@ if ($null -eq $appConfig) { throw "Mobile manifest does not define $App." }
 $packageName = [string]$appConfig.androidPackage
 $resolvedSha1 = Resolve-Sha1Fingerprint
 
-$login = Invoke-Firebase -Arguments @('login:list') -AllowFailure
-if ($login.ExitCode -ne 0 -or $login.Text -notmatch 'Logged in as') {
-    throw "Firebase login is required. Run: pnpm dlx firebase-tools@$FirebaseToolsVersion login"
-}
+[void](Invoke-Gcloud -Arguments @(
+    'services', 'enable', 'firebase.googleapis.com', '--project', $ProjectId
+))
 
 $records = @(Get-FirebaseAndroidApps)
 $record = Find-AppByPackage -Records $records -Package $packageName
 if ($null -eq $record) {
-    [void](Invoke-Firebase -Arguments @(
-        'apps:create', 'ANDROID', "BThwani $App Android Development",
-        '--package-name', $packageName,
-        '--project', $ProjectId,
-        '--json', '--non-interactive'
-    ))
-    for ($attempt = 1; $attempt -le 10; $attempt++) {
-        Start-Sleep -Seconds 2
-        $record = Find-AppByPackage -Records @(Get-FirebaseAndroidApps) -Package $packageName
-        if ($null -ne $record) { break }
-    }
-    if ($null -eq $record) { throw "Firebase app '$packageName' was not visible after creation." }
+    $record = New-FirebaseAndroidApp -PackageName $packageName
+}
+if ([string]$record.packageName -ne $packageName) {
+    throw "Firebase Android app package mismatch. Expected '$packageName', got '$($record.packageName)'."
 }
 
 $firebaseApiKey = Ensure-FirebaseApiKey -PackageName $packageName -Sha1 $resolvedSha1
-$appId = [string](Get-PropertyValue -Object $record -Names @('appId', 'app_id'))
-$sdkConfig = Invoke-Firebase -Arguments @(
-    'apps:sdkconfig', 'ANDROID', $appId, '--project', $ProjectId, '--non-interactive'
-)
-$config = Get-BalancedJson -Text $sdkConfig.Text
+$appId = [string]$record.appId
+if ([string]::IsNullOrWhiteSpace($appId)) {
+    throw "Firebase Android app '$packageName' does not expose an appId."
+}
+
+$config = Get-FirebaseSdkConfig -AppId $appId
 Set-ClientApiKey -Config $config -PackageName $packageName -ApiKey $firebaseApiKey
 
 New-Item -ItemType Directory -Path $DestinationDirectory -Force | Out-Null
