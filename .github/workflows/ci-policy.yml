@@ -157,7 +157,10 @@ jobs:
         if: ${{ inputs.infrastructure == 'true' }}
         run: pnpm run guard:opa-policies
       - name: Verify immutable commit diff
-        run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
+        env:
+          BASE_SHA: ${{ inputs.base_sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: git diff --check "${BASE_SHA}" "${HEAD_SHA}"
       - name: Fail closed on deferred policy violations
         if: ${{ always() && (steps.guard_registry.outcome == 'failure' || steps.repository_hygiene.outcome == 'failure') }}
         run: |
