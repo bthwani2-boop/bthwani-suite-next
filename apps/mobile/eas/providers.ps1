@@ -95,6 +95,14 @@ function Stage-ProviderInputs {
     return [pscustomobject]@{ MapsKey = $mapsKey; FirebaseKey = $firebaseKey }
 }
 
+function Remove-AnsiEscapeSequences {
+    param([AllowNull()][string] $Text)
+
+    if ([string]::IsNullOrEmpty($Text)) { return $Text }
+    $csiPattern = [string]([char]27) + '\[[0-?]*[ -/]*[@-~]'
+    return [regex]::Replace($Text, $csiPattern, '')
+}
+
 function Invoke-EasEnvironmentCommand {
     param(
         [Parameter(Mandatory)][string[]] $Arguments,
@@ -105,12 +113,15 @@ function Invoke-EasEnvironmentCommand {
 
     Push-Location -LiteralPath $AppDir
     $previousNoColor = $env:NO_COLOR
+    $previousForceColor = $env:FORCE_COLOR
     try {
         $env:NO_COLOR = '1'
+        $env:FORCE_COLOR = '0'
         $global:LASTEXITCODE = 0
         $output = & pnpm @Arguments 2>&1
         $exitCode = if ($null -eq $global:LASTEXITCODE) { 0 } else { [int]$global:LASTEXITCODE }
-        $text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
+        $rawText = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
+        $text = Remove-AnsiEscapeSequences -Text $rawText
         $commandText = "pnpm $($Arguments -join ' ')"
         foreach ($secret in $SecretValues) {
             if (-not [string]::IsNullOrWhiteSpace($secret)) {
@@ -129,6 +140,11 @@ function Invoke-EasEnvironmentCommand {
         } else {
             $env:NO_COLOR = $previousNoColor
         }
+        if ($null -eq $previousForceColor) {
+            Remove-Item Env:FORCE_COLOR -ErrorAction SilentlyContinue
+        } else {
+            $env:FORCE_COLOR = $previousForceColor
+        }
         Pop-Location
     }
 }
@@ -142,8 +158,10 @@ function Test-EasVariable {
     ) -AllowFailure -Quiet
     if ($result.ExitCode -ne 0) { return $false }
 
-    $pattern = "(?m)^\s*$([regex]::Escape($Name))="
-    return [regex]::IsMatch($result.Text, $pattern)
+    $escapedName = [regex]::Escape($Name)
+    $shortPattern = "(?m)^\s*$escapedName="
+    $longPattern = "(?mi)^\s*Name\s*:\s*$escapedName\s*$"
+    return [regex]::IsMatch($result.Text, $shortPattern) -or [regex]::IsMatch($result.Text, $longPattern)
 }
 
 function Set-EasVariable {
