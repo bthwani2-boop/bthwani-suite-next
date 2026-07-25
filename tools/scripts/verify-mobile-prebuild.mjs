@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
 
 const root = process.cwd();
 const manifest = JSON.parse(
@@ -20,19 +21,19 @@ for (const appKey of appKeys) {
 }
 
 function runPnpm(args, cwd) {
-  const pnpmCli = process.env.npm_execpath;
-  if (!pnpmCli) throw new Error("npm_execpath is unavailable; run through pnpm");
-  const result = spawnSync(process.execPath, [pnpmCli, ...args], {
+  const environment = {
+    ...process.env,
+    CI: "1",
+    EXPO_NO_TELEMETRY: "1",
+    COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
+  };
+  const invocation = resolvePackageManagerInvocation("pnpm", args, environment);
+  const result = spawnSync(invocation.executable, invocation.args, {
     cwd,
     stdio: "inherit",
     shell: false,
     windowsHide: true,
-    env: {
-      ...process.env,
-      CI: "1",
-      EXPO_NO_TELEMETRY: "1",
-      COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
-    },
+    env: environment,
   });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
