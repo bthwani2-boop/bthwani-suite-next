@@ -130,7 +130,6 @@ jobs:
           restore-keys: |
             nx-test-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
       - name: Verify Node tests
-        id: node_tests
         shell: bash
         env:
           NX_BASE: ${{ inputs.base_sha }}
@@ -139,41 +138,17 @@ jobs:
         run: |
           mkdir -p "${RUNNER_TEMP}/node-tests"
           set -o pipefail
-          set +e
           if [[ "$FULL_VERIFICATION" == "true" ]]; then
             pnpm exec nx run-many -t test --all --outputStyle=stream 2>&1 | tee "${RUNNER_TEMP}/node-tests/nx-test.log"
           else
             pnpm exec nx affected -t test --outputStyle=stream 2>&1 | tee "${RUNNER_TEMP}/node-tests/nx-test.log"
           fi
-          test_status=${PIPESTATUS[0]}
-          set -e
-          if [[ "${test_status}" -ne 0 ]]; then
-            node tools/scripts/integrate-jrn029-openapi.mjs
-            node --input-type=module -e "import('./tools/scripts/dsh-openapi-modular-lib.mjs').then(({ migrateDshOpenApi }) => migrateDshOpenApi())"
-            pnpm --dir services/dsh exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts
-          fi
-          exit "${test_status}"
       - name: Upload Node test evidence
         if: ${{ failure() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: node-tests-${{ github.run_id }}
           path: ${{ runner.temp }}/node-tests/*.log
-          if-no-files-found: error
-          retention-days: 7
-      - name: Upload JRN-029 OpenAPI remediation evidence
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: jrn029-openapi-remediation-${{ github.run_id }}
-          path: |
-            services/dsh/contracts/dsh.openapi.yaml
-            services/dsh/contracts/paths/platform-policies.paths.yaml
-            services/dsh/contracts/components/schemas/platform-policies.schemas.yaml
-            services/dsh/contracts/dsh.modular.manifest.json
-            services/dsh/contracts/dsh.contract-ownership.json
-            services/dsh/contracts/generated/dsh.bundle.openapi.yaml
-            services/dsh/clients/generated/dsh-api.ts
           if-no-files-found: error
           retention-days: 7
 
