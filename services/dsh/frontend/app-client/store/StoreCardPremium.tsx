@@ -37,6 +37,8 @@ const PLACEHOLDER_COLORS: Record<string, string> = {
   default: colorRoles.brandStructure,
 };
 
+type ServiceChip = Readonly<{ label: string; tone: "bthwani" | "partner" | "pickup" | "default" }>;
+
 export function StoreCardPremium({
   store,
   onPress,
@@ -109,9 +111,27 @@ export function StoreCardPremium({
 
         {serviceModes.length > 0 ? (
           <View style={styles.serviceRow}>
-            {serviceModes.map((label) => (
-              <View key={label} style={styles.svcItem}>
-                <Text style={styles.svcLabel} numberOfLines={1}>{label}</Text>
+            {serviceModes.map((mode) => (
+              <View
+                key={mode.label}
+                style={[
+                  styles.svcItem,
+                  mode.tone === "bthwani" && styles.svcBthwani,
+                  mode.tone === "partner" && styles.svcPartner,
+                  mode.tone === "pickup" && styles.svcPickup,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.svcLabel,
+                    mode.tone === "bthwani" && styles.svcBthwaniLabel,
+                    mode.tone === "partner" && styles.svcPartnerLabel,
+                    mode.tone === "pickup" && styles.svcPickupLabel,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {mode.label}
+                </Text>
               </View>
             ))}
           </View>
@@ -188,11 +208,26 @@ function buildMetaLine(store: DshStoreCardViewModel): string {
   return pieces.join(" · ");
 }
 
-function buildServiceModeLabels(store: DshStoreCardViewModel): readonly string[] {
-  const labels = store.deliveryModeLabels
+function buildServiceModeLabels(store: DshStoreCardViewModel): readonly ServiceChip[] {
+  const modes = new Set(store.availableFulfillmentModes);
+  const labels: ServiceChip[] = [];
+
+  if (modes.has("bthwani_delivery")) {
+    labels.push({ label: "بثواني", tone: "bthwani" });
+  }
+  if (modes.has("partner_delivery")) {
+    labels.push({ label: "توصيل المتجر", tone: "partner" });
+  }
+  if (modes.has("pickup")) {
+    labels.push({ label: "استلام", tone: "pickup" });
+  }
+
+  if (labels.length > 0) return labels.slice(0, 3);
+
+  return store.deliveryModeLabels
     .map(compactDeliveryMode)
-    .filter((label): label is string => label !== null);
-  return [...new Set(labels)].slice(0, 2);
+    .filter((mode): mode is ServiceChip => mode !== null)
+    .slice(0, 3);
 }
 
 function buildMarketingChips(store: DshStoreCardViewModel): readonly { label: string; tone?: "strong" }[] {
@@ -206,14 +241,22 @@ function buildMarketingChips(store: DshStoreCardViewModel): readonly { label: st
   return chips.slice(0, 4);
 }
 
-function compactDeliveryMode(label: string): string | null {
+function compactDeliveryMode(label: string): ServiceChip | null {
   const value = label.replace("⚡", "").trim();
   if (!value) return null;
-  if (value.includes("استلام") || value.includes("استلم")) return "استلام";
-  if (value.includes("الشريك")) return "توصيل المتجر";
-  if (value.includes("ثواني") || value.includes("سريع")) return "سريع";
-  if (value.includes("توصيل")) return "توصيل";
-  return value.length > 12 ? null : value;
+  if (value.includes("ثواني") || value.includes("سريع")) {
+    return { label: "بثواني", tone: "bthwani" };
+  }
+  if (value.includes("الشريك")) {
+    return { label: "توصيل المتجر", tone: "partner" };
+  }
+  if (value.includes("استلام") || value.includes("استلم")) {
+    return { label: "استلام", tone: "pickup" };
+  }
+  if (value.includes("توصيل")) {
+    return { label: "توصيل", tone: "default" };
+  }
+  return value.length > 12 ? null : { label: value, tone: "default" };
 }
 
 const SHADOW = Platform.select({
@@ -344,6 +387,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: alpha(colorRoles.brandStructure, 0.08),
   },
+  svcBthwani: {
+    backgroundColor: alpha(colorRoles.brandAction, 0.1),
+    borderColor: alpha(colorRoles.brandAction, 0.2),
+  },
+  svcPartner: {
+    backgroundColor: alpha(statusScale.info, 0.09),
+    borderColor: alpha(statusScale.info, 0.2),
+  },
+  svcPickup: {
+    backgroundColor: alpha(statusScale.success, 0.09),
+    borderColor: alpha(statusScale.success, 0.2),
+  },
   svcLabel: {
     fontSize: 9.5,
     lineHeight: 12,
@@ -351,6 +406,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
   },
+  svcBthwaniLabel: { color: colorRoles.brandAction },
+  svcPartnerLabel: { color: statusScale.info },
+  svcPickupLabel: { color: statusScale.success },
   badgeRow: {
     flexDirection: "row-reverse",
     gap: 4,
