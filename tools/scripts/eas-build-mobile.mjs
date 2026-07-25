@@ -92,7 +92,7 @@ function withMobileBuildEnvironmentForApp(appKey, environment = process.env) {
 
 function requireNativeProviderInputs(appKey, app, environment) {
   const features = app.features ?? [];
-  if (profile === "development" || !features.includes("maps")) return;
+  if (!features.includes("maps")) return;
 
   if ((platform === "android" || platform === "all")
     && !optionalEnvironmentValue(environment.GOOGLE_MAPS_ANDROID_API_KEY)) {
@@ -109,6 +109,14 @@ console.log("=== PHASE 1: Comprehensive Preflight ===");
 
 run(process.execPath, ["tools/scripts/sync-mobile-apps.mjs", "--check"]);
 run(process.execPath, ["tools/scripts/guard-mobile-expo-sdk56-versions.mjs"]);
+
+if (all && (platform === "android" || platform === "all")) {
+  run(process.execPath, [
+    "tools/scripts/guard-google-platform-prebuild.mjs",
+    "--project",
+    "bthwani-platform",
+  ]);
+}
 
 if (all && profile !== "development") {
   const projects = new Map();
