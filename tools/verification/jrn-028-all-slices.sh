@@ -39,6 +39,7 @@ done
 
 node tools/guards/product-truth-gate.mjs
 pnpm --dir services/dsh openapi:compose
+node tools/guards/dsh-openapi-modular-gate.mjs
 pnpm --dir services/dsh test -- --test-name-pattern="JRN-028"
 services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh
 services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh
