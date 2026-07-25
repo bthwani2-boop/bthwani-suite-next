@@ -11,7 +11,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 if (Test-Path Variable:PSNativeCommandUseErrorActionPreference) {
-    $PSNativeCommandUseErrorActionPreference = $true
+    $PSNativeCommandUseErrorActionPreference = $false
 }
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -187,6 +187,52 @@ function Invoke-GoogleServicesValidation {
     return $result
 }
 
+function Format-EasCommandForLog {
+    param(
+        [Parameter(Mandatory)][string[]] $Arguments
+    )
+
+    $sensitiveFlags = @("--value", "--password", "--secret")
+    $masked = [System.Collections.Generic.List[string]]::new()
+    for ($index = 0; $index -lt $Arguments.Count; $index++) {
+        $argument = [string]$Arguments[$index]
+        $masked.Add($argument)
+        if ($sensitiveFlags -contains $argument -and ($index + 1) -lt $Arguments.Count) {
+            $index++
+            $masked.Add("<redacted>")
+        }
+    }
+    return "pnpm $($masked -join ' ')"
+}
+
+function Invoke-EasCliCommand {
+    param(
+        [Parameter(Mandatory)][string] $AppDirectory,
+        [Parameter(Mandatory)][string[]] $Arguments,
+        [string[]] $SecretValues = @()
+    )
+
+    Push-Location -LiteralPath $AppDirectory
+    try {
+        $global:LASTEXITCODE = 0
+        $output = & pnpm @Arguments 2>&1
+        $exitCode = if ($null -eq $global:LASTEXITCODE) { 0 } else { [int]$global:LASTEXITCODE }
+        $text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
+        foreach ($secretValue in $SecretValues) {
+            if (-not [string]::IsNullOrWhiteSpace($secretValue)) {
+                $text = $text.Replace($secretValue, "<redacted>")
+            }
+        }
+        return [pscustomobject]@{
+            ExitCode = $exitCode
+            Text = $text
+            Rendered = Format-EasCommandForLog -Arguments $Arguments
+        }
+    } finally {
+        Pop-Location
+    }
+}
+
 function Set-EasDevelopmentVariable {
     param(
         [Parameter(Mandatory)][string] $AppDirectory,
@@ -199,23 +245,48 @@ function Set-EasDevelopmentVariable {
     # Use sensitive rather than secret so EAS CLI can resolve dynamic app config
     # consistently while still avoiding plain log output.
     $visibility = "sensitive"
+    $createArguments = @(
+        "dlx", "eas-cli@latest", "env:create",
+        "--name", $Name,
+        "--value", $Value,
+        "--type", $Type,
+        "--visibility", $visibility,
+        "--scope", "project",
+        "--environment", "development",
+        "--force",
+        "--non-interactive"
+    )
 
-    Push-Location -LiteralPath $AppDirectory
-    try {
-        & pnpm dlx eas-cli@latest env:create development `
-            --name $Name `
-            --value $Value `
-            --type $Type `
-            --visibility $visibility `
-            --scope project `
-            --force `
-            --non-interactive | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            throw "EAS env:create failed for $Name with exit code $LASTEXITCODE"
-        }
-    } finally {
-        Pop-Location
+    Write-Host "> $(Format-EasCommandForLog -Arguments $createArguments)" -ForegroundColor DarkGray
+    $create = Invoke-EasCliCommand -AppDirectory $AppDirectory -Arguments $createArguments -SecretValues @($Value)
+    if ($create.ExitCode -eq 0) {
+        return
     }
+
+    $alreadyExists = $create.Text -match "already exists|duplicate|exists"
+    if ($alreadyExists) {
+        $updateArguments = @(
+            "dlx", "eas-cli@latest", "env:update",
+            "development",
+            "--variable-name", $Name,
+            "--variable-environment", "development",
+            "--name", $Name,
+            "--value", $Value,
+            "--type", $Type,
+            "--visibility", $visibility,
+            "--scope", "project",
+            "--environment", "development",
+            "--non-interactive"
+        )
+        Write-Host "> $(Format-EasCommandForLog -Arguments $updateArguments)" -ForegroundColor DarkGray
+        $update = Invoke-EasCliCommand -AppDirectory $AppDirectory -Arguments $updateArguments -SecretValues @($Value)
+        if ($update.ExitCode -eq 0) {
+            return
+        }
+        throw "EAS env:update failed for $Name with exit code $($update.ExitCode). Command: $($update.Rendered)`n$($update.Text)"
+    }
+
+    throw "EAS env:create failed for $Name with exit code $($create.ExitCode). Command: $($create.Rendered)`n$($create.Text)"
 }
 
 Write-Host "BThwani Mobile Firebase Development Setup" -ForegroundColor Cyan
