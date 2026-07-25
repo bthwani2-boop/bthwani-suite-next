@@ -181,11 +181,11 @@ test("JRN-029 is owned by active standalone OpenAPI projection and modular DSH m
   }
 
   for (const schema of [
-    "DshOperationalPolicyProfile",
-    "DshOperationalPolicyDeliveryMode",
-    "DshOperationalPolicyDecision",
-    "DshOperationalPolicyAuditEvent",
-    "DshOperationalPolicyRollbackResult",
+    "OperationalProfile",
+    "DeliveryModePolicy",
+    "OperationalDecision",
+    "PolicyAuditEvent",
+    "RollbackResult",
   ]) {
     assert.match(standaloneContract, new RegExp(`${schema}:`));
   }
