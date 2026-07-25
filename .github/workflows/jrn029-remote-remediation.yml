@@ -1,0 +1,61 @@
+name: JRN-029 Remote Remediation
+
+on:
+  push:
+    branches:
+      - reemsam
+    paths:
+      - .github/workflows/jrn029-remote-remediation.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: jrn029-remote-remediation-reemsam
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    name: Commit generated OpenAPI remediation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout branch history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          ref: reemsam
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Generate, verify, and commit JRN-029 contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          node tools/scripts/integrate-jrn029-openapi.mjs
+          node --input-type=module -e "import('./tools/scripts/dsh-openapi-modular-lib.mjs').then(({ migrateDshOpenApi }) => migrateDshOpenApi())"
+          pnpm --dir services/dsh exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts
+          pnpm --dir services/dsh run openapi:test
+
+          git checkout 4bff994125cf4d3f3296c5af85f5d70b17eaf49e -- .github/workflows/ci-node-verification.yml
+          git add \
+            services/dsh/contracts/dsh.openapi.yaml \
+            services/dsh/contracts/paths/platform-policies.paths.yaml \
+            services/dsh/contracts/components/schemas/platform-policies.schemas.yaml \
+            services/dsh/contracts/dsh.modular.manifest.json \
+            services/dsh/contracts/dsh.contract-ownership.json \
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+            services/dsh/clients/generated/dsh-api.ts \
+            .github/workflows/ci-node-verification.yml
+          git rm tools/scripts/integrate-jrn029-openapi.mjs
+          git rm .github/workflows/jrn029-remote-remediation.yml
+
+          if git diff --cached --quiet; then
+            echo "No remediation changes were produced." >&2
+            exit 1
+          fi
+
+          git commit -m "fix(openapi): integrate JRN-029 operational policy contracts"
+          git push origin HEAD:reemsam
