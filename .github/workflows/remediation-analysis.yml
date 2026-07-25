@@ -1,136 +1,279 @@
-name: BThwani Failure Analysis
+name: BThwani Live Code Remediation
 
 on:
-  workflow_run:
-    workflows:
-      - BThwani Contextual CI
-    types:
-      - completed
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Branch, tag, or commit to repair; defaults to the selected workflow ref
+        required: false
+        default: ""
+        type: string
+      mode:
+        description: Repair and verification depth
+        required: true
+        default: full
+        type: choice
+        options: [full, affected]
 
 permissions:
-  actions: read
-  contents: read
+  contents: write
+  pull-requests: write
 
 concurrency:
-  group: failure-analysis-${{ github.event.workflow_run.id }}
-  cancel-in-progress: true
+  group: live-code-remediation-${{ inputs.source_ref || github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  analyze:
-    name: Build immutable failure diagnostics
-    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.head_repository.full_name == github.repository }}
+  remediate:
+    name: Repair and verify live code
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 180
+    env:
+      BASE_BRANCH: master
+      SOURCE_REF: ${{ inputs.source_ref || github.ref_name }}
+      REMEDIATION_BRANCH: automation/live-code-remediation-${{ github.run_id }}-${{ github.run_attempt }}
+      NX_BASE: origin/master
+      NX_HEAD: HEAD
     steps:
-      - name: Collect failed jobs and diagnostic excerpts
+      - name: Checkout requested live source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ inputs.source_ref || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Set up locked Go runtime
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            services/wlt/backend/go.sum
+            core/identity/backend/go.sum
+            core/workforce/backend/go.sum
+            core/platform-control/backend/go.sum
+            core/providers/backend/go.sum
+
+      - name: Create isolated remediation branch
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
-          SOURCE_RUN_URL: ${{ github.event.workflow_run.html_url }}
-          SOURCE_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          SOURCE_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "${BASE_BRANCH}"
+          git switch -c "${REMEDIATION_BRANCH}"
+          {
+            echo "### Live-code remediation"
+            echo "- Source ref: ${SOURCE_REF}"
+            echo "- Source commit: $(git rev-parse HEAD)"
+            echo "- Repair mode: ${{ inputs.mode }}"
+            echo "- Output branch: ${REMEDIATION_BRANCH}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Apply deterministic code repairs
+        id: repair
+        shell: bash
+        run: |
+          set +e
+          mobile_status=0
+          openapi_status=0
+          lint_status=0
+          gofmt_status=0
+
+          pnpm run mobile:apps:sync
+          mobile_status=$?
+
+          pnpm run openapi:generate
+          openapi_status=$?
+
+          if [[ "${{ inputs.mode }}" == "full" ]]; then
+            pnpm exec nx run-many -t lint --all --fix --outputStyle=stream
+          else
+            pnpm exec nx affected -t lint --fix --outputStyle=stream
+          fi
+          lint_status=$?
+
+          mapfile -t go_files < <(git ls-files '*.go')
+          if [[ "${#go_files[@]}" -gt 0 ]]; then
+            gofmt -w "${go_files[@]}"
+            gofmt_status=$?
+          fi
+
+          set -e
+          {
+            echo "- Mobile source synchronization exit: ${mobile_status}"
+            echo "- OpenAPI generation exit: ${openapi_status}"
+            echo "- Lint auto-fix exit: ${lint_status}"
+            echo "- Go formatting exit: ${gofmt_status}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Exclude documents, governance records, and logs
+        shell: bash
         run: |
           set -euo pipefail
 
-          gh api --paginate \
-            "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/jobs?filter=latest&per_page=100" \
-            --jq '.jobs[]' | jq -s '.' > /tmp/jobs.json
+          is_non_code_record() {
+            local path="$1"
+            [[ "${path}" == *.md ]] ||
+              [[ "${path}" == docs/* ]] ||
+              [[ "${path}" == governance/* ]] ||
+              [[ "${path}" == .agents/* ]] ||
+              [[ "${path}" == AGENTS.md ]] ||
+              [[ "${path}" == GEMINI.md ]] ||
+              [[ "${path}" == *.log ]] ||
+              [[ "${path}" == .diagnostics/* ]]
+          }
 
-          jq \
-            --arg repository "${GITHUB_REPOSITORY}" \
-            --arg runId "${SOURCE_RUN_ID}" \
-            --arg runUrl "${SOURCE_RUN_URL}" \
-            --arg headSha "${SOURCE_HEAD_SHA}" \
-            --arg headBranch "${SOURCE_HEAD_BRANCH}" \
-            '{
-              schemaVersion: 2,
-              repository: $repository,
-              sourceRunId: $runId,
-              sourceRunUrl: $runUrl,
-              headSha: $headSha,
-              headBranch: $headBranch,
-              failedJobs: [
-                .[]
-                | select(.conclusion != "success" and .conclusion != "skipped")
-                | {
-                    id,
-                    name,
-                    status,
-                    conclusion,
-                    htmlUrl: .html_url,
-                    failedSteps: [
-                      .steps[]?
-                      | select(.conclusion != "success" and .conclusion != "skipped")
-                      | {number, name, status, conclusion}
-                    ]
-                  }
-              ]
-            }' /tmp/jobs.json > failure-map.json
+          while IFS= read -r -d '' path; do
+            if is_non_code_record "${path}"; then
+              git restore --source=HEAD --staged --worktree -- "${path}"
+            fi
+          done < <(git diff --name-only -z)
 
-          failed_count="$(jq '.failedJobs | length' failure-map.json)"
-          if [[ "${failed_count}" -eq 0 ]]; then
-            echo "No failed job was returned for failed workflow run ${SOURCE_RUN_ID}." >&2
+          while IFS= read -r -d '' path; do
+            if is_non_code_record "${path}"; then
+              rm -rf -- "${path}"
+            fi
+          done < <(git ls-files --others --exclude-standard -z)
+
+          invalid=0
+          while IFS= read -r path; do
+            [[ -z "${path}" ]] && continue
+            case "${path}" in
+              apps/*|core/*|services/*|shared/*|contracts/*|infra/*|tools/*|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|nx.json)
+                ;;
+              *)
+                echo "::error title=Non-code remediation blocked::${path} is outside the live-code allowlist."
+                invalid=1
+                ;;
+            esac
+          done < <({ git diff --name-only; git ls-files --others --exclude-standard; } | sort -u)
+
+          if [[ "${invalid}" -ne 0 ]]; then
             exit 1
           fi
 
-          mkdir -p failure-logs
-          : > failure-diagnostics.txt
+      - name: Verify live bindings and imports
+        id: bindings
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run guard:no-broken-imports
+          pnpm run guard:api-binding
+          pnpm run guard:backend-api-binding
+          pnpm run guard:frontend-feature-binding
+          pnpm run guard:runtime-real-bindings
+          pnpm run guard:live-cross-journey-integrity
+          pnpm run mobile:expo:verify
+          pnpm --dir contracts typecheck
 
-          while IFS=$'\t' read -r job_id job_name job_url; do
-            raw_log="failure-logs/${job_id}.raw.log"
-            clean_log="failure-logs/${job_id}.log"
-            excerpt="failure-logs/${job_id}.excerpt.log"
+      - name: Verify Node code
+        id: node_verification
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ inputs.mode }}" == "full" ]]; then
+            pnpm run nx:typecheck
+            pnpm run nx:lint
+            pnpm run nx:test
+            pnpm run nx:build
+          else
+            pnpm run affected:typecheck
+            pnpm run affected:lint
+            pnpm run affected:test
+            pnpm run affected:build
+          fi
 
-            curl --fail-with-body --location --retry 3 \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${GH_TOKEN}" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/jobs/${job_id}/logs" \
-              --output "${raw_log}"
+      - name: Verify Go code
+        id: go_verification
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t modules < <(git ls-files | grep '/go.mod$' | sort)
+          for module in "${modules[@]}"; do
+            module_dir="$(dirname "${module}")"
+            echo "=== ${module_dir} ==="
+            (
+              cd "${module_dir}"
+              go test ./... -count=1
+              go build ./...
+            )
+          done
 
-            sed -E \
-              -e $'s/\x1b\[[0-9;]*m//g' \
-              -e 's/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z[[:space:]]+//' \
-              "${raw_log}" > "${clean_log}"
+      - name: Commit repaired live code
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
 
-            grep -E -i \
-              '##\[error\]|(^|[[:space:]])(error|fatal|fail(ed|ure)?|assertionerror|panic|unused|unlisted|missing|violation|forbidden|cannot|not found|invalid)(:|[[:space:]]|$)|^-[[:space:]]' \
-              "${clean_log}" | tail -n 120 > "${excerpt}" || true
+          git add --all -- apps core services shared contracts infra tools package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json
+          if git diff --cached --quiet; then
+            echo "created=false" >> "${GITHUB_OUTPUT}"
+            echo "No deterministic live-code change was produced." >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
 
-            if [[ ! -s "${excerpt}" ]]; then
-              tail -n 120 "${clean_log}" > "${excerpt}"
-            fi
+          git config user.name "bthwani-live-code-remediation[bot]"
+          git config user.email "bthwani-live-code-remediation[bot]@users.noreply.github.com"
+          git commit -m "fix: apply deterministic live-code remediation"
+          echo "created=true" >> "${GITHUB_OUTPUT}"
+          echo "commit_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
 
-            {
-              echo "## ${job_name}"
-              echo "Job: ${job_url}"
-              echo
-              cat "${excerpt}"
-              echo
-            } >> failure-diagnostics.txt
-          done < <(jq -r '.failedJobs[] | [.id, .name, .htmlUrl] | @tsv' failure-map.json)
+      - name: Push remediation branch and open pull request
+        if: ${{ steps.commit.outputs.created == 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BINDINGS_RESULT: ${{ steps.bindings.outcome }}
+          NODE_RESULT: ${{ steps.node_verification.outcome }}
+          GO_RESULT: ${{ steps.go_verification.outcome }}
+        run: |
+          set -euo pipefail
+          gh auth setup-git
+          git push --force-with-lease origin "HEAD:${REMEDIATION_BRANCH}"
 
-          {
-            echo "### Immutable failure diagnostics"
-            echo "- Source run: ${SOURCE_RUN_URL}"
-            echo "- Branch: ${SOURCE_HEAD_BRANCH}"
-            echo "- Commit: ${SOURCE_HEAD_SHA}"
-            echo "- Failed jobs: ${failed_count}"
-            echo
-            jq -r '.failedJobs[] | "- **\(.name)** — \(.conclusion)\n" + ((.failedSteps // []) | map("  - \(.name): \(.conclusion)") | join("\n"))' failure-map.json
-            echo
-            echo "### First diagnostic excerpts"
-            sed -n '1,180p' failure-diagnostics.txt
-          } >> "${GITHUB_STEP_SUMMARY}"
+          cat > /tmp/remediation-pr.md <<EOF
+          ## Live-code remediation
 
-      - name: Upload immutable failure diagnostics
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: failure-diagnostics-${{ github.event.workflow_run.id }}
-          path: |
-            failure-map.json
-            failure-diagnostics.txt
-            failure-logs/*.excerpt.log
-          if-no-files-found: error
-          retention-days: 7
+          This pull request contains deterministic repairs applied to executable source only.
+
+          - Source ref: \`${SOURCE_REF}\`
+          - Mode: \`${{ inputs.mode }}\`
+          - Live bindings/imports: \`${BINDINGS_RESULT}\`
+          - Node verification: \`${NODE_RESULT}\`
+          - Go verification: \`${GO_RESULT}\`
+
+          Markdown documents, governance records, diagnostic folders, and log files were explicitly excluded from automatic modification.
+          EOF
+
+          gh pr create \
+            --base "${BASE_BRANCH}" \
+            --head "${REMEDIATION_BRANCH}" \
+            --title "fix: remediate live-code failures" \
+            --body-file /tmp/remediation-pr.md
+
+      - name: Enforce remediation result
+        if: ${{ always() }}
+        shell: bash
+        env:
+          CREATED: ${{ steps.commit.outputs.created }}
+          BINDINGS_RESULT: ${{ steps.bindings.outcome }}
+          NODE_RESULT: ${{ steps.node_verification.outcome }}
+          GO_RESULT: ${{ steps.go_verification.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ "${CREATED}" != "true" ]]; then
+            echo "::error title=No safe automatic repair::The workflow found no deterministic code change to commit. Semantic repair is still required."
+            exit 1
+          fi
+
+          if [[ "${BINDINGS_RESULT}" != "success" || "${NODE_RESULT}" != "success" || "${GO_RESULT}" != "success" ]]; then
+            echo "::error title=Remediation PR created with unresolved checks::Review the created pull request and finish the remaining semantic fixes in live code."
+            exit 1
+          fi
+
+          echo "Deterministic live-code remediation completed and all verification bundles passed."
