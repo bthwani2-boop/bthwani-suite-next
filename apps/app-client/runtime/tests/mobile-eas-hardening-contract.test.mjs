@@ -71,10 +71,13 @@ test("Firebase Android configuration uses the official Management REST API", () 
     "projects/-/androidApps/$encodedAppId/config",
     "configFileContents",
     "FromBase64String",
+    "X-Goog-User-Project",
+    "Get-FirebaseErrorText",
   ]) assert.ok(firebaseHelper.includes(marker), `missing Firebase REST marker: ${marker}`);
-  assert.equal(/['\"]apps:sdkconfig['\"]/.test(firebaseHelper), false);
+  assert.equal(/[\'"]apps:sdkconfig[\'"]/.test(firebaseHelper), false);
   assert.equal(firebaseHelper.includes("firebase-tools@"), false);
-  assert.equal(firebaseHelper.includes("Invoke-Firebase"), false);
+  assert.equal(/function\s+Invoke-Firebase\s*\{/i.test(firebaseHelper), false);
+  assert.equal(firebaseHelper.includes("$_.ErrorDetails.Message"), false);
 });
 
 test("every remote Android build verifies Firebase and Maps on the EAS worker", () => {
