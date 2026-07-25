@@ -13,7 +13,7 @@ on:
 permissions:
   contents: read
 jobs:
-  prepare:
+  remediate:
     name: Forensic discovery and deterministic repair
     steps:
       - uses: actions/checkout@0123456789012345678901234567890123456789
@@ -23,20 +23,13 @@ jobs:
       - run: pnpm exec nx run-many -t lint --all --fix
       - run: echo patch_sha256
       - run: echo Unapproved deletion rejected
-  publish:
-    name: Publish reviewed remediation pull request
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@0123456789012345678901234567890123456789
+      - run: echo Protected deletion rejected
+      - run: echo manual-patch-only-no-privileged-write
+      - name: Export evidence-backed remediation patch
+        uses: actions/upload-artifact@0123456789012345678901234567890123456789
         with:
-          persist-credentials: false
-      - run: git commit -m repair
-      - run: git push origin HEAD:automation/repair
-  result:
-    steps:
-      - run: echo done
+          name: evidence
+          path: /tmp/remediation-evidence
 `;
 
 test("allows read-only verification commands", () => {
@@ -119,12 +112,12 @@ steps:
   assert.deepEqual(ids(workflow), ["SOURCE_FORMAT_WRITE", "SOURCE_FORMAT_WRITE"]);
 });
 
-test("allows only the hardened manual remediation workflow to write", () => {
+test("allows only the hardened manual read-only remediation workflow", () => {
   assert.deepEqual(ids(validRemediation, ".github/workflows/remediation-analysis.yml"), []);
 });
 
 test("rejects secrets in the remediation workflow", () => {
-  const workflow = validRemediation.replace("echo done", "echo ${{ secrets.DANGEROUS_TOKEN }}");
+  const workflow = validRemediation.replace("path: /tmp/remediation-evidence", "path: ${{ secrets.DANGEROUS_TOKEN }}");
   assert.ok(ids(workflow, ".github/workflows/remediation-analysis.yml").includes("REMEDIATION_REPOSITORY_SECRET_FORBIDDEN"));
 });
 
@@ -134,4 +127,16 @@ test("rejects automatic privileged remediation triggers", () => {
   assert.ok(result.includes("REMEDIATION_MANUAL_TRIGGER_REQUIRED"));
   assert.ok(result.includes("REMEDIATION_PRIVILEGED_TRIGGER_FORBIDDEN"));
   assert.ok(result.includes("PRIVILEGED_TRIGGER_SOURCE_EXECUTION"));
+});
+
+test("rejects write permissions in the remediation workflow", () => {
+  const workflow = validRemediation.replace("contents: read", "contents: write");
+  const result = ids(workflow, ".github/workflows/remediation-analysis.yml");
+  assert.ok(result.includes("SOURCE_WRITE_PERMISSION"));
+  assert.ok(result.includes("REMEDIATION_WRITE_PERMISSION_FORBIDDEN"));
+});
+
+test("rejects branch mutation in the remediation workflow", () => {
+  const workflow = validRemediation.replace("echo patch_sha256", "git push origin HEAD:automation/bad");
+  assert.ok(ids(workflow, ".github/workflows/remediation-analysis.yml").includes("REMEDIATION_BRANCH_OR_PR_MUTATION_FORBIDDEN"));
 });
