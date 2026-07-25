@@ -88,7 +88,8 @@ if (result.error || result.status !== 0) {
     console.error(`::error file=${location},title=zizmor:${finding.ident ?? "finding"}::severity=${severity} confidence=${confidence} ${finding.desc ?? "workflow security finding"}`);
   }
 
-  const message = result.error?.message ?? String(result.stderr ?? "").trim() || `exit=${result.status}`;
+  const stderrMessage = String(result.stderr ?? "").trim();
+  const message = result.error?.message ?? (stderrMessage || `exit=${result.status}`);
   console.error(`[ZIZMOR FAIL] ${message} report=${path.relative(repoRoot, reportPath)} decision=FIX_REQUIRED`);
   process.exit(1);
 }
