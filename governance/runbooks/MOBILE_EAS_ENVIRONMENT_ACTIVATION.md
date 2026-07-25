@@ -33,22 +33,22 @@ Initialize -> Preflight -> Build
 
 ## Initialize
 
-Run once for the selected application, or again only when its signing or provider inputs change:
+Run for the selected application before its first preflight and whenever its signing or provider inputs may have changed:
 
 ```powershell
 pnpm mobile:eas -- -App app-field -Mode Initialize
 ```
 
-`Initialize` performs only the missing work for that application:
+`Initialize` is idempotent and application-scoped:
 
-- creates or reuses its isolated Android development keystore;
-- records the keystore SHA-1 used by the restricted Maps key;
-- creates or reuses its Firebase Android application in `bthwani-platform`;
-- downloads and validates its package-specific `google-services.json`;
-- creates or reuses its package-and-SHA-1-restricted Android Maps key;
-- stages the validated local inputs used by Expo and EAS.
+- creates or reuses the isolated Android development keystore;
+- derives and records the current keystore SHA-1;
+- creates or reuses the Firebase Android application in `bthwani-platform`;
+- refreshes and validates the package-specific `google-services.json`;
+- creates or updates the existing Android Maps key restrictions for the exact package and current SHA-1;
+- stages and validates the local inputs used by Expo and EAS.
 
-It does not submit a build.
+It does not submit a build and does not touch another application.
 
 ## Preflight
 
@@ -117,7 +117,7 @@ Each application remains isolated by:
 
 ## Push sending credential
 
-The FCM V1 service-account credential is an operational sending credential. It is not required to compile an Android APK and is intentionally excluded from `Initialize`, `Preflight`, and `Build`.
+The FCM V1 service-account credential is an operational sending credential. It is intentionally separate from `Initialize`, `Preflight`, and `Build` so push-delivery administration cannot block compilation.
 
 Configure and verify push delivery separately after the application binary builds and installs successfully.
 
