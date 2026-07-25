@@ -29,7 +29,10 @@ test('JRN-015 persists one durable pickup lifecycle and command truth', () => {
 
 test('JRN-015 composes the governed reschedule route and lifecycle projection', () => {
   const fragment = source('services/dsh/contracts/fragments/pickup-recovery.fragment.yaml');
+  const rootContract = source('services/dsh/contracts/dsh.openapi.yaml');
+  const bundle = source('services/dsh/contracts/generated/dsh.bundle.openapi.yaml');
   const composer = source('tools/scripts/compose-dsh-openapi.mjs');
+  const modularComposer = source('tools/scripts/dsh-openapi-modular-lib.mjs');
 
   assert.match(fragment, /\/dsh\/operator\/pickups\/\{orderId\}\/reschedule:/);
   assert.match(fragment, /operationId: rescheduleDshPickupWindow/);
@@ -38,9 +41,13 @@ test('JRN-015 composes the governed reschedule route and lifecycle projection', 
   assert.match(fragment, /customerArrivedAt:/);
   assert.match(fragment, /noShowReason:/);
   assert.match(fragment, /rescheduledAt:/);
-  assert.match(composer, /pickup-recovery\.fragment\.yaml/);
-  assert.match(composer, /DshPickupSession:/);
-  assert.match(composer, /Pickup lifecycle properties are duplicated/);
+  assert.match(rootContract, /\/dsh\/operator\/pickups\/\{orderId\}\/reschedule:/);
+  assert.match(bundle, /operationId: rescheduleDshPickupWindow/);
+  assert.match(bundle, /DshPickupSession:/);
+  assert.match(composer, /composeDshOpenApi/);
+  assert.match(composer, /generatedBundlePath/);
+  assert.match(modularComposer, /generatedBundlePath/);
+  assert.match(modularComposer, /composeDshOpenApi/);
 });
 
 test('JRN-015 guards every pickup mutation with command and version semantics', () => {
