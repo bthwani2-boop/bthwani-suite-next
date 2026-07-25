@@ -1,14 +1,15 @@
-# App-field EAS archive rules.
-# This runtime may generate native build inputs locally immediately before
-# submitting an EAS remote Android build. These files are intentionally not
-# tracked, but they must remain available to Expo config during the remote build
-# archive.
-
+# Governed EAS archive rules for one mobile runtime.
 node_modules/
 .expo/
 dist/
 build/
+coverage/
 .tmp/
+*.log
+credentials.json
+*.jks
+*.keystore
+.env*
 
 !google-services.json
 !.env.local
