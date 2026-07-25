@@ -29,12 +29,12 @@ test("canonical operational consumer resolves order recipient and emits notifica
   assert.match(worker, /SELECT client_id::text\s+FROM dsh_orders/s);
   assert.match(worker, /plan\.ActionURL/);
   assert.match(worker, /ON CONFLICT \(id\) DO NOTHING/);
+  assert.match(worker, /case "order\.created":/);
+  assert.match(worker, /تم إنشاء طلبك/);
 
   assert.match(policy, /fallbackTitle, fallbackBody := notificationCopy\(event\.EventType\)/);
   assert.match(policy, /ActionURL:\s+notificationActionURL\(event\)/);
   assert.match(policy, /case "order":\s+return "\/orders\/" \+ event\.EntityID/s);
-  assert.match(policy, /case "order\.created":/);
-  assert.match(policy, /تم إنشاء طلبك/);
 });
 
 test("JRN-011 runbook treats outbox delivery as an operational obligation", () => {
