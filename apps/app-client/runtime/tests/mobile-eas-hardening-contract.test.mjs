@@ -11,6 +11,10 @@ const wrapper = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas.ps1"), "utf
 const workflow = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/workflow.ps1"), "utf8");
 const providers = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/providers.ps1"), "utf8");
 const signing = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/signing.ps1"), "utf8");
+const firebaseHelper = fs.readFileSync(
+  path.join(repoRoot, "tools/scripts/mobile-eas/ensure-firebase-app.ps1"),
+  "utf8",
+);
 
 function runtimePackage(app) {
   return JSON.parse(fs.readFileSync(path.join(repoRoot, "apps", app, "runtime/package.json"), "utf8"));
@@ -42,6 +46,20 @@ test("EAS provider variables use one unambiguous environment selector", () => {
   const listAdds = signing.match(/[^\n]*\$candidates\.Add\([^\n]*/g) ?? [];
   assert.ok(listAdds.length > 0);
   for (const line of listAdds) assert.match(line, /\[void\]\s+\$candidates\.Add/);
+});
+
+test("Firebase Android configuration uses the official Management REST API", () => {
+  for (const marker of [
+    "https://firebase.googleapis.com/v1beta1",
+    "'auth', 'print-access-token'",
+    "projects/$ProjectId/androidApps",
+    "projects/-/androidApps/$encodedAppId/config",
+    "configFileContents",
+    "FromBase64String",
+  ]) assert.ok(firebaseHelper.includes(marker), `missing Firebase REST marker: ${marker}`);
+  assert.equal(firebaseHelper.includes("apps:sdkconfig"), false);
+  assert.equal(firebaseHelper.includes("firebase-tools@"), false);
+  assert.equal(firebaseHelper.includes("Invoke-Firebase"), false);
 });
 
 test("every remote Android build verifies Firebase and Maps on the EAS worker", () => {
