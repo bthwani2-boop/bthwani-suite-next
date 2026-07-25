@@ -23,34 +23,40 @@ describe("JRN-007 home discovery slice closure", () => {
     assert.match(mediaUrl, /new URL\(value, apiBaseUrl\)/);
   });
 
-  test("S1.1 keeps categories and video independent from promos", () => {
+  test("S1.1 keeps the legacy promo row while categories and video stay independent", () => {
     const shell = read("services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx");
-    const quickActions = read("services/dsh/frontend/app-client/home-discovery/HomeQuickActionsSection.tsx");
     const reels = read("services/dsh/frontend/app-client/home-discovery/HomeReelsSection.tsx");
     const reelsApi = read("services/dsh/frontend/shared/home-discovery/home-reels.api.ts");
     const promo = read("services/dsh/frontend/app-client/home-discovery/HomePromoSection.tsx");
 
-    assert.match(shell, /HomeQuickActionsSection/);
-    assert.match(shell, /hasCategories=\{categories\.length > 0\}/);
+    assert.doesNotMatch(shell, /HomeQuickActionsSection/);
     assert.match(shell, /fetchHomePublicReels\(10\)/);
     assert.match(shell, /HomeReelsSection/);
-    assert.match(quickActions, /title="الفئات"/);
-    assert.match(quickActions, /title="فيديو"/);
-    assert.doesNotMatch(promo, /onCategoriesPress|onVideoPress/);
+    assert.match(shell, /<HomePromoSection/);
+    assert.match(shell, /onCategoriesPress=\{\(\) => setShowDropdown\(true\)\}/);
+    assert.match(shell, /onVideoPress=\{handleVideoPress\}/);
+    assert.match(promo, /fixedIconsContainer/);
+    assert.match(promo, /label="الفئات"/);
+    assert.match(promo, /label="فيديو"/);
+    assert.match(promo, /ICON_BOX = 56/);
     assert.match(reels, /مختارات مرئية/);
     assert.match(reelsApi, /\/dsh\/public\/reels\?limit=/);
   });
 
-  test("S1.2 keeps store cards compact and marketing-led", () => {
+  test("S1.2 keeps store cards in the previous compact space with cleaned text", () => {
     const card = read("services/dsh/frontend/app-client/store/StoreCardPremium.tsx");
 
+    assert.match(card, /const CARD_HEIGHT = 118/);
+    assert.match(card, /height: CARD_HEIGHT/);
     assert.match(card, /buildMarketingChips/);
+    assert.match(card, /buildServiceModeLabels/);
     assert.match(card, /compactDeliveryMode/);
     assert.match(card, /مجاني/);
     assert.match(card, /كوبون/);
     assert.match(card, /استلام/);
     assert.match(card, /توصيل المتجر/);
-    assert.doesNotMatch(card, /deliveryModeLabels\.map/);
+    assert.doesNotMatch(card, /minHeight: CARD_HEIGHT/);
+    assert.doesNotMatch(card, /deliveryModeLabels\.map\(\(label\)/);
     assert.doesNotMatch(card, /توصيل المتجر الشريك/);
   });
 
