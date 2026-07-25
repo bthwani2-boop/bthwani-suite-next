@@ -108,7 +108,7 @@ export function StoreCardPremium({
       </View>
 
       <View style={styles.mediaBlock}>
-        <View style={[styles.heroWrap, { backgroundColor: placeholderBgColor }]}> 
+        <View style={[styles.heroWrap, { backgroundColor: placeholderBgColor }]}>
           {heroImageUri ? (
             <Image
               source={{ uri: heroImageUri }}
