@@ -163,17 +163,27 @@ jobs:
           restore-keys: |
             nx-build-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
       - name: Verify Node build
+        shell: bash
         env:
           NX_BASE: ${{ inputs.base_sha }}
           NX_HEAD: ${{ inputs.head_sha }}
           FULL_VERIFICATION: ${{ inputs.full_verification }}
         run: |
-          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/node-build"
+          set -o pipefail
           if [[ "${FULL_VERIFICATION}" == "true" ]]; then
-            pnpm run nx:build
+            pnpm run nx:build 2>&1 | tee "${RUNNER_TEMP}/node-build/nx-build.log"
           else
-            pnpm run affected:build
+            pnpm run affected:build 2>&1 | tee "${RUNNER_TEMP}/node-build/nx-build.log"
           fi
+      - name: Upload Node build evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: node-build-${{ github.run_id }}
+          path: ${{ runner.temp }}/node-build/*.log
+          if-no-files-found: error
+          retention-days: 7
 
   journeys:
     name: Run detected journey gates
