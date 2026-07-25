@@ -57,6 +57,10 @@
   },
   "workspaces": {
     ".": {
+      "entry": [
+        "tools/guards/_guard-utils.mjs",
+        "tools/scripts/dsh-openapi-modular-lib.mjs"
+      ],
       "ignoreFiles": [
         "tools/contracts/**/*.mjs",
         "tools/guards/**/*.mjs",
@@ -67,15 +71,12 @@
       ],
       "ignoreDependencies": [
         "expo-linking"
-      ],
-      "ignoreIssues": {
-        "tools/guards/_guard-utils.mjs": [
-          "exports"
-        ],
-        "tools/scripts/dsh-openapi-modular-lib.mjs": [
-          "exports"
-        ]
-      }
+      ]
+    },
+    "apps/control-panel/runtime": {
+      "entry": [
+        "src/app/api/auth/_lib/server-config.ts"
+      ]
     },
     "apps/app-client/runtime": {
       "entry": [
@@ -158,6 +159,8 @@
         "frontend/app-*/**/*Header.tsx",
         "frontend/app-*/**/*context.tsx",
         "frontend/app-*/*.navigation-bridge.ts",
+        "frontend/app-partner/account/PartnerHubNav.tsx",
+        "frontend/app-partner/dsh-partner-binding.contracts.ts",
         "frontend/control-panel/**/index.{ts,tsx}",
         "frontend/control-panel/**/*Screen.tsx",
         "frontend/control-panel/**/*Panel.tsx",
@@ -165,9 +168,13 @@
         "frontend/control-panel/**/*Inspector.tsx",
         "frontend/control-panel/**/*Workspace.tsx",
         "frontend/control-panel/**/*Section.tsx",
-        "frontend/control-panel/**/*Diagnostic.tsx",
         "frontend/control-panel/**/*.types.ts",
         "frontend/control-panel/**/*.helpers.ts",
+        "frontend/control-panel/finance/RepresentativeWalletLookup.tsx",
+        "frontend/control-panel/hr/SupervisorPicker.tsx",
+        "frontend/control-panel/hr/WorkforceScopeManager.tsx",
+        "frontend/control-panel/hr/ZonePicker.tsx",
+        "frontend/control-panel/platform/DshPlatformWorkspaces.tsx",
         "frontend/shared/**/index.{ts,tsx}",
         "frontend/shared/**/*.registry.ts",
         "frontend/shared/**/*contract*.ts",
@@ -185,7 +192,13 @@
         "frontend/shared/**/*journey.ts",
         "frontend/shared/**/*classifier.ts",
         "frontend/shared/**/*image-source.ts",
-        "frontend/shared/**/*notification-action.ts"
+        "frontend/shared/**/*notification-action.ts",
+        "frontend/shared/_kernel/DshDevDiagnostic.tsx",
+        "frontend/shared/operations/dsh-operational-runtime-adapter.ts",
+        "frontend/shared/partner-delivery/PartnerDeliveryStatusCard.tsx",
+        "frontend/shared/partner/operator-delivery-pricing.tsx",
+        "frontend/shared/platform/use-operational-policy-editor.ts",
+        "frontend/shared/workforce/WorkforceErrorState.tsx"
       ],
       "ignoreFiles": [
         "frontend/shared/**/generated/**"
@@ -205,6 +218,7 @@
     },
     "services/wlt": {
       "entry": [
+        "service.manifest.ts",
         "frontend/shared/**/*.{ts,tsx}",
         "frontend/app-*/operational-surface.classification.ts",
         "frontend/control-panel/_skeleton-proof/*.tsx"
@@ -238,11 +252,17 @@
       ]
     },
     "core/platform-control": {
+      "entry": [
+        "service.manifest.ts"
+      ],
       "ignoreDependencies": [
         "react"
       ]
     },
     "core/providers": {
+      "entry": [
+        "service.manifest.ts"
+      ],
       "ignoreDependencies": [
         "react"
       ]
