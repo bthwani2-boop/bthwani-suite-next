@@ -14,6 +14,7 @@ import {
 } from "@bthwani/control-panel/components";
 import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
+import { WebStyleSheet } from "@bthwani/ui-kit/web";
 import { useOperatorCheckoutController } from "../../shared/checkout";
 import type { DshCheckoutIntent, DshFulfillmentMode, DshIntentState } from "../../shared/checkout";
 
@@ -55,9 +56,11 @@ export function CheckoutActivityScreen() {
       dir="rtl"
       header={(
         <CpPageHeader title="نشاط checkout ومرجع WLT">
-          <CpMutedInline tight>
-            حدود الخدمة والرحلة التشغيلية: هذه الشاشة مراقبة تشغيلية فقط، DSH يعرض نية checkout وWLT يملك مرجع جلسة الدفع. لا توجد أزرار خصم أو استرداد أو تسوية هنا.
-          </CpMutedInline>
+          <div style={styles.boundaryNote}>
+            <CpMutedInline tight>
+              حدود الخدمة والرحلة التشغيلية: هذه الشاشة مراقبة تشغيلية فقط، DSH يعرض نية checkout وWLT يملك مرجع جلسة الدفع. لا توجد أزرار خصم أو استرداد أو تسوية هنا.
+            </CpMutedInline>
+          </div>
         </CpPageHeader>
       )}
       filters={(
@@ -161,3 +164,9 @@ const STATUS_TONE: Record<DshIntentState, CpBadgeTone> = {
   cancelled: "danger",
   expired: "neutral",
 };
+
+const styles = WebStyleSheet.create({
+  boundaryNote: {
+    maxWidth: "72rem",
+  },
+});
