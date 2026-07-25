@@ -29,9 +29,13 @@ import {
   type HomeDiscoveryState,
   type PromoViewModel,
 } from "../../shared/home-discovery";
+import { fetchPublicReels } from "../../shared/catalog/central-catalog.api";
+import type { PublicReel } from "../../shared/catalog/central-catalog.types";
 import { HomeFilterRailSection } from "./HomeFilterRailSection";
 import { HomeHeroBannerSection } from "./HomeHeroBannerSection";
 import { HomePromoSection } from "./HomePromoSection";
+import { HomeQuickActionsSection } from "./HomeQuickActionsSection";
+import { HomeReelsSection } from "./HomeReelsSection";
 import { HomeStoreFeedSection } from "./HomeStoreFeedSection";
 
 type Props = {
@@ -56,6 +60,9 @@ export function HomeDiscoveryShell({
   const isRtl = I18nManager.isRTL;
   const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
   const [showDropdown, setShowDropdown] = React.useState(false);
+  const [reels, setReels] = React.useState<readonly PublicReel[]>([]);
+  const scrollRef = React.useRef<ScrollView>(null);
+  const reelsOffsetY = React.useRef(0);
   const recordedImpressions = React.useRef(new Set<string>());
   const viewerRef = React.useRef(
     `home.${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 12)}`,
@@ -77,6 +84,26 @@ export function HomeDiscoveryShell({
       audienceSegment: state.data.context.audienceSegment,
     });
   }, [state]);
+
+  React.useEffect(() => {
+    if (state.kind !== "success") {
+      setReels([]);
+      return;
+    }
+
+    let cancelled = false;
+    void fetchPublicReels(10)
+      .then((items) => {
+        if (!cancelled) setReels(items);
+      })
+      .catch(() => {
+        if (!cancelled) setReels([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [state.kind, state.kind === "success" ? state.data.context.cityCode : "", state.kind === "success" ? state.data.context.serviceAreaCode : ""]);
 
   React.useEffect(() => {
     if (state.kind !== "success") return;
@@ -111,6 +138,16 @@ export function HomeDiscoveryShell({
     emitMarketingEvent("click", "promos", promo.id);
     executeMarketingAction(promo.actionType, promo.actionTarget);
   }, [emitMarketingEvent, executeMarketingAction]);
+
+  const handleVideoPress = React.useCallback(() => {
+    scrollRef.current?.scrollTo({ y: reelsOffsetY.current, animated: true });
+  }, []);
+
+  const handleReelPress = React.useCallback((reel: PublicReel) => {
+    if (reel.targetType === "store") {
+      onMarketingAction?.("store", reel.targetId);
+    }
+  }, [onMarketingAction]);
 
   if (state.kind === "loading") {
     return <Screen padded={false}><LoadingState title="جاري التحميل..." /></Screen>;
@@ -152,6 +189,7 @@ export function HomeDiscoveryShell({
   return (
     <Screen padded={false}>
       <ScrollView
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -159,11 +197,23 @@ export function HomeDiscoveryShell({
         {banners.length > 0 ? (
           <HomeHeroBannerSection banners={banners} onBannerPress={handleBannerPress} />
         ) : null}
+        <HomeQuickActionsSection
+          hasCategories={categories.length > 0}
+          hasReels
+          onCategoriesPress={() => setShowDropdown(true)}
+          onVideoPress={handleVideoPress}
+        />
+        <View
+          onLayout={(event) => {
+            reelsOffsetY.current = event.nativeEvent.layout.y;
+          }}
+        >
+          <HomeReelsSection reels={reels} onReelPress={handleReelPress} />
+        </View>
         {promos.length > 0 ? (
           <HomePromoSection
             promos={promos}
             onPromoPress={handlePromoPress}
-            onCategoriesPress={() => setShowDropdown(true)}
           />
         ) : null}
         <HomeFilterRailSection
