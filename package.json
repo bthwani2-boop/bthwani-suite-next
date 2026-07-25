@@ -203,16 +203,6 @@
     "mobile:apps:sync": "node tools/scripts/sync-mobile-apps.mjs --apply",
     "mobile:apps:check": "node tools/scripts/sync-mobile-apps.mjs --check",
     "mobile:expo:verify": "node tools/scripts/guard-mobile-apps.mjs",
-    "mobile:eas:preflight": "node tools/scripts/sync-mobile-apps.mjs --check && node tools/scripts/guard-mobile-apps.mjs && pnpm -r --if-present typecheck",
-    "mobile:eas:preflight:android": "node tools/scripts/sync-mobile-apps.mjs --check && node tools/scripts/guard-mobile-apps.mjs --require-build-secrets --platform android && pnpm -r --if-present typecheck",
-    "mobile:eas:build": "node tools/scripts/eas-build-mobile.mjs",
-    "mobile:eas:build:client:dev": "node tools/scripts/eas-build-mobile.mjs --app app-client --platform android --profile development",
-    "mobile:eas:build:partner:dev": "node tools/scripts/eas-build-mobile.mjs --app app-partner --platform android --profile development",
-    "mobile:eas:build:captain:dev": "node tools/scripts/eas-build-mobile.mjs --app app-captain --platform android --profile development",
-    "mobile:eas:build:field:dev": "node tools/scripts/eas-build-mobile.mjs --app app-field --platform android --profile development",
-    "mobile:eas:build:all:dev": "node tools/scripts/eas-build-mobile.mjs --all --platform android --profile development",
-    "mobile:eas:preflight:all:dev": "node tools/scripts/eas-build-mobile.mjs --all --platform android --profile development --preflight-only",
-    "mobile:firebase:setup:dev": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/setup-mobile-firebase-development.ps1",
     "client:mirror": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-client/runtime/start.ps1 -MirrorDevice",
     "partner:mirror": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-partner/runtime/start.ps1 -MirrorDevice",
     "captain:mirror": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-captain/runtime/start.ps1 -MirrorDevice",
@@ -235,7 +225,8 @@
     "journey:gate:runtime:full": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Full -Runtime",
     "openapi:lint:dsh": "node tools/guards/dsh-openapi-modular-gate.mjs",
     "openapi:verify:dsh": "pnpm --dir services/dsh openapi:verify",
-    "guard:a11y-runtime": "node tools/guards/a11y-runtime-gate.mjs"
+    "guard:a11y-runtime": "node tools/guards/a11y-runtime-gate.mjs",
+    "mobile:eas": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/mobile-eas.ps1"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",
