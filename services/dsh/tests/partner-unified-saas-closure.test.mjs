@@ -99,16 +99,17 @@ describe("partner unified full-stack SaaS closure", () => {
     assert.match(barrel, /PartnerDetailUnifiedScreen as PartnerDetailScreen/);
   });
 
-  test("passes category from UI to runtime and eliminates repeated client-home stores", () => {
+  test("passes category from UI to runtime and renders one canonical client-home store feed", () => {
     const controller = read("services/dsh/frontend/shared/partner/partner-workspace.controller.tsx");
     const list = read("services/dsh/frontend/control-panel/partners/PartnerListScreen.tsx");
-    const groups = read("services/dsh/frontend/shared/home-discovery/home-discovery.groups.ts");
     const shell = read("services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx");
 
     assert.match(controller, /query\.set\('category'|query\.set\("category"/);
     assert.match(list, /controller\.filters\.category/);
-    assert.match(groups, /claimed\.has\(store\.id\)/);
-    assert.match(groups, /feedStores/);
-    assert.match(shell, /presentation\.feedStores/);
+    assert.match(shell, /const \{ banners, promos, filters, categories, stores \} = state\.data/);
+    assert.match(shell, /const filteredStores = applyDiscoveryFilter\(stores, activeFilter\)/);
+    assert.match(shell, /<HomeStoreFeedSection/);
+    assert.match(shell, /stores=\{filteredStores\}/);
+    assert.equal((shell.match(/<HomeStoreFeedSection/g) ?? []).length, 1);
   });
 });
