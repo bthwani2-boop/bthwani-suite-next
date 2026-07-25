@@ -107,7 +107,16 @@ export function ProviderRegistryPanel() {
       {mapsProvider ? (
         <View style={styles.section}>
           <Text role="titleSm">مزود الخرائط</Text>
-          <MapsProviderInspector provider={mapsProvider} />
+          <MapsProviderInspector
+            provider={mapsProvider}
+            providerId={mapsProvider.providerId}
+            canUpdate={canUpdate}
+            mutationLoading={
+              registry.mutationState.kind === "loading" &&
+              registry.mutationState.providerId === mapsProvider.providerId
+            }
+            onSaveAndroidKey={registry.setMapsAndroidKey}
+          />
         </View>
       ) : null}
 
@@ -242,7 +251,7 @@ export function ProviderRegistryPanel() {
           <StateView
             tone="success"
             title="تم تحديث حالة المزود"
-            description="تمت الكتابة في خدمة providers ثم أُعيدت قراءة السجل والصحة من المصدر التشغيلي."
+            description="تمت الكتابة في خدمة providers ثم أُعيدت قراءة السجل والصحة من المصدر التشغيلي. إذا كان التحديث مفتاح خرائط Android، فيجب مزامنته إلى EAS وتشغيل build جديد للميداني."
           />
         </View>
       ) : null}
