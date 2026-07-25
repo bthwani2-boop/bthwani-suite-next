@@ -184,16 +184,6 @@ function Get-KeyNameByDisplayName {
     return [string]$match.name
 }
 
-function Get-KeyResourceName {
-    param([Parameter(Mandatory)] $Payload)
-    foreach ($node in @($Payload.response, $Payload.result, $Payload)) {
-        if ($null -eq $node) { continue }
-        $name = [string](Get-PropertyValue -Object $node -Names @('name'))
-        if ($name -match '/locations/global/keys/') { return $name }
-    }
-    return $null
-}
-
 function Get-KeyString {
     param([Parameter(Mandatory)][string] $KeyName)
 
@@ -202,7 +192,11 @@ function Get-KeyString {
             $payload = Get-BalancedJson -Text (Invoke-Gcloud -Arguments @(
                 'services', 'api-keys', 'get-key-string', $KeyName, '--format=json'
             ) -CaptureOnly)
-            $value = if ($payload.keyString) { [string]$payload.keyString } else { [string]$payload.response.keyString }
+            $value = [string](Get-PropertyValue -Object $payload -Names @('keyString'))
+            if (-not $value) {
+                $response = Get-PropertyValue -Object $payload -Names @('response')
+                $value = [string](Get-PropertyValue -Object $response -Names @('keyString'))
+            }
             if ($value -match '^AIza[0-9A-Za-z_-]{35}$') { return $value }
         } catch {
             if ($attempt -eq 10) { throw }
@@ -238,10 +232,14 @@ function Ensure-FirebaseApiKey {
         '--format=json'
     )
 
-    $resultText = Invoke-Gcloud -Arguments $arguments -CaptureOnly
+    [void](Invoke-Gcloud -Arguments $arguments -CaptureOnly)
     if (-not $keyName) {
-        $keyName = Get-KeyResourceName -Payload (Get-BalancedJson -Text $resultText)
-        if (-not $keyName) { throw "Unable to identify Firebase API key '$FirebaseKeyDisplayName'." }
+        for ($attempt = 1; $attempt -le 10; $attempt++) {
+            Start-Sleep -Seconds 2
+            $keyName = Get-KeyNameByDisplayName
+            if ($keyName) { break }
+        }
+        if (-not $keyName) { throw "Unable to locate Firebase API key '$FirebaseKeyDisplayName' after creation." }
     }
 
     return Get-KeyString -KeyName $keyName
