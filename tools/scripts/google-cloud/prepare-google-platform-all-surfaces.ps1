@@ -63,7 +63,7 @@ function Assert-File {
 function Invoke-ChildPowerShell {
     param(
         [Parameter(Mandatory)][string] $File,
-        [Parameter(Mandatory)][string[]] $Arguments
+        [Parameter(Mandatory)][AllowEmptyCollection()][string[]] $Arguments
     )
 
     Write-Host "> pwsh -NoProfile -ExecutionPolicy Bypass -File $File $($Arguments -join ' ')" -ForegroundColor DarkGray
@@ -76,7 +76,7 @@ function Invoke-ChildPowerShell {
 function Invoke-NodeChecked {
     param(
         [Parameter(Mandatory)][string] $File,
-        [Parameter(Mandatory)][string[]] $Arguments
+        [Parameter(Mandatory)][AllowEmptyCollection()][string[]] $Arguments
     )
 
     Write-Host "> node $File $($Arguments -join ' ')" -ForegroundColor DarkGray
