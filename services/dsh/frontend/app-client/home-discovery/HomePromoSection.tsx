@@ -1,5 +1,5 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from "react-native";
 import {
   alpha,
   colorRoles,
@@ -14,193 +14,292 @@ import type { PromoViewModel } from "../../shared/home-discovery";
 type Props = {
   readonly promos: readonly PromoViewModel[];
   readonly onPromoPress?: ((promo: PromoViewModel) => void) | undefined;
+  readonly onCategoriesPress?: ((event: GestureResponderEvent) => void) | undefined;
+  readonly onVideoPress?: (() => void) | undefined;
 };
 
-export function HomePromoSection({ promos, onPromoPress }: Props) {
-  if (promos.length === 0) return null;
+const ICON_BOX = 56;
+const PROMO_H = 74;
 
-  const primary = promos[0];
-  const secondary = promos.slice(1, 3);
+export function HomePromoSection({ promos, onPromoPress, onCategoriesPress, onVideoPress }: Props) {
+  const promo = promos[0] ?? null;
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.kicker}>عروض مختارة</Text>
-        <Text style={styles.title}>وفرها بثواني</Text>
-      </View>
-
-      {primary ? (
-        <Pressable
-          style={({ pressed }) => [styles.heroPromoCard, pressed && styles.cardPressed]}
-          onPress={() => onPromoPress?.(primary)}
-          accessibilityRole="button"
-          accessibilityLabel={primary.title}
-        >
-          <View style={styles.heroIconContainer}>
-            <Text style={styles.heroIcon}>🎁</Text>
-          </View>
-          <View style={styles.heroTextWrap}>
-            {primary.badgeLabel ? (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{primary.badgeLabel}</Text>
-              </View>
-            ) : null}
-            <Text style={styles.heroTitle} numberOfLines={1}>{primary.title}</Text>
-            {primary.subtitle ? (
-              <Text style={styles.heroSubtitle} numberOfLines={1}>{primary.subtitle}</Text>
-            ) : null}
-          </View>
-          <View style={styles.ctaButton}>
-            <Text style={styles.ctaText}>استفد الآن</Text>
-          </View>
-        </Pressable>
-      ) : null}
-
-      {secondary.length > 0 ? (
-        <View style={styles.miniRow}>
-          {secondary.map((promo) => (
-            <Pressable
-              key={promo.id}
-              style={({ pressed }) => [styles.miniCard, pressed && styles.cardPressed]}
-              onPress={() => onPromoPress?.(promo)}
-              accessibilityRole="button"
-              accessibilityLabel={promo.title}
-            >
-              <Text style={styles.miniTitle} numberOfLines={1}>{promo.title}</Text>
-              {promo.badgeLabel ? <Text style={styles.miniBadge} numberOfLines={1}>{promo.badgeLabel}</Text> : null}
-            </Pressable>
-          ))}
+      <View style={styles.row}>
+        <View style={styles.fixedIconsContainer}>
+          <QuickBtn label="فيديو" onPress={onVideoPress} isVideo />
+          <QuickBtn label="الفئات" onPress={onCategoriesPress} isHub />
         </View>
-      ) : null}
+
+        {promo != null ? (
+          <Pressable
+            style={({ pressed }) => [styles.heroPromoCard, pressed && styles.heroPromoCardPressed]}
+            onPress={() => onPromoPress?.(promo)}
+            accessibilityRole="button"
+            accessibilityLabel={promo.title}
+          >
+            <View style={styles.heroPromoContent}>
+              <View style={styles.heroPromoIconContainer}>
+                <RibbonIcon />
+              </View>
+              <View style={styles.heroPromoTextWrap}>
+                {promo.badgeLabel ? (
+                  <Text style={styles.heroPromoBadge} numberOfLines={1}>{promo.badgeLabel}</Text>
+                ) : null}
+                <Text style={styles.heroPromoTitle} numberOfLines={1}>{promo.title}</Text>
+                {promo.subtitle ? (
+                  <Text style={styles.heroPromoSubtitle} numberOfLines={1}>{promo.subtitle}</Text>
+                ) : null}
+                <View style={styles.heroPromoCtaButton}>
+                  <Text style={styles.heroPromoCtaText}>استفد الآن</Text>
+                </View>
+              </View>
+            </View>
+          </Pressable>
+        ) : (
+          <View style={styles.heroPromoFallback}>
+            <Text style={styles.fallbackTitle} numberOfLines={1}>عروض بثواني</Text>
+            <Text style={styles.fallbackSubtitle} numberOfLines={1}>ستظهر هنا عند نشرها</Text>
+          </View>
+        )}
+      </View>
     </View>
+  );
+}
+
+function PlayIcon() {
+  return <Text style={styles.playGlyph}>▶</Text>;
+}
+
+function GridOutlineIcon() {
+  return (
+    <View style={styles.gridOutline}>
+      <View style={styles.gridRow}>
+        <View style={styles.gridCell} />
+        <View style={styles.gridCell} />
+      </View>
+      <View style={styles.gridRow}>
+        <View style={styles.gridCell} />
+        <View style={styles.gridCell} />
+      </View>
+    </View>
+  );
+}
+
+function RibbonIcon() {
+  return <Text style={styles.ribbonGlyph}>🎖️</Text>;
+}
+
+function QuickBtn({
+  label,
+  onPress,
+  isVideo = false,
+  isHub = false,
+}: {
+  readonly label: string;
+  readonly onPress?: ((event: GestureResponderEvent) => void) | undefined;
+  readonly isVideo?: boolean | undefined;
+  readonly isHub?: boolean | undefined;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.categorySelectorCard, pressed && styles.quickPressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <View
+        style={[
+          styles.categoryIconContainer,
+          isVideo && styles.videoIconContainer,
+          isHub && styles.categoryHubIconContainer,
+        ]}
+      >
+        {isVideo ? <PlayIcon /> : <GridOutlineIcon />}
+      </View>
+      <View style={styles.categoryNameContainer}>
+        <Text style={styles.categoryName} numberOfLines={1}>{label}</Text>
+      </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: spacing[4],
-    marginBottom: spacing[4],
+    marginBottom: spacing[1],
   },
-  headerRow: {
-    marginBottom: spacing[2],
-    alignItems: "flex-end",
+  row: {
+    flexDirection: "row-reverse",
+    alignItems: "flex-start",
+    gap: spacing[1],
   },
-  kicker: {
+  fixedIconsContainer: {
+    flexDirection: "row-reverse",
+    alignItems: "flex-start",
+    gap: spacing[2],
+    flexShrink: 0,
+  },
+  categorySelectorCard: {
+    alignItems: "center",
+    gap: spacing[1],
+  },
+  quickPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.98 }],
+  },
+  categoryIconContainer: {
+    width: ICON_BOX,
+    height: ICON_BOX,
+    borderRadius: radius.xl,
+    backgroundColor: colorRoles.surfaceBase,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    borderWidth: 0.5,
+    borderColor: colorRoles.borderSubtle,
+    ...elevation.raised,
+  },
+  videoIconContainer: {
+    borderWidth: 1,
+    borderColor: alpha(colorRoles.brandAction, 0.32),
+    backgroundColor: alpha(statusScale.danger, 0.04),
+  },
+  categoryHubIconContainer: {
+    borderWidth: 1,
+    borderColor: alpha(colorRoles.brandAction, 0.32),
+    backgroundColor: alpha(colorRoles.brandAction, 0.04),
+  },
+  categoryNameContainer: {
+    alignItems: "center",
+    minHeight: 18,
+  },
+  categoryName: {
     fontSize: 11,
     fontWeight: "800",
-    color: statusScale.warning,
-    textAlign: "right",
+    color: colorRoles.textSecondary,
+    textAlign: "center",
   },
-  title: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: colorRoles.textPrimary,
-    textAlign: "right",
+  playGlyph: {
+    fontSize: 20,
+    color: colorRoles.brandAction,
+    lineHeight: 22,
+  },
+  gridOutline: {
+    gap: 4,
+  },
+  gridRow: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  gridCell: {
+    width: 10,
+    height: 10,
+    borderRadius: 2,
+    borderWidth: 2,
+    borderColor: colorRoles.brandAction,
+    backgroundColor: "transparent",
+  },
+  ribbonGlyph: {
+    fontSize: 24,
   },
   heroPromoCard: {
-    minHeight: 82,
+    flex: 1.6,
+    height: PROMO_H,
     borderRadius: radius.lg,
+    backgroundColor: colorRoles.surfaceInset,
     borderWidth: 1,
-    borderColor: alpha(statusScale.warning, 0.22),
-    backgroundColor: colorRoles.surfaceBase,
-    padding: spacing[3],
-    flexDirection: "row-reverse",
+    borderColor: colorRoles.borderSubtle,
+    overflow: "hidden",
+    justifyContent: "center",
+    paddingHorizontal: spacing[3],
+    ...elevation.raised,
+  },
+  heroPromoCardPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.98 }],
+  },
+  heroPromoContent: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: spacing[3],
-    ...elevation.overlay,
+    gap: spacing[2],
   },
-  cardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.988 }],
-  },
-  heroIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: alpha(statusScale.warning, 0.12),
+  heroPromoIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.sm,
+    backgroundColor: alpha(statusScale.warning, 0.08),
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
-  heroIcon: {
-    fontSize: 25,
-  },
-  heroTextWrap: {
+  heroPromoTextWrap: {
     flex: 1,
     alignItems: "flex-end",
+    justifyContent: "center",
+    gap: 1,
     minWidth: 0,
   },
-  badge: {
-    borderRadius: radius.round,
-    backgroundColor: alpha(statusScale.warning, 0.15),
-    paddingHorizontal: spacing[2],
-    paddingVertical: 2,
-    marginBottom: 3,
-  },
-  badgeText: {
+  heroPromoBadge: {
     fontSize: 9,
     fontWeight: "900",
     color: statusScale.warning,
-  },
-  heroTitle: {
-    width: "100%",
-    fontSize: 14,
-    fontWeight: "900",
-    color: colorRoles.textPrimary,
     textAlign: "right",
   },
-  heroSubtitle: {
+  heroPromoTitle: {
     width: "100%",
-    marginTop: 1,
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "900",
+    color: colorRoles.brandAction,
+    textAlign: "right",
+    lineHeight: 18,
+  },
+  heroPromoSubtitle: {
+    width: "100%",
+    fontSize: 9,
     color: colorRoles.textSecondary,
     textAlign: "right",
+    marginBottom: 2,
   },
-  ctaButton: {
-    height: 30,
-    borderRadius: radius.round,
-    paddingHorizontal: spacing[3],
+  heroPromoCtaButton: {
+    backgroundColor: colorRoles.brandAction,
+    borderRadius: radius.xs,
+    paddingHorizontal: spacing[2],
+    paddingVertical: 3,
+    height: 22,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colorRoles.brandAction,
-    flexShrink: 0,
+    alignSelf: "flex-end",
   },
-  ctaText: {
-    fontSize: 11,
-    fontWeight: "900",
+  heroPromoCtaText: {
+    fontSize: 9,
+    fontWeight: "800",
     color: neutralScale[0],
   },
-  miniRow: {
-    flexDirection: "row-reverse",
-    gap: spacing[2],
-    marginTop: spacing[2],
-  },
-  miniCard: {
-    flex: 1,
-    minHeight: 48,
-    borderRadius: radius.md,
+  heroPromoFallback: {
+    flex: 1.6,
+    height: PROMO_H,
+    borderRadius: radius.lg,
+    backgroundColor: colorRoles.surfaceInset,
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
-    backgroundColor: colorRoles.surfaceMuted,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    alignItems: "flex-end",
     justifyContent: "center",
+    alignItems: "flex-end",
+    paddingHorizontal: spacing[3],
+    ...elevation.raised,
   },
-  miniTitle: {
-    width: "100%",
-    fontSize: 12,
+  fallbackTitle: {
+    fontSize: 13,
     fontWeight: "900",
-    color: colorRoles.textPrimary,
+    color: colorRoles.brandAction,
     textAlign: "right",
   },
-  miniBadge: {
-    width: "100%",
-    marginTop: 1,
-    fontSize: 10,
-    fontWeight: "800",
-    color: colorRoles.brandAction,
+  fallbackSubtitle: {
+    marginTop: 2,
+    fontSize: 9,
+    fontWeight: "700",
+    color: colorRoles.textSecondary,
     textAlign: "right",
   },
 });
