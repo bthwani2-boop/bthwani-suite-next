@@ -129,7 +129,19 @@ jobs:
         run: pnpm run guard:workflow-lint
       - name: Verify workflow security
         if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
-        run: pnpm run guard:workflow-security
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/workflow-security"
+          set -o pipefail
+          pnpm run guard:workflow-security 2>&1 | tee "${RUNNER_TEMP}/workflow-security/zizmor.log"
+      - name: Upload workflow security evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workflow-security-${{ github.run_id }}
+          path: ${{ runner.temp }}/workflow-security/zizmor.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Verify workflow policy
         if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
         run: pnpm run guard:opa-policies
