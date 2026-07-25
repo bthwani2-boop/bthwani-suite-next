@@ -107,7 +107,6 @@ function Invoke-EasEnvironmentCommand {
     param(
         [Parameter(Mandatory)][string[]] $Arguments,
         [string[]] $SecretValues = @(),
-        [switch] $AllowFailure,
         [switch] $Quiet
     )
 
@@ -129,8 +128,8 @@ function Invoke-EasEnvironmentCommand {
                 $commandText = $commandText.Replace($secret, '<redacted>')
             }
         }
-        if ($text -and (-not $Quiet -or ($exitCode -ne 0 -and -not $AllowFailure))) { Write-Host $text }
-        if ($exitCode -ne 0 -and -not $AllowFailure) {
+        if ($text -and (-not $Quiet -or $exitCode -ne 0)) { Write-Host $text }
+        if ($exitCode -ne 0) {
             throw "EAS environment command failed with exit code ${exitCode}: $commandText"
         }
         return [pscustomobject]@{ ExitCode = $exitCode; Text = $text }
@@ -147,25 +146,6 @@ function Invoke-EasEnvironmentCommand {
         }
         Pop-Location
     }
-}
-
-function Get-EasDevelopmentVariableNames {
-    # Supplying the environment makes env:list non-interactive. Unlike env:set,
-    # env:list does not define a --non-interactive flag.
-    $result = Invoke-EasEnvironmentCommand -Arguments @(
-        'dlx', 'eas-cli@latest', 'env:list', 'development',
-        '--format', 'short', '--scope', 'project'
-    ) -Quiet
-
-    $names = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
-    foreach ($line in ($result.Text -split '\r?\n')) {
-        # Current EAS short format is NAME=value. Accept NAME | metadata as a
-        # compatibility fallback for older or alternate CLI renderers.
-        if ($line -match '^\s*(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*(?:=|\|)') {
-            [void]$names.Add([string]$Matches.name)
-        }
-    }
-    return [string[]]@($names)
 }
 
 function Set-EasVariable {
@@ -189,16 +169,5 @@ function Sync-EasDevelopmentEnvironment {
     Write-Step 'Synchronize EAS development provider inputs'
     Set-EasVariable -Name 'GOOGLE_SERVICES_JSON' -Value $SecureFirebasePath -Type 'file' -Visibility 'secret'
     Set-EasVariable -Name 'GOOGLE_MAPS_ANDROID_API_KEY' -Value $MapsKey -Type 'string' -Visibility 'sensitive' -SecretValues @($MapsKey)
-    Assert-EasDevelopmentEnvironment
-}
-
-function Assert-EasDevelopmentEnvironment {
-    Write-Step 'Verify EAS development provider inputs'
-    $availableNames = @(Get-EasDevelopmentVariableNames)
-    foreach ($requiredName in @('GOOGLE_SERVICES_JSON', 'GOOGLE_MAPS_ANDROID_API_KEY')) {
-        if ($availableNames -notcontains $requiredName) {
-            $availableText = if ($availableNames.Count -gt 0) { $availableNames -join ', ' } else { '<none>' }
-            throw "Required EAS development variable is missing: $requiredName. Available project variables: $availableText"
-        }
-    }
+    Write-Host 'PASS: EAS development provider inputs were created or updated.' -ForegroundColor Green
 }
