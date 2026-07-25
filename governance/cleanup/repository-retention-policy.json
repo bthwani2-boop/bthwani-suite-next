@@ -1,7 +1,8 @@
 {
-  "schemaVersion": 1,
-  "decision": "DETECT_FAIL_AND_REVIEW_WITHOUT_CI_SOURCE_MUTATION",
-  "ciSourceMutation": "FORBIDDEN",
+  "schemaVersion": 2,
+  "decision": "CODE_FIRST_REMEDIATION_WITH_REVIEWED_RECORD_CLEANUP",
+  "ciSourceMutation": "MANUAL_REMEDIATION_PULL_REQUEST_ONLY",
+  "privilegedRemediationWorkflow": ".github/workflows/remediation-analysis.yml",
   "generatedOutputRoots": [
     ".diagnostics/",
     "coverage/",
@@ -63,7 +64,9 @@
       "STATUS: RETIRED",
       "STATUS: OBSOLETE",
       "STATUS: SUPERSEDED"
-    ]
+    ],
+    "deleteExactNormalizedDuplicates": true,
+    "deleteEmptyDocuments": true
   },
   "maintenanceScripts": {
     "root": "tools/scripts/",
@@ -79,14 +82,24 @@
     "maximumUnreferencedAgeDays": 90
   },
   "deletionPolicy": {
-    "safeAutomaticClasses": ["scratch", "temporary", "generated-output"],
+    "safeAutomaticClasses": [
+      "scratch",
+      "temporary",
+      "generated-output"
+    ],
+    "safeManualRemediationClasses": [
+      "retired-document",
+      "stale-evidence",
+      "duplicate-document",
+      "empty-document"
+    ],
     "requiresExplicitHumanOrAgentCommit": true,
     "forbiddenAutomaticClasses": [
       "source",
       "contract",
       "migration",
-      "governance",
-      "evidence",
+      "active-governance",
+      "active-evidence",
       "audit"
     ]
   }

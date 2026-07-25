@@ -57,9 +57,10 @@ jobs:
         env:
           NX_BASE: ${{ inputs.base_sha }}
           NX_HEAD: ${{ inputs.head_sha }}
+          FULL_VERIFICATION: ${{ inputs.full_verification }}
         run: |
           set -euo pipefail
-          if [[ "${{ inputs.full_verification }}" == "true" ]]; then
+          if [[ "${FULL_VERIFICATION}" == "true" ]]; then
             pnpm run nx:typecheck
           else
             pnpm run affected:typecheck
@@ -89,9 +90,10 @@ jobs:
         env:
           NX_BASE: ${{ inputs.base_sha }}
           NX_HEAD: ${{ inputs.head_sha }}
+          FULL_VERIFICATION: ${{ inputs.full_verification }}
         run: |
           set -euo pipefail
-          if [[ "${{ inputs.full_verification }}" == "true" ]]; then
+          if [[ "${FULL_VERIFICATION}" == "true" ]]; then
             pnpm run nx:lint
           else
             pnpm run affected:lint
@@ -122,10 +124,11 @@ jobs:
         env:
           NX_BASE: ${{ inputs.base_sha }}
           NX_HEAD: ${{ inputs.head_sha }}
+          FULL_VERIFICATION: ${{ inputs.full_verification }}
         run: |
           mkdir -p "${RUNNER_TEMP}/node-tests"
           set -o pipefail
-          if [[ "${{ inputs.full_verification }}" == "true" ]]; then
+          if [[ "${FULL_VERIFICATION}" == "true" ]]; then
             pnpm exec nx run-many -t test --all --outputStyle=stream 2>&1 | tee "${RUNNER_TEMP}/node-tests/nx-test.log"
           else
             pnpm exec nx affected -t test --outputStyle=stream 2>&1 | tee "${RUNNER_TEMP}/node-tests/nx-test.log"
@@ -163,9 +166,10 @@ jobs:
         env:
           NX_BASE: ${{ inputs.base_sha }}
           NX_HEAD: ${{ inputs.head_sha }}
+          FULL_VERIFICATION: ${{ inputs.full_verification }}
         run: |
           set -euo pipefail
-          if [[ "${{ inputs.full_verification }}" == "true" ]]; then
+          if [[ "${FULL_VERIFICATION}" == "true" ]]; then
             pnpm run nx:build
           else
             pnpm run affected:build

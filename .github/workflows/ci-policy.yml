@@ -55,6 +55,26 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify workflow security preflight (guard:workflow-security)
+        id: workflow_security
+        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
+        continue-on-error: true
+        env:
+          BTHWANI_ZIZMOR_REPORT: ${{ runner.temp }}/zizmor/zizmor.json
+        run: node tools/scripts/run-zizmor.mjs
+      - name: Upload workflow security findings
+        if: ${{ steps.workflow_security.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workflow-security-${{ github.run_id }}
+          path: ${{ runner.temp }}/zizmor/zizmor.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Fail closed on workflow security findings
+        if: ${{ steps.workflow_security.outcome == 'failure' }}
+        run: |
+          echo "::error title=Workflow security failed::Review the machine-readable Zizmor artifact."
+          exit 1
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Test CI source immutability guard
@@ -111,7 +131,7 @@ jobs:
           BTHWANI_HYGIENE_REPORT: ${{ runner.temp }}/repository-hygiene/report.json
         run: node tools/scripts/check-repository-hygiene.mjs
       - name: Upload repository hygiene report
-        if: ${{ inputs.policy == 'true' && always() }}
+        if: ${{ inputs.policy == 'true' && steps.repository_hygiene.outcome != 'skipped' && always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: repository-hygiene-${{ github.run_id }}
@@ -127,9 +147,6 @@ jobs:
       - name: Verify workflow syntax
         if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
         run: pnpm run guard:workflow-lint
-      - name: Verify workflow security
-        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
-        run: pnpm run guard:workflow-security
       - name: Verify workflow policy
         if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
         run: pnpm run guard:opa-policies
@@ -140,7 +157,10 @@ jobs:
         if: ${{ inputs.infrastructure == 'true' }}
         run: pnpm run guard:opa-policies
       - name: Verify immutable commit diff
-        run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
+        env:
+          BASE_SHA: ${{ inputs.base_sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: git diff --check "${BASE_SHA}" "${HEAD_SHA}"
       - name: Fail closed on deferred policy violations
         if: ${{ always() && (steps.guard_registry.outcome == 'failure' || steps.repository_hygiene.outcome == 'failure') }}
         run: |
