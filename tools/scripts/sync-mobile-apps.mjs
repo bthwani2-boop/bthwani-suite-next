@@ -6,6 +6,13 @@ const root = process.cwd();
 const apply = process.argv.includes("--apply");
 const check = process.argv.includes("--check");
 
+function valueAfter(flag, fallback) {
+  const index = process.argv.indexOf(flag);
+  return index >= 0 ? process.argv[index + 1] : fallback;
+}
+
+const requestedApp = valueAfter("--app", null);
+
 if (!apply && !check) {
   console.error("FAIL: use --apply or --check");
   process.exit(1);
@@ -88,6 +95,13 @@ const manifest = readJson("tools/mobile/mobile-apps.manifest.json");
 const easTemplate = readJson("tools/mobile/eas.template.json");
 const appKeys = Object.keys(manifest.apps);
 
+if (requestedApp && !manifest.apps[requestedApp]) {
+  console.error(`FAIL: unknown --app '${requestedApp}'. Allowed: ${appKeys.join(", ")}`);
+  process.exit(1);
+}
+
+const targetAppKeys = requestedApp ? [requestedApp] : appKeys;
+
 for (const key of appKeys) {
   const app = manifest.apps[key];
   for (const field of [
@@ -139,17 +153,17 @@ if (apply) {
   // The executable factory is sovereign and is deliberately never generated here.
   writeText("tools/mobile/defineBthwaniExpoApp.d.ts", factoryDtsContent());
 
-  for (const key of appKeys) {
+  for (const key of targetAppKeys) {
     writeText(`${appDir(key)}/app.config.ts`, appConfig(key));
     writeJson(`${appDir(key)}/eas.json`, easTemplate);
   }
 
-  console.log("PASS: generated mobile app configs synchronized without overwriting the Expo factory");
+  console.log(`PASS: generated mobile app configs synchronized for ${targetAppKeys.join(", ")} without overwriting the Expo factory`);
   process.exit(0);
 }
 
 assertSame("tools/mobile/defineBthwaniExpoApp.d.ts", factoryDtsContent());
-for (const key of appKeys) {
+for (const key of targetAppKeys) {
   assertSame(`${appDir(key)}/app.config.ts`, appConfig(key));
   assertSame(`${appDir(key)}/eas.json`, JSON.stringify(easTemplate, null, 2) + "\n");
 }
@@ -157,14 +171,14 @@ for (const key of appKeys) {
 const lifecycle = process.env.npm_lifecycle_event ?? "";
 if (lifecycle === "mobile:eas:preflight" || lifecycle === "mobile:eas:preflight:android") {
   const platform = process.env.MOBILE_PREFLIGHT_PLATFORM || "android";
-  for (const key of appKeys) {
+  for (const key of targetAppKeys) {
     const cwd = abs(appDir(key));
     runPnpm(["dlx", "expo-doctor@latest"], cwd);
     const outputDir = abs(`.tmp/eas-preflight/${key}/${platform}`);
     fs.rmSync(outputDir, { recursive: true, force: true });
     runPnpm(["exec", "expo", "export", "--platform", platform, "--output-dir", outputDir], cwd);
   }
-  runNode(["tools/scripts/verify-mobile-prebuild.mjs", "--platform", platform]);
+  runNode(["tools/scripts/verify-mobile-prebuild.mjs", "--platform", platform, ...requestedApp ? ["--app", requestedApp] : []]);
 }
 
-console.log("PASS: mobile generated contracts are synchronized");
+console.log(`PASS: mobile generated contracts are synchronized for ${targetAppKeys.join(", ")}`);
