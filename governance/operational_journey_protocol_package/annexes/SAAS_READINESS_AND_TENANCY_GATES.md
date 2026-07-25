@@ -8,6 +8,8 @@ Schema: `governance/saas/saas-governance.schema.json`
 
 Activation authorization: `governance/saas/activation-authorization.json`
 
+Tenant hostname and TLS policy: `governance/saas/TENANT_HOSTNAME_AND_TLS_POLICY.md`
+
 Canonical decisions: `governance/contracts/decision-vocabulary.json`
 
 ## Applies When
@@ -20,6 +22,7 @@ applies_when:
   - tenant_owned_data == true
   - cross_tenant_operation == true
   - future_saas_boundary_affected == true
+  - tenant_hostname_or_custom_domain_affected == true
 ```
 
 ## Current Mode — SINGLE SOURCE OF TRUTH IS THE MACHINE-READABLE FILE
@@ -40,23 +43,24 @@ source_of_truth: governance/saas/saas-governance.json
 Read this as three distinct, non-interchangeable facts — do not collapse them into one claim:
 
 1. **Authorization exists, and its scope now covers doing the work, not only assessing it.** `governance/saas/activation-authorization.json` records `status: AUTHORIZED` for target ref `lianbassam` (dated 2026-07-23), scoped to `ENABLE_SAAS_RUNTIME_MODE`, `REMOVE_COMMERCIAL_ACTIVATION_POLICY_BLOCK`, `EXECUTE_SAAS_ACTIVATION_VERIFICATION`. On 2026-07-24 the user explicitly widened that scope with `EXECUTE_SAAS_IMPLEMENTATION_WORK` and `EXECUTE_SAAS_ACTIVATION_WORK` (see `scopeAmendment` in that file): this is no longer readiness-assessment-only, engineering may actively build tenant isolation and activation-gate capability, not merely evaluate it. This scope widening does **not** by itself change `commercialActivationState`, `saasReadinessMode`, or any `activationEvidence` item below — those still move only when each has same-commit proof.
-2. **Runtime mode is NOT yet flipped.** `governance/saas/saas-governance.json` (commit `4e0ba605`, `fix(governance): separate authorization from SaaS activation state` — the current and newest state on this file) deliberately keeps `saasReadinessMode: SAAS_READY_DEFERRED`. Authorization to proceed is not the same event as declaring the platform SaaS-active. Do not read authorization as if it already means `SAAS_ACTIVE`.
-3. **Commercial state is `ELIGIBLE_FOR_REVIEW`**, not `ACTIVATION_AUTHORIZED` and not `ACTIVE`. That earlier, more advanced-sounding label was walked back by the same commit for exactly this reason: it over-claimed relative to unproven evidence (`activationEvidence` in the JSON lists every gate item as `NOT_PROVEN`).
+2. **Runtime mode is NOT yet flipped.** `governance/saas/saas-governance.json` deliberately keeps `saasReadinessMode: SAAS_READY_DEFERRED`. Authorization to proceed is not the same event as declaring the platform SaaS-active. Do not read authorization as if it already means `SAAS_ACTIVE`.
+3. **Commercial state is `ELIGIBLE_FOR_REVIEW`**, not `ACTIVATION_AUTHORIZED` and not `ACTIVE`. Any more advanced-sounding label over-claims relative to unproven evidence (`activationEvidence` in the JSON lists every gate item as `NOT_PROVEN`).
 
-An earlier version of this annex (commit `babf91d0`) stated `saas_readiness_mode: SAAS_ACTIVE` and `commercial_activation_state: ACTIVATION_AUTHORIZED`. That was superseded by the later JSON correction and is now corrected here. Any other governance document, prompt template, or agent output still citing `SAAS_ACTIVE` or `ACTIVATION_AUTHORIZED` as the current state is citing stale information and must be corrected before use.
+An earlier version of this annex stated `saas_readiness_mode: SAAS_ACTIVE` and `commercial_activation_state: ACTIVATION_AUTHORIZED`. That state was superseded by the machine-readable correction. Any other governance document, prompt template, or agent output still citing `SAAS_ACTIVE` or `ACTIVATION_AUTHORIZED` as the current state is stale and must be corrected before use.
 
-State values never replace the canonical decision vocabulary. Neither `SAAS_READY_DEFERRED` nor `ELIGIBLE_FOR_REVIEW` by itself proves production isolation, security, financial separation, or commercial release readiness — every item in `activationEvidence` is still `NOT_PROVEN`.
+State values never replace the canonical decision vocabulary. Neither `SAAS_READY_DEFERRED` nor `ELIGIBLE_FOR_REVIEW` by itself proves production isolation, security, financial separation, custom-domain readiness, hostname routing, TLS readiness, or commercial release readiness — every item in `activationEvidence` is still `NOT_PROVEN`.
 
 Current rules:
 
-- SaaS work in this repository is authorized as **implementation and activation engineering**, not merely readiness preparation or planning (`activation-authorization.json` §`scopeAmendment`, 2026-07-24). Do not downgrade a SaaS-touching journey to documentation/planning-only when the scope explicitly authorizes writing the actual tenant-isolation and activation code.
+- SaaS work in this repository is authorized as **implementation and activation engineering**, not merely readiness preparation or planning, when the current task explicitly requests it and the target ref is valid. Do not downgrade a SaaS-touching journey to documentation/planning-only when the scope explicitly authorizes writing the actual tenant-isolation and activation code.
 - Preserve the unified multi-surface full-stack model.
 - Derive tenant context from trusted identity or server-side delegation.
 - Never trust a client-supplied tenant identifier as authority.
+- A path, hostname, subdomain, custom domain, header, or query parameter is only a selector until validated and resolved to a trusted server-side tenant context.
 - Do not mark any evidence `PROVEN` without same-commit proof.
 - Do not deploy production from this authorization because `productionDeploymentAuthorized` is false.
 - Keep deferred commercial capabilities disabled until each has Product Truth, architecture, security, finance, and SDLC approval.
-- Default a journey's `saas_context.mode` to `NOT_APPLICABLE` unless the journey actually touches tenant ownership, tenant isolation, cross-tenant access, subscriptions, entitlements, metering, tenant billing, tenant lifecycle, white-labeling, custom domains, or commercial SaaS activation — do not auto-expand an unrelated journey into a SaaS-readiness project just because this annex exists.
+- Default a journey's `saas_context.mode` to `NOT_APPLICABLE` unless the journey actually touches tenant ownership, tenant isolation, cross-tenant access, subscriptions, entitlements, metering, tenant billing, tenant lifecycle, white-labeling, tenant subdomains, managed TLS, custom domains, or commercial SaaS activation — do not auto-expand an unrelated journey into a SaaS-readiness project just because this annex exists.
 - Record `NOT_APPLICABLE` with a stated technical reason (`NOT_AFFECTED_WITH_REASON`) rather than leaving `saas_context` blank; a blank `saas_context` on a journey that does touch tenant-owned data is `FIX_REQUIRED`.
 - Never output or accept `SAAS_ACTIVE` or the deprecated activation-approval alias as the current platform state — the current, single-source-of-truth state is `SAAS_READY_DEFERRED` / `ELIGIBLE_FOR_REVIEW` as recorded above. Only `governance/saas/saas-governance.json` itself, edited under explicit authorization, can change this.
 - Commercial/production SaaS activation is never implied by completing an unrelated implementation journey; it requires the full `saas_activation_gate` in the ACTIVE section below, evaluated on its own same-commit evidence.
@@ -98,6 +102,10 @@ saas_context:
   tenant_backup_restore_required: true | false
   tenant_observability_required: true | false
   tenant_quota_required: true | false
+  tenant_hostname_impact: NONE | FIRST_PARTY_SUBDOMAIN | CUSTOMER_CUSTOM_DOMAIN | BOTH
+  hostname_resolution_authority:
+  hostname_lifecycle_required: true | false
+  managed_tls_required: true | false
   entitlement_impact: NONE | READ_ONLY | REQUIRED
   subscription_impact: NONE | READ_ONLY | REQUIRED
   metering_impact: NONE | READ_ONLY | REQUIRED
@@ -106,6 +114,8 @@ saas_context:
 ```
 
 Missing `saas_context` for tenant-owned data is `FIX_REQUIRED`.
+
+A hostname-affecting journey must also conform to `governance/saas/TENANT_HOSTNAME_AND_TLS_POLICY.md`. A wildcard DNS record or certificate is infrastructure routing evidence only; it is never tenant-isolation evidence.
 
 ## Required Matrices
 
@@ -116,17 +126,27 @@ Applicable journeys must complete:
 - `tenant_resource_isolation_matrix`;
 - tenant-aware `auth_permission_matrix`;
 - tenant-aware `object_authorization_record`;
-- WLT tenant financial isolation proof when WLT or financial references are affected.
+- WLT tenant financial isolation proof when WLT or financial references are affected;
+- `tenant_hostname_resolution_matrix` when a subdomain or custom domain is affected;
+- `tenant_domain_lifecycle_matrix` when reservation, verification, activation, suspension, release, or reuse is affected;
+- `tenant_tls_coverage_and_rotation_matrix` when edge or origin TLS is affected.
 
-A matrix is planning or evidence structure only. It does not prove runtime isolation by itself.
+A matrix is planning or evidence structure only. It does not prove runtime isolation, DNS correctness, certificate validity, hostname ownership, or origin protection by itself.
 
 ## Security Rules
 
 - Tenant context must be derived from trusted identity or session context.
 - Client-supplied `tenantId` is never trusted as authority; it may only be a selector validated against trusted authority.
+- Host and forwarded-host values are accepted only through an explicitly trusted proxy chain and exact normalized hostname binding.
+- Unknown, unverified, disabled, suspended, expired, or ambiguous hostnames fail closed and never resolve to a default tenant.
 - Privileged operator cross-tenant access requires delegated tenant context, permission, reason, expiry, audit event, and no self-approval.
 - Global data must be explicitly classified as `GLOBAL`; unexplained null tenant ownership is forbidden.
 - Cache keys, idempotency keys, outbox events, audit events, media references, and financial references must carry or derive the same trusted tenant boundary when tenant-owned.
+- Tenant-domain cookies must be host-only by default; broad parent-domain cookies cannot carry tenant authority.
+- Credentialed wildcard CORS is forbidden.
+- `Full (strict)` or a stronger approved origin mode is required before any production tenant-hostname activation claim.
+- Origin bypass prevention is a separate control from origin certificate validation.
+- Certificate and private-key material must never be committed.
 - Cross-tenant negative tests and independent isolation-security approval are mandatory before production isolation claims.
 
 ## Deferred Commercial Features
@@ -137,7 +157,8 @@ The following remain deferred while the platform is `SAAS_READY_DEFERRED` and co
 - paid plan matrix;
 - self-service tenant signup;
 - white-label customization;
-- custom domains;
+- tenant subdomains and managed TLS;
+- customer-owned custom domains;
 - per-tenant deployment;
 - marketplace extensions;
 - automated invoicing;
@@ -146,6 +167,35 @@ The following remain deferred while the platform is `SAAS_READY_DEFERRED` and co
 - multi-region tenant placement.
 
 Adding one requires an explicit Product Truth contract, SaaS impact declaration, architecture approval, security and finance routing, and formal SDLC evidence.
+
+## Tenant Hostname and TLS Gate
+
+When `tenant_hostname_impact != NONE`, the journey must use `governance/saas/TENANT_HOSTNAME_AND_TLS_POLICY.md` as the canonical specialized policy.
+
+Minimum first-party tenant-subdomain proof before activation:
+
+```yaml
+tenant_hostname_gate:
+  reserved_label_registry_enforced: PROVEN
+  trusted_proxy_and_host_validation_verified: PROVEN
+  exact_hostname_to_tenant_resolution_verified: PROVEN
+  cross_tenant_negative_routing_tests_passed: PROVEN
+  wildcard_dns_scope_verified: PROVEN
+  edge_certificate_coverage_verified: PROVEN
+  origin_certificate_match_and_rotation_verified: PROVEN
+  full_strict_enabled_and_verified: PROVEN
+  origin_bypass_prevention_verified: PROVEN
+  cookie_cors_csrf_redirect_controls_verified: PROVEN
+  cache_queue_idempotency_isolation_verified: PROVEN
+  observability_and_expiry_alerting_verified: PROVEN
+  suspension_release_quarantine_workflows_verified: PROVEN
+  independent_security_review_passed: PROVEN
+  production_deployment_authorized: PROVEN
+```
+
+Customer-owned domains additionally require verified ownership, active DNS routing, active certificate state, CAA compatibility, lifecycle automation, provider failure handling, and an approved entitlement/support model.
+
+No item in this section is proven by documentation alone.
 
 ## Activation States
 
@@ -196,4 +246,4 @@ CLOSED_WITH_EVIDENCE
 
 ## Acceptance Condition
 
-Accepted when the machine-readable SaaS state validates against its schema, explicit implementation authorization is traceable, the declared runtime mode matches the machine-readable state, tenant boundaries remain enforced, deferred features remain controlled, and no production or evidence claim exceeds the proof available on the same commit.
+Accepted when the machine-readable SaaS state validates against its schema, explicit implementation authorization is traceable, the declared runtime mode matches the machine-readable state, tenant boundaries remain enforced, tenant hostname and TLS work is routed through its specialized policy, deferred features remain controlled, and no production or evidence claim exceeds the proof available on the same commit.
