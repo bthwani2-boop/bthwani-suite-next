@@ -29,7 +29,7 @@ const forbiddenPatterns = [
   },
   {
     id: "SOURCE_MUTATING_GH_COMMAND",
-    regex: /^\s*(?:-\s*)?(?:run:\s*)?gh\s+(?:pr\s+merge|api\s+.*(?:--method|-X)\s*(?:POST|PUT|PATCH|DELETE).*\/(?:contents|git\/refs|merges)(?:\b|\/))/i,
+    regex: /^\s*(?:-\s*)?(?:run:\s*)?gh\s+(?:pr\s+(?:create|merge)|api\s+.*(?:--method|-X)\s*(?:POST|PUT|PATCH|DELETE).*\/(?:contents|git\/refs|merges)(?:\b|\/))/i,
     reason: "workflows must not mutate repository source through GitHub CLI",
   },
   {
@@ -74,45 +74,28 @@ function remediationViolations(content, relative) {
 
   requireMarker("name: BThwani Expert Live-Code Remediation", "REMEDIATION_NAME_REQUIRED");
   requireMarker("workflow_dispatch:", "REMEDIATION_MANUAL_TRIGGER_REQUIRED");
+  requireMarker("permissions:\n  contents: read", "REMEDIATION_READ_ONLY_REQUIRED");
   requireMarker("Forensic discovery and deterministic repair", "REMEDIATION_PREPARE_JOB_REQUIRED");
-  requireMarker("Publish reviewed remediation pull request", "REMEDIATION_PUBLISH_JOB_REQUIRED");
-  requireMarker("contents: write", "REMEDIATION_CONTENT_WRITE_REQUIRED");
-  requireMarker("pull-requests: write", "REMEDIATION_PR_WRITE_REQUIRED");
+  requireMarker("Export evidence-backed remediation patch", "REMEDIATION_EXPORT_REQUIRED");
+  requireMarker("manual-patch-only-no-privileged-write", "REMEDIATION_MANUAL_PUBLICATION_REQUIRED");
   requireMarker("persist-credentials: false", "REMEDIATION_CHECKOUT_HARDENING_REQUIRED");
   requireMarker("patch_sha256", "REMEDIATION_PATCH_DIGEST_REQUIRED");
   requireMarker("Unapproved deletion rejected", "REMEDIATION_DELETION_GUARD_REQUIRED");
+  requireMarker("Protected deletion rejected", "REMEDIATION_PROTECTED_DELETION_GUARD_REQUIRED");
 
   if (/^\s{2}(?:workflow_run|pull_request_target|schedule|repository_dispatch):/m.test(content)) {
     violations.push({ file: relative, line: 0, id: "REMEDIATION_PRIVILEGED_TRIGGER_FORBIDDEN", reason: "remediation must remain explicitly manual" });
   }
   if (/\bsecrets\.[A-Za-z0-9_]+\b/.test(content)) {
-    violations.push({ file: relative, line: 0, id: "REMEDIATION_REPOSITORY_SECRET_FORBIDDEN", reason: "remediation may use only the scoped github.token" });
+    violations.push({ file: relative, line: 0, id: "REMEDIATION_REPOSITORY_SECRET_FORBIDDEN", reason: "remediation must not use repository secrets" });
   }
-  if (/^\s*(?:id-token|packages|deployments|actions):\s*write\b/im.test(content)) {
-    violations.push({ file: relative, line: 0, id: "REMEDIATION_EXCESS_WRITE_PERMISSION", reason: "only contents and pull-request writes are allowed" });
+  if (/^\s*(?:id-token|packages|deployments|actions|contents|pull-requests|statuses):\s*write\b/im.test(content)) {
+    violations.push({ file: relative, line: 0, id: "REMEDIATION_WRITE_PERMISSION_FORBIDDEN", reason: "read-only remediation may not request write permissions" });
   }
-  if (/git\s+push\s+(?:--force|-f)\b/i.test(content) || /gh\s+pr\s+merge\b/i.test(content)) {
-    violations.push({ file: relative, line: 0, id: "REMEDIATION_FORCE_OR_MERGE_FORBIDDEN", reason: "remediation may publish a branch and PR but never force-push or merge" });
-  }
-
-  const publishStart = content.search(/^\s{2}publish:\s*$/m);
-  const resultStart = content.search(/^\s{2}result:\s*$/m);
-  if (publishStart >= 0 && resultStart > publishStart) {
-    const publish = content.slice(publishStart, resultStart);
-    if (/^\s*(?:pnpm|npm|npx|yarn|node|go)\b/m.test(publish) || /uses:\s*\.\//m.test(publish)) {
-      violations.push({
-        file: relative,
-        line: 0,
-        id: "REMEDIATION_PUBLISH_EXECUTES_SOURCE",
-        reason: "the write-capable publish job must not execute repository tooling or local actions",
-      });
-    }
+  if (/\b(?:git\s+(?:push|commit)|gh\s+pr\s+(?:create|merge))\b/i.test(content)) {
+    violations.push({ file: relative, line: 0, id: "REMEDIATION_BRANCH_OR_PR_MUTATION_FORBIDDEN", reason: "remediation exports a patch only and must not mutate branches or pull requests" });
   }
 
-  const writeCount = (content.match(/^\s*contents:\s*write\s*$/gm) ?? []).length;
-  if (writeCount !== 1) {
-    violations.push({ file: relative, line: 0, id: "REMEDIATION_SINGLE_WRITE_BOUNDARY_REQUIRED", reason: `expected one contents: write declaration, found ${writeCount}` });
-  }
   return violations;
 }
 
@@ -145,7 +128,6 @@ export function scanWorkflowContent(content, relative = "workflow.yml") {
     for (const rule of forbiddenPatterns) {
       if (!rule.regex.test(line)) continue;
       const remediationException = isRemediation && [
-        "SOURCE_WRITE_PERMISSION",
         "SOURCE_MUTATING_GIT_COMMAND",
         "SOURCE_FORMAT_WRITE",
       ].includes(rule.id);
