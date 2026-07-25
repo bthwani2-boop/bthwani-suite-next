@@ -17,6 +17,7 @@ const expectedWorkflowFiles = [
   "ci-runtime.yml",
   "ci.yml",
   "dsh-database.yml",
+  "lockfile-snapshot.yml",
   "remediation-analysis.yml",
 ].sort();
 
@@ -216,6 +217,7 @@ requireMarkers(`${workflowsRoot}/ci-policy.yml`, [
   "guard:saas-governance",
   "guard:guard-registry",
   "guard:sdlc",
+  "sdlc-governance-${{ github.run_id }}",
   "guard:cleanup-policy",
   "check-portable-tracked-config.mjs",
   "check-repository-hygiene.mjs",
@@ -224,6 +226,15 @@ requireMarkers(`${workflowsRoot}/ci-policy.yml`, [
   "guard:workflow-lint",
   "guard:workflow-security",
   "guard:opa-policies",
+]);
+
+requireMarkers(`${workflowsRoot}/lockfile-snapshot.yml`, [
+  "name: BThwani Lockfile Snapshot",
+  "permissions:\n  contents: read",
+  "persist-credentials: false",
+  "pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts",
+  "pnpm install --lockfile-only --frozen-lockfile --ignore-scripts --offline",
+  "Upload lockfile candidate",
 ]);
 
 requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, [
