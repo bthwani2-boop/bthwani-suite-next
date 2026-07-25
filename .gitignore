@@ -14,10 +14,15 @@ node_modules/
 **/*.svg
 **/*.ico
 
-
 .env
 .env.*
 !.env.example
+infra/local/*.env
+secrets.local.mobile.json
+tools/scripts/google-cloud/google-platform-input.local.json
+apps/*/runtime/google-services.json
+apps/*/runtime/credentials.json
+.tmp/
 dist/
 dist-swagger/
 build/
@@ -27,10 +32,6 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 Thumbs.db
-
-# Generated local Firebase configs for EAS remote build packaging.
-apps/*/runtime/google-services.json
-
 
 graphify-out/
 .graphify/
