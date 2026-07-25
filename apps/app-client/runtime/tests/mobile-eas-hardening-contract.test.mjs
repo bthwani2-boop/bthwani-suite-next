@@ -35,9 +35,14 @@ test("Initialize is mandatory and bound to immutable provider inputs", () => {
   assert.ok(workflow.indexOf("Assert-StateStamp -Path $PreflightStampPath") < workflow.indexOf("Write-Step 'Submit remote build'"));
 });
 
-test("EAS provider variables use idempotent env:set and metadata-only verification", () => {
+test("EAS provider variables use idempotent env:set and ANSI-safe metadata verification", () => {
   assert.ok(providers.includes("'env:set', 'development'"));
   assert.ok(providers.includes("'env:list', 'development'"));
+  assert.ok(providers.includes("Remove-AnsiEscapeSequences"));
+  assert.ok(providers.includes("$env:FORCE_COLOR = '0'"));
+  assert.ok(providers.includes("$escapedName = [regex]::Escape($Name)"));
+  assert.ok(providers.includes("$shortPattern"));
+  assert.ok(providers.includes("$longPattern"));
   assert.equal(providers.includes("'env:get', 'development'"), false);
   assert.equal(providers.includes("'env:update', 'development'"), false);
   assert.equal(providers.includes("'env:create', 'development'"), false);
