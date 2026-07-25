@@ -1,0 +1,367 @@
+name: Reorganize mobile operations once
+
+on:
+  push:
+    branches: [reemsam]
+    paths: [".github/workflows/reorganize-mobile-operations-once.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  reorganize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout reemsam
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: reemsam
+          fetch-depth: 0
+
+      - name: Reorganize mobile operational scripts
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+          import re
+          import shutil
+
+          root = Path.cwd()
+          shared = root / "apps" / "mobile"
+          shared.mkdir(parents=True, exist_ok=True)
+
+          moves = {
+              root / "tools/scripts/mobile-eas.ps1": shared / "eas.ps1",
+              root / "tools/scripts/start-mobile-runtime.ps1": shared / "runtime.ps1",
+              root / "tools/scripts/ensure-mobile-dev-runtime.ps1": shared / "ensure-runtime.ps1",
+              root / "tools/scripts/mobile-adb.ps1": shared / "adb.ps1",
+          }
+          for source, target in moves.items():
+              if not source.is_file():
+                  raise RuntimeError(f"Missing source: {source}")
+              if target.exists():
+                  raise RuntimeError(f"Target already exists: {target}")
+              shutil.move(source, target)
+
+          eas_path = shared / "eas.ps1"
+          eas = eas_path.read_text(encoding="utf-8")
+          eas = eas.replace("# tools/scripts/mobile-eas.ps1", "# apps/mobile/eas.ps1")
+          eas = eas.replace(
+              "foreach ($home in @($env:JAVA_HOME, $env:JDK_HOME)) {\n        if ($home) { Add-KeytoolCandidate -List $candidates -Path (Join-Path $home 'bin\\keytool.exe') }\n    }",
+              "foreach ($javaHome in @($env:JAVA_HOME, $env:JDK_HOME)) {\n        if ($javaHome) { Add-KeytoolCandidate -List $candidates -Path (Join-Path $javaHome 'bin\\keytool.exe') }\n    }",
+          )
+          if "foreach ($home in" in eas:
+              raise RuntimeError("Reserved PowerShell HOME variable remains in EAS script")
+
+          refresh_start = eas.index("function Refresh-ProviderInputs {")
+          refresh_end = eas.index("function Resolve-FirebaseSource {")
+          refresh = r'''function Refresh-ProviderInputs {
+    param([Parameter(Mandatory)][string] $Sha1)
+
+    Write-Step 'Refresh Firebase config and restricted runtime key'
+    Invoke-Checked -Command 'pwsh' -Arguments @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $FirebaseHelperPath,
+        '-App', $App,
+        '-Sha1Fingerprint', $Sha1
+    ) | Out-Null
+
+    $input = Get-Content -LiteralPath $GoogleInputLocalPath -Raw | ConvertFrom-Json -Depth 100
+    $entry = $input.apps.$App
+    Write-Step 'Create or update restricted Maps key'
+    Invoke-Checked -Command 'pwsh' -Arguments @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $MapsHelperPath,
+        '-ProjectId', 'bthwani-platform',
+        '-AppKey', $App,
+        '-PackageName', ([string]$appConfig.androidPackage),
+        '-Sha1Fingerprint', $Sha1,
+        '-DisplayName', ([string]$entry.mapsKeyDisplayName),
+        '-WriteEnvironmentFile', $MobileEnvPath
+    ) | Out-Null
+
+    Import-EnvFile -Path $MobileEnvPath
+    $mapsKey = Resolve-ScopedValue -BaseName 'GOOGLE_MAPS_ANDROID_API_KEY'
+    if (-not (Test-ValidMapsKey -Value $mapsKey)) {
+        throw "Maps key provisioning did not produce a valid key for $App."
+    }
+
+    Write-Step 'Synchronize EAS development provider inputs'
+    Invoke-Checked -Command 'pnpm' -Arguments @(
+        'dlx', 'eas-cli@latest', 'env:create', 'development',
+        '--name', 'GOOGLE_SERVICES_JSON',
+        '--value', $SecureFirebasePath,
+        '--type', 'file',
+        '--visibility', 'secret',
+        '--scope', 'project',
+        '--force',
+        '--non-interactive'
+    ) -WorkingDirectory $AppDir | Out-Null
+
+    Invoke-Checked -Command 'pnpm' -Arguments @(
+        'dlx', 'eas-cli@latest', 'env:create', 'development',
+        '--name', 'GOOGLE_MAPS_ANDROID_API_KEY',
+        '--value', $mapsKey,
+        '--type', 'string',
+        '--visibility', 'sensitive',
+        '--scope', 'project',
+        '--force',
+        '--non-interactive'
+    ) -WorkingDirectory $AppDir -SecretValues @($mapsKey) | Out-Null
+}
+
+'''
+          eas = eas[:refresh_start] + refresh + eas[refresh_end:]
+          eas = eas.replace(
+              "foreach ($required in @('credentials.json', '*.jks', '*.keystore', '!google-services.json', '!.env.local'))",
+              "foreach ($required in @('credentials.json', '*.jks', '*.keystore', 'google-services.json', '.env*'))",
+          )
+          eas = eas.replace(
+              "# Generated locally by tools/scripts/mobile-eas.ps1.",
+              "# Generated locally by apps/mobile/eas.ps1.",
+          )
+          eas_path.write_text(eas, encoding="utf-8", newline="\n")
+
+          runtime_path = shared / "runtime.ps1"
+          runtime = runtime_path.read_text(encoding="utf-8")
+          runtime = runtime.replace(
+              '$AdbHelper = Join-Path $PSScriptRoot "mobile-adb.ps1"',
+              '$AdbHelper = Join-Path $PSScriptRoot "adb.ps1"',
+          )
+          runtime = runtime.replace(
+              '$RuntimePhase = Join-Path $PSScriptRoot "invoke-runtime-phase.ps1"',
+              '$RuntimePhase = Join-Path $RepoRoot "tools\\scripts\\invoke-runtime-phase.ps1"',
+          )
+          runtime = runtime.replace(
+              '"disabled (configure infra/local/mobile.env)"',
+              '"not-configured (optional in development)"',
+          )
+          runtime = runtime.replace(
+              '$SentryState = if ([string]::IsNullOrWhiteSpace($env:EXPO_PUBLIC_SENTRY_DSN)) {',
+              '$WatchdogState = if (-not $SelectedDevice.IsTcpIp) { "not-applicable (usb)" } elseif ($WatchdogEligible) { "reverse-only" } else { "off" }\n$SentryState = if ([string]::IsNullOrWhiteSpace($env:EXPO_PUBLIC_SENTRY_DSN)) {',
+          )
+          runtime = runtime.replace(
+              'Write-Host "Watchdog:     $(if ($WatchdogEligible) { \'reverse-only\' } else { \'off\' })"',
+              'Write-Host "Watchdog:     $WatchdogState"',
+          )
+          runtime_path.write_text(runtime, encoding="utf-8", newline="\n")
+
+          ensure_path = shared / "ensure-runtime.ps1"
+          ensure = ensure_path.read_text(encoding="utf-8")
+          ensure = ensure.replace(
+              '$RuntimePhase = Join-Path $PSScriptRoot "invoke-runtime-phase.ps1"',
+              '$RuntimePhase = Join-Path $RepoRoot "tools\\scripts\\invoke-runtime-phase.ps1"',
+          )
+          ensure = ensure.replace(
+              '$DataScript = Join-Path $PSScriptRoot "mobile-dev-data.mjs"',
+              '$DataScript = Join-Path $RepoRoot "tools\\scripts\\mobile-dev-data.mjs"',
+          )
+          ensure_path.write_text(ensure, encoding="utf-8", newline="\n")
+
+          dispatcher = r'''[CmdletBinding()]
+param(
+    [Parameter(Mandatory)]
+    [ValidateSet('app-client', 'app-partner', 'app-captain', 'app-field')]
+    [string] $App,
+
+    [Parameter(Mandatory)]
+    [ValidateSet('Run', 'Initialize', 'Preflight', 'Build')]
+    [string] $Mode,
+
+    [switch] $ClearCache,
+    [switch] $MirrorDevice
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+$SharedDirectory = Join-Path $PSScriptRoot 'mobile'
+$EasScript = Join-Path $SharedDirectory 'eas.ps1'
+$EnsureRuntimeScript = Join-Path $SharedDirectory 'ensure-runtime.ps1'
+$RuntimeScript = Join-Path $SharedDirectory 'runtime.ps1'
+
+if ($Mode -eq 'Run') {
+    $ports = @{
+        'app-client' = 18101
+        'app-partner' = 18102
+        'app-captain' = 18103
+        'app-field' = 18104
+    }
+
+    & $EnsureRuntimeScript
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+    & $RuntimeScript `
+        -AppKey $App `
+        -MetroPort $ports[$App] `
+        -ClearCache:$ClearCache `
+        -MirrorDevice:$MirrorDevice
+    exit $LASTEXITCODE
+}
+
+& $EasScript -App $App -Mode $Mode -ClearCache:$ClearCache
+exit $LASTEXITCODE
+'''
+          (root / "apps/mobile.ps1").write_text(dispatcher, encoding="utf-8", newline="\n")
+
+          app_ports = {
+              "app-client": 18101,
+              "app-partner": 18102,
+              "app-captain": 18103,
+              "app-field": 18104,
+          }
+          for app in app_ports:
+              runtime_dir = root / "apps" / app / "runtime"
+              wrapper = f'''[CmdletBinding()]\nparam(\n    [ValidateSet('Run', 'Initialize', 'Preflight', 'Build')]\n    [string] $Mode = 'Run',\n    [switch] $ClearCache,\n    [switch] $MirrorDevice\n)\n\nSet-StrictMode -Version Latest\n$ErrorActionPreference = 'Stop'\n\n$SharedMobile = (Resolve-Path (Join-Path $PSScriptRoot '..\\..\\mobile.ps1')).Path\n& $SharedMobile -App '{app}' -Mode $Mode -ClearCache:$ClearCache -MirrorDevice:$MirrorDevice\nexit $LASTEXITCODE\n'''
+              (runtime_dir / "mobile.ps1").write_text(wrapper, encoding="utf-8", newline="\n")
+
+              start = '''param(\n    [switch] $ClearCache,\n    [switch] $MirrorDevice\n)\n\nSet-StrictMode -Version Latest\n$ErrorActionPreference = "Stop"\n\n& (Join-Path $PSScriptRoot "mobile.ps1") `\n    -Mode Run `\n    -ClearCache:$ClearCache `\n    -MirrorDevice:$MirrorDevice\n\nexit $LASTEXITCODE\n'''
+              (runtime_dir / "start.ps1").write_text(start, encoding="utf-8", newline="\n")
+
+              package_path = runtime_dir / "package.json"
+              package = json.loads(package_path.read_text(encoding="utf-8"))
+              package.setdefault("scripts", {})["mobile"] = "pwsh -NoProfile -ExecutionPolicy Bypass -File mobile.ps1"
+              package_path.write_text(json.dumps(package, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          replacements = {
+              "tools/scripts/mobile-eas.ps1": "apps/mobile/eas.ps1",
+              "tools/scripts/start-mobile-runtime.ps1": "apps/mobile/runtime.ps1",
+              "tools/scripts/ensure-mobile-dev-runtime.ps1": "apps/mobile/ensure-runtime.ps1",
+              "tools/scripts/mobile-adb.ps1": "apps/mobile/adb.ps1",
+          }
+          text_suffixes = {".ps1", ".mjs", ".js", ".cjs", ".json", ".md", ".yml", ".yaml", ".txt"}
+          for path in root.rglob("*"):
+              if not path.is_file() or path.suffix.lower() not in text_suffixes:
+                  continue
+              if ".git" in path.parts:
+                  continue
+              text = path.read_text(encoding="utf-8", errors="ignore")
+              updated = text
+              for old, new in replacements.items():
+                  updated = updated.replace(old, new)
+              if updated != text:
+                  path.write_text(updated, encoding="utf-8", newline="\n")
+
+          package_path = root / "package.json"
+          package = json.loads(package_path.read_text(encoding="utf-8"))
+          package["scripts"]["mobile:eas"] = "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/mobile.ps1"
+          package_path.write_text(json.dumps(package, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+          contract_path = root / "apps/app-client/runtime/tests/mobile-development-provider-contract.test.mjs"
+          contract = contract_path.read_text(encoding="utf-8")
+          contract = contract.replace(
+              '"pwsh -NoProfile -ExecutionPolicy Bypass -File apps/mobile/eas.ps1"',
+              '"pwsh -NoProfile -ExecutionPolicy Bypass -File apps/mobile.ps1"',
+          )
+          contract_path.write_text(contract, encoding="utf-8", newline="\n")
+
+          sentry_path = root / "tools/mobile/sentry-env.js"
+          sentry = sentry_path.read_text(encoding="utf-8")
+          function_start = sentry.index("function resolveGoogleServicesFile(")
+          function_end = sentry.index("function resolveSentryEnvironment(")
+          resolver = r'''function resolveGoogleServicesFile(appKey, environment = process.env) {
+  const suffix = appEnvSuffix(appKey);
+
+  // EAS file variables are the authoritative cloud-build input.
+  const scoped = configuredFilePath(environment[`GOOGLE_SERVICES_JSON_${suffix}`]);
+  if (scoped) return scoped;
+
+  const common = configuredFilePath(environment.GOOGLE_SERVICES_JSON);
+  if (common) return common;
+
+  // Local development and preflight use the staged runtime file.
+  const runtimeLocal = resolveRuntimeGoogleServicesFile(appKey);
+  if (runtimeLocal) return runtimeLocal;
+
+  const rootDir = path.resolve(__dirname, "../..");
+  const secretsConfigPath = path.join(rootDir, "secrets.local.mobile.json");
+  if (fs.existsSync(secretsConfigPath)) {
+    try {
+      const secretsData = JSON.parse(fs.readFileSync(secretsConfigPath, "utf8"));
+      const customPath = configuredFilePath(secretsData[appKey]);
+      if (customPath && fs.existsSync(customPath)) return customPath;
+    } catch {
+      // The validator reports malformed local configuration when it is required.
+    }
+  }
+
+  const defaultPath = path.join("C:", "bthwani-secrets", "firebase", appKey, "google-services.json");
+  return fs.existsSync(defaultPath) ? defaultPath : undefined;
+}
+
+'''
+          sentry = sentry[:function_start] + resolver + sentry[function_end:]
+          sentry_path.write_text(sentry, encoding="utf-8", newline="\n")
+
+          for app in app_ports:
+              ignore_path = root / "apps" / app / "runtime" / ".easignore"
+              lines = [
+                  "# Governed EAS archive rules for one mobile runtime.",
+                  "node_modules/",
+                  ".expo/",
+                  "dist/",
+                  "build/",
+                  "coverage/",
+                  ".tmp/",
+                  "*.log",
+                  "credentials.json",
+                  "*.jks",
+                  "*.keystore",
+                  ".env*",
+                  "google-services.json",
+                  "",
+              ]
+              ignore_path.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+
+      - name: Verify final mobile layout and contracts
+        shell: pwsh
+        run: |
+          $files = @(
+            'apps/mobile.ps1',
+            'apps/mobile/eas.ps1',
+            'apps/mobile/runtime.ps1',
+            'apps/mobile/ensure-runtime.ps1',
+            'apps/mobile/adb.ps1',
+            'apps/app-client/runtime/mobile.ps1',
+            'apps/app-partner/runtime/mobile.ps1',
+            'apps/app-captain/runtime/mobile.ps1',
+            'apps/app-field/runtime/mobile.ps1'
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors)
+            if (@($errors).Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "${file}: $($_.Message)" }
+              exit 1
+            }
+          }
+
+          $oldPaths = @(
+            'tools/scripts/mobile-eas.ps1',
+            'tools/scripts/start-mobile-runtime.ps1',
+            'tools/scripts/ensure-mobile-dev-runtime.ps1',
+            'tools/scripts/mobile-adb.ps1'
+          )
+          foreach ($oldPath in $oldPaths) {
+            if (Test-Path -LiteralPath $oldPath) { throw "Old mobile script still exists: $oldPath" }
+            $matches = git grep -n --fixed-strings $oldPath -- ':!*.lock' 2>$null
+            if ($LASTEXITCODE -eq 0 -and $matches) { throw "Stale references remain for ${oldPath}:`n$matches" }
+          }
+
+          node --check tools/scripts/eas-build-mobile.mjs
+          node --check tools/scripts/verify-mobile-prebuild.mjs
+          node --check tools/mobile/google-services-config.mjs
+          node --test apps/app-client/runtime/tests/mobile-development-provider-contract.test.mjs
+          node --test apps/app-client/runtime/tests/mobile-runtime-contract.test.mjs
+          node --test apps/app-client/runtime/tests/mobile-dev-runtime-contract.test.mjs
+          node -e "JSON.parse(require('node:fs').readFileSync('package.json','utf8'))"
+
+      - name: Commit atomic reorganization
+        shell: bash
+        run: |
+          rm .github/workflows/reorganize-mobile-operations-once.yml
+          git config user.name "bthwani-ci"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "refactor(mobile): centralize app operations under apps"
+          git push origin HEAD:reemsam
