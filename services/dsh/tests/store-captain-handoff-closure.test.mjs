@@ -172,6 +172,6 @@ test("contextual CI delegates contracts, Node checks, journey gates and backend 
   assert.match(nodeWorkflow, /pnpm run affected:lint/);
   assert.match(nodeWorkflow, /Run detected journey gates/);
   assert.match(backendWorkflow, /name: Apply migrations/);
-  assert.match(backendWorkflow, /go test \.\/\.\. -count=1/);
-  assert.match(backendWorkflow, /go build \.\/\.\./);
+  assert.match(backendWorkflow, /go test \.\/\.\.\. -count=1/);
+  assert.match(backendWorkflow, /go build \.\/\.\.\./);
 });
