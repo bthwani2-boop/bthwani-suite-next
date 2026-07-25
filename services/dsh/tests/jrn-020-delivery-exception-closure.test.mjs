@@ -35,7 +35,7 @@ test('JRN-020 governed mutation boundary is active in runtime', async () => {
   assert.match(governance, /handleResolveDeliveryExceptionGoverned/);
   assert.match(main, /DeliveryExceptionGovernanceMiddleware/);
   assert.match(main, /deliveryExceptionGovernedRouter/);
-  assert.match(main, /CorsMiddleware\(authMode, deliveryExceptionGovernedRouter\)/);
+  assert.match(main, /CorsMiddleware\(authMode, governedIncidentRouter\)/);
 });
 
 test('JRN-020 shared mutation contract requires evidence and every governed action', async () => {
