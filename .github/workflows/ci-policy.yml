@@ -55,6 +55,9 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Verify workflow security preflight (guard:workflow-security)
+        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
+        run: node tools/scripts/run-zizmor.mjs
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Test CI source immutability guard
@@ -127,9 +130,6 @@ jobs:
       - name: Verify workflow syntax
         if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
         run: pnpm run guard:workflow-lint
-      - name: Verify workflow security
-        if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
-        run: pnpm run guard:workflow-security
       - name: Verify workflow policy
         if: ${{ inputs.workflow == 'true' || inputs.security == 'true' }}
         run: pnpm run guard:opa-policies
