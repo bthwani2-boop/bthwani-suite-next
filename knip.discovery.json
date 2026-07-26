@@ -1,0 +1,93 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": [
+    ".cache/**",
+    ".gocache*/**",
+    ".gomodcache*/**",
+    ".diagnostics/**",
+    "coverage/**",
+    "dist/**",
+    "build/**",
+    "out/**",
+    "graphify-out/**",
+    "**/clients/generated/**",
+    "**/contracts/generated/**"
+  ],
+  "ignoreBinaries": ["dev", "go", "pwsh", "graphify", "k6", "gitleaks"],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "duplicates": "off"
+  },
+  "workspaces": {
+    ".": {
+      "entry": [
+        "tools/guards/**/*.mjs",
+        "tools/important-scripts/**/*.mjs",
+        "tools/remediation/**/*.mjs",
+        "tools/scripts/**/*.mjs",
+        "tools/verification/**/*.mjs",
+        "tools/performance/**/*.{js,cjs}"
+      ],
+      "project": ["tools/**/*.{js,mjs,cjs,ts}"]
+    },
+    "apps/control-panel/runtime": {
+      "entry": ["src/app/**/*.{ts,tsx}", "src/config/*.ts", "tests/*.test.mjs"],
+      "project": ["src/**/*.{ts,tsx}", "tests/**/*.mjs"]
+    },
+    "apps/app-client/runtime": {
+      "entry": ["**/*.{js,ts,tsx}"],
+      "project": ["**/*.{js,ts,tsx}", "!android/**", "!ios/**"]
+    },
+    "apps/app-partner/runtime": {
+      "entry": ["**/*.{js,ts,tsx}"],
+      "project": ["**/*.{js,ts,tsx}", "!android/**", "!ios/**"]
+    },
+    "apps/app-captain/runtime": {
+      "entry": ["**/*.{js,ts,tsx}"],
+      "project": ["**/*.{js,ts,tsx}", "!android/**", "!ios/**"]
+    },
+    "apps/app-field/runtime": {
+      "entry": ["**/*.{js,ts,tsx}"],
+      "project": ["**/*.{js,ts,tsx}", "!android/**", "!ios/**"]
+    },
+    "services/dsh": {
+      "entry": [
+        "contracts/**/*.{ts,tsx}",
+        "tests/*.test.mjs",
+        "frontend/app-*/**/*.{ts,tsx}",
+        "frontend/control-panel/**/*.{ts,tsx}",
+        "frontend/shared/**/*.{ts,tsx}",
+        "*.ts"
+      ],
+      "project": ["contracts/**/*.{ts,tsx}", "frontend/**/*.{ts,tsx}", "tests/**/*.mjs", "*.ts"]
+    },
+    "services/wlt": {
+      "entry": ["frontend/**/*.{ts,tsx}", "*.ts"],
+      "project": ["frontend/**/*.{ts,tsx}", "*.ts"]
+    },
+    "shared/*": {
+      "entry": ["src/**/*.{js,ts,tsx}", "*.{js,ts,tsx}"],
+      "project": ["src/**/*.{js,ts,tsx}", "*.{js,ts,tsx}"]
+    },
+    "core/identity": {
+      "entry": ["**/*.{js,ts,tsx}"],
+      "project": ["**/*.{js,ts,tsx}"]
+    },
+    "core/workforce": {
+      "entry": ["**/*.{js,ts,tsx}"],
+      "project": ["**/*.{js,ts,tsx}"]
+    },
+    "core/platform-control": {
+      "entry": ["**/*.{js,ts,tsx}"],
+      "project": ["**/*.{js,ts,tsx}"]
+    },
+    "core/providers": {
+      "entry": ["**/*.{js,ts,tsx}"],
+      "project": ["**/*.{js,ts,tsx}"]
+    },
+    "contracts": {
+      "entry": ["**/*.{js,mjs,ts,tsx}"],
+      "project": ["**/*.{js,mjs,ts,tsx}"]
+    }
+  }
+}
