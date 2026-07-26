@@ -155,6 +155,12 @@ try {
     }
   }
 
+  if ($Action -eq "smoke" -and $ProfileList -contains "dsh") {
+    "=== BEGIN_RUNTIME_SOURCE_SNAPSHOT ===" | Add-Content -LiteralPath $LogPath
+    Get-Content -LiteralPath $RuntimeScript -Raw | Add-Content -LiteralPath $LogPath
+    "=== END_RUNTIME_SOURCE_SNAPSHOT ===" | Add-Content -LiteralPath $LogPath
+  }
+
   $subject = ConvertTo-StatusText -Value $message -Limit 48
   if ([string]::IsNullOrWhiteSpace($subject)) { $subject = "phase-failed" }
   Publish-RuntimeStatus -State failure -Description $message -Subject $subject
