@@ -65,6 +65,7 @@
         "tools/guards/**/*.mjs",
         "tools/mobile/*.d.ts",
         "tools/performance/**/*.{js,cjs}",
+        "tools/remediation/**/*.mjs",
         "tools/scripts/*.mjs",
         "tools/verification/**/*.mjs"
       ],

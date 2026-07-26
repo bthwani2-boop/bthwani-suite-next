@@ -57,6 +57,8 @@ The full workflow inventory — which files may exist under `.github/workflows/`
 
 Adding a permanent `CORE`-adjacent task workflow (see the progressive remediation system) requires only a new file plus a registry entry — not an edit to either consuming guard, because the guards validate against the registry rather than a hard-coded list of every allowed file.
 
+The first such registered `READ_ONLY_DIAGNOSTIC` workflow is `task-discovery.yml` (`.github/workflows/task-discovery.yml`), which runs the progressive remediation system's parallel discovery scripts under `tools/remediation/discovery/` and rejects the run if any tracked file changes.
+
 ## Repository Ruleset requirement
 
 GitHub repository settings must be verified independently. The intended `master` ruleset is:

@@ -16,6 +16,18 @@
   "privilegedWorkflow": "remediation-analysis.yml",
   "entries": [
     {
+      "id": "task-discovery",
+      "path": ".github/workflows/task-discovery.yml",
+      "class": "READ_ONLY_DIAGNOSTIC",
+      "name": "BThwani Task Discovery",
+      "triggers": ["workflow_dispatch"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Progressive remediation discovery: runs the parallel read-only inventory and baseline scripts under tools/remediation/discovery/, rejects any tracked mutation, and uploads the evidence bundle as an artifact. Part of governance/remediation/ (wave P0-B)."
+    },
+    {
       "id": "ci",
       "path": ".github/workflows/ci.yml",
       "class": "CORE",

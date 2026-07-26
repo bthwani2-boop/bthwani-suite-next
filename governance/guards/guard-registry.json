@@ -241,6 +241,78 @@
       "source_file": "tools/guards/remediation-governance-gate.mjs"
     },
     {
+      "id": "task-contract",
+      "name": "Task Contract Gate",
+      "script": "guard:task-contract",
+      "exit_level": "fail",
+      "description": "Focused validation of task contract instances under governance/remediation/tasks/** against schema and executor/approver/scope rules.",
+      "source_file": "tools/guards/task-contract-gate.mjs"
+    },
+    {
+      "id": "gap-ledger",
+      "name": "Gap Ledger Gate",
+      "script": "guard:gap-ledger",
+      "exit_level": "fail",
+      "description": "Focused validation of governance/remediation/gap-ledger.json against schema and state/type/profile consistency.",
+      "source_file": "tools/guards/gap-ledger-gate.mjs"
+    },
+    {
+      "id": "capability-graph",
+      "name": "Capability Graph Gate",
+      "script": "guard:capability-graph",
+      "exit_level": "fail",
+      "description": "Validates governance/remediation/capability-graph.json against schema and cross-checks node gap references.",
+      "source_file": "tools/guards/capability-graph-gate.mjs"
+    },
+    {
+      "id": "requirement-traceability",
+      "name": "Requirement Traceability Gate",
+      "script": "guard:requirement-traceability",
+      "exit_level": "fail",
+      "description": "Validates governance/remediation/requirement-traceability.json against schema and cross-checks gap references.",
+      "source_file": "tools/guards/requirement-traceability-gate.mjs"
+    },
+    {
+      "id": "same-commit-evidence",
+      "name": "Same-Commit Evidence Gate",
+      "script": "guard:same-commit-evidence",
+      "exit_level": "fail",
+      "description": "Fails any recorded remediation evidence manifest whose sourceSha does not equal the current HEAD.",
+      "source_file": "tools/guards/same-commit-evidence-gate.mjs"
+    },
+    {
+      "id": "workflow-temp-files",
+      "name": "Workflow Temp Files Gate",
+      "script": "guard:workflow-temp-files",
+      "exit_level": "fail",
+      "description": "Forbids .github/workflows/temp/ and requires any temp-*.yml file to be registered TEMPORARY with an unexpired contract in the workflow registry.",
+      "source_file": "tools/guards/workflow-temp-files-gate.mjs"
+    },
+    {
+      "id": "canonical-paths",
+      "name": "Canonical Paths Gate",
+      "script": "guard:canonical-paths",
+      "exit_level": "fail",
+      "description": "Fails a retired document left outside governance/archive/ and two documents claiming the same canonical title.",
+      "source_file": "tools/guards/canonical-paths-gate.mjs"
+    },
+    {
+      "id": "orphan-files",
+      "name": "Orphan Files Gate",
+      "script": "guard:orphan-files",
+      "exit_level": "warn",
+      "description": "Narrow proxy signal for unreferenced tools/scripts and tools/remediation files; routes positives to manual cleanup classification, never deletes.",
+      "source_file": "tools/guards/orphan-files-gate.mjs"
+    },
+    {
+      "id": "document-authority-conflicts",
+      "name": "Document Authority Conflicts Gate",
+      "script": "guard:document-authority-conflicts",
+      "exit_level": "fail",
+      "description": "Fails when .agents/SKILL_CATALOG.md drifts from governance/skills/skills-registry.json, the exact failure mode fixed in wave 0.",
+      "source_file": "tools/guards/document-authority-conflicts-gate.mjs"
+    },
+    {
       "id": "agent-governance",
       "name": "Agent and Skill Governance Gate",
       "script": "guard:agent-governance",
