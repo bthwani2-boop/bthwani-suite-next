@@ -74,6 +74,7 @@ const guardRelative = "governance/guards/guard-registry.json";
 const assuranceRelative = "governance/guards/guard-assurance.json";
 const bindingRelative = "governance/guards/frontend-binding-registry.json";
 const enforcementRelative = "governance/github/repository-enforcement.json";
+const workflowRegistryRelative = "governance/github/workflow-registry.json";
 const singleOwnerRelative = "governance/authority/single-owner-mode.json";
 const saasRelative = "governance/saas/saas-governance.json";
 const decisionIndexRelative = "governance/00_DECISION_INDEX.md";
@@ -86,6 +87,7 @@ const guards = validateDocument(guardRelative, "governance/guards/guard-schema.j
 const guardAssurance = validateDocument(assuranceRelative, "governance/guards/guard-assurance.schema.json", "GUARD_ASSURANCE");
 const frontendBindings = validateDocument(bindingRelative, "governance/guards/frontend-binding-registry.schema.json", "FRONTEND_BINDING");
 const repositoryEnforcement = validateDocument(enforcementRelative, "governance/github/repository-enforcement.schema.json", "GITHUB_ENFORCEMENT");
+validateDocument(workflowRegistryRelative, "governance/github/workflow-registry.schema.json", "WORKFLOW_REGISTRY");
 const singleOwnerMode = validateDocument(singleOwnerRelative, "governance/authority/single-owner-mode.schema.json", "SINGLE_OWNER_MODE");
 const saasGovernance = validateDocument(saasRelative, "governance/saas/saas-governance.schema.json", "SAAS_GOVERNANCE");
 readJson("tools/guards/guard-manifest.json", "GUARD_MANIFEST");

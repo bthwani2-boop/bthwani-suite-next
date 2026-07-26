@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "decision": "WORKFLOW_INVENTORY_IS_REGISTRY_DRIVEN_WITH_IMMUTABLE_CORE",
+  "coreWorkflows": [
+    "ci-backends.yml",
+    "ci-node-diagnostics.yml",
+    "ci-node-verification.yml",
+    "ci-policy.yml",
+    "ci-runtime.yml",
+    "ci.yml",
+    "dsh-database.yml",
+    "jrn-020-025-sambassam-verify.yml",
+    "lockfile-snapshot.yml",
+    "remediation-analysis.yml"
+  ],
+  "privilegedWorkflow": "remediation-analysis.yml",
+  "entries": [
+    {
+      "id": "ci",
+      "path": ".github/workflows/ci.yml",
+      "class": "CORE",
+      "name": "BThwani Contextual CI",
+      "triggers": ["workflow_dispatch", "pull_request", "push"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Root orchestrator: detects affected scope and fans out to the reusable verification workflows with one fail-closed aggregate result."
+    },
+    {
+      "id": "ci-policy",
+      "path": ".github/workflows/ci-policy.yml",
+      "class": "CORE",
+      "name": "BThwani Policy Verification",
+      "triggers": ["workflow_call"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Nomenclature plus governance, workflow, security, and infrastructure policy guards."
+    },
+    {
+      "id": "ci-node-diagnostics",
+      "path": ".github/workflows/ci-node-diagnostics.yml",
+      "class": "CORE",
+      "name": "BThwani Node Diagnostics",
+      "triggers": ["workflow_call"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "UI purity, dead-code, logic, accessibility, dependency, structure, performance, contract, and diff-hygiene diagnostics."
+    },
+    {
+      "id": "ci-node-verification",
+      "path": ".github/workflows/ci-node-verification.yml",
+      "class": "CORE",
+      "name": "BThwani Node Verification",
+      "triggers": ["workflow_call"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Nx typecheck, lint, test, and build over all or affected projects plus journey and platform change-set gates."
+    },
+    {
+      "id": "ci-backends",
+      "path": ".github/workflows/ci-backends.yml",
+      "class": "CORE",
+      "name": "BThwani Backend Verification",
+      "triggers": ["workflow_call"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Dynamic Go backend matrix: applies migrations then runs go test and go build per affected service."
+    },
+    {
+      "id": "ci-runtime",
+      "path": ".github/workflows/ci-runtime.yml",
+      "class": "CORE",
+      "name": "BThwani Runtime Proof",
+      "triggers": ["workflow_call"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Docker runtime bring-up, bootstrap, smoke, and teardown when runtime proof is required."
+    },
+    {
+      "id": "dsh-database",
+      "path": ".github/workflows/dsh-database.yml",
+      "class": "CORE",
+      "name": "DSH Database Contract",
+      "triggers": ["push", "pull_request", "workflow_dispatch"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Verifies the canonical DSH database path against a PostgreSQL service."
+    },
+    {
+      "id": "jrn-020-025-sambassam-verify",
+      "path": ".github/workflows/jrn-020-025-sambassam-verify.yml",
+      "class": "CORE",
+      "name": "JRN-020-025 Sambassam Verification",
+      "triggers": ["workflow_dispatch", "pull_request"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Fullstack boundary, WLT financial boundary, and governed route exposure for journeys 020 to 025."
+    },
+    {
+      "id": "lockfile-snapshot",
+      "path": ".github/workflows/lockfile-snapshot.yml",
+      "class": "CORE",
+      "name": "BThwani Lockfile Snapshot",
+      "triggers": ["pull_request"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Regenerates a frozen-install-compatible lockfile candidate and uploads it as an artifact; never commits."
+    },
+    {
+      "id": "remediation-analysis",
+      "path": ".github/workflows/remediation-analysis.yml",
+      "class": "PRIVILEGED",
+      "name": "BThwani Expert Live-Code Remediation",
+      "triggers": ["workflow_dispatch"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": true,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Manual patch-only remediation: applies deterministic repairs in the runner, verifies them, and exports a signed patch artifact without any privileged write. Modernization is tracked as GAP-0002.",
+      "gapId": "GAP-0002"
+    }
+  ]
+}

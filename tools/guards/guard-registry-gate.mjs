@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fail, lineNumber, repoRoot } from "./_guard-utils.mjs";
+import { resolveWorkflowInventory } from "./_workflow-registry.mjs";
 
 const guardId = "guard-registry-gate";
 const violations = [];
@@ -11,7 +12,10 @@ const manifestRelative = "tools/guards/guard-manifest.json";
 const workflowsRoot = ".github/workflows";
 const remediationRelative = `${workflowsRoot}/remediation-analysis.yml`;
 const workflowsDir = path.join(repoRoot, workflowsRoot);
-const expectedWorkflowFiles = [
+// The immutable core is hard-coded here on purpose: the registry may add or remove
+// task-class workflows, but changing the core requires editing this guard and
+// tools/guards/required-command-integrity-gate.mjs together.
+const immutableCoreWorkflows = [
   "ci-backends.yml",
   "ci-node-diagnostics.yml",
   "ci-node-verification.yml",
@@ -23,6 +27,10 @@ const expectedWorkflowFiles = [
   "lockfile-snapshot.yml",
   "remediation-analysis.yml",
 ].sort();
+
+const workflowInventory = resolveWorkflowInventory(repoRoot, immutableCoreWorkflows);
+violations.push(...workflowInventory.violations);
+const expectedWorkflowFiles = workflowInventory.expectedFiles;
 
 const aggregateScripts = new Set([
   "guard:logic-all",

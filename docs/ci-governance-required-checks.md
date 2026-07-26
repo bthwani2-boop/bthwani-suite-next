@@ -45,7 +45,17 @@ concurrency:
   cancel-in-progress: true
 ```
 
-Job-level concurrency groups are forbidden. Temporary workflows, one-time remediation workflows, and duplicate result jobs are forbidden by `guard:guard-registry`.
+Job-level concurrency groups are forbidden. Unregistered temporary workflows, one-time remediation workflows, and duplicate result jobs are forbidden by `guard:guard-registry`.
+
+## Workflow inventory registry
+
+The full workflow inventory — which files may exist under `.github/workflows/`, their class, triggers, and permissions — is declared in `governance/github/workflow-registry.json` (schema: `governance/github/workflow-registry.schema.json`) and cross-checked by `guard:guard-registry` and `guard:required-command-integrity`. Three classes exist:
+
+- `CORE` — the ten permanent workflows above; this set is additionally hard-coded as an immutable core inside both consuming guards, so removing or renaming a core workflow requires editing the guards themselves, not only the registry.
+- `PRIVILEGED` — exactly `remediation-analysis.yml`; the only workflow permitted to mutate source, and only inside its own runner, never by pushing.
+- `TEMPORARY` — a registered, time-boxed, task-scoped workflow (see the Progressive Remediation System's `task-*.yml` workflows and `governance/remediation/`). A `TEMPORARY` entry must declare `taskId`, `contractHash`, `parentBranch`, and an unexpired `expiresAt`; an expired or contract-incomplete entry fails `guard:workflow-temp-files`. A `TEMPORARY` workflow is still read-only, still permission-locked, and still forbidden from mutating source.
+
+Adding a permanent `CORE`-adjacent task workflow (see the progressive remediation system) requires only a new file plus a registry entry — not an edit to either consuming guard, because the guards validate against the registry rather than a hard-coded list of every allowed file.
 
 ## Repository Ruleset requirement
 
