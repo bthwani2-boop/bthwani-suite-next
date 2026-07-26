@@ -34,6 +34,9 @@
       "The work branch has not moved in a way that creates a logical conflict."
     ]
   },
+  "registryDataIsProvisional": true,
+  "diagnosisBeforeRemediationRequired": true,
+  "diagnosisRequirementNote": "Product/journey registries such as governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md are living but explicitly preliminary and NOT a final baseline (the registry's own §الغرض says it does not prove any journey complete and does not override Product Truth, contracts, manifests, code, database, or actual evidence). Owner directive 2026-07-26: operational logic, features, operations, and capabilities documented there have significant gaps. Before starting execution of ANY future task, run the full multi-layer, multi-axis diagnostic pass (structural, product/journey, contract, database, runtime, security, test-quality, etc. via tools/remediation/discovery/ and the relevant .agents/ skills) against real code, contracts, database, and runtime to diagnose gaps/violations accurately, then remediate. Registry-derived artifacts (e.g. governance/remediation/capability-graph.json's PROGRESSIVE_P1A nodes from GAP-0008) are a starting scaffold to go verify, never a substitute for that diagnosis.",
   "upstreamContracts": {
     "workUnitContract": ".agents/skills/bthwani-cost-aware-subagent-orchestrator/references/WORK_UNIT_CONTRACT.md",
     "modelRoutingPolicy": ".agents/skills/bthwani-cost-aware-subagent-orchestrator/references/MODEL_ROUTING_AND_TOKEN_POLICY.md",

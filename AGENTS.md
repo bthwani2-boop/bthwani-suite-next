@@ -154,6 +154,7 @@ Use `governance/agents/agent-registry.json` and `governance/skills/skills-regist
 
 Gap-driven repair work runs through the progressive remediation system governed by `governance/remediation/` and validated by `pnpm run guard:remediation-governance`.
 
+- Product/journey registries (e.g. `governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md`) are living but explicitly preliminary, not a final baseline — their own stated purpose is that they do not prove any journey complete and never override Product Truth, contracts, manifests, code, database, or actual evidence. Before starting execution of any task, run the full multi-layer, multi-axis diagnostic pass (structural, product/journey, contract, database, runtime, security, test-quality, etc., via `tools/remediation/discovery/` and the relevant `.agents/` skills) against real code and behavior to diagnose gaps accurately, then remediate; never treat registry- or capability-graph-derived data alone as verified fact (see `governance/remediation/progressive-remediation-policy.json`'s `diagnosisRequirementNote`).
 - Every gap needs a task contract (`governance/remediation/tasks/`) that passes `task-contract.schema.json` before any execution starts; no contract, no repair.
 - A task contract layers above the Work Unit Contract: every work unit's write paths stay inside the frozen contract scope, and its tier never exceeds the contract ceiling.
 - Task state moves only along `governance/remediation/task-state-machine.json`; `REPAIRING`, `VERIFYING`, and `INTEGRATED` can never jump to `CLOSED`.

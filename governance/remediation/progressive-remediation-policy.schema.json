@@ -7,7 +7,8 @@
     "schemaVersion", "decision", "wipWriteLimit", "maxRepairIterations", "microLoopAttemptCap",
     "executorApproverSeparation", "failClosedDecision", "sameCommitEvidence", "archivalOverDeletion",
     "childBranchPattern", "mergeTarget", "masterMerge", "gitWriteAuthorization", "taskInstanceFormat",
-    "liveLockRoot", "evidenceRoots", "autoChildMerge", "upstreamContracts"
+    "liveLockRoot", "evidenceRoots", "autoChildMerge", "upstreamContracts",
+    "registryDataIsProvisional", "diagnosisBeforeRemediationRequired", "diagnosisRequirementNote"
   ],
   "properties": {
     "schemaVersion": { "const": 1 },
@@ -37,6 +38,9 @@
         "requiredConditions": { "type": "array", "minItems": 12, "maxItems": 12, "items": { "type": "string", "minLength": 10 } }
       }
     },
+    "registryDataIsProvisional": { "const": true },
+    "diagnosisBeforeRemediationRequired": { "const": true },
+    "diagnosisRequirementNote": { "type": "string", "minLength": 20 },
     "upstreamContracts": {
       "type": "object",
       "additionalProperties": false,
