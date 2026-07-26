@@ -145,20 +145,14 @@ try {
 
   if ($Action -eq "smoke" -and $ProfileList -contains "dsh" -and
       (Test-Path -LiteralPath $DshSmokeDiagnosticScript -PathType Leaf)) {
-    Write-Host "`n=== runtime:dsh-smoke-auth-boundary-diagnosis ==="
+    Write-Host "`n=== runtime:dsh-smoke-request-boundary-diagnosis ==="
     try {
       & $DshSmokeDiagnosticScript 2>&1 | Tee-Object -FilePath $LogPath -Append
     } catch {
       $diagnosticMessage = $_.Exception.Message
-      Write-Host "DSH smoke auth-boundary diagnosis failed: $diagnosticMessage"
+      Write-Host "DSH smoke request-boundary diagnosis failed: $diagnosticMessage"
       ($_ | Format-List * -Force | Out-String) | Add-Content -LiteralPath $LogPath
     }
-  }
-
-  if ($Action -eq "smoke" -and $ProfileList -contains "dsh") {
-    "=== BEGIN_RUNTIME_SOURCE_SNAPSHOT ===" | Tee-Object -FilePath $LogPath -Append
-    Get-Content -LiteralPath $RuntimeScript -Raw | Tee-Object -FilePath $LogPath -Append
-    "=== END_RUNTIME_SOURCE_SNAPSHOT ===" | Tee-Object -FilePath $LogPath -Append
   }
 
   $subject = ConvertTo-StatusText -Value $message -Limit 48
