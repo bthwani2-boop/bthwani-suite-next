@@ -37,7 +37,7 @@ jobs:
 
           function Add-RuntimeLog {
             param([Parameter(Mandatory)][string] $Text)
-            $Text | Tee-Object -LiteralPath $logPath -Append
+            $Text | Tee-Object -FilePath $logPath -Append
           }
 
           function Invoke-LoggedPhase {
@@ -49,7 +49,7 @@ jobs:
             Add-RuntimeLog "=== $Name ==="
             try {
               $global:LASTEXITCODE = 0
-              & $Command *>&1 | Tee-Object -LiteralPath $logPath -Append
+              & $Command *>&1 | Tee-Object -FilePath $logPath -Append
               $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
               Add-RuntimeLog "phase=$Name exitCode=$exitCode"
               if ($exitCode -ne 0) {
