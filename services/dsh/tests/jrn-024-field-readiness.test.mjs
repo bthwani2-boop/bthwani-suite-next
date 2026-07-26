@@ -12,11 +12,20 @@ const sharedMedia = read("services/dsh/frontend/shared/media/field-document-medi
 const visitScreen = read("services/dsh/frontend/app-field/escalation/DshFieldVisitScreen.tsx");
 const queueScreen = read("services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx");
 const checklistScreen = read("services/dsh/frontend/app-field/escalation/DshFieldReadinessChecklistScreen.tsx");
+const escalationScreen = read("services/dsh/frontend/app-field/escalation/DshFieldEscalationScreen.tsx");
+const escalationSubmission = read("services/dsh/frontend/shared/field-readiness/use-field-escalation-submission-controller.ts");
 const operatorScreen = read("services/dsh/frontend/control-panel/partners/field-readiness/FieldReadinessQueueScreen.tsx");
 const fieldSchemas = read("services/dsh/contracts/components/schemas/field.schemas.yaml");
 const fieldPaths = read("services/dsh/contracts/paths/field.paths.yaml");
 const generatedBundle = read("services/dsh/contracts/generated/dsh.bundle.openapi.yaml");
 const generatedClient = read("services/dsh/clients/generated/dsh-api.ts");
+const identityGate = read("services/dsh/frontend/shared/session/IdentitySessionGate.tsx");
+const identityStore = read("core/identity/clients/identity-session-store.ts");
+const appRuntime = read("apps/app-field/runtime/src/App.tsx");
+const appIndex = read("apps/app-field/runtime/src/index.ts");
+const offlineQueue = read("services/dsh/frontend/shared/field-readiness/field-offline-queue.ts");
+const onboardingTypes = read("services/dsh/frontend/shared/field-onboarding/field-onboarding.types.ts");
+const fieldDraftsController = read("services/dsh/frontend/shared/field-onboarding/use-field-partner-drafts-controller.tsx");
 
 test("JRN-024 routes every write through the governed backend boundary", () => {
   assert.match(routes, /handleCreateGovernedFieldVisit/);
@@ -76,6 +85,53 @@ test("JRN-024 source and generated contracts require both GPS captures", () => {
   assert.match(generatedBundle, /completionLocation:/);
   assert.match(generatedClient, /startLocation:/);
   assert.match(generatedClient, /completionLocation:/);
+});
+
+test("JRN-024 removes production developer access and governs field activation", () => {
+  assert.doesNotMatch(identityGate, /دخول سريع|123456|handleDevQuickLogin/);
+  assert.match(identityGate, /requiredRole !== "field"/);
+  assert.match(identityGate, /لا يمكن إصدار رمز ميداني ذاتيًا من التطبيق/);
+});
+
+test("JRN-024 uses a persistent per-install device fingerprint", () => {
+  assert.doesNotMatch(identityStore, /DEVICE_FINGERPRINT\s*=\s*"bthwani-runtime-session"/);
+  assert.match(identityStore, /configureIdentityDeviceFingerprintProvider/);
+  assert.match(appRuntime, /Crypto\.randomUUID\(\)/);
+  assert.match(appRuntime, /SecureStore\.setItemAsync\(FIELD_DEVICE_FINGERPRINT_KEY/);
+});
+
+test("JRN-024 accepts only governed app-field links and notification actions", () => {
+  assert.match(appRuntime, /scheme !== FIELD_APP_SCHEME/);
+  assert.doesNotMatch(appRuntime, /parseNotificationData|data\.route/);
+});
+
+test("JRN-024 isolates and clears encrypted offline work per tenant and actor", () => {
+  assert.match(offlineQueue, /readonly tenantId: string/);
+  assert.match(offlineQueue, /readonly actorId: string/);
+  assert.match(offlineQueue, /configureFieldOfflineQueueStorage/);
+  assert.match(offlineQueue, /scope\.tenantId/);
+  assert.match(offlineQueue, /scope\.actorId/);
+  assert.doesNotMatch(offlineQueue, /submit_payout_request|upload_media_evidence/);
+  assert.match(appIndex, /SecureStore\.setItemAsync/);
+  assert.match(appIndex, /clearFieldOfflineQueue\(\)/);
+});
+
+test("JRN-024 blocks partner submission until required documents exist", () => {
+  assert.match(onboardingTypes, /REQUIRED_DOCUMENT_TYPES\.filter/);
+  assert.match(onboardingTypes, /DOCUMENT_TYPE_LABELS\[documentType\]/);
+  assert.doesNotMatch(onboardingTypes, /Documents and photos are optional/);
+});
+
+test("JRN-024 keeps field escalation submission separate from operator queues", () => {
+  assert.match(escalationScreen, /useFieldEscalationSubmissionController/);
+  assert.doesNotMatch(escalationScreen, /useFieldEscalationController/);
+  assert.doesNotMatch(escalationSubmission, /fetchOperatorEscalations/);
+});
+
+test("JRN-024 loads the full governed partner list instead of only the first page", () => {
+  assert.match(fieldDraftsController, /loadAllFieldPartners/);
+  assert.match(fieldDraftsController, /partners\.length < total/);
+  assert.doesNotMatch(fieldDraftsController, /limit:\s*50/);
 });
 
 test("JRN-024 affected React Native screens contain no inline style objects", () => {
