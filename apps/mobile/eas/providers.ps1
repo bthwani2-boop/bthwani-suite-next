@@ -103,6 +103,34 @@ function Remove-AnsiEscapeSequences {
     return [regex]::Replace($Text, $csiPattern, '')
 }
 
+function Get-EasEnvironmentContextDirectory {
+    $contextDirectory = Join-Path $StampDirectory "environment-context\$App"
+    New-Item -ItemType Directory -Path $contextDirectory -Force | Out-Null
+
+    $packageJson = [ordered]@{
+        name = "@bthwani/eas-environment-$App"
+        version = '0.0.0'
+        private = $true
+    }
+    $appJson = [ordered]@{
+        expo = [ordered]@{
+            name = [string]$appConfig.name
+            slug = [string]$appConfig.slug
+            owner = [string]$manifest.global.owner
+            version = [string]$manifest.global.version
+            extra = [ordered]@{
+                eas = [ordered]@{
+                    projectId = [string]$appConfig.projectId
+                }
+            }
+        }
+    }
+
+    $packageJson | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $contextDirectory 'package.json') -Encoding UTF8
+    $appJson | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $contextDirectory 'app.json') -Encoding UTF8
+    return $contextDirectory
+}
+
 function Invoke-EasEnvironmentCommand {
     param(
         [Parameter(Mandatory)][string[]] $Arguments,
@@ -110,7 +138,8 @@ function Invoke-EasEnvironmentCommand {
         [switch] $Quiet
     )
 
-    Push-Location -LiteralPath $AppDir
+    $environmentContextDirectory = Get-EasEnvironmentContextDirectory
+    Push-Location -LiteralPath $environmentContextDirectory
     $previousNoColor = $env:NO_COLOR
     $previousForceColor = $env:FORCE_COLOR
     try {
@@ -168,6 +197,6 @@ function Sync-EasDevelopmentEnvironment {
     param([Parameter(Mandatory)][string] $MapsKey)
     Write-Step 'Synchronize EAS development provider inputs'
     Set-EasVariable -Name 'GOOGLE_SERVICES_JSON' -Value $SecureFirebasePath -Type 'file' -Visibility 'secret'
-    Set-EasVariable -Name 'GOOGLE_MAPS_ANDROID_API_KEY' -Value $MapsKey -Type 'string' -Visibility 'sensitive' -SecretValues @($MapsKey)
+    Set-EasVariable -Name 'GOOGLE_MAPS_ANDROID_API_KEY' -Value $MapsKey -Type 'string' -Visibility 'secret' -SecretValues @($MapsKey)
     Write-Host 'PASS: EAS development provider inputs were created or updated.' -ForegroundColor Green
 }
