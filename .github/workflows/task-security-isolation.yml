@@ -1,0 +1,71 @@
+name: BThwani Task Security and Isolation Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: Task/gap id this run verifies, e.g. GAP-0001.
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remediation-security-isolation-${{ inputs.task_id }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Security and boundary proof (read-only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Run security verification profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .diagnostics/remediation/evidence/${{ inputs.task_id }}
+          pnpm run guard:fullstack-boundary
+          pnpm run guard:wlt-financial-boundary
+          pnpm run guard:secrets
+
+      - name: Record tenant isolation proof coverage limitation
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > .diagnostics/remediation/evidence/${{ inputs.task_id }}/tenancy-results.json <<'EOF'
+          {
+            "schemaVersion": 1,
+            "boundaryGuardsPassed": true,
+            "crossTenantRuntimeProof": "NEEDS_EVIDENCE",
+            "note": "Static boundary guards passed. Cross-tenant negative-isolation runtime proof (Tenant A vs Tenant B across API/DB/cache/exports) is a planned wave P1-B dimension per governance/remediation/verification-profiles.json and is not claimed by this workflow."
+          }
+          EOF
+
+      - name: Reject any tracked source mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet -- . ':(exclude).diagnostics'; then
+            echo "Task verification workflows are read-only." >&2
+            git status --short -- . ':(exclude).diagnostics' >&2
+            exit 1
+          fi
+
+      - name: Export security and isolation evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: task-security-isolation-${{ inputs.task_id }}-${{ github.run_id }}
+          path: .diagnostics/remediation/evidence/${{ inputs.task_id }}
+          if-no-files-found: warn
+          retention-days: 14

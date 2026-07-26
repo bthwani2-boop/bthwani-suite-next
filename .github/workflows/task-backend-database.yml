@@ -1,0 +1,116 @@
+name: BThwani Task Backend and Database Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: Task/gap id this run verifies, e.g. GAP-0001.
+        type: string
+        required: true
+      service:
+        description: Backend service to verify (dsh, wlt, identity, workforce, platform-control, providers).
+        type: choice
+        options:
+          - dsh
+          - wlt
+          - identity
+          - workforce
+          - platform-control
+          - providers
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remediation-backend-database-${{ inputs.task_id }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Backend and database proof (read-only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: remediation_runtime
+          POSTGRES_PASSWORD: remediation_runtime_password
+          POSTGRES_DB: task_${{ inputs.task_id }}_${{ inputs.service }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U remediation_runtime"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Set up locked Go runtime
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: services/dsh/backend/go.mod
+
+      - name: Resolve backend and database roots
+        id: paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ inputs.service }}" in
+            dsh) root="services/dsh" ;;
+            wlt) root="services/wlt" ;;
+            identity|workforce|platform-control|providers) root="core/${{ inputs.service }}" ;;
+            *) echo "Unknown service ${{ inputs.service }}" >&2; exit 1 ;;
+          esac
+          echo "backend=${root}/backend" >> "$GITHUB_OUTPUT"
+          echo "database=${root}/database/migrations" >> "$GITHUB_OUTPUT"
+
+      - name: Apply migrations to the task-scoped database
+        shell: bash
+        env:
+          PGPASSWORD: remediation_runtime_password
+        run: |
+          set -euo pipefail
+          migrations="${{ steps.paths.outputs.database }}"
+          if [ -d "$migrations" ]; then
+            for file in "$migrations"/*.sql; do
+              [ -e "$file" ] || continue
+              psql -h localhost -U remediation_runtime -d "task_${{ inputs.task_id }}_${{ inputs.service }}" -v ON_ERROR_STOP=1 -f "$file"
+            done
+          fi
+
+      - name: Run Go verification for the affected backend
+        shell: bash
+        working-directory: ${{ steps.paths.outputs.backend }}
+        run: |
+          set -euo pipefail
+          go vet ./...
+          go build ./...
+          go test ./... -count=1
+
+      - name: Reject any tracked source mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet -- . ':(exclude).diagnostics'; then
+            echo "Task verification workflows are read-only." >&2
+            git status --short -- . ':(exclude).diagnostics' >&2
+            exit 1
+          fi
+
+      - name: Export backend and database evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: task-backend-database-${{ inputs.task_id }}-${{ inputs.service }}-${{ github.run_id }}
+          path: .diagnostics/remediation
+          if-no-files-found: warn
+          retention-days: 14

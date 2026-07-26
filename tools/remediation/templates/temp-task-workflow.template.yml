@@ -1,0 +1,79 @@
+# Approved template for a spec S14 exceptional temporary workflow.
+#
+# Use only when a task genuinely needs an environment no permanent workflow
+# covers (legacy upgrade rehearsal, a specific production incident, a one-time
+# backfill, a rare external-provider compatibility matrix, a rare migration
+# laboratory). The default remains: the temporary artifact is the task contract
+# (governance/remediation/tasks/active/GAP-*.json), not a workflow file.
+#
+# To materialize one:
+#   1. Copy this file to .github/workflows/temp-gap-<task-id>-<short-hash>.yml
+#      (directly under .github/workflows/ — never under a temp/ subdirectory;
+#      that path is forbidden by guard:workflow-temp-files).
+#   2. Replace every <PLACEHOLDER> below.
+#   3. Add a matching entry to governance/github/workflow-registry.json with
+#      class "TEMPORARY", taskId, contractHash, parentBranch, and an expiresAt
+#      no more than 14 days out. guard:workflow-temp-files fails closed if any
+#      of those fields are missing or if expiresAt has passed.
+#   4. Never add secrets, never add write permissions, never add push/PR/merge
+#      commands, never self-modify. It produces a patch and evidence only.
+#   5. Delete the file (and its registry entry) via a separate PR once the
+#      task closes — do not leave it registered past its expiry.
+
+name: BThwani Temporary Task Workflow — <TASK_ID>
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: Must equal <TASK_ID>.
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remediation-temp-<TASK_ID>
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: <DESCRIBE THE EXCEPTIONAL VERIFICATION NEED HERE>
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: <RUN THE EXCEPTIONAL VERIFICATION — READ ONLY>
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .diagnostics/remediation/evidence/<TASK_ID>
+          echo "REPLACE WITH THE EXCEPTIONAL COMMAND(S)" >&2
+          exit 1
+
+      - name: Reject any tracked source mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet -- . ':(exclude).diagnostics'; then
+            echo "Temporary task workflows are read-only, same as every other task-*.yml." >&2
+            git status --short -- . ':(exclude).diagnostics' >&2
+            exit 1
+          fi
+
+      - name: Export temporary task evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: task-temp-<TASK_ID>-${{ github.run_id }}
+          path: .diagnostics/remediation/evidence/<TASK_ID>
+          if-no-files-found: warn
+          retention-days: 14
