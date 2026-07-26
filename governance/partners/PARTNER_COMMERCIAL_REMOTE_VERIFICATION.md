@@ -996,62 +996,62 @@ internal/http/server.go:171:77: protected.handleUpdateOperatorSupportTicket unde
 internal/http/server.go:172:85: protected.handleAddOperatorSupportMessage undefined (type *protectedStoreServer has no field or method handleAddOperatorSupportMessage)
 internal/http/server.go:173:85: protected.handleEscalateSupportTicket undefined (type *protectedStoreServer has no field or method handleEscalateSupportTicket)
 internal/http/server.go:173:85: too many errors
-FAIL	dsh-api/cmd/dsh-api [build failed]
-ok  	dsh-api/internal/administration	0.004s
-ok  	dsh-api/internal/analytics	0.003s
-ok  	dsh-api/internal/auth	0.009s
-ok  	dsh-api/internal/cart	0.005s
-?   	dsh-api/internal/catalogapproval	[no test files]
-ok  	dsh-api/internal/centralcatalog	0.013s
-ok  	dsh-api/internal/checkout	0.007s
-ok  	dsh-api/internal/checkoutfinanceoutbox	0.005s
-?   	dsh-api/internal/coupons	[no test files]
-ok  	dsh-api/internal/dispatch	0.004s
-ok  	dsh-api/internal/fieldcommissionoutbox	0.005s
-ok  	dsh-api/internal/fieldreadiness	0.005s
-ok  	dsh-api/internal/health	0.008s
-ok  	dsh-api/internal/homediscovery	0.007s
-FAIL	dsh-api/internal/http [build failed]
-ok  	dsh-api/internal/marketing	0.008s
-ok  	dsh-api/internal/media	0.018s
-ok  	dsh-api/internal/notifications	0.003s
-ok  	dsh-api/internal/operationaloutbox	0.004s
-ok  	dsh-api/internal/orders	0.017s
-ok  	dsh-api/internal/partner	0.009s
-ok  	dsh-api/internal/partnerdelivery	0.005s
-ok  	dsh-api/internal/partnerfleet	0.005s
-ok  	dsh-api/internal/pickup	0.004s
-ok  	dsh-api/internal/platformpolicies	0.003s
-?   	dsh-api/internal/promotionfundingoutbox	[no test files]
-ok  	dsh-api/internal/specialrequests	0.006s
-ok  	dsh-api/internal/store	0.005s
-ok  	dsh-api/internal/support	0.003s
-ok  	dsh-api/internal/wlt	0.011s
-ok  	dsh-api/internal/wltoutbox	0.004s
+FAIL dsh-api/cmd/dsh-api [build failed]
+ok   dsh-api/internal/administration 0.004s
+ok   dsh-api/internal/analytics 0.003s
+ok   dsh-api/internal/auth 0.009s
+ok   dsh-api/internal/cart 0.005s
+?    dsh-api/internal/catalogapproval [no test files]
+ok   dsh-api/internal/centralcatalog 0.013s
+ok   dsh-api/internal/checkout 0.007s
+ok   dsh-api/internal/checkoutfinanceoutbox 0.005s
+?    dsh-api/internal/coupons [no test files]
+ok   dsh-api/internal/dispatch 0.004s
+ok   dsh-api/internal/fieldcommissionoutbox 0.005s
+ok   dsh-api/internal/fieldreadiness 0.005s
+ok   dsh-api/internal/health 0.008s
+ok   dsh-api/internal/homediscovery 0.007s
+FAIL dsh-api/internal/http [build failed]
+ok   dsh-api/internal/marketing 0.008s
+ok   dsh-api/internal/media 0.018s
+ok   dsh-api/internal/notifications 0.003s
+ok   dsh-api/internal/operationaloutbox 0.004s
+ok   dsh-api/internal/orders 0.017s
+ok   dsh-api/internal/partner 0.009s
+ok   dsh-api/internal/partnerdelivery 0.005s
+ok   dsh-api/internal/partnerfleet 0.005s
+ok   dsh-api/internal/pickup 0.004s
+ok   dsh-api/internal/platformpolicies 0.003s
+?    dsh-api/internal/promotionfundingoutbox [no test files]
+ok   dsh-api/internal/specialrequests 0.006s
+ok   dsh-api/internal/store 0.005s
+ok   dsh-api/internal/support 0.003s
+ok   dsh-api/internal/wlt 0.011s
+ok   dsh-api/internal/wltoutbox 0.004s
 FAIL
 
 exit_code=1
 
 ## WLT Go tests
 go: downloading go1.26.5 (linux/amd64)
-?   	wlt-api/cmd/wlt-api	[no test files]
-ok  	wlt-api/internal/cod	0.011s
-ok  	wlt-api/internal/commercial	0.012s
-ok  	wlt-api/internal/dshnotify	0.009s
-?   	wlt-api/internal/dshoutbox	[no test files]
-?   	wlt-api/internal/health	[no test files]
-ok  	wlt-api/internal/http	0.012s
-ok  	wlt-api/internal/ledger	0.010s
-ok  	wlt-api/internal/payment	0.026s
-ok  	wlt-api/internal/payout	0.017s
-?   	wlt-api/internal/promotionfunding	[no test files]
-ok  	wlt-api/internal/provider	0.005s
-ok  	wlt-api/internal/reconciliation	0.008s
-ok  	wlt-api/internal/reference	0.005s
-ok  	wlt-api/internal/refund	0.007s
-ok  	wlt-api/internal/settlement	0.006s
-?   	wlt-api/internal/shared	[no test files]
-?   	wlt-api/internal/wallet	[no test files]
+?    wlt-api/cmd/wlt-api [no test files]
+ok   wlt-api/internal/cod 0.011s
+ok   wlt-api/internal/commercial 0.012s
+ok   wlt-api/internal/dshnotify 0.009s
+?    wlt-api/internal/dshoutbox [no test files]
+?    wlt-api/internal/health [no test files]
+ok   wlt-api/internal/http 0.012s
+ok   wlt-api/internal/ledger 0.010s
+ok   wlt-api/internal/payment 0.026s
+ok   wlt-api/internal/payout 0.017s
+?    wlt-api/internal/promotionfunding [no test files]
+ok   wlt-api/internal/provider 0.005s
+ok   wlt-api/internal/reconciliation 0.008s
+ok   wlt-api/internal/reference 0.005s
+ok   wlt-api/internal/refund 0.007s
+ok   wlt-api/internal/settlement 0.006s
+?    wlt-api/internal/shared [no test files]
+?    wlt-api/internal/wallet [no test files]
 
 exit_code=0
 

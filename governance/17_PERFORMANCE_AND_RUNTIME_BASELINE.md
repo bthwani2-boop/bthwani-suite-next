@@ -40,7 +40,7 @@ Define performance and runtime design constraints while keeping configuration, s
 Initial target budgets may include:
 
 | Metric | Target |
-|---|---:|
+| --- | ---: |
 | p95 API reads | `< 300 ms` |
 | p95 API writes | `< 700 ms` |
 | basic database query | `< 100 ms` |

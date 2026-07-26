@@ -1,6 +1,8 @@
 # 14 — Extraction and Screen Inventory
 
-Status: CANONICAL
+> **Historical reference** per `governance/00_DECISION_INDEX.md`: this file owns no current readiness or implementation state. The `machine-readable/` matrix directory it references has been removed from the repository.
+
+Status: HISTORICAL_REFERENCE
 Stage: PHASE_10_11_EXTRACTION_AND_SCREEN_INVENTORY
 
 ## Purpose
@@ -79,4 +81,3 @@ store auth/serviceability rules.
 Accepted only when schema v2 is present, ownership and journey normalization pass,
 all mobile/control-panel targets have screen-state coverage, forbidden paths and
 service owners are absent, all pre-journey gate rules pass, and the foundation gate passes.
-

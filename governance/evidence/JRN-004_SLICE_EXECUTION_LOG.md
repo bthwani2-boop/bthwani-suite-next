@@ -14,7 +14,7 @@
 ## Functional slices
 
 | Slice | Name | Result |
-|---|---|---|
+| --- | --- | --- |
 | JRN-004-S01 | قائمة المتاجر العامة وتفاصيل المتجر وسياقه | COMPLETE |
 | JRN-004-S02 | التغطية ومناطق الخدمة وقابلية الظهور | COMPLETE |
 | JRN-004-S03 | سياق الاستلام للكابتن والتحقق الميداني | COMPLETE |
@@ -28,7 +28,7 @@
 ## Full-stack slices
 
 | Slice | Result | Primary evidence |
-|---|---|---|
+| --- | --- | --- |
 | FS-01 | COMPLETE | `governance/product-truth/JRN-004_STORE_DISCOVERY_CONTEXT_GOVERNANCE.md` |
 | FS-02 | COMPLETE | `services/dsh/contracts/jrn-004-access-matrix.json` |
 | FS-03 | COMPLETE | `services/dsh/contracts/jrn-004-state-machine.json` |

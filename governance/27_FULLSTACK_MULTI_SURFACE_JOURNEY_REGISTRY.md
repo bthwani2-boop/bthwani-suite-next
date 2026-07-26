@@ -65,7 +65,7 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 ## فهرس الرحلات
 
 | ID | الرحلة | المالك الرئيسي | القرار الابتدائي |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | JRN-001 | تأهيل الشريك والمتجر ونشره | DSH + Identity + Workforce | NEEDS_EVIDENCE |
 | JRN-002 | الهوية والتفعيل والجلسات | Identity | NEEDS_EVIDENCE |
 | JRN-003 | القوى العاملة والموارد البشرية | Workforce + Identity + DSH | NEEDS_EVIDENCE |
@@ -173,7 +173,6 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 - قائمة المتاجر التشغيلية وتفاصيل المشغل.
 - حوكمة المتجر والتشخيص والإخفاء والحظر وإعادة التفعيل.
 - سجل تدقيق المتجر وقراءة أثر القرار في كل سطح.
-
 
 حالة التنفيذ الحالية: `READY_FOR_REVIEW`.
 
@@ -744,7 +743,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 أضف سطرًا بعد كل شريحة منفذة أو قرار نطاق. لا تستبدل التاريخ السابق.
 
 | التاريخ | Journey ID | Slice | الفرع | commit الدليل | الأسطح | القرار | المتبقي |
-|---|---|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-07-21 | REGISTRY | استخراج السجل الأولي من baseline الفرع | sambassam | `466d34bacdd7fde4cc1c351e094d3d4604b33268` | جميع الأسطح مسجلة لا مُثبتة | NEEDS_EVIDENCE | تقييم كل رحلة وتحديثها على commits لاحقة |
 
 | 2026-07-21 | JRN-001 | FS-01..FS-18 sequential execution | sambassam | `246d4e63d75fecaa64a982938885bb2bfd6249cb` | app-field, app-partner, control-panel, app-client public projection | READY_FOR_REVIEW | Product, QA, Security, Release, device runtime and production evidence pending |
@@ -779,7 +778,6 @@ open_gaps: []
 ## شرط قبول السجل
 
 يُعد السجل محدثًا فقط عندما تتطابق أسماء الرحلات والشرائح مع Product Truth والعقود والـoperation IDs والمسارات والـmigrations وخريطة القدرات والأسطح في الـcommit المثبت، وتُسجل أي فجوة أو استبعاد بوضوح. تحديث السجل ليس تنفيذًا، ونجاح فحصه لا يساوي إغلاق الرحلات.
-
 
 <!-- JRN-020-030-CLOSURE-2026-07-21 -->
 ## سجل إغلاق JRN-020..JRN-030 — 2026-07-21

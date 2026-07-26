@@ -18,11 +18,7 @@ No journey may begin without all relevant rows in this document passing their ga
 
 ## Canonical Source of Truth
 
-Machine-readable source exists **only** in:
-
-```
-C:\bthwani-suite-next\machine-readable\
-```
+The legacy `machine-readable\` matrix directory has been **removed from the repository** and no longer exists. Historical references to `machine-readable/*.csv` in this file and in the historical extraction documents describe a retired planning stage only; they are not current-state claims. Current machine-readable contracts live under `governance/**` (see `governance/00_DECISION_INDEX.md`, "Active machine-readable contracts").
 
 Donor reference paths (read-only comparison only):
 
@@ -318,7 +314,7 @@ Deny cross-tenant access without object existence leak (never expose 404 vs 403 
 
 Every write, financial, order-state, and support row must include:
 
-```
+```text
 audit actor_id, actor_role, object_id, action, from_state, to_state,
 correlation_id, timestamp
 ```

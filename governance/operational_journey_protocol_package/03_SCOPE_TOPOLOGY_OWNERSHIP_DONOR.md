@@ -317,10 +317,10 @@ DSH لا ينفّذ financial mutation.
 ممنوع نقل مسارات المانح، بنيته كما هي، كوده الميت، mock/demo/preview كحقيقة تشغيلية، ownership خاطئة، منطق مالي داخل DSH، تصميم مكرر، أو API access مباشر من الشاشات.
 كل قيمة صالحة من المانح يجب أن يعاد بناؤها داخل بنية الريبو الجديد ومالكه الصحيح.
 
-
 ## Frontend-Backend Ownership Separation
 
 Frontend owns:
+
 - presentation
 - interaction capture
 - rendering
@@ -329,6 +329,7 @@ Frontend owns:
 - displaying canonical states
 
 Frontend must not own:
+
 - domain decisions
 - request contract invention
 - response reinterpretation
@@ -339,6 +340,7 @@ Frontend must not own:
 - independent status vocabulary
 
 Backend owns:
+
 - authorization enforcement
 - validation
 - business decisions
@@ -351,6 +353,7 @@ Backend owns:
 - canonical operational errors
 
 Contract owns:
+
 - request shape
 - response shape
 - enums

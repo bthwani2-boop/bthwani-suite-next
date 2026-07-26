@@ -109,7 +109,7 @@ if (!reviewerSkill?.conflicts_with?.includes("bthwani-cost-aware-subagent-orches
 }
 
 const mixedSkill = skillById.get("bthwani-governance-ci-guardian");
-if (!mixedSkill || mixedSkill.status !== "retired" || mixedSkill.contract_level !== "legacy") violations.push({ file: skillPath, line: 0, message: "MIXED_GOVERNANCE_CI_SKILL_MUST_BE_RETIRED" });
+if (mixedSkill && (mixedSkill.status !== "retired" || mixedSkill.contract_level !== "legacy")) violations.push({ file: skillPath, line: 0, message: "MIXED_GOVERNANCE_CI_SKILL_MUST_BE_RETIRED" });
 if (index.includes("→ `bthwani-governance-ci-guardian`") || /^- `bthwani-governance-ci-guardian`$/m.test(index)) violations.push({ file: indexPath, line: 0, message: "RETIRED_MIXED_SKILL_STILL_ROUTED" });
 
 const skillAuthorityMarkers = new Map([

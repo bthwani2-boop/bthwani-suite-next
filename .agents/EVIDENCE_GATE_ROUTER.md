@@ -71,11 +71,11 @@ Blocked unless explicitly requested.
 
 ## Decision output
 
-Every review must end with one of:
+Every review must end with one canonical decision from `governance/contracts/decision-vocabulary.json`:
 
-`PASS`, `PASS_WITH_WARNINGS`, `FIX_REQUIRED`, `BLOCKED`, `READY_FOR_PR`, `REVERT_REQUIRED`, `NEEDS_EVIDENCE`, `NEEDS_VISUAL_EVIDENCE`, `NO_ACTION_REQUIRED`.
+`PASS`, `FIX_REQUIRED`, `BLOCKED_EXTERNAL`, `NEEDS_EVIDENCE`, `READY_FOR_REVIEW`, `PROTOCOL_VIOLATION`.
 
-Use `NEEDS_VISUAL_EVIDENCE` only when visual evidence is required for explicit visual request, final visual closure, visual parity approval, or release/store visual requirements. Use `NEEDS_EVIDENCE` only when escalation rules make evidence files mandatory.
+Use `NEEDS_EVIDENCE` with the visual scope declared when visual evidence is required for an explicit visual request, final visual closure, visual parity approval, or release/store visual requirements; otherwise use `NEEDS_EVIDENCE` only when escalation rules make evidence files mandatory.
 
 ## Closure Vocabulary Alignment
 
@@ -83,8 +83,6 @@ When the task is code-only, do not return a generic `PASS` if it can be misread 
 
 - `CODE_CHECK_PASS`: static/code checks passed, no runtime claim.
 - `CODE_CHECK_FAIL`: static/code checks failed.
-- `DSH_WLT_CODE_CLOSURE_PASS`: DSH/WLT code closure passed, no runtime claim.
-- `DSH_WLT_CODE_CLOSURE_FAIL`: DSH/WLT code closure failed.
 - `RUNTIME_SMOKE_PASS`: runtime smoke was executed and passed.
 - `RUNTIME_SMOKE_FAIL`: runtime smoke failed.
 - `UI_VISUAL_PASS`: visual proof was produced and accepted.

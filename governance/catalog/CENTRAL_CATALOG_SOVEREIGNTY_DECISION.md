@@ -76,10 +76,11 @@ this journey must conform to.
   sale) to settle.
 
 ## Sovereign taxonomy names (authoritative — use exactly these identifiers in
+
 code, migrations, and API payloads)
 
 | Level | Name | Arabic meaning |
-|---|---|---|
+| --- | --- | --- |
 | L1 | `BUSINESS_DOMAIN` | الفئة الرئيسية للمتجر |
 | L2 | `BUSINESS_SUBDOMAIN` | الفئة الفرعية للمتجر |
 | L3 | `PRODUCT_MAIN_CLASS` | التصنيف الرئيسي للمنتجات |

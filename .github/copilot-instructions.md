@@ -14,8 +14,6 @@ This adapter is thin. Do not duplicate global policy here. If this file conflict
 
 Before editing, state the exact files you intend to touch. After editing, provide changed paths and ask for Git evidence.
 
-
-
 ## BThwani Ponytail / YAGNI
 
 Also apply:

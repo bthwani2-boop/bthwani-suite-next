@@ -644,7 +644,6 @@ binding_chain_matrix:
 
 أي حلقة مفقودة أو قفز في السلسلة = `FIX_REQUIRED`.
 
-
 ## Frontend-Backend Parity Matrices
 
 ```yaml

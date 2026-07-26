@@ -1,6 +1,8 @@
 # 14 — Master Extraction, Logic, and UX Coverage
 
-Status: CANONICAL
+> **Historical reference** per `governance/00_DECISION_INDEX.md`: this file owns no current readiness or implementation state. The `machine-readable/` matrix directory it references has been removed from the repository.
+
+Status: HISTORICAL_REFERENCE
 Stage: PHASE_10_11_MASTER_EXTRACTION_LOGIC_UX_COVERAGE
 
 ## Purpose

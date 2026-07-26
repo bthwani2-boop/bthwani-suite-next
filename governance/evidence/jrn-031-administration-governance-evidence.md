@@ -29,7 +29,7 @@ No local repository state was used as execution evidence.
 ## Functional-slice closure map
 
 | Slice | Implemented closure | Primary evidence |
-|---|---|---|
+| --- | --- | --- |
 | FS-01 | Live administration role inventory | `services/dsh/backend/internal/administration/administration.go` |
 | FS-02 | Governed role-definition request with mandatory reason | `role_definition_approvals.go` |
 | FS-03 | Independent checker approval/rejection for role definitions | `ReviewRoleDefinition` and HTTP review route |

@@ -195,6 +195,7 @@ change_control_for_protocol_package_v2:
 ## Execution Plan Required Matrices and Failure Conditions
 
 يجب إضافة هذه المصفوفات إلى mandatory_outputs:
+
 - frontend_backend_parity_matrix
 - contract_field_traceability_matrix
 - request_response_alignment_matrix
@@ -205,6 +206,7 @@ change_control_for_protocol_package_v2:
 - frontend_backend_runtime_journey_matrix
 
 شروط الفشل:
+
 - أي UI feature بلا backend chain.
 - أي backend capability بلا contract مطابق.
 - أي contract operation بلا backend implementation.

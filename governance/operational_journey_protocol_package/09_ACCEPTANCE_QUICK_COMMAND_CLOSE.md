@@ -110,7 +110,6 @@ result: PROTOCOL_VIOLATION
 reason: unable_to_follow_protocol_without_unsafe_or_unverified_claims
 ```
 
-
 ## Frontend-Backend Acceptance Gate
 
 ```yaml

@@ -97,7 +97,7 @@ The canonical retired set exists only in `governance/skills/skills-registry.json
 - may not be dependencies of active or conditional skills;
 - may not be described as active, default, mandatory, or current truth.
 
-The mixed `bthwani-governance-ci-guardian` skill is retired and must never be routed.
+The mixed governance-and-CI guardian skill was retired and moved to `.agents/archive/skills/`; a skill mixing governance and CI approval authority must never be recreated or routed.
 
 ## Tool ladder
 

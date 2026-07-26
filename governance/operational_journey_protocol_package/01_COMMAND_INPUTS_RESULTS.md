@@ -166,7 +166,6 @@ PROTOCOL_VIOLATION
 
 إلا إذا كانت داخل تقرير مفسر ومربوطة بدليل عملي. أي لفظ نجاح غير مدعوم بدليل = `FIX_REQUIRED`.
 
-
 ## Frontend-Backend Integrity Rules
 
 - الحالة الابتدائية لأي implementation_or_closure هي FIX_REQUIRED.

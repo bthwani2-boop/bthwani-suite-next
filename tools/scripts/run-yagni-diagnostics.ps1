@@ -40,7 +40,6 @@ foreach ($path in @(
   "knip.json",
   ".reviewdog.yml",
   ".agents/rules/bthwani-ponytail-yagni.md",
-  ".agents/skills/bthwani-ponytail-yagni/SKILL.md",
   "tools/yagni/semgrep/bthwani-yagni.yml",
   "tools/yagni/ast-grep/sgconfig.yml",
   "tools/scripts/run-yagni-diagnostics.ps1"

@@ -5,7 +5,7 @@ Status: `ACTIVE_CANONICAL`
 ## Service objectives
 
 | Signal | Target | Alert |
-|---|---:|---:|
+| --- | ---: | ---: |
 | Order creation availability | ≥ 99.9% per 30 days | < 99.5% for 10 minutes |
 | p95 order creation latency | ≤ 1.5 seconds | > 2.5 seconds for 10 minutes |
 | p95 actor-scoped read latency | ≤ 500 ms | > 1 second for 10 minutes |

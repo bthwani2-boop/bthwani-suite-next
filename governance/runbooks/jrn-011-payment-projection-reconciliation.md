@@ -19,7 +19,7 @@ DSH reads an opaque WLT Payment Session and stores only a read-only projection o
 ## Projection mapping
 
 | WLT method/status | DSH projection |
-|---|---|
+| --- | --- |
 | COD + `initiated` or `reference_created` | `cash_due` |
 | non-COD + `initiated` or `reference_created` | `pending` |
 | `captured` | `confirmed` |

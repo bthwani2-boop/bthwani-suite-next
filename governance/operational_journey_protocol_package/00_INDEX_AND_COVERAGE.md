@@ -19,7 +19,7 @@ No file in this package may override a higher authority, live service manifest, 
 ## Package contents
 
 | Path | Purpose |
-|---|---|
+| --- | --- |
 | `00_INDEX_AND_COVERAGE.md` | Package routing and authority boundary. |
 | `01_COMMAND_INPUTS_RESULTS.md` | Input and result guidance. |
 | `02_REMOTE_REF_SOURCE_GIT_GATES.md` | Remote ref and Git evidence guidance. |

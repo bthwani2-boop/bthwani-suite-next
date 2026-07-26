@@ -364,7 +364,6 @@ external_reference_record:
 
 ممنوع: نسخ كود عشوائي، أو إدخال dependency جديدة دون سبب وفحص أثر.
 
-
 ## P0 Cleanup Cases (Frontend-Backend Mismatches)
 
 الحالات التالية تعتبر P0:
@@ -376,7 +375,6 @@ external_reference_record:
 - Backend requires fields frontend never sends
 - UI displays success before committed backend success
 - Backend mutation succeeds but frontend remains stale
-
 
 ## P0 Cleanup Cases (Frontend-Backend Mismatches)
 
@@ -397,6 +395,7 @@ external_reference_record:
 > قاعدة: أي compatibility adapter يخفي عدم تطابق العقد بدل إصلاح المصدر يعتبر FIX_REQUIRED.
 
 ممنوع:
+
 - تعديل gap counters يدويًا.
 - تغيير status دون تغيير الحقيقة المولدة له.
 - تعطيل test أو guard لإزالة الفشل.

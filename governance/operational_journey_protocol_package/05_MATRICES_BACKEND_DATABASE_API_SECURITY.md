@@ -425,7 +425,6 @@ risk_based_test_matrix:
 
 - غياب اختبار مناسب لخطر داخل النطاق = `FIX_REQUIRED`.
 
-
 ## Contract and State Traceability Matrices
 
 ```yaml

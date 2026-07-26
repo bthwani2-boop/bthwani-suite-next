@@ -51,7 +51,8 @@ Discover
 → Repeat
 ```
 
-التوقف لا يكون إلا عند `remaining_internal_gaps = 0` أو بقاء blockers خارجية مثبتة فقط.
+التوقف لا يكون إلا عند `remaining_internal_gaps = 0` أو بقاء blockers خارجية مثبتة فقط
+
 ---
 
 ## 26) Antigravity Command Output Standard

@@ -207,7 +207,6 @@ merge_review_matrix:
   blockers:
 ```
 
-
 ## Frontend-Backend Runtime Journey Verification
 
 `````yaml
@@ -243,12 +242,13 @@ frontend_backend_runtime_journey_matrix:
 `````
 
 > القواعد:
-- Frontend unit test alone is insufficient.
-- Backend unit test alone is insufficient.
-- Contract validation alone is insufficient.
-- Generated-client compilation alone is insufficient.
-- Endpoint smoke alone is insufficient.
-- A valid proof must cross UI → contract → backend → database → UI readback.
+
+* Frontend unit test alone is insufficient.
+* Backend unit test alone is insufficient.
+* Contract validation alone is insufficient.
+* Generated-client compilation alone is insufficient.
+* Endpoint smoke alone is insufficient.
+* A valid proof must cross UI → contract → backend → database → UI readback.
 
 ## 23) Operational Protocol Workflow Contract
 
@@ -267,12 +267,12 @@ When `saas_context.mode` is `SAAS_READY_DEFERRED` or `SAAS_ACTIVE`, affected ver
 
 Minimum required proof:
 
-- tenant context source is trusted
-- tenant-owned data is classified
-- backend queries enforce tenant scope
-- cross-tenant negative cases are covered
-- delegated operator access is audited when present
-- WLT financial references remain tenant-safe when affected
+* tenant context source is trusted
+* tenant-owned data is classified
+* backend queries enforce tenant scope
+* cross-tenant negative cases are covered
+* delegated operator access is audited when present
+* WLT financial references remain tenant-safe when affected
 
 Missing tenant proof in an applicable journey returns `FIX_REQUIRED`.
 

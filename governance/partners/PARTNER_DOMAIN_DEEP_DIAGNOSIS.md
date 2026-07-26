@@ -22,7 +22,7 @@ Both surfaces consume the same DSH contracts and persistence truth. They do not 
 ## 2. Sovereign ownership matrix
 
 | Capability | Sovereign owner | Allowed surfaces | Required gate |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Partner identity and activation | DSH partner domain + Identity actor reference | control-panel, app-partner read-self, app-field readiness | RBAC + lifecycle OCC |
 | Store and team membership | DSH store/team domain | app-partner, control-panel read/audit, app-captain membership read | authenticated store scope |
 | Catalog source and publication | DSH central catalog | app-partner submit, marketing/catalog review, app-client read | catalog approval + active store |

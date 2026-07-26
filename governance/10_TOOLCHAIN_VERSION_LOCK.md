@@ -11,7 +11,7 @@ A version change updates every affected live manifest, lockfile, installer, work
 ## Locked baseline
 
 | Tool | Declared baseline | Operative source | Evidence state |
-|---|---:|---|---|
+| --- | ---: | --- | --- |
 | Node.js | `>=24.17.0 <25` | `package.json#engines.node` | `PASS` only when the manifest and active CI setup agree |
 | pnpm | `10.34.0` | `packageManager` and `engines.pnpm` | `PASS` only when the manifest, lockfile, and setup action agree |
 | TypeScript | `~6.0.3` | `devDependencies.typescript` | `PASS` only when package metadata and lockfile agree |

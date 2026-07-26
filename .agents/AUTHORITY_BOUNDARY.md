@@ -5,7 +5,7 @@
 - inspect files inside the current repository
 - propose exact changes
 - apply narrow local edits when explicitly instructed
-- generate evidence under `tools/registry/runs`
+- generate evidence under `governance/evidence/` (tracked and referenced) or `.diagnostics/` (untracked)
 - choose the smallest sufficient verification gate
 - ask for missing evidence only when the task cannot be safely completed without it
 
@@ -25,14 +25,12 @@
 When ownership is unclear, use this order:
 
 1. Current branch file evidence
-2. `governance/`
-3. `machine-readable/`
-4. `.agents/`
-5. donor/reference material after classification
+2. `governance/` (including its machine-readable JSON contracts)
+3. `.agents/`
+4. donor/reference material after classification
 
 If still unclear, mark `NEEDS_EVIDENCE` and state the exact missing proof.
 
 ## Command safety
 
 - Executed commands must strictly comply with the [Command Safety Policy](./COMMAND_SAFETY_POLICY.md).
-

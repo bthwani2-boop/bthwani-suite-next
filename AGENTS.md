@@ -103,7 +103,7 @@ Agents must not:
 Choose one primary mode and add only the owner skills required by the actual risk.
 
 | Mode | Use when | Default verification |
-|---|---|---|
+| --- | --- | --- |
 | `TEXT_ONLY` | wording or documentation with no behavioral claim | diff check |
 | `CODE_ONLY` | bounded static code change | one targeted check |
 | `PRODUCT_MODEL` | actor, problem, surface, role, outcome, or acceptance changes | Product Truth gate |

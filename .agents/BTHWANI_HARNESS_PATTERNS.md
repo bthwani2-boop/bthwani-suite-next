@@ -8,7 +8,7 @@ This document defines which design patterns from `revfactory/harness` are adopte
 | :--- | :--- | :--- | :--- |
 | **Progressive Disclosure** | Yes | `.agents/README.md`, `.agents/INDEX.md` | Prevents agents from loading all instructions/skills into the context at once. Limits active context to what is strictly necessary, reducing token waste. |
 | **Orchestrator / Supervisor Routing** | Yes | `.agents/INDEX.md`, `AGENTS.md` | Guides top-level agent routing to specific sub-skills rather than using a single monolithic instructions block. |
-| **Producer-Reviewer Pattern** | Yes | `.agents/skills/bthwani-patch-review-evidence` | Separates change proposal (producer) from verification/evidence collection (reviewer) for critical updates. |
+| **Producer-Reviewer Pattern** | Yes | `.agents/skills/bthwani-independent-implementation-reviewer` | Separates change proposal (producer) from verification/evidence collection (reviewer) for critical updates. |
 | **QA-after-each-unit** | Yes | `.agents/EVIDENCE_GATE_ROUTER.md` | Enforces running verification tests immediately after modifying any unit/component, preventing regression accumulation. |
 | **Final Closure Judge** | Yes | `.agents/skills/bthwani-final-journey-closure-judge` | Restricts declaring a task complete without multi-dimensional evidence (visual, backend, contract, etc.). |
 | **Skill References Structure** | Yes | `.agents/skills/` | Standardizes each skill into a standalone directory containing a `SKILL.md` file and optional supporting assets. |

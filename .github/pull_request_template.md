@@ -1,4 +1,4 @@
-## Scope
+# Scope
 
 - [ ] UI only
 - [ ] Frontend logic
