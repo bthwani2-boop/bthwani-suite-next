@@ -106,17 +106,7 @@ function Resolve-BthwaniAdb {
         }
     }
 
-    throw @"
-ADB was not found.
-
-Expected one of:
-- %ADB%
-- adb.exe next to scrcpy.exe
-- %ANDROID_HOME%\platform-tools\adb.exe
-- %ANDROID_SDK_ROOT%\platform-tools\adb.exe
-- %LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe
-- adb.exe in PATH
-"@
+    throw "ADB was not found.`n`nExpected one of:`n- %ADB%`n- adb.exe next to scrcpy.exe`n- %ANDROID_HOME%\platform-tools\adb.exe`n- %ANDROID_SDK_ROOT%\platform-tools\adb.exe`n- %LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe`n- adb.exe in PATH"
 }
 
 function Get-BthwaniAndroidDevices {
