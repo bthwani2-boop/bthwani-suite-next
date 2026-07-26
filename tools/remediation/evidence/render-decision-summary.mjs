@@ -48,4 +48,4 @@ function main() {
   console.log(JSON.stringify(renderDecisionSummary(contract, results), null, 2));
 }
 
-if (process.argv[1] && process.argv[1].endsWith("render-decision-summary.mjs")) main();
+if (process.argv[1]?.endsWith("render-decision-summary.mjs")) main();

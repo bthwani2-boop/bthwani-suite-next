@@ -28,6 +28,18 @@
       "purpose": "Progressive remediation discovery: runs the parallel read-only inventory and baseline scripts under tools/remediation/discovery/, rejects any tracked mutation, and uploads the evidence bundle as an artifact. Part of governance/remediation/ (wave P0-B)."
     },
     {
+      "id": "progressive-remediation",
+      "path": ".github/workflows/progressive-remediation.yml",
+      "class": "READ_ONLY_DIAGNOSTIC",
+      "name": "BThwani Progressive Remediation Orchestrator",
+      "triggers": ["workflow_dispatch"],
+      "permissions": { "contents": "read" },
+      "mayMutateSource": false,
+      "mayUseSecrets": false,
+      "requiredPinnedActions": true,
+      "purpose": "Progressive remediation orchestrator: validates the governed contracts and evaluates the requested phase (select-next, validate-contract, required-proof, reconcile-state) read-only, rejects any tracked mutation, and uploads the decision evidence as an artifact. It decides which task-*.yml workflows to dispatch next; it never dispatches them itself in wave P0-C. Part of governance/remediation/ (wave P0-C)."
+    },
+    {
       "id": "ci",
       "path": ".github/workflows/ci.yml",
       "class": "CORE",

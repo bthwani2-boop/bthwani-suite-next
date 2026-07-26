@@ -30,4 +30,4 @@ function main() {
   console.log("detect-shared-ownership: PASS");
 }
 
-if (process.argv[1] && process.argv[1].endsWith("detect-shared-ownership.mjs")) main();
+if (process.argv[1]?.endsWith("detect-shared-ownership.mjs")) main();

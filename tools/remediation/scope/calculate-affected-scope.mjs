@@ -39,4 +39,4 @@ function main() {
   process.exit(result.outside.length > 0 ? 1 : 0);
 }
 
-if (process.argv[1] && process.argv[1].endsWith("calculate-affected-scope.mjs")) main();
+if (process.argv[1]?.endsWith("calculate-affected-scope.mjs")) main();

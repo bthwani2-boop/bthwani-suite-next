@@ -125,6 +125,43 @@ export function classifyFiles(inputFiles, options = {}) {
     journeyScope = "PROJECT-WIDE";
   }
 
+  // Progressive remediation system outputs (governance/remediation/**, spec S6.2).
+  const remediationGovernanceChanged = full || starts("governance/remediation/");
+  const taskContractChanged = full || starts("governance/remediation/tasks/", "governance/remediation/iterations/");
+  const remediationToolingChanged = full || starts("tools/remediation/");
+  const cleanupChanged = full || starts("governance/cleanup/") || equals(
+    "tools/scripts/apply-repository-cleanup.mjs",
+    "tools/guards/cleanup-policy-gate.mjs",
+    "tools/scripts/check-repository-hygiene.mjs"
+  );
+  const nativeChanged = full || mobileTooling || starts("apps/mobile/") || has((file) =>
+    /(^|\/)(android|ios)\//.test(file) ||
+    /(^|\/)(app|eas)\.json$/.test(file) ||
+    file.endsWith("google-services.json") ||
+    file.endsWith("GoogleService-Info.plist")
+  );
+  const visualChanged = full || starts("shared/ui-kit/") || has((file) =>
+    file.includes("/design-tokens/") ||
+    file.endsWith(".snap") ||
+    /ui-kit-visual-contract/i.test(file)
+  );
+  const tenantIsolationChanged = full || starts("governance/saas/") || has((file) =>
+    /tenant/i.test(file) || /isolation/i.test(file)
+  );
+  const financialChanged = full || wlt || has((file) =>
+    /\/(finance|wallet|commission|settlement|payout|ledger)\//i.test(file) ||
+    file.startsWith("governance/dsh-wlt") ||
+    /dsh-wlt-finance/i.test(file)
+  );
+  const migrationChanged = full || includes("/migrations/");
+  const sharedContractChanged = full || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
+  const recoveryChanged = full || starts("governance/runbooks/") || has((file) =>
+    /backup/i.test(file) || /restore/i.test(file) || /recovery/i.test(file) || /rollback/i.test(file)
+  );
+  const observabilityChanged = full || starts("tools/observability/") || has((file) =>
+    /observability/i.test(file) || /\botel\b/i.test(file) || /(^|\/)tracing\//i.test(file)
+  );
+
   const nodeScope = uniqueSorted([
     frontend ? "frontend" : "",
     contracts ? "contracts" : "",
@@ -156,7 +193,19 @@ export function classifyFiles(inputFiles, options = {}) {
     shared_brain: sharedBrain,
     heavy,
     jrn040,
-    platform_change_sets: jrn040
+    platform_change_sets: jrn040,
+    task_contract_changed: taskContractChanged,
+    cleanup_changed: cleanupChanged,
+    native_changed: nativeChanged,
+    visual_changed: visualChanged,
+    tenant_isolation_changed: tenantIsolationChanged,
+    financial_changed: financialChanged,
+    migration_changed: migrationChanged,
+    shared_contract_changed: sharedContractChanged,
+    recovery_changed: recoveryChanged,
+    observability_changed: observabilityChanged,
+    remediation_governance_changed: remediationGovernanceChanged,
+    remediation_tooling_changed: remediationToolingChanged
   };
 }
 

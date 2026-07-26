@@ -39,4 +39,4 @@ function main() {
   console.log(`create-manifest: ${target}`);
 }
 
-if (process.argv[1] && process.argv[1].endsWith("create-manifest.mjs")) main();
+if (process.argv[1]?.endsWith("create-manifest.mjs")) main();

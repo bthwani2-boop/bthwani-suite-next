@@ -40,4 +40,4 @@ function main() {
   console.log("enforce-allowed-paths: PASS");
 }
 
-if (process.argv[1] && process.argv[1].endsWith("enforce-allowed-paths.mjs")) main();
+if (process.argv[1]?.endsWith("enforce-allowed-paths.mjs")) main();

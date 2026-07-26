@@ -24,4 +24,4 @@ function main() {
   process.exit(result.expanded ? 1 : 0);
 }
 
-if (process.argv[1] && process.argv[1].endsWith("detect-scope-expansion.mjs")) main();
+if (process.argv[1]?.endsWith("detect-scope-expansion.mjs")) main();

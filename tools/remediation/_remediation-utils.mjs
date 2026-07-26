@@ -2,9 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { repoRoot, listFiles, toPosix } from "../guards/_guard-utils.mjs";
+import { repoRoot } from "../guards/_guard-utils.mjs";
 
-export { repoRoot, listFiles, toPosix };
+export { repoRoot };
+export { listFiles, listCodeFiles, toPosix, read } from "../guards/_guard-utils.mjs";
 
 export const inventoryRoot = path.join(repoRoot, ".diagnostics", "remediation", "inventory");
 

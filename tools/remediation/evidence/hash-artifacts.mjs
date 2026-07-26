@@ -41,4 +41,4 @@ function main() {
   console.log("hash-artifacts: PASS");
 }
 
-if (process.argv[1] && process.argv[1].endsWith("hash-artifacts.mjs")) main();
+if (process.argv[1]?.endsWith("hash-artifacts.mjs")) main();

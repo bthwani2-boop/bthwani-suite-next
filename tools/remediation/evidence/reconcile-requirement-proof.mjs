@@ -32,4 +32,4 @@ function main() {
   console.log("reconcile-requirement-proof: PASS");
 }
 
-if (process.argv[1] && process.argv[1].endsWith("reconcile-requirement-proof.mjs")) main();
+if (process.argv[1]?.endsWith("reconcile-requirement-proof.mjs")) main();

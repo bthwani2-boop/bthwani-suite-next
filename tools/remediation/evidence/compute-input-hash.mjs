@@ -39,4 +39,4 @@ function main() {
   console.log(inputHash);
 }
 
-if (process.argv[1] && process.argv[1].endsWith("compute-input-hash.mjs")) main();
+if (process.argv[1]?.endsWith("compute-input-hash.mjs")) main();

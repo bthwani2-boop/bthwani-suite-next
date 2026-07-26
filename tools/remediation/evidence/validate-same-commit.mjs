@@ -33,4 +33,4 @@ function main() {
   console.log("validate-same-commit: PASS");
 }
 
-if (process.argv[1] && process.argv[1].endsWith("validate-same-commit.mjs")) main();
+if (process.argv[1]?.endsWith("validate-same-commit.mjs")) main();

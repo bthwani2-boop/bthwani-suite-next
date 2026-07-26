@@ -313,6 +313,30 @@
       "source_file": "tools/guards/document-authority-conflicts-gate.mjs"
     },
     {
+      "id": "scope-expansion",
+      "name": "Scope Expansion Gate",
+      "script": "guard:scope-expansion",
+      "exit_level": "fail",
+      "description": "Fails an active or blocked task contract whose git-diff changed files fall outside its frozen scope.allowedPaths or exceed maximumChangedFiles.",
+      "source_file": "tools/guards/scope-expansion-gate.mjs"
+    },
+    {
+      "id": "agent-locks",
+      "name": "Agent Locks Gate",
+      "script": "guard:agent-locks",
+      "exit_level": "fail",
+      "description": "Validates governance/remediation/agent-locks.json and fails on any conflicting non-expired live lock under .diagnostics/remediation/locks/.",
+      "source_file": "tools/guards/agent-locks-gate.mjs"
+    },
+    {
+      "id": "flaky-tests",
+      "name": "Flaky Tests Gate",
+      "script": "guard:flaky-tests",
+      "exit_level": "fail",
+      "description": "Validates governance/remediation/flaky-tests.json and fails an unexpired-fix quarantine that has passed its expiry date.",
+      "source_file": "tools/guards/flaky-tests-gate.mjs"
+    },
+    {
       "id": "agent-governance",
       "name": "Agent and Skill Governance Gate",
       "script": "guard:agent-governance",
