@@ -159,11 +159,12 @@ describe("JRN-025 campaigns, tickers, and partner offers", () => {
 });
 
 describe("JRN-020..025 verification hygiene", () => {
-  const verifierPath = "../../../.github/workflows/jrn-020-025-sambassam-verify.yml";
+  const verifierPath = "../../../.github/workflows/manual-deep-verification.yml";
 
-  it("keeps one permanent verifier and removes one-off repair workflows", () => {
+  it("uses the generic permanent verifier and removes journey-specific repair workflows", () => {
     assert.equal(exists(verifierPath), true);
     for (const workflow of [
+      "jrn-020-025-sambassam-verify.yml",
       "jrn-020-025-boundary-diagnostic.yml",
       "jrn-020-025-wlt-boundary-diagnostic.yml",
       "jrn-020-025-surface-import-repair.yml",
@@ -173,10 +174,11 @@ describe("JRN-020..025 verification hygiene", () => {
     }
   });
 
-  it("keeps both sovereign boundary gates in the permanent verifier", () => {
+  it("keeps both sovereign boundary gates in the generic read-only verifier", () => {
     const verifier = source(verifierPath);
     assert.match(verifier, /guard:fullstack-boundary/);
     assert.match(verifier, /guard:wlt-financial-boundary/);
-    assert.match(verifier, /TestJourneys020To025ExposeGovernedRoutes/);
+    assert.match(verifier, /Reject tracked source mutation/);
+    assert.match(verifier, /read-only-exact-sha-verification/);
   });
 });
