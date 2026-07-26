@@ -1,9 +1,11 @@
 {
   "schemaVersion": 3,
-  "decision": "CODE_FIRST_REMEDIATION_WITH_REVIEWED_RECORD_CLEANUP",
-  "archivalOverDeletion": true,
-  "ciSourceMutation": "MANUAL_REMEDIATION_PULL_REQUEST_ONLY",
-  "privilegedRemediationWorkflow": ".github/workflows/remediation-analysis.yml",
+  "decision": "FUNCTION_BASED_RETENTION_WITH_GIT_HISTORY_AS_DEFAULT_ARCHIVE",
+  "archivalOverDeletion": false,
+  "gitHistoryIsDefaultArchive": true,
+  "ageIsDecisionCriterion": false,
+  "ciSourceMutation": "FORBIDDEN",
+  "privilegedRemediationWorkflow": null,
   "generatedOutputRoots": [
     ".diagnostics/",
     "coverage/",
@@ -31,10 +33,11 @@
     "tmp/",
     "temp/",
     "logs/",
+    ".diagnostics/",
     ".github/workflows/temp/"
   ],
   "temporaryWorkflowException": {
-    "note": "A tracked .github/workflows/temp-gap-<id>-<hash>.yml file is allowed only while registered with class TEMPORARY, a task id, a contract hash, a parent branch, and an unexpired expiry in governance/github/workflow-registry.json; enforcement lands with guard:workflow-temp-files (wave P0-B)."
+    "note": "A temporary workflow is allowed only on an isolated task branch, with a registered TEMPORARY contract and expiry, and must be removed before merge to the work branch."
   },
   "forbiddenTrackedFilenamePatterns": [
     "(^|/)tmp[-_.]",
@@ -56,25 +59,19 @@
       "postgres://[^\\s\"]+:[^\\s\"]+@"
     ]
   },
-  "allowedTrackedLogRoots": [
-    "governance/evidence/security/"
-  ],
+  "allowedTrackedLogRoots": [],
   "evidence": {
-    "roots": ["governance/evidence/"],
+    "roots": [],
     "maximumUnreferencedAgeDays": 180,
-    "permanentRoots": [
-      "governance/evidence/security/archive/"
-    ],
-    "referenceIndexes": [
-      "governance/00_DECISION_INDEX.md",
-      "governance/operational_journey_protocol_package/00_INDEX_AND_COVERAGE.md",
-      "governance/evidence/security/lianbassam-remediation.md",
-      "governance/evidence/security/archive/README.md"
-    ]
+    "ageOnlyDiagnostic": true,
+    "permanentRoots": [],
+    "referenceIndexes": []
   },
   "documents": {
     "roots": ["docs/", "governance/"],
     "archiveRoot": "governance/archive/",
+    "archiveByDefault": false,
+    "archiveRequiresClass": ["LEGAL_AUDIT", "SECURITY_EXCEPTION", "FINANCIAL_CONTROL", "RELEASE_AUDIT"],
     "retiredMarkers": [
       "status: retired",
       "status: obsolete",
@@ -97,7 +94,33 @@
       "patch-",
       "update-"
     ],
-    "maximumUnreferencedAgeDays": 90
+    "maximumUnreferencedAgeDays": 90,
+    "ageOnlyDiagnostic": true
+  },
+  "retentionClasses": {
+    "retain": [
+      "CANONICAL_SOURCE",
+      "EXECUTABLE_POLICY",
+      "ACTIVE_CONTRACT",
+      "LEGAL_AUDIT",
+      "SECURITY_EXCEPTION",
+      "FINANCIAL_CONTROL",
+      "RELEASE_MANIFEST",
+      "ESSENTIAL_OPERATIONAL_RUNBOOK"
+    ],
+    "removeOrMerge": [
+      "GENERATED",
+      "REPRODUCIBLE",
+      "TASK_TEMPORARY",
+      "UNCONSUMED",
+      "DUPLICATE",
+      "SUPERSEDED",
+      "HISTORICAL_ONLY",
+      "STALE_CONTRADICTORY",
+      "NO_OWNER",
+      "NO_VALIDATOR",
+      "NO_OPERATIONAL_CONSUMER"
+    ]
   },
   "deletionPolicy": {
     "safeAutomaticClasses": [
@@ -109,7 +132,9 @@
       "retired-document",
       "stale-evidence",
       "duplicate-document",
-      "empty-document"
+      "empty-document",
+      "unconsumed-document",
+      "superseded-document"
     ],
     "requiresExplicitHumanOrAgentCommit": true,
     "forbiddenAutomaticClasses": [
@@ -117,8 +142,10 @@
       "contract",
       "migration",
       "active-governance",
-      "active-evidence",
-      "audit"
+      "audit",
+      "security-exception",
+      "financial-control",
+      "release-manifest"
     ]
   }
 }
