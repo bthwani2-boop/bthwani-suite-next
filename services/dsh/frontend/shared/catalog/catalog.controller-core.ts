@@ -46,6 +46,9 @@ export function resolveCatalogError(error: unknown): CatalogState {
   if (typed.kind === "http" && (typed.status === 401 || typed.status === 403)) {
     return catalogPermissionDeniedState();
   }
+  if (typed.kind === "http" && typed.status === 404) {
+    return catalogErrorState("لا توجد منتجات منشورة لهذا المتجر حاليًا.");
+  }
   if (typed.kind === "http" && typed.status === 409) {
     return catalogErrorState("تغيّرت نسخة الكتالوج. أعد التحميل ثم حاول مجددًا.");
   }

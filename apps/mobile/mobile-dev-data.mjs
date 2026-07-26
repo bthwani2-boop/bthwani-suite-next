@@ -73,16 +73,55 @@ function list(value) {
   return Array.isArray(value) ? value : [];
 }
 
-async function collectReadinessFailures() {
+async function collectClientStorefrontFailures() {
   const failures = [];
-
   try {
-    const home = await requestJson('dsh:home-discovery', `${DSH_API_BASE}/dsh/home-discovery`);
-    if (list(home?.stores).length === 0) failures.push('app-client: no client-visible stores');
+    const home = await requestJson('dsh:home-discovery', `${DSH_API_BASE}/dsh/home-discovery?limit=50`);
+    const stores = list(home?.stores);
+    if (stores.length === 0) failures.push('app-client: no client-visible stores');
     if (list(home?.categories).length === 0) failures.push('app-client: no discovery categories');
+
+    for (const store of stores) {
+      const storeId = typeof store?.id === 'string' ? store.id.trim() : '';
+      if (!storeId) {
+        failures.push('app-client: home discovery returned a store without an id');
+        continue;
+      }
+
+      const encodedStoreId = encodeURIComponent(storeId);
+      try {
+        const detail = await requestJson(
+          `dsh:store-detail:${storeId}`,
+          `${DSH_API_BASE}/dsh/stores/${encodedStoreId}`,
+        );
+        if (detail?.store?.id !== storeId) {
+          failures.push(`app-client: store detail mismatch for ${storeId}`);
+        }
+      } catch (error) {
+        failures.push(`app-client: storefront ${storeId} detail failed: ${error.message}`);
+        continue;
+      }
+
+      try {
+        const catalog = await requestJson(
+          `dsh:store-catalog:${storeId}`,
+          `${DSH_API_BASE}/dsh/stores/${encodedStoreId}/catalog`,
+        );
+        if (list(catalog?.products).length === 0) {
+          failures.push(`app-client: storefront ${storeId} has no client-visible products`);
+        }
+      } catch (error) {
+        failures.push(`app-client: storefront ${storeId} catalog failed: ${error.message}`);
+      }
+    }
   } catch (error) {
     failures.push(`app-client: ${error.message}`);
   }
+  return failures;
+}
+
+async function collectReadinessFailures() {
+  const failures = await collectClientStorefrontFailures();
 
   let partnerToken;
   try {

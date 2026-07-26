@@ -24,6 +24,13 @@ INSERT INTO dsh_stores (
   has_coupon_badge,
   points_multiplier,
   is_popular,
+  address_line,
+  coverage_summary,
+  operating_hours,
+  delivery_readiness,
+  storefront_photo_ref,
+  interior_photo_ref,
+  signage_photo_ref,
   latitude,
   longitude
 ) VALUES
@@ -34,6 +41,12 @@ INSERT INTO dsh_stores (
     '/dsh-media/realistic/store-test-grocery-logo.jpg',
     'domain-groceries', ARRAY['delivery','pickup','express'], true,
     2.10, 3100, true, false, 2, true,
+    'شارع حدة، جوار جولة المصباحي، صنعاء',
+    'حدة والأحياء المجاورة ضمن نطاق 8 كم',
+    'يوميًا 08:00-23:00', 'ready',
+    '/dsh-media/realistic/store-test-grocery-hero.jpg',
+    '/dsh-media/realistic/store-test-grocery-hero.jpg',
+    '/dsh-media/realistic/store-test-grocery-logo.jpg',
     15.3400, 44.1900
   ),
   (
@@ -43,6 +56,12 @@ INSERT INTO dsh_stores (
     '/dsh-media/realistic/store-test-sweets-logo.jpg',
     'domain-groceries', ARRAY['delivery','pickup'], true,
     1.80, 1200, true, true, null, false,
+    'شارع السبعين، جوار مستشفى السبعين، صنعاء',
+    'السبعين والأحياء المجاورة ضمن نطاق 7 كم',
+    'يوميًا 05:30-22:30', 'ready',
+    '/dsh-media/realistic/store-test-sweets-hero.jpg',
+    '/dsh-media/realistic/store-test-sweets-hero.jpg',
+    '/dsh-media/realistic/store-test-sweets-logo.jpg',
     15.3300, 44.2000
   ),
   (
@@ -52,6 +71,12 @@ INSERT INTO dsh_stores (
     '/dsh-media/realistic/store-test-grocery-logo.jpg',
     'domain-groceries', ARRAY['delivery','pickup'], false,
     3.50, 850, false, false, null, false,
+    'شارع تعز، جوار جولة تعز، صنعاء',
+    'شارع تعز والأحياء المجاورة ضمن نطاق 6 كم',
+    'يوميًا 08:00-23:00', 'ready',
+    '/dsh-media/realistic/store-test-grocery-hero.jpg',
+    '/dsh-media/realistic/store-test-grocery-hero.jpg',
+    '/dsh-media/realistic/store-test-grocery-logo.jpg',
     15.3200, 44.1800
   ),
   (
@@ -61,6 +86,12 @@ INSERT INTO dsh_stores (
     '/dsh-media/realistic/store-test-grocery-logo.jpg',
     'domain-groceries', ARRAY['delivery'], false,
     1.20, 2400, true, false, null, false,
+    'شارع الزبيري، وسط صنعاء',
+    'الزبيري والأحياء المجاورة ضمن نطاق 5 كم',
+    'يوميًا 08:00-23:00', 'paused',
+    '/dsh-media/realistic/store-test-grocery-hero.jpg',
+    '/dsh-media/realistic/store-test-grocery-hero.jpg',
+    '/dsh-media/realistic/store-test-grocery-logo.jpg',
     15.3600, 44.1700
   ),
   (
@@ -70,6 +101,12 @@ INSERT INTO dsh_stores (
     '/dsh-media/realistic/store-test-restaurant-logo.jpg',
     'domain-restaurants', ARRAY['delivery','pickup','express'], true,
     0.50, 5200, true, true, 3, true,
+    'باب اليمن، المدينة القديمة، صنعاء',
+    'المدينة القديمة ومركز صنعاء ضمن نطاق 6 كم',
+    'يوميًا 08:00-23:00', 'ready',
+    '/dsh-media/realistic/store-test-restaurant-hero.jpg',
+    '/dsh-media/realistic/store-test-restaurant-hero.jpg',
+    '/dsh-media/realistic/store-test-restaurant-logo.jpg',
     15.3560, 44.1800
   ),
   (
@@ -78,8 +115,14 @@ INSERT INTO dsh_stores (
     '/dsh-media/realistic/store-test-pharmacy-hero.jpg',
     '/dsh-media/realistic/store-test-pharmacy-logo.jpg',
     'domain-pharmacy', ARRAY['delivery'], true,
-      4.10, 980, false, true, null, false,
-      15.3700, 44.1900
+    4.10, 980, false, true, null, false,
+    'شارع الستين، منطقة معين، صنعاء',
+    'معين والستين والأحياء المجاورة ضمن نطاق 8 كم',
+    'يوميًا 08:00-24:00', 'ready',
+    '/dsh-media/realistic/store-test-pharmacy-hero.jpg',
+    '/dsh-media/realistic/store-test-pharmacy-hero.jpg',
+    '/dsh-media/realistic/store-test-pharmacy-logo.jpg',
+    15.3700, 44.1900
   ),
   (
     'store-test-electronics', 'local-dsh', 'test-electronics', 'إلكترونيات المستقبل', 'active',
@@ -88,6 +131,12 @@ INSERT INTO dsh_stores (
     '/dsh-media/realistic/store-test-electronics-logo.jpg',
     'domain-electronics', ARRAY['delivery'], true,
     4.10, 980, false, true, null, false,
+    'شارع حدة، مركز المستقبل، صنعاء',
+    'صنعاء ضمن نطاق توصيل 10 كم',
+    'يوميًا 08:00-23:00', 'ready',
+    '/dsh-media/realistic/store-test-electronics-hero.jpg',
+    '/dsh-media/realistic/store-test-electronics-hero.jpg',
+    '/dsh-media/realistic/store-test-electronics-logo.jpg',
     15.3700, 44.1900
   )
 ON CONFLICT (id) DO UPDATE SET
@@ -113,6 +162,13 @@ ON CONFLICT (id) DO UPDATE SET
   has_coupon_badge = EXCLUDED.has_coupon_badge,
   points_multiplier = EXCLUDED.points_multiplier,
   is_popular = EXCLUDED.is_popular,
+  address_line = EXCLUDED.address_line,
+  coverage_summary = EXCLUDED.coverage_summary,
+  operating_hours = EXCLUDED.operating_hours,
+  delivery_readiness = EXCLUDED.delivery_readiness,
+  storefront_photo_ref = EXCLUDED.storefront_photo_ref,
+  interior_photo_ref = EXCLUDED.interior_photo_ref,
+  signage_photo_ref = EXCLUDED.signage_photo_ref,
   latitude = EXCLUDED.latitude,
   longitude = EXCLUDED.longitude,
   updated_at = now();
