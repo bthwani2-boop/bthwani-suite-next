@@ -80,10 +80,10 @@ export function classifyFiles(inputFiles, options = {}) {
     "services/dsh/backend/internal/wlt/",
     "services/dsh/frontend/shared/finance-wlt-link/",
     "services/dsh/frontend/control-panel/finance/",
-    "governance/dsh-wlt"
-  ) || equals(
-    "tools/scripts/smoke-wlt-provider-through-wlt.ps1",
-    "tools/scripts/smoke-wiremock-financial-provider.ps1"
+    "governance/dsh-wlt",
+    "tools/scripts/finance/",
+    "tools/scripts/smoke-wlt-",
+    "tools/scripts/smoke-wiremock-"
   ) || has((file) =>
     /(^|\/)(finance|wallet|commission|settlement|payout|ledger|refund|payment|checkoutfinanceoutbox|fieldcommissionoutbox)(\/|[-_.])/i.test(file) ||
     /dsh-wlt-finance/i.test(file)
