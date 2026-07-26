@@ -1,6 +1,6 @@
-// Scans every task evidence manifest.json under .diagnostics/remediation/evidence/**
-// (if present) and fails if its recorded sourceSha differs from the current HEAD —
-// stale evidence is not evidence (spec §2.5, §20).
+// Scans every evidence manifest.json under .diagnostics/** (if present) and fails if
+// its recorded sourceSha differs from the current HEAD — stale evidence is not
+// evidence. This is the exact-SHA gate: no closure may rest on a prior commit's run.
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -8,7 +8,7 @@ import { fail, repoRoot } from "./_guard-utils.mjs";
 
 const guardId = "same-commit-evidence-gate";
 const violations = [];
-const evidenceRoot = path.join(repoRoot, ".diagnostics", "remediation", "evidence");
+const evidenceRoot = path.join(repoRoot, ".diagnostics");
 
 function headSha() {
   try {

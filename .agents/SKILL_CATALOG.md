@@ -17,7 +17,6 @@ This catalog is a human-readable projection of `governance/skills/skills-registr
 - `bthwani-ci-workflow-guardian` — Validate GitHub Actions policy, immutable refs, least privilege, verification-only behavior, and final aggregation.
 - `bthwani-cost-aware-subagent-orchestrator` — Coordinate product-aware hierarchical subagents with non-overlapping ownership, minimum sufficient context, independent review, and deterministic merge.
 - `bthwani-docker-journey-runtime` — Route Docker and data-plane changes to bounded same-commit runtime evidence without upgrading static checks.
-- `bthwani-engineering-loop-controller` — Own the governed engineering loop (iteration records, convergence, thrash detection, task-split escalation) for one progressive-remediation task under a frozen contract, without approving its own work.
 - `bthwani-dsh-wlt-finance-boundary` — Protect WLT financial truth; require explicit evidence for every DSH/WLT financial handoff.
 - `bthwani-final-journey-closure-judge` — Judge final closure only from same-commit, all-applicable-scope, independently approved evidence.
 - `bthwani-governance-contract-guardian` — Validate governance contracts, authority precedence, agents, skills, guards, and SDLC control-plane integrity without self-approving.
@@ -34,7 +33,7 @@ This catalog is a human-readable projection of `governance/skills/skills-registr
 
 - `graphify` — Graphify is a conditional tool, not an owner skill or approval authority. Its `SKILL.md` remains only as the governed tool documentation referenced by `CLAUDE.md` and `.agents/GRAPHIFY.md`.
 
-All other previously retired skill directories were moved to `.agents/archive/skills/` (archived, not destroyed): superseded legacy skills own no authority and had no live references, and dead references must not accumulate inside the active contract. Archiving a skill requires proof that no active file references it; the registry, this catalog, routing, guards, and scripts must be updated in the same change. See `.agents/archive/README.md`.
+All other previously retired skill directories were removed from the tree: superseded legacy skills own no authority, had no live references, and dead references must not accumulate inside the active contract. Git history is the archive. Retiring a skill requires proof that no active file references it; the registry, this catalog, routing, guards, and scripts must be updated in the same change.
 
 ## Catalog rule
 

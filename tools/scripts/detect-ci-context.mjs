@@ -126,10 +126,6 @@ export function classifyFiles(inputFiles, options = {}) {
     file === "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
   );
 
-  // Progressive remediation system outputs (governance/remediation/**, spec S6.2).
-  const remediationGovernanceChanged = full || starts("governance/remediation/");
-  const taskContractChanged = full || starts("governance/remediation/tasks/", "governance/remediation/iterations/");
-  const remediationToolingChanged = full || starts("tools/remediation/");
   const cleanupChanged = full || starts("governance/cleanup/") || equals(
     "tools/scripts/apply-repository-cleanup.mjs",
     "tools/guards/cleanup-policy-gate.mjs",
@@ -210,7 +206,6 @@ export function classifyFiles(inputFiles, options = {}) {
     diagnostics,
     jrn040,
     platform_change_sets: jrn040,
-    task_contract_changed: taskContractChanged,
     cleanup_changed: cleanupChanged,
     native_changed: nativeChanged,
     visual_changed: visualChanged,
@@ -219,9 +214,7 @@ export function classifyFiles(inputFiles, options = {}) {
     migration_changed: migrationChanged,
     shared_contract_changed: sharedContractChanged,
     recovery_changed: recoveryChanged,
-    observability_changed: observabilityChanged,
-    remediation_governance_changed: remediationGovernanceChanged,
-    remediation_tooling_changed: remediationToolingChanged
+    observability_changed: observabilityChanged
   };
 }
 

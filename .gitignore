@@ -109,10 +109,6 @@ node-gates*.log
 !.agents/
 !.agents/**
 
-# Explicitly track all files under the progressive remediation tooling directory
-!tools/remediation/
-!tools/remediation/**
-
 # Explicitly track markdown under docs/ and infra/: **/*.md above silently
 # dropped new files here with no error (GAP-0004) — docs/MIGRATION_SAFETY.md and
 # infra/docker/PRODUCTION_ARCHITECTURE.md existed locally for weeks with no git

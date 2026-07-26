@@ -43,6 +43,7 @@ The machine-readable authority registry overrides stale `Status: CANONICAL`, sel
 17. `governance/17_PERFORMANCE_AND_RUNTIME_BASELINE.md`
 18. `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`
 19. `governance/product/PRODUCT_TRUTH_POLICY.md`
+20. `governance/28_DIRECT_WORK_BRANCH_EXECUTION_POLICY.md`
 
 ## Active machine-readable contracts
 
@@ -55,7 +56,8 @@ The following paths encode enforceable governance and are validated by registere
 - `governance/authority/single-owner-mode.schema.json` — validates the active sole-owner approval exception;
 - `governance/product/product-truth.schema.json` — Product Truth schema;
 - `governance/saas/**` — SaaS readiness state, tenant-governance constraints, activation evidence, and commercial activation policy;
-- `governance/remediation/**` — progressive remediation contracts: policy invariants, the 16-state task machine, task contracts, the gap ledger, verification profiles, iteration records, and lock declarations, validated by `guard:remediation-governance`;
+- `governance/quality/flaky-tests.json` — flaky-test quarantine register with expiry enforcement, validated by `guard:flaky-tests`;
+- `governance/authority/direct-work-branch-execution-policy.json` — direct work-branch execution authority: allowed write modes, SHA pinning, and task-branch escalation triggers;
 - `tools/guards/guard-manifest.json` — guard sets and execution policy.
 
 A machine-readable contract does not prove that its associated guard, workflow, runtime, or human approval executed.

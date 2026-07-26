@@ -39,9 +39,8 @@ LeanCTX, Graphify, and Nx are optional tools. They are never mandatory first ste
 - Formal G0–G10 lifecycle control → `bthwani-sdlc-stage-gate-orchestrator`.
 - Final multi-scope closure → `bthwani-final-journey-closure-judge`.
 - Two or more independent bounded work units with real subagent capability → `bthwani-cost-aware-subagent-orchestrator`.
-- A frozen progressive-remediation task contract needing loop iteration, convergence, or task-split evaluation → `bthwani-engineering-loop-controller`.
 
-Governance-contract and CI-workflow approvals are separate. When both domains change, both skills apply and the approving identities must differ. Independent implementation review must also remain separate from the author, executor, and coordinator, and separate from the engineering-loop controller.
+Governance-contract and CI-workflow approvals are separate. When both domains change, both skills apply and the approving identities must differ. Independent implementation review must also remain separate from the author, executor, and coordinator.
 
 ## Product routing order
 
@@ -98,7 +97,7 @@ The canonical retired set exists only in `governance/skills/skills-registry.json
 - may not be dependencies of active or conditional skills;
 - may not be described as active, default, mandatory, or current truth.
 
-The mixed governance-and-CI guardian skill was retired and moved to `.agents/archive/skills/`; a skill mixing governance and CI approval authority must never be recreated or routed.
+The mixed governance-and-CI guardian skill was retired and removed; a skill mixing governance and CI approval authority must never be recreated or routed. Git history holds its content.
 
 ## Tool ladder
 

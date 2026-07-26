@@ -54,11 +54,4 @@ if (registry) {
   }
 }
 
-const decisionIndexPath = path.join(repoRoot, "governance", "00_DECISION_INDEX.md");
-const decisionIndex = fs.existsSync(decisionIndexPath) ? fs.readFileSync(decisionIndexPath, "utf8") : "";
-const activeContractsSection = /## Active machine-readable contracts[\s\S]*?(?=\n## )/.exec(decisionIndex)?.[0] ?? "";
-if (!activeContractsSection.includes("governance/remediation/")) {
-  violations.push({ file: "governance/00_DECISION_INDEX.md", line: 0, message: "DECISION_INDEX_MISSING_REMEDIATION_CONTRACT_REFERENCE" });
-}
-
 fail(guardId, violations);

@@ -233,46 +233,6 @@
       "source_file": "tools/guards/governance-schema-gate.mjs"
     },
     {
-      "id": "remediation-governance",
-      "name": "Progressive Remediation Governance Gate",
-      "script": "guard:remediation-governance",
-      "exit_level": "fail",
-      "description": "Validates the progressive remediation contracts: schemas, the 16-state task machine, the gap ledger, task contracts, iteration records, and work-unit contract drift.",
-      "source_file": "tools/guards/remediation-governance-gate.mjs"
-    },
-    {
-      "id": "task-contract",
-      "name": "Task Contract Gate",
-      "script": "guard:task-contract",
-      "exit_level": "fail",
-      "description": "Focused validation of task contract instances under governance/remediation/tasks/** against schema and executor/approver/scope rules.",
-      "source_file": "tools/guards/task-contract-gate.mjs"
-    },
-    {
-      "id": "gap-ledger",
-      "name": "Gap Ledger Gate",
-      "script": "guard:gap-ledger",
-      "exit_level": "fail",
-      "description": "Focused validation of governance/remediation/gap-ledger.json against schema and state/type/profile consistency.",
-      "source_file": "tools/guards/gap-ledger-gate.mjs"
-    },
-    {
-      "id": "capability-graph",
-      "name": "Capability Graph Gate",
-      "script": "guard:capability-graph",
-      "exit_level": "fail",
-      "description": "Validates governance/remediation/capability-graph.json against schema and cross-checks node gap references.",
-      "source_file": "tools/guards/capability-graph-gate.mjs"
-    },
-    {
-      "id": "requirement-traceability",
-      "name": "Requirement Traceability Gate",
-      "script": "guard:requirement-traceability",
-      "exit_level": "fail",
-      "description": "Validates governance/remediation/requirement-traceability.json against schema and cross-checks gap references.",
-      "source_file": "tools/guards/requirement-traceability-gate.mjs"
-    },
-    {
       "id": "same-commit-evidence",
       "name": "Same-Commit Evidence Gate",
       "script": "guard:same-commit-evidence",
@@ -301,7 +261,7 @@
       "name": "Orphan Files Gate",
       "script": "guard:orphan-files",
       "exit_level": "warn",
-      "description": "Narrow proxy signal for unreferenced tools/scripts and tools/remediation files; routes positives to manual cleanup classification, never deletes.",
+      "description": "Narrow proxy signal for unreferenced tools/scripts files; routes positives to manual cleanup classification, never deletes.",
       "source_file": "tools/guards/orphan-files-gate.mjs"
     },
     {
@@ -313,27 +273,11 @@
       "source_file": "tools/guards/document-authority-conflicts-gate.mjs"
     },
     {
-      "id": "scope-expansion",
-      "name": "Scope Expansion Gate",
-      "script": "guard:scope-expansion",
-      "exit_level": "fail",
-      "description": "Fails an active or blocked task contract whose git-diff changed files fall outside its frozen scope.allowedPaths or exceed maximumChangedFiles.",
-      "source_file": "tools/guards/scope-expansion-gate.mjs"
-    },
-    {
-      "id": "agent-locks",
-      "name": "Agent Locks Gate",
-      "script": "guard:agent-locks",
-      "exit_level": "fail",
-      "description": "Validates governance/remediation/agent-locks.json and fails on any conflicting non-expired live lock under .diagnostics/remediation/locks/.",
-      "source_file": "tools/guards/agent-locks-gate.mjs"
-    },
-    {
       "id": "flaky-tests",
       "name": "Flaky Tests Gate",
       "script": "guard:flaky-tests",
       "exit_level": "fail",
-      "description": "Validates governance/remediation/flaky-tests.json and fails an unexpired-fix quarantine that has passed its expiry date.",
+      "description": "Validates governance/quality/flaky-tests.json and fails an unexpired-fix quarantine that has passed its expiry date.",
       "source_file": "tools/guards/flaky-tests-gate.mjs"
     },
     {
@@ -523,41 +467,6 @@
       "exit_level": "fail",
       "description": "Validates the modular DSH OpenAPI composition and generated-client source of truth.",
       "source_file": "tools/guards/dsh-openapi-modular-gate.mjs"
-    },
-    {
-      "id": "jrn-031-closure",
-      "name": "JRN-031 Administration Closure Gate",
-      "exit_level": "fail",
-      "description": "Validates JRN-031 administration governance, maker-checker boundaries, immutable evidence and consolidated CI coverage.",
-      "source_file": "tools/guards/jrn-031-closure-gate.mjs"
-    },
-    {
-      "id": "jrn-036-settlement-commission",
-      "name": "JRN-036 Settlement Commission Gate",
-      "exit_level": "fail",
-      "description": "Validates JRN-036 settlement and commission ownership, contracts, and surface bindings.",
-      "source_file": "tools/guards/jrn-036-settlement-commission-gate.mjs"
-    },
-    {
-      "id": "jrn-037-payout-destination",
-      "name": "JRN-037 Payout Destination Gate",
-      "exit_level": "fail",
-      "description": "Validates JRN-037 payout destination ownership, contracts, and multi-surface bindings.",
-      "source_file": "tools/guards/jrn-037-payout-destination-gate.mjs"
-    },
-    {
-      "id": "jrn-040-platform-change-sets",
-      "name": "JRN-040 Platform Change Sets Gate",
-      "exit_level": "fail",
-      "description": "Validates JRN-040 platform change-set governance, contracts, and control-panel binding.",
-      "source_file": "tools/guards/jrn-040-platform-change-sets-gate.mjs"
-    },
-    {
-      "id": "jrn-041-progressive-rollout",
-      "name": "JRN-041 Progressive Rollout Gate",
-      "exit_level": "fail",
-      "description": "Validates JRN-041 progressive rollout and rollback governance, contracts, and surfaces.",
-      "source_file": "tools/guards/jrn-041-progressive-rollout-gate.mjs"
     },
     {
       "id": "a11y-runtime",

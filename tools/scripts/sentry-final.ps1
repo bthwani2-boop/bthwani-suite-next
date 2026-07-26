@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$RepoRoot = "C:\bthwani-suite-next",
+    [string]$RepoRoot = (& git -C $PSScriptRoot rev-parse --show-toplevel),
     [string]$Organization = "bthwani",
     [string[]]$EasEnvironments = @("development", "preview", "production"),
     [switch]$RebuildSentryProjects,

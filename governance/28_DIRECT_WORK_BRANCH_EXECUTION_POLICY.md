@@ -1,6 +1,7 @@
 # 28 — سياسة التنفيذ المباشر على فرع العمل
 
-**Status:** ACTIVE_CANONICAL  
+Status: ACTIVE_CANONICAL
+
 **Effective:** 2026-07-26  
 **Authority domain:** branch execution, repository writes, task routing  
 **Machine-readable contract:** `governance/authority/direct-work-branch-execution-policy.json`

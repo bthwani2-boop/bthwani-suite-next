@@ -1,8 +1,8 @@
-// Lightweight orphan-file signal for the remediation cleanup track (spec §19.1,
-// §10.2): flags tracked files under tools/scripts/** and tools/remediation/** with no
-// static reference anywhere else in the tracked tree. This is a narrow proxy, not a
-// substitute for the full knip-based dead-code diagnosis; it never deletes anything
-// and a positive here routes to classify-cleanup-candidate.mjs for full review.
+// Lightweight orphan-file signal for the repository-integrity engine: flags tracked
+// files under tools/scripts/** with no static reference anywhere else in the tracked
+// tree. This is a narrow proxy, not a substitute for the full knip-based dead-code
+// diagnosis; it never deletes anything, and a positive here is one of the two
+// independent signals required before any removal.
 import fs from "node:fs";
 import path from "node:path";
 import { fail, repoRoot, listCodeFiles, read } from "./_guard-utils.mjs";
@@ -10,7 +10,7 @@ import { fail, repoRoot, listCodeFiles, read } from "./_guard-utils.mjs";
 const guardId = "orphan-files-gate";
 const violations = [];
 const warnings = [];
-const scannedRoots = ["tools/scripts", "tools/remediation"];
+const scannedRoots = ["tools/scripts"];
 
 function collectCandidates(root) {
   const full = path.join(repoRoot, root);

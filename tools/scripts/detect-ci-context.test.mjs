@@ -176,25 +176,6 @@ test("full mode intentionally enables every verification domain", () => {
   assert.equal(result.verification_tier, "deep");
 });
 
-test("routes progressive remediation contract and tooling changes separately", () => {
-  const result = classifyFiles(["governance/remediation/gap-ledger.json"]);
-  assert.equal(result.remediation_governance_changed, true);
-  assert.equal(result.task_contract_changed, false);
-  assert.equal(result.remediation_tooling_changed, false);
-});
-
-test("routes a task contract instance as task_contract_changed", () => {
-  const result = classifyFiles(["governance/remediation/tasks/active/GAP-0099.json"]);
-  assert.equal(result.task_contract_changed, true);
-  assert.equal(result.remediation_governance_changed, true);
-});
-
-test("routes remediation tooling scripts separately from the governance contracts", () => {
-  const result = classifyFiles(["tools/remediation/orchestrator/select-next-task.mjs"]);
-  assert.equal(result.remediation_tooling_changed, true);
-  assert.equal(result.remediation_governance_changed, false);
-});
-
 test("routes cleanup policy changes to cleanup_changed", () => {
   const result = classifyFiles(["governance/cleanup/repository-retention-policy.json"]);
   assert.equal(result.cleanup_changed, true);
@@ -274,10 +255,9 @@ test("exposes the complete set of classification output keys", () => {
     "frontend", "contracts", "journey", "journey_scope", "node", "node_scope",
     "dsh", "wlt", "identity", "workforce", "platform", "providers", "database", "runtime",
     "shared_brain", "heavy", "verification_tier", "diagnostics", "jrn040", "platform_change_sets",
-    "task_contract_changed", "cleanup_changed", "native_changed", "visual_changed",
+    "cleanup_changed", "native_changed", "visual_changed",
     "tenant_isolation_changed", "financial_changed", "migration_changed",
     "shared_contract_changed", "recovery_changed", "observability_changed",
-    "remediation_governance_changed", "remediation_tooling_changed",
   ];
   for (const key of expectedKeys) {
     assert.ok(key in result, `missing output key: ${key}`);

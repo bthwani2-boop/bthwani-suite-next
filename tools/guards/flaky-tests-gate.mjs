@@ -1,4 +1,4 @@
-// Validates governance/remediation/flaky-tests.json against its schema and enforces
+// Validates governance/quality/flaky-tests.json against its schema and enforces
 // the spec S17 rules: FLAKY_CONFIRMED entries required for proof block closure,
 // and any QUARANTINED entry past its quarantineExpiry becomes EXPIRED_QUARANTINE
 // (which itself blocks closure) rather than silently staying quarantined forever.
@@ -9,7 +9,7 @@ import addFormats from "ajv-formats";
 import { fail, repoRoot } from "./_guard-utils.mjs";
 
 const guardId = "flaky-tests-gate";
-const remediationRoot = "governance/remediation";
+const qualityRoot = "governance/quality";
 const violations = [];
 
 function readJson(relative) {
@@ -26,15 +26,15 @@ function readJson(relative) {
   }
 }
 
-const registry = readJson(`${remediationRoot}/flaky-tests.json`);
-const schema = readJson(`${remediationRoot}/flaky-tests.schema.json`);
+const registry = readJson(`${qualityRoot}/flaky-tests.json`);
+const schema = readJson(`${qualityRoot}/flaky-tests.schema.json`);
 
 if (registry && schema) {
   const ajv = new Ajv({ allErrors: true, strict: false });
   addFormats(ajv);
   const validate = ajv.compile(schema);
   if (!validate(registry)) {
-    for (const issue of validate.errors ?? []) violations.push({ file: `${remediationRoot}/flaky-tests.json`, line: 0, message: `SCHEMA_VIOLATION ${issue.instancePath || "/"} ${issue.message}` });
+    for (const issue of validate.errors ?? []) violations.push({ file: `${qualityRoot}/flaky-tests.json`, line: 0, message: `SCHEMA_VIOLATION ${issue.instancePath || "/"} ${issue.message}` });
   }
 }
 
@@ -42,10 +42,10 @@ if (registry) {
   const today = new Date().toISOString().slice(0, 10);
   for (const entry of registry.entries ?? []) {
     if (entry.state === "QUARANTINED" && entry.quarantineExpiry && entry.quarantineExpiry < today) {
-      violations.push({ file: `${remediationRoot}/flaky-tests.json`, line: 0, message: `QUARANTINE_EXPIRED_WITHOUT_FIX ${entry.testId} (expired ${entry.quarantineExpiry})` });
+      violations.push({ file: `${qualityRoot}/flaky-tests.json`, line: 0, message: `QUARANTINE_EXPIRED_WITHOUT_FIX ${entry.testId} (expired ${entry.quarantineExpiry})` });
     }
     if (entry.state === "QUARANTINED" && !entry.quarantineExpiry) {
-      violations.push({ file: `${remediationRoot}/flaky-tests.json`, line: 0, message: `QUARANTINE_WITHOUT_EXPIRY ${entry.testId}` });
+      violations.push({ file: `${qualityRoot}/flaky-tests.json`, line: 0, message: `QUARANTINE_WITHOUT_EXPIRY ${entry.testId}` });
     }
   }
 }
