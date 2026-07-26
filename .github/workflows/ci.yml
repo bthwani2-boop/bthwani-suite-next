@@ -240,32 +240,73 @@ jobs:
           VERIFICATION_RESULT: ${{ needs.verification.result }}
           BACKENDS_RESULT: ${{ needs.backends.result }}
           RUNTIME_RESULT: ${{ needs.runtime.result }}
+          FULL_VERIFICATION: ${{ needs.context.outputs.full_verification }}
+          FRONTEND_REQUIRED: ${{ needs.context.outputs.frontend }}
+          CONTRACTS_REQUIRED: ${{ needs.context.outputs.contracts }}
+          NODE_REQUIRED: ${{ needs.context.outputs.node }}
+          JOURNEY_REQUIRED: ${{ needs.context.outputs.journey }}
+          PLATFORM_CHANGE_SETS_REQUIRED: ${{ needs.context.outputs.platform_change_sets }}
+          DSH_REQUIRED: ${{ needs.context.outputs.dsh }}
+          WLT_REQUIRED: ${{ needs.context.outputs.wlt }}
+          IDENTITY_REQUIRED: ${{ needs.context.outputs.identity }}
+          WORKFORCE_REQUIRED: ${{ needs.context.outputs.workforce }}
+          PLATFORM_REQUIRED: ${{ needs.context.outputs.platform }}
+          PROVIDERS_REQUIRED: ${{ needs.context.outputs.providers }}
+          RUNTIME_REQUIRED: ${{ needs.context.outputs.runtime }}
+          EXPLICIT_RUNTIME_PROOF: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
         run: |
           set -euo pipefail
           failed=0
           failures=()
 
+          is_true() {
+            [[ "${1:-false}" == "true" ]]
+          }
+
           check_result() {
             local name="$1"
             local result="$2"
-            if [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
-              failures+=("${name}:${result}")
-              failed=1
+            local allow_skipped="$3"
+            if [[ "${result}" == "success" ]]; then
+              return 0
             fi
+            if [[ "${result}" == "skipped" && "${allow_skipped}" == "true" ]]; then
+              return 0
+            fi
+            failures+=("${name}:${result}")
+            failed=1
           }
 
-          check_result context "${CONTEXT_RESULT}"
-          check_result policy "${POLICY_RESULT}"
-          check_result diagnostics "${DIAGNOSTICS_RESULT}"
-          check_result verification "${VERIFICATION_RESULT}"
-          check_result backends "${BACKENDS_RESULT}"
-          check_result runtime "${RUNTIME_RESULT}"
+          diagnostics_applicable=false
+          verification_applicable=false
+          backends_applicable=false
+          runtime_applicable=false
+
+          if is_true "${FULL_VERIFICATION}" || is_true "${FRONTEND_REQUIRED}" || is_true "${CONTRACTS_REQUIRED}" || is_true "${NODE_REQUIRED}"; then
+            diagnostics_applicable=true
+          fi
+          if is_true "${FULL_VERIFICATION}" || is_true "${FRONTEND_REQUIRED}" || is_true "${NODE_REQUIRED}" || is_true "${JOURNEY_REQUIRED}" || is_true "${PLATFORM_CHANGE_SETS_REQUIRED}"; then
+            verification_applicable=true
+          fi
+          if is_true "${FULL_VERIFICATION}" || is_true "${DSH_REQUIRED}" || is_true "${WLT_REQUIRED}" || is_true "${IDENTITY_REQUIRED}" || is_true "${WORKFORCE_REQUIRED}" || is_true "${PLATFORM_REQUIRED}" || is_true "${PROVIDERS_REQUIRED}"; then
+            backends_applicable=true
+          fi
+          if is_true "${FULL_VERIFICATION}" || is_true "${RUNTIME_REQUIRED}" || is_true "${EXPLICIT_RUNTIME_PROOF}"; then
+            runtime_applicable=true
+          fi
+
+          check_result context "${CONTEXT_RESULT}" false
+          check_result policy "${POLICY_RESULT}" false
+          check_result diagnostics "${DIAGNOSTICS_RESULT}" "$([[ "${diagnostics_applicable}" == "false" ]] && echo true || echo false)"
+          check_result verification "${VERIFICATION_RESULT}" "$([[ "${verification_applicable}" == "false" ]] && echo true || echo false)"
+          check_result backends "${BACKENDS_RESULT}" "$([[ "${backends_applicable}" == "false" ]] && echo true || echo false)"
+          check_result runtime "${RUNTIME_RESULT}" "$([[ "${runtime_applicable}" == "false" ]] && echo true || echo false)"
 
           if [[ "${failed}" -ne 0 ]]; then
-            message="failed bundles: $(IFS=,; echo "${failures[*]}")"
+            message="failed or unjustifiably skipped bundles: $(IFS=,; echo "${failures[*]}")"
             echo "::error title=BThwani CI failed::${message}"
             printf '%s\n' "${message}"
             exit 1
           fi
 
-          printf '%s\n' "all required bundles passed or were intentionally skipped"
+          printf '%s\n' "all required bundles passed; skipped bundles were proven non-applicable by the router"
