@@ -1,5 +1,7 @@
 import React, { useEffect } from "react";
+import { Platform } from "react-native";
 import { registerRootComponent } from "expo";
+import * as SecureStore from "expo-secure-store";
 import * as Sentry from "@sentry/react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BthwaniUiProvider } from "@bthwani/ui-kit";
@@ -12,8 +14,20 @@ import {
   wireBatteryAwareQueue,
   wireNetInfoOnlineManager,
 } from "@bthwani/data-runtime";
+import {
+  clearFieldOfflineQueue,
+  configureFieldOfflineQueueStorage,
+} from "../../../../services/dsh/frontend/shared/field-readiness";
 import { initSentry } from "./observability/sentry";
 import App from "./App";
+
+if (Platform.OS !== "web") {
+  configureFieldOfflineQueueStorage({
+    getItem: (key) => SecureStore.getItemAsync(key),
+    setItem: (key, value) => SecureStore.setItemAsync(key, value),
+    removeItem: (key) => SecureStore.deleteItemAsync(key),
+  });
+}
 
 const sentryEnabled = initSentry();
 
@@ -32,6 +46,7 @@ function Root() {
       await Promise.all([
         clearBthwaniQueryClient(queryClient, queryPersistenceKey),
         mutationQueue.clear(),
+        clearFieldOfflineQueue(),
       ]);
     });
     return () => {
