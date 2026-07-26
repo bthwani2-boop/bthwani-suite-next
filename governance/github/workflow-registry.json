@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "decision": "WORKFLOW_INVENTORY_IS_REGISTRY_DRIVEN_WITH_IMMUTABLE_CORE",
+  "decision": "WORKFLOW_INVENTORY_IS_CONTEXT_ROUTED_READ_ONLY_AND_EXACT_SHA",
   "coreWorkflows": [
     "ci-backends.yml",
     "ci-node-diagnostics.yml",
@@ -9,156 +9,11 @@
     "ci-runtime.yml",
     "ci.yml",
     "dsh-database.yml",
-    "jrn-020-025-sambassam-verify.yml",
     "lockfile-snapshot.yml",
-    "remediation-analysis.yml"
+    "manual-deep-verification.yml"
   ],
-  "privilegedWorkflow": "remediation-analysis.yml",
+  "privilegedWorkflow": null,
   "entries": [
-    {
-      "id": "task-discovery",
-      "path": ".github/workflows/task-discovery.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "BThwani Task Discovery",
-      "triggers": ["workflow_dispatch"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Progressive remediation discovery: runs the parallel read-only inventory and baseline scripts under tools/remediation/discovery/, rejects any tracked mutation, and uploads the evidence bundle as an artifact. Part of governance/remediation/ (wave P0-B)."
-    },
-    {
-      "id": "progressive-remediation",
-      "path": ".github/workflows/progressive-remediation.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "BThwani Progressive Remediation Orchestrator",
-      "triggers": ["workflow_dispatch"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Progressive remediation orchestrator: validates the governed contracts and evaluates the requested phase (select-next, validate-contract, required-proof, reconcile-state) read-only, rejects any tracked mutation, and uploads the decision evidence as an artifact. It decides which task-*.yml workflows to dispatch next; it never dispatches them itself in wave P0-C. Part of governance/remediation/ (wave P0-C)."
-    },
-    {
-      "id": "task-static-analysis",
-      "path": ".github/workflows/task-static-analysis.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "BThwani Task Static Analysis",
-      "triggers": ["workflow_dispatch"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Task-scoped STATIC_SCOPED verification profile: no-broken-imports, dependency-graph, ast-grep-rules, logic-coverage. Part of governance/remediation/ (wave P0-D)."
-    },
-    {
-      "id": "task-contract-verification",
-      "path": ".github/workflows/task-contract-verification.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "BThwani Task Contract Verification",
-      "triggers": ["workflow_dispatch"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Task-scoped contract binding proof: contracts:lint, openapi:verify:dsh, api-binding, backend-api-binding. Part of governance/remediation/ (wave P0-D)."
-    },
-    {
-      "id": "task-backend-database",
-      "path": ".github/workflows/task-backend-database.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "BThwani Task Backend and Database Verification",
-      "triggers": ["workflow_dispatch"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Task-scoped Go backend and migration verification against an isolated per-task-per-service Postgres database. Part of governance/remediation/ (wave P0-D)."
-    },
-    {
-      "id": "task-ui-runtime",
-      "path": ".github/workflows/task-ui-runtime.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "BThwani Task UI and Runtime Verification",
-      "triggers": ["workflow_dispatch"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Task-scoped affected typecheck/lint/test plus an optional Docker runtime smoke profile. Part of governance/remediation/ (wave P0-D)."
-    },
-    {
-      "id": "task-mobile-native",
-      "path": ".github/workflows/task-mobile-native.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "BThwani Task Mobile Native Verification",
-      "triggers": ["workflow_dispatch"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Task-scoped static Expo/mobile configuration verification; records on-device native proof as NEEDS_EVIDENCE (planned wave P1-C). Part of governance/remediation/ (wave P0-D)."
-    },
-    {
-      "id": "task-security-isolation",
-      "path": ".github/workflows/task-security-isolation.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "BThwani Task Security and Isolation Verification",
-      "triggers": ["workflow_dispatch"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Task-scoped security boundary and secrets guards; records cross-tenant runtime proof as NEEDS_EVIDENCE (planned wave P1-B). Part of governance/remediation/ (wave P0-D)."
-    },
-    {
-      "id": "task-resilience",
-      "path": ".github/workflows/task-resilience.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "BThwani Task Resilience Verification",
-      "triggers": ["workflow_dispatch"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Registered honest placeholder for the resilience dimension (planned wave P1-C); always records NEEDS_EVIDENCE, never a fabricated pass. Part of governance/remediation/ (wave P0-D)."
-    },
-    {
-      "id": "task-performance",
-      "path": ".github/workflows/task-performance.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "BThwani Task Performance Verification",
-      "triggers": ["workflow_dispatch"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Task-scoped performance and bundle budget verification. Part of governance/remediation/ (wave P0-D)."
-    },
-    {
-      "id": "task-cleanup",
-      "path": ".github/workflows/task-cleanup.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "BThwani Task Cleanup Verification",
-      "triggers": ["workflow_dispatch"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Task-scoped cleanup and hygiene guards; read-only proof only, never deletes anything itself. Part of governance/remediation/ (wave P0-D)."
-    },
-    {
-      "id": "task-final-verification",
-      "path": ".github/workflows/task-final-verification.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "BThwani Task Final Verification",
-      "triggers": ["workflow_dispatch"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Aggregates the governed remediation contracts, reconciles task state, and renders the same-commit decision summary. Part of governance/remediation/ (wave P0-D)."
-    },
     {
       "id": "ci",
       "path": ".github/workflows/ci.yml",
@@ -169,7 +24,7 @@
       "mayMutateSource": false,
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
-      "purpose": "Root orchestrator: detects affected scope and fans out to the reusable verification workflows with one fail-closed aggregate result."
+      "purpose": "Root exact-SHA orchestrator that calculates affected and risk-expanded scope, invokes reusable verification engines, and enforces one fail-closed result."
     },
     {
       "id": "ci-policy",
@@ -181,7 +36,7 @@
       "mayMutateSource": false,
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
-      "purpose": "Nomenclature plus governance, workflow, security, and infrastructure policy guards."
+      "purpose": "Reusable repository, governance, workflow, security, nomenclature, and infrastructure policy verification engine."
     },
     {
       "id": "ci-node-diagnostics",
@@ -193,7 +48,7 @@
       "mayMutateSource": false,
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
-      "purpose": "UI purity, dead-code, logic, accessibility, dependency, structure, performance, contract, and diff-hygiene diagnostics."
+      "purpose": "Reusable affected static diagnostics for boundaries, bindings, accessibility, dependency direction, dead code, duplication, and repository integrity."
     },
     {
       "id": "ci-node-verification",
@@ -205,7 +60,7 @@
       "mayMutateSource": false,
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
-      "purpose": "Nx typecheck, lint, test, and build over all or affected projects plus journey and platform change-set gates."
+      "purpose": "Reusable affected or full typecheck, lint, test, build, contract, and governed capability verification engine."
     },
     {
       "id": "ci-backends",
@@ -217,7 +72,7 @@
       "mayMutateSource": false,
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
-      "purpose": "Dynamic Go backend matrix: applies migrations then runs go test and go build per affected service."
+      "purpose": "Reusable affected Go backend and isolated PostgreSQL migration, test, vet, and build verification engine."
     },
     {
       "id": "ci-runtime",
@@ -229,7 +84,7 @@
       "mayMutateSource": false,
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
-      "purpose": "Docker runtime bring-up, bootstrap, smoke, and teardown when runtime proof is required."
+      "purpose": "Reusable runtime startup, bootstrap, readiness, smoke, and teardown proof when the router or explicit request requires runtime evidence."
     },
     {
       "id": "dsh-database",
@@ -241,44 +96,31 @@
       "mayMutateSource": false,
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
-      "purpose": "Verifies the canonical DSH database path against a PostgreSQL service."
-    },
-    {
-      "id": "jrn-020-025-sambassam-verify",
-      "path": ".github/workflows/jrn-020-025-sambassam-verify.yml",
-      "class": "CORE",
-      "name": "JRN-020-025 Sambassam Verification",
-      "triggers": ["workflow_dispatch", "pull_request"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Fullstack boundary, WLT financial boundary, and governed route exposure for journeys 020 to 025."
+      "purpose": "Verifies the canonical DSH database migrations, schema, seeds, and contract against an isolated PostgreSQL service."
     },
     {
       "id": "lockfile-snapshot",
       "path": ".github/workflows/lockfile-snapshot.yml",
-      "class": "CORE",
+      "class": "READ_ONLY_DIAGNOSTIC",
       "name": "BThwani Lockfile Snapshot",
       "triggers": ["pull_request"],
       "permissions": { "contents": "read" },
       "mayMutateSource": false,
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
-      "purpose": "Regenerates a frozen-install-compatible lockfile candidate and uploads it as an artifact; never commits."
+      "purpose": "Generates an uncommitted frozen-install-compatible lockfile proposal artifact without publishing or changing the candidate branch."
     },
     {
-      "id": "remediation-analysis",
-      "path": ".github/workflows/remediation-analysis.yml",
-      "class": "PRIVILEGED",
-      "name": "BThwani Manual Patch Verification",
+      "id": "manual-deep-verification",
+      "path": ".github/workflows/manual-deep-verification.yml",
+      "class": "READ_ONLY_DIAGNOSTIC",
+      "name": "BThwani Manual Deep Verification",
       "triggers": ["workflow_dispatch"],
       "permissions": { "contents": "read" },
-      "mayMutateSource": true,
+      "mayMutateSource": false,
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
-      "purpose": "Manual patch verification: verifies whatever is already at the requested source_ref (typically a task's already-repaired branch) against the full logic, contract, build, test, database, security, and runtime gates, applies only the pre-existing policy-governed records cleanup, and exports a signed evidence patch artifact without any privileged write. GAP-0002 (wave R) removed every general auto-repair step (mobile source sync, OpenAPI generation, dependency dedupe, lint --fix, go mod tidy, gofmt) that previously ran before verification.",
-      "gapId": "GAP-0002"
+      "purpose": "Read-only exact-SHA affected and risk-expanded manual verification with optional full runtime proof and a machine-readable decision artifact."
     }
   ]
 }
