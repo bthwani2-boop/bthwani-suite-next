@@ -75,8 +75,9 @@ foreach ($actor in @(
   if ([string]::IsNullOrWhiteSpace($context.store.id)) { throw "missing scoped store for $($actor.username)" }
 }
 
-# Every card published through Home Discovery must resolve to an openable store
-# and a non-empty client-visible central catalog.
+# Home Discovery: every visible card must resolve to an openable storefront and
+# a non-empty public catalog. This is the runtime closure for the historical
+# drift where home discovery returned stores rejected by store detail with 404.
 $homeDisc = Invoke-RestMethod "http://localhost:58080/dsh/home-discovery?limit=50" -TimeoutSec 10 -ErrorAction Stop
 $bannerCount    = if ($homeDisc.banners)    { $homeDisc.banners.Count }    else { 0 }
 $promoCount     = if ($homeDisc.promos)     { $homeDisc.promos.Count }     else { 0 }
