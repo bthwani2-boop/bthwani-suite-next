@@ -36,8 +36,12 @@
     ".diagnostics/",
     ".github/workflows/temp/"
   ],
-  "temporaryWorkflowException": {
-    "note": "A temporary workflow is allowed only on an isolated task branch, with a registered TEMPORARY contract and expiry, and must be removed before merge to the work branch."
+  "temporaryWorkflowException": null,
+  "temporaryWorkflowPolicy": {
+    "trackedTemporaryWorkflow": "FORBIDDEN_BY_DEFAULT",
+    "automaticTaskBranch": "FORBIDDEN",
+    "allowedOnlyWhen": "An explicit current human instruction names the temporary workflow or branch path, or existing branch protection makes direct work impossible and the human explicitly authorizes the alternate path.",
+    "defaultAlternative": "Use an existing reusable workflow or an untracked local script for scoped verification."
   },
   "forbiddenTrackedFilenamePatterns": [
     "(^|/)tmp[-_.]",

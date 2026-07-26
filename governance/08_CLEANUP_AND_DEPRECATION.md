@@ -31,6 +31,18 @@ These labels classify cleanup targets; they are not lifecycle or closure decisio
 
 The result of a cleanup operation still maps through the canonical decision vocabulary.
 
+## Artifact and test lifecycle cleanup
+
+Cleanup applies to source, supporting files, tests, fixtures, snapshots, scripts, runbooks, and tracked governance artifacts. Age alone is never a deletion criterion; current function, ownership, consumption, accuracy, duplication, and evidence value decide disposition.
+
+Tests must be retained when they are active behavior regressions, security invariants, tenant-isolation checks, financial-integrity checks, database-integrity checks, contract-binding checks, runtime smokes, migration-safety checks, negative-behavior checks, or recovery and idempotency checks.
+
+Tests must be retired or rebuilt when they are exact-SHA gates, branch-specific checks, journey-closure checks, evidence-file checks, wording-only document checks, duplicate checks with no additional protection, removed-feature checks, uninvoked checks, obsolete fixture checks, mock-only success checks, stale snapshots, or implementation-detail checks no longer owned by a public contract.
+
+When a historical test mixes useful behavior assertions with closure, journey, branch, SHA, or evidence assertions, extract the useful invariant into a durable capability test first. Then remove the historical test and any exact-head or evidence dependency.
+
+Security, financial, tenant-isolation, migration, and real regression tests must not be deleted until equal or stronger current-commit coverage is proven. Missing proof is `NEEDS_EVIDENCE`; broken or contradictory coverage is `FIX_REQUIRED`.
+
 ## Runtime truth forbidden
 
 - preview or demo data in live behavior;

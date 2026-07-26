@@ -59,16 +59,16 @@
         "apps/mobile/eas-build-mobile.mjs",
         "apps/mobile/mobile-dev-data.mjs",
         "apps/mobile/sentry-env.js",
-        "tools/guards/_guard-utils.mjs",
-        "tools/scripts/dsh-openapi-modular-lib.mjs"
+        "tools/guards/**/*.mjs",
+        "tools/scripts/*.mjs",
+        "tools/scripts/**/*.mjs",
+        "tools/verification/**/*.mjs"
       ],
       "ignoreFiles": [
         "tools/contracts/**/*.mjs",
-        "tools/guards/**/*.mjs",
         "tools/mobile/*.d.ts",
         "tools/performance/**/*.{js,cjs}",
-        "tools/scripts/*.mjs",
-        "tools/verification/**/*.mjs"
+        "tools/verification/**/*.sh"
       ],
       "ignoreDependencies": [
         "expo-linking"

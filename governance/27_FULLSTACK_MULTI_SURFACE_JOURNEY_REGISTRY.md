@@ -719,8 +719,8 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - فصل Product Manager وProduct Owner والمنفذ والمراجع.
 - حوكمة العقود والمهارات والحراس وسجل القرارات.
 - فحوص مستهدفة للرحلة فقط دون طوابير عامة غير لازمة.
-- Workflow مؤقت عند الحاجة، بصلاحيات دنيا وActions مثبتة.
-- إزالة workflow المؤقت وأدواته بعد نجاح المهمة عندما يكون ذلك ضمن الخطة المعتمدة.
+- فحوص جديدة عبر reusable workflow عام أو script محلي غير متتبع عند الحاجة.
+- لا workflow مؤقت متتبع ولا فرع مهمة تلقائي إلا بأمر بشري صريح أو تعذر الكتابة المباشرة بسبب حماية الفرع.
 - مراجعة مستقلة للأمن والمالية وQA والحوكمة وCI حسب الأثر.
 - قواعد PR والدمج والإصدار والتوقيع والrollback.
 - عدم ادعاء closure قبل runtime وrelease وproduction evidence المنطبق.
