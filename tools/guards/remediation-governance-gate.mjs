@@ -118,14 +118,23 @@ export function validateIterations(records, policy) {
       seen.add(record.iteration);
       const prior = record.antiThrash ?? {};
       const escalations = new Set(["LOOP_NOT_CONVERGING", "REDIAGNOSE", "TASK_SPLIT_REQUIRED"]);
+      const evaluation = record.evaluation ?? {};
+      // Repeating the same hypothesis or the same patch is always a literal repeat of
+      // one attempt and requires escalation. A repeated failureFingerprint is not, by
+      // itself: the fingerprint identifies which bug a converging sequence of
+      // iterations is working on, and naturally stays constant while the hypothesis
+      // and patch legitimately evolve toward a fix. It only signals thrash when the
+      // fingerprint repeats AND this iteration still failed to converge (stalled or
+      // degrading) — i.e. the same failure recurred with no real progress.
       const repeated =
         (prior.priorHypothesisHashes ?? []).includes(record.hypothesis?.hash) ||
         (record.execution?.patchHash && (prior.priorPatchHashes ?? []).includes(record.execution.patchHash)) ||
-        (record.hypothesis?.failureFingerprint && (prior.priorFailureFingerprints ?? []).includes(record.hypothesis.failureFingerprint));
+        (record.hypothesis?.failureFingerprint &&
+          (prior.priorFailureFingerprints ?? []).includes(record.hypothesis.failureFingerprint) &&
+          evaluation.convergence !== "IMPROVING");
       if (repeated && !escalations.has(record.decision?.status)) {
         violations.push(`REPEATED_ATTEMPT_WITHOUT_ESCALATION ${record.iterationId}`);
       }
-      const evaluation = record.evaluation ?? {};
       if (["CONVERGED", "PASS"].includes(record.decision?.status)) {
         if ((evaluation.regressionCount ?? 0) !== 0 || (evaluation.scopeViolationCount ?? 0) !== 0 || (evaluation.unexpectedDeletionCount ?? 0) !== 0) {
           violations.push(`CONVERGENCE_WITH_OPEN_VIOLATIONS ${record.iterationId}`);

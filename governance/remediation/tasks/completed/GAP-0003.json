@@ -5,14 +5,14 @@
     "title": "Classify and resolve the untracked dist-swagger root artifact",
     "class": "CLEANUP",
     "priority": "P3",
-    "status": "CONTRACT_READY"
+    "status": "CLOSED"
   },
   "source": {
     "repository": "bthwani2-boop/bthwani-suite-next",
     "workBranch": "reemsam",
     "baseSha": "34ba3f112f8ba70ec3d75b34602cdab554932a17",
-    "contractHash": "sha256:28d81f36a49b5098aec07f3a24f349bcdfc38e727409ce663f4d87c51a74c8f5",
-    "frozenAt": "2026-07-26T00:00:00Z"
+    "contractHash": "sha256:6fa0d5262b0cb838540003e01f8bd5360795213fa65c6b3657a795de3ed4314c",
+    "frozenAt": "2026-07-26T01:00:00Z"
   },
   "problem": {
     "statement": "An untracked top-level directory dist-swagger/ exists at the repository root. repository-structure-gate emits a non-fatal UNAPPROVED_TOP_LEVEL warning for it, and it is not declared anywhere in the cleanup retention policy.",
@@ -28,7 +28,7 @@
       }
     ],
     "rootCauseHypothesis": [
-      "A local Swagger/OpenAPI generation step writes to dist-swagger/ but the path was never added to generatedOutputRoots, so it reads as an unclassified top-level directory."
+      "CORRECTED at iteration 2: tools/scripts/build-swagger-static.mjs (invoked by the swagger:build script) legitimately generates dist-swagger/. The warning source, tools/guards/repository-structure-gate.mjs, maintains its own hard-coded APPROVED_TOP_LEVEL set independent of governance/cleanup/repository-retention-policy.json; adding dist-swagger to the retention policy's generatedOutputRoots (the iteration-1 hypothesis) would not silence this specific warning. The real fix adds \"dist-swagger\" to that hard-coded set."
     ]
   },
   "product": {
@@ -54,7 +54,7 @@
   },
   "scope": {
     "allowedPaths": [
-      "governance/cleanup/repository-retention-policy.json"
+      "tools/guards/repository-structure-gate.mjs"
     ],
     "forbiddenPaths": [
       ".github/**",

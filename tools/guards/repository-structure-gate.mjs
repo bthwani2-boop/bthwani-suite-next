@@ -116,7 +116,7 @@ const APPROVED_TOP_LEVEL = new Set([
   ".agents", ".github", ".vscode", ".expo", ".nx",
   ".diagnostics", "node_modules", ".pnpm-store",
   // Build/cache (transient, should be gitignored)
-  "dist", "build", "out", "coverage", "graphify-out",
+  "dist", "build", "out", "coverage", "graphify-out", "dist-swagger",
 ]);
 
 const topLevel = fs.readdirSync(repoRoot, { withFileTypes: true });

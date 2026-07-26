@@ -200,6 +200,32 @@ test("a repeated patch hash without escalation forces LOOP_NOT_CONVERGING", () =
   assert.deepEqual(validateIterations([repeated], policy), []);
 });
 
+test("a repeated failure fingerprint alone is not thrash when the iteration converges (same bug, evolving fix)", () => {
+  const secondAttempt = baseIteration({
+    iterationId: "GAP-0099-I02",
+    iteration: 2,
+    decision: { status: "PASS" },
+    evaluation: { failedGatesBefore: 1, failedGatesAfter: 0, regressionCount: 0, scopeViolationCount: 0, unexpectedDeletionCount: 0, convergence: "IMPROVING" },
+    antiThrash: { priorHypothesisHashes: [], priorPatchHashes: [], priorFailureFingerprints: ["fp-1"] },
+  });
+  secondAttempt.hypothesis = { ...secondAttempt.hypothesis, failureFingerprint: "fp-1" };
+  assert.deepEqual(validateIterations([secondAttempt], policy), []);
+});
+
+test("a repeated failure fingerprint with a stalled iteration and no escalation is real thrash", () => {
+  const stalled = baseIteration({
+    iterationId: "GAP-0099-I02",
+    iteration: 2,
+    decision: { status: "REPLAN" },
+    evaluation: { failedGatesBefore: 1, failedGatesAfter: 1, regressionCount: 0, scopeViolationCount: 0, unexpectedDeletionCount: 0, convergence: "STALLED" },
+    antiThrash: { priorHypothesisHashes: [], priorPatchHashes: [], priorFailureFingerprints: ["fp-1"] },
+  });
+  stalled.hypothesis = { ...stalled.hypothesis, failureFingerprint: "fp-1" };
+  assert.ok(validateIterations([stalled], policy).some((message) => message.startsWith("REPEATED_ATTEMPT_WITHOUT_ESCALATION")));
+  stalled.decision.status = "REDIAGNOSE";
+  assert.deepEqual(validateIterations([stalled], policy), []);
+});
+
 test("convergence claims with open violations fail", () => {
   const record = baseIteration({ evaluation: { failedGatesBefore: 1, failedGatesAfter: 0, regressionCount: 1, scopeViolationCount: 0, unexpectedDeletionCount: 0, convergence: "IMPROVING" } });
   assert.ok(validateIterations([record], policy).some((message) => message.startsWith("CONVERGENCE_WITH_OPEN_VIOLATIONS")));

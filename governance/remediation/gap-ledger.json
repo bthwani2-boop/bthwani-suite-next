@@ -1,15 +1,41 @@
 {
   "schemaVersion": 1,
   "gapTypes": [
-    "UNBOUND_SCREEN", "UNBOUND_ROUTE", "UNBOUND_SHARED_CONTROLLER", "MISSING_OPENAPI_OPERATION",
-    "MISSING_BACKEND_ROUTE", "MISSING_DATABASE_TRUTH", "MISSING_GENERATED_CLIENT", "DIRECT_API_IN_SURFACE",
-    "BUSINESS_LOGIC_IN_SURFACE", "DUPLICATED_TYPE", "DUPLICATED_RUNTIME_TRUTH", "DEAD_FILE_CANDIDATE",
-    "UNCLASSIFIED_KNIP_ITEM", "GRAPHIFY_UNRESOLVED_EDGE", "LEANCTX_UNRESOLVED_CONTEXT", "MISSING_ICON_HANDLER",
-    "MISSING_A11Y_LABEL", "MISSING_EMPTY_STATE", "MISSING_ERROR_STATE", "MISSING_BLOCKED_STATE",
-    "MISSING_PERMISSION", "MISSING_AUDIT", "MISSING_ROLLBACK", "DSH_WLT_BOUNDARY_VIOLATION",
-    "PARTNER_STORE_CONFLATION", "STALE_EVIDENCE", "RAW_DIAGNOSTIC_TRACKED", "CI_NOT_PROVEN",
-    "RUNTIME_NOT_PROVEN", "SECURITY_NOT_PROVEN", "PERFORMANCE_NOT_PROVEN", "OBSERVABILITY_NOT_PROVEN",
-    "GOVERNANCE_ENFORCEMENT_NOT_PROVEN", "WORKFLOW_MODERNIZATION_REQUIRED", "UNTRACKED_ROOT_ARTIFACT"
+    "UNBOUND_SCREEN",
+    "UNBOUND_ROUTE",
+    "UNBOUND_SHARED_CONTROLLER",
+    "MISSING_OPENAPI_OPERATION",
+    "MISSING_BACKEND_ROUTE",
+    "MISSING_DATABASE_TRUTH",
+    "MISSING_GENERATED_CLIENT",
+    "DIRECT_API_IN_SURFACE",
+    "BUSINESS_LOGIC_IN_SURFACE",
+    "DUPLICATED_TYPE",
+    "DUPLICATED_RUNTIME_TRUTH",
+    "DEAD_FILE_CANDIDATE",
+    "UNCLASSIFIED_KNIP_ITEM",
+    "GRAPHIFY_UNRESOLVED_EDGE",
+    "LEANCTX_UNRESOLVED_CONTEXT",
+    "MISSING_ICON_HANDLER",
+    "MISSING_A11Y_LABEL",
+    "MISSING_EMPTY_STATE",
+    "MISSING_ERROR_STATE",
+    "MISSING_BLOCKED_STATE",
+    "MISSING_PERMISSION",
+    "MISSING_AUDIT",
+    "MISSING_ROLLBACK",
+    "DSH_WLT_BOUNDARY_VIOLATION",
+    "PARTNER_STORE_CONFLATION",
+    "STALE_EVIDENCE",
+    "RAW_DIAGNOSTIC_TRACKED",
+    "CI_NOT_PROVEN",
+    "RUNTIME_NOT_PROVEN",
+    "SECURITY_NOT_PROVEN",
+    "PERFORMANCE_NOT_PROVEN",
+    "OBSERVABILITY_NOT_PROVEN",
+    "GOVERNANCE_ENFORCEMENT_NOT_PROVEN",
+    "WORKFLOW_MODERNIZATION_REQUIRED",
+    "UNTRACKED_ROOT_ARTIFACT"
   ],
   "priorityOrder": [
     "P0: security, data, finance, tenant isolation, broken critical journeys, and cleanup that blocks diagnosis (enabling tasks)",
@@ -29,11 +55,22 @@
       "pattern_group": "github-enforcement",
       "risk_level": "HIGH",
       "required_action": "Prove GitHub ruleset, branch protection, and the required check on exact head SHA from GitHub settings, then flip the enforcement snapshot with evidence.",
-      "target_files": ["governance/github/repository-enforcement.json"],
+      "target_files": [
+        "governance/github/repository-enforcement.json"
+      ],
       "allowed_decision": "NEEDS_EVIDENCE",
-      "forbidden_actions": ["Claiming protection without GitHub-side evidence", "Enabling autoChildMerge before closure of this gap"],
-      "verification_commands": ["gh api repos/{owner}/{repo}/rulesets", "gh api repos/{owner}/{repo}/branches/master/protection"],
-      "proof_required": ["governance", "ci"],
+      "forbidden_actions": [
+        "Claiming protection without GitHub-side evidence",
+        "Enabling autoChildMerge before closure of this gap"
+      ],
+      "verification_commands": [
+        "gh api repos/{owner}/{repo}/rulesets",
+        "gh api repos/{owner}/{repo}/branches/master/protection"
+      ],
+      "proof_required": [
+        "governance",
+        "ci"
+      ],
       "status": "OPEN",
       "blocks_journey_start": false,
       "risk_class": "HIGH",
@@ -42,7 +79,9 @@
       "blocked_reason": "Requires GitHub-side settings evidence outside the repository execution boundary.",
       "priority": "P0",
       "discovered_at": "2026-07-26",
-      "evidence": ["governance/github/repository-enforcement.json"]
+      "evidence": [
+        "governance/github/repository-enforcement.json"
+      ]
     },
     {
       "gap_id": "GAP-0002",
@@ -67,9 +106,18 @@
         "docs/ci-governance-required-checks.md"
       ],
       "allowed_decision": "FIX_REQUIRED",
-      "forbidden_actions": ["Editing the workflow before wave R preconditions hold", "Breaking the marker set without the synchronized nine-file edit"],
-      "verification_commands": ["pnpm run guard:required-command-integrity", "pnpm run guard:guard-registry"],
-      "proof_required": ["ci", "governance"],
+      "forbidden_actions": [
+        "Editing the workflow before wave R preconditions hold",
+        "Breaking the marker set without the synchronized nine-file edit"
+      ],
+      "verification_commands": [
+        "pnpm run guard:required-command-integrity",
+        "pnpm run guard:guard-registry"
+      ],
+      "proof_required": [
+        "ci",
+        "governance"
+      ],
       "status": "OPEN",
       "blocks_journey_start": false,
       "risk_class": "STANDARD",
@@ -78,7 +126,9 @@
       "blocked_reason": "",
       "priority": "P1",
       "discovered_at": "2026-07-26",
-      "evidence": [".github/workflows/remediation-analysis.yml"]
+      "evidence": [
+        ".github/workflows/remediation-analysis.yml"
+      ]
     },
     {
       "gap_id": "GAP-0003",
@@ -91,20 +141,33 @@
       "pattern_group": "repository-hygiene",
       "risk_level": "LOW",
       "required_action": "Classify per cleanup policy: either register as an approved generated output root or remove the local artifact; no tracked change may introduce it.",
-      "target_files": ["governance/cleanup/repository-retention-policy.json"],
+      "target_files": [
+        "governance/cleanup/repository-retention-policy.json"
+      ],
       "allowed_decision": "FIX_REQUIRED",
-      "forbidden_actions": ["Tracking the directory in git"],
-      "verification_commands": ["node tools/guards/repository-structure-gate.mjs"],
-      "proof_required": ["static"],
-      "status": "IN_PROGRESS",
+      "forbidden_actions": [
+        "Tracking the directory in git"
+      ],
+      "verification_commands": [
+        "node tools/guards/repository-structure-gate.mjs"
+      ],
+      "proof_required": [
+        "static"
+      ],
+      "status": "CLOSED",
       "blocks_journey_start": false,
       "risk_class": "LOW",
-      "state": "CONTRACT_READY",
+      "state": "CLOSED",
       "verification_profile": "STATIC_SCOPED",
       "blocked_reason": "",
       "priority": "P3",
       "discovered_at": "2026-07-26",
-      "evidence": ["governance/remediation/tasks/active/GAP-0003.json"]
+      "evidence": [
+        "governance/remediation/tasks/completed/GAP-0003.json",
+        "governance/remediation/iterations/GAP-0003/01.json",
+        "governance/remediation/iterations/GAP-0003/02.json",
+        ".diagnostics/remediation/evidence/GAP-0003/static-results.txt"
+      ]
     },
     {
       "gap_id": "GAP-0004",
@@ -117,11 +180,23 @@
       "pattern_group": "gitignore-silent-drop",
       "risk_level": "STANDARD",
       "required_action": "Decide, per directory, whether to add a negation (matching the governance/.agents/tools-remediation pattern) or to intentionally exclude specific paths, then track docs/MIGRATION_SAFETY.md and infra/docker/PRODUCTION_ARCHITECTURE.md (or archive them if superseded). Audit for any other silently-dropped file across the whole tree before closing.",
-      "target_files": [".gitignore", "docs/MIGRATION_SAFETY.md", "infra/docker/PRODUCTION_ARCHITECTURE.md"],
+      "target_files": [
+        ".gitignore",
+        "docs/MIGRATION_SAFETY.md",
+        "infra/docker/PRODUCTION_ARCHITECTURE.md"
+      ],
       "allowed_decision": "FIX_REQUIRED",
-      "forbidden_actions": ["Deleting either document without confirming it is superseded", "Blanket-untracking .gitignore without auditing what else it currently hides"],
-      "verification_commands": ["node tools/scripts/check-repository-hygiene.mjs"],
-      "proof_required": ["static", "governance"],
+      "forbidden_actions": [
+        "Deleting either document without confirming it is superseded",
+        "Blanket-untracking .gitignore without auditing what else it currently hides"
+      ],
+      "verification_commands": [
+        "node tools/scripts/check-repository-hygiene.mjs"
+      ],
+      "proof_required": [
+        "static",
+        "governance"
+      ],
       "status": "OPEN",
       "blocks_journey_start": false,
       "risk_class": "STANDARD",
@@ -130,7 +205,48 @@
       "blocked_reason": "",
       "priority": "P1",
       "discovered_at": "2026-07-26",
-      "evidence": ["docs/MIGRATION_SAFETY.md", "infra/docker/PRODUCTION_ARCHITECTURE.md", ".gitignore"]
+      "evidence": [
+        "docs/MIGRATION_SAFETY.md",
+        "infra/docker/PRODUCTION_ARCHITECTURE.md",
+        ".gitignore"
+      ]
+    },
+    {
+      "gap_id": "GAP-0005",
+      "type": "STALE_EVIDENCE",
+      "path": "tools/remediation/scope/enforce-allowed-paths.mjs",
+      "owner": "foundation",
+      "affected_surface": "repository",
+      "affected_journeys": [],
+      "root_cause": "Discovered while closing GAP-0003 (iteration 2): enforce-allowed-paths.mjs and scope-expansion-gate.mjs compute changed files as `git diff source.baseSha...HEAD`. This is only accurate when a task's repair happens on an isolated child branch created at baseSha. When a task is instead repaired directly on a shared work branch (this session's operating mode, since no child-branch-per-task automation exists yet — that is wave P0-E's Agent Controller role, still human-gated), every unrelated commit landed on the branch since baseSha shows up as a false OUTSIDE_ALLOWED_PATHS / scope-expansion violation.",
+      "pattern_group": "scope-tool-branch-isolation-assumption",
+      "risk_level": "STANDARD",
+      "required_action": "Either (a) always create an isolated child branch per task before repair (matching the policy's own childBranchPattern) so the baseSha diff stays accurate, or (b) change these two tools to diff against a per-task frozen tree/index snapshot taken at contract-freeze time instead of a commit-range, so they stay accurate on a shared work branch too.",
+      "target_files": [
+        "tools/remediation/scope/enforce-allowed-paths.mjs",
+        "tools/guards/scope-expansion-gate.mjs"
+      ],
+      "allowed_decision": "FIX_REQUIRED",
+      "forbidden_actions": [
+        "Silencing the false positive by weakening the scope check instead of fixing its diff basis"
+      ],
+      "verification_commands": [
+        "node tools/remediation/scope/enforce-allowed-paths.mjs governance/remediation/tasks/completed/GAP-0003.json"
+      ],
+      "proof_required": [
+        "static"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false,
+      "risk_class": "STANDARD",
+      "state": "TRIAGED",
+      "verification_profile": "STATIC_SCOPED",
+      "blocked_reason": "",
+      "priority": "P2",
+      "discovered_at": "2026-07-26",
+      "evidence": [
+        "governance/remediation/iterations/GAP-0003/02.json"
+      ]
     }
   ]
 }
