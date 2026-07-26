@@ -26,16 +26,25 @@ test("JRN-004 registers all nine functional slices and FS-01 through FS-18", () 
   assert.equal(registry.zeroGate.failedRequiredChecks, 0);
 });
 
-test("JRN-004 Product Truth owns one 13-condition publication gate", () => {
+test("JRN-004 keeps the 13 row gates and adds relational storefront closure", () => {
   const truth = read("../../governance/product-truth/JRN-004_STORE_DISCOVERY_CONTEXT_GOVERNANCE.md");
   const diagnostics = read("backend/internal/store/publication_diagnostics.go");
+  const publication = read("backend/internal/store/publication.go");
   const repository = read("backend/internal/store/repository.go");
+  const homeRepository = read("backend/internal/homediscovery/repository.go");
   const model = read("backend/internal/store/model.go");
 
   assert.match(truth, /بوابة النشر الواحدة/);
   assert.match(truth, /13\./);
   assert.match(model, /return DiagnoseStorePublication\(row\)\.IsReady/);
-  assert.match(repository, /const publicStorePredicate/);
+  assert.match(publication, /func ClientStorefrontPredicate\(alias string\) string/);
+  assert.match(publication, /partner\.activation_status = 'client_visible'/);
+  assert.match(publication, /assortment\.publication_status = 'client_visible'/);
+  assert.match(publication, /product\.approval_status = 'approved'/);
+  assert.match(publication, /store_domain\.status = 'approved'/);
+  assert.match(repository, /ClientStorefrontPredicate\("dsh_stores"\)/);
+  assert.match(homeRepository, /store\.ClientStorefrontPredicate\("s"\)/);
+  assert.doesNotMatch(homeRepository, /const clientEligibleStorePredicate/);
   for (const blocker of [
     "STORE_NOT_ACTIVE",
     "STORE_HIDDEN",
