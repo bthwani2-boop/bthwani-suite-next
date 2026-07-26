@@ -42,6 +42,17 @@ test("routes sovereign mobile tooling through policy frontend and runtime proof"
   assert.equal(result.workflow, false);
 });
 
+test("routes runtime tooling changes to mandatory runtime proof", () => {
+  for (const file of [
+    "tools/scripts/invoke-runtime-phase.ps1",
+    "tools/scripts/runtime/diagnose-dsh-smoke-auth-boundary.ps1",
+  ]) {
+    const result = classifyFiles([file]);
+    assert.equal(result.runtime, true, `${file} must require runtime proof`);
+    assert.equal(result.heavy, true, `${file} must require heavy verification`);
+  }
+});
+
 test("routes infrastructure without product-wide verification", () => {
   const result = classifyFiles(["infra/docker/compose.runtime.yml"]);
   assert.equal(result.infrastructure, true);
