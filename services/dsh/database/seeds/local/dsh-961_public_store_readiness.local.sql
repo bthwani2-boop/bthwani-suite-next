@@ -75,3 +75,45 @@ WHERE tenant_id = 'local-dsh'
     'store-1006',
     'store-test-electronics'
   );
+
+-- Future local fixtures may be introduced by a migration or a later seed. Any
+-- row already governed as client-visible must also converge the field-readiness
+-- facts instead of silently disappearing from the public repository predicate.
+UPDATE dsh_stores
+SET address_line = CASE
+      WHEN btrim(COALESCE(address_line, '')) = ''
+        THEN display_name || '، ' || COALESCE(NULLIF(city_code, ''), 'sana')
+      ELSE address_line
+    END,
+    coverage_summary = CASE
+      WHEN btrim(COALESCE(coverage_summary, '')) = ''
+        THEN 'نطاق ' || COALESCE(NULLIF(service_area_code, ''), NULLIF(city_code, ''), 'sana')
+      ELSE coverage_summary
+    END,
+    operating_hours = CASE
+      WHEN btrim(COALESCE(operating_hours, '')) = '' THEN 'يوميًا 08:00-23:00'
+      ELSE operating_hours
+    END,
+    delivery_readiness = 'ready',
+    storefront_photo_ref = CASE
+      WHEN btrim(COALESCE(storefront_photo_ref, '')) = ''
+        THEN COALESCE(NULLIF(hero_image_url, ''), '/dsh-media/realistic/' || id || '-hero.jpg')
+      ELSE storefront_photo_ref
+    END,
+    interior_photo_ref = CASE
+      WHEN btrim(COALESCE(interior_photo_ref, '')) = ''
+        THEN COALESCE(NULLIF(hero_image_url, ''), '/dsh-media/realistic/' || id || '-interior.jpg')
+      ELSE interior_photo_ref
+    END,
+    signage_photo_ref = CASE
+      WHEN btrim(COALESCE(signage_photo_ref, '')) = ''
+        THEN COALESCE(NULLIF(logo_url, ''), '/dsh-media/realistic/' || id || '-logo.jpg')
+      ELSE signage_photo_ref
+    END,
+    updated_at = NOW()
+WHERE tenant_id = 'local-dsh'
+  AND status = 'active'
+  AND is_visible = true
+  AND partner_readiness = 'ready'
+  AND catalog_approval_status = 'approved'
+  AND marketing_visibility = 'visible';
