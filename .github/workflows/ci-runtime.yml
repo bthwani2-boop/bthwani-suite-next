@@ -75,6 +75,10 @@ jobs:
               pnpm run runtime:full:bootstrap-dev
             }
 
+            Invoke-LoggedPhase "dsh-operator-governance-preflight" {
+              & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1
+            }
+
             Invoke-LoggedPhase "runtime:full:smoke" {
               pnpm run runtime:full:smoke
             }
@@ -84,6 +88,9 @@ jobs:
             }
 
             $proof = Get-Content -LiteralPath $logPath -Raw
+            if ($proof -notmatch [regex]::Escape("DSH operator governance preflight: PASS")) {
+              throw "runtime proof did not record the DSH operator governance preflight PASS marker"
+            }
             if ($proof -notmatch [regex]::Escape("DSH/WLT representative financial readback smoke: PASS")) {
               throw "runtime proof did not record the representative financial readback PASS marker"
             }
