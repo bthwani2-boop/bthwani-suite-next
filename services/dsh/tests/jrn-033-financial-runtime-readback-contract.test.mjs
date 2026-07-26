@@ -10,6 +10,21 @@ describe("JRN-033 representative financial runtime readback", () => {
   const workflow = source("../../../.github/workflows/ci-runtime.yml");
   const smoke = source("../../../tools/scripts/finance/smoke-dsh-wlt-representative-readback.ps1");
 
+  it("runs affected runtime proof independently of full verification", () => {
+    assert.match(
+      workflow,
+      /if: \$\{\{ inputs\.runtime_proof \|\| inputs\.full_verification == 'true' \|\| inputs\.runtime == 'true' \}\}/,
+    );
+    assert.match(
+      workflow,
+      /if: \$\{\{ !inputs\.runtime_proof && inputs\.full_verification != 'true' && inputs\.runtime != 'true' \}\}/,
+    );
+    assert.doesNotMatch(
+      workflow,
+      /inputs\.full_verification == 'true' && inputs\.runtime == 'true'/,
+    );
+  });
+
   it("runs the representative readback after the full runtime smoke and requires its PASS marker", () => {
     assert.match(workflow, /runtime:full:smoke[\s\S]*smoke-dsh-wlt-representative-readback\.ps1/);
     assert.match(workflow, /DSH\/WLT representative financial readback smoke: PASS/);
