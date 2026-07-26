@@ -181,6 +181,9 @@ $proposal = Invoke-CheckedJsonRequest `
 if ([string]::IsNullOrWhiteSpace([string]$proposal.proposal.id)) {
   throw "dsh-partner-catalog-proposal-create returned no proposal id"
 }
+if ([int]$proposal.proposal.version -lt 1) {
+  throw "dsh-partner-catalog-proposal-create returned invalid proposal version: $($proposal.proposal.version)"
+}
 
 $proposalId = [Uri]::EscapeDataString([string]$proposal.proposal.id)
 foreach ($transition in @(
