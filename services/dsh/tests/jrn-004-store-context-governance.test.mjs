@@ -61,12 +61,14 @@ test("JRN-004 keeps partner settings and profiles actor-scoped and read back", (
   assert.doesNotMatch(partnerHub, /serviceabilityVerified\s*=\s*false/);
 });
 
-test("JRN-004 uses one governed publication diagnostic across backend and control panel", () => {
+test("JRN-004 uses one governed publication predicate across client reads", () => {
   const router = read("backend/internal/http/server.go");
   const diagnostics = read("backend/internal/store/publication_diagnostics.go");
+  const publication = read("backend/internal/store/publication.go");
   const handler = read("backend/internal/http/store_publication_diagnostics.go");
   const protectedStore = read("backend/internal/http/protected_store.go");
   const repository = read("backend/internal/store/repository.go");
+  const homeRepository = read("backend/internal/homediscovery/repository.go");
   const model = read("backend/internal/store/model.go");
   const adminApi = read("frontend/shared/store/store-admin.api.ts");
   const adminController = read("frontend/shared/store/use-store-admin-controller.tsx");
@@ -77,12 +79,16 @@ test("JRN-004 uses one governed publication diagnostic across backend and contro
   assert.doesNotMatch(protectedStore, /handleOperatorStoreDiagnostics/);
   assert.match(handler, /store\.DiagnoseStorePublication\(\*row\)/);
   assert.match(model, /return DiagnoseStorePublication\(row\)\.IsReady/);
-  assert.match(repository, /const publicStorePredicate/);
-  assert.match(repository, /cardinality\(delivery_modes\) > 0/);
-  assert.match(repository, /delivery_readiness = 'ready'/);
-  assert.match(repository, /btrim\(COALESCE\(hero_image_url,''\)\) <> ''/);
-  assert.match(repository, /btrim\(COALESCE\(logo_url,''\)\) <> ''/);
-  assert.match(repository, /func GetStoreByID[\s\S]*publicStorePredicate/);
+  assert.match(publication, /func ClientStorefrontPredicate\(alias string\) string/);
+  assert.match(publication, /cardinality\(%\[1\]sdelivery_modes\) > 0/);
+  assert.match(publication, /%\[1\]sdelivery_readiness = 'ready'/);
+  assert.match(publication, /partner\.activation_status = 'client_visible'/);
+  assert.match(publication, /assortment\.publication_status = 'client_visible'/);
+  assert.match(publication, /store_domain\.status = 'approved'/);
+  assert.match(repository, /ClientStorefrontPredicate\("dsh_stores"\)/);
+  assert.match(repository, /func GetStoreByID[\s\S]*ClientStorefrontPredicate/);
+  assert.match(homeRepository, /store\.ClientStorefrontPredicate\("s"\)/);
+  assert.doesNotMatch(homeRepository, /const clientEligibleStorePredicate/);
   for (const code of [
     "STORE_NOT_ACTIVE",
     "STORE_HIDDEN",
