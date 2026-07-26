@@ -1,6 +1,6 @@
-// Enforces spec §14: no .github/workflows/temp/ directory; any tracked
-// temp-gap-<id>-<hash>.yml must be registered TEMPORARY with a task id, contract
-// hash, parent branch, and an unexpired expiry in the workflow registry.
+// Enforces the workflow admission boundary: no .github/workflows/temp/ directory;
+// any tracked temp-gap-<id>-<hash>.yml must be registered TEMPORARY with a task id,
+// contract hash, parent branch, and an unexpired expiry in the workflow registry.
 import fs from "node:fs";
 import path from "node:path";
 import { fail, repoRoot } from "./_guard-utils.mjs";
@@ -18,9 +18,15 @@ const onDiskFiles = fs.existsSync(workflowsDir) ? fs.readdirSync(workflowsDir).f
 const looseTempFiles = onDiskFiles.filter((name) => /^temp-/i.test(name));
 
 const immutableCoreWorkflows = [
-  "ci-backends.yml", "ci-node-diagnostics.yml", "ci-node-verification.yml", "ci-policy.yml",
-  "ci-runtime.yml", "ci.yml", "dsh-database.yml", "jrn-020-025-sambassam-verify.yml",
-  "lockfile-snapshot.yml", "remediation-analysis.yml",
+  "ci-backends.yml",
+  "ci-node-diagnostics.yml",
+  "ci-node-verification.yml",
+  "ci-policy.yml",
+  "ci-runtime.yml",
+  "ci.yml",
+  "dsh-database.yml",
+  "lockfile-snapshot.yml",
+  "manual-deep-verification.yml",
 ].sort();
 const { registry, violations: registryViolations } = resolveWorkflowInventory(repoRoot, immutableCoreWorkflows);
 violations.push(...registryViolations);
