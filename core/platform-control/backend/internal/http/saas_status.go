@@ -26,11 +26,20 @@ func resolveSaasRuntimeStatus(getenv func(string) string) (saasRuntimeStatus, er
 	if activation != "blocked" && activation != "eligible" && activation != "authorized" && activation != "active" {
 		return saasRuntimeStatus{}, errors.New("BTHWANI_COMMERCIAL_ACTIVATION_STATE is invalid")
 	}
+	if mode == "active" && activation == "eligible" {
+		return saasRuntimeStatus{}, errors.New("active SaaS runtime requires activation authorization")
+	}
 	if mode == "active" && activation == "blocked" {
 		return saasRuntimeStatus{}, errors.New("active SaaS runtime cannot remain policy blocked")
 	}
 	if mode == "active" && defaultTenantID == "" {
 		return saasRuntimeStatus{}, errors.New("active SaaS runtime requires BTHWANI_DEFAULT_TENANT_ID")
+	}
+	if activation == "active" && mode != "active" {
+		return saasRuntimeStatus{}, errors.New("commercial active state requires active SaaS runtime")
+	}
+	if productionAuthorized {
+		return saasRuntimeStatus{}, errors.New("production SaaS deployment cannot be enabled by environment configuration alone")
 	}
 	if activation == "authorized" && productionAuthorized {
 		return saasRuntimeStatus{}, errors.New("authorized runtime activation cannot imply production deployment")

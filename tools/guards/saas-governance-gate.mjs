@@ -175,6 +175,51 @@ for (const requiredFeature of [
   if (!deferred.has(requiredFeature)) violations.push({ file: statePath, line: 0, message: `DEFERRED_COMMERCIAL_FEATURE_MISSING ${requiredFeature}` });
 }
 
+const runtimeModeByReadiness = {
+  NOT_APPLICABLE: "deferred",
+  SAAS_READY_DEFERRED: "deferred",
+  SAAS_ACTIVE: "active",
+};
+const runtimeActivationByCommercialState = {
+  BLOCKED_BY_POLICY: "blocked",
+  ELIGIBLE_FOR_REVIEW: "eligible",
+  ACTIVATION_AUTHORIZED: "authorized",
+  ACTIVE: "active",
+};
+const expectedRuntimeMode = runtimeModeByReadiness[state?.saasReadinessMode];
+const expectedCommercialActivation = runtimeActivationByCommercialState[state?.commercialActivationState];
+const expectedProductionDeploymentAuthorized = String(state?.activationAuthorization?.productionDeploymentAuthorized ?? false);
+if (state && expectedRuntimeMode && expectedCommercialActivation) {
+  for (const marker of [
+    `BTHWANI_SAAS_MODE=${expectedRuntimeMode}`,
+    `BTHWANI_COMMERCIAL_ACTIVATION_STATE=${expectedCommercialActivation}`,
+    `BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED=${expectedProductionDeploymentAuthorized}`,
+  ]) {
+    if (!runtimeEnv.includes(marker)) {
+      violations.push({ file: runtimeEnvPath, line: 0, message: `SAAS_RUNTIME_ENV_DEFAULT_MISMATCH expected ${marker}` });
+    }
+  }
+  for (const marker of [
+    `BTHWANI_SAAS_MODE: "\${BTHWANI_SAAS_MODE:-${expectedRuntimeMode}}"`,
+    `BTHWANI_COMMERCIAL_ACTIVATION_STATE: "\${BTHWANI_COMMERCIAL_ACTIVATION_STATE:-${expectedCommercialActivation}}"`,
+    `BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED: "\${BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED:-${expectedProductionDeploymentAuthorized}}"`,
+  ]) {
+    if (!compose.includes(marker)) {
+      violations.push({ file: composePath, line: 0, message: `SAAS_COMPOSE_DEFAULT_MISMATCH expected ${marker}` });
+    }
+  }
+  if (state.activationAuthorization?.productionDeploymentAuthorized !== true) {
+    for (const forbidden of [
+      "BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED=true",
+      'BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED: "${BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED:-true}"',
+    ]) {
+      if (runtimeEnv.includes(forbidden) || compose.includes(forbidden)) {
+        violations.push({ file: composePath, line: 0, message: `SAAS_PRODUCTION_DEPLOYMENT_DEFAULT_FORBIDDEN ${forbidden}` });
+      }
+    }
+  }
+}
+
 if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED" || state?.commercialActivationState === "ACTIVE") {
   const expectedRuntimeMarkers = state.commercialActivationState === "ACTIVE"
     ? [
