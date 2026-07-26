@@ -48,6 +48,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "runtime:full:smoke failed with exit code $LASTEXITCODE"
           }
+
+          & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/finance/smoke-dsh-wlt-representative-readback.ps1 2>&1 |
+            Tee-Object -LiteralPath runtime-smoke.log -Append
+          if ($LASTEXITCODE -ne 0) {
+            throw "representative financial readback smoke failed with exit code $LASTEXITCODE"
+          }
+
+          $proof = Get-Content -LiteralPath runtime-smoke.log -Raw
+          if ($proof -notmatch [regex]::Escape("DSH/WLT representative financial readback smoke: PASS")) {
+            throw "runtime proof did not record the representative financial readback PASS marker"
+          }
       - name: Stop runtime
         if: always()
         shell: pwsh
