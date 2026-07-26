@@ -1,8 +1,7 @@
 import { Linking, Platform, StyleSheet, View } from "react-native";
 
 import * as SecureStore from "expo-secure-store";
-import * as Notifications from "expo-notifications";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
 import { DshFieldSurface } from "../../../../services/dsh/frontend/app-field";
 import type { DshFieldNavigationCommand } from "../../../../services/dsh/frontend/app-field/dsh-field.routes";
@@ -20,6 +19,8 @@ import {
 } from "@bthwani/core-identity";
 import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
+
+const FIELD_APP_SCHEME = "bthwani-field-next";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -57,7 +58,11 @@ function parseDeepLink(url: string): DshFieldNavigationCommand | null {
     if (!trimmed) return null;
 
     const schemeSeparator = trimmed.indexOf("://");
-    const afterScheme = schemeSeparator >= 0 ? trimmed.slice(schemeSeparator + 3) : trimmed;
+    if (schemeSeparator <= 0) return null;
+    const scheme = trimmed.slice(0, schemeSeparator).toLowerCase();
+    if (scheme !== FIELD_APP_SCHEME) return null;
+
+    const afterScheme = trimmed.slice(schemeSeparator + 3);
     const withoutFragment = afterScheme.split("#", 1)[0] ?? "";
     const querySeparator = withoutFragment.indexOf("?");
     const location = querySeparator >= 0 ? withoutFragment.slice(0, querySeparator) : withoutFragment;
@@ -88,30 +93,15 @@ function parseDeepLink(url: string): DshFieldNavigationCommand | null {
   }
 }
 
-function parseNotificationData(data: Record<string, unknown>): DshFieldNavigationCommand | null {
-  const route = data.route as string | undefined;
-  if (!route) return null;
-  return parseDeepLink(
-    `bthwani-field-next://${route}?storeId=${encodeURIComponent(String(data.storeId ?? ""))}&visitId=${encodeURIComponent(String(data.visitId ?? ""))}&partnerId=${encodeURIComponent(String(data.partnerId ?? ""))}`,
-  );
-}
-
 function AppContent() {
   const identity = useIdentitySession();
-  useDshMobilePushRegistration(identity.state.kind, "app-field", "bthwani-field-next");
+  useDshMobilePushRegistration(identity.state.kind, "app-field", FIELD_APP_SCHEME);
 
   const [navCommand, setNavCommand] = useState<DshFieldNavigationCommand | undefined>();
-  const notifListenerRef = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
-    // Handle legacy route payloads while governed actionUrl payloads are handled
-    // by useDshMobilePushRegistration for foreground, background and cold start.
-    notifListenerRef.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as Record<string, unknown>;
-      const cmd = parseNotificationData(data);
-      if (cmd) setNavCommand(cmd);
-    });
-
+    // Governed notification actionUrl payloads are handled by
+    // useDshMobilePushRegistration. Only the application URL scheme is accepted here.
     void Linking.getInitialURL().then((url) => {
       if (url) {
         const cmd = parseDeepLink(url);
@@ -125,7 +115,6 @@ function AppContent() {
     });
 
     return () => {
-      notifListenerRef.current?.remove();
       linkSub.remove();
     };
   }, []);
