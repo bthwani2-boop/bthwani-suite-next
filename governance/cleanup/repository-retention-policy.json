@@ -1,6 +1,7 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "decision": "CODE_FIRST_REMEDIATION_WITH_REVIEWED_RECORD_CLEANUP",
+  "archivalOverDeletion": true,
   "ciSourceMutation": "MANUAL_REMEDIATION_PULL_REQUEST_ONLY",
   "privilegedRemediationWorkflow": ".github/workflows/remediation-analysis.yml",
   "generatedOutputRoots": [
@@ -11,13 +12,30 @@
     "out/",
     "graphify-out/"
   ],
+  "generatedOutputDirectoryNames": [
+    "__generated__",
+    ".cache",
+    ".expo",
+    ".nx",
+    "playwright-report",
+    "test-results",
+    "screenshots-temp",
+    "artifacts-local"
+  ],
+  "generatedOutputDirectoryNameExceptions": [
+    "**/clients/generated/**"
+  ],
   "forbiddenTrackedPathPrefixes": [
     "tools/scripts/scratch/",
     "tools/tmp/",
     "tmp/",
     "temp/",
-    "logs/"
+    "logs/",
+    ".github/workflows/temp/"
   ],
+  "temporaryWorkflowException": {
+    "note": "A tracked .github/workflows/temp-gap-<id>-<hash>.yml file is allowed only while registered with class TEMPORARY, a task id, a contract hash, a parent branch, and an unexpired expiry in governance/github/workflow-registry.json; enforcement lands with guard:workflow-temp-files (wave P0-B)."
+  },
   "forbiddenTrackedFilenamePatterns": [
     "(^|/)tmp[-_.]",
     "(^|/)(copy|backup|bak)[-_.]",

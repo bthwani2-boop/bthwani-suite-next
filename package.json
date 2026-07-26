@@ -148,6 +148,7 @@
     "performance:go:bench:wlt": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/performance/go/run-go-benchmarks.ps1 -Service wlt",
     "diagnostics:performance": "node tools/scripts/generate-performance-report.mjs",
     "guard:governance-schema": "node tools/guards/governance-schema-gate.mjs",
+    "guard:remediation-governance": "node tools/guards/remediation-governance-gate.mjs",
     "guard:agent-governance": "node tools/guards/agent-governance-gate.mjs",
     "guard:authority-separation": "node tools/guards/authority-separation-gate.mjs",
     "guard:saas-governance": "node tools/guards/saas-governance-gate.mjs",

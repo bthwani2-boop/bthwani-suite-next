@@ -233,6 +233,14 @@
       "source_file": "tools/guards/governance-schema-gate.mjs"
     },
     {
+      "id": "remediation-governance",
+      "name": "Progressive Remediation Governance Gate",
+      "script": "guard:remediation-governance",
+      "exit_level": "fail",
+      "description": "Validates the progressive remediation contracts: schemas, the 16-state task machine, the gap ledger, task contracts, iteration records, and work-unit contract drift.",
+      "source_file": "tools/guards/remediation-governance-gate.mjs"
+    },
+    {
       "id": "agent-governance",
       "name": "Agent and Skill Governance Gate",
       "script": "guard:agent-governance",

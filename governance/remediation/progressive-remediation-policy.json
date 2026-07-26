@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "decision": "PROGRESSIVE_SINGLE_GAP_REMEDIATION_OVER_EXISTING_AGENT_LAYER",
+  "wipWriteLimit": 1,
+  "maxRepairIterations": 3,
+  "microLoopAttemptCap": 2,
+  "executorApproverSeparation": true,
+  "failClosedDecision": "NEEDS_EVIDENCE",
+  "sameCommitEvidence": true,
+  "archivalOverDeletion": true,
+  "childBranchPattern": "task/<work-branch>/<task-id>-<slug>",
+  "mergeTarget": "work_branch_only",
+  "masterMerge": "human_explicit_command_only",
+  "gitWriteAuthorization": "human_explicit_command_per_round",
+  "taskInstanceFormat": "json",
+  "liveLockRoot": ".diagnostics/remediation/locks/",
+  "evidenceRoots": ["governance/evidence/", ".diagnostics/remediation/"],
+  "autoChildMerge": {
+    "enabled": false,
+    "activationOwner": "human_decision_after_branch_protection_proven",
+    "activationBlockedBy": ["GAP-0001"],
+    "requiredConditions": [
+      "The pull request targets the correct originating work branch.",
+      "The head SHA has not changed after verification completed.",
+      "All required checks pass on the exact head SHA.",
+      "No review thread remains open.",
+      "No .github/** change exists unless the task is a registered workflow task.",
+      "No contract, migration, security, or finance change exists outside the frozen task contract.",
+      "No unapproved file-set expansion exists.",
+      "No unclassified deletion exists.",
+      "No FLAKY result exists among required proofs.",
+      "No NEEDS_EVIDENCE gap remains for the task.",
+      "Baseline reconciliation ran and detected no unintended loss.",
+      "The work branch has not moved in a way that creates a logical conflict."
+    ]
+  },
+  "upstreamContracts": {
+    "workUnitContract": ".agents/skills/bthwani-cost-aware-subagent-orchestrator/references/WORK_UNIT_CONTRACT.md",
+    "modelRoutingPolicy": ".agents/skills/bthwani-cost-aware-subagent-orchestrator/references/MODEL_ROUTING_AND_TOKEN_POLICY.md",
+    "branchReturnPolicy": "governance/github/remediation-branch-return-policy.json",
+    "retentionPolicy": "governance/cleanup/repository-retention-policy.json",
+    "decisionVocabulary": "governance/contracts/decision-vocabulary.json",
+    "sdlcStateMachine": "governance/operational_journey_protocol_package/sdlc/lifecycle.state-machine.yaml"
+  }
+}

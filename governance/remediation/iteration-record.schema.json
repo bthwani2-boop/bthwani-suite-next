@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Engineering loop iteration record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "iterationId", "taskId", "iteration", "loop", "sourceSha", "hypothesis", "plan", "execution", "observation", "evaluation", "diagnosis", "improve", "decision", "antiThrash"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "iterationId": { "type": "string", "pattern": "^GAP-[0-9]{4}-I[0-9]{2}$" },
+    "taskId": { "type": "string", "pattern": "^GAP-[0-9]{4}$" },
+    "workUnitId": { "type": "string" },
+    "iteration": { "type": "integer", "minimum": 1, "maximum": 3 },
+    "loop": { "enum": ["MICRO", "GAP_CLOSURE", "PORTFOLIO"] },
+    "sourceSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "candidateSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "hypothesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "evidence", "hash", "failureFingerprint"],
+      "properties": {
+        "statement": { "type": "string", "minLength": 10 },
+        "evidence": { "type": "array", "items": { "type": "string" } },
+        "hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "failureFingerprint": { "type": "string" }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["planHash", "intendedChanges", "expectedOutcomes", "forbiddenChanges"],
+      "properties": {
+        "planHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "intendedChanges": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "expectedOutcomes": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "forbiddenChanges": { "type": "array", "items": { "type": "string" } },
+        "workUnitIds": { "type": "array", "items": { "type": "string" } },
+        "budget": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agentRole", "capabilityTier", "changedPaths"],
+      "properties": {
+        "agentRole": { "type": "string", "pattern": "^[A-Z][A-Z_]+$" },
+        "capabilityTier": { "enum": ["T0_MINIMAL", "T1_BALANCED", "T2_SPECIALIST", "T3_ADVISORY_MAX"] },
+        "changedPaths": { "type": "array", "items": { "type": "string" } },
+        "patchHash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checks", "unexpectedResults"],
+      "properties": {
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["command", "before", "after"],
+            "properties": {
+              "command": { "type": "string", "minLength": 1 },
+              "before": { "enum": ["PASS", "FAIL", "NOT_RUN"] },
+              "after": { "enum": ["PASS", "FAIL", "NOT_RUN"] },
+              "exitCode": { "type": "integer" },
+              "evidenceRef": { "type": "string" },
+              "evidenceSha256": { "type": "string" }
+            }
+          }
+        },
+        "unexpectedResults": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["failedGatesBefore", "failedGatesAfter", "regressionCount", "scopeViolationCount", "convergence"],
+      "properties": {
+        "acceptanceDelta": { "type": "integer" },
+        "failedGatesBefore": { "type": "integer", "minimum": 0 },
+        "failedGatesAfter": { "type": "integer", "minimum": 0 },
+        "regressionCount": { "type": "integer", "minimum": 0 },
+        "scopeViolationCount": { "type": "integer", "minimum": 0 },
+        "unexpectedDeletionCount": { "type": "integer", "minimum": 0 },
+        "convergence": { "enum": ["IMPROVING", "STALLED", "DEGRADING"] }
+      }
+    },
+    "diagnosis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hypothesisConfirmed", "newFindings", "rootCauseState"],
+      "properties": {
+        "hypothesisConfirmed": { "type": "boolean" },
+        "newFindings": { "type": "array", "items": { "type": "string" } },
+        "rootCauseState": { "enum": ["CONFIRMED", "PARTIAL", "REJECTED", "UNKNOWN"] }
+      }
+    },
+    "improve": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["missingGuards", "regressionTestsNeeded", "reusableRepairScripts", "blindSpotsFound"],
+      "properties": {
+        "missingGuards": { "type": "array", "items": { "type": "string" } },
+        "regressionTestsNeeded": { "type": "array", "items": { "type": "string" } },
+        "reusableRepairScripts": { "type": "array", "items": { "type": "string" } },
+        "blindSpotsFound": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["PASS", "REPLAN", "CONVERGED", "LOOP_NOT_CONVERGING", "REDIAGNOSE", "TASK_SPLIT_REQUIRED", "NEEDS_EVIDENCE", "BLOCKED_EXTERNAL", "PROTOCOL_VIOLATION"] },
+        "nextHypothesis": { "type": "string" }
+      }
+    },
+    "antiThrash": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["priorHypothesisHashes", "priorPatchHashes", "priorFailureFingerprints"],
+      "properties": {
+        "priorHypothesisHashes": { "type": "array", "items": { "type": "string" } },
+        "priorPatchHashes": { "type": "array", "items": { "type": "string" } },
+        "priorFailureFingerprints": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

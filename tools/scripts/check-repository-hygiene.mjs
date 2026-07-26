@@ -129,6 +129,19 @@ for (const file of files) {
     });
   }
 
+  const generatedSegment = (policy.generatedOutputDirectoryNames ?? []).find((name) =>
+    lower.split("/").includes(String(name).toLowerCase()),
+  );
+  if (generatedSegment && !lower.includes("/clients/generated/")) {
+    add(errors, {
+      code: "FORBIDDEN_TRACKED_GENERATED_DIRECTORY",
+      file,
+      message: `Tracked generated-output directory segment ${generatedSegment}`,
+      classification: "generated-output",
+      safeDelete: true,
+    });
+  }
+
   const forbiddenName = forbiddenNameRegexes.find((regex) => regex.test(file));
   if (forbiddenName) {
     add(errors, {

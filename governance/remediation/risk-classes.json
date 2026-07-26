@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "classes": [
+    { "id": "LOW", "minCapabilityTier": "T0_MINIMAL", "minVerificationProfile": "STATIC_SCOPED", "description": "Text, documentation, or single-file low-blast-radius change." },
+    { "id": "FOCUSED", "minCapabilityTier": "T1_BALANCED", "minVerificationProfile": "STATIC_SCOPED", "description": "Source change inside one clearly owned module." },
+    { "id": "STANDARD", "minCapabilityTier": "T1_BALANCED", "minVerificationProfile": "TARGETED_TEST", "description": "Multi-file or cross-layer change with clear ownership." },
+    { "id": "HIGH", "minCapabilityTier": "T2_SPECIALIST", "minVerificationProfile": "AFFECTED_BUILD", "description": "Moves, deletions-by-archive, boundary or public API changes, shared contracts." },
+    { "id": "CRITICAL", "minCapabilityTier": "T3_ADVISORY_MAX", "minVerificationProfile": "FULL_GATE", "description": "Security, finance, tenant isolation, migrations, workflows, or destructive operations." }
+  ],
+  "protectedDomainFloors": {
+    "security": "CRITICAL",
+    "finance": "CRITICAL",
+    "tenancy": "CRITICAL",
+    "migrations": "CRITICAL",
+    "workflows": "CRITICAL",
+    "contracts": "HIGH",
+    "generated_clients": "HIGH"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Risk classes",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "classes", "protectedDomainFloors"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "classes": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "minCapabilityTier", "minVerificationProfile", "description"],
+        "properties": {
+          "id": { "enum": ["LOW", "FOCUSED", "STANDARD", "HIGH", "CRITICAL"] },
+          "minCapabilityTier": { "enum": ["T0_MINIMAL", "T1_BALANCED", "T2_SPECIALIST", "T3_ADVISORY_MAX"] },
+          "minVerificationProfile": { "enum": ["STATIC_SCOPED", "TARGETED_TEST", "AFFECTED_BUILD", "RUNTIME_PROOF", "FULL_GATE"] },
+          "description": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "protectedDomainFloors": {
+      "type": "object",
+      "additionalProperties": { "enum": ["LOW", "FOCUSED", "STANDARD", "HIGH", "CRITICAL"] }
+    }
+  }
+}

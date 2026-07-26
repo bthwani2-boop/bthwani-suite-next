@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "archivalOverDeletion": true,
+  "note": "Owner decision 2026-07-26: no permanent deletion of tracked material. SAFE_DELETE and REVIEWED_DELETE execute as archive moves (.agents/archive/ for agent-system material, governance/archive/ for documents) with every live reference updated in the same change. Deleting untracked generated or scratch output remains allowed when explicitly approved.",
+  "cleanupClasses": [
+    "KEEP_CANONICAL", "MOVE", "MERGE", "RENAME", "GENERATE_INSTEAD",
+    "ARCHIVE", "SAFE_DELETE", "REVIEWED_DELETE", "PROTECTED", "UNKNOWN_USAGE"
+  ],
+  "deadCodeClasses": [
+    "DEAD_PROVEN", "DYNAMIC_USAGE", "GENERATED", "TEST_ONLY", "RUNTIME_ONLY", "UNKNOWN_USAGE", "KEEP"
+  ],
+  "deadCodeProofSteps": [
+    "static references", "dynamic imports", "config references", "expo/next plugin references",
+    "route references", "package script references", "test references", "git history",
+    "runtime probe when needed", "product model graph"
+  ],
+  "forbiddenAutomaticClasses": ["source", "contract", "migration", "active-governance", "active-evidence", "audit", "production-data-script", "financial-record"],
+  "moveBeforeArchiveProtocol": [
+    "identify canonical target", "update references", "move", "verify", "archive the old path", "verify again"
+  ],
+  "retentionPolicy": "governance/cleanup/repository-retention-policy.json"
+}

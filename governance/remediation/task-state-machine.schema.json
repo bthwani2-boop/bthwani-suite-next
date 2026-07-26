@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Task state machine",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "positionedBelow", "initialState", "terminalStates", "states", "transitions", "forbiddenTransitions", "closurePrecondition"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "positionedBelow": { "type": "string", "minLength": 1 },
+    "initialState": { "type": "string" },
+    "terminalStates": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "states": {
+      "type": "array",
+      "minItems": 16,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z][A-Z_]+$" }
+    },
+    "transitions": {
+      "type": "object",
+      "additionalProperties": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+    },
+    "forbiddenTransitions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "reason"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "closurePrecondition": { "type": "string", "minLength": 1 }
+  }
+}

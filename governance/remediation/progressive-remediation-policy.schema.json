@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Progressive remediation policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "decision", "wipWriteLimit", "maxRepairIterations", "microLoopAttemptCap",
+    "executorApproverSeparation", "failClosedDecision", "sameCommitEvidence", "archivalOverDeletion",
+    "childBranchPattern", "mergeTarget", "masterMerge", "gitWriteAuthorization", "taskInstanceFormat",
+    "liveLockRoot", "evidenceRoots", "autoChildMerge", "upstreamContracts"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "decision": { "type": "string", "minLength": 1 },
+    "wipWriteLimit": { "const": 1 },
+    "maxRepairIterations": { "const": 3 },
+    "microLoopAttemptCap": { "const": 2 },
+    "executorApproverSeparation": { "const": true },
+    "failClosedDecision": { "const": "NEEDS_EVIDENCE" },
+    "sameCommitEvidence": { "const": true },
+    "archivalOverDeletion": { "const": true },
+    "childBranchPattern": { "const": "task/<work-branch>/<task-id>-<slug>" },
+    "mergeTarget": { "const": "work_branch_only" },
+    "masterMerge": { "const": "human_explicit_command_only" },
+    "gitWriteAuthorization": { "const": "human_explicit_command_per_round" },
+    "taskInstanceFormat": { "const": "json" },
+    "liveLockRoot": { "const": ".diagnostics/remediation/locks/" },
+    "evidenceRoots": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "autoChildMerge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "activationOwner", "activationBlockedBy", "requiredConditions"],
+      "properties": {
+        "enabled": { "const": false },
+        "activationOwner": { "type": "string", "minLength": 1 },
+        "activationBlockedBy": { "type": "array", "items": { "type": "string", "pattern": "^GAP-[0-9]{4}$" } },
+        "requiredConditions": { "type": "array", "minItems": 12, "maxItems": 12, "items": { "type": "string", "minLength": 10 } }
+      }
+    },
+    "upstreamContracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workUnitContract", "modelRoutingPolicy", "branchReturnPolicy", "retentionPolicy", "decisionVocabulary", "sdlcStateMachine"],
+      "properties": {
+        "workUnitContract": { "type": "string" },
+        "modelRoutingPolicy": { "type": "string" },
+        "branchReturnPolicy": { "type": "string" },
+        "retentionPolicy": { "type": "string" },
+        "decisionVocabulary": { "type": "string" },
+        "sdlcStateMachine": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Requirement traceability",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "links"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["requirementId", "statement", "gapIds", "taskIds", "evidence"],
+        "properties": {
+          "requirementId": { "type": "string", "pattern": "^REQ-[0-9]{4}$" },
+          "statement": { "type": "string", "minLength": 5 },
+          "gapIds": { "type": "array", "items": { "type": "string", "pattern": "^GAP-[0-9]{4}$" } },
+          "taskIds": { "type": "array", "items": { "type": "string", "pattern": "^GAP-[0-9]{4}$" } },
+          "evidence": { "type": "array", "items": { "type": "string" } },
+          "status": { "enum": ["OPEN", "PROVEN", "NEEDS_EVIDENCE"] }
+        }
+      }
+    }
+  }
+}

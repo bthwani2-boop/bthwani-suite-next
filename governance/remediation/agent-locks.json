@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "lockModes": ["EXCLUSIVE", "WRITE", "READ"],
+  "conflictDecision": "LOCK_CONFLICT",
+  "liveLockRoot": ".diagnostics/remediation/locks/",
+  "liveLockNote": "Live per-task locks are runtime state and stay untracked under the live lock root; this tracked file declares only the globally locked resources and the lock vocabulary.",
+  "globalLockResources": [
+    { "resource": ".github/**", "reason": "Workflow surface; one writer at a time, registry-governed." },
+    { "resource": "AGENTS.md", "reason": "Root agent contract; marker-locked by agent-governance-gate." },
+    { "resource": "governance/authority/**", "reason": "Authority precedence and single-owner mode." },
+    { "resource": "governance/contracts/**", "reason": "Decision vocabulary and canonical contracts." },
+    { "resource": "pnpm-lock.yaml", "reason": "Single dependency truth; lockfile snapshots only." },
+    { "resource": "contracts/master.openapi.yaml", "reason": "Canonical OpenAPI root contract." },
+    { "resource": "**/*.openapi.yaml", "reason": "Canonical OpenAPI contracts." },
+    { "resource": "**/clients/generated/**", "reason": "Generated clients regenerate from contracts; never hand-edited concurrently." },
+    { "resource": "**/migrations/**", "reason": "Migration sequences are append-only and single-writer." },
+    { "resource": "shared/ui-kit/**", "reason": "Shared design tokens and UI kit." }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "positionedBelow": "governance/operational_journey_protocol_package/sdlc/lifecycle.state-machine.yaml",
+  "initialState": "DISCOVERED",
+  "terminalStates": ["CLOSED"],
+  "states": [
+    "DISCOVERED", "TRIAGED", "QUEUED", "DIAGNOSING", "BLOCKED", "CONTRACT_READY",
+    "REPAIRING", "VERIFYING", "FIX_REQUIRED", "READY_TO_INTEGRATE", "INTEGRATING",
+    "INTEGRATED", "CLEANING", "CLEANED", "RECONCILED", "CLOSED"
+  ],
+  "transitions": {
+    "DISCOVERED": ["TRIAGED"],
+    "TRIAGED": ["QUEUED", "BLOCKED"],
+    "QUEUED": ["DIAGNOSING"],
+    "DIAGNOSING": ["CONTRACT_READY", "BLOCKED"],
+    "CONTRACT_READY": ["REPAIRING"],
+    "REPAIRING": ["VERIFYING"],
+    "VERIFYING": ["FIX_REQUIRED", "READY_TO_INTEGRATE"],
+    "FIX_REQUIRED": ["REPAIRING", "BLOCKED"],
+    "READY_TO_INTEGRATE": ["INTEGRATING"],
+    "INTEGRATING": ["INTEGRATED"],
+    "INTEGRATED": ["CLEANING"],
+    "CLEANING": ["CLEANED"],
+    "CLEANED": ["RECONCILED"],
+    "RECONCILED": ["CLOSED", "FIX_REQUIRED"],
+    "BLOCKED": ["TRIAGED"],
+    "CLOSED": []
+  },
+  "forbiddenTransitions": [
+    { "from": "REPAIRING", "to": "CLOSED", "reason": "Cleanup and reconciliation are not proven yet." },
+    { "from": "VERIFYING", "to": "CLOSED", "reason": "Cleanup and reconciliation are not proven yet." },
+    { "from": "INTEGRATED", "to": "CLOSED", "reason": "Cleanup and reconciliation are not proven yet." }
+  ],
+  "closurePrecondition": "INTEGRATED + CLEANED + RECONCILED in order; RECONCILED may reopen to FIX_REQUIRED."
+}

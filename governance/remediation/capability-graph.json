@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "population": "PROGRESSIVE_P1A",
+  "chain": [
+    "domain", "journey", "actor", "step", "state", "action", "surface", "permission",
+    "controller", "api_operation", "domain_command", "repository", "database_effect",
+    "event_outbox", "readback_surface", "error_behavior", "evidence"
+  ],
+  "surfaces": [
+    "app-client", "app-partner", "app-captain", "app-field", "control-panel",
+    "dsh-backend", "wlt-backend", "identity", "workforce", "platform-control",
+    "providers", "database", "runtime", "infrastructure", "observability"
+  ],
+  "surfaceElements": [
+    "routes", "screens", "tabs", "buttons", "actions", "forms", "loading_states",
+    "empty_states", "error_states", "permission_states", "offline_states",
+    "navigation_reachability", "backend_binding", "readback"
+  ],
+  "nodes": []
+}

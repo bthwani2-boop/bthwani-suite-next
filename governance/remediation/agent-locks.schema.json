@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent lock declaration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "lockModes", "conflictDecision", "liveLockRoot", "liveLockNote", "globalLockResources"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "lockModes": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "enum": ["EXCLUSIVE", "WRITE", "READ"] }
+    },
+    "conflictDecision": { "const": "LOCK_CONFLICT" },
+    "liveLockRoot": { "const": ".diagnostics/remediation/locks/" },
+    "liveLockNote": { "type": "string", "minLength": 10 },
+    "globalLockResources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["resource", "reason"],
+        "properties": {
+          "resource": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "liveLockEntrySchema": {
+      "type": "object",
+      "description": "Shape of a live lock file under the live lock root (untracked).",
+      "additionalProperties": false,
+      "required": ["taskId", "resource", "owner", "mode", "expiresAt"],
+      "properties": {
+        "taskId": { "type": "string", "pattern": "^GAP-[0-9]{4}$" },
+        "resource": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1 },
+        "mode": { "enum": ["EXCLUSIVE", "WRITE", "READ"] },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

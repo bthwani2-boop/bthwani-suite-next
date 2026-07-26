@@ -95,6 +95,13 @@ for (const file of files) {
   const generatedRoot = (policy.generatedOutputRoots ?? []).find((root) => lower.startsWith(String(root).toLowerCase()));
   if (generatedRoot) mark(file, `tracked generated output under ${generatedRoot}`, "generated-output");
 
+  const generatedSegment = (policy.generatedOutputDirectoryNames ?? []).find((name) =>
+    lower.split("/").includes(String(name).toLowerCase()),
+  );
+  if (generatedSegment && !lower.includes("/clients/generated/")) {
+    mark(file, `tracked generated output directory segment ${generatedSegment}`, "generated-output");
+  }
+
   const transientRoot = (policy.forbiddenTrackedPathPrefixes ?? []).find((root) => lower.startsWith(String(root).toLowerCase()));
   if (transientRoot) mark(file, `tracked transient path under ${transientRoot}`, "temporary");
 

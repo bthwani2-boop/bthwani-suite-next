@@ -150,6 +150,21 @@ Graphify is a tool, not an agent. LeanCTX is optional, not a mandatory first ste
 
 Use `governance/agents/agent-registry.json` and `governance/skills/skills-registry.json` as machine-readable role and skill contracts.
 
+## Task contracts and progressive remediation
+
+Gap-driven repair work runs through the progressive remediation system governed by `governance/remediation/` and validated by `pnpm run guard:remediation-governance`.
+
+- Every gap needs a task contract (`governance/remediation/tasks/`) that passes `task-contract.schema.json` before any execution starts; no contract, no repair.
+- A task contract layers above the Work Unit Contract: every work unit's write paths stay inside the frozen contract scope, and its tier never exceeds the contract ceiling.
+- Task state moves only along `governance/remediation/task-state-machine.json`; `REPAIRING`, `VERIFYING`, and `INTEGRATED` can never jump to `CLOSED`.
+- An agent writes only paths reserved for it; scope never expands in place — a wider scope requires a new contract.
+- Never adjust a test just to make CI pass; never remove a test or guard without an independent task contract; never treat a retry as success — repeating an unchanged attempt after two failures is a protocol violation.
+- Diagnosis, execution, and approval stay separated: the diagnoser, executor, and reviewer of one task are different roles, and the executor never issues closure.
+- `MAX_REPAIR_ITERATIONS` is 3 per task; each iteration records a hypothesis, plan, observation, evaluation, and decision under `governance/remediation/iterations/`, following the governed engineering loop (PLAN, EXECUTE, OBSERVE, EVALUATE, DIAGNOSE, CORRECT, VERIFY, IMPROVE, REPLAN).
+- A repeated hypothesis hash, patch hash, or failure fingerprint stops the loop: escalate with `LOOP_NOT_CONVERGING`, re-diagnose, or split the task.
+- Stop conditions: budget exceeded resolves to task split; missing required evidence resolves to `NEEDS_EVIDENCE`; external dependency resolves to `BLOCKED_EXTERNAL`; every known gap is recorded in `governance/remediation/gap-ledger.json` before moving on.
+- Retired or superseded material is archived (`.agents/archive/`, `governance/archive/`), never destroyed; child branches merge only to their work branch; `master` merges remain an explicit human decision.
+
 ## Evidence and decisions
 
 Every result must map through the canonical vocabulary.
