@@ -164,6 +164,7 @@ Gap-driven repair work runs through the progressive remediation system governed 
 - A repeated hypothesis hash, patch hash, or failure fingerprint stops the loop: escalate with `LOOP_NOT_CONVERGING`, re-diagnose, or split the task.
 - Stop conditions: budget exceeded resolves to task split; missing required evidence resolves to `NEEDS_EVIDENCE`; external dependency resolves to `BLOCKED_EXTERNAL`; every known gap is recorded in `governance/remediation/gap-ledger.json` before moving on.
 - Retired or superseded material is archived (`.agents/archive/`, `governance/archive/`), never destroyed; child branches merge only to their work branch; `master` merges remain an explicit human decision.
+- `bthwani-engineering-loop-controller` owns the loop state above once a contract reaches `CONTRACT_READY`; it dispatches work through `bthwani-cost-aware-subagent-orchestrator` and hands completed work to `bthwani-independent-implementation-reviewer` — the two conflict by design and never share an identity.
 
 ## Evidence and decisions
 

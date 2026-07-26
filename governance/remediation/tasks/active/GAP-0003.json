@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "task": {
+    "id": "GAP-0003",
+    "title": "Classify and resolve the untracked dist-swagger root artifact",
+    "class": "CLEANUP",
+    "priority": "P3",
+    "status": "CONTRACT_READY"
+  },
+  "source": {
+    "repository": "bthwani2-boop/bthwani-suite-next",
+    "workBranch": "reemsam",
+    "baseSha": "34ba3f112f8ba70ec3d75b34602cdab554932a17",
+    "contractHash": "sha256:28d81f36a49b5098aec07f3a24f349bcdfc38e727409ce663f4d87c51a74c8f5",
+    "frozenAt": "2026-07-26T00:00:00Z"
+  },
+  "problem": {
+    "statement": "An untracked top-level directory dist-swagger/ exists at the repository root. repository-structure-gate emits a non-fatal UNAPPROVED_TOP_LEVEL warning for it, and it is not declared anywhere in the cleanup retention policy.",
+    "evidenceState": "PROVEN",
+    "evidence": [
+      {
+        "path": "tools/guards/repository-structure-gate.mjs",
+        "note": "Emits UNAPPROVED_TOP_LEVEL warning for undeclared top-level directories."
+      },
+      {
+        "path": "governance/cleanup/repository-retention-policy.json",
+        "note": "Does not currently declare dist-swagger as a generated output root."
+      }
+    ],
+    "rootCauseHypothesis": [
+      "A local Swagger/OpenAPI generation step writes to dist-swagger/ but the path was never added to generatedOutputRoots, so it reads as an unclassified top-level directory."
+    ]
+  },
+  "product": {
+    "journey": "repository-hygiene",
+    "actors": [
+      "foundation"
+    ],
+    "includedSurfaces": [
+      "repository"
+    ],
+    "excludedSurfaces": []
+  },
+  "behavior": {
+    "current": [
+      "dist-swagger/ is untracked, undeclared, and produces a structure-gate warning."
+    ],
+    "required": [
+      "dist-swagger/ is either declared as a generated output root (if it is genuinely a build artifact) or removed locally with no tracked change introducing it."
+    ],
+    "forbidden": [
+      "Tracking dist-swagger/ or any of its contents in git."
+    ]
+  },
+  "scope": {
+    "allowedPaths": [
+      "governance/cleanup/repository-retention-policy.json"
+    ],
+    "forbiddenPaths": [
+      ".github/**",
+      "services/**",
+      "core/**",
+      "apps/**",
+      "shared/**",
+      "contracts/**"
+    ],
+    "maximumChangedFiles": 1,
+    "maximumChangedLines": 20
+  },
+  "dependencies": {
+    "blockedBy": [],
+    "blocks": [],
+    "sharedContracts": [],
+    "sharedGeneratedOutputs": []
+  },
+  "agents": {
+    "required": [
+      "foundation"
+    ],
+    "maximumRepairIterations": 3,
+    "roles": {
+      "diagnosedBy": "foundation-diagnosis",
+      "executedBy": "foundation-executor",
+      "reviewedBy": "independent-implementation-reviewer"
+    }
+  },
+  "workUnits": [],
+  "proof": {
+    "required": {
+      "static": true,
+      "contract": false,
+      "unit": false,
+      "integration": false,
+      "database": false,
+      "runtime": false,
+      "visual": false,
+      "native": false,
+      "security": false,
+      "tenancy": false,
+      "performance": false,
+      "resilience": false
+    },
+    "commands": [
+      "node tools/guards/repository-structure-gate.mjs"
+    ],
+    "scenarios": [
+      {
+        "id": "no-unapproved-top-level-warning"
+      }
+    ]
+  },
+  "acceptance": [
+    {
+      "id": "AC-001",
+      "statement": "repository-structure-gate no longer emits UNAPPROVED_TOP_LEVEL for dist-swagger/.",
+      "evidenceRequired": [
+        "static"
+      ]
+    }
+  ],
+  "cleanup": {
+    "temporaryPaths": [],
+    "expectedArchivedPaths": [],
+    "archivePaths": []
+  },
+  "approval": {
+    "protectedDomains": [],
+    "humanApprovalRequired": false
+  },
+  "budget": {
+    "maxJobs": 1,
+    "maxRuntimeMinutes": 10,
+    "maxAgentIterations": 3,
+    "maxChangedFiles": 1,
+    "maxChangedLines": 20,
+    "maxArtifactsMb": 1,
+    "maxFullScans": 0
+  },
+  "confidence": {
+    "productModel": "NOT_APPLICABLE",
+    "static": "PROVEN",
+    "contract": "NOT_APPLICABLE",
+    "database": "NOT_APPLICABLE",
+    "runtime": "NOT_APPLICABLE",
+    "visual": "NOT_APPLICABLE",
+    "native": "NOT_APPLICABLE",
+    "security": "NOT_APPLICABLE",
+    "tenancy": "NOT_APPLICABLE",
+    "finance": "NOT_APPLICABLE",
+    "performance": "NOT_APPLICABLE",
+    "resilience": "NOT_APPLICABLE",
+    "recovery": "NOT_APPLICABLE"
+  }
+}

@@ -39,8 +39,9 @@ LeanCTX, Graphify, and Nx are optional tools. They are never mandatory first ste
 - Formal G0–G10 lifecycle control → `bthwani-sdlc-stage-gate-orchestrator`.
 - Final multi-scope closure → `bthwani-final-journey-closure-judge`.
 - Two or more independent bounded work units with real subagent capability → `bthwani-cost-aware-subagent-orchestrator`.
+- A frozen progressive-remediation task contract needing loop iteration, convergence, or task-split evaluation → `bthwani-engineering-loop-controller`.
 
-Governance-contract and CI-workflow approvals are separate. When both domains change, both skills apply and the approving identities must differ. Independent implementation review must also remain separate from the author, executor, and coordinator.
+Governance-contract and CI-workflow approvals are separate. When both domains change, both skills apply and the approving identities must differ. Independent implementation review must also remain separate from the author, executor, and coordinator, and separate from the engineering-loop controller.
 
 ## Product routing order
 

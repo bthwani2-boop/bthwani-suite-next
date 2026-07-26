@@ -103,6 +103,16 @@ node-gates*.log
 !governance/
 !governance/**
 
+# Explicitly track all files in the agent-system SSOT directory (.agents is the
+# single source of truth for skills, routing, and archived agent-system material —
+# see .agents/BTHWANI_HARNESS_PATTERNS.md)
+!.agents/
+!.agents/**
+
+# Explicitly track all files under the progressive remediation tooling directory
+!tools/remediation/
+!tools/remediation/**
+
 # Explicitly track operational journey checklist
 !tools/checklist/operational-journey-factory-checklist.md
 !tools/checklist/**/

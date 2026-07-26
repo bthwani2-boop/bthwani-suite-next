@@ -1,6 +1,6 @@
 ---
 name: bthwani-cost-aware-subagent-orchestrator
-version: 2026.07.17-v1
+version: 2026.07.26-v2
 summary: Coordinate product-aware hierarchical subagents with non-overlapping ownership, minimum sufficient context, independent review, and deterministic merge.
 ---
 
