@@ -1,6 +1,8 @@
 param(
   [string]$BaseUrl = $env:WLT_BASE_URL,
-  [string]$WiremockUrl = "http://localhost:58090"
+  [string]$WiremockUrl = "http://localhost:58090",
+  [string]$TenantId = $env:BTHWANI_DEFAULT_TENANT_ID,
+  [string]$ServiceToken = $env:WLT_DSH_SERVICE_TOKEN
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,14 +11,22 @@ Set-StrictMode -Version Latest
 if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
   $BaseUrl = "http://localhost:58083"
 }
+if ([string]::IsNullOrWhiteSpace($TenantId)) {
+  throw "BTHWANI_DEFAULT_TENANT_ID or -TenantId is required for WLT provider smoke"
+}
+if ([string]::IsNullOrWhiteSpace($ServiceToken)) {
+  throw "WLT_DSH_SERVICE_TOKEN or -ServiceToken is required for WLT provider smoke"
+}
 
 $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $CorrelationId = "wlt-provider-smoke-$timestamp"
 $IdempotencyKey = "wlt-provider-smoke-idemp-$timestamp"
-$TenantId = "tenant-dev-001"
 $ClientId = "client-provider-smoke-$timestamp"
 $CheckoutIntentId = "checkout-provider-smoke-$timestamp"
 $OrderId = "order-provider-smoke-$timestamp"
+$RefundMakerOperatorId = "refund-maker-provider-smoke-$timestamp"
+$RefundCheckerOperatorId = "refund-checker-provider-smoke-$timestamp"
+$RefundExecutorOperatorId = "refund-executor-provider-smoke-$timestamp"
 
 function Invoke-WltJson {
   param(
@@ -29,15 +39,24 @@ function Invoke-WltJson {
   $headers = @{
     "X-Correlation-ID" = $CorrelationId
     "Idempotency-Key" = $OperationIdempotencyKey
-    "Authorization" = "Bearer dev-only-dsh-wlt-shared-secret"
+    "Authorization" = "Bearer $ServiceToken"
     "X-Service-Caller" = "dsh"
     "X-Tenant-ID" = $TenantId
   }
   $uri = "$BaseUrl$Path"
-  if ($null -eq $Body) {
-    return Invoke-RestMethod -Method $Method -Uri $uri -Headers $headers -TimeoutSec 20
+  try {
+    if ($null -eq $Body) {
+      return Invoke-RestMethod -Method $Method -Uri $uri -Headers $headers -TimeoutSec 20
+    }
+    return Invoke-RestMethod -Method $Method -Uri $uri -Headers $headers -ContentType "application/json" -Body ($Body | ConvertTo-Json -Depth 8) -TimeoutSec 20
+  } catch {
+    $statusCode = $_.Exception.Response.StatusCode.value__
+    $responseBody = ""
+    try {
+      $responseBody = $_.ErrorDetails.Message
+    } catch { }
+    throw "WLT request failed: method=$Method path=$Path tenant=$TenantId status=$statusCode body=$responseBody"
   }
-  return Invoke-RestMethod -Method $Method -Uri $uri -Headers $headers -ContentType "application/json" -Body ($Body | ConvertTo-Json -Depth 8) -TimeoutSec 20
 }
 
 $health = Invoke-WltJson -Method "GET" -Path "/wlt/health"
@@ -71,19 +90,28 @@ if ($readback.paymentSession.status -ne "captured") { throw "WLT readback did no
 if ($readback.paymentSession.tenantId -ne $TenantId) { throw "WLT readback did not preserve tenant identity" }
 
 $refund = Invoke-WltJson -Method "POST" -Path "/wlt/refunds" -OperationIdempotencyKey "$IdempotencyKey-refund-create" -Body @{
+  tenantId = $TenantId
   paymentSessionId = $sessionId
   orderId = $OrderId
   clientId = $ClientId
+  amountMinorUnits = 1000
   reason = "automated provider refund smoke"
+  eligibilityReference = "provider-smoke-eligibility:$OrderId"
+  requestedByOperatorId = $RefundMakerOperatorId
 }
 $refundId = "$($refund.refund.id)"
 if ([string]::IsNullOrWhiteSpace($refundId)) { throw "WLT did not create refund" }
 if ($refund.refund.status -ne "requested") { throw "Unexpected refund creation status: $($refund.refund.status)" }
 
-$approvedRefund = Invoke-WltJson -Method "POST" -Path "/wlt/refunds/$refundId/approve" -OperationIdempotencyKey "$IdempotencyKey-refund-approve"
+$approvedRefund = Invoke-WltJson -Method "POST" -Path "/wlt/refunds/$refundId/approve" -OperationIdempotencyKey "$IdempotencyKey-refund-approve" -Body @{
+  operatorId = $RefundCheckerOperatorId
+  reason = "independent automated provider refund approval"
+}
 if ($approvedRefund.refund.status -ne "approved") { throw "Refund approval failed" }
 
-$completedRefund = Invoke-WltJson -Method "POST" -Path "/wlt/refunds/$refundId/complete" -OperationIdempotencyKey "$IdempotencyKey-refund-complete"
+$completedRefund = Invoke-WltJson -Method "POST" -Path "/wlt/refunds/$refundId/complete" -OperationIdempotencyKey "$IdempotencyKey-refund-complete" -Body @{
+  operatorId = $RefundExecutorOperatorId
+}
 if ($completedRefund.refund.status -ne "completed") { throw "Provider-backed refund completion failed" }
 
 $refundReadback = Invoke-WltJson -Method "GET" -Path "/wlt/refunds/$refundId"

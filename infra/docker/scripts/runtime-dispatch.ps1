@@ -15,7 +15,6 @@ param(
   [switch]$Force
 )
 
-Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
