@@ -241,25 +241,36 @@ function serializeOutput(value) {
   return String(value ?? "");
 }
 
-function main() {
-  const args = process.argv.slice(2);
-  if (args.length < 2) {
-    throw new Error("Usage: detect-ci-context.mjs <base-sha> <head-sha> [mode] [journey]");
-  }
-  const [baseSha, headSha, mode = "affected", journey = ""] = args;
-  const changedFiles = readChangedFiles(baseSha, headSha);
-  const result = classifyFiles(changedFiles, { mode, journey });
-  const outputFile = process.env.GITHUB_OUTPUT;
-  if (!outputFile) {
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-    return;
-  }
-  for (const [key, value] of Object.entries(result)) {
-    appendFileSync(resolve(outputFile), `${key}=${serializeOutput(value)}\n`);
-  }
+function writeGitHubOutputs(outputs) {
+  const outputPath = process.env.GITHUB_OUTPUT;
+  if (!outputPath) return;
+  const lines = Object.entries(outputs).map(([key, value]) => `${key}=${serializeOutput(value)}`);
+  appendFileSync(outputPath, `${lines.join("\n")}\n`, "utf8");
 }
 
-const isEntrypoint = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (isEntrypoint) {
+function main() {
+  const baseSha = String(process.env.CI_BASE_SHA ?? "").trim();
+  const headSha = String(process.env.CI_HEAD_SHA ?? "HEAD").trim() || "HEAD";
+  const mode = String(process.env.CI_MODE ?? "affected").trim() || "affected";
+  const journey = String(process.env.CI_JOURNEY ?? "").trim();
+  const providedFiles = String(process.env.CI_CHANGED_FILES ?? "").trim();
+  const files = providedFiles
+    ? providedFiles.split(/\r?\n/).map(normalizePath).filter(Boolean)
+    : readChangedFiles(baseSha, headSha);
+
+  const classification = classifyFiles(files, { mode, journey });
+  const outputs = {
+    base_sha: baseSha,
+    head_sha: headSha,
+    mode,
+    ...classification
+  };
+
+  writeGitHubOutputs(outputs);
+  process.stdout.write(`${JSON.stringify({ files: uniqueSorted(files), ...outputs }, null, 2)}\n`);
+}
+
+const isDirectExecution = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+if (isDirectExecution) {
   main();
 }
