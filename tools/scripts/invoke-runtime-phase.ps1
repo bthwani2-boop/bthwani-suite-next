@@ -156,9 +156,9 @@ try {
   }
 
   if ($Action -eq "smoke" -and $ProfileList -contains "dsh") {
-    "=== BEGIN_RUNTIME_SOURCE_SNAPSHOT ===" | Add-Content -LiteralPath $LogPath
-    Get-Content -LiteralPath $RuntimeScript -Raw | Add-Content -LiteralPath $LogPath
-    "=== END_RUNTIME_SOURCE_SNAPSHOT ===" | Add-Content -LiteralPath $LogPath
+    "=== BEGIN_RUNTIME_SOURCE_SNAPSHOT ===" | Tee-Object -FilePath $LogPath -Append
+    Get-Content -LiteralPath $RuntimeScript -Raw | Tee-Object -FilePath $LogPath -Append
+    "=== END_RUNTIME_SOURCE_SNAPSHOT ===" | Tee-Object -FilePath $LogPath -Append
   }
 
   $subject = ConvertTo-StatusText -Value $message -Limit 48
