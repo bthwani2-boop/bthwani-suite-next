@@ -76,7 +76,19 @@ export function classifyFiles(inputFiles, options = {}) {
   const frontend = full || mobileTooling || workspaceManifest || starts("apps/", "shared/") || includes("/frontend/", "/clients/generated/");
   const contracts = full || backendApiSurface || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
   const database = full || includes("/database/", "/migrations/") || starts("infra/docker/");
-  const runtime = full || mobileTooling || starts("infra/") || has((file) =>
+  const financialChanged = full || wlt || starts(
+    "services/dsh/backend/internal/wlt/",
+    "services/dsh/frontend/shared/finance-wlt-link/",
+    "services/dsh/frontend/control-panel/finance/",
+    "governance/dsh-wlt"
+  ) || equals(
+    "tools/scripts/smoke-wlt-provider-through-wlt.ps1",
+    "tools/scripts/smoke-wiremock-financial-provider.ps1"
+  ) || has((file) =>
+    /(^|\/)(finance|wallet|commission|settlement|payout|ledger|refund|payment|checkoutfinanceoutbox|fieldcommissionoutbox)(\/|[-_.])/i.test(file) ||
+    /dsh-wlt-finance/i.test(file)
+  );
+  const runtime = full || financialChanged || mobileTooling || starts("infra/") || has((file) =>
     file.endsWith("service.manifest.ts") ||
     file.endsWith("start.ps1") ||
     /(^|\/)(next|metro|babel|app)\.config\.[cm]?[jt]s$/.test(file) ||
@@ -147,11 +159,6 @@ export function classifyFiles(inputFiles, options = {}) {
   );
   const tenantIsolationChanged = full || starts("governance/saas/") || has((file) =>
     /tenant/i.test(file) || /isolation/i.test(file)
-  );
-  const financialChanged = full || wlt || has((file) =>
-    /\/(finance|wallet|commission|settlement|payout|ledger)\//i.test(file) ||
-    file.startsWith("governance/dsh-wlt") ||
-    /dsh-wlt-finance/i.test(file)
   );
   const migrationChanged = full || includes("/migrations/");
   const sharedContractChanged = full || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
