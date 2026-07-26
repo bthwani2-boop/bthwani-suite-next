@@ -14,6 +14,7 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
 $CatalogSeedScript = Join-Path $RepoRoot "services/dsh/database/scripts/apply-central-catalog-seed.ps1"
 $AuthenticatedWltSmokeScript = Join-Path $RepoRoot "tools/scripts/finance/smoke-wlt-authenticated-runtime.ps1"
+$DshSmokeDiagnosticScript = Join-Path $RepoRoot "tools/scripts/runtime/diagnose-dsh-smoke-auth-boundary.ps1"
 $LogRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
 $LogPath = Join-Path $LogRoot "bthwani-runtime-$Action.log"
 $ProfileList = @($Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
@@ -141,6 +142,19 @@ try {
   Publish-RuntimeStatus -State success -Description "runtime $Action passed"
 } catch {
   $message = $_.Exception.Message
+
+  if ($Action -eq "smoke" -and $ProfileList -contains "dsh" -and
+      (Test-Path -LiteralPath $DshSmokeDiagnosticScript -PathType Leaf)) {
+    Write-Host "`n=== runtime:dsh-smoke-auth-boundary-diagnosis ==="
+    try {
+      & $DshSmokeDiagnosticScript 2>&1 | Tee-Object -FilePath $LogPath -Append
+    } catch {
+      $diagnosticMessage = $_.Exception.Message
+      Write-Host "DSH smoke auth-boundary diagnosis failed: $diagnosticMessage"
+      ($_ | Format-List * -Force | Out-String) | Add-Content -LiteralPath $LogPath
+    }
+  }
+
   $subject = ConvertTo-StatusText -Value $message -Limit 48
   if ([string]::IsNullOrWhiteSpace($subject)) { $subject = "phase-failed" }
   Publish-RuntimeStatus -State failure -Description $message -Subject $subject
