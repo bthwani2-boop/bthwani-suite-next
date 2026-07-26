@@ -74,6 +74,7 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-099_jrn037_request_hash_scope.sql" = "to_regclass('public.wlt_payout_requests_request_hash_idx') IS NOT NULL"
   "wlt-100_jrn037_payout_destination_reference.sql" = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_payout_requests_destination_fk')"
   "wlt-101_jrn037_reconciliation_single_claim.sql" = "EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'wlt_jrn037_single_reconciliation_claim_trigger' AND NOT tgisinternal)"
+  "wlt-102_settlement_cod_commission_payout_tenancy.sql" = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_settlements' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_cod_records' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_commissions' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payout_requests' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND to_regclass('public.wlt_settlements_tenant_partner_idx') IS NOT NULL AND to_regclass('public.wlt_cod_records_tenant_partner_idx') IS NOT NULL AND to_regclass('public.wlt_commissions_tenant_beneficiary_idx') IS NOT NULL AND to_regclass('public.wlt_payout_requests_tenant_beneficiary_idx') IS NOT NULL"
 }
 
 function Test-WltMigrationProbeCoverage {
