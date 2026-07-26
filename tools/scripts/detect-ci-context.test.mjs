@@ -10,15 +10,19 @@ test("routes governance-only changes without product checks", () => {
   assert.equal(result.policy, true);
   assert.equal(result.frontend, false);
   assert.equal(result.dsh, false);
+  assert.equal(result.verification_tier, "standard");
+  assert.equal(result.diagnostics, false);
 });
 
-test("routes workflow changes to workflow security", () => {
+test("routes workflow changes to workflow security without runtime", () => {
   const result = classifyFiles([".github/workflows/ci.yml"]);
   assert.equal(result.workflow, true);
   assert.equal(result.security, true);
   assert.equal(result.policy, true);
   assert.equal(result.dsh, false);
   assert.equal(result.wlt, false);
+  assert.equal(result.runtime, false);
+  assert.equal(result.verification_tier, "deep");
 });
 
 test("treats the contextual router itself as workflow policy", () => {
@@ -26,6 +30,7 @@ test("treats the contextual router itself as workflow policy", () => {
   assert.equal(result.workflow, true);
   assert.equal(result.security, true);
   assert.equal(result.policy, true);
+  assert.equal(result.verification_tier, "deep");
 });
 
 test("routes sovereign mobile tooling through policy frontend and runtime proof", () => {
@@ -39,6 +44,8 @@ test("routes sovereign mobile tooling through policy frontend and runtime proof"
   assert.equal(result.node, true);
   assert.equal(result.runtime, true);
   assert.equal(result.heavy, true);
+  assert.equal(result.verification_tier, "deep");
+  assert.equal(result.diagnostics, true);
   assert.equal(result.workflow, false);
 });
 
@@ -50,6 +57,7 @@ test("routes runtime tooling changes to mandatory runtime proof", () => {
     const result = classifyFiles([file]);
     assert.equal(result.runtime, true, `${file} must require runtime proof`);
     assert.equal(result.heavy, true, `${file} must require heavy verification`);
+    assert.equal(result.verification_tier, "deep", `${file} must use deep verification`);
   }
 });
 
@@ -60,18 +68,22 @@ test("routes infrastructure without product-wide verification", () => {
   assert.equal(result.runtime, true);
   assert.equal(result.policy, true);
   assert.equal(result.frontend, false);
+  assert.equal(result.verification_tier, "deep");
 });
 
-test("treats shared DSH frontend changes as heavy cross-surface frontend work only", () => {
+test("routes shared DSH frontend changes as standard cross-surface work without project-wide journey gates", () => {
   const result = classifyFiles(["services/dsh/frontend/shared/cart/cart-controller.ts"]);
   assert.equal(result.dsh, false);
   assert.equal(result.frontend, true);
   assert.equal(result.shared_brain, true);
-  assert.equal(result.heavy, true);
-  assert.equal(result.journey_scope, "PROJECT-WIDE");
+  assert.equal(result.heavy, false);
+  assert.equal(result.verification_tier, "standard");
+  assert.equal(result.diagnostics, true);
+  assert.equal(result.journey, false);
+  assert.equal(result.journey_scope, "");
 });
 
-test("routes internal non-financial DSH logic changes to Go verification only", () => {
+test("routes internal non-financial DSH logic changes to standard Go verification only", () => {
   const result = classifyFiles(["services/dsh/backend/internal/cart/cart.go"]);
   assert.equal(result.dsh, true);
   assert.equal(result.contracts, false);
@@ -81,6 +93,8 @@ test("routes internal non-financial DSH logic changes to Go verification only", 
   assert.equal(result.financial_changed, false);
   assert.equal(result.runtime, false);
   assert.equal(result.heavy, false);
+  assert.equal(result.verification_tier, "standard");
+  assert.equal(result.diagnostics, false);
 });
 
 test("routes DSH HTTP surface changes to Go and contract parity", () => {
@@ -91,6 +105,8 @@ test("routes DSH HTTP surface changes to Go and contract parity", () => {
   assert.equal(result.frontend, false);
   assert.equal(result.heavy, false);
   assert.equal(result.node_scope, "contracts");
+  assert.equal(result.verification_tier, "standard");
+  assert.equal(result.diagnostics, true);
 });
 
 test("routes DSH API composition changes to Go and contract parity", () => {
@@ -109,6 +125,7 @@ test("routes WLT HTTP surface changes to Go contract parity and runtime proof", 
   assert.equal(result.financial_changed, true);
   assert.equal(result.runtime, true);
   assert.equal(result.heavy, true);
+  assert.equal(result.verification_tier, "deep");
 });
 
 test("detects JRN-040 targeted platform verification", () => {
@@ -127,22 +144,36 @@ test("supports an explicit journey for manual dispatch", () => {
   assert.equal(result.journey, true);
   assert.equal(result.node, true);
   assert.equal(result.journey_scope, "JRN-043");
+  assert.equal(result.verification_tier, "standard");
 });
 
-test("keeps an isolated app change lightweight", () => {
+test("keeps an isolated app change on the fast verification tier", () => {
   const result = classifyFiles(["apps/app-client/runtime/src/App.tsx"]);
   assert.equal(result.frontend, true);
   assert.equal(result.runtime, false);
   assert.equal(result.dsh, false);
   assert.equal(result.heavy, false);
+  assert.equal(result.verification_tier, "fast");
+  assert.equal(result.diagnostics, false);
+  assert.equal(result.journey, false);
+});
+
+test("keeps an isolated control-panel screen change on the fast verification tier", () => {
+  const result = classifyFiles(["services/dsh/frontend/control-panel/catalogs/CatalogDashboardScreen.tsx"]);
+  assert.equal(result.frontend, true);
+  assert.equal(result.shared_brain, false);
+  assert.equal(result.verification_tier, "fast");
+  assert.equal(result.diagnostics, false);
+  assert.equal(result.runtime, false);
 });
 
 test("full mode intentionally enables every verification domain", () => {
   const result = classifyFiles([], { mode: "full" });
-  for (const key of ["governance", "workflow", "infrastructure", "security", "frontend", "contracts", "journey", "dsh", "wlt", "identity", "workforce", "platform", "providers", "database", "runtime", "heavy"]) {
+  for (const key of ["governance", "workflow", "infrastructure", "security", "frontend", "contracts", "journey", "dsh", "wlt", "identity", "workforce", "platform", "providers", "database", "runtime", "heavy", "diagnostics"]) {
     assert.equal(result[key], true, `${key} should be enabled`);
   }
   assert.equal(result.journey_scope, "PROJECT-WIDE");
+  assert.equal(result.verification_tier, "deep");
 });
 
 test("routes progressive remediation contract and tooling changes separately", () => {
@@ -169,19 +200,23 @@ test("routes cleanup policy changes to cleanup_changed", () => {
   assert.equal(result.cleanup_changed, true);
 });
 
-test("routes mobile native surfaces to native_changed", () => {
+test("routes mobile native surfaces to native_changed and deep verification", () => {
   const result = classifyFiles(["apps/app-client/runtime/android/app/build.gradle"]);
   assert.equal(result.native_changed, true);
+  assert.equal(result.verification_tier, "deep");
 });
 
-test("routes shared UI kit changes to visual_changed", () => {
+test("routes shared UI kit changes to visual_changed and standard verification", () => {
   const result = classifyFiles(["shared/ui-kit/src/Button.tsx"]);
   assert.equal(result.visual_changed, true);
+  assert.equal(result.verification_tier, "standard");
+  assert.equal(result.diagnostics, true);
 });
 
 test("routes SaaS tenancy governance to tenant_isolation_changed", () => {
   const result = classifyFiles(["governance/saas/saas-governance.json"]);
   assert.equal(result.tenant_isolation_changed, true);
+  assert.equal(result.verification_tier, "deep");
 });
 
 test("routes WLT ledger changes to mandatory financial runtime proof", () => {
@@ -189,6 +224,7 @@ test("routes WLT ledger changes to mandatory financial runtime proof", () => {
   assert.equal(result.financial_changed, true);
   assert.equal(result.runtime, true);
   assert.equal(result.heavy, true);
+  assert.equal(result.verification_tier, "deep");
 });
 
 test("routes DSH financial outbox and finance surfaces to mandatory runtime proof", () => {
@@ -202,6 +238,7 @@ test("routes DSH financial outbox and finance surfaces to mandatory runtime proo
     assert.equal(result.financial_changed, true, `${file} must be financial`);
     assert.equal(result.runtime, true, `${file} must require runtime proof`);
     assert.equal(result.heavy, true, `${file} must require heavy verification`);
+    assert.equal(result.verification_tier, "deep", `${file} must use deep verification`);
   }
 });
 
@@ -209,16 +246,20 @@ test("routes migration files to migration_changed independent of the broader dat
   const result = classifyFiles(["services/dsh/database/migrations/0002_add_column.sql"]);
   assert.equal(result.migration_changed, true);
   assert.equal(result.database, true);
+  assert.equal(result.verification_tier, "deep");
 });
 
 test("routes OpenAPI contract changes to shared_contract_changed", () => {
   const result = classifyFiles(["services/dsh/contracts/dsh.openapi.yaml"]);
   assert.equal(result.shared_contract_changed, true);
+  assert.equal(result.verification_tier, "standard");
+  assert.equal(result.diagnostics, true);
 });
 
 test("routes runbook and recovery-named paths to recovery_changed", () => {
   const result = classifyFiles(["governance/runbooks/jrn-011-order-truth-operations.md"]);
   assert.equal(result.recovery_changed, true);
+  assert.equal(result.verification_tier, "deep");
 });
 
 test("routes observability tooling to observability_changed", () => {
@@ -232,7 +273,7 @@ test("exposes the complete set of classification output keys", () => {
     "changed_count", "governance", "workflow", "infrastructure", "security", "policy",
     "frontend", "contracts", "journey", "journey_scope", "node", "node_scope",
     "dsh", "wlt", "identity", "workforce", "platform", "providers", "database", "runtime",
-    "shared_brain", "heavy", "jrn040", "platform_change_sets",
+    "shared_brain", "heavy", "verification_tier", "diagnostics", "jrn040", "platform_change_sets",
     "task_contract_changed", "cleanup_changed", "native_changed", "visual_changed",
     "tenant_isolation_changed", "financial_changed", "migration_changed",
     "shared_contract_changed", "recovery_changed", "observability_changed",
