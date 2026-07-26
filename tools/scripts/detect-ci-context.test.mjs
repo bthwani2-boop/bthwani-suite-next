@@ -60,13 +60,16 @@ test("treats shared DSH frontend changes as heavy cross-surface frontend work on
   assert.equal(result.journey_scope, "PROJECT-WIDE");
 });
 
-test("routes internal DSH logic changes to Go verification only", () => {
+test("routes internal non-financial DSH logic changes to Go verification only", () => {
   const result = classifyFiles(["services/dsh/backend/internal/cart/cart.go"]);
   assert.equal(result.dsh, true);
   assert.equal(result.contracts, false);
   assert.equal(result.node, false);
   assert.equal(result.frontend, false);
   assert.equal(result.wlt, false);
+  assert.equal(result.financial_changed, false);
+  assert.equal(result.runtime, false);
+  assert.equal(result.heavy, false);
 });
 
 test("routes DSH HTTP surface changes to Go and contract parity", () => {
@@ -86,12 +89,15 @@ test("routes DSH API composition changes to Go and contract parity", () => {
   assert.equal(result.node, true);
 });
 
-test("routes WLT HTTP surface changes to Go and contract parity", () => {
+test("routes WLT HTTP surface changes to Go contract parity and runtime proof", () => {
   const result = classifyFiles(["services/wlt/backend/internal/http/server.go"]);
   assert.equal(result.wlt, true);
   assert.equal(result.contracts, true);
   assert.equal(result.node, true);
   assert.equal(result.dsh, false);
+  assert.equal(result.financial_changed, true);
+  assert.equal(result.runtime, true);
+  assert.equal(result.heavy, true);
 });
 
 test("detects JRN-040 targeted platform verification", () => {
@@ -167,9 +173,25 @@ test("routes SaaS tenancy governance to tenant_isolation_changed", () => {
   assert.equal(result.tenant_isolation_changed, true);
 });
 
-test("routes WLT and finance-path changes to financial_changed", () => {
+test("routes WLT ledger changes to mandatory financial runtime proof", () => {
   const result = classifyFiles(["services/wlt/backend/internal/ledger/ledger.go"]);
   assert.equal(result.financial_changed, true);
+  assert.equal(result.runtime, true);
+  assert.equal(result.heavy, true);
+});
+
+test("routes DSH financial outbox and finance surfaces to mandatory runtime proof", () => {
+  for (const file of [
+    "services/dsh/backend/internal/checkoutfinanceoutbox/outbox.go",
+    "services/dsh/backend/internal/fieldcommissionoutbox/worker.go",
+    "services/dsh/frontend/shared/finance-wlt-link/actor-wallet.ts",
+    "services/dsh/frontend/control-panel/finance/RepresentativeWalletLookup.tsx",
+  ]) {
+    const result = classifyFiles([file]);
+    assert.equal(result.financial_changed, true, `${file} must be financial`);
+    assert.equal(result.runtime, true, `${file} must require runtime proof`);
+    assert.equal(result.heavy, true, `${file} must require heavy verification`);
+  }
 });
 
 test("routes migration files to migration_changed independent of the broader database flag", () => {
