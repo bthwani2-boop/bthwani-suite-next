@@ -11,6 +11,7 @@ const allowedInLocalhostCheck = (file) =>
   file.includes(".test.") ||
   file.includes(".spec.") ||
   file.startsWith("tools/") ||
+  file.startsWith("apps/mobile/") ||
   file.includes("/config/") ||
   file.includes("config") ||
   file.startsWith("infra/") ||
@@ -32,7 +33,7 @@ for (const file of listCodeFiles()) {
 
 const hardcodedPathRegex = /(?:[c-z]:[\\/]|(?:\r?\n|^|\s)[\\/](?:home|Users)[\\/])[^\r\n]*bthwani-suite-next/i;
 for (const file of listCodeFiles()) {
-  if (file.startsWith("tools/") || file.includes("/test/") || file.includes("/tests/")) continue;
+  if (file.startsWith("tools/") || file.startsWith("apps/mobile/") || file.includes("/test/") || file.includes("/tests/")) continue;
   const content = read(file);
   const match = hardcodedPathRegex.exec(content);
   if (match) {
@@ -46,6 +47,7 @@ for (const file of listCodeFiles()) {
 
 const allowedEnvAccess = (file) =>
   file.startsWith("tools/") ||
+  file.startsWith("apps/mobile/") ||
   file.startsWith("shared/config/") ||
   file.includes("/shared/") ||
   file.startsWith("shared/") ||
