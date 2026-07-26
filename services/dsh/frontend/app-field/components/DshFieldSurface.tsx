@@ -8,7 +8,6 @@ import { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { DshFieldSurfaceProps } from '../dsh-field.routes';
 import { DshFieldRouteRenderer } from './DshFieldRouteRenderer';
 import { useIdentitySession } from '@bthwani/core-identity';
-import { DshFieldActivationCard } from './DshFieldActivationCard';
 import { useFieldPartnerOnboardingController } from '../../shared/field-onboarding';
 import {
   useFieldOfflineSync,
@@ -203,25 +202,15 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
     }, [fieldSurface.actions, fieldSurface.model.routeStackDepth, onExit]),
   );
 
-  if (identity.state.kind === 'restoring' || identity.state.kind === 'unconfigured') {
-    return (
-      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-        <StatusBar backgroundColor={colorRoles.brandAction} barStyle="light-content" translucent={false} />
-      </View>
-    );
-  }
-
   if (identity.state.kind !== 'authenticated') {
     return (
-      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
+      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase, justifyContent: 'center', padding: spacing[4] }}>
         <StatusBar backgroundColor={colorRoles.brandAction} barStyle="light-content" translucent={false} />
-        <View style={{ flex: 1, justifyContent: 'center', padding: spacing[4] }}>
-          <DshFieldActivationCard
-            loading={identity.state.kind === 'authenticating'}
-            {...(identity.state.kind === 'error' ? { error: identity.state.message } : {})}
-            onSubmit={(phone, code) => void identity.activate('field', phone, code)}
-          />
-        </View>
+        <StateView
+          tone="danger"
+          title="جلسة الميداني غير متاحة"
+          description="تدير بوابة الهوية العليا تسجيل الدخول والتفعيل. أعد فتح التطبيق أو سجّل الدخول مجددًا."
+        />
       </View>
     );
   }
