@@ -13,6 +13,7 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
 $CatalogSeedScript = Join-Path $RepoRoot "services/dsh/database/scripts/apply-central-catalog-seed.ps1"
+$AuthenticatedWltSmokeScript = Join-Path $RepoRoot "tools/scripts/finance/smoke-wlt-authenticated-runtime.ps1"
 $LogRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
 $LogPath = Join-Path $LogRoot "bthwani-runtime-$Action.log"
 $ProfileList = @($Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
@@ -77,17 +78,43 @@ if (-not (Test-Path -LiteralPath $RuntimeScript)) {
   throw "Runtime script not found: $RuntimeScript"
 }
 
+$runAuthenticatedWltSmoke = $Action -eq "smoke" -and $ProfileList -contains "wlt"
+$runtimeProfileList = if ($runAuthenticatedWltSmoke) {
+  @($ProfileList | Where-Object { $_ -ne "wlt" })
+} else {
+  @($ProfileList)
+}
+$runtimeProfiles = $runtimeProfileList -join ","
+
 $runtimeParameters = @{
   Action = $Action
-  Profiles = $Profiles
+  Profiles = $runtimeProfiles
 }
 if ($Force) { $runtimeParameters.Force = $true }
 
 try {
   Set-Location -LiteralPath $RepoRoot
-  & $RuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath
-  if ($LASTEXITCODE -ne 0) {
-    throw "Runtime script action '$Action' failed with exit code $LASTEXITCODE"
+
+  if ($runtimeProfileList.Count -gt 0) {
+    & $RuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath
+    if ($LASTEXITCODE -ne 0) {
+      throw "Runtime script action '$Action' failed with exit code $LASTEXITCODE"
+    }
+  } else {
+    "Runtime base phase skipped: no non-WLT profiles remain for action '$Action'." |
+      Tee-Object -FilePath $LogPath
+  }
+
+  if ($runAuthenticatedWltSmoke) {
+    if (-not (Test-Path -LiteralPath $AuthenticatedWltSmokeScript -PathType Leaf)) {
+      throw "Authenticated WLT smoke script not found: $AuthenticatedWltSmokeScript"
+    }
+    Write-Host "`n=== runtime:wlt-authenticated-smoke ==="
+    $global:LASTEXITCODE = 0
+    & $AuthenticatedWltSmokeScript 2>&1 | Tee-Object -FilePath $LogPath -Append
+    if ($LASTEXITCODE -ne 0) {
+      throw "Authenticated WLT runtime smoke failed with exit code $LASTEXITCODE"
+    }
   }
 
   # Development catalog convergence has a governed prerequisite: the canonical
