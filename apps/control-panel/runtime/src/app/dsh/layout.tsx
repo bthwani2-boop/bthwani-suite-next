@@ -9,7 +9,6 @@ import {
   useDshNavigation,
   DSH_NAV_ITEMS,
 } from "../../shell";
-import { publicRuntimeFlags } from "../../config/public-runtime-flags";
 import { ControlPanelSessionProvider } from "@dsh-shared/session/control-panel-session";
 import { ControlPanelAuthBoundary } from "@dsh-shared/session/ControlPanelAuthBoundary";
 import { ControlPanelUserMenu } from "@dsh-shared/session/ControlPanelUserMenu";
@@ -57,13 +56,10 @@ function DshShell({ children }: { readonly children: ReactNode }) {
 export default function DshLayout({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname();
   const isLoginRoute = pathname === "/dsh/login";
-  const isJrn033VisualEvidenceRoute =
-    pathname === "/dsh/finance/jrn-033-visual-evidence" &&
-    publicRuntimeFlags.jrn033VisualEvidenceEnabled;
 
   return (
     <ControlPanelSessionProvider>
-      {isLoginRoute || isJrn033VisualEvidenceRoute ? (
+      {isLoginRoute ? (
         children
       ) : (
         <ControlPanelAuthBoundary>
