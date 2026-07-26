@@ -5,8 +5,8 @@
 .DESCRIPTION
   Preserves the established runtime engine for every action and profile while
   routing DSH smoke verification through focused scripts that follow the current
-  optimistic-concurrency contracts. The legacy engine remains read-only and is
-  not duplicated or modified.
+  optimistic-concurrency contracts. The established engine is preserved verbatim
+  for compatibility and remains the implementation for non-DSH actions.
 #>
 
 param(
@@ -51,17 +51,19 @@ $legacyParameters = @{
 if ($Force) { $legacyParameters.Force = $true }
 
 if ($Action -ne "smoke" -or -not $hasDsh) {
+  $global:LASTEXITCODE = 0
   & $LegacyScript @legacyParameters
   if ($LASTEXITCODE -ne 0) {
     throw "Legacy runtime action '$Action' failed with exit code $LASTEXITCODE"
   }
-  exit 0
+  return
 }
 
 Write-Host "=== runtime:smoke modular DSH routing ==="
 
 $nonDshProfiles = @($profileList | Where-Object { $_ -ne "dsh" })
 if ($nonDshProfiles.Count -gt 0) {
+  $global:LASTEXITCODE = 0
   & $LegacyScript -Action smoke -Profiles ($nonDshProfiles -join ",") -Service $Service
   if ($LASTEXITCODE -ne 0) {
     throw "Non-DSH runtime smoke failed with exit code $LASTEXITCODE"
@@ -71,10 +73,12 @@ if ($nonDshProfiles.Count -gt 0) {
 # Reconcile the DSH schema and deterministic local fixtures before exercising
 # the focused smoke scripts. These commands retain the established engine and
 # avoid replaying its stale embedded DSH smoke implementation.
+$global:LASTEXITCODE = 0
 & $LegacyScript -Action up -Profiles "dsh,media"
 if ($LASTEXITCODE -ne 0) {
   throw "DSH runtime preparation failed with exit code $LASTEXITCODE"
 }
+$global:LASTEXITCODE = 0
 & $LegacyScript -Action seed -Profiles "dsh,media"
 if ($LASTEXITCODE -ne 0) {
   throw "DSH runtime seed failed with exit code $LASTEXITCODE"
@@ -82,11 +86,13 @@ if ($LASTEXITCODE -ne 0) {
 
 $statePath = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-dsh-smoke-$([Guid]::NewGuid().ToString('N')).json"
 try {
+  $global:LASTEXITCODE = 0
   & $DshCatalogSmoke -StatePath $statePath
   if ($LASTEXITCODE -ne 0) {
     throw "DSH catalog smoke failed with exit code $LASTEXITCODE"
   }
 
+  $global:LASTEXITCODE = 0
   & $DshPartnerSmoke
   if ($LASTEXITCODE -ne 0) {
     throw "DSH partner onboarding smoke failed with exit code $LASTEXITCODE"
@@ -94,6 +100,7 @@ try {
 
   $clientParameters = @{ StatePath = $statePath }
   if ($profileList -contains "wlt") { $clientParameters.WltEnabled = $true }
+  $global:LASTEXITCODE = 0
   & $DshClientSmoke @clientParameters
   if ($LASTEXITCODE -ne 0) {
     throw "DSH client and home smoke failed with exit code $LASTEXITCODE"
