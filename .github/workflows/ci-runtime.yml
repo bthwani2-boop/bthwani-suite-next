@@ -32,32 +32,66 @@ jobs:
       - name: Runtime proof
         shell: pwsh
         run: |
-          "Runtime proof started for $env:GITHUB_SHA" | Set-Content -LiteralPath runtime-smoke.log
+          $logPath = Join-Path $PWD "runtime-smoke.log"
+          "Runtime proof started for $env:GITHUB_SHA" | Set-Content -LiteralPath $logPath
 
-          pnpm run runtime:full:up 2>&1 | Tee-Object -LiteralPath runtime-smoke.log -Append
-          if ($LASTEXITCODE -ne 0) {
-            throw "runtime:full:up failed with exit code $LASTEXITCODE"
+          function Add-RuntimeLog {
+            param([Parameter(Mandatory)][string] $Text)
+            $Text | Tee-Object -LiteralPath $logPath -Append
           }
 
-          pnpm run runtime:full:bootstrap-dev 2>&1 | Tee-Object -LiteralPath runtime-smoke.log -Append
-          if ($LASTEXITCODE -ne 0) {
-            throw "runtime:full:bootstrap-dev failed with exit code $LASTEXITCODE"
+          function Invoke-LoggedPhase {
+            param(
+              [Parameter(Mandatory)][string] $Name,
+              [Parameter(Mandatory)][scriptblock] $Command
+            )
+
+            Add-RuntimeLog "=== $Name ==="
+            try {
+              $global:LASTEXITCODE = 0
+              & $Command *>&1 | Tee-Object -LiteralPath $logPath -Append
+              $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
+              Add-RuntimeLog "phase=$Name exitCode=$exitCode"
+              if ($exitCode -ne 0) {
+                throw "$Name failed with exit code $exitCode"
+              }
+            } catch {
+              Add-RuntimeLog "PHASE_FAILURE=$Name"
+              ($_ | Format-List * -Force | Out-String) | Add-Content -LiteralPath $logPath
+              throw
+            }
           }
 
-          pnpm run runtime:full:smoke 2>&1 | Tee-Object -LiteralPath runtime-smoke.log -Append
-          if ($LASTEXITCODE -ne 0) {
-            throw "runtime:full:smoke failed with exit code $LASTEXITCODE"
-          }
+          try {
+            $pnpmCommand = Get-Command pnpm -ErrorAction Stop
+            Add-RuntimeLog "pwsh=$($PSVersionTable.PSVersion)"
+            Add-RuntimeLog "pnpm=$($pnpmCommand.Source)"
 
-          & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/finance/smoke-dsh-wlt-representative-readback.ps1 2>&1 |
-            Tee-Object -LiteralPath runtime-smoke.log -Append
-          if ($LASTEXITCODE -ne 0) {
-            throw "representative financial readback smoke failed with exit code $LASTEXITCODE"
-          }
+            Invoke-LoggedPhase "runtime:full:up" {
+              pnpm run runtime:full:up
+            }
 
-          $proof = Get-Content -LiteralPath runtime-smoke.log -Raw
-          if ($proof -notmatch [regex]::Escape("DSH/WLT representative financial readback smoke: PASS")) {
-            throw "runtime proof did not record the representative financial readback PASS marker"
+            Invoke-LoggedPhase "runtime:full:bootstrap-dev" {
+              pnpm run runtime:full:bootstrap-dev
+            }
+
+            Invoke-LoggedPhase "runtime:full:smoke" {
+              pnpm run runtime:full:smoke
+            }
+
+            Invoke-LoggedPhase "representative-financial-readback" {
+              & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/finance/smoke-dsh-wlt-representative-readback.ps1
+            }
+
+            $proof = Get-Content -LiteralPath $logPath -Raw
+            if ($proof -notmatch [regex]::Escape("DSH/WLT representative financial readback smoke: PASS")) {
+              throw "runtime proof did not record the representative financial readback PASS marker"
+            }
+            Add-RuntimeLog "RUNTIME_PROOF_RESULT=PASS"
+          } catch {
+            Add-RuntimeLog "RUNTIME_PROOF_RESULT=FAIL"
+            ($_ | Format-List * -Force | Out-String) | Add-Content -LiteralPath $logPath
+            throw
           }
       - name: Stop runtime
         if: always()
