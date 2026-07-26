@@ -14,7 +14,30 @@ func (s *protectedStoreServer) writeGovernedFieldReadinessError(w http.ResponseW
 		store.SendError(w, http.StatusConflict, "STORE_LOCATION_REQUIRED", "store coordinates must be registered before a field visit can start")
 		return
 	}
+	if errors.Is(err, fieldreadiness.ErrIdempotencyRequired) {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_REQUIRED", "Idempotency-Key and X-Correlation-ID are required for field readiness mutations")
+		return
+	}
+	if errors.Is(err, fieldreadiness.ErrIdempotencyConflict) {
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "the idempotency key was already used with different field readiness inputs")
+		return
+	}
+	if errors.Is(err, fieldreadiness.ErrTenantContext) {
+		store.SendError(w, http.StatusInternalServerError, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is unavailable")
+		return
+	}
 	s.writeFieldReadinessError(w, err)
+}
+
+func governedFieldMutationContext(
+	r *http.Request,
+	request any,
+) (fieldreadiness.MutationContext, error) {
+	return fieldreadiness.BuildMutationContext(
+		r.Header.Get("Idempotency-Key"),
+		r.Header.Get("X-Correlation-ID"),
+		request,
+	)
 }
 
 // POST /dsh/field/stores/{storeId}/visits
@@ -30,16 +53,25 @@ func (s *protectedStoreServer) handleCreateGovernedFieldVisit(w http.ResponseWri
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
+	storeID := r.PathValue("storeId")
+	mutation, err := governedFieldMutationContext(r, struct {
+		StoreID string `json:"storeId"`
+		Body    any    `json:"body"`
+	}{StoreID: storeID, Body: body})
+	if err != nil {
+		s.writeGovernedFieldReadinessError(w, err)
+		return
+	}
 	visitType := fieldreadiness.VisitTypeOnboarding
 	if strings.TrimSpace(body.VisitType) != "" {
 		visitType = fieldreadiness.VisitType(body.VisitType)
 	}
-	visit, err := fieldreadiness.CreateGovernedVisit(r.Context(), s.db, actor, fieldreadiness.CreateVisitInput{
-		StoreID:       r.PathValue("storeId"),
+	visit, err := fieldreadiness.CreateGovernedVisitIdempotent(r.Context(), s.db, actor, fieldreadiness.CreateVisitInput{
+		StoreID:       storeID,
 		FieldAgentID:  actor.ID,
 		VisitType:     visitType,
 		StartLocation: body.StartLocation,
-	})
+	}, mutation)
 	if err != nil {
 		s.writeGovernedFieldReadinessError(w, err)
 		return
@@ -59,9 +91,18 @@ func (s *protectedStoreServer) handleCompleteGovernedFieldVisit(w http.ResponseW
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	visit, err := fieldreadiness.CompleteGovernedVisit(r.Context(), s.db, actor, r.PathValue("visitId"), fieldreadiness.CompleteVisitInput{
+	visitID := r.PathValue("visitId")
+	mutation, err := governedFieldMutationContext(r, struct {
+		VisitID string `json:"visitId"`
+		Body    any    `json:"body"`
+	}{VisitID: visitID, Body: body})
+	if err != nil {
+		s.writeGovernedFieldReadinessError(w, err)
+		return
+	}
+	visit, err := fieldreadiness.CompleteGovernedVisitIdempotent(r.Context(), s.db, actor, visitID, fieldreadiness.CompleteVisitInput{
 		CompletionLocation: body.CompletionLocation,
-	})
+	}, mutation)
 	if err != nil {
 		s.writeGovernedFieldReadinessError(w, err)
 		return
@@ -84,12 +125,21 @@ func (s *protectedStoreServer) handleUpsertGovernedReadinessCheck(w http.Respons
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	check, err := fieldreadiness.UpsertGovernedReadinessCheck(r.Context(), s.db, actor, r.PathValue("visitId"), fieldreadiness.UpdateCheckInput{
+	visitID := r.PathValue("visitId")
+	mutation, err := governedFieldMutationContext(r, struct {
+		VisitID string `json:"visitId"`
+		Body    any    `json:"body"`
+	}{VisitID: visitID, Body: body})
+	if err != nil {
+		s.writeGovernedFieldReadinessError(w, err)
+		return
+	}
+	check, err := fieldreadiness.UpsertGovernedReadinessCheckIdempotent(r.Context(), s.db, actor, visitID, fieldreadiness.UpdateCheckInput{
 		CheckType:   body.CheckType,
 		Status:      fieldreadiness.CheckStatus(body.Status),
 		EvidenceURL: body.EvidenceURL,
 		Notes:       body.Notes,
-	})
+	}, mutation)
 	if err != nil {
 		s.writeGovernedFieldReadinessError(w, err)
 		return
@@ -112,14 +162,23 @@ func (s *protectedStoreServer) handleCreateGovernedReadinessEscalation(w http.Re
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	escalation, err := fieldreadiness.CreateGovernedEscalation(r.Context(), s.db, actor, fieldreadiness.CreateEscalationInput{
+	storeID := r.PathValue("storeId")
+	mutation, err := governedFieldMutationContext(r, struct {
+		StoreID string `json:"storeId"`
+		Body    any    `json:"body"`
+	}{StoreID: storeID, Body: body})
+	if err != nil {
+		s.writeGovernedFieldReadinessError(w, err)
+		return
+	}
+	escalation, err := fieldreadiness.CreateGovernedEscalationIdempotent(r.Context(), s.db, actor, fieldreadiness.CreateEscalationInput{
 		VisitID:     body.VisitID,
-		StoreID:     r.PathValue("storeId"),
+		StoreID:     storeID,
 		RaisedBy:    actor.ID,
 		Severity:    fieldreadiness.EscalationSeverity(body.Severity),
 		Category:    fieldreadiness.EscalationCategory(body.Category),
 		Description: body.Description,
-	})
+	}, mutation)
 	if err != nil {
 		s.writeGovernedFieldReadinessError(w, err)
 		return
