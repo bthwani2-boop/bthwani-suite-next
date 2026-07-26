@@ -69,6 +69,16 @@ function Invoke-RuntimeEngine {
   }
 }
 
+function Invoke-FinancialSimulatorHealthSmoke {
+  Write-Host "`n--- Financial simulator isolated smoke ---"
+  Invoke-RestMethod "http://localhost:58090/__admin/mappings" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+  $health = Invoke-RestMethod "http://localhost:58090/financial/health" -TimeoutSec 10 -ErrorAction Stop
+  if ([string]$health.status -ne "healthy") {
+    throw "WireMock financial simulator health is not healthy: $($health.status)"
+  }
+  Write-Host "Financial simulator isolated smoke: PASS"
+}
+
 if ($Action -ne "smoke" -or -not $hasDsh) {
   Invoke-RuntimeEngine -EngineAction $Action -EngineProfiles $Profiles -EngineService $Service
   return
@@ -76,9 +86,21 @@ if ($Action -ne "smoke" -or -not $hasDsh) {
 
 Write-Host "=== runtime:smoke modular DSH routing ==="
 
-$nonDshProfiles = @($profileList | Where-Object { $_ -ne "dsh" })
+# The caller deliberately removes WLT from this phase and executes the governed
+# authenticated WLT smoke afterward. Running runtime.ps1 with only the financial
+# simulator profile would nevertheless invoke the WLT provider path and create a
+# false tenant-context failure. Verify the simulator directly here, and leave the
+# WLT-to-provider contract to the dedicated authenticated smoke.
+$financialSimulatorsRequested = $profileList -contains "financial-simulators"
+$nonDshProfiles = @(
+  $profileList |
+    Where-Object { $_ -ne "dsh" -and $_ -ne "financial-simulators" }
+)
 if ($nonDshProfiles.Length -gt 0) {
   Invoke-RuntimeEngine -EngineAction "smoke" -EngineProfiles ($nonDshProfiles -join ",") -EngineService $Service
+}
+if ($financialSimulatorsRequested) {
+  Invoke-FinancialSimulatorHealthSmoke
 }
 
 Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles "dsh,media"
