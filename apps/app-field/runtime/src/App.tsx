@@ -1,5 +1,6 @@
 import { Linking, Platform, StyleSheet, View } from "react-native";
 
+import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
@@ -12,6 +13,7 @@ import {
   WorkforceProfileProvider,
 } from "../../../../services/dsh/frontend/shared/workforce";
 import {
+  configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
   configureIdentitySessionStorage,
   type SessionStorageAdapter,
@@ -21,6 +23,7 @@ import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/sha
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
 
 const FIELD_APP_SCHEME = "bthwani-field-next";
+const FIELD_DEVICE_FINGERPRINT_KEY = "bthwani.field.device-fingerprint.v1";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -30,8 +33,17 @@ function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   };
 }
 
+async function getOrCreateFieldDeviceFingerprint(): Promise<string> {
+  const existing = await SecureStore.getItemAsync(FIELD_DEVICE_FINGERPRINT_KEY);
+  if (existing?.trim()) return existing;
+  const created = `field-device:${Crypto.randomUUID()}`;
+  await SecureStore.setItemAsync(FIELD_DEVICE_FINGERPRINT_KEY, created);
+  return created;
+}
+
 if (Platform.OS !== "web") {
   configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
+  configureIdentityDeviceFingerprintProvider(getOrCreateFieldDeviceFingerprint);
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
