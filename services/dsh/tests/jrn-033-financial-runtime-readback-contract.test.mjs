@@ -25,8 +25,18 @@ describe("JRN-033 representative financial runtime readback", () => {
     );
   });
 
-  it("runs the representative readback after the full runtime smoke and requires its PASS marker", () => {
-    assert.match(workflow, /runtime:full:smoke[\s\S]*smoke-dsh-wlt-representative-readback\.ps1/);
+  it("preserves evidence from startup bootstrap smoke and representative readback", () => {
+    for (const command of [
+      "runtime:full:up",
+      "runtime:full:bootstrap-dev",
+      "runtime:full:smoke",
+    ]) {
+      assert.match(
+        workflow,
+        new RegExp(`${command.replaceAll(":", "\\:")} 2>&1 \\| Tee-Object -LiteralPath runtime-smoke\\.log -Append`),
+      );
+    }
+    assert.match(workflow, /smoke-dsh-wlt-representative-readback\.ps1[\s\S]*Tee-Object -LiteralPath runtime-smoke\.log -Append/);
     assert.match(workflow, /DSH\/WLT representative financial readback smoke: PASS/);
     assert.match(workflow, /runtime proof did not record the representative financial readback PASS marker/);
   });
