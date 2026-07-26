@@ -35,7 +35,8 @@
     "OBSERVABILITY_NOT_PROVEN",
     "GOVERNANCE_ENFORCEMENT_NOT_PROVEN",
     "WORKFLOW_MODERNIZATION_REQUIRED",
-    "UNTRACKED_ROOT_ARTIFACT"
+    "UNTRACKED_ROOT_ARTIFACT",
+    "MISSING_CAPABILITY_GRAPH_BINDING"
   ],
   "priorityOrder": [
     "P0: security, data, finance, tenant isolation, broken critical journeys, and cleanup that blocks diagnosis (enabling tasks)",
@@ -291,6 +292,89 @@
       "discovered_at": "2026-07-26",
       "evidence": [
         "governance/remediation/iterations/GAP-0005/01.json"
+      ]
+    },
+    {
+      "gap_id": "GAP-0007",
+      "type": "MISSING_CAPABILITY_GRAPH_BINDING",
+      "path": "governance/remediation/capability-graph.json",
+      "owner": "product",
+      "affected_surface": "repository",
+      "affected_journeys": ["JRN-043", "JRN-044"],
+      "root_cause": "Discovered while populating capability-graph.json for wave P1-A: JRN-043's registry candidate-surfaces line names 'the repository, GitHub, and build/release environments' in prose with no backtick-quoted surface token, and JRN-044 (OUT_OF_SCOPE_FOR_THIS_JOURNEY) has no candidate-surfaces line at all. Both were honestly omitted from capability-graph.json's nodes rather than force-mapped to a fabricated surface.",
+      "pattern_group": "capability-graph-coverage-gap",
+      "risk_level": "LOW",
+      "required_action": "Either add 'infrastructure' and/or 'observability' as JRN-043's explicit candidate surfaces in the registry (matching what its prose already describes) and confirm JRN-044 is intentionally excluded by design, then extend inventory-capabilities.mjs's idiom list if a new phrasing is needed, and re-run the P1-A population step.",
+      "target_files": [
+        "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
+        "tools/remediation/discovery/inventory-capabilities.mjs",
+        "governance/remediation/capability-graph.json"
+      ],
+      "allowed_decision": "NEEDS_EVIDENCE",
+      "forbidden_actions": [
+        "Fabricating a surface binding for JRN-043 or JRN-044 without registry-text evidence"
+      ],
+      "verification_commands": [
+        "node tools/remediation/discovery/inventory-capabilities.mjs"
+      ],
+      "proof_required": [
+        "governance"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false,
+      "risk_class": "LOW",
+      "state": "TRIAGED",
+      "verification_profile": "STATIC_SCOPED",
+      "blocked_reason": "",
+      "priority": "P3",
+      "discovered_at": "2026-07-26",
+      "evidence": [
+        ".diagnostics/remediation/inventory/capabilities.json",
+        "governance/remediation/requirement-traceability.json"
+      ]
+    },
+    {
+      "gap_id": "GAP-0008",
+      "type": "MISSING_CAPABILITY_GRAPH_BINDING",
+      "path": "governance/remediation/capability-graph.json",
+      "owner": "product",
+      "affected_surface": "repository",
+      "affected_journeys": ["JRN-001", "JRN-002", "JRN-003", "JRN-004", "JRN-005", "JRN-006", "JRN-007", "JRN-008", "JRN-009", "JRN-010", "JRN-011", "JRN-012", "JRN-013", "JRN-014", "JRN-015", "JRN-016", "JRN-017", "JRN-018", "JRN-019", "JRN-020", "JRN-021", "JRN-022", "JRN-023", "JRN-024", "JRN-025", "JRN-026", "JRN-027", "JRN-028", "JRN-029", "JRN-030", "JRN-031", "JRN-032", "JRN-033", "JRN-034", "JRN-035", "JRN-036", "JRN-037", "JRN-038", "JRN-039", "JRN-040", "JRN-041", "JRN-042"],
+      "root_cause": "capability-graph.json and requirement-traceability.json were both created empty in wave P0-A, with population explicitly deferred to wave P1-A; inventory-capabilities.mjs only stubbed each journey as {journeyId, populated: false} without ever parsing the real registry text.",
+      "pattern_group": "p1a-capability-graph-population",
+      "risk_level": "STANDARD",
+      "required_action": "Parse the real JRN-* registry (index table plus per-journey candidate-surfaces text) and populate capability-graph.json with one product_model_node per (journey, surface) pair and requirement-traceability.json with links for every requirement this session's gaps addressed.",
+      "target_files": [
+        "tools/remediation/discovery/inventory-capabilities.mjs",
+        "governance/remediation/capability-graph.json",
+        "governance/remediation/requirement-traceability.json"
+      ],
+      "allowed_decision": "CLOSED_WITH_EVIDENCE",
+      "forbidden_actions": [
+        "Fabricating chain links or surfaces not present in the registry text"
+      ],
+      "verification_commands": [
+        "node tools/remediation/discovery/inventory-capabilities.mjs",
+        "node tools/guards/remediation-governance-gate.mjs"
+      ],
+      "proof_required": [
+        "static",
+        "governance"
+      ],
+      "status": "CLOSED",
+      "blocks_journey_start": false,
+      "risk_class": "STANDARD",
+      "state": "CLOSED",
+      "verification_profile": "STATIC_SCOPED",
+      "blocked_reason": "",
+      "priority": "P1",
+      "discovered_at": "2026-07-26",
+      "evidence": [
+        "governance/remediation/tasks/completed/GAP-0008.json",
+        "governance/remediation/iterations/GAP-0008/01.json",
+        ".diagnostics/remediation/evidence/GAP-0008/static-results.txt",
+        "governance/remediation/capability-graph.json",
+        "governance/remediation/requirement-traceability.json"
       ]
     }
   ]

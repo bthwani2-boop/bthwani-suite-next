@@ -1,4 +1,73 @@
 {
   "schemaVersion": 1,
-  "links": []
+  "links": [
+    {
+      "requirementId": "REQ-0001",
+      "statement": "The privileged remediation workflow must verify a candidate source_ref without running any general auto-repair (mobile source sync, OpenAPI generation, dependency dedupe, lint --fix, go mod tidy, gofmt).",
+      "gapIds": ["GAP-0002"],
+      "taskIds": ["GAP-0002"],
+      "evidence": [
+        "governance/remediation/tasks/completed/GAP-0002.json",
+        "governance/remediation/iterations/GAP-0002/01.json",
+        ".diagnostics/remediation/evidence/GAP-0002/static-results.txt"
+      ],
+      "status": "PROVEN"
+    },
+    {
+      "requirementId": "REQ-0002",
+      "statement": ".gitignore must not silently drop new tracked documentation under docs/ or infra/ with no error from git or any guard.",
+      "gapIds": ["GAP-0004"],
+      "taskIds": ["GAP-0004"],
+      "evidence": [
+        "governance/remediation/tasks/completed/GAP-0004.json",
+        "governance/remediation/iterations/GAP-0004/01.json",
+        ".diagnostics/remediation/evidence/GAP-0004/static-results.txt"
+      ],
+      "status": "PROVEN"
+    },
+    {
+      "requirementId": "REQ-0003",
+      "statement": "Task scope-check tooling must not report false OUTSIDE_ALLOWED_PATHS / scope-expansion violations for unrelated commits landed on a shared work branch after a task's baseSha.",
+      "gapIds": ["GAP-0005"],
+      "taskIds": ["GAP-0005"],
+      "evidence": [
+        "governance/remediation/tasks/completed/GAP-0005.json",
+        "governance/remediation/iterations/GAP-0005/01.json",
+        ".diagnostics/remediation/evidence/GAP-0005/static-results.txt"
+      ],
+      "status": "PROVEN"
+    },
+    {
+      "requirementId": "REQ-0004",
+      "statement": "GitHub branch protection, required status checks, and separation of duties on master must be proven from GitHub's own settings (ruleset and branch protection API responses), not merely declared in a tracked JSON file.",
+      "gapIds": ["GAP-0001"],
+      "taskIds": [],
+      "evidence": [
+        "governance/github/repository-enforcement.json"
+      ],
+      "status": "NEEDS_EVIDENCE"
+    },
+    {
+      "requirementId": "REQ-0005",
+      "statement": "recordedChangedPaths' self-declared execution.changedPaths must eventually be cross-checked against the real git diff for a task's own commit(s), not trusted unconditionally, to close the defense-in-depth gap GAP-0005's fix itself introduced.",
+      "gapIds": ["GAP-0006"],
+      "taskIds": [],
+      "evidence": [
+        "governance/remediation/iterations/GAP-0005/01.json"
+      ],
+      "status": "OPEN"
+    },
+    {
+      "requirementId": "REQ-0006",
+      "statement": "Every product journey (JRN-001..JRN-042) with at least one registry-declared candidate surface must have a corresponding product_model_node in governance/remediation/capability-graph.json binding its owning domain, journey title, and registry decision status; JRN-043 and JRN-044 are known, explicitly-tracked exceptions (no backtick-quoted surface tokens resolved from their registry prose) pending a follow-up gap rather than a fabricated surface binding.",
+      "gapIds": ["GAP-0007"],
+      "taskIds": [],
+      "evidence": [
+        "governance/remediation/capability-graph.json",
+        ".diagnostics/remediation/inventory/capabilities.json",
+        "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md"
+      ],
+      "status": "NEEDS_EVIDENCE"
+    }
+  ]
 }

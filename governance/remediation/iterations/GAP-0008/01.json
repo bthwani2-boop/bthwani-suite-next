@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "iterationId": "GAP-0008-I01",
+  "taskId": "GAP-0008",
+  "iteration": 1,
+  "loop": "GAP_CLOSURE",
+  "sourceSha": "20f2b8c5070a6f9ee11c14118244ff2683ab6e58",
+  "hypothesis": {
+    "statement": "The 44-journey registry governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md already contains real, maintained per-journey owner, decision, and candidate-surface text; mechanically parsing it (index table plus per-journey sections) rather than stubbing populated:false lets capability-graph.json be populated with real, traceable product_model_node entries without fabricating any deeper chain link.",
+    "evidence": [
+      "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
+      "tools/remediation/discovery/inventory-capabilities.mjs",
+      "governance/remediation/capability-graph.schema.json"
+    ],
+    "hash": "sha256:6da26f9671818d373a5e98630d472ab4ebfb94d087533b2f28f58af09f7d4e67",
+    "failureFingerprint": "MISSING_CAPABILITY_GRAPH_BINDING:all-journeys"
+  },
+  "plan": {
+    "planHash": "sha256:ddaba7c528903a7555ef97d3551444e90b086c39edbf7f6e21c0359cf71a4565",
+    "intendedChanges": [
+      "Rewrite inventory-capabilities.mjs to parse the registry's index table and per-journey sections for owner/title/decision/candidate-surfaces, handling backtick tokens plus known idiom phrases (\"جميع الأسطح ذات تسجيل الدخول\", \"التطبيقات الأربعة\").",
+      "Transform the parsed output into one product_model_node per (journey, surface) pair in governance/remediation/capability-graph.json, keeping population: PROGRESSIVE_P1A (not claiming full-chain completion).",
+      "Backfill governance/remediation/requirement-traceability.json with links for every requirement this session's real gaps (GAP-0001, GAP-0002, GAP-0004, GAP-0005, GAP-0006, GAP-0007) addressed.",
+      "Honestly omit JRN-043 and JRN-044 (no resolvable backtick-quoted surface token) rather than fabricate a binding, and register that omission as GAP-0007."
+    ],
+    "expectedOutcomes": [
+      "node tools/remediation/discovery/inventory-capabilities.mjs produces real owner/title/decision/surfaces for all 44 journeys.",
+      "node tools/guards/remediation-governance-gate.mjs exits 0 with capability-graph.json containing 122 schema-valid nodes.",
+      "requirement-traceability.json links resolve to real, already-closed or already-tracked gaps only."
+    ],
+    "forbiddenChanges": [
+      "Fabricating actor/step/state/action/controller/api_operation/domain_command/repository/database_effect/event_outbox/readback_surface/error_behavior chain links not verified against real code.",
+      "Force-mapping a surface for JRN-043 or JRN-044 without registry-text evidence."
+    ],
+    "workUnitIds": [],
+    "budget": {
+      "maxAgentIterations": 3
+    }
+  },
+  "execution": {
+    "agentRole": "FOUNDATION_EXECUTOR",
+    "capabilityTier": "T1_BALANCED",
+    "changedPaths": [
+      "tools/remediation/discovery/inventory-capabilities.mjs",
+      "governance/remediation/capability-graph.json",
+      "governance/remediation/requirement-traceability.json",
+      "governance/remediation/gap-ledger.json"
+    ],
+    "patchHash": "sha256:15627c1ee6792942478ef2b73707dc3cfb85a9e384b6433a17a3f4aaeb4cae4a"
+  },
+  "observation": {
+    "checks": [
+      {
+        "command": "node tools/remediation/discovery/inventory-capabilities.mjs",
+        "before": "PASS",
+        "after": "PASS",
+        "exitCode": 0,
+        "evidenceRef": ".diagnostics/remediation/evidence/GAP-0008/static-results.txt",
+        "evidenceSha256": "sha256:e181e2b2d4d3e8a8c93da7038701c4de36a63c99edd8975508d31ebd602bded1"
+      },
+      {
+        "command": "node tools/guards/remediation-governance-gate.mjs",
+        "before": "FAIL",
+        "after": "PASS",
+        "exitCode": 0,
+        "evidenceRef": ".diagnostics/remediation/evidence/GAP-0008/static-results.txt",
+        "evidenceSha256": "sha256:e181e2b2d4d3e8a8c93da7038701c4de36a63c99edd8975508d31ebd602bded1"
+      }
+    ],
+    "unexpectedResults": [
+      "The gate initially failed with TASK_CONTRACT_WITHOUT_LEDGER_ENTRY for GAP-0008 itself, because the ledger entry for this very task had not yet been added when the contract was first written; added the GAP-0008 ledger entry in the same iteration before re-running.",
+      "JRN-002, JRN-023, and JRN-033 use descriptive idiom phrases ('جميع الأسطح ذات تسجيل الدخول', 'التطبيقات الأربعة') instead of a full backtick-quoted surface list; the parser's idiom table resolves these to their intended surface sets, verified by spot-checking the rendered nodes against the source registry text."
+    ]
+  },
+  "evaluation": {
+    "acceptanceDelta": 3,
+    "failedGatesBefore": 1,
+    "failedGatesAfter": 0,
+    "regressionCount": 0,
+    "scopeViolationCount": 0,
+    "unexpectedDeletionCount": 0,
+    "convergence": "IMPROVING"
+  },
+  "diagnosis": {
+    "hypothesisConfirmed": true,
+    "newFindings": [
+      "JRN-043 and JRN-044 have no backtick-quoted candidate-surface token in the registry (JRN-043 describes 'the repository, GitHub, and build/release environments' in prose; JRN-044 is OUT_OF_SCOPE_FOR_THIS_JOURNEY with no candidate-surfaces line at all), so capability-graph.json correctly has no nodes for either; tracked as GAP-0007 rather than silently accepted or fabricated."
+    ],
+    "rootCauseState": "CONFIRMED"
+  },
+  "improve": {
+    "missingGuards": [],
+    "regressionTestsNeeded": [
+      "inventory-capabilities.mjs has no unit test of its own yet; a future iteration should add node --test coverage for parseIndexTable/parseJourneySections/extractSurfaces against a small fixture registry excerpt."
+    ],
+    "reusableRepairScripts": [],
+    "blindSpotsFound": [
+      "capability-graph.json's population currently covers only domain/journey/surface/decision from the registry index and per-journey heading; the deeper 17-link chain (actor through evidence) remains genuinely unpopulated and is not claimed to be — population stays PROGRESSIVE_P1A, not POPULATED."
+    ]
+  },
+  "decision": {
+    "status": "PASS"
+  },
+  "antiThrash": {
+    "priorHypothesisHashes": [],
+    "priorPatchHashes": [],
+    "priorFailureFingerprints": [
+      "MISSING_CAPABILITY_GRAPH_BINDING:all-journeys"
+    ]
+  }
+}
