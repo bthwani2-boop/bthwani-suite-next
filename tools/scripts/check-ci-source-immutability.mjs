@@ -72,10 +72,10 @@ function remediationViolations(content, relative) {
     if (!content.includes(marker)) violations.push({ file: relative, line: 0, id, reason: `required marker missing: ${marker}` });
   };
 
-  requireMarker("name: BThwani Expert Live-Code Remediation", "REMEDIATION_NAME_REQUIRED");
+  requireMarker("name: BThwani Manual Patch Verification", "REMEDIATION_NAME_REQUIRED");
   requireMarker("workflow_dispatch:", "REMEDIATION_MANUAL_TRIGGER_REQUIRED");
   requireMarker("permissions:\n  contents: read", "REMEDIATION_READ_ONLY_REQUIRED");
-  requireMarker("Forensic discovery and deterministic repair", "REMEDIATION_PREPARE_JOB_REQUIRED");
+  requireMarker("Verify candidate source without auto-repair", "REMEDIATION_PREPARE_JOB_REQUIRED");
   requireMarker("Export evidence-backed remediation patch", "REMEDIATION_EXPORT_REQUIRED");
   requireMarker("manual-patch-only-no-privileged-write", "REMEDIATION_MANUAL_PUBLICATION_REQUIRED");
   requireMarker("persist-credentials: false", "REMEDIATION_CHECKOUT_HARDENING_REQUIRED");
@@ -127,10 +127,12 @@ export function scanWorkflowContent(content, relative = "workflow.yml") {
 
     for (const rule of forbiddenPatterns) {
       if (!rule.regex.test(line)) continue;
-      const remediationException = isRemediation && [
-        "SOURCE_MUTATING_GIT_COMMAND",
-        "SOURCE_FORMAT_WRITE",
-      ].includes(rule.id);
+      // Wave R (GAP-0002) removed every general auto-repair step (mobile sync,
+      // OpenAPI generation, dedupe, lint --fix, go mod tidy, gofmt) from the
+      // remediation workflow, so only the defensive `git restore` used to freeze
+      // .github/** still needs an exception; source-rewriting formatters are no
+      // longer present and are no longer excused here.
+      const remediationException = isRemediation && rule.id === "SOURCE_MUTATING_GIT_COMMAND";
       if (remediationException) continue;
       violations.push({
         file: relative,

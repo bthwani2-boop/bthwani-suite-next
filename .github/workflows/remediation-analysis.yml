@@ -1,10 +1,10 @@
-name: BThwani Expert Live-Code Remediation
+name: BThwani Manual Patch Verification
 
 on:
   workflow_dispatch:
     inputs:
       source_ref:
-        description: Immutable branch, tag, or commit to diagnose and repair
+        description: Immutable branch, tag, or commit to diagnose and verify
         required: true
         default: master
         type: string
@@ -34,11 +34,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: expert-live-code-remediation-${{ github.run_id }}
+  group: manual-patch-verification-${{ github.run_id }}
   cancel-in-progress: false
 
 env:
-  ARTIFACT_NAME: live-code-remediation-${{ github.run_id }}-${{ github.run_attempt }}
+  ARTIFACT_NAME: manual-patch-verification-${{ github.run_id }}-${{ github.run_attempt }}
   SOURCE_REF_INPUT: ${{ inputs.source_ref }}
   BASE_BRANCH_INPUT: ${{ inputs.base_branch }}
   MODE_INPUT: ${{ inputs.mode }}
@@ -47,7 +47,7 @@ env:
 
 jobs:
   remediate:
-    name: Forensic discovery and deterministic repair
+    name: Verify candidate source without auto-repair
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     permissions:
@@ -113,58 +113,14 @@ jobs:
       - name: Install PostgreSQL client
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
 
-      - name: Apply deterministic source repairs
-        shell: bash
-        run: |
-          set +e
-          status_file=/tmp/remediation-evidence/repair-status.tsv
-          : > "${status_file}"
-
-          run_repair() {
-            local name="$1"
-            shift
-            echo "=== ${name} ==="
-            "$@"
-            local status=$?
-            printf '%s\t%s\n' "${name}" "${status}" >> "${status_file}"
-            return 0
-          }
-
-          run_repair mobile-source-sync pnpm run mobile:apps:sync
-          run_repair openapi-generation pnpm run openapi:generate
-          run_repair dependency-deduplication pnpm dedupe
-
-          if [[ "${MODE_INPUT}" == "full" ]]; then
-            run_repair eslint-autofix pnpm exec nx run-many -t lint --all --fix --outputStyle=stream
-          else
-            git fetch --no-tags origin "${BASE_BRANCH_INPUT}"
-            export NX_BASE="origin/${BASE_BRANCH_INPUT}"
-            export NX_HEAD=HEAD
-            run_repair eslint-autofix pnpm exec nx affected -t lint --fix --outputStyle=stream
-          fi
-
-          while IFS= read -r module; do
-            module_dir="$(dirname "${module}")"
-            (
-              cd "${module_dir}"
-              go mod tidy
-            )
-            printf '%s\t%s\n' "go-mod-tidy:${module_dir}" "$?" >> "${status_file}"
-          done < <(git ls-files | grep '/go.mod$' | sort)
-
-          mapfile -t go_files < <(git ls-files '*.go')
-          if [[ "${#go_files[@]}" -gt 0 ]]; then
-            gofmt -w "${go_files[@]}"
-            printf '%s\t%s\n' gofmt "$?" >> "${status_file}"
-          fi
-          exit 0
-
       - name: Apply policy-governed records cleanup
         shell: bash
         env:
           BTHWANI_CLEANUP_REPORT: .diagnostics/repository-cleanup/report.json
         run: |
           set +e
+          status_file=/tmp/remediation-evidence/cleanup-status.tsv
+          : > "${status_file}"
           if [[ "${CLEANUP_RECORDS_INPUT}" == "true" ]]; then
             node tools/scripts/apply-repository-cleanup.mjs --apply
             status=$?
@@ -174,7 +130,7 @@ jobs:
             printf '%s\n' '{"schemaVersion":1,"mode":"disabled","deleted":[],"planned":[],"blocked":[]}' \
               > .diagnostics/repository-cleanup/report.json
           fi
-          printf '%s\t%s\n' records-cleanup "${status}" >> /tmp/remediation-evidence/repair-status.tsv
+          printf '%s\t%s\n' records-cleanup "${status}" >> "${status_file}"
           exit 0
 
       - name: Freeze allowed remediation scope
@@ -471,7 +427,7 @@ jobs:
         run: |
           set -euo pipefail
           if jq -e '.verificationPassed == true' /tmp/remediation-evidence/manifest.json >/dev/null; then
-            echo "All covered repair, logic, build, test, database, security, cleanup, and runtime gates passed."
+            echo "All covered verification, logic, build, test, database, security, cleanup, and runtime gates passed."
           else
             echo "::error title=Unresolved code or runtime gaps::Review manifest.json and status TSV files in the remediation artifact."
             exit 1

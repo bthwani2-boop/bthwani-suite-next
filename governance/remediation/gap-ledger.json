@@ -118,16 +118,19 @@
         "ci",
         "governance"
       ],
-      "status": "OPEN",
+      "status": "CLOSED",
       "blocks_journey_start": false,
       "risk_class": "STANDARD",
-      "state": "TRIAGED",
+      "state": "CLOSED",
       "verification_profile": "STATIC_SCOPED",
       "blocked_reason": "",
       "priority": "P1",
       "discovered_at": "2026-07-26",
       "evidence": [
-        ".github/workflows/remediation-analysis.yml"
+        "governance/remediation/tasks/completed/GAP-0002.json",
+        "governance/remediation/iterations/GAP-0002/01.json",
+        ".diagnostics/remediation/evidence/GAP-0002/static-results.txt",
+        ".diagnostics/remediation/evidence/GAP-0002/patch.diff"
       ]
     },
     {

@@ -271,13 +271,13 @@
       "id": "remediation-analysis",
       "path": ".github/workflows/remediation-analysis.yml",
       "class": "PRIVILEGED",
-      "name": "BThwani Expert Live-Code Remediation",
+      "name": "BThwani Manual Patch Verification",
       "triggers": ["workflow_dispatch"],
       "permissions": { "contents": "read" },
       "mayMutateSource": true,
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
-      "purpose": "Manual patch-only remediation: applies deterministic repairs in the runner, verifies them, and exports a signed patch artifact without any privileged write. Modernization is tracked as GAP-0002.",
+      "purpose": "Manual patch verification: verifies whatever is already at the requested source_ref (typically a task's already-repaired branch) against the full logic, contract, build, test, database, security, and runtime gates, applies only the pre-existing policy-governed records cleanup, and exports a signed evidence patch artifact without any privileged write. GAP-0002 (wave R) removed every general auto-repair step (mobile source sync, OpenAPI generation, dependency dedupe, lint --fix, go mod tidy, gofmt) that previously ran before verification.",
       "gapId": "GAP-0002"
     }
   ]

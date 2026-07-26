@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 1,
+  "task": {
+    "id": "GAP-0002",
+    "title": "Modernize remediation-analysis.yml to manual patch verification (remove general auto-repair)",
+    "class": "WORKFLOW",
+    "priority": "P1",
+    "status": "CLOSED"
+  },
+  "source": {
+    "repository": "bthwani2-boop/bthwani-suite-next",
+    "workBranch": "reemsam",
+    "baseSha": "eab7d8f0d366f7a5ae25f430ddb195d37c5c2270",
+    "contractHash": "sha256:81569d8f91bb1d8dde68af064e9cec0fc81219680d181ad6636fe7e95e2c7501",
+    "frozenAt": "2026-07-26T05:00:00Z"
+  },
+  "problem": {
+    "statement": "The privileged remediation workflow ran broad, general-purpose auto-repair (mobile source sync, OpenAPI generation, dependency dedupe, ESLint --fix, go mod tidy, gofmt) across the whole checked-out tree before any verification, instead of the scoped task-based verification the progressive remediation system now provides. It predated wave P0 and was frozen, not modernized, while the foundation was built.",
+    "evidenceState": "PROVEN",
+    "evidence": [
+      {
+        "path": ".github/workflows/remediation-analysis.yml",
+        "note": "Formerly contained an 'Apply deterministic source repairs' step running mobile:apps:sync, openapi:generate, pnpm dedupe, nx lint --fix, go mod tidy, and gofmt -w before verification."
+      },
+      {
+        "path": "governance/remediation/gap-ledger.json",
+        "note": "GAP-0002 recorded WORKFLOW_MODERNIZATION_REQUIRED with allowed_decision FIX_REQUIRED and the nine target files, blocked until wave P0-E closed and a real task passed through the new system (GAP-0003)."
+      }
+    ],
+    "rootCauseHypothesis": [
+      "The workflow was written before the progressive remediation system existed and combined auto-repair and verification in one privileged, secrets-free, manually-triggered job; now that scoped task-*.yml verification workflows and the orchestrator exist, the auto-repair half is redundant and inconsistent with 'no general auto-repair' governance, so it is removed and the workflow is renamed to reflect its narrowed, verification-only purpose."
+    ]
+  },
+  "product": {
+    "journey": "ci-governance",
+    "actors": ["ci"],
+    "includedSurfaces": ["repository"],
+    "excludedSurfaces": []
+  },
+  "behavior": {
+    "current": [
+      "remediation-analysis.yml ran mobile:apps:sync, openapi:generate, pnpm dedupe, nx lint --fix (full or affected), a go.mod-tidy loop, and gofmt -w across the whole checked-out tree before any verification step."
+    ],
+    "required": [
+      "remediation-analysis.yml (BThwani Manual Patch Verification) verifies whatever is already at the requested source_ref — typically a task branch already repaired through the progressive remediation system — against the full logic, contract, build, test, database, security, and runtime gates, applying only the pre-existing policy-governed records cleanup."
+    ],
+    "forbidden": [
+      "Reintroducing any general auto-repair step (mobile source sync, OpenAPI generation, dependency dedupe, lint --fix, go mod tidy, gofmt) into remediation-analysis.yml.",
+      "Breaking the marker set checked by required-command-integrity-gate.mjs, guard-registry-gate.mjs, or check-ci-source-immutability.mjs without updating all of them together in the same change."
+    ]
+  },
+  "scope": {
+    "allowedPaths": [
+      ".github/workflows/remediation-analysis.yml",
+      "tools/guards/required-command-integrity-gate.mjs",
+      "tools/guards/guard-registry-gate.mjs",
+      "tools/scripts/check-ci-source-immutability.mjs",
+      "tools/scripts/check-ci-source-immutability.test.mjs",
+      "governance/cleanup/repository-retention-policy.json",
+      "governance/github/remediation-branch-return-policy.json",
+      "governance/github/workflow-registry.json",
+      "docs/ci-governance-required-checks.md"
+    ],
+    "forbiddenPaths": [
+      "services/**",
+      "core/**",
+      "apps/**",
+      "shared/**",
+      "contracts/**",
+      ".github/workflows/ci.yml",
+      ".github/workflows/ci-*.yml"
+    ],
+    "maximumChangedFiles": 9,
+    "maximumChangedLines": 150
+  },
+  "dependencies": {
+    "blockedBy": ["GAP-0003"],
+    "blocks": [],
+    "sharedContracts": [],
+    "sharedGeneratedOutputs": []
+  },
+  "agents": {
+    "required": ["ci-governance"],
+    "maximumRepairIterations": 3,
+    "roles": {
+      "diagnosedBy": "ci-governance-diagnosis",
+      "executedBy": "ci-governance-executor",
+      "reviewedBy": "independent-implementation-reviewer"
+    }
+  },
+  "workUnits": [],
+  "proof": {
+    "required": {
+      "static": true,
+      "contract": false,
+      "unit": false,
+      "integration": false,
+      "database": false,
+      "runtime": false,
+      "visual": false,
+      "native": false,
+      "security": false,
+      "tenancy": false,
+      "performance": false,
+      "resilience": false
+    },
+    "commands": [
+      "node tools/guards/required-command-integrity-gate.mjs",
+      "node tools/guards/guard-registry-gate.mjs",
+      "node --test tools/scripts/check-ci-source-immutability.test.mjs",
+      "pnpm run guard:governance-schema",
+      "pnpm run guard:workflow-lint",
+      "pnpm run guard:actions-pin"
+    ],
+    "scenarios": [
+      { "id": "no-general-auto-repair-markers-remain" },
+      { "id": "remediation-workflow-name-and-markers-consistent-across-guards" }
+    ]
+  },
+  "acceptance": [
+    {
+      "id": "AC-001",
+      "statement": "remediation-analysis.yml no longer runs any general auto-repair step (mobile source sync, OpenAPI generation, dependency dedupe, lint --fix, go mod tidy, gofmt).",
+      "evidenceRequired": ["static"]
+    },
+    {
+      "id": "AC-002",
+      "statement": "required-command-integrity-gate.mjs, guard-registry-gate.mjs, and check-ci-source-immutability.mjs (plus its unit test) all pass against the modernized workflow with a consistent marker set.",
+      "evidenceRequired": ["static"]
+    },
+    {
+      "id": "AC-003",
+      "statement": "governance/github/workflow-registry.json and docs/ci-governance-required-checks.md accurately describe the modernized workflow's name, permissions, and no-auto-repair purpose.",
+      "evidenceRequired": ["static"]
+    }
+  ],
+  "cleanup": {
+    "temporaryPaths": [],
+    "expectedArchivedPaths": [],
+    "archivePaths": []
+  },
+  "approval": {
+    "protectedDomains": [".github/workflows/remediation-analysis.yml"],
+    "humanApprovalRequired": true
+  },
+  "budget": {
+    "maxJobs": 1,
+    "maxRuntimeMinutes": 20,
+    "maxAgentIterations": 3,
+    "maxChangedFiles": 9,
+    "maxChangedLines": 150,
+    "maxArtifactsMb": 5,
+    "maxFullScans": 0
+  },
+  "confidence": {
+    "productModel": "NOT_APPLICABLE",
+    "static": "PROVEN",
+    "contract": "NOT_APPLICABLE",
+    "database": "NOT_APPLICABLE",
+    "runtime": "NOT_APPLICABLE",
+    "visual": "NOT_APPLICABLE",
+    "native": "NOT_APPLICABLE",
+    "security": "NOT_APPLICABLE",
+    "tenancy": "NOT_APPLICABLE",
+    "finance": "NOT_APPLICABLE",
+    "performance": "NOT_APPLICABLE",
+    "resilience": "NOT_APPLICABLE",
+    "recovery": "NOT_APPLICABLE"
+  }
+}

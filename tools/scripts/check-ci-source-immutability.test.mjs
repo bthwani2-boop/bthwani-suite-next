@@ -7,20 +7,19 @@ function ids(content, relative) {
 }
 
 const validRemediation = `
-name: BThwani Expert Live-Code Remediation
+name: BThwani Manual Patch Verification
 on:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   remediate:
-    name: Forensic discovery and deterministic repair
+    name: Verify candidate source without auto-repair
     steps:
       - uses: actions/checkout@0123456789012345678901234567890123456789
         with:
           persist-credentials: false
       - run: git restore --source=HEAD -- .github
-      - run: pnpm exec nx run-many -t lint --all --fix
       - run: echo patch_sha256
       - run: echo Unapproved deletion rejected
       - run: echo Protected deletion rejected

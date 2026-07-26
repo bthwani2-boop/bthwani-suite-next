@@ -66,10 +66,10 @@ function rejectMarkers(relativePath, content, markers) {
 
 function verifyRemediationBoundary(content) {
   requireMarkers(remediationRelative, [
-    "name: BThwani Expert Live-Code Remediation",
+    "name: BThwani Manual Patch Verification",
     "workflow_dispatch:",
     "permissions:\n  contents: read",
-    "Forensic discovery and deterministic repair",
+    "Verify candidate source without auto-repair",
     "Logic, binding, duplication, and repository integrity",
     "Type, lint, test, and build verification",
     "backend and database",
