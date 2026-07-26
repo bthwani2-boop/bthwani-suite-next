@@ -25,6 +25,10 @@ export {
   useFieldVerificationController,
 } from "./use-field-readiness-controller";
 export {
+  configureFieldOfflineQueueStorage,
+  configureFieldOfflineQueueScope,
+  prepareFieldOfflineQueue,
+  clearFieldOfflineQueue,
   enqueueFieldOperation,
   markOperationSynced,
   markOperationFailed,
@@ -35,6 +39,8 @@ export {
   recoverCorruptFieldOfflineQueue,
 } from "./field-offline-queue";
 export type {
+  FieldOfflineQueueScope,
+  FieldOfflineQueueStorageAdapter,
   FieldOfflineOperation,
   FieldOfflineOperationType,
   FieldOfflineOperationStatus,
