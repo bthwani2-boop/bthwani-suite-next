@@ -23,20 +23,6 @@ const storeColumns = `id, COALESCE(partner_id,''), slug, display_name, status, c
 	COALESCE(interior_photo_ref,''), COALESCE(signage_photo_ref,''),
 	created_at, updated_at`
 
-const publicStorePredicate = `is_visible = true
-	AND status = 'active'
-	AND serviceability_status IN ('serviceable','limited')
-	AND partner_readiness = 'ready'
-	AND catalog_approval_status = 'approved'
-	AND marketing_visibility = 'visible'
-	AND cardinality(delivery_modes) > 0
-	AND btrim(COALESCE(address_line,'')) <> ''
-	AND btrim(COALESCE(coverage_summary,'')) <> ''
-	AND btrim(COALESCE(operating_hours,'')) <> ''
-	AND delivery_readiness = 'ready'
-	AND btrim(COALESCE(hero_image_url,'')) <> ''
-	AND btrim(COALESCE(logo_url,'')) <> ''`
-
 func scanStore(scanner interface{ Scan(...any) error }) (DshStoreRow, error) {
 	var row DshStoreRow
 	err := scanner.Scan(
@@ -67,7 +53,7 @@ func ListAllStores(db *sql.DB, q DshStoreListQuery) (DshStoreListResult, error) 
 func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListResult, error) {
 	conditions := []string{}
 	if publicOnly {
-		conditions = append(conditions, "("+publicStorePredicate+")")
+		conditions = append(conditions, "("+ClientStorefrontPredicate("dsh_stores")+")")
 	}
 	params := []any{}
 	idx := 1
@@ -129,7 +115,7 @@ func listStores(db *sql.DB, q DshStoreListQuery, publicOnly bool) (DshStoreListR
 
 func GetStoreByID(db *sql.DB, storeID string) (*DshStoreRow, error) {
 	row, err := scanStore(db.QueryRow("SELECT "+storeColumns+` FROM dsh_stores
-		WHERE id = $1 AND (`+publicStorePredicate+`)`, storeID))
+		WHERE id = $1 AND (`+ClientStorefrontPredicate("dsh_stores")+`)`, storeID))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
