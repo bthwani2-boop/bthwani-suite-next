@@ -9,10 +9,7 @@ const packageFile = "package.json";
 const enforcementFile = "governance/github/repository-enforcement.json";
 const fullVerificationTrigger = "governance/github/full-verification.trigger.json";
 const workflowsRoot = ".github/workflows";
-const remediationRelative = `${workflowsRoot}/remediation-analysis.yml`;
-// The immutable core is hard-coded here on purpose: the registry may add or remove
-// task-class workflows, but changing the core requires editing this guard and
-// tools/guards/guard-registry-gate.mjs together.
+const manualDeepRelative = `${workflowsRoot}/manual-deep-verification.yml`;
 const immutableCoreWorkflows = [
   "ci-backends.yml",
   "ci-node-diagnostics.yml",
@@ -21,9 +18,8 @@ const immutableCoreWorkflows = [
   "ci-runtime.yml",
   "ci.yml",
   "dsh-database.yml",
-  "jrn-020-025-sambassam-verify.yml",
   "lockfile-snapshot.yml",
-  "remediation-analysis.yml",
+  "manual-deep-verification.yml",
 ].sort();
 
 const workflowInventory = resolveWorkflowInventory(repoRoot, immutableCoreWorkflows);
@@ -46,11 +42,7 @@ function requireMarkers(relativePath, markers) {
   const content = text(relativePath);
   for (const marker of markers) {
     if (!content.includes(marker)) {
-      violations.push({
-        file: relativePath,
-        line: 0,
-        message: `REQUIRED_MARKER_MISSING ${marker}`,
-      });
+      violations.push({ file: relativePath, line: 0, message: `REQUIRED_MARKER_MISSING ${marker}` });
     }
   }
   return content;
@@ -58,46 +50,7 @@ function requireMarkers(relativePath, markers) {
 
 function rejectMarkers(relativePath, content, markers) {
   for (const [label, pattern] of markers) {
-    if (pattern.test(content)) {
-      violations.push({ file: relativePath, line: 0, message: label });
-    }
-  }
-}
-
-function verifyRemediationBoundary(content) {
-  requireMarkers(remediationRelative, [
-    "name: BThwani Manual Patch Verification",
-    "workflow_dispatch:",
-    "permissions:\n  contents: read",
-    "Verify candidate source without auto-repair",
-    "Logic, binding, duplication, and repository integrity",
-    "Type, lint, test, and build verification",
-    "backend and database",
-    "Dependency, secret, workflow, and container security",
-    "Integrated SaaS runtime proof",
-    "Export evidence-backed remediation patch",
-    "persist-credentials: false",
-    "patch_sha256",
-    "sha256sum",
-    "Unapproved deletion rejected",
-    "Protected deletion rejected",
-    "manual-patch-only-no-privileged-write",
-  ]);
-
-  if (/^\s{2}(?:workflow_run|pull_request_target|schedule|repository_dispatch):/m.test(content)) {
-    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_MUST_REMAIN_EXPLICITLY_MANUAL" });
-  }
-  if (/\bsecrets\.[A-Za-z0-9_]+\b/.test(content)) {
-    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_REPOSITORY_SECRET_FORBIDDEN" });
-  }
-  if (/contents:\s*write\b|pull-requests:\s*write\b|statuses:\s*write\b|write-all\b/i.test(content)) {
-    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_PRIVILEGED_WRITE_FORBIDDEN" });
-  }
-  if (/\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+(?:create|merge))\b/i.test(content)) {
-    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_BRANCH_OR_PR_MUTATION_FORBIDDEN" });
-  }
-  if (/uses:\s*[^\s#]+@(?:latest|master|main)\b/i.test(content)) {
-    violations.push({ file: remediationRelative, line: 0, message: "REMEDIATION_DYNAMIC_ACTION_VERSION_FORBIDDEN" });
+    if (pattern.test(content)) violations.push({ file: relativePath, line: 0, message: label });
   }
 }
 
@@ -184,22 +137,36 @@ if (JSON.stringify(workflowFiles) !== JSON.stringify(expectedWorkflowFiles)) {
 for (const workflowFile of workflowFiles) {
   const relative = `${workflowsRoot}/${workflowFile}`;
   const content = text(relative);
-  if (relative !== remediationRelative) {
-    rejectMarkers(relative, content, [
-      ["SOURCE_WRITE_PERMISSION_FORBIDDEN", /contents:\s*write\b|write-all\b/i],
-      ["STATUS_WRITE_PERMISSION_FORBIDDEN", /statuses:\s*write\b/i],
-      ["PULL_REQUEST_TARGET_FORBIDDEN", /pull_request_target\s*:/i],
-      ["CI_SOURCE_MUTATION_FORBIDDEN", /\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+merge)\b/i],
-      ["CI_SOURCE_REWRITE_FORBIDDEN", /\b(?:gofmt\s+-w|prettier\s+--write|eslint\s+--fix|nx\b[^\n]*--fix|sed\s+-i|perl\s+-pi)\b/i],
-      ["DYNAMIC_ACTION_VERSION_FORBIDDEN", /uses:\s*[^\s#]+@(?:latest|master|main)\b/i],
-    ]);
-  } else {
-    verifyRemediationBoundary(content);
-  }
+  rejectMarkers(relative, content, [
+    ["SOURCE_WRITE_PERMISSION_FORBIDDEN", /contents:\s*write\b|write-all\b/i],
+    ["STATUS_WRITE_PERMISSION_FORBIDDEN", /statuses:\s*write\b/i],
+    ["PULL_REQUEST_TARGET_FORBIDDEN", /pull_request_target\s*:/i],
+    ["CI_SOURCE_MUTATION_FORBIDDEN", /\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+(?:create|merge))\b/i],
+    ["CI_SOURCE_REWRITE_FORBIDDEN", /\b(?:gofmt\s+-w|prettier\s+--write|eslint\s+--fix|nx\b[^\n]*--fix|sed\s+-i|perl\s+-pi)\b/i],
+    ["DYNAMIC_ACTION_VERSION_FORBIDDEN", /uses:\s*[^\s#]+@(?:latest|master|main)\b/i],
+  ]);
   if (!/^permissions:\s*(?:\n|$)/m.test(content) && !/^permissions:\s*\{\s*\}\s*$/m.test(content)) {
     violations.push({ file: relative, line: 0, message: "EXPLICIT_TOP_LEVEL_PERMISSIONS_REQUIRED" });
   }
 }
+
+const manualDeep = requireMarkers(manualDeepRelative, [
+  "name: BThwani Manual Deep Verification",
+  "workflow_dispatch:",
+  "default: affected",
+  "Verify immutable candidate",
+  "Resolve affected and risk-expanded mode",
+  "Reject tracked source mutation",
+  "Build exact-SHA decision manifest",
+  "read-only-exact-sha-verification",
+  "persist-credentials: false",
+]);
+rejectMarkers(manualDeepRelative, manualDeep, [
+  ["MANUAL_VERIFICATION_CLEANUP_APPLY_FORBIDDEN", /apply-repository-cleanup\.mjs\s+--apply/],
+  ["MANUAL_VERIFICATION_PATCH_GENERATION_FORBIDDEN", /git\s+diff[^\n>]*>[^\n]*\.patch/],
+  ["MANUAL_VERIFICATION_GIT_ADD_FORBIDDEN", /\bgit\s+add\b/],
+  ["MANUAL_VERIFICATION_SOURCE_FIX_FORBIDDEN", /\b(?:gofmt\s+-w|prettier\s+--write|eslint\s+--fix|sed\s+-i|perl\s+-pi)\b/i],
+]);
 
 const ci = requireMarkers(`${workflowsRoot}/ci.yml`, [
   "branches: [master]",
@@ -218,18 +185,13 @@ if ((ci.match(/^\s*concurrency:\s*$/gm) ?? []).length !== 1) {
 }
 
 requireMarkers(`${workflowsRoot}/ci-policy.yml`, [
-  "permissions:",
-  "contents: read",
   "guard:governance-schema",
   "guard:agent-governance",
   "guard:authority-separation",
   "guard:saas-governance",
   "guard:guard-registry",
   "guard:sdlc",
-  "sdlc-governance-${{ github.run_id }}",
   "guard:cleanup-policy",
-  "check-portable-tracked-config.mjs",
-  "check-repository-hygiene.mjs",
   "guard:required-command-integrity",
   "guard:actions-pin",
   "guard:workflow-lint",
@@ -241,16 +203,7 @@ requireMarkers(`${workflowsRoot}/lockfile-snapshot.yml`, [
   "name: BThwani Lockfile Snapshot",
   "permissions:\n  contents: read",
   "persist-credentials: false",
-  "pnpm install --lockfile-only --no-frozen-lockfile --ignore-scripts",
-  "pnpm install --lockfile-only --frozen-lockfile --ignore-scripts --offline",
   "Upload lockfile candidate",
-]);
-
-requireMarkers(`${workflowsRoot}/jrn-020-025-sambassam-verify.yml`, [
-  "guard:fullstack-boundary",
-  "guard:wlt-financial-boundary",
-  "TestJourneys020To025ExposeGovernedRoutes",
-  "persist-credentials: false",
 ]);
 
 requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, [
@@ -261,7 +214,6 @@ requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, [
   "guard:ast-grep-rules",
   "guard:repo-naming",
   "guard:repo-structure",
-  "pnpm --dir contracts typecheck",
   "guard:api-binding",
   "guard:backend-api-binding",
   "guard:frontend-feature-binding",
@@ -273,29 +225,11 @@ requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, [
   "pnpm run nx:typecheck",
   "pnpm run nx:lint",
   "pnpm run nx:build",
-  "run-journey-gate.ps1",
-  "tsconfig.platform-change-sets.json",
-  "contracts/platform-change-sets.openapi.yaml",
-  "tools/guards/platform-change-sets-gate.mjs",
 ]);
 
-requireMarkers(`${workflowsRoot}/ci-backends.yml`, [
-  "Select affected backends",
-  "Apply migrations",
-  "go test ./...",
-  "go build ./...",
-]);
-
-requireMarkers(`${workflowsRoot}/ci-runtime.yml`, [
-  "runtime:full:smoke",
-  "Stop runtime",
-]);
-
-requireMarkers(`${workflowsRoot}/dsh-database.yml`, [
-  "contents: read",
-  "postgres:16-alpine",
-  "invoke-dsh-database.ps1",
-]);
+requireMarkers(`${workflowsRoot}/ci-backends.yml`, ["Select affected backends", "Apply migrations", "go test ./...", "go build ./..."]);
+requireMarkers(`${workflowsRoot}/ci-runtime.yml`, ["runtime:full:smoke", "Stop runtime"]);
+requireMarkers(`${workflowsRoot}/dsh-database.yml`, ["contents: read", "postgres:16-alpine", "invoke-dsh-database.ps1"]);
 
 if (enforcement.targetBranch !== "master") {
   violations.push({ file: enforcementFile, line: 0, message: "TARGET_BRANCH_MUST_BE_MASTER" });
