@@ -86,17 +86,29 @@ if ($Force) { $runtimeParameters.Force = $true }
 try {
   Set-Location -LiteralPath $RepoRoot
   & $RuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath
+  if ($LASTEXITCODE -ne 0) {
+    throw "Runtime script action '$Action' failed with exit code $LASTEXITCODE"
+  }
 
-  # A normal unified full-stack startup must converge the sovereign DSH catalog,
-  # not merely start containers. This closes the fresh/persisted-volume gap where
-  # taxonomy rows existed while master products and store assortments remained
-  # absent until an operator manually ran the seed script.
+  # Development catalog convergence has a governed prerequisite: the canonical
+  # local seeds must create baseline stores and WLT references before store-level
+  # catalog bindings can be upserted. Running the complete selected-profile seed
+  # phase avoids partial, order-dependent SQL execution on fresh volumes.
   if ($Action -eq "up" -and $ProfileList -contains "dsh") {
+    Write-Host "`n=== runtime:seed-prerequisites ==="
+    & $RuntimeScript -Action seed -Profiles $Profiles 2>&1 | Tee-Object -FilePath $LogPath -Append
+    if ($LASTEXITCODE -ne 0) {
+      throw "Runtime seed prerequisites failed with exit code $LASTEXITCODE"
+    }
+
     if (-not (Test-Path -LiteralPath $CatalogSeedScript)) {
       throw "Central catalog convergence script not found: $CatalogSeedScript"
     }
     Write-Host "`n=== runtime:catalog-convergence ==="
     & $CatalogSeedScript 2>&1 | Tee-Object -FilePath $LogPath -Append
+    if ($LASTEXITCODE -ne 0) {
+      throw "Central catalog convergence failed with exit code $LASTEXITCODE"
+    }
   }
 
   Publish-RuntimeStatus -State success -Description "runtime $Action passed"
