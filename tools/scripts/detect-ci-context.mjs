@@ -111,34 +111,20 @@ export function classifyFiles(inputFiles, options = {}) {
     }
   }
 
-  const journey = full || Boolean(manualJourney) || journeyIds.size > 0 || sharedBrain || has((file) =>
+  const productJourneyGovernance = has((file) =>
     file.startsWith("governance/product/") ||
     file.startsWith("governance/product-truth/") ||
     file.startsWith("governance/evidence/") ||
     /tools\/guards\/jrn[-_]?\d{3}/i.test(file) ||
     file === "tools/scripts/run-journey-gate.ps1"
   );
+  const journey = full || Boolean(manualJourney) || journeyIds.size > 0 || productJourneyGovernance;
 
   const jrn040 = manualJourney === "JRN-040" || journeyIds.has("JRN-040") || has((file) =>
     /jrn[-_]?040/i.test(file) ||
     file === "services/dsh/tsconfig.jrn-040.json" ||
     file === "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
   );
-
-  const heavy = full || mobileTooling || workspaceManifest || sharedBrain || database || runtime || (contracts && frontend);
-  const policy = governance || workflow || infrastructure || security;
-  const node = frontend || contracts || journey || jrn040;
-
-  let journeyScope = "";
-  if (full) {
-    journeyScope = "PROJECT-WIDE";
-  } else if (manualJourney) {
-    journeyScope = manualJourney;
-  } else if (journeyIds.size > 0) {
-    journeyScope = uniqueSorted([...journeyIds]).join(",");
-  } else if (sharedBrain) {
-    journeyScope = "PROJECT-WIDE";
-  }
 
   // Progressive remediation system outputs (governance/remediation/**, spec S6.2).
   const remediationGovernanceChanged = full || starts("governance/remediation/");
@@ -172,6 +158,24 @@ export function classifyFiles(inputFiles, options = {}) {
     /observability/i.test(file) || /\botel\b/i.test(file) || /(^|\/)tracing\//i.test(file)
   );
 
+  const policy = governance || workflow || infrastructure || security;
+  const node = frontend || contracts || journey || jrn040;
+  const backendChanged = dsh || wlt || identity || workforce || platform || providers;
+  const deepRisk = full || workflow || security || infrastructure || workspaceManifest || mobileTooling || runtimeTooling || financialChanged || migrationChanged || tenantIsolationChanged || nativeChanged || recoveryChanged;
+  const standardRisk = deepRisk || policy || sharedBrain || database || contracts || backendChanged || journey;
+  const verificationTier = deepRisk ? "deep" : standardRisk ? "standard" : "fast";
+  const heavy = verificationTier === "deep";
+  const diagnostics = full || contracts || (frontend && verificationTier !== "fast");
+
+  let journeyScope = "";
+  if (full || productJourneyGovernance) {
+    journeyScope = "PROJECT-WIDE";
+  } else if (manualJourney) {
+    journeyScope = manualJourney;
+  } else if (journeyIds.size > 0) {
+    journeyScope = uniqueSorted([...journeyIds]).join(",");
+  }
+
   const nodeScope = uniqueSorted([
     frontend ? "frontend" : "",
     contracts ? "contracts" : "",
@@ -202,6 +206,8 @@ export function classifyFiles(inputFiles, options = {}) {
     runtime,
     shared_brain: sharedBrain,
     heavy,
+    verification_tier: verificationTier,
+    diagnostics,
     jrn040,
     platform_change_sets: jrn040,
     task_contract_changed: taskContractChanged,
