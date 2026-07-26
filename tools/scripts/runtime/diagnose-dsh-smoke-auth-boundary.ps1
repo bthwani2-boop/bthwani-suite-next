@@ -191,6 +191,7 @@ foreach ($transition in @(
   $transitionBody = @{
     nextStatus = $transition.Name
     note = $transition.Note
+    expectedVersion = [int]$proposal.proposal.version
   } | ConvertTo-Json
   $proposal = Invoke-CheckedJsonRequest `
     -Name "dsh-catalog-transition-$($transition.Name)" `
