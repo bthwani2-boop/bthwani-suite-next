@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fail, repoRoot } from "./_guard-utils.mjs";
+import { recordedChangedPaths } from "../remediation/scope/recorded-changed-paths.mjs";
 
 const guardId = "scope-expansion-gate";
 const violations = [];
@@ -44,7 +45,9 @@ for (const bucket of ["active", "blocked"]) {
     const relative = `${remediationRoot}/tasks/${bucket}/${entry}`;
     const contract = readJson(relative);
     if (!contract?.source?.baseSha || !contract?.scope) continue;
-    const changed = changedFilesSince(contract.source.baseSha);
+    const taskId = contract.task?.id ?? entry.replace(/\.json$/, "");
+    const recorded = recordedChangedPaths(repoRoot, taskId);
+    const changed = recorded.length > 0 ? recorded : changedFilesSince(contract.source.baseSha);
     if (changed === undefined) {
       violations.push({ file: relative, line: 0, message: `BASE_SHA_UNREACHABLE ${contract.source.baseSha}` });
       continue;

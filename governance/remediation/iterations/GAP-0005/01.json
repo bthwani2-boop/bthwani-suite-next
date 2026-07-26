@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "iterationId": "GAP-0005-I01",
+  "taskId": "GAP-0005",
+  "iteration": 1,
+  "loop": "GAP_CLOSURE",
+  "sourceSha": "1d5982fe5efa8ef2697c32648bbf1c61b0555fbc",
+  "hypothesis": {
+    "statement": "enforce-allowed-paths.mjs and scope-expansion-gate.mjs both false-positive on a shared work branch because they diff baseSha...HEAD, which includes every unrelated commit landed since baseSha; preferring the union of a task's recorded execution.changedPaths across its iteration records, falling back to the commit-range diff only when no iteration has run yet, removes the false positives without requiring per-task branch isolation.",
+    "evidence": [
+      "governance/remediation/iterations/GAP-0003/02.json",
+      "tools/remediation/scope/enforce-allowed-paths.mjs",
+      "tools/guards/scope-expansion-gate.mjs"
+    ],
+    "hash": "sha256:56c98208bdf7c91e164c2bd1f46843a68aec53433af5d23dce535b6792958500",
+    "failureFingerprint": "STALE_EVIDENCE:scope-tool-branch-isolation-assumption"
+  },
+  "plan": {
+    "planHash": "sha256:f8b550e1c6c7b9b3998ab6bc2c7b6e300539fb6d23aaf1a965f4b854b32431e4",
+    "intendedChanges": [
+      "Add tools/remediation/scope/recorded-changed-paths.mjs that unions execution.changedPaths across a task's iteration directory (governance/remediation/iterations/<taskId>/*.json), with unit tests.",
+      "Wire recordedChangedPaths as the preferred file list in enforce-allowed-paths.mjs, falling back to the existing baseSha...HEAD diff when no iteration has run yet.",
+      "Wire the same preference into scope-expansion-gate.mjs per scanned task contract.",
+      "Verify GAP-0003's completed contract (the task that originally surfaced 13 false violations) now passes with zero violations, and that the BASE_SHA_UNREACHABLE fallback still fires for a task with no recorded iterations and an unreachable baseSha."
+    ],
+    "expectedOutcomes": [
+      "node --test tools/remediation/scope/recorded-changed-paths.test.mjs: all pass",
+      "pnpm run guard:scope-expansion exits 0",
+      "node tools/remediation/scope/enforce-allowed-paths.mjs governance/remediation/tasks/completed/GAP-0003.json exits 0 with PASS"
+    ],
+    "forbiddenChanges": [
+      "Weakening or removing the scope check itself.",
+      "Requiring per-task branch isolation as a precondition for this fix."
+    ],
+    "workUnitIds": [],
+    "budget": {
+      "maxAgentIterations": 3
+    }
+  },
+  "execution": {
+    "agentRole": "FOUNDATION_EXECUTOR",
+    "capabilityTier": "T1_BALANCED",
+    "changedPaths": [
+      "tools/remediation/scope/recorded-changed-paths.mjs",
+      "tools/remediation/scope/recorded-changed-paths.test.mjs",
+      "tools/remediation/scope/enforce-allowed-paths.mjs",
+      "tools/guards/scope-expansion-gate.mjs"
+    ],
+    "patchHash": "sha256:9197dfaaa15d3e369cfdc75b189df778f35d0a21049d27f91f97c3597442fdfe"
+  },
+  "observation": {
+    "checks": [
+      {
+        "command": "node --test tools/remediation/scope/recorded-changed-paths.test.mjs",
+        "before": "NOT_RUN",
+        "after": "PASS",
+        "exitCode": 0,
+        "evidenceRef": ".diagnostics/remediation/evidence/GAP-0005/static-results.txt",
+        "evidenceSha256": "sha256:b85d82725815bc03fd6b37e4e18f444d25be0408cbcad74907d7ef3e9305261a"
+      },
+      {
+        "command": "pnpm run guard:scope-expansion",
+        "before": "PASS",
+        "after": "PASS",
+        "exitCode": 0,
+        "evidenceRef": ".diagnostics/remediation/evidence/GAP-0005/static-results.txt",
+        "evidenceSha256": "sha256:b85d82725815bc03fd6b37e4e18f444d25be0408cbcad74907d7ef3e9305261a"
+      },
+      {
+        "command": "node tools/remediation/scope/enforce-allowed-paths.mjs governance/remediation/tasks/completed/GAP-0003.json",
+        "before": "FAIL",
+        "after": "PASS",
+        "exitCode": 0,
+        "evidenceRef": ".diagnostics/remediation/evidence/GAP-0005/static-results.txt",
+        "evidenceSha256": "sha256:b85d82725815bc03fd6b37e4e18f444d25be0408cbcad74907d7ef3e9305261a"
+      }
+    ],
+    "unexpectedResults": []
+  },
+  "evaluation": {
+    "acceptanceDelta": 3,
+    "failedGatesBefore": 1,
+    "failedGatesAfter": 0,
+    "regressionCount": 0,
+    "scopeViolationCount": 0,
+    "unexpectedDeletionCount": 0,
+    "convergence": "IMPROVING"
+  },
+  "diagnosis": {
+    "hypothesisConfirmed": true,
+    "newFindings": [
+      "guard-registry-gate.mjs's remediation-file exception is path-based, not name-based, so it needed no change for Wave R; by contrast these two scope tools key entirely off a commit-range diff, which is why they broke under a shared work branch while guard-registry-gate.mjs did not."
+    ],
+    "rootCauseState": "CONFIRMED"
+  },
+  "improve": {
+    "missingGuards": [],
+    "regressionTestsNeeded": [],
+    "reusableRepairScripts": [],
+    "blindSpotsFound": [
+      "Real per-task branch isolation (wave P0-E's Agent Controller, still human-gated) remains the more complete long-term fix; recordedChangedPaths is a correct and sufficient interim fix for the current shared-work-branch operating mode, but it depends on the executor accurately recording execution.changedPaths in every iteration, which is currently a convention, not itself schema-enforced against the actual git diff."
+    ]
+  },
+  "decision": {
+    "status": "PASS"
+  },
+  "antiThrash": {
+    "priorHypothesisHashes": [],
+    "priorPatchHashes": [],
+    "priorFailureFingerprints": [
+      "STALE_EVIDENCE:scope-tool-branch-isolation-assumption"
+    ]
+  }
+}

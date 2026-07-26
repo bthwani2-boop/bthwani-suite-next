@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "task": {
+    "id": "GAP-0005",
+    "title": "Fix the shared-work-branch false positive in enforce-allowed-paths.mjs and scope-expansion-gate.mjs",
+    "class": "GOVERNANCE",
+    "priority": "P2",
+    "status": "CLOSED"
+  },
+  "source": {
+    "repository": "bthwani2-boop/bthwani-suite-next",
+    "workBranch": "reemsam",
+    "baseSha": "1d5982fe5efa8ef2697c32648bbf1c61b0555fbc",
+    "contractHash": "sha256:3b3a70b9b0a0aebf5fb9bdd488e394d109c3c8bc28bd056ce6eda49c3a7cde50",
+    "frozenAt": "2026-07-26T06:00:00Z"
+  },
+  "problem": {
+    "statement": "enforce-allowed-paths.mjs and scope-expansion-gate.mjs both computed a task's changed files as `git diff source.baseSha...HEAD`, which is only accurate when the task's repair runs on an isolated child branch created at baseSha. Discovered while closing GAP-0003 (iteration 2): because tasks were repaired directly on the shared work branch (no per-task branch automation exists yet outside the human-gated Agent Controller), every unrelated commit landed on the branch since baseSha showed up as a false OUTSIDE_ALLOWED_PATHS / scope-expansion violation (13 false violations were observed for GAP-0003's single-file repair).",
+    "evidenceState": "PROVEN",
+    "evidence": [
+      { "path": "governance/remediation/iterations/GAP-0003/02.json", "note": "observation.unexpectedResults documents the 13 false OUTSIDE_ALLOWED_PATHS violations discovered while closing GAP-0003." },
+      { "path": "tools/remediation/scope/enforce-allowed-paths.mjs", "note": "Formerly computed changed files exclusively via changedFiles(contract.source.baseSha), i.e. git diff baseSha...HEAD." },
+      { "path": "tools/guards/scope-expansion-gate.mjs", "note": "Formerly computed changed files exclusively via changedFilesSince(contract.source.baseSha), the same commit-range assumption." }
+    ],
+    "rootCauseHypothesis": [
+      "Both tools assumed the childBranchPattern in progressive-remediation-policy.json (task/<work-branch>/<task-id>-<slug>) was always used, but that branch automation is still human-gated (wave P0-E's Agent Controller role) and was not used for any task closed so far in this session; every task ran directly on the shared work branch reemsam, so a commit-range diff picks up unrelated, already-committed work from other closed tasks."
+    ]
+  },
+  "product": {
+    "journey": "repository-hygiene",
+    "actors": ["foundation"],
+    "includedSurfaces": ["repository"],
+    "excludedSurfaces": []
+  },
+  "behavior": {
+    "current": [
+      "A task's scope check false-positives whenever any other commit lands on the shared work branch after its baseSha, even if that commit belongs to a different, already-closed task."
+    ],
+    "required": [
+      "Both tools prefer the executor's self-declared execution.changedPaths (the union across all of a task's iteration records) as the scope-check source of truth, falling back to the baseSha...HEAD git diff only when no iteration has run yet for that task."
+    ],
+    "forbidden": [
+      "Silencing the false positive by weakening or removing the scope check instead of fixing its diff basis.",
+      "Requiring per-task branch isolation as a precondition for this fix (branch automation remains a separate, larger, human-gated undertaking)."
+    ]
+  },
+  "scope": {
+    "allowedPaths": [
+      "tools/remediation/scope/recorded-changed-paths.mjs",
+      "tools/remediation/scope/recorded-changed-paths.test.mjs",
+      "tools/remediation/scope/enforce-allowed-paths.mjs",
+      "tools/guards/scope-expansion-gate.mjs"
+    ],
+    "forbiddenPaths": [
+      "services/**",
+      "core/**",
+      "apps/**",
+      "shared/**",
+      "contracts/**",
+      ".github/**"
+    ],
+    "maximumChangedFiles": 4,
+    "maximumChangedLines": 250
+  },
+  "dependencies": {
+    "blockedBy": [],
+    "blocks": [],
+    "sharedContracts": [],
+    "sharedGeneratedOutputs": []
+  },
+  "agents": {
+    "required": ["foundation"],
+    "maximumRepairIterations": 3,
+    "roles": {
+      "diagnosedBy": "foundation-diagnosis",
+      "executedBy": "foundation-executor",
+      "reviewedBy": "independent-implementation-reviewer"
+    }
+  },
+  "workUnits": [],
+  "proof": {
+    "required": {
+      "static": true,
+      "contract": false,
+      "unit": true,
+      "integration": false,
+      "database": false,
+      "runtime": false,
+      "visual": false,
+      "native": false,
+      "security": false,
+      "tenancy": false,
+      "performance": false,
+      "resilience": false
+    },
+    "commands": [
+      "node --test tools/remediation/scope/recorded-changed-paths.test.mjs",
+      "pnpm run guard:scope-expansion",
+      "node tools/remediation/scope/enforce-allowed-paths.mjs governance/remediation/tasks/completed/GAP-0003.json"
+    ],
+    "scenarios": [
+      { "id": "recorded-changed-paths-preferred-over-commit-range-diff" },
+      { "id": "gap-0003-no-longer-produces-false-scope-violations" }
+    ]
+  },
+  "acceptance": [
+    {
+      "id": "AC-001",
+      "statement": "enforce-allowed-paths.mjs and scope-expansion-gate.mjs both prefer a task's recorded execution.changedPaths over a baseSha...HEAD commit-range diff whenever iteration records exist.",
+      "evidenceRequired": ["static", "unit"]
+    },
+    {
+      "id": "AC-002",
+      "statement": "Running enforce-allowed-paths.mjs against GAP-0003's completed contract (the task that originally surfaced the 13 false violations) now passes with zero violations.",
+      "evidenceRequired": ["static"]
+    },
+    {
+      "id": "AC-003",
+      "statement": "guard:scope-expansion still fails closed with BASE_SHA_UNREACHABLE for a task with no iteration records and an unreachable baseSha (the pre-existing fallback path is preserved).",
+      "evidenceRequired": ["unit"]
+    }
+  ],
+  "cleanup": {
+    "temporaryPaths": [],
+    "expectedArchivedPaths": [],
+    "archivePaths": []
+  },
+  "approval": {
+    "protectedDomains": [],
+    "humanApprovalRequired": false
+  },
+  "budget": {
+    "maxJobs": 1,
+    "maxRuntimeMinutes": 10,
+    "maxAgentIterations": 3,
+    "maxChangedFiles": 4,
+    "maxChangedLines": 250,
+    "maxArtifactsMb": 1,
+    "maxFullScans": 0
+  },
+  "confidence": {
+    "productModel": "NOT_APPLICABLE",
+    "static": "PROVEN",
+    "contract": "NOT_APPLICABLE",
+    "database": "NOT_APPLICABLE",
+    "runtime": "NOT_APPLICABLE",
+    "visual": "NOT_APPLICABLE",
+    "native": "NOT_APPLICABLE",
+    "security": "NOT_APPLICABLE",
+    "tenancy": "NOT_APPLICABLE",
+    "finance": "NOT_APPLICABLE",
+    "performance": "NOT_APPLICABLE",
+    "resilience": "NOT_APPLICABLE",
+    "recovery": "NOT_APPLICABLE"
+  }
+}

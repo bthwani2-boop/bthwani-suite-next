@@ -240,16 +240,57 @@
       "proof_required": [
         "static"
       ],
-      "status": "OPEN",
+      "status": "CLOSED",
       "blocks_journey_start": false,
       "risk_class": "STANDARD",
-      "state": "TRIAGED",
+      "state": "CLOSED",
       "verification_profile": "STATIC_SCOPED",
       "blocked_reason": "",
       "priority": "P2",
       "discovered_at": "2026-07-26",
       "evidence": [
-        "governance/remediation/iterations/GAP-0003/02.json"
+        "governance/remediation/tasks/completed/GAP-0005.json",
+        "governance/remediation/iterations/GAP-0005/01.json",
+        ".diagnostics/remediation/evidence/GAP-0005/static-results.txt",
+        ".diagnostics/remediation/evidence/GAP-0005/patch.diff"
+      ]
+    },
+    {
+      "gap_id": "GAP-0006",
+      "type": "STALE_EVIDENCE",
+      "path": "tools/remediation/scope/recorded-changed-paths.mjs",
+      "owner": "foundation",
+      "affected_surface": "repository",
+      "affected_journeys": [],
+      "root_cause": "Discovered while closing GAP-0005 (iteration 1, improve.blindSpotsFound): recordedChangedPaths() trusts the executor's self-declared execution.changedPaths in each iteration record as the scope-check source of truth. This is correct and sufficient for the current shared-work-branch operating mode, but it is a convention, not itself schema- or guard-enforced against the actual git diff of the same commit range: a task whose iteration record under-reports its own changedPaths would pass enforce-allowed-paths.mjs / scope-expansion-gate.mjs without detection.",
+      "pattern_group": "scope-tool-self-declared-evidence-trust",
+      "risk_level": "LOW",
+      "required_action": "Add a defense-in-depth cross-check (in remediation-governance-gate.mjs or a new guard) that, for a CLOSED task with a reachable sourceSha, compares the union of recorded execution.changedPaths against the real git diff for that task's own commit(s) and flags a mismatch as NEEDS_EVIDENCE rather than silently trusting the self-report.",
+      "target_files": [
+        "tools/guards/remediation-governance-gate.mjs",
+        "tools/guards/remediation-governance-gate.test.mjs"
+      ],
+      "allowed_decision": "FIX_REQUIRED",
+      "forbidden_actions": [
+        "Removing recordedChangedPaths as the scope-check source of truth (that would reintroduce GAP-0005's shared-work-branch false positives)"
+      ],
+      "verification_commands": [
+        "node --test tools/guards/remediation-governance-gate.test.mjs"
+      ],
+      "proof_required": [
+        "static",
+        "governance"
+      ],
+      "status": "OPEN",
+      "blocks_journey_start": false,
+      "risk_class": "LOW",
+      "state": "TRIAGED",
+      "verification_profile": "STATIC_SCOPED",
+      "blocked_reason": "",
+      "priority": "P3",
+      "discovered_at": "2026-07-26",
+      "evidence": [
+        "governance/remediation/iterations/GAP-0005/01.json"
       ]
     }
   ]
