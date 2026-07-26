@@ -10,11 +10,7 @@ const registryRelative = "governance/guards/guard-registry.json";
 const packageRelative = "package.json";
 const manifestRelative = "tools/guards/guard-manifest.json";
 const workflowsRoot = ".github/workflows";
-const remediationRelative = `${workflowsRoot}/remediation-analysis.yml`;
 const workflowsDir = path.join(repoRoot, workflowsRoot);
-// The immutable core is hard-coded here on purpose: the registry may add or remove
-// task-class workflows, but changing the core requires editing this guard and
-// tools/guards/required-command-integrity-gate.mjs together.
 const immutableCoreWorkflows = [
   "ci-backends.yml",
   "ci-node-diagnostics.yml",
@@ -23,9 +19,8 @@ const immutableCoreWorkflows = [
   "ci-runtime.yml",
   "ci.yml",
   "dsh-database.yml",
-  "jrn-020-025-sambassam-verify.yml",
   "lockfile-snapshot.yml",
-  "remediation-analysis.yml",
+  "manual-deep-verification.yml",
 ].sort();
 
 const workflowInventory = resolveWorkflowInventory(repoRoot, immutableCoreWorkflows);
@@ -105,7 +100,6 @@ const manifest = readJson(manifestRelative);
 const entries = Array.isArray(registry?.entries) ? registry.entries : [];
 const scripts = packageJson?.scripts ?? {};
 const registeredScripts = new Set();
-const registeredSources = new Set();
 const entryById = new Map();
 
 for (const entry of entries) {
@@ -125,7 +119,6 @@ for (const entry of entries) {
 
   const canonicalSource = canonicalSourceById.get(entry.id) ?? entry.source_file;
   if (canonicalSource) {
-    registeredSources.add(canonicalSource);
     if (!fs.existsSync(path.join(repoRoot, canonicalSource))) violations.push({ file: registryRelative, line: 0, message: `MISSING_SOURCE_FILE ${entry.id} -> ${canonicalSource}` });
     if (entry.source_file && entry.source_file !== canonicalSource) warnings.push(`registry source migration pending: ${entry.id} -> ${canonicalSource}`);
   }
@@ -154,11 +147,11 @@ if (!fs.existsSync(workflowsDir)) {
   for (const fileName of workflowFiles) {
     const relativePath = `${workflowsRoot}/${fileName}`;
     const content = readText(relativePath);
-    const isRemediation = relativePath === remediationRelative;
     if (!/^permissions:\s*(?:\n|$)/m.test(content) && !/^permissions:\s*\{\s*\}\s*$/m.test(content)) violations.push({ file: relativePath, line: 0, message: "WORKFLOW_MUST_DECLARE_EXPLICIT_TOP_LEVEL_PERMISSIONS" });
     if (/pull_request_target\s*:/m.test(content)) violations.push({ file: relativePath, line: 0, message: "PULL_REQUEST_TARGET_FORBIDDEN" });
     if (/contents:\s*write\b|statuses:\s*write\b|write-all/i.test(content)) violations.push({ file: relativePath, line: 0, message: "WORKFLOW_WRITE_PERMISSION_FORBIDDEN" });
-    if (!isRemediation && /\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+(?:create|merge))\b/i.test(content)) violations.push({ file: relativePath, line: 0, message: "CI_SOURCE_OR_BRANCH_MUTATION_FORBIDDEN" });
+    if (/\b(?:git\s+(?:push|commit|reset\s+--hard)|gh\s+pr\s+(?:create|merge))\b/i.test(content)) violations.push({ file: relativePath, line: 0, message: "CI_SOURCE_OR_BRANCH_MUTATION_FORBIDDEN" });
+    if (/\b(?:gofmt\s+-w|prettier\s+--write|eslint\s+--fix|nx\b[^\n]*--fix|sed\s+-i|perl\s+-pi)\b/i.test(content)) violations.push({ file: relativePath, line: 0, message: "CI_SOURCE_REWRITE_FORBIDDEN" });
     if (/@latest\b/i.test(content)) violations.push({ file: relativePath, line: 0, message: "LATEST_VERSION_FORBIDDEN_IN_WORKFLOW" });
     verifyPinnedUses(relativePath, content);
     verifyCheckoutCredentials(relativePath, content);
@@ -167,7 +160,7 @@ if (!fs.existsSync(workflowsDir)) {
   requireMarkers(`${workflowsRoot}/ci.yml`, readText(`${workflowsRoot}/ci.yml`), ["workflow_dispatch:", "pull_request:", "push:", "branches: [master]", "BThwani CI result", "uses: ./.github/workflows/ci-policy.yml"]);
   requireMarkers(`${workflowsRoot}/ci-policy.yml`, readText(`${workflowsRoot}/ci-policy.yml`), ["guard:governance-schema", "guard:agent-governance", "guard:authority-separation", "guard:saas-governance", "guard:guard-registry", "guard:sdlc", "guard:workflow-lint", "guard:workflow-security", "guard:actions-pin", "check-ci-source-immutability.mjs", "check-repository-hygiene.mjs", "check-portable-tracked-config.mjs"]);
   requireMarkers(`${workflowsRoot}/lockfile-snapshot.yml`, readText(`${workflowsRoot}/lockfile-snapshot.yml`), ["name: BThwani Lockfile Snapshot", "contents: read", "persist-credentials: false", "Upload lockfile candidate"]);
-  requireMarkers(`${workflowsRoot}/jrn-020-025-sambassam-verify.yml`, readText(`${workflowsRoot}/jrn-020-025-sambassam-verify.yml`), ["guard:fullstack-boundary", "guard:wlt-financial-boundary", "TestJourneys020To025ExposeGovernedRoutes", "persist-credentials: false"]);
+  requireMarkers(`${workflowsRoot}/manual-deep-verification.yml`, readText(`${workflowsRoot}/manual-deep-verification.yml`), ["name: BThwani Manual Deep Verification", "default: affected", "Resolve affected and risk-expanded mode", "Reject tracked source mutation", "read-only-exact-sha-verification", "persist-credentials: false"]);
 }
 
 for (const warning of warnings) console.warn(`guard-registry warning: ${warning}`);
