@@ -100,6 +100,8 @@ jobs:
       runtime: ${{ steps.scope.outputs.runtime }}
       shared_brain: ${{ steps.scope.outputs.shared_brain }}
       heavy: ${{ steps.scope.outputs.heavy }}
+      verification_tier: ${{ steps.scope.outputs.verification_tier }}
+      diagnostics: ${{ steps.scope.outputs.diagnostics }}
       platform_change_sets: ${{ steps.scope.outputs.platform_change_sets }}
     steps:
       - name: Checkout immutable source history
@@ -152,6 +154,8 @@ jobs:
           HEAD_SHA: ${{ steps.scope.outputs.head_sha }}
           NODE_SCOPE: ${{ steps.scope.outputs.node_scope }}
           JOURNEY_SCOPE: ${{ steps.scope.outputs.journey_scope }}
+          VERIFICATION_TIER: ${{ steps.scope.outputs.verification_tier }}
+          DIAGNOSTICS_REQUIRED: ${{ steps.scope.outputs.diagnostics }}
           HEAVY_CHECKS: ${{ steps.scope.outputs.heavy }}
           FULL_VERIFICATION: ${{ steps.scope.outputs.full_verification }}
         run: |
@@ -160,14 +164,17 @@ jobs:
             echo "- Base: ${BASE_SHA}"
             echo "- Head: ${HEAD_SHA}"
             echo "- Full verification: ${FULL_VERIFICATION}"
+            echo "- Verification tier: ${VERIFICATION_TIER}"
             echo "- Node scope: ${NODE_SCOPE}"
             echo "- Journey scope: ${JOURNEY_SCOPE:-none}"
+            echo "- Static diagnostics: ${DIAGNOSTICS_REQUIRED}"
             echo "- Heavy checks: ${HEAVY_CHECKS}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
   policy:
     name: Policy and governance
     needs: [context]
+    if: ${{ needs.context.outputs.policy == 'true' }}
     uses: ./.github/workflows/ci-policy.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -180,6 +187,7 @@ jobs:
   diagnostics:
     name: Static diagnostics
     needs: [context]
+    if: ${{ needs.context.outputs.diagnostics == 'true' }}
     uses: ./.github/workflows/ci-node-diagnostics.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -192,6 +200,7 @@ jobs:
   verification:
     name: Node verification
     needs: [context]
+    if: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' || needs.context.outputs.node == 'true' || needs.context.outputs.journey == 'true' || needs.context.outputs.platform_change_sets == 'true' }}
     uses: ./.github/workflows/ci-node-verification.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -199,6 +208,7 @@ jobs:
       full_verification: ${{ needs.context.outputs.full_verification }}
       frontend: ${{ needs.context.outputs.frontend }}
       heavy: ${{ needs.context.outputs.heavy }}
+      verification_tier: ${{ needs.context.outputs.verification_tier }}
       journey: ${{ needs.context.outputs.journey }}
       journey_scope: ${{ needs.context.outputs.journey_scope }}
       platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}
@@ -206,6 +216,7 @@ jobs:
   backends:
     name: Backend verification
     needs: [context]
+    if: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.dsh == 'true' || needs.context.outputs.wlt == 'true' || needs.context.outputs.identity == 'true' || needs.context.outputs.workforce == 'true' || needs.context.outputs.platform == 'true' || needs.context.outputs.providers == 'true' }}
     uses: ./.github/workflows/ci-backends.yml
     with:
       dsh: ${{ needs.context.outputs.dsh }}
@@ -218,6 +229,7 @@ jobs:
   runtime:
     name: Runtime proof
     needs: [context]
+    if: ${{ needs.context.outputs.full_verification == 'true' || needs.context.outputs.runtime == 'true' || (github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true) }}
     uses: ./.github/workflows/ci-runtime.yml
     with:
       full_verification: ${{ needs.context.outputs.full_verification }}
@@ -241,6 +253,8 @@ jobs:
           BACKENDS_RESULT: ${{ needs.backends.result }}
           RUNTIME_RESULT: ${{ needs.runtime.result }}
           FULL_VERIFICATION: ${{ needs.context.outputs.full_verification }}
+          POLICY_REQUIRED: ${{ needs.context.outputs.policy }}
+          DIAGNOSTICS_REQUIRED: ${{ needs.context.outputs.diagnostics }}
           FRONTEND_REQUIRED: ${{ needs.context.outputs.frontend }}
           CONTRACTS_REQUIRED: ${{ needs.context.outputs.contracts }}
           NODE_REQUIRED: ${{ needs.context.outputs.node }}
@@ -277,12 +291,16 @@ jobs:
             failed=1
           }
 
+          policy_applicable=false
           diagnostics_applicable=false
           verification_applicable=false
           backends_applicable=false
           runtime_applicable=false
 
-          if is_true "${FULL_VERIFICATION}" || is_true "${FRONTEND_REQUIRED}" || is_true "${CONTRACTS_REQUIRED}" || is_true "${NODE_REQUIRED}"; then
+          if is_true "${POLICY_REQUIRED}"; then
+            policy_applicable=true
+          fi
+          if is_true "${DIAGNOSTICS_REQUIRED}"; then
             diagnostics_applicable=true
           fi
           if is_true "${FULL_VERIFICATION}" || is_true "${FRONTEND_REQUIRED}" || is_true "${NODE_REQUIRED}" || is_true "${JOURNEY_REQUIRED}" || is_true "${PLATFORM_CHANGE_SETS_REQUIRED}"; then
@@ -296,7 +314,7 @@ jobs:
           fi
 
           check_result context "${CONTEXT_RESULT}" false
-          check_result policy "${POLICY_RESULT}" false
+          check_result policy "${POLICY_RESULT}" "$([[ "${policy_applicable}" == "false" ]] && echo true || echo false)"
           check_result diagnostics "${DIAGNOSTICS_RESULT}" "$([[ "${diagnostics_applicable}" == "false" ]] && echo true || echo false)"
           check_result verification "${VERIFICATION_RESULT}" "$([[ "${verification_applicable}" == "false" ]] && echo true || echo false)"
           check_result backends "${BACKENDS_RESULT}" "$([[ "${backends_applicable}" == "false" ]] && echo true || echo false)"
