@@ -37,43 +37,52 @@ $profileList = @(
 )
 $hasDsh = $profileList -contains "dsh"
 
-$runtimeParameters = @{
-  Action = $Action
-  Profiles = $Profiles
-  Service = $Service
+function Invoke-RuntimeEngine {
+  param(
+    [Parameter(Mandatory = $true)][string]$EngineAction,
+    [Parameter(Mandatory = $true)][string]$EngineProfiles,
+    [string]$EngineService = ""
+  )
+
+  # runtime.ps1 predates the strict modular dispatcher and intentionally owns
+  # its own execution policy and scope. Run it in a fresh PowerShell process so
+  # Set-StrictMode from this wrapper cannot change legacy collection/null
+  # semantics inside the established engine.
+  $arguments = @(
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-File", $RuntimeScript,
+    "-Action", $EngineAction,
+    "-Profiles", $EngineProfiles
+  )
+  if (-not [string]::IsNullOrWhiteSpace($EngineService)) {
+    $arguments += @("-Service", $EngineService)
+  }
+  if ($Force) {
+    $arguments += "-Force"
+  }
+
+  $global:LASTEXITCODE = 0
+  & pwsh @arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "Runtime action '$EngineAction' failed with exit code $LASTEXITCODE"
+  }
 }
-if ($Force) { $runtimeParameters.Force = $true }
 
 if ($Action -ne "smoke" -or -not $hasDsh) {
-  $global:LASTEXITCODE = 0
-  & $RuntimeScript @runtimeParameters
-  if ($LASTEXITCODE -ne 0) {
-    throw "Runtime action '$Action' failed with exit code $LASTEXITCODE"
-  }
+  Invoke-RuntimeEngine -EngineAction $Action -EngineProfiles $Profiles -EngineService $Service
   return
 }
 
 Write-Host "=== runtime:smoke modular DSH routing ==="
 
 $nonDshProfiles = @($profileList | Where-Object { $_ -ne "dsh" })
-if ($nonDshProfiles.Count -gt 0) {
-  $global:LASTEXITCODE = 0
-  & $RuntimeScript -Action smoke -Profiles ($nonDshProfiles -join ",") -Service $Service
-  if ($LASTEXITCODE -ne 0) {
-    throw "Non-DSH runtime smoke failed with exit code $LASTEXITCODE"
-  }
+if ($nonDshProfiles.Length -gt 0) {
+  Invoke-RuntimeEngine -EngineAction "smoke" -EngineProfiles ($nonDshProfiles -join ",") -EngineService $Service
 }
 
-$global:LASTEXITCODE = 0
-& $RuntimeScript -Action up -Profiles "dsh,media"
-if ($LASTEXITCODE -ne 0) {
-  throw "DSH runtime preparation failed with exit code $LASTEXITCODE"
-}
-$global:LASTEXITCODE = 0
-& $RuntimeScript -Action seed -Profiles "dsh,media"
-if ($LASTEXITCODE -ne 0) {
-  throw "DSH runtime seed failed with exit code $LASTEXITCODE"
-}
+Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles "dsh,media"
+Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles "dsh,media"
 
 $statePath = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-dsh-smoke-$([Guid]::NewGuid().ToString('N')).json"
 try {
