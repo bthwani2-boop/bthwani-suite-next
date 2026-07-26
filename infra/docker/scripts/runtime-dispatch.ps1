@@ -15,6 +15,7 @@ param(
   [switch]$Force
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -43,9 +44,10 @@ function Invoke-RuntimeEngine {
     [string]$EngineService = ""
   )
 
-  # runtime.ps1 predates the modular dispatcher and owns its own execution
-  # policy. Execute it in a fresh process so wrapper semantics cannot leak into
-  # the established engine.
+  # runtime.ps1 predates the strict modular dispatcher and intentionally owns
+  # its own execution policy and scope. Run it in a fresh PowerShell process so
+  # Set-StrictMode from this wrapper cannot change legacy collection/null
+  # semantics inside the established engine.
   $arguments = @(
     "-NoProfile",
     "-ExecutionPolicy", "Bypass",
@@ -84,9 +86,11 @@ if ($Action -ne "smoke" -or -not $hasDsh) {
 
 Write-Host "=== runtime:smoke modular DSH routing ==="
 
-# WLT is removed from this phase and exercised through the governed authenticated
-# smoke afterward. Verify the financial simulator directly so the legacy engine
-# does not invoke the WLT provider path without tenant context.
+# The caller deliberately removes WLT from this phase and executes the governed
+# authenticated WLT smoke afterward. Running runtime.ps1 with only the financial
+# simulator profile would nevertheless invoke the WLT provider path and create a
+# false tenant-context failure. Verify the simulator directly here, and leave the
+# WLT-to-provider contract to the dedicated authenticated smoke.
 $financialSimulatorsRequested = $profileList -contains "financial-simulators"
 $nonDshProfiles = @(
   $profileList |
