@@ -96,7 +96,9 @@ Agents must not:
 - run full Graphify, full Nx graph, full test, full build, or full guard suites without a proven need;
 - use CI to mutate source, commit, push, merge, or rewrite branches;
 - treat seed, fixture, preview, fallback, or in-memory data as runtime, revenue, subscriber, tenant-isolation, or commercial proof;
-- claim final closure from static checks alone.
+- claim final closure from static checks alone;
+- use `git add -A` or `git add .`;
+- archive retired material by default when Git history already preserves it.
 
 ## Task router
 
@@ -150,22 +152,43 @@ Graphify is a tool, not an agent. LeanCTX is optional, not a mandatory first ste
 
 Use `governance/agents/agent-registry.json` and `governance/skills/skills-registry.json` as machine-readable role and skill contracts.
 
-## Task contracts and progressive remediation
+## Adaptive task context and remediation
 
-Gap-driven repair work runs through the progressive remediation system governed by `governance/remediation/` and validated by `pnpm run guard:remediation-governance`.
+Product and journey registries, historical closure files, capability graphs, gap ledgers, and generated inventories are discovery inputs only. They are provisional and never override current code, contracts, database behavior, runtime behavior, or same-commit evidence.
 
-- Product/journey registries (e.g. `governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md`) are living but explicitly preliminary, not a final baseline — their own stated purpose is that they do not prove any journey complete and never override Product Truth, contracts, manifests, code, database, or actual evidence. Before starting execution of any task, run the full multi-layer, multi-axis diagnostic pass (structural, product/journey, contract, database, runtime, security, test-quality, etc., via `tools/remediation/discovery/` and the relevant `.agents/` skills) against real code and behavior to diagnose gaps accurately, then remediate; never treat registry- or capability-graph-derived data alone as verified fact (see `governance/remediation/progressive-remediation-policy.json`'s `diagnosisRequirementNote`).
-- Every gap needs a task contract (`governance/remediation/tasks/`) that passes `task-contract.schema.json` before any execution starts; no contract, no repair.
-- A task contract layers above the Work Unit Contract: every work unit's write paths stay inside the frozen contract scope, and its tier never exceeds the contract ceiling.
-- Task state moves only along `governance/remediation/task-state-machine.json`; `REPAIRING`, `VERIFYING`, and `INTEGRATED` can never jump to `CLOSED`.
-- An agent writes only paths reserved for it; scope never expands in place — a wider scope requires a new contract.
-- Never adjust a test just to make CI pass; never remove a test or guard without an independent task contract; never treat a retry as success — repeating an unchanged attempt after two failures is a protocol violation.
-- Diagnosis, execution, and approval stay separated: the diagnoser, executor, and reviewer of one task are different roles, and the executor never issues closure.
-- `MAX_REPAIR_ITERATIONS` is 3 per task; each iteration records a hypothesis, plan, observation, evaluation, and decision under `governance/remediation/iterations/`, following the governed engineering loop (PLAN, EXECUTE, OBSERVE, EVALUATE, DIAGNOSE, CORRECT, VERIFY, IMPROVE, REPLAN).
-- A repeated hypothesis hash, patch hash, or failure fingerprint stops the loop: escalate with `LOOP_NOT_CONVERGING`, re-diagnose, or split the task.
-- Stop conditions: budget exceeded resolves to task split; missing required evidence resolves to `NEEDS_EVIDENCE`; external dependency resolves to `BLOCKED_EXTERNAL`; every known gap is recorded in `governance/remediation/gap-ledger.json` before moving on.
-- Retired or superseded material is archived (`.agents/archive/`, `governance/archive/`), never destroyed; child branches merge only to their work branch; `master` merges remain an explicit human decision.
-- `bthwani-engineering-loop-controller` owns the loop state above once a contract reaches `CONTRACT_READY`; it dispatches work through `bthwani-cost-aware-subagent-orchestrator` and hands completed work to `bthwani-independent-implementation-reviewer` — the two conflict by design and never share an identity.
+Before a repair, diagnose the relevant real implementation across the layers that can affect the claim. Expand to structural, product, contract, database, runtime, security, test-quality, or cross-surface analysis only when the observed impact or risk requires it.
+
+Each task requires a logical execution context containing the pinned repository, source branch, base SHA, target branch, allowed paths, forbidden paths, expected outputs, risk profile, and verification profile. This context is ephemeral by default and may live in `.diagnostics/**`, a pull-request body, a check summary, or an Actions artifact. It is committed only when it represents a durable contract with an identified long-term consumer.
+
+Task state, hypotheses, work-unit allocation, repeated attempts, raw logs, generated evidence, and iteration records are not permanent repository sources of truth. Keep them outside the final Git tree by default. A known gap must appear in the current diagnostic or review output, but it does not require a permanent `GAP-*` file.
+
+The engineering loop is:
+
+```text
+DIAGNOSE
+→ PLAN
+→ EXECUTE
+→ OBSERVE
+→ EVALUATE
+→ CORRECT
+→ VERIFY
+→ CLEAN
+→ RECONCILE
+→ HANDOFF
+```
+
+Rules:
+
+- never execute before the root cause and intended behavior are sufficiently identified;
+- never expand allowed paths in place without re-evaluating scope and risk;
+- never change or remove a test merely to make CI pass;
+- never repeat an unchanged hypothesis, patch, or failed command and call the retry progress;
+- after three materially similar unsuccessful attempts, re-diagnose, split the task, or return `LOOP_NOT_CONVERGING`;
+- diagnosis, execution, and final approval remain logically separate;
+- final verification runs after the last write on a clean checkout of the exact candidate SHA;
+- use Git history as the default archive for removed or superseded material;
+- child task branches may merge only to their originating work branch;
+- merging a work branch to `master` remains an explicit human decision.
 
 ## Evidence and decisions
 
