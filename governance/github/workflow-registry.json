@@ -101,26 +101,26 @@
     {
       "id": "lockfile-snapshot",
       "path": ".github/workflows/lockfile-snapshot.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
+      "class": "CORE",
       "name": "BThwani Lockfile Snapshot",
       "triggers": ["pull_request"],
       "permissions": { "contents": "read" },
       "mayMutateSource": false,
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
-      "purpose": "Generates an uncommitted frozen-install-compatible lockfile proposal artifact without publishing or changing the candidate branch."
+      "purpose": "Core read-only lockfile proposal workflow that uploads a frozen-install-compatible candidate artifact without publishing or changing the candidate branch."
     },
     {
       "id": "manual-deep-verification",
       "path": ".github/workflows/manual-deep-verification.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
+      "class": "CORE",
       "name": "BThwani Manual Deep Verification",
       "triggers": ["workflow_dispatch"],
       "permissions": { "contents": "read" },
       "mayMutateSource": false,
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
-      "purpose": "Read-only exact-SHA affected and risk-expanded manual verification with optional full runtime proof and a machine-readable decision artifact."
+      "purpose": "Core read-only exact-SHA affected and risk-expanded manual verification with optional full runtime proof and a machine-readable decision artifact."
     }
   ]
 }
