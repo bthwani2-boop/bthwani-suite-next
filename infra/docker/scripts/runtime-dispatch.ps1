@@ -36,43 +36,71 @@ $profileList = @(
 )
 $hasDsh = $profileList -contains "dsh"
 
-$runtimeParameters = @{
-  Action = $Action
-  Profiles = $Profiles
-  Service = $Service
+function Invoke-RuntimeEngine {
+  param(
+    [Parameter(Mandatory = $true)][string]$EngineAction,
+    [Parameter(Mandatory = $true)][string]$EngineProfiles,
+    [string]$EngineService = ""
+  )
+
+  # runtime.ps1 predates the modular dispatcher and owns its own execution
+  # policy. Execute it in a fresh process so wrapper semantics cannot leak into
+  # the established engine.
+  $arguments = @(
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-File", $RuntimeScript,
+    "-Action", $EngineAction,
+    "-Profiles", $EngineProfiles
+  )
+  if (-not [string]::IsNullOrWhiteSpace($EngineService)) {
+    $arguments += @("-Service", $EngineService)
+  }
+  if ($Force) {
+    $arguments += "-Force"
+  }
+
+  $global:LASTEXITCODE = 0
+  & pwsh @arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "Runtime action '$EngineAction' failed with exit code $LASTEXITCODE"
+  }
 }
-if ($Force) { $runtimeParameters.Force = $true }
+
+function Invoke-FinancialSimulatorHealthSmoke {
+  Write-Host "`n--- Financial simulator isolated smoke ---"
+  Invoke-RestMethod "http://localhost:58090/__admin/mappings" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+  $health = Invoke-RestMethod "http://localhost:58090/financial/health" -TimeoutSec 10 -ErrorAction Stop
+  if ([string]$health.status -ne "healthy") {
+    throw "WireMock financial simulator health is not healthy: $($health.status)"
+  }
+  Write-Host "Financial simulator isolated smoke: PASS"
+}
 
 if ($Action -ne "smoke" -or -not $hasDsh) {
-  $global:LASTEXITCODE = 0
-  & $RuntimeScript @runtimeParameters
-  if ($LASTEXITCODE -ne 0) {
-    throw "Runtime action '$Action' failed with exit code $LASTEXITCODE"
-  }
+  Invoke-RuntimeEngine -EngineAction $Action -EngineProfiles $Profiles -EngineService $Service
   return
 }
 
 Write-Host "=== runtime:smoke modular DSH routing ==="
 
-$nonDshProfiles = @($profileList | Where-Object { $_ -ne "dsh" })
-if ($nonDshProfiles.Count -gt 0) {
-  $global:LASTEXITCODE = 0
-  & $RuntimeScript -Action smoke -Profiles ($nonDshProfiles -join ",") -Service $Service
-  if ($LASTEXITCODE -ne 0) {
-    throw "Non-DSH runtime smoke failed with exit code $LASTEXITCODE"
-  }
+# WLT is removed from this phase and exercised through the governed authenticated
+# smoke afterward. Verify the financial simulator directly so the legacy engine
+# does not invoke the WLT provider path without tenant context.
+$financialSimulatorsRequested = $profileList -contains "financial-simulators"
+$nonDshProfiles = @(
+  $profileList |
+    Where-Object { $_ -ne "dsh" -and $_ -ne "financial-simulators" }
+)
+if ($nonDshProfiles.Length -gt 0) {
+  Invoke-RuntimeEngine -EngineAction "smoke" -EngineProfiles ($nonDshProfiles -join ",") -EngineService $Service
+}
+if ($financialSimulatorsRequested) {
+  Invoke-FinancialSimulatorHealthSmoke
 }
 
-$global:LASTEXITCODE = 0
-& $RuntimeScript -Action up -Profiles "dsh,media"
-if ($LASTEXITCODE -ne 0) {
-  throw "DSH runtime preparation failed with exit code $LASTEXITCODE"
-}
-$global:LASTEXITCODE = 0
-& $RuntimeScript -Action seed -Profiles "dsh,media"
-if ($LASTEXITCODE -ne 0) {
-  throw "DSH runtime seed failed with exit code $LASTEXITCODE"
-}
+Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles "dsh,media"
+Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles "dsh,media"
 
 $statePath = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-dsh-smoke-$([Guid]::NewGuid().ToString('N')).json"
 try {
