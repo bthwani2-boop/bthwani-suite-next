@@ -25,18 +25,23 @@ describe("JRN-033 representative financial runtime readback", () => {
     );
   });
 
-  it("preserves evidence from startup bootstrap smoke and representative readback", () => {
+  it("preserves deterministic evidence from every runtime phase", () => {
+    assert.match(workflow, /function Invoke-LoggedPhase/);
+    assert.match(workflow, /Tee-Object -FilePath \$logPath -Append/);
+    assert.doesNotMatch(workflow, /Tee-Object -LiteralPath/);
+
     for (const command of [
       "runtime:full:up",
       "runtime:full:bootstrap-dev",
       "runtime:full:smoke",
+      "representative-financial-readback",
     ]) {
-      assert.match(
-        workflow,
-        new RegExp(`${command.replaceAll(":", "\\:")} 2>&1 \\| Tee-Object -LiteralPath runtime-smoke\\.log -Append`),
-      );
+      assert.match(workflow, new RegExp(`Invoke-LoggedPhase "${command.replaceAll(":", "\\:")}"`));
     }
-    assert.match(workflow, /smoke-dsh-wlt-representative-readback\.ps1[\s\S]*Tee-Object -LiteralPath runtime-smoke\.log -Append/);
+
+    assert.match(workflow, /PHASE_FAILURE=\$Name/);
+    assert.match(workflow, /RUNTIME_PROOF_RESULT=FAIL/);
+    assert.match(workflow, /RUNTIME_PROOF_RESULT=PASS/);
     assert.match(workflow, /DSH\/WLT representative financial readback smoke: PASS/);
     assert.match(workflow, /runtime proof did not record the representative financial readback PASS marker/);
   });
