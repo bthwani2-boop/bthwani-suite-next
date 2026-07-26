@@ -46,6 +46,7 @@ function IdentityAccessPanel({
 }) {
   const { login, requestOtp, activate } = useIdentitySession();
   const activationAvailable = isActivationActorType(requiredRole);
+  const selfServiceOtpAllowed = activationAvailable && requiredRole !== "field";
   const [mode, setMode] = useState<SignInMode>(activationAvailable ? "activation" : "login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -72,8 +73,12 @@ function IdentityAccessPanel({
   };
 
   const issueOtp = async () => {
-    if (!activationAvailable || !phone.trim()) {
-      setFeedback("أدخل رقم الهاتف المرتبط بالحساب.");
+    if (!selfServiceOtpAllowed || !phone.trim()) {
+      setFeedback(
+        requiredRole === "field"
+          ? "رمز تفعيل الميداني يصدر من فريق التشغيل عبر لوحة التحكم."
+          : "أدخل رقم الهاتف المرتبط بالحساب.",
+      );
       return;
     }
     setSubmitting(true);
@@ -104,48 +109,15 @@ function IdentityAccessPanel({
     }
   };
 
-  const devUsernameForRole = (role: DshSurfaceRole): string => {
-    switch (role) {
-      case "client":
-        return "client";
-      case "captain":
-        return "captain";
-      case "field":
-        return "field";
-      case "partner":
-        return "bthwani";
-      case "operator":
-        return "operator";
-      default:
-        return role;
-    }
-  };
-
-  const handleDevQuickLogin = async () => {
-    const devUser = devUsernameForRole(requiredRole);
-    const devPass = "123456";
-
-    setSubmitting(true);
-    setFeedback("");
-    setUsername(devUser);
-    setPassword(devPass);
-
-    try {
-      await login(devUser, devPass);
-    } catch (error) {
-      setFeedback(identityErrorPresentation(errorCode(error)).description);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
     <View style={styles.accessRoot}>
       <Card style={styles.accessCard}>
         <Text role="titleLg" style={styles.title}>الدخول إلى بثواني</Text>
         <Text role="body" tone="muted" style={styles.description}>
           {activationAvailable
-            ? "استخدم بيانات الحساب أو رمز التفعيل المخصص لهذا التطبيق."
+            ? requiredRole === "field"
+              ? "استخدم بيانات الحساب أو رمز التفعيل الصادر من فريق التشغيل لهذا التطبيق."
+              : "استخدم بيانات الحساب أو رمز التفعيل المخصص لهذا التطبيق."
             : "استخدم بيانات الحساب للدخول إلى التطبيق."}
         </Text>
 
@@ -206,12 +178,18 @@ function IdentityAccessPanel({
               placeholder="رقم الهاتف"
               keyboardType="phone-pad"
             />
-            <Button
-              label={submitting ? "جاري الإصدار" : "طلب رمز التفعيل"}
-              tone="secondary"
-              disabled={submitting}
-              onPress={issueOtp}
-            />
+            {selfServiceOtpAllowed ? (
+              <Button
+                label={submitting ? "جاري الإصدار" : "طلب رمز التفعيل"}
+                tone="secondary"
+                disabled={submitting}
+                onPress={issueOtp}
+              />
+            ) : (
+              <Text role="caption" tone="muted" style={styles.activationNotice}>
+                استلم رمز التفعيل من فريق التشغيل. لا يمكن إصدار رمز ميداني ذاتيًا من التطبيق.
+              </Text>
+            )}
             <TextField
               value={code}
               onChangeText={setCode}
@@ -226,15 +204,6 @@ function IdentityAccessPanel({
             />
           </View>
         )}
-
-        <View style={styles.devAccessRow}>
-          <Button
-            label={submitting ? "جاري الدخول السريع..." : "⚡ دخول سريع (مطور)"}
-            tone="ghost"
-            disabled={submitting}
-            onPress={handleDevQuickLogin}
-          />
-        </View>
 
         {feedback ? <Text role="caption" style={styles.feedback}>{feedback}</Text> : null}
       </Card>
@@ -332,12 +301,11 @@ const styles = StyleSheet.create({
     textAlign: "right",
     color: colorRoles.brandAction,
   },
+  activationNotice: {
+    textAlign: "right",
+  },
   feedback: {
     textAlign: "right",
     color: colorRoles.brandStructure,
-  },
-  devAccessRow: {
-    alignItems: "center",
-    marginTop: spacing[1],
   },
 });
