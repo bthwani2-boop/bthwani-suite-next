@@ -1,0 +1,340 @@
+name: BThwani Manual Deep Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Immutable branch, tag, or commit to verify
+        required: true
+        default: master
+        type: string
+      base_branch:
+        description: Comparison branch for affected verification
+        required: true
+        default: master
+        type: string
+      mode:
+        description: Verification depth
+        required: true
+        default: affected
+        type: choice
+        options: [affected, full]
+      runtime_proof:
+        description: Execute integrated runtime smoke proof
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manual-deep-verification-${{ inputs.source_ref }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+env:
+  SOURCE_REF_INPUT: ${{ inputs.source_ref }}
+  BASE_BRANCH_INPUT: ${{ inputs.base_branch }}
+  MODE_INPUT: ${{ inputs.mode }}
+  RUNTIME_PROOF_INPUT: ${{ inputs.runtime_proof }}
+  EVIDENCE_ROOT: /tmp/bthwani-manual-deep
+
+jobs:
+  verify:
+    name: Verify immutable candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: verification
+          POSTGRES_PASSWORD: verification_password
+          POSTGRES_DB: verification
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U verification -d verification"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+
+    steps:
+      - name: Checkout requested source without credentials
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate inputs and pin candidate
+        id: identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${SOURCE_REF_INPUT}${BASE_BRANCH_INPUT}" in
+            *$'\n'*|*$'\r'*)
+              echo "::error title=Invalid workflow input::Control characters are forbidden."
+              exit 1
+              ;;
+          esac
+          if [[ "${BASE_BRANCH_INPUT}" == -* ]]; then
+            echo "::error title=Invalid base branch::Leading dashes are forbidden."
+            exit 1
+          fi
+          git check-ref-format --branch "${BASE_BRANCH_INPUT}" >/dev/null
+          git ls-remote --exit-code --heads origin "${BASE_BRANCH_INPUT}" >/dev/null
+          git fetch --no-tags origin "${BASE_BRANCH_INPUT}"
+          mkdir -p "${EVIDENCE_ROOT}"
+          source_sha="$(git rev-parse HEAD)"
+          base_sha="$(git rev-parse "origin/${BASE_BRANCH_INPUT}")"
+          printf '%s\n' "${source_sha}" > "${EVIDENCE_ROOT}/source-sha.txt"
+          printf '%s\n' "${base_sha}" > "${EVIDENCE_ROOT}/base-sha.txt"
+          printf '%s\n' "${SOURCE_REF_INPUT}" > "${EVIDENCE_ROOT}/source-ref.txt"
+          printf '%s\n' "${BASE_BRANCH_INPUT}" > "${EVIDENCE_ROOT}/base-branch.txt"
+          git diff --name-only "${base_sha}...${source_sha}" | sort -u > "${EVIDENCE_ROOT}/changed-files.txt"
+
+      - name: Resolve affected and risk-expanded mode
+        id: router
+        shell: bash
+        run: |
+          set -euo pipefail
+          effective_mode="${MODE_INPUT}"
+          risk_reason="requested affected verification"
+          if [[ "${MODE_INPUT}" == "full" ]]; then
+            effective_mode=full
+            risk_reason="full verification explicitly requested"
+          elif grep -Eq '^(pnpm-lock\.yaml|package\.json|pnpm-workspace\.yaml|nx\.json|\.github/|contracts/|.*/migrations/|core/identity/|services/wlt/|governance/authority/|governance/github/)' "${EVIDENCE_ROOT}/changed-files.txt"; then
+            effective_mode=full
+            risk_reason="risk-expanding path changed"
+          fi
+          echo "effective_mode=${effective_mode}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "### Manual deep verification routing"
+            echo "- Candidate: $(cat "${EVIDENCE_ROOT}/source-sha.txt")"
+            echo "- Base: $(cat "${EVIDENCE_ROOT}/base-sha.txt")"
+            echo "- Mode: ${effective_mode}"
+            echo "- Reason: ${risk_reason}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+
+      - name: Set up locked Go runtime
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            services/wlt/backend/go.sum
+            core/identity/backend/go.sum
+            core/workforce/backend/go.sum
+            core/platform-control/backend/go.sum
+            core/providers/backend/go.sum
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+
+      - name: Repository, policy, contract, and security verification
+        shell: bash
+        run: |
+          set +e
+          status_file="${EVIDENCE_ROOT}/policy-status.tsv"
+          : > "${status_file}"
+          run_check() {
+            local name="$1"
+            shift
+            echo "=== ${name} ==="
+            "$@"
+            local status=$?
+            printf '%s\t%s\n' "${name}" "${status}" >> "${status_file}"
+            return 0
+          }
+          run_check governance pnpm run guard:governance-all
+          run_check workflow-lint pnpm run guard:workflow-lint
+          run_check workflow-security pnpm run guard:workflow-security
+          run_check actions-pin pnpm run guard:actions-pin
+          run_check broken-imports pnpm run guard:no-broken-imports
+          run_check fullstack-boundary pnpm run guard:fullstack-boundary
+          run_check financial-boundary pnpm run guard:wlt-financial-boundary
+          run_check api-binding pnpm run guard:api-binding
+          run_check backend-api-binding pnpm run guard:backend-api-binding
+          run_check runtime-bindings pnpm run guard:runtime-real-bindings
+          run_check contracts pnpm run contracts:lint
+          run_check mobile-config pnpm run mobile:expo:verify
+          exit 0
+
+      - name: Node verification
+        shell: bash
+        env:
+          EFFECTIVE_MODE: ${{ steps.router.outputs.effective_mode }}
+        run: |
+          set +e
+          status_file="${EVIDENCE_ROOT}/node-status.tsv"
+          : > "${status_file}"
+          run_check() {
+            local name="$1"
+            shift
+            echo "=== ${name} ==="
+            "$@"
+            local status=$?
+            printf '%s\t%s\n' "${name}" "${status}" >> "${status_file}"
+            return 0
+          }
+          if [[ "${EFFECTIVE_MODE}" == "full" ]]; then
+            run_check typecheck pnpm run nx:typecheck
+            run_check lint pnpm run nx:lint
+            run_check test pnpm run nx:test
+            run_check build pnpm run nx:build
+            run_check dead-code pnpm exec knip --config knip.json --reporter compact --reporter github-actions
+          else
+            export NX_BASE="origin/${BASE_BRANCH_INPUT}"
+            export NX_HEAD=HEAD
+            run_check typecheck pnpm run affected:typecheck
+            run_check lint pnpm run affected:lint
+            run_check test pnpm run affected:test
+            run_check build pnpm run affected:build
+          fi
+          exit 0
+
+      - name: Backend and database verification
+        shell: bash
+        env:
+          PGPASSWORD: verification_password
+          EFFECTIVE_MODE: ${{ steps.router.outputs.effective_mode }}
+        run: |
+          set +e
+          status_file="${EVIDENCE_ROOT}/backend-status.tsv"
+          : > "${status_file}"
+
+          should_verify() {
+            local prefix="$1"
+            [[ "${EFFECTIVE_MODE}" == "full" ]] || grep -Eq "^${prefix}" "${EVIDENCE_ROOT}/changed-files.txt"
+          }
+
+          verify_backend() {
+            local key="$1"
+            local prefix="$2"
+            local workdir="$3"
+            local migrations="$4"
+            if ! should_verify "${prefix}"; then
+              printf '%s\t%s\n' "${key}" "NOT_APPLICABLE" >> "${status_file}"
+              return 0
+            fi
+            local database="verification_${key}"
+            local database_url="postgres://verification:verification_password@localhost:5432/${database}?sslmode=disable"
+            local status=0
+            dropdb --if-exists -h localhost -U verification "${database}" >/dev/null 2>&1
+            createdb -h localhost -U verification "${database}" || status=1
+            if [[ "${status}" -eq 0 ]]; then
+              found=0
+              for migration in ${migrations}; do
+                found=1
+                psql "${database_url}" -q -v ON_ERROR_STOP=1 -f "${migration}" >/dev/null || status=1
+              done
+              [[ "${found}" -eq 1 ]] || status=1
+            fi
+            if [[ "${status}" -eq 0 ]]; then
+              (
+                cd "${workdir}"
+                export DATABASE_URL="${database_url}"
+                if [[ "${key}" == dsh ]]; then export DSH_REQUIRE_DB_TESTS=true; fi
+                if [[ "${key}" == wlt ]]; then export WLT_REQUIRE_DB_TESTS=true; fi
+                go vet ./... && go test ./... -count=1 && go build ./...
+              ) || status=1
+            fi
+            printf '%s\t%s\n' "${key}" "${status}" >> "${status_file}"
+          }
+
+          verify_backend dsh 'services/dsh/' services/dsh/backend 'services/dsh/database/migrations/*.sql'
+          verify_backend wlt 'services/wlt/' services/wlt/backend 'services/wlt/database/migrations/*.sql'
+          verify_backend identity 'core/identity/' core/identity/backend 'core/identity/database/migrations/*.sql'
+          verify_backend workforce 'core/workforce/' core/workforce/backend 'core/workforce/database/migrations/*.sql'
+          verify_backend platform 'core/platform-control/' core/platform-control/backend 'core/platform-control/database/migrations/*.sql'
+          verify_backend providers 'core/providers/' core/providers/backend 'core/providers/database/migrations/*.sql'
+          exit 0
+
+      - name: Integrated runtime proof
+        if: ${{ inputs.runtime_proof == true }}
+        shell: bash
+        run: |
+          set +e
+          status_file="${EVIDENCE_ROOT}/runtime-status.tsv"
+          : > "${status_file}"
+          pnpm run runtime:full:up
+          printf '%s\t%s\n' runtime-up "$?" >> "${status_file}"
+          pnpm run runtime:full:bootstrap-dev
+          printf '%s\t%s\n' runtime-bootstrap "$?" >> "${status_file}"
+          pnpm run runtime:full:smoke
+          printf '%s\t%s\n' runtime-smoke "$?" >> "${status_file}"
+          pnpm run runtime:full:down
+          printf '%s\t%s\n' runtime-down "$?" >> "${status_file}"
+          exit 0
+
+      - name: Record runtime non-applicability
+        if: ${{ inputs.runtime_proof != true }}
+        shell: bash
+        run: printf '%s\t%s\n' runtime-proof NOT_APPLICABLE > "${EVIDENCE_ROOT}/runtime-status.tsv"
+
+      - name: Reject tracked source mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet; then
+            echo "::error title=Verification mutated candidate::Manual deep verification is read-only."
+            git status --short
+            exit 1
+          fi
+
+      - name: Build exact-SHA decision manifest
+        id: decision
+        shell: bash
+        env:
+          EFFECTIVE_MODE: ${{ steps.router.outputs.effective_mode }}
+        run: |
+          set -euo pipefail
+          verification_passed=true
+          failures=0
+          for file in "${EVIDENCE_ROOT}"/*-status.tsv; do
+            while IFS=$'\t' read -r check status; do
+              [[ -z "${check}" ]] && continue
+              if [[ "${status}" != "0" && "${status}" != "NOT_APPLICABLE" ]]; then
+                verification_passed=false
+                failures=$((failures + 1))
+                echo "::error title=Verification gate failed::${check} exited with ${status}."
+              fi
+            done < "${file}"
+          done
+          jq -n \
+            --arg sourceRef "${SOURCE_REF_INPUT}" \
+            --arg sourceSha "$(cat "${EVIDENCE_ROOT}/source-sha.txt")" \
+            --arg baseBranch "${BASE_BRANCH_INPUT}" \
+            --arg baseSha "$(cat "${EVIDENCE_ROOT}/base-sha.txt")" \
+            --arg mode "${EFFECTIVE_MODE}" \
+            --argjson verificationPassed "${verification_passed}" \
+            --argjson unresolvedGateCount "${failures}" \
+            '{
+              schemaVersion: 1,
+              sourceRef: $sourceRef,
+              sourceSha: $sourceSha,
+              baseBranch: $baseBranch,
+              baseSha: $baseSha,
+              mode: $mode,
+              verificationPassed: $verificationPassed,
+              unresolvedGateCount: $unresolvedGateCount,
+              sourceMutation: false,
+              publication: "read-only-exact-sha-verification"
+            }' > "${EVIDENCE_ROOT}/manifest.json"
+
+      - name: Export verification evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: manual-deep-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/bthwani-manual-deep
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce evidence-based result
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -e '.verificationPassed == true and .sourceMutation == false' "${EVIDENCE_ROOT}/manifest.json" >/dev/null
