@@ -113,6 +113,9 @@ export function classifyStoreDiscoveryError(err: unknown): DshStoreListState {
     const typed = err as { kind: string; status?: number; message?: string };
     if (typed.kind === "http") {
       if (typed.status === 503) return serviceUnavailableState();
+      if (typed.status === 404) {
+        return errorState("المتجر غير متاح أو لم يعد منشورًا.");
+      }
       return errorState(`HTTP_STATUS: ${typed.status ?? "unknown"}`);
     }
     if (typed.kind === "network") {
