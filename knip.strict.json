@@ -1,0 +1,128 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": [
+    ".cache/**",
+    ".gocache*/**",
+    ".gomodcache*/**",
+    ".diagnostics/**",
+    "coverage/**",
+    "dist/**",
+    "build/**",
+    "out/**",
+    "graphify-out/**",
+    "**/clients/generated/**",
+    "**/contracts/generated/**"
+  ],
+  "ignoreBinaries": ["go", "pwsh", "graphify", "k6", "gitleaks"],
+  "ignoreExportsUsedInFile": true,
+  "rules": {
+    "duplicates": "off"
+  },
+  "workspaces": {
+    ".": {
+      "entry": [
+        "tools/guards/*.mjs",
+        "tools/guards/sdlc/*.mjs",
+        "tools/important-scripts/*.mjs",
+        "tools/scripts/*.mjs",
+        "tools/verification/*.mjs",
+        "tools/performance/**/*.{js,cjs}",
+        "*.config.{js,mjs,cjs,ts}"
+      ],
+      "project": [
+        "tools/**/*.{js,mjs,cjs,ts}",
+        "*.config.{js,mjs,cjs,ts}"
+      ]
+    },
+    "apps/control-panel/runtime": {
+      "entry": [
+        "src/app/**/{page,layout,route,loading,error,not-found}.{ts,tsx}",
+        "src/app/api/**/route.ts",
+        "src/config/*.ts",
+        "tests/*.test.mjs"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "tests/**/*.mjs"]
+    },
+    "apps/app-client/runtime": {
+      "entry": ["index.{js,ts,tsx}", "App.{js,ts,tsx}", "app.config.{js,ts}", "fingerprint.config.js"],
+      "project": ["**/*.{js,ts,tsx}", "!android/**", "!ios/**"]
+    },
+    "apps/app-partner/runtime": {
+      "entry": ["index.{js,ts,tsx}", "App.{js,ts,tsx}", "app.config.{js,ts}", "fingerprint.config.js"],
+      "project": ["**/*.{js,ts,tsx}", "!android/**", "!ios/**"]
+    },
+    "apps/app-captain/runtime": {
+      "entry": ["index.{js,ts,tsx}", "App.{js,ts,tsx}", "app.config.{js,ts}", "fingerprint.config.js"],
+      "project": ["**/*.{js,ts,tsx}", "!android/**", "!ios/**"]
+    },
+    "apps/app-field/runtime": {
+      "entry": ["index.{js,ts,tsx}", "App.{js,ts,tsx}", "app.config.{js,ts}", "fingerprint.config.js"],
+      "project": ["**/*.{js,ts,tsx}", "!android/**", "!ios/**"]
+    },
+    "services/dsh": {
+      "entry": [
+        "contracts/contract-registry.ts",
+        "runtime-map.ts",
+        "service.manifest.ts",
+        "tests/*.test.mjs",
+        "frontend/app-*/index.{ts,tsx}",
+        "frontend/app-*/*.navigation-bridge.ts",
+        "frontend/control-panel/**/index.{ts,tsx}",
+        "frontend/shared/**/index.{ts,tsx}",
+        "frontend/shared/**/*.registry.ts"
+      ],
+      "project": [
+        "contracts/**/*.{ts,tsx}",
+        "frontend/**/*.{ts,tsx}",
+        "tests/**/*.mjs",
+        "*.ts"
+      ],
+      "ignore": ["frontend/shared/**/generated/**"]
+    },
+    "services/wlt": {
+      "entry": [
+        "service.manifest.ts",
+        "frontend/app-*/index.{ts,tsx}",
+        "frontend/control-panel/**/index.{ts,tsx}",
+        "frontend/shared/**/index.{ts,tsx}"
+      ],
+      "project": ["frontend/**/*.{ts,tsx}", "*.ts"]
+    },
+    "shared/app-shell": {
+      "entry": ["src/index.{ts,tsx}", "index.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}", "*.{ts,tsx}"]
+    },
+    "shared/data-runtime": {
+      "entry": ["src/index.{ts,tsx}", "index.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}", "*.{ts,tsx}"]
+    },
+    "shared/media-runtime": {
+      "entry": ["src/index.{ts,tsx}", "index.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}", "*.{ts,tsx}"]
+    },
+    "shared/ui-kit": {
+      "entry": ["src/index.{js,ts,tsx}", "index.{js,ts,tsx}"],
+      "project": ["src/**/*.{js,ts,tsx}", "*.{js,ts,tsx}"]
+    },
+    "core/identity": {
+      "entry": ["clients/index.{js,ts}", "clients/use-identity-session.{js,ts}", "service.manifest.ts"],
+      "project": ["**/*.{js,ts,tsx}"]
+    },
+    "core/workforce": {
+      "entry": ["clients/index.{js,ts}", "service.manifest.ts"],
+      "project": ["**/*.{js,ts,tsx}"]
+    },
+    "core/platform-control": {
+      "entry": ["clients/index.{js,ts}", "service.manifest.ts"],
+      "project": ["**/*.{js,ts,tsx}"]
+    },
+    "core/providers": {
+      "entry": ["clients/index.{js,ts}", "service.manifest.ts"],
+      "project": ["**/*.{js,ts,tsx}"]
+    },
+    "contracts": {
+      "entry": ["src/index.{ts,tsx}", "index.{ts,tsx}", "*.config.{js,mjs,ts}"],
+      "project": ["**/*.{js,mjs,ts,tsx}"]
+    }
+  }
+}
