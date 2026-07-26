@@ -25,6 +25,36 @@ function ConvertTo-StatusText {
   return $normalized.Substring(0, $Limit)
 }
 
+function Get-ErrorDiagnostic {
+  param([System.Management.Automation.ErrorRecord]$Record)
+
+  $parts = [System.Collections.Generic.List[string]]::new()
+  if (-not [string]::IsNullOrWhiteSpace($Record.Exception.Message)) {
+    $parts.Add($Record.Exception.Message.Trim())
+  }
+  if (-not [string]::IsNullOrWhiteSpace($Record.ErrorDetails.Message)) {
+    $parts.Add("response=$($Record.ErrorDetails.Message.Trim())")
+  }
+  if (-not [string]::IsNullOrWhiteSpace($Record.InvocationInfo.PositionMessage)) {
+    $position = ($Record.InvocationInfo.PositionMessage -replace "`r|`n", " " -replace "\s+", " ").Trim()
+    $parts.Add("source=$position")
+  }
+
+  try {
+    $response = $Record.Exception.Response
+    if ($null -ne $response -and $null -ne $response.Content) {
+      $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
+      if (-not [string]::IsNullOrWhiteSpace($body)) {
+        $parts.Add("httpBody=$($body.Trim())")
+      }
+    }
+  } catch {
+    # The response body is optional diagnostic evidence; preserve the original failure.
+  }
+
+  return ($parts | Select-Object -Unique) -join " | "
+}
+
 function Publish-RuntimeStatus {
   param(
     [ValidateSet("success", "failure", "error")]
@@ -140,11 +170,12 @@ try {
 
   Publish-RuntimeStatus -State success -Description "runtime $Action passed"
 } catch {
-  $message = $_.Exception.Message
-  $subject = ConvertTo-StatusText -Value $message -Limit 48
+  $diagnostic = Get-ErrorDiagnostic -Record $_
+  if ([string]::IsNullOrWhiteSpace($diagnostic)) { $diagnostic = "unknown runtime failure" }
+  $subject = ConvertTo-StatusText -Value $diagnostic -Limit 48
   if ([string]::IsNullOrWhiteSpace($subject)) { $subject = "phase-failed" }
-  Publish-RuntimeStatus -State failure -Description $message -Subject $subject
-  Write-Error "Runtime phase '$Action' failed: $message. Full log: $LogPath"
+  Publish-RuntimeStatus -State failure -Description $diagnostic -Subject $subject
+  Write-Error "Runtime phase '$Action' failed: $diagnostic. Full log: $LogPath"
   if (Test-Path -LiteralPath $LogPath) {
     Write-Host "--- Runtime $Action final log lines ---"
     Get-Content -LiteralPath $LogPath -Tail 160
