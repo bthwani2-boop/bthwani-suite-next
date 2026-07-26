@@ -88,7 +88,10 @@ export function classifyFiles(inputFiles, options = {}) {
     /(^|\/)(finance|wallet|commission|settlement|payout|ledger|refund|payment|checkoutfinanceoutbox|fieldcommissionoutbox)(\/|[-_.])/i.test(file) ||
     /dsh-wlt-finance/i.test(file)
   );
-  const runtime = full || financialChanged || mobileTooling || starts("infra/") || has((file) =>
+  const runtimeTooling = starts("tools/scripts/runtime/") || equals(
+    "tools/scripts/invoke-runtime-phase.ps1"
+  );
+  const runtime = full || financialChanged || mobileTooling || runtimeTooling || starts("infra/") || has((file) =>
     file.endsWith("service.manifest.ts") ||
     file.endsWith("start.ps1") ||
     /(^|\/)(next|metro|babel|app)\.config\.[cm]?[jt]s$/.test(file) ||
