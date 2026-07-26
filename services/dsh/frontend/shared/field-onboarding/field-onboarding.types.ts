@@ -158,9 +158,11 @@ export function getLocationMediaMissingCount(form: Partial<FieldPartnerDraftForm
 
 export function getDocumentsMissingCount(
   uploadedDocumentTypes: DshPartnerDocumentType[],
-  form: Partial<FieldPartnerDraftForm> = {}
+  _form: Partial<FieldPartnerDraftForm> = {},
 ): number {
-  return 0; // Documents and photos are optional (according to what is available)
+  return REQUIRED_DOCUMENT_TYPES.filter(
+    (documentType) => !uploadedDocumentTypes.includes(documentType),
+  ).length;
 }
 
 export function getAgreementReviewMissingCount(
@@ -203,6 +205,11 @@ export function getFieldRequiredMissingItems(
   if (!form.primaryPhone?.trim()) missing.push("جوال المالك");
   if (!form.city?.trim()) missing.push("المدينة");
   if (!form.addressLine?.trim()) missing.push("العنوان");
+  for (const documentType of REQUIRED_DOCUMENT_TYPES) {
+    if (!uploadedDocumentTypes.includes(documentType)) {
+      missing.push(DOCUMENT_TYPE_LABELS[documentType]);
+    }
+  }
   if (!form.operatingHours?.trim()) missing.push("ساعات العمل");
   if (!form.deliveryReadiness?.trim()) missing.push("جاهزية التوصيل");
   if (!form.beneficiaryName?.trim()) missing.push("اسم صاحب الحساب البنكي");
