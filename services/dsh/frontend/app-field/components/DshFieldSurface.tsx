@@ -50,8 +50,11 @@ function FieldBottomNavBar({
     return (
       <Pressable
         key={id}
+        accessibilityRole="tab"
+        accessibilityLabel={label}
+        accessibilityState={{ selected: isActive }}
         onPress={() => onSelect(id)}
-        style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing[2] }}
+        style={{ flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing[2] }}
       >
         <Icon
           name={isActive ? activeIcon : icon}
@@ -60,7 +63,7 @@ function FieldBottomNavBar({
         />
         <Text
           style={{
-            fontSize: 10,
+            fontSize: 11,
             marginTop: 2,
             color: isActive ? colorRoles.brandAction : colorRoles.textMuted,
             fontWeight: isActive ? '700' : '400',
@@ -74,6 +77,7 @@ function FieldBottomNavBar({
 
   return (
     <View
+      accessibilityRole="tablist"
       style={{
         flexDirection: 'row',
         height: 72 + insets.bottom,
@@ -109,12 +113,14 @@ function FieldBottomNavBar({
             shadowRadius: 10,
             elevation: 8,
           })}
-          accessibilityLabel="إضافة ملف جديد"
+          accessibilityRole="button"
+          accessibilityLabel="إضافة شريك جديد"
+          accessibilityHint="يفتح رحلة إنشاء وتأهيل شريك جديد"
         >
           <Icon name="add" size={30} color={colorRoles.surfaceBase} />
         </Pressable>
         <Text style={{ fontSize: 10, color: colorRoles.textMuted, marginTop: -18 }}>
-          إضافة
+          إضافة شريك
         </Text>
       </View>
 
@@ -128,6 +134,12 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
   const onboardingController = useFieldPartnerOnboardingController();
   const identity = useIdentitySession();
   const insets = useSafeAreaInsets();
+  const offlineScope = identity.state.kind === 'authenticated'
+    ? {
+        tenantId: identity.state.identity.tenantId,
+        actorId: identity.state.identity.subject,
+      }
+    : undefined;
 
   const offlineSync = useFieldOfflineSync(
     identity.state.kind === 'authenticated'
@@ -174,6 +186,7 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
           },
         }
       : undefined,
+    offlineScope,
   );
 
   useAndroidBackHandler(
@@ -253,7 +266,7 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
             activeId={fieldSurface.model.bottomNav.activeId}
             onLauncherPress={() => fieldSurface.actions.pushRoute({ kind: 'onboarding' })}
             onSelect={(id: string) => {
-              if (id === 'tasks') fieldSurface.actions.resetToStores();
+              if (id === 'tasks') fieldSurface.actions.pushRoute({ kind: 'work-queue' });
               if (id === 'history') fieldSurface.actions.pushRoute({ kind: 'history' });
               if (id === 'finance') fieldSurface.actions.pushRoute({ kind: 'finance' });
               if (id === 'profile') fieldSurface.actions.pushRoute({ kind: 'account' });
