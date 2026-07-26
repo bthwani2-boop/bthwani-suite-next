@@ -113,6 +113,14 @@ node-gates*.log
 !tools/remediation/
 !tools/remediation/**
 
+# Explicitly track markdown under docs/ and infra/: **/*.md above silently
+# dropped new files here with no error (GAP-0004) — docs/MIGRATION_SAFETY.md and
+# infra/docker/PRODUCTION_ARCHITECTURE.md existed locally for weeks with no git
+# history as a result. Binary/generated exclusions above (png/jpg/zip/etc.)
+# still apply inside both directories; only the markdown blanket-ignore is negated.
+!docs/**/*.md
+!infra/**/*.md
+
 # Explicitly track operational journey checklist
 !tools/checklist/operational-journey-factory-checklist.md
 !tools/checklist/**/

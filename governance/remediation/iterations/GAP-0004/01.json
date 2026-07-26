@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "iterationId": "GAP-0004-I01",
+  "taskId": "GAP-0004",
+  "iteration": 1,
+  "loop": "GAP_CLOSURE",
+  "sourceSha": "6e9eeb4831527bdf7a7ce988003d42142203f1f7",
+  "hypothesis": {
+    "statement": "The blanket **/*.md rule in .gitignore silently drops new markdown files under docs/ and infra/ because only governance/, .agents/, and tools/remediation/ were ever negated; adding !docs/**/*.md and !infra/**/*.md and tracking the two already-discovered hidden documents will close the gap without exposing any other unwanted file.",
+    "evidence": [
+      ".gitignore",
+      "docs/MIGRATION_SAFETY.md",
+      "infra/docker/PRODUCTION_ARCHITECTURE.md"
+    ],
+    "hash": "sha256:4b93a414f7eb22868293f924803b49e26f0ab5864dad97b46381293ff2a0f7bf",
+    "failureFingerprint": "STALE_EVIDENCE:.gitignore-markdown-blanket-ignore"
+  },
+  "plan": {
+    "planHash": "sha256:9bcc77c4f789af26963563d617a3296b79fe11f209e715b6d07dec965b92526f",
+    "intendedChanges": [
+      "Add !docs/**/*.md and !infra/**/*.md negation lines to .gitignore, following the existing governance/.agents/tools-remediation negation convention.",
+      "Confirm via git status that only the two already-known documents become trackable, and re-run a repo-wide ignored-file audit to rule out any other silently-dropped document.",
+      "Track docs/MIGRATION_SAFETY.md and infra/docker/PRODUCTION_ARCHITECTURE.md (neither carries a retired/obsolete/superseded marker, so both are kept, not archived)."
+    ],
+    "expectedOutcomes": [
+      "git status shows exactly docs/MIGRATION_SAFETY.md and infra/docker/PRODUCTION_ARCHITECTURE.md as newly trackable.",
+      "node tools/scripts/check-repository-hygiene.mjs exits 0.",
+      "pnpm run guard:cleanup-policy exits 0."
+    ],
+    "forbiddenChanges": [
+      "Deleting either document.",
+      "Removing the binary/generated exclusions (png/jpg/zip/pdf/etc.) that still apply inside docs/ and infra/."
+    ],
+    "workUnitIds": [],
+    "budget": {
+      "maxAgentIterations": 3
+    }
+  },
+  "execution": {
+    "agentRole": "FOUNDATION_EXECUTOR",
+    "capabilityTier": "T0_MINIMAL",
+    "changedPaths": [
+      ".gitignore",
+      "docs/MIGRATION_SAFETY.md",
+      "infra/docker/PRODUCTION_ARCHITECTURE.md"
+    ],
+    "patchHash": "sha256:7c2543b9c16d373f4a13b6648807c5d928593484b8cf8e847d03c1e6bf183972"
+  },
+  "observation": {
+    "checks": [
+      {
+        "command": "node tools/scripts/check-repository-hygiene.mjs",
+        "before": "PASS",
+        "after": "PASS",
+        "exitCode": 0,
+        "evidenceRef": ".diagnostics/remediation/evidence/GAP-0004/static-results.txt",
+        "evidenceSha256": "sha256:dab9b3055c3039fbfddbc996713b656cc1b84b3f720936d708047759aa8ecdef"
+      },
+      {
+        "command": "pnpm run guard:cleanup-policy",
+        "before": "PASS",
+        "after": "PASS",
+        "exitCode": 0,
+        "evidenceRef": ".diagnostics/remediation/evidence/GAP-0004/static-results.txt",
+        "evidenceSha256": "sha256:dab9b3055c3039fbfddbc996713b656cc1b84b3f720936d708047759aa8ecdef"
+      }
+    ],
+    "unexpectedResults": [
+      "A repo-wide ignored-file audit (comparing git status --ignored=matching against known binary/generated/env patterns) found no other silently-dropped substantive document beyond the two already known; the only other newly-visible ignored paths were .claude/scheduled_tasks.lock (a local runtime lock file) and services/dsh/database/seeds/local/media/** (already-intentional local seed media directories), neither of which is a document."
+    ]
+  },
+  "evaluation": {
+    "acceptanceDelta": 3,
+    "failedGatesBefore": 0,
+    "failedGatesAfter": 0,
+    "regressionCount": 0,
+    "scopeViolationCount": 0,
+    "unexpectedDeletionCount": 0,
+    "convergence": "IMPROVING"
+  },
+  "diagnosis": {
+    "hypothesisConfirmed": true,
+    "newFindings": [
+      "The governance/.agents/tools-remediation negation pattern was scoped to the progressive remediation build's own directories and was never generalized to an audit of the rest of the tree, which is why docs/ and infra/ were missed."
+    ],
+    "rootCauseState": "CONFIRMED"
+  },
+  "improve": {
+    "missingGuards": [],
+    "regressionTestsNeeded": [],
+    "reusableRepairScripts": [],
+    "blindSpotsFound": []
+  },
+  "decision": {
+    "status": "PASS"
+  },
+  "antiThrash": {
+    "priorHypothesisHashes": [],
+    "priorPatchHashes": [],
+    "priorFailureFingerprints": [
+      "STALE_EVIDENCE:.gitignore-markdown-blanket-ignore"
+    ]
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "task": {
+    "id": "GAP-0004",
+    "title": "Close the .gitignore markdown blanket-ignore silent-drop gap for docs/ and infra/",
+    "class": "GOVERNANCE",
+    "priority": "P1",
+    "status": "CLOSED"
+  },
+  "source": {
+    "repository": "bthwani2-boop/bthwani-suite-next",
+    "workBranch": "reemsam",
+    "baseSha": "6e9eeb4831527bdf7a7ce988003d42142203f1f7",
+    "contractHash": "sha256:50fe4c43242c2c157b9526b7ed191bf6cbcfa21aea69eecd1a8fd2818545498b",
+    "frozenAt": "2026-07-26T05:30:00Z"
+  },
+  "problem": {
+    "statement": ".gitignore line 6 (`**/*.md`) blanket-ignores every markdown file repo-wide and was only negated for governance/, .agents/, and tools/remediation/ (plus a handful of individually named files). docs/ and infra/ had no negation, so any new markdown file placed there silently never got tracked, with no error from git or any guard. Two real, substantive, pre-existing documents were confirmed lost from history as a result.",
+    "evidenceState": "PROVEN",
+    "evidence": [
+      { "path": ".gitignore", "lineRange": "4-15", "note": "Blanket **/*.md with no negation for docs/ or infra/ before this fix." },
+      { "path": "docs/MIGRATION_SAFETY.md", "note": "Existed on disk since 2026-07-15 with zero git history (`git log --all` returns nothing) until this task tracked it." },
+      { "path": "infra/docker/PRODUCTION_ARCHITECTURE.md", "note": "Existed on disk since 2026-07-14 with zero git history until this task tracked it." }
+    ],
+    "rootCauseHypothesis": [
+      "The governance/.agents/tools-remediation negation pattern was applied only to directories touched by the progressive remediation build itself; docs/ and infra/ markdown was never audited against the blanket ignore rule, so files placed there by other work silently never entered git history."
+    ]
+  },
+  "product": {
+    "journey": "repository-hygiene",
+    "actors": ["foundation"],
+    "includedSurfaces": ["repository"],
+    "excludedSurfaces": []
+  },
+  "behavior": {
+    "current": [
+      "New markdown files under docs/ or infra/ are silently ignored by git with no warning from any guard."
+    ],
+    "required": [
+      "Markdown files under docs/ and infra/ are tracked by default (negated out of the blanket **/*.md ignore), while binary/generated exclusions in the same directories are unaffected; both previously-hidden documents are tracked."
+    ],
+    "forbidden": [
+      "Deleting docs/MIGRATION_SAFETY.md or infra/docker/PRODUCTION_ARCHITECTURE.md without confirming they are superseded (neither carries a retired/obsolete/superseded status marker).",
+      "Blanket-untracking .gitignore's markdown rule without auditing what else it currently hides."
+    ]
+  },
+  "scope": {
+    "allowedPaths": [
+      ".gitignore",
+      "docs/MIGRATION_SAFETY.md",
+      "infra/docker/PRODUCTION_ARCHITECTURE.md"
+    ],
+    "forbiddenPaths": [
+      "services/**",
+      "core/**",
+      "apps/**",
+      "shared/**",
+      "contracts/**",
+      ".github/**"
+    ],
+    "maximumChangedFiles": 3,
+    "maximumChangedLines": 400
+  },
+  "dependencies": {
+    "blockedBy": [],
+    "blocks": [],
+    "sharedContracts": [],
+    "sharedGeneratedOutputs": []
+  },
+  "agents": {
+    "required": ["foundation"],
+    "maximumRepairIterations": 3,
+    "roles": {
+      "diagnosedBy": "foundation-diagnosis",
+      "executedBy": "foundation-executor",
+      "reviewedBy": "independent-implementation-reviewer"
+    }
+  },
+  "workUnits": [],
+  "proof": {
+    "required": {
+      "static": true,
+      "contract": false,
+      "unit": false,
+      "integration": false,
+      "database": false,
+      "runtime": false,
+      "visual": false,
+      "native": false,
+      "security": false,
+      "tenancy": false,
+      "performance": false,
+      "resilience": false
+    },
+    "commands": [
+      "node tools/scripts/check-repository-hygiene.mjs",
+      "pnpm run guard:cleanup-policy"
+    ],
+    "scenarios": [
+      { "id": "docs-infra-markdown-no-longer-silently-dropped" },
+      { "id": "no-other-silently-dropped-file-found-in-repo-wide-audit" }
+    ]
+  },
+  "acceptance": [
+    {
+      "id": "AC-001",
+      "statement": ".gitignore no longer silently drops new markdown files under docs/ or infra/, while binary/generated exclusions in those directories still apply.",
+      "evidenceRequired": ["static"]
+    },
+    {
+      "id": "AC-002",
+      "statement": "docs/MIGRATION_SAFETY.md and infra/docker/PRODUCTION_ARCHITECTURE.md are tracked in git.",
+      "evidenceRequired": ["static"]
+    },
+    {
+      "id": "AC-003",
+      "statement": "A repo-wide audit of git-ignored paths found no other substantive silently-dropped document beyond these two.",
+      "evidenceRequired": ["static"]
+    }
+  ],
+  "cleanup": {
+    "temporaryPaths": [],
+    "expectedArchivedPaths": [],
+    "archivePaths": []
+  },
+  "approval": {
+    "protectedDomains": [],
+    "humanApprovalRequired": false
+  },
+  "budget": {
+    "maxJobs": 1,
+    "maxRuntimeMinutes": 10,
+    "maxAgentIterations": 3,
+    "maxChangedFiles": 3,
+    "maxChangedLines": 400,
+    "maxArtifactsMb": 1,
+    "maxFullScans": 1
+  },
+  "confidence": {
+    "productModel": "NOT_APPLICABLE",
+    "static": "PROVEN",
+    "contract": "NOT_APPLICABLE",
+    "database": "NOT_APPLICABLE",
+    "runtime": "NOT_APPLICABLE",
+    "visual": "NOT_APPLICABLE",
+    "native": "NOT_APPLICABLE",
+    "security": "NOT_APPLICABLE",
+    "tenancy": "NOT_APPLICABLE",
+    "finance": "NOT_APPLICABLE",
+    "performance": "NOT_APPLICABLE",
+    "resilience": "NOT_APPLICABLE",
+    "recovery": "NOT_APPLICABLE"
+  }
+}

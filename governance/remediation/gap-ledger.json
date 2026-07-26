@@ -200,18 +200,19 @@
         "static",
         "governance"
       ],
-      "status": "OPEN",
+      "status": "CLOSED",
       "blocks_journey_start": false,
       "risk_class": "STANDARD",
-      "state": "TRIAGED",
+      "state": "CLOSED",
       "verification_profile": "STATIC_SCOPED",
       "blocked_reason": "",
       "priority": "P1",
       "discovered_at": "2026-07-26",
       "evidence": [
-        "docs/MIGRATION_SAFETY.md",
-        "infra/docker/PRODUCTION_ARCHITECTURE.md",
-        ".gitignore"
+        "governance/remediation/tasks/completed/GAP-0004.json",
+        "governance/remediation/iterations/GAP-0004/01.json",
+        ".diagnostics/remediation/evidence/GAP-0004/static-results.txt",
+        ".diagnostics/remediation/evidence/GAP-0004/patch.diff"
       ]
     },
     {
