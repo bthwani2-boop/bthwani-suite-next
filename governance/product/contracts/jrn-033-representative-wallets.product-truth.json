@@ -163,7 +163,7 @@
   },
   "execution": {
     "appetite": "Close JRN-033 actor and tenant scoped wallet ledger route UI runtime and financial boundary gaps without enabling unapproved money movement or production deployment.",
-    "fixedConstraints": ["Repository mode is REMOTE_ONLY on sambassam.", "WLT remains financial truth owner.", "Tenant context comes only from authenticated Identity.", "No PR merge force push release or production deployment is authorized.", "Independent financial and product approvals cannot be self-issued by engineering."],
+    "fixedConstraints": ["Repository mode is REMOTE_ONLY on smar.", "WLT remains financial truth owner.", "Tenant context comes only from authenticated Identity.", "No PR merge force push release or production deployment is authorized.", "Independent financial and product approvals cannot be self-issued by engineering."],
     "variableScope": ["Arabic labels", "wallet summary presentation", "ledger row density", "non-financial navigation placement"],
     "forbiddenScope": ["DSH wallet balance mutation", "frontend direct WLT financial call", "client supplied tenant selection", "cross-tenant finance lookup", "provider activation", "production deployment", "commercial SaaS activation", "self-approval"],
     "forecastRange": "one sequential journey closure",

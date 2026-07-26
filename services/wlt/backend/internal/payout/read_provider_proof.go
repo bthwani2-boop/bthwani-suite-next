@@ -80,11 +80,20 @@ func scanPayoutRequestWithProof(rows *sql.Rows) (*PayoutRequest, error) {
 	return &payoutRequest, nil
 }
 
+// HandleListPayoutRequestsWithProviderProof requires a tenantId query
+// parameter: the tenant_id predicate is mandatory and always applied first,
+// so no combination of the optional filters below can ever return another
+// tenant's payout requests.
 func HandleListPayoutRequestsWithProviderProof(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		tenantID := strings.TrimSpace(r.URL.Query().Get("tenantId"))
 		beneficiaryActorID := strings.TrimSpace(r.URL.Query().Get("beneficiaryActorId"))
 		beneficiaryActorType := strings.TrimSpace(r.URL.Query().Get("beneficiaryActorType"))
 		status := strings.TrimSpace(r.URL.Query().Get("status"))
+		if tenantID == "" {
+			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", "tenantId is required")
+			return
+		}
 		if (beneficiaryActorID == "") != (beneficiaryActorType == "") {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "beneficiaryActorId and beneficiaryActorType must be supplied together")
 			return
@@ -97,19 +106,19 @@ func HandleListPayoutRequestsWithProviderProof(db *sql.DB) http.HandlerFunc {
 		}
 
 		query := "SELECT " + payoutReadCols + " FROM wlt_payout_requests"
-		where := make([]string, 0, 2)
-		args := make([]any, 0, 3)
+		where := make([]string, 0, 3)
+		args := make([]any, 0, 4)
+		args = append(args, tenantID)
+		where = append(where, "tenant_id = $1")
 		if beneficiaryActorID != "" {
 			args = append(args, beneficiaryActorID, strings.ToLower(beneficiaryActorType))
-			where = append(where, "beneficiary_actor_id = $1 AND beneficiary_actor_type = $2")
+			where = append(where, fmt.Sprintf("beneficiary_actor_id = $%d AND beneficiary_actor_type = $%d", len(args)-1, len(args)))
 		}
 		if status != "" {
 			args = append(args, status)
 			where = append(where, fmt.Sprintf("status = $%d", len(args)))
 		}
-		if len(where) > 0 {
-			query += " WHERE " + strings.Join(where, " AND ")
-		}
+		query += " WHERE " + strings.Join(where, " AND ")
 		query += " ORDER BY requested_at DESC, id DESC LIMIT 250"
 
 		rows, err := db.QueryContext(r.Context(), query, args...)

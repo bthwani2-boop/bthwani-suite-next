@@ -129,15 +129,22 @@ func GetSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
 	return s, err
 }
 
-func ListPartnerSettlements(db *sql.DB, partnerID string) ([]*Settlement, error) {
+// ListPartnerSettlements requires a tenantID: the tenant_id predicate is
+// mandatory and is never dropped, regardless of whether partnerID is
+// supplied. This is what makes /wlt/settlements tenant-scoped rather than an
+// optional filter a caller can omit.
+func ListPartnerSettlements(db *sql.DB, tenantID, partnerID string) ([]*Settlement, error) {
+	if tenantID == "" {
+		return nil, fmt.Errorf("tenantId is required")
+	}
 	var (
 		rows *sql.Rows
 		err  error
 	)
 	if partnerID == "" {
-		rows, err = db.Query(`SELECT ` + settlementCols + ` FROM wlt_settlements ORDER BY period_start DESC LIMIT 50`)
+		rows, err = db.Query(`SELECT `+settlementCols+` FROM wlt_settlements WHERE tenant_id = $1 ORDER BY period_start DESC LIMIT 50`, tenantID)
 	} else {
-		rows, err = db.Query(`SELECT `+settlementCols+` FROM wlt_settlements WHERE partner_id = $1 ORDER BY period_start DESC`, partnerID)
+		rows, err = db.Query(`SELECT `+settlementCols+` FROM wlt_settlements WHERE tenant_id = $1 AND partner_id = $2 ORDER BY period_start DESC`, tenantID, partnerID)
 	}
 	if err != nil {
 		return nil, err
@@ -318,8 +325,9 @@ func HandleGetSettlement(db *sql.DB) http.HandlerFunc {
 
 func HandleListSettlements(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		tenantID := r.URL.Query().Get("tenantId")
 		partnerID := r.URL.Query().Get("partnerId")
-		settlements, err := ListPartnerSettlements(db, partnerID)
+		settlements, err := ListPartnerSettlements(db, tenantID, partnerID)
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

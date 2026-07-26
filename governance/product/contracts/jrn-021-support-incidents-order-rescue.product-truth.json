@@ -228,7 +228,7 @@
   "execution": {
     "appetite": "Close JRN-021 code gaps without expanding into financial mutation, production deployment or commercial SaaS activation.",
     "fixedConstraints": [
-      "Repository mode is REMOTE_ONLY on sambassam.",
+      "Repository mode is REMOTE_ONLY on smar.",
       "DSH shared support owns frontend business coordination.",
       "WLT remains read-only from order rescue.",
       "No PR, merge, force push, release or production deployment is authorized."

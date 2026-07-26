@@ -410,8 +410,8 @@
   "execution": {
     "appetite": "Execute the rescue surface by surface on the pinned branch, preserving live behavior and stopping at the strongest independently proven stage.",
     "fixedConstraints": [
-      "Use governed pull-request branches targeting pinned lianbassam commit 8c61745ad27cea87ce3b213e051535cf0de464dd.",
-      "Do not write to lianbassam or master.",
+      "(historical) Use governed pull-request branches targeting pinned lianbassam commit 8c61745ad27cea87ce3b213e051535cf0de464dd.",
+      "Do not write to lianbassam (historical), master, or smar.",
       "Preserve current API, controller, identity, role, DSH, WLT, and persistence ownership.",
       "Use UI-kit tokens and public contracts.",
       "Do not reintroduce fake, seed, fixture, preview, fallback, or hardcoded runtime truth.",

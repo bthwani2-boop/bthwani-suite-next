@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - master
-      - lianbassam
+      - smar
+      - "work/**"
     paths:
       - "package.json"
       - "services/dsh/database/**"

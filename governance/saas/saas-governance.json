@@ -6,7 +6,7 @@
   "activationAuthorization": {
     "authorizationPath": "governance/saas/activation-authorization.json",
     "status": "AUTHORIZED",
-    "targetRef": "lianbassam",
+    "targetRef": "smar",
     "productionDeploymentAuthorized": false
   },
   "tenantDefinition": "A tenant is the platform operator or organization that owns an isolated operating context; it is not automatically a partner, store, user, city, or service.",

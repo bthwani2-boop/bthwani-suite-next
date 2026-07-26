@@ -149,7 +149,7 @@
   },
   "execution": {
     "appetite": "Close JRN-029 code, data, contract, impact and verification gaps without deploying production or changing WLT ownership.",
-    "fixedConstraints": ["Repository mode is REMOTE_ONLY on sambassam.", "No PR merge force push release or production deployment is authorized.", "Service-area geofences remain the spatial truth owner.", "Independent approvals cannot be self-issued by engineering."],
+    "fixedConstraints": ["Repository mode is REMOTE_ONLY on smar.", "No PR merge force push release or production deployment is authorized.", "Service-area geofences remain the spatial truth owner.", "Independent approvals cannot be self-issued by engineering."],
     "variableScope": ["Arabic operator wording", "diagnostic presentation", "non-financial policy labels"],
     "forbiddenScope": ["WLT ledger mutation", "production deployment", "commercial SaaS activation", "self-approval", "fake runtime evidence"],
     "forecastRange": "one sequential journey closure",

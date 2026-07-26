@@ -66,14 +66,26 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/settlements/summary", readGate(settlement.HandleGetSettlementSummaryGoverned(db)))
 	mux.HandleFunc("POST /wlt/settlements", gate(serviceAuth(settlement.HandleCreateEvidenceBackedSettlement(db))))
 	mux.HandleFunc("GET /wlt/settlements/{settlementId}/evidence", readGate(settlement.HandleListSettlementEvidence(db)))
-	mux.HandleFunc("GET /wlt/settlements/{settlementId}", readGate(settlement.HandleGetSettlement(db)))
-	mux.HandleFunc("GET /wlt/settlements", readGate(settlement.HandleListSettlements(db)))
+	mux.HandleFunc("GET /wlt/settlements/{settlementId}", readGate(shared.RequireTenantScope(db, shared.TenantScopeConfig{
+		Table:       "wlt_settlements",
+		IDPathValue: "settlementId",
+	}, settlement.HandleGetSettlement(db))))
+	mux.HandleFunc("GET /wlt/settlements", readGate(shared.RequireTenantScope(db, shared.TenantScopeConfig{
+		Table:    "wlt_settlements",
+		ListPath: "/wlt/settlements",
+	}, settlement.HandleListSettlements(db))))
 	mux.HandleFunc("POST /wlt/settlements/{settlementId}/post", gate(serviceAuth(settlement.HandlePostSettlement(db))))
 	mux.HandleFunc("PUT /wlt/settlement-policies/{partnerId}", gate(serviceAuth(settlement.HandleUpsertGovernedSettlementPolicyIdempotent(db))))
 
 	mux.HandleFunc("POST /wlt/cod-records", gate(serviceAuth(cod.HandleCreateCodRecordAtomic(db))))
-	mux.HandleFunc("GET /wlt/cod-records/{codRecordId}", readGate(cod.HandleGetCodRecord(db)))
-	mux.HandleFunc("GET /wlt/cod-records", readGate(cod.HandleListCodRecords(db)))
+	mux.HandleFunc("GET /wlt/cod-records/{codRecordId}", readGate(shared.RequireTenantScope(db, shared.TenantScopeConfig{
+		Table:       "wlt_cod_records",
+		IDPathValue: "codRecordId",
+	}, cod.HandleGetCodRecord(db))))
+	mux.HandleFunc("GET /wlt/cod-records", readGate(shared.RequireTenantScope(db, shared.TenantScopeConfig{
+		Table:    "wlt_cod_records",
+		ListPath: "/wlt/cod-records",
+	}, cod.HandleListCodRecords(db))))
 	mux.HandleFunc("POST /wlt/cod-records/{codRecordId}/collect", gate(serviceAuth(cod.HandleCollectCodSovereign(db))))
 	mux.HandleFunc("POST /wlt/cod-records/{codRecordId}/remit", gate(serviceAuth(cod.HandleRemitCodSovereign(db))))
 	mux.HandleFunc("GET /wlt/cod-reconciliation-cases", readGate(cod.HandleListCodReconciliationCases(db)))
@@ -81,8 +93,14 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/cod-reconciliation-cases/{caseId}/resolve", gate(serviceAuth(cod.HandleResolveCodReconciliationCase(db))))
 	mux.HandleFunc("PUT /wlt/commission-policies", gate(serviceAuth(cod.HandleUpsertGovernedCommissionPolicyIdempotent(db))))
 	mux.HandleFunc("POST /wlt/commissions", gate(serviceAuth(cod.HandleCreateGovernedCommission(db))))
-	mux.HandleFunc("GET /wlt/commissions/{commissionId}", readGate(cod.HandleGetGovernedCommission(db)))
-	mux.HandleFunc("GET /wlt/commissions", readGate(cod.HandleListGovernedCommissions(db)))
+	mux.HandleFunc("GET /wlt/commissions/{commissionId}", readGate(shared.RequireTenantScope(db, shared.TenantScopeConfig{
+		Table:       "wlt_commissions",
+		IDPathValue: "commissionId",
+	}, cod.HandleGetGovernedCommission(db))))
+	mux.HandleFunc("GET /wlt/commissions", readGate(shared.RequireTenantScope(db, shared.TenantScopeConfig{
+		Table:    "wlt_commissions",
+		ListPath: "/wlt/commissions",
+	}, cod.HandleListGovernedCommissions(db))))
 	mux.HandleFunc("POST /wlt/commissions/{commissionId}/adjust", gate(serviceAuth(cod.HandleAdjustGovernedCommission(db))))
 	mux.HandleFunc("POST /wlt/commissions/{commissionId}/confirm", gate(serviceAuth(cod.HandleConfirmGovernedCommissionIdempotent(db))))
 	mux.HandleFunc("POST /wlt/commissions/{commissionId}/settle", gate(serviceAuth(cod.HandleSettleGovernedCommissionIdempotent(db))))
@@ -110,8 +128,14 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/reconciliation-cases/{caseId}/resolve", gate(serviceAuth(reconciliation.HandleResolveCase(db))))
 
 	mux.HandleFunc("POST /wlt/payout-requests", gate(serviceAuth(payout.HandleCreatePayoutRequestJRN037(db))))
-	mux.HandleFunc("GET /wlt/payout-requests", readGate(payout.HandleListPayoutRequestsWithProviderProof(db)))
-	mux.HandleFunc("GET /wlt/payout-requests/{payoutId}", readGate(payout.HandleGetPayoutRequestWithProviderProof(db)))
+	mux.HandleFunc("GET /wlt/payout-requests", readGate(shared.RequireTenantScope(db, shared.TenantScopeConfig{
+		Table:    "wlt_payout_requests",
+		ListPath: "/wlt/payout-requests",
+	}, payout.HandleListPayoutRequestsWithProviderProof(db))))
+	mux.HandleFunc("GET /wlt/payout-requests/{payoutId}", readGate(shared.RequireTenantScope(db, shared.TenantScopeConfig{
+		Table:       "wlt_payout_requests",
+		IDPathValue: "payoutId",
+	}, payout.HandleGetPayoutRequestWithProviderProof(db))))
 	mux.HandleFunc("GET /wlt/payout-requests/{payoutId}/audit", readGate(payout.HandleListPayoutAuditJRN037(db)))
 	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/approve", gate(serviceAuth(payout.HandleApprovePayoutRequestSovereign(db))))
 	mux.HandleFunc("POST /wlt/payout-requests/{payoutId}/reject", gate(serviceAuth(payout.HandleRejectPayoutRequestSovereign(db))))

@@ -31,7 +31,7 @@ platform_mode: BTHWANI_NATIVE_PLATFORM
 saas_readiness_mode: SAAS_READY_DEFERRED
 commercial_activation_state: ELIGIBLE_FOR_REVIEW
 activation_authorization_status: AUTHORIZED
-activation_authorization_target_ref: lianbassam
+activation_authorization_target_ref: smar
 production_deployment_authorized: false
 canonical_decision: NEEDS_EVIDENCE
 source_of_truth: governance/saas/saas-governance.json
@@ -39,7 +39,7 @@ source_of_truth: governance/saas/saas-governance.json
 
 Read this as three distinct, non-interchangeable facts — do not collapse them into one claim:
 
-1. **Authorization exists, and its scope now covers doing the work, not only assessing it.** `governance/saas/activation-authorization.json` records `status: AUTHORIZED` for target ref `lianbassam` (dated 2026-07-23), scoped to `ENABLE_SAAS_RUNTIME_MODE`, `REMOVE_COMMERCIAL_ACTIVATION_POLICY_BLOCK`, `EXECUTE_SAAS_ACTIVATION_VERIFICATION`. On 2026-07-24 the user explicitly widened that scope with `EXECUTE_SAAS_IMPLEMENTATION_WORK` and `EXECUTE_SAAS_ACTIVATION_WORK` (see `scopeAmendment` in that file): this is no longer readiness-assessment-only, engineering may actively build tenant isolation and activation-gate capability, not merely evaluate it. This scope widening does **not** by itself change `commercialActivationState`, `saasReadinessMode`, or any `activationEvidence` item below — those still move only when each has same-commit proof.
+1. **Authorization exists, and its scope now covers doing the work, not only assessing it.** `governance/saas/activation-authorization.json` records `status: AUTHORIZED` for target ref `smar` (dated 2026-07-23), scoped to `ENABLE_SAAS_RUNTIME_MODE`, `REMOVE_COMMERCIAL_ACTIVATION_POLICY_BLOCK`, `EXECUTE_SAAS_ACTIVATION_VERIFICATION`. On 2026-07-24 the user explicitly widened that scope with `EXECUTE_SAAS_IMPLEMENTATION_WORK` and `EXECUTE_SAAS_ACTIVATION_WORK` (see `scopeAmendment` in that file): this is no longer readiness-assessment-only, engineering may actively build tenant isolation and activation-gate capability, not merely evaluate it. This scope widening does **not** by itself change `commercialActivationState`, `saasReadinessMode`, or any `activationEvidence` item below — those still move only when each has same-commit proof.
 2. **Runtime mode is NOT yet flipped.** `governance/saas/saas-governance.json` (commit `4e0ba605`, `fix(governance): separate authorization from SaaS activation state` — the current and newest state on this file) deliberately keeps `saasReadinessMode: SAAS_READY_DEFERRED`. Authorization to proceed is not the same event as declaring the platform SaaS-active. Do not read authorization as if it already means `SAAS_ACTIVE`.
 3. **Commercial state is `ELIGIBLE_FOR_REVIEW`**, not `ACTIVATION_AUTHORIZED` and not `ACTIVE`. That earlier, more advanced-sounding label was walked back by the same commit for exactly this reason: it over-claimed relative to unproven evidence (`activationEvidence` in the JSON lists every gate item as `NOT_PROVEN`).
 

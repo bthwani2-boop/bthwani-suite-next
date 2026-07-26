@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "decision": "WORK_BRANCHES_REQUIRE_HUMAN_MASTER_MERGE_AND_AUTOMATED_SUBBRANCHES_RETURN_TO_WORK_BRANCH",
-  "activeTargetBranch": "reemsam",
-  "closureInstruction": "Reflect the verified remediation achievements into reemsam only, then stop. Do not continue toward master without a separate explicit human command.",
+  "activeTargetBranch": "smar",
+  "closureInstruction": "Reflect the verified remediation achievements into smar only, then stop. Do not continue toward master without a separate explicit human command.",
   "branchClasses": {
     "workBranch": {
       "definition": "A primary human-owned work branch created from master, such as reemsam, lianbassam, sambassam, or a similar named delivery branch.",

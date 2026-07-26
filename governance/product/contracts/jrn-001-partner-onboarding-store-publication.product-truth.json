@@ -207,7 +207,7 @@
   "execution": {
     "appetite": "Close JRN-001 sequentially across all mandatory FS-01 through FS-18 slices, then stop before JRN-002.",
     "fixedConstraints": [
-      "Use GitHub Remote lianbassam as execution truth.",
+      "Use GitHub Remote smar as execution truth.",
       "DSH owns operational partner and store state; WLT owns financial payout truth.",
       "Tenant context is derived from authenticated Identity and never accepted from client-controlled input.",
       "No store reassignment through the generic onboarding link route.",

@@ -38,7 +38,7 @@ on:
       - "pnpm-workspace.yaml"
       - "nx.json"
   push:
-    branches: [master]
+    branches: [master, smar, "work/**"]
     paths:
       - "AGENTS.md"
       - "GEMINI.md"

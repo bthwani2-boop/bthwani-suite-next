@@ -264,7 +264,7 @@
   "execution": {
     "appetite": "Close JRN-022 code gaps without creating a second media, exception or financial subsystem, deploying production or activating commercial SaaS.",
     "fixedConstraints": [
-      "Repository mode is REMOTE_ONLY on sambassam.",
+      "Repository mode is REMOTE_ONLY on smar.",
       "DSH shared special-requests owns frontend business coordination.",
       "Dispatch owns assignment delivery proof and exception truth.",
       "WLT remains the sole financial truth owner.",

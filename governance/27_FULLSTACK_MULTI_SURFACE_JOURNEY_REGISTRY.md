@@ -804,7 +804,7 @@ open_gaps: []
 - `verified_implementation_commit`: `7018be0d7de0abd6ce98311a7cb0ad245b93ac49`
 - `proof_run_id`: `29867162535`
 - `status_context`: `journeys/jrn-007/home-discovery`
-- `permanent_gate`: `.github/workflows/jrn-007-sambassam-verify.yml`
+- `permanent_gate`: `.github/workflows/manual-deep-verification.yml`
 - `product_truth`: `governance/product-truth/JRN-007_HOME_DISCOVERY_PRODUCT_TRUTH.md`
 - `evidence`: `governance/evidence/JRN-007_FULLSTACK_MULTI_SURFACE_CLOSURE.json`
 - أُغلقت الشرائح `JRN-007-S1..S8` في الكود الفعلي: المجموعات والفئات، البنرات والوسائط والإجراءات، الاستهداف الإقليمي والجماهيري، الجدولة والنشر، CRUD المحكوم، منع ازدواج الملكية، حالات تطبيق العميل، وقياس الظهور والنقر المحكوم بالسياق.

@@ -11,6 +11,7 @@ import (
 )
 
 type GovernedCommissionQuery struct {
+	TenantID             string
 	SourceID             string
 	BeneficiaryActorID   string
 	BeneficiaryActorType string
@@ -18,23 +19,31 @@ type GovernedCommissionQuery struct {
 	Limit                int
 }
 
+// ListGovernedCommissions requires a TenantID: the tenant_id predicate is
+// mandatory and always applied first, so no combination of the optional
+// filters below can ever return another tenant's commissions.
 func ListGovernedCommissions(db *sql.DB, query GovernedCommissionQuery) ([]*Commission, error) {
+	query.TenantID = strings.TrimSpace(query.TenantID)
 	query.SourceID = strings.TrimSpace(query.SourceID)
 	query.BeneficiaryActorID = strings.TrimSpace(query.BeneficiaryActorID)
 	query.BeneficiaryActorType = strings.ToLower(strings.TrimSpace(query.BeneficiaryActorType))
 	query.Status = strings.ToLower(strings.TrimSpace(query.Status))
+	if query.TenantID == "" {
+		return nil, fmt.Errorf("tenantId is required")
+	}
 	if (query.BeneficiaryActorID == "") != (query.BeneficiaryActorType == "") {
 		return nil, fmt.Errorf("beneficiaryActorId and beneficiaryActorType must be supplied together")
 	}
 	if query.Limit <= 0 || query.Limit > 200 {
 		query.Limit = 100
 	}
-	conditions := make([]string, 0, 3)
-	args := make([]any, 0, 4)
+	conditions := make([]string, 0, 4)
+	args := make([]any, 0, 5)
 	appendCondition := func(column string, value any) {
 		args = append(args, value)
 		conditions = append(conditions, fmt.Sprintf("%s = $%d", column, len(args)))
 	}
+	appendCondition("tenant_id", query.TenantID)
 	if query.SourceID != "" {
 		appendCondition("source_id", query.SourceID)
 	}
@@ -97,6 +106,7 @@ func HandleListGovernedCommissions(db *sql.DB) http.HandlerFunc {
 			limit = parsed
 		}
 		commissions, err := ListGovernedCommissions(db, GovernedCommissionQuery{
+			TenantID:             strings.TrimSpace(values.Get("tenantId")),
 			SourceID:             sourceID,
 			BeneficiaryActorID:   beneficiaryActorID,
 			BeneficiaryActorType: beneficiaryActorType,

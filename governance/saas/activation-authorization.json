@@ -4,7 +4,7 @@
   "status": "AUTHORIZED",
   "source": "USER_EXPLICIT_INSTRUCTION",
   "authorizedDate": "2026-07-23",
-  "targetRef": "lianbassam",
+  "targetRef": "smar",
   "scope": [
     "ENABLE_SAAS_RUNTIME_MODE",
     "REMOVE_COMMERCIAL_ACTIVATION_POLICY_BLOCK",

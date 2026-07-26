@@ -202,7 +202,7 @@
   "execution": {
     "appetite": "Close all JRN-030 technical slices on GitHub Remote without granting independent product QA security release or production approval.",
     "fixedConstraints": [
-      "GitHub Remote sambassam is the only execution truth",
+      "GitHub Remote smar is the only execution truth",
       "DSH remains the sole fleet membership owner",
       "Identity remains the authentication owner",
       "codes are single-use and digest-only",
