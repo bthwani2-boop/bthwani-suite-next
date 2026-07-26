@@ -12,6 +12,7 @@ param(
 $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
+$RuntimeSmokeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime-dispatch.ps1"
 $CatalogSeedScript = Join-Path $RepoRoot "services/dsh/database/scripts/apply-central-catalog-seed.ps1"
 $AuthenticatedWltSmokeScript = Join-Path $RepoRoot "tools/scripts/finance/smoke-wlt-authenticated-runtime.ps1"
 $DshSmokeDiagnosticScript = Join-Path $RepoRoot "tools/scripts/runtime/diagnose-dsh-smoke-auth-boundary.ps1"
@@ -74,9 +75,11 @@ function Publish-RuntimeStatus {
   }
 }
 
-if (-not (Test-Path -LiteralPath $RuntimeScript)) {
-  Publish-RuntimeStatus -State error -Description "runtime.ps1 is missing" -Subject "missing-script"
-  throw "Runtime script not found: $RuntimeScript"
+foreach ($requiredScript in @($RuntimeScript, $RuntimeSmokeScript)) {
+  if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
+    Publish-RuntimeStatus -State error -Description "runtime script is missing" -Subject "missing-script"
+    throw "Runtime script not found: $requiredScript"
+  }
 }
 
 $runAuthenticatedWltSmoke = $Action -eq "smoke" -and $ProfileList -contains "wlt"
@@ -86,6 +89,7 @@ $runtimeProfileList = if ($runAuthenticatedWltSmoke) {
   @($ProfileList)
 }
 $runtimeProfiles = $runtimeProfileList -join ","
+$phaseRuntimeScript = if ($Action -eq "smoke") { $RuntimeSmokeScript } else { $RuntimeScript }
 
 $runtimeParameters = @{
   Action = $Action
@@ -97,7 +101,8 @@ try {
   Set-Location -LiteralPath $RepoRoot
 
   if ($runtimeProfileList.Count -gt 0) {
-    & $RuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath
+    $global:LASTEXITCODE = 0
+    & $phaseRuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath
     if ($LASTEXITCODE -ne 0) {
       throw "Runtime script action '$Action' failed with exit code $LASTEXITCODE"
     }
@@ -124,6 +129,7 @@ try {
   # phase avoids partial, order-dependent SQL execution on fresh volumes.
   if ($Action -eq "up" -and $ProfileList -contains "dsh") {
     Write-Host "`n=== runtime:seed-prerequisites ==="
+    $global:LASTEXITCODE = 0
     & $RuntimeScript -Action seed -Profiles $Profiles 2>&1 | Tee-Object -FilePath $LogPath -Append
     if ($LASTEXITCODE -ne 0) {
       throw "Runtime seed prerequisites failed with exit code $LASTEXITCODE"
@@ -133,6 +139,7 @@ try {
       throw "Central catalog convergence script not found: $CatalogSeedScript"
     }
     Write-Host "`n=== runtime:catalog-convergence ==="
+    $global:LASTEXITCODE = 0
     & $CatalogSeedScript 2>&1 | Tee-Object -FilePath $LogPath -Append
     if ($LASTEXITCODE -ne 0) {
       throw "Central catalog convergence failed with exit code $LASTEXITCODE"
