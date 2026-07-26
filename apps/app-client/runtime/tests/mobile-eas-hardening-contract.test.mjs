@@ -41,7 +41,7 @@ test("Initialize is mandatory and bound to immutable provider inputs", () => {
   assert.ok(syncCalls.length >= 2, "EAS inputs must be synchronized during Initialize and again before Preflight/Build");
 });
 
-test("EAS provider synchronization is idempotent and does not parse CLI listings", () => {
+test("EAS provider synchronization is isolated, idempotent, and secret-preserving", () => {
   assert.ok(providers.includes("'env:set', 'development'"));
   assert.ok(providers.includes("PASS: EAS development provider inputs were created or updated."));
   assert.equal(providers.includes("'env:list', 'development'"), false);
@@ -54,12 +54,32 @@ test("EAS provider synchronization is idempotent and does not parse CLI listings
   assert.equal(providers.includes("'env:create', 'development'"), false);
   assert.equal(providers.includes("'--variable-environment', 'development'"), false);
 
+  assert.ok(providers.includes("function Get-EasEnvironmentContextDirectory"));
+  assert.ok(providers.includes('"environment-context\\$App"'));
+  assert.ok(providers.includes("'package.json'"));
+  assert.ok(providers.includes("'app.json'"));
+  assert.ok(providers.includes("projectId = [string]$appConfig.projectId"));
+  assert.ok(providers.includes("Push-Location -LiteralPath $environmentContextDirectory"));
+  assert.equal(providers.includes("Push-Location -LiteralPath $AppDir"), false);
+
   const setStart = providers.indexOf("'env:set', 'development'");
   const setEnd = providers.indexOf(") -SecretValues", setStart);
   assert.ok(setStart >= 0 && setEnd > setStart);
   const setInvocation = providers.slice(setStart, setEnd);
   assert.ok(setInvocation.includes("--non-interactive"));
   assert.ok(setInvocation.includes("--scope', 'project"));
+
+  assert.ok(
+    providers.includes(
+      "Set-EasVariable -Name 'GOOGLE_SERVICES_JSON' -Value $SecureFirebasePath -Type 'file' -Visibility 'secret'",
+    ),
+  );
+  assert.ok(
+    providers.includes(
+      "Set-EasVariable -Name 'GOOGLE_MAPS_ANDROID_API_KEY' -Value $MapsKey -Type 'string' -Visibility 'secret'",
+    ),
+  );
+  assert.equal(providers.includes("-Visibility 'sensitive'"), false);
 
   assert.ok(providers.includes("$commandText = $commandText.Replace($secret, '<redacted>')"));
   assert.equal(signing.includes("Add-KeytoolCandidate"), false);
