@@ -75,18 +75,44 @@ foreach ($actor in @(
   if ([string]::IsNullOrWhiteSpace($context.store.id)) { throw "missing scoped store for $($actor.username)" }
 }
 
-# Home Discovery: Home Discovery endpoint smoke
-$homeDisc = Invoke-RestMethod "http://localhost:58080/dsh/home-discovery" -TimeoutSec 10 -ErrorAction Stop
+# Home Discovery: every visible card must resolve to an openable storefront and
+# a non-empty public catalog. This is the runtime closure for the historical
+# drift where home discovery returned stores rejected by store detail with 404.
+$homeDisc = Invoke-RestMethod "http://localhost:58080/dsh/home-discovery?limit=50" -TimeoutSec 10 -ErrorAction Stop
 $bannerCount    = if ($homeDisc.banners)    { $homeDisc.banners.Count }    else { 0 }
 $promoCount     = if ($homeDisc.promos)     { $homeDisc.promos.Count }     else { 0 }
 $categoryCount  = if ($homeDisc.categories) { $homeDisc.categories.Count } else { 0 }
 $filterCount    = if ($homeDisc.filters)    { $homeDisc.filters.Count }    else { 0 }
-$homeStoreCount = if ($homeDisc.stores)     { $homeDisc.stores.Count }     else { 0 }
+$homeStores     = @($homeDisc.stores)
+$homeStoreCount = $homeStores.Count
 Write-Host "  /dsh/home-discovery: banners=$bannerCount promos=$promoCount categories=$categoryCount filters=$filterCount stores=$homeStoreCount"
 if ($bannerCount    -eq 0) { throw "/dsh/home-discovery: 0 banners" }
 if ($promoCount     -eq 0) { throw "/dsh/home-discovery: 0 promos" }
 if ($categoryCount  -eq 0) { throw "/dsh/home-discovery: 0 categories" }
 if ($filterCount    -eq 0) { throw "/dsh/home-discovery: 0 filters" }
 if ($homeStoreCount -eq 0) { throw "/dsh/home-discovery: 0 stores" }
+
+foreach ($homeStore in $homeStores) {
+  $storeId = [string]$homeStore.id
+  if ([string]::IsNullOrWhiteSpace($storeId)) {
+    throw "/dsh/home-discovery returned a store without id"
+  }
+
+  $encodedStoreId = [uri]::EscapeDataString($storeId)
+  $detail = Invoke-RestMethod "http://localhost:58080/dsh/stores/$encodedStoreId" -TimeoutSec 10 -ErrorAction Stop
+  if ($null -eq $detail.store) {
+    throw "/dsh/stores/$storeId response is missing store"
+  }
+  if ([string]$detail.store.id -ne $storeId) {
+    throw "/dsh/stores/$storeId returned mismatched store id: $($detail.store.id)"
+  }
+
+  $catalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/$encodedStoreId/catalog" -TimeoutSec 15 -ErrorAction Stop
+  $productCount = if ($catalog.products) { @($catalog.products).Count } else { 0 }
+  if ($productCount -eq 0) {
+    throw "/dsh/stores/$storeId/catalog returned no client-visible products"
+  }
+  Write-Host "  storefront=$storeId detail=PASS catalogProducts=$productCount"
+}
 
 Write-Host "DSH API smoke: PASS"
