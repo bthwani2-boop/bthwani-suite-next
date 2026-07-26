@@ -6,22 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"dsh-api/internal/store"
 	"github.com/lib/pq"
 )
-
-const clientEligibleStorePredicate = `
-	s.is_visible = true
-	AND s.status = 'active'
-	AND s.serviceability_status IN ('serviceable','limited')
-	AND s.partner_readiness = 'ready'
-	AND s.catalog_approval_status = 'approved'
-	AND s.marketing_visibility = 'visible'
-	AND EXISTS (
-		SELECT 1 FROM dsh_partners p
-		WHERE p.id = s.partner_id
-		  AND p.activation_status = 'client_visible'
-		  AND p.archived_at IS NULL
-	)`
 
 func homeContentTargetPredicate(alias string) string {
 	return fmt.Sprintf(`
@@ -74,7 +61,7 @@ func ListBanners(ctx context.Context, db *sql.DB, discoveryQuery HomeDiscoveryQu
 			OR EXISTS (
 				SELECT 1 FROM dsh_stores s
 				WHERE s.id = b.action_target
-				  AND ` + clientEligibleStorePredicate + `
+				  AND ` + store.ClientStorefrontPredicate("s") + `
 			)
 		  )
 		  AND (
@@ -126,7 +113,7 @@ func ListPromos(ctx context.Context, db *sql.DB, discoveryQuery HomeDiscoveryQue
 			OR EXISTS (
 				SELECT 1 FROM dsh_stores s
 				WHERE s.id = p.action_target
-				  AND ` + clientEligibleStorePredicate + `
+				  AND ` + store.ClientStorefrontPredicate("s") + `
 			)
 		  )
 		  AND (
@@ -198,7 +185,7 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]HomeCategory, error) {
 }
 
 func ListHomeStores(ctx context.Context, db *sql.DB, query HomeDiscoveryQuery) ([]HomeStore, int, error) {
-	conditions := []string{clientEligibleStorePredicate}
+	conditions := []string{store.ClientStorefrontPredicate("s")}
 	params := []any{}
 	idx := 1
 
