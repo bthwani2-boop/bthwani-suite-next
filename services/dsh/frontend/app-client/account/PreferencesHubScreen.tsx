@@ -39,33 +39,32 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
   const authKind = identity.state.kind === "authenticated" ? "authenticated" : "unauthenticated";
   const controller = useNotificationsController(authKind);
   const [savingTopic, setSavingTopic] = React.useState<string | null>(null);
-  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [localActionError, setLocalActionError] = React.useState<string | null>(null);
 
   const handleToggle = React.useCallback(
     async (preference: DshNotificationPreference, enabled: boolean) => {
-      if (savingTopic !== null) return;
+      if (savingTopic !== null || controller.busyAction !== null) return;
       setSavingTopic(preference.topic);
-      setActionError(null);
-      try {
-        await controller.savePreference({
-          topic: preference.topic,
-          enabled,
-          channels: preference.channels,
-          quietHoursStart: preference.quietHoursStart,
-          quietHoursEnd: preference.quietHoursEnd,
-          locale: preference.locale,
-          timezone: preference.timezone,
-        });
-      } catch {
-        setActionError("تعذر حفظ التفضيل في DSH. لم يُعرض نجاح قبل القراءة الراجعة.");
-      } finally {
-        setSavingTopic(null);
+      setLocalActionError(null);
+      const accepted = await controller.savePreference({
+        topic: preference.topic,
+        enabled,
+        channels: preference.channels,
+        quietHoursStart: preference.quietHoursStart,
+        quietHoursEnd: preference.quietHoursEnd,
+        locale: preference.locale,
+        timezone: preference.timezone,
+      });
+      if (!accepted) {
+        setLocalActionError("تعذر حفظ التفضيل في DSH. لم يُعرض نجاح قبل القراءة الراجعة.");
       }
+      setSavingTopic(null);
     },
     [controller, savingTopic],
   );
 
   const preferenceState = controller.preferenceState;
+  const actionError = controller.actionError ?? localActionError;
 
   return (
     <ScrollScreen>
@@ -145,7 +144,7 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
                   </View>
                   <Switch
                     accessibilityLabel={`تفعيل ${topicLabel(preference.topic)}`}
-                    disabled={savingTopic !== null}
+                    disabled={savingTopic !== null || controller.busyAction !== null}
                     value={preference.enabled}
                     onValueChange={(enabled) => void handleToggle(preference, enabled)}
                     trackColor={{ false: colorRoles.borderSubtle, true: colorRoles.brandAction }}
