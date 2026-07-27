@@ -104,7 +104,7 @@ export function useFieldOfflineSync(
       });
   }, [drainQueue]);
 
-  const scopeKey = scope ? `${scope.tenantId}:${scope.actorId}` : "signed-out";
+  const scopeKey = scope ? `${scope.actorId}:${scope.installationId}` : "signed-out";
   useEffect(() => {
     const currentScope = scopeRef.current;
     configureFieldOfflineQueueScope(currentScope ?? null);
