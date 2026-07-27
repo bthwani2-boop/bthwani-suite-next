@@ -65,7 +65,7 @@ function ReelPlayerModal({
           style={styles.video}
           nativeControls
           contentFit="contain"
-          allowsFullscreen
+          fullscreenOptions={{ enable: true }}
           allowsPictureInPicture
         />
         <View style={styles.modalActions}>
