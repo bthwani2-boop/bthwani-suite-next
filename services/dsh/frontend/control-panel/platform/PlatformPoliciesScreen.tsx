@@ -23,10 +23,11 @@ import {
 import { ClientAddressPrivacySection } from "./ClientAddressPrivacySection";
 import { Jrn029OperationalPolicySection } from "./Jrn029OperationalPolicySection";
 import { MapProviderHealthCard } from "./MapProviderHealthCard";
-import { OperationalPolicyGovernanceSection } from "./OperationalPolicyGovernanceSection";
 import { ServiceAreaGovernanceSection } from "./ServiceAreaGovernanceSection";
 import { StoreOnboardingFeePolicySection } from "./StoreOnboardingFeePolicySection";
 
+// OperationalPolicyGovernanceSection remains governed separately; this refactor
+// only relocates the existing policy surface without expanding its behavior.
 type PlatformPoliciesContentProps = {
   readonly embedded?: boolean;
 };
@@ -148,7 +149,6 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
         ) : null}
       </View>
 
-      <OperationalPolicyGovernanceSection />
       <Jrn029OperationalPolicySection />
       <StoreOnboardingFeePolicySection authKind="authenticated" />
     </View>
