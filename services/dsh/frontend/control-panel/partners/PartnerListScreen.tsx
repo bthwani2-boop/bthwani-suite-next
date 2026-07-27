@@ -129,12 +129,19 @@ export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
         <tbody>
           {controller.rows.map((row) => (
             <tr key={row.id}>
-              <CpTableCell>{row.name}</CpTableCell>
-              <CpTableCell>{row.category}</CpTableCell>
-              <CpTableCell><CpBadge tone={toBadgeTone(row.statusTone)}>{row.statusLabel}</CpBadge></CpTableCell>
-              <CpTableCell>{row.nextActionLabel}</CpTableCell>
               <CpTableCell>
-                {onSelectPartner ? <CpButton variant="secondary" onClick={() => onSelectPartner(row.id)}>فتح</CpButton> : null}
+                <div style={{ fontWeight: 600 }}>{row.displayName}</div>
+                <CpMutedInline tight>{row.legalNameAr}</CpMutedInline>
+              </CpTableCell>
+              <CpTableCell>{row.category}</CpTableCell>
+              <CpTableCell>
+                <CpBadge tone={toBadgeTone(row.statusTone)}>{row.statusLabel}</CpBadge>
+              </CpTableCell>
+              <CpTableCell>
+                <CpMutedInline>{row.nextAction}</CpMutedInline>
+              </CpTableCell>
+              <CpTableCell>
+                <CpButton onClick={() => onSelectPartner?.(row.id)}>عرض التفاصيل</CpButton>
               </CpTableCell>
             </tr>
           ))}
@@ -143,5 +150,3 @@ export function PartnerListScreen({ onSelectPartner, onCreatePartner }: Props) {
     </DataTablePageFrame>
   );
 }
-
-export default PartnerListScreen;
