@@ -139,9 +139,9 @@ export function OnboardingLocationSection({
         {...((errors as { readonly city?: string }).city
           ? { error: (errors as { readonly city?: string }).city }
           : {})}
-        onChangeText={(city) => onChange({ city, serviceAreaCode: "" })}
+        onChangeText={(city) => onChange({ city, serviceAreaCode: city.trim() })}
         placeholder="مثال: صنعاء"
-        hint="تستخدم كمرجع أولي فقط؛ نطاق الخدمة يعتمد من الإحداثيات وسياسات DSH."
+        hint="تُستخدم المدينة كنطاق مؤقت فقط حتى يعتمد DSH النطاق النهائي من الإحداثيات والسياسات."
       />
 
       <TextField
