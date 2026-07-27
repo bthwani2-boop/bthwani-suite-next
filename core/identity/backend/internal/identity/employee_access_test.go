@@ -19,13 +19,27 @@ func TestEmployeeActivationMigrationRegistersPersistedContract(t *testing.T) {
 		t.Fatalf("read employee activation migration: %v", err)
 	}
 	text := string(migration)
-	for _, required := range []string{"'employee'", "'control-panel'"} {
+	for _, required := range []string{
+		"'employee'",
+		"SET surface = 'control-panel'",
+		"surface = 'webapp'",
+		"'control-panel'",
+	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("employee activation migration is missing %s", required)
 		}
 	}
-	if strings.Contains(text, "'webapp'") {
-		t.Fatal("employee activation migration must not register the independent webapp surface")
+	constraintStart := strings.Index(text, "ADD CONSTRAINT identity_activation_challenges_surface_check")
+	if constraintStart < 0 {
+		t.Fatal("employee activation migration is missing the surface constraint")
+	}
+	constraintTail := text[constraintStart:]
+	constraintEnd := strings.Index(constraintTail, ";")
+	if constraintEnd < 0 {
+		t.Fatal("employee activation surface constraint is not terminated")
+	}
+	if strings.Contains(constraintTail[:constraintEnd], "'webapp'") {
+		t.Fatal("employee activation surface constraint must not register the independent webapp surface")
 	}
 }
 
