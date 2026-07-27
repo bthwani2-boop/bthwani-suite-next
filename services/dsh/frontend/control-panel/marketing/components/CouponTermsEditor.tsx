@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
+import { CpButton } from "@bthwani/control-panel/components";
 import type {
   CouponDiscountType,
   CouponFulfillmentMode,
@@ -125,9 +126,9 @@ export function CouponTermsEditor({ coupon, loading, onSave }: CouponTermsEditor
         <small style={styles.muted}>
           الأنماط: {coupon.eligibleFulfillmentModes.join(" · ")} · البداية: {coupon.startsAt || "فورية"} · النهاية: {coupon.endsAt || "بلا نهاية"}
         </small>
-        <button type="button" disabled={disabled} onClick={() => setEditing(true)} style={styles.secondary}>
+        <CpButton disabled={disabled} onClick={() => setEditing(true)} variant="secondary">
           تعديل الشروط والنطاق
-        </button>
+        </CpButton>
         {coupon.status === "active" ? <small style={styles.muted}>أوقف الكوبون قبل تعديل الشروط.</small> : null}
       </div>
     );
@@ -162,8 +163,8 @@ export function CouponTermsEditor({ coupon, loading, onSave }: CouponTermsEditor
         </div>
       </div>
       <div style={{ ...styles.full, ...styles.actions }}>
-        <button type="button" disabled={disabled} onClick={() => void save()} style={styles.primary}>حفظ الشروط</button>
-        <button type="button" disabled={loading} onClick={() => setEditing(false)} style={styles.secondary}>إلغاء</button>
+        <CpButton disabled={disabled} onClick={() => void save()} variant="brand">حفظ الشروط</CpButton>
+        <CpButton disabled={loading} onClick={() => setEditing(false)} variant="secondary">إلغاء</CpButton>
       </div>
     </div>
   );
@@ -179,6 +180,4 @@ const styles: Record<string, CSSProperties> = {
   mode: { display: "flex", gap: "0.35rem", alignItems: "center", fontSize: "0.82rem" },
   actions: { display: "flex", gap: "0.45rem", flexWrap: "wrap" },
   muted: { opacity: 0.68, fontSize: "0.78rem" },
-  primary: { padding: "0.6rem 0.8rem", border: 0, borderRadius: "0.5rem", background: colorRoles.brandAction, color: colorRoles.surfaceBase, cursor: "pointer", fontWeight: 700 },
-  secondary: { padding: "0.55rem 0.75rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.5rem", background: colorRoles.surfaceBase, cursor: "pointer", fontWeight: 700 },
 };

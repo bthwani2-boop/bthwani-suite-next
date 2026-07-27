@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
+import { CpButton } from "@bthwani/control-panel/components";
 import { useSubscriptionPlansController, type SubscriptionPlanRecord } from "../../../shared/marketing";
 
 export function SubscriptionsCommandDeck() {
@@ -48,7 +49,7 @@ export function SubscriptionsCommandDeck() {
           <h3 style={styles.title}>خطط الاشتراك</h3>
           <p style={styles.muted}>DSH يعرّف العرض فقط؛ المنتج والدفع والاشتراك الفعلي مملوكة لـWLT.</p>
         </div>
-        <button type="button" onClick={() => void controller.reload()} style={styles.secondary}>إعادة التحميل</button>
+        <CpButton onClick={() => void controller.reload()} variant="secondary">إعادة التحميل</CpButton>
       </div>
 
       <div style={styles.summary}>
@@ -61,7 +62,7 @@ export function SubscriptionsCommandDeck() {
         <input value={nameAr} onChange={(event) => setNameAr(event.target.value)} placeholder="اسم الخطة" style={styles.input} />
         <input value={priceYer} onChange={(event) => setPriceYer(event.target.value)} inputMode="numeric" placeholder="السعر بالريال" style={styles.input} />
         <input value={wltProductReference} onChange={(event) => setWltProductReference(event.target.value)} placeholder="مرجع منتج WLT" style={styles.input} />
-        <button type="button" disabled={submitting} onClick={() => void createDraft()} style={styles.primary}>إنشاء مسودة</button>
+        <CpButton disabled={submitting} onClick={() => void createDraft()} variant="brand">إنشاء مسودة</CpButton>
       </div>
 
       {controller.state.kind === "loading" ? <p>جارٍ التحميل…</p> : null}
@@ -79,9 +80,9 @@ export function SubscriptionsCommandDeck() {
               <p style={styles.muted}>الحالة: {plan.status}</p>
             </div>
             <div style={styles.actions}>
-              {plan.status !== "active" ? <button type="button" disabled={submitting || !plan.wltProductReference} onClick={() => void updateStatus(plan, "active")} style={styles.primary}>طلب اعتماد نشط</button> : null}
-              {plan.status === "active" ? <button type="button" disabled={submitting} onClick={() => void updateStatus(plan, "paused")} style={styles.secondary}>إيقاف</button> : null}
-              {plan.status !== "archived" ? <button type="button" disabled={submitting} onClick={() => void updateStatus(plan, "archived")} style={styles.secondary}>أرشفة</button> : null}
+              {plan.status !== "active" ? <CpButton disabled={submitting || !plan.wltProductReference} onClick={() => void updateStatus(plan, "active")} variant="brand">طلب اعتماد نشط</CpButton> : null}
+              {plan.status === "active" ? <CpButton disabled={submitting} onClick={() => void updateStatus(plan, "paused")} variant="secondary">إيقاف</CpButton> : null}
+              {plan.status !== "archived" ? <CpButton disabled={submitting} onClick={() => void updateStatus(plan, "archived")} variant="secondary">أرشفة</CpButton> : null}
             </div>
           </article>
         ))}
@@ -98,8 +99,6 @@ const styles: Record<string, CSSProperties> = {
   summary: { display: "flex", flexWrap: "wrap", gap: "1rem", padding: "0.8rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.7rem" },
   form: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: "0.6rem" },
   input: { padding: "0.65rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.5rem", background: colorRoles.surfaceBase },
-  primary: { padding: "0.6rem 0.8rem", border: 0, borderRadius: "0.5rem", background: colorRoles.brandAction, color: colorRoles.surfaceBase, cursor: "pointer", fontWeight: 700 },
-  secondary: { padding: "0.55rem 0.75rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.5rem", background: colorRoles.surfaceBase, cursor: "pointer", fontWeight: 700 },
   error: { color: colorRoles.danger, margin: 0 },
   list: { display: "grid", gap: "0.6rem" },
   card: { display: "flex", justifyContent: "space-between", gap: "1rem", padding: "0.9rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.7rem", background: colorRoles.surfaceBase },

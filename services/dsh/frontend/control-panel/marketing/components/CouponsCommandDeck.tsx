@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
+import { CpButton } from "@bthwani/control-panel/components";
 import { useCouponsController } from "../../../shared/marketing/use-coupons-controller";
 import type {
   CouponDiscountType,
@@ -80,9 +81,9 @@ function CouponFundingEditor({ coupon, policy, loading, onSave }: FundingEditorP
           style={styles.input}
         />
       ) : null}
-      <button type="button" disabled={disabled} onClick={() => void save()} style={styles.secondary}>
+      <CpButton disabled={disabled} onClick={() => void save()} variant="secondary">
         حفظ التمويل
-      </button>
+      </CpButton>
       {coupon.status === "active" ? <small style={styles.muted}>أوقف الكوبون قبل تغيير التمويل.</small> : null}
     </div>
   );
@@ -166,7 +167,7 @@ export function CouponsCommandDeck() {
           <h3 style={styles.title}>الكوبونات التشغيلية</h3>
           <p style={styles.muted}>الكود مشفر، والخصم يُحسب داخل checkout، وتمويله يُحجز ويُلتزم ويُعكس في WLT.</p>
         </div>
-        <button type="button" onClick={() => void controller.reload()} style={styles.secondary}>إعادة التحميل</button>
+        <CpButton onClick={() => void controller.reload()} variant="secondary">إعادة التحميل</CpButton>
       </div>
 
       <div style={styles.form}>
@@ -193,14 +194,14 @@ export function CouponsCommandDeck() {
         <input value={maxDiscountYer} onChange={(event) => setMaxDiscountYer(event.target.value)} inputMode="numeric" placeholder="أقصى خصم ر.ي — صفر بلا حد" style={styles.input} />
         <input value={globalLimit} onChange={(event) => setGlobalLimit(event.target.value)} inputMode="numeric" placeholder="الحد الإجمالي — صفر بلا حد" style={styles.input} />
         <input value={clientLimit} onChange={(event) => setClientLimit(event.target.value)} inputMode="numeric" placeholder="حد العميل" style={styles.input} />
-        <button type="button" disabled={controller.mutationLoading} onClick={() => void createDraft()} style={styles.primary}>إنشاء مسودة</button>
+        <CpButton disabled={controller.mutationLoading} onClick={() => void createDraft()} variant="brand">إنشاء مسودة</CpButton>
       </div>
 
       {controller.issuedCoupon ? (
         <div role="status" style={styles.issued}>
           <strong>الكود الصريح — يظهر الآن فقط:</strong>
           <code style={styles.code}>{controller.issuedCoupon.code}</code>
-          <button type="button" onClick={controller.clearIssuedCoupon} style={styles.secondary}>إخفاء</button>
+          <CpButton onClick={controller.clearIssuedCoupon} variant="secondary">إخفاء</CpButton>
         </div>
       ) : null}
       {controller.state.kind === "loading" ? <p>جارٍ التحميل…</p> : null}
@@ -242,13 +243,13 @@ export function CouponsCommandDeck() {
               </div>
               <div style={styles.actions}>
                 {coupon.status === "draft" || coupon.status === "paused" ? (
-                  <button type="button" disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "active")} style={styles.primary}>اعتماد وتفعيل</button>
+                  <CpButton disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "active")} variant="brand">اعتماد وتفعيل</CpButton>
                 ) : null}
                 {coupon.status === "active" ? (
-                  <button type="button" disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "paused")} style={styles.secondary}>إيقاف</button>
+                  <CpButton disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "paused")} variant="secondary">إيقاف</CpButton>
                 ) : null}
                 {coupon.status !== "archived" ? (
-                  <button type="button" disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "archived")} style={styles.secondary}>أرشفة</button>
+                  <CpButton disabled={controller.mutationLoading} onClick={() => void setStatus(coupon, "archived")} variant="secondary">أرشفة</CpButton>
                 ) : null}
               </div>
             </article>
@@ -273,8 +274,6 @@ const styles: Record<string, CSSProperties> = {
   muted: { margin: "0.25rem 0", opacity: 0.68, fontSize: "0.82rem" },
   form: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: "0.6rem" },
   input: { padding: "0.65rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.5rem", background: colorRoles.surfaceBase },
-  primary: { padding: "0.6rem 0.8rem", border: 0, borderRadius: "0.5rem", background: colorRoles.brandAction, color: colorRoles.surfaceBase, cursor: "pointer", fontWeight: 700 },
-  secondary: { padding: "0.55rem 0.75rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.5rem", background: colorRoles.surfaceBase, cursor: "pointer", fontWeight: 700 },
   error: { color: colorRoles.danger, margin: 0 },
   issued: { display: "flex", gap: "0.8rem", alignItems: "center", flexWrap: "wrap", padding: "0.9rem", border: `1px solid ${colorRoles.warning}`, borderRadius: "0.7rem" },
   code: { fontSize: "1.1rem", fontWeight: 800, letterSpacing: "0.12rem" },

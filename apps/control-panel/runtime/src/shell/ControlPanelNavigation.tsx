@@ -108,7 +108,7 @@ function NavItem({
       ? colorRoles.textInverse
       : hovered
       ? alpha(colorRoles.textInverse, 0.8)
-      : "var(--sidebar-text, rgb(168, 191, 223))",
+      : "var(--sidebar-text)",
     boxShadow: isActive
       ? `inset 0 0 0 1px ${alpha(colorRoles.textSecondary, 0.35)}, 0 0 12px ${alpha(colorRoles.textSecondary, 0.12)}`
       : "none",
@@ -221,7 +221,7 @@ export function ControlPanelNavigation({
       <div
         style={{
           ...styles.versionBadge,
-          borderTop: footer == null ? "1px solid var(--sidebar-border, rgb(26, 42, 74))" : undefined,
+          borderTop: footer == null ? "1px solid var(--sidebar-border)" : undefined,
         }}
       >
         DSH Control Panel v2
@@ -256,8 +256,8 @@ const styles = WebStyleSheet.create({
     bottom: "20%",
     width: "3px",
     borderRadius: "0 2px 2px 0",
-    background: "var(--dsh-blue, rgb(59, 123, 255))",
-    boxShadow: "0 0 8px var(--dsh-blue, rgb(59, 123, 255))",
+    background: "var(--dsh-blue)",
+    boxShadow: "0 0 8px var(--dsh-blue)",
   },
   iconWrapper: {
     flexShrink: 0,
@@ -271,7 +271,7 @@ const styles = WebStyleSheet.create({
   },
   badge: {
     flexShrink: 0,
-    background: "var(--dsh-blue, rgb(59, 123, 255))",
+    background: "var(--dsh-blue)",
     color: colorRoles.textInverse,
     fontSize: "0.7rem",
     fontWeight: 700,
@@ -283,11 +283,11 @@ const styles = WebStyleSheet.create({
     display: "flex",
     flexDirection: "column",
     height: "100%",
-    background: "var(--sidebar-bg, rgb(13, 20, 37))",
+    background: "var(--sidebar-bg)",
   },
   brandHeader: {
     padding: "1.25rem 1rem 1rem",
-    borderBottom: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
+    borderBottom: "1px solid var(--sidebar-border)",
     flexShrink: 0,
   },
   brandLogoContainer: {
@@ -299,7 +299,7 @@ const styles = WebStyleSheet.create({
     width: "2rem",
     height: "2rem",
     borderRadius: "0.5rem",
-    background: "var(--grad-blue, linear-gradient(135deg, rgb(59, 123, 255), rgb(94, 151, 255)))",
+    background: "var(--grad-blue)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -315,7 +315,7 @@ const styles = WebStyleSheet.create({
   },
   brandLogoSubtitle: {
     fontSize: "0.68rem",
-    color: "var(--sidebar-text, rgb(168, 191, 223))",
+    color: "var(--sidebar-text)",
     letterSpacing: "0.06em",
     textTransform: "uppercase",
   },
@@ -335,7 +335,7 @@ const styles = WebStyleSheet.create({
   },
   footerWrapper: {
     flexShrink: 0,
-    borderTop: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
+    borderTop: "1px solid var(--sidebar-border)",
     padding: "0.75rem",
   },
   versionBadge: {

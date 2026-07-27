@@ -26,6 +26,7 @@ import type {
   ProductProposal,
   StoreAssortment,
 } from "../../shared/catalog";
+import { PartnerReelsManagementSection } from "./PartnerReelsManagementSection";
 
 type Props = {
   readonly storeId: string;
@@ -88,9 +89,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
   }, [identity.state.kind, loadData]);
 
   const startEditing = (product: MasterProduct) => {
-    const current = assortment.find(
-      (item) => item.masterProductId === product.id,
-    );
+    const current = assortment.find((item) => item.masterProductId === product.id);
     setSelectedProductId(product.id);
     setPrice(current ? String(current.unitPrice) : "");
     setNote(current?.localNote ?? "");
@@ -103,9 +102,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
       return;
     }
 
-    const current = assortment.find(
-      (item) => item.masterProductId === selectedProductId,
-    );
+    const current = assortment.find((item) => item.masterProductId === selectedProductId);
     setSaving(true);
     setError(null);
     try {
@@ -124,20 +121,14 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         },
       );
       setAssortment((items) => [
-        ...items.filter(
-          (item) => item.masterProductId !== saved.masterProductId,
-        ),
+        ...items.filter((item) => item.masterProductId !== saved.masterProductId),
         saved,
       ]);
       setSelectedProductId("");
       setPrice("");
       setNote("");
     } catch (caught) {
-      setError(
-        caught instanceof Error
-          ? caught.message
-          : "تعذر حفظ تشكيلة المتجر.",
-      );
+      setError(caught instanceof Error ? caught.message : "تعذر حفظ تشكيلة المتجر.");
       await loadData();
     } finally {
       setSaving(false);
@@ -189,29 +180,21 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
       <Card>
         <View style={styles.hero}>
           <View style={styles.headerRow}>
-            <Text role="titleLg" align="start">
-              كتالوج المتجر المركزي
-            </Text>
+            <Text role="titleLg" align="start">كتالوج المتجر المركزي</Text>
             <Badge label="DSH" tone="info" />
           </View>
-          <Text tone="secondary" align="start">
-            المتجر المحدد: {storeId}
-          </Text>
+          <Text tone="secondary" align="start">المتجر المحدد: {storeId}</Text>
           <View style={styles.metrics}>
             <Badge label={`${domains.length} مجالات`} tone="neutral" />
             <Badge label={`${nodes.length} فئات`} tone="neutral" />
-            <Badge
-              label={`${masterProducts.length} منتجات مركزية`}
-              tone="neutral"
-            />
-            <Badge
-              label={`${assortment.length} في تشكيلة المتجر`}
-              tone="neutral"
-            />
+            <Badge label={`${masterProducts.length} منتجات مركزية`} tone="neutral" />
+            <Badge label={`${assortment.length} في تشكيلة المتجر`} tone="neutral" />
             <Badge label={`${proposals.length} اقتراحات`} tone="info" />
           </View>
         </View>
       </Card>
+
+      <PartnerReelsManagementSection storeId={storeId} />
 
       {error ? (
         <StateView
@@ -223,21 +206,15 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         />
       ) : null}
 
-      <Text role="titleMd" align="start">
-        المنتجات المركزية المتاحة
-      </Text>
+      <Text role="titleMd" align="start">المنتجات المركزية المتاحة</Text>
       <Card>
         {masterProducts.length === 0 ? (
           <View style={styles.section}>
-            <Text tone="secondary" align="center">
-              لا توجد منتجات مركزية معتمدة.
-            </Text>
+            <Text tone="secondary" align="center">لا توجد منتجات مركزية معتمدة.</Text>
           </View>
         ) : (
           masterProducts.map((product) => {
-            const linked = assortment.find(
-              (item) => item.masterProductId === product.id,
-            );
+            const linked = assortment.find((item) => item.masterProductId === product.id);
             return (
               <ListItem
                 key={product.id}
@@ -268,19 +245,10 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
               {namesByProduct.get(selectedProductId) ?? selectedProductId}
             </Text>
             <Text tone="secondary" align="start">
-              الإضافة الجديدة تبدأ كمسودة غير متاحة وبحالة نفاد مخزون؛ يجب
-              تفعيل التوفر والنشر في مسار منفصل محكوم.
+              الإضافة الجديدة تبدأ كمسودة غير متاحة وبحالة نفاد مخزون؛ يجب تفعيل التوفر والنشر في مسار منفصل محكوم.
             </Text>
-            <TextField
-              label="سعر المتجر (YER)"
-              value={price}
-              onChangeText={setPrice}
-            />
-            <TextField
-              label="ملاحظة المتجر"
-              value={note}
-              onChangeText={setNote}
-            />
+            <TextField label="سعر المتجر (YER)" value={price} onChangeText={setPrice} />
+            <TextField label="ملاحظة المتجر" value={note} onChangeText={setNote} />
             <View style={styles.actions}>
               <Button
                 label="حفظ في تشكيلة المتجر"
@@ -304,15 +272,11 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         </Card>
       ) : null}
 
-      <Text role="titleMd" align="start">
-        اقتراحات المنتجات وحالة المراجعة
-      </Text>
+      <Text role="titleMd" align="start">اقتراحات المنتجات وحالة المراجعة</Text>
       <Card>
         {proposals.length === 0 ? (
           <View style={styles.section}>
-            <Text tone="secondary" align="center">
-              لا توجد اقتراحات منتجات مرسلة من هذا المتجر.
-            </Text>
+            <Text tone="secondary" align="center">لا توجد اقتراحات منتجات مرسلة من هذا المتجر.</Text>
           </View>
         ) : (
           proposals.map((proposal) => (
@@ -331,24 +295,17 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         )}
       </Card>
 
-      <Text role="titleMd" align="start">
-        تشكيلة المتجر الحالية
-      </Text>
+      <Text role="titleMd" align="start">تشكيلة المتجر الحالية</Text>
       <Card>
         {assortment.length === 0 ? (
           <View style={styles.section}>
-            <Text tone="secondary" align="center">
-              لا توجد منتجات مضافة بعد.
-            </Text>
+            <Text tone="secondary" align="center">لا توجد منتجات مضافة بعد.</Text>
           </View>
         ) : (
           assortment.map((item) => (
             <ListItem
               key={item.id}
-              title={
-                namesByProduct.get(item.masterProductId) ??
-                item.masterProductId
-              }
+              title={namesByProduct.get(item.masterProductId) ?? item.masterProductId}
               subtitle={`${item.unitPrice} ${item.currency} — ${item.publicationStatus}`}
               trailing={
                 <Badge
@@ -372,11 +329,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing[2],
   },
-  metrics: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: spacing[2],
-  },
+  metrics: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2] },
   section: { padding: spacing[4], gap: spacing[2] },
   actions: { flexDirection: "row-reverse", gap: spacing[2] },
 });
