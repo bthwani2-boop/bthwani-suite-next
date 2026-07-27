@@ -77,7 +77,8 @@ function ReelSlide({
         style={StyleSheet.absoluteFill}
         nativeControls={false}
         contentFit="cover"
-        allowsFullscreen
+        surfaceType="textureView"
+        fullscreenOptions={{ enable: true }}
         allowsPictureInPicture
       />
       <View pointerEvents="none" style={styles.slideScrim} />
@@ -124,7 +125,7 @@ function VerticalReelsModal({
     [],
   );
   const handleViewableItemsChanged = React.useRef((info: {
-    readonly viewableItems: readonly ViewToken<HomePublicReel>[];
+    readonly viewableItems: readonly ViewToken[];
   }) => {
     const nextIndex = info.viewableItems.find((item) => item.isViewable)?.index;
     if (typeof nextIndex === "number") setActiveIndex(nextIndex);
