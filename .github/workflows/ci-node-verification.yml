@@ -19,7 +19,6 @@ permissions:
 jobs:
   verify:
     name: ${{ inputs.verification_tier }} Node verification
-    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:

@@ -24,11 +24,12 @@ jobs:
     name: Execute scoped runtime proof
     if: ${{ inputs.runtime_proof || inputs.full_verification == 'true' || inputs.runtime == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: Checkout immutable source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          fetch-depth: 0
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
@@ -56,7 +57,7 @@ jobs:
           }
 
           $profiles = switch ($profile) {
-            "identity-security" { "identity" }
+            "identity-security" { "identity,workforce,dsh,media" }
             "dsh" { "dsh,media" }
             "workforce" { "identity,workforce" }
             "wlt-finance" { "identity,dsh,wlt,financial-simulators" }
@@ -74,6 +75,7 @@ jobs:
             } elseif ($profile -eq "mobile-native") {
               Invoke-Phase "mobile:apps:check" { pnpm run mobile:apps:check }
               Invoke-Phase "mobile:expo:verify" { pnpm run mobile:expo:verify }
+              Invoke-Phase "mobile:native:prebuild" { node apps/mobile/verify-mobile-native.mjs }
             } else {
               Invoke-Phase "runtime:up" {
                 & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action up -Profiles $profiles
@@ -123,7 +125,7 @@ jobs:
         run: |
           $profile = $env:RUNTIME_PROFILE
           $profiles = switch ($profile) {
-            "identity-security" { "identity" }
+            "identity-security" { "identity,workforce,dsh,media" }
             "dsh" { "dsh,media" }
             "workforce" { "identity,workforce" }
             "wlt-finance" { "identity,dsh,wlt,financial-simulators" }

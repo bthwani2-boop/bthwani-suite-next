@@ -7,6 +7,9 @@
   "types": "src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "node ../../mobile/verify-mobile-source.mjs --app app-field",
+    "test": "node ../../mobile/test-mobile-runtime-contract.mjs --app app-field",
+    "build": "node ../../mobile/verify-mobile-export.mjs --app app-field",
     "eas-build-pre-install": "node ../../mobile/verify-eas-provider-inputs.mjs --app app-field"
   },
   "devDependencies": {

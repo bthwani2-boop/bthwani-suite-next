@@ -7,6 +7,7 @@ const guardId = "guard-registry-gate";
 const violations = [];
 const warnings = [];
 const registryRelative = "governance/guards/guard-registry.json";
+const directRegistrationRelative = "governance/guards/registrations/direct-work-branch-execution.json";
 const packageRelative = "package.json";
 const manifestRelative = "tools/guards/guard-manifest.json";
 const workflowsRoot = ".github/workflows";
@@ -94,9 +95,42 @@ function verifyCheckoutCredentials(relativePath, content) {
   }
 }
 
+function verifyDirectWorkBranchRegistration(registration) {
+  if (!registration) return;
+  const expected = {
+    id: "direct-work-branch-execution",
+    status: "ACTIVE_CANONICAL",
+    exitLevel: "fail",
+    command: "node tools/guards/direct-work-branch-execution-gate.mjs",
+    testCommand: "node --test tools/guards/direct-work-branch-execution-gate.test.mjs",
+    sourceFile: "tools/guards/direct-work-branch-execution-gate.mjs",
+    testFile: "tools/guards/direct-work-branch-execution-gate.test.mjs",
+    policyContract: "governance/authority/direct-work-branch-execution-policy.json",
+    schemaContract: "governance/authority/direct-work-branch-execution-policy.schema.json",
+    ciWorkflow: ".github/workflows/ci-policy.yml",
+  };
+  for (const [key, value] of Object.entries(expected)) {
+    if (registration[key] !== value) {
+      violations.push({ file: directRegistrationRelative, line: 0, message: `DIRECT_WORK_BRANCH_REGISTRATION_DRIFT ${key}` });
+    }
+  }
+  for (const relativePath of [expected.sourceFile, expected.testFile, expected.policyContract, expected.schemaContract, expected.ciWorkflow]) {
+    if (!fs.existsSync(path.join(repoRoot, relativePath))) {
+      violations.push({ file: directRegistrationRelative, line: 0, message: `DIRECT_WORK_BRANCH_REGISTRATION_TARGET_MISSING ${relativePath}` });
+    }
+  }
+  for (const key of ["sameBranchRequired", "automaticTaskBranchForbidden", "automaticPullRequestForbidden", "forcePushForbidden", "staleShaOverwriteForbidden", "universalNamedBranchCiRequired"]) {
+    if (registration.assurance?.[key] !== true) {
+      violations.push({ file: directRegistrationRelative, line: 0, message: `DIRECT_WORK_BRANCH_ASSURANCE_DISABLED ${key}` });
+    }
+  }
+}
+
 const registry = readJson(registryRelative);
+const directRegistration = readJson(directRegistrationRelative);
 const packageJson = readJson(packageRelative);
 const manifest = readJson(manifestRelative);
+verifyDirectWorkBranchRegistration(directRegistration);
 const entries = Array.isArray(registry?.entries) ? registry.entries : [];
 const scripts = packageJson?.scripts ?? {};
 const registeredScripts = new Set();
@@ -157,8 +191,8 @@ if (!fs.existsSync(workflowsDir)) {
     verifyCheckoutCredentials(relativePath, content);
   }
 
-  requireMarkers(`${workflowsRoot}/ci.yml`, readText(`${workflowsRoot}/ci.yml`), ["workflow_dispatch:", "pull_request:", "push:", "branches: [master]", "BThwani CI result", "uses: ./.github/workflows/ci-policy.yml"]);
-  requireMarkers(`${workflowsRoot}/ci-policy.yml`, readText(`${workflowsRoot}/ci-policy.yml`), ["guard:governance-schema", "guard:agent-governance", "guard:authority-separation", "guard:saas-governance", "guard:guard-registry", "guard:sdlc", "guard:workflow-lint", "guard:workflow-security", "guard:actions-pin", "check-ci-source-immutability.mjs", "check-repository-hygiene.mjs", "check-portable-tracked-config.mjs"]);
+  requireMarkers(`${workflowsRoot}/ci.yml`, readText(`${workflowsRoot}/ci.yml`), ["workflow_dispatch:", "pull_request:", "push:", "branches: [\"**\"]", "BThwani CI result", "uses: ./.github/workflows/ci-policy.yml"]);
+  requireMarkers(`${workflowsRoot}/ci-policy.yml`, readText(`${workflowsRoot}/ci-policy.yml`), ["guard:governance-schema", "guard:agent-governance", "guard:authority-separation", "guard:saas-governance", "guard:guard-registry", "guard:sdlc", "guard:workflow-lint", "guard:workflow-security", "guard:actions-pin", "direct-work-branch-execution-gate.test.mjs", "direct-work-branch-execution-gate.mjs", "check-ci-source-immutability.mjs", "check-repository-hygiene.mjs", "check-portable-tracked-config.mjs"]);
   requireMarkers(`${workflowsRoot}/lockfile-snapshot.yml`, readText(`${workflowsRoot}/lockfile-snapshot.yml`), ["name: BThwani Lockfile Snapshot", "contents: read", "persist-credentials: false", "Upload lockfile candidate"]);
   requireMarkers(`${workflowsRoot}/manual-deep-verification.yml`, readText(`${workflowsRoot}/manual-deep-verification.yml`), ["name: BThwani Manual Deep Verification", "default: affected", "Resolve affected and risk-expanded mode", "Reject tracked source mutation", "read-only-exact-sha-verification", "persist-credentials: false"]);
 }
