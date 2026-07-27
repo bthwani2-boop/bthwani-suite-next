@@ -16,6 +16,7 @@ import (
 	"workforce-api/internal/dshclient"
 	workforcehttp "workforce-api/internal/http"
 	"workforce-api/internal/identityclient"
+	"workforce-api/internal/wltclient"
 	"workforce-api/internal/workforce"
 )
 
@@ -37,6 +38,15 @@ func main() {
 	if dshBaseURL == "" {
 		log.Fatal("[workforce-api] WORKFORCE_DSH_BASE_URL is required")
 	}
+	wltBaseURL := os.Getenv("WORKFORCE_WLT_BASE_URL")
+	if wltBaseURL == "" {
+		log.Fatal("[workforce-api] WORKFORCE_WLT_BASE_URL is required")
+	}
+	wltServiceToken := os.Getenv("WORKFORCE_WLT_SERVICE_TOKEN")
+	if wltServiceToken == "" {
+		log.Fatal("[workforce-api] WORKFORCE_WLT_SERVICE_TOKEN is required")
+	}
+	tenantID := envOr("BTHWANI_DEFAULT_TENANT_ID", "local-dsh")
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
@@ -51,12 +61,13 @@ func main() {
 	repo := workforce.NewRepository(db)
 	identity := identityclient.NewClient(identityBaseURL, serviceToken)
 	dsh := dshclient.NewClient(dshBaseURL)
+	wlt := wltclient.NewClient(wltBaseURL, wltServiceToken, tenantID)
 	service := workforce.NewService(repo, identity, dsh)
 	authClient := auth.NewClient(identityBaseURL)
 
 	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient)
 	workforcehttp.RegisterOperationalCoreRoutes(baseRouter, repo, authClient)
-	workforcehttp.RegisterOperationalEnforcementRoutes(baseRouter, repo, authClient)
+	workforcehttp.RegisterOperationalEnforcementRoutes(baseRouter, repo, authClient, wlt)
 	workforcehttp.RegisterEmployeeGovernanceRoutes(baseRouter, repo, authClient)
 	operationalCoreRouter := workforcehttp.OperationalCoreGateMiddleware(baseRouter, repo, authClient)
 	journeyRouter := workforcehttp.Journey003MutationMiddleware(operationalCoreRouter, repo, authClient)
