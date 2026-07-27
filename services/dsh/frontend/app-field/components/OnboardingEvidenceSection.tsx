@@ -14,7 +14,7 @@ export type EvidenceItem = {
   readonly kind: EvidenceKind;
   readonly label: string;
   readonly status: 'missing' | 'uploaded';
-  readonly previewUri?: string;
+  readonly previewUri?: string | undefined;
 };
 
 type Props = {
