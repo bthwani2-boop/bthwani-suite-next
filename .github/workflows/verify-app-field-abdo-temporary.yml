@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - abdo
-  pull_request:
-    branches:
-      - master
 
 permissions:
   contents: read
@@ -27,44 +24,20 @@ jobs:
         with:
           go-version-file: services/dsh/backend/go.mod
           cache-dependency-path: services/dsh/backend/go.sum
-      - name: Run isolated app-field verification
-        id: isolated
-        continue-on-error: true
+      - name: Verify app-field and DSH batch runtime
         shell: bash
         run: |
-          set +e
-          log="${RUNNER_TEMP}/app-field-isolated-verification.log"
-          : >"${log}"
-          status=0
-          run_check() {
-            echo "===== $* =====" | tee -a "${log}"
-            "$@" 2>&1 | tee -a "${log}"
-            local code=${PIPESTATUS[0]}
-            if [[ ${code} -ne 0 ]]; then status=${code}; fi
-          }
-          run_check pnpm --filter @bthwani/app-field-runtime typecheck
-          run_check pnpm --filter @bthwani/app-field-runtime lint
-          run_check pnpm --filter @bthwani/app-field-runtime test
-          run_check pnpm --dir services/dsh build
-          run_check node --test --test-name-pattern="field onboarding validation" services/dsh/tests/field-onboarding-validation.test.mjs
-          (
-            cd services/dsh/backend || exit 1
-            go test ./internal/http ./internal/centralcatalog -count=1
-          ) 2>&1 | tee -a "${log}"
-          go_code=${PIPESTATUS[0]}
-          if [[ ${go_code} -ne 0 ]]; then status=${go_code}; fi
-          echo "exit_code=${status}" >>"${GITHUB_OUTPUT}"
-          exit "${status}"
-      - name: Prepare and verify batch OpenAPI contract
-        id: openapi
-        if: ${{ steps.isolated.outcome == 'success' }}
-        continue-on-error: true
+          pnpm --filter @bthwani/app-field-runtime typecheck
+          pnpm --filter @bthwani/app-field-runtime lint
+          pnpm --filter @bthwani/app-field-runtime test
+          pnpm --dir services/dsh build
+          node --test --test-name-pattern="field onboarding validation" services/dsh/tests/field-onboarding-validation.test.mjs
+          cd services/dsh/backend
+          go test ./internal/http ./internal/centralcatalog -count=1
+      - name: Patch batch OpenAPI sources
         shell: bash
         run: |
-          set +e
-          log="${RUNNER_TEMP}/app-field-openapi-verification.log"
-          : >"${log}"
-          python3 - <<'PY' 2>&1 | tee -a "${log}"
+          python3 - <<'PY'
           from pathlib import Path
 
           catalog_path = Path("services/dsh/contracts/paths/catalog.paths.yaml")
@@ -166,41 +139,27 @@ jobs:
 
           catalog_path.write_text(catalog, encoding="utf-8")
           root_path.write_text(root, encoding="utf-8")
-          out = Path(".artifacts/openapi")
-          (out / "paths").mkdir(parents=True, exist_ok=True)
-          (out / "paths/catalog.paths.yaml").write_text(catalog, encoding="utf-8")
-          (out / "dsh.openapi.yaml").write_text(root, encoding="utf-8")
           PY
-          python_code=${PIPESTATUS[0]}
-          if [[ ${python_code} -ne 0 ]]; then exit "${python_code}"; fi
-          pnpm --dir services/dsh openapi:verify 2>&1 | tee -a "${log}"
-          exit ${PIPESTATUS[0]}
-      - name: Upload verified OpenAPI sources
-        if: ${{ steps.openapi.outcome == 'success' }}
+      - name: Compose and verify OpenAPI
+        run: |
+          pnpm --dir services/dsh openapi:compose
+          pnpm --dir services/dsh openapi:verify
+      - name: Collect verified outputs
+        shell: bash
+        run: |
+          mkdir -p .artifacts/openapi/contracts/paths
+          mkdir -p .artifacts/openapi/contracts/generated
+          mkdir -p .artifacts/openapi/clients/generated
+          cp services/dsh/contracts/paths/catalog.paths.yaml .artifacts/openapi/contracts/paths/catalog.paths.yaml
+          cp services/dsh/contracts/dsh.openapi.yaml .artifacts/openapi/contracts/dsh.openapi.yaml
+          cp services/dsh/contracts/dsh.modular.manifest.json .artifacts/openapi/contracts/dsh.modular.manifest.json
+          cp services/dsh/contracts/dsh.contract-ownership.json .artifacts/openapi/contracts/dsh.contract-ownership.json
+          cp services/dsh/contracts/generated/dsh.bundle.openapi.yaml .artifacts/openapi/contracts/generated/dsh.bundle.openapi.yaml
+          cp services/dsh/clients/generated/dsh-api.ts .artifacts/openapi/clients/generated/dsh-api.ts
+      - name: Upload verified outputs
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: app-field-openapi-sources-${{ github.run_id }}
+          name: app-field-verified-outputs-${{ github.run_id }}
           path: .artifacts/openapi
           if-no-files-found: error
           retention-days: 7
-      - name: Upload OpenAPI diagnostics
-        if: ${{ steps.openapi.outcome == 'failure' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: app-field-openapi-diagnostics-${{ github.run_id }}
-          path: |
-            ${{ runner.temp }}/app-field-openapi-verification.log
-            .artifacts/openapi
-          if-no-files-found: warn
-          retention-days: 7
-      - name: Upload isolated diagnostics
-        if: ${{ steps.isolated.outcome == 'failure' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: app-field-isolated-verification-${{ github.run_id }}
-          path: ${{ runner.temp }}/app-field-isolated-verification.log
-          if-no-files-found: error
-          retention-days: 7
-      - name: Enforce verification
-        if: ${{ steps.isolated.outcome == 'failure' || steps.openapi.outcome == 'failure' }}
-        run: exit 1
