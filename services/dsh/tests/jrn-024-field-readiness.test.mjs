@@ -5,7 +5,11 @@ import test from "node:test";
 const read = (path) => readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
 
 const governedDomain = read("services/dsh/backend/internal/fieldreadiness/journey024_governance.go");
+const idempotentDomain = read("services/dsh/backend/internal/fieldreadiness/journey024_idempotent_mutations.go");
+const mutationReceipts = read("services/dsh/backend/internal/fieldreadiness/mutation_idempotency.go");
 const governedHandlers = read("services/dsh/backend/internal/http/field_readiness_governed_handlers.go");
+const mutationMigration = read("services/dsh/database/migrations/dsh-960_field_readiness_mutation_idempotency.sql");
+const receiptMigration = read("services/dsh/database/migrations/dsh-961_field_readiness_operation_receipts.sql");
 const routes = read("services/dsh/backend/internal/http/field_readiness_routes.go");
 const sharedTypes = read("services/dsh/frontend/shared/field-readiness/field-readiness.types.ts");
 const sharedMedia = read("services/dsh/frontend/shared/media/field-document-media.ts");
@@ -36,6 +40,29 @@ test("JRN-024 routes every write through the governed backend boundary", () => {
   assert.match(routes, /handleGovernedPartnerOnboardingStatus/);
   assert.doesNotMatch(routes, /stores\/\{storeId\}\/media\/uploads/);
   assert.doesNotMatch(governedHandlers, /handleFieldReadinessMediaUpload/);
+});
+
+test("JRN-024 consumes governed idempotency headers for every replayable write", () => {
+  assert.match(governedHandlers, /r\.Header\.Get\("Idempotency-Key"\)/);
+  assert.match(governedHandlers, /r\.Header\.Get\("X-Correlation-ID"\)/);
+  assert.match(governedHandlers, /CreateGovernedVisitIdempotent/);
+  assert.match(governedHandlers, /CompleteGovernedVisitIdempotent/);
+  assert.match(governedHandlers, /UpsertGovernedReadinessCheckIdempotent/);
+  assert.match(governedHandlers, /CreateGovernedEscalationIdempotent/);
+  assert.match(governedHandlers, /IDEMPOTENCY_REQUIRED/);
+  assert.match(governedHandlers, /IDEMPOTENCY_CONFLICT/);
+});
+
+test("JRN-024 stores atomic tenant and actor scoped replay receipts", () => {
+  assert.match(mutationReceipts, /current_setting\('bthwani\.tenant_id', TRUE\)/);
+  assert.match(mutationReceipts, /pg_advisory_xact_lock/);
+  assert.match(mutationReceipts, /dsh_field_readiness_operation_receipts/);
+  assert.match(mutationReceipts, /tenantID, actorID, operation, mutation\.IdempotencyKey/);
+  assert.match(idempotentDomain, /storeMutationReceiptTx/);
+  assert.match(idempotentDomain, /fieldcommissionoutbox\.Enqueue/);
+  assert.match(mutationMigration, /create_idempotency_key/);
+  assert.match(mutationMigration, /completion_idempotency_key/);
+  assert.match(receiptMigration, /UNIQUE INDEX[\s\S]*tenant_id, actor_id, operation, idempotency_key/);
 });
 
 test("JRN-024 uses server-owned store coordinates and governed GPS evidence", () => {
@@ -85,6 +112,26 @@ test("JRN-024 source and generated contracts require both GPS captures", () => {
   assert.match(generatedBundle, /completionLocation:/);
   assert.match(generatedClient, /startLocation:/);
   assert.match(generatedClient, /completionLocation:/);
+});
+
+test("JRN-024 publishes idempotency and correlation headers in source and generated contracts", () => {
+  for (const operation of [
+    "dshFieldCreateVisit",
+    "dshFieldCompleteVisit",
+    "dshFieldUpsertReadinessCheck",
+    "dshFieldCreateEscalation",
+  ]) {
+    const start = fieldPaths.indexOf(`operationId: ${operation}`);
+    assert.notEqual(start, -1, `missing operation ${operation}`);
+    const requestBody = fieldPaths.indexOf("requestBody:", start);
+    const block = fieldPaths.slice(start, requestBody);
+    assert.match(block, /components\/parameters\/IdempotencyKey/);
+    assert.match(block, /components\/parameters\/CorrelationId/);
+  }
+  assert.match(generatedBundle, /name: Idempotency-Key/);
+  assert.match(generatedBundle, /name: X-Correlation-ID/);
+  assert.match(generatedClient, /"Idempotency-Key"/);
+  assert.match(generatedClient, /"X-Correlation-ID"/);
 });
 
 test("JRN-024 removes production developer access and governs field activation", () => {
