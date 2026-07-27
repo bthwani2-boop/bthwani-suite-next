@@ -1,11 +1,16 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Governed Reels API
-  version: 1.0.0
+  version: 1.0.1
   description: >
     Sovereign short-video lifecycle across app-partner, control-panel and
     app-client. Partner submissions and moderation previews are private;
     app-client reads approved video and poster assets only.
+x-bthwani-owner: services/dsh
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-runtime-dependency: true
+x-bthwani-client-generation: DISABLED
+x-bthwani-adapter-owner: frontend/shared/catalog/reels.api.ts
 servers:
   - url: /
 tags:
