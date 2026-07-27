@@ -125,9 +125,37 @@ function appDir(key) {
 }
 
 function appConfig(key) {
-  return `import { defineBthwaniExpoApp } from "../../../tools/mobile/defineBthwaniExpoApp";
+  const app = manifest.apps[key];
+  const userInterfaceStyle = app.userInterfaceStyle;
+  const supportsPictureInPicture = app.video?.supportsPictureInPicture === true;
+
+  if (!userInterfaceStyle && !supportsPictureInPicture) {
+    return `import { defineBthwaniExpoApp } from "../../../tools/mobile/defineBthwaniExpoApp";
 
 export default defineBthwaniExpoApp("${key}");
+`;
+  }
+
+  const overrides = [];
+  if (userInterfaceStyle) {
+    overrides.push(`  userInterfaceStyle: "${userInterfaceStyle}" as const,`);
+  }
+  if (supportsPictureInPicture) {
+    overrides.push(`  plugins: (config.plugins ?? []).map((plugin) =>
+    plugin === "expo-video"
+      ? ["expo-video", { supportsPictureInPicture: true }]
+      : plugin,
+  ),`);
+  }
+
+  return `import { defineBthwaniExpoApp } from "../../../tools/mobile/defineBthwaniExpoApp";
+
+const config = defineBthwaniExpoApp("${key}");
+
+export default {
+  ...config,
+${overrides.join("\n")}
+};
 `;
 }
 
