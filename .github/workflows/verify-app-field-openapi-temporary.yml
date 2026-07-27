@@ -1,0 +1,150 @@
+name: Temporary App Field OpenAPI Export
+
+on:
+  push:
+    branches:
+      - abdo
+
+permissions:
+  contents: read
+
+jobs:
+  export-openapi:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Patch batch contract sources
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          catalog_path = Path("services/dsh/contracts/paths/catalog.paths.yaml")
+          root_path = Path("services/dsh/contracts/dsh.openapi.yaml")
+          catalog = catalog_path.read_text(encoding="utf-8")
+          root = root_path.read_text(encoding="utf-8")
+
+          batch_key = "/dsh/field/partners/{partnerId}/stores/{storeId}/assortment/batch:"
+          batch_block = r'''
+          /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/batch:
+            post:
+              operationId: fieldUpsertStoreAssortmentBatch
+              summary: Link up to 100 approved central products to a field-onboarded partner store in one governed request.
+              tags: [CentralCatalog]
+              security: [{ bearerAuth: [] }]
+              parameters:
+                - name: partnerId
+                  in: path
+                  required: true
+                  schema: { type: string }
+                - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      additionalProperties: false
+                      required: [items]
+                      properties:
+                        items:
+                          type: array
+                          minItems: 1
+                          maxItems: 100
+                          items:
+                            type: object
+                            additionalProperties: false
+                            required: [masterProductId, unitPrice, currency, available, stockStatus, localNote, publicationStatus]
+                            properties:
+                              masterProductId: { type: string, minLength: 1 }
+                              unitPrice: { type: number, minimum: 0 }
+                              currency: { type: string, minLength: 1 }
+                              available: { type: boolean }
+                              stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock] }
+                              localNote: { type: string }
+                              customImageObjectKey: { type: [string, "null"] }
+                              publicationStatus: { type: string, enum: [draft, submitted] }
+                              expectedVersion: { type: integer, minimum: 1 }
+              responses:
+                "200":
+                  description: Per-item batch result. Successful rows remain committed when another row fails validation or OCC.
+                  content:
+                    application/json:
+                      schema:
+                        type: object
+                        additionalProperties: false
+                        required: [results, succeeded, failed]
+                        properties:
+                          succeeded: { type: integer, minimum: 0 }
+                          failed: { type: integer, minimum: 0 }
+                          results:
+                            type: array
+                            items:
+                              type: object
+                              additionalProperties: false
+                              required: [index, masterProductId, status]
+                              properties:
+                                index: { type: integer, minimum: 0 }
+                                masterProductId: { type: string }
+                                status: { type: string, enum: [saved, failed] }
+                                assortment: { type: object, additionalProperties: true }
+                                code: { type: string }
+                                message: { type: string }
+                                currentVersion: { type: integer, minimum: 1 }
+                                expectedVersion: { type: integer, minimum: 1 }
+                "400": { $ref: "../dsh.openapi.yaml#/components/responses/BadRequest" }
+                "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+          '''.strip() + "\n\n"
+
+          catalog_anchor = "/dsh/field/partners/{partnerId}/assortment:\n"
+          if batch_key not in catalog:
+              if catalog_anchor not in catalog:
+                  raise SystemExit("catalog anchor not found")
+              catalog = catalog.replace(catalog_anchor, batch_block + catalog_anchor, 1)
+
+          root_key = "  /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/batch:\n"
+          root_anchor = (
+              "  /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}:\n"
+              "    $ref: \"./paths/catalog.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1stores~1{storeId}~1assortment~1{masterProductId}\"\n"
+          )
+          root_block = (
+              "  /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/batch:\n"
+              "    $ref: \"./paths/catalog.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1stores~1{storeId}~1assortment~1batch\"\n"
+          )
+          if root_key not in root:
+              if root_anchor not in root:
+                  raise SystemExit("root anchor not found")
+              root = root.replace(root_anchor, root_anchor + root_block, 1)
+
+          catalog_path.write_text(catalog, encoding="utf-8")
+          root_path.write_text(root, encoding="utf-8")
+          PY
+      - name: Compose and verify OpenAPI
+        run: |
+          pnpm --dir services/dsh openapi:compose
+          pnpm --dir services/dsh openapi:verify
+      - name: Collect verified outputs
+        shell: bash
+        run: |
+          mkdir -p .artifacts/openapi/contracts/paths
+          mkdir -p .artifacts/openapi/contracts/generated
+          mkdir -p .artifacts/openapi/clients/generated
+          cp services/dsh/contracts/paths/catalog.paths.yaml .artifacts/openapi/contracts/paths/catalog.paths.yaml
+          cp services/dsh/contracts/dsh.openapi.yaml .artifacts/openapi/contracts/dsh.openapi.yaml
+          cp services/dsh/contracts/dsh.modular.manifest.json .artifacts/openapi/contracts/dsh.modular.manifest.json
+          cp services/dsh/contracts/dsh.contract-ownership.json .artifacts/openapi/contracts/dsh.contract-ownership.json
+          cp services/dsh/contracts/generated/dsh.bundle.openapi.yaml .artifacts/openapi/contracts/generated/dsh.bundle.openapi.yaml
+          cp services/dsh/clients/generated/dsh-api.ts .artifacts/openapi/clients/generated/dsh-api.ts
+      - name: Upload verified OpenAPI outputs
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-field-openapi-verified-${{ github.run_id }}
+          path: .artifacts/openapi
+          if-no-files-found: error
+          retention-days: 7
