@@ -1,25 +1,24 @@
 name: Temporary App Field Verification
 
 on:
-  push:
-    branches:
-      - abdo
   pull_request:
     branches:
       - master
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  verify-app-field:
+  verify-and-finalize:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - name: Checkout immutable source
+      - name: Checkout abdo head
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          persist-credentials: false
+          ref: abdo
+          fetch-depth: 1
+          persist-credentials: true
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Set up locked Go runtime
@@ -42,22 +41,21 @@ jobs:
           python3 tools/scripts/patch-app-field-batch-openapi-temporary.py
           pnpm --dir services/dsh openapi:compose
           pnpm --dir services/dsh openapi:verify
-      - name: Collect verified outputs
+      - name: Commit verified outputs and remove temporary verification
         shell: bash
         run: |
-          mkdir -p .artifacts/openapi/contracts/paths
-          mkdir -p .artifacts/openapi/contracts/generated
-          mkdir -p .artifacts/openapi/clients/generated
-          cp services/dsh/contracts/paths/catalog.paths.yaml .artifacts/openapi/contracts/paths/catalog.paths.yaml
-          cp services/dsh/contracts/dsh.openapi.yaml .artifacts/openapi/contracts/dsh.openapi.yaml
-          cp services/dsh/contracts/dsh.modular.manifest.json .artifacts/openapi/contracts/dsh.modular.manifest.json
-          cp services/dsh/contracts/dsh.contract-ownership.json .artifacts/openapi/contracts/dsh.contract-ownership.json
-          cp services/dsh/contracts/generated/dsh.bundle.openapi.yaml .artifacts/openapi/contracts/generated/dsh.bundle.openapi.yaml
-          cp services/dsh/clients/generated/dsh-api.ts .artifacts/openapi/clients/generated/dsh-api.ts
-      - name: Upload verified outputs
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: app-field-verified-outputs-${{ github.run_id }}
-          path: .artifacts/openapi
-          if-no-files-found: error
-          retention-days: 7
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            services/dsh/contracts/paths/catalog.paths.yaml \
+            services/dsh/contracts/dsh.openapi.yaml \
+            services/dsh/contracts/dsh.modular.manifest.json \
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+            services/dsh/clients/generated/dsh-api.ts
+          git rm \
+            .github/workflows/verify-app-field-abdo-temporary.yml \
+            .github/workflows/verify-app-field-openapi-temporary.yml \
+            tools/scripts/patch-app-field-batch-openapi-temporary.py
+          git diff --cached --check
+          git commit -m "feat(dsh): finalize field partner bulk catalog onboarding"
+          git push origin HEAD:abdo
