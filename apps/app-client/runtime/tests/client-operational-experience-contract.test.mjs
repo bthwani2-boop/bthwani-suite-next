@@ -22,7 +22,15 @@ function assertMarkers(relativePath, markers) {
 test("client discovery exposes real search, cached images, and playable reels", () => {
   const discovery = assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx",
-    ["createClientEphemeralId", "searchText", "normalizedQuery", "ابحث عن متجر أو فئة"],
+    [
+      "createClientEphemeralId",
+      "searchText",
+      "normalizedQuery",
+      "ابحث عن متجر أو فئة",
+      "setReels([])",
+      "reels.length > 0",
+      "state.data.categories.some",
+    ],
   );
   assert.equal(discovery.includes("Math.random("), false);
 
@@ -33,6 +41,10 @@ test("client discovery exposes real search, cached images, and playable reels", 
   assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomeReelsSection.tsx",
     ["expo-video", "useVideoPlayer", "useCaching: true", "allowsPictureInPicture"],
+  );
+  assertMarkers(
+    "services/dsh/frontend/app-client/home-discovery/HomePromoSection.tsx",
+    ["promo.actionTarget.trim().length > 0", "hasQuickActions", "interactive ?"],
   );
 });
 
@@ -69,6 +81,10 @@ test("privacy-safe order sharing uses temporary Expo files and no sensitive refe
     "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
     ["shareClientTextDocument", "shareableOrderSummary", "مشاركة الملخص"],
   );
+  const summaryStart = orders.indexOf("function shareableOrderSummary");
+  const summaryEnd = orders.indexOf("type Props", summaryStart);
+  assert.ok(summaryStart >= 0 && summaryEnd > summaryStart);
+  const summarySource = orders.slice(summaryStart, summaryEnd);
   for (const forbidden of [
     "deliveryAddressSnapshot",
     "wltPaymentRefId",
@@ -76,8 +92,7 @@ test("privacy-safe order sharing uses temporary Expo files and no sensitive refe
     "clientId",
   ]) {
     assert.equal(
-      orders.slice(orders.indexOf("function shareableOrderSummary"), orders.indexOf("type Props"))
-        .includes(forbidden),
+      summarySource.includes(forbidden),
       false,
       `shared order summary must not include ${forbidden}`,
     );
