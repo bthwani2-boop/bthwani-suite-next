@@ -16,6 +16,7 @@ export type ActorNotificationsPanelProps = {
   readonly maxItems?: number;
   readonly appScheme?: string;
   readonly onOpenActionUrl?: (actionUrl: string) => void;
+  readonly showPreferences?: boolean;
 };
 
 function preferenceInput(
@@ -83,6 +84,7 @@ export function ActorNotificationsPanel({
   maxItems,
   appScheme,
   onOpenActionUrl,
+  showPreferences = true,
 }: ActorNotificationsPanelProps) {
   const {
     state,
@@ -91,7 +93,7 @@ export function ActorNotificationsPanel({
     markAllRead,
     reload,
     savePreference,
-  } = useNotificationsController(authKind);
+  } = useNotificationsController(authKind, { loadPreferences: showPreferences });
 
   if (authKind !== "authenticated") {
     return <StateView title="تسجيل الدخول مطلوب" description="هذه الإشعارات مرتبطة بالممثل الحالي فقط." />;
@@ -116,7 +118,14 @@ export function ActorNotificationsPanel({
             {state.unreadCount > 0 ? `${state.unreadCount} غير مقروءة` : "كل الإشعارات مقروءة"}
           </Text>
         </Box>
-        <Button label="تحديد الكل مقروءاً" tone="secondary" size="sm" fullWidth={false} onPress={() => { void markAllRead(); }} />
+        <Button
+          label="تحديد الكل مقروءاً"
+          tone="secondary"
+          size="sm"
+          fullWidth={false}
+          disabled={state.unreadCount === 0}
+          onPress={() => { void markAllRead(); }}
+        />
       </Box>
 
       {notifications.length === 0 ? (
@@ -131,92 +140,95 @@ export function ActorNotificationsPanel({
               meta={new Date(notification.createdAt).toLocaleString("ar-YE")}
               trailing={<Badge label={notification.isRead ? notification.topic : "جديد"} tone={notification.isRead ? "neutral" : "action"} />}
               onPress={() => {
-                void markRead(notification.id);
-                void openNotificationAction(notification.actionUrl, appScheme, onOpenActionUrl);
+                void markRead(notification.id)
+                  .then(() => openNotificationAction(notification.actionUrl, appScheme, onOpenActionUrl))
+                  .catch(() => undefined);
               }}
             />
           ))}
         </Box>
       )}
 
-      <Box gap={2}>
-        <Text role="titleSm" align="start">تفضيلات الإشعارات</Text>
-        {preferenceState.kind === "idle" || preferenceState.kind === "loading" ? (
-          <StateView loading title="جارٍ تحميل التفضيلات" />
-        ) : preferenceState.kind === "error" ? (
-          <StateView tone="warning" title="تعذر تحميل التفضيلات" description={preferenceState.message} actionLabel="إعادة المحاولة" onActionPress={reload} />
-        ) : preferenceState.preferences.length === 0 ? (
-          <StateView title="لا توجد تفضيلات مخصصة" description="تستخدم الإشعارات إعدادات المنصة الافتراضية لهذا الممثل." />
-        ) : (
-          preferenceState.preferences.map((preference) => (
-            <Surface key={preference.topic} tone="inset" padding={3} gap={2}>
-              <Box layoutDirection="row" align="center" justify="space-between" gap={2}>
-                <Box gap={1}>
-                  <Text role="label" align="start">{preference.topic}</Text>
-                  <Text role="bodySm" tone="muted" align="start">
-                    {preference.enabled ? "مفعّل لهذا الممثل" : "متوقف لهذا الممثل"}
-                  </Text>
-                </Box>
-                <Button
-                  label={preference.enabled ? "إيقاف" : "تفعيل"}
-                  tone={preference.enabled ? "secondary" : "primary"}
-                  size="sm"
-                  fullWidth={false}
-                  onPress={() => { void savePreference(preferenceInput(preference, { enabled: !preference.enabled })); }}
-                />
-              </Box>
-
-              <Box layoutDirection="row" gap={2}>
-                {(["in_app", "push"] as const).map((channel) => (
+      {showPreferences ? (
+        <Box gap={2}>
+          <Text role="titleSm" align="start">تفضيلات الإشعارات</Text>
+          {preferenceState.kind === "idle" || preferenceState.kind === "loading" ? (
+            <StateView loading title="جارٍ تحميل التفضيلات" />
+          ) : preferenceState.kind === "error" ? (
+            <StateView tone="warning" title="تعذر تحميل التفضيلات" description={preferenceState.message} actionLabel="إعادة المحاولة" onActionPress={reload} />
+          ) : preferenceState.preferences.length === 0 ? (
+            <StateView title="لا توجد تفضيلات مخصصة" description="تستخدم الإشعارات إعدادات المنصة الافتراضية لهذا الممثل." />
+          ) : (
+            preferenceState.preferences.map((preference) => (
+              <Surface key={preference.topic} tone="inset" padding={3} gap={2}>
+                <Box layoutDirection="row" align="center" justify="space-between" gap={2}>
+                  <Box gap={1}>
+                    <Text role="label" align="start">{preference.topic}</Text>
+                    <Text role="bodySm" tone="muted" align="start">
+                      {preference.enabled ? "مفعّل لهذا الممثل" : "متوقف لهذا الممثل"}
+                    </Text>
+                  </Box>
                   <Button
-                    key={channel}
-                    label={`${preference.channels.includes(channel) ? "✓ " : ""}${channelLabel(channel)}`}
-                    tone={preference.channels.includes(channel) ? "primary" : "secondary"}
+                    label={preference.enabled ? "إيقاف" : "تفعيل"}
+                    tone={preference.enabled ? "secondary" : "primary"}
+                    size="sm"
+                    fullWidth={false}
+                    onPress={() => { void savePreference(preferenceInput(preference, { enabled: !preference.enabled })); }}
+                  />
+                </Box>
+
+                <Box layoutDirection="row" gap={2}>
+                  {(["in_app", "push"] as const).map((channel) => (
+                    <Button
+                      key={channel}
+                      label={`${preference.channels.includes(channel) ? "✓ " : ""}${channelLabel(channel)}`}
+                      tone={preference.channels.includes(channel) ? "primary" : "secondary"}
+                      size="sm"
+                      fullWidth={false}
+                      onPress={() => {
+                        void savePreference(preferenceInput(preference, {
+                          channels: toggledChannels(preference.channels, channel),
+                        }));
+                      }}
+                    />
+                  ))}
+                </Box>
+
+                <Box layoutDirection="row" gap={2}>
+                  <Button
+                    label={preference.quietHoursStart ? "إلغاء وقت الهدوء" : "هدوء 22:00–07:00"}
+                    tone="secondary"
+                    size="sm"
+                    fullWidth={false}
+                    onPress={() => {
+                      void savePreference(preferenceInput(preference, preference.quietHoursStart
+                        ? { quietHoursStart: undefined, quietHoursEnd: undefined }
+                        : { quietHoursStart: "22:00", quietHoursEnd: "07:00" }));
+                    }}
+                  />
+                  <Button
+                    label={preference.locale === "ar" ? "العربية" : "English"}
+                    tone="secondary"
                     size="sm"
                     fullWidth={false}
                     onPress={() => {
                       void savePreference(preferenceInput(preference, {
-                        channels: toggledChannels(preference.channels, channel),
+                        locale: preference.locale === "ar" ? "en" : "ar",
                       }));
                     }}
                   />
-                ))}
-              </Box>
+                </Box>
 
-              <Box layoutDirection="row" gap={2}>
-                <Button
-                  label={preference.quietHoursStart ? "إلغاء وقت الهدوء" : "هدوء 22:00–07:00"}
-                  tone="secondary"
-                  size="sm"
-                  fullWidth={false}
-                  onPress={() => {
-                    void savePreference(preferenceInput(preference, preference.quietHoursStart
-                      ? { quietHoursStart: undefined, quietHoursEnd: undefined }
-                      : { quietHoursStart: "22:00", quietHoursEnd: "07:00" }));
-                  }}
-                />
-                <Button
-                  label={preference.locale === "ar" ? "العربية" : "English"}
-                  tone="secondary"
-                  size="sm"
-                  fullWidth={false}
-                  onPress={() => {
-                    void savePreference(preferenceInput(preference, {
-                      locale: preference.locale === "ar" ? "en" : "ar",
-                    }));
-                  }}
-                />
-              </Box>
-
-              <Text role="caption" tone="muted" align="start">
-                {preference.quietHoursStart && preference.quietHoursEnd
-                  ? `وقت الهدوء: ${preference.quietHoursStart}–${preference.quietHoursEnd} (${preference.timezone})`
-                  : `لا يوجد وقت هدوء (${preference.timezone})`}
-              </Text>
-            </Surface>
-          ))
-        )}
-      </Box>
+                <Text role="caption" tone="muted" align="start">
+                  {preference.quietHoursStart && preference.quietHoursEnd
+                    ? `وقت الهدوء: ${preference.quietHoursStart}–${preference.quietHoursEnd} (${preference.timezone})`
+                    : `لا يوجد وقت هدوء (${preference.timezone})`}
+                </Text>
+              </Surface>
+            ))
+          )}
+        </Box>
+      ) : null}
     </Surface>
   );
 }
