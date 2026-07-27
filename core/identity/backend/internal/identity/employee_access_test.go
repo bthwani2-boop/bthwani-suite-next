@@ -51,6 +51,29 @@ func TestDepartmentManagerBundleIsDepartmentScoped(t *testing.T) {
 	}
 }
 
+func TestEmployeeAccessRejectsProviderAndConsumerRoles(t *testing.T) {
+	tests := []struct {
+		name  string
+		roles []string
+		want  bool
+	}{
+		{name: "client", roles: []string{"client"}, want: true},
+		{name: "partner", roles: []string{"partner"}, want: true},
+		{name: "field", roles: []string{"field"}, want: true},
+		{name: "captain", roles: []string{"captain"}, want: true},
+		{name: "mixed provider and employee", roles: []string{"field", "employee", "operator"}, want: true},
+		{name: "existing employee", roles: []string{"employee", "operator"}, want: false},
+		{name: "bootstrap operator", roles: []string{"operator"}, want: false},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := employeeAccessConflictsWithRoles(test.roles); got != test.want {
+				t.Fatalf("employeeAccessConflictsWithRoles(%v)=%v want %v", test.roles, got, test.want)
+			}
+		})
+	}
+}
+
 func TestInvalidDepartmentRejected(t *testing.T) {
 	if _, err := employeeBundlePermissions(EmployeeBundleStaff, "../platform"); err == nil {
 		t.Fatal("expected invalid department to be rejected")
