@@ -23,18 +23,19 @@ type fieldAssortmentBatchItem struct {
 	StockStatus          string  `json:"stockStatus"`
 	LocalNote            string  `json:"localNote"`
 	CustomImageObjectKey *string `json:"customImageObjectKey"`
+	PublicationStatus    string  `json:"publicationStatus"`
 	ExpectedVersion      *int    `json:"expectedVersion"`
 }
 
 type fieldAssortmentBatchResult struct {
-	Index             int                             `json:"index"`
-	MasterProductID   string                          `json:"masterProductId"`
-	Status            string                          `json:"status"`
-	Assortment        *centralcatalog.StoreAssortment `json:"assortment,omitempty"`
-	Code              string                          `json:"code,omitempty"`
-	Message           string                          `json:"message,omitempty"`
-	CurrentVersion    *int                            `json:"currentVersion,omitempty"`
-	ExpectedVersion   *int                            `json:"expectedVersion,omitempty"`
+	Index           int                             `json:"index"`
+	MasterProductID string                          `json:"masterProductId"`
+	Status          string                          `json:"status"`
+	Assortment      *centralcatalog.StoreAssortment `json:"assortment,omitempty"`
+	Code            string                          `json:"code,omitempty"`
+	Message         string                          `json:"message,omitempty"`
+	CurrentVersion  *int                            `json:"currentVersion,omitempty"`
+	ExpectedVersion *int                            `json:"expectedVersion,omitempty"`
 }
 
 type fieldAssortmentBatchResponse struct {
@@ -150,8 +151,11 @@ func (s *protectedStoreServer) handleFieldUpsertStoreAssortmentBatch(w http.Resp
 			StockStatus:          item.StockStatus,
 			LocalNote:            item.LocalNote,
 			CustomImageObjectKey: item.CustomImageObjectKey,
-			PublicationStatus:    "submitted",
-			ExpectedVersion:      item.ExpectedVersion,
+			// Field intake may request draft/submitted, but the server never
+			// trusts a client-supplied publication transition. Every batch row
+			// enters the governed submitted state for downstream review.
+			PublicationStatus: "submitted",
+			ExpectedVersion:   item.ExpectedVersion,
 		}
 		assortment, err := centralcatalog.UpsertStoreAssortmentAtomic(
 			r.Context(), s.db, resolvedStoreID, masterProductID, actorID, input, policy.AllowsStoreProductCustomImage,
