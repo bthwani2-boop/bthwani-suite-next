@@ -1,0 +1,44 @@
+name: Remote Field Gofmt
+
+on:
+  push:
+    branches:
+      - work/smar-field-gofmt-20260727
+    paths:
+      - ".github/workflows/remote-field-gofmt.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.26.5
+      - name: Apply gofmt
+        run: |
+          gofmt -w \
+            services/dsh/backend/internal/fieldreadiness/journey024_idempotent_mutations.go \
+            services/dsh/backend/internal/fieldreadiness/mutation_idempotency.go \
+            services/dsh/backend/internal/fieldreadiness/mutation_idempotency_db_test.go \
+            services/dsh/backend/internal/fieldreadiness/mutation_idempotency_test.go \
+            services/dsh/backend/internal/http/field_readiness_governed_handlers.go
+          mkdir -p governance/evidence
+          printf '# Remote gofmt evidence\n\n- Commit before formatting: `%s`\n- Completed: `%s`\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > governance/evidence/app-field-gofmt.md
+      - name: Commit formatted files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            services/dsh/backend/internal/fieldreadiness/journey024_idempotent_mutations.go \
+            services/dsh/backend/internal/fieldreadiness/mutation_idempotency.go \
+            services/dsh/backend/internal/fieldreadiness/mutation_idempotency_db_test.go \
+            services/dsh/backend/internal/fieldreadiness/mutation_idempotency_test.go \
+            services/dsh/backend/internal/http/field_readiness_governed_handlers.go \
+            governance/evidence/app-field-gofmt.md
+          git commit -m "style(dsh): apply remote gofmt [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
