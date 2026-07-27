@@ -13,6 +13,16 @@ export function fetchControlPanelSession(): Promise<SessionApiResult<{ identity:
   return request<{ identity: ActorIdentity }>("/api/auth/session", { method: "GET" });
 }
 
+export function activateControlPanelSession(
+  phone: string,
+  code: string,
+): Promise<SessionApiResult<{ identity: ActorIdentity; code?: string }>> {
+  return request<{ identity: ActorIdentity; code?: string }>("/api/auth/activate", {
+    method: "POST",
+    body: JSON.stringify({ phone, code }),
+  });
+}
+
 export function loginControlPanelSession(
   username: string,
   password: string,
