@@ -109,3 +109,45 @@ export type DshStoreOnboardingFeePolicyInput = {
   readonly expectedVersion: number;
   readonly reason: string;
 };
+
+// This is an operational requirement owned by DSH. WLT remains the owner of
+// the actual balance and supplies every dispatch eligibility readback.
+export type DshDispatchBalancePolicy = {
+  readonly enabled: boolean;
+  readonly requirePositiveBalance: boolean;
+  readonly minimumDispatchBalanceMinorUnits: number;
+  readonly minimumCodBalanceMinorUnits: number;
+  readonly currency: string;
+  readonly snapshotTtlSeconds: number;
+  readonly notes: string;
+  readonly updatedBy: string;
+  readonly updatedAt: string;
+  readonly version: number;
+};
+
+export type DshDispatchBalancePolicyInput = {
+  readonly enabled: boolean;
+  readonly requirePositiveBalance: boolean;
+  readonly minimumDispatchBalanceMinorUnits: number;
+  readonly minimumCodBalanceMinorUnits: number;
+  readonly currency: string;
+  readonly snapshotTtlSeconds: number;
+  readonly notes: string;
+  readonly expectedVersion: number;
+  readonly reason: string;
+};
+
+export type DshCaptainFinancialEligibility = {
+  readonly tenantId: string;
+  readonly captainId: string;
+  readonly walletId: string;
+  readonly walletStatus: string;
+  readonly availableBalanceMinorUnits: number;
+  readonly minimumDispatchBalanceMinorUnits: number;
+  readonly currency: string;
+  readonly eligible: boolean;
+  readonly ineligibilityReason?: string;
+  readonly snapshotReference: string;
+  readonly checkedAt: string;
+  readonly expiresAt: string;
+};
