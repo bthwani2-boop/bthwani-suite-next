@@ -72,10 +72,10 @@ export function HomeDiscoveryShell({
   const [showDropdown, setShowDropdown] = React.useState(false);
   const [searchText, setSearchText] = React.useState("");
   const [reels, setReels] = React.useState<readonly HomePublicReel[]>([]);
+  const [viewerRef] = React.useState(() => createClientEphemeralId("home"));
   const scrollRef = React.useRef<ScrollView>(null);
   const reelsOffsetY = React.useRef(0);
   const recordedImpressions = React.useRef(new Set<string>());
-  const viewerRef = React.useRef(createClientEphemeralId("home"));
 
   const emitMarketingEvent = React.useCallback((
     eventType: "impression" | "click",
@@ -88,12 +88,12 @@ export function HomeDiscoveryShell({
       eventType,
       contentKind,
       contentId,
-      viewerRef: viewerRef.current,
+      viewerRef,
       cityCode: state.data.context.cityCode,
       serviceAreaCode: state.data.context.serviceAreaCode,
       audienceSegment: state.data.context.audienceSegment,
     }).catch(() => undefined);
-  }, [state]);
+  }, [state, viewerRef]);
 
   React.useEffect(() => {
     if (state.kind !== "success") {
@@ -101,6 +101,7 @@ export function HomeDiscoveryShell({
       return;
     }
 
+    setReels([]);
     let cancelled = false;
     void fetchHomePublicReels(10)
       .then((items) => {
@@ -120,13 +121,21 @@ export function HomeDiscoveryShell({
   ]);
 
   React.useEffect(() => {
+    if (state.kind !== "success" || activeCategoryId === null) return;
+    if (!state.data.categories.some((category) => category.id === activeCategoryId)) {
+      setActiveCategoryId(null);
+    }
+  }, [activeCategoryId, state]);
+
+  React.useEffect(() => {
     if (state.kind !== "success") return;
+    const contextKey = `${state.data.context.cityCode}:${state.data.context.serviceAreaCode}`;
     const content = [
       ...state.data.banners.map((item) => ({ kind: "banners" as const, id: item.id })),
       ...state.data.promos.map((item) => ({ kind: "promos" as const, id: item.id })),
     ];
     for (const item of content) {
-      const key = `${item.kind}:${item.id}`;
+      const key = `${contextKey}:${item.kind}:${item.id}`;
       if (recordedImpressions.current.has(key)) continue;
       recordedImpressions.current.add(key);
       emitMarketingEvent("impression", item.kind, item.id);
@@ -227,7 +236,7 @@ export function HomeDiscoveryShell({
           promos={promos}
           onPromoPress={handlePromoPress}
           onCategoriesPress={() => setShowDropdown(true)}
-          onVideoPress={handleVideoPress}
+          {...(reels.length > 0 ? { onVideoPress: handleVideoPress } : {})}
         />
         <View
           onLayout={(event) => {
@@ -343,7 +352,7 @@ function CategoryOption({
   readonly isRtl: boolean;
   readonly onPress: () => void;
 }) {
-  const iconIsImageUrl = /^https:\/\//i.test(icon) || icon.startsWith("/");
+  const iconIsImageUrl = /^https?:\/\//i.test(icon) || icon.startsWith("/");
 
   return (
     <Pressable
