@@ -5,6 +5,7 @@ import { WltDshCaptainBridge } from '../../shared/finance-wlt-link/wlt/generated
 import { ActorWalletPanel } from '../../shared/finance-wlt-link/actor-wallet';
 import { RepresentativeCommissionPanel } from '../../shared/finance-wlt-link/jrn036';
 import { PayoutDestinationPanel } from '../../shared/finance-wlt-link/jrn037';
+import { ProviderIncidentsPanel } from '../../shared/workforce/ProviderIncidentsPanel';
 import { DshOperationScreen } from '../DshOperationScreen';
 import { DshCaptainCodCustodyScreen } from './DshCaptainCodCustodyScreen';
 import type {
@@ -24,15 +25,17 @@ export type DshCaptainFinanceScreenProps = {
 function EarningsContent() {
 	return (
 		<Box gap={4}>
-			<ActorWalletPanel actorType="captain" title="الرصيد والأرباح المرجعية" embedded />
-			<RepresentativeCommissionPanel actorType="captain" title="عمولات التوصيل" embedded />
+			<ActorWalletPanel actorType="captain" title="الرصيد والضمانة المالية والأرباح" embedded />
+			<DshCaptainCodCustodyScreen embedded />
+			<RepresentativeCommissionPanel actorType="captain" title="أجور وعمولات التوصيل" embedded />
 			<PayoutDestinationPanel actorType="captain" title="وجهة صرف الكابتن وطلبات الدفع" embedded />
+			<ProviderIncidentsPanel />
 		</Box>
 	);
 }
 
 export function DshCaptainFinanceScreen({
-	section = 'cod-liability',
+	section = 'earnings',
 	state = 'ready',
 	onBack,
 	onRetry,
@@ -46,7 +49,7 @@ export function DshCaptainFinanceScreen({
 			<DshOperationScreen
 				state={state}
 				title="المالية"
-				subtitle="محفظة الكابتن والدفتر وذمة COD والعمولات والصرف تُقرأ من WLT عبر وكيل DSH المحكوم."
+				subtitle="الضمانة المالية والمحفظة والدفتر وذمة COD والأجور والخصومات والصرف تُقرأ من المصادر المحكومة."
 				onRetry={onRetry}
 			/>
 		);
@@ -60,7 +63,7 @@ export function DshCaptainFinanceScreen({
 		if (embedded) return <EarningsContent />;
 		return (
 			<View style={{ flex: 1, backgroundColor: theme.surface }}>
-				<TopBar title="محفظة الكابتن" {...(onBack ? { onBack } : {})} />
+				<TopBar title="مالية الكابتن" {...(onBack ? { onBack } : {})} />
 				<MobileScrollView fill padding={4} gap={4} contentContainerStyle={{ paddingBottom: 120 }}>
 					<EarningsContent />
 				</MobileScrollView>
@@ -80,5 +83,3 @@ export function DshCaptainFinanceScreen({
 export function DshCaptainCodBalanceScreen(props: Omit<DshCaptainFinanceScreenProps, 'section'> = {}) {
 	return <DshCaptainFinanceScreen {...props} section="cod-liability" />;
 }
-
-// export default DshCaptainFinanceScreen; // Unused default export
