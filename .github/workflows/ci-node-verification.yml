@@ -40,22 +40,47 @@ jobs:
       - name: Verify immutable diff
         run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
       - name: Verify exact affected or full Node graph
+        id: node_graph
+        continue-on-error: true
         env:
           NX_BASE: ${{ inputs.base_sha }}
           NX_HEAD: ${{ inputs.head_sha }}
           FULL_VERIFICATION: ${{ inputs.full_verification }}
           VERIFICATION_TIER: ${{ inputs.verification_tier }}
+        shell: bash
         run: |
+          set +e
+          log="${RUNNER_TEMP}/node-graph-verification.log"
+          : >"${log}"
+          run_check() {
+            echo "===== $* =====" | tee -a "${log}"
+            "$@" 2>&1 | tee -a "${log}"
+            return ${PIPESTATUS[0]}
+          }
+          status=0
           if [[ "${FULL_VERIFICATION}" == "true" ]]; then
-            pnpm run nx:typecheck
-            pnpm run nx:lint
-            pnpm run nx:test
-            pnpm run nx:build
+            run_check pnpm run nx:typecheck || status=$?
+            run_check pnpm run nx:lint || status=$?
+            run_check pnpm run nx:test || status=$?
+            run_check pnpm run nx:build || status=$?
           elif [[ "${VERIFICATION_TIER}" == "fast" ]]; then
-            node tools/scripts/run-affected-verification.mjs typecheck lint test
+            run_check node tools/scripts/run-affected-verification.mjs typecheck lint test || status=$?
           else
-            node tools/scripts/run-affected-verification.mjs typecheck lint test build
+            run_check node tools/scripts/run-affected-verification.mjs typecheck lint test build || status=$?
           fi
+          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
+          exit "${status}"
+      - name: Upload Node graph diagnostics
+        if: ${{ steps.node_graph.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: node-graph-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/node-graph-verification.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce Node graph result
+        if: ${{ steps.node_graph.outcome == 'failure' }}
+        run: exit 1
       - name: Verify Expo configuration for deep frontend changes
         if: ${{ inputs.frontend == 'true' && inputs.verification_tier == 'deep' }}
         run: pnpm run mobile:expo:verify
