@@ -11,16 +11,13 @@ import {
 } from "@bthwani/ui-kit";
 import { ActorWalletPanel } from "../../shared/finance-wlt-link/actor-wallet";
 
-export type BThwaniAppearanceMode = "lightPremium" | "darkGlass";
-
 export type MySpaceScreenProps = {
-  /** Kept for caller compatibility until a governed runtime theme contract exists. */
-  appearanceMode?: BThwaniAppearanceMode;
-  onAppearanceModeChange?: (mode: BThwaniAppearanceMode) => void;
+  currentAppearanceLabel?: string;
   onOpenOrders?: () => void;
   onOpenAddresses?: () => void;
   onOpenIdentity?: () => void;
   onOpenBenefits?: () => void;
+  onOpenAppearance?: () => void;
   onOpenPreferences?: () => void;
   onOpenSupport?: () => void;
 };
@@ -30,6 +27,7 @@ type MySpaceTab =
   | "addresses"
   | "identity"
   | "benefits"
+  | "appearance"
   | "preferences"
   | "support";
 
@@ -40,11 +38,12 @@ type TabConfig = {
   iconName: string;
 };
 
-const TABS: readonly TabConfig[] = [
+const BASE_TABS: readonly TabConfig[] = [
   { id: "orders", label: "طلباتي", summary: "الطلب والتاريخ والتتبع", iconName: "bag-outline" },
   { id: "addresses", label: "العناوين والموقع", summary: "إدارة العناوين وتعليمات التوصيل", iconName: "location-outline" },
   { id: "identity", label: "الملف الشخصي", summary: "البيانات الشخصية والأمان", iconName: "person-outline" },
   { id: "benefits", label: "المزايا والولاء", summary: "النقاط والاشتراكات والعروض المعتمدة", iconName: "gift-outline" },
+  { id: "appearance", label: "المظهر", summary: "يتبع النظام أو فاتح أو داكن", iconName: "color-palette-outline" },
   { id: "preferences", label: "تفضيلات الإشعارات", summary: "إعدادات محفوظة في DSH ومقروءة بعد التعديل", iconName: "notifications-outline" },
   { id: "support", label: "الدعم والمساعدة", summary: "تذاكر الدعم ومتابعة المشاكل", iconName: "help-buoy-outline" },
 ];
@@ -64,7 +63,7 @@ function MySpaceRow({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={title}
+      accessibilityLabel={`${title}، ${subtitle}`}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       <View style={styles.rowIconContainer}>
@@ -80,10 +79,12 @@ function MySpaceRow({
 }
 
 export function MySpaceScreen({
+  currentAppearanceLabel,
   onOpenOrders,
   onOpenAddresses,
   onOpenIdentity,
   onOpenBenefits,
+  onOpenAppearance,
   onOpenPreferences,
   onOpenSupport,
 }: MySpaceScreenProps) {
@@ -93,6 +94,7 @@ export function MySpaceScreen({
       case "addresses": return onOpenAddresses?.();
       case "identity": return onOpenIdentity?.();
       case "benefits": return onOpenBenefits?.();
+      case "appearance": return onOpenAppearance?.();
       case "preferences": return onOpenPreferences?.();
       case "support": return onOpenSupport?.();
     }
@@ -105,11 +107,13 @@ export function MySpaceScreen({
       <MobileScrollView fill padding={4} gap={3} contentContainerStyle={styles.scrollContent}>
         <ActorWalletPanel actorType="client" title="محفظتي" embedded />
 
-        {TABS.map((tab) => (
+        {BASE_TABS.map((tab) => (
           <MySpaceRow
             key={tab.id}
             title={tab.label}
-            subtitle={tab.summary}
+            subtitle={tab.id === "appearance" && currentAppearanceLabel
+              ? `${tab.summary} · الحالي: ${currentAppearanceLabel}`
+              : tab.summary}
             iconName={tab.iconName}
             onPress={() => handleRowPress(tab.id)}
           />
