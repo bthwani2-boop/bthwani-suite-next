@@ -33,6 +33,7 @@ import {
   useSpecialRequestsController,
 } from "../shared/special-requests";
 import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
+import type { DshHomeSpecialRequestTarget } from "../shared/home-discovery";
 import { notificationActionFromDeepLink } from "../shared/notifications/client-notification-deep-link";
 
 type ClientTab = "home" | "stores" | "orders" | "special" | "profile" | "cart";
@@ -122,6 +123,14 @@ export function DshClientSurface() {
     void performClientSelectionHaptic();
     setSelectedStoreId(storeId);
     setActiveTab("stores");
+  }, []);
+
+  const openSpecialRequestType = useCallback((requestType: DshHomeSpecialRequestTarget) => {
+    void performClientSelectionHaptic();
+    setActiveTab("home");
+    setActiveSpecialRequest(
+      requestType === "SHEIN_ASSISTED_PURCHASE" ? "shein" : "awnak",
+    );
   }, []);
 
   const openNotificationActionUrl = useCallback((actionUrl: string) => {
@@ -324,11 +333,7 @@ export function DshClientSurface() {
         ) : activeTab === "home" ? (
           <HomeDiscoveryRoute
             onStorePress={openStore}
-            onSpecialCategoryPress={(nodeId) => {
-              void performClientSelectionHaptic();
-              if (nodeId === "node-shein") setActiveSpecialRequest("shein");
-              if (nodeId === "node-awnak") setActiveSpecialRequest("awnak");
-            }}
+            onSpecialRequestPress={openSpecialRequestType}
             onMarketingAction={openHomeMarketingAction}
           />
         ) : activeTab === "special" ? (
