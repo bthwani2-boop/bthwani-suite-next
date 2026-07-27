@@ -208,22 +208,24 @@ requireMarkers(`${workflowsRoot}/lockfile-snapshot.yml`, [
 
 requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, [
   "pnpm exec knip",
-  "guard:logic-coverage",
+  "guard:logic-all",
   "guard:a11y",
   "guard:dependency-graph",
   "guard:ast-grep-rules",
-  "guard:repo-naming",
-  "guard:repo-structure",
+  "guard:repo-all",
   "guard:api-binding",
   "guard:backend-api-binding",
   "guard:frontend-feature-binding",
+  "guard:runtime-real-bindings",
+  "guard:live-cross-journey-integrity",
 ]);
 
 requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, [
-  "pnpm exec nx run-many -t test --all --outputStyle=stream",
-  "pnpm exec nx affected -t test --outputStyle=stream",
+  "run-affected-verification.mjs typecheck lint test",
+  "run-affected-verification.mjs typecheck lint test build",
   "pnpm run nx:typecheck",
   "pnpm run nx:lint",
+  "pnpm run nx:test",
   "pnpm run nx:build",
 ]);
 
