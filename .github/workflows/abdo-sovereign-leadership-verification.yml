@@ -1,0 +1,55 @@
+name: Abdo Sovereign Leadership Verification
+
+on:
+  push:
+    branches:
+      - abdo
+    paths:
+      - "core/identity/**"
+      - "core/workforce/**"
+      - "services/dsh/frontend/**"
+      - "apps/control-panel/runtime/**"
+      - "openapi.yaml"
+      - ".github/workflows/abdo-sovereign-leadership-verification.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: abdo-sovereign-leadership-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: core/identity/backend/go.mod
+          cache-dependency-path: |
+            core/identity/backend/go.sum
+            core/workforce/backend/go.sum
+      - name: Test Identity
+        working-directory: core/identity/backend
+        run: go test ./...
+      - name: Test Workforce
+        working-directory: core/workforce/backend
+        run: go test ./...
+
+  control-panel-typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck control panel
+        run: pnpm --dir apps/control-panel/runtime typecheck
