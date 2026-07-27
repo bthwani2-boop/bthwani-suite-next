@@ -37,7 +37,12 @@ export type FieldOnboardingController = {
   addEvidenceRef: (ref: string) => void;
   /** Validates identity + owner fields and creates the partner draft if it doesn't exist yet. Returns the partner id (existing or newly created), or false if blocked. */
   ensureDraftCreated: (placeholder?: boolean) => Promise<string | false>;
-  uploadDocument: (kind: DshPartnerDocumentType, mediaRef: string) => Promise<boolean>;
+  /**
+   * Links an already uploaded media reference to the partner document record.
+   * partnerIdOverride closes the first-upload race where React state still holds
+   * null immediately after ensureDraftCreated returns the durable partner id.
+   */
+  uploadDocument: (kind: DshPartnerDocumentType, mediaRef: string, partnerIdOverride?: string) => Promise<boolean>;
   /** Loads an existing partner draft's full state from the server. Returns false on 403/404/network error. */
   loadDraft: (partnerId: string) => Promise<boolean>;
   /** Resets to a blank draft (partnerId undefined) or hydrates a different partner's draft, guarding against stale cross-draft state. */
@@ -321,8 +326,13 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     return (await ensureDraftCreated()) !== false;
   }, [state.partnerId, saveDraft, ensureDraftCreated]);
 
-  const uploadDocument = useCallback(async (kind: DshPartnerDocumentType, mediaRef: string): Promise<boolean> => {
-    if (!state.partnerId) {
+  const uploadDocument = useCallback(async (
+    kind: DshPartnerDocumentType,
+    mediaRef: string,
+    partnerIdOverride?: string,
+  ): Promise<boolean> => {
+    const effectivePartnerId = partnerIdOverride?.trim() || state.partnerId;
+    if (!effectivePartnerId) {
       const failure = {
         state: "readiness_blocked",
         code: "PARTNER_DRAFT_REQUIRED",
@@ -335,22 +345,30 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     }
     try {
       const doc = await fieldUploadDocument(
-        state.partnerId,
+        effectivePartnerId,
         {
           documentType: kind,
           mediaRef,
           notes: "مرفوع عبر تطبيق الميداني",
         },
-        createPartnerMutationContext("field-upload-document", `${state.partnerId}:${kind}`),
+        createPartnerMutationContext("field-upload-document", `${effectivePartnerId}:${kind}:${mediaRef}`),
       );
+
+      // The upload is not considered complete until the durable partner
+      // document readback contains the exact record returned by the mutation.
+      const readback = await fieldListDocuments(effectivePartnerId);
+      const confirmed = readback.documents.some(
+        (item) => item.id === doc.id && item.documentType === kind && item.mediaRef === mediaRef,
+      );
+      if (!confirmed) {
+        throw new Error("PARTNER_DOCUMENT_READBACK_MISMATCH");
+      }
+
       setState((s) => ({
         ...s,
-        uploadedDocumentIds: s.uploadedDocumentIds.includes(doc.id)
-          ? s.uploadedDocumentIds
-          : [...s.uploadedDocumentIds, doc.id],
-        uploadedDocumentTypes: s.uploadedDocumentTypes.includes(kind)
-          ? s.uploadedDocumentTypes
-          : [...s.uploadedDocumentTypes, kind],
+        partnerId: s.partnerId ?? effectivePartnerId,
+        uploadedDocumentIds: readback.documents.map((item) => item.id),
+        uploadedDocumentTypes: readback.documents.map((item) => item.documentType) as DshPartnerDocumentType[],
         submitError: null,
         failure: null,
       }));
