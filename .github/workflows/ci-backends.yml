@@ -117,12 +117,20 @@ jobs:
         shell: bash
         env:
           MIGRATIONS: ${{ matrix.migrations }}
+          BACKEND_KEY: ${{ matrix.key }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          log="${RUNNER_TEMP}/${BACKEND_KEY}-migration.log"
+          : >"${log}"
           found=0
           for migration in ${MIGRATIONS}; do
             found=1
-            psql "${DATABASE_URL}" -q -v ON_ERROR_STOP=1 -f "${migration}" >/dev/null
+            echo "===== ${migration} =====" >>"${log}"
+            if ! psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 -f "${migration}" >>"${log}" 2>&1; then
+              echo "::error title=${BACKEND_KEY} migration failed::${migration} failed; complete output is retained as an artifact."
+              tail -n 160 "${log}"
+              exit 1
+            fi
           done
           if [[ "${found}" -ne 1 ]]; then
             echo "::error title=Migration discovery failed::No migrations matched ${MIGRATIONS}"
@@ -144,11 +152,13 @@ jobs:
             tail -n 160 "${log}"
             exit 1
           fi
-      - name: Upload verification log
+      - name: Upload verification logs
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ matrix.key }}-go-verification-${{ github.run_id }}
-          path: ${{ runner.temp }}/${{ matrix.key }}-go-verification.log
+          name: ${{ matrix.key }}-backend-verification-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/${{ matrix.key }}-migration.log
+            ${{ runner.temp }}/${{ matrix.key }}-go-verification.log
           if-no-files-found: warn
           retention-days: 7
