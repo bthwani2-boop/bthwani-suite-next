@@ -56,10 +56,15 @@ jobs:
           echo "exit_code=${status}" >>"${GITHUB_OUTPUT}"
           exit "${status}"
       - name: Prepare and verify batch OpenAPI contract
+        id: openapi
         if: ${{ steps.isolated.outcome == 'success' }}
+        continue-on-error: true
         shell: bash
         run: |
-          python3 - <<'PY'
+          set +e
+          log="${RUNNER_TEMP}/app-field-openapi-verification.log"
+          : >"${log}"
+          python3 - <<'PY' 2>&1 | tee -a "${log}"
           from pathlib import Path
 
           catalog_path = Path("services/dsh/contracts/paths/catalog.paths.yaml")
@@ -166,14 +171,27 @@ jobs:
           (out / "paths/catalog.paths.yaml").write_text(catalog, encoding="utf-8")
           (out / "dsh.openapi.yaml").write_text(root, encoding="utf-8")
           PY
-          pnpm --dir services/dsh openapi:verify
+          python_code=${PIPESTATUS[0]}
+          if [[ ${python_code} -ne 0 ]]; then exit "${python_code}"; fi
+          pnpm --dir services/dsh openapi:verify 2>&1 | tee -a "${log}"
+          exit ${PIPESTATUS[0]}
       - name: Upload verified OpenAPI sources
-        if: ${{ steps.isolated.outcome == 'success' }}
+        if: ${{ steps.openapi.outcome == 'success' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: app-field-openapi-sources-${{ github.run_id }}
           path: .artifacts/openapi
           if-no-files-found: error
+          retention-days: 7
+      - name: Upload OpenAPI diagnostics
+        if: ${{ steps.openapi.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-field-openapi-diagnostics-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/app-field-openapi-verification.log
+            .artifacts/openapi
+          if-no-files-found: warn
           retention-days: 7
       - name: Upload isolated diagnostics
         if: ${{ steps.isolated.outcome == 'failure' }}
@@ -183,6 +201,6 @@ jobs:
           path: ${{ runner.temp }}/app-field-isolated-verification.log
           if-no-files-found: error
           retention-days: 7
-      - name: Enforce isolated verification
-        if: ${{ steps.isolated.outcome == 'failure' }}
+      - name: Enforce verification
+        if: ${{ steps.isolated.outcome == 'failure' || steps.openapi.outcome == 'failure' }}
         run: exit 1
