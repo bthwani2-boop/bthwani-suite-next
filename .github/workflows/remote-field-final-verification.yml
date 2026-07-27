@@ -116,11 +116,12 @@ jobs:
         run: test -z "$(gofmt -d services/dsh/backend/internal/fieldreadiness services/dsh/backend/internal/http/field_readiness_governed_handlers.go)"
 
       - name: Apply canonical PostgreSQL migrations
-        run: |
-          for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name "*.sql" | sort -V); do
-            echo "Applying $file"
-            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
-          done
+        shell: pwsh
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1
+          -Action migrate
+          -Transport url
+          -DatabaseUrl $env:DATABASE_URL
 
       - name: Verify all field-readiness Go tests
         run: |
