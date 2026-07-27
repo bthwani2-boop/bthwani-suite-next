@@ -29,8 +29,6 @@ type Props = Readonly<{
   store: DshStoreDetailViewModel;
   categories: readonly CatalogCategory[];
   products: readonly CatalogProduct[];
-  favoriteIds: ReadonlySet<string>;
-  onToggleFavorite: (id: string) => void;
   onAddToCart: (
     product: CatalogProduct,
     quantity: number,
@@ -59,8 +57,6 @@ export function StoreDetailShell({
   store,
   categories,
   products,
-  favoriteIds,
-  onToggleFavorite,
   onAddToCart,
   cartActionError,
   onBack,
@@ -88,14 +84,11 @@ export function StoreDetailShell({
 
   const filteredProducts = useMemo(() => {
     if (selectedCategoryId === "all") return [...products];
-    if (selectedCategoryId === "favorites") {
-      return products.filter((product) => favoriteIds.has(product.id));
-    }
     if (selectedCategoryId === "popular") {
       return products.filter((product) => product.isActive);
     }
     return products.filter((product) => product.categoryId === selectedCategoryId);
-  }, [products, selectedCategoryId, favoriteIds]);
+  }, [products, selectedCategoryId]);
 
   const closeProduct = useCallback(() => {
     if (isSubmitting) return;
@@ -181,7 +174,6 @@ export function StoreDetailShell({
           categories={categories}
           selectedId={selectedCategoryId}
           onSelect={changeCategory}
-          favoriteIds={favoriteIds}
         />
       </>
     ),
@@ -194,7 +186,6 @@ export function StoreDetailShell({
       bannerItems,
       categories,
       selectedCategoryId,
-      favoriteIds,
       changeCategory,
     ],
   );
@@ -252,8 +243,6 @@ export function StoreDetailShell({
               "عام"
             }
             price={toProductCardPrice(item.priceReference)}
-            isFavorited={favoriteIds.has(item.id)}
-            onFavorite={() => onToggleFavorite(item.id)}
             {...(orderable
               ? {
                   onAdd: () => handleOpenProduct(item),
@@ -264,7 +253,7 @@ export function StoreDetailShell({
         </Animated.View>
       );
     },
-    [categories, favoriteIds, onToggleFavorite, scrollY, handleOpenProduct],
+    [categories, scrollY, handleOpenProduct],
   );
 
   return (
