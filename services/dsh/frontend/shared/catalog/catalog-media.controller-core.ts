@@ -116,7 +116,6 @@ export async function uploadAndLinkImage(
   const uploadResp = await uploadBinaryToPresignedUrl(intent.uploadUrl, file, file.type);
 
   if (!uploadResp.ok) {
-    // Best-effort rollback to avoid orphaned objects in storage.
     try {
       await catalogMediaApi.deleteCatalogAsset(intent.asset.id);
     } catch {
@@ -129,7 +128,6 @@ export async function uploadAndLinkImage(
 
   onProgress?.({ stage: "verifying" });
 
-  // complete is idempotent: if already uploaded/pending_review it returns current asset.
   let uploadedAsset: CatalogAsset;
   try {
     uploadedAsset = await catalogMediaApi.completeAssetUpload(intent.asset.id);
@@ -138,7 +136,6 @@ export async function uploadAndLinkImage(
     throw err;
   }
 
-  // Try to find auto-linked result (server links when intendedEntityType was set).
   let link: CatalogAssetLink | undefined;
   try {
     const links = await catalogMediaApi.fetchCatalogAssetLinks({
@@ -167,72 +164,168 @@ export async function uploadAndLinkImage(
 
 export interface UploadReelVideoOptions {
   readonly file: File;
+  readonly posterFile?: File;
+  readonly posterAssetId?: string;
   readonly targetType: "master_product" | "store" | "offer";
   readonly targetId: string;
   readonly titleAr?: string;
   readonly titleEn?: string;
+  readonly subtitleAr?: string;
+  readonly subtitleEn?: string;
+  readonly highlightAr?: string;
+  readonly highlightEn?: string;
+  readonly ctaLabelAr?: string;
+  readonly ctaLabelEn?: string;
   readonly sourceStoreId?: string;
   readonly onProgress?: (p: AssetUploadProgress) => void;
 }
 
+type GovernedReelSubmissionInput = CreateReelSubmissionInput & {
+  readonly posterAssetId?: string;
+  readonly subtitleAr?: string;
+  readonly subtitleEn?: string;
+  readonly highlightAr?: string;
+  readonly highlightEn?: string;
+  readonly ctaLabelAr?: string;
+  readonly ctaLabelEn?: string;
+};
+
+async function deleteAssetsBestEffort(assetIds: readonly string[]): Promise<void> {
+  await Promise.all(assetIds.map(async (assetId) => {
+    try {
+      await catalogMediaApi.deleteCatalogAsset(assetId);
+    } catch {
+      // Cleanup must not hide the original upload or submission error.
+    }
+  }));
+}
+
+async function uploadReelPoster(file: File): Promise<string> {
+  const validationError = validateImageFile(file);
+  if (validationError) throw new Error(validationError);
+  const intent = await catalogMediaApi.createAssetUploadIntent({
+    fileName: file.name,
+    mimeType: file.type,
+    sizeBytes: file.size,
+    altAr: "غلاف فيديو ريلز",
+    altEn: "Reel poster",
+    intendedRole: "reel_poster",
+  });
+  const uploadResp = await uploadBinaryToPresignedUrl(intent.uploadUrl, file, file.type);
+  if (!uploadResp.ok) {
+    await deleteAssetsBestEffort([intent.asset.id]);
+    throw new Error(`Poster upload to storage failed: HTTP ${uploadResp.status}`);
+  }
+  await catalogMediaApi.completeAssetUpload(intent.asset.id);
+  return intent.asset.id;
+}
+
 /**
- * Upload an MP4 video and create a reel submission (pending operator review).
+ * Upload an MP4 video and optional poster, then create a reel submission.
+ * Both assets remain unapproved until the operator reviews the reel; backend
+ * approval promotes video and poster in the same transaction.
  */
 export async function uploadAndSubmitReel(opts: UploadReelVideoOptions): Promise<Reel> {
-  const { file, targetType, targetId, titleAr, titleEn, sourceStoreId, onProgress } = opts;
+  const {
+    file,
+    posterFile,
+    posterAssetId,
+    targetType,
+    targetId,
+    titleAr,
+    titleEn,
+    subtitleAr,
+    subtitleEn,
+    highlightAr,
+    highlightEn,
+    ctaLabelAr,
+    ctaLabelEn,
+    sourceStoreId,
+    onProgress,
+  } = opts;
 
   const validationError = validateVideoFile(file);
   if (validationError) {
     onProgress?.({ stage: "failed", error: validationError });
     throw new Error(validationError);
   }
-
-  onProgress?.({ stage: "signing" });
-
-  const intent = await catalogMediaApi.createAssetUploadIntent({
-    fileName: file.name,
-    mimeType: "video/mp4",
-    sizeBytes: file.size,
-    intendedRole: "reel_video",
-  });
-
-  onProgress?.({ stage: "uploading", percent: 0 });
-
-  const uploadResp = await uploadBinaryToPresignedUrl(intent.uploadUrl, file, "video/mp4");
-
-  if (!uploadResp.ok) {
-    try {
-      await catalogMediaApi.deleteCatalogAsset(intent.asset.id);
-    } catch {
-      /* best-effort */
+  if (posterFile) {
+    const posterError = validateImageFile(posterFile);
+    if (posterError) {
+      onProgress?.({ stage: "failed", error: posterError });
+      throw new Error(posterError);
     }
-    const err = `Video upload to storage failed: HTTP ${uploadResp.status}`;
-    onProgress?.({ stage: "failed", error: err });
-    throw new Error(err);
   }
 
-  onProgress?.({ stage: "verifying" });
+  const createdAssetIds: string[] = [];
+  onProgress?.({ stage: "signing" });
 
-  // complete transitions the asset to uploaded and verifies it exists in storage.
-  await catalogMediaApi.completeAssetUpload(intent.asset.id);
+  try {
+    const intent = await catalogMediaApi.createAssetUploadIntent({
+      fileName: file.name,
+      mimeType: "video/mp4",
+      sizeBytes: file.size,
+      intendedRole: "reel_video",
+    });
+    createdAssetIds.push(intent.asset.id);
 
-  const input: CreateReelSubmissionInput = {
-    assetId: intent.asset.id,
-    targetType,
-    targetId,
-    ...(titleAr !== undefined ? { titleAr } : {}),
-    ...(titleEn !== undefined ? { titleEn } : {}),
-    ...(sourceStoreId !== undefined ? { sourceStoreId } : {}),
-  };
+    onProgress?.({ stage: "uploading", percent: 0 });
+    const uploadResp = await uploadBinaryToPresignedUrl(intent.uploadUrl, file, "video/mp4");
+    if (!uploadResp.ok) {
+      throw new Error(`Video upload to storage failed: HTTP ${uploadResp.status}`);
+    }
 
-  const reel = await catalogMediaApi.submitReel(input);
-  onProgress?.({ stage: "linked", assetId: intent.asset.id });
-  return reel;
+    onProgress?.({ stage: "verifying" });
+    await catalogMediaApi.completeAssetUpload(intent.asset.id);
+
+    let resolvedPosterAssetId = posterAssetId?.trim() || undefined;
+    if (posterFile) {
+      resolvedPosterAssetId = await uploadReelPoster(posterFile);
+      createdAssetIds.push(resolvedPosterAssetId);
+    }
+
+    const input: GovernedReelSubmissionInput = {
+      assetId: intent.asset.id,
+      targetType,
+      targetId,
+      ...(resolvedPosterAssetId ? { posterAssetId: resolvedPosterAssetId } : {}),
+      ...(titleAr !== undefined ? { titleAr } : {}),
+      ...(titleEn !== undefined ? { titleEn } : {}),
+      ...(subtitleAr !== undefined ? { subtitleAr } : {}),
+      ...(subtitleEn !== undefined ? { subtitleEn } : {}),
+      ...(highlightAr !== undefined ? { highlightAr } : {}),
+      ...(highlightEn !== undefined ? { highlightEn } : {}),
+      ...(ctaLabelAr !== undefined ? { ctaLabelAr } : {}),
+      ...(ctaLabelEn !== undefined ? { ctaLabelEn } : {}),
+      ...(sourceStoreId !== undefined ? { sourceStoreId } : {}),
+    };
+
+    const reel = await catalogMediaApi.submitReel(input);
+    onProgress?.({ stage: "linked", assetId: intent.asset.id });
+    return reel;
+  } catch (err) {
+    await deleteAssetsBestEffort(createdAssetIds);
+    const message = err instanceof Error ? err.message : String(err);
+    onProgress?.({ stage: "failed", error: message });
+    throw err;
+  }
 }
 
 // ─── Operator review ──────────────────────────────────────────────────────────
 
-export async function reviewReelAsOperator(reelId: string, input: ReviewReelInput): Promise<Reel> {
+export type GovernedReviewReelInput = ReviewReelInput & {
+  readonly posterAssetId?: string;
+  readonly titleAr?: string;
+  readonly titleEn?: string;
+  readonly subtitleAr?: string;
+  readonly subtitleEn?: string;
+  readonly highlightAr?: string;
+  readonly highlightEn?: string;
+  readonly ctaLabelAr?: string;
+  readonly ctaLabelEn?: string;
+};
+
+export async function reviewReelAsOperator(reelId: string, input: GovernedReviewReelInput): Promise<Reel> {
   return catalogMediaApi.reviewReel(reelId, input);
 }
 
