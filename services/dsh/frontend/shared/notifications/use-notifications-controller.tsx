@@ -38,6 +38,10 @@ type PreferenceState =
   | { readonly kind: "success"; readonly preferences: readonly DshNotificationPreference[] }
   | { readonly kind: "error"; readonly message: string };
 
+type NotificationsControllerOptions = {
+  readonly loadPreferences?: boolean;
+};
+
 function canUseTopicEnabledPreferenceUpdate(input: DshUpdateNotificationPreferenceInput): boolean {
   return input.channels.length === 1
     && input.channels[0] === "in_app"
@@ -47,7 +51,11 @@ function canUseTopicEnabledPreferenceUpdate(input: DshUpdateNotificationPreferen
     && input.timezone === "Asia/Aden";
 }
 
-export function useNotificationsController(authKind: string) {
+export function useNotificationsController(
+  authKind: string,
+  options: NotificationsControllerOptions = {},
+) {
+  const shouldLoadPreferences = options.loadPreferences !== false;
   const [state, setState] = useState<DshNotificationsState>(notifIdle());
   const [preferenceState, setPreferenceState] = useState<PreferenceState>({ kind: "idle" });
 
@@ -62,6 +70,10 @@ export function useNotificationsController(authKind: string) {
   }, []);
 
   const loadPreferences = useCallback(async () => {
+    if (!shouldLoadPreferences) {
+      setPreferenceState({ kind: "idle" });
+      return;
+    }
     setPreferenceState({ kind: "loading" });
     try {
       const data = await fetchNotificationPreferences();
@@ -69,11 +81,15 @@ export function useNotificationsController(authKind: string) {
     } catch (err) {
       setPreferenceState({ kind: "error", message: resolveMessage(err) });
     }
-  }, []);
+  }, [shouldLoadPreferences]);
 
   const reload = useCallback(async () => {
-    await Promise.all([loadNotifications(), loadPreferences()]);
-  }, [loadNotifications, loadPreferences]);
+    if (shouldLoadPreferences) {
+      await Promise.all([loadNotifications(), loadPreferences()]);
+      return;
+    }
+    await loadNotifications();
+  }, [loadNotifications, loadPreferences, shouldLoadPreferences]);
 
   const markRead = useCallback(async (id: string) => {
     await markNotificationRead(id);
