@@ -100,7 +100,7 @@ jobs:
 
       - name: Verify workflow security preflight
         if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
-        run: node tools/scripts/run-zizmor.mjs
+        run: pnpm run guard:workflow-security
 
       - name: Test CI source immutability guard
         if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
