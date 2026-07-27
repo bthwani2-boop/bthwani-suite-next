@@ -1,6 +1,4 @@
 import React from "react";
-import { File as ExpoFile } from "expo-file-system";
-import * as DocumentPicker from "expo-document-picker";
 import { StyleSheet, View } from "react-native";
 import {
   Badge,
@@ -14,6 +12,7 @@ import {
 } from "@bthwani/ui-kit";
 import {
   fetchPartnerReels,
+  pickCatalogMobileFile,
   uploadAndSubmitReel,
   validateImageFile,
   validateVideoFile,
@@ -32,18 +31,6 @@ const STATUS_LABELS: Record<GovernedReel["status"], string> = {
   rejected: "مرفوض ويحتاج تصحيحًا",
   archived: "مؤرشف",
 };
-
-function toUploadSource(asset: DocumentPicker.DocumentPickerAsset): UploadFileSource {
-  const file = new ExpoFile(asset.uri);
-  const type = asset.mimeType?.trim() || file.type;
-  const size = asset.size ?? file.size;
-  return {
-    name: asset.name || file.name,
-    type,
-    size,
-    body: file,
-  };
-}
 
 function progressLabel(progress: AssetUploadProgress): string {
   switch (progress.stage) {
@@ -86,37 +73,35 @@ export function PartnerReelsManagementSection({ storeId }: Props) {
   }, [load]);
 
   const pickVideo = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: "video/mp4",
-      copyToCacheDirectory: true,
-      multiple: false,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const source = toUploadSource(result.assets[0]);
-    const validation = validateVideoFile(source);
-    if (validation) {
-      setError(validation);
-      return;
+    try {
+      const source = await pickCatalogMobileFile("video");
+      if (!source) return;
+      const validation = validateVideoFile(source);
+      if (validation) {
+        setError(validation);
+        return;
+      }
+      setVideo(source);
+      setError(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "تعذر اختيار ملف الفيديو.");
     }
-    setVideo(source);
-    setError(null);
   };
 
   const pickPoster = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ["image/jpeg", "image/png", "image/webp"],
-      copyToCacheDirectory: true,
-      multiple: false,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const source = toUploadSource(result.assets[0]);
-    const validation = validateImageFile(source);
-    if (validation) {
-      setError(validation);
-      return;
+    try {
+      const source = await pickCatalogMobileFile("image");
+      if (!source) return;
+      const validation = validateImageFile(source);
+      if (validation) {
+        setError(validation);
+        return;
+      }
+      setPoster(source);
+      setError(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "تعذر اختيار ملف الغلاف.");
     }
-    setPoster(source);
-    setError(null);
   };
 
   const submit = async () => {
