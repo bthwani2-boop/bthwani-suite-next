@@ -1,427 +1,218 @@
-// Authority: services/dsh/frontend/app-client — preferences sub-screen.
-// Sovereign shared: services/dsh/frontend/shared
-
-import React from 'react';
-import { ScrollView, Switch, TextInput, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Path } from 'react-native-svg';
+import React from "react";
+import { StyleSheet, Switch, TouchableOpacity, View } from "react-native";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
-  Button,
+  Header,
+  ScrollScreen,
+  StateView,
   Text,
   colorRoles,
-  alpha,
   radius,
   spacing,
-} from '@bthwani/ui-kit';
+} from "@bthwani/ui-kit";
+import {
+  useNotificationsController,
+  type DshNotificationPreference,
+} from "../../shared/notifications";
 
 export type PreferencesHubScreenProps = {
   onBack?: () => void;
 };
 
-type PrefsSection = 'delivery' | 'notifications' | 'privacy';
+function topicLabel(topic: string): string {
+  if (topic.startsWith("order.")) return "تحديثات الطلب";
+  if (topic.startsWith("partner_delivery_")) return "تحديثات التوصيل";
+  if (topic.startsWith("pickup_")) return "تحديثات الاستلام من المتجر";
+  if (topic.startsWith("special_request_")) return "تحديثات الطلبات الخاصة";
+  return topic.replaceAll("_", " ").replaceAll(".", " ");
+}
 
-// SVG Icons
-function BackIcon({ color = colorRoles.textPrimary }: { color?: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M15 19l-7-7 7-7" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
+function channelsLabel(preference: DshNotificationPreference): string {
+  const labels = preference.channels.map((channel) =>
+    channel === "push" ? "إشعار الهاتف" : "داخل التطبيق",
   );
-}
-
-function CarIcon({ color = colorRoles.brandAction }: { color?: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7c0 .6.4 1 1 1h2m13-7H9v3h11v-3z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Circle cx="7.5" cy="17.5" r="2.5" stroke={color} strokeWidth={2} />
-      <Circle cx="16.5" cy="17.5" r="2.5" stroke={color} strokeWidth={2} />
-    </Svg>
-  );
-}
-
-function BellIcon({ color = colorRoles.brandAction }: { color?: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M13.73 21a2 2 0 01-3.46 0" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-// LockIcon color default has been fixed
-function LockIcon({ color = colorRoles.brandAction }: { color?: string }) {
-  return (
-    <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-      <Path d="M12 15v3m-5-6h10a2 2 0 012 2v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6a2 2 0 01-2-2z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d="M8 11V7a4 4 0 118 0v4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function ChevronDownIcon({ color = colorRoles.textMuted }: { color?: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M19 9l-7 7-7-7" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-function ChevronUpIcon({ color = colorRoles.textMuted }: { color?: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-      <Path d="M5 15l7-7 7 7" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-    </Svg>
-  );
-}
-
-// Local Custom Components
-function ScreenHeader({ title, onBack }: { title: string; onBack?: () => void }) {
-  return (
-    <View
-      style={{
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: 56,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: colorRoles.borderSubtle,
-        backgroundColor: colorRoles.surfaceBase,
-      }}
-    >
-      <View style={{ width: 40, alignItems: 'center' }}>
-        {onBack ? (
-          <TouchableOpacity onPress={onBack} style={{ padding: 8 }}>
-            <BackIcon color={colorRoles.textPrimary} />
-          </TouchableOpacity>
-        ) : null}
-      </View>
-      <Text role="bodyStrong" style={{ fontSize: 18, color: colorRoles.textPrimary }}>
-        {title}
-      </Text>
-      <View style={{ width: 40 }} />
-    </View>
-  );
-}
-
-interface ActionStripProps {
-  icon: 'car' | 'notifications' | 'lock-closed';
-  title: string;
-  subtitle: string;
-  expanded: boolean;
-  onPress: () => void;
-  children?: React.ReactNode;
-}
-
-function ActionStrip({ icon, title, subtitle, expanded, onPress, children }: ActionStripProps) {
-  return (
-    <View style={{ width: '100%' }}>
-      <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={0.8}
-        style={{
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingVertical: 16,
-          paddingHorizontal: 16,
-        }}
-      >
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12, flex: 1 }}>
-          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: alpha(colorRoles.brandAction, 0.08), justifyContent: 'center', alignItems: 'center' }}>
-            {icon === 'car' ? <CarIcon /> : icon === 'notifications' ? <BellIcon /> : <LockIcon />}
-          </View>
-          <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>
-            <Text role="bodyStrong" style={{ color: colorRoles.textPrimary }}>{title}</Text>
-            <Text role="bodySm" numberOfLines={1} style={{ color: colorRoles.textMuted }}>{subtitle}</Text>
-          </View>
-        </View>
-        <View style={{ paddingRight: 8 }}>
-          {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
-        </View>
-      </TouchableOpacity>
-
-      {expanded && children && (
-        <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
-          {children}
-        </View>
-      )}
-    </View>
-  );
-}
-
-interface SwitchRowProps {
-  label: string;
-  description?: string;
-  value: boolean;
-  onValueChange: (val: boolean) => void;
-  isLast?: boolean;
-}
-
-function SwitchRow({ label, description, value, onValueChange, isLast = false }: SwitchRowProps) {
-  return (
-    <View style={{ width: '100%' }}>
-      <View
-        style={{
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingVertical: 12,
-          paddingHorizontal: 16,
-        }}
-      >
-        <View style={{ flex: 1, alignItems: 'flex-end', paddingLeft: 12 }}>
-          <Text role="bodyStrong" style={{ color: colorRoles.textPrimary, textAlign: 'right' }}>
-            {label}
-          </Text>
-          {description ? (
-            <Text role="bodySm" style={{ color: colorRoles.textMuted, textAlign: 'right', marginTop: 2 }}>
-              {description}
-            </Text>
-          ) : null}
-        </View>
-        <Switch
-          value={value}
-          onValueChange={onValueChange}
-          trackColor={{ false: colorRoles.surfaceBase, true: colorRoles.brandAction }}
-          thumbColor={value ? colorRoles.surfaceBase : colorRoles.surfaceBase}
-        />
-      </View>
-      {!isLast && <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle, marginHorizontal: 16 }} />}
-    </View>
-  );
+  return labels.join(" · ");
 }
 
 export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
-  const insets = useSafeAreaInsets();
-  const [expanded, setExpanded] = React.useState<PrefsSection | null>('delivery');
+  const identity = useIdentitySession();
+  const authKind = identity.state.kind === "authenticated" ? "authenticated" : "unauthenticated";
+  const controller = useNotificationsController(authKind);
+  const [savingTopic, setSavingTopic] = React.useState<string | null>(null);
+  const [actionError, setActionError] = React.useState<string | null>(null);
 
-  // Delivery
-  const [deliveryInstructions, setDeliveryInstructions] = React.useState(
-    'اتصل قبل الوصول بدقيقتين واترك الطلب عند الباب عند عدم الرد.',
+  const handleToggle = React.useCallback(
+    async (preference: DshNotificationPreference, enabled: boolean) => {
+      if (savingTopic !== null) return;
+      setSavingTopic(preference.topic);
+      setActionError(null);
+      try {
+        await controller.savePreference({
+          topic: preference.topic,
+          enabled,
+          channels: preference.channels,
+          quietHoursStart: preference.quietHoursStart,
+          quietHoursEnd: preference.quietHoursEnd,
+          locale: preference.locale,
+          timezone: preference.timezone,
+        });
+      } catch {
+        setActionError("تعذر حفظ التفضيل في DSH. لم يُعرض نجاح قبل القراءة الراجعة.");
+      } finally {
+        setSavingTopic(null);
+      }
+    },
+    [controller, savingTopic],
   );
 
-  // Notifications
-  const [orderAlerts, setOrderAlerts]   = React.useState(true);
-  const [arrivalBell, setArrivalBell]   = React.useState(true);
-  const [promoAlerts, setPromoAlerts]   = React.useState(true);
-  const [systemAlerts, setSystemAlerts] = React.useState(false);
-
-  // Privacy & experience
-  const [quickOrder, setQuickOrder]           = React.useState(true);
-  const [autoSaveAddr, setAutoSaveAddr]       = React.useState(true);
-  const [highPrivacy, setHighPrivacy]         = React.useState(false);
-  const [accessMode, setAccessMode]           = React.useState(false);
-
-  const [successMsg, setSuccessMsg] = React.useState('');
-
-  const toggle = (s: PrefsSection) => setExpanded((prev) => (prev === s ? null : s));
-
-  const quickSuggestions = [
-    'اترك الطلب عند الباب دون طرق.',
-    'اتصل قبل الوصول بخمس دقائق.',
-    'سلم الطلب يدوياً للمستلم فقط.',
-  ];
-
-  React.useEffect(() => {
-    try {
-      const saved = localStorage.getItem('bthwani-client-preferences');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (typeof parsed.deliveryInstructions === 'string') setDeliveryInstructions(parsed.deliveryInstructions);
-        if (typeof parsed.orderAlerts === 'boolean') setOrderAlerts(parsed.orderAlerts);
-        if (typeof parsed.arrivalBell === 'boolean') setArrivalBell(parsed.arrivalBell);
-        if (typeof parsed.promoAlerts === 'boolean') setPromoAlerts(parsed.promoAlerts);
-        if (typeof parsed.systemAlerts === 'boolean') setSystemAlerts(parsed.systemAlerts);
-        if (typeof parsed.quickOrder === 'boolean') setQuickOrder(parsed.quickOrder);
-        if (typeof parsed.autoSaveAddr === 'boolean') setAutoSaveAddr(parsed.autoSaveAddr);
-        if (typeof parsed.highPrivacy === 'boolean') setHighPrivacy(parsed.highPrivacy);
-        if (typeof parsed.accessMode === 'boolean') setAccessMode(parsed.accessMode);
-      }
-    } catch (e) {
-      console.warn("Could not load preferences from localStorage", e);
-    }
-  }, []);
-
-  const handleSave = () => {
-    try {
-      const payload = {
-        deliveryInstructions,
-        orderAlerts,
-        arrivalBell,
-        promoAlerts,
-        systemAlerts,
-        quickOrder,
-        autoSaveAddr,
-        highPrivacy,
-        accessMode,
-      };
-      localStorage.setItem('bthwani-client-preferences', JSON.stringify(payload));
-      setSuccessMsg('تم حفظ التفضيلات بنجاح في جهازك.');
-      setTimeout(() => setSuccessMsg(''), 3000);
-    } catch (e) {
-      console.warn("Could not save preferences", e);
-    }
-  };
-
-  const handleReset = () => {
-    setDeliveryInstructions('اتصل قبل الوصول بدقيقتين واترك الطلب عند الباب عند عدم الرد.');
-    setOrderAlerts(true); setArrivalBell(true); setPromoAlerts(true); setSystemAlerts(false);
-    setQuickOrder(true); setAutoSaveAddr(true); setHighPrivacy(false); setAccessMode(false);
-    try {
-      localStorage.removeItem('bthwani-client-preferences');
-      setSuccessMsg('تمت إعادة تعيين التفضيلات إلى الافتراضي.');
-      setTimeout(() => setSuccessMsg(''), 3000);
-    } catch (e) {
-      console.warn("Could not reset preferences in localStorage", e);
-    }
-  };
+  const preferenceState = controller.preferenceState;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      <ScreenHeader title="تفضيلات التوصيل" {...(onBack ? { onBack } : {})} />
+    <ScrollScreen>
+      <Header
+        title="تفضيلات الإشعارات"
+        subtitle="إعدادات حساب محفوظة في DSH ومقروءة بعد كل تعديل"
+      />
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          padding: spacing[4],
-          gap: spacing[4],
-          paddingBottom: insets.bottom + spacing[12],
-        }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ gap: spacing[2] }}>
-          <Text role="bodyStrong" style={{ color: colorRoles.textPrimary, textAlign: 'right', paddingHorizontal: spacing[4], marginBottom: spacing[2] }}>
-            خيارات التفضيلات
-          </Text>
-
-          <View style={{ borderWidth: 1, borderColor: colorRoles.borderSubtle, borderRadius: 16, overflow: 'hidden', backgroundColor: colorRoles.surfaceBase }}>
-            {/* 1. Delivery */}
-            <ActionStrip
-              icon="car"
-              title="تعليمات الكابتن والتسليم"
-              subtitle={deliveryInstructions}
-              expanded={expanded === 'delivery'}
-              onPress={() => toggle('delivery')}
-            >
-              <View style={{ gap: spacing[3], paddingTop: spacing[2] }}>
-                <Text role="bodySm" style={{ color: colorRoles.textMuted, textAlign: 'right' }}>
-                  ملاحظات أو توجيهات تظهر للكابتن لمساعدته في العثور على موقعك وتوصيل الطلب بسهولة وسرعة.
-                </Text>
-                <TextInput
-                  value={deliveryInstructions}
-                  onChangeText={setDeliveryInstructions}
-                  placeholder="أدخل تعليمات التوصيل..."
-                  multiline
-                  style={{
-                    width: '100%',
-                    minHeight: 80,
-                    borderWidth: 1,
-                    borderColor: colorRoles.surfaceBase,
-                    borderRadius: 16,
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    textAlign: 'right',
-                    color: colorRoles.textPrimary,
-                    backgroundColor: colorRoles.surfaceBase,
-                  }}
-                />
-                <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2], marginTop: spacing[1] }}>
-                  {quickSuggestions.map((s) => (
-                    <TouchableOpacity
-                      key={s}
-                      onPress={() => setDeliveryInstructions(s)}
-                      style={{
-                        paddingVertical: 8,
-                        paddingHorizontal: spacing[3],
-                        backgroundColor: colorRoles.surfaceBase,
-                        borderRadius: 100,
-                        borderWidth: 1,
-                        borderColor: colorRoles.surfaceBase,
-                      }}
-                    >
-                      <Text role="bodySm" style={{ color: colorRoles.textPrimary }}>{s}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </ActionStrip>
-
-            <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
-
-            {/* 2. Notifications */}
-            <ActionStrip
-              icon="notifications"
-              title="إعدادات التنبيهات"
-              subtitle="إشعارات حالة الطلب، جرس الوصول، والعروض"
-              expanded={expanded === 'notifications'}
-              onPress={() => toggle('notifications')}
-            >
-              <View style={{ paddingTop: spacing[2] }}>
-                <SwitchRow label="إشعارات حالة الطلب المباشرة" description="تحديثات فورية عند قبول الطلب وخروج الكابتن." value={orderAlerts} onValueChange={setOrderAlerts} />
-                <SwitchRow label="تفعيل جرس الوصول الذكي" description="تنبيه بصوت مميز عند اقتراب الكابتن." value={arrivalBell} onValueChange={setArrivalBell} />
-                <SwitchRow label="العروض والتخفيضات الحصرية" description="تنبيهات لأقوى التخفيضات وكوبونات التوصيل المجاني." value={promoAlerts} onValueChange={setPromoAlerts} />
-                <SwitchRow label="تنبيهات النظام الأساسية" description="إشعارات الأمان والتحديثات الهامة." value={systemAlerts} onValueChange={setSystemAlerts} isLast />
-              </View>
-            </ActionStrip>
-
-            <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
-
-            {/* 3. Privacy */}
-            <ActionStrip
-              icon="lock-closed"
-              title="الخصوصية وتسهيلات التجربة"
-              subtitle="الطلب السريع، حفظ العناوين، ووضع الخصوصية العالي"
-              expanded={expanded === 'privacy'}
-              onPress={() => toggle('privacy')}
-            >
-              <View style={{ paddingTop: spacing[2] }}>
-                <SwitchRow label="الطلب السريع بلمسة واحدة" description="إتمام الطلب باستخدام عنوانك وطريقة الدفع الافتراضية." value={quickOrder} onValueChange={setQuickOrder} />
-                <SwitchRow label="حفظ المواقع والعناوين تلقائياً" description="حفظ العناوين الجديدة تلقائياً لاستخدامها مستقبلاً." value={autoSaveAddr} onValueChange={setAutoSaveAddr} />
-                <SwitchRow label="تفعيل وضع الخصوصية العالي" description="حظر رؤية اسمك الكامل أو رقمك الفعلي للكابتن." value={highPrivacy} onValueChange={setHighPrivacy} />
-                <SwitchRow label="تسهيلات الوصول وقراءة الشاشة" description="تكبير الخطوط وزيادة التباين وتوافق قارئ الشاشة." value={accessMode} onValueChange={setAccessMode} isLast />
-              </View>
-            </ActionStrip>
-          </View>
-        </View>
-
-        {/* Actions */}
-        <View style={{ gap: spacing[2], marginTop: spacing[4] }}>
-          {successMsg ? (
-            <View
-              style={{
-                backgroundColor: alpha(colorRoles.brandAction, 0.08),
-                borderWidth: 1,
-                borderColor: colorRoles.brandAction,
-                borderRadius: 16,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                alignItems: 'center',
-                marginBottom: spacing[2],
-              }}
-            >
-              <Text role="bodyStrong" style={{ color: colorRoles.brandAction, textAlign: 'center' }}>
-                {successMsg}
-              </Text>
-            </View>
-          ) : null}
-
-          <Button
-            tone="primary"
-            label="حفظ كل التفضيلات والتغييرات"
-            onPress={handleSave}
-            style={{ backgroundColor: colorRoles.brandAction, borderRadius: 100, elevation: 2 }}
-          />
-
-          <TouchableOpacity onPress={handleReset} style={{ alignSelf: 'center', marginTop: 12, padding: 8 }}>
-            <Text role="body" style={{ color: colorRoles.brandStructure, fontWeight: 'bold' }}>
-              إعادة تعيين إلى الافتراضي
-            </Text>
+      <View style={styles.content}>
+        {onBack ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="العودة"
+            style={styles.backButton}
+            onPress={onBack}
+          >
+            <Text style={styles.backText}>العودة</Text>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </View>
+        ) : null}
+
+        {preferenceState.kind === "idle" ? (
+          <StateView
+            tone="warning"
+            title="يلزم تسجيل الدخول"
+            description="لا يمكن قراءة تفضيلات حساب دون جلسة عميل موثوقة."
+          />
+        ) : null}
+
+        {preferenceState.kind === "loading" ? (
+          <StateView tone="neutral" title="جارٍ تحميل التفضيلات…" />
+        ) : null}
+
+        {preferenceState.kind === "error" ? (
+          <>
+            <StateView
+              tone="danger"
+              title="تعذر تحميل التفضيلات"
+              description={preferenceState.message}
+            />
+            <TouchableOpacity
+              accessibilityRole="button"
+              style={styles.retryButton}
+              onPress={() => void controller.reload()}
+            >
+              <Text style={styles.retryText}>إعادة المحاولة</Text>
+            </TouchableOpacity>
+          </>
+        ) : null}
+
+        {actionError ? (
+          <StateView tone="danger" title="تعذر حفظ التغيير" description={actionError} />
+        ) : null}
+
+        {preferenceState.kind === "success" && preferenceState.preferences.length === 0 ? (
+          <StateView
+            tone="neutral"
+            title="لا توجد تفضيلات مخصصة"
+            description="تُطبق إعدادات الإشعارات الافتراضية للمنصة. لن تُعرض مفاتيح وهمية قبل وجود موضوعات محفوظة للحساب."
+          />
+        ) : null}
+
+        {preferenceState.kind === "success"
+          ? preferenceState.preferences.map((preference) => {
+              const saving = savingTopic === preference.topic;
+              return (
+                <View key={preference.topic} style={styles.preferenceCard}>
+                  <View style={styles.preferenceText}>
+                    <Text role="bodyStrong" style={styles.preferenceTitle}>
+                      {topicLabel(preference.topic)}
+                    </Text>
+                    <Text role="bodySm" tone="muted" style={styles.preferenceDescription}>
+                      {channelsLabel(preference)} · {preference.locale === "ar" ? "العربية" : "English"}
+                    </Text>
+                    <Text role="caption" tone="muted" style={styles.topicCode}>
+                      {preference.topic}
+                    </Text>
+                  </View>
+                  <Switch
+                    accessibilityLabel={`تفعيل ${topicLabel(preference.topic)}`}
+                    disabled={savingTopic !== null}
+                    value={preference.enabled}
+                    onValueChange={(enabled) => void handleToggle(preference, enabled)}
+                    trackColor={{ false: colorRoles.borderSubtle, true: colorRoles.brandAction }}
+                    thumbColor={colorRoles.surfaceBase}
+                  />
+                  {saving ? <Text style={styles.savingText}>جارٍ الحفظ…</Text> : null}
+                </View>
+              );
+            })
+          : null}
+      </View>
+    </ScrollScreen>
   );
 }
 
-// export default PreferencesHubScreen; // Unused default export
+const styles = StyleSheet.create({
+  content: {
+    padding: spacing[4],
+    gap: spacing[3],
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+  },
+  backText: {
+    color: colorRoles.brandAction,
+    fontWeight: "700",
+  },
+  retryButton: {
+    alignSelf: "center",
+    borderRadius: radius.round,
+    backgroundColor: colorRoles.brandAction,
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[3],
+  },
+  retryText: {
+    color: colorRoles.surfaceBase,
+    fontWeight: "700",
+  },
+  preferenceCard: {
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    borderRadius: radius.lg,
+    backgroundColor: colorRoles.surfaceBase,
+    padding: spacing[4],
+    gap: spacing[2],
+    flexDirection: "row-reverse",
+    alignItems: "center",
+  },
+  preferenceText: {
+    flex: 1,
+    alignItems: "flex-end",
+    gap: spacing[1],
+  },
+  preferenceTitle: {
+    color: colorRoles.textPrimary,
+    textAlign: "right",
+  },
+  preferenceDescription: {
+    textAlign: "right",
+  },
+  topicCode: {
+    textAlign: "right",
+  },
+  savingText: {
+    color: colorRoles.brandAction,
+    fontSize: 11,
+  },
+});
