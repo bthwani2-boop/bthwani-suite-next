@@ -13,7 +13,7 @@
     "eas-build-pre-install": "node ../../mobile/verify-eas-provider-inputs.mjs --app app-field"
   },
   "devDependencies": {
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.2"
   },
   "dependencies": {
     "@bthwani/app-shell": "workspace:*",
