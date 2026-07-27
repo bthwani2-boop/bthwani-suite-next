@@ -56,68 +56,23 @@ AS $$
   ), false);
 $$;
 
--- Creating the governance row is the point at which an assignment becomes a
--- governed platform offer. Legacy fixture/compatibility assignments that do not
--- have a governance row are deliberately outside this new trigger.
-CREATE OR REPLACE FUNCTION dsh_assert_governed_offer_financial_eligibility()
+-- Governed platform offers always carry a non-empty idempotency key. Legacy
+-- fixtures and compatibility assignments without that key remain outside this
+-- gate, while every live governed offer and acceptance fails closed.
+CREATE OR REPLACE FUNCTION dsh_assert_governed_assignment_financial_eligibility()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
-DECLARE
-  assignment_captain_id text;
 BEGIN
-  SELECT captain_id
-  INTO assignment_captain_id
-  FROM dsh_assignments
-  WHERE id = NEW.assignment_id;
-
-  IF assignment_captain_id IS NULL THEN
-    RAISE EXCEPTION USING
-      ERRCODE = 'P0001',
-      MESSAGE = 'GOVERNED_ASSIGNMENT_NOT_FOUND';
-  END IF;
-
-  IF dsh_financial_snapshot_is_eligible(NEW.tenant_id, assignment_captain_id) = false THEN
-    RAISE EXCEPTION USING
-      ERRCODE = 'P0001',
-      MESSAGE = 'CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED';
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_dsh_governed_offer_financial_eligibility
-  ON dsh_assignment_governance;
-CREATE TRIGGER trg_dsh_governed_offer_financial_eligibility
-BEFORE INSERT OR UPDATE OF assignment_id, tenant_id
-ON dsh_assignment_governance
-FOR EACH ROW EXECUTE FUNCTION dsh_assert_governed_offer_financial_eligibility();
-
--- Acceptance is rechecked because the wallet may have changed after the offer.
--- The trigger applies only when the assignment has the governance row created
--- above, preserving unrelated legacy fixtures while protecting live offers.
-CREATE OR REPLACE FUNCTION dsh_assert_governed_acceptance_financial_eligibility()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $$
-DECLARE
-  governed_tenant_id text;
-BEGIN
-  IF NEW.status <> 'accepted' OR OLD.status = 'accepted' THEN
+  IF NEW.idempotency_key IS NULL OR btrim(NEW.idempotency_key) = '' THEN
     RETURN NEW;
   END IF;
 
-  SELECT tenant_id
-  INTO governed_tenant_id
-  FROM dsh_assignment_governance
-  WHERE assignment_id = NEW.id;
-
-  IF governed_tenant_id IS NULL THEN
+  IF NEW.status NOT IN ('offered','accepted') THEN
     RETURN NEW;
   END IF;
 
-  IF dsh_financial_snapshot_is_eligible(governed_tenant_id, NEW.captain_id) = false THEN
+  IF dsh_financial_snapshot_is_eligible(NEW.tenant_id, NEW.captain_id) = false THEN
     RAISE EXCEPTION USING
       ERRCODE = 'P0001',
       MESSAGE = 'CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED';
@@ -131,10 +86,12 @@ DROP TRIGGER IF EXISTS trg_dsh_assignment_captain_financial_eligibility
   ON dsh_assignments;
 DROP TRIGGER IF EXISTS trg_dsh_governed_acceptance_financial_eligibility
   ON dsh_assignments;
-CREATE TRIGGER trg_dsh_governed_acceptance_financial_eligibility
-BEFORE UPDATE OF status, captain_id
+DROP TRIGGER IF EXISTS trg_dsh_governed_offer_financial_eligibility
+  ON dsh_assignments;
+CREATE TRIGGER trg_dsh_assignment_captain_financial_eligibility
+BEFORE INSERT OR UPDATE OF status, captain_id, tenant_id, idempotency_key
 ON dsh_assignments
-FOR EACH ROW EXECUTE FUNCTION dsh_assert_governed_acceptance_financial_eligibility();
+FOR EACH ROW EXECUTE FUNCTION dsh_assert_governed_assignment_financial_eligibility();
 
 COMMENT ON TABLE dsh_captain_financial_eligibility IS
   'Short-lived WLT wallet readback used only for governed dispatch gating; it is not a financial ledger or balance owner.';
