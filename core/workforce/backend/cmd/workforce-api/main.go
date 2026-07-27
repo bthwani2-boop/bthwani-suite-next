@@ -13,6 +13,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"workforce-api/internal/auth"
+	"workforce-api/internal/availabilityoutbox"
 	"workforce-api/internal/dshclient"
 	workforcehttp "workforce-api/internal/http"
 	"workforce-api/internal/identityclient"
@@ -38,6 +39,10 @@ func main() {
 	if dshBaseURL == "" {
 		log.Fatal("[workforce-api] WORKFORCE_DSH_BASE_URL is required")
 	}
+	dshServiceToken := os.Getenv("WORKFORCE_DSH_SERVICE_TOKEN")
+	if dshServiceToken == "" {
+		log.Fatal("[workforce-api] WORKFORCE_DSH_SERVICE_TOKEN is required")
+	}
 	wltBaseURL := os.Getenv("WORKFORCE_WLT_BASE_URL")
 	if wltBaseURL == "" {
 		log.Fatal("[workforce-api] WORKFORCE_WLT_BASE_URL is required")
@@ -60,7 +65,7 @@ func main() {
 
 	repo := workforce.NewRepository(db)
 	identity := identityclient.NewClient(identityBaseURL, serviceToken)
-	dsh := dshclient.NewClient(dshBaseURL)
+	dsh := dshclient.NewClient(dshBaseURL, dshServiceToken, tenantID)
 	wlt := wltclient.NewClient(wltBaseURL, wltServiceToken, tenantID)
 	service := workforce.NewService(repo, identity, dsh)
 	authClient := auth.NewClient(identityBaseURL)
@@ -71,6 +76,10 @@ func main() {
 	workforcehttp.RegisterEmployeeGovernanceRoutes(baseRouter, repo, authClient)
 	operationalCoreRouter := workforcehttp.OperationalCoreGateMiddleware(baseRouter, repo, authClient)
 	journeyRouter := workforcehttp.Journey003MutationMiddleware(operationalCoreRouter, repo, authClient)
+
+	workerCtx, cancelWorker := context.WithCancel(context.Background())
+	go availabilityoutbox.RunWorker(workerCtx, db, dsh, 15*time.Second)
+
 	server := &http.Server{
 		Addr:         ":" + port,
 		Handler:      workforcehttp.CorsMiddleware(workforcehttp.ActivationMutationSafetyMiddleware(journeyRouter)),
@@ -89,6 +98,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	<-stop
+	cancelWorker()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
