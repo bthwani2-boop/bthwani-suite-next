@@ -19,6 +19,27 @@ function assertMarkers(relativePath, markers) {
   return content;
 }
 
+test("app-client keeps every Expo capability used by the operational experience", () => {
+  const packageJson = JSON.parse(source("apps/app-client/runtime/package.json"));
+  for (const dependency of [
+    "expo-crypto",
+    "expo-file-system",
+    "expo-haptics",
+    "expo-image",
+    "expo-sharing",
+    "expo-video",
+    "expo-web-browser",
+  ]) {
+    assert.equal(typeof packageJson.dependencies?.[dependency], "string", `missing dependency: ${dependency}`);
+  }
+
+  const manifest = JSON.parse(source("tools/mobile/mobile-apps.manifest.json"));
+  const features = new Set(manifest.apps?.["app-client"]?.features ?? []);
+  for (const feature of ["crypto", "fileSystem", "image", "sharing", "video", "webBrowser"]) {
+    assert.equal(features.has(feature), true, `app-client manifest missing feature: ${feature}`);
+  }
+});
+
 test("client discovery exposes real search, cached images, and playable reels", () => {
   const discovery = assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx",
