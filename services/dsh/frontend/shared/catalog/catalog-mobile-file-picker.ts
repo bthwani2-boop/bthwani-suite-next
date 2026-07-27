@@ -16,13 +16,9 @@ export function configureCatalogMobileFilePicker(picker: CatalogMobileFilePicker
   configuredPicker = picker;
 }
 
-export async function pickCatalogMobileFile(kind: CatalogMobileFileKind): Promise<UploadFileSource> {
+export async function pickCatalogMobileFile(kind: CatalogMobileFileKind): Promise<UploadFileSource | null> {
   if (!configuredPicker) {
     throw new Error("CATALOG_MOBILE_FILE_PICKER_NOT_CONFIGURED");
   }
-  const selected = await configuredPicker(kind);
-  if (!selected) {
-    throw new Error("CATALOG_MOBILE_FILE_PICKER_CANCELLED");
-  }
-  return selected;
+  return configuredPicker(kind);
 }
