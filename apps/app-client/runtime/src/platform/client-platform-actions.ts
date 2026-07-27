@@ -1,5 +1,10 @@
+import * as Crypto from "expo-crypto";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
+
+export function createClientEphemeralId(prefix: string): string {
+  return `${prefix}.${Crypto.randomUUID()}`;
+}
 
 export async function performClientSelectionHaptic(): Promise<void> {
   await Haptics.selectionAsync().catch(() => undefined);
