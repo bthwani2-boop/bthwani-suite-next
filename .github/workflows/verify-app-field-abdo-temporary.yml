@@ -22,14 +22,46 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Typecheck app-field runtime
-        run: pnpm --filter @bthwani/app-field-runtime typecheck
-      - name: Verify app-field source rules
-        run: pnpm --filter @bthwani/app-field-runtime lint
-      - name: Verify app-field runtime contract
-        run: pnpm --filter @bthwani/app-field-runtime test
-      - name: Verify field onboarding validation
-        run: pnpm --dir services/dsh test -- --test-name-pattern="field onboarding validation"
-      - name: Verify DSH backend catalog batch
-        working-directory: services/dsh/backend
-        run: go test ./internal/http ./internal/centralcatalog
+      - name: Set up locked Go runtime
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Run isolated app-field verification
+        id: isolated
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          log="${RUNNER_TEMP}/app-field-isolated-verification.log"
+          : >"${log}"
+          status=0
+          run_check() {
+            echo "===== $* =====" | tee -a "${log}"
+            "$@" 2>&1 | tee -a "${log}"
+            local code=${PIPESTATUS[0]}
+            if [[ ${code} -ne 0 ]]; then status=${code}; fi
+          }
+          run_check pnpm --filter @bthwani/app-field-runtime typecheck
+          run_check pnpm --filter @bthwani/app-field-runtime lint
+          run_check pnpm --filter @bthwani/app-field-runtime test
+          run_check pnpm --dir services/dsh test -- --test-name-pattern="field onboarding validation"
+          (
+            cd services/dsh/backend || exit 1
+            go test ./internal/http ./internal/centralcatalog -count=1
+          ) 2>&1 | tee -a "${log}"
+          go_code=${PIPESTATUS[0]}
+          if [[ ${go_code} -ne 0 ]]; then status=${go_code}; fi
+          echo "exit_code=${status}" >>"${GITHUB_OUTPUT}"
+          exit "${status}"
+      - name: Upload isolated diagnostics
+        if: ${{ steps.isolated.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-field-isolated-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/app-field-isolated-verification.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce isolated verification
+        if: ${{ steps.isolated.outcome == 'failure' }}
+        run: exit 1
