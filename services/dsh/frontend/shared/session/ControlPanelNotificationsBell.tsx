@@ -8,11 +8,18 @@ const shadowVal = "rgba" + "(13, 20, 37, 0.12)";
 const unreadBgVal = "rgba" + "(59, 123, 255, 0.06)";
 
 export function ControlPanelNotificationsBell() {
-  const { state, markRead, markAllRead } = useNotificationsController("authenticated");
+  const {
+    state,
+    busyAction,
+    actionError,
+    markRead,
+    markAllRead,
+  } = useNotificationsController("authenticated", { loadPreferences: false });
   const [open, setOpen] = useState(false);
 
   const unreadCount = state.kind === "success" ? state.unreadCount : 0;
   const notifications = state.kind === "success" ? state.notifications : [];
+  const mutationBusy = busyAction !== null;
 
   return (
     <div style={{ position: "relative", flexShrink: 0 }}>
@@ -89,13 +96,27 @@ export function ControlPanelNotificationsBell() {
             {unreadCount > 0 && (
               <button
                 type="button"
+                disabled={mutationBusy}
                 onClick={() => void markAllRead()}
-                style={{ border: "none", background: "transparent", color: colorRoles.brandAction, fontSize: "0.75rem", cursor: "pointer" }}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: colorRoles.brandAction,
+                  fontSize: "0.75rem",
+                  cursor: mutationBusy ? "not-allowed" : "pointer",
+                  opacity: mutationBusy ? 0.55 : 1,
+                }}
               >
-                تعليم الكل كمقروء
+                {busyAction === "mark_all_read" ? "جارٍ التحديث…" : "تعليم الكل كمقروء"}
               </button>
             )}
           </div>
+
+          {actionError ? (
+            <p role="alert" style={{ padding: "0.5rem", fontSize: "0.8rem", color: colorRoles.danger }}>
+              {actionError}
+            </p>
+          ) : null}
 
           {state.kind === "loading" || state.kind === "idle" ? (
             <p style={{ padding: "0.5rem", fontSize: "0.8rem", opacity: 0.7 }}>جارٍ التحميل…</p>
@@ -104,11 +125,12 @@ export function ControlPanelNotificationsBell() {
           ) : notifications.length === 0 ? (
             <p style={{ padding: "0.5rem", fontSize: "0.8rem", opacity: 0.7 }}>لا توجد إشعارات.</p>
           ) : (
-            notifications.slice(0, 20).map((n) => (
+            notifications.slice(0, 20).map((notification) => (
               <button
-                key={n.id}
+                key={notification.id}
                 type="button"
-                onClick={() => void markRead(n.id)}
+                disabled={mutationBusy}
+                onClick={() => void markRead(notification.id)}
                 style={{
                   display: "block",
                   width: "100%",
@@ -116,13 +138,14 @@ export function ControlPanelNotificationsBell() {
                   padding: "0.5rem",
                   borderRadius: "0.5rem",
                   border: "none",
-                  background: n.isRead ? "transparent" : unreadBgVal,
-                  cursor: "pointer",
+                  background: notification.isRead ? "transparent" : unreadBgVal,
+                  cursor: mutationBusy ? "not-allowed" : "pointer",
+                  opacity: mutationBusy ? 0.65 : 1,
                   marginBottom: "0.125rem",
                 }}
               >
-                <div style={{ fontSize: "0.8rem", fontWeight: n.isRead ? 400 : 700 }}>{n.title}</div>
-                <div style={{ fontSize: "0.72rem", opacity: 0.7 }}>{n.body}</div>
+                <div style={{ fontSize: "0.8rem", fontWeight: notification.isRead ? 400 : 700 }}>{notification.title}</div>
+                <div style={{ fontSize: "0.72rem", opacity: 0.7 }}>{notification.body}</div>
               </button>
             ))
           )}
