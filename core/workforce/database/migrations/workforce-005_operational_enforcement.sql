@@ -2,17 +2,17 @@
 -- This migration is additive and keeps WLT as the monetary source of truth.
 
 CREATE TABLE IF NOT EXISTS workforce_captain_classification_history (
-  id                          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  actor_id                    text NOT NULL REFERENCES workforce_people(actor_id) ON DELETE CASCADE,
-  from_classification         text NOT NULL CHECK (from_classification IN ('joker','basic')),
-  to_classification           text NOT NULL CHECK (to_classification IN ('joker','basic')),
-  completed_deliveries        integer NOT NULL CHECK (completed_deliveries >= 0),
+  id                           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id                     text NOT NULL REFERENCES workforce_people(actor_id) ON DELETE CASCADE,
+  from_classification          text NOT NULL CHECK (from_classification IN ('joker','basic')),
+  to_classification            text NOT NULL CHECK (to_classification IN ('joker','basic')),
+  completed_deliveries         integer NOT NULL CHECK (completed_deliveries >= 0),
   completion_rate_basis_points integer NOT NULL CHECK (completion_rate_basis_points BETWEEN 0 AND 10000),
-  severe_incident_free        boolean NOT NULL,
-  evidence_media_refs         jsonb NOT NULL DEFAULT '[]'::jsonb,
-  decision_note               text NOT NULL CHECK (btrim(decision_note) <> ''),
-  approved_by_actor_id        text NOT NULL CHECK (btrim(approved_by_actor_id) <> ''),
-  created_at                  timestamptz NOT NULL DEFAULT now(),
+  severe_incident_free         boolean NOT NULL,
+  evidence_media_refs          jsonb NOT NULL DEFAULT '[]'::jsonb,
+  decision_note                text NOT NULL CHECK (btrim(decision_note) <> ''),
+  approved_by_actor_id         text NOT NULL CHECK (btrim(approved_by_actor_id) <> ''),
+  created_at                   timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT workforce_captain_classification_transition_chk CHECK (
     from_classification <> to_classification
   )
@@ -79,26 +79,24 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  transition_allowed boolean := false;
+  transition_allowed boolean := true;
 BEGIN
-  IF OLD.status = NEW.status THEN
-    RETURN NEW;
-  END IF;
+  IF OLD.status <> NEW.status THEN
+    transition_allowed := CASE OLD.status
+      WHEN 'reported' THEN NEW.status IN ('under_review','provider_notified','rejected')
+      WHEN 'under_review' THEN NEW.status IN ('provider_notified','appeal_window','approved','rejected')
+      WHEN 'provider_notified' THEN NEW.status IN ('appeal_window','approved','rejected','under_review')
+      WHEN 'appeal_window' THEN NEW.status IN ('under_review','approved','rejected')
+      WHEN 'approved' THEN NEW.status IN ('under_review','financial_action_posted','closed','reversed')
+      WHEN 'financial_action_posted' THEN NEW.status IN ('closed','reversed')
+      WHEN 'rejected' THEN NEW.status = 'closed'
+      WHEN 'reversed' THEN NEW.status = 'closed'
+      ELSE false
+    END;
 
-  transition_allowed := CASE OLD.status
-    WHEN 'reported' THEN NEW.status IN ('under_review','provider_notified','rejected')
-    WHEN 'under_review' THEN NEW.status IN ('provider_notified','appeal_window','approved','rejected')
-    WHEN 'provider_notified' THEN NEW.status IN ('appeal_window','approved','rejected','under_review')
-    WHEN 'appeal_window' THEN NEW.status IN ('under_review','approved','rejected')
-    WHEN 'approved' THEN NEW.status IN ('under_review','financial_action_posted','closed','reversed')
-    WHEN 'financial_action_posted' THEN NEW.status IN ('closed','reversed')
-    WHEN 'rejected' THEN NEW.status = 'closed'
-    WHEN 'reversed' THEN NEW.status = 'closed'
-    ELSE false
-  END;
-
-  IF NOT transition_allowed THEN
-    RAISE EXCEPTION 'invalid provider incident transition: % -> %', OLD.status, NEW.status;
+    IF NOT transition_allowed THEN
+      RAISE EXCEPTION 'invalid provider incident transition: % -> %', OLD.status, NEW.status;
+    END IF;
   END IF;
 
   IF NEW.status = 'approved' AND NEW.proposed_penalty_minor_units > 0 AND (
