@@ -17,6 +17,7 @@ export const PLATFORM_RUNTIME_STATES = {
 
 export type PlatformMainTabId =
   | "overview"
+  | "leadership"
   | "variables"
   | "services"
   | "providers"
@@ -32,6 +33,7 @@ export type PlatformMainTabMeta = {
 
 export const PLATFORM_MAIN_TABS: readonly PlatformMainTabMeta[] = [
   { id: "overview", label: "نظرة عامة عن المنصة" },
+  { id: "leadership", label: "القيادة والكادر السيادي" },
   { id: "variables", label: "المتغيرات والأعلام" },
   { id: "services", label: "الخدمات" },
   { id: "providers", label: "المزودون" },
