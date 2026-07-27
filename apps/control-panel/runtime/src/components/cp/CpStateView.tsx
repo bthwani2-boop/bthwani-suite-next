@@ -53,9 +53,15 @@ export function CpStateView({ kind, title, description, code, onRetry, retryLabe
   const defaults = DEFAULT_COPY[kind];
   const role = ALERT_KINDS.has(kind) ? "alert" : "status";
   const canRetry = onRetry != null && kind !== "unauthenticated" && kind !== "forbidden";
+  const resolvedDescription = description ?? defaults.description;
 
   return (
-    <CpStatePanel role={role} title={title ?? defaults.title} description={description ?? defaults.description} code={code}>
+    <CpStatePanel
+      role={role}
+      title={title ?? defaults.title}
+      {...(resolvedDescription !== undefined ? { description: resolvedDescription } : {})}
+      {...(code !== undefined ? { code } : {})}
+    >
       {illustration}
       {canRetry ? <CpRetryButton onClick={onRetry as () => void}>{retryLabel}</CpRetryButton> : null}
     </CpStatePanel>
