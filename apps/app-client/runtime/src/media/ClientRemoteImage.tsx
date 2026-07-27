@@ -24,9 +24,9 @@ export function ClientRemoteImage({
       contentFit={contentFit}
       cachePolicy="memory-disk"
       transition={150}
-      accessibilityLabel={accessibilityLabel}
       accessibilityIgnoresInvertColors
-      onError={onError}
+      {...(accessibilityLabel !== undefined ? { accessibilityLabel } : {})}
+      {...(onError !== undefined ? { onError } : {})}
     />
   );
 }
