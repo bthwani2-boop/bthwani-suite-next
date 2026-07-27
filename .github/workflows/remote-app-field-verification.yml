@@ -1,0 +1,170 @@
+name: Remote App Field Verification
+
+on:
+  push:
+    branches:
+      - work/smar-field-production-blockers-ci-v2-20260727
+    paths:
+      - ".github/workflows/remote-app-field-verification.yml"
+      - "governance/github/full-verification.trigger.json"
+      - "apps/app-field/**"
+      - "core/identity/**"
+      - "services/dsh/backend/internal/fieldreadiness/**"
+      - "services/dsh/database/migrations/**"
+      - "services/dsh/frontend/app-field/**"
+      - "services/dsh/frontend/shared/field-onboarding/**"
+      - "services/dsh/frontend/shared/field-readiness/**"
+      - "services/dsh/tests/jrn-024-field-readiness.test.mjs"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: remote-app-field-verification
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_test
+          POSTGRES_PASSWORD: dsh_test
+          POSTGRES_DB: dsh_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_test -d dsh_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh_test:dsh_test@127.0.0.1:5432/dsh_test?sslmode=disable
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGUSER: dsh_test
+      PGPASSWORD: dsh_test
+      PGDATABASE: dsh_test
+      EVIDENCE_FILE: governance/evidence/app-field-production-blockers-remote-verification.md
+      LOG_FILE: /tmp/app-field-verification.log
+      RESULTS_FILE: /tmp/app-field-verification-results.txt
+
+    steps:
+      - name: Checkout verification head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.0 --activate
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.26.5
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Execute remote verification matrix
+        id: matrix
+        shell: bash
+        run: |
+          set +e
+          : > "$LOG_FILE"
+          : > "$RESULTS_FILE"
+
+          run_check() {
+            local name="$1"
+            shift
+            printf '\n===== %s =====\n' "$name" | tee -a "$LOG_FILE"
+            "$@" >> "$LOG_FILE" 2>&1
+            local code=$?
+            printf '%s=%s\n' "$name" "$code" | tee -a "$RESULTS_FILE"
+            return 0
+          }
+
+          run_check pnpm_install pnpm install --frozen-lockfile
+          run_check app_field_typecheck pnpm --dir apps/app-field/runtime typecheck
+          run_check identity_typecheck pnpm exec tsc --noEmit -p core/identity/tsconfig.json
+          run_check jrn024_source_guard node --test services/dsh/tests/jrn-024-field-readiness.test.mjs
+          run_check dsh_database_contract node tools/scripts/check-dsh-database-contract.mjs
+          run_check gofmt bash -lc 'test -z "$(gofmt -d services/dsh/backend/internal/fieldreadiness services/dsh/backend/internal/http/field_readiness_governed_handlers.go)"'
+          run_check go_unit bash -lc 'cd services/dsh/backend && go test ./internal/fieldreadiness -run "Test(BuildMutationContext|ValidateGovernedLocation|EscalationTransitions|GovernedInputEnums)" -count=1'
+          run_check postgres_migrations bash -lc 'for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name "*.sql" | sort -V); do echo "Applying $file"; psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"; done'
+          run_check go_fieldreadiness_all bash -lc 'cd services/dsh/backend && go test ./internal/fieldreadiness -count=1'
+
+          if awk -F= '$2 != 0 { failed=1 } END { exit failed ? 0 : 1 }' "$RESULTS_FILE"; then
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "failed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build immutable evidence report
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$(dirname "$EVIDENCE_FILE")"
+          {
+            echo "# App Field Production Blockers — Remote Verification"
+            echo
+            echo "- Repository: \`${GITHUB_REPOSITORY}\`"
+            echo "- Branch: \`${GITHUB_REF_NAME}\`"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Workflow run: \`${GITHUB_RUN_ID}\`"
+            echo "- Generated at: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo
+            echo "## Results"
+            echo
+            echo '| Check | Exit code | Result |'
+            echo '|---|---:|---|'
+            if [[ -f "$RESULTS_FILE" ]]; then
+              while IFS='=' read -r name code; do
+                if [[ "$code" == "0" ]]; then result='PASS'; else result='FAIL'; fi
+                echo "| \`$name\` | $code | $result |"
+              done < "$RESULTS_FILE"
+            else
+              echo '| workflow_bootstrap | 1 | FAIL |'
+            fi
+            echo
+            echo "## Log tail"
+            echo
+            echo '```text'
+            if [[ -f "$LOG_FILE" ]]; then tail -n 240 "$LOG_FILE"; else echo 'Verification log was not created.'; fi
+            echo '```'
+          } > "$EVIDENCE_FILE"
+
+      - name: Commit remote evidence
+        if: always()
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$EVIDENCE_FILE"
+          if git diff --cached --quiet; then
+            echo "No evidence change to commit"
+          else
+            git commit -m "test(app-field): record remote verification evidence [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Publish evidence to verification PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: gh pr comment 174 --body-file "$EVIDENCE_FILE"
+
+      - name: Fail workflow when any check failed
+        if: always() && steps.matrix.outputs.failed == 'true'
+        run: exit 1
