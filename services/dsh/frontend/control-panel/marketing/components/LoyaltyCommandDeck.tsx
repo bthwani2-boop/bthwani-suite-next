@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
+import { CpButton } from "@bthwani/control-panel/components";
 import { useLoyaltyTiersController, type LoyaltyTierRecord } from "../../../shared/marketing";
 
 export function LoyaltyCommandDeck() {
@@ -44,7 +45,7 @@ export function LoyaltyCommandDeck() {
           <h3 style={styles.title}>مستويات الولاء</h3>
           <p style={styles.muted}>تعريفات DSH فقط؛ رصيد النقاط والحركات المالية تظل في WLT.</p>
         </div>
-        <button type="button" onClick={() => void controller.reload()} style={styles.secondary}>إعادة التحميل</button>
+        <CpButton onClick={() => void controller.reload()} variant="secondary">إعادة التحميل</CpButton>
       </div>
 
       <div style={styles.summary}>
@@ -57,7 +58,7 @@ export function LoyaltyCommandDeck() {
         <input value={nameAr} onChange={(event) => setNameAr(event.target.value)} placeholder="اسم المستوى" style={styles.input} />
         <input value={minPoints} onChange={(event) => setMinPoints(event.target.value)} inputMode="numeric" placeholder="الحد الأدنى للنقاط" style={styles.input} />
         <input value={discountPercent} onChange={(event) => setDiscountPercent(event.target.value)} inputMode="decimal" placeholder="نسبة الخصم" style={styles.input} />
-        <button type="button" disabled={submitting} onClick={() => void createDraft()} style={styles.primary}>إنشاء مسودة</button>
+        <CpButton disabled={submitting} onClick={() => void createDraft()} variant="brand">إنشاء مسودة</CpButton>
       </div>
 
       {controller.state.kind === "loading" ? <p>جارٍ التحميل…</p> : null}
@@ -74,9 +75,9 @@ export function LoyaltyCommandDeck() {
               <p style={styles.muted}>الحالة: {tier.status}</p>
             </div>
             <div style={styles.actions}>
-              {tier.status !== "active" ? <button type="button" disabled={submitting} onClick={() => void updateStatus(tier, "active")} style={styles.primary}>طلب اعتماد نشط</button> : null}
-              {tier.status === "active" ? <button type="button" disabled={submitting} onClick={() => void updateStatus(tier, "paused")} style={styles.secondary}>إيقاف</button> : null}
-              {tier.status !== "archived" ? <button type="button" disabled={submitting} onClick={() => void updateStatus(tier, "archived")} style={styles.secondary}>أرشفة</button> : null}
+              {tier.status !== "active" ? <CpButton disabled={submitting} onClick={() => void updateStatus(tier, "active")} variant="brand">طلب اعتماد نشط</CpButton> : null}
+              {tier.status === "active" ? <CpButton disabled={submitting} onClick={() => void updateStatus(tier, "paused")} variant="secondary">إيقاف</CpButton> : null}
+              {tier.status !== "archived" ? <CpButton disabled={submitting} onClick={() => void updateStatus(tier, "archived")} variant="secondary">أرشفة</CpButton> : null}
             </div>
           </article>
         ))}
@@ -93,8 +94,6 @@ const styles: Record<string, CSSProperties> = {
   summary: { display: "flex", flexWrap: "wrap", gap: "1rem", padding: "0.8rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.7rem" },
   form: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: "0.6rem" },
   input: { padding: "0.65rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.5rem", background: colorRoles.surfaceBase },
-  primary: { padding: "0.6rem 0.8rem", border: 0, borderRadius: "0.5rem", background: colorRoles.brandAction, color: colorRoles.surfaceBase, cursor: "pointer", fontWeight: 700 },
-  secondary: { padding: "0.55rem 0.75rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.5rem", background: colorRoles.surfaceBase, cursor: "pointer", fontWeight: 700 },
   error: { color: colorRoles.danger, margin: 0 },
   list: { display: "grid", gap: "0.6rem" },
   card: { display: "flex", justifyContent: "space-between", gap: "1rem", padding: "0.9rem", border: `1px solid ${colorRoles.borderSubtle}`, borderRadius: "0.7rem", background: colorRoles.surfaceBase },

@@ -1,0 +1,57 @@
+import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
+import { useState } from "react";
+import { useCpTokens } from "./cpTokens";
+
+export type CpTableProps = { readonly style?: CSSProperties; readonly "aria-label"?: string; readonly children: ReactNode };
+export function CpTable({ style, "aria-label": ariaLabel, children }: CpTableProps) {
+  const { styles } = useCpTokens();
+  return <table style={{ ...styles.table, ...style }} aria-label={ariaLabel}>{children}</table>;
+}
+
+export type CpTableHeaderCellProps = { readonly scope?: "col" | "row"; readonly style?: CSSProperties; readonly children: ReactNode };
+export function CpTableHeaderCell({ scope = "col", style, children }: CpTableHeaderCellProps) {
+  const { styles } = useCpTokens();
+  return <th scope={scope} style={{ ...styles.tableHeaderCell, ...style }}>{children}</th>;
+}
+
+export type CpTableCellProps = { readonly style?: CSSProperties; readonly children?: ReactNode };
+export function CpTableCell({ style, children }: CpTableCellProps) {
+  const { styles } = useCpTokens();
+  return <td style={{ ...styles.tableCell, ...style }}>{children}</td>;
+}
+
+export function CpEmptyTableMessage({ children }: { readonly children: ReactNode }) {
+  const { styles } = useCpTokens();
+  return <div style={styles.emptyTableMessage}>{children}</div>;
+}
+
+export function CpSelectableTableRow({
+  selected,
+  onClick,
+  onDoubleClick,
+  children,
+}: {
+  readonly selected: boolean;
+  readonly onClick: () => void;
+  readonly onDoubleClick?: MouseEventHandler<HTMLTableRowElement>;
+  readonly children: ReactNode;
+}) {
+  const { styles } = useCpTokens();
+  const [hovered, setHovered] = useState(false);
+  return (
+    <tr
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      aria-selected={selected || undefined}
+      style={{
+        ...styles.selectableTableRow,
+        ...(hovered && !selected ? styles.selectableTableRowHover : {}),
+        ...(selected ? styles.selectableTableRowSelected : {}),
+      }}
+    >
+      {children}
+    </tr>
+  );
+}

@@ -33,8 +33,8 @@ export function ControlPanelShell({
   const topBarStyle: CSSProperties = {
     backdropFilter: glassMode === "darkGlass" ? "blur(20px)" : undefined,
     WebkitBackdropFilter: glassMode === "darkGlass" ? "blur(20px)" : undefined,
-    background: glass.backgroundColor ?? "var(--topbar-bg, rgb(255, 255, 255))",
-    borderBottom: `1px solid ${glass.borderColor ?? "var(--topbar-border, rgb(226, 232, 243))"}`,
+    background: glass.backgroundColor ?? "var(--topbar-bg)",
+    borderBottom: `1px solid ${glass.borderColor ?? "var(--topbar-border)"}`,
   };
 
   return (
@@ -81,8 +81,8 @@ const styles = WebStyleSheet.create({
     height: "100vh",
     overflow: "hidden",
     fontFamily: "var(--font-arabic)",
-    background: "var(--main-bg, rgb(240, 244, 250))",
-    color: "var(--text-primary, rgb(13, 20, 37))",
+    background: "var(--main-bg)",
+    color: "var(--text-primary)",
   },
   topBar: {
     flexShrink: 0,
@@ -99,8 +99,8 @@ const styles = WebStyleSheet.create({
     flexShrink: 0,
     overflowY: "auto",
     overflowX: "hidden",
-    background: "var(--sidebar-bg, rgb(13, 20, 37))",
-    borderInlineEnd: "1px solid var(--sidebar-border, rgb(26, 42, 74))",
+    background: "var(--sidebar-bg)",
+    borderInlineEnd: "1px solid var(--sidebar-border)",
     display: "flex",
     flexDirection: "column",
     scrollbarWidth: "none",
@@ -109,19 +109,19 @@ const styles = WebStyleSheet.create({
     flex: 1,
     minWidth: 0,
     overflowY: "auto",
-    background: "var(--main-bg, rgb(240, 244, 250))",
+    background: "var(--main-bg)",
     scrollbarWidth: "thin",
-    scrollbarColor: "var(--card-border, rgb(226, 232, 243)) transparent",
+    scrollbarColor: "var(--card-border) transparent",
   },
   sidePanel: {
     flexShrink: 0,
     overflowY: "auto",
-    background: "var(--card-bg, rgb(255, 255, 255))",
-    borderInlineStart: "1px solid var(--card-border, rgb(226, 232, 243))",
+    background: "var(--card-bg)",
+    borderInlineStart: "1px solid var(--card-border)",
   },
   footer: {
     flexShrink: 0,
-    background: "var(--topbar-bg, rgb(255, 255, 255))",
-    borderTop: "1px solid var(--topbar-border, rgb(226, 232, 243))",
+    background: "var(--topbar-bg)",
+    borderTop: "1px solid var(--topbar-border)",
   },
 });

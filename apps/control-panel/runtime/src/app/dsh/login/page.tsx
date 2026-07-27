@@ -56,7 +56,7 @@ function DshLoginForm() {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        background: "var(--main-bg, rgb(240, 244, 250))",
+        background: "var(--main-bg)",
       }}
     >
       <form
@@ -68,8 +68,8 @@ function DshLoginForm() {
           gap: "1rem",
           padding: "2rem",
           borderRadius: "1rem",
-          border: "1px solid var(--card-border, rgb(226, 232, 243))",
-          background: "var(--card-bg, rgb(255, 255, 255))",
+          border: "1px solid var(--card-border)",
+          background: "var(--card-bg)",
           boxShadow: `0 1px 2px ${alpha(colorRoles.shadowBase, 0.06)}`,
         }}
       >
@@ -90,7 +90,7 @@ function DshLoginForm() {
             style={{
               padding: "0.625rem 0.75rem",
               borderRadius: "0.5rem",
-              border: "1px solid var(--card-border, rgb(226, 232, 243))",
+              border: "1px solid var(--card-border)",
             }}
           />
         </label>
@@ -107,7 +107,7 @@ function DshLoginForm() {
             style={{
               padding: "0.625rem 0.75rem",
               borderRadius: "0.5rem",
-              border: "1px solid var(--card-border, rgb(226, 232, 243))",
+              border: "1px solid var(--card-border)",
             }}
           />
         </label>
@@ -125,7 +125,7 @@ function DshLoginForm() {
             padding: "0.75rem",
             borderRadius: "0.5rem",
             border: "none",
-            background: "var(--grad-blue, linear-gradient(135deg,rgb(59, 123, 255),rgb(94, 151, 255)))",
+            background: "var(--grad-blue)",
             color: "white",
             fontWeight: 700,
             cursor: isSubmitting ? "wait" : "pointer",
