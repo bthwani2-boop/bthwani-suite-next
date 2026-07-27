@@ -14,10 +14,22 @@ import {
   emptyState,
   type HomeDiscoveryState,
 } from './home-discovery.states';
-import type { DshHomeDiscoveryParams, DshHomeDiscoveryResponseDto } from './home-discovery.types';
+import type {
+  DshHomeCategoryDto,
+  DshHomeDiscoveryParams,
+  DshHomeDiscoveryResponseDto,
+} from './home-discovery.types';
 import { resolveDshApiBaseUrl, validateDshApiBaseUrl } from '../_kernel/dsh-api-base-url';
 
 export { loadingState };
+
+function isValidCategoryDestination(category: DshHomeCategoryDto): boolean {
+  const target = category.destinationTarget?.trim();
+  if (!target) return false;
+  if (category.destinationType === 'catalog_domain') return true;
+  if (category.destinationType !== 'special_request') return false;
+  return target === 'SHEIN_ASSISTED_PURCHASE' || target === 'AWNAK_ERRAND';
+}
 
 export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promise<HomeDiscoveryState> {
   const baseUrl = resolveDshApiBaseUrl();
@@ -49,6 +61,9 @@ export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promi
       !Array.isArray((dto as Record<string, unknown>)['categories'])
     ) {
       return errorState('DSH_INVALID_RESPONSE: response missing required discovery collections');
+    }
+    if (dto.categories.some((category) => !isValidCategoryDestination(category))) {
+      return errorState('DSH_INVALID_RESPONSE: category destination is missing or unsupported');
     }
 
     const banners = dto.banners.map(toBannerViewModel);
