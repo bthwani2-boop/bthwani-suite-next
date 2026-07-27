@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -14,13 +13,12 @@ import {
   radius,
   statusScale,
 } from "@bthwani/ui-kit";
+import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
 import type { DshStoreCardViewModel } from "../../shared/store";
 
 export type StoreCardPremiumProps = Readonly<{
   store: DshStoreCardViewModel;
   onPress: (storeId: string) => void;
-  onFavoritePress?: ((storeId: string) => void) | undefined;
-  isFavorite?: boolean | undefined;
 }>;
 
 const CARD_HEIGHT = 118;
@@ -37,14 +35,12 @@ const PLACEHOLDER_COLORS: Record<string, string> = {
   default: colorRoles.brandStructure,
 };
 
-type ServiceChip = Readonly<{ label: string; tone: "bthwani" | "partner" | "pickup" | "default" }>;
+type ServiceChip = Readonly<{
+  label: string;
+  tone: "bthwani" | "partner" | "pickup" | "default";
+}>;
 
-export function StoreCardPremium({
-  store,
-  onPress,
-  onFavoritePress,
-  isFavorite = false,
-}: StoreCardPremiumProps) {
+export function StoreCardPremium({ store, onPress }: StoreCardPremiumProps) {
   const placeholderBgColor = PLACEHOLDER_COLORS[store.placeholderTone] ?? colorRoles.brandStructure;
   const heroUri = store.heroImageSource?.uri ?? null;
   const logoUri = store.logoImageSource?.uri ?? null;
@@ -70,7 +66,7 @@ export function StoreCardPremium({
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={() => onPress(store.id)}
       accessibilityRole="button"
-      accessibilityLabel={store.displayName}
+      accessibilityLabel={`${store.displayName}، ${store.isOpen ? "مفتوح" : "مغلق"}`}
     >
       <View style={styles.leftCol}>
         <View style={[styles.lockBox, store.isOpen ? styles.lockBoxOpen : styles.lockBoxClosed]}>
@@ -79,21 +75,6 @@ export function StoreCardPremium({
           </Text>
           <View style={[styles.lockDot, store.isOpen ? styles.dotOpen : styles.dotClosed]} />
         </View>
-
-        <Pressable
-          onPress={(event) => {
-            event.stopPropagation();
-            onFavoritePress?.(store.id);
-          }}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel={isFavorite ? "إزالة من المفضلة" : "إضافة إلى المفضلة"}
-          style={styles.heartBtn}
-        >
-          <Text style={[styles.heartIcon, isFavorite && styles.heartIconActive]}>
-            {isFavorite ? "♥" : "♡"}
-          </Text>
-        </Pressable>
       </View>
 
       <View style={styles.content}>
@@ -154,12 +135,11 @@ export function StoreCardPremium({
       <View style={styles.imgBlock}>
         <View style={[styles.imageSquare, { backgroundColor: placeholderBgColor }]}>
           {showHeroImage ? (
-            <Image
-              source={{ uri: heroUri }}
+            <ClientRemoteImage
+              uri={heroUri}
               style={StyleSheet.absoluteFill}
-              accessibilityIgnoresInvertColors
-              resizeMode="cover"
-              alt=""
+              contentFit="cover"
+              accessibilityLabel={`صورة متجر ${store.displayName}`}
               onError={() => setHeroFailed(true)}
             />
           ) : (
@@ -169,11 +149,11 @@ export function StoreCardPremium({
 
         <View style={styles.logoRing}>
           {showLogoImage ? (
-            <Image
-              source={{ uri: logoUri }}
+            <ClientRemoteImage
+              uri={logoUri}
               style={styles.logoImg}
-              resizeMode="contain"
-              alt=""
+              contentFit="contain"
+              accessibilityLabel={`شعار متجر ${store.displayName}`}
               onError={() => setLogoFailed(true)}
             />
           ) : (
@@ -230,7 +210,9 @@ function buildServiceModeLabels(store: DshStoreCardViewModel): readonly ServiceC
     .slice(0, 3);
 }
 
-function buildMarketingChips(store: DshStoreCardViewModel): readonly { label: string; tone?: "strong" }[] {
+function buildMarketingChips(
+  store: DshStoreCardViewModel,
+): readonly { label: string; tone?: "strong" }[] {
   const chips: { label: string; tone?: "strong" }[] = [];
   if (store.isFreeDelivery) chips.push({ label: "مجاني", tone: "strong" });
   if (store.hasCouponBadge) chips.push({ label: "كوبون", tone: "strong" });
@@ -260,19 +242,34 @@ function compactDeliveryMode(label: string): ServiceChip | null {
 }
 
 const SHADOW = Platform.select({
-  ios: { shadowColor: colorRoles.shadowBase, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8 },
+  ios: {
+    shadowColor: colorRoles.shadowBase,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+  },
   android: { elevation: 3 },
   default: {},
 });
 
 const LOCK_SHADOW = Platform.select({
-  ios: { shadowColor: colorRoles.shadowBase, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
+  ios: {
+    shadowColor: colorRoles.shadowBase,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
   android: { elevation: 2 },
   default: {},
 });
 
 const LOGO_SHADOW = Platform.select({
-  ios: { shadowColor: colorRoles.shadowBase, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.18, shadowRadius: 5 },
+  ios: {
+    shadowColor: colorRoles.shadowBase,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+  },
   android: { elevation: 5 },
   default: {},
 });
@@ -297,7 +294,7 @@ const styles = StyleSheet.create({
     height: CARD_HEIGHT,
     paddingVertical: 10,
     paddingLeft: 10,
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     alignItems: "center",
   },
   lockBox: {
@@ -328,17 +325,6 @@ const styles = StyleSheet.create({
   },
   dotOpen: { backgroundColor: statusScale.success },
   dotClosed: { backgroundColor: statusScale.danger },
-  heartBtn: {
-    width: 28,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heartIcon: {
-    fontSize: 19,
-    color: colorRoles.borderStrong,
-  },
-  heartIconActive: { color: statusScale.danger },
   content: {
     flex: 1,
     minWidth: 0,
