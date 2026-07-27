@@ -1,7 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState } from "react";
 import {
-  Dimensions,
-  Image,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -9,26 +7,56 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
-import { colorRoles, colorPalette, alpha, neutralScale, brandScale, statusScale, spacing, radius } from '@bthwani/ui-kit';
-import type { BannerViewModel } from '../../shared/home-discovery';
+  useWindowDimensions,
+} from "react-native";
+import {
+  alpha,
+  brandScale,
+  colorPalette,
+  colorRoles,
+  neutralScale,
+  radius,
+  spacing,
+  statusScale,
+} from "@bthwani/ui-kit";
+import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
+import type { BannerViewModel } from "../../shared/home-discovery";
 
 type Props = {
   banners: BannerViewModel[];
   onBannerPress?: ((banner: BannerViewModel) => void) | undefined;
 };
 
-const { width: SCREEN_W } = Dimensions.get('window');
 const BANNER_H = 220;
-const BANNER_W = SCREEN_W;
+
+function bannerActionLabel(banner: BannerViewModel): string {
+  switch (banner.actionType) {
+    case "store":
+      return "فتح المتجر";
+    case "category":
+      return "عرض الفئة";
+    case "external":
+      return "معرفة المزيد";
+    case "none":
+    default:
+      return "";
+  }
+}
 
 export function HomeHeroBannerSection({ banners, onBannerPress }: Props) {
+  const { width } = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  const bannerWidth = Math.max(1, width);
 
-  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const page = Math.round(e.nativeEvent.contentOffset.x / BANNER_W);
-    setActiveIndex(page);
+  React.useEffect(() => {
+    if (activeIndex >= banners.length) setActiveIndex(0);
+    scrollRef.current?.scrollTo({ x: activeIndex * bannerWidth, animated: false });
+  }, [activeIndex, bannerWidth, banners.length]);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const page = Math.round(event.nativeEvent.contentOffset.x / bannerWidth);
+    setActiveIndex(Math.max(0, Math.min(page, banners.length - 1)));
   };
 
   if (banners.length === 0) return null;
@@ -40,69 +68,68 @@ export function HomeHeroBannerSection({ banners, onBannerPress }: Props) {
         horizontal
         pagingEnabled
         decelerationRate="fast"
-        snapToInterval={BANNER_W}
+        snapToInterval={bannerWidth}
         snapToAlignment="start"
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
         onScroll={handleScroll}
         scrollEventThrottle={16}
       >
-        {banners.map((banner) => (
-          <Pressable
-            key={banner.id}
-            style={styles.bannerCard}
-            onPress={() => onBannerPress?.(banner)}
-            accessibilityRole="button"
-            accessibilityLabel={banner.title}
-          >
-            {/* Background image */}
-            {banner.imageUrl ? (
-              <Image
-                source={{ uri: banner.imageUrl }}
-                style={StyleSheet.absoluteFill}
-                resizeMode="cover"
-                accessibilityIgnoresInvertColors
-                alt=""
-              />
-            ) : (
-              <View style={[StyleSheet.absoluteFill, styles.bannerPlaceholder]} />
-            )}
+        {banners.map((banner) => {
+          const actionLabel = bannerActionLabel(banner);
+          const interactive = actionLabel.length > 0 && onBannerPress != null;
+          return (
+            <Pressable
+              key={banner.id}
+              disabled={!interactive}
+              style={({ pressed }) => [
+                styles.bannerCard,
+                { width: bannerWidth },
+                pressed && interactive && styles.bannerPressed,
+              ]}
+              onPress={() => onBannerPress?.(banner)}
+              accessibilityRole={interactive ? "button" : "image"}
+              accessibilityLabel={interactive
+                ? `${banner.title}، ${actionLabel}`
+                : banner.title}
+            >
+              {banner.imageUrl ? (
+                <ClientRemoteImage
+                  uri={banner.imageUrl}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  accessibilityLabel={`صورة ${banner.title}`}
+                />
+              ) : (
+                <View style={[StyleSheet.absoluteFill, styles.bannerPlaceholder]} />
+              )}
 
-            {/* Dark gradient scrim */}
-            <View style={styles.scrim} />
+              <View style={styles.scrim} />
 
-            {/* Badge — top right */}
-            {banner.subtitle ? (
-              <View style={styles.topBadge}>
-                <Text style={styles.topBadgeText}>{banner.subtitle}</Text>
-              </View>
-            ) : null}
-
-            {/* Bottom content: title + CTA */}
-            <View style={styles.bannerBottom}>
-              <Text style={styles.bannerTitle} numberOfLines={2}>{banner.title}</Text>
-              {banner.actionType !== 'none' ? (
-                <Pressable
-                  style={styles.ctaButton}
-                  onPress={() => onBannerPress?.(banner)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`اشترك الآن — ${banner.title}`}
-                >
-                  <Text style={styles.ctaText}>اشترك الآن</Text>
-                </Pressable>
+              {banner.subtitle ? (
+                <View style={styles.topBadge}>
+                  <Text style={styles.topBadgeText}>{banner.subtitle}</Text>
+                </View>
               ) : null}
-            </View>
-          </Pressable>
-        ))}
+
+              <View style={styles.bannerBottom}>
+                <Text style={styles.bannerTitle} numberOfLines={2}>{banner.title}</Text>
+                {actionLabel ? (
+                  <View style={styles.ctaButton}>
+                    <Text style={styles.ctaText}>{actionLabel}</Text>
+                  </View>
+                ) : null}
+              </View>
+            </Pressable>
+          );
+        })}
       </ScrollView>
 
-      {/* Dot indicators */}
       {banners.length > 1 ? (
-        <View style={styles.dots}>
-          {banners.map((_, i) => (
+        <View style={styles.dots} accessibilityRole="none">
+          {banners.map((banner, index) => (
             <View
-              key={i}
-              style={[styles.dot, i === activeIndex && styles.dotActive]}
+              key={banner.id}
+              style={[styles.dot, index === activeIndex && styles.dotActive]}
             />
           ))}
         </View>
@@ -115,35 +142,24 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: spacing[4],
   },
-  scrollContent: {
-    gap: 0,
-  },
-
   bannerCard: {
-    width: BANNER_W,
     height: BANNER_H,
-    borderRadius: 0,
-    overflow: 'hidden',
+    overflow: "hidden",
     backgroundColor: brandScale.action[600],
+  },
+  bannerPressed: {
+    opacity: 0.94,
   },
   bannerPlaceholder: {
     backgroundColor: brandScale.action[500],
   },
-
-  /* Scrim */
   scrim: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: colorRoles.mediaScrimStrong,
     opacity: 0.45,
   },
-
-  /* Badge — top right */
   topBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: spacing[3],
     right: spacing[3],
     backgroundColor: statusScale.success,
@@ -153,33 +169,28 @@ const styles = StyleSheet.create({
   },
   topBadgeText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     color: neutralScale[0],
   },
-
-  /* Bottom content */
   bannerBottom: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     padding: spacing[4],
-    paddingBottom: spacing[4],
     gap: spacing[2],
   },
   bannerTitle: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: "900",
     color: neutralScale[0],
-    textAlign: 'right',
+    textAlign: "right",
     textShadowColor: alpha(colorPalette.black, 0.35),
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
-
-  /* CTA */
   ctaButton: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     backgroundColor: colorRoles.brandAction,
     borderRadius: radius.md,
     paddingHorizontal: spacing[4],
@@ -187,14 +198,12 @@ const styles = StyleSheet.create({
   },
   ctaText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: "800",
     color: neutralScale[0],
   },
-
-  /* Dots */
   dots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     gap: spacing[2],
     marginTop: spacing[2],
   },
