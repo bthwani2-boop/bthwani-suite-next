@@ -141,6 +141,22 @@ func mergeEmployeeRoles(existing []string, supervisory bool) []string {
 	return result
 }
 
+// employeeAccessConflictsWithRoles protects the control-panel trust boundary.
+// A phone already used by a consumer, partner, field agent or captain cannot be
+// silently upgraded into an administrative employee. Such an upgrade would
+// grant operator permissions to a provider identity merely because the phone
+// matched. Existing employee/operator identities may still be updated through
+// the governed server-owned permission bundles.
+func employeeAccessConflictsWithRoles(roles []string) bool {
+	for _, role := range roles {
+		switch strings.TrimSpace(role) {
+		case "client", "partner", "field", "captain":
+			return true
+		}
+	}
+	return false
+}
+
 func permissionIdentityKey(permission Permission) string {
 	return strings.Join([]string{permission.Service, permission.Surface, permission.Action, permission.Scope}, "|")
 }
@@ -195,6 +211,9 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 		return ActorAdminView{}, err
 	}
 	if err == nil {
+		if strings.TrimSpace(existing.TenantID) != tenantID || employeeAccessConflictsWithRoles(existing.Roles) {
+			return ActorAdminView{}, ErrPhoneAlreadyBound
+		}
 		roles := mergeEmployeeRoles(existing.Roles, supervisory)
 		mergedPermissions := mergeEmployeePermissions(existing.Permissions, permissions)
 		permissionsJSON, marshalErr := json.Marshal(mergedPermissions)
