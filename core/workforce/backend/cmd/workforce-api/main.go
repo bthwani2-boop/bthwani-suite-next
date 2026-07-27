@@ -57,6 +57,7 @@ func main() {
 	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient)
 	workforcehttp.RegisterOperationalCoreRoutes(baseRouter, repo, authClient)
 	workforcehttp.RegisterOperationalEnforcementRoutes(baseRouter, repo, authClient)
+	workforcehttp.RegisterEmployeeGovernanceRoutes(baseRouter, repo, authClient)
 	operationalCoreRouter := workforcehttp.OperationalCoreGateMiddleware(baseRouter, repo, authClient)
 	journeyRouter := workforcehttp.Journey003MutationMiddleware(operationalCoreRouter, repo, authClient)
 	server := &http.Server{
