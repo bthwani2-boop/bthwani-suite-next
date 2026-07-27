@@ -1,5 +1,7 @@
 import * as Crypto from "expo-crypto";
+import { File, Paths } from "expo-file-system";
 import * as Haptics from "expo-haptics";
+import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
 
 export function createClientEphemeralId(prefix: string): string {
@@ -19,4 +21,34 @@ export async function openClientExternalUrl(url: string): Promise<boolean> {
   if (!/^https:\/\//i.test(normalized)) return false;
   const result = await WebBrowser.openBrowserAsync(normalized);
   return result.type !== "cancel";
+}
+
+export async function shareClientTextDocument(input: {
+  readonly fileNamePrefix: string;
+  readonly contents: string;
+  readonly dialogTitle: string;
+}): Promise<boolean> {
+  const contents = input.contents.trim();
+  if (!contents || !(await Sharing.isAvailableAsync())) return false;
+
+  const safePrefix = input.fileNamePrefix
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64) || "bthwani-share";
+  const file = new File(Paths.cache, `${safePrefix}-${Crypto.randomUUID()}.txt`);
+
+  try {
+    file.write(contents);
+    await Sharing.shareAsync(file.uri, {
+      dialogTitle: input.dialogTitle,
+      mimeType: "text/plain",
+      UTI: "public.plain-text",
+    });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    if (file.exists) file.delete();
+  }
 }
