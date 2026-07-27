@@ -179,7 +179,7 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]HomeCategory, error) {
 		  AND is_client_visible = true
 		  AND is_manual_request = false
 		UNION ALL
-		SELECT n.id, n.name_ar, COALESCE(n.icon,''), n.sort_order,
+		SELECT n.id, n.name_ar, COALESCE(n.icon,''), (d.sort_order + n.sort_order) AS sort_order,
 		       'special_request' AS destination_type,
 		       CASE n.slug
 		         WHEN 'shein' THEN 'SHEIN_ASSISTED_PURCHASE'
@@ -190,7 +190,7 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]HomeCategory, error) {
 		WHERE d.is_manual_request = true
 		  AND n.slug IN ('shein', 'awnak')
 		  AND n.is_active = true
-		ORDER BY sort_order ASC`)
+		ORDER BY sort_order ASC, id ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query categories: %w", err)
 	}
