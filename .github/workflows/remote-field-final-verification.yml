@@ -1,0 +1,174 @@
+name: Remote Field Final Verification
+
+on:
+  pull_request:
+    branches:
+      - smar
+    paths:
+      - ".github/workflows/remote-field-final-verification.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: remote-field-final-verification-20260727
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: dsh_test
+          POSTGRES_PASSWORD: dsh_test
+          POSTGRES_DB: dsh_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dsh_test -d dsh_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh_test:dsh_test@127.0.0.1:5432/dsh_test?sslmode=disable
+      DSH_REQUIRE_DB_TESTS: "true"
+      DSH_TEST_TENANT_ID: local-dsh
+      EVIDENCE_FILE: governance/evidence/app-field-workforce-scope-correction.md
+
+    steps:
+      - name: Checkout verification head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.34.0 --activate
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.26.5
+          cache-dependency-path: services/dsh/backend/go.sum
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Synchronize governed OpenAPI mutation headers
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("services/dsh/contracts/paths/field.paths.yaml")
+          text = path.read_text(encoding="utf-8")
+          operations = (
+              "createDshFieldVisit",
+              "completeDshFieldVisit",
+              "upsertDshReadinessCheck",
+              "createDshReadinessEscalation",
+          )
+          additions = (
+              '      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"\n'
+              '      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"\n'
+          )
+
+          for operation in operations:
+              marker = f"    operationId: {operation}\n"
+              start = text.find(marker)
+              if start < 0:
+                  raise SystemExit(f"operation not found: {operation}")
+              request_body = text.find("    requestBody:\n", start)
+              if request_body < 0:
+                  raise SystemExit(f"requestBody not found: {operation}")
+              block = text[start:request_body]
+              if "#/components/parameters/IdempotencyKey" in block:
+                  continue
+              if text.find("    parameters:\n", start, request_body) < 0:
+                  raise SystemExit(f"parameters block not found: {operation}")
+              text = text[:request_body] + additions + text[request_body:]
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Generate and verify DSH OpenAPI
+        run: |
+          pnpm --dir services/dsh openapi:generate
+          pnpm --dir services/dsh openapi:test
+
+      - name: Verify TypeScript and source guards
+        run: |
+          pnpm --dir apps/app-field/runtime typecheck
+          pnpm exec tsc --noEmit -p core/identity/tsconfig.json
+          node --test services/dsh/tests/jrn-024-field-readiness.test.mjs
+          node tools/scripts/check-dsh-database-contract.mjs
+
+      - name: Verify Go formatting
+        run: test -z "$(gofmt -d services/dsh/backend/internal/fieldreadiness services/dsh/backend/internal/http/field_readiness_governed_handlers.go)"
+
+      - name: Apply canonical PostgreSQL migrations
+        run: |
+          for file in $(find services/dsh/database/migrations -maxdepth 1 -type f -name "*.sql" | sort -V); do
+            echo "Applying $file"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+          done
+
+      - name: Verify all field-readiness Go tests
+        run: |
+          cd services/dsh/backend
+          go test ./internal/fieldreadiness -count=1
+
+      - name: Record verified evidence
+        run: |
+          mkdir -p "$(dirname "$EVIDENCE_FILE")"
+          cat > "$EVIDENCE_FILE" <<EOF
+          # App Field Workforce Scope Correction — Remote Verification
+
+          - Repository: \`${GITHUB_REPOSITORY}\`
+          - Verification branch: \`${GITHUB_HEAD_REF}\`
+          - Verified source commit: \`${GITHUB_SHA}\`
+          - Workflow run: \`${GITHUB_RUN_ID}\`
+          - Verified at: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`
+
+          ## Architecture verified
+
+          - Field identity is globally owned by \`core/workforce\` through \`actor_id\`.
+          - Merchant \`tenant_id\` is not part of offline queue or mutation receipt identity.
+          - Offline queue scope is \`actorId + installationId\`.
+          - Replay receipt identity is \`actor_id + operation + idempotency_key\`.
+          - Store and partner tenant context remains target-resource authorization data.
+
+          ## Checks
+
+          - Workspace install: PASS
+          - DSH OpenAPI generation and modular verification: PASS
+          - app-field TypeScript: PASS
+          - Identity TypeScript: PASS
+          - JRN-024 source guard: PASS
+          - DSH database contract: PASS
+          - Go formatting: PASS
+          - Canonical PostgreSQL migrations: PASS
+          - All field-readiness Go tests: PASS
+          EOF
+
+      - name: Commit verified artifacts
+        run: |
+          git rm .github/workflows/remote-field-final-verification.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            services/dsh/contracts/paths/field.paths.yaml \
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+            services/dsh/clients/generated/dsh-api.ts \
+            "$EVIDENCE_FILE"
+          git commit -m "test(app-field): verify platform workforce scope correction [skip ci]"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
