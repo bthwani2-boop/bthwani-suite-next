@@ -14,6 +14,7 @@ import {
 } from '@bthwani/ui-kit';
 import { useWorkforceProfile } from '../../shared/workforce/use-workforce-profile';
 import { ENGAGEMENT_STATUS_LABEL_AR } from '../../shared/workforce';
+import { ProviderAvailabilityNoticesPanel } from '../../shared/workforce/ProviderAvailabilityNoticesPanel';
 import { ProviderRatingSummaryPanel } from '../../shared/provider-ratings/ProviderRatingSummaryPanel';
 
 type DshFieldProfileHomeScreenProps = {
@@ -125,6 +126,7 @@ export function DshFieldProfileHomeScreen({
         </View>
 
         <ProviderRatingSummaryPanel kind="field" title="تقييم الشركاء لي" />
+        <ProviderAvailabilityNoticesPanel providerLabel="الميداني" />
 
         <View style={styles.divider} />
 
