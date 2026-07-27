@@ -10,7 +10,7 @@ const plugins: NonNullable<ExpoConfig["plugins"]> = (config.plugins ?? []).map((
 
 const appConfig: ExpoConfig = {
   ...config,
-  userInterfaceStyle: "automatic",
+  userInterfaceStyle: "light",
   plugins,
 };
 
