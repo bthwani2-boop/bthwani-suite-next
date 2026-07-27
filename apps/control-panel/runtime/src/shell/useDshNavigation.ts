@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import { useControlPanelSession } from "@dsh-shared/session/control-panel-session";
 import { hasControlPanelPermission } from "@dsh-shared/session/control-panel-permissions";
 
+/**
+ * The former platform-policies entry is intentionally not a navigation item.
+ * Its legacy URL /dsh/platform/policies remains a compatibility route that
+ * opens the policies tab inside the single sovereign platform section.
+ */
+
 /** Full ordered list of all DSH control panel sections. */
 export const DSH_NAV_ITEMS = [
   { section: "dashboard", label: "الرئيسية", route: "/dsh/dashboard" },
