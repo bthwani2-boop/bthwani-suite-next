@@ -128,15 +128,15 @@ function FieldBottomNavBar({
   );
 }
 
-export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) {
+export function DshFieldSurface({ command, onExit, installationId }: DshFieldSurfaceProps = {}) {
   const fieldSurface = useDshFieldSurfaceModel(command);
   const onboardingController = useFieldPartnerOnboardingController();
   const identity = useIdentitySession();
   const insets = useSafeAreaInsets();
-  const offlineScope = identity.state.kind === 'authenticated'
+  const offlineScope = identity.state.kind === 'authenticated' && installationId
     ? {
-        tenantId: identity.state.identity.tenantId,
         actorId: identity.state.identity.subject,
+        installationId,
       }
     : undefined;
 
