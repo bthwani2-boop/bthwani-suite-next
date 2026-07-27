@@ -2,8 +2,8 @@
   "formatVersion": 1,
   "entryContract": "services/dsh/contracts/dsh.openapi.yaml",
   "generatedBundle": "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
-  "pathCount": 275,
-  "operationIdCount": 324,
+  "pathCount": 276,
+  "operationIdCount": 325,
   "componentCounts": {
     "securitySchemes": 1,
     "parameters": 4,
@@ -11,7 +11,7 @@
     "schemas": 316
   },
   "pathDomains": {
-    "field": 28,
+    "field": 29,
     "system": 5,
     "discovery": 2,
     "home-discovery": 4,
