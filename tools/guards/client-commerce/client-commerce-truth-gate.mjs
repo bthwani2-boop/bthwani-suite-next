@@ -82,7 +82,7 @@ const rules = [
   ["services/dsh/frontend/app-client/home-discovery/HomeFilterRailSection.tsx", [], ["isDiscoveryFilterOperational", "operationalFilters"]],
   ["services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx", [
     [/Math\.random\s*\(/g, "RANDOM_HOME_VIEWER_REFERENCE_FORBIDDEN"],
-  ], ["randomUUID", "searchQuery", "normalizedSearchQuery", "بحث عن متجر أو فئة"]],
+  ], ["createClientEphemeralId", "searchText", "normalizedQuery", "ابحث عن متجر أو فئة"]],
   ["services/dsh/frontend/app-client/home-discovery/HomeHeroBannerSection.tsx", [
     [/اشترك الآن/g, "GENERIC_BANNER_CTA_FORBIDDEN"],
   ], ["ClientRemoteImage", "bannerActionLabel", "useWindowDimensions"]],
@@ -100,9 +100,9 @@ const rules = [
     [/userInterfaceStyle:\s*\"automatic\"/g, "INCOMPLETE_NATIVE_DARK_MODE_FORBIDDEN"],
   ], ['userInterfaceStyle: "light"', "supportsPictureInPicture: true", "ExpoConfig"]],
   ["services/dsh/frontend/app-client/support/SupportTicketScreen.tsx", [], ["const ok = await submitTicket", "if (!ok) return;", "onBack", "maxLength={4000}"]],
-  ["services/dsh/frontend/shared/notifications/ActorNotificationsPanel.tsx", [], ["showPreferences", "loadNotifications", "loadPreferences"]],
+  ["services/dsh/frontend/shared/notifications/ActorNotificationsPanel.tsx", [], ["showPreferences", "useNotificationsController(authKind, { loadPreferences: showPreferences })"]],
   ["services/dsh/frontend/app-client/notifications/NotificationCenterScreen.tsx", [], ["showPreferences={false}", "onOpenActionUrl"]],
-  ["services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx", [], ["onOpenPickup", 'order.fulfillmentMode === "pickup"', "فتح جلسة الاستلام الذاتي"]],
+  ["services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx", [], ["onOpenPickup", 'order.fulfillmentMode === "pickup"', "افتح جلسة الاستلام"]],
   ["services/dsh/frontend/app-client/DshClientSurface.tsx", [
     [/Linking\.openURL/g, "RAW_EXTERNAL_LINK_OPEN_FORBIDDEN"],
     [/useClientAppearance|AppearanceHubScreen|profileRoute === \"appearance\"/g, "INCOMPLETE_APPEARANCE_RUNTIME_FORBIDDEN"],
