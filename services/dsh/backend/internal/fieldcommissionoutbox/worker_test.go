@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -40,18 +41,31 @@ func uniqueID(prefix string) string {
 	return prefix + "-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 }
 
-// seedVisitFixture creates the minimal store/field-visit chain the outbox's
-// foreign key on visit_id requires, and registers cleanup.
+// seedVisitFixture creates the minimal partner/store/field-visit chain the
+// category-derived commission outbox requires, and registers cleanup in
+// reverse foreign-key order.
 func seedVisitFixture(t *testing.T, db *sql.DB) (storeID, agentID, visitID string) {
 	t.Helper()
 	ctx := context.Background()
+	partnerID := uniqueID("field-commission-outbox-partner")
 	storeID = uniqueID("field-commission-outbox-store")
 	agentID = uniqueID("field-agent")
+	phone := fmt.Sprintf("7%09d", time.Now().UnixNano()%1_000_000_000)
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Field Commission Outbox Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
-		storeID); err != nil {
+		INSERT INTO dsh_partners
+			(id, legal_name_ar, display_name, legal_identity_number, primary_phone, category)
+		VALUES ($1, 'شريك اختبار عمولة الميداني', 'Field Commission Test Partner', $1, $2, 'restaurant')`,
+		partnerID, phone); err != nil {
+		t.Fatalf("failed to insert test partner: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID) })
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_stores
+			(id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
+		VALUES ($1, $1, 'Field Commission Outbox Test Store', 'active', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
+		storeID, partnerID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID) })
