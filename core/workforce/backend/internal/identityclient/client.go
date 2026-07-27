@@ -139,6 +139,13 @@ func (c *Client) Reactivate(ctx context.Context, actorID string) error {
 	return c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/reactivate", nil, nil, nil)
 }
 
+func canonicalActivationSurface(expectedActorType, expectedSurface string) string {
+	if strings.TrimSpace(expectedActorType) == "employee" {
+		return "control-panel"
+	}
+	return strings.TrimSpace(expectedSurface)
+}
+
 func (c *Client) IssueActivation(ctx context.Context, actorID, issuedByActorID, expectedActorType, expectedSurface, idempotencyKey, correlationID string) (ActivationCode, error) {
 	var code ActivationCode
 	headers := map[string]string{}
@@ -148,6 +155,7 @@ func (c *Client) IssueActivation(ctx context.Context, actorID, issuedByActorID, 
 	if correlationID != "" {
 		headers["X-Correlation-ID"] = correlationID
 	}
+	expectedSurface = canonicalActivationSurface(expectedActorType, expectedSurface)
 	err := c.do(ctx, http.MethodPost, "/internal/actors/"+url.PathEscape(actorID)+"/activations",
 		map[string]string{
 			"issuedByActorId":   issuedByActorID,
