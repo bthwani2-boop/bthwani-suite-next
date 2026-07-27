@@ -16,7 +16,6 @@ import (
 var (
 	ErrIdempotencyRequired = errors.New("field readiness idempotency context is required")
 	ErrIdempotencyConflict = errors.New("idempotency key was already used with different field readiness inputs")
-	ErrTenantContext       = errors.New("trusted tenant context is required for field readiness mutation")
 )
 
 type MutationOperation string
@@ -65,17 +64,6 @@ func validateMutationContext(mutation MutationContext) error {
 	return nil
 }
 
-func trustedTenantIDTx(ctx context.Context, tx *sql.Tx) (string, error) {
-	var tenant sql.NullString
-	if err := tx.QueryRowContext(ctx, `SELECT NULLIF(current_setting('bthwani.tenant_id', TRUE), '')`).Scan(&tenant); err != nil {
-		return "", err
-	}
-	if !tenant.Valid || strings.TrimSpace(tenant.String) == "" {
-		return "", ErrTenantContext
-	}
-	return strings.TrimSpace(tenant.String), nil
-}
-
 func loadMutationReceiptTx(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -87,22 +75,18 @@ func loadMutationReceiptTx(
 	if err := validateMutationContext(mutation); err != nil {
 		return false, err
 	}
-	tenantID, err := trustedTenantIDTx(ctx, tx)
-	if err != nil {
-		return false, err
-	}
-	lockIdentity := strings.Join([]string{tenantID, actorID, string(operation), mutation.IdempotencyKey}, "|")
+	lockIdentity := strings.Join([]string{actorID, string(operation), mutation.IdempotencyKey}, "|")
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, lockIdentity); err != nil {
 		return false, err
 	}
 
 	var storedHash string
 	var storedResponse []byte
-	err = tx.QueryRowContext(ctx, `
+	err := tx.QueryRowContext(ctx, `
 		SELECT request_hash, response_json
 		FROM dsh_field_readiness_operation_receipts
-		WHERE tenant_id = $1 AND actor_id = $2 AND operation = $3 AND idempotency_key = $4`,
-		tenantID, actorID, operation, mutation.IdempotencyKey,
+		WHERE actor_id = $1 AND operation = $2 AND idempotency_key = $3`,
+		actorID, operation, mutation.IdempotencyKey,
 	).Scan(&storedHash, &storedResponse)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, nil
@@ -128,19 +112,14 @@ func storeMutationReceiptTx(
 	mutation MutationContext,
 	response any,
 ) error {
-	tenantID, err := trustedTenantIDTx(ctx, tx)
-	if err != nil {
-		return err
-	}
 	encoded, err := json.Marshal(response)
 	if err != nil {
 		return fmt.Errorf("encode field readiness mutation receipt response: %w", err)
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO dsh_field_readiness_operation_receipts
-		  (tenant_id, actor_id, operation, resource_id, idempotency_key, request_hash, correlation_id, response_json)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
-		tenantID,
+		  (actor_id, operation, resource_id, idempotency_key, request_hash, correlation_id, response_json)
+		VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
 		actorID,
 		operation,
 		resourceID,
