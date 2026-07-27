@@ -1,0 +1,106 @@
+openapi: 3.1.0
+info:
+  title: BThwani Identity Employee Access API
+  version: 0.1.0
+  description: >-
+    Workforce-only administrative employee provisioning. Identity derives the
+    effective control-panel roles and permissions from a closed permission
+    bundle catalogue; callers cannot submit arbitrary permissions. Employee
+    activation remains actor-bound through the canonical Identity activation
+    challenge endpoint with actorType=employee and surface=webapp.
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-owner: core/identity
+x-bthwani-extends: ./auth.openapi.yaml
+servers:
+  - url: http://localhost:58082
+    description: Local Identity runtime
+paths:
+  /internal/employees/provision:
+    post:
+      operationId: provisionAdministrativeEmployee
+      tags: [internal-employees]
+      security:
+        - serviceToken: []
+      parameters:
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema:
+            const: workforce
+        - name: X-Tenant-ID
+          in: header
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeProvisionRequest'
+      responses:
+        '201':
+          description: Employee actor provisioned or upgraded idempotently.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActorAdminView'
+        '400':
+          description: Invalid bundle, department, phone, or username.
+        '401':
+          description: Invalid Workforce service token.
+        '403':
+          description: Caller or tenant context is forbidden.
+        '409':
+          description: Phone or username conflicts with another actor.
+components:
+  securitySchemes:
+    serviceToken:
+      type: http
+      scheme: bearer
+  schemas:
+    EmployeeProvisionRequest:
+      type: object
+      additionalProperties: false
+      required: [username, phoneE164, permissionBundle, departmentScope]
+      properties:
+        username:
+          type: string
+          minLength: 1
+        phoneE164:
+          type: string
+          minLength: 8
+          maxLength: 20
+        permissionBundle:
+          type: string
+          enum:
+            - staff
+            - platform_owner
+            - platform_coordinator
+            - operations_manager
+            - partners_manager
+            - finance_manager
+            - support_manager
+            - hr_manager
+        departmentScope:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
+        tenantId:
+          type: string
+    ActorAdminView:
+      type: object
+      additionalProperties: false
+      required: [actorId, username, phoneE164, roles, active]
+      properties:
+        actorId:
+          type: string
+        username:
+          type: string
+        phoneE164:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        active:
+          type: boolean
