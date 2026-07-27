@@ -157,8 +157,6 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
         store={store}
         categories={categories}
         products={products}
-        favoriteIds={storeCtrl.favoriteIds}
-        onToggleFavorite={storeCtrl.toggleFavorite}
         onAddToCart={handleAddToCart}
         cartActionError={cartCtrl.actionError}
         onBack={onBack}
