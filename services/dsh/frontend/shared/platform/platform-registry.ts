@@ -1,8 +1,8 @@
 /**
  * Canonical navigation and ownership metadata for the sovereign Platform
- * control plane. Live metrics and workflow states must come from
- * core/platform-control; DSH operational policies are exposed through their
- * own governed route so a tab can never render without a bound owner.
+ * control plane. Live metrics and workflow states come from
+ * core/platform-control, while DSH operational policies remain bound to their
+ * governed owners and are exposed inside the same unified sovereign section.
  */
 
 export const PLATFORM_RUNTIME_STATES = {
@@ -20,6 +20,7 @@ export type PlatformMainTabId =
   | "variables"
   | "services"
   | "providers"
+  | "policies"
   | "health"
   | "rollback"
   | "canary";
@@ -34,6 +35,7 @@ export const PLATFORM_MAIN_TABS: readonly PlatformMainTabMeta[] = [
   { id: "variables", label: "المتغيرات والأعلام" },
   { id: "services", label: "الخدمات" },
   { id: "providers", label: "المزودون" },
+  { id: "policies", label: "السياسات ومناطق الخدمة" },
   { id: "health", label: "الصحة والأداء" },
   { id: "rollback", label: "دورة التغيير والتراجع" },
   { id: "canary", label: "الإطلاق التدريجي" },
