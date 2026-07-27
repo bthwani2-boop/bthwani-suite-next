@@ -22,6 +22,7 @@ import {
   spacing,
   statusScale,
 } from "@bthwani/ui-kit";
+import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
 import type { HomePublicReel } from "../../shared/home-discovery";
 
 export type HomeReelsLoadState = "idle" | "loading" | "ready" | "empty" | "error";
@@ -35,22 +36,55 @@ type Props = {
   readonly onItemImpression?: ((reel: HomePublicReel) => void) | undefined;
 };
 
+function isPrivateDevelopmentHost(hostname: string): boolean {
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") return true;
+  if (/^10\./.test(hostname) || /^192\.168\./.test(hostname)) return true;
+  const match = /^172\.(\d+)\./.exec(hostname);
+  if (!match) return false;
+  const secondOctet = Number.parseInt(match[1] ?? "0", 10);
+  return secondOctet >= 16 && secondOctet <= 31;
+}
+
 function isPlayableVideoUrl(value: string): boolean {
-  return /^https:\/\/[^\s]+$/i.test(value.trim());
+  const normalized = value.trim();
+  try {
+    const url = new URL(normalized);
+    if (url.protocol === "https:") return true;
+    return url.protocol === "http:" && isPrivateDevelopmentHost(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function reelTitle(reel: HomePublicReel): string {
-  return reel.titleAr.trim() || reel.titleEn.trim() || "فيديو مختار";
+  return reel.titleAr || reel.titleEn || "فيديو مختار";
+}
+
+function reelSubtitle(reel: HomePublicReel): string {
+  return reel.subtitleAr || reel.subtitleEn;
+}
+
+function reelHighlight(reel: HomePublicReel): string {
+  return reel.highlightAr || reel.highlightEn;
 }
 
 function targetCopy(reel: HomePublicReel): { readonly label: string; readonly description: string } {
   switch (reel.targetType) {
     case "store":
-      return { label: "فتح المتجر", description: "يمكن الانتقال إلى المتجر المرتبط بهذا الفيديو." };
+      return {
+        label: reel.ctaLabelAr || reel.ctaLabelEn || "فتح المتجر",
+        description: "يمكن الانتقال إلى المتجر المرتبط بهذا الفيديو.",
+      };
     case "master_product":
-      return { label: "منتج مرتبط", description: "مشاهدة فقط حتى يتوفر مسار منتج سيادي في تطبيق العميل." };
+      return {
+        label: reel.ctaLabelAr || reel.ctaLabelEn || "منتج مرتبط",
+        description: "مشاهدة فقط حتى يتوفر مسار منتج سيادي في تطبيق العميل.",
+      };
     case "offer":
-      return { label: "عرض مرتبط", description: "مشاهدة فقط حتى يتوفر مسار عرض سيادي في تطبيق العميل." };
+      return {
+        label: reel.ctaLabelAr || reel.ctaLabelEn || "عرض مرتبط",
+        description: "مشاهدة فقط حتى يتوفر مسار عرض سيادي في تطبيق العميل.",
+      };
   }
 }
 
@@ -76,9 +110,19 @@ function ReelSlide({
   }, [active, player]);
 
   const target = targetCopy(reel);
+  const subtitle = reelSubtitle(reel);
+  const highlight = reelHighlight(reel);
   return (
     <View style={[styles.slideShell, { height }]}>
       <View style={styles.slideCard}>
+        {reel.posterUrl ? (
+          <ClientRemoteImage
+            uri={reel.posterUrl}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            accessibilityLabel={`غلاف ${reelTitle(reel)}`}
+          />
+        ) : null}
         <VideoView
           player={player}
           style={StyleSheet.absoluteFill}
@@ -97,7 +141,9 @@ function ReelSlide({
         </View>
         <View style={styles.slideBody}>
           <Text style={styles.slideTitle} numberOfLines={2}>{reelTitle(reel)}</Text>
-          <Text style={styles.targetDescription}>{target.description}</Text>
+          {subtitle ? <Text style={styles.slideSubtitle} numberOfLines={3}>{subtitle}</Text> : null}
+          {highlight ? <Text style={styles.slideHighlight} numberOfLines={2}>{highlight}</Text> : null}
+          {!subtitle && !highlight ? <Text style={styles.targetDescription}>{target.description}</Text> : null}
           {onOpenStore ? (
             <Button label={target.label} tone="primary" onPress={onOpenStore} />
           ) : null}
@@ -308,6 +354,15 @@ export function HomeReelsSection({
                 accessibilityLabel={`تشغيل ${reelTitle(item)}`}
               >
                 <View style={styles.videoPlane}>
+                  {item.posterUrl ? (
+                    <ClientRemoteImage
+                      uri={item.posterUrl}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      accessibilityLabel={`غلاف ${reelTitle(item)}`}
+                    />
+                  ) : null}
+                  {item.posterUrl ? <View pointerEvents="none" style={styles.cardPosterScrim} /> : null}
                   <View style={styles.playButton}>
                     <Text style={styles.playIcon}>▶</Text>
                   </View>
@@ -317,7 +372,9 @@ export function HomeReelsSection({
                 </View>
                 <View style={styles.copyWrap}>
                   <Text style={styles.cardTitle} numberOfLines={1}>{reelTitle(item)}</Text>
-                  <Text style={styles.cardSubtitle} numberOfLines={1}>اضغط ثم اسحب للتنقل</Text>
+                  <Text style={styles.cardSubtitle} numberOfLines={1}>
+                    {reelSubtitle(item) || "اضغط ثم اسحب للتنقل"}
+                  </Text>
                 </View>
               </Pressable>
             )}
@@ -380,6 +437,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colorRoles.brandStructure,
+    overflow: "hidden",
+  },
+  cardPosterScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: alpha(colorRoles.shadowBase, 0.25),
   },
   playButton: {
     width: 48,
@@ -494,6 +556,19 @@ const styles = StyleSheet.create({
     color: neutralScale[0],
     fontSize: 22,
     fontWeight: "900",
+    textAlign: "right",
+  },
+  slideSubtitle: {
+    color: alpha(neutralScale[0], 0.92),
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "right",
+  },
+  slideHighlight: {
+    color: alpha(neutralScale[0], 0.88),
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 20,
     textAlign: "right",
   },
   targetDescription: {
