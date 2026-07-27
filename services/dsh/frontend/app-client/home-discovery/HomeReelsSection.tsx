@@ -26,6 +26,7 @@ import type { HomePublicReel } from "../../shared/home-discovery";
 
 type Props = {
   readonly reels: readonly HomePublicReel[];
+  readonly openRequest?: number | undefined;
   readonly onReelPress?: ((reel: HomePublicReel) => void) | undefined;
 };
 
@@ -189,8 +190,9 @@ function VerticalReelsModal({
   );
 }
 
-export function HomeReelsSection({ reels, onReelPress }: Props) {
+export function HomeReelsSection({ reels, openRequest = 0, onReelPress }: Props) {
   const [selectedIndex, setSelectedIndex] = React.useState<number | null>(null);
+  const lastHandledOpenRequest = React.useRef(0);
   const playableReels = React.useMemo(
     () => reels.filter((reel) => isPlayableVideoUrl(reel.videoUrl)),
     [reels],
@@ -201,6 +203,18 @@ export function HomeReelsSection({ reels, onReelPress }: Props) {
       setSelectedIndex(null);
     }
   }, [playableReels.length, selectedIndex]);
+
+  React.useEffect(() => {
+    if (
+      openRequest <= 0
+      || openRequest === lastHandledOpenRequest.current
+      || playableReels.length === 0
+    ) {
+      return;
+    }
+    lastHandledOpenRequest.current = openRequest;
+    setSelectedIndex(0);
+  }, [openRequest, playableReels.length]);
 
   if (playableReels.length === 0) return null;
 
