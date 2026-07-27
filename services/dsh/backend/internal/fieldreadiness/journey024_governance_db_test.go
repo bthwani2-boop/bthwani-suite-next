@@ -39,7 +39,7 @@ func TestCreateGovernedVisitUsesRegisteredStoreCoordinates(t *testing.T) {
 	agentID := uniqueID("agent-governed-location")
 	partnerID := seedPartner(t, db, agentID)
 	storeID := uniqueID("store-governed-location")
-	seedFieldStore(t, db, storeID, agentID)
+	seedFieldStoreForPartner(t, db, storeID, agentID, partnerID)
 	registerGovernedStoreLocation(t, db, storeID, partnerID)
 	actor := testFieldActor(t, agentID)
 
@@ -72,8 +72,8 @@ func TestGovernedCheckRejectsEvidenceFromAnotherStore(t *testing.T) {
 	partnerID := seedPartner(t, db, agentID)
 	storeA := uniqueID("store-evidence-a")
 	storeB := uniqueID("store-evidence-b")
-	seedFieldStore(t, db, storeA, agentID)
-	seedFieldStore(t, db, storeB, agentID)
+	seedFieldStoreForPartner(t, db, storeA, agentID, partnerID)
+	seedFieldStoreForPartner(t, db, storeB, agentID, partnerID)
 	registerGovernedStoreLocation(t, db, storeA, partnerID)
 	registerGovernedStoreLocation(t, db, storeB, partnerID)
 	actor := testFieldActor(t, agentID)
@@ -100,7 +100,7 @@ func TestEscalatedFurtherRemainsACompletionBlocker(t *testing.T) {
 	agentID := uniqueID("agent-escalated-further")
 	partnerID := seedPartner(t, db, agentID)
 	storeID := uniqueID("store-escalated-further")
-	seedFieldStore(t, db, storeID, agentID)
+	seedFieldStoreForPartner(t, db, storeID, agentID, partnerID)
 	registerGovernedStoreLocation(t, db, storeID, partnerID)
 	actor := testFieldActor(t, agentID)
 
