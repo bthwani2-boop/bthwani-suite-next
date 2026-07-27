@@ -1,4 +1,4 @@
-import { Linking, Platform, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, StyleSheet, Text, View } from "react-native";
 
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
@@ -105,11 +105,36 @@ function parseDeepLink(url: string): DshFieldNavigationCommand | null {
   }
 }
 
+type InstallationState =
+  | { readonly kind: "loading" }
+  | { readonly kind: "ready"; readonly installationId: string }
+  | { readonly kind: "error" };
+
 function AppContent() {
   const identity = useIdentitySession();
   useDshMobilePushRegistration(identity.state.kind, "app-field", FIELD_APP_SCHEME);
 
+  const [installationState, setInstallationState] = useState<InstallationState>({ kind: "loading" });
   const [navCommand, setNavCommand] = useState<DshFieldNavigationCommand | undefined>();
+
+  useEffect(() => {
+    let active = true;
+    const installationPromise = Platform.OS === "web"
+      ? Promise.resolve(`field-web:${Crypto.randomUUID()}`)
+      : getOrCreateFieldDeviceFingerprint();
+
+    void installationPromise
+      .then((installationId) => {
+        if (active) setInstallationState({ kind: "ready", installationId });
+      })
+      .catch(() => {
+        if (active) setInstallationState({ kind: "error" });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     // Governed notification actionUrl payloads are handled by
@@ -135,6 +160,20 @@ function AppContent() {
     void identity.logout();
   };
 
+  if (installationState.kind !== "ready") {
+    return (
+      <View style={styles.installationState}>
+        {installationState.kind === "loading" ? (
+          <ActivityIndicator accessibilityLabel="تهيئة هوية تثبيت التطبيق" />
+        ) : (
+          <Text style={styles.installationError}>
+            تعذر تهيئة هوية الجهاز الآمنة. أعد فتح التطبيق قبل تنفيذ أي عمل ميداني.
+          </Text>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
       <View style={styles.screen}>
@@ -144,7 +183,10 @@ function AppContent() {
             onLogout={logout}
             incompleteContent={<DshFieldProfileCompletionScreen onLogout={logout} />}
           >
-            <DshFieldSurface {...(navCommand ? { command: navCommand } : {})} />
+            <DshFieldSurface
+              {...(navCommand ? { command: navCommand } : {})}
+              installationId={installationState.installationId}
+            />
           </WorkforceAccessGate>
         </IdentitySessionGate>
       </View>
@@ -163,4 +205,12 @@ export default function App() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colorRoles.surfaceMuted },
   screen: { flex: 1 },
+  installationState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: colorRoles.surfaceMuted,
+  },
+  installationError: { textAlign: "center" },
 });
