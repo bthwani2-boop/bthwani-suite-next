@@ -12,15 +12,12 @@ package fieldcommissionoutbox
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 )
 
-// EventTypeFieldVisitCommission is the canonical event type for field agent
-// commission eligibility following a completed onboarding visit.
 const EventTypeFieldVisitCommission = "field_visit_commission"
 
-// Event represents a pending or retried commission eligibility notification
-// bound for WLT.
 type Event struct {
 	ID                 string
 	EventID            string
@@ -29,6 +26,7 @@ type Event struct {
 	VisitID            string
 	StoreID            string
 	PartnerID          string
+	PartnerCategory    string
 	CommissionPolicyID string
 	CorrelationID      string
 	IdempotencyKey     string
@@ -36,35 +34,47 @@ type Event struct {
 	AttemptCount       int
 }
 
-// EnqueueInput is the set of fields required when writing a commission
-// eligibility event inside a visit-completion transaction.
 type EnqueueInput struct {
 	FieldActorID       string
 	VisitID            string
 	StoreID            string
-	PartnerID          string
 	CommissionPolicyID string
-	// IdempotencyKey must be stable per visit — callers should derive it from
-	// "field_visit_commission:{visitId}" so duplicate visits are no-ops.
-	IdempotencyKey string
+	IdempotencyKey     string
 }
 
-// Enqueue writes a commission eligibility event inside tx. It must be called
-// within the same transaction that commits the field visit as complete so the
-// event is guaranteed to be durable even if WLT is unreachable. A duplicate
-// idempotency_key is silently discarded (ON CONFLICT DO NOTHING).
+// Enqueue resolves partner identity and category from DSH-owned store truth in
+// the same transaction as visit completion. Neither the app nor WLT may supply
+// or override this category evidence.
 func Enqueue(tx *sql.Tx, input EnqueueInput) error {
+	input.FieldActorID = strings.TrimSpace(input.FieldActorID)
+	input.VisitID = strings.TrimSpace(input.VisitID)
+	input.StoreID = strings.TrimSpace(input.StoreID)
+	if input.FieldActorID == "" || input.VisitID == "" || input.StoreID == "" {
+		return fmt.Errorf("field actor, visit and store are required")
+	}
 	if input.IdempotencyKey == "" {
 		input.IdempotencyKey = fmt.Sprintf("field_visit_commission:%s", input.VisitID)
 	}
-	_, err := tx.Exec(`
+	var partnerID, partnerCategory string
+	err := tx.QueryRow(`
+		SELECT COALESCE(s.partner_id,''), COALESCE(NULLIF(btrim(p.category),''),'default')
+		FROM dsh_stores s
+		LEFT JOIN dsh_partners p ON p.id=s.partner_id
+		WHERE s.id=$1`, input.StoreID).Scan(&partnerID, &partnerCategory)
+	if err != nil {
+		return fmt.Errorf("resolve field commission partner evidence: %w", err)
+	}
+	if strings.TrimSpace(partnerID) == "" {
+		return fmt.Errorf("store %s has no partner for field commission", input.StoreID)
+	}
+	_, err = tx.Exec(`
 		INSERT INTO dsh_field_commission_outbox
-			(field_actor_id, visit_id, store_id, partner_id, commission_policy_id, idempotency_key)
-		VALUES ($1, $2::uuid, $3, $4, $5, $6)
+			(field_actor_id, visit_id, store_id, partner_id, partner_category,
+			 commission_policy_id, idempotency_key)
+		VALUES ($1, $2::uuid, $3, $4, $5, $6, $7)
 		ON CONFLICT (idempotency_key) DO NOTHING`,
-		input.FieldActorID, input.VisitID, input.StoreID,
-		nullableString(input.PartnerID), nullableString(input.CommissionPolicyID),
-		input.IdempotencyKey,
+		input.FieldActorID, input.VisitID, input.StoreID, partnerID,
+		partnerCategory, nullableString(input.CommissionPolicyID), input.IdempotencyKey,
 	)
 	if err != nil {
 		return fmt.Errorf("enqueue field commission outbox event: %w", err)
@@ -72,26 +82,23 @@ func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 	return nil
 }
 
-// ClaimBatch leases up to limit pending events due for delivery.
-// It updates next_retry_at so concurrent workers skip leased rows.
 func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	rows, err := tx.Query(`
 		SELECT id, event_id, event_type, field_actor_id, visit_id::text, store_id,
-		       COALESCE(partner_id,''), COALESCE(commission_policy_id,''),
-		       correlation_id::text, idempotency_key, occurred_at, attempt_count
+		       COALESCE(partner_id,''), partner_category,
+		       COALESCE(commission_policy_id,''), correlation_id::text,
+		       idempotency_key, occurred_at, attempt_count
 		FROM dsh_field_commission_outbox
 		WHERE status = 'pending' AND next_retry_at <= NOW()
 		ORDER BY created_at
 		LIMIT $1
-		FOR UPDATE SKIP LOCKED`,
-		limit,
-	)
+		FOR UPDATE SKIP LOCKED`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("claim field commission outbox batch: %w", err)
 	}
@@ -99,9 +106,10 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	for rows.Next() {
 		var e Event
 		if err := rows.Scan(
-			&e.ID, &e.EventID, &e.EventType, &e.FieldActorID, &e.VisitID, &e.StoreID,
-			&e.PartnerID, &e.CommissionPolicyID,
-			&e.CorrelationID, &e.IdempotencyKey, &e.OccurredAt, &e.AttemptCount,
+			&e.ID, &e.EventID, &e.EventType, &e.FieldActorID, &e.VisitID,
+			&e.StoreID, &e.PartnerID, &e.PartnerCategory,
+			&e.CommissionPolicyID, &e.CorrelationID, &e.IdempotencyKey,
+			&e.OccurredAt, &e.AttemptCount,
 		); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan field commission outbox event: %w", err)
@@ -109,6 +117,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		events = append(events, e)
 	}
 	if err := rows.Err(); err != nil {
+		rows.Close()
 		return nil, err
 	}
 	rows.Close()
@@ -121,33 +130,24 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		if _, err := tx.Exec(`
 			UPDATE dsh_field_commission_outbox
 			SET next_retry_at = NOW() + $2::interval, updated_at = NOW()
-			WHERE id = ANY($1::uuid[])`,
-			pqStringArray(ids), lease.String(),
-		); err != nil {
+			WHERE id = ANY($1::uuid[])`, pqStringArray(ids), lease.String()); err != nil {
 			return nil, fmt.Errorf("lease field commission outbox batch: %w", err)
 		}
 	}
-
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 	return events, nil
 }
 
-// MarkSent marks the event as successfully delivered.
 func MarkSent(db *sql.DB, id string) error {
 	_, err := db.Exec(`
 		UPDATE dsh_field_commission_outbox
 		SET status = 'sent', updated_at = NOW()
-		WHERE id = $1::uuid`,
-		id,
-	)
+		WHERE id = $1::uuid`, id)
 	return err
 }
 
-// MarkFailed records a delivery failure and schedules the next retry with
-// exponential backoff capped at 30 minutes. The row remains 'pending' so
-// retries continue indefinitely — a lost commission event is a financial bug.
 func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 	next := attemptCount + 1
 	backoff := time.Duration(1<<uint(min(next, 10))) * time.Second
@@ -156,10 +156,9 @@ func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 	}
 	_, err := db.Exec(`
 		UPDATE dsh_field_commission_outbox
-		SET attempt_count = $2, last_error = $3, next_retry_at = NOW() + $4::interval, updated_at = NOW()
-		WHERE id = $1::uuid`,
-		id, next, cause.Error(), backoff.String(),
-	)
+		SET attempt_count = $2, last_error = $3,
+		    next_retry_at = NOW() + $4::interval, updated_at = NOW()
+		WHERE id = $1::uuid`, id, next, cause.Error(), backoff.String())
 	return err
 }
 
@@ -177,14 +176,13 @@ func nullableString(s string) *string {
 	return &s
 }
 
-// pqStringArray formats a []string as a Postgres array literal for ANY($1::uuid[]).
 func pqStringArray(values []string) string {
 	out := "{"
-	for i, v := range values {
+	for i, value := range values {
 		if i > 0 {
 			out += ","
 		}
-		out += `"` + v + `"`
+		out += `"` + value + `"`
 	}
 	return out + "}"
 }
