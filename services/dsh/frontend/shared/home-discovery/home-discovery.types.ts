@@ -7,15 +7,9 @@
 
 import type { paths } from '../../../clients/generated/dsh-api';
 
-export type DshHomeDiscoveryResponseDto =
+type GeneratedDshHomeDiscoveryResponseDto =
   paths['/dsh/home-discovery']['get']['responses']['200']['content']['application/json'];
-
-export type DshHomeBannerDto = DshHomeDiscoveryResponseDto['banners'][number];
-export type DshHomePromoDto = DshHomeDiscoveryResponseDto['promos'][number];
-export type DshHomeFilterDto = DshHomeDiscoveryResponseDto['filters'][number];
-type GeneratedDshHomeCategoryDto = DshHomeDiscoveryResponseDto['categories'][number];
-export type DshHomeStoreDto = DshHomeDiscoveryResponseDto['stores'][number];
-export type DshHomePaginationDto = DshHomeDiscoveryResponseDto['pagination'];
+type GeneratedDshHomeCategoryDto = GeneratedDshHomeDiscoveryResponseDto['categories'][number];
 
 export type DshHomeCategoryDestinationType = 'catalog_domain' | 'special_request';
 export type DshHomeSpecialRequestTarget = 'SHEIN_ASSISTED_PURCHASE' | 'AWNAK_ERRAND';
@@ -29,6 +23,16 @@ export type DshHomeCategoryDto = GeneratedDshHomeCategoryDto & {
   readonly destinationType: DshHomeCategoryDestinationType;
   readonly destinationTarget: string;
 };
+
+export type DshHomeDiscoveryResponseDto = Omit<GeneratedDshHomeDiscoveryResponseDto, 'categories'> & {
+  readonly categories: readonly DshHomeCategoryDto[];
+};
+
+export type DshHomeBannerDto = DshHomeDiscoveryResponseDto['banners'][number];
+export type DshHomePromoDto = DshHomeDiscoveryResponseDto['promos'][number];
+export type DshHomeFilterDto = DshHomeDiscoveryResponseDto['filters'][number];
+export type DshHomeStoreDto = DshHomeDiscoveryResponseDto['stores'][number];
+export type DshHomePaginationDto = DshHomeDiscoveryResponseDto['pagination'];
 
 export type DiscoveryFilterKind = DshHomeFilterDto['kind'];
 export type DshHomeAudienceSegment = 'guest' | 'authenticated';
