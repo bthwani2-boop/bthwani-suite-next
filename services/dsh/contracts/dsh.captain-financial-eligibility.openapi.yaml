@@ -1,0 +1,209 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Captain Financial Eligibility API
+  version: 1.0.0
+  description: Tenant-scoped WLT wallet readback and DSH-owned dispatch balance policy. No ledger or balance truth is stored in DSH.
+servers:
+  - url: /api/dsh
+security:
+  - bearerAuth: []
+paths:
+  /dsh/operator/platform/dispatch-balance-policy:
+    get:
+      operationId: getDispatchBalancePolicy
+      responses:
+        '200': { $ref: '#/components/responses/PolicyResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+    put:
+      operationId: upsertDispatchBalancePolicy
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DispatchBalancePolicyInput' }
+      responses:
+        '200': { $ref: '#/components/responses/PolicyResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/dispatch/captains/{captainId}/financial-eligibility:
+    parameters:
+      - $ref: '#/components/parameters/CaptainId'
+      - $ref: '#/components/parameters/TenantIdQuery'
+    get:
+      operationId: getOperatorCaptainFinancialEligibility
+      responses:
+        '200': { $ref: '#/components/responses/EligibilityResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh:
+    parameters:
+      - $ref: '#/components/parameters/CaptainId'
+      - $ref: '#/components/parameters/CorrelationId'
+    post:
+      operationId: refreshOperatorCaptainFinancialEligibility
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId]
+              properties:
+                tenantId: { type: string, minLength: 1 }
+      responses:
+        '200': { $ref: '#/components/responses/EligibilityResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/captain/dispatch/financial-eligibility:
+    get:
+      operationId: getOwnCaptainFinancialEligibility
+      responses:
+        '200': { $ref: '#/components/responses/EligibilityResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/captain/dispatch/financial-eligibility/refresh:
+    post:
+      operationId: refreshOwnCaptainFinancialEligibility
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false }
+      responses:
+        '200': { $ref: '#/components/responses/EligibilityResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '503': { $ref: '#/components/responses/ErrorResponse' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    CaptainId:
+      name: captainId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    TenantIdQuery:
+      name: tenantId
+      in: query
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 8 }
+  responses:
+    ErrorResponse:
+      description: Governed error response.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    PolicyResponse:
+      description: Dispatch balance policy.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [policy]
+            properties:
+              policy: { $ref: '#/components/schemas/DispatchBalancePolicy' }
+    EligibilityResponse:
+      description: Short-lived WLT-backed captain eligibility snapshot.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [financialEligibility]
+            properties:
+              financialEligibility: { $ref: '#/components/schemas/CaptainFinancialEligibility' }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+    DispatchBalancePolicy:
+      type: object
+      required:
+        - enabled
+        - requirePositiveBalance
+        - minimumDispatchBalanceMinorUnits
+        - minimumCodBalanceMinorUnits
+        - currency
+        - snapshotTtlSeconds
+        - notes
+        - updatedBy
+        - updatedAt
+        - version
+      properties:
+        enabled: { type: boolean }
+        requirePositiveBalance: { type: boolean }
+        minimumDispatchBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
+        minimumCodBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        snapshotTtlSeconds: { type: integer, minimum: 30, maximum: 600 }
+        notes: { type: string, maxLength: 1000 }
+        updatedBy: { type: string }
+        updatedAt: { type: string, format: date-time }
+        version: { type: integer, minimum: 1 }
+    DispatchBalancePolicyInput:
+      allOf:
+        - $ref: '#/components/schemas/DispatchBalancePolicy'
+        - type: object
+          required: [expectedVersion, reason]
+          properties:
+            expectedVersion: { type: integer, minimum: 1 }
+            reason: { type: string, minLength: 3, maxLength: 500 }
+    CaptainFinancialEligibility:
+      type: object
+      required:
+        - tenantId
+        - captainId
+        - walletId
+        - walletStatus
+        - availableBalanceMinorUnits
+        - minimumDispatchBalanceMinorUnits
+        - currency
+        - eligible
+        - snapshotReference
+        - checkedAt
+        - expiresAt
+      properties:
+        tenantId: { type: string, minLength: 1 }
+        captainId: { type: string, minLength: 1 }
+        walletId: { type: string, minLength: 1 }
+        walletStatus: { type: string }
+        availableBalanceMinorUnits: { type: integer, format: int64 }
+        minimumDispatchBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        eligible: { type: boolean }
+        ineligibilityReason: { type: string }
+        snapshotReference: { type: string, minLength: 1 }
+        checkedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+x-bthwani-service: dsh
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-financial-boundary: WLT_READBACK_ONLY
