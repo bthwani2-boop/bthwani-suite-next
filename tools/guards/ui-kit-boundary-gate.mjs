@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fail, findImportSpecifiers, lineNumber, listCodeFiles, listFiles, read, repoRoot } from "./_guard-utils.mjs";
+import { fail, findImportSpecifiers, lineNumber, listCodeFiles, listFiles, listStyleFiles, read, repoRoot } from "./_guard-utils.mjs";
 
 const guardId = "ui-kit-boundary-gate";
 const violations = [];
@@ -144,88 +144,125 @@ for (const file of listCodeFiles()) {
   }
 }
 
-// Helper to strip CSS variables (var() and color-mix()) with matching parentheses
+// Removes custom-property *names* only, so that a token reference such as
+// `var(--cp-border)` scans clean while the fallback in `var(--cp-border, #E2E8F0)`
+// stays visible. A literal inside a fallback is still a hardcoded color: it is
+// what renders whenever the token is missing, and it drifts from the token
+// silently. Stripping the whole var() call — as this helper used to do — is what
+// hid most of the raw colors in the control panel.
 function stripCssVars(str) {
-  let result = str;
-  while (true) {
-    const varIdx = result.indexOf("var(");
-    const mixIdx = result.indexOf("color-mix(");
-    const idx = (varIdx !== -1 && mixIdx !== -1) ? Math.min(varIdx, mixIdx) : (varIdx !== -1 ? varIdx : mixIdx);
-    if (idx === -1) break;
-    
-    let depth = 1;
-    let endIdx = -1;
-    const startSearch = idx + (result.startsWith("var(", idx) ? 4 : 10);
-    for (let j = startSearch; j < result.length; j++) {
-      if (result[j] === '(') depth++;
-      else if (result[j] === ')') {
-        depth--;
-        if (depth === 0) {
-          endIdx = j;
-          break;
-        }
-      }
-    }
-    if (endIdx !== -1) {
-      result = result.slice(0, idx) + " " + result.slice(endIdx + 1);
-    } else {
-      result = result.slice(0, idx);
-    }
-  }
-  return result;
+  return str.replace(/--[A-Za-z0-9_-]+/g, " ");
 }
 
-const warnings = [];
-
 // 7. no-raw-colors-outside-ui-kit (Error)
-for (const file of listCodeFiles()) {
-  const isExcludedFromColors =
+//
+// Scans code AND stylesheets. Every finding is a hard violation unless it is
+// listed in the ratchet baseline; a baseline entry that no longer matches is
+// itself a violation, so the list can only ever shrink.
+const RAW_COLOR_BASELINE_PATH = "tools/guards/control-panel/raw-color-baseline.json";
+
+// Files permitted to inline literal colors because they are the token-injection
+// boundary itself. Exact paths only — never a suffix or directory match.
+const RAW_COLOR_ALLOWLIST = new Set([]);
+
+function isExcludedFromColors(file) {
+  if (RAW_COLOR_ALLOWLIST.has(file)) return true;
+  return (
     file.startsWith("shared/ui-kit/") ||
     file.startsWith("tools/") ||
     file.startsWith("governance/") ||
     file.startsWith("infra/") ||
     file.startsWith("contracts/") ||
     file.endsWith(".d.ts") ||
-    file.includes("/styles/") ||
-    file.endsWith("layout.tsx") ||
     file.endsWith("config.js") ||
-    file.endsWith("config.ts");
+    file.endsWith("config.ts")
+  );
+}
 
-  if (isExcludedFromColors) continue;
+// Baseline keys ignore line numbers so unrelated edits above a known violation
+// do not invalidate the entry; the normalized snippet plus an occurrence index
+// keeps duplicate lines within one file distinguishable.
+function snippetKey(file, snippet) {
+  return `${file}::${snippet.replace(/\s+/g, " ").trim()}`;
+}
 
-  const content = read(file);
-  const lines = content.split(/\r?\n/);
-  const isControlPanel = file.startsWith("apps/control-panel/");
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const cleanLine = line.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "").trim();
-    if (cleanLine.length === 0) continue;
+function collectRawColorFindings() {
+  const findings = [];
+  for (const file of [...listCodeFiles(), ...listStyleFiles()]) {
+    if (isExcludedFromColors(file)) continue;
 
-    let lineToTest = cleanLine;
-    if (isControlPanel) {
-      lineToTest = stripCssVars(cleanLine);
-    }
+    const content = read(file);
+    const lines = content.split(/\r?\n/);
 
-    const hasHex = /#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/gi.test(lineToTest);
-    const hasCssColor = /\b(?:rgb|rgba|hsl|hsla)\([^)]+\)/gi.test(lineToTest);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const cleanLine = line.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*/g, "").trim();
+      if (cleanLine.length === 0) continue;
 
-    if (hasHex || hasCssColor) {
-      const msg = `FORBIDDEN: raw color value found in styling: "${line.trim()}". Use brand tokens or colorRoles from shared/ui-kit instead.`;
-      if (isControlPanel) {
-        warnings.push({ file, line: i + 1, message: msg });
-      } else {
-        violations.push({ file, line: i + 1, message: msg });
+      // var() / color-mix() fallbacks are stripped everywhere: a literal inside
+      // a fallback is still a literal, but the surrounding token reference is not.
+      const lineToTest = stripCssVars(cleanLine);
+
+      const hasHex = /#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/gi.test(lineToTest);
+      const hasCssColor = /\b(?:rgb|rgba|hsl|hsla)\([^)]+\)/gi.test(lineToTest);
+
+      if (hasHex || hasCssColor) {
+        findings.push({ file, line: i + 1, snippet: line.trim() });
       }
     }
   }
+  return findings;
 }
 
-if (warnings.length > 0) {
-  console.log(`\n${guardId} WARNINGS (${warnings.length}):`);
-  for (const w of warnings) {
-    console.log(`  - ${w.file}:${w.line} ${w.message}`);
+const rawColorFindings = collectRawColorFindings();
+
+if (process.env.BTHWANI_WRITE_RAW_COLOR_BASELINE === "1") {
+  const generated = rawColorFindings.map(({ file, line, snippet }) => ({
+    file,
+    line,
+    snippet: snippet.replace(/\s+/g, " ").trim(),
+    reason: "pre-existing at Phase 0 of the control-panel remediation; must be removed, not extended"
+  }));
+  fs.writeFileSync(
+    path.join(repoRoot, RAW_COLOR_BASELINE_PATH),
+    `${JSON.stringify({ entries: generated }, null, 2)}\n`,
+    "utf8"
+  );
+  console.log(`${guardId}: wrote ${generated.length} baseline entries to ${RAW_COLOR_BASELINE_PATH}`);
+  process.exit(0);
+}
+
+const baselineFullPath = path.join(repoRoot, RAW_COLOR_BASELINE_PATH);
+const baselineRemaining = new Map();
+if (fs.existsSync(baselineFullPath)) {
+  const parsed = JSON.parse(fs.readFileSync(baselineFullPath, "utf8"));
+  for (const entry of parsed.entries ?? []) {
+    const key = snippetKey(entry.file, entry.snippet ?? "");
+    baselineRemaining.set(key, (baselineRemaining.get(key) ?? 0) + 1);
   }
+}
+
+for (const finding of rawColorFindings) {
+  const key = snippetKey(finding.file, finding.snippet);
+  const remaining = baselineRemaining.get(key) ?? 0;
+  if (remaining > 0) {
+    baselineRemaining.set(key, remaining - 1);
+    continue;
+  }
+  violations.push({
+    file: finding.file,
+    line: finding.line,
+    message: `FORBIDDEN: raw color value found in styling: "${finding.snippet}". Use brand tokens or colorRoles from shared/ui-kit instead.`
+  });
+}
+
+for (const [key, remaining] of baselineRemaining) {
+  if (remaining <= 0) continue;
+  const [file] = key.split("::");
+  violations.push({
+    file: RAW_COLOR_BASELINE_PATH,
+    message: `stale baseline entry for ${file} no longer matches the source (${remaining} occurrence(s)); delete it — the baseline may only shrink`
+  });
 }
 
 // 8. platform-imports-validation (Error)

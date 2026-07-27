@@ -94,6 +94,11 @@ const CODE_EXTENSIONS = new Set([
   ".tsx"
 ]);
 
+const STYLE_EXTENSIONS = new Set([
+  ".css",
+  ".scss"
+]);
+
 export function toPosix(filePath) {
   return filePath.replaceAll(path.sep, "/");
 }
@@ -125,6 +130,29 @@ export function listFiles(dir = repoRoot, files = []) {
 
 export function listCodeFiles() {
   return listFiles().filter((file) => CODE_EXTENSIONS.has(path.extname(file)));
+}
+
+// Stylesheets are outside TEXT_EXTENSIONS (and therefore outside listFiles), so
+// they need their own walk. Without this, style-only rules such as the raw-color
+// gate silently skip every .css file in the repository.
+export function listStyleFiles(dir = repoRoot, files = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    const rel = toPosix(path.relative(repoRoot, full));
+
+    if (isExcluded(rel, entry.isDirectory(), entry.name)) continue;
+
+    if (entry.isDirectory()) {
+      listStyleFiles(full, files);
+      continue;
+    }
+
+    if (STYLE_EXTENSIONS.has(path.extname(entry.name))) {
+      files.push(rel);
+    }
+  }
+
+  return files;
 }
 
 export function read(file) {

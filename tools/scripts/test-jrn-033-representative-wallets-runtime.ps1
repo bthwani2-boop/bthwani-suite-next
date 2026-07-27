@@ -9,8 +9,10 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+. (Join-Path $PSScriptRoot "../dev/local-actors.ps1")
+
 if ([string]::IsNullOrWhiteSpace($IdentityPassword)) {
-  $IdentityPassword = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) { "123456" } else { $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD }
+  $IdentityPassword = Get-LocalPassword
 }
 
 $RunId = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
@@ -100,12 +102,12 @@ function Require-NoStore([object]$Response, [string]$Name) {
 }
 
 $actors = @(
-  Login-Actor "client" "client" "client-local-001"
-  Login-Actor "bthwani" "partner" "partner-local-001"
-  Login-Actor "captain" "captain" "captain-local-001"
-  Login-Actor "field" "field" "field-local-001"
+  Login-Actor (Get-LocalUsername "client") "client" "client-local-001"
+  Login-Actor (Get-LocalUsername "partner") "partner" "partner-local-001"
+  Login-Actor (Get-LocalUsername "captain") "captain" "captain-local-001"
+  Login-Actor (Get-LocalUsername "field") "field" "field-local-001"
 )
-$operator = Login-Actor "operator" "operator" "operator-local-001"
+$operator = Login-Actor (Get-LocalUsername "operator") "operator" "operator-local-001"
 
 $walletEvidence = @()
 foreach ($actor in $actors) {

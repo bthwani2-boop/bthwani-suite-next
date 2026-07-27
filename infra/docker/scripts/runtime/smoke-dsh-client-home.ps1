@@ -6,6 +6,8 @@ param(
 )
 
 Set-StrictMode -Version Latest
+
+. (Join-Path $PSScriptRoot "../../../../tools/dev/local-actors.ps1")
 $ErrorActionPreference = "Stop"
 
 $state = Get-Content -LiteralPath $StatePath -Raw | ConvertFrom-Json
@@ -14,11 +16,7 @@ if ([string]::IsNullOrWhiteSpace($smokeCatalogProductId)) {
   throw "DSH client smoke state is missing masterProductId"
 }
 
-$identityPassword = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
-  "123456"
-} else {
-  $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD
-}
+$identityPassword = Get-LocalPassword
 function Get-LocalActorToken([string] $Username) {
   $loginBody = @{
     username = $Username
@@ -29,11 +27,11 @@ function Get-LocalActorToken([string] $Username) {
   return $login.accessToken
 }
 
-$operatorToken = Get-LocalActorToken "operator"
+$operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")
 $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
 
 if ($WltEnabled) {
-  $clientToken = Get-LocalActorToken "client"
+  $clientToken = Get-LocalActorToken (Get-LocalUsername "client")
   $clientHeaders = @{
     Authorization = "Bearer $clientToken"
     "X-Correlation-ID" = "smoke-checkout-$([guid]::NewGuid())"
@@ -64,9 +62,9 @@ if ($WltEnabled) {
 }
 
 foreach ($actor in @(
-  @{ username = "bthwani"; expectedRole = "partner" },
-  @{ username = "field"; expectedRole = "field" },
-  @{ username = "captain"; expectedRole = "captain" }
+  @{ username = (Get-LocalUsername "partner"); expectedRole = "partner" },
+  @{ username = (Get-LocalUsername "field"); expectedRole = "field" },
+  @{ username = (Get-LocalUsername "captain"); expectedRole = "captain" }
 )) {
   $token = Get-LocalActorToken $actor.username
   $headers = @{ Authorization = "Bearer $token" }

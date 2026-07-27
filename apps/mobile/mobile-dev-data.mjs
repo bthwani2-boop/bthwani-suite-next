@@ -1,17 +1,11 @@
 import { createHash } from 'node:crypto';
+import { LOCAL_ACTORS, localPassword } from '../../tools/dev/local-actors.mjs';
 
 const MODE = process.argv.includes('--repair') ? 'repair' : 'check';
 const DSH_API_BASE = process.env.DSH_API_BASE || 'http://127.0.0.1:58080';
 const IDENTITY_API_BASE = process.env.IDENTITY_API_BASE || 'http://127.0.0.1:58082';
 const WORKFORCE_API_BASE = process.env.WORKFORCE_API_BASE || 'http://127.0.0.1:58086';
-const LOCAL_PASSWORD = process.env.IDENTITY_LOCAL_BOOTSTRAP_PASSWORD || '123456';
-
-const LOCAL_ACTORS = Object.freeze({
-  operator: { username: 'operator', actorId: 'operator-local-001' },
-  partner: { username: 'bthwani', actorId: 'partner-local-001' },
-  field: { username: 'field', actorId: 'field-local-001', phoneE164: '+967774182730' },
-  captain: { username: 'captain', actorId: 'captain-local-001', phoneE164: '+967773000003' },
-});
+const LOCAL_PASSWORD = localPassword();
 
 class HttpError extends Error {
   constructor(operation, status, body) {

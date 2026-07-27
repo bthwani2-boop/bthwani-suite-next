@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { localPassword, localUsername } from '../dev/local-actors.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,7 +34,7 @@ async function responseError(operation, res) {
   return new Error(`${operation} failed HTTP ${res.status}: ${body}`);
 }
 
-async function getToken(username, password = '123456') {
+async function getToken(username, password = localPassword()) {
   const res = await fetch(`${IDENTITY_API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -154,8 +155,8 @@ async function uploadAsset(token, filePath, altAr, altEn, intendedEntityType, in
 
 async function main() {
   try {
-    const partnerToken = await getToken('bthwani');
-    const operatorToken = await getToken('operator');
+    const partnerToken = await getToken(localUsername('partner'));
+    const operatorToken = await getToken(localUsername('operator'));
 
     const devProductsPath = path.join(__dirname, 'bootstrap-products.json');
     if (!fs.existsSync(devProductsPath)) {

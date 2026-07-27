@@ -5,6 +5,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+. (Join-Path $PSScriptRoot "../dev/local-actors.ps1")
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 Set-Location -LiteralPath $RepoRoot
 $ComposeArgs = @("--env-file", "infra/docker/env/runtime.env.example", "-f", "infra/docker/compose.runtime.yml", "--profile", "identity", "--profile", "dsh")
@@ -18,7 +20,7 @@ function Invoke-DshScalar {
 
 function Get-ActorSession {
   param([Parameter(Mandatory = $true)][string]$Username)
-  $password = if ($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD) { $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD } else { "123456" }
+  $password = Get-LocalPassword
   $login = Invoke-RestMethod "$IdentityBaseUrl/auth/login" -Method Post -ContentType "application/json" -Body (@{
     username = $Username
     password = $password
@@ -61,8 +63,8 @@ $parts = $assortment.Split("|", 2)
 $masterProductId = $parts[0]
 $expectedUnitPrice = [decimal]::Parse($parts[1], $invariantCulture)
 
-$clientSession = Get-ActorSession "client"
-$operatorSession = Get-ActorSession "operator"
+$clientSession = Get-ActorSession (Get-LocalUsername "client")
+$operatorSession = Get-ActorSession (Get-LocalUsername "operator")
 $clientId = [string]$clientSession.Subject
 $clientHeaders = @{ Authorization = "Bearer $($clientSession.Token)"; "X-Correlation-ID" = "jrn009-client-$([guid]::NewGuid())" }
 $operatorHeaders = @{ Authorization = "Bearer $($operatorSession.Token)"; "X-Correlation-ID" = "jrn009-operator-$([guid]::NewGuid())" }

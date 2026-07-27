@@ -4,6 +4,8 @@ param(
 )
 
 Set-StrictMode -Version Latest
+
+. (Join-Path $PSScriptRoot "../../../../tools/dev/local-actors.ps1")
 $ErrorActionPreference = "Stop"
 
 Write-Host "`n--- DSH API smoke ---"
@@ -39,11 +41,7 @@ $store1 = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocer
 Write-Host "  /dsh/stores/store-test-grocery: $($store1.store.displayName)"
 if ($store1.store.id -ne "store-test-grocery") { throw "/dsh/stores/store-test-grocery returned wrong id" }
 
-$identityPassword = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
-  "123456"
-} else {
-  $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD
-}
+$identityPassword = Get-LocalPassword
 function Get-LocalActorToken([string] $Username) {
   $loginBody = @{
     username = $Username
@@ -54,7 +52,7 @@ function Get-LocalActorToken([string] $Username) {
   return $login.accessToken
 }
 
-$operatorToken = Get-LocalActorToken "operator"
+$operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")
 $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
 $operatorStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores" -Headers $operatorHeaders -TimeoutSec 10
 if ($operatorStores.stores.Count -lt 1) { throw "operator store list returned no stores" }
@@ -108,7 +106,7 @@ $publicStore = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-g
 if (-not $publicStore.store.publicationEligible) { throw "store publication gates were not restored" }
 
 # DSH-JOURNEY-002: product proposal, transition pipeline, and assortment management
-$partnerToken = Get-LocalActorToken "bthwani"
+$partnerToken = Get-LocalActorToken (Get-LocalUsername "partner")
 $partnerHeaders = @{
   Authorization = "Bearer $partnerToken"
   "X-Correlation-ID" = "smoke-catalog-$([guid]::NewGuid())"
@@ -124,7 +122,7 @@ $proposalBody = @{
 $proposal = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/product-proposals" -Method Post -Headers $partnerHeaders -ContentType "application/json" -Body $proposalBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($proposal.proposal.id)) { throw "product proposal create did not persist" }
 
-$operatorToken = Get-LocalActorToken "operator"
+$operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")
 $operatorHeaders = @{
   Authorization = "Bearer $operatorToken"
   "X-Correlation-ID" = "smoke-operator-$([guid]::NewGuid())"

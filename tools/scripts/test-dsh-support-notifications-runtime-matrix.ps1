@@ -7,8 +7,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+. (Join-Path $PSScriptRoot "../dev/local-actors.ps1")
 if ([string]::IsNullOrWhiteSpace($IdentityPassword)) {
-  $IdentityPassword = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) { "123456" } else { $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD }
+  $IdentityPassword = Get-LocalPassword
 }
 $RunId = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 
@@ -77,9 +79,9 @@ function Invoke-DshScalar([string]$Sql) {
 
 function Escape-Sql([string]$Value) { return $Value.Replace("'", "''") }
 
-$Client = Login "client"
-$Partner = Login "bthwani"
-$Operator = Login "operator"
+$Client = Login (Get-LocalUsername "client")
+$Partner = Login (Get-LocalUsername "partner")
+$Operator = Login (Get-LocalUsername "operator")
 
 $TicketCreate = Invoke-Api POST "$DshBaseUrl/dsh/support/tickets" (Headers $Client "ticket-create") @{
   storeId = "store-test-grocery"

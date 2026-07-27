@@ -78,8 +78,11 @@ func ListBanners(ctx context.Context, db *sql.DB, discoveryQuery HomeDiscoveryQu
 				JOIN dsh_catalog_domains d ON d.id = n.domain_id
 				WHERE n.id = b.action_target
 				  AND d.is_manual_request = true
+				  AND d.is_active = true
+				  AND d.is_client_visible = true
 				  AND n.slug IN ('shein', 'awnak')
 				  AND n.is_active = true
+				  AND n.is_client_visible = true
 			)
 		  )` + homeContentTargetPredicate("b") + `
 		ORDER BY b.sort_order ASC, b.id ASC`
@@ -139,8 +142,11 @@ func ListPromos(ctx context.Context, db *sql.DB, discoveryQuery HomeDiscoveryQue
 				JOIN dsh_catalog_domains d ON d.id = n.domain_id
 				WHERE n.id = p.action_target
 				  AND d.is_manual_request = true
+				  AND d.is_active = true
+				  AND d.is_client_visible = true
 				  AND n.slug IN ('shein', 'awnak')
 				  AND n.is_active = true
+				  AND n.is_client_visible = true
 			)
 		  )` + homeContentTargetPredicate("p") + `
 		ORDER BY p.sort_order ASC, p.id ASC`
@@ -179,7 +185,7 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]HomeCategory, error) {
 		  AND is_client_visible = true
 		  AND is_manual_request = false
 		UNION ALL
-		SELECT n.id, n.name_ar, COALESCE(n.icon,''), n.sort_order,
+		SELECT n.id, n.name_ar, COALESCE(n.icon,''), (d.sort_order + n.sort_order) AS sort_order,
 		       'special_request' AS destination_type,
 		       CASE n.slug
 		         WHEN 'shein' THEN 'SHEIN_ASSISTED_PURCHASE'
@@ -188,9 +194,12 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]HomeCategory, error) {
 		FROM dsh_catalog_nodes n
 		JOIN dsh_catalog_domains d ON n.domain_id = d.id
 		WHERE d.is_manual_request = true
+		  AND d.is_active = true
+		  AND d.is_client_visible = true
 		  AND n.slug IN ('shein', 'awnak')
 		  AND n.is_active = true
-		ORDER BY sort_order ASC`)
+		  AND n.is_client_visible = true
+		ORDER BY sort_order ASC, id ASC`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query categories: %w", err)
 	}

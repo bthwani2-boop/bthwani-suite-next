@@ -8,8 +8,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+. (Join-Path $PSScriptRoot "../dev/local-actors.ps1")
 if ([string]::IsNullOrWhiteSpace($IdentityPassword)) {
-  $IdentityPassword = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) { "123456" } else { $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD }
+  $IdentityPassword = Get-LocalPassword
 }
 $RunId = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 
@@ -87,9 +89,9 @@ function Headers([object]$Actor, [string]$Operation, [switch]$ReadOnly, [string]
   return $Result
 }
 
-$Partner = Login-Actor "bthwani"
-$Field = Login-Actor "field"
-$Operator = Login-Actor "operator"
+$Partner = Login-Actor (Get-LocalUsername "partner")
+$Field = Login-Actor (Get-LocalUsername "field")
+$Operator = Login-Actor (Get-LocalUsername "operator")
 
 $PartnerStatus = Invoke-Api GET "$DshBaseUrl/dsh/partner/activation/status" (Headers $Partner "activation-status" -ReadOnly)
 Require-Status $PartnerStatus @(200) "partner activation status"

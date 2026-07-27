@@ -27,7 +27,38 @@ test("JRN-022 client surface exposes creation and owned lifecycle navigation", (
     'activeSpecialRequest === "shein"',
     'activeSpecialRequest === "awnak"',
     "onViewRequests={openSpecialRequestList}",
+    "DshHomeSpecialRequestTarget",
+    "openSpecialRequestType",
+    "onSpecialRequestPress={openSpecialRequestType}",
   ], "client surface");
+  assert.equal(surface.includes("node-shein"), false);
+  assert.equal(surface.includes("node-awnak"), false);
+});
+
+test("JRN-022 home categories route manual services through sovereign request types", () => {
+  const repository = read("services/dsh/backend/internal/homediscovery/repository.go");
+  const model = read("services/dsh/backend/internal/homediscovery/model.go");
+  const contract = read("services/dsh/contracts/components/schemas/catalog.schemas.yaml");
+  const shell = read("services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx");
+  assertIncludesAll(repository, [
+    "'special_request' AS destination_type",
+    "SHEIN_ASSISTED_PURCHASE",
+    "AWNAK_ERRAND",
+    "n.slug IN ('shein', 'awnak')",
+  ], "home-discovery repository");
+  assertIncludesAll(model, ["DestinationType", "DestinationTarget"], "home-discovery model");
+  assertIncludesAll(contract, [
+    "destinationType:",
+    "enum: [catalog_domain, special_request]",
+    "destinationTarget:",
+  ], "home category contract");
+  assertIncludesAll(shell, [
+    "openCategoryDestination",
+    'category.destinationType === "special_request"',
+    'category.destinationType === "catalog_domain"',
+  ], "client category destination execution");
+  assert.equal(shell.includes("node-shein"), false);
+  assert.equal(shell.includes("node-awnak"), false);
 });
 
 test("JRN-022 shared API binds information exchange execution and financial readback", () => {
@@ -99,15 +130,31 @@ test("JRN-022 operator workbench requests information and reads evidence through
   assert.ok(!workbench.includes("<button"), "operator workbench must not bypass governed Button");
 });
 
-test("JRN-022 intake forms use governed UI Kit fields without raw TextInput", () => {
-  for (const relativePath of [
-    "services/dsh/frontend/shared/shein/SheinForm.tsx",
-    "services/dsh/frontend/shared/awnak/AwnakForm.tsx",
-  ]) {
-    const form = read(relativePath);
-    assert.ok(form.includes("TextField"), `${relativePath} must use TextField`);
-    assert.ok(!form.includes("TextInput"), `${relativePath} must not use raw TextInput`);
+test("JRN-022 intake forms expose all supported operational fields through UI Kit", () => {
+  const shein = read("services/dsh/frontend/shared/shein/SheinForm.tsx");
+  const awnak = read("services/dsh/frontend/shared/awnak/AwnakForm.tsx");
+  for (const [label, form] of [["SHEIN", shein], ["Awnak", awnak]]) {
+    assert.ok(form.includes("TextField"), `${label} form must use TextField`);
+    assert.ok(!form.includes("TextInput"), `${label} form must not use raw TextInput`);
   }
+  assertIncludesAll(shein, [
+    "validateSheinInput",
+    "MAX_QUANTITY",
+    "deliveryAddressReference",
+    "handlingRequirements",
+    "customerNotes",
+    "إرسال للمراجعة والتسعير",
+  ], "SHEIN intake");
+  assertIncludesAll(awnak, [
+    "ITEM_TYPES",
+    'type AwnakScheduleMode = "asap" | "scheduled"',
+    "scheduledAt: parsed.toISOString()",
+    "pickupAddressReference",
+    "dropoffAddressReference",
+    "handlingRequirements",
+    "customerNotes",
+    "إرسال للمراجعة والتسعير",
+  ], "Awnak intake");
 });
 
 test("JRN-022 frontend dispatch adapter matches the backend assignment response", () => {

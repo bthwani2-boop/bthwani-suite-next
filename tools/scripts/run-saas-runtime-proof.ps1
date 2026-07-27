@@ -2,6 +2,8 @@ param()
 
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "../dev/local-actors.ps1")
+
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../..")).Path
 Set-Location -LiteralPath $RepoRoot
@@ -160,8 +162,8 @@ Wait-HttpReady -Name "WireMock" -Url "http://localhost:58090/financial/health"
 Wait-HttpReady -Name "Mailpit" -Url "http://localhost:8025/api/v1/info"
 
 $login = Invoke-JsonRequest -Uri "http://localhost:58082/auth/login" -Method "POST" -Body @{
-  username = "operator"
-  password = $(if ($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD) { $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD } else { "123456" })
+  username = (Get-LocalUsername "operator")
+  password = $(Get-LocalPassword)
   deviceFingerprint = "saas-runtime-proof"
 }
 if ([string]::IsNullOrWhiteSpace($login.accessToken)) { throw "Identity login did not return an access token" }

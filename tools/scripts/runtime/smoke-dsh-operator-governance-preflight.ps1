@@ -5,13 +5,11 @@ param(
 )
 
 Set-StrictMode -Version Latest
+
+. (Join-Path $PSScriptRoot "../../dev/local-actors.ps1")
 $ErrorActionPreference = "Stop"
 
-$password = if ([string]::IsNullOrWhiteSpace([string]$env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
-  "123456"
-} else {
-  [string]$env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD
-}
+$password = Get-LocalPassword
 
 function Invoke-CheckedJsonRequest {
   param(
@@ -51,7 +49,7 @@ function Invoke-CheckedJsonRequest {
 }
 
 $loginBody = @{
-  username = "operator"
+  username = (Get-LocalUsername "operator")
   password = $password
   deviceFingerprint = "dsh-governance-preflight-$([Guid]::NewGuid().ToString('N'))"
 } | ConvertTo-Json

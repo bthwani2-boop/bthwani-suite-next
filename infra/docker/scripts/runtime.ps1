@@ -28,6 +28,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "../../../tools/dev/local-actors.ps1")
+
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../../../")).Path
 Set-Location -LiteralPath $RepoRoot
@@ -116,7 +118,7 @@ function Test-RuntimeDefaultSecrets {
   $defaults = @(
     @{ Name = "BTHWANI_MINIO_ROOT_PASSWORD"; Value = if ($env:BTHWANI_MINIO_ROOT_PASSWORD) { $env:BTHWANI_MINIO_ROOT_PASSWORD } else { "bthwani_minio_password" }; Default = "bthwani_minio_password" },
     @{ Name = "BTHWANI_POSTGRES_PASSWORD"; Value = if ($env:BTHWANI_POSTGRES_PASSWORD) { $env:BTHWANI_POSTGRES_PASSWORD } else { "bthwani_runtime_password" }; Default = "bthwani_runtime_password" },
-    @{ Name = "IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"; Value = if ($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD) { $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD } else { "123456" }; Default = "123456" }
+    @{ Name = "IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"; Value = Get-LocalPassword; Default = Get-LocalPasswordDefault }
   )
   $weak = $defaults | Where-Object { $_.Value -eq $_.Default }
   foreach ($item in $weak) {
@@ -303,17 +305,10 @@ function Invoke-IdentitySmoke {
   $readiness = Invoke-RestMethod "http://localhost:58082/identity/readiness" -TimeoutSec 10 -ErrorAction Stop
   if ($readiness.status -ne "ready") { throw "/identity/readiness not ready" }
   $body = @{
-    username = "operator"
-    password = $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD
+    username = (Get-LocalUsername "operator")
+    password = Get-LocalPassword
     deviceFingerprint = "runtime-smoke"
   } | ConvertTo-Json
-  if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
-    $body = @{
-      username = "operator"
-      password = "123456"
-      deviceFingerprint = "runtime-smoke"
-    } | ConvertTo-Json
-  }
   $login = Invoke-RestMethod "http://localhost:58082/auth/login" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 10
   if ([string]::IsNullOrWhiteSpace($login.accessToken)) { throw "identity login did not return accessToken" }
   $headers = @{ Authorization = "Bearer $($login.accessToken)" }
@@ -735,11 +730,7 @@ function Invoke-DshSmoke {
   Write-Host "  /dsh/stores/store-test-grocery: $($store1.store.displayName)"
   if ($store1.store.id -ne "store-test-grocery") { throw "/dsh/stores/store-test-grocery returned wrong id" }
 
-  $identityPassword = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
-    "123456"
-  } else {
-    $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD
-  }
+  $identityPassword = Get-LocalPassword
   function Get-LocalActorToken([string] $Username) {
     $loginBody = @{
       username = $Username
@@ -750,7 +741,7 @@ function Invoke-DshSmoke {
     return $login.accessToken
   }
 
-  $operatorToken = Get-LocalActorToken "operator"
+  $operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")
   $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
   $operatorStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores" -Headers $operatorHeaders -TimeoutSec 10
   if ($operatorStores.stores.Count -lt 1) { throw "operator store list returned no stores" }
@@ -804,7 +795,7 @@ function Invoke-DshSmoke {
   if (-not $publicStore.store.publicationEligible) { throw "store publication gates were not restored" }
 
   # DSH-JOURNEY-002: product proposal, transition pipeline, and assortment management
-  $partnerToken = Get-LocalActorToken "bthwani"
+  $partnerToken = Get-LocalActorToken (Get-LocalUsername "partner")
   $partnerHeaders = @{
     Authorization = "Bearer $partnerToken"
     "X-Correlation-ID" = "smoke-catalog-$([guid]::NewGuid())"
@@ -820,7 +811,7 @@ function Invoke-DshSmoke {
   $proposal = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/product-proposals" -Method Post -Headers $partnerHeaders -ContentType "application/json" -Body $proposalBody -TimeoutSec 10
   if ([string]::IsNullOrWhiteSpace($proposal.proposal.id)) { throw "product proposal create did not persist" }
 
-  $operatorToken = Get-LocalActorToken "operator"
+  $operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")
   $operatorHeaders = @{
     Authorization = "Bearer $operatorToken"
     "X-Correlation-ID" = "smoke-operator-$([guid]::NewGuid())"
@@ -869,7 +860,7 @@ function Invoke-DshSmoke {
 
 
   # Partner Onboarding & Store Publication: partner lifecycle from field draft to client-visible store readiness.
-  $fieldToken = Get-LocalActorToken "field"
+  $fieldToken = Get-LocalActorToken (Get-LocalUsername "field")
   $fieldHeaders = @{
     Authorization = "Bearer $fieldToken"
     "X-Correlation-ID" = "smoke-partner-field-$([guid]::NewGuid())"
@@ -999,7 +990,7 @@ function Invoke-DshSmoke {
   Write-Host "  Partner Onboarding & Store Publication partner lifecycle smoke: PASS"
 
   if ($script:ProfileList -contains "wlt") {
-    $clientToken = Get-LocalActorToken "client"
+    $clientToken = Get-LocalActorToken (Get-LocalUsername "client")
     $clientHeaders = @{
       Authorization = "Bearer $clientToken"
       "X-Correlation-ID" = "smoke-checkout-$([guid]::NewGuid())"
@@ -1030,9 +1021,9 @@ function Invoke-DshSmoke {
   }
 
   foreach ($actor in @(
-    @{ username = "bthwani"; expectedRole = "partner" },
-    @{ username = "field"; expectedRole = "field" },
-    @{ username = "captain"; expectedRole = "captain" }
+    @{ username = (Get-LocalUsername "partner"); expectedRole = "partner" },
+    @{ username = (Get-LocalUsername "field"); expectedRole = "field" },
+    @{ username = (Get-LocalUsername "captain"); expectedRole = "captain" }
   )) {
     $token = Get-LocalActorToken $actor.username
     $headers = @{ Authorization = "Bearer $token" }

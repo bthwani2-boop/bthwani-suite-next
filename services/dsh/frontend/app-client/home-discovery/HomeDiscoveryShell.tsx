@@ -39,7 +39,7 @@ import {
 import { HomeFilterRailSection } from "./HomeFilterRailSection";
 import { HomeHeroBannerSection } from "./HomeHeroBannerSection";
 import { HomePromoSection } from "./HomePromoSection";
-import { HomeReelsSection } from "./HomeReelsSection";
+import { HomeReelsSection, type HomeReelsLoadState } from "./HomeReelsSection";
 import { HomeStoreFeedSection } from "./HomeStoreFeedSection";
 
 type Props = {
@@ -78,9 +78,10 @@ export function HomeDiscoveryShell({
   const [showDropdown, setShowDropdown] = React.useState(false);
   const [searchText, setSearchText] = React.useState("");
   const [reels, setReels] = React.useState<readonly HomePublicReel[]>([]);
+  const [reelsLoadState, setReelsLoadState] = React.useState<HomeReelsLoadState>("idle");
+  const [videoOpenRequest, setVideoOpenRequest] = React.useState(0);
   const [viewerRef] = React.useState(() => createClientEphemeralId("home"));
-  const scrollRef = React.useRef<ScrollView>(null);
-  const reelsOffsetY = React.useRef(0);
+  const reelsRequestSequence = React.useRef(0);
   const recordedImpressions = React.useRef(new Set<string>());
 
   const emitMarketingEvent = React.useCallback((
@@ -101,26 +102,36 @@ export function HomeDiscoveryShell({
     }).catch(() => undefined);
   }, [state, viewerRef]);
 
+  const loadReels = React.useCallback(async () => {
+    const requestId = reelsRequestSequence.current + 1;
+    reelsRequestSequence.current = requestId;
+    setReelsLoadState("loading");
+    try {
+      const items = await fetchHomePublicReels(10);
+      if (reelsRequestSequence.current !== requestId) return;
+      setReels(items);
+      setReelsLoadState(items.length > 0 ? "ready" : "empty");
+    } catch {
+      if (reelsRequestSequence.current !== requestId) return;
+      setReels([]);
+      setReelsLoadState("error");
+    }
+  }, []);
+
   React.useEffect(() => {
     if (state.kind !== "success") {
+      reelsRequestSequence.current += 1;
       setReels([]);
+      setReelsLoadState("idle");
       return;
     }
 
-    setReels([]);
-    let cancelled = false;
-    void fetchHomePublicReels(10)
-      .then((items) => {
-        if (!cancelled) setReels(items);
-      })
-      .catch(() => {
-        if (!cancelled) setReels([]);
-      });
-
+    void loadReels();
     return () => {
-      cancelled = true;
+      reelsRequestSequence.current += 1;
     };
   }, [
+    loadReels,
     state.kind,
     state.kind === "success" ? state.data.context.cityCode : "",
     state.kind === "success" ? state.data.context.serviceAreaCode : "",
@@ -189,8 +200,11 @@ export function HomeDiscoveryShell({
   }, [emitMarketingEvent, executeMarketingAction]);
 
   const handleVideoPress = React.useCallback(() => {
-    scrollRef.current?.scrollTo({ y: reelsOffsetY.current, animated: true });
-  }, []);
+    setVideoOpenRequest((current) => current + 1);
+    if (reelsLoadState === "idle" || reelsLoadState === "empty" || reelsLoadState === "error") {
+      void loadReels();
+    }
+  }, [loadReels, reelsLoadState]);
 
   const handleReelPress = React.useCallback((reel: HomePublicReel) => {
     onMarketingAction?.(reel.targetType, reel.targetId);
@@ -247,7 +261,6 @@ export function HomeDiscoveryShell({
   return (
     <Screen padded={false}>
       <ScrollView
-        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -260,15 +273,15 @@ export function HomeDiscoveryShell({
           promos={promos}
           onPromoPress={handlePromoPress}
           onCategoriesPress={() => setShowDropdown(true)}
-          {...(reels.length > 0 ? { onVideoPress: handleVideoPress } : {})}
+          onVideoPress={handleVideoPress}
         />
-        <View
-          onLayout={(event) => {
-            reelsOffsetY.current = event.nativeEvent.layout.y;
-          }}
-        >
-          <HomeReelsSection reels={reels} onReelPress={handleReelPress} />
-        </View>
+        <HomeReelsSection
+          reels={reels}
+          loadState={reelsLoadState}
+          openRequest={videoOpenRequest}
+          onRetry={() => void loadReels()}
+          onReelPress={handleReelPress}
+        />
 
         <View style={styles.searchWrap}>
           <TextInput

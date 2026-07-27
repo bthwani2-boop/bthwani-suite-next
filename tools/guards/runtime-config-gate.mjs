@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fail, lineNumber, listCodeFiles, read, repoRoot, toPosix } from "./_guard-utils.mjs";
+import { LOCAL_PASSWORD_ENV_VAR, localPasswordDefault } from "../dev/local-actors.mjs";
 
 const guardId = "runtime-config-gate";
 const violations = [];
@@ -142,7 +143,7 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
   const weakDefaults = new Map([
     ["BTHWANI_POSTGRES_PASSWORD", "bthwani_runtime_password"],
     ["BTHWANI_MINIO_ROOT_PASSWORD", "bthwani_minio_password"],
-    ["IDENTITY_LOCAL_BOOTSTRAP_PASSWORD", "123456"],
+    [LOCAL_PASSWORD_ENV_VAR, localPasswordDefault()],
     ["IDENTITY_ACTIVATION_HMAC_SECRET", "LOCAL_ONLY_replace_with_32_plus_byte_activation_hmac_secret"],
     ["IDENTITY_WORKFORCE_SERVICE_TOKEN", "LOCAL_ONLY_replace_with_workforce_internal_service_token"],
     ["WLT_DSH_SERVICE_TOKEN", "dev-only-dsh-wlt-shared-secret"],
