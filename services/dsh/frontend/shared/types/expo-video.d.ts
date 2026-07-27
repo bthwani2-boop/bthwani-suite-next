@@ -5,7 +5,7 @@ declare module "expo-video" {
   export type VideoPlayer = {
     loop: boolean;
     play: () => void;
-    pause?: () => void;
+    pause: () => void;
   };
 
   export function useVideoPlayer(
@@ -19,6 +19,8 @@ declare module "expo-video" {
     readonly nativeControls?: boolean;
     readonly contentFit?: "contain" | "cover" | "fill";
     readonly allowsFullscreen?: boolean;
+    readonly fullscreenOptions?: { readonly enable: boolean };
     readonly allowsPictureInPicture?: boolean;
+    readonly surfaceType?: "textureView" | "surfaceView";
   }>;
 }
