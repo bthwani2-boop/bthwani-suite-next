@@ -1,7 +1,11 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colorRoles, neutralScale, spacing, radius } from '@bthwani/ui-kit';
-import type { DshHomeFilterDto, DiscoveryFilterKind } from '../../shared/home-discovery';
+import {
+  isDiscoveryFilterOperational,
+  type DshHomeFilterDto,
+  type DiscoveryFilterKind,
+} from '../../shared/home-discovery';
 
 type Props = Readonly<{
   filters: DshHomeFilterDto[];
@@ -9,16 +13,16 @@ type Props = Readonly<{
   onFilterChange: (kind: DiscoveryFilterKind) => void;
 }>;
 
-/** Maps each filter kind to a leading emoji icon matching the reference design */
 const FILTER_ICONS: Record<string, string> = {
-  all:       '',
-  favorites: '♡',
-  nearest:   '📍',
-  new:       '✦',
-  offers:    '🏷',
+  all: '',
+  nearest: '📍',
+  new: '✦',
+  offers: '🏷',
 };
 
 export function HomeFilterRailSection({ filters, activeFilter, onFilterChange }: Props) {
+  const operationalFilters = filters.filter((filter) => isDiscoveryFilterOperational(filter.kind));
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -26,7 +30,7 @@ export function HomeFilterRailSection({ filters, activeFilter, onFilterChange }:
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {filters.map((filter) => {
+        {operationalFilters.map((filter) => {
           const isActive = filter.kind === activeFilter;
           const icon = FILTER_ICONS[filter.kind] ?? '';
           return (
