@@ -39,15 +39,21 @@ function promoActionLabel(promo: PromoViewModel): string {
 export function HomePromoSection({ promos, onPromoPress, onCategoriesPress, onVideoPress }: Props) {
   const promo = promos[0] ?? null;
   const actionLabel = promo ? promoActionLabel(promo) : "";
-  const interactive = promo != null && actionLabel.length > 0 && onPromoPress != null;
+  const interactive = promo != null
+    && actionLabel.length > 0
+    && promo.actionTarget.trim().length > 0
+    && onPromoPress != null;
+  const hasQuickActions = onVideoPress != null || onCategoriesPress != null;
 
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <View style={styles.fixedIconsContainer}>
-          <QuickBtn label="فيديو" onPress={onVideoPress} isVideo />
-          <QuickBtn label="الفئات" onPress={onCategoriesPress} isHub />
-        </View>
+        {hasQuickActions ? (
+          <View style={styles.fixedIconsContainer}>
+            {onVideoPress ? <QuickBtn label="فيديو" onPress={onVideoPress} isVideo /> : null}
+            {onCategoriesPress ? <QuickBtn label="الفئات" onPress={onCategoriesPress} isHub /> : null}
+          </View>
+        ) : null}
 
         {promo != null ? (
           <Pressable
@@ -59,6 +65,7 @@ export function HomePromoSection({ promos, onPromoPress, onCategoriesPress, onVi
             onPress={() => onPromoPress?.(promo)}
             accessibilityRole={interactive ? "button" : "text"}
             accessibilityLabel={interactive ? `${promo.title}، ${actionLabel}` : promo.title}
+            accessibilityState={{ disabled: !interactive }}
           >
             {promo.imageUrl ? (
               <ClientRemoteImage
@@ -98,7 +105,7 @@ export function HomePromoSection({ promos, onPromoPress, onCategoriesPress, onVi
                     {promo.subtitle}
                   </Text>
                 ) : null}
-                {actionLabel ? (
+                {interactive ? (
                   <View style={styles.heroPromoCtaButton}>
                     <Text style={styles.heroPromoCtaText}>{actionLabel}</Text>
                   </View>
@@ -124,17 +131,15 @@ function QuickBtn({
   isHub = false,
 }: {
   readonly label: string;
-  readonly onPress?: ((event: GestureResponderEvent) => void) | undefined;
+  readonly onPress: (event: GestureResponderEvent) => void;
   readonly isVideo?: boolean | undefined;
   readonly isHub?: boolean | undefined;
 }) {
   return (
     <Pressable
-      disabled={onPress == null}
       style={({ pressed }) => [styles.categorySelectorCard, pressed && styles.quickPressed]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityState={{ disabled: onPress == null }}
       accessibilityLabel={label}
     >
       <View
