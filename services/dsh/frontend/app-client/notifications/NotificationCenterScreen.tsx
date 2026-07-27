@@ -2,7 +2,6 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
-  Button,
   ScrollScreen,
   TopBar,
   spacing,
@@ -20,17 +19,18 @@ export function NotificationCenterScreen({ onBack, onOpenActionUrl }: Props) {
 
   return (
     <View style={styles.container}>
-      <TopBar title="الإشعارات" />
-      <ScrollScreen>
-        <View style={styles.content}>
-          <ActorNotificationsPanel
-            authKind={identity.state.kind}
-            title="إشعارات العميل"
-            emptyDescription="ستظهر هنا إشعارات الطلبات، التتبع، والدعم الخاصة بك."
-            {...(onOpenActionUrl ? { onOpenActionUrl } : {})}
-          />
-          {onBack ? <Button label="العودة" tone="secondary" onPress={onBack} /> : null}
-        </View>
+      <TopBar
+        title="الإشعارات"
+        subtitle="الطلبات والتتبع والدعم"
+        {...(onBack ? { onBack } : {})}
+      />
+      <ScrollScreen contentContainerStyle={styles.content}>
+        <ActorNotificationsPanel
+          authKind={identity.state.kind}
+          title="إشعارات العميل"
+          emptyDescription="ستظهر هنا إشعارات الطلبات، التتبع، والدعم الخاصة بك."
+          {...(onOpenActionUrl ? { onOpenActionUrl } : {})}
+        />
       </ScrollScreen>
     </View>
   );
@@ -44,7 +44,6 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing[4],
     gap: spacing[3],
+    paddingBottom: spacing[12],
   },
 });
-
-// export default NotificationCenterScreen; // Unused default export
