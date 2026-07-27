@@ -14,21 +14,21 @@ import (
 // employee. Identity remains the source of authentication roles and effective
 // permissions; these fields describe the approved organisational scope.
 type EmployeeGovernanceProfile struct {
-	ActorID                 string    `json:"actorId"`
-	PositionTitle           string    `json:"positionTitle"`
-	JobGrade                string    `json:"jobGrade"`
-	EmploymentClass         string    `json:"employmentClass"`
-	GuaranteeType           string    `json:"guaranteeType"`
-	GuaranteeStatus         string    `json:"guaranteeStatus"`
-	GuaranteeReference      string    `json:"guaranteeReference,omitempty"`
-	ResponsibilityScopes    []string  `json:"responsibilityScopes"`
-	AuthorityScopes         []string  `json:"authorityScopes"`
-	ManagedDepartmentCodes  []string  `json:"managedDepartmentCodes"`
-	Notes                   string    `json:"notes,omitempty"`
-	UpdatedByActorID        string    `json:"updatedByActorId"`
-	Version                 int       `json:"version"`
-	CreatedAt               time.Time `json:"createdAt"`
-	UpdatedAt               time.Time `json:"updatedAt"`
+	ActorID                string    `json:"actorId"`
+	PositionTitle          string    `json:"positionTitle"`
+	JobGrade               string    `json:"jobGrade"`
+	EmploymentClass        string    `json:"employmentClass"`
+	GuaranteeType          string    `json:"guaranteeType"`
+	GuaranteeStatus        string    `json:"guaranteeStatus"`
+	GuaranteeReference     string    `json:"guaranteeReference,omitempty"`
+	ResponsibilityScopes   []string  `json:"responsibilityScopes"`
+	AuthorityScopes        []string  `json:"authorityScopes"`
+	ManagedDepartmentCodes []string  `json:"managedDepartmentCodes"`
+	Notes                  string    `json:"notes,omitempty"`
+	UpdatedByActorID       string    `json:"updatedByActorId"`
+	Version                int       `json:"version"`
+	CreatedAt              time.Time `json:"createdAt"`
+	UpdatedAt              time.Time `json:"updatedAt"`
 }
 
 type UpsertEmployeeGovernanceInput struct {
@@ -91,6 +91,16 @@ func validateEmployeeGovernanceInput(input *UpsertEmployeeGovernanceInput) error
 	return nil
 }
 
+func decodeStringArray(raw []byte, target *[]string) error {
+	if err := json.Unmarshal(raw, target); err != nil {
+		return err
+	}
+	if *target == nil {
+		*target = []string{}
+	}
+	return nil
+}
+
 func scanEmployeeGovernance(row rowScanner) (EmployeeGovernanceProfile, error) {
 	var profile EmployeeGovernanceProfile
 	var responsibilityJSON, authorityJSON, departmentsJSON []byte
@@ -103,17 +113,14 @@ func scanEmployeeGovernance(row rowScanner) (EmployeeGovernanceProfile, error) {
 	if err != nil {
 		return EmployeeGovernanceProfile{}, err
 	}
-	for raw, target := range map[string]*[]string{
-		string(responsibilityJSON): &profile.ResponsibilityScopes,
-		string(authorityJSON):      &profile.AuthorityScopes,
-		string(departmentsJSON):    &profile.ManagedDepartmentCodes,
-	} {
-		if err := json.Unmarshal([]byte(raw), target); err != nil {
-			return EmployeeGovernanceProfile{}, err
-		}
-		if *target == nil {
-			*target = []string{}
-		}
+	if err := decodeStringArray(responsibilityJSON, &profile.ResponsibilityScopes); err != nil {
+		return EmployeeGovernanceProfile{}, err
+	}
+	if err := decodeStringArray(authorityJSON, &profile.AuthorityScopes); err != nil {
+		return EmployeeGovernanceProfile{}, err
+	}
+	if err := decodeStringArray(departmentsJSON, &profile.ManagedDepartmentCodes); err != nil {
+		return EmployeeGovernanceProfile{}, err
 	}
 	return profile, nil
 }
@@ -159,9 +166,18 @@ func (r *Repository) UpsertEmployeeGovernance(ctx context.Context, actorID, oper
 	if err := validateEmployeeGovernanceInput(&input); err != nil {
 		return EmployeeGovernanceProfile{}, err
 	}
-	responsibilityJSON, _ := json.Marshal(input.ResponsibilityScopes)
-	authorityJSON, _ := json.Marshal(input.AuthorityScopes)
-	departmentsJSON, _ := json.Marshal(input.ManagedDepartmentCodes)
+	responsibilityJSON, err := json.Marshal(input.ResponsibilityScopes)
+	if err != nil {
+		return EmployeeGovernanceProfile{}, err
+	}
+	authorityJSON, err := json.Marshal(input.AuthorityScopes)
+	if err != nil {
+		return EmployeeGovernanceProfile{}, err
+	}
+	departmentsJSON, err := json.Marshal(input.ManagedDepartmentCodes)
+	if err != nil {
+		return EmployeeGovernanceProfile{}, err
+	}
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
