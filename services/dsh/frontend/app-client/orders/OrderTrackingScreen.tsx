@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React from "react";
+import { StyleSheet, View } from "react-native";
 import {
   Badge,
   Box,
@@ -13,7 +13,7 @@ import {
   TopBar,
   colorRoles,
   spacing,
-} from '@bthwani/ui-kit';
+} from "@bthwani/ui-kit";
 import {
   CLIENT_CANCELLATION_REASONS,
   FINANCIAL_CLOSURE_LABELS,
@@ -21,7 +21,7 @@ import {
   useOrderCancellationController,
   type ClientCancellationReasonCode,
   type DshFinancialClosureStatus,
-} from '../../shared/orders';
+} from "../../shared/orders";
 import {
   bidiIsolate,
   buildOrderTruthAccessibilityLabel,
@@ -29,48 +29,49 @@ import {
   orderEventLabel,
   toOrderTruthSummary,
   type OrderTruth,
-} from '../../shared/order-truth';
-import { DELIVERY_STATUS_LABELS } from '../../shared/dispatch';
-import type { DshPartnerDeliveryTaskStatus } from '../../shared/partner-delivery/partner-delivery.types';
-import { ClientLiveTrackingCard } from './ClientLiveTrackingCard';
-import { ClientPreparationDecisionPanel } from './ClientPreparationDecisionPanel';
-import { useClientOrderJourneyController } from './useClientOrderJourneyController';
+} from "../../shared/order-truth";
+import { DELIVERY_STATUS_LABELS } from "../../shared/dispatch";
+import type { DshPartnerDeliveryTaskStatus } from "../../shared/partner-delivery/partner-delivery.types";
+import { ClientLiveTrackingCard } from "./ClientLiveTrackingCard";
+import { ClientPreparationDecisionPanel } from "./ClientPreparationDecisionPanel";
+import { useClientOrderJourneyController } from "./useClientOrderJourneyController";
 
 const PARTNER_DELIVERY_STATUS_LABELS: Readonly<Record<DshPartnerDeliveryTaskStatus, string>> = {
-  unassigned: 'بانتظار تعيين سائق من المتجر',
-  assigned: 'تم تعيين سائق من المتجر',
-  departed: 'السائق في الطريق إليك',
-  arrived: 'السائق وصل إلى موقعك',
-  proof_pending: 'بانتظار إثبات التسليم',
-  completed: 'تم تسليم الطلب',
-  cancelled: 'تم إلغاء توصيل الشريك',
-  exception: 'تعذر إتمام التوصيل، راجع الدعم',
+  unassigned: "بانتظار تعيين سائق من المتجر",
+  assigned: "تم تعيين سائق من المتجر",
+  departed: "السائق في الطريق إليك",
+  arrived: "السائق وصل إلى موقعك",
+  proof_pending: "بانتظار إثبات التسليم",
+  completed: "تم تسليم الطلب",
+  cancelled: "تم إلغاء توصيل الشريك",
+  exception: "تعذر إتمام التوصيل، راجع الدعم",
 };
 
 type Props = {
   readonly orderId: string;
   readonly onBack?: () => void;
+  readonly onOpenPickup?: (orderId: string) => void;
 };
 
-const FULFILLMENT_LABELS: Readonly<Record<OrderTruth['fulfillmentMode'], string>> = {
-  bthwani_delivery: 'توصيل بثواني',
-  partner_delivery: 'توصيل المتجر',
-  pickup: 'استلام ذاتي',
+const FULFILLMENT_LABELS: Readonly<Record<OrderTruth["fulfillmentMode"], string>> = {
+  bthwani_delivery: "توصيل بثواني",
+  partner_delivery: "توصيل المتجر",
+  pickup: "استلام ذاتي",
 };
 
-function statusTone(status: string): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
-  if (status.startsWith('cancelled_') || status.startsWith('failed_')) return 'danger';
-  if (status === 'delivered' || status === 'ready_for_pickup' || status === 'returned_to_store') return 'success';
-  if (status === 'pending') return 'warning';
-  return 'info';
+function statusTone(status: string): "neutral" | "success" | "warning" | "danger" | "info" {
+  if (status.startsWith("cancelled_") || status.startsWith("failed_")) return "danger";
+  if (status === "delivered" || status === "ready_for_pickup" || status === "returned_to_store") return "success";
+  if (status === "pending") return "warning";
+  return "info";
 }
 
-function financialTone(status: DshFinancialClosureStatus): 'neutral' | 'success' | 'warning' | 'danger' | 'info' {
-  if (status === 'failed') return 'danger';
-  if (status === 'pending') return 'warning';
-  if (status === 'refund_requested') return 'info';
-  if (status === 'session_expired' || status === 'refund_completed' || status === 'no_action') return 'success';
-  return 'neutral';
+function financialTone(status: DshFinancialClosureStatus): "neutral" | "success" | "warning" | "danger" | "info" {
+  if (status === "failed") return "danger";
+  if (status === "pending") return "warning";
+  if (status === "refund_requested") return "info";
+  if (status === "session_expired" || status === "refund_completed" || status === "no_action") return "success";
+  return "neutral";
 }
 
 function OrderTimeline({ order }: { readonly order: OrderTruth }) {
@@ -93,14 +94,14 @@ function OrderTimeline({ order }: { readonly order: OrderTruth }) {
         return (
           <View key={event.id} style={styles.timelineRow}>
             <Icon
-              name={current ? 'radio-button-on' : 'checkmark-circle'}
+              name={current ? "radio-button-on" : "checkmark-circle"}
               size={18}
-              tone={current ? 'action' : 'success'}
+              tone={current ? "action" : "success"}
             />
             <View style={styles.timelineText}>
-              <Text role={current ? 'bodyStrong' : 'bodySm'}>{orderEventLabel(event)}</Text>
+              <Text role={current ? "bodyStrong" : "bodySm"}>{orderEventLabel(event)}</Text>
               <Text role="caption" tone="muted">
-                {new Date(event.createdAt).toLocaleString('ar-YE')} · الإصدار {event.orderVersion}
+                {new Date(event.createdAt).toLocaleString("ar-YE")} · الإصدار {event.orderVersion}
               </Text>
             </View>
           </View>
@@ -119,18 +120,18 @@ function ClientCancellationPanel({
   readonly allowedActions: readonly string[];
   readonly onOrderChanged: () => void | Promise<void>;
 }) {
-  const [reasonCode, setReasonCode] = React.useState<ClientCancellationReasonCode>('changed_mind');
-  const [reasonNote, setReasonNote] = React.useState('');
+  const [reasonCode, setReasonCode] = React.useState<ClientCancellationReasonCode>("changed_mind");
+  const [reasonNote, setReasonNote] = React.useState("");
   const controller = useOrderCancellationController({
-    surface: 'client',
+    surface: "client",
     orderId,
     onCancelled: onOrderChanged,
   });
-  const canCancel = allowedActions.includes('cancel_if_policy_allows');
+  const canCancel = allowedActions.includes("cancel_if_policy_allows");
   const cancellation =
-    controller.state.kind === 'ready'
+    controller.state.kind === "ready"
       ? controller.state.cancellation
-      : controller.state.kind === 'submitting'
+      : controller.state.kind === "submitting"
         ? controller.state.cancellation
         : undefined;
 
@@ -155,17 +156,17 @@ function ClientCancellationPanel({
         ) : null}
         {cancellation.financialFailure ? <Text role="bodySm" tone="danger">{cancellation.financialFailure}</Text> : null}
         <Button
-          label={controller.state.kind === 'submitting' ? 'جارٍ تحديث القرار المالي…' : 'تحديث حالة الاسترداد'}
+          label={controller.state.kind === "submitting" ? "جارٍ تحديث القرار المالي…" : "تحديث حالة الاسترداد"}
           accessibilityLabel="تحديث حالة الاسترداد من المصدر المالي"
           tone="secondary"
-          disabled={controller.state.kind === 'submitting'}
+          disabled={controller.state.kind === "submitting"}
           onPress={() => void controller.refresh()}
         />
       </Surface>
     );
   }
 
-  if (controller.state.kind === 'requires_review') {
+  if (controller.state.kind === "requires_review") {
     return (
       <Surface tone="warning" gap={3}>
         <Text role="titleSm">الإلغاء يحتاج مراجعة العمليات</Text>
@@ -186,9 +187,9 @@ function ClientCancellationPanel({
     );
   }
 
-  const submitting = controller.state.kind === 'submitting';
+  const submitting = controller.state.kind === "submitting";
   const selectedReason = CLIENT_CANCELLATION_REASONS.find((option) => option.code === reasonCode);
-  const noteRequired = reasonCode === 'other';
+  const noteRequired = reasonCode === "other";
 
   return (
     <Surface tone="raised" gap={3}>
@@ -202,7 +203,7 @@ function ClientCancellationPanel({
             key={reason.code}
             label={reason.label}
             accessibilityLabel={`اختيار سبب الإلغاء: ${reason.label}`}
-            tone={reasonCode === reason.code ? 'brand' : 'secondary'}
+            tone={reasonCode === reason.code ? "brand" : "secondary"}
             size="sm"
             fullWidth={false}
             disabled={submitting}
@@ -212,14 +213,14 @@ function ClientCancellationPanel({
       </Box>
       {selectedReason ? <Text role="caption" tone="muted">{selectedReason.description}</Text> : null}
       <TextField
-        label={noteRequired ? 'التوضيح المطلوب' : 'ملاحظة اختيارية'}
+        label={noteRequired ? "التوضيح المطلوب" : "ملاحظة اختيارية"}
         placeholder="اكتب معلومات تساعد العمليات على فهم القرار"
         value={reasonNote}
         onChangeText={setReasonNote}
       />
-      {controller.state.kind === 'error' ? <Text role="bodySm" tone="danger">{controller.state.message}</Text> : null}
+      {controller.state.kind === "error" ? <Text role="bodySm" tone="danger">{controller.state.message}</Text> : null}
       <Button
-        label={submitting ? 'جارٍ تثبيت الإلغاء…' : 'تأكيد إلغاء الطلب'}
+        label={submitting ? "جارٍ تثبيت الإلغاء…" : "تأكيد إلغاء الطلب"}
         accessibilityLabel="تأكيد إلغاء الطلب وفق السياسة"
         tone="danger"
         disabled={submitting || (noteRequired && !reasonNote.trim())}
@@ -229,14 +230,14 @@ function ClientCancellationPanel({
   );
 }
 
-export function OrderTrackingScreen({ orderId, onBack }: Props) {
+export function OrderTrackingScreen({ orderId, onBack, onOpenPickup }: Props) {
   const { state, reload } = useClientOrderJourneyController(orderId);
 
-  if (state.kind === 'loading') {
+  if (state.kind === "loading") {
     return <StateView title="جارٍ تحميل رحلة الطلب" description="نقرأ حقيقة الطلب والتجهيز والمشكلات والتتبع من مصادر DSH المقيدة بالحساب." loading />;
   }
 
-  if (state.kind === 'error') {
+  if (state.kind === "error") {
     return (
       <View style={styles.errorRoot}>
         <StateView
@@ -265,8 +266,8 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
   const deliveryStatus = assignment?.delivery?.status;
   const accessibilityLabel = buildOrderTruthAccessibilityLabel(order);
   const estimatedReadyLabel = preparation.estimatedReadyAt
-    ? new Date(preparation.estimatedReadyAt).toLocaleString('ar-YE')
-    : 'لم يحدد بعد';
+    ? new Date(preparation.estimatedReadyAt).toLocaleString("ar-YE")
+    : "لم يحدد بعد";
 
   return (
     <View style={styles.root}>
@@ -293,7 +294,7 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
             <Text role="titleSm">تجهيز الطلب</Text>
             <Badge
               label={PREPARATION_SLA_LABELS[preparation.preparationSlaState]}
-              tone={preparation.preparationSlaState === 'overdue' ? 'danger' : preparation.preparationSlaState === 'due_soon' ? 'warning' : 'info'}
+              tone={preparation.preparationSlaState === "overdue" ? "danger" : preparation.preparationSlaState === "due_soon" ? "warning" : "info"}
             />
           </Box>
           <View style={styles.detailRow}>
@@ -333,8 +334,24 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
         </Surface>
 
         <Surface tone="raised" gap={3}>
-          <Text role="titleSm">تفاصيل التوصيل</Text>
-          {order.fulfillmentMode === 'partner_delivery' ? (
+          <Text role="titleSm">طريقة التنفيذ</Text>
+          {order.fulfillmentMode === "pickup" ? (
+            <View style={styles.pickupPanel}>
+              <Icon name="storefront-outline" size={28} tone="action" />
+              <Text role="bodyStrong">استلام الطلب من الفرع</Text>
+              <Text role="bodySm" tone="muted" style={styles.centerText}>
+                افتح جلسة الاستلام لقراءة الجاهزية، نافذة الحضور، ومحاولات التحقق من DSH.
+              </Text>
+              {onOpenPickup ? (
+                <Button
+                  label="فتح حالة الاستلام"
+                  accessibilityLabel={`${accessibilityLabel}، فتح حالة الاستلام من الفرع`}
+                  tone="primary"
+                  onPress={() => onOpenPickup(order.id)}
+                />
+              ) : null}
+            </View>
+          ) : order.fulfillmentMode === "partner_delivery" ? (
             partnerDeliveryTask ? (
               <>
                 <View style={styles.detailRow}>
@@ -344,13 +361,13 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
                 {partnerDeliveryTask.departedAt ? (
                   <View style={styles.detailRow}>
                     <Text role="bodySm" tone="muted">وقت الانطلاق</Text>
-                    <Text role="bodyStrong">{new Date(partnerDeliveryTask.departedAt).toLocaleString('ar-YE')}</Text>
+                    <Text role="bodyStrong">{new Date(partnerDeliveryTask.departedAt).toLocaleString("ar-YE")}</Text>
                   </View>
                 ) : null}
                 {partnerDeliveryTask.arrivedAt ? (
                   <View style={styles.detailRow}>
                     <Text role="bodySm" tone="muted">وقت الوصول</Text>
-                    <Text role="bodyStrong">{new Date(partnerDeliveryTask.arrivedAt).toLocaleString('ar-YE')}</Text>
+                    <Text role="bodyStrong">{new Date(partnerDeliveryTask.arrivedAt).toLocaleString("ar-YE")}</Text>
                   </View>
                 ) : null}
               </>
@@ -368,25 +385,23 @@ export function OrderTrackingScreen({ orderId, onBack }: Props) {
               </View>
               <View style={styles.detailRow}>
                 <Text role="bodySm" tone="muted">حالة المهمة</Text>
-                <Text role="bodyStrong">{deliveryStatus ? DELIVERY_STATUS_LABELS[deliveryStatus] : 'بانتظار قبول المهمة'}</Text>
+                <Text role="bodyStrong">{deliveryStatus ? DELIVERY_STATUS_LABELS[deliveryStatus] : "بانتظار قبول المهمة"}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Text role="bodySm" tone="muted">وقت الإسناد</Text>
-                <Text role="bodyStrong">{new Date(assignment.createdAt).toLocaleString('ar-YE')}</Text>
+                <Text role="bodyStrong">{new Date(assignment.createdAt).toLocaleString("ar-YE")}</Text>
               </View>
             </>
           ) : (
             <View style={styles.emptyDispatch}>
               <Icon name="time-outline" size={24} tone="muted" />
               <Text role="bodyStrong">لم يتم إسناد كابتن بعد</Text>
-              <Text role="bodySm" tone="muted">
-                هذا طبيعي ما دام الطلب لدى المتجر أو كان نوع التنفيذ الاستلام الذاتي.
-              </Text>
+              <Text role="bodySm" tone="muted">هذا طبيعي ما دام الطلب لدى المتجر.</Text>
             </View>
           )}
         </Surface>
 
-        {order.fulfillmentMode === 'bthwani_delivery' ? (
+        {order.fulfillmentMode === "bthwani_delivery" ? (
           <ClientLiveTrackingCard tracking={liveTracking} />
         ) : null}
 
@@ -424,7 +439,7 @@ const styles = StyleSheet.create({
   },
   errorRoot: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     gap: spacing[3],
     padding: spacing[4],
     backgroundColor: colorRoles.surfaceWarm,
@@ -433,36 +448,44 @@ const styles = StyleSheet.create({
     paddingBottom: spacing[12],
   },
   summaryHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
     gap: spacing[2],
   },
   actionText: {
     color: colorRoles.surfaceBase,
-    textAlign: 'right',
+    textAlign: "right",
   },
   timelineRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
+    flexDirection: "row-reverse",
+    alignItems: "center",
     gap: spacing[3],
   },
   timelineText: {
     flex: 1,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   detailRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
     gap: spacing[3],
     paddingVertical: spacing[2],
     borderBottomWidth: 1,
     borderBottomColor: colorRoles.borderSubtle,
   },
   emptyDispatch: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: spacing[2],
     paddingVertical: spacing[4],
+  },
+  pickupPanel: {
+    alignItems: "center",
+    gap: spacing[3],
+    paddingVertical: spacing[2],
+  },
+  centerText: {
+    textAlign: "center",
   },
 });
