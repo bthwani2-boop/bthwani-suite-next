@@ -59,6 +59,11 @@ export async function submitPartnerFieldRating(score: number, comment = ""): Pro
   return result.rating;
 }
 
+export async function fetchPendingClientOrderRatingPrompt(): Promise<ClientOrderRatingPrompt> {
+  const result = await request<{ prompt: ClientOrderRatingPrompt }>("/dsh/client/me/ratings/pending-order");
+  return result.prompt;
+}
+
 export async function fetchClientOrderRatingPrompt(orderId: string): Promise<ClientOrderRatingPrompt> {
   const result = await request<{ prompt: ClientOrderRatingPrompt }>(
     `/dsh/client/orders/${encodeURIComponent(orderId)}/rating-prompt`,
