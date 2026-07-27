@@ -45,7 +45,8 @@ jobs:
           run_check pnpm --filter @bthwani/app-field-runtime typecheck
           run_check pnpm --filter @bthwani/app-field-runtime lint
           run_check pnpm --filter @bthwani/app-field-runtime test
-          run_check pnpm --dir services/dsh test -- --test-name-pattern="field onboarding validation"
+          run_check pnpm --dir services/dsh build
+          run_check node --test --test-name-pattern="field onboarding validation" services/dsh/tests/field-onboarding-validation.test.mjs
           (
             cd services/dsh/backend || exit 1
             go test ./internal/http ./internal/centralcatalog -count=1
