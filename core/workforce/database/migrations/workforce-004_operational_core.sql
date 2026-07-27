@@ -135,10 +135,37 @@ CREATE UNIQUE INDEX IF NOT EXISTS workforce_provider_incidents_source_unique
   ON workforce_provider_incidents(actor_id, incident_code, source_type, source_id)
   WHERE source_id <> '';
 
--- Existing field rows must not retain an employment-style shift assignment.
-UPDATE workforce_field_profiles SET shift_code = NULL WHERE shift_code IS NOT NULL;
+-- Compatibility only: legacy Workforce code still reads shift_code before the
+-- old column can be dropped safely. `not_applicable` is never exposed by the API
+-- (`json:"-"`), is not a working period and carries no start/end times.
+INSERT INTO workforce_shifts (code, name_ar, name_en, starts_at, ends_at, active)
+VALUES ('not_applicable', 'غير منطبق — مقدم خدمة مستقل', 'Not applicable — independent provider', NULL, NULL, true)
+ON CONFLICT (code) DO UPDATE SET
+  name_ar = EXCLUDED.name_ar,
+  name_en = EXCLUDED.name_en,
+  starts_at = NULL,
+  ends_at = NULL,
+  active = true,
+  updated_at = now();
+
+CREATE OR REPLACE FUNCTION workforce_force_independent_no_shift()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.shift_code := 'not_applicable';
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_workforce_field_no_shift_compat ON workforce_field_profiles;
+CREATE TRIGGER trg_workforce_field_no_shift_compat
+BEFORE INSERT OR UPDATE OF shift_code ON workforce_field_profiles
+FOR EACH ROW EXECUTE FUNCTION workforce_force_independent_no_shift();
+
+UPDATE workforce_field_profiles SET shift_code = 'not_applicable';
 COMMENT ON COLUMN workforce_field_profiles.shift_code IS
-  'Deprecated compatibility column. The field provider is independent and has no shifts; use availability notices.';
+  'Deprecated internal compatibility value only. Independent field providers have no shifts; use availability notices.';
 
 INSERT INTO workforce_provider_operational_core (actor_id)
 SELECT actor_id FROM workforce_people WHERE workforce_kind IN ('field','captain')
