@@ -72,6 +72,8 @@ export function workforceErrorMessage(error: unknown): string {
       return "خدمة الهوية غير متاحة حاليًا";
     case "INVALID_SUPERVISOR":
       return "المشرف المختار غير موجود أو غير مفعل — اختر مشرفًا آخر";
+    case "EMPLOYEE_SCOPE_FORBIDDEN":
+      return "الموظف خارج نطاق القسم المسموح لهذه الجلسة";
     case "PROVIDER_KIND_CONFLICT":
     case "WORKFORCE_KIND_CONFLICT":
       return "هذا الحساب مسجل بالفعل كنوع آخر في Workforce";
@@ -179,33 +181,36 @@ export async function revokeCaptainActivationCodes(actorId: string): Promise<voi
   await request<void>(`/workforce/captains/${encodeURIComponent(actorId)}/activation-codes`, { method: "DELETE" });
 }
 
+const DEPARTMENT_EMPLOYEE_PATH = "/workforce/department-employees";
+
 export async function listEmployees(filter: EmployeeListFilter = {}): Promise<readonly Employee[]> {
-  const result = await request<{ employees: Employee[] }>(`/workforce/employees${listQuery(filter)}`);
+  const result = await request<{ employees: Employee[] }>(`${DEPARTMENT_EMPLOYEE_PATH}${listQuery(filter)}`);
   return result.employees;
 }
 
 export async function getEmployee(actorId: string): Promise<EmployeeDetail> {
-  return request<EmployeeDetail>(`/workforce/employees/${encodeURIComponent(actorId)}`);
+  return request<EmployeeDetail>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}`);
 }
 
 export async function createEmployee(input: CreateEmployeeInput): Promise<Employee> {
-  return request<Employee>("/workforce/employees", {
+  const result = await request<{ employee: Employee; activation: ActivationCodeResult }>(DEPARTMENT_EMPLOYEE_PATH, {
     method: "POST",
-    idempotencyKey: corrId("wf-create-employee"),
+    idempotencyKey: corrId("wf-create-department-employee"),
     body: input,
   });
+  return result.employee;
 }
 
 export async function updateEmployee(actorId: string, input: UpdateEmployeeInput): Promise<Employee> {
-  return request<Employee>(`/workforce/employees/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input });
+  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input });
 }
 
 export async function suspendEmployee(actorId: string, expectedVersion: number, reason: string): Promise<Employee> {
-  return request<Employee>(`/workforce/employees/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason } });
+  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason } });
 }
 
 export async function reactivateEmployee(actorId: string, expectedVersion: number, reason: string): Promise<Employee> {
-  return request<Employee>(`/workforce/employees/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason } });
+  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason } });
 }
 
 export async function searchSupervisors(kind: ProviderKind, q: string): Promise<readonly SupervisorCandidate[]> {
