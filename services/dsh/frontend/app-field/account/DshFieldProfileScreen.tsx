@@ -60,7 +60,7 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
       <StateView
         tone="danger"
         title="نوع الحساب غير متوافق"
-        description="ملف Workforce الحالي ليس ملف مقدم خدمة ميداني."
+        description="ملف Workforce الحالي ليس ملف ميداني."
         actionLabel="رجوع"
         onActionPress={onBack}
       />
@@ -69,11 +69,11 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
 
   const items: ReadonlyArray<{ label: string; value: string }> = [
     { label: 'الاسم الكامل', value: me.fullNameAr },
-    { label: 'رقم مقدم الخدمة', value: me.workforceCode },
-    { label: 'نوع Workforce', value: 'مقدم خدمة ميداني' },
+    { label: 'رقم الميداني', value: me.workforceCode },
+    { label: 'النوع', value: 'ميداني' },
     { label: 'منطقة الخدمة', value: me.fieldProfile?.serviceZoneId || 'غير محدد' },
-    { label: 'الوردية', value: me.fieldProfile?.shiftCode || 'غير محدد' },
-    { label: 'المشرف', value: me.fieldProfile?.supervisorActorId || 'غير محدد' },
+    { label: 'التوفر', value: 'يُدار من بلاغات التوفر وعدم التوفر' },
+    { label: 'مسؤول المتابعة', value: me.fieldProfile?.supervisorActorId || 'غير محدد' },
     { label: 'حالة الارتباط', value: ENGAGEMENT_STATUS_LABEL_AR[me.engagementStatus] },
   ];
 
