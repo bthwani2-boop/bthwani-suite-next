@@ -70,6 +70,10 @@ export function workforceErrorMessage(error: unknown): string {
       return "تم إصدار كود حديثًا لهذا الحساب، أعد المحاولة بعد دقيقة";
     case "IDENTITY_UNAVAILABLE":
       return "خدمة الهوية غير متاحة حاليًا";
+    case "INVALID_ACTOR_INPUT":
+      return "رقم الهاتف أو بيانات الحساب غير صالحة — تأكد من إدخال الهاتف بصيغة دولية كاملة مثل ‎+967777777777";
+    case "INVALID_REQUEST":
+      return "بيانات الطلب غير مكتملة أو غير صالحة — راجع الحقول المطلوبة";
     case "INVALID_SUPERVISOR":
       return "المشرف المختار غير موجود أو غير مفعل — اختر مشرفًا آخر";
     case "EMPLOYEE_SCOPE_FORBIDDEN":

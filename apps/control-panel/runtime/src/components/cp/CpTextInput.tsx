@@ -4,7 +4,7 @@ export type CpTextInputProps = {
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly placeholder?: string;
-  readonly type?: "text" | "password";
+  readonly type?: "text" | "password" | "date";
   readonly disabled?: boolean;
   readonly "aria-label"?: string;
 };
