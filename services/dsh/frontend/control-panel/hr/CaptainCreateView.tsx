@@ -5,8 +5,7 @@ import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTabs, CpTextInpu
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
 import { useCaptainCreateAndActivationController } from "../../shared/workforce";
-import type { Captain, SupervisorCandidate } from "../../shared/workforce";
-import { SupervisorPicker } from "./SupervisorPicker";
+import type { Captain } from "../../shared/workforce";
 import { ZonePicker } from "./ZonePicker";
 
 const VEHICLE_TYPES: Array<{ label: string; value: string }> = [
@@ -25,22 +24,13 @@ export function CaptainCreateView(props: {
   const [phone, setPhone] = useState("");
   const [zoneId, setZoneId] = useState("");
   const [vehicleType, setVehicleType] = useState("");
-  const [vehicleIdentifier, setVehicleIdentifier] = useState("");
-  const [licenseExpiresAt, setLicenseExpiresAt] = useState("");
-  const [supervisor, setSupervisor] = useState<SupervisorCandidate | null>(null);
-  const [autoActivate, setAutoActivate] = useState(true);
-  const [copied, setCopied] = useState(false);
 
   const createdCaptain = state.kind === "created" ? state.provider : null;
-  const issuedCode = state.kind === "created" ? state.activation?.code ?? null : null;
-  const activationError = state.kind === "created" ? state.activationError : null;
-
   const canSubmit =
     fullNameAr.trim().length > 0 &&
     phone.trim().length >= 9 &&
     zoneId !== "" &&
     vehicleType !== "" &&
-    vehicleIdentifier.trim().length > 0 &&
     state.kind !== "submitting" &&
     state.kind !== "created";
 
@@ -50,13 +40,9 @@ export function CaptainCreateView(props: {
       phoneE164: phone.trim(),
       engagementType: "independent_contractor",
       vehicleType,
-      vehicleIdentifier: vehicleIdentifier.trim(),
-      // Account activation must never self-approve a driving licence.
-      licenseStatus: "pending_review",
-      licenseExpiresAt: licenseExpiresAt.trim() || undefined,
+      licenseStatus: "missing",
       serviceZoneId: zoneId,
-      supervisorActorId: supervisor?.actorId,
-    }, { issueActivationCode: autoActivate });
+    }, { issueActivationCode: false });
   };
 
   const resetForm = () => {
@@ -65,24 +51,16 @@ export function CaptainCreateView(props: {
     setPhone("");
     setZoneId("");
     setVehicleType("");
-    setVehicleIdentifier("");
-    setLicenseExpiresAt("");
-    setSupervisor(null);
-    setAutoActivate(true);
-    setCopied(false);
   };
 
   const body = (
     <div style={{ maxWidth: "800px", margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <CpMutedInline>
-        مقدم خدمة مستقل — يتقاضى رسوم التوصيل عن كل طلب. رقم الهاتف يُسجَّل في خدمة الهوية ولا
-        يُخزَّن في Workforce.
+        إنشاء أولي مختصر للكابتن. يبدأ تلقائيًا بتصنيف Joker، ولا يصدر كود الدخول قبل اكتمال الهوية والرخصة والعقد والعهدة والتدريب والضمانة المالية واعتماد العمليات.
       </CpMutedInline>
 
-      {/* Basic Info Card */}
       <div style={{ padding: "24px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 2px 8px var(--bthwani-overlay-soft)" }}>
-        <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>البيانات الأساسية</Text>
-        
+        <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>البيانات الأولية</Text>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
           <div>
             <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>الاسم الكامل *</Text>
@@ -93,18 +71,9 @@ export function CaptainCreateView(props: {
             <CpTextInput value={phone} onChange={setPhone} placeholder="مثال: 777123456" disabled={Boolean(createdCaptain)} aria-label="رقم الهاتف" />
           </div>
         </div>
-      </div>
 
-      {/* Operation & Scope Card */}
-      <div style={{ padding: "24px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 2px 8px var(--bthwani-overlay-soft)" }}>
-        <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>التشغيل والنطاق</Text>
         <ZonePicker value={zoneId} disabled={Boolean(createdCaptain)} onChange={(zone) => setZoneId(zone?.id ?? "")} />
-      </div>
 
-      {/* Vehicle Card */}
-      <div style={{ padding: "24px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 2px 8px var(--bthwani-overlay-soft)" }}>
-        <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>المركبة</Text>
-        
         {!createdCaptain ? (
           <CpTabs
             aria-label="نوع المركبة"
@@ -113,73 +82,19 @@ export function CaptainCreateView(props: {
             items={VEHICLE_TYPES}
           />
         ) : (
-          <Text role="bodySm">{VEHICLE_TYPES.find((v) => v.value === vehicleType)?.label ?? "—"}</Text>
+          <Text role="bodySm">نوع المركبة: {VEHICLE_TYPES.find((item) => item.value === vehicleType)?.label ?? "—"}</Text>
         )}
-        
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
-          <div>
-            <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>رقم أو لوحة المركبة *</Text>
-            <CpTextInput value={vehicleIdentifier} onChange={setVehicleIdentifier} placeholder="مثال: صنعاء 12345" disabled={Boolean(createdCaptain)} aria-label="رقم أو لوحة المركبة" />
-          </div>
-          <div>
-            <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>تاريخ انتهاء الرخصة</Text>
-            <CpTextInput value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" disabled={Boolean(createdCaptain)} aria-label="تاريخ انتهاء الرخصة" />
-          </div>
-        </div>
-
-        <CpMutedInline>
-          حالة الرخصة الأولية دائمًا «بانتظار المراجعة». إصدار كود الدخول لا يثبت صلاحية الرخصة ولا
-          يتجاوز مراجعة الوثائق.
-        </CpMutedInline>
       </div>
 
-      {/* Supervision & Activation Card */}
-      <div style={{ padding: "24px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 2px 8px var(--bthwani-overlay-soft)" }}>
-        <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>الإشراف وتفعيل الدخول</Text>
-        
-        <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} disabled={Boolean(createdCaptain)} />
+      <CpMutedInline>
+        الضمانة المالية هي نفسها الرصيد الممول لأهلية الإسناد؛ لا يوجد رصيد افتتاحي منفصل. WLT هو مصدر الحقيقة المالي.
+      </CpMutedInline>
 
-        <div style={{ marginTop: "8px" }}>
-          <CpButton
-            variant={autoActivate ? "primary" : "ghost"}
-            disabled={Boolean(createdCaptain)}
-            onClick={() => setAutoActivate((value) => !value)}
-          >
-            {autoActivate ? "إصدار كود دخول بعد الإنشاء" : "إنشاء بدون كود دخول"}
-          </CpButton>
-        </div>
-      </div>
+      {state.kind === "error" ? <CpStatePanel role="alert" title="تعذر إنشاء الكابتن" description={state.message} /> : null}
 
-      {state.kind === "error" ? <CpStatePanel role="alert" title="تعذر إنشاء مقدم الخدمة" description={state.message} /> : null}
-
-      {/* Action Bar */}
       {createdCaptain ? (
-        <CpStatePanel role="status" title="تم إنشاء الكابتن وتأكيده من Workforce، والرخصة ما تزال بانتظار المراجعة.">
-          {issuedCode ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              <Text role="bodySm">كود التفعيل الصادر من خدمة الهوية:</Text>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
-                <Text role="titleMd" style={{ letterSpacing: 2, fontWeight: "bold" }}>{issuedCode}</Text>
-                <CpButton
-                  variant="ghost"
-                  onClick={() => {
-                    if (typeof navigator !== "undefined") {
-                      void navigator.clipboard.writeText(issuedCode);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                    }
-                  }}
-                >
-                  {copied ? "تم النسخ" : "نسخ الكود"}
-                </CpButton>
-              </div>
-            </div>
-          ) : activationError ? (
-            <Text role="bodySm">تم إنشاء الكابتن، لكن تعذر إصدار كود الدخول: {activationError}</Text>
-          ) : (
-            <Text role="bodySm">تم الإنشاء بدون تفعيل حساب الدخول. يمكن إصدار الكود من ملف الكابتن.</Text>
-          )}
-
+        <CpStatePanel role="status" title="تم إنشاء ملف الكابتن الأولي بتصنيف Joker.">
+          <Text role="bodySm">افتح الملف لاستكمال مصدر الترشيح والضمين والهوية والرخصة والعقد والتجهيز والضمانة المالية قبل التفعيل.</Text>
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
             <CpButton variant="primary" onClick={() => props.onCreated(createdCaptain)}>فتح ملف الكابتن</CpButton>
             <CpButton variant="secondary" onClick={resetForm}>إضافة كابتن جديد</CpButton>
@@ -189,7 +104,7 @@ export function CaptainCreateView(props: {
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
           <div style={{ minWidth: "240px" }}>
             <CpButton variant="primary" disabled={!canSubmit} onClick={() => void handleSubmit()}>
-              {state.kind === "submitting" ? "جارٍ الإنشاء…" : "إنشاء مقدم الخدمة"}
+              {state.kind === "submitting" ? "جارٍ الإنشاء…" : "إنشاء ملف الكابتن"}
             </CpButton>
           </div>
         </div>
@@ -202,7 +117,7 @@ export function CaptainCreateView(props: {
   return (
     <EditorPageFrame
       header={
-        <CpPageHeader title="إضافة مقدم خدمة — كابتن">
+        <CpPageHeader title="إضافة كابتن">
           {props.onBack ? <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton> : null}
         </CpPageHeader>
       }
