@@ -1,7 +1,6 @@
 /**
- * Home Discovery Home Discovery — Policy
+ * Home Discovery — shared policy.
  * Access gates, capability checks, and client-side filter behavior.
- * Lives in shared so any surface can reuse filter logic without re-implementing it.
  */
 
 import type { DiscoveryFilterKind } from './home-discovery.types';
@@ -16,27 +15,29 @@ export function canViewHomeDiscovery(_ctx: DshClientContext): boolean {
   return true;
 }
 
+/**
+ * A filter is operational only when its result can be derived from governed
+ * runtime truth. Favorites remain hidden until DSH exposes an authenticated,
+ * persistent favorites contract with readback.
+ */
+export function isDiscoveryFilterOperational(filter: DiscoveryFilterKind): boolean {
+  return filter !== 'favorites';
+}
+
 function hasDistance(store: HomeStoreCardViewModel): boolean {
   return store.distanceKm != null || store.distanceDisplay != null;
 }
 
 /**
- * Applies a client-side discovery filter to a list of store view-models.
- *
- * - `all`       → original order (no mutation)
- * - `nearest`   → sort by distance ascending; stores without distance go last
- * - `offers`    → keep only stores with coupon badge or free delivery
- * - `favorites` → empty (requires user auth + server-side favorites endpoint, not yet available)
- * - `new`       → original order (backend already seeds newest first; no client sort needed)
+ * Applies an operational client-side discovery filter.
+ * Unsupported filters fail safe by preserving the governed store feed instead
+ * of presenting an empty result that implies persisted user state exists.
  */
 export function applyDiscoveryFilter(
   stores: readonly HomeStoreCardViewModel[],
   filter: DiscoveryFilterKind,
 ): HomeStoreCardViewModel[] {
   switch (filter) {
-    case 'favorites':
-      return [];
-
     case 'nearest':
       return [...stores].sort((a, b) => {
         const aHasDistance = hasDistance(a);
@@ -48,8 +49,9 @@ export function applyDiscoveryFilter(
       });
 
     case 'offers':
-      return stores.filter((s) => s.hasCouponBadge || s.isFreeDelivery);
+      return stores.filter((store) => store.hasCouponBadge || store.isFreeDelivery);
 
+    case 'favorites':
     case 'new':
     case 'all':
     default:
