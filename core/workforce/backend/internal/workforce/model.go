@@ -64,6 +64,7 @@ type CreateFieldAgentInput struct {
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	ServiceZoneID       string   `json:"serviceZoneId"`
+	ShiftCode           string   `json:"-"` // ignored compatibility slot; never accepted from API
 	SupervisorActorID   string   `json:"supervisorActorId"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
 	DocumentMediaRefs   []string `json:"documentMediaRefs"`
@@ -93,6 +94,7 @@ type UpdateFieldAgentInput struct {
 	EngagementType      *string `json:"engagementType"`
 	EngagementStartDate *string `json:"engagementStartDate"`
 	ServiceZoneID       *string `json:"serviceZoneId"`
+	ShiftCode           *string `json:"-"` // ignored compatibility slot; never accepted from API
 	SupervisorActorID   *string `json:"supervisorActorId"`
 	PhotoMediaRef       *string `json:"photoMediaRef"`
 }
@@ -105,7 +107,7 @@ type UpdateCaptainInput struct {
 	EngagementStartDate *string `json:"engagementStartDate"`
 	PhotoMediaRef       *string `json:"photoMediaRef"`
 	VehicleType         *string `json:"vehicleType"`
-	VehicleIdentifier   *string `json:"vehicleIdentifier"`
+	VehicleIdentifier  *string `json:"vehicleIdentifier"`
 	LicenseStatus       *string `json:"licenseStatus"`
 	LicenseExpiresAt    *string `json:"licenseExpiresAt"`
 	ServiceZoneID       *string `json:"serviceZoneId"`
