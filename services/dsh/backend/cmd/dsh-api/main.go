@@ -90,6 +90,7 @@ func main() {
 	dshHttp.RegisterLegacyContractCompatibilityRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterGovernedIncidentRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterProviderRatingRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterOperationsIntelligenceRoutes(router, db, identityClient, wltClient, mediaProvider)
 	operationalPolicyGuardedRouter := dshHttp.OperationalPolicyEffectsMiddleware(db, router)
 	pickupGuardedRouter := dshHttp.PickupMutationPathContext(
 		dshHttp.PickupMutationGuard(db, identityClient, wltClient, mediaProvider, operationalPolicyGuardedRouter),
@@ -108,7 +109,8 @@ func main() {
 		mediaProvider,
 		deliveryExceptionGovernedRouter,
 	)
-	handler := dshHttp.CorsMiddleware(authMode, governedIncidentRouter)
+	availabilityGuardedRouter := dshHttp.OperationsAvailabilityMiddleware(db, governedIncidentRouter)
+	handler := dshHttp.CorsMiddleware(authMode, availabilityGuardedRouter)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
 	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)
