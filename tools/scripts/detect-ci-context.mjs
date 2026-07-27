@@ -53,7 +53,6 @@ export function classifyFiles(inputFiles, options = {}) {
     /(^|\/)Dockerfile(?:\.|$)/.test(file) ||
     file.endsWith(".dockerfile")
   );
-  const security = workflow || starts("governance/security/", "tools/security/");
 
   const dsh = full || starts("services/dsh/backend/", "services/dsh/database/");
   const wlt = full || starts("services/wlt/backend/", "services/wlt/database/");
@@ -76,6 +75,31 @@ export function classifyFiles(inputFiles, options = {}) {
   const frontend = full || mobileTooling || workspaceManifest || starts("apps/", "shared/") || includes("/frontend/", "/clients/generated/");
   const contracts = full || backendApiSurface || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
   const database = full || includes("/database/", "/migrations/") || starts("infra/docker/");
+
+  const authChanged = full || has((file) =>
+    file.startsWith("core/identity/") && /(^|\/)(auth|authentication|activation|otp|token|credential)(\/|[-_.])/i.test(file)
+  );
+  const sessionChanged = full || has((file) =>
+    /(^|\/)(session|sessions|refresh-token|revocation|device-fingerprint)(\/|[-_.])/i.test(file)
+  );
+  const rbacChanged = full || has((file) =>
+    /(^|\/)(rbac|role|roles|permission|permissions|authorization|policy-enforcement)(\/|[-_.])/i.test(file)
+  );
+  const privacyChanged = full || has((file) =>
+    /(^|\/)(privacy|consent|retention|redaction|anonymization)(\/|[-_.])/i.test(file)
+  );
+  const piiChanged = full || has((file) =>
+    /(^|\/)(pii|personal-data|national-id|identity-document)(\/|[-_.])/i.test(file)
+  );
+  const secretsChanged = full || starts("governance/security/", "tools/security/") || has((file) =>
+    /(^|\/)(secret|secrets|credential|credentials|signing|keystore|certificate)(\/|[-_.])/i.test(file)
+  );
+  const tenantContextChanged = full || starts("governance/saas/") || has((file) =>
+    /(^|\/)(tenant|tenancy|tenant-context|tenant-isolation|cross-tenant)(\/|[-_.])/i.test(file)
+  );
+  const protectedSecurityChanged = authChanged || sessionChanged || rbacChanged || privacyChanged || piiChanged || secretsChanged || tenantContextChanged;
+  const security = workflow || protectedSecurityChanged || starts("governance/security/", "tools/security/");
+
   const financialChanged = full || wlt || starts(
     "services/dsh/backend/internal/wlt/",
     "services/dsh/frontend/shared/finance-wlt-link/",
@@ -88,16 +112,23 @@ export function classifyFiles(inputFiles, options = {}) {
     /(^|\/)(finance|wallet|commission|settlement|payout|ledger|refund|payment|checkoutfinanceoutbox|fieldcommissionoutbox)(\/|[-_.])/i.test(file) ||
     /dsh-wlt-finance/i.test(file)
   );
-  const runtimeTooling = starts("tools/scripts/runtime/") || equals(
-    "tools/scripts/invoke-runtime-phase.ps1"
+
+  const runtimeTooling = starts("tools/scripts/runtime/") || equals("tools/scripts/invoke-runtime-phase.ps1");
+  const nativeChanged = full || starts("apps/mobile/") || has((file) =>
+    /(^|\/)(android|ios)\//.test(file) ||
+    /(^|\/)(app|eas)\.json$/.test(file) ||
+    file.endsWith("google-services.json") ||
+    file.endsWith("GoogleService-Info.plist")
   );
-  const runtime = full || financialChanged || mobileTooling || runtimeTooling || starts("infra/") || has((file) =>
-    file.endsWith("service.manifest.ts") ||
-    file.endsWith("start.ps1") ||
-    /(^|\/)(next|metro|babel|app)\.config\.[cm]?[jt]s$/.test(file) ||
-    /(^|\/)eas\.json$/.test(file) ||
-    /(^|\/)runtime\.env(?:\.|$)/.test(file)
-  );
+
+  let runtimeProfile = "none";
+  if (full || infrastructure || runtimeTooling) runtimeProfile = "full";
+  else if (financialChanged) runtimeProfile = "wlt-finance";
+  else if (protectedSecurityChanged) runtimeProfile = "identity-security";
+  else if (nativeChanged) runtimeProfile = "mobile-native";
+  else if (mobileTooling) runtimeProfile = "mobile-config";
+
+  const runtime = runtimeProfile !== "none";
 
   const sharedBrain = full || starts("shared/", "services/dsh/frontend/shared/", "services/wlt/frontend/shared/") || equals(
     "contracts/master.openapi.yaml",
@@ -106,9 +137,7 @@ export function classifyFiles(inputFiles, options = {}) {
 
   const journeyIds = new Set();
   for (const file of files) {
-    for (const match of file.matchAll(/jrn[-_ ]?(\d{3})/gi)) {
-      journeyIds.add(`JRN-${match[1]}`);
-    }
+    for (const match of file.matchAll(/jrn[-_ ]?(\d{3})/gi)) journeyIds.add(`JRN-${match[1]}`);
   }
 
   const productJourneyGovernance = has((file) =>
@@ -131,19 +160,10 @@ export function classifyFiles(inputFiles, options = {}) {
     "tools/guards/cleanup-policy-gate.mjs",
     "tools/scripts/check-repository-hygiene.mjs"
   );
-  const nativeChanged = full || mobileTooling || starts("apps/mobile/") || has((file) =>
-    /(^|\/)(android|ios)\//.test(file) ||
-    /(^|\/)(app|eas)\.json$/.test(file) ||
-    file.endsWith("google-services.json") ||
-    file.endsWith("GoogleService-Info.plist")
-  );
   const visualChanged = full || starts("shared/ui-kit/") || has((file) =>
     file.includes("/design-tokens/") ||
     file.endsWith(".snap") ||
     /ui-kit-visual-contract/i.test(file)
-  );
-  const tenantIsolationChanged = full || starts("governance/saas/") || has((file) =>
-    /tenant/i.test(file) || /isolation/i.test(file)
   );
   const migrationChanged = full || includes("/migrations/");
   const sharedContractChanged = full || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
@@ -154,23 +174,24 @@ export function classifyFiles(inputFiles, options = {}) {
     /observability/i.test(file) || /\botel\b/i.test(file) || /(^|\/)tracing\//i.test(file)
   );
 
-  const policy = governance || workflow || infrastructure || security;
+  const governancePolicy = governance;
+  const workflowPolicy = workflow;
+  const securityPolicy = security;
+  const infrastructurePolicy = infrastructure;
+  const nomenclatureRequired = workflow || governance || frontend || contracts || dsh || wlt || identity || workforce || platform || providers;
+  const policy = governancePolicy || workflowPolicy || securityPolicy || infrastructurePolicy;
   const node = frontend || contracts || journey || jrn040;
   const backendChanged = dsh || wlt || identity || workforce || platform || providers;
-  const deepRisk = full || workflow || security || infrastructure || workspaceManifest || mobileTooling || runtimeTooling || financialChanged || migrationChanged || tenantIsolationChanged || nativeChanged || recoveryChanged;
+  const deepRisk = full || workflow || security || infrastructure || workspaceManifest || mobileTooling || runtimeTooling || financialChanged || migrationChanged || nativeChanged || recoveryChanged;
   const standardRisk = deepRisk || policy || sharedBrain || database || contracts || backendChanged || journey;
   const verificationTier = deepRisk ? "deep" : standardRisk ? "standard" : "fast";
   const heavy = verificationTier === "deep";
   const diagnostics = full || contracts || (frontend && verificationTier !== "fast");
 
   let journeyScope = "";
-  if (full || productJourneyGovernance) {
-    journeyScope = "PROJECT-WIDE";
-  } else if (manualJourney) {
-    journeyScope = manualJourney;
-  } else if (journeyIds.size > 0) {
-    journeyScope = uniqueSorted([...journeyIds]).join(",");
-  }
+  if (full || productJourneyGovernance) journeyScope = "PROJECT-WIDE";
+  else if (manualJourney) journeyScope = manualJourney;
+  else if (journeyIds.size > 0) journeyScope = uniqueSorted([...journeyIds]).join(",");
 
   const nodeScope = uniqueSorted([
     frontend ? "frontend" : "",
@@ -186,6 +207,11 @@ export function classifyFiles(inputFiles, options = {}) {
     infrastructure,
     security,
     policy,
+    governance_policy: governancePolicy,
+    workflow_policy: workflowPolicy,
+    security_policy: securityPolicy,
+    infrastructure_policy: infrastructurePolicy,
+    nomenclature_required: nomenclatureRequired,
     frontend,
     contracts,
     journey,
@@ -200,6 +226,7 @@ export function classifyFiles(inputFiles, options = {}) {
     providers,
     database,
     runtime,
+    runtime_profile: runtimeProfile,
     shared_brain: sharedBrain,
     heavy,
     verification_tier: verificationTier,
@@ -209,12 +236,19 @@ export function classifyFiles(inputFiles, options = {}) {
     cleanup_changed: cleanupChanged,
     native_changed: nativeChanged,
     visual_changed: visualChanged,
-    tenant_isolation_changed: tenantIsolationChanged,
+    tenant_isolation_changed: tenantContextChanged,
     financial_changed: financialChanged,
     migration_changed: migrationChanged,
     shared_contract_changed: sharedContractChanged,
     recovery_changed: recoveryChanged,
-    observability_changed: observabilityChanged
+    observability_changed: observabilityChanged,
+    auth_changed: authChanged,
+    session_changed: sessionChanged,
+    rbac_changed: rbacChanged,
+    privacy_changed: privacyChanged,
+    pii_changed: piiChanged,
+    secrets_changed: secretsChanged,
+    tenant_context_changed: tenantContextChanged
   };
 }
 
@@ -258,18 +292,10 @@ function main() {
     : readChangedFiles(baseSha, headSha);
 
   const classification = classifyFiles(files, { mode, journey });
-  const outputs = {
-    base_sha: baseSha,
-    head_sha: headSha,
-    mode,
-    ...classification
-  };
-
+  const outputs = { base_sha: baseSha, head_sha: headSha, mode, ...classification };
   writeGitHubOutputs(outputs);
   process.stdout.write(`${JSON.stringify({ files: uniqueSorted(files), ...outputs }, null, 2)}\n`);
 }
 
 const isDirectExecution = process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]);
-if (isDirectExecution) {
-  main();
-}
+if (isDirectExecution) main();

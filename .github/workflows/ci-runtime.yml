@@ -9,6 +9,9 @@ on:
       runtime:
         type: string
         required: true
+      runtime_profile:
+        type: string
+        required: true
       runtime_proof:
         type: boolean
         required: true
@@ -29,87 +32,117 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Runtime proof
-        shell: pwsh
-        run: |
-          $logPath = Join-Path $PWD "runtime-smoke.log"
-          "Runtime proof started for $env:GITHUB_SHA" | Set-Content -LiteralPath $logPath
 
-          function Add-RuntimeLog {
-            param([Parameter(Mandatory)][string] $Text)
-            $Text | Tee-Object -FilePath $logPath -Append
+      - name: Execute selected runtime profile
+        id: runtime
+        shell: pwsh
+        env:
+          RUNTIME_PROFILE: ${{ inputs.runtime_profile }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $profile = if ([string]::IsNullOrWhiteSpace($env:RUNTIME_PROFILE)) { "none" } else { $env:RUNTIME_PROFILE }
+          $logPath = Join-Path $PWD "runtime-smoke.log"
+          $resultPath = Join-Path $PWD "runtime-proof.json"
+          "Runtime proof started for $env:GITHUB_SHA profile=$profile" | Set-Content -LiteralPath $logPath
+
+          function Invoke-Phase {
+            param([string] $Name, [scriptblock] $Command)
+            "=== $Name ===" | Tee-Object -FilePath $logPath -Append
+            $global:LASTEXITCODE = 0
+            & $Command *>&1 | Tee-Object -FilePath $logPath -Append
+            $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
+            "phase=$Name exitCode=$exitCode" | Tee-Object -FilePath $logPath -Append
+            if ($exitCode -ne 0) { throw "$Name failed with exit code $exitCode" }
           }
 
-          function Invoke-LoggedPhase {
-            param(
-              [Parameter(Mandatory)][string] $Name,
-              [Parameter(Mandatory)][scriptblock] $Command
-            )
-
-            Add-RuntimeLog "=== $Name ==="
-            try {
-              $global:LASTEXITCODE = 0
-              & $Command *>&1 | Tee-Object -FilePath $logPath -Append
-              $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
-              Add-RuntimeLog "phase=$Name exitCode=$exitCode"
-              if ($exitCode -ne 0) {
-                throw "$Name failed with exit code $exitCode"
-              }
-            } catch {
-              Add-RuntimeLog "PHASE_FAILURE=$Name"
-              ($_ | Format-List * -Force | Out-String) | Add-Content -LiteralPath $logPath
-              throw
-            }
+          $profiles = switch ($profile) {
+            "identity-security" { "identity" }
+            "dsh" { "dsh,media" }
+            "workforce" { "identity,workforce" }
+            "wlt-finance" { "identity,dsh,wlt,financial-simulators" }
+            "provider" { "wlt,financial-simulators" }
+            "full" { "identity,workforce,dsh,wlt,financial-simulators,mail,media" }
+            "mobile-config" { "" }
+            "mobile-native" { "" }
+            default { throw "Unsupported runtime profile: $profile" }
           }
 
           try {
-            $pnpmCommand = Get-Command pnpm -ErrorAction Stop
-            Add-RuntimeLog "pwsh=$($PSVersionTable.PSVersion)"
-            Add-RuntimeLog "pnpm=$($pnpmCommand.Source)"
-
-            Invoke-LoggedPhase "runtime:full:up" {
-              pnpm run runtime:full:up
+            if ($profile -eq "mobile-config") {
+              Invoke-Phase "mobile:apps:check" { pnpm run mobile:apps:check }
+              Invoke-Phase "mobile:expo:verify" { pnpm run mobile:expo:verify }
+            } elseif ($profile -eq "mobile-native") {
+              Invoke-Phase "mobile:apps:check" { pnpm run mobile:apps:check }
+              Invoke-Phase "mobile:expo:verify" { pnpm run mobile:expo:verify }
+            } else {
+              Invoke-Phase "runtime:up" {
+                & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action up -Profiles $profiles
+              }
+              Invoke-Phase "runtime:bootstrap-dev" {
+                & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action bootstrap-dev -Profiles $profiles -Force
+              }
+              if ($profile -eq "full") {
+                Invoke-Phase "dsh-operator-governance-preflight" {
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1
+                }
+              }
+              Invoke-Phase "runtime:smoke" {
+                & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles $profiles
+              }
+              if ($profile -in @("wlt-finance", "full")) {
+                Invoke-Phase "representative-financial-readback" {
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/finance/smoke-dsh-wlt-representative-readback.ps1
+                }
+              }
             }
 
-            Invoke-LoggedPhase "runtime:full:bootstrap-dev" {
-              pnpm run runtime:full:bootstrap-dev
-            }
-
-            Invoke-LoggedPhase "dsh-operator-governance-preflight" {
-              & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1
-            }
-
-            Invoke-LoggedPhase "runtime:full:smoke" {
-              pnpm run runtime:full:smoke
-            }
-
-            Invoke-LoggedPhase "representative-financial-readback" {
-              & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/finance/smoke-dsh-wlt-representative-readback.ps1
-            }
-
-            $proof = Get-Content -LiteralPath $logPath -Raw
-            if ($proof -notmatch [regex]::Escape("DSH operator governance preflight: PASS")) {
-              throw "runtime proof did not record the DSH operator governance preflight PASS marker"
-            }
-            if ($proof -notmatch [regex]::Escape("DSH/WLT representative financial readback smoke: PASS")) {
-              throw "runtime proof did not record the representative financial readback PASS marker"
-            }
-            Add-RuntimeLog "RUNTIME_PROOF_RESULT=PASS"
+            @{
+              schemaVersion = 1
+              sourceSha = $env:GITHUB_SHA
+              profile = $profile
+              result = "PASS"
+            } | ConvertTo-Json | Set-Content -LiteralPath $resultPath
+            "RUNTIME_PROOF_RESULT=PASS" | Tee-Object -FilePath $logPath -Append
           } catch {
-            Add-RuntimeLog "RUNTIME_PROOF_RESULT=FAIL"
-            ($_ | Format-List * -Force | Out-String) | Add-Content -LiteralPath $logPath
+            @{
+              schemaVersion = 1
+              sourceSha = $env:GITHUB_SHA
+              profile = $profile
+              result = "FAIL"
+              error = $_.Exception.Message
+            } | ConvertTo-Json | Set-Content -LiteralPath $resultPath
+            "RUNTIME_PROOF_RESULT=FAIL" | Tee-Object -FilePath $logPath -Append
             throw
           }
-      - name: Stop runtime
-        if: always()
+
+      - name: Stop selected runtime profile
+        if: ${{ always() }}
         shell: pwsh
-        run: pnpm run runtime:full:down
+        env:
+          RUNTIME_PROFILE: ${{ inputs.runtime_profile }}
+        run: |
+          $profile = $env:RUNTIME_PROFILE
+          $profiles = switch ($profile) {
+            "identity-security" { "identity" }
+            "dsh" { "dsh,media" }
+            "workforce" { "identity,workforce" }
+            "wlt-finance" { "identity,dsh,wlt,financial-simulators" }
+            "provider" { "wlt,financial-simulators" }
+            "full" { "identity,workforce,dsh,wlt,financial-simulators,mail,media" }
+            default { "" }
+          }
+          if ($profiles) {
+            & pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles $profiles
+          }
+
       - name: Upload runtime proof
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: runtime-proof-${{ github.run_id }}
-          path: runtime-smoke.log
+          path: |
+            runtime-smoke.log
+            runtime-proof.json
           if-no-files-found: error
           retention-days: 7
 

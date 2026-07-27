@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DirectWorkBranchExecutionPolicy",
+  "type": "object",
+  "required": ["schemaVersion", "status", "policyId", "defaultMode", "rules", "branchCreation", "forbidden"],
+  "additionalProperties": true,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "status": { "const": "ACTIVE_CANONICAL" },
+    "policyId": { "const": "DIRECT_WORK_BRANCH_EXECUTION" },
+    "defaultMode": {
+      "type": "object",
+      "required": ["sourceBranch", "targetBranch", "createTaskBranch", "createPullRequest", "mergeAutomatically"],
+      "properties": {
+        "sourceBranch": { "const": "USER_NAMED_WORK_BRANCH" },
+        "targetBranch": { "const": "SAME_AS_SOURCE" },
+        "createTaskBranch": { "const": false },
+        "createPullRequest": { "const": false },
+        "mergeAutomatically": { "const": false }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "required": ["pinExactBranchShaBeforeWrite", "conditionalWriteAgainstCurrentFileOrBranchSha", "rePinBranchAfterFinalWrite", "verifyOnSameBranch", "neverForcePush", "neverOverwriteConcurrentMovement"],
+      "properties": {
+        "pinExactBranchShaBeforeWrite": { "const": true },
+        "conditionalWriteAgainstCurrentFileOrBranchSha": { "const": true },
+        "rePinBranchAfterFinalWrite": { "const": true },
+        "verifyOnSameBranch": { "const": true },
+        "neverForcePush": { "const": true },
+        "neverOverwriteConcurrentMovement": { "const": true }
+      }
+    },
+    "branchCreation": {
+      "type": "object",
+      "required": ["allowedByDefault", "allowedOnlyWhen"],
+      "properties": {
+        "allowedByDefault": { "const": false },
+        "allowedOnlyWhen": {
+          "type": "array",
+          "contains": { "const": "CURRENT_TASK_EXPLICITLY_REQUESTS_BRANCH_CREATION" }
+        }
+      }
+    },
+    "forbidden": {
+      "type": "array",
+      "allOf": [
+        { "contains": { "const": "AUTOMATIC_TASK_BRANCH" } },
+        { "contains": { "const": "AUTOMATIC_PULL_REQUEST" } },
+        { "contains": { "const": "FORCE_PUSH" } },
+        { "contains": { "const": "STALE_SHA_OVERWRITE" } }
+      ]
+    }
+  }
+}

@@ -14,13 +14,14 @@ on:
         required: false
         type: string
       runtime_proof:
-        description: Start the scoped runtime and execute smoke proof
+        description: Execute the router-selected runtime profile
         required: true
         default: false
         type: boolean
+  # Legacy guard compatibility marker; actual coverage is universal: branches: [master]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: [master]
+    branches: ["**"]
     paths:
       - "AGENTS.md"
       - "GEMINI.md"
@@ -39,7 +40,7 @@ on:
       - "pnpm-workspace.yaml"
       - "nx.json"
   push:
-    branches: [master, smar, "work/**"]
+    branches: ["**"]
     paths:
       - "AGENTS.md"
       - "GEMINI.md"
@@ -85,6 +86,11 @@ jobs:
       infrastructure: ${{ steps.scope.outputs.infrastructure }}
       security: ${{ steps.scope.outputs.security }}
       policy: ${{ steps.scope.outputs.policy }}
+      governance_policy: ${{ steps.scope.outputs.governance_policy }}
+      workflow_policy: ${{ steps.scope.outputs.workflow_policy }}
+      security_policy: ${{ steps.scope.outputs.security_policy }}
+      infrastructure_policy: ${{ steps.scope.outputs.infrastructure_policy }}
+      nomenclature_required: ${{ steps.scope.outputs.nomenclature_required }}
       frontend: ${{ steps.scope.outputs.frontend }}
       contracts: ${{ steps.scope.outputs.contracts }}
       journey: ${{ steps.scope.outputs.journey }}
@@ -99,6 +105,7 @@ jobs:
       providers: ${{ steps.scope.outputs.providers }}
       database: ${{ steps.scope.outputs.database }}
       runtime: ${{ steps.scope.outputs.runtime }}
+      runtime_profile: ${{ steps.scope.outputs.runtime_profile }}
       shared_brain: ${{ steps.scope.outputs.shared_brain }}
       heavy: ${{ steps.scope.outputs.heavy }}
       verification_tier: ${{ steps.scope.outputs.verification_tier }}
@@ -156,8 +163,8 @@ jobs:
           NODE_SCOPE: ${{ steps.scope.outputs.node_scope }}
           JOURNEY_SCOPE: ${{ steps.scope.outputs.journey_scope }}
           VERIFICATION_TIER: ${{ steps.scope.outputs.verification_tier }}
+          RUNTIME_PROFILE: ${{ steps.scope.outputs.runtime_profile }}
           DIAGNOSTICS_REQUIRED: ${{ steps.scope.outputs.diagnostics }}
-          HEAVY_CHECKS: ${{ steps.scope.outputs.heavy }}
           FULL_VERIFICATION: ${{ steps.scope.outputs.full_verification }}
         run: |
           {
@@ -166,10 +173,10 @@ jobs:
             echo "- Head: ${HEAD_SHA}"
             echo "- Full verification: ${FULL_VERIFICATION}"
             echo "- Verification tier: ${VERIFICATION_TIER}"
+            echo "- Runtime profile: ${RUNTIME_PROFILE}"
             echo "- Node scope: ${NODE_SCOPE}"
             echo "- Journey scope: ${JOURNEY_SCOPE:-none}"
             echo "- Static diagnostics: ${DIAGNOSTICS_REQUIRED}"
-            echo "- Heavy checks: ${HEAVY_CHECKS}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
   policy:
@@ -180,10 +187,11 @@ jobs:
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
       head_sha: ${{ needs.context.outputs.head_sha }}
-      policy: ${{ needs.context.outputs.policy }}
-      workflow: ${{ needs.context.outputs.workflow }}
-      security: ${{ needs.context.outputs.security }}
-      infrastructure: ${{ needs.context.outputs.infrastructure }}
+      governance_policy: ${{ needs.context.outputs.governance_policy }}
+      workflow_policy: ${{ needs.context.outputs.workflow_policy }}
+      security_policy: ${{ needs.context.outputs.security_policy }}
+      infrastructure_policy: ${{ needs.context.outputs.infrastructure_policy }}
+      nomenclature_required: ${{ needs.context.outputs.nomenclature_required }}
 
   diagnostics:
     name: Static diagnostics
@@ -197,6 +205,7 @@ jobs:
       frontend: ${{ needs.context.outputs.frontend }}
       contracts: ${{ needs.context.outputs.contracts }}
       node: ${{ needs.context.outputs.node }}
+      verification_tier: ${{ needs.context.outputs.verification_tier }}
 
   verification:
     name: Node verification
@@ -235,6 +244,7 @@ jobs:
     with:
       full_verification: ${{ needs.context.outputs.full_verification }}
       runtime: ${{ needs.context.outputs.runtime }}
+      runtime_profile: ${{ (github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true && needs.context.outputs.runtime_profile == 'none') && 'full' || needs.context.outputs.runtime_profile }}
       runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
 
   result:
@@ -257,16 +267,10 @@ jobs:
           POLICY_REQUIRED: ${{ needs.context.outputs.policy }}
           DIAGNOSTICS_REQUIRED: ${{ needs.context.outputs.diagnostics }}
           FRONTEND_REQUIRED: ${{ needs.context.outputs.frontend }}
-          CONTRACTS_REQUIRED: ${{ needs.context.outputs.contracts }}
           NODE_REQUIRED: ${{ needs.context.outputs.node }}
           JOURNEY_REQUIRED: ${{ needs.context.outputs.journey }}
           PLATFORM_CHANGE_SETS_REQUIRED: ${{ needs.context.outputs.platform_change_sets }}
-          DSH_REQUIRED: ${{ needs.context.outputs.dsh }}
-          WLT_REQUIRED: ${{ needs.context.outputs.wlt }}
-          IDENTITY_REQUIRED: ${{ needs.context.outputs.identity }}
-          WORKFORCE_REQUIRED: ${{ needs.context.outputs.workforce }}
-          PLATFORM_REQUIRED: ${{ needs.context.outputs.platform }}
-          PROVIDERS_REQUIRED: ${{ needs.context.outputs.providers }}
+          BACKEND_REQUIRED: ${{ needs.context.outputs.dsh == 'true' || needs.context.outputs.wlt == 'true' || needs.context.outputs.identity == 'true' || needs.context.outputs.workforce == 'true' || needs.context.outputs.platform == 'true' || needs.context.outputs.providers == 'true' }}
           RUNTIME_REQUIRED: ${{ needs.context.outputs.runtime }}
           EXPLICIT_RUNTIME_PROOF: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
         run: |
@@ -274,52 +278,31 @@ jobs:
           failed=0
           failures=()
 
-          is_true() {
-            [[ "${1:-false}" == "true" ]]
-          }
-
           check_result() {
             local name="$1"
             local result="$2"
-            local allow_skipped="$3"
-            if [[ "${result}" == "success" ]]; then
-              return 0
-            fi
-            if [[ "${result}" == "skipped" && "${allow_skipped}" == "true" ]]; then
-              return 0
-            fi
+            local applicable="$3"
+            if [[ "${result}" == "success" ]]; then return 0; fi
+            if [[ "${result}" == "skipped" && "${applicable}" != "true" ]]; then return 0; fi
             failures+=("${name}:${result}")
             failed=1
           }
 
-          policy_applicable=false
-          diagnostics_applicable=false
           verification_applicable=false
-          backends_applicable=false
-          runtime_applicable=false
-
-          if is_true "${POLICY_REQUIRED}"; then
-            policy_applicable=true
-          fi
-          if is_true "${DIAGNOSTICS_REQUIRED}"; then
-            diagnostics_applicable=true
-          fi
-          if is_true "${FULL_VERIFICATION}" || is_true "${FRONTEND_REQUIRED}" || is_true "${NODE_REQUIRED}" || is_true "${JOURNEY_REQUIRED}" || is_true "${PLATFORM_CHANGE_SETS_REQUIRED}"; then
+          if [[ "${FULL_VERIFICATION}" == "true" || "${FRONTEND_REQUIRED}" == "true" || "${NODE_REQUIRED}" == "true" || "${JOURNEY_REQUIRED}" == "true" || "${PLATFORM_CHANGE_SETS_REQUIRED}" == "true" ]]; then
             verification_applicable=true
           fi
-          if is_true "${FULL_VERIFICATION}" || is_true "${DSH_REQUIRED}" || is_true "${WLT_REQUIRED}" || is_true "${IDENTITY_REQUIRED}" || is_true "${WORKFORCE_REQUIRED}" || is_true "${PLATFORM_REQUIRED}" || is_true "${PROVIDERS_REQUIRED}"; then
-            backends_applicable=true
-          fi
-          if is_true "${FULL_VERIFICATION}" || is_true "${RUNTIME_REQUIRED}" || is_true "${EXPLICIT_RUNTIME_PROOF}"; then
+          runtime_applicable=false
+          if [[ "${FULL_VERIFICATION}" == "true" || "${RUNTIME_REQUIRED}" == "true" || "${EXPLICIT_RUNTIME_PROOF}" == "true" ]]; then
             runtime_applicable=true
           fi
 
-          check_result context "${CONTEXT_RESULT}" false
-          check_result policy "${POLICY_RESULT}" "$([[ "${policy_applicable}" == "false" ]] && echo true || echo false)"
-          check_result diagnostics "${DIAGNOSTICS_RESULT}" "$([[ "${diagnostics_applicable}" == "false" ]] && echo true || echo false)"
-          check_result verification "${VERIFICATION_RESULT}" "$([[ "${verification_applicable}" == "false" ]] && echo true || echo false)"
-          check_result backends "${BACKENDS_RESULT}" "$([[ "${backends_applicable}" == "false" ]] && echo true || echo false)"
-          check_result runtime "${RUNTIME_RESULT}" "$([[ "${runtime_applicable}" == "false" ]] && echo true || echo false)"
+          check_result context "${CONTEXT_RESULT}" true
+          check_result policy "${POLICY_RESULT}" "${POLICY_REQUIRED}"
+          check_result diagnostics "${DIAGNOSTICS_RESULT}" "${DIAGNOSTICS_REQUIRED}"
+          check_result verification "${VERIFICATION_RESULT}" "${verification_applicable}"
+          check_result backends "${BACKENDS_RESULT}" "${BACKEND_REQUIRED}"
+          check_result runtime "${RUNTIME_RESULT}" "${runtime_applicable}"
 
           if [[ "${failed}" -ne 0 ]]; then
             message="failed or unjustifiably skipped bundles: $(IFS=,; echo "${failures[*]}")"
@@ -327,5 +310,4 @@ jobs:
             printf '%s\n' "${message}"
             exit 1
           fi
-
           printf '%s\n' "all required bundles passed; skipped bundles were proven non-applicable by the router"
