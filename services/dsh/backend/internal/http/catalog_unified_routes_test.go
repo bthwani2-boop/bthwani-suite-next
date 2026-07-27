@@ -60,6 +60,7 @@ func TestUnifiedCatalogRoutesAreRegistered(t *testing.T) {
 		{http.MethodPost, "/dsh/field/partners/partner-1/catalog/product-proposals", "POST /dsh/field/partners/{partnerId}/catalog/product-proposals"},
 		{http.MethodGet, "/dsh/field/partners/partner-1/assortment", "GET /dsh/field/partners/{partnerId}/assortment"},
 		{http.MethodPut, "/dsh/field/partners/partner-1/stores/store-1/assortment/product-1", "PUT /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}"},
+		{http.MethodPost, "/dsh/field/partners/partner-1/stores/store-1/assortment/batch", "POST /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/batch"},
 		{http.MethodPost, "/dsh/partner/reels", "POST /dsh/partner/reels"},
 		{http.MethodGet, "/dsh/operator/reels", "GET /dsh/operator/reels"},
 		{http.MethodPost, "/dsh/operator/reels/reel-1/review", "POST /dsh/operator/reels/{reelId}/review"},
@@ -107,5 +108,23 @@ func TestCatalogConflictResponseIsStructured409(t *testing.T) {
 	}
 	if body.Code != "CONFLICT" || body.EntityID != "domain-1" || body.ExpectedVersion != 4 || body.CurrentVersion != 5 {
 		t.Fatalf("unexpected conflict body: %+v", body)
+	}
+}
+
+func TestFieldBatchConflictKeepsPerItemVersions(t *testing.T) {
+	t.Parallel()
+
+	expected := 2
+	result := failedFieldBatchResult(3, "product-1", &centralcatalog.ConflictError{
+		EntityID:        "assortment-1",
+		ExpectedVersion: &expected,
+		CurrentVersion:  4,
+		Message:         "version mismatch",
+	})
+	if result.Status != "failed" || result.Code != "CONFLICT" || result.CurrentVersion == nil || *result.CurrentVersion != 4 {
+		t.Fatalf("unexpected batch conflict: %+v", result)
+	}
+	if result.ExpectedVersion == nil || *result.ExpectedVersion != 2 {
+		t.Fatalf("expected version was not preserved: %+v", result)
 	}
 }
