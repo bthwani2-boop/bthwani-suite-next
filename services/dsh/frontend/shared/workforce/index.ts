@@ -6,6 +6,7 @@ export * from "./workforce-operational-enforcement.api";
 export * from "./workforce-documents.api";
 export * from "./workforce-scopes.api";
 export * from "./workforce-employee-media.api";
+export * from "./employee-governance.api";
 export * from "./use-workforce-controllers";
 export * from "./use-workforce-employee-controllers";
 export * from "./use-workforce-create-activation-controller";
