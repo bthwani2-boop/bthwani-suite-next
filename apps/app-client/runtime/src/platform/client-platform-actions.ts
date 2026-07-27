@@ -12,9 +12,6 @@ export async function performClientSuccessHaptic(): Promise<void> {
 export async function openClientExternalUrl(url: string): Promise<boolean> {
   const normalized = url.trim();
   if (!/^https:\/\//i.test(normalized)) return false;
-  const result = await WebBrowser.openBrowserAsync(normalized, {
-    enableBarCollapsing: true,
-    showTitle: true,
-  });
+  const result = await WebBrowser.openBrowserAsync(normalized);
   return result.type !== "cancel";
 }
