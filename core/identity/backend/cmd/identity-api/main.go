@@ -44,6 +44,9 @@ func main() {
 	if err := repository.BootstrapLocalPlatformActors(context.Background(), localBootstrap); err != nil {
 		log.Fatalf("[identity-api] local platform separation bootstrap: %v", err)
 	}
+	if err := repository.BootstrapSovereignLeadershipAccess(context.Background(), localBootstrap); err != nil {
+		log.Fatalf("[identity-api] local sovereign leadership bootstrap: %v", err)
+	}
 	if err := repository.RepairLocalBootstrapTenant(
 		context.Background(),
 		localBootstrap,
@@ -53,6 +56,7 @@ func main() {
 	}
 
 	router := identityhttp.NewRouter(db, repository)
+	identityhttp.RegisterEmployeeAccessRoutes(router, repository)
 	authTenantScopedRouter := identityhttp.SaaSAuthTenantBoundary(repository, router)
 	issuerScopedRouter := identityhttp.SaaSActivationIssuerBoundary(db, authTenantScopedRouter)
 	tenantScopedRouter := identityhttp.SaaSTenantBoundary(db, issuerScopedRouter)
