@@ -4,3 +4,4 @@ export { ProviderRegistryPanel } from "./ProviderRegistryPanel";
 export { MapsProviderInspector } from "./MapsProviderInspector";
 export { PlatformDashboardScreen } from "./PlatformDashboardScreen";
 export { PlatformGovernanceVisual } from "./PlatformGovernanceVisual";
+export { SovereignLeadershipPanel } from "./SovereignLeadershipPanel";
