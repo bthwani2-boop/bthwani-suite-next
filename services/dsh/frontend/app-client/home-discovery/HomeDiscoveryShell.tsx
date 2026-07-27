@@ -29,7 +29,9 @@ import {
   fetchHomePublicReels,
   recordHomeMarketingEvent,
   type BannerViewModel,
+  type CategoryViewModel,
   type DiscoveryFilterKind,
+  type DshHomeSpecialRequestTarget,
   type HomeDiscoveryState,
   type HomePublicReel,
   type PromoViewModel,
@@ -45,7 +47,7 @@ type Props = {
   activeFilter: DiscoveryFilterKind;
   onFilterChange: (kind: DiscoveryFilterKind) => void;
   onStorePress?: ((storeId: string, slug: string) => void) | undefined;
-  onSpecialCategoryPress?: ((nodeId: string) => void) | undefined;
+  onSpecialRequestPress?: ((requestType: DshHomeSpecialRequestTarget) => void) | undefined;
   onMarketingAction?: ((actionType: string, actionTarget: string) => void) | undefined;
   onRetry?: (() => void) | undefined;
 };
@@ -58,12 +60,16 @@ function normalizeSearchText(value: string): string {
     .trim();
 }
 
+function isSpecialRequestTarget(value: string): value is DshHomeSpecialRequestTarget {
+  return value === "SHEIN_ASSISTED_PURCHASE" || value === "AWNAK_ERRAND";
+}
+
 export function HomeDiscoveryShell({
   state,
   activeFilter,
   onFilterChange,
   onStorePress,
-  onSpecialCategoryPress,
+  onSpecialRequestPress,
   onMarketingAction,
   onRetry,
 }: Props) {
@@ -122,9 +128,11 @@ export function HomeDiscoveryShell({
 
   React.useEffect(() => {
     if (state.kind !== "success" || activeCategoryId === null) return;
-    if (!state.data.categories.some((category) => category.id === activeCategoryId)) {
-      setActiveCategoryId(null);
-    }
+    const categoryStillExists = state.data.categories.some(
+      (category) => category.destinationType === "catalog_domain"
+        && category.destinationTarget === activeCategoryId,
+    );
+    if (!categoryStillExists) setActiveCategoryId(null);
   }, [activeCategoryId, state]);
 
   React.useEffect(() => {
@@ -142,15 +150,33 @@ export function HomeDiscoveryShell({
     }
   }, [emitMarketingEvent, state]);
 
+  const openCategoryDestination = React.useCallback((category: CategoryViewModel) => {
+    if (
+      category.destinationType === "special_request"
+      && isSpecialRequestTarget(category.destinationTarget)
+    ) {
+      onSpecialRequestPress?.(category.destinationTarget);
+      return;
+    }
+    if (category.destinationType === "catalog_domain") {
+      setActiveCategoryId((current) =>
+        current === category.destinationTarget ? null : category.destinationTarget,
+      );
+    }
+  }, [onSpecialRequestPress]);
+
   const executeMarketingAction = React.useCallback((actionType: string, actionTarget: string) => {
     const target = actionTarget.trim();
     if (!target || actionType === "none") return;
     if (actionType === "category") {
-      setActiveCategoryId(target);
+      const category = state.kind === "success"
+        ? state.data.categories.find((item) => item.id === target || item.destinationTarget === target)
+        : undefined;
+      if (category) openCategoryDestination(category);
       return;
     }
     onMarketingAction?.(actionType, target);
-  }, [onMarketingAction]);
+  }, [onMarketingAction, openCategoryDestination, state]);
 
   const handleBannerPress = React.useCallback((banner: BannerViewModel) => {
     emitMarketingEvent("click", "banners", banner.id);
@@ -167,9 +193,7 @@ export function HomeDiscoveryShell({
   }, []);
 
   const handleReelPress = React.useCallback((reel: HomePublicReel) => {
-    if (reel.targetType === "store") {
-      onMarketingAction?.("store", reel.targetId);
-    }
+    onMarketingAction?.(reel.targetType, reel.targetId);
   }, [onMarketingAction]);
 
   if (state.kind === "loading") {
@@ -310,7 +334,8 @@ export function HomeDiscoveryShell({
                     }}
                   />
                   {categories.map((category) => {
-                    const selected = activeCategoryId === category.id;
+                    const selected = category.destinationType === "catalog_domain"
+                      && activeCategoryId === category.destinationTarget;
                     return (
                       <CategoryOption
                         key={category.id}
@@ -320,11 +345,7 @@ export function HomeDiscoveryShell({
                         isRtl={isRtl}
                         onPress={() => {
                           setShowDropdown(false);
-                          if (category.id === "node-shein" || category.id === "node-awnak") {
-                            onSpecialCategoryPress?.(category.id);
-                          } else {
-                            setActiveCategoryId(selected ? null : category.id);
-                          }
+                          openCategoryDestination(category);
                         }}
                       />
                     );
