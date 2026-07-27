@@ -51,6 +51,39 @@ test("client order and support routes remain navigable and failure-safe", () => 
   );
 });
 
+test("privacy-safe order sharing uses temporary Expo files and no sensitive references", () => {
+  const platform = assertMarkers(
+    "apps/app-client/runtime/src/platform/client-platform-actions.ts",
+    [
+      "expo-file-system",
+      "expo-sharing",
+      "Sharing.isAvailableAsync()",
+      "Sharing.shareAsync",
+      "Paths.cache",
+      "file.delete()",
+    ],
+  );
+  assert.ok(platform.includes('mimeType: "text/plain"'));
+
+  const orders = assertMarkers(
+    "services/dsh/frontend/app-client/orders/OrdersListScreen.tsx",
+    ["shareClientTextDocument", "shareableOrderSummary", "مشاركة الملخص"],
+  );
+  for (const forbidden of [
+    "deliveryAddressSnapshot",
+    "wltPaymentRefId",
+    "correlationId",
+    "clientId",
+  ]) {
+    assert.equal(
+      orders.slice(orders.indexOf("function shareableOrderSummary"), orders.indexOf("type Props"))
+        .includes(forbidden),
+      false,
+      `shared order summary must not include ${forbidden}`,
+    );
+  }
+});
+
 test("notification mutations are contained and provide canonical readback", () => {
   assertMarkers(
     "services/dsh/frontend/shared/notifications/use-notifications-controller.tsx",
