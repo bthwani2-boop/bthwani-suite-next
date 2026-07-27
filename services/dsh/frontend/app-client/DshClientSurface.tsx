@@ -308,6 +308,7 @@ export function DshClientSurface() {
           <OrderTrackingScreen
             orderId={activeOrderId}
             onBack={() => setActiveOrderId(null)}
+            onOpenPickup={openPickupSession}
           />
         ) : activeSpecialRequest === "shein" ? (
           <SheinForm
@@ -389,7 +390,7 @@ export function DshClientSurface() {
         ) : profileRoute === "identity" ? (
           <IdentityHubScreen onBack={() => setProfileRoute("profile")} />
         ) : profileRoute === "benefits" ? (
-          <BenefitsHubScreen />
+          <BenefitsHubScreen onBack={() => setProfileRoute("profile")} />
         ) : profileRoute === "preferences" ? (
           <PreferencesHubScreen onBack={() => setProfileRoute("profile")} />
         ) : profileRoute === "support" ? (
