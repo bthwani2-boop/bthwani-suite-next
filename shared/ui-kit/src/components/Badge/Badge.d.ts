@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
+export type BadgeTone = "neutral" | "action" | "brand" | "success" | "warning" | "danger" | "info";
 export type BadgeProps = {
     label: string;
-    tone?: "neutral" | "action" | "success" | "warning" | "danger" | "info";
+    tone?: BadgeTone;
     icon?: ReactNode;
 };
 export declare function Badge({ label, tone, icon }: BadgeProps): import("react").JSX.Element;
