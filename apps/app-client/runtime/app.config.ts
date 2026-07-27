@@ -2,7 +2,8 @@ import type { ExpoConfig } from "expo/config";
 import { defineBthwaniExpoApp } from "../../../tools/mobile/defineBthwaniExpoApp";
 
 const config = defineBthwaniExpoApp("app-client");
-const plugins: NonNullable<ExpoConfig["plugins"]> = (config.plugins ?? []).map((plugin) =>
+type ExpoPlugin = NonNullable<ExpoConfig["plugins"]>[number];
+const plugins = (config.plugins ?? []).map<ExpoPlugin>((plugin) =>
   plugin === "expo-video"
     ? ["expo-video", { supportsPictureInPicture: true }]
     : plugin,
