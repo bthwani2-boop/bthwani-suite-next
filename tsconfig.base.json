@@ -94,6 +94,9 @@
       "expo-crypto": [
         "apps/app-client/runtime/node_modules/expo-crypto"
       ],
+      "expo-video": [
+        "apps/app-client/runtime/node_modules/expo-video"
+      ],
       "@dsh-shared/*": [
         "services/dsh/frontend/shared/*"
       ]
