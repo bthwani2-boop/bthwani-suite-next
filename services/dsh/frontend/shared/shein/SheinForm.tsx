@@ -6,7 +6,6 @@ import {
   StateView,
   Text,
   TextField,
-  colorRoles,
   spacing,
 } from "@bthwani/ui-kit";
 
@@ -249,5 +248,4 @@ const styles = StyleSheet.create({
   flexField: { flex: 1, minWidth: 140 },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: spacing[3], marginTop: spacing[4] },
   actionButton: { flex: 1, minWidth: 150 },
-  errorText: { color: colorRoles.danger, marginTop: spacing[3], textAlign: "right" },
 });
