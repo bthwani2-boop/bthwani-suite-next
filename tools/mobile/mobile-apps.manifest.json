@@ -15,6 +15,10 @@
       "androidPackage": "com.bthwani.client.next",
       "iosBundleIdentifier": "com.bthwani.client.next",
       "projectId": "abec897b-1f5f-409d-8286-607a5a6b69e2",
+      "userInterfaceStyle": "automatic",
+      "video": {
+        "supportsPictureInPicture": true
+      },
       "features": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "sqlite", "location", "maps"]
     },
     "app-partner": {
