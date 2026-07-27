@@ -36,9 +36,9 @@ type EmployeeProvisionInput struct {
 }
 
 func init() {
-	// Employee activation is actor-bound and issued only by Workforce. The webapp
-	// surface is the control-panel activation surface used by the existing BFF.
-	activationSurfaceByActorType["employee"] = "webapp"
+	// Employee access invitations are actor-bound, issued only by Workforce,
+	// and consumed exclusively by the administrative control-panel BFF.
+	activationSurfaceByActorType["employee"] = "control-panel"
 }
 
 func normalizeDepartmentCode(raw string) (string, error) {
