@@ -53,16 +53,17 @@ test("JRN-024 consumes governed idempotency headers for every replayable write",
   assert.match(governedHandlers, /IDEMPOTENCY_CONFLICT/);
 });
 
-test("JRN-024 stores atomic tenant and actor scoped replay receipts", () => {
-  assert.match(mutationReceipts, /current_setting\('bthwani\.tenant_id', TRUE\)/);
+test("JRN-024 stores atomic platform-workforce actor scoped replay receipts", () => {
+  assert.doesNotMatch(mutationReceipts, /bthwani\.tenant_id|tenantID/);
   assert.match(mutationReceipts, /pg_advisory_xact_lock/);
   assert.match(mutationReceipts, /dsh_field_readiness_operation_receipts/);
-  assert.match(mutationReceipts, /tenantID, actorID, operation, mutation\.IdempotencyKey/);
+  assert.match(mutationReceipts, /actorID, string\(operation\), mutation\.IdempotencyKey/);
   assert.match(idempotentDomain, /storeMutationReceiptTx/);
   assert.match(idempotentDomain, /fieldcommissionoutbox\.Enqueue/);
   assert.match(mutationMigration, /create_idempotency_key/);
   assert.match(mutationMigration, /completion_idempotency_key/);
-  assert.match(receiptMigration, /UNIQUE INDEX[\s\S]*tenant_id, actor_id, operation, idempotency_key/);
+  assert.doesNotMatch(receiptMigration, /tenant_id/);
+  assert.match(receiptMigration, /UNIQUE INDEX[\s\S]*actor_id, operation, idempotency_key/);
 });
 
 test("JRN-024 uses server-owned store coordinates and governed GPS evidence", () => {
@@ -116,10 +117,10 @@ test("JRN-024 source and generated contracts require both GPS captures", () => {
 
 test("JRN-024 publishes idempotency and correlation headers in source and generated contracts", () => {
   for (const operation of [
-    "dshFieldCreateVisit",
-    "dshFieldCompleteVisit",
-    "dshFieldUpsertReadinessCheck",
-    "dshFieldCreateEscalation",
+    "createDshFieldVisit",
+    "completeDshFieldVisit",
+    "upsertDshReadinessCheck",
+    "createDshReadinessEscalation",
   ]) {
     const start = fieldPaths.indexOf(`operationId: ${operation}`);
     assert.notEqual(start, -1, `missing operation ${operation}`);
@@ -152,13 +153,15 @@ test("JRN-024 accepts only governed app-field links and notification actions", (
   assert.doesNotMatch(appRuntime, /parseNotificationData|data\.route/);
 });
 
-test("JRN-024 isolates and clears encrypted offline work per tenant and actor", () => {
-  assert.match(offlineQueue, /readonly tenantId: string/);
+test("JRN-024 isolates and clears encrypted offline work per workforce actor and installation", () => {
+  assert.doesNotMatch(offlineQueue, /tenantId/);
   assert.match(offlineQueue, /readonly actorId: string/);
+  assert.match(offlineQueue, /readonly installationId: string/);
   assert.match(offlineQueue, /configureFieldOfflineQueueStorage/);
-  assert.match(offlineQueue, /scope\.tenantId/);
   assert.match(offlineQueue, /scope\.actorId/);
+  assert.match(offlineQueue, /scope\.installationId/);
   assert.doesNotMatch(offlineQueue, /submit_payout_request|upload_media_evidence/);
+  assert.match(appRuntime, /installationId=\{installationState\.installationId\}/);
   assert.match(appIndex, /SecureStore\.setItemAsync/);
   assert.match(appIndex, /clearFieldOfflineQueue\(\)/);
 });
