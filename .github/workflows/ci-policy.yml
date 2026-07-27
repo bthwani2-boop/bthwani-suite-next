@@ -76,7 +76,22 @@ jobs:
 
       - name: Verify guard registry
         if: ${{ inputs.governance_policy == 'true' }}
-        run: pnpm run guard:guard-registry
+        run: |
+          set +e
+          log="${RUNNER_TEMP}/guard-registry.log"
+          pnpm run guard:guard-registry >"${log}" 2>&1
+          status=$?
+          cat "${log}"
+          exit "${status}"
+
+      - name: Upload guard registry diagnostic
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: guard-registry-${{ github.run_id }}
+          path: ${{ runner.temp }}/guard-registry.log
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Verify SDLC governance
         if: ${{ inputs.governance_policy == 'true' }}
