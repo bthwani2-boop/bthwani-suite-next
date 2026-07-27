@@ -28,16 +28,28 @@ function run(command, args, cwd) {
   if (result.status !== 0) fail(`${command} ${args.join(" ")} failed with exit code ${result.status}`);
 }
 
+function linkInstalledModules(source, target, label) {
+  if (!fs.existsSync(source)) fail(`${label} node_modules is required before native verification`);
+  fs.symlinkSync(source, target, process.platform === "win32" ? "junction" : "dir");
+}
+
 try {
   for (const app of apps) if (!manifest.apps?.[app]) fail(`unknown app '${app}'`);
   run("git", ["worktree", "add", "--detach", worktree, "HEAD"], repoRoot);
-  const sourceNodeModules = path.join(repoRoot, "node_modules");
-  const targetNodeModules = path.join(worktree, "node_modules");
-  if (!fs.existsSync(sourceNodeModules)) fail("root node_modules is required before native verification");
-  fs.symlinkSync(sourceNodeModules, targetNodeModules, process.platform === "win32" ? "junction" : "dir");
+  linkInstalledModules(
+    path.join(repoRoot, "node_modules"),
+    path.join(worktree, "node_modules"),
+    "root",
+  );
 
   for (const app of apps) {
+    const sourceAppDir = path.join(repoRoot, "apps", app, "runtime");
     const appDir = path.join(worktree, "apps", app, "runtime");
+    linkInstalledModules(
+      path.join(sourceAppDir, "node_modules"),
+      path.join(appDir, "node_modules"),
+      app,
+    );
     run("pnpm", ["--dir", appDir, "exec", "expo", "prebuild", "--platform", "android", "--no-install", "--clean"], worktree);
     for (const required of ["android/gradlew", "android/app/build.gradle"]) {
       if (!fs.existsSync(path.join(appDir, required))) fail(`${app}: prebuild did not create ${required}`);
