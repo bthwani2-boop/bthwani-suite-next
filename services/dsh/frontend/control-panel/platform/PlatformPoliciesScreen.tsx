@@ -23,6 +23,7 @@ import {
 import { ClientAddressPrivacySection } from "./ClientAddressPrivacySection";
 import { Jrn029OperationalPolicySection } from "./Jrn029OperationalPolicySection";
 import { MapProviderHealthCard } from "./MapProviderHealthCard";
+import { OperationalPolicyGovernanceSection } from "./OperationalPolicyGovernanceSection";
 import { ServiceAreaGovernanceSection } from "./ServiceAreaGovernanceSection";
 import { StoreOnboardingFeePolicySection } from "./StoreOnboardingFeePolicySection";
 
@@ -147,6 +148,7 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
         ) : null}
       </View>
 
+      <OperationalPolicyGovernanceSection />
       <Jrn029OperationalPolicySection />
       <StoreOnboardingFeePolicySection authKind="authenticated" />
     </View>
