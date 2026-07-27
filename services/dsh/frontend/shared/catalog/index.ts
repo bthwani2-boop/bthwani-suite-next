@@ -15,6 +15,9 @@ export * from "./central-catalog-occ.api";
 export * from "./product-proposal-readback.api";
 export * from "./catalog-governance.types";
 export * from "./catalog-governance.api";
+export * from "./reels.types";
+export * from "./reels.api";
+export * from "./catalog-media.controller-core";
 export {
   updateCatalogAssetOCC as updateCatalogAsset,
 } from "./central-catalog-occ.api";
