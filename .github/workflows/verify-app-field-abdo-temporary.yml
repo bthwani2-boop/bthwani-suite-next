@@ -144,10 +144,18 @@ jobs:
           root_path.write_text(root, encoding="utf-8")
           PY
       - name: Compose and verify OpenAPI
+        id: openapi
+        continue-on-error: true
+        shell: bash
         run: |
-          pnpm --dir services/dsh openapi:compose
-          pnpm --dir services/dsh openapi:verify
+          set -o pipefail
+          log="${RUNNER_TEMP}/app-field-openapi-compose.log"
+          {
+            pnpm --dir services/dsh openapi:compose
+            pnpm --dir services/dsh openapi:verify
+          } 2>&1 | tee "${log}"
       - name: Collect verified outputs
+        if: ${{ steps.openapi.outcome == 'success' }}
         shell: bash
         run: |
           mkdir -p .artifacts/openapi/contracts/paths
@@ -160,9 +168,26 @@ jobs:
           cp services/dsh/contracts/generated/dsh.bundle.openapi.yaml .artifacts/openapi/contracts/generated/dsh.bundle.openapi.yaml
           cp services/dsh/clients/generated/dsh-api.ts .artifacts/openapi/clients/generated/dsh-api.ts
       - name: Upload verified outputs
+        if: ${{ steps.openapi.outcome == 'success' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: app-field-verified-outputs-${{ github.run_id }}
           path: .artifacts/openapi
           if-no-files-found: error
           retention-days: 7
+      - name: Upload OpenAPI failure diagnostics
+        if: ${{ steps.openapi.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-field-openapi-failure-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/app-field-openapi-compose.log
+            services/dsh/contracts/paths/catalog.paths.yaml
+            services/dsh/contracts/dsh.openapi.yaml
+            services/dsh/contracts/dsh.modular.manifest.json
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Enforce OpenAPI verification
+        if: ${{ steps.openapi.outcome == 'failure' }}
+        run: exit 1
