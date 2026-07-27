@@ -40,7 +40,6 @@ function registeredDshContracts() {
 function loadRouteClassifications() {
   const absolute = path.join(repoRoot, routeClassificationFile);
   if (!fs.existsSync(absolute)) return new Map();
-
   let document;
   try {
     document = JSON.parse(read(routeClassificationFile));
@@ -54,7 +53,6 @@ function loadRouteClassifications() {
     });
     return new Map();
   }
-
   if (
     document.schemaVersion !== 1 ||
     document.service !== "DSH" ||
@@ -68,7 +66,6 @@ function loadRouteClassifications() {
     });
     return new Map();
   }
-
   const result = new Map();
   for (const [index, item] of document.routes.entries()) {
     const line = index + 1;
@@ -103,12 +100,17 @@ function loadRouteClassifications() {
 }
 
 const dshRegistry = registeredDshContracts();
-const dshRegisteredFiles = new Set(
-  dshRegistry.map((entry) => entry.file),
-);
-const dshAdditionalContracts = dshRegistry
-  .map((entry) => entry.file)
-  .filter((file) => file !== dshPrimary);
+const dshRegisteredFiles = new Set(dshRegistry.map((entry) => entry.file));
+const dshExplicitRuntimeContracts = [
+  "services/dsh/contracts/dsh.reels.openapi.yaml",
+  "services/dsh/contracts/dsh.runtime-extensions.openapi.yaml",
+];
+const dshAdditionalContracts = [
+  ...dshRegistry
+    .map((entry) => entry.file)
+    .filter((file) => file !== dshPrimary),
+  ...dshExplicitRuntimeContracts,
+].filter((file, index, values) => values.indexOf(file) === index);
 const dshClientAddressContract =
   "services/dsh/contracts/dsh.client-address.openapi.yaml";
 if (!dshRegisteredFiles.has(dshClientAddressContract)) {
@@ -120,7 +122,6 @@ if (!dshRegisteredFiles.has(dshClientAddressContract)) {
 }
 
 const routeClassifications = loadRouteClassifications();
-
 const services = [
   {
     name: "DSH",
@@ -142,6 +143,7 @@ const services = [
       "services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml",
       "services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml",
       "services/wlt/contracts/jrn-038-cod-custody.openapi.yaml",
+      "services/wlt/contracts/wlt.workforce-finance.openapi.yaml",
     ].filter((file) => fs.existsSync(path.join(repoRoot, file))),
     router: "services/wlt/backend/internal/http/server.go",
     routerDir: "services/wlt/backend/internal/http",
@@ -149,7 +151,9 @@ const services = [
   {
     name: "Identity",
     openapi: "core/identity/contracts/auth.openapi.yaml",
-    additionalOpenapi: [],
+    additionalOpenapi: [
+      "core/identity/contracts/employee-access.openapi.yaml",
+    ],
     router: "core/identity/backend/internal/http/server.go",
     routerDir: "core/identity/backend/internal/http",
   },
@@ -177,9 +181,7 @@ const gatedWltMutationRoutes = new Set([
   "POST /wlt/commercial/loyalty-entries",
   "POST /wlt/commercial/subscriptions",
 ]);
-const approvedWltMutationScopes = new Set([
-  "POST /wlt/settlements",
-]);
+const approvedWltMutationScopes = new Set(["POST /wlt/settlements"]);
 const wltFinancialReadRoutes = new Set([
   "GET /wlt/refunds",
   "GET /wlt/refunds/{refundId}",
@@ -218,7 +220,6 @@ function serviceGoRoutes(service) {
       }
     }
   }
-
   const routes = [];
   const keys = new Set();
   for (const file of files) {
@@ -254,7 +255,6 @@ function uniqueOperations(service, operations) {
       unique.push(operation);
       continue;
     }
-
     const previous = seen.get(operation.operationId);
     if (previous) {
       if (operationKey(previous) === operationKey(operation)) continue;
@@ -285,18 +285,14 @@ function validatePathParameters(service, operation) {
       violations.push({
         file: operationFile(service, operation),
         line: operation.line,
-        message: `FORBIDDEN_WILDCARD_CONTRACT: ${operationKey(
-          operation,
-        )} uses wildcard path parameter "${pathParam.rawName}"`,
+        message: `FORBIDDEN_WILDCARD_CONTRACT: ${operationKey(operation)} uses wildcard path parameter "${pathParam.rawName}"`,
       });
     }
     if (!declared.has(pathParam.name)) {
       violations.push({
         file: operationFile(service, operation),
         line: operation.line,
-        message: `MISSING_PATH_PARAMETER: ${operationKey(
-          operation,
-        )} does not declare path parameter "${pathParam.name}"`,
+        message: `MISSING_PATH_PARAMETER: ${operationKey(operation)} does not declare path parameter "${pathParam.name}"`,
       });
     }
   }
@@ -308,9 +304,7 @@ function validateInternalServiceRoute(service, operation) {
     violations.push({
       file: operationFile(service, operation),
       line: operation.line,
-      message: `MISSING_INTERNAL_SECURITY: ${operationKey(
-        operation,
-      )} must define security`,
+      message: `MISSING_INTERNAL_SECURITY: ${operationKey(operation)} must define security`,
     });
   }
   for (const header of ["Authorization", "X-Service-Caller"]) {
@@ -318,9 +312,7 @@ function validateInternalServiceRoute(service, operation) {
       violations.push({
         file: operationFile(service, operation),
         line: operation.line,
-        message: `MISSING_INTERNAL_HEADER: ${operationKey(
-          operation,
-        )} must require ${header}`,
+        message: `MISSING_INTERNAL_HEADER: ${operationKey(operation)} must require ${header}`,
       });
     }
   }
@@ -329,7 +321,6 @@ function validateInternalServiceRoute(service, operation) {
 function validateWltOperation(service, operation) {
   if (service.name !== "WLT") return;
   const key = operationKey(operation);
-
   if (wltFinancialReadRoutes.has(key)) {
     for (const header of ["Authorization", "X-Service-Caller"]) {
       if (!hasRequiredHeader(operation, header)) {
@@ -341,12 +332,10 @@ function validateWltOperation(service, operation) {
       }
     }
   }
-
   if (!gatedWltMutationRoutes.has(key)) return;
   const expectedApproved = approvedWltMutationScopes.has(key);
   if (
-    operation.extensions.get("x-bthwani-mutation-approved") !==
-    expectedApproved
+    operation.extensions.get("x-bthwani-mutation-approved") !== expectedApproved
   ) {
     violations.push({
       file: operationFile(service, operation),
@@ -371,7 +360,6 @@ function validateWltOperation(service, operation) {
 }
 
 const openApiRoutesByService = new Map();
-
 try {
   for (const service of services) {
     const contracts = contractFiles(service);
@@ -384,7 +372,6 @@ try {
         });
       }
     }
-
     const parsedOperations = contracts
       .filter((contract) => fs.existsSync(path.join(repoRoot, contract)))
       .flatMap((contractFile) =>
@@ -395,7 +382,6 @@ try {
       );
     const operations = uniqueOperations(service, parsedOperations);
     openApiRoutesByService.set(service.name, operations);
-
     const openApiRouteSet = new Set(operations.map(operationKey));
     const goRoutes = serviceGoRoutes(service);
     const goRouteSet = new Set(goRoutes.map(routeKey));
@@ -403,7 +389,6 @@ try {
     for (const route of goRoutes) {
       const key = routeKey(route);
       if (key === "/" || openApiRouteSet.has(key)) continue;
-
       const classification =
         service.name === "DSH" ? routeClassifications.get(key) : undefined;
       if (classification) {
@@ -416,7 +401,6 @@ try {
         }
         continue;
       }
-
       violations.push({
         file: route.file,
         line: route.line,
@@ -461,20 +445,10 @@ try {
   cleanupGoRouteExtractor();
 }
 
-function verifyOutboundCall(
-  targetService,
-  method,
-  pathValue,
-  sourceFile,
-  line,
-) {
+function verifyOutboundCall(targetService, method, pathValue, sourceFile, line) {
   const operations = openApiRoutesByService.get(targetService) ?? [];
   const key = `${method} ${pathValue}`;
-  if (
-    operations.some((operation) => operationKey(operation) === key)
-  ) {
-    return;
-  }
+  if (operations.some((operation) => operationKey(operation) === key)) return;
   if (
     pathValue.endsWith("/") &&
     operations.some(
