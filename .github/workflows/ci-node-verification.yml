@@ -3,107 +3,23 @@ name: BThwani Node Verification
 on:
   workflow_call:
     inputs:
-      base_sha:
-        type: string
-        required: true
-      head_sha:
-        type: string
-        required: true
-      full_verification:
-        type: string
-        required: true
-      frontend:
-        type: string
-        required: true
-      heavy:
-        type: string
-        required: true
-      verification_tier:
-        type: string
-        required: true
-      journey:
-        type: string
-        required: true
-      journey_scope:
-        type: string
-        required: false
-        default: ""
-      platform_change_sets:
-        type: string
-        required: true
+      base_sha: { type: string, required: true }
+      head_sha: { type: string, required: true }
+      full_verification: { type: string, required: true }
+      frontend: { type: string, required: true }
+      heavy: { type: string, required: true }
+      verification_tier: { type: string, required: true }
+      journey: { type: string, required: true }
+      journey_scope: { type: string, required: false, default: "" }
+      platform_change_sets: { type: string, required: true }
 
 permissions:
   contents: read
 
 jobs:
-  fast:
-    name: Fast affected Node verification
-    if: ${{ inputs.verification_tier == 'fast' && inputs.frontend == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 45
-    steps:
-      - name: Checkout immutable source history
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Set up locked Node workspace
-        uses: ./.github/actions/setup-node-workspace
-      - name: Restore Nx computation cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .nx/cache
-          key: nx-fast-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ github.sha }}
-          restore-keys: |
-            nx-fast-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
-            nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
-      - name: Verify immutable diff
-        run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
-      - name: Verify affected typecheck, lint and tests
-        env:
-          NX_BASE: ${{ inputs.base_sha }}
-          NX_HEAD: ${{ inputs.head_sha }}
-        run: |
-          pnpm run affected:typecheck
-          pnpm run affected:lint
-          pnpm run affected:test
-
-  standard:
-    name: Standard affected Node verification
-    if: ${{ inputs.verification_tier == 'standard' && (inputs.frontend == 'true' || inputs.journey == 'true' || inputs.platform_change_sets == 'true') }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    steps:
-      - name: Checkout immutable source history
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Set up locked Node workspace
-        uses: ./.github/actions/setup-node-workspace
-      - name: Restore Nx computation cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .nx/cache
-          key: nx-standard-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ github.sha }}
-          restore-keys: |
-            nx-standard-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
-            nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
-      - name: Verify immutable diff
-        run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
-      - name: Verify affected typecheck, lint, tests and build
-        env:
-          NX_BASE: ${{ inputs.base_sha }}
-          NX_HEAD: ${{ inputs.head_sha }}
-        run: |
-          pnpm run affected:typecheck
-          pnpm run affected:lint
-          pnpm run affected:test
-          pnpm run affected:build
-
-  deep:
-    name: Deep Node verification
-    if: ${{ inputs.verification_tier == 'deep' && (inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.journey == 'true' || inputs.platform_change_sets == 'true') }}
+  verify:
+    name: ${{ inputs.verification_tier }} Node verification
+    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -118,31 +34,31 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .nx/cache
-          key: nx-deep-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ github.sha }}
+          key: nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ github.sha }}
           restore-keys: |
-            nx-deep-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
+            nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
             nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
       - name: Verify immutable diff
         run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
-      - name: Verify full or affected Node graph
+      - name: Verify exact affected or full Node graph
         env:
           NX_BASE: ${{ inputs.base_sha }}
           NX_HEAD: ${{ inputs.head_sha }}
           FULL_VERIFICATION: ${{ inputs.full_verification }}
+          VERIFICATION_TIER: ${{ inputs.verification_tier }}
         run: |
           if [[ "${FULL_VERIFICATION}" == "true" ]]; then
             pnpm run nx:typecheck
             pnpm run nx:lint
             pnpm run nx:test
             pnpm run nx:build
+          elif [[ "${VERIFICATION_TIER}" == "fast" ]]; then
+            node tools/scripts/run-affected-verification.mjs typecheck lint test
           else
-            pnpm run affected:typecheck
-            pnpm run affected:lint
-            pnpm run affected:test
-            pnpm run affected:build
+            node tools/scripts/run-affected-verification.mjs typecheck lint test build
           fi
       - name: Verify Expo configuration for deep frontend changes
-        if: ${{ inputs.frontend == 'true' }}
+        if: ${{ inputs.frontend == 'true' && inputs.verification_tier == 'deep' }}
         run: pnpm run mobile:expo:verify
 
   journeys:
