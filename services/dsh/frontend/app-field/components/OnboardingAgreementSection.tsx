@@ -45,15 +45,16 @@ export function OnboardingAgreementSection({
         multiline
       />
 
-      <View style={{ gap: spacing[2] }}>
+      <View style={{ gap: spacing[2], opacity: readOnly ? 0.6 : 1 }}>
         <Text role="bodySm" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>
           طريقة التوصيل والاستلام الأولية
         </Text>
         <SegmentedControl
           items={DELIVERY_READINESS_ITEMS}
           value={form.deliveryReadiness ?? ''}
-          onValueChange={(value) => onChange({ deliveryReadiness: value })}
-          disabled={readOnly}
+          onValueChange={(value) => {
+            if (!readOnly) onChange({ deliveryReadiness: value });
+          }}
         />
         <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
           الاختيار يصف الجاهزية الأولية فقط؛ نطاق الخدمة والتسعير النهائيان يظلان معتمدين من العمليات.
