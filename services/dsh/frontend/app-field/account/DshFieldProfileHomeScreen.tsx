@@ -14,6 +14,7 @@ import {
 } from '@bthwani/ui-kit';
 import { useWorkforceProfile } from '../../shared/workforce/use-workforce-profile';
 import { ENGAGEMENT_STATUS_LABEL_AR } from '../../shared/workforce';
+import { ProviderRatingSummaryPanel } from '../../shared/provider-ratings/ProviderRatingSummaryPanel';
 
 type DshFieldProfileHomeScreenProps = {
   readonly onBack: () => void;
@@ -42,8 +43,8 @@ export function DshFieldProfileHomeScreen({
     return (
       <StateView
         tone="warning"
-        title="الملف التشغيلي غير منشأ"
-        description="تم تسجيل الهوية، لكن Workforce لم ينشئ ملف مقدم الخدمة الميداني بعد. لا يمكن فتح المهام أو المالية قبل إنشائه."
+        title="ملف الميداني غير منشأ"
+        description="تم تسجيل الهوية، لكن Workforce لم ينشئ ملف الميداني بعد. لا يمكن فتح المهام أو المالية قبل إنشائه."
         actionLabel="إعادة المحاولة"
         onActionPress={() => void workforce.reload()}
       />
@@ -55,7 +56,7 @@ export function DshFieldProfileHomeScreen({
       <View style={styles.blockedRoot}>
         <StateView
           tone="danger"
-          title="الحساب الميداني معلّق"
+          title="حساب الميداني معلّق"
           description="تم إيقاف الملف التشغيلي من Workforce. لا يمكن تنفيذ زيارات أو عمليات مالية حتى إعادة التفعيل."
           actionLabel="تحديث الحالة"
           onActionPress={() => void workforce.reload()}
@@ -69,7 +70,7 @@ export function DshFieldProfileHomeScreen({
     return (
       <StateView
         tone="danger"
-        title="تعذر تحميل الملف التشغيلي"
+        title="تعذر تحميل ملف الميداني"
         description={workforce.state.message}
         actionLabel="إعادة المحاولة"
         onActionPress={() => void workforce.reload()}
@@ -78,13 +79,12 @@ export function DshFieldProfileHomeScreen({
   }
 
   const me = workforce.state.me;
-  const isFieldActor = me.workforceKind === 'field';
-  if (!isFieldActor) {
+  if (me.workforceKind !== 'field') {
     return (
       <StateView
         tone="danger"
         title="نوع الحساب غير متوافق"
-        description="الجلسة الحالية لا تملك ملف مقدم خدمة ميداني. افتح السطح المتوافق مع نوع Workforce المسجل."
+        description="الجلسة الحالية لا تملك ملف ميداني. افتح السطح المتوافق مع نوع Workforce المسجل."
         actionLabel="رجوع"
         onActionPress={onBack}
       />
@@ -97,7 +97,7 @@ export function DshFieldProfileHomeScreen({
     <View style={styles.root}>
       <View style={styles.headerContainer}>
         <Button label="رجوع" tone="ghost" size="sm" fullWidth={false} onPress={onBack} />
-        <Header title="ملف الميداني" subtitle="الهوية والملف التشغيلي من Workforce" />
+        <Header title="ملف الميداني" subtitle="الهوية والحالة التشغيلية من Workforce" />
       </View>
       <ScrollView
         style={styles.scroll}
@@ -107,7 +107,7 @@ export function DshFieldProfileHomeScreen({
         <View style={styles.identityBlock}>
           <View style={styles.badges}>
             <Badge label="DSH" tone="success" />
-            <Badge label="مقدم خدمة ميداني" tone="action" />
+            <Badge label="ميداني" tone="action" />
             <Badge
               label={ENGAGEMENT_STATUS_LABEL_AR[me.engagementStatus]}
               tone={operationallyActive ? 'success' : 'warning'}
@@ -115,7 +115,7 @@ export function DshFieldProfileHomeScreen({
           </View>
           <Text role="titleMd" style={styles.rtl}>{me.fullNameAr}</Text>
           <Text role="bodySm" tone="muted" style={styles.rtl}>
-            رقم مقدم الخدمة: {me.workforceCode}
+            رقم الميداني: {me.workforceCode}
           </Text>
           {!operationallyActive ? (
             <Text role="bodySm" tone="warning" style={styles.rtl}>
@@ -124,12 +124,14 @@ export function DshFieldProfileHomeScreen({
           ) : null}
         </View>
 
+        <ProviderRatingSummaryPanel kind="field" title="تقييم الشركاء لي" />
+
         <View style={styles.divider} />
 
         <View style={styles.menu}>
-          <MenuRow title="بيانات الميداني" subtitle="الهوية، التغطية، والوردية الحالية." onPress={onOpenProfile} />
+          <MenuRow title="بيانات الميداني" subtitle="الهوية، منطقة التغطية، والتوفر." onPress={onOpenProfile} />
           <MenuRow title="السجل" subtitle="آخر حالة لكل متجر والتقدم المرتبط به." onPress={onOpenHistory} />
-          <MenuRow title="المالية" subtitle="المحفظة والعمولات وطلبات الصرف من WLT." onPress={onOpenFinance} />
+          <MenuRow title="المالية" subtitle="المحفظة والعمولات والخصومات وطلبات الصرف من WLT." onPress={onOpenFinance} />
           <MenuRow title="مهام التحقق الميداني" subtitle="الزيارات والتصعيدات المخصصة لهذا الحساب." onPress={onOpenVerification} />
         </View>
 
