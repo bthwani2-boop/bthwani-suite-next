@@ -1,10 +1,6 @@
-// Field catalog controller — lets a field agent, while onboarding a partner's
-// auto-created draft store, browse the sovereign central-catalog master
-// products (never free-form local products) and link a chosen one to the
-// store's assortment, or propose a brand-new master product for review when
-// nothing matching exists. Proposals go through the approval pipeline before
-// they can ever be linked to a store — this controller never links a
-// proposal id, only an adopted masterProductId.
+// Field catalog controller — lets a field agent stock a partner's draft store
+// from the sovereign central catalog. Store-local truth is limited to price,
+// availability, stock, note, and governed media; product identity remains central.
 import { useCallback, useEffect, useState } from "react";
 import { fieldGetPartnerStore } from "./partner.api";
 import {
@@ -14,7 +10,11 @@ import {
   createFieldProductProposal,
 } from "../catalog/central-catalog.api";
 import { fetchFieldProductProposals } from "../catalog/product-proposal-readback.api";
-import { upsertFieldStoreAssortmentOCC } from "../catalog/central-catalog-occ.api";
+import {
+  upsertFieldStoreAssortmentOCC,
+  upsertFieldStoreAssortmentBatchOCC,
+  type FieldStoreAssortmentBatchResult,
+} from "../catalog/central-catalog-occ.api";
 import type {
   CentralCatalogDomain,
   CentralCatalogNode,
@@ -55,6 +55,17 @@ export type FieldStoreAssortmentInput = {
   readonly localNote: string;
 };
 
+export type FieldStoreAssortmentBatchInput = {
+  readonly masterProductId: string;
+  readonly input: FieldStoreAssortmentInput;
+};
+
+export type FieldCatalogBatchSummary = {
+  readonly succeeded: number;
+  readonly failed: number;
+  readonly results: readonly FieldStoreAssortmentBatchResult[];
+};
+
 export type FieldProductProposalInput = {
   readonly proposedNameAr: string;
   readonly proposedNameEn: string;
@@ -64,6 +75,16 @@ export type FieldProductProposalInput = {
   readonly barcode: string | null;
   readonly imageObjectKey?: string | null;
 };
+
+function mergeSavedAssortments(
+  current: readonly StoreAssortment[],
+  results: readonly FieldStoreAssortmentBatchResult[],
+): readonly StoreAssortment[] {
+  const saved = results.flatMap((result) => result.status === "saved" && result.assortment ? [result.assortment] : []);
+  if (saved.length === 0) return current;
+  const savedIds = new Set(saved.map((item) => item.masterProductId));
+  return [...current.filter((item) => !savedIds.has(item.masterProductId)), ...saved];
+}
 
 export function useFieldCatalogController(partnerId: string) {
   const [storeState, setStoreState] = useState<FieldCatalogStoreState>({ kind: "idle" });
@@ -108,13 +129,13 @@ export function useFieldCatalogController(partnerId: string) {
     async (query?: { domainId?: string; categoryNodeId?: string; search?: string }) => {
       setMasterProductsState({ kind: "loading" });
       try {
-        const items = await fetchFieldMasterProducts(query);
+        const items = await fetchFieldMasterProducts({ ...query, limit: 100, offset: 0 });
         setMasterProductsState({ kind: "success", items });
       } catch {
         setMasterProductsState({ kind: "error", message: "تعذر تحميل المنتجات" });
       }
     },
-    []
+    [],
   );
 
   useEffect(() => { void loadStore(); }, [loadStore]);
@@ -125,7 +146,7 @@ export function useFieldCatalogController(partnerId: string) {
       if (storeState.kind !== "success") return false;
       setActionState({ kind: "submitting" });
       try {
-        const existing = assortmentItems.find((a) => a.masterProductId === masterProductId);
+        const existing = assortmentItems.find((item) => item.masterProductId === masterProductId);
         const assortment = await upsertFieldStoreAssortmentOCC(partnerId, storeState.storeId, masterProductId, {
           unitPrice: input.unitPrice,
           currency: input.currency,
@@ -136,8 +157,8 @@ export function useFieldCatalogController(partnerId: string) {
           publicationStatus: existing?.publicationStatus ?? "draft",
           ...(existing ? { expectedVersion: existing.version } : {}),
         });
-        setAssortmentItems((prev) => {
-          const withoutExisting = prev.filter((a) => a.masterProductId !== masterProductId);
+        setAssortmentItems((previous) => {
+          const withoutExisting = previous.filter((item) => item.masterProductId !== masterProductId);
           return [...withoutExisting, assortment];
         });
         setActionState({ kind: "idle" });
@@ -148,7 +169,49 @@ export function useFieldCatalogController(partnerId: string) {
         return false;
       }
     },
-    [partnerId, storeState, assortmentItems, loadStore]
+    [partnerId, storeState, assortmentItems, loadStore],
+  );
+
+  const linkMasterProductsBatch = useCallback(
+    async (items: readonly FieldStoreAssortmentBatchInput[]): Promise<FieldCatalogBatchSummary> => {
+      if (storeState.kind !== "success" || items.length === 0) {
+        return { succeeded: 0, failed: items.length, results: [] };
+      }
+      setActionState({ kind: "submitting" });
+      try {
+        const response = await upsertFieldStoreAssortmentBatchOCC(
+          partnerId,
+          storeState.storeId,
+          items.map(({ masterProductId, input }) => {
+            const existing = assortmentItems.find((item) => item.masterProductId === masterProductId);
+            return {
+              masterProductId,
+              unitPrice: input.unitPrice,
+              currency: input.currency,
+              available: input.available,
+              stockStatus: input.stockStatus,
+              localNote: input.localNote,
+              customImageObjectKey: null,
+              publicationStatus: existing?.publicationStatus ?? "draft",
+              ...(existing ? { expectedVersion: existing.version } : {}),
+            };
+          }),
+        );
+        setAssortmentItems((previous) => mergeSavedAssortments(previous, response.results));
+        if (response.failed > 0) {
+          await loadStore();
+          setActionState({ kind: "error", message: `تم حفظ ${response.succeeded} وتعذر حفظ ${response.failed}` });
+        } else {
+          setActionState({ kind: "idle" });
+        }
+        return response;
+      } catch {
+        await loadStore();
+        setActionState({ kind: "error", message: "تعذر حفظ مجموعة المنتجات" });
+        return { succeeded: 0, failed: items.length, results: [] };
+      }
+    },
+    [partnerId, storeState, assortmentItems, loadStore],
   );
 
   const proposeNewProduct = useCallback(
@@ -165,7 +228,7 @@ export function useFieldCatalogController(partnerId: string) {
           imageObjectKey: input.imageObjectKey || null,
           sourceSurface: "app-field",
         });
-        setProposals((prev) => [proposal, ...prev.filter((item) => item.id !== proposal.id)]);
+        setProposals((previous) => [proposal, ...previous.filter((item) => item.id !== proposal.id)]);
         setActionState({ kind: "idle" });
         return proposal;
       } catch {
@@ -173,7 +236,7 @@ export function useFieldCatalogController(partnerId: string) {
         return null;
       }
     },
-    [partnerId]
+    [partnerId],
   );
 
   return {
@@ -187,6 +250,7 @@ export function useFieldCatalogController(partnerId: string) {
     reloadTaxonomy: loadTaxonomy,
     searchMasterProducts,
     linkMasterProduct,
+    linkMasterProductsBatch,
     proposeNewProduct,
   };
 }
