@@ -2,6 +2,7 @@ import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { DshClientSurface } from "../../../../services/dsh/frontend/app-client";
+import { ClientOrderRatingGate } from "../../../../services/dsh/frontend/app-client/ratings/ClientOrderRatingGate";
 import {
   configureIdentitySession,
   configureIdentitySessionStorage,
@@ -32,7 +33,9 @@ function AppContent() {
   return (
     <View style={styles.root}>
       <IdentitySessionGate requiredRole="client" requiredSurface="app-client">
-        <DshClientSurface />
+        <ClientOrderRatingGate>
+          <DshClientSurface />
+        </ClientOrderRatingGate>
       </IdentitySessionGate>
     </View>
   );
