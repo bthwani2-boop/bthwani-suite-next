@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   promoScrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: alpha(colorRoles.shadowBase, 0.5),
   },
   heroPromoContent: {
