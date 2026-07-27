@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     backgroundColor: brandScale.action[500],
   },
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colorRoles.mediaScrimStrong,
     opacity: 0.45,
   },
