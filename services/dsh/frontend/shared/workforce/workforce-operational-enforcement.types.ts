@@ -25,8 +25,8 @@ export type ProviderIncidentStatus =
 
 export type TransitionProviderIncidentInput = {
   readonly toStatus: ProviderIncidentStatus;
-  readonly resolutionNote?: string;
-  readonly wltLedgerReference?: string;
+  readonly resolutionNote?: string | undefined;
+  readonly wltLedgerReference?: string | undefined;
 };
 
 export type TransitionProviderIncidentResponse = {
@@ -38,8 +38,8 @@ export type ProviderIncidentTransition = {
   readonly incidentId: string;
   readonly fromStatus: ProviderIncidentStatus;
   readonly toStatus: ProviderIncidentStatus;
-  readonly resolutionNote?: string;
-  readonly wltLedgerReference?: string;
+  readonly resolutionNote?: string | undefined;
+  readonly wltLedgerReference?: string | undefined;
   readonly changedByActorId: string;
   readonly createdAt: string;
 };
