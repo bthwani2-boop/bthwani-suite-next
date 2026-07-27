@@ -60,5 +60,24 @@ jobs:
         run: corepack enable
       - name: Install workspace
         run: pnpm install --frozen-lockfile
-      - name: Typecheck control panel
-        run: pnpm --dir apps/control-panel/runtime typecheck
+      - name: Run control-panel typecheck
+        id: typecheck
+        shell: bash
+        run: |
+          set +e
+          pnpm --dir apps/control-panel/runtime typecheck > typecheck.log 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          cat typecheck.log
+          exit 0
+      - name: Upload typecheck diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: abdo-control-panel-typecheck-${{ github.run_id }}
+          path: typecheck.log
+          if-no-files-found: error
+          retention-days: 3
+      - name: Enforce typecheck result
+        if: steps.typecheck.outputs.exit_code != '0'
+        run: exit 1
