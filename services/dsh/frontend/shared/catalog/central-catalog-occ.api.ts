@@ -125,6 +125,41 @@ export async function upsertFieldStoreAssortmentOCC(
   return response.assortment;
 }
 
+export type FieldStoreAssortmentBatchItem = StoreAssortmentOCCInput & {
+  readonly masterProductId: string;
+};
+
+export type FieldStoreAssortmentBatchResult = {
+  readonly index: number;
+  readonly masterProductId: string;
+  readonly status: "saved" | "failed";
+  readonly assortment?: StoreAssortment;
+  readonly code?: string;
+  readonly message?: string;
+  readonly currentVersion?: number;
+  readonly expectedVersion?: number;
+};
+
+export type FieldStoreAssortmentBatchResponse = {
+  readonly results: readonly FieldStoreAssortmentBatchResult[];
+  readonly succeeded: number;
+  readonly failed: number;
+};
+
+export async function upsertFieldStoreAssortmentBatchOCC(
+  partnerId: string,
+  storeId: string,
+  items: readonly FieldStoreAssortmentBatchItem[],
+): Promise<FieldStoreAssortmentBatchResponse> {
+  if (items.length === 0 || items.length > 100) {
+    throw new Error("FIELD_ASSORTMENT_BATCH_SIZE_INVALID");
+  }
+  return request<FieldStoreAssortmentBatchResponse>(
+    `/dsh/field/partners/${encodeURIComponent(partnerId)}/stores/${encodeURIComponent(storeId)}/assortment/batch`,
+    { method: "POST", body: { items } },
+  );
+}
+
 async function resolveAssetVersion(assetId: string, supplied?: number): Promise<number> {
   if (Number.isInteger(supplied) && (supplied ?? 0) > 0) return supplied as number;
   const limit = 200;
