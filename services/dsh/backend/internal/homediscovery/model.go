@@ -27,10 +27,12 @@ type HomeFilter struct {
 }
 
 type HomeCategory struct {
-	ID        string `json:"id"`
-	Label     string `json:"label"`
-	IconURL   string `json:"iconUrl,omitempty"`
-	SortOrder int    `json:"sortOrder"`
+	ID                string `json:"id"`
+	Label             string `json:"label"`
+	IconURL           string `json:"iconUrl,omitempty"`
+	SortOrder         int    `json:"sortOrder"`
+	DestinationType   string `json:"destinationType"`
+	DestinationTarget string `json:"destinationTarget"`
 }
 
 type AdminContentItem struct {
