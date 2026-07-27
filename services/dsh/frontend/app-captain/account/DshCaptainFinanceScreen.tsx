@@ -5,6 +5,7 @@ import { WltDshCaptainBridge } from '../../shared/finance-wlt-link/wlt/generated
 import { ActorWalletPanel } from '../../shared/finance-wlt-link/actor-wallet';
 import { RepresentativeCommissionPanel } from '../../shared/finance-wlt-link/jrn036';
 import { PayoutDestinationPanel } from '../../shared/finance-wlt-link/jrn037';
+import { CaptainFinancialEligibilityPanel } from '../../shared/dispatch';
 import { ProviderIncidentsPanel } from '../../shared/workforce/ProviderIncidentsPanel';
 import { DshOperationScreen } from '../DshOperationScreen';
 import { DshCaptainCodCustodyScreen } from './DshCaptainCodCustodyScreen';
@@ -25,6 +26,7 @@ export type DshCaptainFinanceScreenProps = {
 function EarningsContent() {
 	return (
 		<Box gap={4}>
+			<CaptainFinancialEligibilityPanel />
 			<ActorWalletPanel actorType="captain" title="الرصيد والضمانة المالية والأرباح" embedded />
 			<DshCaptainCodCustodyScreen embedded />
 			<RepresentativeCommissionPanel actorType="captain" title="أجور وعمولات التوصيل" embedded />
