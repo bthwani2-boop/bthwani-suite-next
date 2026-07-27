@@ -230,7 +230,12 @@ requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, [
 ]);
 
 requireMarkers(`${workflowsRoot}/ci-backends.yml`, ["Select affected backends", "Apply migrations", "go test ./...", "go build ./..."]);
-requireMarkers(`${workflowsRoot}/ci-runtime.yml`, ["runtime:full:smoke", "Stop runtime"]);
+requireMarkers(`${workflowsRoot}/ci-runtime.yml`, [
+  "Execute selected runtime profile",
+  "runtime:smoke",
+  "Stop selected runtime profile",
+  "Upload runtime proof",
+]);
 requireMarkers(`${workflowsRoot}/dsh-database.yml`, ["contents: read", "postgres:16-alpine", "invoke-dsh-database.ps1"]);
 
 if (enforcement.targetBranch !== "master") {
