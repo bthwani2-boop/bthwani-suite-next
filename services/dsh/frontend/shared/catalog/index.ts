@@ -15,6 +15,7 @@ export * from "./central-catalog-occ.api";
 export * from "./product-proposal-readback.api";
 export * from "./catalog-governance.types";
 export * from "./catalog-governance.api";
+export * from "./catalog-mobile-file-picker";
 export * from "./reels.types";
 export {
   submitGovernedReel,
