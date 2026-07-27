@@ -1,5 +1,5 @@
 import React from "react";
-import { useColorScheme } from "react-native";
+import { useColorScheme, type ColorSchemeName } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 
@@ -23,7 +23,7 @@ function isAppearanceMode(value: string | null): value is ClientAppearanceMode {
 
 function resolveThemeName(
   mode: ClientAppearanceMode,
-  systemScheme: "light" | "dark" | null | undefined,
+  systemScheme: ColorSchemeName,
 ): ClientThemeName {
   if (mode === "darkGlass") return "dark";
   if (mode === "lightPremium") return "light";
