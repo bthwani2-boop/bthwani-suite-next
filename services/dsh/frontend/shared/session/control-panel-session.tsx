@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import type { ActorIdentity } from "@bthwani/core-identity";
+import { CONTROL_PANEL_SESSION_EXPIRED_EVENT } from "../_kernel/dsh-http-request";
 import {
   activateControlPanelSession,
   fetchControlPanelSession,
@@ -42,6 +43,16 @@ export function ControlPanelSessionProvider({ children }: { readonly children: R
     mounted.current = true;
     return () => {
       mounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleExpiredSession = () => {
+      if (mounted.current) setState({ kind: "signed_out" });
+    };
+    window.addEventListener(CONTROL_PANEL_SESSION_EXPIRED_EVENT, handleExpiredSession);
+    return () => {
+      window.removeEventListener(CONTROL_PANEL_SESSION_EXPIRED_EVENT, handleExpiredSession);
     };
   }, []);
 
