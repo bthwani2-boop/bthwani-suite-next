@@ -18,6 +18,7 @@ import {
   type EngagementStatus,
   type FieldAgent,
 } from "../../shared/workforce";
+import { ProviderOperationalEnforcementPanel } from "./ProviderOperationalEnforcementPanel";
 
 export type ProviderActivationWorkspaceProps = {
   readonly providerKind: "field" | "captain";
@@ -268,6 +269,12 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
 
         {actionError ? <CpStatePanel role="alert" title={actionError} /> : null}
         {latest?.status ? <CpBadge tone={latest.status === "pending" ? "success" : "neutral"}>{latest.status}</CpBadge> : null}
+
+        <ProviderOperationalEnforcementPanel
+          actorId={actorId}
+          providerKind={providerKind}
+          canManage={managerAllowed}
+        />
       </Box>
     </Card>
   );
