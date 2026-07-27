@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani Identity Employee Access API
-  version: 0.1.0
+  version: 0.1.1
   description: >-
     Workforce-only administrative employee provisioning. Identity derives the
     effective control-panel roles and permissions from a closed permission
@@ -10,6 +10,7 @@ info:
     challenge endpoint with actorType=employee and surface=webapp.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/identity
+x-bthwani-runtime-dependency: true
 x-bthwani-extends: ./auth.openapi.yaml
 servers:
   - url: http://localhost:58082
@@ -22,6 +23,12 @@ paths:
       security:
         - serviceToken: []
       parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
         - name: X-Service-Caller
           in: header
           required: true
