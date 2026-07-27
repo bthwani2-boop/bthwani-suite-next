@@ -1,0 +1,333 @@
+openapi: 3.1.0
+info:
+  title: BThwani DSH Governed Reels API
+  version: 1.0.0
+  description: >
+    Sovereign short-video lifecycle across app-partner, control-panel and
+    app-client. Partner submissions and moderation previews are private;
+    app-client reads approved video and poster assets only.
+servers:
+  - url: /
+tags:
+  - name: Reels
+paths:
+  /dsh/partner/reels:
+    get:
+      operationId: listPartnerOwnedReels
+      tags: [Reels]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: storeId
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: offset
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Actor- and store-scoped reel submissions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reels]
+                properties:
+                  reels:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshGovernedReel" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: submitPartnerReel
+      tags: [Reels]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshSubmitReelRequest" }
+      responses:
+        "201":
+          description: Reel submitted for moderation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reel]
+                properties:
+                  reel: { $ref: "#/components/schemas/DshGovernedReel" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/reels:
+    get:
+      operationId: listOperatorReels
+      tags: [Reels]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: "#/components/schemas/DshReelStatus" }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: offset
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Permission-gated moderation queue.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reels]
+                properties:
+                  reels:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshGovernedReel" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /dsh/operator/reels/{reelId}/review:
+    post:
+      operationId: reviewOperatorReel
+      tags: [Reels]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ReelId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DshReviewReelRequest" }
+      responses:
+        "200":
+          description: Moderation decision and canonical presentation metadata committed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reel]
+                properties:
+                  reel: { $ref: "#/components/schemas/DshGovernedReel" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /dsh/operator/reels/{reelId}/media/{kind}:
+    get:
+      operationId: previewOperatorReelMedia
+      tags: [Reels]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ReelId"
+        - name: kind
+          in: path
+          required: true
+          schema: { type: string, enum: [video, poster] }
+      responses:
+        "200":
+          description: Private no-store moderation preview.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: "private, no-store" }
+          content:
+            video/mp4:
+              schema: { type: string, format: binary }
+            image/jpeg:
+              schema: { type: string, format: binary }
+            image/png:
+              schema: { type: string, format: binary }
+            image/webp:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /dsh/public/reels:
+    get:
+      operationId: listApprovedPublicReels
+      tags: [Reels]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        "200":
+          description: Approved reels with approved DAM media only.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reels]
+                properties:
+                  reels:
+                    type: array
+                    items: { $ref: "#/components/schemas/DshPublicReel" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ReelId:
+      name: reelId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+  schemas:
+    DshReelStatus:
+      type: string
+      enum: [pending_review, approved, rejected, archived]
+    DshReelTargetType:
+      type: string
+      enum: [master_product, store, offer]
+    DshGovernedReel:
+      type: object
+      required:
+        - id
+        - assetId
+        - titleAr
+        - titleEn
+        - subtitleAr
+        - subtitleEn
+        - highlightAr
+        - highlightEn
+        - ctaLabelAr
+        - ctaLabelEn
+        - targetType
+        - targetId
+        - status
+        - sortOrder
+        - submittedBy
+        - submittedByRole
+        - reviewNote
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string }
+        assetId: { type: string }
+        posterAssetId: { type: [string, "null"] }
+        titleAr: { type: string, maxLength: 160 }
+        titleEn: { type: string, maxLength: 160 }
+        subtitleAr: { type: string, maxLength: 500 }
+        subtitleEn: { type: string, maxLength: 500 }
+        highlightAr: { type: string, maxLength: 280 }
+        highlightEn: { type: string, maxLength: 280 }
+        ctaLabelAr: { type: string, maxLength: 80 }
+        ctaLabelEn: { type: string, maxLength: 80 }
+        targetType: { $ref: "#/components/schemas/DshReelTargetType" }
+        targetId: { type: string, minLength: 1 }
+        status: { $ref: "#/components/schemas/DshReelStatus" }
+        sortOrder: { type: integer }
+        submittedBy: { type: string }
+        submittedByRole: { type: string }
+        sourceStoreId: { type: [string, "null"] }
+        reviewedBy: { type: [string, "null"] }
+        reviewNote: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DshSubmitReelRequest:
+      type: object
+      required: [assetId, targetType, targetId]
+      properties:
+        assetId: { type: string, minLength: 1 }
+        posterAssetId: { type: string, minLength: 1 }
+        titleAr: { type: string, maxLength: 160 }
+        titleEn: { type: string, maxLength: 160 }
+        subtitleAr: { type: string, maxLength: 500 }
+        subtitleEn: { type: string, maxLength: 500 }
+        highlightAr: { type: string, maxLength: 280 }
+        highlightEn: { type: string, maxLength: 280 }
+        ctaLabelAr: { type: string, maxLength: 80 }
+        ctaLabelEn: { type: string, maxLength: 80 }
+        targetType: { $ref: "#/components/schemas/DshReelTargetType" }
+        targetId: { type: string, minLength: 1 }
+        sortOrder: { type: integer, default: 0 }
+        sourceStoreId: { type: string, minLength: 1 }
+    DshReviewReelRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [approved, rejected, archived] }
+        reviewNote: { type: string }
+        posterAssetId: { type: string, minLength: 1 }
+        titleAr: { type: string, maxLength: 160 }
+        titleEn: { type: string, maxLength: 160 }
+        subtitleAr: { type: string, maxLength: 500 }
+        subtitleEn: { type: string, maxLength: 500 }
+        highlightAr: { type: string, maxLength: 280 }
+        highlightEn: { type: string, maxLength: 280 }
+        ctaLabelAr: { type: string, maxLength: 80 }
+        ctaLabelEn: { type: string, maxLength: 80 }
+        targetType: { $ref: "#/components/schemas/DshReelTargetType" }
+        targetId: { type: string, minLength: 1 }
+        sortOrder: { type: integer }
+    DshPublicReel:
+      type: object
+      required: [id, titleAr, titleEn, videoUrl, targetType, targetId, sortOrder]
+      properties:
+        id: { type: string }
+        titleAr: { type: string }
+        titleEn: { type: string }
+        subtitleAr: { type: string }
+        subtitleEn: { type: string }
+        highlightAr: { type: string }
+        highlightEn: { type: string }
+        ctaLabelAr: { type: string }
+        ctaLabelEn: { type: string }
+        videoUrl: { type: string }
+        posterUrl: { type: string }
+        targetType: { $ref: "#/components/schemas/DshReelTargetType" }
+        targetId: { type: string }
+        sortOrder: { type: integer }
+    DshError:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
+    Unauthorized:
+      description: Authentication required.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
+    Forbidden:
+      description: Permission or store ownership denied.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
+    NotFound:
+      description: Reel or media not found.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }
+    Conflict:
+      description: Lifecycle or media state conflict.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/DshError" }

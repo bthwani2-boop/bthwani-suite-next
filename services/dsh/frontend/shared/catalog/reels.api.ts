@@ -1,3 +1,4 @@
+import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient, createDshPublicHttpClient } from "../_kernel/dsh-http-request";
 import type {
@@ -59,6 +60,28 @@ export async function reviewGovernedReel(
     { method: "POST", body: input },
   );
   return response.reel;
+}
+
+export async function fetchOperatorReelMediaBlob(
+  reelId: string,
+  kind: "video" | "poster",
+): Promise<Blob> {
+  const token = getIdentityAccessToken();
+  if (!token) throw new Error("IDENTITY_SESSION_REQUIRED");
+  const response = await fetch(
+    `${baseUrl}/dsh/operator/reels/${encodeURIComponent(reelId)}/media/${kind}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: kind === "video" ? "video/mp4" : "image/*",
+      },
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`REEL_MEDIA_PREVIEW_FAILED:${response.status}`);
+  }
+  return response.blob();
 }
 
 export async function fetchGovernedPublicReels(limit = 20): Promise<readonly GovernedPublicReel[]> {
