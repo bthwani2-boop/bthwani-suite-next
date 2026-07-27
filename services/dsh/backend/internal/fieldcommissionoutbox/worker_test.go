@@ -41,9 +41,6 @@ func uniqueID(prefix string) string {
 	return prefix + "-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 }
 
-// seedVisitFixture creates the minimal partner/store/field-visit chain the
-// category-derived commission outbox requires, and registers cleanup in
-// reverse foreign-key order.
 func seedVisitFixture(t *testing.T, db *sql.DB) (storeID, agentID, visitID string) {
 	t.Helper()
 	ctx := context.Background()
@@ -93,10 +90,6 @@ func fetchOutboxRow(t *testing.T, db *sql.DB, id string) (status string, attempt
 	return
 }
 
-// TestProcessOnceDeliversAndMarksSentDBIntegration proves the end-to-end path:
-// an enqueued event is claimed, delivered via a fake WLT server, and marked
-// 'sent' — the same path that was previously missing entirely (no worker ever
-// called ClaimBatch), which meant field commissions never reached WLT.
 func TestProcessOnceDeliversAndMarksSentDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	storeID, agentID, visitID := seedVisitFixture(t, db)
@@ -115,8 +108,8 @@ func TestProcessOnceDeliversAndMarksSentDBIntegration(t *testing.T) {
 
 	var gotBody map[string]any
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/wlt/commissions" {
-			t.Fatalf("expected /wlt/commissions, got %s", r.URL.Path)
+		if r.URL.Path != "/wlt/field-commissions" {
+			t.Fatalf("expected /wlt/field-commissions, got %s", r.URL.Path)
 		}
 		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
 			t.Fatalf("failed to decode request body: %v", err)
@@ -139,8 +132,17 @@ func TestProcessOnceDeliversAndMarksSentDBIntegration(t *testing.T) {
 	if gotBody["storeId"] != storeID {
 		t.Fatalf("expected storeId=%q, got %v", storeID, gotBody["storeId"])
 	}
-	if gotBody["sourceType"] != "field_visit" {
-		t.Fatalf("expected sourceType=field_visit, got %v", gotBody["sourceType"])
+	if gotBody["partnerId"] == "" || gotBody["partnerId"] == nil {
+		t.Fatalf("expected partnerId to be projected, got %v", gotBody["partnerId"])
+	}
+	if gotBody["partnerCategory"] != "restaurant" {
+		t.Fatalf("expected partnerCategory=restaurant, got %v", gotBody["partnerCategory"])
+	}
+	if gotBody["sourceEvidenceHash"] == "" || gotBody["sourceEvidenceHash"] == nil {
+		t.Fatalf("expected immutable sourceEvidenceHash, got %v", gotBody["sourceEvidenceHash"])
+	}
+	if gotBody["idempotencyKey"] == "" || gotBody["idempotencyKey"] == nil {
+		t.Fatalf("expected idempotencyKey, got %v", gotBody["idempotencyKey"])
 	}
 
 	var id string
@@ -156,8 +158,6 @@ func TestProcessOnceDeliversAndMarksSentDBIntegration(t *testing.T) {
 	}
 }
 
-// TestProcessOnceMarksFailedWithoutMarkingSentDBIntegration proves a WLT-down
-// scenario does not silently drop the event and does not falsely mark it sent.
 func TestProcessOnceMarksFailedWithoutMarkingSentDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	storeID, agentID, visitID := seedVisitFixture(t, db)
@@ -200,12 +200,15 @@ func TestProcessOnceMarksFailedWithoutMarkingSentDBIntegration(t *testing.T) {
 	}
 }
 
-// TestDeliverFieldCommissionErrorSurfacesToCaller is a lightweight non-DB check
-// that a transport failure calling WLT surfaces as a non-nil error, the
-// precondition MarkFailed's caller relies on.
-func TestDeliverFieldCommissionErrorSurfacesToCaller(t *testing.T) {
+func TestDeliverFieldCategoryCommissionErrorSurfacesToCaller(t *testing.T) {
 	client := wlt.NewClient("http://127.0.0.1:0", "test-service-token")
-	err := client.DeliverFieldCommission(context.Background(), wlt.DeliverFieldCommissionInput{VisitID: "visit-x"})
+	err := client.DeliverFieldCategoryCommission(context.Background(), wlt.DeliverFieldCategoryCommissionInput{
+		BeneficiaryActorID: "field-x",
+		VisitID:            "visit-x",
+		StoreID:            "store-x",
+		PartnerID:          "partner-x",
+		PartnerCategory:    "restaurant",
+	})
 	if err == nil {
 		t.Fatalf("expected error calling an unreachable WLT endpoint")
 	}
