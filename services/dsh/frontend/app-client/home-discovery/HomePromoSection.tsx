@@ -9,6 +9,7 @@ import {
   spacing,
   statusScale,
 } from "@bthwani/ui-kit";
+import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
 import type { PromoViewModel } from "../../shared/home-discovery";
 
 type Props = {
@@ -21,8 +22,24 @@ type Props = {
 const ICON_BOX = 56;
 const PROMO_H = 74;
 
+function promoActionLabel(promo: PromoViewModel): string {
+  switch (promo.actionType) {
+    case "store":
+      return "فتح المتجر";
+    case "category":
+      return "عرض الفئة";
+    case "external":
+      return "معرفة المزيد";
+    case "none":
+    default:
+      return "";
+  }
+}
+
 export function HomePromoSection({ promos, onPromoPress, onCategoriesPress, onVideoPress }: Props) {
   const promo = promos[0] ?? null;
+  const actionLabel = promo ? promoActionLabel(promo) : "";
+  const interactive = promo != null && actionLabel.length > 0 && onPromoPress != null;
 
   return (
     <View style={styles.container}>
@@ -34,26 +51,58 @@ export function HomePromoSection({ promos, onPromoPress, onCategoriesPress, onVi
 
         {promo != null ? (
           <Pressable
-            style={({ pressed }) => [styles.heroPromoCard, pressed && styles.heroPromoCardPressed]}
+            disabled={!interactive}
+            style={({ pressed }) => [
+              styles.heroPromoCard,
+              pressed && interactive && styles.heroPromoCardPressed,
+            ]}
             onPress={() => onPromoPress?.(promo)}
-            accessibilityRole="button"
-            accessibilityLabel={promo.title}
+            accessibilityRole={interactive ? "button" : "text"}
+            accessibilityLabel={interactive ? `${promo.title}، ${actionLabel}` : promo.title}
           >
+            {promo.imageUrl ? (
+              <ClientRemoteImage
+                uri={promo.imageUrl}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                accessibilityLabel={`صورة عرض ${promo.title}`}
+              />
+            ) : null}
+            {promo.imageUrl ? <View style={styles.promoScrim} /> : null}
             <View style={styles.heroPromoContent}>
-              <View style={styles.heroPromoIconContainer}>
-                <RibbonIcon />
-              </View>
+              {!promo.imageUrl ? (
+                <View style={styles.heroPromoIconContainer}>
+                  <Text style={styles.ribbonGlyph}>🎖️</Text>
+                </View>
+              ) : null}
               <View style={styles.heroPromoTextWrap}>
                 {promo.badgeLabel ? (
-                  <Text style={styles.heroPromoBadge} numberOfLines={1}>{promo.badgeLabel}</Text>
+                  <Text
+                    style={[styles.heroPromoBadge, promo.imageUrl && styles.textOnMedia]}
+                    numberOfLines={1}
+                  >
+                    {promo.badgeLabel}
+                  </Text>
                 ) : null}
-                <Text style={styles.heroPromoTitle} numberOfLines={1}>{promo.title}</Text>
+                <Text
+                  style={[styles.heroPromoTitle, promo.imageUrl && styles.textOnMedia]}
+                  numberOfLines={1}
+                >
+                  {promo.title}
+                </Text>
                 {promo.subtitle ? (
-                  <Text style={styles.heroPromoSubtitle} numberOfLines={1}>{promo.subtitle}</Text>
+                  <Text
+                    style={[styles.heroPromoSubtitle, promo.imageUrl && styles.textOnMediaMuted]}
+                    numberOfLines={1}
+                  >
+                    {promo.subtitle}
+                  </Text>
                 ) : null}
-                <View style={styles.heroPromoCtaButton}>
-                  <Text style={styles.heroPromoCtaText}>استفد الآن</Text>
-                </View>
+                {actionLabel ? (
+                  <View style={styles.heroPromoCtaButton}>
+                    <Text style={styles.heroPromoCtaText}>{actionLabel}</Text>
+                  </View>
+                ) : null}
               </View>
             </View>
           </Pressable>
@@ -66,29 +115,6 @@ export function HomePromoSection({ promos, onPromoPress, onCategoriesPress, onVi
       </View>
     </View>
   );
-}
-
-function PlayIcon() {
-  return <Text style={styles.playGlyph}>▶</Text>;
-}
-
-function GridOutlineIcon() {
-  return (
-    <View style={styles.gridOutline}>
-      <View style={styles.gridRow}>
-        <View style={styles.gridCell} />
-        <View style={styles.gridCell} />
-      </View>
-      <View style={styles.gridRow}>
-        <View style={styles.gridCell} />
-        <View style={styles.gridCell} />
-      </View>
-    </View>
-  );
-}
-
-function RibbonIcon() {
-  return <Text style={styles.ribbonGlyph}>🎖️</Text>;
 }
 
 function QuickBtn({
@@ -104,9 +130,11 @@ function QuickBtn({
 }) {
   return (
     <Pressable
+      disabled={onPress == null}
       style={({ pressed }) => [styles.categorySelectorCard, pressed && styles.quickPressed]}
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityState={{ disabled: onPress == null }}
       accessibilityLabel={label}
     >
       <View
@@ -116,7 +144,20 @@ function QuickBtn({
           isHub && styles.categoryHubIconContainer,
         ]}
       >
-        {isVideo ? <PlayIcon /> : <GridOutlineIcon />}
+        {isVideo ? (
+          <Text style={styles.playGlyph}>▶</Text>
+        ) : (
+          <View style={styles.gridOutline}>
+            <View style={styles.gridRow}>
+              <View style={styles.gridCell} />
+              <View style={styles.gridCell} />
+            </View>
+            <View style={styles.gridRow}>
+              <View style={styles.gridCell} />
+              <View style={styles.gridCell} />
+            </View>
+          </View>
+        )}
       </View>
       <View style={styles.categoryNameContainer}>
         <Text style={styles.categoryName} numberOfLines={1}>{label}</Text>
@@ -199,7 +240,6 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     borderWidth: 2,
     borderColor: colorRoles.brandAction,
-    backgroundColor: "transparent",
   },
   ribbonGlyph: {
     fontSize: 24,
@@ -219,6 +259,10 @@ const styles = StyleSheet.create({
   heroPromoCardPressed: {
     opacity: 0.88,
     transform: [{ scale: 0.98 }],
+  },
+  promoScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: alpha(colorRoles.shadowBase, 0.5),
   },
   heroPromoContent: {
     flexDirection: "row",
@@ -262,12 +306,18 @@ const styles = StyleSheet.create({
     textAlign: "right",
     marginBottom: 2,
   },
+  textOnMedia: {
+    color: neutralScale[0],
+  },
+  textOnMediaMuted: {
+    color: alpha(neutralScale[0], 0.9),
+  },
   heroPromoCtaButton: {
     backgroundColor: colorRoles.brandAction,
     borderRadius: radius.xs,
     paddingHorizontal: spacing[2],
     paddingVertical: 3,
-    height: 22,
+    minHeight: 22,
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "flex-end",
