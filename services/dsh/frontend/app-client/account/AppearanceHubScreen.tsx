@@ -1,59 +1,81 @@
-// Authority: services/dsh/frontend/app-client — appearance sub-screen.
-// Sovereign shared: services/dsh/frontend/shared
-
-import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import React from "react";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import {
   Badge,
   Card,
-  Header,
   ScrollScreen,
+  StateView,
   Text,
+  TopBar,
   spacing,
   colorRoles,
-} from '@bthwani/ui-kit';
-
-export type BThwaniAppearanceMode = 'lightPremium' | 'darkGlass';
+} from "@bthwani/ui-kit";
+import type { ClientAppearanceMode } from "../../../../../apps/app-client/runtime/src/preferences/client-appearance";
 
 export type AppearanceHubScreenProps = {
-  appearanceMode?: BThwaniAppearanceMode;
-  onAppearanceModeChange?: (mode: BThwaniAppearanceMode) => void;
+  appearanceMode: ClientAppearanceMode;
+  resolvedTheme: "light" | "dark";
+  onAppearanceModeChange: (mode: ClientAppearanceMode) => Promise<void>;
   onBack?: () => void;
 };
 
+type AppearanceOption = {
+  readonly mode: ClientAppearanceMode;
+  readonly title: string;
+  readonly description: string;
+  readonly modeLabel: string;
+};
+
+const OPTIONS: readonly AppearanceOption[] = [
+  {
+    mode: "system",
+    title: "اتباع مظهر الجهاز",
+    description: "يتحوّل التطبيق تلقائيًا بين الفاتح والداكن عند تغيير إعداد الجهاز.",
+    modeLabel: "System",
+  },
+  {
+    mode: "lightPremium",
+    title: "المظهر الفاتح",
+    description: "واجهة فاتحة ثابتة مناسبة للاستخدام النهاري والقراءة تحت الإضاءة القوية.",
+    modeLabel: "Light",
+  },
+  {
+    mode: "darkGlass",
+    title: "المظهر الداكن",
+    description: "واجهة داكنة ثابتة لتقليل السطوع في البيئات المظلمة.",
+    modeLabel: "Dark",
+  },
+];
+
 function AppearanceOptionRow({
-  title,
-  description,
-  mode,
+  option,
   selected,
-  modeLabel,
-  statusLabel,
+  disabled,
   onPress,
 }: {
-  title: string;
-  description: string;
-  mode: BThwaniAppearanceMode;
+  option: AppearanceOption;
   selected: boolean;
-  modeLabel: string;
-  statusLabel: string;
+  disabled: boolean;
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
-      <Card
-        style={[
-          styles.optionCard,
-          selected && styles.optionCardSelected,
-        ]}
-      >
+    <TouchableOpacity
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected, disabled }}
+      accessibilityLabel={`${option.title}، ${option.description}`}
+      disabled={disabled}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <Card style={[styles.optionCard, selected && styles.optionCardSelected]}>
         <View style={styles.optionRow}>
           <View style={styles.optionInfo}>
-            <Text role="titleSm" style={styles.optionTitle}>{title}</Text>
-            <Text role="caption" tone="muted" style={styles.optionDesc}>{description}</Text>
+            <Text role="titleSm" style={styles.optionTitle}>{option.title}</Text>
+            <Text role="caption" tone="muted" style={styles.optionDesc}>{option.description}</Text>
           </View>
           <View style={styles.optionBadges}>
-            <Badge label={modeLabel} tone="info" />
-            {selected && <Badge label={statusLabel} tone="success" />}
+            <Badge label={option.modeLabel} tone="info" />
+            {selected ? <Badge label="محدد" tone="success" /> : null}
           </View>
         </View>
       </Card>
@@ -62,43 +84,58 @@ function AppearanceOptionRow({
 }
 
 export function AppearanceHubScreen({
-  appearanceMode = 'lightPremium',
+  appearanceMode,
+  resolvedTheme,
   onAppearanceModeChange,
   onBack,
 }: AppearanceHubScreenProps) {
+  const [savingMode, setSavingMode] = React.useState<ClientAppearanceMode | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const selectMode = React.useCallback(async (mode: ClientAppearanceMode) => {
+    if (savingMode !== null || mode === appearanceMode) return;
+    setSavingMode(mode);
+    setError(null);
+    try {
+      await onAppearanceModeChange(mode);
+    } catch {
+      setError("تعذر حفظ المظهر على الجهاز. لم يتم عرض نجاح وهمي.");
+    } finally {
+      setSavingMode(null);
+    }
+  }, [appearanceMode, onAppearanceModeChange, savingMode]);
+
   return (
-    <ScrollScreen>
-      <Header
-        title="المظهر والسمات"
-        subtitle="اختر المظهر المناسب لتجربتك"
+    <View style={styles.root}>
+      <TopBar
+        title="المظهر"
+        subtitle={`المظهر الفعلي الآن: ${resolvedTheme === "dark" ? "داكن" : "فاتح"}`}
+        {...(onBack ? { onBack } : {})}
       />
-
-      <View style={styles.container}>
-        <AppearanceOptionRow
-          title="المظهر الفاتح الراقي"
-          description="قاعدة بيضاء نقية مع لمسات زجاجية خفيفة وتفاصيل برتقالية ناصعة مناسبة للقراءة النهارية."
-          mode="lightPremium"
-          selected={appearanceMode === 'lightPremium'}
-          modeLabel="Light Premium"
-          statusLabel="افتراضي"
-          onPress={() => onAppearanceModeChange?.('lightPremium')}
-        />
-
-        <AppearanceOptionRow
-          title="الوضع الداكن الزجاجي"
-          description="تأثيرات زجاجية معتمة مصممة خصيصًا لتقليل إجهاد العين ليلاً في البيئات المظلمة."
-          mode="darkGlass"
-          selected={appearanceMode === 'darkGlass'}
-          modeLabel="Dark Glass"
-          statusLabel="تأثير زجاجي"
-          onPress={() => onAppearanceModeChange?.('darkGlass')}
-        />
-      </View>
-    </ScrollScreen>
+      <ScrollScreen>
+        <View style={styles.container} accessibilityRole="radiogroup">
+          {OPTIONS.map((option) => (
+            <AppearanceOptionRow
+              key={option.mode}
+              option={option}
+              selected={appearanceMode === option.mode}
+              disabled={savingMode !== null}
+              onPress={() => void selectMode(option.mode)}
+            />
+          ))}
+          {savingMode !== null ? <StateView loading title="جارٍ حفظ المظهر…" /> : null}
+          {error ? <StateView tone="danger" title="تعذر حفظ المظهر" description={error} /> : null}
+        </View>
+      </ScrollScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colorRoles.surfaceWarm,
+  },
   container: {
     padding: spacing[4],
     gap: spacing[3],
@@ -107,18 +144,16 @@ const styles = StyleSheet.create({
     padding: spacing[4],
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: colorRoles.surfaceBase,
+    borderColor: colorRoles.borderSubtle,
     backgroundColor: colorRoles.surfaceBase,
-    marginBottom: spacing[3],
   },
   optionCardSelected: {
     borderColor: colorRoles.brandAction,
-    backgroundColor: colorRoles.surfaceBase,
   },
   optionRow: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     gap: spacing[3],
   },
   optionInfo: {
@@ -126,19 +161,16 @@ const styles = StyleSheet.create({
     gap: spacing[1],
   },
   optionTitle: {
-    fontWeight: '700',
-    color: colorRoles.brandStructure,
-    textAlign: 'right',
+    fontWeight: "700",
+    color: colorRoles.textPrimary,
+    textAlign: "right",
   },
   optionDesc: {
-    color: colorRoles.brandStructure,
-    textAlign: 'right',
+    textAlign: "right",
     lineHeight: 20,
   },
   optionBadges: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
     gap: spacing[2],
   },
 });
-
-// export default AppearanceHubScreen; // Unused default export
