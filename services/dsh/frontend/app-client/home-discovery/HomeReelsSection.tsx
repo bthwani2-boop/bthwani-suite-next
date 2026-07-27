@@ -1,11 +1,14 @@
 import React from "react";
 import {
+  FlatList,
   Modal,
   Pressable,
-  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
+  type ViewToken,
 } from "react-native";
 import { VideoView, useVideoPlayer } from "expo-video";
 import {
@@ -27,69 +30,176 @@ type Props = {
 };
 
 function isPlayableVideoUrl(value: string): boolean {
-  return /^https:\/\//i.test(value.trim());
+  return /^https:\/\/[^\s]+$/i.test(value.trim());
 }
 
 function reelTitle(reel: HomePublicReel): string {
   return reel.titleAr.trim() || reel.titleEn.trim() || "فيديو مختار";
 }
 
-function ReelPlayerModal({
+function targetCopy(reel: HomePublicReel): { readonly label: string; readonly description: string } {
+  switch (reel.targetType) {
+    case "store":
+      return { label: "فتح المتجر", description: "يمكن الانتقال إلى المتجر المرتبط بهذا الفيديو." };
+    case "master_product":
+      return { label: "منتج مرتبط", description: "مشاهدة فقط حتى يتوفر مسار منتج سيادي في تطبيق العميل." };
+    case "offer":
+      return { label: "عرض مرتبط", description: "مشاهدة فقط حتى يتوفر مسار عرض سيادي في تطبيق العميل." };
+  }
+}
+
+function ReelSlide({
   reel,
-  onClose,
-  onOpenTarget,
+  active,
+  height,
+  onOpenStore,
 }: {
   readonly reel: HomePublicReel;
-  readonly onClose: () => void;
-  readonly onOpenTarget?: () => void;
+  readonly active: boolean;
+  readonly height: number;
+  readonly onOpenStore?: (() => void) | undefined;
 }) {
   const player = useVideoPlayer({ uri: reel.videoUrl, useCaching: true }, (instance) => {
     instance.loop = true;
-    instance.play();
   });
+
+  React.useEffect(() => {
+    if (active) player.play();
+    else player.pause();
+    return () => player.pause();
+  }, [active, player]);
+
+  const target = targetCopy(reel);
+  return (
+    <View style={[styles.slide, { height }]}>
+      <VideoView
+        player={player}
+        style={StyleSheet.absoluteFill}
+        nativeControls={false}
+        contentFit="cover"
+        allowsFullscreen
+        allowsPictureInPicture
+      />
+      <View pointerEvents="none" style={styles.slideScrim} />
+      <View style={styles.slideHeader}>
+        <View style={styles.approvedBadge}>
+          <Text style={styles.approvedBadgeText}>فيديو معتمد</Text>
+        </View>
+        <Text style={styles.swipeHint}>اسحب للأعلى أو للأسفل</Text>
+      </View>
+      <View style={styles.slideBody}>
+        <Text style={styles.slideTitle} numberOfLines={2}>{reelTitle(reel)}</Text>
+        <Text style={styles.targetDescription}>{target.description}</Text>
+        {onOpenStore ? (
+          <Button label={target.label} tone="primary" onPress={onOpenStore} />
+        ) : (
+          <StateView
+            tone="neutral"
+            title={target.label}
+            description={target.description}
+          />
+        )}
+      </View>
+    </View>
+  );
+}
+
+function VerticalReelsModal({
+  reels,
+  initialIndex,
+  onClose,
+  onReelPress,
+}: {
+  readonly reels: readonly HomePublicReel[];
+  readonly initialIndex: number;
+  readonly onClose: () => void;
+  readonly onReelPress?: ((reel: HomePublicReel) => void) | undefined;
+}) {
+  const { height } = useWindowDimensions();
+  const safeInitialIndex = Math.max(0, Math.min(initialIndex, reels.length - 1));
+  const [activeIndex, setActiveIndex] = React.useState(safeInitialIndex);
+  const listRef = React.useRef<FlatList<HomePublicReel>>(null);
+  const viewabilityConfig = React.useMemo(
+    () => ({ itemVisiblePercentThreshold: 80, minimumViewTime: 120 }),
+    [],
+  );
+  const handleViewableItemsChanged = React.useRef((info: {
+    readonly viewableItems: readonly ViewToken<HomePublicReel>[];
+  }) => {
+    const nextIndex = info.viewableItems.find((item) => item.isViewable)?.index;
+    if (typeof nextIndex === "number") setActiveIndex(nextIndex);
+  }).current;
+
+  React.useEffect(() => {
+    setActiveIndex(safeInitialIndex);
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToIndex({ index: safeInitialIndex, animated: false });
+    });
+  }, [safeInitialIndex]);
 
   return (
     <Modal
       visible
       animationType="slide"
       presentationStyle="fullScreen"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
+      <StatusBar hidden />
       <View style={styles.modalRoot}>
-        <View style={styles.modalHeader}>
-          <Button label="إغلاق" tone="ghost" size="sm" onPress={onClose} />
-          <Text style={styles.modalTitle} numberOfLines={1}>{reelTitle(reel)}</Text>
-        </View>
-        <VideoView
-          player={player}
-          style={styles.video}
-          nativeControls
-          contentFit="contain"
-          allowsFullscreen
-          allowsPictureInPicture
-        />
-        <View style={styles.modalActions}>
-          {onOpenTarget ? (
-            <Button label="فتح المتجر" tone="primary" onPress={onOpenTarget} />
-          ) : (
-            <StateView
-              tone="neutral"
-              title="المشاهدة فقط"
-              description="لا يملك هذا الفيديو هدف متجر قابلًا للفتح في تطبيق العميل حاليًا."
+        <FlatList
+          ref={listRef}
+          data={reels}
+          keyExtractor={(item) => item.id}
+          pagingEnabled
+          decelerationRate="fast"
+          showsVerticalScrollIndicator={false}
+          initialScrollIndex={safeInitialIndex}
+          getItemLayout={(_, index) => ({ length: height, offset: height * index, index })}
+          viewabilityConfig={viewabilityConfig}
+          onViewableItemsChanged={handleViewableItemsChanged}
+          renderItem={({ item, index }) => (
+            <ReelSlide
+              reel={item}
+              active={index === activeIndex}
+              height={height}
+              {...(onReelPress && item.targetType === "store"
+                ? {
+                    onOpenStore: () => {
+                      onClose();
+                      onReelPress(item);
+                    },
+                  }
+                : {})}
             />
           )}
-        </View>
+        />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="إغلاق الفيديوهات"
+          hitSlop={10}
+          style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
+          onPress={onClose}
+        >
+          <Text style={styles.closeGlyph}>×</Text>
+        </Pressable>
       </View>
     </Modal>
   );
 }
 
 export function HomeReelsSection({ reels, onReelPress }: Props) {
-  const [selectedReel, setSelectedReel] = React.useState<HomePublicReel | null>(null);
+  const [selectedIndex, setSelectedIndex] = React.useState<number | null>(null);
   const playableReels = React.useMemo(
     () => reels.filter((reel) => isPlayableVideoUrl(reel.videoUrl)),
     [reels],
   );
+
+  React.useEffect(() => {
+    if (selectedIndex !== null && selectedIndex >= playableReels.length) {
+      setSelectedIndex(null);
+    }
+  }, [playableReels.length, selectedIndex]);
 
   if (playableReels.length === 0) return null;
 
@@ -99,18 +209,18 @@ export function HomeReelsSection({ reels, onReelPress }: Props) {
         <Text style={styles.kicker}>مختارات مرئية</Text>
         <Text style={styles.title}>شاهد قبل أن تطلب</Text>
       </View>
-      <ScrollView
+      <FlatList
         horizontal
+        data={playableReels}
+        keyExtractor={(item) => item.id}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rail}
-      >
-        {playableReels.map((reel) => (
+        renderItem={({ item, index }) => (
           <Pressable
-            key={reel.id}
             style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-            onPress={() => setSelectedReel(reel)}
+            onPress={() => setSelectedIndex(index)}
             accessibilityRole="button"
-            accessibilityLabel={`تشغيل ${reelTitle(reel)}`}
+            accessibilityLabel={`تشغيل ${reelTitle(item)}`}
           >
             <View style={styles.videoPlane}>
               <View style={styles.playButton}>
@@ -121,30 +231,19 @@ export function HomeReelsSection({ reels, onReelPress }: Props) {
               </View>
             </View>
             <View style={styles.copyWrap}>
-              <Text style={styles.cardTitle} numberOfLines={1}>
-                {reelTitle(reel)}
-              </Text>
-              <Text style={styles.cardSubtitle} numberOfLines={1}>
-                اضغط للمشاهدة
-              </Text>
+              <Text style={styles.cardTitle} numberOfLines={1}>{reelTitle(item)}</Text>
+              <Text style={styles.cardSubtitle} numberOfLines={1}>اضغط ثم اسحب للتنقل</Text>
             </View>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+      />
 
-      {selectedReel ? (
-        <ReelPlayerModal
-          reel={selectedReel}
-          onClose={() => setSelectedReel(null)}
-          {...(onReelPress && selectedReel.targetType === "store"
-            ? {
-                onOpenTarget: () => {
-                  const reel = selectedReel;
-                  setSelectedReel(null);
-                  onReelPress(reel);
-                },
-              }
-            : {})}
+      {selectedIndex !== null ? (
+        <VerticalReelsModal
+          reels={playableReels}
+          initialIndex={selectedIndex}
+          onClose={() => setSelectedIndex(null)}
+          onReelPress={onReelPress}
         />
       ) : null}
     </View>
@@ -152,9 +251,7 @@ export function HomeReelsSection({ reels, onReelPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacing[4],
-  },
+  container: { marginBottom: spacing[4] },
   headerRow: {
     paddingHorizontal: spacing[4],
     marginBottom: spacing[2],
@@ -186,10 +283,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     ...elevation.overlay,
   },
-  cardPressed: {
-    opacity: 0.9,
-    transform: [{ scale: 0.985 }],
-  },
+  cardPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
   videoPlane: {
     height: 164,
     alignItems: "center",
@@ -224,10 +318,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: neutralScale[0],
   },
-  copyWrap: {
-    padding: spacing[2],
-    alignItems: "flex-end",
-  },
+  copyWrap: { padding: spacing[2], alignItems: "flex-end" },
   cardTitle: {
     width: "100%",
     fontSize: 12,
@@ -243,33 +334,77 @@ const styles = StyleSheet.create({
     color: colorRoles.textSecondary,
     textAlign: "right",
   },
-  modalRoot: {
-    flex: 1,
+  modalRoot: { flex: 1, backgroundColor: colorRoles.shadowBase },
+  slide: {
+    width: "100%",
     backgroundColor: colorRoles.shadowBase,
+    justifyContent: "flex-end",
   },
-  modalHeader: {
-    minHeight: 64,
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
+  slideScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: alpha(colorRoles.shadowBase, 0.34),
+  },
+  slideHeader: {
+    position: "absolute",
+    top: spacing[4],
+    left: spacing[4],
+    right: spacing[4],
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing[3],
-    backgroundColor: colorRoles.surfaceBase,
   },
-  modalTitle: {
-    flex: 1,
-    color: colorRoles.textPrimary,
+  approvedBadge: {
+    borderRadius: radius.round,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    backgroundColor: alpha(colorRoles.shadowBase, 0.58),
+    borderWidth: 1,
+    borderColor: alpha(neutralScale[0], 0.14),
+  },
+  approvedBadgeText: { color: neutralScale[0], fontSize: 11, fontWeight: "900" },
+  swipeHint: {
+    color: alpha(neutralScale[0], 0.88),
+    fontSize: 11,
     fontWeight: "800",
     textAlign: "right",
   },
-  video: {
-    flex: 1,
-    width: "100%",
-    backgroundColor: colorRoles.shadowBase,
+  slideBody: {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[8],
+    gap: spacing[3],
   },
-  modalActions: {
-    padding: spacing[4],
-    backgroundColor: colorRoles.surfaceBase,
+  slideTitle: {
+    color: neutralScale[0],
+    fontSize: 22,
+    fontWeight: "900",
+    textAlign: "right",
+  },
+  targetDescription: {
+    color: alpha(neutralScale[0], 0.9),
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: "right",
+  },
+  closeButton: {
+    position: "absolute",
+    top: spacing[4],
+    right: spacing[4],
+    width: 44,
+    height: 44,
+    borderRadius: radius.round,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: alpha(colorRoles.shadowBase, 0.68),
+    borderWidth: 1,
+    borderColor: alpha(neutralScale[0], 0.18),
+    zIndex: 20,
+  },
+  closeButtonPressed: { opacity: 0.78 },
+  closeGlyph: {
+    color: neutralScale[0],
+    fontSize: 30,
+    lineHeight: 32,
+    fontWeight: "500",
   },
 });
