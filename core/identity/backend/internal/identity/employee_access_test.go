@@ -8,8 +8,8 @@ import (
 
 func TestEmployeeActivationSurfaceRegistered(t *testing.T) {
 	surface, ok := activationSurfaceFor("employee")
-	if !ok || surface != "webapp" {
-		t.Fatalf("employee activation surface = %q, %v; want webapp,true", surface, ok)
+	if !ok || surface != "control-panel" {
+		t.Fatalf("employee activation surface = %q, %v; want control-panel,true", surface, ok)
 	}
 }
 
@@ -19,10 +19,13 @@ func TestEmployeeActivationMigrationRegistersPersistedContract(t *testing.T) {
 		t.Fatalf("read employee activation migration: %v", err)
 	}
 	text := string(migration)
-	for _, required := range []string{"'employee'", "'webapp'"} {
+	for _, required := range []string{"'employee'", "'control-panel'"} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("employee activation migration is missing %s", required)
 		}
+	}
+	if strings.Contains(text, "'webapp'") {
+		t.Fatal("employee activation migration must not register the independent webapp surface")
 	}
 }
 
