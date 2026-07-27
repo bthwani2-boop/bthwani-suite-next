@@ -159,6 +159,7 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("PATCH /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}", s.handleUpdateFieldProductProposalAtomic)
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/assortment", s.handleFieldGetStoreAssortment)
 	mux.HandleFunc("PUT /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/{masterProductId}", s.handleFieldUpsertStoreAssortmentAtomic)
+	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/stores/{storeId}/assortment/batch", s.handleFieldUpsertStoreAssortmentBatch)
 	mux.HandleFunc("GET /dsh/field/partners/{partnerId}/assortment-pauses", s.handleListFieldAssortmentPauses)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/assortment/{masterProductId}/pause", s.handlePauseFieldAssortment)
 	mux.HandleFunc("POST /dsh/field/partners/{partnerId}/assortment/{masterProductId}/resume", s.handleResumeFieldAssortment)
