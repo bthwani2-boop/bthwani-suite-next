@@ -6,7 +6,6 @@ import {
   BottomNavBar,
   type BottomNavItem,
 } from "../../../../apps/app-client/runtime/src/shell/BottomNavBar";
-import { useClientAppearance } from "../../../../apps/app-client/runtime/src/preferences/client-appearance";
 import {
   openClientExternalUrl,
   performClientSelectionHaptic,
@@ -18,7 +17,6 @@ import { StoreDetailRoute } from "./store/StoreDetailRoute";
 import { ClientCheckoutRoute } from "./checkout/ClientCheckoutRoute";
 import { OrdersListScreen } from "./orders/OrdersListScreen";
 import { MySpaceScreen } from "./account/MySpaceScreen";
-import { AppearanceHubScreen } from "./account/AppearanceHubScreen";
 import { AddressLocationScreen } from "./account/AddressLocationScreen";
 import { IdentityHubScreen } from "./account/IdentityHubScreen";
 import { BenefitsHubScreen } from "./account/BenefitsHubScreen";
@@ -40,7 +38,6 @@ import { notificationActionFromDeepLink } from "../shared/notifications/client-n
 type ClientTab = "home" | "stores" | "orders" | "special" | "profile" | "cart";
 type ProfileRoute =
   | "profile"
-  | "appearance"
   | "addresses"
   | "identity"
   | "benefits"
@@ -84,14 +81,8 @@ function isClientTab(value: string): value is ClientTab {
     || value === "cart";
 }
 
-function appearanceLabel(mode: ReturnType<typeof useClientAppearance>["mode"]): string {
-  if (mode === "system") return "مظهر الجهاز";
-  return mode === "darkGlass" ? "داكن" : "فاتح";
-}
-
 export function DshClientSurface() {
   const insets = useSafeAreaInsets();
-  const appearance = useClientAppearance();
   const [activeTab, setActiveTab] = useState<ClientTab>("home");
   const [profileRoute, setProfileRoute] = useState<ProfileRoute>("profile");
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
@@ -375,13 +366,6 @@ export function DshClientSurface() {
               onSuccess={openOrderTracking}
             />
           )
-        ) : profileRoute === "appearance" ? (
-          <AppearanceHubScreen
-            appearanceMode={appearance.mode}
-            resolvedTheme={appearance.themeName}
-            onAppearanceModeChange={appearance.setMode}
-            onBack={() => setProfileRoute("profile")}
-          />
         ) : profileRoute === "addresses" ? (
           <AddressLocationScreen
             onBack={() => setProfileRoute("profile")}
@@ -407,12 +391,10 @@ export function DshClientSurface() {
           )
         ) : (
           <MySpaceScreen
-            currentAppearanceLabel={appearanceLabel(appearance.mode)}
             onOpenOrders={() => setActiveTab("orders")}
             onOpenAddresses={() => setProfileRoute("addresses")}
             onOpenIdentity={() => setProfileRoute("identity")}
             onOpenBenefits={() => setProfileRoute("benefits")}
-            onOpenAppearance={() => setProfileRoute("appearance")}
             onOpenPreferences={() => setProfileRoute("preferences")}
             onOpenSupport={() => setProfileRoute("support")}
           />
