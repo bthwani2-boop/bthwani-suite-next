@@ -1,11 +1,28 @@
 package identity
 
-import "testing"
+import (
+	"os"
+	"strings"
+	"testing"
+)
 
 func TestEmployeeActivationSurfaceRegistered(t *testing.T) {
 	surface, ok := activationSurfaceFor("employee")
 	if !ok || surface != "webapp" {
 		t.Fatalf("employee activation surface = %q, %v; want webapp,true", surface, ok)
+	}
+}
+
+func TestEmployeeActivationMigrationRegistersPersistedContract(t *testing.T) {
+	migration, err := os.ReadFile("../../../database/migrations/identity-008_employee_activation_surface.sql")
+	if err != nil {
+		t.Fatalf("read employee activation migration: %v", err)
+	}
+	text := string(migration)
+	for _, required := range []string{"'employee'", "'webapp'"} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("employee activation migration is missing %s", required)
+		}
 	}
 }
 
