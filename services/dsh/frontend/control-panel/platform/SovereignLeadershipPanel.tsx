@@ -63,10 +63,23 @@ const selectStyle = {
   padding: "0 12px",
 } as const;
 
+const fieldLabelStyle = {
+  display: "flex",
+  flexDirection: "column",
+  gap: "6px",
+} as const;
+
 function defaultBundleForClass(value: LeadershipEmploymentClass): LeadershipPermissionBundle {
   if (value === "project_manager") return "platform_owner";
   if (value === "coordinator" || value === "executive") return "platform_coordinator";
   return "operations_manager";
+}
+
+function assignmentDateError(startsOn: string, endsOn: string): string | null {
+  const start = startsOn.trim();
+  const end = endsOn.trim();
+  if (!start || !end) return null;
+  return end < start ? "تاريخ نهاية التكليف يجب أن يساوي تاريخ البداية أو يأتي بعده" : null;
 }
 
 export function SovereignLeadershipPanel() {
@@ -104,17 +117,27 @@ export function SovereignLeadershipPanel() {
     void reload();
   }, [reload]);
 
+  const dateError = useMemo(
+    () => assignmentDateError(assignmentStartsOn, assignmentEndsOn),
+    [assignmentEndsOn, assignmentStartsOn],
+  );
+
   const canSubmit = useMemo(
-    () => fullNameAr.trim().length > 0 && phoneE164.trim().length >= 9 && department.trim().length > 1 && !submitting,
-    [department, fullNameAr, phoneE164, submitting],
+    () =>
+      fullNameAr.trim().length > 0 &&
+      phoneE164.trim().length >= 9 &&
+      department.trim().length > 1 &&
+      dateError === null &&
+      !submitting,
+    [dateError, department, fullNameAr, phoneE164, submitting],
   );
 
   const positionTitle = useMemo(() => {
     if (employmentClass === "project_manager") return "مدير المشروع";
     if (employmentClass === "coordinator") return "منسق المنصة";
     if (employmentClass === "executive") return "إدارة تنفيذية";
-    
-    const dept = DEPARTMENTS.find(d => d.value === department);
+
+    const dept = DEPARTMENTS.find((item) => item.value === department);
     if (dept) return `مدير ${dept.label.split(" (")[0]}`;
     return "مدير قسم";
   }, [employmentClass, department]);
@@ -123,14 +146,17 @@ export function SovereignLeadershipPanel() {
     setEmploymentClass(value);
     const bundle = defaultBundleForClass(value);
     setPermissionBundle(bundle);
-    if (value === "project_manager") {
-      setDepartment("platform");
-    } else if (value === "coordinator" || value === "executive") {
+    if (value === "project_manager" || value === "coordinator" || value === "executive") {
       setDepartment("platform");
     }
   };
 
   const submit = async () => {
+    const currentDateError = assignmentDateError(assignmentStartsOn, assignmentEndsOn);
+    if (currentDateError) {
+      setSubmitError(currentDateError);
+      return;
+    }
     if (!canSubmit) return;
     setSubmitting(true);
     setSubmitError(null);
@@ -186,42 +212,49 @@ export function SovereignLeadershipPanel() {
         <Text role="titleMd">إضافة موظف قيادي</Text>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "12px" }}>
           <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم الكامل بالعربية" placeholder="الاسم الكامل بالعربية" />
-          <CpTextInput value={phoneE164} onChange={setPhoneE164} aria-label="رقم الهاتف" placeholder="777123456" />
-          
-          <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <CpTextInput value={phoneE164} onChange={setPhoneE164} aria-label="رقم الهاتف" placeholder="+967777123456" />
+
+          <label style={fieldLabelStyle}>
             <span>الفئة الإدارية</span>
             <select value={employmentClass} onChange={(event) => changeClass(event.target.value as LeadershipEmploymentClass)} style={selectStyle}>
               {Object.entries(CLASS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </label>
 
-          <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <label style={fieldLabelStyle}>
             <span>القسم</span>
-            <select value={department} onChange={(e) => setDepartment(e.target.value)} style={selectStyle} disabled={employmentClass !== "department_manager"}>
+            <select value={department} onChange={(event) => setDepartment(event.target.value)} style={selectStyle} disabled={employmentClass !== "department_manager"}>
               <option value="">اختر القسم...</option>
-              {DEPARTMENTS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+              {DEPARTMENTS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </label>
-          
-          <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+
+          <label style={fieldLabelStyle}>
             <span>حزمة الصلاحيات</span>
             <select value={permissionBundle} onChange={(event) => setPermissionBundle(event.target.value as LeadershipPermissionBundle)} style={selectStyle} disabled={employmentClass !== "department_manager"}>
               {Object.entries(BUNDLE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </label>
 
-          <label style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <label style={fieldLabelStyle}>
             <span>موقع العمل</span>
-            <select value={officeLocation} onChange={(e) => setOfficeLocation(e.target.value)} style={selectStyle}>
+            <select value={officeLocation} onChange={(event) => setOfficeLocation(event.target.value)} style={selectStyle}>
               <option value="">موقع العمل (اختياري)</option>
-              {OFFICE_LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+              {OFFICE_LOCATIONS.map((location) => <option key={location} value={location}>{location}</option>)}
             </select>
           </label>
-          
-          <CpTextInput value={assignmentStartsOn} onChange={setAssignmentStartsOn} type="date" aria-label="بداية التكليف" placeholder="YYYY-MM-DD بداية التكليف" />
-          <CpTextInput value={assignmentEndsOn} onChange={setAssignmentEndsOn} type="date" aria-label="نهاية التكليف" placeholder="YYYY-MM-DD نهاية اختيارية" />
+
+          <label style={fieldLabelStyle}>
+            <span>بداية التكليف</span>
+            <CpTextInput value={assignmentStartsOn} onChange={setAssignmentStartsOn} type="date" aria-label="بداية التكليف" placeholder="YYYY-MM-DD" />
+          </label>
+          <label style={fieldLabelStyle}>
+            <span>نهاية التكليف (اختيارية)</span>
+            <CpTextInput value={assignmentEndsOn} onChange={setAssignmentEndsOn} type="date" aria-label="نهاية التكليف" placeholder="YYYY-MM-DD" />
+          </label>
         </div>
         <CpTextInput value={notes} onChange={setNotes} aria-label="ملاحظات التكليف" placeholder="ملاحظات أو مرجع قرار التكليف" />
+        {dateError ? <CpStatePanel role="alert" title="تواريخ التكليف غير صالحة" description={dateError} /> : null}
         {submitError ? <CpStatePanel role="alert" title="تعذر إنشاء التكليف القيادي" description={submitError} /> : null}
         {created ? (
           <CpStatePanel
