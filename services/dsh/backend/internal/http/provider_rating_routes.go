@@ -18,6 +18,7 @@ func RegisterProviderRatingRoutes(mux *http.ServeMux, db *sql.DB, identityClient
 	s := newProtectedStoreServer(db, identityClient, wltClient, mediaProvider)
 	mux.HandleFunc("GET /dsh/partner/me/ratings/field/prompt", s.handlePartnerFieldRatingPrompt)
 	mux.HandleFunc("POST /dsh/partner/me/ratings/field", s.handleSubmitPartnerFieldRating)
+	mux.HandleFunc("GET /dsh/client/me/ratings/pending-order", s.handlePendingClientOrderRatingPrompt)
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/rating-prompt", s.handleClientOrderRatingPrompt)
 	mux.HandleFunc("POST /dsh/client/orders/{orderId}/ratings", s.handleSubmitClientOrderRatings)
 	mux.HandleFunc("GET /dsh/field/me/ratings/summary", s.handleFieldRatingSummary)
@@ -43,6 +44,14 @@ func (s *protectedStoreServer) handleSubmitPartnerFieldRating(w http.ResponseWri
 	rating, err := ratings.SubmitPartnerFieldRating(r.Context(), s.db, actor.TenantID, actor.ID, input.Score, input.Comment, correlationID(r))
 	if err != nil { writeRatingError(w, err); return }
 	store.SendJSON(w, http.StatusOK, map[string]any{"rating": rating})
+}
+
+func (s *protectedStoreServer) handlePendingClientOrderRatingPrompt(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "client")
+	if !ok { return }
+	prompt, err := ratings.PendingClientOrderRatingPrompt(r.Context(), s.db, actor.TenantID, actor.ID)
+	if err != nil { writeRatingError(w, err); return }
+	store.SendJSON(w, http.StatusOK, map[string]any{"prompt": prompt})
 }
 
 func (s *protectedStoreServer) handleClientOrderRatingPrompt(w http.ResponseWriter, r *http.Request) {
