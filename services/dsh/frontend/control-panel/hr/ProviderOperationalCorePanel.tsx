@@ -3,7 +3,14 @@
 import React from "react";
 import { CpButton, CpMutedInline, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { Text } from "@bthwani/ui-kit";
-import { getProviderOperationalCore, patchProviderOperationalCore } from "../../shared/workforce";
+import { fetchPartners } from "../../shared/partner/partner.api";
+import {
+  getProviderOperationalCore,
+  listCaptains,
+  listEmployees,
+  listFieldAgents,
+  patchProviderOperationalCore,
+} from "../../shared/workforce";
 import type {
   CaptainActivationCore,
   ContractReviewStatus,
@@ -74,6 +81,16 @@ type FormState = {
   accreditationStatus: CaptainActivationCore["operationsAccreditationStatus"];
 };
 
+type ReferralPersonOption = {
+  readonly actorId: string;
+  readonly label: string;
+};
+
+type ReferralPartnerOption = {
+  readonly partnerId: string;
+  readonly label: string;
+};
+
 const EMPTY_FORM: FormState = {
   referralSourceType: "direct",
   referralSourceActorId: "",
@@ -107,10 +124,10 @@ function activationEvidenceError(form: FormState, kind: IndependentProviderKind)
   if (activationStage) {
     if (!form.guarantorPhoneVerified) return "يجب توثيق التحقق من هاتف الضمين قبل الجاهزية للتفعيل.";
     if (["employee", "captain", "field"].includes(form.referralSourceType) && form.referralSourceActorId.trim() === "") {
-      return "مصدر الترشيح المحدد يحتاج مرجع الشخص داخل النظام.";
+      return "مصدر الترشيح المحدد يحتاج اختيار الشخص من السجل الفعلي.";
     }
     if (form.referralSourceType === "partner" && form.referralPartnerId.trim() === "") {
-      return "ترشيح الشريك يحتاج معرف الشريك.";
+      return "ترشيح الشريك يحتاج اختيار الشريك من السجل الفعلي.";
     }
     if (["advertisement", "social_media"].includes(form.referralSourceType) && form.referralChannel.trim() === "") {
       return "مصدر الإعلان أو وسائل التواصل يحتاج قناة أو مرجع حملة.";
@@ -144,6 +161,10 @@ export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actor
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
+  const [referralPeople, setReferralPeople] = React.useState<readonly ReferralPersonOption[]>([]);
+  const [referralPartners, setReferralPartners] = React.useState<readonly ReferralPartnerOption[]>([]);
+  const [referralLoading, setReferralLoading] = React.useState(false);
+  const [referralError, setReferralError] = React.useState<string | null>(null);
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -195,6 +216,61 @@ export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actor
   }, [actorId, apply, kind]);
 
   React.useEffect(() => { void load(); }, [load]);
+
+  React.useEffect(() => {
+    const sourceType = form.referralSourceType;
+    if (!["employee", "captain", "field", "partner"].includes(sourceType)) {
+      setReferralPeople([]);
+      setReferralPartners([]);
+      setReferralError(null);
+      return;
+    }
+    let cancelled = false;
+    setReferralLoading(true);
+    setReferralError(null);
+    const loadOptions = async () => {
+      if (sourceType === "partner") {
+        const result = await fetchPartners({ limit: 100 });
+        if (!cancelled) {
+          setReferralPartners(result.partners.map((partner) => ({
+            partnerId: partner.id,
+            label: `${partner.displayName || partner.legalNameAr} · ${partner.category || "بلا فئة"}`,
+          })));
+          setReferralPeople([]);
+        }
+        return;
+      }
+      const people = sourceType === "employee"
+        ? await listEmployees({ status: "active", limit: 100 })
+        : sourceType === "captain"
+          ? await listCaptains({ status: "active", limit: 100 })
+          : await listFieldAgents({ status: "active", limit: 100 });
+      if (!cancelled) {
+        setReferralPeople(people.map((person) => ({
+          actorId: person.actorId,
+          label: `${person.fullNameAr} · ${person.workforceCode}`,
+        })));
+        setReferralPartners([]);
+      }
+    };
+    void loadOptions()
+      .catch((cause) => {
+        if (!cancelled) setReferralError(cause instanceof Error ? cause.message : "تعذر تحميل سجل المرشحين");
+      })
+      .finally(() => {
+        if (!cancelled) setReferralLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [form.referralSourceType]);
+
+  const changeReferralSource = (value: ReferralSourceType) => {
+    setForm((current) => ({
+      ...current,
+      referralSourceType: value,
+      referralSourceActorId: ["employee", "captain", "field"].includes(value) ? current.referralSourceActorId : "",
+      referralPartnerId: value === "partner" ? current.referralPartnerId : "",
+    }));
+  };
 
   const save = async () => {
     const validationError = activationEvidenceError(form, kind);
@@ -255,15 +331,22 @@ export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actor
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Section title="مصدر الترشيح">
-        <select value={form.referralSourceType} onChange={(event) => setField("referralSourceType", event.target.value as ReferralSourceType)} style={selectStyle} aria-label="مصدر الترشيح">
+        <select value={form.referralSourceType} onChange={(event) => changeReferralSource(event.target.value as ReferralSourceType)} style={selectStyle} aria-label="مصدر الترشيح">
           {REFERRAL_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
         {(["employee", "captain", "field"] as ReferralSourceType[]).includes(form.referralSourceType) ? (
-          <CpTextInput value={form.referralSourceActorId} onChange={(value) => setField("referralSourceActorId", value)} placeholder="معرف الشخص المرشّح داخل النظام" aria-label="معرف الشخص المرشح" />
+          <select value={form.referralSourceActorId} onChange={(event) => setField("referralSourceActorId", event.target.value)} style={selectStyle} aria-label="الشخص المرشح" disabled={referralLoading}>
+            <option value="">{referralLoading ? "جارٍ تحميل السجل…" : "اختر الشخص من السجل"}</option>
+            {referralPeople.map((option) => <option key={option.actorId} value={option.actorId}>{option.label}</option>)}
+          </select>
         ) : null}
         {form.referralSourceType === "partner" ? (
-          <CpTextInput value={form.referralPartnerId} onChange={(value) => setField("referralPartnerId", value)} placeholder="معرف الشريك" aria-label="معرف الشريك المرشح" />
+          <select value={form.referralPartnerId} onChange={(event) => setField("referralPartnerId", event.target.value)} style={selectStyle} aria-label="الشريك المرشح" disabled={referralLoading}>
+            <option value="">{referralLoading ? "جارٍ تحميل الشركاء…" : "اختر الشريك من السجل"}</option>
+            {referralPartners.map((option) => <option key={option.partnerId} value={option.partnerId}>{option.label}</option>)}
+          </select>
         ) : null}
+        {referralError ? <CpStatePanel role="alert" title="تعذر تحميل سجل الترشيح" description={referralError} /> : null}
         {(["advertisement", "social_media"] as ReferralSourceType[]).includes(form.referralSourceType) ? (
           <CpTextInput value={form.referralChannel} onChange={(value) => setField("referralChannel", value)} placeholder="قناة الإعلان أو مرجع الحملة" aria-label="قناة الترشيح" />
         ) : null}
