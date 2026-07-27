@@ -141,7 +141,7 @@ export default defineBthwaniExpoApp("${key}");
     overrides.push(`  userInterfaceStyle: "${userInterfaceStyle}" as const,`);
   }
   if (supportsPictureInPicture) {
-    overrides.push(`  plugins: (config.plugins ?? []).map((plugin) =>
+    overrides.push(`  plugins: (config.plugins ?? []).map((plugin: NonNullable<typeof config.plugins>[number]) =>
     plugin === "expo-video"
       ? ["expo-video", { supportsPictureInPicture: true }]
       : plugin,
