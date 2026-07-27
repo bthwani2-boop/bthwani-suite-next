@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchNotificationDeliveryAttempts,
   fetchNotificationPreferences,
@@ -29,7 +29,7 @@ function resolveMessage(err: unknown): string {
   if (e?.status === 401) return "الجلسة منتهية، يرجى إعادة تسجيل الدخول";
   if (e?.status === 403) return "لا تملك الصلاحية المطلوبة";
   if (e?.status === 400) return "بيانات سياسة الإشعارات غير صالحة";
-  return "تعذّر تحميل الإشعارات";
+  return "تعذّر إكمال إجراء الإشعارات";
 }
 
 type PreferenceState =
@@ -41,6 +41,12 @@ type PreferenceState =
 type NotificationsControllerOptions = {
   readonly loadPreferences?: boolean;
 };
+
+export type NotificationMutationAction =
+  | "mark_read"
+  | "mark_all_read"
+  | "save_preference"
+  | null;
 
 function canUseTopicEnabledPreferenceUpdate(input: DshUpdateNotificationPreferenceInput): boolean {
   return input.channels.length === 1
@@ -58,6 +64,9 @@ export function useNotificationsController(
   const shouldLoadPreferences = options.loadPreferences !== false;
   const [state, setState] = useState<DshNotificationsState>(notifIdle());
   const [preferenceState, setPreferenceState] = useState<PreferenceState>({ kind: "idle" });
+  const [busyAction, setBusyAction] = useState<NotificationMutationAction>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const mutationBusyRef = useRef(false);
 
   const loadNotifications = useCallback(async () => {
     setState(notifLoading());
@@ -84,6 +93,7 @@ export function useNotificationsController(
   }, [shouldLoadPreferences]);
 
   const reload = useCallback(async () => {
+    setActionError(null);
     if (shouldLoadPreferences) {
       await Promise.all([loadNotifications(), loadPreferences()]);
       return;
@@ -91,30 +101,64 @@ export function useNotificationsController(
     await loadNotifications();
   }, [loadNotifications, loadPreferences, shouldLoadPreferences]);
 
-  const markRead = useCallback(async (id: string) => {
-    await markNotificationRead(id);
-    await loadNotifications();
-  }, [loadNotifications]);
-
-  const markAllRead = useCallback(async () => {
-    await markAllNotificationsRead();
-    await loadNotifications();
-  }, [loadNotifications]);
-
-  const savePreference = useCallback(async (input: DshUpdateNotificationPreferenceInput) => {
-    const { topic, enabled } = input;
-    if (canUseTopicEnabledPreferenceUpdate(input)) {
-      await updateNotificationPreferences(topic, enabled);
-    } else {
-      await updateNotificationPreferences(input);
+  const runMutation = useCallback(async (
+    action: Exclude<NotificationMutationAction, null>,
+    operation: () => Promise<void>,
+  ): Promise<boolean> => {
+    if (mutationBusyRef.current) return false;
+    mutationBusyRef.current = true;
+    setBusyAction(action);
+    setActionError(null);
+    try {
+      await operation();
+      return true;
+    } catch (err) {
+      setActionError(resolveMessage(err));
+      return false;
+    } finally {
+      mutationBusyRef.current = false;
+      setBusyAction(null);
     }
-    await loadPreferences();
-  }, [loadPreferences]);
+  }, []);
+
+  const markRead = useCallback(async (id: string): Promise<boolean> => runMutation(
+    "mark_read",
+    async () => {
+      await markNotificationRead(id);
+      await loadNotifications();
+    },
+  ), [loadNotifications, runMutation]);
+
+  const markAllRead = useCallback(async (): Promise<boolean> => runMutation(
+    "mark_all_read",
+    async () => {
+      await markAllNotificationsRead();
+      await loadNotifications();
+    },
+  ), [loadNotifications, runMutation]);
+
+  const savePreference = useCallback(async (
+    input: DshUpdateNotificationPreferenceInput,
+  ): Promise<boolean> => runMutation(
+    "save_preference",
+    async () => {
+      const { topic, enabled } = input;
+      if (canUseTopicEnabledPreferenceUpdate(input)) {
+        await updateNotificationPreferences(topic, enabled);
+      } else {
+        await updateNotificationPreferences(input);
+      }
+      await loadPreferences();
+    },
+  ), [loadPreferences, runMutation]);
 
   useEffect(() => {
     if (authKind !== "authenticated") {
+      mutationBusyRef.current = false;
       setState(notifIdle());
       setPreferenceState({ kind: "idle" });
+      setBusyAction(null);
+      setActionError(null);
       return;
     }
     void reload();
@@ -123,6 +167,8 @@ export function useNotificationsController(
   return {
     state,
     preferenceState,
+    busyAction,
+    actionError,
     reload,
     markRead,
     markAllRead,
