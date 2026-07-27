@@ -24,6 +24,7 @@ import type { ProviderKind, LicenseStatus } from "../../shared/workforce";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { ProviderActivationWorkspace } from "../shared";
+import { ProviderOperationalCorePanel } from "./ProviderOperationalCorePanel";
 
 export function ProviderDetailView(props: { readonly actorId: string; readonly kind: ProviderKind; readonly onBack: () => void }) {
   if (props.kind === "captain") {
@@ -80,22 +81,21 @@ function FieldAgentDetailBody(props: { readonly actorId: string; readonly onBack
   const agent = controller.state.agent;
   const rows: Array<[string, string]> = [
     ["الاسم", agent.fullNameAr],
-    ["رقم مقدم الخدمة", agent.workforceCode],
+    ["رقم الميداني", agent.workforceCode],
     ["النوع", PROVIDER_KIND_LABEL_AR[agent.workforceKind]],
     ["الهاتف", agent.phoneMasked ?? "—"],
     ["نوع الارتباط", ENGAGEMENT_TYPE_LABEL_AR[agent.engagementType]],
     ["تاريخ البداية", agent.engagementStartDate || "—"],
-    ["منطقة الخدمة السيادية", zones.zoneLabel(agent.fieldProfile?.serviceZoneId)],
-    ["مدينة التشغيل المشتقة", reference.cityLabel(agent.fieldProfile?.cityCode)],
-    ["الوردية", reference.shiftLabel(agent.fieldProfile?.shiftCode)],
-    ["المشرف", agent.fieldProfile?.supervisorActorId || "—"],
+    ["منطقة الخدمة", zones.zoneLabel(agent.fieldProfile?.serviceZoneId)],
+    ["مدينة التشغيل", reference.cityLabel(agent.fieldProfile?.cityCode)],
+    ["مسؤول المتابعة", agent.fieldProfile?.supervisorActorId || "—"],
     ["حالة الارتباط", ENGAGEMENT_STATUS_LABEL_AR[agent.engagementStatus]],
   ];
 
   return (
     <DetailPageFrame
       header={
-        <CpPageHeader title="ملف مقدم الخدمة">
+        <CpPageHeader title="ملف الميداني">
           <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
         </CpPageHeader>
       }
@@ -110,6 +110,7 @@ function FieldAgentDetailBody(props: { readonly actorId: string; readonly onBack
           <CpMutedInline>تعذر تحميل بعض المسميات المرجعية؛ المعرفات المعروضة تبقى من البيانات السيادية نفسها.</CpMutedInline>
         ) : null}
 
+        <ProviderOperationalCorePanel actorId={agent.actorId} kind="field" />
         <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
       </div>
     </DetailPageFrame>
@@ -156,16 +157,16 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
 
   const rows: Array<[string, string]> = [
     ["الاسم", captain.fullNameAr],
-    ["رقم مقدم الخدمة", captain.workforceCode],
+    ["رقم الكابتن", captain.workforceCode],
     ["النوع", PROVIDER_KIND_LABEL_AR[captain.workforceKind]],
     ["الهاتف", captain.phoneMasked ?? "—"],
-    ["منطقة الخدمة السيادية", zones.zoneLabel(profile?.serviceZoneId)],
-    ["مدينة التشغيل المشتقة", reference.cityLabel(profile?.operatingCityCode)],
+    ["منطقة الخدمة", zones.zoneLabel(profile?.serviceZoneId)],
+    ["مدينة التشغيل", reference.cityLabel(profile?.operatingCityCode)],
     ["نوع المركبة", profile?.vehicleType || "—"],
     ["رقم المركبة", profile?.vehicleIdentifier || "—"],
     ["حالة الرخصة", LICENSE_STATUS_LABEL_AR[profile?.licenseStatus ?? "missing"]],
     ["تاريخ انتهاء الرخصة", profile?.licenseExpiresAt || "—"],
-    ["المشرف", profile?.supervisorActorId || "—"],
+    ["مسؤول المتابعة", profile?.supervisorActorId || "—"],
     ["حالة الارتباط", ENGAGEMENT_STATUS_LABEL_AR[captain.engagementStatus]],
   ];
 
@@ -206,7 +207,7 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
   return (
     <DetailPageFrame
       header={
-        <CpPageHeader title="ملف مقدم الخدمة">
+        <CpPageHeader title="ملف الكابتن">
           <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
         </CpPageHeader>
       }
@@ -232,32 +233,26 @@ function CaptainDetailBody(props: { readonly actorId: string; readonly onBack: (
 
         {profile?.licenseStatus !== "valid" ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <Text role="titleSm">مراجعة رخصة القيادة والعمل</Text>
+            <Text role="titleSm">مراجعة رخصة القيادة</Text>
             <Text role="bodySm">الحالة الحالية: {LICENSE_STATUS_LABEL_AR[profile?.licenseStatus ?? "missing"]}</Text>
             <CpMutedInline>
-              اعتماد الرخصة لا يتاح إلا بعد وجود وثيقة وتاريخ انتهاء صالح. قاعدة Workforce تفرض الشرط نفسه حتى عند استدعاء API مباشرة.
+              اعتماد الرخصة لا يتاح إلا بعد وجود وثيقة وتاريخ انتهاء صالح. قاعدة Workforce تفرض الشرط نفسه عند استدعاء API مباشرة.
             </CpMutedInline>
-
             {!canApproveLicence ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                {licenceApprovalBlockers.map((reason) => (
-                  <CpMutedInline key={reason}>• {reason}</CpMutedInline>
-                ))}
+                {licenceApprovalBlockers.map((reason) => <CpMutedInline key={reason}>• {reason}</CpMutedInline>)}
               </div>
             ) : null}
-
             {controller.actionError ? <CpStatePanel role="alert" title={controller.actionError} /> : null}
-
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <CpButton variant="primary" disabled={isBusy || !canApproveLicence} onClick={() => void handleUpdateLicense("valid")}>
-                اعتماد الرخصة (صالحة)
-              </CpButton>
+              <CpButton variant="primary" disabled={isBusy || !canApproveLicence} onClick={() => void handleUpdateLicense("valid")}>اعتماد الرخصة</CpButton>
               <CpButton variant="danger" disabled={isBusy} onClick={() => void handleUpdateLicense("rejected")}>رفض الرخصة</CpButton>
               <CpButton variant="secondary" disabled={isBusy} onClick={() => void handleUpdateLicense("missing")}>طلب استكمال</CpButton>
             </div>
           </div>
         ) : null}
 
+        <ProviderOperationalCorePanel actorId={captain.actorId} kind="captain" />
         <ProviderActivationWorkspace providerKind="captain" initialActorId={captain.actorId} entrySource="hr" />
       </div>
     </DetailPageFrame>

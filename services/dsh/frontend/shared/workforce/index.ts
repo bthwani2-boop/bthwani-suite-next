@@ -1,5 +1,6 @@
 export * from "./workforce.types";
 export * from "./workforce.api";
+export * from "./workforce-operational-core.api";
 export * from "./workforce-documents.api";
 export * from "./workforce-scopes.api";
 export * from "./workforce-employee-media.api";

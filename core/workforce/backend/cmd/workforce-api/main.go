@@ -55,7 +55,9 @@ func main() {
 	authClient := auth.NewClient(identityBaseURL)
 
 	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient)
-	journeyRouter := workforcehttp.Journey003MutationMiddleware(baseRouter, repo, authClient)
+	workforcehttp.RegisterOperationalCoreRoutes(baseRouter, repo, authClient)
+	operationalCoreRouter := workforcehttp.OperationalCoreGateMiddleware(baseRouter, repo, authClient)
+	journeyRouter := workforcehttp.Journey003MutationMiddleware(operationalCoreRouter, repo, authClient)
 	server := &http.Server{
 		Addr: ":" + port,
 		Handler: workforcehttp.CorsMiddleware(workforcehttp.ActivationMutationSafetyMiddleware(journeyRouter)),

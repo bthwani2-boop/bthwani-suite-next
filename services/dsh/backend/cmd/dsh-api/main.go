@@ -89,6 +89,7 @@ func main() {
 	dshHttp.RegisterWorkforceEmployeeMediaRoute(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterLegacyContractCompatibilityRoutes(router, db, identityClient, wltClient, mediaProvider)
 	dshHttp.RegisterGovernedIncidentRoutes(router, db, identityClient, wltClient, mediaProvider)
+	dshHttp.RegisterProviderRatingRoutes(router, db, identityClient, wltClient, mediaProvider)
 	operationalPolicyGuardedRouter := dshHttp.OperationalPolicyEffectsMiddleware(db, router)
 	pickupGuardedRouter := dshHttp.PickupMutationPathContext(
 		dshHttp.PickupMutationGuard(db, identityClient, wltClient, mediaProvider, operationalPolicyGuardedRouter),
@@ -197,7 +198,7 @@ func newMediaProvider(ctx context.Context) *media.Provider {
 		AccessKey:      accessKey,
 		SecretKey:      secretKey,
 		Bucket:          bucket,
-		UseSSL:          useSSL,
+		UseSSL:         useSSL,
 		PublicUseSSL:    publicUseSSL,
 	}, 15*time.Second)
 }

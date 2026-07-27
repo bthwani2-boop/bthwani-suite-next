@@ -135,7 +135,6 @@ export function SheinForm({ onBack, onViewRequests, onSubmit }: Props) {
             value={productUrl}
             onChangeText={setProductUrl}
             autoCapitalize="none"
-            autoCorrect={false}
             maxLength={2000}
             disabled={isSubmitting}
           />
@@ -144,30 +143,16 @@ export function SheinForm({ onBack, onViewRequests, onSubmit }: Props) {
             placeholder="1"
             value={quantity}
             onChangeText={setQuantity}
-            keyboardType="number-pad"
+            keyboardType="numeric"
             maxLength={4}
             disabled={isSubmitting}
           />
           <View style={styles.twoColumnRow}>
             <View style={styles.flexField}>
-              <TextField
-                label="المقاس"
-                placeholder="مثال: M أو 38"
-                value={size}
-                onChangeText={setSize}
-                maxLength={120}
-                disabled={isSubmitting}
-              />
+              <TextField label="المقاس" placeholder="مثال: M أو 38" value={size} onChangeText={setSize} maxLength={120} disabled={isSubmitting} />
             </View>
             <View style={styles.flexField}>
-              <TextField
-                label="اللون"
-                placeholder="مثال: أسود"
-                value={color}
-                onChangeText={setColor}
-                maxLength={120}
-                disabled={isSubmitting}
-              />
+              <TextField label="اللون" placeholder="مثال: أسود" value={color} onChangeText={setColor} maxLength={120} disabled={isSubmitting} />
             </View>
           </View>
           <TextField
@@ -212,18 +197,10 @@ export function SheinForm({ onBack, onViewRequests, onSubmit }: Props) {
           />
         </View>
 
-        {submitError ? (
-          <StateView tone="danger" title="تعذر إرسال الطلب" description={submitError} />
-        ) : null}
+        {submitError ? <StateView tone="danger" title="تعذر إرسال الطلب" description={submitError} /> : null}
 
         <View style={styles.actions}>
-          <Button
-            label="إلغاء"
-            tone="secondary"
-            disabled={isSubmitting}
-            onPress={onBack}
-            style={styles.actionButton}
-          />
+          <Button label="إلغاء" tone="secondary" disabled={isSubmitting} onPress={onBack} style={styles.actionButton} />
           <Button
             label={isSubmitting ? "جاري تثبيت الطلب..." : "إرسال للمراجعة والتسعير"}
             tone="primary"

@@ -40,6 +40,8 @@ import { CaptainSupportScreenRouter } from "./account/CaptainSupportScreenRouter
 import type { DshCaptainOrderBellItem, DshCaptainOrdersScreenState } from "../shared/orders";
 import type { DshDeliveryException } from "../shared/dispatch";
 import { ActorNotificationsPanel } from "../shared/notifications";
+import { ProviderRatingSummaryPanel } from "../shared/provider-ratings/ProviderRatingSummaryPanel";
+import { ProviderAvailabilityNoticesPanel } from "../shared/workforce/ProviderAvailabilityNoticesPanel";
 
 type BThwaniAppearanceMode = "lightPremium" | "darkPremium";
 type CaptainOrderDetailSummary = React.ComponentProps<typeof CaptainOrderDetailScreen>["summary"];
@@ -192,7 +194,6 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     onDeclineTask,
     onOpenSupportScreen,
     onOpenSupportDirectory,
-    onOpenCaptainAccountSection,
     onSetAppearanceMode,
     onToggleStoreCourierMode,
     onToggleAvailability,
@@ -275,16 +276,41 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     }
 
     if (route === "account-profile") {
-      return <KeyValueList items={[{ label: "معرف الكابتن", value: captainDisplayName }, { label: "النوع", value: "DSH", tone: "success" }, { label: "التوفر", value: currentAvailabilityMeta.label, tone: "warning" }]} />;
+      return (
+        <Box gap={4}>
+          <KeyValueList items={[
+            { label: "معرف الكابتن", value: captainDisplayName },
+            { label: "النوع", value: "DSH", tone: "success" },
+            { label: "التوفر", value: currentAvailabilityMeta.label, tone: "warning" },
+          ]} />
+          <ProviderRatingSummaryPanel kind="captain" title="تقييم العملاء لي" />
+        </Box>
+      );
     }
 
     if (route === "account-orders") {
       if (!activeSummary) return <MissingAssignment onGoToInbox={onGoToInbox} />;
-      return <KeyValueList items={[{ label: "الطلب النشط", value: `#${activeOrderDisplayId}`, tone: "success" }, { label: "المرحلة الحالية", value: activeSummary.currentStageLabel, tone: "info" }, { label: "الاستلام", value: activeSummary.pickupLabel }, { label: "التسليم", value: activeSummary.dropoffLabel }, { label: "الخطوة التالية", value: activeSummary.nextActionLabel, tone: "warning" }]} />;
+      return <KeyValueList items={[
+        { label: "الطلب النشط", value: `#${activeOrderDisplayId}`, tone: "success" },
+        { label: "المرحلة الحالية", value: activeSummary.currentStageLabel, tone: "info" },
+        { label: "الاستلام", value: activeSummary.pickupLabel },
+        { label: "التسليم", value: activeSummary.dropoffLabel },
+        { label: "الخطوة التالية", value: activeSummary.nextActionLabel, tone: "warning" },
+      ]} />;
     }
 
-    if (route === "account-docs") return <StateView title="الوثائق والتقييم غير مربوطين" description="لا توجد قراءة Workforce/اعتماد موثقة لهذا السطح بعد." tone="warning" />;
-    if (route === "account-shifts") return <StateView title="الدوام والإجازات غير مربوطين" description="لا توجد قراءة Workforce للوردية أو الإجازات في تطبيق الكابتن." tone="warning" />;
+    if (route === "account-docs") {
+      return (
+        <Box gap={4}>
+          <StateView title="الوثائق" description="تُراجع وثائق الكابتن واعتماداته من Workforce قبل التفعيل التشغيلي." tone="info" />
+          <ProviderRatingSummaryPanel kind="captain" title="تقييم العملاء لي" />
+        </Box>
+      );
+    }
+
+    if (route === "account-shifts") {
+      return <ProviderAvailabilityNoticesPanel providerLabel="الكابتن" hasActiveAssignment={hasActiveAssignment} />;
+    }
 
     if (route === "account-support") {
       return <DshCaptainAccountSettingsContent appearanceHydrated={appearanceHydrated} appearanceMode={appearanceMode} isStoreCourierMode={isStoreCourierMode} onSetAppearanceMode={onSetAppearanceMode} onToggleStoreCourierMode={onToggleStoreCourierMode} />;
@@ -306,7 +332,11 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
             </View>
           </Box>
           <Divider />
-          <KeyValueList items={[{ label: wltSummaryLabel, value: walletBalanceLabel ?? "غير متاح" }, { label: "حالة التوفر", value: currentAvailabilityMeta.label, tone: "warning" }]} />
+          <KeyValueList items={[
+            { label: wltSummaryLabel, value: walletBalanceLabel ?? "افتح المالية لقراءة رصيد WLT" },
+            { label: "حالة التوفر", value: currentAvailabilityMeta.label, tone: "warning" },
+          ]} />
+          <ProviderRatingSummaryPanel kind="captain" title="تقييم العملاء لي" />
           <Divider />
           <Box gap={0}>{captainAccountNavItems.map((item) => <CaptainAccountNavRow key={item.title} title={item.title} subtitle={item.subtitle} badgeLabel={item.badgeLabel} icon={item.icon} onPress={item.onPress} />)}</Box>
         </Box>
@@ -325,12 +355,12 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
 
   const accountRouteTitle: Partial<Record<DshCaptainRoute, { readonly title: string; readonly subtitle: string }>> = {
     "account-finance": { title: "المالية", subtitle: "المحفظة والمستحقات من WLT." },
-    "account-profile": { title: "بيانات الكابتن", subtitle: "الهوية والحالة التشغيلية المثبتة." },
+    "account-profile": { title: "بيانات الكابتن", subtitle: "الهوية والحالة والتقييم المثبت." },
     "account-orders": { title: "الطلبات", subtitle: "المهمة النشطة الحية." },
-    "account-docs": { title: "الوثائق والتقييم", subtitle: "قراءة Workforce المطلوبة." },
-    "account-shifts": { title: "الدوام والإجازات", subtitle: "قراءة Workforce المطلوبة." },
+    "account-docs": { title: "الوثائق والتقييم", subtitle: "اعتمادات Workforce وتقييم العملاء." },
+    "account-shifts": { title: "التوفر وعدم التوفر", subtitle: "إبلاغ الفترات دون ورديات أو حضور وظيفي." },
     "account-support": { title: "الإعدادات", subtitle: "المظهر وخيارات السطح." },
-    account: { title: "حساب الكابتن", subtitle: "الهوية والمالية والحالة المثبتة." },
+    account: { title: "حساب الكابتن", subtitle: "الهوية والمالية والتقييم والحالة المثبتة." },
     "support-directory": { title: "دليل الدعم", subtitle: "المسارات التشغيلية المسجلة." },
     "support-screen": { title: selectedSupportScreen === "cod-liability" ? "ذمة الدفع عند الاستلام" : "الدعم", subtitle: "المسار المفتوح من الدليل." },
   };

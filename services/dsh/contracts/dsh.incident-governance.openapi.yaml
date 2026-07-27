@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
-  title: DSH Governed Incident API
-  version: 1.1.0
+  title: DSH Governed Incident and Provider Rating API
+  version: 1.2.0
   description: >-
-    Permission-scoped support incidents and sovereign operational interventions
-    with retry-safe mutations, optimistic transitions, evidence references and
-    append-only audit readback.
+    Permission-scoped support incidents, sovereign operational interventions,
+    and source-bound provider ratings with retry-safe mutations, evidence
+    references and append-only audit readback.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-runtime-dependency: true
 x-bthwani-generation: DISABLED
@@ -125,6 +125,94 @@ paths:
         '200': { $ref: '#/components/responses/OperationalIncident' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+
+  /dsh/partner/me/ratings/field/prompt:
+    get:
+      tags: ["dsh-provider-ratings"]
+      operationId: getDshPartnerFieldRatingPrompt
+      summary: Return the authenticated partner's post-activation field rating prompt.
+      responses:
+        '200': { $ref: '#/components/responses/PartnerFieldRatingPrompt' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /dsh/partner/me/ratings/field:
+    post:
+      tags: ["dsh-provider-ratings"]
+      operationId: submitDshPartnerFieldRating
+      summary: Rate the attributed field provider after partner activation.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SingleRatingInput' }
+      responses:
+        '200': { $ref: '#/components/responses/ProviderRating' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /dsh/client/me/ratings/pending-order:
+    get:
+      tags: ["dsh-provider-ratings"]
+      operationId: getDshPendingClientOrderRatingPrompt
+      summary: Return the newest delivered order awaiting client ratings.
+      responses:
+        '200': { $ref: '#/components/responses/ClientOrderRatingPrompt' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /dsh/client/orders/{orderId}/rating-prompt:
+    get:
+      tags: ["dsh-provider-ratings"]
+      operationId: getDshClientOrderRatingPrompt
+      summary: Return rating eligibility for an owned delivered order.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200': { $ref: '#/components/responses/ClientOrderRatingPrompt' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /dsh/client/orders/{orderId}/ratings:
+    post:
+      tags: ["dsh-provider-ratings"]
+      operationId: submitDshClientOrderRatings
+      summary: Rate the captain and the order after verified delivery.
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrderRatingsInput' }
+      responses:
+        '200': { $ref: '#/components/responses/ProviderRatings' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /dsh/field/me/ratings/summary:
+    get:
+      tags: ["dsh-provider-ratings"]
+      operationId: getDshFieldOwnRatingSummary
+      summary: Return the authenticated field provider's partner rating summary.
+      responses:
+        '200': { $ref: '#/components/responses/ProviderRatingSummary' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /dsh/captain/me/ratings/summary:
+    get:
+      tags: ["dsh-provider-ratings"]
+      operationId: getDshCaptainOwnRatingSummary
+      summary: Return the authenticated captain's client rating summary.
+      responses:
+        '200': { $ref: '#/components/responses/ProviderRatingSummary' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -134,6 +222,11 @@ components:
   parameters:
     IncidentId:
       name: incidentId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    OrderId:
+      name: orderId
       in: path
       required: true
       schema: { type: string, minLength: 1 }
@@ -214,14 +307,7 @@ components:
     ReportOperationalIncidentInput:
       type: object
       additionalProperties: false
-      required:
-        - orderId
-        - targetEntityType
-        - targetEntityId
-        - incidentType
-        - reason
-        - ticketReference
-        - expectedVersion
+      required: [orderId, targetEntityType, targetEntityId, incidentType, reason, ticketReference, expectedVersion]
       properties:
         orderId: { type: string, minLength: 1 }
         targetEntityType: { $ref: '#/components/schemas/OperationalTargetEntityType' }
@@ -240,20 +326,7 @@ components:
     OperationalIncident:
       type: object
       additionalProperties: true
-      required:
-        - id
-        - orderId
-        - targetEntityType
-        - targetEntityId
-        - incidentType
-        - status
-        - reason
-        - ticketReference
-        - actorId
-        - actorRole
-        - correlationId
-        - createdAt
-        - updatedAt
+      required: [id, orderId, targetEntityType, targetEntityId, incidentType, status, reason, ticketReference, actorId, actorRole, correlationId, createdAt, updatedAt]
       properties:
         id: { type: string }
         orderId: { type: string }
@@ -274,6 +347,82 @@ components:
         appliedAt: { type: [string, 'null'], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    RatingScore:
+      type: integer
+      minimum: 1
+      maximum: 5
+    SingleRatingInput:
+      type: object
+      additionalProperties: false
+      required: [score]
+      properties:
+        score: { $ref: '#/components/schemas/RatingScore' }
+        comment: { type: string, maxLength: 1000 }
+    OrderRatingsInput:
+      type: object
+      additionalProperties: false
+      required: [captainScore, orderScore]
+      properties:
+        captainScore: { $ref: '#/components/schemas/RatingScore' }
+        orderScore: { $ref: '#/components/schemas/RatingScore' }
+        captainComment: { type: string, maxLength: 1000 }
+        orderComment: { type: string, maxLength: 1000 }
+    ProviderRating:
+      type: object
+      additionalProperties: false
+      required: [id, tenantId, raterKind, raterActorId, targetKind, sourceKind, sourceId, score, status, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        tenantId: { type: string }
+        raterKind: { type: string, enum: [partner, client] }
+        raterActorId: { type: string }
+        targetKind: { type: string, enum: [field, captain, order] }
+        targetActorId: { type: string }
+        sourceKind: { type: string, enum: [partner_activation, order_delivery] }
+        sourceId: { type: string }
+        score: { $ref: '#/components/schemas/RatingScore' }
+        comment: { type: string }
+        status: { type: string, enum: [active, retracted] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PartnerFieldRatingPrompt:
+      type: object
+      additionalProperties: false
+      required: [eligible, completed]
+      properties:
+        eligible: { type: boolean }
+        completed: { type: boolean }
+        partnerId: { type: string }
+        partnerName: { type: string }
+        fieldActorId: { type: string }
+        activationStatus: { type: string }
+        reason: { type: string }
+    ClientOrderRatingPrompt:
+      type: object
+      additionalProperties: false
+      required: [eligible, completed, orderId, captainRated, orderRated]
+      properties:
+        eligible: { type: boolean }
+        completed: { type: boolean }
+        orderId: { type: string }
+        orderNumber: { type: string }
+        captainActorId: { type: string }
+        captainRated: { type: boolean }
+        orderRated: { type: boolean }
+        reason: { type: string }
+    ProviderRatingSummary:
+      type: object
+      additionalProperties: false
+      required: [targetKind, targetActorId, averageScore, ratingCount, distribution]
+      properties:
+        targetKind: { type: string, enum: [field, captain] }
+        targetActorId: { type: string }
+        averageScore: { type: number, minimum: 0, maximum: 5 }
+        ratingCount: { type: integer, minimum: 0 }
+        distribution:
+          type: object
+          additionalProperties: { type: integer, minimum: 0 }
+        lastRatedAt: { type: string, format: date-time }
   responses:
     Incident:
       description: Operational support incident.
@@ -315,6 +464,55 @@ components:
               incidents:
                 type: array
                 items: { $ref: '#/components/schemas/OperationalIncident' }
+    PartnerFieldRatingPrompt:
+      description: Partner activation rating prompt.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [prompt]
+            properties:
+              prompt: { $ref: '#/components/schemas/PartnerFieldRatingPrompt' }
+    ClientOrderRatingPrompt:
+      description: Delivered-order rating prompt.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [prompt]
+            properties:
+              prompt: { $ref: '#/components/schemas/ClientOrderRatingPrompt' }
+    ProviderRating:
+      description: Governed provider rating.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [rating]
+            properties:
+              rating: { $ref: '#/components/schemas/ProviderRating' }
+    ProviderRatings:
+      description: Governed captain and order ratings.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [ratings]
+            properties:
+              ratings:
+                type: array
+                minItems: 2
+                maxItems: 2
+                items: { $ref: '#/components/schemas/ProviderRating' }
+    ProviderRatingSummary:
+      description: Provider rating summary.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [summary]
+            properties:
+              summary: { $ref: '#/components/schemas/ProviderRatingSummary' }
     Error:
       description: Governed error response.
       content:

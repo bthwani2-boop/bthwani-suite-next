@@ -2,11 +2,9 @@ package workforce
 
 import "time"
 
-// Person is the sovereign service-provider profile (field agent today,
-// captain later). Providers are independent contractors, not employees:
-// compensation (field commission per store onboarding, captain delivery
-// fees) is owned by WLT and never modeled here. actor_id is the shared key
-// with Identity; no phone is stored here (Identity owns phones).
+// Person is the sovereign unified person profile. The workforce kind selects a
+// separate employee, captain or field projection. Independent providers are
+// not employees; compensation and all monetary truth are owned by WLT.
 type Person struct {
 	ActorID             string           `json:"actorId"`
 	FullNameAr          string           `json:"fullNameAr"`
@@ -28,7 +26,7 @@ type Person struct {
 type FieldProfile struct {
 	CityCode              string   `json:"cityCode,omitempty"`
 	ServiceZoneID         string   `json:"serviceZoneId,omitempty"`
-	ShiftCode             string   `json:"shiftCode,omitempty"`
+	ShiftCode             string   `json:"-"` // deprecated database compatibility only; field providers have no shifts
 	SupervisorActorID     string   `json:"supervisorActorId,omitempty"`
 	EmergencyContactName  string   `json:"emergencyContactName,omitempty"`
 	EmergencyContactPhone string   `json:"emergencyContactPhone,omitempty"`
@@ -57,6 +55,8 @@ type EmployeeProfile struct {
 	DocumentMediaRefs []string `json:"documentMediaRefs"`
 }
 
+// Initial creation is deliberately short. Referral, guarantor, identity and
+// contract facts are completed progressively in ProviderOperationalCore.
 type CreateFieldAgentInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
@@ -64,7 +64,7 @@ type CreateFieldAgentInput struct {
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	ServiceZoneID       string   `json:"serviceZoneId"`
-	ShiftCode           string   `json:"shiftCode"`
+	ShiftCode           string   `json:"-"` // ignored compatibility slot; never accepted from API
 	SupervisorActorID   string   `json:"supervisorActorId"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
 	DocumentMediaRefs   []string `json:"documentMediaRefs"`
@@ -94,7 +94,7 @@ type UpdateFieldAgentInput struct {
 	EngagementType      *string `json:"engagementType"`
 	EngagementStartDate *string `json:"engagementStartDate"`
 	ServiceZoneID       *string `json:"serviceZoneId"`
-	ShiftCode           *string `json:"shiftCode"`
+	ShiftCode           *string `json:"-"` // ignored compatibility slot; never accepted from API
 	SupervisorActorID   *string `json:"supervisorActorId"`
 	PhotoMediaRef       *string `json:"photoMediaRef"`
 }
@@ -107,7 +107,7 @@ type UpdateCaptainInput struct {
 	EngagementStartDate *string `json:"engagementStartDate"`
 	PhotoMediaRef       *string `json:"photoMediaRef"`
 	VehicleType         *string `json:"vehicleType"`
-	VehicleIdentifier   *string `json:"vehicleIdentifier"`
+	VehicleIdentifier  *string `json:"vehicleIdentifier"`
 	LicenseStatus       *string `json:"licenseStatus"`
 	LicenseExpiresAt    *string `json:"licenseExpiresAt"`
 	ServiceZoneID       *string `json:"serviceZoneId"`
@@ -142,9 +142,8 @@ type UpdateEmployeeInput struct {
 	SupervisorActorID   *string `json:"supervisorActorId"`
 }
 
-// UpdateSelfInput carries the only fields a provider may edit about
-// themselves. Everything sovereign (name, code, status, shift, city,
-// supervisor) is operator-owned and rejected at the contract level.
+// UpdateSelfInput carries the only fields a provider may edit about themselves.
+// Sovereign identity, engagement state and assignment scope remain operator-owned.
 type UpdateSelfInput struct {
 	PhotoMediaRef         *string `json:"photoMediaRef"`
 	EmergencyContactName  *string `json:"emergencyContactName"`
@@ -153,7 +152,6 @@ type UpdateSelfInput struct {
 	PolicyConsent         *bool   `json:"policyConsent"`
 }
 
-// MeView is the provider-facing projection returned by GET /workforce/me.
 type MeView struct {
 	Person
 	PhoneMasked     string `json:"phoneMasked,omitempty"`
@@ -176,6 +174,7 @@ type City struct {
 	Active bool   `json:"active"`
 }
 
+// Shift reference data remains available only for employee workflows.
 type Shift struct {
 	Code     string `json:"code"`
 	NameAr   string `json:"nameAr"`

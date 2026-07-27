@@ -24,8 +24,8 @@ export function ClientRemoteImage({
       contentFit={contentFit}
       cachePolicy="memory-disk"
       transition={150}
+      accessibilityLabel={accessibilityLabel ?? "صورة"}
       accessibilityIgnoresInvertColors
-      {...(accessibilityLabel !== undefined ? { accessibilityLabel } : {})}
       {...(onError !== undefined ? { onError } : {})}
     />
   );
