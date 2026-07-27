@@ -29,6 +29,7 @@ export function NotificationCenterScreen({ onBack, onOpenActionUrl }: Props) {
           authKind={identity.state.kind}
           title="إشعارات العميل"
           emptyDescription="ستظهر هنا إشعارات الطلبات، التتبع، والدعم الخاصة بك."
+          showPreferences={false}
           {...(onOpenActionUrl ? { onOpenActionUrl } : {})}
         />
       </ScrollScreen>
