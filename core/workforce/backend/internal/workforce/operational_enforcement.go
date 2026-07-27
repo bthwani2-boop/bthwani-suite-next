@@ -14,25 +14,25 @@ import (
 // decision. Numeric promotion thresholds remain policy-owned; this command
 // prevents a bare classification edit with no performance evidence.
 type PromoteCaptainInput struct {
-	CompletedDeliveries         int      `json:"completedDeliveries"`
-	CompletionRateBasisPoints   int      `json:"completionRateBasisPoints"`
-	SevereIncidentFree          bool     `json:"severeIncidentFree"`
-	EvidenceMediaRefs           []string `json:"evidenceMediaRefs"`
-	DecisionNote                string   `json:"decisionNote"`
+	CompletedDeliveries       int      `json:"completedDeliveries"`
+	CompletionRateBasisPoints int      `json:"completionRateBasisPoints"`
+	SevereIncidentFree        bool     `json:"severeIncidentFree"`
+	EvidenceMediaRefs         []string `json:"evidenceMediaRefs"`
+	DecisionNote              string   `json:"decisionNote"`
 }
 
 type CaptainClassificationDecision struct {
-	ID                          string    `json:"id"`
-	ActorID                     string    `json:"actorId"`
-	FromClassification          string    `json:"fromClassification"`
-	ToClassification            string    `json:"toClassification"`
-	CompletedDeliveries         int       `json:"completedDeliveries"`
-	CompletionRateBasisPoints   int       `json:"completionRateBasisPoints"`
-	SevereIncidentFree          bool      `json:"severeIncidentFree"`
-	EvidenceMediaRefs           []string  `json:"evidenceMediaRefs"`
-	DecisionNote                string    `json:"decisionNote"`
-	ApprovedByActorID           string    `json:"approvedByActorId"`
-	CreatedAt                   time.Time `json:"createdAt"`
+	ID                        string    `json:"id"`
+	ActorID                   string    `json:"actorId"`
+	FromClassification        string    `json:"fromClassification"`
+	ToClassification          string    `json:"toClassification"`
+	CompletedDeliveries       int       `json:"completedDeliveries"`
+	CompletionRateBasisPoints int       `json:"completionRateBasisPoints"`
+	SevereIncidentFree        bool      `json:"severeIncidentFree"`
+	EvidenceMediaRefs         []string  `json:"evidenceMediaRefs"`
+	DecisionNote              string    `json:"decisionNote"`
+	ApprovedByActorID         string    `json:"approvedByActorId"`
+	CreatedAt                 time.Time `json:"createdAt"`
 }
 
 type TransitionProviderIncidentInput struct {
@@ -42,14 +42,14 @@ type TransitionProviderIncidentInput struct {
 }
 
 type ProviderIncidentTransition struct {
-	ID                   string    `json:"id"`
-	IncidentID           string    `json:"incidentId"`
-	FromStatus           string    `json:"fromStatus"`
-	ToStatus             string    `json:"toStatus"`
-	ResolutionNote       string    `json:"resolutionNote,omitempty"`
-	WltLedgerReference   string    `json:"wltLedgerReference,omitempty"`
-	ChangedByActorID     string    `json:"changedByActorId"`
-	CreatedAt            time.Time `json:"createdAt"`
+	ID                 string    `json:"id"`
+	IncidentID         string    `json:"incidentId"`
+	FromStatus         string    `json:"fromStatus"`
+	ToStatus           string    `json:"toStatus"`
+	ResolutionNote     string    `json:"resolutionNote,omitempty"`
+	WltLedgerReference string    `json:"wltLedgerReference,omitempty"`
+	ChangedByActorID   string    `json:"changedByActorId"`
+	CreatedAt          time.Time `json:"createdAt"`
 }
 
 func cleanEvidenceRefs(values []string) []string {
@@ -109,12 +109,16 @@ func (r *Repository) PromoteCaptainToBasic(ctx context.Context, actorID, operato
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	var current string
+	var current, trainingStatus, accreditationStatus, engagementStatus string
 	if err := tx.QueryRowContext(ctx, `
-		SELECT classification
-		FROM workforce_captain_activation_core
-		WHERE actor_id=$1
-		FOR UPDATE`, actorID).Scan(&current); err != nil {
+		SELECT activation.classification,activation.training_status,
+			activation.operations_accreditation_status,person.engagement_status
+		FROM workforce_captain_activation_core activation
+		JOIN workforce_people person ON person.actor_id=activation.actor_id
+		WHERE activation.actor_id=$1
+		FOR UPDATE OF activation,person`, actorID).Scan(
+		&current, &trainingStatus, &accreditationStatus, &engagementStatus,
+	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ProviderOperationalCore{}, ErrNotFound
 		}
@@ -128,6 +132,12 @@ func (r *Repository) PromoteCaptainToBasic(ctx context.Context, actorID, operato
 	}
 	if current != "joker" {
 		return ProviderOperationalCore{}, fmt.Errorf("%w: unsupported captain classification", ErrInvalidInput)
+	}
+	if engagementStatus != "active" {
+		return ProviderOperationalCore{}, fmt.Errorf("%w: captain engagement must be active before promotion", ErrInvalidInput)
+	}
+	if trainingStatus != "passed" || accreditationStatus != "approved" {
+		return ProviderOperationalCore{}, fmt.Errorf("%w: captain training and operations accreditation are required", ErrInvalidInput)
 	}
 
 	evidenceJSON, err := json.Marshal(input.EvidenceMediaRefs)
