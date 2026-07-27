@@ -1,13 +1,13 @@
 openapi: 3.1.0
 info:
   title: BThwani Identity Employee Access API
-  version: 0.1.1
+  version: 0.1.2
   description: >-
     Workforce-only administrative employee provisioning. Identity derives the
     effective control-panel roles and permissions from a closed permission
     bundle catalogue; callers cannot submit arbitrary permissions. Employee
     activation remains actor-bound through the canonical Identity activation
-    challenge endpoint with actorType=employee and surface=webapp.
+    challenge endpoint with actorType=employee and surface=control-panel.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/identity
 x-bthwani-runtime-dependency: true
