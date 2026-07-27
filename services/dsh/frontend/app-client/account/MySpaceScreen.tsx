@@ -1,20 +1,20 @@
-import React, { useState } from "react";
+import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import {
   Icon,
   MobileScrollView,
   Text,
   TopBar,
-  spacing,
-  SegmentedControl,
-  colorRoles,
   brandScale,
+  colorRoles,
+  spacing,
 } from "@bthwani/ui-kit";
 import { ActorWalletPanel } from "../../shared/finance-wlt-link/actor-wallet";
 
 export type BThwaniAppearanceMode = "lightPremium" | "darkGlass";
 
 export type MySpaceScreenProps = {
+  /** Kept for caller compatibility until a governed runtime theme contract exists. */
   appearanceMode?: BThwaniAppearanceMode;
   onAppearanceModeChange?: (mode: BThwaniAppearanceMode) => void;
   onOpenOrders?: () => void;
@@ -30,8 +30,6 @@ type MySpaceTab =
   | "addresses"
   | "identity"
   | "benefits"
-  | "appearance"
-  | "language"
   | "preferences"
   | "support";
 
@@ -42,14 +40,12 @@ type TabConfig = {
   iconName: string;
 };
 
-const TABS: TabConfig[] = [
+const TABS: readonly TabConfig[] = [
   { id: "orders", label: "طلباتي", summary: "الطلب والتاريخ والتتبع", iconName: "bag-outline" },
-  { id: "addresses", label: "العناوين والموقع", summary: "إدارة العناوين وموقع التوصيل", iconName: "location-outline" },
+  { id: "addresses", label: "العناوين والموقع", summary: "إدارة العناوين وتعليمات التوصيل", iconName: "location-outline" },
   { id: "identity", label: "الملف الشخصي", summary: "البيانات الشخصية والأمان", iconName: "person-outline" },
   { id: "benefits", label: "المزايا والولاء", summary: "النقاط والاشتراكات والعروض المعتمدة", iconName: "gift-outline" },
-  { id: "appearance", label: "المظهر", summary: "فاتح أبيض أو داكن زجاجي", iconName: "color-palette-outline" },
-  { id: "language", label: "اللغة", summary: "العربية أو الإنجليزية", iconName: "globe-outline" },
-  { id: "preferences", label: "تفضيلات التوصيل", summary: "إعدادات خاصة بالتسليم والاستبدال", iconName: "options-outline" },
+  { id: "preferences", label: "تفضيلات الإشعارات", summary: "إعدادات محفوظة في DSH ومقروءة بعد التعديل", iconName: "notifications-outline" },
   { id: "support", label: "الدعم والمساعدة", summary: "تذاكر الدعم ومتابعة المشاكل", iconName: "help-buoy-outline" },
 ];
 
@@ -58,19 +54,18 @@ function MySpaceRow({
   subtitle,
   iconName,
   onPress,
-  actionElement,
 }: {
   title: string;
   subtitle: string;
   iconName: string;
   onPress?: () => void;
-  actionElement?: React.ReactNode;
 }) {
   return (
     <Pressable
-      disabled={Boolean(actionElement)}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && !actionElement && styles.rowPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       <View style={styles.rowIconContainer}>
         <Icon name={iconName} size={21} color={colorRoles.brandAction} />
@@ -79,18 +74,12 @@ function MySpaceRow({
         <Text role="bodyStrong" style={styles.rowTitle}>{title}</Text>
         <Text role="bodySm" tone="muted" style={styles.rowSummary}>{subtitle}</Text>
       </View>
-      {actionElement ? (
-        <View style={styles.actionWrapper}>{actionElement}</View>
-      ) : (
-        <Text style={styles.chevron}>‹</Text>
-      )}
+      <Text style={styles.chevron}>‹</Text>
     </Pressable>
   );
 }
 
 export function MySpaceScreen({
-  appearanceMode = "lightPremium",
-  onAppearanceModeChange,
   onOpenOrders,
   onOpenAddresses,
   onOpenIdentity,
@@ -98,8 +87,6 @@ export function MySpaceScreen({
   onOpenPreferences,
   onOpenSupport,
 }: MySpaceScreenProps) {
-  const [lang, setLang] = useState<string>("ar");
-
   const handleRowPress = (id: MySpaceTab) => {
     switch (id) {
       case "orders": return onOpenOrders?.();
@@ -108,7 +95,6 @@ export function MySpaceScreen({
       case "benefits": return onOpenBenefits?.();
       case "preferences": return onOpenPreferences?.();
       case "support": return onOpenSupport?.();
-      default: return undefined;
     }
   };
 
@@ -119,46 +105,15 @@ export function MySpaceScreen({
       <MobileScrollView fill padding={4} gap={3} contentContainerStyle={styles.scrollContent}>
         <ActorWalletPanel actorType="client" title="محفظتي" embedded />
 
-        {TABS.map((tab) => {
-          let actionElement: React.ReactNode = undefined;
-
-          if (tab.id === "appearance") {
-            actionElement = (
-              <SegmentedControl
-                items={[
-                  { value: "lightPremium", label: "فاتح" },
-                  { value: "darkGlass", label: "داكن" },
-                ]}
-                value={appearanceMode === "darkGlass" ? "darkGlass" : "lightPremium"}
-                onValueChange={(nextValue) => {
-                  onAppearanceModeChange?.(nextValue as BThwaniAppearanceMode);
-                }}
-              />
-            );
-          } else if (tab.id === "language") {
-            actionElement = (
-              <SegmentedControl
-                items={[
-                  { value: "ar", label: "عربي" },
-                  { value: "en", label: "EN" },
-                ]}
-                value={lang}
-                onValueChange={setLang}
-              />
-            );
-          }
-
-          return (
-            <MySpaceRow
-              key={tab.id}
-              title={tab.label}
-              subtitle={tab.summary}
-              iconName={tab.iconName}
-              actionElement={actionElement}
-              onPress={() => handleRowPress(tab.id)}
-            />
-          );
-        })}
+        {TABS.map((tab) => (
+          <MySpaceRow
+            key={tab.id}
+            title={tab.label}
+            subtitle={tab.summary}
+            iconName={tab.iconName}
+            onPress={() => handleRowPress(tab.id)}
+          />
+        ))}
       </MobileScrollView>
     </View>
   );
@@ -204,10 +159,6 @@ const styles = StyleSheet.create({
   },
   rowSummary: {
     textAlign: "right",
-  },
-  actionWrapper: {
-    justifyContent: "center",
-    alignItems: "center",
   },
   chevron: {
     fontSize: 20,
