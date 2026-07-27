@@ -36,6 +36,23 @@ CREATE TABLE IF NOT EXISTS workforce_provider_incident_transitions (
 CREATE INDEX IF NOT EXISTS workforce_provider_incident_transitions_incident_idx
   ON workforce_provider_incident_transitions(incident_id, created_at ASC);
 
+-- Any legacy projection claiming a completed evidence state without its
+-- reference is moved back to review instead of being grandfathered as ready.
+UPDATE workforce_captain_activation_core
+SET financial_guarantee_status = 'pending_review', updated_at = now()
+WHERE financial_guarantee_status = 'funded'
+  AND (financial_guarantee_minor_units <= 0 OR btrim(financial_guarantee_reference) = '');
+
+UPDATE workforce_captain_activation_core
+SET delivery_bag_custody_status = 'not_issued', updated_at = now()
+WHERE delivery_bag_custody_status = 'issued'
+  AND btrim(delivery_bag_custody_reference) = '';
+
+UPDATE workforce_captain_activation_core
+SET mandatory_purchases_status = 'paid', updated_at = now()
+WHERE mandatory_purchases_status = 'paid_and_delivered'
+  AND btrim(mandatory_purchases_reference) = '';
+
 CREATE OR REPLACE FUNCTION workforce_validate_captain_activation_evidence()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -55,14 +72,15 @@ BEGIN
     RAISE EXCEPTION 'paid and delivered mandatory purchases require an invoice or delivery reference';
   END IF;
 
-  IF TG_OP = 'UPDATE' AND OLD.classification = 'joker' AND NEW.classification = 'basic' AND NOT EXISTS (
+  IF TG_OP = 'UPDATE' AND OLD.classification <> NEW.classification AND NOT EXISTS (
     SELECT 1
     FROM workforce_captain_classification_history h
     WHERE h.actor_id = NEW.actor_id
-      AND h.from_classification = 'joker'
-      AND h.to_classification = 'basic'
+      AND h.from_classification = OLD.classification
+      AND h.to_classification = NEW.classification
+      AND h.created_at >= transaction_timestamp()
   ) THEN
-    RAISE EXCEPTION 'captain promotion to basic requires an evidence-backed classification history record';
+    RAISE EXCEPTION 'captain classification change requires a current evidence-backed decision';
   END IF;
 
   RETURN NEW;
