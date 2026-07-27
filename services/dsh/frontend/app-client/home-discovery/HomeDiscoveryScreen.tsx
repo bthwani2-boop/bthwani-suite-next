@@ -2,17 +2,18 @@ import React from "react";
 import { useClientAddressController } from "../../shared/client-address";
 import {
   useHomeDiscoveryController,
+  type DshHomeSpecialRequestTarget,
   type HomeDiscoveryState,
 } from "../../shared/home-discovery";
 import { HomeDiscoveryShell } from "./HomeDiscoveryShell";
 
 type Props = {
   onStorePress?: ((storeId: string, slug: string) => void) | undefined;
-  onSpecialCategoryPress?: ((nodeId: string) => void) | undefined;
+  onSpecialRequestPress?: ((requestType: DshHomeSpecialRequestTarget) => void) | undefined;
   onMarketingAction?: ((actionType: string, actionTarget: string) => void) | undefined;
 };
 
-export function HomeDiscoveryScreen({ onStorePress, onSpecialCategoryPress, onMarketingAction }: Props) {
+export function HomeDiscoveryScreen({ onStorePress, onSpecialRequestPress, onMarketingAction }: Props) {
   const addressController = useClientAddressController();
   const serviceAreaCode = addressController.selectedAddress?.serviceAreaCode;
   const controller = useHomeDiscoveryController({
@@ -37,7 +38,7 @@ export function HomeDiscoveryScreen({ onStorePress, onSpecialCategoryPress, onMa
       activeFilter={controller.activeFilter}
       onFilterChange={controller.setActiveFilter}
       onStorePress={onStorePress}
-      onSpecialCategoryPress={onSpecialCategoryPress}
+      onSpecialRequestPress={onSpecialRequestPress}
       onMarketingAction={onMarketingAction}
       onRetry={retry}
     />
