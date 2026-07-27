@@ -70,16 +70,12 @@ function ReelPlayerModal({
         />
         <View style={styles.modalActions}>
           {onOpenTarget ? (
-            <Button
-              label={reel.targetType === "store" ? "فتح المتجر" : "فتح التفاصيل"}
-              tone="primary"
-              onPress={onOpenTarget}
-            />
+            <Button label="فتح المتجر" tone="primary" onPress={onOpenTarget} />
           ) : (
             <StateView
               tone="neutral"
               title="المشاهدة فقط"
-              description="لا يملك هذا الفيديو هدفًا قابلًا للفتح في تطبيق العميل حاليًا."
+              description="لا يملك هذا الفيديو هدف متجر قابلًا للفتح في تطبيق العميل حاليًا."
             />
           )}
         </View>
@@ -140,7 +136,7 @@ export function HomeReelsSection({ reels, onReelPress }: Props) {
         <ReelPlayerModal
           reel={selectedReel}
           onClose={() => setSelectedReel(null)}
-          {...(onReelPress
+          {...(onReelPress && selectedReel.targetType === "store"
             ? {
                 onOpenTarget: () => {
                   const reel = selectedReel;
