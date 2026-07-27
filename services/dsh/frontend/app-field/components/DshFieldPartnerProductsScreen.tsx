@@ -1,15 +1,12 @@
-// app-field — DshFieldPartnerProductsScreen
-// Lets the field agent stock a partner's auto-created draft store from the
-// sovereign central catalog: browse taxonomy + master products, link a
-// chosen master product to the store's assortment (price/availability/stock
-// status only — never a free-form name or price), and propose a new master
-// product when nothing matches. Proposals are submitted for review and are
-// never immediately addable to the store — a proposal only becomes linkable
-// once catalog governance adopts it into a master product.
+// app-field — fast governed partner catalog setup.
+// The field agent selects many approved master products, enters store-local
+// prices/availability/description, and saves the batch in one governed request.
+// Product identity, unit and measurement type always come from central catalog.
 import React from 'react';
 import { Pressable, View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
+  Badge,
   Button,
   Text,
   TextField,
@@ -29,11 +26,27 @@ export type DshFieldPartnerProductsScreenProps = {
   readonly onBack: () => void;
 };
 
-const STOCK_STATUS_LABELS: Record<'in_stock' | 'low_stock' | 'out_of_stock', string> = {
+type StockStatus = 'in_stock' | 'low_stock' | 'out_of_stock';
+type ProductDraft = {
+  readonly price: string;
+  readonly localDescription: string;
+  readonly stockStatus: StockStatus;
+};
+
+const STOCK_STATUS_LABELS: Record<StockStatus, string> = {
   in_stock: 'متوفر',
-  low_stock: 'متوفر بكمية محدودة',
+  low_stock: 'كمية محدودة',
   out_of_stock: 'غير متوفر',
 };
+
+function emptyDraft(): ProductDraft {
+  return { price: '', localDescription: '', stockStatus: 'in_stock' };
+}
+
+function centralMeasurementLabel(product: MasterProduct): string {
+  const parts = [product.unit?.trim(), product.measurementType?.trim()].filter(Boolean);
+  return parts.length ? parts.join(' · ') : 'الوحدة يحددها الكتالوج المركزي';
+}
 
 export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPartnerProductsScreenProps) {
   const insets = useSafeAreaInsets();
@@ -45,43 +58,101 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     assortmentItems,
     proposals,
     searchMasterProducts,
-    linkMasterProduct,
+    linkMasterProductsBatch,
     proposeNewProduct,
   } = useFieldCatalogController(partnerId);
 
   const [searchText, setSearchText] = React.useState('');
   const [selectedDomainId, setSelectedDomainId] = React.useState('');
   const [selectedNodeId, setSelectedNodeId] = React.useState('');
-  const [linkingId, setLinkingId] = React.useState<string | null>(null);
-  const [linkPrice, setLinkPrice] = React.useState('');
-  const [linkNote, setLinkNote] = React.useState('');
-  const [linkStock, setLinkStock] = React.useState<'in_stock' | 'low_stock' | 'out_of_stock'>('in_stock');
-  const [linkError, setLinkError] = React.useState<string | undefined>(undefined);
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [drafts, setDrafts] = React.useState<Record<string, ProductDraft>>({});
+  const [rowErrors, setRowErrors] = React.useState<Record<string, string | undefined>>({});
+  const [batchMessage, setBatchMessage] = React.useState<string | null>(null);
+  const [batchTone, setBatchTone] = React.useState<'success' | 'warning' | 'danger'>('success');
 
   const [showProposeForm, setShowProposeForm] = React.useState(false);
   const [proposeNameAr, setProposeNameAr] = React.useState('');
   const [proposeNameEn, setProposeNameEn] = React.useState('');
   const [proposeBrand, setProposeBrand] = React.useState('');
-  const [proposeImageKey, setProposeImageKey] = React.useState('');
-  const [proposeError, setProposeError] = React.useState<string | undefined>(undefined);
-  // The proposal form's domain/node choice is intentionally decoupled from
-  // selectedDomainId/selectedNodeId (which drive browsing/search below). The
-  // proposal form must start with no domain selected and force an explicit
-  // choice — it must never inherit the auto-selected browsing domain.
+  const [proposeError, setProposeError] = React.useState<string | undefined>();
   const [proposeDomainId, setProposeDomainId] = React.useState('');
   const [proposeNodeId, setProposeNodeId] = React.useState('');
 
   React.useEffect(() => {
-    if (taxonomyState.kind === 'success' && !selectedDomainId) {
-      const firstDomainId = taxonomyState.domains.filter(d => d.isActive)[0]?.id ?? '';
-      setSelectedDomainId(firstDomainId);
-      if (firstDomainId) {
-        void searchMasterProducts({ domainId: firstDomainId });
-      } else {
-        void searchMasterProducts();
-      }
-    }
+    if (taxonomyState.kind !== 'success' || selectedDomainId) return;
+    const firstDomainId = taxonomyState.domains.find((domain) => domain.isActive)?.id ?? '';
+    setSelectedDomainId(firstDomainId);
+    void searchMasterProducts(firstDomainId ? { domainId: firstDomainId } : undefined);
   }, [taxonomyState, selectedDomainId, searchMasterProducts]);
+
+  const masterProducts = masterProductsState.kind === 'success' ? masterProductsState.items : [];
+  const activeDomains = taxonomyState.kind === 'success' ? taxonomyState.domains.filter((domain) => domain.isActive) : [];
+  const visibleNodes = taxonomyState.kind === 'success'
+    ? taxonomyState.nodes.filter((node) => node.domainId === selectedDomainId && node.isActive)
+    : [];
+  const proposeNodes = taxonomyState.kind === 'success'
+    ? taxonomyState.nodes.filter((node) => node.domainId === proposeDomainId && node.isActive)
+    : [];
+
+  const draftForProduct = React.useCallback((productId: string): ProductDraft => {
+    const draft = drafts[productId];
+    if (draft) return draft;
+    const existing = assortmentItems.find((item) => item.masterProductId === productId);
+    return existing
+      ? {
+          price: String(existing.unitPrice),
+          localDescription: existing.localNote ?? '',
+          stockStatus: existing.stockStatus,
+        }
+      : emptyDraft();
+  }, [drafts, assortmentItems]);
+
+  const ensureDraft = React.useCallback((productId: string) => {
+    setDrafts((current) => {
+      if (current[productId]) return current;
+      const existing = assortmentItems.find((item) => item.masterProductId === productId);
+      return {
+        ...current,
+        [productId]: existing
+          ? {
+              price: String(existing.unitPrice),
+              localDescription: existing.localNote ?? '',
+              stockStatus: existing.stockStatus,
+            }
+          : emptyDraft(),
+      };
+    });
+  }, [assortmentItems]);
+
+  const toggleSelected = (productId: string) => {
+    ensureDraft(productId);
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+    setBatchMessage(null);
+  };
+
+  const updateDraft = (productId: string, patch: Partial<ProductDraft>) => {
+    setDrafts((current) => ({ ...current, [productId]: { ...draftForProduct(productId), ...patch } }));
+    setRowErrors((current) => ({ ...current, [productId]: undefined }));
+    setBatchMessage(null);
+  };
+
+  const selectAllVisible = () => {
+    for (const product of masterProducts) ensureDraft(product.id);
+    setSelectedIds(new Set(masterProducts.map((product) => product.id)));
+    setBatchMessage(null);
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setRowErrors({});
+    setBatchMessage(null);
+  };
 
   const handleSearch = async () => {
     await searchMasterProducts({
@@ -91,73 +162,100 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     });
   };
 
-  const startLinking = (product: MasterProduct) => {
-    const existing = assortmentItems.find((a) => a.masterProductId === product.id);
-    setLinkingId(product.id);
-    setLinkPrice(existing ? String(existing.unitPrice) : '');
-    setLinkNote(existing?.localNote ?? '');
-    setLinkStock(existing?.stockStatus ?? 'in_stock');
-    setLinkError(undefined);
-  };
+  const handleBatchSave = async () => {
+    const selectedProducts = masterProducts.filter((product) => selectedIds.has(product.id));
+    const nextErrors: Record<string, string | undefined> = {};
+    const validItems = selectedProducts.flatMap((product) => {
+      const draft = draftForProduct(product.id);
+      const price = Number(draft.price.trim());
+      if (!draft.price.trim() || !Number.isFinite(price) || price < 0) {
+        nextErrors[product.id] = 'أدخل سعرًا صحيحًا';
+        return [];
+      }
+      return [{
+        masterProductId: product.id,
+        input: {
+          unitPrice: price,
+          currency: 'YER',
+          available: draft.stockStatus !== 'out_of_stock',
+          stockStatus: draft.stockStatus,
+          localNote: draft.localDescription.trim(),
+        },
+      }];
+    });
 
-  const handleSaveLink = async (masterProductId: string) => {
-    const priceNumber = Number(linkPrice.trim());
-    if (!linkPrice.trim() || Number.isNaN(priceNumber) || priceNumber < 0) {
-      setLinkError('أدخل سعراً صحيحاً');
+    setRowErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setBatchTone('warning');
+      setBatchMessage('أكمل الأسعار الصحيحة لجميع المنتجات المحددة قبل الحفظ.');
       return;
     }
-    setLinkError(undefined);
+    if (validItems.length === 0) return;
 
-    const ok = await linkMasterProduct(masterProductId, {
-      unitPrice: priceNumber,
-      currency: 'YER',
-      available: linkStock !== 'out_of_stock',
-      stockStatus: linkStock,
-      localNote: linkNote.trim(),
-    });
-    if (ok) setLinkingId(null);
+    const summary = await linkMasterProductsBatch(validItems);
+    const savedIds = new Set(
+      summary.results.filter((result) => result.status === 'saved').map((result) => result.masterProductId),
+    );
+    setSelectedIds((current) => new Set([...current].filter((id) => !savedIds.has(id))));
+    const failedErrors: Record<string, string | undefined> = {};
+    for (const result of summary.results) {
+      if (result.status === 'failed') {
+        failedErrors[result.masterProductId] = result.code === 'CONFLICT'
+          ? 'تغير المنتج بعد تحميله. أعد المحاولة بعد تحديث البيانات.'
+          : result.message ?? 'تعذر حفظ المنتج';
+      }
+    }
+    setRowErrors(failedErrors);
+
+    if (summary.failed === 0) {
+      setBatchTone('success');
+      setBatchMessage(`تم حفظ ${summary.succeeded} منتج وربطها بمتجر الشريك.`);
+    } else if (summary.succeeded > 0) {
+      setBatchTone('warning');
+      setBatchMessage(`تم حفظ ${summary.succeeded} منتج، وتعذر حفظ ${summary.failed}. بقيت الصفوف الفاشلة محددة لإعادة المحاولة.`);
+    } else {
+      setBatchTone('danger');
+      setBatchMessage('تعذر حفظ المنتجات المحددة. راجع الأخطاء الظاهرة في الصفوف.');
+    }
   };
 
   const startProposeWithSearch = () => {
     setProposeNameAr(searchText.trim());
-    setProposeDomainId(selectedDomainId); // Pre-select current domain for convenience
+    setProposeDomainId(selectedDomainId);
     setProposeNodeId(selectedNodeId);
     setShowProposeForm(true);
   };
 
   const handlePropose = async () => {
     if (!proposeNameAr.trim()) {
-      setProposeError('اسم المنتج مطلوب لإرسال الاقتراح');
+      setProposeError('اسم المنتج مطلوب');
       return;
     }
     if (!proposeDomainId) {
-      setProposeError('اختر القسم أولاً');
+      setProposeError('اختر القسم المركزي أولًا');
       return;
     }
-    setProposeError(undefined);
-
-    // Only send a node that actually belongs to the chosen proposal domain
     const matchedNode = proposeNodes.find((node) => node.id === proposeNodeId);
-    const categoryNodeId = matchedNode && matchedNode.domainId === proposeDomainId ? matchedNode.id : null;
-
     const proposal = await proposeNewProduct({
       proposedNameAr: proposeNameAr.trim(),
       proposedNameEn: proposeNameEn.trim(),
       domainId: proposeDomainId,
-      categoryNodeId,
+      categoryNodeId: matchedNode?.domainId === proposeDomainId ? matchedNode.id : null,
       brand: proposeBrand.trim(),
       barcode: null,
-      imageObjectKey: proposeImageKey.trim() || null,
+      imageObjectKey: null,
     });
-    if (proposal) {
-      setProposeNameAr('');
-      setProposeNameEn('');
-      setProposeBrand('');
-      setProposeImageKey('');
-      setProposeDomainId('');
-      setProposeNodeId('');
-      setShowProposeForm(false);
+    if (!proposal) {
+      setProposeError('تعذر إرسال الاقتراح. تحقق من سياسة الفئة ثم أعد المحاولة.');
+      return;
     }
+    setProposeNameAr('');
+    setProposeNameEn('');
+    setProposeBrand('');
+    setProposeDomainId('');
+    setProposeNodeId('');
+    setProposeError(undefined);
+    setShowProposeForm(false);
   };
 
   if (storeState.kind === 'loading' || storeState.kind === 'idle') {
@@ -167,86 +265,61 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
     return <StateView tone="danger" title="تعذر التحميل" description={storeState.message} actionLabel="رجوع" onActionPress={onBack} />;
   }
 
-  const masterProducts = masterProductsState.kind === 'success' ? masterProductsState.items : [];
-  const visibleNodes = taxonomyState.kind === 'success'
-    ? taxonomyState.nodes.filter((node) => node.domainId === selectedDomainId && node.isActive)
-    : [];
-  const activeDomains = taxonomyState.kind === 'success' ? taxonomyState.domains.filter((d) => d.isActive) : [];
-  const proposeNodes = taxonomyState.kind === 'success'
-    ? taxonomyState.nodes.filter((node) => node.domainId === proposeDomainId && node.isActive)
-    : [];
-
   return (
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-      <Header title="منتجات المتجر" subtitle="اختر من كتالوج المنصة الموحّد أو اقترح منتجاً جديداً" />
+      <Header title="إعداد منتجات المتجر" subtitle="اختيار جماعي من الكتالوج المركزي وحفظ الأسعار دفعة واحدة" />
 
-      {/* ── Search Input (Always at top, sticky outside ScrollView) ── */}
-      <View style={{ padding: spacing[4], paddingBottom: spacing[2], gap: spacing[2], borderBottomWidth: 1, borderBottomColor: colorRoles.borderSubtle, backgroundColor: colorRoles.surfaceBase, zIndex: 10 }}>
+      <View style={{ padding: spacing[4], paddingBottom: spacing[2], gap: spacing[2], borderBottomWidth: 1, borderBottomColor: colorRoles.borderSubtle }}>
         <View style={{ flexDirection: 'row-reverse', gap: spacing[2], alignItems: 'flex-end' }}>
           <View style={{ flex: 1 }}>
-            <TextField
-              label="بحث في منتجات الكتالوج"
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholder="ابحث بالاسم أو الباركود"
-            />
+            <TextField label="بحث في الكتالوج المركزي" value={searchText} onChangeText={setSearchText} placeholder="الاسم أو الباركود" />
           </View>
           <Button label="بحث" tone="secondary" onPress={() => void handleSearch()} disabled={masterProductsState.kind === 'loading'} />
         </View>
-        <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
-          اربط منتجات المتجر بكتالوج المنصة الموحّد. المنتجات ستُضاف لمتجر الشريك.
-        </Text>
+        <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2], alignItems: 'center' }}>
+          <Button label="تحديد كل الظاهر" size="sm" tone="ghost" onPress={selectAllVisible} disabled={masterProducts.length === 0} />
+          <Button label="إلغاء التحديد" size="sm" tone="ghost" onPress={clearSelection} disabled={selectedIds.size === 0} />
+          <Badge label={`${selectedIds.size} محدد`} tone={selectedIds.size ? 'brand' : 'neutral'} />
+        </View>
       </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: spacing[4], gap: spacing[4], paddingBottom: 100 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Horizontal Taxonomy Chips ── */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing[4], gap: spacing[4], paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
         <View style={{ gap: spacing[3] }}>
           {taxonomyState.kind === 'error' ? (
             <StateView tone="danger" title="تعذر تحميل الفئات المركزية" description={taxonomyState.message} />
           ) : taxonomyState.kind === 'success' ? (
-            <View style={{ gap: spacing[3] }}>
-              <View style={{ gap: spacing[2] }}>
-                <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>المجال المركزي</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2], flexDirection: 'row-reverse', paddingHorizontal: 2 }}>
-                  {taxonomyState.domains.filter((domain) => domain.isActive).map((domain) => (
-                    <Button
-                      key={domain.id}
-                      label={domain.nameAr}
-                      size="sm"
-                      pill={true}
-                      tone={selectedDomainId === domain.id ? 'primary' : 'ghost'}
-                      onPress={() => {
-                        setSelectedDomainId(domain.id);
-                        setSelectedNodeId('');
-                        void searchMasterProducts({
-                          domainId: domain.id,
-                          ...(searchText.trim() ? { search: searchText.trim() } : {}),
-                        });
-                      }}
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-
-              {visibleNodes.length > 0 && (
-                <View style={{ gap: spacing[2] }}>
-                  <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>الفئة المركزية</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2], flexDirection: 'row-reverse', paddingHorizontal: 2 }}>
+            <>
+              <Text role="bodyStrong" style={{ textAlign: 'right' }}>المجال المركزي</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2], flexDirection: 'row-reverse' }}>
+                {activeDomains.map((domain) => (
+                  <Button
+                    key={domain.id}
+                    label={domain.nameAr}
+                    size="sm"
+                    pill
+                    tone={selectedDomainId === domain.id ? 'primary' : 'ghost'}
+                    onPress={() => {
+                      setSelectedDomainId(domain.id);
+                      setSelectedNodeId('');
+                      clearSelection();
+                      void searchMasterProducts({ domainId: domain.id, ...(searchText.trim() ? { search: searchText.trim() } : {}) });
+                    }}
+                  />
+                ))}
+              </ScrollView>
+              {visibleNodes.length ? (
+                <>
+                  <Text role="bodyStrong" style={{ textAlign: 'right' }}>الفئة المركزية</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2], flexDirection: 'row-reverse' }}>
                     <Button
                       label="الكل"
                       size="sm"
-                      pill={true}
+                      pill
                       tone={selectedNodeId ? 'ghost' : 'primary'}
                       onPress={() => {
                         setSelectedNodeId('');
-                        void searchMasterProducts({
-                          domainId: selectedDomainId,
-                          ...(searchText.trim() ? { search: searchText.trim() } : {}),
-                        });
+                        clearSelection();
+                        void searchMasterProducts({ domainId: selectedDomainId, ...(searchText.trim() ? { search: searchText.trim() } : {}) });
                       }}
                     />
                     {visibleNodes.map((node) => (
@@ -254,302 +327,171 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
                         key={node.id}
                         label={node.nameAr}
                         size="sm"
-                        pill={true}
+                        pill
                         tone={selectedNodeId === node.id ? 'primary' : 'ghost'}
                         onPress={() => {
                           setSelectedNodeId(node.id);
-                          void searchMasterProducts({
-                            domainId: selectedDomainId,
-                            categoryNodeId: node.id,
-                            ...(searchText.trim() ? { search: searchText.trim() } : {}),
-                          });
+                          clearSelection();
+                          void searchMasterProducts({ domainId: selectedDomainId, categoryNodeId: node.id, ...(searchText.trim() ? { search: searchText.trim() } : {}) });
                         }}
                       />
                     ))}
                   </ScrollView>
-                </View>
-              )}
+                </>
+              ) : null}
+            </>
+          ) : null}
+        </View>
+
+        {actionState.kind === 'error' ? <StateView tone="warning" title="تعذر إكمال بعض العمليات" description={actionState.message} /> : null}
+        {batchMessage ? <StateView tone={batchTone} title={batchTone === 'success' ? 'تم الحفظ' : 'نتيجة الحفظ الجماعي'} description={batchMessage} /> : null}
+
+        <View style={{ gap: spacing[3] }}>
+          <Text role="bodyStrong" style={{ textAlign: 'right' }}>{`منتجات الكتالوج (${masterProducts.length})`}</Text>
+          {masterProductsState.kind === 'loading' ? (
+            <StateView loading title="جاري تحميل المنتجات…" />
+          ) : masterProducts.length === 0 ? (
+            <View style={{ padding: spacing[5], gap: spacing[3], borderWidth: 1.5, borderStyle: 'dashed', borderColor: colorRoles.borderStrong, borderRadius: radius.md, alignItems: 'center' }}>
+              <Icon name="search-outline" size={32} tone="muted" />
+              <Text role="bodyStrong" tone="muted" style={{ textAlign: 'center' }}>لا توجد نتائج مطابقة</Text>
+              {searchText.trim() ? <Button label="اقتراح منتج جديد" tone="primary" onPress={startProposeWithSearch} /> : null}
+            </View>
+          ) : masterProducts.map((product) => {
+            const selected = selectedIds.has(product.id);
+            const linked = assortmentItems.find((item) => item.masterProductId === product.id);
+            const draft = draftForProduct(product.id);
+            const error = rowErrors[product.id];
+            return (
+              <View
+                key={product.id}
+                style={{
+                  padding: spacing[3],
+                  borderWidth: selected ? 2 : borders.hairline,
+                  borderColor: error ? colorRoles.danger : selected ? colorRoles.brandAction : colorRoles.borderSubtle,
+                  borderRadius: radius.md,
+                  backgroundColor: selected ? colorRoles.brandActionSoft : colorRoles.surfaceBase,
+                  gap: spacing[3],
+                }}
+              >
+                <Pressable onPress={() => toggleSelected(product.id)} style={{ flexDirection: 'row-reverse', gap: spacing[2], alignItems: 'center' }}>
+                  <Icon name={selected ? 'checkbox' : 'square-outline'} size={24} tone={selected ? 'brand' : 'muted'} />
+                  <View style={{ flex: 1, alignItems: 'flex-end', gap: 2 }}>
+                    <Text role="bodyStrong" style={{ textAlign: 'right' }}>{product.canonicalNameAr}</Text>
+                    <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>{centralMeasurementLabel(product)}</Text>
+                  </View>
+                  {linked ? <Badge label="مرتبط" tone="success" /> : null}
+                </Pressable>
+
+                {selected ? (
+                  <View style={{ gap: spacing[3] }}>
+                    <TextField
+                      label={`السعر (${centralMeasurementLabel(product)})`}
+                      value={draft.price}
+                      onChangeText={(price) => updateDraft(product.id, { price })}
+                      placeholder="مثال: 1500"
+                      {...(error ? { error } : {})}
+                    />
+                    <TextField
+                      label="وصف المتجر للمنتج"
+                      value={draft.localDescription}
+                      onChangeText={(localDescription) => updateDraft(product.id, { localDescription })}
+                      placeholder="اختياري: طازج يوميًا، تحضير خاص، أو وصف محلي"
+                      multiline
+                    />
+                    <View style={{ gap: spacing[2] }}>
+                      <Text role="caption" style={{ textAlign: 'right' }}>حالة المخزون</Text>
+                      <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2] }}>
+                        {(Object.keys(STOCK_STATUS_LABELS) as StockStatus[]).map((status) => (
+                          <Button
+                            key={status}
+                            label={STOCK_STATUS_LABELS[status]}
+                            size="sm"
+                            pill
+                            tone={draft.stockStatus === status ? (status === 'in_stock' ? 'success' : status === 'out_of_stock' ? 'danger' : 'brand') : 'ghost'}
+                            onPress={() => updateDraft(product.id, { stockStatus: status })}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                ) : linked ? (
+                  <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                    <Text role="bodySm" tone="success">{linked.unitPrice} {linked.currency}</Text>
+                    <Text role="caption" tone="muted">{STOCK_STATUS_LABELS[linked.stockStatus]}</Text>
+                    {linked.localNote ? <Text role="caption" tone="muted">{linked.localNote}</Text> : null}
+                  </View>
+                ) : (
+                  <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>حدده لإدخال السعر وإضافته مع المجموعة.</Text>
+                )}
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
+        <View style={{ backgroundColor: colorRoles.surfaceMuted, padding: spacing[4], borderRadius: radius.lg, gap: spacing[3], borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle }}>
+          <Pressable onPress={() => setShowProposeForm((value) => !value)} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text role="bodyStrong" style={{ textAlign: 'right' }}>{showProposeForm ? 'إغلاق اقتراح المنتج' : 'المنتج غير موجود؟ أرسله للمراجعة'}</Text>
+            <Icon name={showProposeForm ? 'chevron-up-outline' : 'chevron-down-outline'} size={20} tone="muted" />
+          </Pressable>
+          {showProposeForm ? (
+            <View style={{ gap: spacing[3] }}>
+              <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
+                الاقتراح لا يصبح منتجًا قابلًا للبيع حتى تعتمده إدارة الكتالوج المركزي.
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2], flexDirection: 'row-reverse' }}>
+                {activeDomains.map((domain) => (
+                  <Button
+                    key={domain.id}
+                    label={domain.nameAr}
+                    size="sm"
+                    pill
+                    tone={proposeDomainId === domain.id ? 'primary' : 'ghost'}
+                    onPress={() => { setProposeDomainId(domain.id); setProposeNodeId(''); setProposeError(undefined); }}
+                  />
+                ))}
+              </ScrollView>
+              {proposeDomainId && proposeNodes.length ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2], flexDirection: 'row-reverse' }}>
+                  <Button label="بدون فئة فرعية" size="sm" pill tone={proposeNodeId ? 'ghost' : 'primary'} onPress={() => setProposeNodeId('')} />
+                  {proposeNodes.map((node) => (
+                    <Button key={node.id} label={node.nameAr} size="sm" pill tone={proposeNodeId === node.id ? 'primary' : 'ghost'} onPress={() => setProposeNodeId(node.id)} />
+                  ))}
+                </ScrollView>
+              ) : null}
+              {proposeError ? <Text role="bodySm" tone="danger" style={{ textAlign: 'right' }}>{proposeError}</Text> : null}
+              <TextField label="اسم المنتج بالعربية" value={proposeNameAr} onChangeText={setProposeNameAr} />
+              <TextField label="اسم المنتج بالإنجليزية" value={proposeNameEn} onChangeText={setProposeNameEn} placeholder="اختياري" />
+              <TextField label="العلامة التجارية" value={proposeBrand} onChangeText={setProposeBrand} placeholder="اختياري" />
+              <Button label="إرسال الاقتراح للمراجعة" tone="primary" onPress={() => void handlePropose()} disabled={actionState.kind === 'submitting'} />
             </View>
           ) : null}
         </View>
 
-        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
-
-        {/* ── Product List ── */}
-        <View style={{ gap: spacing[3] }}>
-          <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>
-              {`منتجات الكتالوج (${masterProducts.length})`}
-            </Text>
-          </View>
-
-          {masterProductsState.kind === 'loading' ? (
-            <StateView loading title="جاري البحث…" />
-          ) : masterProducts.length === 0 ? (
-            <View
-              style={{
-                paddingVertical: spacing[5],
-                paddingHorizontal: spacing[4],
-                gap: spacing[4],
-                borderWidth: 1.5,
-                borderStyle: 'dashed',
-                borderColor: colorRoles.borderStrong,
-                borderRadius: radius.md,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colorRoles.surfaceMuted,
-              }}
-            >
-              <Icon name="search-outline" size={32} tone="muted" />
-              <View style={{ alignItems: 'center', gap: spacing[1] }}>
-                <Text role="bodyStrong" tone="muted" style={{ textAlign: 'center' }}>
-                  لا توجد نتائج مطابقة في الكتالوج الموحد
-                </Text>
-                {searchText.trim() && (
-                  <Text role="caption" tone="muted" style={{ textAlign: 'center' }}>
-                    لم يتم العثور على "{searchText}"
-                  </Text>
-                )}
-              </View>
-              {searchText.trim() && (
-                <Button 
-                  label="اقترح كمنتج جديد" 
-                  tone="primary" 
-                  onPress={startProposeWithSearch} 
-                  leading={<Icon name="add-circle-outline" size={18} />}
-                />
-              )}
-            </View>
-          ) : (
-            <View style={{ gap: spacing[3] }}>
-              {masterProducts.map((product) => {
-                const linked = assortmentItems.find((a) => a.masterProductId === product.id);
-                const isLinking = linkingId === product.id;
-                return (
-                  <View
-                    key={product.id}
-                    style={{
-                      padding: spacing[3],
-                      borderWidth: isLinking ? 2 : borders.hairline,
-                      borderColor: isLinking ? colorRoles.borderStrong : colorRoles.borderSubtle,
-                      borderRadius: radius.md,
-                      backgroundColor: isLinking ? colorRoles.surfaceMuted : colorRoles.surfaceBase,
-                      gap: spacing[2],
-                      shadowColor: colorRoles.textPrimary,
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 2,
-                      elevation: 1,
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary, flex: 1 }}>
-                        {product.canonicalNameAr}
-                      </Text>
-                      {!isLinking && (
-                        <Pressable onPress={() => startLinking(product)} style={{ padding: 4 }}>
-                          <Icon name={linked ? 'pencil-outline' : 'add-circle-outline'} size={24} tone={linked ? 'brand' : 'muted'} />
-                        </Pressable>
-                      )}
-                    </View>
-
-                    {isLinking ? (
-                      <View style={{ gap: spacing[3], marginTop: spacing[1] }}>
-                        <TextField
-                          label="السعر"
-                          value={linkPrice}
-                          onChangeText={setLinkPrice}
-                          placeholder="مثال: 1500"
-                          {...(linkError ? { error: linkError } : {})}
-                        />
-                        <TextField label="ملاحظة محلية" value={linkNote} onChangeText={setLinkNote} placeholder="اختياري" />
-                        <View style={{ gap: spacing[2] }}>
-                          <Text role="caption" style={{ textAlign: 'right' }}>حالة المخزون</Text>
-                          <View style={{ flexDirection: 'row-reverse', gap: spacing[2], flexWrap: 'wrap' }}>
-                            {(['in_stock', 'low_stock', 'out_of_stock'] as const).map((stock) => (
-                              <Button
-                                key={stock}
-                                label={STOCK_STATUS_LABELS[stock]}
-                                size="sm"
-                                pill={true}
-                                tone={linkStock === stock ? (stock === 'in_stock' ? 'success' : stock === 'low_stock' ? 'brand' : 'danger') : 'ghost'}
-                                onPress={() => setLinkStock(stock)}
-                              />
-                            ))}
-                          </View>
-                        </View>
-                        <View style={{ flexDirection: 'row-reverse', gap: spacing[2], paddingTop: spacing[2] }}>
-                          <Button
-                            label="حفظ الارتباط"
-                            tone="primary"
-                            onPress={() => void handleSaveLink(product.id)}
-                            disabled={actionState.kind === 'submitting'}
-                            style={{ flex: 1 }}
-                          />
-                          <Button label="إلغاء" tone="ghost" onPress={() => setLinkingId(null)} />
-                        </View>
-                      </View>
-                    ) : linked ? (
-                      <View style={{ gap: spacing[1] }}>
-                        <Text role="bodySm" tone="success" style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                          {`${linked.unitPrice} ${linked.currency}`}
-                        </Text>
-                        <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
-                          {STOCK_STATUS_LABELS[linked.stockStatus]}
-                        </Text>
-                      </View>
-                    ) : (
-                      <Text role="bodySm" tone="muted" style={{ textAlign: 'right' }}>
-                        غير مرتبط لمتجر الشريك بعد
-                      </Text>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          )}
-        </View>
-
-        {/* ── Proposal Form Card ── */}
-        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle, marginVertical: spacing[2] }} />
-
-        <View style={{ backgroundColor: colorRoles.surfaceMuted, padding: spacing[4], borderRadius: radius.lg, gap: spacing[3], borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle }}>
-          <Pressable onPress={() => setShowProposeForm((v) => !v)} style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text role="bodyStrong" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>
-              {showProposeForm ? 'إلغاء اقتراح منتج جديد' : 'المنتج غير موجود؟ اقترح منتجاً جديداً'}
-            </Text>
-            <Icon name={showProposeForm ? 'chevron-up-outline' : 'chevron-down-outline'} size={20} tone="muted" />
-          </Pressable>
-
-          {showProposeForm && (
-            <View style={{ gap: spacing[3], marginTop: spacing[2] }}>
-              <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>
-                يُرسل الاقتراح لمراجعة قسم الكتالوج ولا يمكن إضافته للمتجر مباشرة قبل اعتماده من الإدارة.
-              </Text>
-
-              <View style={{ gap: spacing[2] }}>
-                <Text role="bodyStrong" style={{ textAlign: 'right' }}>القسم *</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2], flexDirection: 'row-reverse' }}>
-                  {activeDomains.map((domain) => (
-                    <Button
-                      key={domain.id}
-                      label={domain.nameAr}
-                      size="sm"
-                      pill={true}
-                      tone={proposeDomainId === domain.id ? 'primary' : 'ghost'}
-                      onPress={() => {
-                        setProposeDomainId(domain.id);
-                        setProposeNodeId('');
-                        if (domain.id) setProposeError(undefined);
-                      }}
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-
-              {proposeDomainId && proposeNodes.length > 0 && (
-                <View style={{ gap: spacing[2] }}>
-                  <Text role="bodyStrong" style={{ textAlign: 'right' }}>الفئة (اختياري)</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing[2], flexDirection: 'row-reverse' }}>
-                    <Button
-                      label="بدون فئة محددة"
-                      size="sm"
-                      pill={true}
-                      tone={proposeNodeId ? 'ghost' : 'primary'}
-                      onPress={() => setProposeNodeId('')}
-                    />
-                    {proposeNodes.map((node) => (
-                      <Button
-                        key={node.id}
-                        label={node.nameAr}
-                        size="sm"
-                        pill={true}
-                        tone={proposeNodeId === node.id ? 'primary' : 'ghost'}
-                        onPress={() => setProposeNodeId(node.id)}
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-
-              {proposeError && (
-                <Text role="bodySm" tone="danger" style={{ textAlign: 'right', backgroundColor: colorRoles.surfaceMuted, padding: spacing[2], borderRadius: radius.sm }}>
-                  {proposeError}
-                </Text>
-              )}
-
-              <TextField
-                label="اسم المنتج (عربي)"
-                value={proposeNameAr}
-                onChangeText={(val) => {
-                  setProposeNameAr(val);
-                  if (val.trim()) setProposeError(undefined);
-                }}
-                placeholder="مثال: برجر دجاج كلاسيك"
-              />
-              <TextField
-                label="اسم المنتج (إنجليزي)"
-                value={proposeNameEn}
-                onChangeText={setProposeNameEn}
-                placeholder="اختياري"
-              />
-              <TextField label="العلامة التجارية" value={proposeBrand} onChangeText={setProposeBrand} placeholder="اختياري" />
-              <TextField
-                label="معرف الصورة في DAM (اختياري)"
-                value={proposeImageKey}
-                onChangeText={setProposeImageKey}
-                placeholder="Asset ID من الكاميرا / مكتبة DAM"
-              />
-              <Button
-                label="إرسال الاقتراح للمراجعة"
-                tone="primary"
-                onPress={() => void handlePropose()}
-                disabled={actionState.kind === 'submitting'}
-              />
-            </View>
-          )}
-        </View>
-
-        {/* ── Proposals List ── */}
-        {proposals.length > 0 && (
-          <View style={{ gap: spacing[2], marginTop: spacing[2] }}>
-            <Text role="bodyStrong" style={{ textAlign: 'right' }}>
-              {`الاقتراحات المرسلة (${proposals.length})`}
-            </Text>
+        {proposals.length ? (
+          <View style={{ gap: spacing[2] }}>
+            <Text role="bodyStrong" style={{ textAlign: 'right' }}>{`الاقتراحات المرسلة (${proposals.length})`}</Text>
             {proposals.map((proposal) => (
-              <View
-                key={proposal.id}
-                style={{
-                  padding: spacing[3],
-                  borderWidth: borders.hairline,
-                  borderColor: colorRoles.borderSubtle,
-                  borderRadius: radius.md,
-                  backgroundColor: colorRoles.surfaceBase,
-                  flexDirection: 'row-reverse',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <Text role="bodyStrong" style={{ textAlign: 'right', flex: 1 }}>{proposal.proposedNameAr}</Text>
-                <View style={{ backgroundColor: colorRoles.surfaceMuted, paddingHorizontal: spacing[2], paddingVertical: 2, borderRadius: radius.round }}>
-                  <Text role="caption" tone="action" style={{ textAlign: 'right', fontWeight: 'bold' }}>مُرسل للمراجعة</Text>
-                </View>
+              <View key={proposal.id} style={{ padding: spacing[3], borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle, borderRadius: radius.md, flexDirection: 'row-reverse', gap: spacing[2] }}>
+                <Text role="bodyStrong" style={{ flex: 1, textAlign: 'right' }}>{proposal.proposedNameAr}</Text>
+                <Badge label="قيد المراجعة" tone="warning" />
               </View>
             ))}
           </View>
-        )}
+        ) : null}
       </ScrollView>
 
-      <View
-        style={{
-          padding: spacing[3],
-          paddingBottom: spacing[3] + insets.bottom,
-          borderTopWidth: 1,
-          borderTopColor: colorRoles.borderSubtle,
-          backgroundColor: colorRoles.surfaceBase,
-        }}
-      >
-        <Button label="رجوع للوراء" tone="secondary" onPress={onBack} style={{ width: '100%' }} />
+      <View style={{ padding: spacing[3], paddingBottom: spacing[3] + insets.bottom, borderTopWidth: 1, borderTopColor: colorRoles.borderSubtle, backgroundColor: colorRoles.surfaceBase, gap: spacing[2] }}>
+        {selectedIds.size > 0 ? (
+          <Button
+            label={actionState.kind === 'submitting' ? 'جارٍ حفظ المجموعة…' : `حفظ ${selectedIds.size} منتج`}
+            tone="primary"
+            onPress={() => void handleBatchSave()}
+            disabled={actionState.kind === 'submitting'}
+            fullWidth
+          />
+        ) : null}
+        <Button label="رجوع" tone="secondary" onPress={onBack} fullWidth />
       </View>
     </View>
   );
