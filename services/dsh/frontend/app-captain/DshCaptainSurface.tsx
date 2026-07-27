@@ -26,11 +26,11 @@ const ACCOUNT_ITEMS: ReadonlyArray<{
   readonly badgeLabel: string;
   readonly icon: IconName;
 }> = [
-  { route: "account-profile", title: "بيانات الكابتن", subtitle: "الهوية والحالة التشغيلية المثبتة", badgeLabel: "هوية", icon: "person-outline" },
+  { route: "account-profile", title: "بيانات الكابتن", subtitle: "الهوية والحالة والتقييم المثبت", badgeLabel: "هوية", icon: "person-outline" },
   { route: "account-orders", title: "المهمة الحالية", subtitle: "العرض أو التكليف النشط من DSH", badgeLabel: "تشغيل", icon: "bag-outline" },
-  { route: "account-finance", title: "المالية", subtitle: "COD والمستحقات من WLT", badgeLabel: "WLT", icon: "wallet-outline" },
-  { route: "account-docs", title: "الوثائق والتقييم", subtitle: "قراءة Workforce الموثقة", badgeLabel: "Workforce", icon: "document-text-outline" },
-  { route: "account-shifts", title: "الدوام والإجازات", subtitle: "الوردية والتوفر التشغيلي", badgeLabel: "Workforce", icon: "calendar-outline" },
+  { route: "account-finance", title: "المالية", subtitle: "COD والمستحقات والخصومات من WLT", badgeLabel: "WLT", icon: "wallet-outline" },
+  { route: "account-docs", title: "الوثائق والتقييم", subtitle: "اعتمادات Workforce وتقييم العملاء", badgeLabel: "Workforce", icon: "document-text-outline" },
+  { route: "account-shifts", title: "التوفر وعدم التوفر", subtitle: "إبلاغ الفترات دون ورديات أو حضور", badgeLabel: "تغطية", icon: "calendar-outline" },
   { route: "account-support", title: "الإعدادات", subtitle: "المظهر ووضع موصل المتجر", badgeLabel: "إعدادات", icon: "settings-outline" },
 ];
 
