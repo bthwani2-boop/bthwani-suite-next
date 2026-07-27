@@ -11,6 +11,16 @@ on:
       - "apps/control-panel/runtime/**"
       - "openapi.yaml"
       - ".github/workflows/abdo-sovereign-leadership-verification.yml"
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "core/identity/**"
+      - "core/workforce/**"
+      - "services/dsh/frontend/**"
+      - "apps/control-panel/runtime/**"
+      - "openapi.yaml"
+      - ".github/workflows/abdo-sovereign-leadership-verification.yml"
 
 permissions:
   contents: read
@@ -46,7 +56,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.17.0
-          cache: pnpm
       - name: Enable pnpm
         run: corepack enable
       - name: Install workspace
