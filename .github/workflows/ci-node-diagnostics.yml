@@ -46,10 +46,25 @@ jobs:
       - name: Verify affected frontend diagnostics
         if: ${{ inputs.frontend == 'true' }}
         run: |
-          pnpm run diagnostics:ui-kit
-          pnpm run guard:a11y
-          pnpm run guard:dependency-graph
-          pnpm run guard:ast-grep-rules
+          set +e
+          log="${RUNNER_TEMP}/frontend-diagnostics.log"
+          {
+            pnpm run diagnostics:ui-kit
+            pnpm run guard:a11y
+            pnpm run guard:dependency-graph
+            pnpm run guard:ast-grep-rules
+          } >"${log}" 2>&1
+          status=$?
+          tail -n 250 "${log}"
+          exit "${status}"
+      - name: Upload frontend diagnostic evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frontend-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/frontend-diagnostics.log
+          if-no-files-found: error
+          retention-days: 1
       - name: Verify affected contracts and bindings
         if: ${{ inputs.contracts == 'true' }}
         run: |
