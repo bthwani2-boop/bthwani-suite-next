@@ -40,7 +40,7 @@ test("app-client keeps every Expo capability used by the operational experience"
   }
 });
 
-test("client discovery exposes real search, cached images, and vertical active-only reels", () => {
+test("client discovery exposes real search, cached images, and a persistent donor-style reels launcher", () => {
   const discovery = assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx",
     [
@@ -49,7 +49,10 @@ test("client discovery exposes real search, cached images, and vertical active-o
       "normalizedQuery",
       "ابحث عن متجر أو فئة",
       "setReels([])",
-      "reels.length > 0",
+      "setVideoOpenRequest",
+      "onVideoPress={handleVideoPress}",
+      "openRequest={videoOpenRequest}",
+      "loadState={reelsLoadState}",
       "openCategoryDestination",
       'category.destinationType === "special_request"',
       'category.destinationType === "catalog_domain"',
@@ -58,6 +61,7 @@ test("client discovery exposes real search, cached images, and vertical active-o
   assert.equal(discovery.includes("Math.random("), false);
   assert.equal(discovery.includes("node-shein"), false);
   assert.equal(discovery.includes("node-awnak"), false);
+  assert.equal(discovery.includes("reels.length > 0 ? { onVideoPress"), false);
 
   assertMarkers(
     "apps/app-client/runtime/src/media/ClientRemoteImage.tsx",
@@ -76,12 +80,18 @@ test("client discovery exposes real search, cached images, and vertical active-o
       "onViewableItemsChanged",
       "player.pause()",
       "initialScrollIndex",
+      "ReelsStateModal",
+      "لا توجد فيديوهات معتمدة بعد",
+      "impressedIds",
+      "onItemImpression",
+      "slideCard",
+      "borderRadius: 30",
     ],
   );
   assert.equal(reels.includes("expo-av"), false);
   assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomePromoSection.tsx",
-    ["promo.actionTarget.trim().length > 0", "hasQuickActions", "interactive ?"],
+    ["promo.actionTarget.trim().length > 0", "hasQuickActions", 'label="فيديو"', "isVideo"],
   );
 });
 
