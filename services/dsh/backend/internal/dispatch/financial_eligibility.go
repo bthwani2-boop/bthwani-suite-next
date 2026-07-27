@@ -3,17 +3,18 @@ package dispatch
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 )
 
 type CaptainWalletReadback struct {
-	WalletID                    string
-	WalletStatus                string
-	AvailableBalanceMinorUnits  int64
-	Currency                    string
-	SnapshotReference           string
+	WalletID                   string
+	WalletStatus               string
+	AvailableBalanceMinorUnits int64
+	Currency                   string
+	SnapshotReference          string
 }
 
 type DispatchBalanceRequirement struct {
@@ -25,18 +26,18 @@ type DispatchBalanceRequirement struct {
 }
 
 type CaptainFinancialEligibilitySnapshot struct {
-	TenantID                          string    `json:"tenantId"`
-	CaptainID                         string    `json:"captainId"`
-	WalletID                          string    `json:"walletId"`
-	WalletStatus                      string    `json:"walletStatus"`
-	AvailableBalanceMinorUnits        int64     `json:"availableBalanceMinorUnits"`
-	MinimumDispatchBalanceMinorUnits  int64     `json:"minimumDispatchBalanceMinorUnits"`
-	Currency                          string    `json:"currency"`
-	Eligible                          bool      `json:"eligible"`
-	IneligibilityReason               string    `json:"ineligibilityReason,omitempty"`
-	SnapshotReference                 string    `json:"snapshotReference"`
-	CheckedAt                         time.Time `json:"checkedAt"`
-	ExpiresAt                         time.Time `json:"expiresAt"`
+	TenantID                         string    `json:"tenantId"`
+	CaptainID                        string    `json:"captainId"`
+	WalletID                         string    `json:"walletId"`
+	WalletStatus                     string    `json:"walletStatus"`
+	AvailableBalanceMinorUnits       int64     `json:"availableBalanceMinorUnits"`
+	MinimumDispatchBalanceMinorUnits int64     `json:"minimumDispatchBalanceMinorUnits"`
+	Currency                         string    `json:"currency"`
+	Eligible                         bool      `json:"eligible"`
+	IneligibilityReason              string    `json:"ineligibilityReason,omitempty"`
+	SnapshotReference                string    `json:"snapshotReference"`
+	CheckedAt                        time.Time `json:"checkedAt"`
+	ExpiresAt                        time.Time `json:"expiresAt"`
 }
 
 func effectiveDispatchMinimum(requirement DispatchBalanceRequirement) int64 {
@@ -58,7 +59,7 @@ func EvaluateCaptainFinancialEligibility(
 	if !requirement.Enabled {
 		return true, "", minimum
 	}
-	if wallet.Currency != requirement.Currency {
+	if strings.ToUpper(strings.TrimSpace(wallet.Currency)) != strings.ToUpper(strings.TrimSpace(requirement.Currency)) {
 		return false, "CAPTAIN_WALLET_CURRENCY_MISMATCH", minimum
 	}
 	if wallet.AvailableBalanceMinorUnits < minimum {
@@ -155,7 +156,7 @@ func GetCaptainFinancialEligibilitySnapshot(
 		&snapshot.CheckedAt,
 		&snapshot.ExpiresAt,
 	)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return snapshot, ErrCaptainNotEligible
 	}
 	return snapshot, err
