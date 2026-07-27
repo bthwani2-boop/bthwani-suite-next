@@ -20,6 +20,9 @@ jobs:
   diagnostics:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    env:
+      NX_SKIP_NX_CACHE: "true"
+      NX_DAEMON: "false"
     steps:
       - name: Checkout full history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
