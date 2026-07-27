@@ -73,63 +73,86 @@ export function CaptainCreateView(props: {
   };
 
   const body = (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+    <div style={{ maxWidth: "800px", margin: "0 auto", width: "100%", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       <CpMutedInline>
         مقدم خدمة مستقل — يتقاضى رسوم التوصيل عن كل طلب. رقم الهاتف يُسجَّل في خدمة الهوية ولا
         يُخزَّن في Workforce.
       </CpMutedInline>
 
-      <Text role="bodySm" style={{ fontWeight: "bold" }}>البيانات الأساسية</Text>
-      <div>
-        <Text role="bodySm">الاسم الكامل *</Text>
-        <CpTextInput value={fullNameAr} onChange={setFullNameAr} placeholder="أحمد محمد" disabled={Boolean(createdCaptain)} aria-label="الاسم الكامل" />
-      </div>
-      <div>
-        <Text role="bodySm">رقم الهاتف *</Text>
-        <CpTextInput value={phone} onChange={setPhone} placeholder="مثال: 777123456" disabled={Boolean(createdCaptain)} aria-label="رقم الهاتف" />
+      {/* Basic Info Card */}
+      <div style={{ padding: "24px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 2px 8px var(--bthwani-overlay-soft)" }}>
+        <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>البيانات الأساسية</Text>
+        
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
+          <div>
+            <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>الاسم الكامل *</Text>
+            <CpTextInput value={fullNameAr} onChange={setFullNameAr} placeholder="أحمد محمد" disabled={Boolean(createdCaptain)} aria-label="الاسم الكامل" />
+          </div>
+          <div>
+            <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>رقم الهاتف *</Text>
+            <CpTextInput value={phone} onChange={setPhone} placeholder="مثال: 777123456" disabled={Boolean(createdCaptain)} aria-label="رقم الهاتف" />
+          </div>
+        </div>
       </div>
 
-      <Text role="bodySm" style={{ fontWeight: "bold" }}>التشغيل والنطاق</Text>
-      <ZonePicker value={zoneId} disabled={Boolean(createdCaptain)} onChange={(zone) => setZoneId(zone?.id ?? "")} />
-
-      <Text role="bodySm" style={{ fontWeight: "bold" }}>المركبة</Text>
-      {!createdCaptain ? (
-        <CpTabs
-          aria-label="نوع المركبة"
-          value={vehicleType}
-          onChange={(value) => setVehicleType(value === vehicleType ? "" : value)}
-          items={VEHICLE_TYPES}
-        />
-      ) : (
-        <Text role="bodySm">{VEHICLE_TYPES.find((v) => v.value === vehicleType)?.label ?? "—"}</Text>
-      )}
-      <div>
-        <Text role="bodySm">رقم أو لوحة المركبة *</Text>
-        <CpTextInput value={vehicleIdentifier} onChange={setVehicleIdentifier} placeholder="مثال: صنعاء 12345" disabled={Boolean(createdCaptain)} aria-label="رقم أو لوحة المركبة" />
+      {/* Operation & Scope Card */}
+      <div style={{ padding: "24px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 2px 8px var(--bthwani-overlay-soft)" }}>
+        <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>التشغيل والنطاق</Text>
+        <ZonePicker value={zoneId} disabled={Boolean(createdCaptain)} onChange={(zone) => setZoneId(zone?.id ?? "")} />
       </div>
-      <div>
-        <Text role="bodySm">تاريخ انتهاء الرخصة</Text>
-        <CpTextInput value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" disabled={Boolean(createdCaptain)} aria-label="تاريخ انتهاء الرخصة" />
+
+      {/* Vehicle Card */}
+      <div style={{ padding: "24px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 2px 8px var(--bthwani-overlay-soft)" }}>
+        <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>المركبة</Text>
+        
+        {!createdCaptain ? (
+          <CpTabs
+            aria-label="نوع المركبة"
+            value={vehicleType}
+            onChange={(value) => setVehicleType(value === vehicleType ? "" : value)}
+            items={VEHICLE_TYPES}
+          />
+        ) : (
+          <Text role="bodySm">{VEHICLE_TYPES.find((v) => v.value === vehicleType)?.label ?? "—"}</Text>
+        )}
+        
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
+          <div>
+            <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>رقم أو لوحة المركبة *</Text>
+            <CpTextInput value={vehicleIdentifier} onChange={setVehicleIdentifier} placeholder="مثال: صنعاء 12345" disabled={Boolean(createdCaptain)} aria-label="رقم أو لوحة المركبة" />
+          </div>
+          <div>
+            <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>تاريخ انتهاء الرخصة</Text>
+            <CpTextInput value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" disabled={Boolean(createdCaptain)} aria-label="تاريخ انتهاء الرخصة" />
+          </div>
+        </div>
+
+        <CpMutedInline>
+          حالة الرخصة الأولية دائمًا «بانتظار المراجعة». إصدار كود الدخول لا يثبت صلاحية الرخصة ولا
+          يتجاوز مراجعة الوثائق.
+        </CpMutedInline>
       </div>
-      <CpMutedInline>
-        حالة الرخصة الأولية دائمًا «بانتظار المراجعة». إصدار كود الدخول لا يثبت صلاحية الرخصة ولا
-        يتجاوز مراجعة الوثائق.
-      </CpMutedInline>
 
-      <Text role="bodySm" style={{ fontWeight: "bold" }}>الإشراف</Text>
-      <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} disabled={Boolean(createdCaptain)} />
+      {/* Supervision & Activation Card */}
+      <div style={{ padding: "24px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px", boxShadow: "0 2px 8px var(--bthwani-overlay-soft)" }}>
+        <Text role="titleMd" style={{ fontWeight: "800", color: "var(--bthwani-control-panel-text)", borderBottom: "1px solid var(--bthwani-control-panel-border)", paddingBottom: "12px", marginBottom: "4px" }}>الإشراف وتفعيل الدخول</Text>
+        
+        <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} disabled={Boolean(createdCaptain)} />
 
-      <Text role="bodySm" style={{ fontWeight: "bold" }}>تفعيل حساب الدخول</Text>
-      <CpButton
-        variant={autoActivate ? "primary" : "ghost"}
-        disabled={Boolean(createdCaptain)}
-        onClick={() => setAutoActivate((value) => !value)}
-      >
-        {autoActivate ? "إصدار كود دخول بعد الإنشاء" : "إنشاء بدون كود دخول"}
-      </CpButton>
+        <div style={{ marginTop: "8px" }}>
+          <CpButton
+            variant={autoActivate ? "primary" : "ghost"}
+            disabled={Boolean(createdCaptain)}
+            onClick={() => setAutoActivate((value) => !value)}
+          >
+            {autoActivate ? "إصدار كود دخول بعد الإنشاء" : "إنشاء بدون كود دخول"}
+          </CpButton>
+        </div>
+      </div>
 
       {state.kind === "error" ? <CpStatePanel role="alert" title="تعذر إنشاء مقدم الخدمة" description={state.message} /> : null}
 
+      {/* Action Bar */}
       {createdCaptain ? (
         <CpStatePanel role="status" title="تم إنشاء الكابتن وتأكيده من Workforce، والرخصة ما تزال بانتظار المراجعة.">
           {issuedCode ? (
@@ -157,15 +180,19 @@ export function CaptainCreateView(props: {
             <Text role="bodySm">تم الإنشاء بدون تفعيل حساب الدخول. يمكن إصدار الكود من ملف الكابتن.</Text>
           )}
 
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.75rem" }}>
+          <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
             <CpButton variant="primary" onClick={() => props.onCreated(createdCaptain)}>فتح ملف الكابتن</CpButton>
             <CpButton variant="secondary" onClick={resetForm}>إضافة كابتن جديد</CpButton>
           </div>
         </CpStatePanel>
       ) : (
-        <CpButton variant="primary" disabled={!canSubmit} onClick={() => void handleSubmit()}>
-          {state.kind === "submitting" ? "جارٍ الإنشاء…" : "إنشاء مقدم الخدمة"}
-        </CpButton>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
+          <div style={{ minWidth: "240px" }}>
+            <CpButton variant="primary" disabled={!canSubmit} onClick={() => void handleSubmit()}>
+              {state.kind === "submitting" ? "جارٍ الإنشاء…" : "إنشاء مقدم الخدمة"}
+            </CpButton>
+          </div>
+        </div>
       )}
     </div>
   );
