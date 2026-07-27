@@ -53,6 +53,41 @@ SET mandatory_purchases_status = 'paid', updated_at = now()
 WHERE mandatory_purchases_status = 'paid_and_delivered'
   AND btrim(mandatory_purchases_reference) = '';
 
+CREATE OR REPLACE FUNCTION workforce_validate_captain_classification_decision()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NEW.to_classification = 'basic' AND (
+    NEW.from_classification <> 'joker'
+    OR NEW.completed_deliveries <= 0
+    OR NEW.completion_rate_basis_points <= 0
+    OR NEW.severe_incident_free = false
+    OR jsonb_array_length(NEW.evidence_media_refs) = 0
+  ) THEN
+    RAISE EXCEPTION 'captain promotion to basic requires completed-delivery, performance, incident, and evidence facts';
+  END IF;
+
+  IF NEW.to_classification = 'basic' AND EXISTS (
+    SELECT 1
+    FROM workforce_provider_incidents incident
+    WHERE incident.actor_id = NEW.actor_id
+      AND incident.severity IN ('major','critical')
+      AND incident.status NOT IN ('rejected','reversed','closed')
+  ) THEN
+    RAISE EXCEPTION 'captain has an unresolved major or critical incident';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_workforce_validate_captain_classification_decision
+  ON workforce_captain_classification_history;
+CREATE TRIGGER trg_workforce_validate_captain_classification_decision
+BEFORE INSERT ON workforce_captain_classification_history
+FOR EACH ROW EXECUTE FUNCTION workforce_validate_captain_classification_decision();
+
 CREATE OR REPLACE FUNCTION workforce_validate_captain_activation_evidence()
 RETURNS trigger
 LANGUAGE plpgsql
