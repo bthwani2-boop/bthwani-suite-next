@@ -27,10 +27,15 @@ import {
 import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
 import { useControlPanelSession } from "../../shared/session/control-panel-session";
 import { PlatformChangeWorkflowPanel } from "./PlatformChangeWorkflowPanel";
+import { PlatformPoliciesContent } from "./PlatformPoliciesScreen";
 import { PlatformRolloutPanel } from "./PlatformRolloutPanel";
 import { ProviderRegistryPanel } from "./ProviderRegistryPanel";
 
 type ExecutiveTabId = PlatformMainTabId;
+
+type PlatformDashboardScreenProps = {
+  readonly initialTab?: ExecutiveTabId;
+};
 
 const EXECUTIVE_TABS = PLATFORM_MAIN_TABS;
 
@@ -314,8 +319,10 @@ function ChangeAndRollbackTab({
   );
 }
 
-export function PlatformDashboardScreen() {
-  const [mainTab, setMainTab] = useState<ExecutiveTabId>("overview");
+export function PlatformDashboardScreen({
+  initialTab = "overview",
+}: PlatformDashboardScreenProps) {
+  const [mainTab, setMainTab] = useState<ExecutiveTabId>(initialTab);
   const { state } = useControlPanelSession();
   const identity = state.kind === "authenticated" ? state.identity : null;
   const canReadPlatform = hasControlPanelPermission(identity, "platform:read");
@@ -344,7 +351,7 @@ export function PlatformDashboardScreen() {
 
   if (!canReadPlatform) {
     return (
-      <DataTablePageFrame dir="rtl" header={<CpPageHeader title="منصة DSH السيادية" />}>
+      <DataTablePageFrame dir="rtl" header={<CpPageHeader title="المنصة السيادية" />}>
         <View style={styles.content}>
           <CpStatePanel
             role="alert"
@@ -361,9 +368,9 @@ export function PlatformDashboardScreen() {
     <DataTablePageFrame
       dir="rtl"
       header={
-        <CpPageHeader title="منصة DSH السيادية">
+        <CpPageHeader title="المنصة السيادية">
           <Text role="caption">
-            مركز قرار تنفيذي للخدمات والمتغيرات والأعلام والمزودين والصحة ودورة التغيير والإطلاق التدريجي؛ لا يحتوي أعمالًا تشغيلية يومية.
+            مركز قرار موحد للخدمات والمتغيرات والأعلام والمزودين والسياسات ومناطق الخدمة والصحة ودورة التغيير والإطلاق التدريجي؛ لا يحتوي أعمالًا تشغيلية يومية.
           </Text>
           <CpKpiStrip>
             <CpKpiCard label="المتغيرات المطبقة" value={metrics.variables} />
@@ -379,12 +386,14 @@ export function PlatformDashboardScreen() {
           items={EXECUTIVE_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
           value={mainTab}
           onChange={(value) => setMainTab(value as ExecutiveTabId)}
-          aria-label="تبويبات المنصة"
+          aria-label="تبويبات المنصة السيادية"
         />
       </View>
 
       <View style={styles.content}>
-        {runtime.state.kind === "loading" ? (
+        {mainTab === "policies" ? (
+          <PlatformPoliciesContent embedded />
+        ) : runtime.state.kind === "loading" ? (
           <CpStatePanel role="status" title="جاري تحميل الحقيقة السيادية…" />
         ) : runtime.state.kind === "error" ? (
           <CpStatePanel
