@@ -6,16 +6,18 @@ import {
   BottomNavBar,
   type BottomNavItem,
 } from "../../../../apps/app-client/runtime/src/shell/BottomNavBar";
+import { useClientAppearance } from "../../../../apps/app-client/runtime/src/preferences/client-appearance";
+import {
+  openClientExternalUrl,
+  performClientSelectionHaptic,
+} from "../../../../apps/app-client/runtime/src/platform/client-platform-actions";
 import { brandScale, colorRoles, Icon, StateView } from "@bthwani/ui-kit";
 import { HomeDiscoveryRoute } from "./home-discovery/HomeDiscoveryRoute";
 import { StoreDiscoveryRoute } from "./store/StoreDiscoveryRoute";
 import { StoreDetailRoute } from "./store/StoreDetailRoute";
 import { ClientCheckoutRoute } from "./checkout/ClientCheckoutRoute";
 import { OrdersListScreen } from "./orders/OrdersListScreen";
-import {
-  MySpaceScreen,
-  type BThwaniAppearanceMode,
-} from "./account/MySpaceScreen";
+import { MySpaceScreen } from "./account/MySpaceScreen";
 import { AppearanceHubScreen } from "./account/AppearanceHubScreen";
 import { AddressLocationScreen } from "./account/AddressLocationScreen";
 import { IdentityHubScreen } from "./account/IdentityHubScreen";
@@ -82,8 +84,14 @@ function isClientTab(value: string): value is ClientTab {
     || value === "cart";
 }
 
+function appearanceLabel(mode: ReturnType<typeof useClientAppearance>["mode"]): string {
+  if (mode === "system") return "مظهر الجهاز";
+  return mode === "darkGlass" ? "داكن" : "فاتح";
+}
+
 export function DshClientSurface() {
   const insets = useSafeAreaInsets();
+  const appearance = useClientAppearance();
   const [activeTab, setActiveTab] = useState<ClientTab>("home");
   const [profileRoute, setProfileRoute] = useState<ProfileRoute>("profile");
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
@@ -91,14 +99,38 @@ export function DshClientSurface() {
   const [activePickupOrderId, setActivePickupOrderId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
-  const [appearanceMode, setAppearanceMode] = useState<BThwaniAppearanceMode>("lightPremium");
   const [activeSpecialRequest, setActiveSpecialRequest] = useState<SpecialRequestRoute | null>(null);
 
   const specialRequestController = useSpecialRequestsController();
 
+  const activateTab = useCallback((tab: ClientTab) => {
+    void performClientSelectionHaptic();
+    setShowNotifications(false);
+    setActiveSpecialRequest(null);
+    setActivePickupOrderId(null);
+    setActiveOrderId(null);
+    setActiveTicketId(null);
+    if (tab === "profile") setProfileRoute("profile");
+    setActiveTab(tab);
+  }, []);
+
   const openOrderTracking = useCallback((orderId: string) => {
     setActiveTab("orders");
+    setActivePickupOrderId(null);
     setActiveOrderId(orderId);
+  }, []);
+
+  const openPickupSession = useCallback((orderId: string) => {
+    void performClientSelectionHaptic();
+    setActiveTab("orders");
+    setActiveOrderId(orderId);
+    setActivePickupOrderId(orderId);
+  }, []);
+
+  const openStore = useCallback((storeId: string) => {
+    void performClientSelectionHaptic();
+    setSelectedStoreId(storeId);
+    setActiveTab("stores");
   }, []);
 
   const openNotificationActionUrl = useCallback((actionUrl: string) => {
@@ -106,8 +138,7 @@ export function DshClientSurface() {
     const pickupMatch = /^\/orders\/([^/]+)\/pickup$/.exec(normalized);
     if (pickupMatch?.[1]) {
       setShowNotifications(false);
-      setActiveTab("orders");
-      setActivePickupOrderId(pickupMatch[1]);
+      openPickupSession(pickupMatch[1]);
       return;
     }
     if (normalized === "/orders/pickup") {
@@ -126,19 +157,18 @@ export function DshClientSurface() {
       setActiveSpecialRequest(null);
       setActiveTab("special");
     }
-  }, [openOrderTracking]);
+  }, [openOrderTracking, openPickupSession]);
 
   const openHomeMarketingAction = useCallback((actionType: string, actionTarget: string) => {
     const target = actionTarget.trim();
     if (actionType === "store" && target) {
-      setSelectedStoreId(target);
-      setActiveTab("stores");
+      openStore(target);
       return;
     }
-    if (actionType === "external" && /^https?:\/\//i.test(target)) {
-      void Linking.openURL(target);
+    if (actionType === "external") {
+      void openClientExternalUrl(target);
     }
-  }, []);
+  }, [openStore]);
 
   const openAddressBookFromCart = useCallback(() => {
     setProfileRoute("addresses");
@@ -194,7 +224,16 @@ export function DshClientSurface() {
       return true;
     }
     return false;
-  }, [activeOrderId, activePickupOrderId, activeSpecialRequest, activeTab, activeTicketId, profileRoute, selectedStoreId, showNotifications]);
+  }, [
+    activeOrderId,
+    activePickupOrderId,
+    activeSpecialRequest,
+    activeTab,
+    activeTicketId,
+    profileRoute,
+    selectedStoreId,
+    showNotifications,
+  ]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener("hardwareBackPress", goBack);
@@ -240,12 +279,15 @@ export function DshClientSurface() {
             {
               icon: <Icon name="notifications-outline" size={20} color={colorRoles.surfaceBase} />,
               accessibilityLabel: "الإشعارات",
-              onPress: () => setShowNotifications(true),
+              onPress: () => {
+                void performClientSelectionHaptic();
+                setShowNotifications(true);
+              },
             },
             {
               icon: <Icon name="cart-outline" size={20} color={colorRoles.surfaceBase} />,
               accessibilityLabel: "عربة التسوق",
-              onPress: () => setActiveTab("cart"),
+              onPress: () => activateTab("cart"),
             },
           ]}
         />
@@ -253,11 +295,20 @@ export function DshClientSurface() {
 
       <View style={styles.content}>
         {showNotifications ? (
-          <NotificationCenterScreen onOpenActionUrl={openNotificationActionUrl} />
+          <NotificationCenterScreen
+            onBack={() => setShowNotifications(false)}
+            onOpenActionUrl={openNotificationActionUrl}
+          />
         ) : activePickupOrderId !== null ? (
-          <PickupSessionScreen orderId={activePickupOrderId} onBack={() => setActivePickupOrderId(null)} />
+          <PickupSessionScreen
+            orderId={activePickupOrderId}
+            onBack={() => setActivePickupOrderId(null)}
+          />
         ) : activeOrderId !== null ? (
-          <OrderTrackingScreen orderId={activeOrderId} onBack={() => setActiveOrderId(null)} />
+          <OrderTrackingScreen
+            orderId={activeOrderId}
+            onBack={() => setActiveOrderId(null)}
+          />
         ) : activeSpecialRequest === "shein" ? (
           <SheinForm
             onBack={openSpecialRequestList}
@@ -280,11 +331,9 @@ export function DshClientSurface() {
           />
         ) : activeTab === "home" ? (
           <HomeDiscoveryRoute
-            onStorePress={(storeId) => {
-              setSelectedStoreId(storeId);
-              setActiveTab("stores");
-            }}
+            onStorePress={openStore}
             onSpecialCategoryPress={(nodeId) => {
+              void performClientSelectionHaptic();
               if (nodeId === "node-shein") setActiveSpecialRequest("shein");
               if (nodeId === "node-awnak") setActiveSpecialRequest("awnak");
             }}
@@ -298,7 +347,7 @@ export function DshClientSurface() {
           />
         ) : activeTab === "stores" ? (
           selectedStoreId === null ? (
-            <StoreDiscoveryRoute onStorePress={setSelectedStoreId} />
+            <StoreDiscoveryRoute onStorePress={openStore} />
           ) : (
             <StoreDetailRoute
               storeId={selectedStoreId}
@@ -319,6 +368,7 @@ export function DshClientSurface() {
           ) : (
             <ClientCheckoutRoute
               storeId={selectedStoreId}
+              onBack={() => setActiveTab("stores")}
               onBrowseCatalog={() => setActiveTab("stores")}
               onManageAddresses={openAddressBookFromCart}
               onSuccess={openOrderTracking}
@@ -326,8 +376,10 @@ export function DshClientSurface() {
           )
         ) : profileRoute === "appearance" ? (
           <AppearanceHubScreen
-            appearanceMode={appearanceMode}
-            onAppearanceModeChange={setAppearanceMode}
+            appearanceMode={appearance.mode}
+            resolvedTheme={appearance.themeName}
+            onAppearanceModeChange={appearance.setMode}
+            onBack={() => setProfileRoute("profile")}
           />
         ) : profileRoute === "addresses" ? (
           <AddressLocationScreen
@@ -335,25 +387,31 @@ export function DshClientSurface() {
             {...(selectedStoreId !== null ? { onOpenCheckout: returnFromAddressBookToCart } : {})}
           />
         ) : profileRoute === "identity" ? (
-          <IdentityHubScreen />
+          <IdentityHubScreen onBack={() => setProfileRoute("profile")} />
         ) : profileRoute === "benefits" ? (
           <BenefitsHubScreen />
         ) : profileRoute === "preferences" ? (
-          <PreferencesHubScreen />
+          <PreferencesHubScreen onBack={() => setProfileRoute("profile")} />
         ) : profileRoute === "support" ? (
           activeTicketId !== null ? (
-            <TicketDetailScreen ticketId={activeTicketId} />
+            <TicketDetailScreen
+              ticketId={activeTicketId}
+              onBack={() => setActiveTicketId(null)}
+            />
           ) : (
-            <SupportTicketScreen onOpenTicket={setActiveTicketId} />
+            <SupportTicketScreen
+              onBack={() => setProfileRoute("profile")}
+              onOpenTicket={setActiveTicketId}
+            />
           )
         ) : (
           <MySpaceScreen
-            appearanceMode={appearanceMode}
-            onAppearanceModeChange={setAppearanceMode}
+            currentAppearanceLabel={appearanceLabel(appearance.mode)}
             onOpenOrders={() => setActiveTab("orders")}
             onOpenAddresses={() => setProfileRoute("addresses")}
             onOpenIdentity={() => setProfileRoute("identity")}
             onOpenBenefits={() => setProfileRoute("benefits")}
+            onOpenAppearance={() => setProfileRoute("appearance")}
             onOpenPreferences={() => setProfileRoute("preferences")}
             onOpenSupport={() => setProfileRoute("support")}
           />
@@ -365,11 +423,11 @@ export function DshClientSurface() {
           items={NAV_ITEMS}
           activeId={activeTab}
           onSelect={(id) => {
-            if (isClientTab(id)) setActiveTab(id);
+            if (isClientTab(id)) activateTab(id);
           }}
           launcherIcon={<Icon name="grid-outline" size={26} color={colorRoles.surfaceBase} />}
           launcherLabel="الخدمات"
-          onLauncherPress={() => setActiveTab(activeTab === "stores" ? "home" : "stores")}
+          onLauncherPress={() => activateTab(activeTab === "stores" ? "home" : "stores")}
           direction="rtl"
           bottomInset={insets.bottom}
         />
