@@ -64,7 +64,7 @@ func TestCreateGovernedVisitIdempotentReturnsOriginalVisitAndRejectsConflict(t *
 	}
 
 	conflictMutation := testMutationContext(t, key, map[string]any{
-		"storeId": storeID,
+		"storeId":   storeID,
 		"visitType": "periodic",
 	})
 	if _, err := CreateGovernedVisitIdempotent(ctx, db, actor, input, conflictMutation); !errors.Is(err, ErrIdempotencyConflict) {
