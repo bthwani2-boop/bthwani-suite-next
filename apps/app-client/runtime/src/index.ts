@@ -12,10 +12,6 @@ import {
   wireNetInfoOnlineManager,
 } from "@bthwani/data-runtime";
 import { initSentry } from "./observability/sentry";
-import {
-  ClientAppearanceProvider,
-  useClientAppearance,
-} from "./preferences/client-appearance";
 import App from "./App";
 
 const sentryEnabled = initSentry();
@@ -26,15 +22,6 @@ const queryPersistenceKey = `bthwani-query-cache:v2:${APP_KEY}`;
 const mutationQueue = createBthwaniOfflineMutationQueue(
   `bthwani-offline-mutations:v1:${APP_KEY}`,
 );
-
-function ThemedApp() {
-  const appearance = useClientAppearance();
-  return React.createElement(
-    BthwaniUiProvider,
-    { defaultTheme: appearance.themeName },
-    React.createElement(App),
-  );
-}
 
 function Root() {
   useEffect(() => {
@@ -58,9 +45,9 @@ function Root() {
       BthwaniQueryProvider,
       { client: queryClient, persistenceKey: queryPersistenceKey },
       React.createElement(
-        ClientAppearanceProvider,
-        null,
-        React.createElement(ThemedApp),
+        BthwaniUiProvider,
+        { defaultTheme: "light" },
+        React.createElement(App),
       ),
     ),
   );
