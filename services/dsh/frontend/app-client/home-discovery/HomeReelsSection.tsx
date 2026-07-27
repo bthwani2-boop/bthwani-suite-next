@@ -1,12 +1,16 @@
 import React from "react";
 import {
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { VideoView, useVideoPlayer } from "expo-video";
 import {
+  Button,
+  StateView,
   alpha,
   colorRoles,
   elevation,
@@ -22,8 +26,76 @@ type Props = {
   readonly onReelPress?: ((reel: HomePublicReel) => void) | undefined;
 };
 
+function isPlayableVideoUrl(value: string): boolean {
+  return /^https:\/\//i.test(value.trim());
+}
+
+function reelTitle(reel: HomePublicReel): string {
+  return reel.titleAr.trim() || reel.titleEn.trim() || "فيديو مختار";
+}
+
+function ReelPlayerModal({
+  reel,
+  onClose,
+  onOpenTarget,
+}: {
+  readonly reel: HomePublicReel;
+  readonly onClose: () => void;
+  readonly onOpenTarget?: () => void;
+}) {
+  const player = useVideoPlayer(reel.videoUrl, (instance) => {
+    instance.loop = true;
+    instance.play();
+  });
+
+  return (
+    <Modal
+      visible
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalRoot}>
+        <View style={styles.modalHeader}>
+          <Button label="إغلاق" tone="ghost" size="sm" onPress={onClose} />
+          <Text style={styles.modalTitle} numberOfLines={1}>{reelTitle(reel)}</Text>
+        </View>
+        <VideoView
+          player={player}
+          style={styles.video}
+          nativeControls
+          contentFit="contain"
+          allowsFullscreen
+          allowsPictureInPicture
+        />
+        <View style={styles.modalActions}>
+          {onOpenTarget ? (
+            <Button
+              label={reel.targetType === "store" ? "فتح المتجر" : "فتح التفاصيل"}
+              tone="primary"
+              onPress={onOpenTarget}
+            />
+          ) : (
+            <StateView
+              tone="neutral"
+              title="المشاهدة فقط"
+              description="لا يملك هذا الفيديو هدفًا قابلًا للفتح في تطبيق العميل حاليًا."
+            />
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export function HomeReelsSection({ reels, onReelPress }: Props) {
-  if (reels.length === 0) return null;
+  const [selectedReel, setSelectedReel] = React.useState<HomePublicReel | null>(null);
+  const playableReels = React.useMemo(
+    () => reels.filter((reel) => isPlayableVideoUrl(reel.videoUrl)),
+    [reels],
+  );
+
+  if (playableReels.length === 0) return null;
 
   return (
     <View style={styles.container}>
@@ -36,13 +108,13 @@ export function HomeReelsSection({ reels, onReelPress }: Props) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rail}
       >
-        {reels.map((reel) => (
+        {playableReels.map((reel) => (
           <Pressable
             key={reel.id}
             style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-            onPress={() => onReelPress?.(reel)}
+            onPress={() => setSelectedReel(reel)}
             accessibilityRole="button"
-            accessibilityLabel={reel.titleAr || reel.titleEn || "فيديو"}
+            accessibilityLabel={`تشغيل ${reelTitle(reel)}`}
           >
             <View style={styles.videoPlane}>
               <View style={styles.playButton}>
@@ -54,15 +126,31 @@ export function HomeReelsSection({ reels, onReelPress }: Props) {
             </View>
             <View style={styles.copyWrap}>
               <Text style={styles.cardTitle} numberOfLines={1}>
-                {reel.titleAr || reel.titleEn || "عرض مختار"}
+                {reelTitle(reel)}
               </Text>
               <Text style={styles.cardSubtitle} numberOfLines={1}>
-                اضغط للتفاصيل
+                اضغط للمشاهدة
               </Text>
             </View>
           </Pressable>
         ))}
       </ScrollView>
+
+      {selectedReel ? (
+        <ReelPlayerModal
+          reel={selectedReel}
+          onClose={() => setSelectedReel(null)}
+          {...(onReelPress
+            ? {
+                onOpenTarget: () => {
+                  const reel = selectedReel;
+                  setSelectedReel(null);
+                  onReelPress(reel);
+                },
+              }
+            : {})}
+        />
+      ) : null}
     </View>
   );
 }
@@ -158,5 +246,34 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colorRoles.textSecondary,
     textAlign: "right",
+  },
+  modalRoot: {
+    flex: 1,
+    backgroundColor: colorRoles.shadowBase,
+  },
+  modalHeader: {
+    minHeight: 64,
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing[3],
+    backgroundColor: colorRoles.surfaceBase,
+  },
+  modalTitle: {
+    flex: 1,
+    color: colorRoles.textPrimary,
+    fontWeight: "800",
+    textAlign: "right",
+  },
+  video: {
+    flex: 1,
+    width: "100%",
+    backgroundColor: colorRoles.shadowBase,
+  },
+  modalActions: {
+    padding: spacing[4],
+    backgroundColor: colorRoles.surfaceBase,
   },
 });
