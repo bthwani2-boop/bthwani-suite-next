@@ -1,12 +1,12 @@
 import React from "react";
 import {
   I18nManager,
-  Image,
   Modal,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
@@ -22,6 +22,8 @@ import {
   radius,
   spacing,
 } from "@bthwani/ui-kit";
+import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
+import { createClientEphemeralId } from "../../../../../apps/app-client/runtime/src/platform/client-platform-actions";
 import {
   applyDiscoveryFilter,
   fetchHomePublicReels,
@@ -48,6 +50,14 @@ type Props = {
   onRetry?: (() => void) | undefined;
 };
 
+function normalizeSearchText(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u064B-\u065F\u0670]/g, "")
+    .toLocaleLowerCase("ar")
+    .trim();
+}
+
 export function HomeDiscoveryShell({
   state,
   activeFilter,
@@ -60,13 +70,12 @@ export function HomeDiscoveryShell({
   const isRtl = I18nManager.isRTL;
   const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
   const [showDropdown, setShowDropdown] = React.useState(false);
+  const [searchText, setSearchText] = React.useState("");
   const [reels, setReels] = React.useState<readonly HomePublicReel[]>([]);
   const scrollRef = React.useRef<ScrollView>(null);
   const reelsOffsetY = React.useRef(0);
   const recordedImpressions = React.useRef(new Set<string>());
-  const viewerRef = React.useRef(
-    `home.${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 12)}`,
-  );
+  const viewerRef = React.useRef(createClientEphemeralId("home"));
 
   const emitMarketingEvent = React.useCallback((
     eventType: "impression" | "click",
@@ -83,7 +92,7 @@ export function HomeDiscoveryShell({
       cityCode: state.data.context.cityCode,
       serviceAreaCode: state.data.context.serviceAreaCode,
       audienceSegment: state.data.context.audienceSegment,
-    });
+    }).catch(() => undefined);
   }, [state]);
 
   React.useEffect(() => {
@@ -188,8 +197,19 @@ export function HomeDiscoveryShell({
   }
 
   const { banners, promos, filters, categories, stores } = state.data;
+  const normalizedQuery = normalizeSearchText(searchText);
   const filteredStores = applyDiscoveryFilter(stores, activeFilter)
-    .filter((store) => activeCategoryId === null || store.categoryId === activeCategoryId);
+    .filter((store) => activeCategoryId === null || store.categoryId === activeCategoryId)
+    .filter((store) => {
+      if (!normalizedQuery) return true;
+      const haystack = normalizeSearchText([
+        store.displayName,
+        store.categoryLabel,
+        store.slug,
+        ...store.deliveryModeLabels,
+      ].filter(Boolean).join(" "));
+      return haystack.includes(normalizedQuery);
+    });
 
   return (
     <Screen padded={false}>
@@ -198,6 +218,7 @@ export function HomeDiscoveryShell({
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {banners.length > 0 ? (
           <HomeHeroBannerSection banners={banners} onBannerPress={handleBannerPress} />
@@ -215,6 +236,33 @@ export function HomeDiscoveryShell({
         >
           <HomeReelsSection reels={reels} onReelPress={handleReelPress} />
         </View>
+
+        <View style={styles.searchWrap}>
+          <TextInput
+            accessibilityLabel="البحث في المتاجر والفئات"
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="ابحث عن متجر أو فئة"
+            placeholderTextColor={colorRoles.textMuted}
+            maxLength={120}
+            returnKeyType="search"
+            autoCorrect={false}
+            style={styles.searchInput}
+            textAlign="right"
+          />
+          {searchText ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="مسح البحث"
+              hitSlop={8}
+              onPress={() => setSearchText("")}
+              style={styles.clearSearch}
+            >
+              <Text style={styles.clearSearchText}>×</Text>
+            </Pressable>
+          ) : null}
+        </View>
+
         <HomeFilterRailSection
           filters={filters}
           activeFilter={activeFilter}
@@ -295,7 +343,7 @@ function CategoryOption({
   readonly isRtl: boolean;
   readonly onPress: () => void;
 }) {
-  const iconIsImageUrl = /^https?:\/\//i.test(icon) || icon.startsWith("/");
+  const iconIsImageUrl = /^https:\/\//i.test(icon) || icon.startsWith("/");
 
   return (
     <Pressable
@@ -308,6 +356,7 @@ function CategoryOption({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}
+      accessibilityLabel={`${label}${selected ? "، محدد" : ""}`}
     >
       <View style={styles.selectionIndicator}>
         {selected ? <Text style={styles.checkmark}>✓</Text> : null}
@@ -315,12 +364,11 @@ function CategoryOption({
       <Text style={[styles.dropdownLabel, selected && styles.dropdownLabelActive]}>{label}</Text>
       <View style={[styles.emojiContainer, selected && styles.emojiContainerActive]}>
         {iconIsImageUrl ? (
-          <Image
-            source={{ uri: icon }}
+          <ClientRemoteImage
+            uri={icon}
             style={styles.dropdownIconImage}
-            resizeMode="contain"
-            accessibilityIgnoresInvertColors
-            alt=""
+            contentFit="contain"
+            accessibilityLabel={`أيقونة ${label}`}
           />
         ) : (
           <Text style={styles.dropdownEmoji}>{icon}</Text>
@@ -333,6 +381,37 @@ function CategoryOption({
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colorRoles.surfaceBase },
   content: { paddingBottom: spacing[8] },
+  searchWrap: {
+    marginHorizontal: spacing[4],
+    marginBottom: spacing[3],
+    position: "relative",
+    justifyContent: "center",
+  },
+  searchInput: {
+    minHeight: 46,
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    borderRadius: radius.round,
+    paddingHorizontal: spacing[4],
+    paddingLeft: 44,
+    color: colorRoles.textPrimary,
+    backgroundColor: colorRoles.surfaceMuted,
+  },
+  clearSearch: {
+    position: "absolute",
+    left: spacing[3],
+    width: 30,
+    height: 30,
+    borderRadius: radius.round,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colorRoles.surfaceBase,
+  },
+  clearSearchText: {
+    color: colorRoles.textSecondary,
+    fontSize: 20,
+    lineHeight: 22,
+  },
   modalOverlay: {
     flex: 1,
     alignItems: "center",
