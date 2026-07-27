@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
+import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
 
@@ -9,11 +9,9 @@ import {
   ENGAGEMENT_STATUS_LABEL_AR,
   appendProviderDocument,
   useFieldAgentDetailController,
-  useWorkforceReferenceData,
   type SupervisorCandidate,
 } from "../../shared/workforce";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
-import { ProviderActivationWorkspace } from "../shared";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
 import { WorkforceScopeManager } from "./WorkforceScopeManager";
@@ -21,13 +19,11 @@ import { ZonePicker } from "./ZonePicker";
 
 export function FieldAgentDetailView(props: { readonly actorId: string; readonly onBack: () => void }) {
   const controller = useFieldAgentDetailController(props.actorId);
-  const reference = useWorkforceReferenceData(true);
   const agent = controller.state.kind === "ready" ? controller.state.agent : null;
 
   const [fullNameAr, setFullNameAr] = useState("");
   const [fullNameEn, setFullNameEn] = useState("");
   const [zoneId, setZoneId] = useState("");
-  const [shiftCode, setShiftCode] = useState("");
   const [engagementStartDate, setEngagementStartDate] = useState("");
   const [supervisor, setSupervisor] = useState<SupervisorCandidate | null>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
@@ -38,7 +34,6 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
     setFullNameAr(agent.fullNameAr);
     setFullNameEn(agent.fullNameEn ?? "");
     setZoneId(agent.fieldProfile?.serviceZoneId ?? "");
-    setShiftCode(agent.fieldProfile?.shiftCode ?? "");
     setEngagementStartDate(agent.engagementStartDate ?? "");
     setSupervisor(
       agent.fieldProfile?.supervisorActorId
@@ -109,23 +104,22 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
   };
 
   const profile = agent.fieldProfile;
-  const canSave =
-    fullNameAr.trim().length > 0 &&
-    zoneId.length > 0 &&
-    shiftCode.length > 0 &&
-    !controller.actionBusy;
-  const activeShifts = reference.shifts.filter((shift) => shift.active !== false);
+  const canSave = fullNameAr.trim().length > 0 && zoneId.length > 0 && !controller.actionBusy;
 
   return (
     <DetailPageFrame
       header={
-        <CpPageHeader title="ملف مقدم الخدمة الميداني">
+        <CpPageHeader title="ملف الميداني">
           <CpMutedInline tight>{agent.workforceCode} · {ENGAGEMENT_STATUS_LABEL_AR[agent.engagementStatus]}</CpMutedInline>
           <CpButton variant="ghost" onClick={props.onBack}>رجوع</CpButton>
         </CpPageHeader>
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+        <CpMutedInline>
+          الميداني مقدم خدمة مستقل بلا وردية أو حضور. التفعيل وإصدار كود الدخول من صلاحية قسم الشراكات بعد اكتمال بوابة التفعيل.
+        </CpMutedInline>
+
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <div>
             <Text role="bodySm">الاسم بالعربية *</Text>
@@ -141,15 +135,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
           </div>
           <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
 
-          <Text role="bodySm" style={{ fontWeight: "bold" }}>الوردية</Text>
-          <CpTabs
-            aria-label="اختيار الوردية"
-            value={shiftCode}
-            onChange={setShiftCode}
-            items={activeShifts.map((shift) => ({ value: shift.code, label: shift.nameAr }))}
-          />
-
-          <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف</Text>
+          <Text role="bodySm" style={{ fontWeight: "bold" }}>مسؤول المتابعة</Text>
           <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} />
           {controller.actionError ? <CpStatePanel role="alert" title={controller.actionError} /> : null}
 
@@ -163,7 +149,6 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
                 fullNameEn: fullNameEn.trim() || undefined,
                 engagementStartDate: engagementStartDate.trim() || undefined,
                 serviceZoneId: zoneId,
-                shiftCode,
                 supervisorActorId: supervisor?.actorId,
               })
             }
@@ -182,13 +167,12 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
               {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}
             </CpButton>
             <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("document")}>
-              {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة مهنية"}
+              {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة"}
             </CpButton>
           </div>
         </div>
 
         <WorkforceScopeManager actorId={agent.actorId} actorRole="field" />
-        <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
       </div>
     </DetailPageFrame>
   );
