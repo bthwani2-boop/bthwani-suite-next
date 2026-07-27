@@ -1080,6 +1080,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dsh/field/partners/{partnerId}/stores/{storeId}/assortment/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link up to 100 approved central products to a field-onboarded partner store in one governed request. */
+        post: operations["fieldUpsertStoreAssortmentBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dsh/field/partners/{partnerId}/assortment": {
         parameters: {
             query?: never;
@@ -5289,6 +5306,10 @@ export interface components {
             label: string;
             iconUrl?: string;
             sortOrder: number;
+            /** @enum {string} */
+            destinationType: "catalog_domain" | "special_request";
+            /** @description Central catalog domain id or sovereign special-request type. */
+            destinationTarget: string;
         };
         DshHomeAdminContentItem: {
             id: string;
@@ -9527,6 +9548,65 @@ export interface operations {
                 };
                 content?: never;
             };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    fieldUpsertStoreAssortmentBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    items: {
+                        masterProductId: string;
+                        unitPrice: number;
+                        currency: string;
+                        available: boolean;
+                        /** @enum {string} */
+                        stockStatus: "in_stock" | "low_stock" | "out_of_stock";
+                        localNote: string;
+                        customImageObjectKey?: string | null;
+                        /** @enum {string} */
+                        publicationStatus: "draft" | "submitted";
+                        expectedVersion?: number;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Per-item batch result. Successful rows remain committed when another row fails validation or OCC. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        succeeded: number;
+                        failed: number;
+                        results: {
+                            index: number;
+                            masterProductId: string;
+                            /** @enum {string} */
+                            status: "saved" | "failed";
+                            assortment?: {
+                                [key: string]: unknown;
+                            };
+                            code?: string;
+                            message?: string;
+                            currentVersion?: number;
+                            expectedVersion?: number;
+                        }[];
+                    };
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
             403: components["responses"]["Forbidden"];
         };
     };
