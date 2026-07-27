@@ -21,18 +21,16 @@ on:
       node:
         type: string
         required: true
-      verification_tier:
-        type: string
-        required: true
 
 permissions:
   contents: read
 
 jobs:
-  affected:
-    name: Affected diagnostics
+  deep_diagnostics:
+    name: UI purity and dead code
+    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 25
     steps:
       - name: Checkout immutable source history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -41,34 +39,172 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Verify immutable diff
-        run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
-      - name: Verify affected frontend diagnostics
-        if: ${{ inputs.frontend == 'true' }}
+      - name: Verify UI providers, icons, tokens and boundaries
+        shell: bash
         run: |
-          pnpm run diagnostics:ui-kit
-          pnpm run guard:a11y
-          pnpm run guard:dependency-graph
-          pnpm run guard:ast-grep-rules
-      - name: Verify affected contracts and bindings
-        if: ${{ inputs.contracts == 'true' }}
+          mkdir -p "${RUNNER_TEMP}/deep-diagnostics"
+          set -o pipefail
+          pnpm run diagnostics:ui-kit 2>&1 | tee "${RUNNER_TEMP}/deep-diagnostics/ui-kit.log"
+      - name: Prevent unused files, exports and dependencies
+        shell: bash
         run: |
-          pnpm run guard:no-broken-imports
-          pnpm --dir contracts typecheck
-          pnpm run guard:api-binding
-          pnpm run guard:backend-api-binding
-          pnpm run guard:service-manifest-drift
-          pnpm run guard:frontend-feature-binding
-          pnpm run guard:runtime-real-bindings
-          pnpm run guard:live-cross-journey-integrity
-      - name: Run deep repository diagnostics
-        if: ${{ inputs.full_verification == 'true' || inputs.verification_tier == 'deep' }}
+          mkdir -p "${RUNNER_TEMP}/deep-diagnostics"
+          set -o pipefail
+          pnpm exec knip --reporter compact --reporter github-actions 2>&1 | tee "${RUNNER_TEMP}/deep-diagnostics/knip.log"
+      - name: Upload deep-diagnostic evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deep-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/deep-diagnostics/*.log
+          if-no-files-found: error
+          retention-days: 7
+
+  vertical_integrity:
+    name: Logic, accessibility and dependency integrity
+    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.contracts == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify Go route extraction
+        shell: bash
         run: |
-          pnpm exec knip --config knip.json --reporter compact --reporter github-actions
-          pnpm run guard:logic-all
-          pnpm run guard:repo-all
-          pnpm run guard:performance-all
-      - name: Record strict dead-code backlog without allowing new closure claims
-        if: ${{ inputs.full_verification == 'true' || inputs.verification_tier == 'deep' }}
-        continue-on-error: true
-        run: pnpm exec knip --config knip.strict.json --reporter compact
+          mkdir -p "${RUNNER_TEMP}/vertical-integrity"
+          set -o pipefail
+          pnpm run guard:go-routes-ci 2>&1 | tee "${RUNNER_TEMP}/vertical-integrity/go-routes.log"
+      - name: Verify logic coverage
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/vertical-integrity"
+          set -o pipefail
+          pnpm run guard:logic-coverage 2>&1 | tee "${RUNNER_TEMP}/vertical-integrity/logic-coverage.log"
+      - name: Verify accessibility contracts
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:a11y 2>&1 | tee "${RUNNER_TEMP}/vertical-integrity/accessibility.log"
+      - name: Verify dependency graph boundaries
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:dependency-graph 2>&1 | tee "${RUNNER_TEMP}/vertical-integrity/dependency-graph.log"
+      - name: Verify AST rules
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:ast-grep-rules 2>&1 | tee "${RUNNER_TEMP}/vertical-integrity/ast-rules.log"
+      - name: Upload vertical-integrity evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vertical-integrity-${{ github.run_id }}
+          path: ${{ runner.temp }}/vertical-integrity/*.log
+          if-no-files-found: error
+          retention-days: 7
+
+  repository_integrity:
+    name: Repository organization and performance budgets
+    if: ${{ inputs.full_verification == 'true' || inputs.frontend == 'true' || inputs.node == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify repository size limits
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/repository-integrity"
+          set -o pipefail
+          pnpm run guard:repo-size 2>&1 | tee "${RUNNER_TEMP}/repository-integrity/repository-size.log"
+      - name: Verify repository naming
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:repo-naming 2>&1 | tee "${RUNNER_TEMP}/repository-integrity/repository-naming.log"
+      - name: Verify repository structure
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:repo-structure 2>&1 | tee "${RUNNER_TEMP}/repository-integrity/repository-structure.log"
+      - name: Verify heavy-import boundaries
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:heavy-imports 2>&1 | tee "${RUNNER_TEMP}/repository-integrity/heavy-imports.log"
+      - name: Verify runtime performance budgets
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:performance-budget 2>&1 | tee "${RUNNER_TEMP}/repository-integrity/performance-budget.log"
+      - name: Verify bundle budgets
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm run guard:bundle-budget 2>&1 | tee "${RUNNER_TEMP}/repository-integrity/bundle-budget.log"
+      - name: Upload repository-integrity evidence
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: repository-integrity-${{ github.run_id }}
+          path: ${{ runner.temp }}/repository-integrity/*.log
+          if-no-files-found: error
+          retention-days: 7
+
+  contracts:
+    name: Contract foundation and bindings
+    if: ${{ inputs.contracts == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Verify imports resolve
+        run: pnpm run guard:no-broken-imports
+      - name: Verify OpenAPI contracts and generated types without warnings
+        run: pnpm --dir contracts typecheck
+      - name: Verify frontend API binding
+        run: pnpm run guard:api-binding
+      - name: Verify backend API binding
+        run: pnpm run guard:backend-api-binding
+      - name: Verify service manifest drift
+        run: pnpm run guard:service-manifest-drift
+      - name: Verify frontend feature binding
+        run: pnpm run guard:frontend-feature-binding
+      - name: Verify runtime-facing bindings
+        run: pnpm run guard:runtime-real-bindings
+      - name: Verify cross-journey integrity
+        run: pnpm run guard:live-cross-journey-integrity
+
+  diff_hygiene:
+    name: Immutable diff hygiene
+    if: ${{ inputs.node == 'true' || inputs.full_verification == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout immutable source history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify immutable commit diff
+        env:
+          CI_BASE_SHA: ${{ inputs.base_sha }}
+          CI_HEAD_SHA: ${{ inputs.head_sha }}
+        run: git diff --check "${CI_BASE_SHA}" "${CI_HEAD_SHA}"
