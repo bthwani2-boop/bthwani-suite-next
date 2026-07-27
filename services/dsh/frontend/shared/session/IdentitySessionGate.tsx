@@ -26,10 +26,20 @@ export type IdentitySessionGateProps = {
   readonly children: ReactNode;
 };
 
-type SignInMode = "login" | "activation";
-
-function isActivationActorType(role: DshSurfaceRole): role is ActivationActorType {
+function isPlatformAccessActorType(role: DshSurfaceRole): role is ActivationActorType {
   return role === "partner" || role === "captain" || role === "field";
+}
+
+function accessCodeIssuer(role: ActivationActorType): string {
+  switch (role) {
+    case "captain":
+      return "قسم العمليات";
+    case "field":
+    case "partner":
+      return "قسم الشركاء";
+    default:
+      return "القسم المسؤول";
+  }
 }
 
 function errorCode(error: unknown): string {
@@ -44,10 +54,8 @@ function IdentityAccessPanel({
   readonly requiredRole: DshSurfaceRole;
   readonly errorMessage?: string;
 }) {
-  const { login, requestOtp, activate } = useIdentitySession();
-  const activationAvailable = isActivationActorType(requiredRole);
-  const selfServiceOtpAllowed = activationAvailable && requiredRole !== "field";
-  const [mode, setMode] = useState<SignInMode>(activationAvailable ? "activation" : "login");
+  const { login, activate } = useIdentitySession();
+  const platformAccessRequired = isPlatformAccessActorType(requiredRole);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
@@ -72,30 +80,9 @@ function IdentityAccessPanel({
     }
   };
 
-  const issueOtp = async () => {
-    if (!selfServiceOtpAllowed || !phone.trim()) {
-      setFeedback(
-        requiredRole === "field"
-          ? "رمز تفعيل الميداني يصدر من فريق التشغيل عبر لوحة التحكم."
-          : "أدخل رقم الهاتف المرتبط بالحساب.",
-      );
-      return;
-    }
-    setSubmitting(true);
-    setFeedback("");
-    try {
-      const issued = await requestOtp(requiredRole, phone.trim());
-      setFeedback(`تم إصدار رمز تفعيل للرقم ${issued.maskedPhone}.`);
-    } catch (error) {
-      setFeedback(identityErrorPresentation(errorCode(error)).description);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const submitActivation = async () => {
-    if (!activationAvailable || !phone.trim() || !/^\d{6}$/.test(code.trim())) {
-      setFeedback("أدخل رقم الهاتف ورمز تفعيل مكوّنًا من ستة أرقام.");
+  const submitPlatformAccessCode = async () => {
+    if (!platformAccessRequired || !phone.trim() || !/^\d{6}$/.test(code.trim())) {
+      setFeedback("أدخل رقم الهاتف وكود الدخول المكوّن من ستة أرقام.");
       return;
     }
     setSubmitting(true);
@@ -114,10 +101,8 @@ function IdentityAccessPanel({
       <Card style={styles.accessCard}>
         <Text role="titleLg" style={styles.title}>الدخول إلى بثواني</Text>
         <Text role="body" tone="muted" style={styles.description}>
-          {activationAvailable
-            ? requiredRole === "field"
-              ? "استخدم بيانات الحساب أو رمز التفعيل الصادر من فريق التشغيل لهذا التطبيق."
-              : "استخدم بيانات الحساب أو رمز التفعيل المخصص لهذا التطبيق."
+          {platformAccessRequired
+            ? `استخدم كود الدخول الصادر لك من ${accessCodeIssuer(requiredRole)} بعد اعتماد حسابك.`
             : "استخدم بيانات الحساب للدخول إلى التطبيق."}
         </Text>
 
@@ -128,28 +113,32 @@ function IdentityAccessPanel({
           </View>
         ) : null}
 
-        {activationAvailable ? (
-          <View style={styles.modeRow}>
-            <Button
-              label="تسجيل الدخول"
-              tone={mode === "login" ? "primary" : "ghost"}
-              onPress={() => {
-                setMode("login");
-                setFeedback("");
-              }}
+        {platformAccessRequired ? (
+          <View style={styles.form}>
+            <TextField
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="رقم الهاتف المرتبط بالحساب"
+              keyboardType="phone-pad"
+            />
+            <Text role="caption" tone="muted" style={styles.activationNotice}>
+              كود الدخول تمنحه منصة بثواني ولا يُرسل تلقائيًا للتحقق من رقم الهاتف. لا يمكن طلبه من التطبيق.
+            </Text>
+            <TextField
+              value={code}
+              onChangeText={setCode}
+              placeholder="كود الدخول من 6 أرقام"
+              keyboardType="numeric"
+              maxLength={6}
             />
             <Button
-              label="التفعيل بالرمز"
-              tone={mode === "activation" ? "primary" : "ghost"}
-              onPress={() => {
-                setMode("activation");
-                setFeedback("");
-              }}
+              label={submitting ? "جاري تسجيل الجهاز" : "تسجيل هذا الجهاز والدخول"}
+              tone="primary"
+              disabled={submitting || !phone.trim() || !/^\d{6}$/.test(code.trim())}
+              onPress={submitPlatformAccessCode}
             />
           </View>
-        ) : null}
-
-        {mode === "login" ? (
+        ) : (
           <View style={styles.form}>
             <TextField
               value={username}
@@ -168,39 +157,6 @@ function IdentityAccessPanel({
               tone="primary"
               disabled={submitting}
               onPress={submitLogin}
-            />
-          </View>
-        ) : (
-          <View style={styles.form}>
-            <TextField
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="رقم الهاتف"
-              keyboardType="phone-pad"
-            />
-            {selfServiceOtpAllowed ? (
-              <Button
-                label={submitting ? "جاري الإصدار" : "طلب رمز التفعيل"}
-                tone="secondary"
-                disabled={submitting}
-                onPress={issueOtp}
-              />
-            ) : (
-              <Text role="caption" tone="muted" style={styles.activationNotice}>
-                استلم رمز التفعيل من فريق التشغيل. لا يمكن إصدار رمز ميداني ذاتيًا من التطبيق.
-              </Text>
-            )}
-            <TextField
-              value={code}
-              onChangeText={setCode}
-              placeholder="رمز التفعيل من 6 أرقام"
-              keyboardType="numeric"
-            />
-            <Button
-              label={submitting ? "جاري التفعيل" : "تفعيل ودخول"}
-              tone="primary"
-              disabled={submitting}
-              onPress={submitActivation}
             />
           </View>
         )}
@@ -285,11 +241,6 @@ const styles = StyleSheet.create({
   },
   description: {
     textAlign: "right",
-  },
-  modeRow: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: spacing[2],
   },
   form: {
     gap: spacing[3],
