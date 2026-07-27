@@ -28,3 +28,22 @@ test("control-panel makes the platform-issued code the primary employee entry", 
   assert.match(session, /activate\(phone: string, code: string\)/);
   assert.match(api, /"\/api\/auth\/activate"/);
 });
+
+test("employee invitation contract targets control-panel rather than webapp", () => {
+  const employeeAccess = read("core/identity/backend/internal/identity/employee_access.go");
+  const employeeContract = read("core/identity/contracts/employee-access.openapi.yaml");
+  const workforceClient = read("core/workforce/backend/internal/identityclient/client.go");
+
+  assert.match(employeeAccess, /activationSurfaceByActorType\["employee"\]\s*=\s*"control-panel"/);
+  assert.doesNotMatch(employeeAccess, /activationSurfaceByActorType\["employee"\]\s*=\s*"webapp"/);
+  assert.match(employeeContract, /actorType=employee and surface=control-panel/);
+  assert.doesNotMatch(employeeContract, /surface=webapp/);
+  assert.match(workforceClient, /expectedActorType\)\s*==\s*"employee"[\s\S]*return "control-panel"/);
+});
+
+test("leadership form rejects an end date before the start date", () => {
+  const panel = read("services/dsh/frontend/control-panel/platform/SovereignLeadershipPanel.tsx");
+  assert.match(panel, /end < start/);
+  assert.match(panel, /تاريخ نهاية التكليف يجب أن يساوي تاريخ البداية أو يأتي بعده/);
+  assert.match(panel, /نهاية التكليف \(اختيارية\)/);
+});
