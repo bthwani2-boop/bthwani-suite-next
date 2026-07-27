@@ -1,9 +1,8 @@
-import React from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
-import { colorRoles, spacing } from '@bthwani/ui-kit';
-import { EmptyState } from '@bthwani/ui-kit';
-import type { HomeStoreCardViewModel, DiscoveryFilterKind } from '../../shared/home-discovery';
-import { HomeStoreCard } from './HomeStoreCard';
+import React from "react";
+import { FlatList, StyleSheet, View } from "react-native";
+import { EmptyState, spacing } from "@bthwani/ui-kit";
+import type { HomeStoreCardViewModel, DiscoveryFilterKind } from "../../shared/home-discovery";
+import { HomeStoreCard } from "./HomeStoreCard";
 
 type Props = {
   stores: HomeStoreCardViewModel[];
@@ -12,18 +11,15 @@ type Props = {
 };
 
 export function HomeStoreFeedSection({ stores, activeFilter, onStorePress }: Props) {
-  if (stores.length === 0 && activeFilter === 'favorites') {
-    return (
-      <View style={styles.container}>
-        <EmptyState title="لا توجد مفضلة" description="أضف متاجر إلى مفضلتك لتظهر هنا" />
-      </View>
-    );
-  }
-
   if (stores.length === 0) {
     return (
       <View style={styles.container}>
-        <EmptyState title="لا توجد متاجر" description="لا توجد متاجر تطابق هذا الفلتر" />
+        <EmptyState
+          title="لا توجد متاجر مطابقة"
+          description={activeFilter === "offers"
+            ? "لا توجد عروض أو متاجر بتوصيل مجاني ضمن النطاق الحالي."
+            : "غيّر البحث أو الفئة أو الفلتر لعرض نتائج أخرى."}
+        />
       </View>
     );
   }
