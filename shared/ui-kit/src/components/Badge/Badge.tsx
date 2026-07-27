@@ -26,17 +26,20 @@ const BadgeFrame = createUiStyled(XStack, {
   defaultVariants: { tone: "neutral" }
 });
 
+export type BadgeTone = "neutral" | "action" | "brand" | "success" | "warning" | "danger" | "info";
+
 export type BadgeProps = {
   label: string;
-  tone?: "neutral" | "action" | "success" | "warning" | "danger" | "info";
+  tone?: BadgeTone;
   icon?: ReactNode;
 };
 
 export function Badge({ label, tone = "neutral", icon }: BadgeProps) {
-  const textTone = tone === "neutral" ? "secondary" : tone === "action" ? "action" : tone;
+  const resolvedTone = tone === "brand" ? "action" : tone;
+  const textTone = resolvedTone === "neutral" ? "secondary" : resolvedTone === "action" ? "action" : resolvedTone;
 
   return (
-    <BadgeFrame tone={tone} accessibilityRole="text">
+    <BadgeFrame tone={resolvedTone} accessibilityRole="text">
       {icon}
       <Text role="caption" tone={textTone}>{label}</Text>
     </BadgeFrame>
