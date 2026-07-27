@@ -20,7 +20,7 @@ func (s *protectedStoreServer) handleListPartnerReels(w http.ResponseWriter, r *
 		return
 	}
 	if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, storeID); err != nil {
-		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "store is not owned by this partner actor")
+		s.writeStoreError(w, err)
 		return
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
