@@ -19,12 +19,11 @@ type Props = Readonly<{
 
 const FILTERS: ReadonlyArray<{ key: DiscoveryFilter; label: string; icon: string }> = [
   { key: "all", label: "الكل", icon: "◼" },
-  { key: "favorites", label: "المفضلة", icon: "♥" },
   { key: "nearest", label: "الأقرب", icon: "📍" },
 ];
 
 export function StoreDiscoveryScreen({ onStorePress }: Props) {
-  const c = useStoreDiscoveryController();
+  const controller = useStoreDiscoveryController();
 
   const handleStorePress = React.useCallback(
     (storeId: string) => { onStorePress?.(storeId); },
@@ -39,12 +38,12 @@ export function StoreDiscoveryScreen({ onStorePress }: Props) {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScroll}
         >
-          {FILTERS.map((f) => {
-            const isActive = c.activeFilter === f.key;
+          {FILTERS.map((filter) => {
+            const isActive = controller.activeFilter === filter.key;
             return (
               <Pressable
-                key={f.key}
-                onPress={() => c.setActiveFilter(f.key)}
+                key={filter.key}
+                onPress={() => controller.setActiveFilter(filter.key)}
                 style={({ pressed }: { pressed: boolean }) => [
                   styles.filterChip,
                   isActive && styles.filterChipActive,
@@ -52,13 +51,13 @@ export function StoreDiscoveryScreen({ onStorePress }: Props) {
                 ]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isActive }}
-                accessibilityLabel={f.label}
+                accessibilityLabel={filter.label}
               >
                 <Text style={[styles.filterIcon, isActive && styles.filterIconActive]}>
-                  {f.icon}
+                  {filter.icon}
                 </Text>
                 <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>
-                  {f.label}
+                  {filter.label}
                 </Text>
               </Pressable>
             );
@@ -67,11 +66,9 @@ export function StoreDiscoveryScreen({ onStorePress }: Props) {
       </View>
 
       <StoreDiscoveryList
-        state={c.visibleState}
-        favoriteIds={c.favoriteIds}
+        state={controller.visibleState}
         onStorePress={handleStorePress}
-        onFavoritePress={c.toggleFavorite}
-        onRetry={c.retry}
+        onRetry={controller.retry}
       />
     </Screen>
   );

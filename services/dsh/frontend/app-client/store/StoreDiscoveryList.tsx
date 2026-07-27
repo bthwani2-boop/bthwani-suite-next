@@ -4,24 +4,15 @@ import { LoadingState, OfflineState } from "@bthwani/ui-kit";
 import { StoreDiscoveryCard } from "./StoreDiscoveryCard";
 import { StoreDiscoveryEmptyState } from "./StoreDiscoveryEmptyState";
 import { StoreDiscoveryErrorState } from "./StoreDiscoveryErrorState";
-import type { DshStoreListState } from "../../shared/store";
-import type { DshStoreCardViewModel } from "../../shared/store";
+import type { DshStoreListState, DshStoreCardViewModel } from "../../shared/store";
 
 type Props = Readonly<{
   state: DshStoreListState;
-  favoriteIds: ReadonlySet<string>;
   onStorePress: (storeId: string) => void;
-  onFavoritePress: (storeId: string) => void;
   onRetry: () => void;
 }>;
 
-export function StoreDiscoveryList({
-  state,
-  favoriteIds,
-  onStorePress,
-  onFavoritePress,
-  onRetry,
-}: Props) {
+export function StoreDiscoveryList({ state, onStorePress, onRetry }: Props) {
   if (state.kind === "loading") {
     return <LoadingState title="جارٍ تحميل المتاجر…" />;
   }
@@ -41,11 +32,7 @@ export function StoreDiscoveryList({
     );
   }
 
-  if (state.kind === "empty") {
-    return <StoreDiscoveryEmptyState />;
-  }
-
-  if (state.stores.length === 0) {
+  if (state.kind === "empty" || state.stores.length === 0) {
     return <StoreDiscoveryEmptyState />;
   }
 
@@ -55,12 +42,7 @@ export function StoreDiscoveryList({
       keyExtractor={(item) => item.id}
       renderItem={({ item }) => (
         <View style={styles.cardWrapper}>
-          <StoreDiscoveryCard
-            store={item}
-            onPress={onStorePress}
-            isFavorite={favoriteIds.has(item.id)}
-            onFavoritePress={onFavoritePress}
-          />
+          <StoreDiscoveryCard store={item} onPress={onStorePress} />
         </View>
       )}
       contentContainerStyle={styles.list}

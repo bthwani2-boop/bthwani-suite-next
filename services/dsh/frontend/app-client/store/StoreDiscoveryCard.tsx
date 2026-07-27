@@ -5,17 +5,8 @@ import type { DshStoreCardViewModel } from "../../shared/store";
 type Props = {
   store: DshStoreCardViewModel;
   onPress: (storeId: string) => void;
-  isFavorite?: boolean;
-  onFavoritePress?: (storeId: string) => void;
 };
 
-export function StoreDiscoveryCard({ store, onPress, isFavorite, onFavoritePress }: Props) {
-  return (
-    <StoreCardPremium
-      store={store}
-      onPress={onPress}
-      isFavorite={isFavorite}
-      onFavoritePress={onFavoritePress}
-    />
-  );
+export function StoreDiscoveryCard({ store, onPress }: Props) {
+  return <StoreCardPremium store={store} onPress={onPress} />;
 }

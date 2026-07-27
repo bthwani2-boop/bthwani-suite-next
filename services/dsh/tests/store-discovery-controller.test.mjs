@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 const {
   applyStoreDiscoveryFilter,
   loadStoreDiscovery,
-  toggleFavoriteIds,
   withStoreDiscoveryFilter,
 } = await import(
   "../dist/services/dsh/frontend/shared/store/store-discovery.controller-core.js"
@@ -65,41 +64,21 @@ describe("store discovery controller core", () => {
     }
   });
 
-  test("toggles favorites without mutating the previous set", () => {
-    const previous = new Set(["s1"]);
-    const removed = toggleFavoriteIds(previous, "s1");
-    const added = toggleFavoriteIds(previous, "s2");
-    assert.deepEqual([...previous], ["s1"]);
-    assert.deepEqual([...removed], []);
-    assert.deepEqual([...added].sort(), ["s1", "s2"]);
-  });
-
-  test("filters favorites and sorts nearest stores", () => {
+  test("sorts nearest stores without mutating the source order", () => {
     const stores = [store("far", 8), store("near", 1), store("mid", 3)];
     assert.deepEqual(
-      applyStoreDiscoveryFilter(stores, "favorites", new Set(["mid"])).map(
-        (item) => item.id,
-      ),
-      ["mid"],
-    );
-    assert.deepEqual(
-      applyStoreDiscoveryFilter(stores, "nearest", new Set()).map(
-        (item) => item.id,
-      ),
+      applyStoreDiscoveryFilter(stores, "nearest").map((item) => item.id),
       ["near", "mid", "far"],
     );
+    assert.deepEqual(stores.map((item) => item.id), ["far", "near", "mid"]);
   });
 
   test("returns a filtered success state without changing non-success states", () => {
-    const success = successState([store("s1", 1), store("s2", 2)], 2, 20, 0);
-    const filtered = withStoreDiscoveryFilter(
-      success,
-      "favorites",
-      new Set(["s2"]),
-    );
+    const success = successState([store("s1", 2), store("s2", 1)], 2, 20, 0);
+    const filtered = withStoreDiscoveryFilter(success, "nearest");
     assert.equal(filtered.kind, "success");
-    assert.deepEqual(filtered.stores.map((item) => item.id), ["s2"]);
+    assert.deepEqual(filtered.stores.map((item) => item.id), ["s2", "s1"]);
     const error = errorState("failed");
-    assert.equal(withStoreDiscoveryFilter(error, "all", new Set()), error);
+    assert.equal(withStoreDiscoveryFilter(error, "all"), error);
   });
 });
