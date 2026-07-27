@@ -1,5 +1,6 @@
 // app-field — OnboardingLocationSection
-// Uses native Google Maps and device GPS. Service-area truth remains backend-owned.
+// Uses native maps and device GPS. Service-area truth remains backend-owned;
+// the field agent records location and address but never invents a zone code.
 import React, { useState } from "react";
 import { View } from "react-native";
 import * as Location from "expo-location";
@@ -84,18 +85,12 @@ export function OnboardingLocationSection({
 
   return (
     <View style={{ gap: spacing[4] }}>
-      <Text
-        role="bodyStrong"
-        style={{ textAlign: "right", fontWeight: "bold", color: colorRoles.textPrimary }}
-      >
+      <Text role="bodyStrong" style={{ textAlign: "right", fontWeight: "bold", color: colorRoles.textPrimary }}>
         الموقع الجغرافي ونطاق التغطية
       </Text>
 
       <View style={{ gap: spacing[2] }}>
-        <Text
-          role="bodySm"
-          style={{ color: colorRoles.textPrimary, textAlign: "right", fontWeight: "bold" }}
-        >
+        <Text role="bodySm" style={{ color: colorRoles.textPrimary, textAlign: "right", fontWeight: "bold" }}>
           تحديد موقع الفرع على الخريطة
         </Text>
 
@@ -125,14 +120,11 @@ export function OnboardingLocationSection({
         />
 
         <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
-          الموقع المرئي يساعد على اختيار الإحداثيات؛ اعتماد نطاق الخدمة يتم في DSH ولا يُنشأ محليًا.
+          تُحفظ الإحداثيات الفعلية، بينما يعتمد DSH نطاق الخدمة النهائي ولا يسمح بإدخال رمز نطاق يدوي.
         </Text>
 
         {selectedCoordinate ? (
-          <Surface
-            tone="inset"
-            style={{ padding: 8, borderRadius: radius.sm, alignItems: "flex-end" }}
-          >
+          <Surface tone="inset" style={{ padding: 8, borderRadius: radius.sm, alignItems: "flex-end" }}>
             <Text role="caption" style={{ color: colorRoles.brandAction, fontWeight: "bold" }}>
               إحداثيات الفرع: {selectedCoordinate.latitude.toFixed(6)}، {selectedCoordinate.longitude.toFixed(6)}
             </Text>
@@ -147,16 +139,9 @@ export function OnboardingLocationSection({
         {...((errors as { readonly city?: string }).city
           ? { error: (errors as { readonly city?: string }).city }
           : {})}
-        onChangeText={(city) => onChange({ city })}
+        onChangeText={(city) => onChange({ city, serviceAreaCode: "" })}
         placeholder="مثال: صنعاء"
-      />
-
-      <TextField
-        label="نطاق الخدمة"
-        value={form.serviceAreaCode ?? ""}
-        disabled={readOnly}
-        onChangeText={(serviceAreaCode) => onChange({ serviceAreaCode })}
-        placeholder="يُعتمد بعد التحقق من DSH"
+        hint="تستخدم كمرجع أولي فقط؛ نطاق الخدمة يعتمد من الإحداثيات وسياسات DSH."
       />
 
       <TextField
@@ -169,11 +154,12 @@ export function OnboardingLocationSection({
       />
 
       <TextField
-        label="ملخص التغطية الجغرافية"
+        label="ملاحظات الوصول والتغطية"
         value={form.coverageSummary ?? ""}
         disabled={readOnly}
         onChangeText={(coverageSummary) => onChange({ coverageSummary })}
-        placeholder="وصف إضافي لحدود التوصيل المتفق عليها"
+        placeholder="معلم قريب، مدخل الفرع، أو ملاحظة تساعد العمليات"
+        multiline
       />
     </View>
   );
