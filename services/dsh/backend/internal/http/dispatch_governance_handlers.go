@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
@@ -27,6 +28,15 @@ func (s *protectedStoreServer) handleCreateGovernedDispatchAssignment(w http.Res
 		ResponseTimeoutSeconds int    `json:"responseTimeoutSeconds"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, body.TenantID, body.CaptainID)
+	if err != nil {
+		writeCaptainFinancialEligibilityError(w, err)
+		return
+	}
+	if !financialEligibility.Eligible {
+		store.SendError(w, http.StatusConflict, financialEligibility.IneligibilityReason, "captain does not meet the WLT-backed dispatch balance requirement")
 		return
 	}
 	idempotencyKey := strings.TrimSpace(body.IdempotencyKey)
@@ -106,6 +116,19 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 	if !ok {
 		return
 	}
+	if strings.TrimSpace(actor.TenantID) == "" {
+		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "captain tenant context is required")
+		return
+	}
+	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, actor.TenantID, actor.ID)
+	if err != nil {
+		writeCaptainFinancialEligibilityError(w, err)
+		return
+	}
+	if !financialEligibility.Eligible {
+		store.SendError(w, http.StatusConflict, financialEligibility.IneligibilityReason, "captain does not meet the WLT-backed dispatch balance requirement")
+		return
+	}
 	assignment, err := dispatch.AcceptGovernedAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
@@ -172,6 +195,14 @@ func (s *protectedStoreServer) handleUpsertCaptainDispatchProfile(w http.Respons
 		writeGovernedDispatchError(w, err)
 		return
 	}
+	financial, financialErr := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, body.TenantID, r.PathValue("captainId"))
+	if financialErr != nil || !financial.Eligible || !financial.ExpiresAt.After(time.Now()) {
+		candidate.Eligible = false
+		candidate.IneligibilityReason = "CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED"
+		if financialErr == nil && financial.IneligibilityReason != "" {
+			candidate.IneligibilityReason = financial.IneligibilityReason
+		}
+	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"candidate": candidate})
 }
 
@@ -180,13 +211,25 @@ func (s *protectedStoreServer) handleListCaptainDispatchCandidates(w http.Respon
 	if !ok {
 		return
 	}
+	tenantID := r.URL.Query().Get("tenantId")
 	limit := parseDispatchLimit(r.URL.Query().Get("limit"), 100)
 	items, err := dispatch.ListCaptainDispatchCandidates(
-		s.db, r.URL.Query().Get("tenantId"), r.URL.Query().Get("serviceAreaCode"), limit,
+		s.db, tenantID, r.URL.Query().Get("serviceAreaCode"), limit,
 	)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
+	}
+	now := time.Now()
+	for index := range items {
+		financial, financialErr := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, tenantID, items[index].CaptainID)
+		if financialErr != nil || !financial.Eligible || !financial.ExpiresAt.After(now) {
+			items[index].Eligible = false
+			items[index].IneligibilityReason = "CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED"
+			if financialErr == nil && financial.IneligibilityReason != "" {
+				items[index].IneligibilityReason = financial.IneligibilityReason
+			}
+		}
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"candidates": items})
 }
@@ -207,6 +250,15 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 		ResponseTimeoutSeconds int    `json:"responseTimeoutSeconds"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, body.TenantID, body.CaptainID)
+	if err != nil {
+		writeCaptainFinancialEligibilityError(w, err)
+		return
+	}
+	if !financialEligibility.Eligible {
+		store.SendError(w, http.StatusConflict, financialEligibility.IneligibilityReason, "captain does not meet the WLT-backed dispatch balance requirement")
 		return
 	}
 	idempotencyKey := strings.TrimSpace(body.IdempotencyKey)
@@ -355,7 +407,7 @@ func writeGovernedDispatchError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, dispatch.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "DISPATCH_NOT_FOUND", err.Error())
-	case errors.Is(err, dispatch.ErrCaptainNotEligible):
+	case errors.Is(err, dispatch.ErrCaptainNotEligible) || strings.Contains(err.Error(), "CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED"):
 		store.SendError(w, http.StatusConflict, "CAPTAIN_NOT_ELIGIBLE", err.Error())
 	case errors.Is(err, dispatch.ErrCaptainAtCapacity):
 		store.SendError(w, http.StatusConflict, "CAPTAIN_AT_CAPACITY", err.Error())
