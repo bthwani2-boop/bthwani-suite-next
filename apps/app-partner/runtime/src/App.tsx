@@ -3,6 +3,7 @@ import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colorRoles } from "@bthwani/ui-kit";
 import { DshPartnerSurface } from "../../../../services/dsh/frontend/app-partner";
+import { PartnerFieldRatingGate } from "../../../../services/dsh/frontend/app-partner/ratings/PartnerFieldRatingGate";
 import * as SecureStore from "expo-secure-store";
 import {
   configureIdentitySession,
@@ -36,7 +37,9 @@ function AppContent() {
     <View style={[styles.root, { paddingBottom: insets.bottom }]}>
       <View style={styles.screen}>
         <IdentitySessionGate requiredRole="partner" requiredSurface="app-partner">
-          <DshPartnerSurface />
+          <PartnerFieldRatingGate>
+            <DshPartnerSurface />
+          </PartnerFieldRatingGate>
         </IdentitySessionGate>
       </View>
     </View>
