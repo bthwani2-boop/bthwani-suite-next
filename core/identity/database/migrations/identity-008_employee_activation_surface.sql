@@ -6,6 +6,13 @@ ALTER TABLE identity_activation_challenges
   DROP CONSTRAINT IF EXISTS identity_activation_challenges_actor_type_check,
   DROP CONSTRAINT IF EXISTS identity_activation_challenges_surface_check;
 
+-- Repair rows created while the employee surface was incorrectly named webapp.
+-- The code hash does not contain the surface, so preserving a still-valid pending
+-- invitation while correcting its target is safe and keeps retries idempotent.
+UPDATE identity_activation_challenges
+SET surface = 'control-panel', updated_at = now()
+WHERE actor_type = 'employee' AND surface = 'webapp';
+
 ALTER TABLE identity_activation_challenges
   ADD CONSTRAINT identity_activation_challenges_actor_type_check
     CHECK (actor_type IN ('field', 'captain', 'client', 'partner', 'operator', 'employee')),
