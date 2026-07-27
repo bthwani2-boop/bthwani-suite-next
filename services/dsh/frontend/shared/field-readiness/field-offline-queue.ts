@@ -1,8 +1,8 @@
 /**
  * Field Offline Queue
  *
- * Durable, account-scoped queue for authenticated field operations during
- * network loss. Mobile runtimes must configure an encrypted storage adapter.
+ * Durable queue scoped to the authenticated platform-workforce actor and the
+ * current app installation. Mobile runtimes must use encrypted storage.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,8 +20,8 @@ export type FieldOfflineOperationStatus =
   | "failed_permanent";
 
 export type FieldOfflineQueueScope = {
-  readonly tenantId: string;
   readonly actorId: string;
+  readonly installationId: string;
 };
 
 export type FieldOfflineQueueStorageAdapter = {
@@ -33,8 +33,8 @@ export type FieldOfflineQueueStorageAdapter = {
 export type FieldOfflineOperation<P = unknown> = {
   readonly operationId: string;
   readonly operationType: FieldOfflineOperationType;
-  readonly tenantId: string;
   readonly actorId: string;
+  readonly installationId: string;
   readonly payload: P;
   readonly idempotencyKey: string;
   readonly correlationId: string;
@@ -47,7 +47,7 @@ export type FieldOfflineOperation<P = unknown> = {
 
 const LEGACY_STORAGE_KEY = "@bthwani/field-offline-queue:v1";
 const LEGACY_CORRUPT_STORAGE_KEY = "@bthwani/field-offline-queue:corrupt:v1";
-const STORAGE_PREFIX = "bthwani.field-offline-queue.v2";
+const STORAGE_PREFIX = "bthwani.field-offline-queue.v3";
 const MAX_ATTEMPTS = 10;
 const MAX_QUEUE_OPERATIONS = 100;
 const MAX_SERIALIZED_CHARACTERS = 48_000;
@@ -76,8 +76,11 @@ function requireNonEmpty(value: string, label: string): string {
 
 function normalizeScope(scope: FieldOfflineQueueScope): FieldOfflineQueueScope {
   return {
-    tenantId: requireNonEmpty(scope.tenantId, "field offline queue tenant id"),
     actorId: requireNonEmpty(scope.actorId, "field offline queue actor id"),
+    installationId: requireNonEmpty(
+      scope.installationId,
+      "field offline queue installation id",
+    ),
   };
 }
 
@@ -87,7 +90,7 @@ function requireScope(): FieldOfflineQueueScope {
 }
 
 function scopeFingerprint(scope: FieldOfflineQueueScope): string {
-  return stableHash(`${scope.tenantId}|${scope.actorId}`);
+  return stableHash(`${scope.actorId}|${scope.installationId}`);
 }
 
 function storageKey(scope: FieldOfflineQueueScope): string {
@@ -112,10 +115,10 @@ function isOperation(value: unknown, scope: FieldOfflineQueueScope): value is Fi
   return (
     typeof candidate.operationId === "string" &&
     typeof candidate.operationType === "string" &&
-    typeof candidate.tenantId === "string" &&
-    candidate.tenantId === scope.tenantId &&
     typeof candidate.actorId === "string" &&
     candidate.actorId === scope.actorId &&
+    typeof candidate.installationId === "string" &&
+    candidate.installationId === scope.installationId &&
     typeof candidate.idempotencyKey === "string" &&
     typeof candidate.correlationId === "string" &&
     typeof candidate.createdAt === "string" &&
@@ -197,19 +200,22 @@ export async function enqueueFieldOperation<P>(
   const queue = await readQueue();
   const existing = queue.find(
     (operation) =>
-      operation.tenantId === scope.tenantId &&
       operation.actorId === scope.actorId &&
+      operation.installationId === scope.installationId &&
+      operation.operationType === operationType &&
       operation.idempotencyKey === normalizedKey,
   );
   if (existing) return existing as FieldOfflineOperation<P>;
 
-  const fingerprint = stableHash(`${scope.tenantId}|${scope.actorId}|${operationType}|${normalizedKey}`);
+  const fingerprint = stableHash(
+    `${scope.actorId}|${scope.installationId}|${operationType}|${normalizedKey}`,
+  );
   const now = new Date().toISOString();
   const operation: FieldOfflineOperation<P> = {
     operationId: `field-op:${operationType}:${fingerprint}`,
     operationType,
-    tenantId: scope.tenantId,
     actorId: scope.actorId,
+    installationId: scope.installationId,
     payload,
     idempotencyKey: normalizedKey,
     correlationId: correlationId?.trim() || `field-correlation:${operationType}:${fingerprint}`,
