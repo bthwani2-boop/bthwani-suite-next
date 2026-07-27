@@ -99,8 +99,23 @@ jobs:
         run: pnpm run guard:required-command-integrity
 
       - name: Verify workflow security preflight
+        id: workflow_security
         if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
+        continue-on-error: true
         run: node tools/scripts/run-zizmor.mjs
+
+      - name: Upload workflow security report
+        if: ${{ steps.workflow_security.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workflow-security-${{ github.run_id }}
+          path: .diagnostics/workflow-security/zizmor.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce workflow security result
+        if: ${{ steps.workflow_security.outcome == 'failure' }}
+        run: exit 1
 
       - name: Test CI source immutability guard
         if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}

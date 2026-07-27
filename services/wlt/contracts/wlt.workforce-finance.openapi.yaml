@@ -1,0 +1,100 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Workforce Finance API
+  version: 0.1.0
+  description: >-
+    Financial mutations initiated by governed Workforce and DSH operational
+    journeys. WLT remains the exclusive owner of commission and penalty truth.
+x-bthwani-owner: services/wlt
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-runtime-dependency: true
+x-bthwani-client-generation: DISABLED
+servers:
+  - url: http://localhost:58083
+paths:
+  /wlt/field-commission-category-policies/{partnerCategory}:
+    put:
+      operationId: upsertFieldCommissionCategoryPolicy
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PartnerCategory'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Category commission policy stored. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /wlt/field-commissions:
+    post:
+      operationId: createFieldCategoryCommission
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '201': { description: Field commission recorded idempotently. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/provider-penalties:
+    post:
+      operationId: createProviderPenalty
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '201': { description: Provider penalty ledger effect recorded. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /wlt/provider-penalties/{penaltyId}/reverse:
+    post:
+      operationId: reverseProviderPenalty
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PenaltyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Provider penalty reversed through a compensating ledger entry. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    PartnerCategory:
+      name: partnerCategory
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    PenaltyId:
+      name: penaltyId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+  responses:
+    BadRequest: { description: Invalid request. }
+    Unauthorized: { description: Authentication or service authorization required. }
+    Forbidden: { description: Caller lacks the required financial authority. }
+    NotFound: { description: Financial record not found. }
+    Conflict: { description: Idempotency or lifecycle conflict. }

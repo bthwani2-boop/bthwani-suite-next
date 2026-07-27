@@ -289,50 +289,32 @@ func newTestRepository(t *testing.T, rows []fakeSessionRow) *Repository {
 
 // Phase 4 unit tests -------------------------------------------------------
 
-func TestConsumeActivationClientActorTypeMapsSurface(t *testing.T) {
-	// ConsumeActivation must not reject "client" or "partner" actorType: both
-	// must derive their surface without an ErrInvalidActivation.
-	repo := &Repository{
-		activationSecret: []byte("01234567890123456789012345678901"),
-		now:              time.Now,
-	}
-	// We only test the surface-derivation branch; the rest of ConsumeActivation
-	// requires a real DB, so we just verify the lookup succeeds by checking
-	// the internal helper directly.
+func TestConsumeActivationActorTypeMapsSurface(t *testing.T) {
+	// Client remains a public consumer bootstrap and derives its surface in
+	// ConsumeActivation. Partner, field and captain are actor-bound platform
+	// access-code roles and therefore use the canonical surface registry.
 	cases := []struct {
-		role    string
-		surface string
+		role      string
+		surface   string
+		canonical bool
 	}{
-		{"client", "app-client"},
-		{"partner", "app-partner"},
-		{"field", "app-field"},
-		{"captain", "app-captain"},
+		{"client", "app-client", false},
+		{"partner", "app-partner", true},
+		{"field", "app-field", true},
+		{"captain", "app-captain", true},
 	}
 	for _, tc := range cases {
-		canonical, ok := activationSurfaceFor(tc.role)
-		if tc.role == "client" || tc.role == "partner" {
-			// activationSurfaceByActorType deliberately excludes client/partner;
-			// the fallback in ConsumeActivation handles them.
-			if ok {
-				t.Errorf("role %q: expected not found in canonical map", tc.role)
-			}
-			var derived string
-			switch tc.role {
-			case "client":
-				derived = "app-client"
-			case "partner":
-				derived = "app-partner"
-			}
-			if derived != tc.surface {
-				t.Errorf("role %q: expected surface %q, got %q", tc.role, tc.surface, derived)
+		surface, ok := activationSurfaceFor(tc.role)
+		if tc.canonical {
+			if !ok || surface != tc.surface {
+				t.Errorf("role %q: expected canonical surface %q, got %q (ok=%v)", tc.role, tc.surface, surface, ok)
 			}
 			continue
 		}
-		if !ok || canonical != tc.surface {
-			t.Errorf("role %q: expected surface %q, got %q (ok=%v)", tc.role, tc.surface, canonical, ok)
+		if ok {
+			t.Errorf("role %q: expected public fallback rather than canonical mapping", tc.role)
 		}
 	}
-	_ = repo
 }
 
 func TestNormalizePhoneE164RejectsShortNumbers(t *testing.T) {

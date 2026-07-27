@@ -114,21 +114,26 @@ export function SovereignLeadershipPanel() {
     setSubmitError(null);
     setCreated(null);
     try {
+      const trimmedJobGrade = jobGrade.trim();
+      const trimmedOfficeLocation = officeLocation.trim();
+      const trimmedStartsOn = assignmentStartsOn.trim();
+      const trimmedEndsOn = assignmentEndsOn.trim();
+      const trimmedNotes = notes.trim();
       const result = await createSovereignLeader({
         fullNameAr: fullNameAr.trim(),
         phoneE164: phoneE164.trim(),
         department: department.trim(),
         positionTitle: positionTitle.trim(),
-        jobGrade: jobGrade.trim() || undefined,
         employmentClass,
         permissionBundle,
-        officeLocation: officeLocation.trim() || undefined,
-        assignmentStartsOn: assignmentStartsOn.trim() || undefined,
-        assignmentEndsOn: assignmentEndsOn.trim() || undefined,
         guaranteeType: "none",
         guaranteeStatus: "not_required",
         responsibilityScopes: [department.trim()],
-        notes: notes.trim() || undefined,
+        ...(trimmedJobGrade ? { jobGrade: trimmedJobGrade } : {}),
+        ...(trimmedOfficeLocation ? { officeLocation: trimmedOfficeLocation } : {}),
+        ...(trimmedStartsOn ? { assignmentStartsOn: trimmedStartsOn } : {}),
+        ...(trimmedEndsOn ? { assignmentEndsOn: trimmedEndsOn } : {}),
+        ...(trimmedNotes ? { notes: trimmedNotes } : {}),
       });
       setCreated(result);
       setFullNameAr("");

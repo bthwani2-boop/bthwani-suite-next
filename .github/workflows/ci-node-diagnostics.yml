@@ -42,7 +42,10 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Verify immutable diff
-        run: git diff --check "${{ inputs.base_sha }}" "${{ inputs.head_sha }}"
+        env:
+          BASE_SHA: ${{ inputs.base_sha }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: git diff --check "${BASE_SHA}" "${HEAD_SHA}"
       - name: Verify affected frontend diagnostics
         if: ${{ inputs.frontend == 'true' }}
         run: |
@@ -51,16 +54,42 @@ jobs:
           pnpm run guard:dependency-graph
           pnpm run guard:ast-grep-rules
       - name: Verify affected contracts and bindings
+        id: contract_diagnostics
         if: ${{ inputs.contracts == 'true' }}
+        continue-on-error: true
+        shell: bash
         run: |
-          pnpm run guard:no-broken-imports
-          pnpm --dir contracts typecheck
-          pnpm run guard:api-binding
-          pnpm run guard:backend-api-binding
-          pnpm run guard:service-manifest-drift
-          pnpm run guard:frontend-feature-binding
-          pnpm run guard:runtime-real-bindings
-          pnpm run guard:live-cross-journey-integrity
+          set +e
+          log="${RUNNER_TEMP}/contract-diagnostics.log"
+          : >"${log}"
+          status=0
+          run_check() {
+            echo "===== $* =====" | tee -a "${log}"
+            "$@" 2>&1 | tee -a "${log}"
+            code=${PIPESTATUS[0]}
+            if [[ "${code}" -ne 0 ]]; then status="${code}"; fi
+          }
+          run_check pnpm run guard:no-broken-imports
+          run_check pnpm --dir contracts typecheck
+          run_check pnpm run guard:api-binding
+          run_check pnpm run guard:backend-api-binding
+          run_check pnpm run guard:service-manifest-drift
+          run_check pnpm run guard:frontend-feature-binding
+          run_check pnpm run guard:runtime-real-bindings
+          run_check pnpm run guard:live-cross-journey-integrity
+          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
+          exit "${status}"
+      - name: Upload contract diagnostics
+        if: ${{ steps.contract_diagnostics.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: contract-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/contract-diagnostics.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce contract diagnostics result
+        if: ${{ steps.contract_diagnostics.outcome == 'failure' }}
+        run: exit 1
       - name: Run deep repository diagnostics
         if: ${{ inputs.full_verification == 'true' || inputs.verification_tier == 'deep' }}
         run: |

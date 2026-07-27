@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,7 +31,7 @@ func (f *fakeTenantOtpRepository) RequestOtpForTenant(
 	return f.result, f.err
 }
 
-func TestSaaSOtpBoundaryUsesTrustedRuntimeTenant(t *testing.T) {
+func TestSaaSOtpBoundaryUsesTrustedRuntimeTenantForClient(t *testing.T) {
 	configureIdentityActiveSaaS(t)
 	repository := &fakeTenantOtpRepository{
 		result: identity.IssueActivationResult{ActivationID: "activation-1", Code: "123456"},
@@ -49,7 +50,7 @@ func TestSaaSOtpBoundaryUsesTrustedRuntimeTenant(t *testing.T) {
 	handler.ServeHTTP(response, request)
 
 	if nextCalled {
-		t.Fatal("active SaaS OTP request fell through to legacy handler")
+		t.Fatal("active SaaS client OTP request fell through to legacy handler")
 	}
 	if repository.calls != 1 || repository.tenantID != "tenant-main" {
 		t.Fatalf("unexpected repository call count=%d tenant=%q", repository.calls, repository.tenantID)
@@ -62,13 +63,37 @@ func TestSaaSOtpBoundaryUsesTrustedRuntimeTenant(t *testing.T) {
 	}
 }
 
-func TestSaaSOtpBoundaryRejectsCrossTenantPhone(t *testing.T) {
+func TestSaaSOtpBoundaryRejectsProviderSelfServiceIssuance(t *testing.T) {
+	configureIdentityActiveSaaS(t)
+	repository := &fakeTenantOtpRepository{}
+	for _, actorType := range []string{"partner", "captain", "field", "employee"} {
+		t.Run(actorType, func(t *testing.T) {
+			request := httptest.NewRequest(
+				http.MethodPost,
+				"/auth/otp/request",
+				strings.NewReader(`{"phone":"+967770000001","actorType":"`+actorType+`"}`),
+			)
+			response := httptest.NewRecorder()
+
+			SaaSOtpBoundary(repository, http.NotFoundHandler()).ServeHTTP(response, request)
+
+			if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "PLATFORM_ACCESS_CODE_REQUIRED") {
+				t.Fatalf("expected PLATFORM_ACCESS_CODE_REQUIRED, got status=%d body=%s", response.Code, response.Body.String())
+			}
+		})
+	}
+	if repository.calls != 0 {
+		t.Fatalf("provider self-service requests must not reach repository; calls=%d", repository.calls)
+	}
+}
+
+func TestSaaSOtpBoundaryRejectsCrossTenantClientPhone(t *testing.T) {
 	configureIdentityActiveSaaS(t)
 	repository := &fakeTenantOtpRepository{err: identity.ErrTenantMismatch}
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/auth/otp/request",
-		strings.NewReader(`{"phone":"+967770000001","actorType":"partner"}`),
+		strings.NewReader(`{"phone":"+967770000001","actorType":"client"}`),
 	)
 	response := httptest.NewRecorder()
 
@@ -96,21 +121,37 @@ func TestSaaSOtpBoundaryPreservesRateLimitError(t *testing.T) {
 	}
 }
 
-func TestSaaSOtpBoundaryPassesThroughWhenDeferred(t *testing.T) {
+func TestSaaSOtpBoundaryPassesClientThroughWhenDeferredAndPreservesBody(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
 	repository := &fakeTenantOtpRepository{}
 	nextCalled := false
-	handler := SaaSOtpBoundary(repository, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	var downstreamBody string
+	handler := SaaSOtpBoundary(repository, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		nextCalled = true
+		body, _ := io.ReadAll(r.Body)
+		downstreamBody = string(body)
 		w.WriteHeader(http.StatusNoContent)
 	}))
-	request := httptest.NewRequest(http.MethodPost, "/auth/otp/request", strings.NewReader(`{}`))
+	payload := `{"phone":"+967770000001","actorType":"client"}`
+	request := httptest.NewRequest(http.MethodPost, "/auth/otp/request", strings.NewReader(payload))
 	response := httptest.NewRecorder()
 
 	handler.ServeHTTP(response, request)
 
 	if !nextCalled || repository.calls != 0 || response.Code != http.StatusNoContent {
 		t.Fatalf("expected deferred passthrough called=%v calls=%d status=%d", nextCalled, repository.calls, response.Code)
+	}
+	if downstreamBody != payload {
+		t.Fatalf("request body changed during passthrough: got %q want %q", downstreamBody, payload)
+	}
+}
+
+func TestSaaSOtpBoundaryRejectsInvalidBody(t *testing.T) {
+	request := httptest.NewRequest(http.MethodPost, "/auth/otp/request", strings.NewReader(`{"actorType":`))
+	response := httptest.NewRecorder()
+	SaaSOtpBoundary(&fakeTenantOtpRepository{}, http.NotFoundHandler()).ServeHTTP(response, request)
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "INVALID_REQUEST") {
+		t.Fatalf("expected INVALID_REQUEST, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 

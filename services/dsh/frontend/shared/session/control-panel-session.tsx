@@ -12,6 +12,7 @@ import {
 } from "react";
 import type { ActorIdentity } from "@bthwani/core-identity";
 import {
+  activateControlPanelSession,
   fetchControlPanelSession,
   loginControlPanelSession,
   logoutControlPanelSession,
@@ -26,6 +27,7 @@ export type ControlPanelSessionState =
 
 export type ControlPanelSession = {
   readonly state: ControlPanelSessionState;
+  activate(phone: string, code: string): Promise<boolean>;
   login(username: string, password: string): Promise<boolean>;
   logout(): Promise<void>;
 };
@@ -59,6 +61,18 @@ export function ControlPanelSessionProvider({ children }: { readonly children: R
     };
   }, []);
 
+  const activate = useCallback(async (phone: string, code: string): Promise<boolean> => {
+    setState({ kind: "authenticating" });
+    const result = await activateControlPanelSession(phone, code);
+    if (!mounted.current) return false;
+    if (result.ok && result.body) {
+      setState({ kind: "authenticated", identity: result.body.identity });
+      return true;
+    }
+    setState({ kind: "error", code: result.body?.code ?? "ACCESS_CODE_FAILED" });
+    return false;
+  }, []);
+
   const login = useCallback(async (username: string, password: string): Promise<boolean> => {
     setState({ kind: "authenticating" });
     const result = await loginControlPanelSession(username, password);
@@ -77,8 +91,8 @@ export function ControlPanelSessionProvider({ children }: { readonly children: R
   }, []);
 
   const value = useMemo<ControlPanelSession>(
-    () => ({ state, login, logout }),
-    [state, login, logout],
+    () => ({ state, activate, login, logout }),
+    [state, activate, login, logout],
   );
 
   return (

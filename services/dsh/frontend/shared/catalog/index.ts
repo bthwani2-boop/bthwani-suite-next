@@ -15,9 +15,41 @@ export * from "./central-catalog-occ.api";
 export * from "./product-proposal-readback.api";
 export * from "./catalog-governance.types";
 export * from "./catalog-governance.api";
+export * from "./catalog-mobile-file-picker";
 export * from "./reels.types";
-export * from "./reels.api";
-export * from "./catalog-media.controller-core";
+export {
+  submitGovernedReel,
+  fetchPartnerReels,
+  fetchOperatorReels,
+  reviewGovernedReel,
+  fetchOperatorReelMediaBlob,
+  fetchGovernedPublicReels,
+} from "./reels.api";
+export {
+  ALLOWED_IMAGE_MIME_TYPES,
+  ALLOWED_VIDEO_MIME_TYPES,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_VIDEO_SIZE_BYTES,
+  toUploadFileSource,
+  isAllowedImageMime,
+  isAllowedVideoMime,
+  validateImageFile,
+  validateVideoFile,
+  uploadAndLinkImage,
+  uploadAndSubmitReel,
+  reviewReelAsOperator,
+  fetchPublicReels as fetchCatalogMediaPublicReels,
+  fetchOperatorReels as fetchCatalogMediaOperatorReels,
+} from "./catalog-media.controller-core";
+export type {
+  AssetUploadProgress,
+  AllowedImageMime,
+  AllowedVideoMime,
+  UploadFileSource,
+  UploadImageOptions,
+  UploadReelVideoOptions,
+  GovernedReviewReelInput,
+} from "./catalog-media.controller-core";
 export {
   updateCatalogAssetOCC as updateCatalogAsset,
 } from "./central-catalog-occ.api";
