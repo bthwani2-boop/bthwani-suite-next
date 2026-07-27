@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import {
+  CpButton,
   CpDescriptionList,
   CpDescriptionRow,
   CpDetailError,
@@ -69,9 +70,9 @@ function StoreImageUploadForm({ storeId }: { readonly storeId: string }) {
           ))}
         </select>
         <input ref={fileInputRef} type="file" accept="image/*" aria-label="اختيار ملف صورة المتجر" />
-        <button type="button" onClick={() => void handleUpload()} disabled={uploading}>
+        <CpButton onClick={() => void handleUpload()} disabled={uploading}>
           {uploading ? "جارٍ الرفع…" : "رفع وربط"}
-        </button>
+        </CpButton>
       </div>
     </CpDescriptionRow>
   );

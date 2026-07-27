@@ -1,15 +1,7 @@
 "use client";
 
-import {
-  PlatformDashboardScreen,
-  PlatformGovernanceVisual,
-} from "@dsh-cp/platform";
+import { PlatformDashboardScreen } from "@dsh-cp/platform";
 
 export default function PlatformPage() {
-  return (
-    <>
-      <PlatformGovernanceVisual />
-      <PlatformDashboardScreen />
-    </>
-  );
+  return <PlatformDashboardScreen />;
 }

@@ -12,6 +12,7 @@ import {
   CpPageHeader,
   CpSearchInput,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -127,7 +128,7 @@ export function ProviderListView(props: {
   };
 
   const stateView = loading ? (
-    <CpStatePanel role="status" title="جارٍ تحميل سجل Workforce…" />
+    <CpStateView kind="loading" title="جارٍ تحميل سجل Workforce…" />
   ) : errorState?.kind === "error" ? (
     <WorkforceErrorState message={errorState.message} isSessionExpired={errorState.isSessionExpired} onRetry={reload} />
   ) : combined.length === 0 ? (

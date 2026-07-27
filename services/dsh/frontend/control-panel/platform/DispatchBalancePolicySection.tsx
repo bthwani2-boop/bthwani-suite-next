@@ -8,6 +8,7 @@ import {
   CpButton,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import {
@@ -117,7 +118,7 @@ export function DispatchBalancePolicySection() {
         قسم المنصة يحدد الحد التشغيلي فقط. WLT يملك الرصيد والدفتر، ويجدد DSH لقطة قصيرة قبل عرض الطلب أو قبوله.
       </Text>
 
-      {loading ? <CpStatePanel role="status" title="جارٍ تحميل سياسة الأهلية…" /> : null}
+      {loading ? <CpStateView kind="loading" title="جارٍ تحميل سياسة الأهلية…" /> : null}
       {!loading && !form ? (
         <CpStatePanel role="alert" title="تعذر تحميل سياسة الأهلية" description={error ?? "لا توجد بيانات"}>
           <CpRetryButton onClick={load}>إعادة المحاولة</CpRetryButton>

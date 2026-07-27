@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
+import { CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
 
@@ -63,7 +63,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
 
   if (controller.state.kind === "loading") {
     return (
-      <DetailPageFrame stateView={<CpStatePanel role="status" title="جارٍ تحميل ملف الكابتن…" />}>
+      <DetailPageFrame stateView={<CpStateView kind="loading" title="جارٍ تحميل ملف الكابتن…" />}>
         <div />
       </DetailPageFrame>
     );
@@ -185,7 +185,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
 
           <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف</Text>
           <SupervisorPicker kind="captain" selected={supervisor} onSelect={setSupervisor} />
-          {controller.actionError ? <CpStatePanel role="alert" title={controller.actionError} /> : null}
+          {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
 
           <CpButton
             variant="primary"
@@ -214,7 +214,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
           <Text role="bodySm">الصورة: {captain.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
           <Text role="bodySm">الوثائق: {documentCount}</Text>
           <Text role="bodySm">حالة الرخصة: {LICENSE_LABEL[profile?.licenseStatus ?? "missing"]}</Text>
-          {uploadError ? <CpStatePanel role="alert" title={uploadError} /> : null}
+          {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>
               {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
+import { CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
 
@@ -9,8 +9,7 @@ import {
   ENGAGEMENT_STATUS_LABEL_AR,
   appendProviderDocument,
   useFieldAgentDetailController,
-  type SupervisorCandidate,
-} from "../../shared/workforce";
+  type SupervisorCandidate } from "../../shared/workforce";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
@@ -44,7 +43,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
 
   if (controller.state.kind === "loading") {
     return (
-      <DetailPageFrame stateView={<CpStatePanel role="status" title="جارٍ تحميل ملف الميداني…" />}>
+      <DetailPageFrame stateView={<CpStateView kind="loading" title="جارٍ تحميل ملف الميداني…" />}>
         <div />
       </DetailPageFrame>
     );
@@ -85,8 +84,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
         const mediaRef = await uploadProviderMedia(agent.actorId, "field", {
           uri: objectUrl,
           name: file.name,
-          mimeType: file.type || "application/octet-stream",
-        });
+          mimeType: file.type || "application/octet-stream" });
         if (purpose === "photo") {
           await controller.update({ expectedVersion: agent.version, photoMediaRef: mediaRef });
         } else {
@@ -137,7 +135,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
 
           <Text role="bodySm" style={{ fontWeight: "bold" }}>مسؤول المتابعة</Text>
           <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} />
-          {controller.actionError ? <CpStatePanel role="alert" title={controller.actionError} /> : null}
+          {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
 
           <CpButton
             variant="primary"
@@ -149,8 +147,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
                 fullNameEn: fullNameEn.trim() || undefined,
                 engagementStartDate: engagementStartDate.trim() || undefined,
                 serviceZoneId: zoneId,
-                supervisorActorId: supervisor?.actorId,
-              })
+                supervisorActorId: supervisor?.actorId })
             }
           >
             {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ الملف التشغيلي"}
@@ -161,7 +158,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
           <Text role="titleSm">الصورة والوثائق</Text>
           <Text role="bodySm">الصورة: {agent.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
           <Text role="bodySm">الوثائق: {profile?.documentMediaRefs.length ?? 0}</Text>
-          {uploadError ? <CpStatePanel role="alert" title={uploadError} /> : null}
+          {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>
               {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}

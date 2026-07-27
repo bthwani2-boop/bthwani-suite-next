@@ -31,21 +31,23 @@ export function MarketingDashboardScreen() {
       header={
         <CpPageHeader title="تسويق DSH">
           <CpMutedInline tight>إدارة المحتوى والحملات والعروض والكوبونات والبرامج التجارية المرتبطة بعقود DSH وWLT الفعلية</CpMutedInline>
-          <CpKpiStrip>
-            <CpKpiCard label="متاجر نشطة" value={metrics.activeStoresRatio} />
-            <CpKpiCard label="طلبات مكتملة" value={metrics.deliveredOrders.toLocaleString("ar")} />
-            <CpKpiCard label="تذاكر مفتوحة" value={metrics.openTickets.toLocaleString("ar")} />
-            <CpKpiCard label="تصعيدات مفتوحة" value={metrics.openEscalations.toLocaleString("ar")} />
-          </CpKpiStrip>
         </CpPageHeader>
       }
+      toolbar={
+        <CpTabs
+          items={MARKETING_MAIN_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
+          value={mainTab}
+          onChange={(value) => setMainTab(value as MarketingMainTabId)}
+          aria-label="أقسام التسويق"
+        />
+      }
     >
-      <CpTabs
-        items={MARKETING_MAIN_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
-        value={mainTab}
-        onChange={(value) => setMainTab(value as MarketingMainTabId)}
-        aria-label="أقسام التسويق"
-      />
+      <CpKpiStrip>
+        <CpKpiCard label="متاجر نشطة" value={metrics.activeStoresRatio} />
+        <CpKpiCard label="طلبات مكتملة" value={metrics.deliveredOrders.toLocaleString("ar")} />
+        <CpKpiCard label="تذاكر مفتوحة" value={metrics.openTickets.toLocaleString("ar")} />
+        <CpKpiCard label="تصعيدات مفتوحة" value={metrics.openEscalations.toLocaleString("ar")} />
+      </CpKpiStrip>
 
       {mainTab === "visibility-gates" ? <VisibilityGatesSection metrics={metrics} reloadMetrics={reloadMetrics} deliverySignals={deliverySignals} /> : null}
       {mainTab === "banners-carousel" ? <MarketingHomeDiscoveryPanel kind="banners" /> : null}

@@ -5,12 +5,13 @@ import { colorRoles } from "@bthwani/ui-kit";
 import {
   CpButton,
   CpRetryButton,
+  CpSelect,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
   CpTextInput,
-  CpSelect,
 } from "@bthwani/control-panel/components";
 import {
   findDeliveryPricing,
@@ -82,7 +83,7 @@ export function OperatorDeliveryPricingPanel({ storeId }: OperatorDeliveryPricin
   };
 
   if (controller.state.kind === "loading") {
-    return <CpStatePanel role="status" title="جاري تحميل سياسات تسعير التوصيل…" />;
+    return <CpStateView kind="loading" title="جاري تحميل سياسات تسعير التوصيل…" />;
   }
   if (controller.state.kind === "error") {
     return (

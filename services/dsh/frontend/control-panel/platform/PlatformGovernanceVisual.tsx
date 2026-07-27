@@ -9,6 +9,7 @@ import {
   CpKpiCard,
   CpKpiStrip,
   CpStatePanel,
+  CpStateView,
 } from "@bthwani/control-panel/components";
 import {
   usePlatformChangeWorkflowController,
@@ -90,7 +91,7 @@ export function PlatformGovernanceVisual() {
           code="PLATFORM_PERMISSION_REQUIRED"
         />
       ) : workflow.state.kind === "loading" || workflow.state.kind === "idle" ? (
-        <CpStatePanel role="status" title="جاري تحميل دورة التغيير الحية…" />
+        <CpStateView kind="loading" title="جاري تحميل دورة التغيير الحية…" />
       ) : workflow.state.kind === "error" ? (
         <CpStatePanel
           role="alert"

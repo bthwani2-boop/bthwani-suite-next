@@ -11,6 +11,7 @@ import { DshFieldStoreVerificationScreen } from '../stores/DshFieldStoreVerifica
 import { DshFieldPartnerProgressScreen } from '../stores/DshFieldPartnerProgressScreen';
 import { DshFieldProfileHomeScreen } from '../account/DshFieldProfileHomeScreen';
 import { DshFieldProfileScreen } from '../account/DshFieldProfileScreen';
+import { DshFieldProfileCompletionScreen } from '../account/DshFieldProfileCompletionScreen';
 import { DshFieldStoresHistoryScreen } from '../stores/DshFieldStoresHistoryScreen';
 import { DshFieldFinanceScreen } from '../finance/DshFieldFinanceScreen';
 import { DshFieldCatalogOperationsScreen } from './DshFieldCatalogOperationsScreen';
@@ -105,6 +106,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
       <DshFieldProfileHomeScreen
         onBack={actions.popRoute}
         onOpenProfile={() => actions.pushRoute({ kind: 'profile' })}
+        onOpenProfileCompletion={() => actions.pushRoute({ kind: 'profile-completion' })}
         onOpenHistory={() => actions.pushRoute({ kind: 'history' })}
         onOpenFinance={() => actions.pushRoute({ kind: 'finance' })}
         onOpenVerification={() => actions.pushRoute({ kind: 'work-queue' })}
@@ -115,6 +117,20 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
 
   if (route.kind === 'profile') {
     return <DshFieldProfileScreen onBack={actions.popRoute} />;
+  }
+
+  if (route.kind === 'profile-completion') {
+    const handleLogout = async () => {
+      await identity.logout();
+      onboardingController.reset();
+      actions.resetToStores();
+    };
+    return (
+      <DshFieldProfileCompletionScreen
+        onBack={actions.popRoute}
+        onLogout={() => void handleLogout()}
+      />
+    );
   }
 
   if (route.kind === 'history') {

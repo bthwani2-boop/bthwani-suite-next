@@ -2,6 +2,7 @@
 
 import { colorRoles } from "@bthwani/ui-kit";
 import type { CSSProperties } from "react";
+import { CpRetryButton } from "@bthwani/control-panel/components";
 import {
   GOVERNANCE_BRIDGES,
   type DeliverySignalCardViewModel,
@@ -19,26 +20,6 @@ type VisibilityGatesSectionProps = {
   readonly reloadMetrics: () => Promise<void>;
   readonly deliverySignals: DeliverySignalsController;
 };
-
-function RetryButton({ onClick }: { readonly onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        border: `1px solid ${colorRoles.borderSubtle}`,
-        borderRadius: "0.5rem",
-        background: colorRoles.surfaceBase,
-        color: colorRoles.brandAction,
-        padding: "0.45rem 0.8rem",
-        cursor: "pointer",
-        fontWeight: 700,
-      }}
-    >
-      إعادة المحاولة
-    </button>
-  );
-}
 
 export function VisibilityGatesSection({
   metrics,
@@ -66,7 +47,7 @@ export function VisibilityGatesSection({
         <section role="alert" style={styles.card}>
           <h3 style={styles.title}>تعذر تحميل الملخص التشغيلي</h3>
           <p style={styles.description}>{metrics.disclosureReason ?? "تعذر تحميل مؤشرات DSH."}</p>
-          <RetryButton onClick={() => void reloadMetrics()} />
+          <CpRetryButton onClick={() => void reloadMetrics()}>إعادة المحاولة</CpRetryButton>
         </section>
       ) : null}
 
@@ -78,7 +59,7 @@ export function VisibilityGatesSection({
               بيانات فعلية من تحليلات الدعم. وجود تذاكر لا يمنح أو يسحب الظهور تلقائيًا، لكنه يحدد الحالات التي تحتاج مراجعة تشغيلية.
             </p>
           </div>
-          <RetryButton onClick={() => void deliverySignals.reload()} />
+          <CpRetryButton onClick={() => void deliverySignals.reload()}>إعادة المحاولة</CpRetryButton>
         </div>
 
         {deliverySignals.errorMessage ? (

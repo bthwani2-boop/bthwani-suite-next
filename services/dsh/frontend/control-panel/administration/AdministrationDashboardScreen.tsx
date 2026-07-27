@@ -11,6 +11,7 @@ import {
   CpMutedInline,
   CpPageHeader,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -23,8 +24,6 @@ import {
   administrationStatusLabel,
   useAdministrationRolesController,
   useStaffController,
-  usePartnerActivationReadController,
-  useCaptainCredentialController,
   useAdminAuditController,
   type AdminMainTabId,
   type DshAdminState,
@@ -38,7 +37,7 @@ function count(state: CountableState): number {
 
 function statePanel(state: CountableState, loadingTitle: string) {
   if (state.kind === "loading") return <CpStatePanel role="status" title={loadingTitle} />;
-  if (state.kind === "error") return <CpStatePanel role="alert" title={state.message} />;
+  if (state.kind === "error") return <CpStateView kind="error" title={state.message} />;
   return null;
 }
 
@@ -68,30 +67,13 @@ export function AdministrationDashboardScreen() {
   const [tab, setTab] = useState<AdminMainTabId>("overview");
   const roles = useAdministrationRolesController("authenticated");
   const staff = useStaffController("authenticated");
-  const partners = usePartnerActivationReadController("authenticated");
-  const captains = useCaptainCredentialController("authenticated");
   const audit = useAdminAuditController("authenticated");
-
-  const openPartnerOwner = (partnerId?: string) => {
-    router.push(partnerId ? `/dsh/partners/${encodeURIComponent(partnerId)}` : "/dsh/partners");
-  };
-
-  const openCaptainOwner = (captainId?: string) => {
-    const params = new URLSearchParams({
-      view: captainId ? "detail" : "create",
-      kind: "captain",
-    });
-    if (captainId) params.set("actorId", captainId);
-    router.push(`/dsh/hr?${params.toString()}`);
-  };
 
   const renderOverview = () => (
     <>
       <CpKpiStrip>
         <CpKpiCard label="الأدوار المعرّفة" value={count(roles.state)} />
         <CpKpiCard label="إسنادات الأدوار المعتمدة" value={count(staff.state)} />
-        <CpKpiCard label="إسقاطات الشركاء" value={count(partners.state)} />
-        <CpKpiCard label="اعتمادات الكباتن" value={count(captains.state)} />
       </CpKpiStrip>
       <CpStatePanel
         role="status"
@@ -102,8 +84,6 @@ export function AdministrationDashboardScreen() {
         <h2>حالة القراءة التشغيلية</h2>
         {statePanel(roles.state, "جارٍ تحميل الأدوار…")}
         {statePanel(staff.state, "جارٍ تحميل إسنادات الأدوار…")}
-        {statePanel(partners.state, "جارٍ تحميل إسقاطات الشركاء…")}
-        {statePanel(captains.state, "جارٍ تحميل اعتمادات الكباتن…")}
         {statePanel(audit.state, "جارٍ تحميل سجل التدقيق…")}
         {roles.state.kind === "success" && staff.state.kind === "success" && audit.state.kind === "success" ? (
           <CpStatePanel role="status" title="تم تحميل الحقيقة الإدارية من DSH." />
@@ -175,80 +155,6 @@ export function AdministrationDashboardScreen() {
                   <CpTableCell>{member.roleName}</CpTableCell>
                   <CpTableCell>{member.assignedBy || "—"}</CpTableCell>
                   <CpTableCell>{member.assignedAt}</CpTableCell>
-                </tr>
-              ))}
-            </tbody>
-          </CpTable>
-        ) : null}
-      </section>
-
-      <section aria-label="تفعيل الشركاء أو حظرهم">
-        <h2>تفعيل الشركاء أو حظرهم</h2>
-        <CpMutedInline tight>التنفيذ يتم داخل مالك دورة حياة الشريك مع بوابات الجاهزية والنسخة والسبب.</CpMutedInline>
-        <div>
-          <CpButton onClick={() => openPartnerOwner()}>فتح طابور الشركاء</CpButton>
-        </div>
-        {statePanel(partners.state, "جارٍ تحميل الشركاء…")}
-        {partners.state.kind === "success" && partners.state.data.length === 0 ? (
-          <CpStatePanel role="status" title="لا توجد إسقاطات شركاء متاحة حاليًا." />
-        ) : null}
-        {partners.state.kind === "success" && partners.state.data.length > 0 ? (
-          <CpTable aria-label="إسقاطات الشركاء">
-            <thead>
-              <tr>
-                <CpTableHeaderCell>الشريك</CpTableHeaderCell>
-                <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-                <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
-              </tr>
-            </thead>
-            <tbody>
-              {partners.state.data.map((item) => (
-                <tr key={item.id}>
-                  <CpTableCell>{item.partnerId}</CpTableCell>
-                  <CpTableCell>
-                    <CpBadge tone={statusTone(item.status)}>{administrationStatusLabel(item.status)}</CpBadge>
-                  </CpTableCell>
-                  <CpTableCell>
-                    <CpButton onClick={() => openPartnerOwner(item.partnerId)}>فتح التفعيل/الحظر</CpButton>
-                  </CpTableCell>
-                </tr>
-              ))}
-            </tbody>
-          </CpTable>
-        ) : null}
-      </section>
-
-      <section aria-label="بيانات اعتماد الكابتن">
-        <h2>بيانات اعتماد الكابتن</h2>
-        <CpMutedInline tight>الإنشاء والتحديث ورفع الوثائق واعتماد الرخصة يتم في Workforce، لا في إسقاط DSH.</CpMutedInline>
-        <div>
-          <CpButton onClick={() => openCaptainOwner()}>إنشاء ملف كابتن</CpButton>
-        </div>
-        {statePanel(captains.state, "جارٍ تحميل الكباتن…")}
-        {captains.state.kind === "success" && captains.state.data.length === 0 ? (
-          <CpStatePanel role="status" title="لا توجد إسقاطات اعتماد كباتن متاحة حاليًا." />
-        ) : null}
-        {captains.state.kind === "success" && captains.state.data.length > 0 ? (
-          <CpTable aria-label="إسقاطات اعتماد الكباتن">
-            <thead>
-              <tr>
-                <CpTableHeaderCell>الكابتن</CpTableHeaderCell>
-                <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-                <CpTableHeaderCell>المركبة</CpTableHeaderCell>
-                <CpTableHeaderCell>الإجراء</CpTableHeaderCell>
-              </tr>
-            </thead>
-            <tbody>
-              {captains.state.data.map((item) => (
-                <tr key={item.id}>
-                  <CpTableCell>{item.captainId}</CpTableCell>
-                  <CpTableCell>
-                    <CpBadge tone={statusTone(item.status)}>{administrationStatusLabel(item.status)}</CpBadge>
-                  </CpTableCell>
-                  <CpTableCell>{item.vehicleType || "بلا مركبة"}</CpTableCell>
-                  <CpTableCell>
-                    <CpButton onClick={() => openCaptainOwner(item.captainId)}>فتح ملف الاعتماد</CpButton>
-                  </CpTableCell>
                 </tr>
               ))}
             </tbody>

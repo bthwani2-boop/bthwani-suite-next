@@ -16,6 +16,7 @@ import {
   CpSearchInput,
   CpSelect,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -417,6 +418,10 @@ export function CatalogDashboardScreen() {
             الإدارة السيادية للفئات الرئيسية، الفئات الفرعية، التصنيفات، المنتجات المركزية، والسياسات.
           </CpMutedInline>
 
+          <CpButton variant="secondary" onClick={() => router.push("/dsh/catalogs/governance")}>
+            غرفة الخصائص والبدائل والتدقيق
+          </CpButton>
+
           <CpKpiStrip>
             <CpKpiCard label="الفئات الرئيسية L1" value={domainsCount} />
             <CpKpiCard label="التصنيفات L2-L4" value={nodesCount} />
@@ -427,7 +432,7 @@ export function CatalogDashboardScreen() {
       }
       stateView={
         controller.state.domains.loading ? (
-          <CpStatePanel role="status" title="جاري تحميل الكتالوج المركزي..." />
+          <CpStateView kind="loading" title="جاري تحميل الكتالوج المركزي..." />
         ) : null
       }
     >
@@ -456,7 +461,7 @@ export function CatalogDashboardScreen() {
           <CpStatePanel
             role="alert"
             title="بذور الكتالوج المركزي غير مطبقة بالكامل في هذه البيئة"
-            description={`العناصر المفقودة: ${seedStatus.missingSeeds.join(", ")}. يرجى تشغيل برنامج التهيئة apply-central-catalog-seed.ps1 لتثبيتها.`}
+            description={`العناصر المفقودة: ${seedStatus.missingSeeds.join(", ")}. هذه بيئة غير مكتملة التهيئة — يرجى التواصل مع فريق المنصة لإتمام تهيئة الكتالوج المركزي قبل الاعتماد عليها.`}
           />
         </div>
       )}
@@ -500,7 +505,7 @@ export function CatalogDashboardScreen() {
                 <li>إجمالي الفئات الرئيسية: <strong>{domainsCount}</strong></li>
                 <li>إجمالي التصنيفات الفرعية: <strong>{nodesCount}</strong></li>
                 <li>إجمالي المنتجات المركزية L5: <strong>{masterCount}</strong></li>
-                <li>بذور الكتالوج (Seed Status): <strong>{seedStatus && seedStatus.missingSeeds.length === 0 ? "مكتملة" : "غير مكتملة"}</strong></li>
+                <li>حالة بذور الكتالوج: <strong>{seedStatus && seedStatus.missingSeeds.length === 0 ? "مكتملة" : "غير مكتملة"}</strong></li>
                 <li>منتجات البذور المعتمدة: <strong>{seedStatus?.masterProductsCount ?? 0}</strong></li>
                 <li>تشكيلات ظاهرة للعميل: <strong>{seedStatus?.assortmentsCount ?? 0}</strong></li>
                 <li>نسخة البذور: <strong>{seedStatus?.seedVersion || "مجهولة"}</strong></li>

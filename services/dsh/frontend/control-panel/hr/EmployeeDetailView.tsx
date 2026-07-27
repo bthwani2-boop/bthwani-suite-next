@@ -7,7 +7,7 @@ import {
   CpDescriptionRow,
   CpPageHeader,
   CpMutedInline,
-  CpStatePanel,
+  CpStateView,
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
@@ -148,7 +148,7 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
 
   if (controller.state.kind === "loading") {
     return (
-      <DetailPageFrame stateView={<CpStatePanel role="status" title="جارٍ تحميل ملف الموظف…" />}>
+      <DetailPageFrame stateView={<CpStateView kind="loading" title="جارٍ تحميل ملف الموظف…" />}>
         <div />
       </DetailPageFrame>
     );
@@ -234,7 +234,7 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
 
           <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف والتسلسل الإداري</Text>
           <SupervisorPicker kind="employee" selected={supervisor} onSelect={setSupervisor} />
-          {controller.actionError ? <CpStatePanel role="alert" title={controller.actionError} /> : null}
+          {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
           <CpButton
             variant="primary"
             disabled={!canSave}
@@ -272,7 +272,7 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
           <div><Text role="bodySm">نطاقات السلطة المعتمدة</Text><CpTextInput value={authorityScopes} onChange={setAuthorityScopes} placeholder="اعتماد كابتن، تعليق حساب، مراجعة مخالفة" aria-label="نطاقات السلطة" /></div>
           <div><Text role="bodySm">رموز الأقسام المُدارة</Text><CpTextInput value={managedDepartmentCodes} onChange={setManagedDepartmentCodes} placeholder="operations, partners" aria-label="الأقسام المدارة" /></div>
           <div><Text role="bodySm">ملاحظات القرار</Text><CpTextInput value={governanceNotes} onChange={setGovernanceNotes} aria-label="ملاحظات القرار" /></div>
-          {governanceError ? <CpStatePanel role="alert" title={governanceError} /> : null}
+          {governanceError ? <CpStateView kind="error" title={governanceError} /> : null}
           <CpButton variant="primary" disabled={governanceBusy || positionTitle.trim().length === 0} onClick={() => void saveGovernance()}>
             {governanceBusy ? "جارٍ الحفظ…" : "حفظ نطاق المسؤولية"}
           </CpButton>
@@ -282,7 +282,7 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
           <Text role="titleSm">الصورة والوثائق الوظيفية</Text>
           <Text role="bodySm">الصورة: {employee.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
           <Text role="bodySm">الوثائق: {profile?.documentMediaRefs.length ?? 0}</Text>
-          {uploadError ? <CpStatePanel role="alert" title={uploadError} /> : null}
+          {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>{uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}</CpButton>
             <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("document")}>{uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة وظيفية"}</CpButton>

@@ -1,16 +1,19 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import { useControlPanelSession } from "../../shared/session/control-panel-session";
 import { Box, Card, Text, spacing } from "@bthwani/ui-kit";
 import {
   CpBadge,
+  CpButton,
   CpKpiCard,
   CpKpiStrip,
   CpMutedInline,
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTabs,
 } from "@bthwani/control-panel/components";
 import { MetricsPageFrame } from "@bthwani/control-panel/shell";
@@ -35,6 +38,7 @@ const PERIOD_TABS = (["today", "week", "month"] as DshAnalyticsPeriod[]).map((va
 }));
 
 export function AnalyticsDashboardScreen() {
+  const router = useRouter();
   const { state } = useControlPanelSession();
   const [period, setPeriod] = React.useState<DshAnalyticsPeriod>("today");
 
@@ -57,10 +61,13 @@ export function AnalyticsDashboardScreen() {
     <MetricsPageFrame
       header={<CpPageHeader title="التحليلات التشغيلية">
         <CpMutedInline tight>لوحة مؤشرات الأداء الرئيسية لمنصة DSH</CpMutedInline>
+        <CpButton variant="secondary" onClick={() => router.push("/dsh/analytics/operational")}>
+          تحليلات SLA والأداء المتقدمة ←
+        </CpButton>
       </CpPageHeader>}
       toolbar={<CpTabs items={PERIOD_TABS} value={period} onChange={(value) => setPeriod(value as DshAnalyticsPeriod)} aria-label="الفترة الزمنية" />}
     >
-      {isLoading ? <CpStatePanel role="status" title="جاري تحميل البيانات من DSH…" /> : null}
+      {isLoading ? <CpStateView kind="loading" title="جاري تحميل البيانات من DSH…" /> : null}
 
       {platformState.kind === "error" ? (
         <AnalyticsError title="تعذّر تحميل مؤشرات المنصة" message={platformState.message} reload={reload} />

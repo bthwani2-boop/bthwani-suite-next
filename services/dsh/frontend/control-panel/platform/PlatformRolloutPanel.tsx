@@ -9,6 +9,7 @@ import {
   CpRetryButton,
   CpSelect,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -211,9 +212,9 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
                 </View>
               </View>
             )}
-            {formError ? <CpStatePanel role="alert" title="تعذر إنشاء الإطلاق" code={formError} /> : null}
+            {formError ? <CpStateView kind="error" title="تعذر إنشاء الإطلاق" code={formError} /> : null}
             {rollouts.mutationState.kind === "error" ? (
-              <CpStatePanel role="alert" title="فشل إجراء الإطلاق" code={rollouts.mutationState.message} />
+              <CpStateView kind="error" title="فشل إجراء الإطلاق" code={rollouts.mutationState.message} />
             ) : null}
             {rollouts.mutationState.kind === "success" ? (
               <CpStatePanel role="status" title="تم حفظ الإجراء وقراءة الحالة الراجعة" code={rollouts.mutationState.message} />
@@ -230,7 +231,7 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
       )}
 
       {rollouts.state.kind === "loading" || rollouts.state.kind === "idle" ? (
-        <CpStatePanel role="status" title="جاري تحميل الإطلاقات…" />
+        <CpStateView kind="loading" title="جاري تحميل الإطلاقات…" />
       ) : rollouts.state.kind === "error" ? (
         <CpStatePanel role="alert" title="تعذر تحميل الإطلاقات" code={rollouts.state.message}>
           <CpRetryButton onClick={() => void rollouts.reload()}>إعادة المحاولة</CpRetryButton>
@@ -282,7 +283,7 @@ export function PlatformRolloutPanel({ changeSets, healthState, onChanged }: Pla
       {recoveryState.kind === "loading" ? (
         <CpStatePanel role="status" title="جاري تحميل دليل الاستعادة…" code={recoveryState.rolloutId} />
       ) : recoveryState.kind === "error" ? (
-        <CpStatePanel role="alert" title="تعذر تحميل دليل الاستعادة" code={recoveryState.message} />
+        <CpStateView kind="error" title="تعذر تحميل دليل الاستعادة" code={recoveryState.message} />
       ) : recoveryState.kind === "success" ? (
         <Card>
           <View style={styles.cardContent}>

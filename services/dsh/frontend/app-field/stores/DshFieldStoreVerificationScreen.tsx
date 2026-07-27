@@ -107,7 +107,7 @@ export function DshFieldStoreVerificationScreen({ storeId, visitId, onBack }: Pr
             />
           </View>
           <Text tone="secondary" style={{ textAlign: "right" }}>
-            {field.store.cityCode} / {field.store.serviceAreaCode}
+            {field.store.addressLine || `${field.store.serviceAreaCode} • ${field.store.cityCode}`}
           </Text>
           <View style={styles.badges}>
             <Badge label={field.verificationSummary} tone={field.attentionChecks.length === 0 ? "success" : "warning"} />
@@ -215,7 +215,7 @@ export function DshFieldStoreVerificationScreen({ storeId, visitId, onBack }: Pr
           <Text role="titleSm">توصية التحقق</Text>
           <Text tone="secondary">{field.recommendation}</Text>
           <Text role="caption" tone="muted">
-            رفع الوثائق والاعتماد الميداني الفعلي يظل ضمن Field Verification بعد اعتماده.
+            رفع الوثائق والاعتماد الميداني الفعلي يبقى ضمن مسار التحقق الميداني بعد اعتماده.
           </Text>
         </View>
       </Card>

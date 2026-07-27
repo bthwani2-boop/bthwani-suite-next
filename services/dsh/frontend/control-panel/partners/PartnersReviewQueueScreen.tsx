@@ -85,10 +85,6 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
         <CpPageHeader title="الشركاء والمتاجر">
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
             <CpBadge tone="brand">فول ستاك متعدد المستأجرين</CpBadge>
-            <CpKpiStrip>
-              <CpKpiCard label="نشطون أو ظاهرون" value={activePartnersCount} />
-              <CpKpiCard label="قيد المعالجة" value={pendingCount} />
-            </CpKpiStrip>
             <CpButton variant="primary" onClick={() => setCreateOpen((current) => !current)}>
               {createOpen ? "إغلاق نموذج الإضافة" : "+ إضافة شريك"}
             </CpButton>
@@ -115,6 +111,10 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
       )}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        <CpKpiStrip>
+          <CpKpiCard label="نشطون أو ظاهرون" value={activePartnersCount} />
+          <CpKpiCard label="قيد المعالجة" value={pendingCount} />
+        </CpKpiStrip>
         {createOpen ? (
           <PartnerCreatePanel
             controller={adminController}

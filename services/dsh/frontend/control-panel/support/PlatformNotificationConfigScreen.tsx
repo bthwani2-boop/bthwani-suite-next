@@ -9,6 +9,7 @@ import {
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -192,7 +193,7 @@ export function PlatformNotificationConfigScreen() {
 
   const stateView =
     state.kind === "loading" || state.kind === "idle" ? (
-      <CpStatePanel role="status" title="جارٍ التحميل…" />
+      <CpStateView kind="loading" title="جارٍ التحميل…" />
     ) : state.kind === "error" ? (
       <CpStatePanel role="alert" title="خطأ" description={state.message}>
         <CpRetryButton onClick={reload}>إعادة المحاولة</CpRetryButton>
@@ -288,7 +289,7 @@ export function PlatformNotificationConfigScreen() {
         <section style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <strong>تدقيق تسليم الإشعارات</strong>
           {deliveryAudit.state.kind === "idle" || deliveryAudit.state.kind === "loading" ? (
-            <CpStatePanel role="status" title="جارٍ تحميل سجل التسليم…" />
+            <CpStateView kind="loading" title="جارٍ تحميل سجل التسليم…" />
           ) : deliveryAudit.state.kind === "error" ? (
             <CpStatePanel role="alert" title="تعذر تحميل سجل التسليم" description={deliveryAudit.state.message}>
               <CpRetryButton onClick={deliveryAudit.reload}>إعادة المحاولة</CpRetryButton>

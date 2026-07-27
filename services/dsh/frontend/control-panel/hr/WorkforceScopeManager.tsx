@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { CpBadge, CpButton, CpMutedInline, CpStatePanel } from "@bthwani/control-panel/components";
+import { CpBadge, CpButton, CpMutedInline, CpStateView } from "@bthwani/control-panel/components";
 import { Text } from "@bthwani/ui-kit";
 
 import {
@@ -10,8 +10,7 @@ import {
   replaceWorkforceScopes,
   workforceErrorMessage,
   type WorkforceScopeActorRole,
-  type WorkforceScopeStoreOption,
-} from "../../shared/workforce";
+  type WorkforceScopeStoreOption } from "../../shared/workforce";
 
 export function WorkforceScopeManager(props: {
   readonly actorId: string;
@@ -53,8 +52,7 @@ export function WorkforceScopeManager(props: {
       const current = byCode.get(option.serviceAreaCode) ?? {
         code: option.serviceAreaCode,
         cities: new Set<string>(),
-        stores: 0,
-      };
+        stores: 0 };
       if (option.cityCode) current.cities.add(option.cityCode);
       current.stores += 1;
       byCode.set(option.serviceAreaCode, current);
@@ -85,8 +83,7 @@ export function WorkforceScopeManager(props: {
         actorId: props.actorId,
         actorRole: props.actorRole,
         storeIds: selectedStoreIds,
-        serviceAreaCodes: selectedAreaCodes,
-      });
+        serviceAreaCodes: selectedAreaCodes });
       setSelectedStoreIds(snapshot.storeIds);
       setSelectedAreaCodes(snapshot.serviceAreaCodes);
       setSaved(true);
@@ -107,8 +104,8 @@ export function WorkforceScopeManager(props: {
         التعيينات مرتبطة مباشرةً بـ actor_id. نطاق المتجر يصرح بمتجر محدد، ونطاق المنطقة يصرح بكل المتاجر الحالية والمستقبلية داخل رمز منطقة الخدمة.
       </CpMutedInline>
 
-      {loading ? <CpStatePanel role="status" title="جارٍ تحميل النطاقات…" /> : null}
-      {error ? <CpStatePanel role="alert" title={error} /> : null}
+      {loading ? <CpStateView kind="loading" title="جارٍ تحميل النطاقات…" /> : null}
+      {error ? <CpStateView kind="error" title={error} /> : null}
       {saved ? <CpBadge tone="success">تم حفظ النطاقات وتسجيل التغيير.</CpBadge> : null}
 
       {!loading ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { CpBadge, CpButton, CpMutedInline, CpRetryButton, CpStatePanel } from "@bthwani/control-panel/components";
+import { CpBadge, CpButton, CpMutedInline, CpRetryButton, CpStatePanel, CpStateView } from "@bthwani/control-panel/components";
 import { WebCompactSurfaceHeader } from "@bthwani/ui-kit/web";
 import { useOperatorDispatchTrackingAlerts } from "../../shared/dispatch/use-operator-dispatch-tracking-alerts";
 import { GoogleMapsWebCanvas } from "../maps/GoogleMapsWebCanvas";
@@ -31,7 +31,7 @@ export function DispatchTrackingAlertsPanel() {
       />
 
       {state.kind === "loading" ? (
-        <CpStatePanel role="status" title="جارٍ تحميل خريطة التتبع…" />
+        <CpStateView kind="loading" title="جارٍ تحميل خريطة التتبع…" />
       ) : state.kind === "error" ? (
         <CpStatePanel role="alert" title="تعذر تحميل التتبع" description={state.message}>
           <CpRetryButton onClick={() => void reload()}>إعادة المحاولة</CpRetryButton>

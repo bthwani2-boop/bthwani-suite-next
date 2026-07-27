@@ -7,6 +7,7 @@ import {
   CpDescriptionRow,
   CpMutedInline,
   CpStatePanel,
+  CpStateView,
   CpTabs,
 } from "@bthwani/control-panel/components";
 import {
@@ -65,7 +66,7 @@ export function ProviderActivationWorkspace({
     : (fieldList.state.kind === "ready" ? fieldList.state.fieldAgents : []);
 
   if (isHrDetail && !selectedActorId) {
-    return <CpStatePanel role="alert" title="معرف مقدم الخدمة غير محدد" />;
+    return <CpStateView kind="error" title="معرف مقدم الخدمة غير محدد" />;
   }
 
   return (
@@ -89,7 +90,7 @@ export function ProviderActivationWorkspace({
               placeholder={providerKind === "field" ? "مثال: FLD-000123 أو أحمد" : "مثال: CAP-000123 أو أحمد"}
             />
             {controller.state.kind === "loading" ? <CpMutedInline tight>جارٍ التحميل…</CpMutedInline> : null}
-            {controller.state.kind === "error" ? <CpStatePanel role="alert" title={controller.state.message} /> : null}
+            {controller.state.kind === "error" ? <CpStateView kind="error" title={controller.state.message} /> : null}
             {controller.state.kind === "ready" && providers.length === 0 ? (
               <CpMutedInline tight>لا توجد ملفات مطابقة. أنشئ الملف الأولي أولًا ثم استكمل بوابة التفعيل.</CpMutedInline>
             ) : null}
@@ -156,8 +157,8 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
   const [reason, setReason] = useState("");
   const [copied, setCopied] = useState(false);
 
-  if (loading) return <CpStatePanel role="status" title="جارٍ تحميل بيانات التفعيل…" />;
-  if (error || !detail) return <CpStatePanel role="alert" title={error ?? "تعذر تحميل بيانات التفعيل"} />;
+  if (loading) return <CpStateView kind="loading" title="جارٍ تحميل بيانات التفعيل…" />;
+  if (error || !detail) return <CpStateView kind="error" title={error ?? "تعذر تحميل بيانات التفعيل"} />;
 
   const managerAllowed = canManageActivation(providerKind, entrySource);
   const missingReasons: string[] = [];
@@ -267,7 +268,7 @@ function ProviderActivationWorkspaceInner({ providerKind, actorId, entrySource, 
           </Box>
         ) : null}
 
-        {actionError ? <CpStatePanel role="alert" title={actionError} /> : null}
+        {actionError ? <CpStateView kind="error" title={actionError} /> : null}
         {latest?.status ? <CpBadge tone={latest.status === "pending" ? "success" : "neutral"}>{latest.status}</CpBadge> : null}
 
         <ProviderOperationalEnforcementPanel

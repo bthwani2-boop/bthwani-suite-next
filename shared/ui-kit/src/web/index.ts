@@ -10,8 +10,8 @@ export type { WebControlActionButtonProps, WebControlActionCardProps, WebControl
 
 // ─── Control Panel Lane ────────────────────────────────────────────────────────
 // Use for: staff operations, admin dashboards, control rooms only.
-export { WebCommandCenterFrame, WebCommandStrip, WebRailServiceList, WebSegmentedTabs, WebControlPanelFrame, WebControlPanelKpiStrip, WebControlPanelWorkspaceTabs, WebControlPanelSubTabs } from './command-center';
-export type { WebCommandCenterFilter, WebCommandCenterFrameProps, WebCommandCenterNavItem, WebCommandStripFilter, WebCommandStripProps, WebRailServiceItem, WebRailServiceListProps, WebSearchItem, WebSegmentedTabItem, WebSegmentedTabsProps, WebControlPanelFrameProps, WebControlPanelKpiItem, WebControlPanelKpiStripProps, WebControlPanelKpiTone, WebControlPanelWorkspaceTabItem, WebControlPanelWorkspaceTabsProps, WebControlPanelSubTabItem, WebControlPanelSubTabsProps } from './command-center';
+export { WebCommandCenterFrame, WebCommandStrip, WebRailServiceList, WebSegmentedTabs, WebControlPanelFrame, WebControlPanelKpiStrip, WebControlPanelWorkspaceTabs } from './command-center';
+export type { WebCommandCenterFilter, WebCommandCenterFrameProps, WebCommandCenterNavItem, WebCommandStripFilter, WebCommandStripProps, WebRailServiceItem, WebRailServiceListProps, WebSearchItem, WebSegmentedTabItem, WebSegmentedTabsProps, WebControlPanelFrameProps, WebControlPanelKpiItem, WebControlPanelKpiStripProps, WebControlPanelKpiTone, WebControlPanelWorkspaceTabItem, WebControlPanelWorkspaceTabsProps } from './command-center';
 export { WebControlPanelQueue } from './control-panel-queue';
 export type { WebControlPanelQueueProps } from './control-panel-queue';
 export {
@@ -23,7 +23,6 @@ export {
 	WebControlPanelMiniMapZone,
 	WebControlPanelMapPin,
 	WebControlPanelRouteLine,
-	WebControlPanelLaneTabs,
 	WebControlPanelTertiaryFilters,
 	WebControlPanelCompactPager,
 	WebControlPanelStatusTag,
@@ -43,8 +42,6 @@ export type {
 	WebControlPanelMiniMapZoneProps,
 	WebControlPanelMapPinProps,
 	WebControlPanelRouteLineProps,
-	WebControlPanelLaneTabItem,
-	WebControlPanelLaneTabsProps,
 	WebControlPanelTertiaryFilterItem,
 	WebControlPanelTertiaryFiltersProps,
 	WebControlPanelCompactPagerProps,

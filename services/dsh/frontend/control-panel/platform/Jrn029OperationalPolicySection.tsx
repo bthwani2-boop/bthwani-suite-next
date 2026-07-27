@@ -10,6 +10,7 @@ import {
   CpBadge,
   CpButton,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -299,7 +300,7 @@ export function Jrn029OperationalPolicySection() {
       </View>
 
       {error ? <Text tone="danger">{error}</Text> : null}
-      {loading ? <CpStatePanel role="status" title="جارٍ مزامنة الحقيقة التشغيلية…" /> : null}
+      {loading ? <CpStateView kind="loading" title="جارٍ مزامنة الحقيقة التشغيلية…" /> : null}
 
       {zones.state.kind === "success" && zoneRows.length > 0 ? (
         <CpTable aria-label="مناطق الرحلة 29">

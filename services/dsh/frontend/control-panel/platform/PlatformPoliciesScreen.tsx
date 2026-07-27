@@ -11,6 +11,7 @@ import {
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -62,7 +63,7 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
           <Text tone="danger">{zonesController.mutationError}</Text>
         ) : null}
         {zonesController.state.kind === "loading" ? (
-          <CpStatePanel role="status" title="جارٍ تحميل المناطق…" />
+          <CpStateView kind="loading" title="جارٍ تحميل المناطق…" />
         ) : null}
         {zonesController.state.kind === "error" ? (
           <CpStatePanel role="alert" title="تعذر تحميل المناطق" description={zonesController.state.message}>
@@ -109,7 +110,7 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
         <Text role="titleSm">قواعد SLA</Text>
         {slaController.mutationError ? <Text tone="danger">{slaController.mutationError}</Text> : null}
         {slaController.state.kind === "loading" ? (
-          <CpStatePanel role="status" title="جارٍ تحميل قواعد SLA…" />
+          <CpStateView kind="loading" title="جارٍ تحميل قواعد SLA…" />
         ) : null}
         {slaController.state.kind === "error" ? (
           <CpStatePanel role="alert" title="تعذر تحميل قواعد SLA" description={slaController.state.message}>

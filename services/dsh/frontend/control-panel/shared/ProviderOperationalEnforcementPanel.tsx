@@ -5,6 +5,7 @@ import {
   CpButton,
   CpMutedInline,
   CpStatePanel,
+  CpStateView,
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { Text } from "@bthwani/ui-kit";
@@ -227,7 +228,7 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
     }
   };
 
-  if (loading) return <CpStatePanel role="status" title="جارٍ تحميل القرارات التشغيلية…" />;
+  if (loading) return <CpStateView kind="loading" title="جارٍ تحميل القرارات التشغيلية…" />;
 
   const classification = core?.operationalCore.captain?.classification;
   const selectedIncident = incidents.find((incident) => incident.id === selectedIncidentId);

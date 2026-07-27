@@ -415,14 +415,6 @@ export function DshFieldOnboardingScreen({
         title={form.legalNameAr || 'ملف انضمام جديد'}
         actions={(
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing[1] }}>
-            {onBack ? (
-              <IconButton
-                icon={<Icon name="arrow-back" mirrored />}
-                accessibilityLabel="رجوع"
-                onPress={onBack}
-                tone="ghost"
-              />
-            ) : null}
             <IconButton
               icon={<Icon name="save-outline" size={20} tone="brand" />}
               accessibilityLabel="حفظ المسودة"

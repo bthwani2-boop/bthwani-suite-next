@@ -2,7 +2,7 @@
 // Profile details sourced exclusively from Workforce.
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Button, StateView, Text, Header, spacing, colorRoles } from '@bthwani/ui-kit';
+import { KeyValueList, StateView, Header, spacing, colorRoles } from '@bthwani/ui-kit';
 import { useWorkforceProfile } from '../../shared/workforce/use-workforce-profile';
 import { ENGAGEMENT_STATUS_LABEL_AR } from '../../shared/workforce';
 
@@ -23,7 +23,7 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
       <StateView
         tone="warning"
         title="الملف غير منشأ"
-        description="لا يوجد ملف Workforce مرتبط بالهوية الحالية."
+        description="لا يوجد ملف ميداني مرتبط بهويتك الحالية."
         actionLabel="إعادة المحاولة"
         onActionPress={() => void workforce.reload()}
       />
@@ -60,42 +60,29 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
       <StateView
         tone="danger"
         title="نوع الحساب غير متوافق"
-        description="ملف Workforce الحالي ليس ملف ميداني."
+        description="هذا الحساب غير مهيأ كحساب ميداني."
         actionLabel="رجوع"
         onActionPress={onBack}
       />
     );
   }
 
-  const items: ReadonlyArray<{ label: string; value: string }> = [
+  const items = [
     { label: 'الاسم الكامل', value: me.fullNameAr },
     { label: 'رقم الميداني', value: me.workforceCode },
-    { label: 'النوع', value: 'ميداني' },
-    { label: 'منطقة الخدمة', value: me.fieldProfile?.serviceZoneId || 'غير محدد' },
     { label: 'التوفر', value: 'يُدار من بلاغات التوفر وعدم التوفر' },
-    { label: 'مسؤول المتابعة', value: me.fieldProfile?.supervisorActorId || 'غير محدد' },
     { label: 'حالة الارتباط', value: ENGAGEMENT_STATUS_LABEL_AR[me.engagementStatus] },
   ];
 
   return (
     <View style={styles.root}>
-      <View style={styles.topActions}>
-        <Button label="رجوع" tone="ghost" size="sm" fullWidth={false} onPress={onBack} />
-      </View>
-      <Header title="بيانات الميداني" subtitle="بيانات تشغيلية حية من Workforce" />
+      <Header title="بيانات الميداني" subtitle="بياناتك التشغيلية الحالية" onBack={onBack} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.items}>
-          {items.map((item) => (
-            <View key={item.label} style={styles.row}>
-              <Text role="bodyStrong" style={styles.rtl}>{item.label}</Text>
-              <Text role="body" style={styles.value}>{item.value}</Text>
-            </View>
-          ))}
-        </View>
+        <KeyValueList items={items} />
       </ScrollView>
     </View>
   );
@@ -103,18 +90,6 @@ export function DshFieldProfileScreen({ onBack }: DshFieldProfileScreenProps) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colorRoles.surfaceBase },
-  topActions: { paddingHorizontal: spacing[4], paddingTop: spacing[2], alignItems: 'flex-start' },
   scroll: { flex: 1 },
   content: { padding: spacing[4], gap: spacing[4], paddingBottom: 96 },
-  items: { gap: spacing[2], width: '100%' },
-  row: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    paddingVertical: spacing[3],
-    borderBottomWidth: 1,
-    borderBottomColor: colorRoles.borderSubtle,
-    gap: spacing[3],
-  },
-  rtl: { textAlign: 'right' },
-  value: { textAlign: 'left', flexShrink: 1 },
 });

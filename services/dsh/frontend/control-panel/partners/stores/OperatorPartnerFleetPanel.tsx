@@ -4,6 +4,7 @@ import React from "react";
 import {
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -46,7 +47,7 @@ export function OperatorPartnerFleetPanel({ storeId }: OperatorPartnerFleetPanel
   }, [load]);
 
   if (state.kind === "loading") {
-    return <CpStatePanel role="status" title="جاري تحميل أسطول المتجر وربط الكباتن…" />;
+    return <CpStateView kind="loading" title="جاري تحميل أسطول المتجر وربط الكباتن…" />;
   }
 
   if (state.kind === "error") {

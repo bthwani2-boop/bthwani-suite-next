@@ -15,6 +15,7 @@ import {
   CpPageHeader,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
 } from '@bthwani/control-panel/components';
 import { OperationsRoomFrame } from '@bthwani/control-panel/shell';
 import { useDispatchOperations } from '../../shared/operations';
@@ -109,7 +110,7 @@ export function DispatchOperationsPanel() {
           </div>
           {state.message ? (
             <div style={{ marginTop: 8 }}>
-              <CpStatePanel role="alert" title={state.message} />
+              <CpStateView kind="error" title={state.message} />
             </div>
           ) : null}
         </CpPageHeader>

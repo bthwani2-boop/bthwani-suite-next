@@ -13,6 +13,7 @@ export type DshFieldRoute =
   | 'checklist'
   | 'account'
   | 'profile'
+  | 'profile-completion'
   | 'history'
   | 'finance'
   | 'escalation'
@@ -28,6 +29,7 @@ export type DshFieldRouteState =
   | { kind: 'checklist'; visitId: string; storeId: string }
   | { kind: 'account' }
   | { kind: 'profile' }
+  | { kind: 'profile-completion' }
   | { kind: 'history' }
   | { kind: 'finance' }
   | { kind: 'escalation'; storeId: string; visitId?: string }

@@ -20,6 +20,7 @@ import { ProviderRatingSummaryPanel } from '../../shared/provider-ratings/Provid
 type DshFieldProfileHomeScreenProps = {
   readonly onBack: () => void;
   readonly onOpenProfile: () => void;
+  readonly onOpenProfileCompletion: () => void;
   readonly onOpenHistory: () => void;
   readonly onOpenFinance: () => void;
   readonly onOpenVerification: () => void;
@@ -29,6 +30,7 @@ type DshFieldProfileHomeScreenProps = {
 export function DshFieldProfileHomeScreen({
   onBack,
   onOpenProfile,
+  onOpenProfileCompletion,
   onOpenHistory,
   onOpenFinance,
   onOpenVerification,
@@ -45,7 +47,7 @@ export function DshFieldProfileHomeScreen({
       <StateView
         tone="warning"
         title="ملف الميداني غير منشأ"
-        description="تم تسجيل الهوية، لكن Workforce لم ينشئ ملف الميداني بعد. لا يمكن فتح المهام أو المالية قبل إنشائه."
+        description="تم تسجيل هويتك، لكن ملفك الميداني لم يُنشأ بعد. لا يمكن فتح المهام أو المالية قبل إنشائه."
         actionLabel="إعادة المحاولة"
         onActionPress={() => void workforce.reload()}
       />
@@ -58,7 +60,7 @@ export function DshFieldProfileHomeScreen({
         <StateView
           tone="danger"
           title="حساب الميداني معلّق"
-          description="تم إيقاف الملف التشغيلي من Workforce. لا يمكن تنفيذ زيارات أو عمليات مالية حتى إعادة التفعيل."
+          description="تم إيقاف ملفك التشغيلي. لا يمكن تنفيذ زيارات أو عمليات مالية حتى إعادة التفعيل."
           actionLabel="تحديث الحالة"
           onActionPress={() => void workforce.reload()}
         />
@@ -85,7 +87,7 @@ export function DshFieldProfileHomeScreen({
       <StateView
         tone="danger"
         title="نوع الحساب غير متوافق"
-        description="الجلسة الحالية لا تملك ملف ميداني. افتح السطح المتوافق مع نوع Workforce المسجل."
+        description="هذا الحساب غير مهيأ كحساب ميداني."
         actionLabel="رجوع"
         onActionPress={onBack}
       />
@@ -96,10 +98,7 @@ export function DshFieldProfileHomeScreen({
 
   return (
     <View style={styles.root}>
-      <View style={styles.headerContainer}>
-        <Button label="رجوع" tone="ghost" size="sm" fullWidth={false} onPress={onBack} />
-        <Header title="ملف الميداني" subtitle="الهوية والحالة التشغيلية من Workforce" />
-      </View>
+      <Header title="ملفي الميداني" subtitle="بياناتي وحالتي التشغيلية" onBack={onBack} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -107,7 +106,6 @@ export function DshFieldProfileHomeScreen({
       >
         <View style={styles.identityBlock}>
           <View style={styles.badges}>
-            <Badge label="DSH" tone="success" />
             <Badge label="ميداني" tone="action" />
             <Badge
               label={ENGAGEMENT_STATUS_LABEL_AR[me.engagementStatus]}
@@ -132,8 +130,9 @@ export function DshFieldProfileHomeScreen({
 
         <View style={styles.menu}>
           <MenuRow title="بيانات الميداني" subtitle="الهوية، منطقة التغطية، والتوفر." onPress={onOpenProfile} />
+          <MenuRow title="استكمال الملف الشخصي" subtitle="جهة اتصال الطوارئ، اللغة، والموافقة على السياسة." onPress={onOpenProfileCompletion} />
           <MenuRow title="السجل" subtitle="آخر حالة لكل متجر والتقدم المرتبط به." onPress={onOpenHistory} />
-          <MenuRow title="المالية" subtitle="المحفظة والعمولات والخصومات وطلبات الصرف من WLT." onPress={onOpenFinance} />
+          <MenuRow title="المالية" subtitle="المحفظة والعمولات والخصومات وطلبات الصرف." onPress={onOpenFinance} />
           <MenuRow title="مهام التحقق الميداني" subtitle="الزيارات والتصعيدات المخصصة لهذا الحساب." onPress={onOpenVerification} />
         </View>
 
@@ -161,7 +160,6 @@ function MenuRow({ title, subtitle, onPress }: { title: string; subtitle: string
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colorRoles.surfaceBase },
   blockedRoot: { flex: 1, backgroundColor: colorRoles.surfaceBase, justifyContent: 'center', padding: spacing[4], gap: spacing[3] },
-  headerContainer: { paddingHorizontal: spacing[4], paddingTop: spacing[2] },
   scroll: { flex: 1 },
   content: { padding: spacing[4], gap: spacing[4], paddingBottom: 96 },
   identityBlock: { gap: spacing[3], paddingVertical: spacing[2] },

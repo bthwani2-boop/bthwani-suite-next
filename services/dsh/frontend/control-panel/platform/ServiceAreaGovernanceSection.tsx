@@ -11,6 +11,7 @@ import {
   CpButton,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -194,7 +195,7 @@ export function ServiceAreaGovernanceSection() {
         النقر على الخريطة يضيف نقطة إلى مسودة المنطقة الحالية بصيغة [longitude, latitude].
       </Text>
 
-      {controller.state.kind === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل مناطق الخدمة…" /> : null}
+      {controller.state.kind === "loading" ? <CpStateView kind="loading" title="جارٍ تحميل مناطق الخدمة…" /> : null}
       {controller.state.kind === "error" ? (
         <CpStatePanel role="alert" title="تعذر تحميل مناطق الخدمة" description={controller.state.message}>
           <CpRetryButton onClick={controller.reload}>إعادة المحاولة</CpRetryButton>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CpButton, CpMutedInline, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
+import { CpButton, CpMutedInline, CpStatePanel, CpStateView, CpTextInput } from "@bthwani/control-panel/components";
 import { Text } from "@bthwani/ui-kit";
 import { fetchPartners } from "../../shared/partner/partner.api";
 import {
@@ -325,7 +325,7 @@ export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actor
     }
   };
 
-  if (loading) return <CpStatePanel role="status" title="جارٍ تحميل بوابة التفعيل…" />;
+  if (loading) return <CpStateView kind="loading" title="جارٍ تحميل بوابة التفعيل…" />;
   if (!data) return <CpStatePanel role="alert" title="تعذر تحميل بوابة التفعيل" description={error ?? "لا توجد بيانات قابلة للعرض."} />;
 
   return (

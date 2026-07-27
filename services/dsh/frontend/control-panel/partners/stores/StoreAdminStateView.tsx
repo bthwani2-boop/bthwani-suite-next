@@ -1,4 +1,4 @@
-import { CpRetryButton, CpStatePanel } from "@bthwani/control-panel/components";
+import { CpRetryButton, CpStatePanel, CpStateView } from "@bthwani/control-panel/components";
 import type { DshStoreAdminListState } from "../../../shared/store";
 
 type Props = {
@@ -9,7 +9,7 @@ type Props = {
 export function StoreAdminStateView({ state, onRetry }: Props) {
   if (state.kind === "loading") {
     return (
-      <CpStatePanel role="status" title="جاري التحميل…" />
+      <CpStateView kind="loading" title="جاري التحميل…" />
     );
   }
 

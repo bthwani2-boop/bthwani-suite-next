@@ -1,10 +1,15 @@
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
-import { Button, Header, StateView, Text, colorRoles, spacing } from "@bthwani/ui-kit";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Button, Header, SegmentedControl, StateView, Text, TextField, colorRoles, spacing } from "@bthwani/ui-kit";
 
 import { useWorkforceProfile } from "../../shared/workforce";
 
-export function DshFieldProfileCompletionScreen({ onLogout }: { readonly onLogout: () => void }) {
+type DshFieldProfileCompletionScreenProps = {
+  readonly onBack?: () => void;
+  readonly onLogout: () => void;
+};
+
+export function DshFieldProfileCompletionScreen({ onBack, onLogout }: DshFieldProfileCompletionScreenProps) {
   const workforce = useWorkforceProfile();
   const me = workforce.state.kind === "ready" ? workforce.state.me : null;
   const fieldProfile = me?.fieldProfile;
@@ -20,13 +25,16 @@ export function DshFieldProfileCompletionScreen({ onLogout }: { readonly onLogou
 
   if (!me || me.workforceKind !== "field") {
     return (
-      <StateView
-        tone="danger"
-        title="تعذر فتح إكمال الملف"
-        description="ملف Workforce الميداني غير متاح لهذه الجلسة."
-        actionLabel="إعادة التحقق"
-        onActionPress={() => void workforce.reload()}
-      />
+      <View style={styles.root}>
+        <Header title="استكمال الملف الشخصي" {...(onBack ? { onBack } : {})} />
+        <StateView
+          tone="danger"
+          title="تعذر فتح استكمال الملف"
+          description="هذا الحساب غير مهيأ كحساب ميداني."
+          actionLabel="إعادة التحقق"
+          onActionPress={() => void workforce.reload()}
+        />
+      </View>
     );
   }
 
@@ -46,71 +54,54 @@ export function DshFieldProfileCompletionScreen({ onLogout }: { readonly onLogou
     setSaving(false);
 
     if (result.kind !== "ok") {
-      setMessage(result.kind === "error" ? result.message : "تعذر حفظ بيانات الملف التشغيلي.");
+      setMessage(result.kind === "error" ? result.message : "تعذر حفظ بياناتك.");
       return;
     }
     if (!result.me.profileComplete) {
       setMessage(
         result.me.photoMediaRef
           ? "ما زالت بعض البيانات المطلوبة غير مكتملة. راجع الحقول ثم أعد الحفظ."
-          : "تم حفظ البيانات الذاتية، لكن الصورة الشخصية ما تزال مفقودة ويجب إضافتها من لوحة التحكم.",
+          : "تم حفظ بياناتك، لكن الصورة الشخصية ما تزال مفقودة ويجب إضافتها من لوحة التحكم.",
       );
     }
   }
 
   return (
     <View style={styles.root}>
-      <Header title="إكمال الملف التشغيلي" subtitle="هذه البيانات مطلوبة قبل فتح مهام الميدان" />
+      <Header title="استكمال الملف الشخصي" subtitle="مطلوبة قبل فتح مهام الميدان" {...(onBack ? { onBack } : {})} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {photoMissing ? (
           <StateView
             tone="warning"
             title="الصورة الشخصية مفقودة"
-            description="أضف الصورة من ملف مقدم الخدمة في لوحة التحكم، ثم ارجع واضغط إعادة التحقق."
+            description="أضف صورتك الشخصية من لوحة التحكم، ثم ارجع واضغط إعادة التحقق."
             actionLabel="إعادة التحقق"
             onActionPress={() => void workforce.reload()}
           />
         ) : null}
 
-        <View style={styles.field}>
-          <Text role="bodyStrong" style={styles.rtl}>اسم جهة اتصال الطوارئ</Text>
-          <TextInput
-            value={emergencyContactName}
-            onChangeText={setEmergencyContactName}
-            placeholder="الاسم الكامل"
-            placeholderTextColor={colorRoles.textMuted}
-            style={styles.input}
-            textAlign="right"
-          />
-        </View>
+        <TextField
+          label="اسم جهة اتصال الطوارئ"
+          value={emergencyContactName}
+          onChangeText={setEmergencyContactName}
+          placeholder="الاسم الكامل"
+        />
 
-        <View style={styles.field}>
-          <Text role="bodyStrong" style={styles.rtl}>رقم اتصال الطوارئ</Text>
-          <TextInput
-            value={emergencyContactPhone}
-            onChangeText={setEmergencyContactPhone}
-            placeholder="رقم هاتف صالح"
-            placeholderTextColor={colorRoles.textMuted}
-            keyboardType="phone-pad"
-            style={styles.input}
-            textAlign="right"
-          />
-        </View>
+        <TextField
+          label="رقم اتصال الطوارئ"
+          value={emergencyContactPhone}
+          onChangeText={setEmergencyContactPhone}
+          placeholder="رقم هاتف صالح"
+          keyboardType="phone-pad"
+        />
 
         <View style={styles.field}>
           <Text role="bodyStrong" style={styles.rtl}>لغة التطبيق المفضلة</Text>
-          <View style={styles.choiceRow}>
-            <Choice
-              label="العربية"
-              selected={preferredLanguage === "ar"}
-              onPress={() => setPreferredLanguage("ar")}
-            />
-            <Choice
-              label="English"
-              selected={preferredLanguage === "en"}
-              onPress={() => setPreferredLanguage("en")}
-            />
-          </View>
+          <SegmentedControl
+            items={[{ value: "ar", label: "العربية" }, { value: "en", label: "English" }]}
+            value={preferredLanguage}
+            onValueChange={(value) => setPreferredLanguage(value === "en" ? "en" : "ar")}
+          />
         </View>
 
         <Pressable
@@ -138,19 +129,6 @@ export function DshFieldProfileCompletionScreen({ onLogout }: { readonly onLogou
   );
 }
 
-function Choice({ label, selected, onPress }: { readonly label: string; readonly selected: boolean; readonly onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ selected }}
-      onPress={onPress}
-      style={[styles.choice, selected ? styles.choiceSelected : null]}
-    >
-      <Text role="bodyStrong" tone={selected ? "action" : "muted"}>{label}</Text>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -166,33 +144,6 @@ const styles = StyleSheet.create({
   },
   rtl: {
     textAlign: "right",
-  },
-  input: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    borderRadius: 12,
-    backgroundColor: colorRoles.surfaceMuted,
-    color: colorRoles.textPrimary,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-  },
-  choiceRow: {
-    flexDirection: "row-reverse",
-    gap: spacing[2],
-  },
-  choice: {
-    flex: 1,
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    borderRadius: 12,
-  },
-  choiceSelected: {
-    borderColor: colorRoles.brandAction,
-    backgroundColor: colorRoles.surfaceMuted,
   },
   consentRow: {
     flexDirection: "row-reverse",

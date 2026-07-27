@@ -12,6 +12,7 @@ import {
   CpButton,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import {
@@ -37,7 +38,7 @@ export function StoreOnboardingFeePolicySection({
       </Text>
 
       {controller.state.kind === "loading" ? (
-        <CpStatePanel role="status" title="جارٍ تحميل السياسة…" />
+        <CpStateView kind="loading" title="جارٍ تحميل السياسة…" />
       ) : null}
       {controller.state.kind === "error" ? (
         <CpStatePanel role="alert" title="تعذر تحميل السياسة" description={controller.state.message}>

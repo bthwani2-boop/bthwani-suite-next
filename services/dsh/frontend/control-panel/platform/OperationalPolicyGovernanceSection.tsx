@@ -11,6 +11,7 @@ import {
   CpButton,
   CpRetryButton,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -300,7 +301,7 @@ export function OperationalPolicyGovernanceSection() {
         <CpButton variant="secondary" onClick={beginZoneCreate}>منطقة تشغيلية جديدة</CpButton>
       </View>
 
-      {zones.state.kind === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل المناطق…" /> : null}
+      {zones.state.kind === "loading" ? <CpStateView kind="loading" title="جارٍ تحميل المناطق…" /> : null}
       {zones.state.kind === "error" ? (
         <CpStatePanel role="alert" title="تعذر تحميل المناطق" description={zones.state.message}>
           <CpRetryButton onClick={zones.reload}>إعادة المحاولة</CpRetryButton>
@@ -449,7 +450,7 @@ export function OperationalPolicyGovernanceSection() {
 
           <Card style={styles.card}>
             <Text role="titleSm">السعة التشغيلية</Text>
-            {capacity.state.kind === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل السعة…" /> : null}
+            {capacity.state.kind === "loading" ? <CpStateView kind="loading" title="جارٍ تحميل السعة…" /> : null}
             {capacity.state.kind === "error" ? (
               <CpStatePanel role="alert" title="تعذر تحميل السعة" description={capacity.state.message}>
                 <CpRetryButton onClick={capacity.reload}>إعادة المحاولة</CpRetryButton>

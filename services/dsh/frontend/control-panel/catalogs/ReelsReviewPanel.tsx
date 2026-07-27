@@ -8,6 +8,7 @@ import {
   CpFilterBar,
   CpMutedInline,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -234,7 +235,7 @@ export function ReelsReviewPanel(_props: ReelsReviewPanelProps) {
       {selectedReel ? (
         <section style={styles.reviewWorkspace} aria-label={`مراجعة الريل ${selectedReel.id}`}>
           <div style={styles.previewColumn}>
-            {previewLoading ? <CpStatePanel role="status" title="جارٍ تحميل المعاينة المحمية…" /> : null}
+            {previewLoading ? <CpStateView kind="loading" title="جارٍ تحميل المعاينة المحمية…" /> : null}
             {previewVideoUrl ? (
               <video
                 src={previewVideoUrl}
@@ -276,7 +277,7 @@ export function ReelsReviewPanel(_props: ReelsReviewPanelProps) {
       ) : null}
 
       {loading ? (
-        <CpStatePanel role="status" title="جاري تحميل الريلز…" />
+        <CpStateView kind="loading" title="جاري تحميل الريلز…" />
       ) : reels.length === 0 ? (
         <CpStatePanel role="status" title="لا توجد ريلز" description="لا توجد ريلز بهذه الحالة حاليًا." />
       ) : (

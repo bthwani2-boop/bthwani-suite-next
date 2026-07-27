@@ -2,14 +2,14 @@
 
 import { Card, Text, spacing } from "@bthwani/ui-kit";
 import { WebStyleSheet as StyleSheet, WebView as View } from "@bthwani/ui-kit/web";
-import { CpBadge, CpButton, CpRetryButton, CpStatePanel } from "@bthwani/control-panel/components";
+import { CpBadge, CpButton, CpRetryButton, CpStatePanel, CpStateView } from "@bthwani/control-panel/components";
 import { useMapProviderHealthController } from "../../shared/client-map";
 
 export function MapProviderHealthCard() {
   const controller = useMapProviderHealthController(true);
 
   if (controller.state.kind === "loading") {
-    return <CpStatePanel role="status" title="جارٍ فحص مزود الخرائط…" />;
+    return <CpStateView kind="loading" title="جارٍ فحص مزود الخرائط…" />;
   }
   if (controller.state.kind === "error") {
     return (

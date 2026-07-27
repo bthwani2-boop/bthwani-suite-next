@@ -4,22 +4,23 @@ import { useMemo, useState } from "react";
 import {
   CpBadge,
   CpButton,
+  CpDescriptionList,
+  CpDescriptionRow,
+  CpDetailPanel,
   CpFilterBar,
   CpKpiCard,
   CpKpiStrip,
   CpMutedInline,
   CpPageHeader,
   CpSearchInput,
+  CpSelectableTableRow,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
-  CpSelectableTableRow,
   CpTabs,
   CpTextInput,
-  CpDetailPanel,
-  CpDescriptionList,
-  CpDescriptionRow,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
 import {
@@ -123,30 +124,33 @@ export function SupportDashboardScreen() {
           <CpMutedInline tight>
             تذاكر العميل والشريك، المحادثات، الحوادث، وسجل التدقيق من Runtime الفعلي.
           </CpMutedInline>
-          <CpKpiStrip>
-            <CpKpiCard label="صفوف مقترحة" value={metrics.suggestedQueues} />
-            <CpKpiCard label="نزاعات" value={metrics.disputes} />
-            <CpKpiCard label="خطر الالتزام" value={metrics.complianceRisk} />
-          </CpKpiStrip>
         </CpPageHeader>
       }
-      stateView={isLoading ? <CpStatePanel role="status" title="جاري تحميل دعم DSH…" /> : undefined}
+      toolbar={
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <CpTabs
+            items={SUPPORT_MAIN_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
+            value={mainTab}
+            onChange={(value) => setMainTab(value as SupportMainTabId)}
+            aria-label="تبويبات الدعم الرئيسية"
+          />
+          {mainTab === "queues" ? (
+            <CpTabs
+              items={SUPPORT_QUEUE_FILTERS.map((filter) => ({ value: filter.id, label: filter.label }))}
+              value={queueFilter}
+              onChange={(value) => setQueueFilter(value as SupportQueueFilterId)}
+              aria-label="فلاتر الصفوف"
+            />
+          ) : null}
+        </div>
+      }
+      stateView={isLoading ? <CpStateView kind="loading" title="جاري تحميل دعم DSH…" /> : undefined}
     >
-      <CpTabs
-        items={SUPPORT_MAIN_TABS.map((tab) => ({ value: tab.id, label: tab.label }))}
-        value={mainTab}
-        onChange={(value) => setMainTab(value as SupportMainTabId)}
-        aria-label="تبويبات الدعم الرئيسية"
-      />
-
-      {mainTab === "queues" ? (
-        <CpTabs
-          items={SUPPORT_QUEUE_FILTERS.map((filter) => ({ value: filter.id, label: filter.label }))}
-          value={queueFilter}
-          onChange={(value) => setQueueFilter(value as SupportQueueFilterId)}
-          aria-label="فلاتر الصفوف"
-        />
-      ) : null}
+      <CpKpiStrip>
+        <CpKpiCard label="صفوف مقترحة" value={metrics.suggestedQueues} />
+        <CpKpiCard label="نزاعات" value={metrics.disputes} />
+        <CpKpiCard label="خطر الالتزام" value={metrics.complianceRisk} />
+      </CpKpiStrip>
 
       <CpFilterBar label="بحث وأدوات">
         <CpSearchInput

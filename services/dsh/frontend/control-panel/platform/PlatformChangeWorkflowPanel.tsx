@@ -9,6 +9,7 @@ import {
   CpRetryButton,
   CpSelect,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -285,8 +286,8 @@ export function PlatformChangeWorkflowPanel({ onChanged }: PlatformChangeWorkflo
           ) : (
             <CpStatePanel role="status" title="صلاحية الاقتراح غير متاحة" description="يمكنك قراءة الطلبات فقط. يتطلب إنشاء الطلب platform:variables:propose." code="PLATFORM_PROPOSE_PERMISSION_REQUIRED" />
           )}
-          {formError ? <CpStatePanel role="alert" title="تعذر تجهيز الطلب" code={formError} /> : null}
-          {workflow.mutationState.kind === "error" ? <CpStatePanel role="alert" title="فشل إجراء منصة" code={workflow.mutationState.message} /> : null}
+          {formError ? <CpStateView kind="error" title="تعذر تجهيز الطلب" code={formError} /> : null}
+          {workflow.mutationState.kind === "error" ? <CpStateView kind="error" title="فشل إجراء منصة" code={workflow.mutationState.message} /> : null}
           {workflow.mutationState.kind === "success" ? <CpStatePanel role="status" title="تم حفظ الإجراء وقراءة الحالة الراجعة" code={workflow.mutationState.message} /> : null}
         </View>
       </Card>
@@ -300,7 +301,7 @@ export function PlatformChangeWorkflowPanel({ onChanged }: PlatformChangeWorkflo
             <CpRetryButton onClick={() => void workflow.reload()}>تحديث</CpRetryButton>
           </View>
           {workflow.state.kind === "loading" || workflow.state.kind === "idle" ? (
-            <CpStatePanel role="status" title="جاري تحميل طلبات التغيير…" />
+            <CpStateView kind="loading" title="جاري تحميل طلبات التغيير…" />
           ) : workflow.state.kind === "error" ? (
             <CpStatePanel role="alert" title="تعذر تحميل طلبات التغيير" code={workflow.state.message}><CpRetryButton onClick={() => void workflow.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
           ) : filteredChangeSets.length === 0 ? (

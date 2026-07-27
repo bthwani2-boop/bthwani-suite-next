@@ -1,28 +1,27 @@
 // app-field — DshFieldFinanceScreen
-// Displays the authenticated field provider's own financial data from DSH.
-// Never reads financial truth from WLT directly or via partnerId enumeration.
+// Displays the authenticated field provider's own financial data.
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import {
   Badge,
   Button,
+  Card,
   StateView,
   Text,
   spacing,
   colorRoles,
   Header,
+  formatCurrency,
+  formatDateTime,
 } from "@bthwani/ui-kit";
 import { useFieldFinanceController } from "../../shared/finance-wlt-link/field-finance";
 import { PayoutDestinationPanel } from "../../shared/finance-wlt-link/jrn037";
 import { ProviderIncidentsPanel } from "../../shared/workforce/ProviderIncidentsPanel";
+import { DshFieldReferenceTag } from "../components/DshFieldReferenceTag";
 
 type DshFieldFinanceScreenProps = {
   readonly onBack: () => void;
 };
-
-function formatAmount(minorUnits: number, currency: string): string {
-  return `${(minorUnits / 100).toFixed(2)} ${currency}`;
-}
 
 function commissionStatusLabel(status: string): string {
   const map: Record<string, string> = {
@@ -37,7 +36,7 @@ function commissionStatusLabel(status: string): string {
     reversed: "معكوس",
     paid: "مدفوع",
   };
-  return map[status] ?? status;
+  return map[status] ?? "قيد المعالجة";
 }
 
 function commissionStatusTone(
@@ -59,6 +58,15 @@ function commissionTypeLabel(type: string): string {
   return (map[type] ?? type) || "عمولة تشغيلية";
 }
 
+function walletStatusLabel(status: string): string {
+  const map: Record<string, string> = {
+    active: "نشطة",
+    suspended: "موقوفة",
+    closed: "مغلقة",
+  };
+  return map[status] ?? "قيد المراجعة";
+}
+
 export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
   const controller = useFieldFinanceController();
   const { state } = controller;
@@ -68,7 +76,7 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
       <StateView
         loading
         title="جارٍ تحميل البيانات المالية"
-        description="نجلب محفظتك ودفتر الحركة وعمولاتك من محرك WLT."
+        description="نجلب محفظتك وحركاتك وعمولاتك."
       />
     );
   }
@@ -89,12 +97,10 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
 
   return (
     <View style={styles.root}>
-      <View style={styles.topActions}>
-        <Button label="رجوع" tone="ghost" size="sm" fullWidth={false} onPress={onBack} />
-      </View>
       <Header
         title="المحفظة والعمولات والصرف"
-        subtitle="بيانات الميداني المالية الشخصية فقط — مصدرها WLT"
+        subtitle="بياناتك المالية الشخصية فقط"
+        onBack={onBack}
       />
 
       <ScrollView
@@ -102,43 +108,44 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.card}>
+        <Card>
           <View style={styles.rowBetween}>
             <Badge
-              label={wallet.status === "active" ? "نشطة" : wallet.status}
+              label={walletStatusLabel(wallet.status)}
               tone={wallet.status === "active" ? "success" : "warning"}
             />
             <Text role="titleMd" style={styles.rtl}>المحفظة</Text>
           </View>
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">متاح</Text>
-            <Text role="titleLg" style={styles.positiveAmount}>{formatAmount(wallet.availableBalanceMinorUnits, wallet.currency)}</Text>
+            <Text role="titleLg" style={styles.positiveAmount}>{formatCurrency(wallet.availableBalanceMinorUnits, wallet.currency)}</Text>
           </View>
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">معلّق</Text>
-            <Text role="bodyMd">{formatAmount(wallet.pendingBalanceMinorUnits, wallet.currency)}</Text>
+            <Text role="bodyMd">{formatCurrency(wallet.pendingBalanceMinorUnits, wallet.currency)}</Text>
           </View>
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">محجوز</Text>
-            <Text role="bodyMd">{formatAmount(wallet.heldBalanceMinorUnits, wallet.currency)}</Text>
+            <Text role="bodyMd">{formatCurrency(wallet.heldBalanceMinorUnits, wallet.currency)}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">إجمالي المكتسب</Text>
-            <Text role="bodyMd">{formatAmount(wallet.earnedTotalMinorUnits, wallet.currency)}</Text>
+            <Text role="bodyMd">{formatCurrency(wallet.earnedTotalMinorUnits, wallet.currency)}</Text>
           </View>
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">إجمالي المسوّى</Text>
-            <Text role="bodyMd">{formatAmount(wallet.settledTotalMinorUnits, wallet.currency)}</Text>
+            <Text role="bodyMd">{formatCurrency(wallet.settledTotalMinorUnits, wallet.currency)}</Text>
           </View>
           <View style={styles.balanceRow}>
             <Text role="caption" tone="muted">إجمالي المدفوع</Text>
-            <Text role="bodyMd">{formatAmount(wallet.paidTotalMinorUnits, wallet.currency)}</Text>
+            <Text role="bodyMd">{formatCurrency(wallet.paidTotalMinorUnits, wallet.currency)}</Text>
           </View>
           <Text role="caption" tone="muted" style={styles.rtl}>
-            آخر تحديث: {wallet.updatedAt ?? "غير متاح"} · آخر قيد: {wallet.lastLedgerEntryAt ?? "لا يوجد"}
+            {wallet.updatedAt ? `آخر تحديث: ${formatDateTime(wallet.updatedAt)}` : ""}
+            {wallet.lastLedgerEntryAt ? ` · آخر حركة: ${formatDateTime(wallet.lastLedgerEntryAt)}` : ""}
           </Text>
-        </View>
+        </Card>
 
         <Button label="تحديث" tone="secondary" size="sm" onPress={controller.refresh} />
 
@@ -149,11 +156,11 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
           embedded
         />
 
-        <Text role="titleSm" style={styles.sectionTitle}>دفتر الحركة المرجعي</Text>
+        <Text role="titleSm" style={styles.sectionTitle}>سجل الحركات</Text>
         {ledgerError ? (
           <StateView
             tone="warning"
-            title="تعذر تحميل دفتر الحركة"
+            title="تعذر تحميل سجل الحركات"
             description={ledgerError}
             actionLabel="إعادة المحاولة"
             onActionPress={controller.refresh}
@@ -162,21 +169,21 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
           <StateView tone="neutral" title="لا توجد قيود مالية بعد" />
         ) : (
           ledgerEntries.map((entry) => (
-            <View key={entry.id} style={styles.card}>
+            <Card key={entry.id}>
               <View style={styles.rowBetween}>
                 <Text role="bodyStrong" tone={entry.debitCredit === "credit" ? "success" : "danger"}>
-                  {entry.debitCredit === "credit" ? "+" : "-"}{formatAmount(Math.abs(entry.amountMinorUnits), entry.currency)}
+                  {entry.debitCredit === "credit" ? "+" : "-"}{formatCurrency(Math.abs(entry.amountMinorUnits), entry.currency)}
                 </Text>
                 <Text role="bodyStrong" style={styles.rtl}>{entry.entryType || "قيد مالي"}</Text>
               </View>
-              <Text role="caption" tone="muted" style={styles.rtl}>
-                {entry.description || entry.sourceType || entry.referenceType}
-              </Text>
+              {entry.description ? (
+                <Text role="caption" tone="muted" style={styles.rtl}>{entry.description}</Text>
+              ) : null}
               <View style={styles.rowBetween}>
-                <Text role="caption" tone="muted">{entry.createdAt}</Text>
-                <Text role="caption" tone="muted">الرصيد بعد القيد: {formatAmount(entry.balanceAfter, entry.currency)}</Text>
+                <Text role="caption" tone="muted">{formatDateTime(entry.createdAt)}</Text>
+                <Text role="caption" tone="muted">الرصيد بعد القيد: {formatCurrency(entry.balanceAfter, entry.currency)}</Text>
               </View>
-            </View>
+            </Card>
           ))
         )}
 
@@ -193,28 +200,32 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
           <StateView
             tone="neutral"
             title="لا توجد عمولات بعد"
-            description="ستظهر العمولة بعد تحقق WLT من الدليل التشغيلي وتطبيق السياسة الفعالة."
+            description="ستظهر العمولة بعد التحقق من الدليل التشغيلي وتطبيق السياسة الفعالة."
           />
         ) : (
           commissions.map((commission) => (
-            <View
+            <Card
               key={commission.id}
-              style={styles.card}
-              accessibilityLabel={`${commissionTypeLabel(commission.commissionType)} بحالة ${commissionStatusLabel(commission.status)} وقيمة ${formatAmount(commission.amountMinorUnits, commission.currency)}`}
+              accessibilityLabel={`${commissionTypeLabel(commission.commissionType)} بحالة ${commissionStatusLabel(commission.status)} وقيمة ${formatCurrency(commission.amountMinorUnits, commission.currency)}`}
             >
               <View style={styles.rowBetween}>
-                <Text role="bodyStrong">{formatAmount(commission.amountMinorUnits, commission.currency)}</Text>
+                <Text role="bodyStrong">{formatCurrency(commission.amountMinorUnits, commission.currency)}</Text>
                 <Badge label={commissionStatusLabel(commission.status)} tone={commissionStatusTone(commission.status)} />
               </View>
               <Text role="bodyStrong" style={styles.rtl}>{commissionTypeLabel(commission.commissionType)}</Text>
-              <Text role="caption" tone="muted" style={styles.rtl}>المصدر: {commission.sourceType}/{commission.sourceId}</Text>
               <Text role="caption" tone="muted" style={styles.rtl}>
-                السياسة: {commission.commissionPolicyId ?? "غير متاحة"} · آخر تحديث: {commission.updatedAt || commission.createdAt}
+                آخر تحديث: {formatDateTime(commission.updatedAt || commission.createdAt)}
               </Text>
               {commission.resolutionNote ? (
                 <Text role="caption" tone="danger" style={styles.rtl}>سبب القرار أو التعديل: {commission.resolutionNote}</Text>
               ) : null}
-            </View>
+              <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[1] }}>
+                <DshFieldReferenceTag label="رقم المصدر" value={commission.sourceId} />
+                {commission.commissionPolicyId ? (
+                  <DshFieldReferenceTag label="رقم السياسة" value={commission.commissionPolicyId} />
+                ) : null}
+              </View>
+            </Card>
           ))
         )}
 
@@ -226,21 +237,8 @@ export function DshFieldFinanceScreen({ onBack }: DshFieldFinanceScreenProps) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colorRoles.surfaceBase },
-  topActions: {
-    paddingHorizontal: spacing[4],
-    paddingTop: spacing[2],
-    alignItems: "flex-start",
-  },
   scroll: { flex: 1 },
   content: { padding: spacing[4], gap: spacing[3], paddingBottom: 96 },
-  card: {
-    backgroundColor: colorRoles.surfaceMuted,
-    padding: spacing[4],
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    gap: spacing[2],
-  },
   balanceRow: {
     flexDirection: "row-reverse",
     justifyContent: "space-between",

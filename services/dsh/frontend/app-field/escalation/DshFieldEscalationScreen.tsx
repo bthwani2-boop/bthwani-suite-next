@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   Header,
+  InlineNotice,
   ScrollScreen,
   StateView,
   Text,
@@ -21,6 +22,7 @@ import {
   type DshEscalationSeverity,
   type DshEscalationCategory,
 } from "../../shared/field-readiness";
+import { DshFieldReferenceTag } from "../components/DshFieldReferenceTag";
 
 type Props = {
   readonly storeId: string;
@@ -89,33 +91,40 @@ export function DshFieldEscalationScreen({ storeId, visitId, onBack }: Props) {
       />
 
       {actionState.kind === "success" ? (
-        <Card tone="success" padding="$3" style={{ marginBottom: spacing[3] }}>
-          <View style={styles.notice}>
-            <Text tone="success">تم تسجيل التصعيد في DSH بنجاح.</Text>
-            <Button label="إغلاق" tone="ghost" size="sm" onPress={resetAction} />
-          </View>
-        </Card>
+        <View style={{ marginBottom: spacing[3] }}>
+          <InlineNotice
+            tone="success"
+            title="تم تسجيل التصعيد بنجاح"
+            action={<Button label="إغلاق" tone="ghost" size="sm" onPress={resetAction} />}
+          />
+        </View>
       ) : null}
 
       {actionState.kind === "queued" ? (
-        <Card tone="warning" padding="$3" style={{ marginBottom: spacing[3] }}>
-          <View style={styles.notice}>
-            <View style={styles.noticeText}>
-              <Text tone="warning">{actionState.message}</Text>
-              <Text role="caption" tone="muted">المرجع المحلي: {actionState.operationId}</Text>
-            </View>
-            <Button label="إغلاق" tone="ghost" size="sm" onPress={resetAction} />
-          </View>
-        </Card>
+        <View style={{ marginBottom: spacing[3] }}>
+          <InlineNotice
+            tone="info"
+            title="تم الحفظ وسيُرسَل تلقائيًا"
+            description={actionState.message}
+            action={
+              <View style={{ gap: spacing[2], alignItems: "flex-end" }}>
+                <DshFieldReferenceTag label="رقم العملية" value={actionState.operationId} />
+                <Button label="إغلاق" tone="ghost" size="sm" onPress={resetAction} />
+              </View>
+            }
+          />
+        </View>
       ) : null}
 
       {actionState.kind === "error" ? (
-        <Card tone="danger" padding="$3" style={{ marginBottom: spacing[3] }}>
-          <View style={styles.notice}>
-            <Text tone="danger">{actionState.message}</Text>
-            <Button label="إغلاق" tone="ghost" size="sm" onPress={resetAction} />
-          </View>
-        </Card>
+        <View style={{ marginBottom: spacing[3] }}>
+          <InlineNotice
+            tone="danger"
+            title="تعذر رفع التصعيد"
+            description={actionState.message}
+            action={<Button label="إغلاق" tone="ghost" size="sm" onPress={resetAction} />}
+          />
+        </View>
       ) : null}
 
       <Card padding="$5" gap="$4">
@@ -175,14 +184,6 @@ export function DshFieldEscalationScreen({ storeId, visitId, onBack }: Props) {
 }
 
 const styles = StyleSheet.create({
-  notice: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: spacing[1],
-    gap: spacing[2],
-  },
-  noticeText: { flex: 1, gap: spacing[1] },
   section: { gap: spacing[2] },
   label: { textAlign: "right", marginBottom: 6 },
   chips: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2] },

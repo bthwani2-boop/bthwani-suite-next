@@ -69,11 +69,11 @@ function resolveCommandRoute(command?: DshFieldNavigationCommand): DshFieldRoute
 }
 
 export function resolveFieldBottomActiveId(route: DshFieldRouteState): string {
-  if (route.kind === 'stores') return 'tasks';
-  if (['visit', 'checklist', 'verification', 'escalation', 'work-queue'].includes(route.kind)) return 'tasks';
+  if (route.kind === 'stores') return 'stores';
+  if (['visit', 'checklist', 'verification', 'escalation', 'work-queue'].includes(route.kind)) return 'stores';
   if (route.kind === 'history') return 'history';
   if (route.kind === 'finance') return 'finance';
-  if (['account', 'profile', 'onboarding', 'partner-progress', 'products-upload'].includes(route.kind)) {
+  if (['account', 'profile', 'profile-completion', 'onboarding', 'partner-progress', 'products-upload'].includes(route.kind)) {
     return 'profile';
   }
   return '';

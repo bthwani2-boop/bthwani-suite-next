@@ -6,6 +6,7 @@ import {
   CpMutedInline,
   CpPageHeader,
   CpStatePanel,
+  CpStateView,
   CpTable,
   CpTableCell,
   CpTableHeaderCell,
@@ -61,8 +62,8 @@ export function DecisionRollbackQueue() {
       dir="rtl"
       header={<CpPageHeader title="التراجع عن القرارات القابلة للعكس" />}
       stateView={
-        rollbacks.state.kind === "loading" ? <CpStatePanel role="status" title="جارٍ تحميل طلبات التراجع…" />
-          : rollbacks.state.kind === "error" ? <CpStatePanel role="alert" title={rollbacks.state.message} />
+        rollbacks.state.kind === "loading" ? <CpStateView kind="loading" title="جارٍ تحميل طلبات التراجع…" />
+          : rollbacks.state.kind === "error" ? <CpStateView kind="error" title={rollbacks.state.message} />
           : undefined
       }
     >
@@ -105,7 +106,7 @@ export function DecisionRollbackQueue() {
         </section>
       ) : null}
 
-      {actionError ? <CpStatePanel role="alert" title={actionError} /> : null}
+      {actionError ? <CpStateView kind="error" title={actionError} /> : null}
       {rollbacks.state.kind === "success" && rollbacks.state.data.length === 0 ? (
         <CpStatePanel role="status" title="لا توجد طلبات تراجع معلقة." />
       ) : null}
