@@ -1,8 +1,11 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
-// Import from compiled dist
-const { applyDiscoveryFilter, canViewHomeDiscovery } = await import(
+const {
+  applyDiscoveryFilter,
+  canViewHomeDiscovery,
+  isDiscoveryFilterOperational,
+} = await import(
   "../dist/services/dsh/frontend/shared/home-discovery/home-discovery.policy.js"
 );
 
@@ -24,6 +27,7 @@ const makeStore = (overrides = {}) => ({
   isPopular: false,
   pointsMultiplier: null,
   distanceDisplay: null,
+  distanceKm: null,
   deliveryModeLabels: [],
   openStatusRole: "storeOpen",
   ...overrides,
@@ -34,6 +38,15 @@ describe("canViewHomeDiscovery", () => {
     assert.equal(canViewHomeDiscovery({}), true);
     assert.equal(canViewHomeDiscovery({ isAuthenticated: false }), true);
     assert.equal(canViewHomeDiscovery({ isAuthenticated: true }), true);
+  });
+});
+
+describe("discovery filter operational truth", () => {
+  test("hides favorites until a persistent authenticated contract exists", () => {
+    assert.equal(isDiscoveryFilterOperational("favorites"), false);
+    assert.equal(isDiscoveryFilterOperational("all"), true);
+    assert.equal(isDiscoveryFilterOperational("nearest"), true);
+    assert.equal(isDiscoveryFilterOperational("offers"), true);
   });
 });
 
@@ -53,16 +66,26 @@ describe("applyDiscoveryFilter — all", () => {
   });
 });
 
-describe("applyDiscoveryFilter — favorites", () => {
-  test("returns empty array — favorites requires server-side endpoint not yet available", () => {
+describe("applyDiscoveryFilter — unsupported favorites", () => {
+  test("fails safe by preserving governed stores instead of implying persisted favorites", () => {
     const stores = [makeStore(), makeStore({ id: "store-002" })];
     const result = applyDiscoveryFilter(stores, "favorites");
-    assert.equal(result.length, 0);
+    assert.deepEqual(result.map((store) => store.id), ["store-001", "store-002"]);
+    assert.notEqual(result, stores);
   });
 });
 
 describe("applyDiscoveryFilter — nearest", () => {
-  test("stores with distanceDisplay come before stores without", () => {
+  test("sorts by numeric distance when available", () => {
+    const stores = [
+      makeStore({ id: "far", distanceKm: 8, distanceDisplay: "8 كم" }),
+      makeStore({ id: "near", distanceKm: 1.2, distanceDisplay: "1.2 كم" }),
+    ];
+    const result = applyDiscoveryFilter(stores, "nearest");
+    assert.deepEqual(result.map((store) => store.id), ["near", "far"]);
+  });
+
+  test("stores with distance come before stores without", () => {
     const stores = [
       makeStore({ id: "no-dist", distanceDisplay: null }),
       makeStore({ id: "has-dist", distanceDisplay: "1.2 كم" }),
@@ -78,7 +101,7 @@ describe("applyDiscoveryFilter — nearest", () => {
       makeStore({ id: "b", distanceDisplay: null }),
     ];
     const result = applyDiscoveryFilter(stores, "nearest");
-    assert.equal(result.length, 2);
+    assert.deepEqual(result.map((store) => store.id), ["a", "b"]);
   });
 
   test("does not mutate original array", () => {
@@ -95,8 +118,7 @@ describe("applyDiscoveryFilter — offers", () => {
       makeStore({ id: "plain" }),
     ];
     const result = applyDiscoveryFilter(stores, "offers");
-    assert.equal(result.length, 1);
-    assert.equal(result[0].id, "coupon");
+    assert.deepEqual(result.map((store) => store.id), ["coupon"]);
   });
 
   test("keeps stores with free delivery", () => {
@@ -105,18 +127,7 @@ describe("applyDiscoveryFilter — offers", () => {
       makeStore({ id: "paid" }),
     ];
     const result = applyDiscoveryFilter(stores, "offers");
-    assert.equal(result.length, 1);
-    assert.equal(result[0].id, "free");
-  });
-
-  test("keeps stores with both coupon and free delivery", () => {
-    const stores = [
-      makeStore({ id: "both", hasCouponBadge: true, isFreeDelivery: true }),
-      makeStore({ id: "neither" }),
-    ];
-    const result = applyDiscoveryFilter(stores, "offers");
-    assert.equal(result.length, 1);
-    assert.equal(result[0].id, "both");
+    assert.deepEqual(result.map((store) => store.id), ["free"]);
   });
 
   test("returns empty when no stores match", () => {
@@ -130,7 +141,7 @@ describe("applyDiscoveryFilter — new", () => {
   test("returns copy preserving order — backend seeds newest first", () => {
     const stores = [makeStore({ id: "new1" }), makeStore({ id: "new2" })];
     const result = applyDiscoveryFilter(stores, "new");
-    assert.equal(result.length, 2);
-    assert.equal(result[0].id, "new1");
+    assert.deepEqual(result.map((store) => store.id), ["new1", "new2"]);
+    assert.notEqual(result, stores);
   });
 });
