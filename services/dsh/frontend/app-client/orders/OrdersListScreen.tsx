@@ -12,6 +12,7 @@ import {
   colorRoles,
   brandScale,
 } from "@bthwani/ui-kit";
+import { shareClientTextDocument } from "../../../../../apps/app-client/runtime/src/platform/client-platform-actions";
 import {
   bidiIsolate,
   buildOrderTruthAccessibilityLabel,
@@ -25,12 +26,36 @@ import { OrderRefundStatusCard } from "../../shared/finance-wlt-link/wlt-refund/
 
 type StatusTone = "neutral" | "success" | "warning" | "danger" | "info";
 
+const FULFILLMENT_LABELS: Readonly<Record<OrderTruth["fulfillmentMode"], string>> = {
+  bthwani_delivery: "توصيل بثواني",
+  partner_delivery: "توصيل المتجر",
+  pickup: "استلام ذاتي",
+};
+
 function orderStatusTone(status: string): StatusTone {
   if (status === "pending" || status === "arrived_customer") return "warning";
   if (status === "ready_for_pickup" || status === "delivered" || status === "returned_to_store") return "success";
   if (status.startsWith("cancelled_") || status.startsWith("failed_")) return "danger";
   if (["store_accepted", "preparing", "driver_assigned", "driver_arrived_store", "picked_up", "returning_to_store", "return_arrived_store"].includes(status)) return "info";
   return "neutral";
+}
+
+function shareableOrderSummary(order: OrderTruth): string {
+  const view = toOrderTruthSummary(order);
+  return [
+    "بثواني — ملخص الطلب",
+    `رقم الطلب: ${order.orderNumber}`,
+    `الحالة: ${view.statusLabel}`,
+    `طريقة التنفيذ: ${FULFILLMENT_LABELS[order.fulfillmentMode]}`,
+    `تاريخ الطلب: ${view.createdAtLabel}`,
+    "",
+    "الأصناف:",
+    ...order.items.map((item) =>
+      `- ${item.productName} ×${item.quantity} — ${formatMinorUnits(item.lineTotalMinorUnits, order.currency)}`,
+    ),
+    "",
+    `الإجمالي: ${formatMinorUnits(order.totalMinorUnits, order.currency)}`,
+  ].join("\n");
 }
 
 type Props = {
@@ -40,6 +65,8 @@ type Props = {
 
 function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
   const view = toOrderTruthSummary(order);
   const items = order.items;
   const mainItemName = items[0]?.productName ?? "طلب بلا عناصر قابلة للعرض";
@@ -47,6 +74,21 @@ function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (i
   const isActive = order.currentOwner !== "terminal";
   const canOpen = canExecuteOrderTruthAction(order, "view") && Boolean(onOpenOrder);
   const accessibilityLabel = buildOrderTruthAccessibilityLabel(order);
+
+  const shareOrder = async () => {
+    if (sharing) return;
+    setSharing(true);
+    setShareError(null);
+    const shared = await shareClientTextDocument({
+      fileNamePrefix: `bthwani-order-${order.orderNumber}`,
+      contents: shareableOrderSummary(order),
+      dialogTitle: `مشاركة ملخص الطلب ${order.orderNumber}`,
+    });
+    if (!shared) {
+      setShareError("المشاركة غير متاحة على هذا الجهاز أو تعذر فتح واجهة المشاركة.");
+    }
+    setSharing(false);
+  };
 
   return (
     <Surface style={styles.card}>
@@ -90,7 +132,17 @@ function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (i
             <Text role="caption" tone="muted">الإصدار: {order.version}</Text>
           </View>
           <OrderRefundStatusCard orderId={order.id} surface="client" />
+          {shareError ? <Text role="bodySm" style={styles.dangerText}>{shareError}</Text> : null}
           <View style={styles.actionRow}>
+            <Button
+              style={styles.actionButton}
+              label={sharing ? "جارٍ إعداد المشاركة…" : "مشاركة الملخص"}
+              accessibilityLabel={`${accessibilityLabel}، مشاركة ملخص غير حساس`}
+              tone="secondary"
+              size="sm"
+              disabled={sharing}
+              onPress={() => void shareOrder()}
+            />
             {canOpen ? (
               <Button
                 style={styles.actionButton}
@@ -98,6 +150,7 @@ function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (i
                 accessibilityLabel={`${accessibilityLabel}، فتح التفاصيل`}
                 tone={order.allowedActions.includes("track") ? "primary" : "secondary"}
                 size="sm"
+                disabled={sharing}
                 onPress={() => onOpenOrder?.(order.id)}
               />
             ) : null}
@@ -149,7 +202,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing[6], gap: spacing[2] },
   retryButton: { marginTop: spacing[4] },
   warningText: { color: colorRoles.warning },
-  dangerText: { color: colorRoles.danger },
+  dangerText: { color: colorRoles.danger, textAlign: "right" },
   partialBanner: { padding: spacing[3], gap: spacing[2], borderColor: colorRoles.warning, borderWidth: 1, marginBottom: spacing[3] },
   card: { backgroundColor: colorRoles.surfaceBase, borderRadius: 16, borderWidth: 1, borderColor: colorRoles.borderSubtle, overflow: "hidden", marginBottom: spacing[3] },
   cardHeader: { padding: spacing[4] },
@@ -167,6 +220,6 @@ const styles = StyleSheet.create({
   itemName: { textAlign: "right", flex: 1 },
   itemQtyPrice: { color: colorRoles.textSecondary },
   truthMeta: { marginTop: spacing[3], gap: spacing[1] },
-  actionRow: { flexDirection: "row-reverse", marginTop: spacing[4] },
-  actionButton: { flex: 1 },
+  actionRow: { flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2], marginTop: spacing[4] },
+  actionButton: { flex: 1, minWidth: 140 },
 });
