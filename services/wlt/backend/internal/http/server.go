@@ -10,6 +10,7 @@ import (
 	"wlt-api/internal/ledger"
 	"wlt-api/internal/payment"
 	"wlt-api/internal/payout"
+	"wlt-api/internal/penalty"
 	"wlt-api/internal/promotionfunding"
 	"wlt-api/internal/reconciliation"
 	"wlt-api/internal/reference"
@@ -106,6 +107,9 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/commissions/{commissionId}/settle", gate(serviceAuth(cod.HandleSettleGovernedCommissionIdempotent(db))))
 	mux.HandleFunc("POST /wlt/commissions/{commissionId}/reject", gate(serviceAuth(cod.HandleRejectGovernedCommissionIdempotent(db))))
 	mux.HandleFunc("POST /wlt/commissions/{commissionId}/reverse", gate(serviceAuth(cod.HandleReverseGovernedCommissionIdempotent(db))))
+
+	mux.HandleFunc("POST /wlt/provider-penalties", gate(serviceAuth(penalty.HandlePost(db))))
+	mux.HandleFunc("POST /wlt/provider-penalties/{penaltyId}/reverse", gate(serviceAuth(penalty.HandleReverse(db))))
 
 	mux.HandleFunc("POST /wlt/ledger/entries", gate(serviceAuth(ledger.HandleAppendLedgerEntry(db))))
 	mux.HandleFunc("GET /wlt/ledger/entries/{entryId}", readGate(ledger.HandleGetLedgerEntry(db)))
