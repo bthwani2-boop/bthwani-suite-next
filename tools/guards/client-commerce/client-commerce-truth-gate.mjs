@@ -80,17 +80,33 @@ const rules = [
   ], ["ClientRemoteImage", "accessibilityLabel={`${store.displayName}، ${store.isOpen ? \"مفتوح\" : \"مغلق\"}`"]],
   ["apps/app-client/runtime/src/media/ClientRemoteImage.tsx", [], ["expo-image", 'cachePolicy="memory-disk"', "transition={150}"]],
   ["services/dsh/frontend/app-client/home-discovery/HomeFilterRailSection.tsx", [], ["isDiscoveryFilterOperational", "operationalFilters"]],
+  ["services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx", [
+    [/Math\.random\s*\(/g, "RANDOM_HOME_VIEWER_REFERENCE_FORBIDDEN"],
+  ], ["createClientEphemeralId", "searchText", "normalizedQuery", "ابحث عن متجر أو فئة"]],
+  ["services/dsh/frontend/app-client/home-discovery/HomeHeroBannerSection.tsx", [
+    [/اشترك الآن/g, "GENERIC_BANNER_CTA_FORBIDDEN"],
+  ], ["ClientRemoteImage", "bannerActionLabel", "useWindowDimensions"]],
+  ["services/dsh/frontend/app-client/home-discovery/HomePromoSection.tsx", [], ["ClientRemoteImage", "promoActionLabel", "promo.imageUrl"]],
+  ["services/dsh/frontend/app-client/home-discovery/HomeReelsSection.tsx", [
+    [/اضغط للتفاصيل/g, "NON_PLAYABLE_REEL_COPY_FORBIDDEN"],
+  ], ["expo-video", "useVideoPlayer", "useCaching: true", "allowsPictureInPicture", 'selectedReel.targetType === "store"']],
   ["services/dsh/frontend/app-client/account/PreferencesHubScreen.tsx", [
     [/\blocalStorage\b|\bsessionStorage\b/g, "LOCAL_NOTIFICATION_PREFERENCE_FORBIDDEN"],
-  ], ["useNotificationsController", "savePreference", "preferenceState.kind === \"success\""]],
-  ["apps/app-client/runtime/src/preferences/client-appearance.tsx", [
-    [/SecureStore/g, "NON_SENSITIVE_APPEARANCE_SECURESTORE_FORBIDDEN"],
-  ], ["AsyncStorage", "useColorScheme", "Haptics.selectionAsync", '"system"', "resolveThemeName"]],
-  ["services/dsh/frontend/app-client/account/AppearanceHubScreen.tsx", [], ["ClientAppearanceMode", 'mode: "system"', "onAppearanceModeChange", "جارٍ حفظ المظهر"]],
+  ], ["useNotificationsController", "savePreference", 'preferenceState.kind === "success"']],
+  ["services/dsh/frontend/app-client/account/MySpaceScreen.tsx", [
+    [/onOpenAppearance|currentAppearanceLabel|\"appearance\"/g, "INCOMPLETE_APPEARANCE_ENTRY_FORBIDDEN"],
+  ], ["const TABS", "onOpenOrders", "onOpenSupport"]],
+  ["apps/app-client/runtime/app.config.ts", [
+    [/userInterfaceStyle:\s*\"automatic\"/g, "INCOMPLETE_NATIVE_DARK_MODE_FORBIDDEN"],
+  ], ['userInterfaceStyle: "light"', "supportsPictureInPicture: true", "ExpoConfig"]],
   ["services/dsh/frontend/app-client/support/SupportTicketScreen.tsx", [], ["const ok = await submitTicket", "if (!ok) return;", "onBack", "maxLength={4000}"]],
+  ["services/dsh/frontend/shared/notifications/ActorNotificationsPanel.tsx", [], ["showPreferences", "useNotificationsController(authKind, { loadPreferences: showPreferences })"]],
+  ["services/dsh/frontend/app-client/notifications/NotificationCenterScreen.tsx", [], ["showPreferences={false}", "onOpenActionUrl"]],
+  ["services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx", [], ["onOpenPickup", 'order.fulfillmentMode === "pickup"', "افتح جلسة الاستلام"]],
   ["services/dsh/frontend/app-client/DshClientSurface.tsx", [
     [/Linking\.openURL/g, "RAW_EXTERNAL_LINK_OPEN_FORBIDDEN"],
-  ], ["openClientExternalUrl", "useClientAppearance", "performClientSelectionHaptic", "onBack={() => setShowNotifications(false)}"]],
+    [/useClientAppearance|AppearanceHubScreen|profileRoute === \"appearance\"/g, "INCOMPLETE_APPEARANCE_RUNTIME_FORBIDDEN"],
+  ], ["openClientExternalUrl", "performClientSelectionHaptic", "onBack={() => setShowNotifications(false)}", "onOpenPickup={openPickupSession}"]],
   ["services/wlt/frontend/shared/dsh/use-wlt-dsh-payment-controller.tsx", [[/grandTotal|amountRows/g, "LOCAL_WLT_AMOUNT_FORBIDDEN"]], ["never calculates totals", 'useState<PaymentMethodKey>("cod")', "مزود WLT الحقيقي"]],
 ];
 

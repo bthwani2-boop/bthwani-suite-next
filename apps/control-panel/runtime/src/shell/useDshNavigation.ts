@@ -17,11 +17,6 @@ export const DSH_NAV_ITEMS = [
   { section: "support", label: "الدعم والمساعدة", route: "/dsh/support" },
   { section: "platform", label: "المنصة السيادية", route: "/dsh/platform" },
   {
-    section: "platform-policies",
-    label: "سياسات المنصة ومناطق الخدمة",
-    route: "/dsh/platform/policies",
-  },
-  {
     section: "administration",
     label: "الإدارة والصلاحيات",
     route: "/dsh/administration",
@@ -46,7 +41,7 @@ export function useDshNavigation() {
   const visibleItems = useMemo(
     () =>
       DSH_NAV_ITEMS.filter(
-        (item) => !item.section.startsWith("platform") || canReadPlatform,
+        (item) => item.section !== "platform" || canReadPlatform,
       ),
     [canReadPlatform],
   );

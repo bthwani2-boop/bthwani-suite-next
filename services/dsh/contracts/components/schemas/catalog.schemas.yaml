@@ -273,6 +273,8 @@ DshHomeCategory:
     - id
     - label
     - sortOrder
+    - destinationType
+    - destinationTarget
   properties:
     id:
       type: string
@@ -282,6 +284,12 @@ DshHomeCategory:
       type: string
     sortOrder:
       type: integer
+    destinationType:
+      type: string
+      enum: [catalog_domain, special_request]
+    destinationTarget:
+      type: string
+      description: Central catalog domain id or sovereign special-request type.
 
 DshEscalationCategory:
   type: string

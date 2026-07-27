@@ -9,6 +9,7 @@ import type {
   DshHomeBannerDto,
   DshHomePromoDto,
   DshHomeCategoryDto,
+  DshHomeCategoryDestinationType,
   DshHomeStoreDto,
 } from './home-discovery.types';
 import { resolveDshMediaUrl } from '../_kernel/dsh-media-url';
@@ -41,6 +42,8 @@ export type CategoryViewModel = {
   label: string;
   iconUrl: string;
   sortOrder: number;
+  destinationType: DshHomeCategoryDestinationType;
+  destinationTarget: string;
 };
 
 export type HomeStoreCardViewModel = DshStoreCardViewModel & {
@@ -103,6 +106,8 @@ export function toCategoryViewModel(dto: DshHomeCategoryDto): CategoryViewModel 
     label: dto.label,
     iconUrl: resolveDshMediaUrl(dto.iconUrl) ?? dto.iconUrl ?? '',
     sortOrder: dto.sortOrder,
+    destinationType: dto.destinationType,
+    destinationTarget: dto.destinationTarget,
   };
 }
 

@@ -89,11 +89,14 @@ export function ActorNotificationsPanel({
   const {
     state,
     preferenceState,
+    busyAction,
+    actionError,
     markRead,
     markAllRead,
     reload,
     savePreference,
   } = useNotificationsController(authKind, { loadPreferences: showPreferences });
+  const mutationBusy = busyAction !== null;
 
   if (authKind !== "authenticated") {
     return <StateView title="تسجيل الدخول مطلوب" description="هذه الإشعارات مرتبطة بالممثل الحالي فقط." />;
@@ -119,14 +122,18 @@ export function ActorNotificationsPanel({
           </Text>
         </Box>
         <Button
-          label="تحديد الكل مقروءاً"
+          label={busyAction === "mark_all_read" ? "جارٍ التحديث…" : "تحديد الكل مقروءاً"}
           tone="secondary"
           size="sm"
           fullWidth={false}
-          disabled={state.unreadCount === 0}
+          disabled={state.unreadCount === 0 || mutationBusy}
           onPress={() => { void markAllRead(); }}
         />
       </Box>
+
+      {actionError ? (
+        <StateView tone="danger" title="تعذر تنفيذ الإجراء" description={actionError} />
+      ) : null}
 
       {notifications.length === 0 ? (
         <StateView title={emptyTitle} description={emptyDescription} actionLabel="تحديث" onActionPress={reload} />
@@ -140,9 +147,9 @@ export function ActorNotificationsPanel({
               meta={new Date(notification.createdAt).toLocaleString("ar-YE")}
               trailing={<Badge label={notification.isRead ? notification.topic : "جديد"} tone={notification.isRead ? "neutral" : "action"} />}
               onPress={() => {
-                void markRead(notification.id)
-                  .then(() => openNotificationAction(notification.actionUrl, appScheme, onOpenActionUrl))
-                  .catch(() => undefined);
+                if (mutationBusy) return;
+                void markRead(notification.id);
+                void openNotificationAction(notification.actionUrl, appScheme, onOpenActionUrl).catch(() => undefined);
               }}
             />
           ))}
@@ -173,6 +180,7 @@ export function ActorNotificationsPanel({
                     tone={preference.enabled ? "secondary" : "primary"}
                     size="sm"
                     fullWidth={false}
+                    disabled={mutationBusy}
                     onPress={() => { void savePreference(preferenceInput(preference, { enabled: !preference.enabled })); }}
                   />
                 </Box>
@@ -185,6 +193,7 @@ export function ActorNotificationsPanel({
                       tone={preference.channels.includes(channel) ? "primary" : "secondary"}
                       size="sm"
                       fullWidth={false}
+                      disabled={mutationBusy}
                       onPress={() => {
                         void savePreference(preferenceInput(preference, {
                           channels: toggledChannels(preference.channels, channel),
@@ -200,6 +209,7 @@ export function ActorNotificationsPanel({
                     tone="secondary"
                     size="sm"
                     fullWidth={false}
+                    disabled={mutationBusy}
                     onPress={() => {
                       void savePreference(preferenceInput(preference, preference.quietHoursStart
                         ? { quietHoursStart: undefined, quietHoursEnd: undefined }
@@ -211,6 +221,7 @@ export function ActorNotificationsPanel({
                     tone="secondary"
                     size="sm"
                     fullWidth={false}
+                    disabled={mutationBusy}
                     onPress={() => {
                       void savePreference(preferenceInput(preference, {
                         locale: preference.locale === "ar" ? "en" : "ar",

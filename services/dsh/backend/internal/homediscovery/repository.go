@@ -72,6 +72,15 @@ func ListBanners(ctx context.Context, db *sql.DB, discoveryQuery HomeDiscoveryQu
 				  AND d.is_active = true
 				  AND d.is_client_visible = true
 			)
+			OR EXISTS (
+				SELECT 1
+				FROM dsh_catalog_nodes n
+				JOIN dsh_catalog_domains d ON d.id = n.domain_id
+				WHERE n.id = b.action_target
+				  AND d.is_manual_request = true
+				  AND n.slug IN ('shein', 'awnak')
+				  AND n.is_active = true
+			)
 		  )` + homeContentTargetPredicate("b") + `
 		ORDER BY b.sort_order ASC, b.id ASC`
 	rows, err := db.QueryContext(ctx, query,
@@ -124,6 +133,15 @@ func ListPromos(ctx context.Context, db *sql.DB, discoveryQuery HomeDiscoveryQue
 				  AND d.is_active = true
 				  AND d.is_client_visible = true
 			)
+			OR EXISTS (
+				SELECT 1
+				FROM dsh_catalog_nodes n
+				JOIN dsh_catalog_domains d ON d.id = n.domain_id
+				WHERE n.id = p.action_target
+				  AND d.is_manual_request = true
+				  AND n.slug IN ('shein', 'awnak')
+				  AND n.is_active = true
+			)
 		  )` + homeContentTargetPredicate("p") + `
 		ORDER BY p.sort_order ASC, p.id ASC`
 	rows, err := db.QueryContext(ctx, query,
@@ -153,16 +171,24 @@ func ListPromos(ctx context.Context, db *sql.DB, discoveryQuery HomeDiscoveryQue
 
 func ListCategories(ctx context.Context, db *sql.DB) ([]HomeCategory, error) {
 	rows, err := db.QueryContext(ctx, `
-		SELECT id, name_ar, COALESCE(icon,''), sort_order
+		SELECT id, name_ar, COALESCE(icon,''), sort_order,
+		       'catalog_domain' AS destination_type,
+		       id AS destination_target
 		FROM dsh_catalog_domains
 		WHERE is_active = true
 		  AND is_client_visible = true
 		  AND is_manual_request = false
 		UNION ALL
-		SELECT n.id, n.name_ar, COALESCE(n.icon,''), n.sort_order
+		SELECT n.id, n.name_ar, COALESCE(n.icon,''), n.sort_order,
+		       'special_request' AS destination_type,
+		       CASE n.slug
+		         WHEN 'shein' THEN 'SHEIN_ASSISTED_PURCHASE'
+		         WHEN 'awnak' THEN 'AWNAK_ERRAND'
+		       END AS destination_target
 		FROM dsh_catalog_nodes n
 		JOIN dsh_catalog_domains d ON n.domain_id = d.id
 		WHERE d.is_manual_request = true
+		  AND n.slug IN ('shein', 'awnak')
 		  AND n.is_active = true
 		ORDER BY sort_order ASC`)
 	if err != nil {
@@ -173,7 +199,14 @@ func ListCategories(ctx context.Context, db *sql.DB) ([]HomeCategory, error) {
 	categories := []HomeCategory{}
 	for rows.Next() {
 		var c HomeCategory
-		if err := rows.Scan(&c.ID, &c.Label, &c.IconURL, &c.SortOrder); err != nil {
+		if err := rows.Scan(
+			&c.ID,
+			&c.Label,
+			&c.IconURL,
+			&c.SortOrder,
+			&c.DestinationType,
+			&c.DestinationTarget,
+		); err != nil {
 			return nil, fmt.Errorf("failed to scan category row: %w", err)
 		}
 		categories = append(categories, c)

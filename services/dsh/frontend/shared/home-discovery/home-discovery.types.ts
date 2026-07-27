@@ -13,9 +13,22 @@ export type DshHomeDiscoveryResponseDto =
 export type DshHomeBannerDto = DshHomeDiscoveryResponseDto['banners'][number];
 export type DshHomePromoDto = DshHomeDiscoveryResponseDto['promos'][number];
 export type DshHomeFilterDto = DshHomeDiscoveryResponseDto['filters'][number];
-export type DshHomeCategoryDto = DshHomeDiscoveryResponseDto['categories'][number];
+type GeneratedDshHomeCategoryDto = DshHomeDiscoveryResponseDto['categories'][number];
 export type DshHomeStoreDto = DshHomeDiscoveryResponseDto['stores'][number];
 export type DshHomePaginationDto = DshHomeDiscoveryResponseDto['pagination'];
+
+export type DshHomeCategoryDestinationType = 'catalog_domain' | 'special_request';
+export type DshHomeSpecialRequestTarget = 'SHEIN_ASSISTED_PURCHASE' | 'AWNAK_ERRAND';
+
+/**
+ * Temporary generated-client compatibility boundary. The OpenAPI source of
+ * truth already requires these fields; this intersection can be removed after
+ * the next generated-client refresh.
+ */
+export type DshHomeCategoryDto = GeneratedDshHomeCategoryDto & {
+  readonly destinationType: DshHomeCategoryDestinationType;
+  readonly destinationTarget: string;
+};
 
 export type DiscoveryFilterKind = DshHomeFilterDto['kind'];
 export type DshHomeAudienceSegment = 'guest' | 'authenticated';

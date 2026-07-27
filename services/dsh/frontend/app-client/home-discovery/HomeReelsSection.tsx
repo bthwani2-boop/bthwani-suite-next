@@ -43,7 +43,7 @@ function ReelPlayerModal({
   readonly onClose: () => void;
   readonly onOpenTarget?: () => void;
 }) {
-  const player = useVideoPlayer(reel.videoUrl, (instance) => {
+  const player = useVideoPlayer({ uri: reel.videoUrl, useCaching: true }, (instance) => {
     instance.loop = true;
     instance.play();
   });

@@ -29,7 +29,9 @@ import {
   fetchHomePublicReels,
   recordHomeMarketingEvent,
   type BannerViewModel,
+  type CategoryViewModel,
   type DiscoveryFilterKind,
+  type DshHomeSpecialRequestTarget,
   type HomeDiscoveryState,
   type HomePublicReel,
   type PromoViewModel,
@@ -45,7 +47,7 @@ type Props = {
   activeFilter: DiscoveryFilterKind;
   onFilterChange: (kind: DiscoveryFilterKind) => void;
   onStorePress?: ((storeId: string, slug: string) => void) | undefined;
-  onSpecialCategoryPress?: ((nodeId: string) => void) | undefined;
+  onSpecialRequestPress?: ((requestType: DshHomeSpecialRequestTarget) => void) | undefined;
   onMarketingAction?: ((actionType: string, actionTarget: string) => void) | undefined;
   onRetry?: (() => void) | undefined;
 };
@@ -58,12 +60,16 @@ function normalizeSearchText(value: string): string {
     .trim();
 }
 
+function isSpecialRequestTarget(value: string): value is DshHomeSpecialRequestTarget {
+  return value === "SHEIN_ASSISTED_PURCHASE" || value === "AWNAK_ERRAND";
+}
+
 export function HomeDiscoveryShell({
   state,
   activeFilter,
   onFilterChange,
   onStorePress,
-  onSpecialCategoryPress,
+  onSpecialRequestPress,
   onMarketingAction,
   onRetry,
 }: Props) {
@@ -72,10 +78,10 @@ export function HomeDiscoveryShell({
   const [showDropdown, setShowDropdown] = React.useState(false);
   const [searchText, setSearchText] = React.useState("");
   const [reels, setReels] = React.useState<readonly HomePublicReel[]>([]);
+  const [viewerRef] = React.useState(() => createClientEphemeralId("home"));
   const scrollRef = React.useRef<ScrollView>(null);
   const reelsOffsetY = React.useRef(0);
   const recordedImpressions = React.useRef(new Set<string>());
-  const viewerRef = React.useRef(createClientEphemeralId("home"));
 
   const emitMarketingEvent = React.useCallback((
     eventType: "impression" | "click",
@@ -88,12 +94,12 @@ export function HomeDiscoveryShell({
       eventType,
       contentKind,
       contentId,
-      viewerRef: viewerRef.current,
+      viewerRef,
       cityCode: state.data.context.cityCode,
       serviceAreaCode: state.data.context.serviceAreaCode,
       audienceSegment: state.data.context.audienceSegment,
     }).catch(() => undefined);
-  }, [state]);
+  }, [state, viewerRef]);
 
   React.useEffect(() => {
     if (state.kind !== "success") {
@@ -101,6 +107,7 @@ export function HomeDiscoveryShell({
       return;
     }
 
+    setReels([]);
     let cancelled = false;
     void fetchHomePublicReels(10)
       .then((items) => {
@@ -120,28 +127,56 @@ export function HomeDiscoveryShell({
   ]);
 
   React.useEffect(() => {
+    if (state.kind !== "success" || activeCategoryId === null) return;
+    const categoryStillExists = state.data.categories.some(
+      (category) => category.destinationType === "catalog_domain"
+        && category.destinationTarget === activeCategoryId,
+    );
+    if (!categoryStillExists) setActiveCategoryId(null);
+  }, [activeCategoryId, state]);
+
+  React.useEffect(() => {
     if (state.kind !== "success") return;
+    const contextKey = `${state.data.context.cityCode}:${state.data.context.serviceAreaCode}`;
     const content = [
       ...state.data.banners.map((item) => ({ kind: "banners" as const, id: item.id })),
       ...state.data.promos.map((item) => ({ kind: "promos" as const, id: item.id })),
     ];
     for (const item of content) {
-      const key = `${item.kind}:${item.id}`;
+      const key = `${contextKey}:${item.kind}:${item.id}`;
       if (recordedImpressions.current.has(key)) continue;
       recordedImpressions.current.add(key);
       emitMarketingEvent("impression", item.kind, item.id);
     }
   }, [emitMarketingEvent, state]);
 
+  const openCategoryDestination = React.useCallback((category: CategoryViewModel) => {
+    if (
+      category.destinationType === "special_request"
+      && isSpecialRequestTarget(category.destinationTarget)
+    ) {
+      onSpecialRequestPress?.(category.destinationTarget);
+      return;
+    }
+    if (category.destinationType === "catalog_domain") {
+      setActiveCategoryId((current) =>
+        current === category.destinationTarget ? null : category.destinationTarget,
+      );
+    }
+  }, [onSpecialRequestPress]);
+
   const executeMarketingAction = React.useCallback((actionType: string, actionTarget: string) => {
     const target = actionTarget.trim();
     if (!target || actionType === "none") return;
     if (actionType === "category") {
-      setActiveCategoryId(target);
+      const category = state.kind === "success"
+        ? state.data.categories.find((item) => item.id === target || item.destinationTarget === target)
+        : undefined;
+      if (category) openCategoryDestination(category);
       return;
     }
     onMarketingAction?.(actionType, target);
-  }, [onMarketingAction]);
+  }, [onMarketingAction, openCategoryDestination, state]);
 
   const handleBannerPress = React.useCallback((banner: BannerViewModel) => {
     emitMarketingEvent("click", "banners", banner.id);
@@ -158,9 +193,7 @@ export function HomeDiscoveryShell({
   }, []);
 
   const handleReelPress = React.useCallback((reel: HomePublicReel) => {
-    if (reel.targetType === "store") {
-      onMarketingAction?.("store", reel.targetId);
-    }
+    onMarketingAction?.(reel.targetType, reel.targetId);
   }, [onMarketingAction]);
 
   if (state.kind === "loading") {
@@ -227,7 +260,7 @@ export function HomeDiscoveryShell({
           promos={promos}
           onPromoPress={handlePromoPress}
           onCategoriesPress={() => setShowDropdown(true)}
-          onVideoPress={handleVideoPress}
+          {...(reels.length > 0 ? { onVideoPress: handleVideoPress } : {})}
         />
         <View
           onLayout={(event) => {
@@ -301,7 +334,8 @@ export function HomeDiscoveryShell({
                     }}
                   />
                   {categories.map((category) => {
-                    const selected = activeCategoryId === category.id;
+                    const selected = category.destinationType === "catalog_domain"
+                      && activeCategoryId === category.destinationTarget;
                     return (
                       <CategoryOption
                         key={category.id}
@@ -311,11 +345,7 @@ export function HomeDiscoveryShell({
                         isRtl={isRtl}
                         onPress={() => {
                           setShowDropdown(false);
-                          if (category.id === "node-shein" || category.id === "node-awnak") {
-                            onSpecialCategoryPress?.(category.id);
-                          } else {
-                            setActiveCategoryId(selected ? null : category.id);
-                          }
+                          openCategoryDestination(category);
                         }}
                       />
                     );
@@ -343,7 +373,7 @@ function CategoryOption({
   readonly isRtl: boolean;
   readonly onPress: () => void;
 }) {
-  const iconIsImageUrl = /^https:\/\//i.test(icon) || icon.startsWith("/");
+  const iconIsImageUrl = /^https?:\/\//i.test(icon) || icon.startsWith("/");
 
   return (
     <Pressable
