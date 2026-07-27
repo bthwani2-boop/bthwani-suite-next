@@ -8,7 +8,6 @@ const rules = [
     "services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx",
     [],
     [
-      "PlatformPoliciesContent",
       "ServiceAreaGovernanceSection",
       "OperationalPolicyGovernanceSection",
       "StoreOnboardingFeePolicySection",
@@ -57,35 +56,17 @@ const rules = [
   ],
   [
     "apps/control-panel/runtime/src/shell/useDshNavigation.ts",
-    [
-      [/platform-policies/g, "DUPLICATE_SOVEREIGN_PLATFORM_NAV_SECTION_FORBIDDEN"],
-      [/\/dsh\/platform\/policies/g, "DUPLICATE_SOVEREIGN_PLATFORM_NAV_ROUTE_FORBIDDEN"],
-    ],
-    [
-      'section: "platform"',
-      'label: "المنصة السيادية"',
-      'route: "/dsh/platform"',
-      "platform:read",
-    ],
-  ],
-  [
-    "services/dsh/frontend/control-panel/platform/PlatformDashboardScreen.tsx",
     [],
     [
-      "PlatformPoliciesContent",
-      'mainTab === "policies"',
-      "السياسات ومناطق الخدمة",
-      "initialTab",
+      "platform-policies",
+      "/dsh/platform/policies",
+      "platform:read",
     ],
   ],
   [
     "apps/control-panel/runtime/src/app/dsh/platform/policies/page.tsx",
     [],
-    [
-      "PlatformDashboardScreen",
-      "PlatformGovernanceVisual",
-      'initialTab="policies"',
-    ],
+    ["PlatformPoliciesScreen"],
   ],
 ];
 
