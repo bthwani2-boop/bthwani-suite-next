@@ -39,7 +39,7 @@ import {
 import { HomeFilterRailSection } from "./HomeFilterRailSection";
 import { HomeHeroBannerSection } from "./HomeHeroBannerSection";
 import { HomePromoSection } from "./HomePromoSection";
-import { HomeReelsSection } from "./HomeReelsSection";
+import { HomeReelsSection, type HomeReelsLoadState } from "./HomeReelsSection";
 import { HomeStoreFeedSection } from "./HomeStoreFeedSection";
 
 type Props = {
@@ -51,8 +51,6 @@ type Props = {
   onMarketingAction?: ((actionType: string, actionTarget: string) => void) | undefined;
   onRetry?: (() => void) | undefined;
 };
-
-type ReelsLoadState = "idle" | "loading" | "ready" | "empty" | "error";
 
 function normalizeSearchText(value: string): string {
   return value
@@ -80,7 +78,7 @@ export function HomeDiscoveryShell({
   const [showDropdown, setShowDropdown] = React.useState(false);
   const [searchText, setSearchText] = React.useState("");
   const [reels, setReels] = React.useState<readonly HomePublicReel[]>([]);
-  const [reelsLoadState, setReelsLoadState] = React.useState<ReelsLoadState>("idle");
+  const [reelsLoadState, setReelsLoadState] = React.useState<HomeReelsLoadState>("idle");
   const [videoOpenRequest, setVideoOpenRequest] = React.useState(0);
   const [viewerRef] = React.useState(() => createClientEphemeralId("home"));
   const reelsRequestSequence = React.useRef(0);
@@ -203,7 +201,7 @@ export function HomeDiscoveryShell({
 
   const handleVideoPress = React.useCallback(() => {
     setVideoOpenRequest((current) => current + 1);
-    if (reelsLoadState === "empty" || reelsLoadState === "error") {
+    if (reelsLoadState === "idle" || reelsLoadState === "empty" || reelsLoadState === "error") {
       void loadReels();
     }
   }, [loadReels, reelsLoadState]);
@@ -279,7 +277,9 @@ export function HomeDiscoveryShell({
         />
         <HomeReelsSection
           reels={reels}
+          loadState={reelsLoadState}
           openRequest={videoOpenRequest}
+          onRetry={() => void loadReels()}
           onReelPress={handleReelPress}
         />
 
