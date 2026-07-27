@@ -49,6 +49,7 @@ func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request)
 	if !decodeJSON(w, r, &input) {
 		return
 	}
+	trustedTenantID := strings.TrimSpace(input.TenantID)
 	if tenantID, active, err := activeSaaSTenant(); err != nil {
 		sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
 		return
@@ -56,11 +57,19 @@ func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request)
 		if !validateInternalTenantRequest(w, r, tenantID) {
 			return
 		}
-		if strings.TrimSpace(input.TenantID) != "" && strings.TrimSpace(input.TenantID) != tenantID {
+		if trustedTenantID != "" && trustedTenantID != tenantID {
 			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "provisioned employee tenant cannot override the active runtime tenant")
 			return
 		}
-		input.TenantID = tenantID
+		trustedTenantID = tenantID
+	}
+	if trustedTenantID == "" {
+		trustedTenantID = "local-dsh"
+	}
+	input.TenantID = trustedTenantID
+	if err := s.repository.ValidateEmployeePhoneTenant(r.Context(), input.PhoneE164, trustedTenantID); err != nil {
+		writeInternalActorError(w, err)
+		return
 	}
 	view, err := s.repository.ProvisionEmployee(r.Context(), input)
 	if err != nil {
