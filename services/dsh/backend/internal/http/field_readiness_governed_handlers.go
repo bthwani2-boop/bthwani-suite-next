@@ -22,10 +22,6 @@ func (s *protectedStoreServer) writeGovernedFieldReadinessError(w http.ResponseW
 		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "the idempotency key was already used with different field readiness inputs")
 		return
 	}
-	if errors.Is(err, fieldreadiness.ErrTenantContext) {
-		store.SendError(w, http.StatusInternalServerError, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is unavailable")
-		return
-	}
 	s.writeFieldReadinessError(w, err)
 }
 
