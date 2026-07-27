@@ -1,26 +1,13 @@
 import type { DshStoreCardViewModel } from "./store-discovery.view-model";
 import { loadingState, type DshStoreListState } from "./store-discovery.states";
 
-export type DiscoveryFilter = "all" | "favorites" | "nearest";
-
-export function toggleFavoriteIds(
-  current: ReadonlySet<string>,
-  storeId: string,
-): ReadonlySet<string> {
-  const next = new Set(current);
-  if (next.has(storeId)) next.delete(storeId);
-  else next.add(storeId);
-  return next;
-}
+export type DiscoveryFilter = "all" | "nearest";
 
 export function applyStoreDiscoveryFilter(
   stores: readonly DshStoreCardViewModel[],
   filter: DiscoveryFilter,
-  favoriteIds: ReadonlySet<string>,
 ): readonly DshStoreCardViewModel[] {
   switch (filter) {
-    case "favorites":
-      return stores.filter((store) => favoriteIds.has(store.id));
     case "nearest":
       return [...stores].sort(
         (a, b) =>
@@ -36,12 +23,11 @@ export function applyStoreDiscoveryFilter(
 export function withStoreDiscoveryFilter(
   state: DshStoreListState,
   filter: DiscoveryFilter,
-  favoriteIds: ReadonlySet<string>,
 ): DshStoreListState {
   if (state.kind !== "success") return state;
   return {
     ...state,
-    stores: applyStoreDiscoveryFilter(state.stores, filter, favoriteIds),
+    stores: applyStoreDiscoveryFilter(state.stores, filter),
   };
 }
 
@@ -49,7 +35,7 @@ export function withStoreDiscoveryFilter(
 export function filterClientEligibleStores(
   stores: readonly DshStoreCardViewModel[],
 ): readonly DshStoreCardViewModel[] {
-  return stores.filter((s) => s.isClientEligible);
+  return stores.filter((store) => store.isClientEligible);
 }
 
 export function withClientEligibilityFilter(
