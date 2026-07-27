@@ -40,7 +40,7 @@ test("app-client keeps every Expo capability used by the operational experience"
   }
 });
 
-test("client discovery exposes real search, cached images, and playable reels", () => {
+test("client discovery exposes real search, cached images, and vertical active-only reels", () => {
   const discovery = assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx",
     [
@@ -50,22 +50,103 @@ test("client discovery exposes real search, cached images, and playable reels", 
       "ابحث عن متجر أو فئة",
       "setReels([])",
       "reels.length > 0",
-      "state.data.categories.some",
+      "openCategoryDestination",
+      'category.destinationType === "special_request"',
+      'category.destinationType === "catalog_domain"',
     ],
   );
   assert.equal(discovery.includes("Math.random("), false);
+  assert.equal(discovery.includes("node-shein"), false);
+  assert.equal(discovery.includes("node-awnak"), false);
 
   assertMarkers(
     "apps/app-client/runtime/src/media/ClientRemoteImage.tsx",
     ["expo-image", 'cachePolicy="memory-disk"', "transition={150}"],
   );
-  assertMarkers(
+  const reels = assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomeReelsSection.tsx",
-    ["expo-video", "useVideoPlayer", "useCaching: true", "allowsPictureInPicture"],
+    [
+      "expo-video",
+      "useVideoPlayer",
+      "useCaching: true",
+      "allowsPictureInPicture",
+      "FlatList",
+      "pagingEnabled",
+      "itemVisiblePercentThreshold: 80",
+      "onViewableItemsChanged",
+      "player.pause()",
+      "initialScrollIndex",
+    ],
   );
+  assert.equal(reels.includes("expo-av"), false);
   assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomePromoSection.tsx",
     ["promo.actionTarget.trim().length > 0", "hasQuickActions", "interactive ?"],
+  );
+});
+
+test("manual request categories are server-routed sovereign destinations", () => {
+  assertMarkers(
+    "services/dsh/backend/internal/homediscovery/repository.go",
+    [
+      "'catalog_domain' AS destination_type",
+      "'special_request' AS destination_type",
+      "SHEIN_ASSISTED_PURCHASE",
+      "AWNAK_ERRAND",
+      "n.slug IN ('shein', 'awnak')",
+      "&c.DestinationType",
+      "&c.DestinationTarget",
+    ],
+  );
+  assertMarkers(
+    "services/dsh/contracts/components/schemas/catalog.schemas.yaml",
+    [
+      "destinationType:",
+      "enum: [catalog_domain, special_request]",
+      "destinationTarget:",
+    ],
+  );
+  assertMarkers(
+    "services/dsh/frontend/shared/home-discovery/home-discovery.view-model.ts",
+    ["destinationType: dto.destinationType", "destinationTarget: dto.destinationTarget"],
+  );
+  const surface = assertMarkers(
+    "services/dsh/frontend/app-client/DshClientSurface.tsx",
+    [
+      "DshHomeSpecialRequestTarget",
+      "openSpecialRequestType",
+      'requestType === "SHEIN_ASSISTED_PURCHASE" ? "shein" : "awnak"',
+      "onSpecialRequestPress={openSpecialRequestType}",
+    ],
+  );
+  assert.equal(surface.includes("node-shein"), false);
+  assert.equal(surface.includes("node-awnak"), false);
+});
+
+test("SHEIN and Awnak intake forms expose the backend-supported operational fields", () => {
+  assertMarkers(
+    "services/dsh/frontend/shared/shein/SheinForm.tsx",
+    [
+      "validateSheinInput",
+      "MAX_QUANTITY",
+      "deliveryAddressReference",
+      "handlingRequirements",
+      "customerNotes",
+      "إرسال للمراجعة والتسعير",
+    ],
+  );
+  assertMarkers(
+    "services/dsh/frontend/shared/awnak/AwnakForm.tsx",
+    [
+      "ITEM_TYPES",
+      'type AwnakScheduleMode = "asap" | "scheduled"',
+      "validateAwnakInput",
+      "scheduledAt: parsed.toISOString()",
+      "handlingRequirements",
+      "pickupAddressReference",
+      "dropoffAddressReference",
+      "إرسال للمراجعة والتسعير",
+    ],
   );
 });
 
