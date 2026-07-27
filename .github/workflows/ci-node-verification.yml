@@ -46,16 +46,31 @@ jobs:
           FULL_VERIFICATION: ${{ inputs.full_verification }}
           VERIFICATION_TIER: ${{ inputs.verification_tier }}
         run: |
+          set +e
+          log="${RUNNER_TEMP}/node-verification.log"
+          status=0
           if [[ "${FULL_VERIFICATION}" == "true" ]]; then
-            pnpm run nx:typecheck
-            pnpm run nx:lint
-            pnpm run nx:test
-            pnpm run nx:build
+            {
+              pnpm run nx:typecheck
+              pnpm run nx:lint
+              pnpm run nx:test
+              pnpm run nx:build
+            } >"${log}" 2>&1 || status=$?
           elif [[ "${VERIFICATION_TIER}" == "fast" ]]; then
-            node tools/scripts/run-affected-verification.mjs typecheck lint test
+            node tools/scripts/run-affected-verification.mjs typecheck lint test >"${log}" 2>&1 || status=$?
           else
-            node tools/scripts/run-affected-verification.mjs typecheck lint test build
+            node tools/scripts/run-affected-verification.mjs typecheck lint test build >"${log}" 2>&1 || status=$?
           fi
+          tail -n 250 "${log}"
+          exit "${status}"
+      - name: Upload Node verification evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: node-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/node-verification.log
+          if-no-files-found: error
+          retention-days: 1
       - name: Verify Expo configuration for deep frontend changes
         if: ${{ inputs.frontend == 'true' && inputs.verification_tier == 'deep' }}
         run: pnpm run mobile:expo:verify
