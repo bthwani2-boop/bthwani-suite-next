@@ -1,6 +1,7 @@
 package dshclient
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -17,19 +18,35 @@ var (
 )
 
 type Client struct {
-	baseURL string
-	http    *http.Client
+	baseURL  string
+	token    string
+	tenantID string
+	http     *http.Client
 }
 
-func NewClient(baseURL string) *Client {
-	return &Client{
-		baseURL: strings.TrimRight(baseURL, "/"),
+// NewClient accepts the service token and tenant as optional arguments to keep
+// compatibility with existing zone-validation tests while enabling the
+// authenticated Workforce -> DSH availability projection channel.
+func NewClient(baseURL string, optional ...string) *Client {
+	client := &Client{
+		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
 		http:    &http.Client{Timeout: 10 * time.Second},
 	}
+	if len(optional) > 0 {
+		client.token = strings.TrimSpace(optional[0])
+	}
+	if len(optional) > 1 {
+		client.tenantID = strings.TrimSpace(optional[1])
+	}
+	return client
 }
 
 func (c *Client) Configured() bool {
 	return c != nil && c.baseURL != ""
+}
+
+func (c *Client) AvailabilityProjectionConfigured() bool {
+	return c.Configured() && c.token != "" && c.tenantID != ""
 }
 
 type Zone struct {
@@ -84,4 +101,46 @@ func (c *Client) ValidateZone(ctx context.Context, zoneID, operatorToken string)
 	}
 
 	return Zone{}, ErrZoneNotFound
+}
+
+type AvailabilityProjectionInput struct {
+	TenantID        string    `json:"tenantId"`
+	NoticeID        string    `json:"noticeId"`
+	ActorType       string    `json:"actorType"`
+	ActorID         string    `json:"actorId"`
+	NoticeType      string    `json:"noticeType"`
+	StartsAt        time.Time `json:"startsAt"`
+	EndsAt          time.Time `json:"endsAt"`
+	Status          string    `json:"status"`
+	Reason          string    `json:"reason"`
+	SourceUpdatedAt time.Time `json:"sourceUpdatedAt"`
+}
+
+func (c *Client) SyncAvailabilityProjection(ctx context.Context, input AvailabilityProjectionInput) error {
+	if !c.AvailabilityProjectionConfigured() {
+		return ErrUnavailable
+	}
+	input.TenantID = c.tenantID
+	encoded, err := json.Marshal(input)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/dsh/internal/workforce/availability-projections", bytes.NewReader(encoded))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("X-Service-Caller", "workforce")
+	req.Header.Set("X-Correlation-ID", "workforce-availability:"+input.NoticeID)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrUnavailable, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("DSH availability projection returned HTTP %d", resp.StatusCode)
+	}
+	return nil
 }
