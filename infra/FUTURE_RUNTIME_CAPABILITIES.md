@@ -29,10 +29,6 @@
 * Dnsmasq
 * ngrok/LocalTunnel
 * Provider Backend Runtime الكامل
-* Tenant wildcard DNS
-* Tenant subdomain routing
-* Tenant TLS or Origin CA issuance
-* Customer-owned custom domains
 
 ## Global Rules
 
@@ -47,11 +43,6 @@
 * No tunnel in CI.
 * No heavy runtime:all.
 * Every future capability must be optional and must have independent smoke proof.
-* DNS, certificates, private keys, Cloudflare tokens, and origin credentials must never be committed.
-* A wildcard DNS record or certificate does not prove tenant existence, authorization, isolation, or SaaS readiness.
-* Production tenant hostnames require the canonical policy in `governance/saas/TENANT_HOSTNAME_AND_TLS_POLICY.md`.
-* `Full (strict)` or a stronger approved mode is the required production end state for Cloudflare-proxied tenant traffic.
-* This registry cannot authorize production DNS changes, certificate issuance, SaaS activation, or deployment.
 
 ## Future Items
 
@@ -96,8 +87,8 @@
    Why not now: heavy on user device.
 
 9. DEV-OSM-OVERPASS-001 — Local Maps / OSM / Overpass
-   Status: rejected_now
-   Why not now: heavy.
+    Status: rejected_now
+    Why not now: heavy.
 
 10. DEV-DNSMASQ-001 — Local Domains
     Status: rejected_now
@@ -123,16 +114,6 @@
     Why not now: default Yemen market requires YER first.
     Rule: YER remains default. Any foreign currency must be explicit and guarded.
 
-15. SAAS-TENANT-HOSTNAME-TLS-001 — Tenant Subdomains and Managed TLS
-    Status: future_deferred
-    Owners: platform-control, identity, infra/runtime, application-security
-    Canonical policy: governance/saas/TENANT_HOSTNAME_AND_TLS_POLICY.md
-    Why not now: tenant isolation, trusted hostname resolution, domain lifecycle, origin protection, runtime proof, and production authorization are not proven.
-    Preferred first-party model: `https://{tenantSlug}.{TENANT_BASE_DOMAIN}` using a dedicated tenant base domain.
-    Required later: reserved-label registry, exact hostname-to-tenant binding, proxied wildcard DNS, publicly trusted edge TLS, valid origin TLS, `Full (strict)`, origin-bypass prevention, host-only cookie policy, tenant-aware cache and observability, suspension/release/quarantine workflow, and negative cross-tenant routing tests.
-    Custom domains: separately deferred; require customer ownership verification and managed per-hostname certificate lifecycle.
-    Forbidden now: DNS mutation, certificate issuance, private-key creation, ingress activation, production domain onboarding, or claims of tenant isolation/readiness.
-
 ## Execution Order
 
 1. Finish current WLT financial hotfix.
@@ -141,14 +122,9 @@
 4. Add DSH runtime smoke later.
 5. Add identity runtime smoke later.
 6. Add backend provider registry.
-7. Stabilize tenant identity, ownership, authorization, and isolation contracts.
-8. Add tenant-aware observability and negative isolation tests.
-9. Add exposure only when public testing is required.
-10. Add proxy only after exposure.
-11. Prove trusted hostname resolution and domain lifecycle in non-production.
-12. Add first-party tenant wildcard DNS and managed TLS only after the SaaS hostname gate is approved.
-13. Evaluate customer-owned custom domains only after first-party tenant hostnames are stable.
-14. Add analytics only after event model.
+7. Add exposure only when public testing is required.
+8. Add proxy only after exposure.
+9. Add analytics only after event model.
 
 ## Prohibited Until Further Notice
 
@@ -163,9 +139,3 @@
 * Ollama/LocalAI now
 * OSM/Overpass now
 * SAR as default currency <!-- ALLOW_FOREIGN_CURRENCY_EXAMPLE -->
-* wildcard tenant DNS activation
-* tenant hostname production routing
-* Origin CA or wildcard private keys in the repository
-* Cloudflare `Off`, `Flexible`, or non-validating `Full` as a production steady state
-* customer-owned custom domain activation
-* treating DNS or TLS as tenant-isolation proof
