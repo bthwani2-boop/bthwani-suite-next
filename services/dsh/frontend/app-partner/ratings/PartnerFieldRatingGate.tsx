@@ -103,7 +103,7 @@ export function PartnerFieldRatingGate({ children }: { readonly children: React.
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: colorRoles.mediaScrimStrong,
     alignItems: "center",
     justifyContent: "center",
     padding: spacing[4],
