@@ -45,9 +45,10 @@ export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promi
       !dto ||
       typeof dto !== 'object' ||
       !Array.isArray((dto as Record<string, unknown>)['banners']) ||
-      !Array.isArray((dto as Record<string, unknown>)['stores'])
+      !Array.isArray((dto as Record<string, unknown>)['stores']) ||
+      !Array.isArray((dto as Record<string, unknown>)['categories'])
     ) {
-      return errorState('DSH_INVALID_RESPONSE: response missing required fields: banners, stores');
+      return errorState('DSH_INVALID_RESPONSE: response missing required discovery collections');
     }
 
     const banners = dto.banners.map(toBannerViewModel);
@@ -55,7 +56,12 @@ export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promi
     const categories = dto.categories.map(toCategoryViewModel);
     const stores = dto.stores.map(toHomeStoreCardViewModel);
 
-    if (stores.length === 0 && banners.length === 0) {
+    if (
+      stores.length === 0
+      && banners.length === 0
+      && promos.length === 0
+      && categories.length === 0
+    ) {
       return emptyState();
     }
 
