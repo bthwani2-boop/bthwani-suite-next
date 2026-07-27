@@ -1,0 +1,32 @@
+name: Temporary App Field Verification
+
+on:
+  push:
+    branches:
+      - abdo
+
+permissions:
+  contents: read
+
+jobs:
+  verify-app-field:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Typecheck app-field runtime
+        run: pnpm --filter @bthwani/app-field-runtime typecheck
+      - name: Verify app-field source rules
+        run: pnpm --filter @bthwani/app-field-runtime lint
+      - name: Verify app-field runtime contract
+        run: pnpm --filter @bthwani/app-field-runtime test
+      - name: Verify field onboarding validation
+        run: pnpm --dir services/dsh test -- --test-name-pattern="field onboarding validation"
+      - name: Verify DSH backend catalog batch
+        working-directory: services/dsh/backend
+        run: go test ./internal/http ./internal/centralcatalog
