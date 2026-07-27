@@ -8,7 +8,6 @@ import { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { DshFieldSurfaceProps } from '../dsh-field.routes';
 import { DshFieldRouteRenderer } from './DshFieldRouteRenderer';
 import { useIdentitySession } from '@bthwani/core-identity';
-import { DshFieldActivationCard } from './DshFieldActivationCard';
 import { useFieldPartnerOnboardingController } from '../../shared/field-onboarding';
 import {
   useFieldOfflineSync,
@@ -50,8 +49,11 @@ function FieldBottomNavBar({
     return (
       <Pressable
         key={id}
+        accessibilityRole="tab"
+        accessibilityLabel={label}
+        accessibilityState={{ selected: isActive }}
         onPress={() => onSelect(id)}
-        style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing[2] }}
+        style={{ flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing[2] }}
       >
         <Icon
           name={isActive ? activeIcon : icon}
@@ -60,7 +62,7 @@ function FieldBottomNavBar({
         />
         <Text
           style={{
-            fontSize: 10,
+            fontSize: 11,
             marginTop: 2,
             color: isActive ? colorRoles.brandAction : colorRoles.textMuted,
             fontWeight: isActive ? '700' : '400',
@@ -74,6 +76,7 @@ function FieldBottomNavBar({
 
   return (
     <View
+      accessibilityRole="tablist"
       style={{
         flexDirection: 'row',
         height: 72 + insets.bottom,
@@ -109,12 +112,14 @@ function FieldBottomNavBar({
             shadowRadius: 10,
             elevation: 8,
           })}
-          accessibilityLabel="إضافة ملف جديد"
+          accessibilityRole="button"
+          accessibilityLabel="إضافة شريك جديد"
+          accessibilityHint="يفتح رحلة إنشاء وتأهيل شريك جديد"
         >
           <Icon name="add" size={30} color={colorRoles.surfaceBase} />
         </Pressable>
         <Text style={{ fontSize: 10, color: colorRoles.textMuted, marginTop: -18 }}>
-          إضافة
+          إضافة شريك
         </Text>
       </View>
 
@@ -123,11 +128,17 @@ function FieldBottomNavBar({
   );
 }
 
-export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) {
+export function DshFieldSurface({ command, onExit, installationId }: DshFieldSurfaceProps = {}) {
   const fieldSurface = useDshFieldSurfaceModel(command);
   const onboardingController = useFieldPartnerOnboardingController();
   const identity = useIdentitySession();
   const insets = useSafeAreaInsets();
+  const offlineScope = identity.state.kind === 'authenticated' && installationId
+    ? {
+        actorId: identity.state.identity.subject,
+        installationId,
+      }
+    : undefined;
 
   const offlineSync = useFieldOfflineSync(
     identity.state.kind === 'authenticated'
@@ -174,6 +185,7 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
           },
         }
       : undefined,
+    offlineScope,
   );
 
   useAndroidBackHandler(
@@ -190,25 +202,15 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
     }, [fieldSurface.actions, fieldSurface.model.routeStackDepth, onExit]),
   );
 
-  if (identity.state.kind === 'restoring' || identity.state.kind === 'unconfigured') {
-    return (
-      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
-        <StatusBar backgroundColor={colorRoles.brandAction} barStyle="light-content" translucent={false} />
-      </View>
-    );
-  }
-
   if (identity.state.kind !== 'authenticated') {
     return (
-      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
+      <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase, justifyContent: 'center', padding: spacing[4] }}>
         <StatusBar backgroundColor={colorRoles.brandAction} barStyle="light-content" translucent={false} />
-        <View style={{ flex: 1, justifyContent: 'center', padding: spacing[4] }}>
-          <DshFieldActivationCard
-            loading={identity.state.kind === 'authenticating'}
-            {...(identity.state.kind === 'error' ? { error: identity.state.message } : {})}
-            onSubmit={(phone, code) => void identity.activate('field', phone, code)}
-          />
-        </View>
+        <StateView
+          tone="danger"
+          title="جلسة الميداني غير متاحة"
+          description="تدير بوابة الهوية العليا تسجيل الدخول والتفعيل. أعد فتح التطبيق أو سجّل الدخول مجددًا."
+        />
       </View>
     );
   }
@@ -253,7 +255,7 @@ export function DshFieldSurface({ command, onExit }: DshFieldSurfaceProps = {}) 
             activeId={fieldSurface.model.bottomNav.activeId}
             onLauncherPress={() => fieldSurface.actions.pushRoute({ kind: 'onboarding' })}
             onSelect={(id: string) => {
-              if (id === 'tasks') fieldSurface.actions.resetToStores();
+              if (id === 'tasks') fieldSurface.actions.pushRoute({ kind: 'work-queue' });
               if (id === 'history') fieldSurface.actions.pushRoute({ kind: 'history' });
               if (id === 'finance') fieldSurface.actions.pushRoute({ kind: 'finance' });
               if (id === 'profile') fieldSurface.actions.pushRoute({ kind: 'account' });

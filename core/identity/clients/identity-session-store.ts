@@ -21,6 +21,7 @@ export type IdentitySessionState =
   | { readonly kind: "error"; readonly message: string };
 
 export type IdentityBeforeSessionEndHook = () => void | Promise<void>;
+export type IdentityDeviceFingerprintProvider = () => string | Promise<string>;
 
 type StoredSession = {
   readonly accessToken: string;
@@ -29,7 +30,7 @@ type StoredSession = {
 };
 
 const STORAGE_KEY = "bthwani-identity-session";
-const DEVICE_FINGERPRINT = "bthwani-runtime-session";
+const RUNTIME_DEVICE_FINGERPRINT = `bthwani-runtime-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 const ACTOR_ROLES = new Set([
   "client",
   "partner",
@@ -43,12 +44,20 @@ let client: IdentityClient | null = null;
 let state: IdentitySessionState = { kind: "unconfigured" };
 let stored: StoredSession | null = null;
 let storageAdapter: SessionStorageAdapter = defaultSessionStorageAdapter();
+let deviceFingerprintProvider: IdentityDeviceFingerprintProvider = () => RUNTIME_DEVICE_FINGERPRINT;
 const listeners = new Set<() => void>();
 const beforeSessionEndHooks = new Set<IdentityBeforeSessionEndHook>();
 
 export function configureIdentitySessionStorage(adapter: SessionStorageAdapter): void {
   if (client !== null) return;
   storageAdapter = adapter;
+}
+
+export function configureIdentityDeviceFingerprintProvider(
+  provider: IdentityDeviceFingerprintProvider,
+): void {
+  if (client !== null) return;
+  deviceFingerprintProvider = provider;
 }
 
 export function registerIdentityBeforeSessionEndHook(
@@ -64,6 +73,12 @@ async function runBeforeSessionEndHooks(): Promise<void> {
       await hook();
     }),
   );
+}
+
+async function resolveDeviceFingerprint(): Promise<string> {
+  const fingerprint = (await deviceFingerprintProvider()).trim();
+  if (!fingerprint) throw new Error("IDENTITY_DEVICE_FINGERPRINT_UNAVAILABLE");
+  return fingerprint;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -166,7 +181,9 @@ function identityErrorCode(error: unknown): string {
   const typed = error as Partial<IdentityClientError>;
   return typed.kind === "http" && typeof typed.code === "string"
     ? typed.code
-    : "IDENTITY_UNAVAILABLE";
+    : error instanceof Error && error.message === "IDENTITY_DEVICE_FINGERPRINT_UNAVAILABLE"
+      ? error.message
+      : "IDENTITY_UNAVAILABLE";
 }
 
 function clearSession(message?: string): void {
@@ -254,7 +271,7 @@ export async function loginIdentity(username: string, password: string): Promise
     const response = await client.login({
       username,
       password,
-      deviceFingerprint: DEVICE_FINGERPRINT,
+      deviceFingerprint: await resolveDeviceFingerprint(),
     });
     commitAuthenticatedSession({
       accessToken: response.accessToken,
@@ -289,7 +306,7 @@ export async function activateIdentity(
       actorType,
       phone,
       code,
-      deviceFingerprint: DEVICE_FINGERPRINT,
+      deviceFingerprint: await resolveDeviceFingerprint(),
     });
     commitAuthenticatedSession({
       accessToken: response.accessToken,

@@ -337,6 +337,8 @@
       - bearerAuth: []
     parameters:
       - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:
@@ -393,6 +395,8 @@
         in: path
         required: true
         schema: { type: string }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:
@@ -435,6 +439,8 @@
         in: path
         required: true
         schema: { type: string }
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:
@@ -476,6 +482,8 @@
       - bearerAuth: []
     parameters:
       - $ref: "../dsh.openapi.yaml#/components/parameters/StoreId"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
+      - $ref: "../dsh.openapi.yaml#/components/parameters/CorrelationId"
     requestBody:
       required: true
       content:

@@ -11620,7 +11620,10 @@ export interface operations {
     createDshFieldVisit: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
             path: {
                 storeId: components["parameters"]["StoreId"];
             };
@@ -11669,7 +11672,10 @@ export interface operations {
     completeDshFieldVisit: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
             path: {
                 visitId: string;
             };
@@ -11732,7 +11738,10 @@ export interface operations {
     upsertDshReadinessCheck: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
             path: {
                 visitId: string;
             };
@@ -11760,7 +11769,10 @@ export interface operations {
     createDshReadinessEscalation: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
             path: {
                 storeId: components["parameters"]["StoreId"];
             };

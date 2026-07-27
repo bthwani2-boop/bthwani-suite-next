@@ -1,8 +1,8 @@
-import { Linking, Platform, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, StyleSheet, Text, View } from "react-native";
 
+import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
-import * as Notifications from "expo-notifications";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
 import { DshFieldSurface } from "../../../../services/dsh/frontend/app-field";
 import type { DshFieldNavigationCommand } from "../../../../services/dsh/frontend/app-field/dsh-field.routes";
@@ -13,6 +13,7 @@ import {
   WorkforceProfileProvider,
 } from "../../../../services/dsh/frontend/shared/workforce";
 import {
+  configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
   configureIdentitySessionStorage,
   type SessionStorageAdapter,
@@ -20,6 +21,9 @@ import {
 } from "@bthwani/core-identity";
 import { resolveIdentityApiBaseUrl } from "../../../../services/dsh/frontend/shared/_kernel/identity-api-base-url";
 import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
+
+const FIELD_APP_SCHEME = "bthwani-field-next";
+const FIELD_DEVICE_FINGERPRINT_KEY = "bthwani.field.device-fingerprint.v1";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -29,8 +33,17 @@ function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   };
 }
 
+async function getOrCreateFieldDeviceFingerprint(): Promise<string> {
+  const existing = await SecureStore.getItemAsync(FIELD_DEVICE_FINGERPRINT_KEY);
+  if (existing?.trim()) return existing;
+  const created = `field-device:${Crypto.randomUUID()}`;
+  await SecureStore.setItemAsync(FIELD_DEVICE_FINGERPRINT_KEY, created);
+  return created;
+}
+
 if (Platform.OS !== "web") {
   configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
+  configureIdentityDeviceFingerprintProvider(getOrCreateFieldDeviceFingerprint);
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
@@ -57,7 +70,11 @@ function parseDeepLink(url: string): DshFieldNavigationCommand | null {
     if (!trimmed) return null;
 
     const schemeSeparator = trimmed.indexOf("://");
-    const afterScheme = schemeSeparator >= 0 ? trimmed.slice(schemeSeparator + 3) : trimmed;
+    if (schemeSeparator <= 0) return null;
+    const scheme = trimmed.slice(0, schemeSeparator).toLowerCase();
+    if (scheme !== FIELD_APP_SCHEME) return null;
+
+    const afterScheme = trimmed.slice(schemeSeparator + 3);
     const withoutFragment = afterScheme.split("#", 1)[0] ?? "";
     const querySeparator = withoutFragment.indexOf("?");
     const location = querySeparator >= 0 ? withoutFragment.slice(0, querySeparator) : withoutFragment;
@@ -88,30 +105,40 @@ function parseDeepLink(url: string): DshFieldNavigationCommand | null {
   }
 }
 
-function parseNotificationData(data: Record<string, unknown>): DshFieldNavigationCommand | null {
-  const route = data.route as string | undefined;
-  if (!route) return null;
-  return parseDeepLink(
-    `bthwani-field-next://${route}?storeId=${encodeURIComponent(String(data.storeId ?? ""))}&visitId=${encodeURIComponent(String(data.visitId ?? ""))}&partnerId=${encodeURIComponent(String(data.partnerId ?? ""))}`,
-  );
-}
+type InstallationState =
+  | { readonly kind: "loading" }
+  | { readonly kind: "ready"; readonly installationId: string }
+  | { readonly kind: "error" };
 
 function AppContent() {
   const identity = useIdentitySession();
-  useDshMobilePushRegistration(identity.state.kind, "app-field", "bthwani-field-next");
+  useDshMobilePushRegistration(identity.state.kind, "app-field", FIELD_APP_SCHEME);
 
+  const [installationState, setInstallationState] = useState<InstallationState>({ kind: "loading" });
   const [navCommand, setNavCommand] = useState<DshFieldNavigationCommand | undefined>();
-  const notifListenerRef = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
-    // Handle legacy route payloads while governed actionUrl payloads are handled
-    // by useDshMobilePushRegistration for foreground, background and cold start.
-    notifListenerRef.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as Record<string, unknown>;
-      const cmd = parseNotificationData(data);
-      if (cmd) setNavCommand(cmd);
-    });
+    let active = true;
+    const installationPromise = Platform.OS === "web"
+      ? Promise.resolve(`field-web:${Crypto.randomUUID()}`)
+      : getOrCreateFieldDeviceFingerprint();
 
+    void installationPromise
+      .then((installationId) => {
+        if (active) setInstallationState({ kind: "ready", installationId });
+      })
+      .catch(() => {
+        if (active) setInstallationState({ kind: "error" });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Governed notification actionUrl payloads are handled by
+    // useDshMobilePushRegistration. Only the application URL scheme is accepted here.
     void Linking.getInitialURL().then((url) => {
       if (url) {
         const cmd = parseDeepLink(url);
@@ -125,7 +152,6 @@ function AppContent() {
     });
 
     return () => {
-      notifListenerRef.current?.remove();
       linkSub.remove();
     };
   }, []);
@@ -133,6 +159,20 @@ function AppContent() {
   const logout = () => {
     void identity.logout();
   };
+
+  if (installationState.kind !== "ready") {
+    return (
+      <View style={styles.installationState}>
+        {installationState.kind === "loading" ? (
+          <ActivityIndicator accessibilityLabel="تهيئة هوية تثبيت التطبيق" />
+        ) : (
+          <Text style={styles.installationError}>
+            تعذر تهيئة هوية الجهاز الآمنة. أعد فتح التطبيق قبل تنفيذ أي عمل ميداني.
+          </Text>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -143,7 +183,10 @@ function AppContent() {
             onLogout={logout}
             incompleteContent={<DshFieldProfileCompletionScreen onLogout={logout} />}
           >
-            <DshFieldSurface {...(navCommand ? { command: navCommand } : {})} />
+            <DshFieldSurface
+              {...(navCommand ? { command: navCommand } : {})}
+              installationId={installationState.installationId}
+            />
           </WorkforceAccessGate>
         </IdentitySessionGate>
       </View>
@@ -162,4 +205,12 @@ export default function App() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colorRoles.surfaceMuted },
   screen: { flex: 1 },
+  installationState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: colorRoles.surfaceMuted,
+  },
+  installationError: { textAlign: "center" },
 });

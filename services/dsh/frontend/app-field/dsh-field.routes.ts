@@ -46,4 +46,5 @@ export type DshFieldNavigationCommand = {
 export type DshFieldSurfaceProps = {
   command?: DshFieldNavigationCommand;
   onExit?: () => void;
+  installationId?: string;
 };

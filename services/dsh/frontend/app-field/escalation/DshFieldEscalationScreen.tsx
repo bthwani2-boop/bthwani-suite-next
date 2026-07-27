@@ -15,7 +15,7 @@ import {
   Icon,
 } from "@bthwani/ui-kit";
 import {
-  useFieldEscalationController,
+  useFieldEscalationSubmissionController,
   ESCALATION_SEVERITY_LABELS,
   ESCALATION_CATEGORY_LABELS,
   type DshEscalationSeverity,
@@ -40,7 +40,7 @@ const CATEGORIES: readonly DshEscalationCategory[] = [
 
 export function DshFieldEscalationScreen({ storeId, visitId, onBack }: Props) {
   const identity = useIdentitySession();
-  const { actionState, raiseEscalation, resetAction } = useFieldEscalationController(identity.state.kind);
+  const { actionState, raiseEscalation, resetAction } = useFieldEscalationSubmissionController();
   const [severity, setSeverity] = React.useState<DshEscalationSeverity>("medium");
   const [category, setCategory] = React.useState<DshEscalationCategory>("document_missing");
   const [description, setDescription] = React.useState("");
