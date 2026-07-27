@@ -75,6 +75,22 @@ const rules = [
   ["tools/guards/backend-api-binding-gate.mjs", [], ['"services/dsh/contracts/dsh.client-address.openapi.yaml"']],
   ["services/dsh/frontend/app-client/store/StoreMeasurementSheet.tsx", [[/getProductMeasurementOptions|\bmultipliers\b|parseFloat\s*\(|basePrice\s*\*/g, "LOCAL_PRODUCT_MEASUREMENT_OR_PRICE_FORBIDDEN"]], ["Quantity-only product sheet", "server resolves", "isSubmitting", "errorMessage"]],
   ["services/dsh/frontend/app-client/store/StoreDetailShell.tsx", [[/onPress:\s*\(\)\s*=>\s*\{\s*\}|onImagePress=\{\(\)\s*=>\s*\{\s*\}\}|\bas\s+any\b|priceReference:\s*`\$\{/g, "DEAD_OR_UNSAFE_STORE_ACTION_FORBIDDEN"]], ["DshFulfillmentDeliveryMode", "handleOpenProduct", "onCartPress={onGoToCart}", "const accepted = await onAddToCart(", "if (accepted)"]],
+  ["services/dsh/frontend/app-client/store/StoreCardPremium.tsx", [
+    [/onFavoritePress|isFavorite|إضافة إلى المفضلة|إزالة من المفضلة/g, "UNPERSISTED_STORE_FAVORITE_FORBIDDEN"],
+  ], ["ClientRemoteImage", "accessibilityLabel={`${store.displayName}، ${store.isOpen ? \"مفتوح\" : \"مغلق\"}`"]],
+  ["apps/app-client/runtime/src/media/ClientRemoteImage.tsx", [], ["expo-image", 'cachePolicy="memory-disk"', "transition={150}"]],
+  ["services/dsh/frontend/app-client/home-discovery/HomeFilterRailSection.tsx", [], ["isDiscoveryFilterOperational", "operationalFilters"]],
+  ["services/dsh/frontend/app-client/account/PreferencesHubScreen.tsx", [
+    [/\blocalStorage\b|\bsessionStorage\b/g, "LOCAL_NOTIFICATION_PREFERENCE_FORBIDDEN"],
+  ], ["useNotificationsController", "savePreference", "preferenceState.kind === \"success\""]],
+  ["apps/app-client/runtime/src/preferences/client-appearance.tsx", [
+    [/SecureStore/g, "NON_SENSITIVE_APPEARANCE_SECURESTORE_FORBIDDEN"],
+  ], ["AsyncStorage", "useColorScheme", "Haptics.selectionAsync", '"system"', "resolveThemeName"]],
+  ["services/dsh/frontend/app-client/account/AppearanceHubScreen.tsx", [], ["ClientAppearanceMode", 'mode: "system"', "onAppearanceModeChange", "جارٍ حفظ المظهر"]],
+  ["services/dsh/frontend/app-client/support/SupportTicketScreen.tsx", [], ["const ok = await submitTicket", "if (!ok) return;", "onBack", "maxLength={4000}"]],
+  ["services/dsh/frontend/app-client/DshClientSurface.tsx", [
+    [/Linking\.openURL/g, "RAW_EXTERNAL_LINK_OPEN_FORBIDDEN"],
+  ], ["openClientExternalUrl", "useClientAppearance", "performClientSelectionHaptic", "onBack={() => setShowNotifications(false)}"]],
   ["services/wlt/frontend/shared/dsh/use-wlt-dsh-payment-controller.tsx", [[/grandTotal|amountRows/g, "LOCAL_WLT_AMOUNT_FORBIDDEN"]], ["never calculates totals", 'useState<PaymentMethodKey>("cod")', "مزود WLT الحقيقي"]],
 ];
 
@@ -86,7 +102,9 @@ for (const [file, forbidden, required] of rules) {
     }
   }
   for (const marker of required) {
-    if (!content.includes(marker)) violations.push({ file, line: 0, message: `REQUIRED_CLIENT_COMMERCE_MARKER_MISSING:${marker}` });
+    if (!content.includes(marker)) {
+      violations.push({ file, line: 0, message: `REQUIRED_CLIENT_COMMERCE_MARKER_MISSING:${marker}` });
+    }
   }
 }
 
