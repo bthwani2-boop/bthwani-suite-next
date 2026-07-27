@@ -1,11 +1,9 @@
 Set-StrictMode -Version Latest
+
+. (Join-Path $PSScriptRoot "../../../../tools/dev/local-actors.ps1")
 $ErrorActionPreference = "Stop"
 
-$identityPassword = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
-  "123456"
-} else {
-  $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD
-}
+$identityPassword = Get-LocalPassword
 function Get-LocalActorToken([string] $Username) {
   $loginBody = @{
     username = $Username
@@ -16,19 +14,19 @@ function Get-LocalActorToken([string] $Username) {
   return $login.accessToken
 }
 
-$operatorToken = Get-LocalActorToken "operator"
+$operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")
 $operatorHeaders = @{
   Authorization = "Bearer $operatorToken"
   "X-Correlation-ID" = "smoke-operator-$([guid]::NewGuid())"
 }
-$partnerToken = Get-LocalActorToken "bthwani"
+$partnerToken = Get-LocalActorToken (Get-LocalUsername "partner")
 $partnerHeaders = @{
   Authorization = "Bearer $partnerToken"
   "X-Correlation-ID" = "smoke-partner-$([guid]::NewGuid())"
 }
 
 # Partner Onboarding & Store Publication: partner lifecycle from field draft to client-visible store readiness.
-$fieldToken = Get-LocalActorToken "field"
+$fieldToken = Get-LocalActorToken (Get-LocalUsername "field")
 $fieldHeaders = @{
   Authorization = "Bearer $fieldToken"
   "X-Correlation-ID" = "smoke-partner-field-$([guid]::NewGuid())"

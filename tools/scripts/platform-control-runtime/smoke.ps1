@@ -1,3 +1,5 @@
+. (Join-Path $PSScriptRoot "../../dev/local-actors.ps1")
+
 function Login-PlatformLocalActor {
   param(
     [Parameter(Mandatory = $true)][string]$Username,
@@ -125,12 +127,12 @@ function Invoke-PlatformP3Smoke {
   $readiness = Invoke-RestMethod "http://localhost:58088/platform/readiness" -TimeoutSec 10
   if ($readiness.status -ne "ready") { throw "platform readiness is not ready" }
 
-  $password = if ($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD) { $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD } else { "123456" }
+  $password = Get-LocalPassword
   $correlationId = "platform-p3-smoke-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
-  $operatorToken = Login-PlatformLocalActor -Username "operator" -Password $password -DeviceFingerprint "$correlationId-operator"
-  $approverToken = Login-PlatformLocalActor -Username "platform-approver" -Password $password -DeviceFingerprint "$correlationId-approver"
-  $applierToken = Login-PlatformLocalActor -Username "platform-applier" -Password $password -DeviceFingerprint "$correlationId-applier"
-  $rolloutToken = Login-PlatformLocalActor -Username "platform-rollout-manager" -Password $password -DeviceFingerprint "$correlationId-rollout"
+  $operatorToken = Login-PlatformLocalActor -Username (Get-LocalUsername "operator") -Password $password -DeviceFingerprint "$correlationId-operator"
+  $approverToken = Login-PlatformLocalActor -Username (Get-LocalUsername "platform-approver") -Password $password -DeviceFingerprint "$correlationId-approver"
+  $applierToken = Login-PlatformLocalActor -Username (Get-LocalUsername "platform-applier") -Password $password -DeviceFingerprint "$correlationId-applier"
+  $rolloutToken = Login-PlatformLocalActor -Username (Get-LocalUsername "platform-rollout-manager") -Password $password -DeviceFingerprint "$correlationId-rollout"
   $operatorHeaders = New-PlatformAuthHeaders -AccessToken $operatorToken -CorrelationId $correlationId
   $approverHeaders = New-PlatformAuthHeaders -AccessToken $approverToken -CorrelationId $correlationId
   $applierHeaders = New-PlatformAuthHeaders -AccessToken $applierToken -CorrelationId $correlationId

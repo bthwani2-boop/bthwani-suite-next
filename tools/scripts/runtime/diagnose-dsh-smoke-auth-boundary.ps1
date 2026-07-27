@@ -5,13 +5,11 @@ param(
 )
 
 Set-StrictMode -Version Latest
+
+. (Join-Path $PSScriptRoot "../../dev/local-actors.ps1")
 $ErrorActionPreference = "Stop"
 
-$password = if ([string]::IsNullOrWhiteSpace([string]$env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
-  "123456"
-} else {
-  [string]$env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD
-}
+$password = Get-LocalPassword
 
 function Invoke-CheckedJsonRequest {
   param(
@@ -89,7 +87,7 @@ function New-MutationHeaders {
 
 Write-Host "=== DSH smoke request-boundary diagnosis ==="
 
-$operatorToken = Get-ActorToken -Username "operator"
+$operatorToken = Get-ActorToken -Username (Get-LocalUsername "operator")
 $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
 $list = Invoke-CheckedJsonRequest `
   -Name "dsh-operator-store-list" `
@@ -162,7 +160,7 @@ if (-not [bool]$publicStore.store.publicationEligible) {
   throw "dsh-public-store-restored-readback is not publication eligible"
 }
 
-$partnerToken = Get-ActorToken -Username "bthwani"
+$partnerToken = Get-ActorToken -Username (Get-LocalUsername "partner")
 $diagnosticSuffix = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $proposalBody = @{
   proposedNameAr = "منتج تشخيص $diagnosticSuffix"

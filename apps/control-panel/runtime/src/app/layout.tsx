@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { Cairo, Inter } from "next/font/google";
 import { Providers } from "./providers";
 import { WebThemeStyle } from "@bthwani/ui-kit/web";
 import {
@@ -28,6 +29,23 @@ import {
   dshTopbarBorder,
 } from "../styles/dsh-colors";
 
+// Self-hosted via next/font/google: the font files are fetched at build time and
+// served from this origin, so the CSP never needs to allowlist
+// fonts.googleapis.com / fonts.gstatic.com, and there is no render-blocking
+// stylesheet round-trip (no FOUT, no preconnect needed).
+const cairo = Cairo({
+  subsets: ["arabic", "latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-cairo",
+  display: "swap",
+});
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "لوحة التحكم — DSH",
   description: "منصة DSH — لوحة التحكم الإدارية",
@@ -35,15 +53,17 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="ar" dir="rtl" data-bth-root="true" data-ui-root="true" data-bth-theme="light" data-ui-theme="light">
+    <html
+      lang="ar"
+      dir="rtl"
+      data-bth-root="true"
+      data-ui-root="true"
+      data-bth-theme="light"
+      data-ui-theme="light"
+      className={`${cairo.variable} ${inter.variable}`}
+    >
       <head>
         <WebThemeStyle />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
         <style>{`
           *, *::before, *::after { box-sizing: border-box; }
 
@@ -90,8 +110,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             --grad-purple:     linear-gradient(135deg, ${dshPurple} 0%, ${dshPurpleDeep} 100%);
 
             /* Typography */
-            --font-arabic:     'Cairo', 'system-ui', sans-serif;
-            --font-latin:      'Inter', 'system-ui', sans-serif;
+            --font-arabic:     var(--font-cairo), 'system-ui', sans-serif;
+            --font-latin:      var(--font-inter), 'system-ui', sans-serif;
 
             /* Animation */
             --ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -106,6 +126,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             color: var(--text-primary);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+          }
+
+          /* --font-latin renders Latin-script / numeral-only runs (codes, IDs,
+             amounts, English labels) explicitly marked as such, rather than
+             falling back to Cairo's Latin glyphs. */
+          [lang="en"], [dir="ltr"], .cp-latin {
+            font-family: var(--font-latin);
           }
 
           @keyframes dsh-fade-up {

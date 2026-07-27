@@ -4,13 +4,11 @@ param(
 )
 
 Set-StrictMode -Version Latest
+
+. (Join-Path $PSScriptRoot "../../dev/local-actors.ps1")
 $ErrorActionPreference = "Stop"
 
-$password = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) {
-  "123456"
-} else {
-  $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD
-}
+$password = Get-LocalPassword
 
 function Get-ActorToken {
   param(
@@ -133,12 +131,12 @@ if ([string]$health.status -ne "healthy") {
   throw "DSH health is not healthy."
 }
 
-$operatorToken = Get-ActorToken -Username "operator"
+$operatorToken = Get-ActorToken -Username (Get-LocalUsername "operator")
 $actors = @(
-  @{ Username = "client";  ActorType = "client";  ActorId = "client-local-001" },
-  @{ Username = "bthwani"; ActorType = "partner"; ActorId = "partner-local-001" },
-  @{ Username = "captain"; ActorType = "captain"; ActorId = "captain-local-001" },
-  @{ Username = "field";   ActorType = "field";   ActorId = "field-local-001" }
+  @{ Username = (Get-LocalUsername "client");  ActorType = "client";  ActorId = "client-local-001" },
+  @{ Username = (Get-LocalUsername "partner"); ActorType = "partner"; ActorId = "partner-local-001" },
+  @{ Username = (Get-LocalUsername "captain"); ActorType = "captain"; ActorId = "captain-local-001" },
+  @{ Username = (Get-LocalUsername "field");   ActorType = "field";   ActorId = "field-local-001" }
 )
 
 foreach ($actor in $actors) {

@@ -7,8 +7,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+. (Join-Path $PSScriptRoot "../dev/local-actors.ps1")
 if ([string]::IsNullOrWhiteSpace($IdentityPassword)) {
-  $IdentityPassword = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD)) { "123456" } else { $env:IDENTITY_LOCAL_BOOTSTRAP_PASSWORD }
+  $IdentityPassword = Get-LocalPassword
 }
 $RunId = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 
@@ -118,11 +120,11 @@ function Ensure-ClientAddress([object]$Client) {
   return $AddressId
 }
 
-$Client = Login-Actor "client" "client"
-$Partner = Login-Actor "bthwani" "partner"
-$Captain = Login-Actor "captain" "captain"
-$Field = Login-Actor "field" "field"
-$Operator = Login-Actor "operator" "operator"
+$Client = Login-Actor (Get-LocalUsername "client") "client"
+$Partner = Login-Actor (Get-LocalUsername "partner") "partner"
+$Captain = Login-Actor (Get-LocalUsername "captain") "captain"
+$Field = Login-Actor (Get-LocalUsername "field") "field"
+$Operator = Login-Actor (Get-LocalUsername "operator") "operator"
 
 $Anonymous = Invoke-Api GET "$DshBaseUrl/dsh/client/orders"
 Require-Status $Anonymous @(401) "anonymous client orders"
