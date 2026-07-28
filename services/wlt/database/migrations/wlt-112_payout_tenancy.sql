@@ -154,9 +154,8 @@ CREATE UNIQUE INDEX wlt_jrn037_payout_outbox_tenant_event_uq
   ON wlt_jrn037_payout_outbox (tenant_id, payout_request_id, event_type);
 DROP INDEX IF EXISTS wlt_jrn037_payout_outbox_pending_idx;
 CREATE INDEX wlt_jrn037_payout_outbox_tenant_pending_idx
-  ON wlt_jrn037_payout_outbox
-    (tenant_id, status, next_retry_at, created_at)
-  WHERE status = 'pending';
+  ON wlt_jrn037_payout_outbox (tenant_id, created_at, id)
+  WHERE delivered_at IS NULL;
 ALTER TABLE wlt_jrn037_payout_outbox
   ADD CONSTRAINT wlt_jrn037_payout_outbox_request_tenant_fk
   FOREIGN KEY (tenant_id, payout_request_id)
@@ -179,7 +178,7 @@ DROP INDEX IF EXISTS wlt_jrn037_payout_reconciliation_request_idx;
 DROP INDEX IF EXISTS wlt_jrn037_payout_reconciliation_single_claim_idx;
 CREATE INDEX wlt_jrn037_payout_reconciliation_tenant_request_idx
   ON wlt_jrn037_payout_reconciliations
-    (tenant_id, payout_request_id, queried_at DESC);
+    (tenant_id, payout_request_id, created_at DESC);
 CREATE UNIQUE INDEX wlt_jrn037_payout_reconciliation_tenant_single_claim_idx
   ON wlt_jrn037_payout_reconciliations (tenant_id, payout_request_id)
   WHERE resolved_at IS NULL;
