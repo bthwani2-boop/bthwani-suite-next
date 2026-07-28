@@ -41,6 +41,8 @@ jobs:
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+      - name: Verify refoundation foundation contract
+        run: node tools/scripts/check-refoundation-foundation.mjs
       - name: Verify immutable diff
         id: immutable_diff
         continue-on-error: true
