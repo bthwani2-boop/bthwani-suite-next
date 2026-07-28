@@ -23,6 +23,11 @@ func main() {
 	if databaseURL == "" {
 		log.Fatal("[identity-api] DATABASE_URL is required")
 	}
+	saasMode := strings.ToLower(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")))
+	bootstrapTenantID := strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID"))
+	if saasMode == "active" && (bootstrapTenantID == "" || bootstrapTenantID == "local-dsh") {
+		log.Fatal("[identity-api] active SaaS mode requires an explicit non-local BTHWANI_DEFAULT_TENANT_ID")
+	}
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
@@ -39,10 +44,9 @@ func main() {
 		Enabled:  strings.EqualFold(strings.TrimSpace(os.Getenv("IDENTITY_LOCAL_BOOTSTRAP")), "true"),
 		Password: os.Getenv("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"),
 	}
-	if localBootstrap.Enabled && strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active") {
+	if localBootstrap.Enabled && saasMode == "active" {
 		log.Fatal("[identity-api] IDENTITY_LOCAL_BOOTSTRAP is forbidden when BTHWANI_SAAS_MODE=active")
 	}
-	bootstrapTenantID := strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID"))
 	if localBootstrap.Enabled && bootstrapTenantID == "" {
 		log.Fatal("[identity-api] BTHWANI_DEFAULT_TENANT_ID is required when local bootstrap is enabled")
 	}
