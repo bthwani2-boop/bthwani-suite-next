@@ -1,0 +1,11 @@
+-- Workforce-010: drop the legacy provider_kind column.
+-- Workforce-003 renamed provider_kind -> workforce_kind but only when
+-- workforce_kind did not already exist, so environments that already had a
+-- workforce_kind column kept a stale, NOT NULL, no-default provider_kind
+-- column alongside it. No application code reads or writes provider_kind
+-- (rg confirms zero references), and every insert into workforce_people only
+-- populates workforce_kind, so any insert on such an environment fails with a
+-- 23502 not-null violation on provider_kind -- surfacing to operators as a
+-- generic "WORKFORCE_INTERNAL_ERROR" when creating sovereign leadership,
+-- department, field, or captain workforce members.
+ALTER TABLE workforce_people DROP COLUMN IF EXISTS provider_kind;

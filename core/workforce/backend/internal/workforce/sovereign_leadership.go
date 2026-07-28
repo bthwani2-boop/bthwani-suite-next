@@ -348,6 +348,12 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 			Department: department, Role: input.PositionTitle, OfficeLocation: input.OfficeLocation,
 			SupervisorActorID: input.SupervisorActorID,
 		})
+	} else if personErr == nil {
+		// The phone already resolved to a workforce profile that predates this
+		// call. This endpoint creates new leadership hires; silently upserting
+		// into the existing profile would discard the newly submitted name and
+		// details while reporting success, so reject instead of merging.
+		return SovereignLeadershipCreationResult{}, false, identityclient.ErrPhoneAlreadyBound
 	}
 	if personErr != nil {
 		_ = s.identity.Deactivate(ctx, actor.ActorID)

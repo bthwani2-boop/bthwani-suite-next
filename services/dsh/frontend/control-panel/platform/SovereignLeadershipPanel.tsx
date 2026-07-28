@@ -100,6 +100,14 @@ export function SovereignLeadershipPanel() {
   const [assignmentStartsOn, setAssignmentStartsOn] = useState("");
   const [assignmentEndsOn, setAssignmentEndsOn] = useState("");
   const [notes, setNotes] = useState("");
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  const copyActivationCode = async (code: string) => {
+    if (typeof navigator === "undefined") return;
+    await navigator.clipboard.writeText(code);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -191,6 +199,7 @@ export function SovereignLeadershipPanel() {
       setAssignmentStartsOn("");
       setAssignmentEndsOn("");
       setNotes("");
+      setCodeCopied(false);
       await reload();
     } catch (error) {
       setSubmitError(workforceErrorMessage(error));
@@ -260,9 +269,19 @@ export function SovereignLeadershipPanel() {
           <CpStatePanel
             role="status"
             title={`تم إنشاء ${created.leadership.employee.fullNameAr}`}
-            description={`كود تفعيل لوحة التحكم: ${created.activation.code} — ينتهي في ${created.activation.expiresAt}`}
             code={`actor=${created.leadership.employee.actorId}`}
-          />
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+              <span>كود تفعيل لوحة التحكم: <strong>{created.activation.code}</strong> — ينتهي في {created.activation.expiresAt}</span>
+              <CpButton
+                variant="secondary"
+                aria-label="نسخ كود التفعيل"
+                onClick={() => void copyActivationCode(created.activation.code)}
+              >
+                {codeCopied ? "✅ تم النسخ" : "📋 نسخ الكود"}
+              </CpButton>
+            </div>
+          </CpStatePanel>
         ) : null}
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <CpButton variant="primary" disabled={!canSubmit} onClick={() => void submit()}>
