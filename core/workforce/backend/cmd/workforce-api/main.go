@@ -56,6 +56,9 @@ func main() {
 	if tenantID == "" {
 		log.Fatal("[workforce-api] BTHWANI_DEFAULT_TENANT_ID is required; silent tenant fallback is forbidden")
 	}
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active") && tenantID == "local-dsh" {
+		log.Fatal("[workforce-api] active SaaS mode requires an explicit non-local BTHWANI_DEFAULT_TENANT_ID")
+	}
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
