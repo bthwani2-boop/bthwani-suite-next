@@ -11,6 +11,7 @@ export * from "./use-catalog-approval-controller";
 export * from "./central-catalog.types";
 export * from "./central-catalog.api";
 export * from "./central-catalog-occ.api";
+export * from "./partner-product-media.client";
 export * from "./product-proposal-readback.api";
 export * from "./catalog-governance.types";
 export * from "./catalog-governance.api";
