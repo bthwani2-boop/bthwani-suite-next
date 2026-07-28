@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { CpButton, CpTextInput, CpStatePanel } from "@bthwani/control-panel/components";
 import { Text } from "@bthwani/ui-kit";
 import { WorkforceScopeManager } from "../../hr/WorkforceScopeManager";
-import type { ProviderKind } from "../../../../shared/workforce";
+import type { ProviderKind } from "../../../shared/workforce";
 
 export function FieldAssignmentWorkspace() {
   const [actorIdInput, setActorIdInput] = useState("");
