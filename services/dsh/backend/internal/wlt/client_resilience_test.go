@@ -32,10 +32,10 @@ func TestCreatePaymentSessionReplayCarriesSameIdempotencyKey(t *testing.T) {
 		PaymentMethod:    "wallet",
 	}
 
-	if _, err := c.CreatePaymentSession(context.Background(), input); err == nil {
+	if _, err := c.CreatePaymentSession(trustedMutationTestContext(), input); err == nil {
 		t.Fatal("expected first call to fail with HTTP 500")
 	}
-	if _, err := c.CreatePaymentSession(context.Background(), input); err == nil {
+	if _, err := c.CreatePaymentSession(trustedMutationTestContext(), input); err == nil {
 		t.Fatal("expected second call to fail with HTTP 500")
 	}
 
@@ -83,7 +83,7 @@ func TestCreatePaymentSessionTimeoutThenRetryUsesSameDeterministicKey(t *testing
 		PaymentMethod:    "wallet",
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	timeoutCtx, cancel := context.WithTimeout(trustedMutationTestContext(), 50*time.Millisecond)
 	defer cancel()
 	_, err := c.CreatePaymentSession(timeoutCtx, input)
 	if err == nil {
@@ -112,7 +112,7 @@ func TestCreatePaymentSessionTimeoutThenRetryUsesSameDeterministicKey(t *testing
 	defer recordingServer.Close()
 
 	retryClient := NewClient(recordingServer.URL, "test-service-token")
-	if _, err := retryClient.CreatePaymentSession(context.Background(), input); err != nil {
+	if _, err := retryClient.CreatePaymentSession(trustedMutationTestContext(), input); err != nil {
 		t.Fatalf("unexpected error on retry: %v", err)
 	}
 	if retryKey == "" {
@@ -154,11 +154,11 @@ func TestOutOfOrderMutationsCarryIndependentDeterministicKeys(t *testing.T) {
 	checkoutIntentID := "intent-ooo-1"
 
 	// ExpireSession fires first (session was cancelled before any order).
-	if err := c.ExpireSession(context.Background(), paymentSessionID, ""); err != nil {
+	if err := c.ExpireSession(trustedMutationTestContext(), paymentSessionID, ""); err != nil {
 		t.Fatalf("unexpected ExpireSession error: %v", err)
 	}
 	// NotifyDeliveryCollection arrives late, out of order, for the related order.
-	if err := c.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{
+	if err := c.NotifyDeliveryCollection(trustedMutationTestContext(), NotifyDeliveryCollectionInput{
 		OrderID:          orderID,
 		CollectorType:    "captain",
 		CollectorID:      "captain-ooo-1",
@@ -211,7 +211,7 @@ func TestNotifyDeliveryCollectionPartialFailureRetryCarriesSameKey(t *testing.T)
 		CheckoutIntentID: "intent-partial-1",
 	}
 
-	firstErr := c.NotifyDeliveryCollection(context.Background(), input)
+	firstErr := c.NotifyDeliveryCollection(trustedMutationTestContext(), input)
 	if firstErr == nil {
 		t.Fatal("expected first attempt to fail with HTTP 500")
 	}
@@ -219,7 +219,7 @@ func TestNotifyDeliveryCollectionPartialFailureRetryCarriesSameKey(t *testing.T)
 		t.Fatalf("expected error to mention status 500, got: %v", firstErr)
 	}
 
-	secondErr := c.NotifyDeliveryCollection(context.Background(), input)
+	secondErr := c.NotifyDeliveryCollection(trustedMutationTestContext(), input)
 	if secondErr != nil {
 		t.Fatalf("expected retry to succeed, got error: %v", secondErr)
 	}
@@ -259,10 +259,10 @@ func TestCommercialProductCreateHasDeterministicRequiredHeaders(t *testing.T) {
 		BillingCycle:    "monthly",
 	}
 
-	if _, err := c.CreateCommercialProduct(context.Background(), input); err != nil {
+	if _, err := c.CreateCommercialProduct(trustedMutationTestContext(), input); err != nil {
 		t.Fatalf("unexpected error on first call: %v", err)
 	}
-	if _, err := c.CreateCommercialProduct(context.Background(), input); err != nil {
+	if _, err := c.CreateCommercialProduct(trustedMutationTestContext(), input); err != nil {
 		t.Fatalf("unexpected error on second call: %v", err)
 	}
 
@@ -301,10 +301,10 @@ func TestAppendLoyaltyEntryHasDeterministicRequiredHeaders(t *testing.T) {
 		SourceID:   "order-loyalty-1",
 	}
 
-	if _, err := c.AppendLoyaltyEntry(context.Background(), input); err != nil {
+	if _, err := c.AppendLoyaltyEntry(trustedMutationTestContext(), input); err != nil {
 		t.Fatalf("unexpected error on first call: %v", err)
 	}
-	if _, err := c.AppendLoyaltyEntry(context.Background(), input); err != nil {
+	if _, err := c.AppendLoyaltyEntry(trustedMutationTestContext(), input); err != nil {
 		t.Fatalf("unexpected error on second call: %v", err)
 	}
 
@@ -336,10 +336,10 @@ func TestFinanceWriteHasDeterministicRequiredHeaders(t *testing.T) {
 	c := NewClient(server.URL, "test-service-token")
 	body := []byte(`{"actorId":"payout-1"}`)
 
-	if _, _, err := c.FinanceWrite(context.Background(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1"); err != nil {
+	if _, _, err := c.FinanceWrite(trustedMutationTestContext(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1"); err != nil {
 		t.Fatalf("unexpected error on first call: %v", err)
 	}
-	if _, _, err := c.FinanceWrite(context.Background(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1"); err != nil {
+	if _, _, err := c.FinanceWrite(trustedMutationTestContext(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1"); err != nil {
 		t.Fatalf("unexpected error on second call: %v", err)
 	}
 
