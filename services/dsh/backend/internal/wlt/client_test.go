@@ -48,6 +48,9 @@ func TestCreatePaymentSessionSuccess(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
+		if r.Header.Get("X-Tenant-ID") != "tenant-a" {
+			t.Fatalf("expected X-Tenant-ID=tenant-a, got %q", r.Header.Get("X-Tenant-ID"))
+		}
 		if r.Header.Get("X-Correlation-ID") != "corr-1" {
 			t.Fatalf("expected X-Correlation-ID=corr-1, got %q", r.Header.Get("X-Correlation-ID"))
 		}
@@ -81,7 +84,7 @@ func TestCreatePaymentSessionSuccess(t *testing.T) {
 		t.Fatalf("expected client to be configured")
 	}
 
-	session, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{
+	session, err := c.CreatePaymentSession(trustedMutationTestContext(), CreatePaymentSessionInput{
 		CheckoutIntentID: "intent-1",
 		ClientID:         "client-1",
 		StoreID:          "store-1",
@@ -107,7 +110,7 @@ func TestCreatePaymentSessionNonSuccessStatus(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
+	_, err := c.CreatePaymentSession(trustedMutationTestContext(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
 	if err == nil {
 		t.Fatalf("expected error for HTTP 500 response")
 	}
@@ -128,7 +131,7 @@ func TestCreatePaymentSessionMalformedBody(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
+	_, err := c.CreatePaymentSession(trustedMutationTestContext(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
 	if err == nil {
 		t.Fatalf("expected error for malformed JSON response")
 	}
@@ -153,7 +156,7 @@ func TestCreatePaymentSessionMissingID(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
+	_, err := c.CreatePaymentSession(trustedMutationTestContext(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
 	if err == nil {
 		t.Fatalf("expected error when response is missing paymentSession.id")
 	}
@@ -180,6 +183,9 @@ func TestNotifyDeliveryCollectionSendsGovernedCollectorHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
+		if r.Header.Get("X-Tenant-ID") != "tenant-a" {
+			t.Fatalf("expected X-Tenant-ID=tenant-a, got %q", r.Header.Get("X-Tenant-ID"))
+		}
 		var input NotifyDeliveryCollectionInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			t.Fatalf("failed to decode request body: %v", err)
@@ -192,7 +198,7 @@ func TestNotifyDeliveryCollectionSendsGovernedCollectorHeaders(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{
+	err := c.NotifyDeliveryCollection(trustedMutationTestContext(), NotifyDeliveryCollectionInput{
 		OrderID:          "order-1",
 		CollectorType:    "captain",
 		CollectorID:      "captain-1",
@@ -235,7 +241,7 @@ func TestFinanceReadWalletWithTenantBuildsPathAndHeaders(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	status, body, err := c.FinanceReadWalletWithTenant(context.Background(), "field", "field-123", "corr-1", "tenant-a")
+	status, body, err := c.FinanceReadWalletWithTenant(trustedMutationTestContext(), "field", "field-123", "corr-1", "tenant-a")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -261,7 +267,7 @@ func TestFinanceReadWalletWithTenantEscapesActorIDSegment(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	if _, _, err := c.FinanceReadWalletWithTenant(context.Background(), "field", "../admin", "corr-1", "tenant-a"); err != nil {
+	if _, _, err := c.FinanceReadWalletWithTenant(trustedMutationTestContext(), "field", "../admin", "corr-1", "tenant-a"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if gotEscapedPath != "/wlt/wallets/field/..%2Fadmin" {
@@ -336,6 +342,9 @@ func TestDeliverFieldCommissionSendsExactBodyAndHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
+		if r.Header.Get("X-Tenant-ID") != "tenant-a" {
+			t.Fatalf("expected X-Tenant-ID=tenant-a, got %q", r.Header.Get("X-Tenant-ID"))
+		}
 		if r.Header.Get("X-Correlation-ID") != "corr-visit-1" {
 			t.Fatalf("expected X-Correlation-ID=corr-visit-1, got %q", r.Header.Get("X-Correlation-ID"))
 		}
@@ -367,7 +376,7 @@ func TestDeliverFieldCommissionSendsExactBodyAndHeaders(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.DeliverFieldCommission(context.Background(), DeliverFieldCommissionInput{
+	err := c.DeliverFieldCommission(trustedMutationTestContext(), DeliverFieldCommissionInput{
 		BeneficiaryActorID: "field-1",
 		SourceID:           "visit-1",
 		VisitID:            "visit-1",
@@ -395,7 +404,7 @@ func TestDeliverFieldCommissionNonSuccessStatus(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.DeliverFieldCommission(context.Background(), DeliverFieldCommissionInput{VisitID: "visit-1"})
+	err := c.DeliverFieldCommission(trustedMutationTestContext(), DeliverFieldCommissionInput{VisitID: "visit-1"})
 	if err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("expected error mentioning status 500, got: %v", err)
 	}
@@ -412,6 +421,9 @@ func TestExpireSessionSendsServiceHeadersAndPath(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
+		if r.Header.Get("X-Tenant-ID") != "tenant-a" {
+			t.Fatalf("expected X-Tenant-ID=tenant-a, got %q", r.Header.Get("X-Tenant-ID"))
+		}
 		if r.Header.Get("X-Correlation-ID") != "corr-1" {
 			t.Fatalf("expected X-Correlation-ID=corr-1, got %q", r.Header.Get("X-Correlation-ID"))
 		}
@@ -420,7 +432,7 @@ func TestExpireSessionSendsServiceHeadersAndPath(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	if err := c.ExpireSession(context.Background(), "ps-1", "corr-1"); err != nil {
+	if err := c.ExpireSession(trustedMutationTestContext(), "ps-1", "corr-1"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if gotMethod != http.MethodPost {
@@ -438,7 +450,7 @@ func TestExpireSessionTreats409AsTerminalSuccess(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	if err := c.ExpireSession(context.Background(), "ps-1", "corr-1"); err != nil {
+	if err := c.ExpireSession(trustedMutationTestContext(), "ps-1", "corr-1"); err != nil {
 		t.Fatalf("expected 409 to be treated as terminal success (session already not expirable), got error: %v", err)
 	}
 }
@@ -450,7 +462,7 @@ func TestExpireSessionNonSuccessStatus(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.ExpireSession(context.Background(), "ps-1", "corr-1")
+	err := c.ExpireSession(trustedMutationTestContext(), "ps-1", "corr-1")
 	if err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("expected error mentioning status 500, got: %v", err)
 	}
@@ -478,6 +490,9 @@ func TestCancelSessionForOrderSendsExactBodyAndHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
+		if r.Header.Get("X-Tenant-ID") != "tenant-a" {
+			t.Fatalf("expected X-Tenant-ID=tenant-a, got %q", r.Header.Get("X-Tenant-ID"))
+		}
 		if r.Header.Get("X-Correlation-ID") != "order-cancellation-order-1" {
 			t.Fatalf("expected X-Correlation-ID=order-cancellation-order-1, got %q", r.Header.Get("X-Correlation-ID"))
 		}
@@ -493,7 +508,7 @@ func TestCancelSessionForOrderSendsExactBodyAndHeaders(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.CancelSessionForOrder(context.Background(), "ps-1", CancelSessionForOrderInput{
+	err := c.CancelSessionForOrder(trustedMutationTestContext(), "ps-1", CancelSessionForOrderInput{
 		OrderID:  "order-1",
 		ClientID: "client-1",
 		Reason:   "store rejected order",
@@ -516,7 +531,7 @@ func TestCancelSessionForOrderNonSuccessStatus(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.CancelSessionForOrder(context.Background(), "ps-1", CancelSessionForOrderInput{
+	err := c.CancelSessionForOrder(trustedMutationTestContext(), "ps-1", CancelSessionForOrderInput{
 		OrderID:  "order-1",
 		ClientID: "client-1",
 		Reason:   "client cancelled order",
@@ -541,7 +556,7 @@ func TestNotifyDeliveryCollectionNonSuccessStatus(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{OrderID: "order-1", CollectorType: "captain", CollectorID: "captain-1", PartnerID: "partner-1", CheckoutIntentID: "intent-1"})
+	err := c.NotifyDeliveryCollection(trustedMutationTestContext(), NotifyDeliveryCollectionInput{OrderID: "order-1", CollectorType: "captain", CollectorID: "captain-1", PartnerID: "partner-1", CheckoutIntentID: "intent-1"})
 	if err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("expected error mentioning status 500, got: %v", err)
 	}
@@ -554,7 +569,7 @@ func TestCreatePaymentSessionClientErrorIsDefinitive(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	_, err := c.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
+	_, err := c.CreatePaymentSession(trustedMutationTestContext(), CreatePaymentSessionInput{CheckoutIntentID: "intent-1"})
 	if err == nil {
 		t.Fatal("expected HTTP 400 error")
 	}
