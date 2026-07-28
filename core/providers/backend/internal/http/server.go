@@ -125,6 +125,7 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 			return
 		}
+		r = r.WithContext(providers.WithTenantContext(r.Context(), identity.TenantID))
 		next(w, r, identity)
 	}
 }
@@ -176,12 +177,7 @@ func operatorOf(r *http.Request, identity auth.Identity) providers.Operator {
 	if len(identity.Roles) > 0 {
 		role = identity.Roles[0]
 	}
-	return providers.Operator{
-		ActorID:  identity.Subject,
-		TenantID: identity.TenantID,
-		Role:     role,
-		Token:    r.Header.Get("Authorization"),
-	}
+	return providers.Operator{ActorID: identity.Subject, Role: role, Token: r.Header.Get("Authorization")}
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
