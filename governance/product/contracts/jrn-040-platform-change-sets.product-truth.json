@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "JRN_040_PLATFORM_CHANGE_SETS",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Platform configuration changes need one governed maker-checker workflow with explicit validation, conflict detection, audit, apply, and rollback boundaries.",
+    "affectedActors": [
+      "platform_operator",
+      "platform_approver",
+      "tenant_operator"
+    ],
+    "currentWorkaround": "Direct or fragmented configuration changes cannot provide one reviewable lifecycle and reliable rollback evidence.",
+    "frequency": "occasional",
+    "severity": "high",
+    "evidenceState": "UNPROVEN",
+    "evidenceReferences": [
+      "core/platform-control/contracts/platform-change-sets.openapi.yaml",
+      "core/platform-control/clients/generated/platform-change-sets-api.ts"
+    ]
+  },
+  "actors": [
+    {
+      "id": "platform_operator",
+      "role": "Creates, validates, submits, applies, and rolls back governed platform change sets within granted scope.",
+      "permittedActions": [
+        "create_change_set",
+        "validate_change_set",
+        "submit_change_set",
+        "apply_approved_change_set",
+        "rollback_applied_change_set"
+      ],
+      "forbiddenActions": [
+        "approve_or_reject_own_change_set",
+        "apply_stale_or_conflicting_change_set",
+        "rollback_without_reason",
+        "store_secret_or_credential_values_in_change_sets",
+        "snapshot_existing_sensitive_target_values"
+      ]
+    },
+    {
+      "id": "platform_approver",
+      "role": "Independently approves or rejects submitted platform change sets.",
+      "permittedActions": [
+        "approve_change_set",
+        "reject_change_set"
+      ],
+      "forbiddenActions": [
+        "approve_or_reject_own_change_set",
+        "apply_stale_or_conflicting_change_set",
+        "rollback_without_reason",
+        "store_secret_or_credential_values_in_change_sets",
+        "snapshot_existing_sensitive_target_values"
+      ]
+    },
+    {
+      "id": "tenant_operator",
+      "role": "Reads only tenant-visible outcomes that are explicitly projected by the platform owner.",
+      "permittedActions": [
+        "read_authorized_projection"
+      ],
+      "forbiddenActions": [
+        "approve_or_reject_own_change_set",
+        "apply_stale_or_conflicting_change_set",
+        "rollback_without_reason",
+        "store_secret_or_credential_values_in_change_sets",
+        "snapshot_existing_sensitive_target_values"
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": [
+        "platform_operator",
+        "platform_approver"
+      ],
+      "routesOrScreens": [
+        "PlatformChangeWorkflowPanel"
+      ],
+      "operationIds": [
+        "listPlatformChangeSets",
+        "getPlatformChangeSet",
+        "createPlatformChangeSet",
+        "validatePlatformChangeSet",
+        "submitPlatformChangeSet",
+        "approvePlatformChangeSet",
+        "rejectPlatformChangeSet",
+        "applyPlatformChangeSet",
+        "rollbackPlatformChangeSet"
+      ],
+      "states": [
+        "loading",
+        "empty",
+        "ready",
+        "blocked",
+        "error"
+      ],
+      "actions": [
+        "create",
+        "validate",
+        "submit",
+        "approve",
+        "reject",
+        "apply",
+        "rollback"
+      ]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": [
+        "platform_operator",
+        "platform_approver"
+      ],
+      "operationIds": [
+        "listPlatformChangeSets",
+        "getPlatformChangeSet",
+        "createPlatformChangeSet",
+        "validatePlatformChangeSet",
+        "submitPlatformChangeSet",
+        "approvePlatformChangeSet",
+        "rejectPlatformChangeSet",
+        "applyPlatformChangeSet",
+        "rollbackPlatformChangeSet"
+      ],
+      "states": [
+        "draft",
+        "validated",
+        "submitted",
+        "approved",
+        "rejected",
+        "applied",
+        "rolled_back",
+        "failed"
+      ],
+      "actions": [
+        "authorize",
+        "validate_preconditions",
+        "persist_transition",
+        "audit_transition"
+      ]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": [
+        "platform_operator",
+        "platform_approver"
+      ],
+      "states": [
+        "transaction_open",
+        "committed",
+        "rolled_back"
+      ],
+      "actions": [
+        "reserve_target",
+        "enforce_sensitive_boundary",
+        "persist_audit",
+        "enforce_version"
+      ]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": [
+        "platform_operator",
+        "platform_approver"
+      ],
+      "states": [
+        "loading",
+        "ready",
+        "blocked",
+        "error"
+      ],
+      "actions": [
+        "map_contract",
+        "orchestrate_readback",
+        "map_errors"
+      ]
+    }
+  ],
+  "outcome": {
+    "statement": "Every platform configuration mutation follows one contract-bound, maker-checker, auditable, conflict-safe lifecycle with explicit rollback evidence.",
+    "primaryMetric": "unreviewed_platform_mutations",
+    "guardrailMetrics": [
+      "stale_change_set_applications",
+      "sensitive_values_captured",
+      "rollback_without_reason"
+    ],
+    "baselineState": "Product acceptance and live runtime proof are not yet established.",
+    "targetState": "The governed lifecycle is product-approved, runtime-proven, and has zero unauthorized or stale mutations.",
+    "observationWindow": "Per release candidate and after each governed mutation"
+  },
+  "acceptance": {
+    "criteria": [
+      "The OpenAPI contract is the canonical source for generated client types.",
+      "Maker-checker separation prevents self-approval and self-rejection.",
+      "Validation and apply reject stale or conflicting target revisions.",
+      "Sensitive and confidential values never enter snapshots or proposed values.",
+      "Rollback requires a reason and produces auditable readback."
+    ],
+    "failureStates": [
+      "manual_generated_type_drift",
+      "self_approval_allowed",
+      "stale_change_applied",
+      "sensitive_value_persisted",
+      "rollback_without_reason",
+      "runtime_readback_missing"
+    ],
+    "requiredChecks": [
+      "product-truth-schema",
+      "platform-change-sets-gate",
+      "platform-control-backend-tests",
+      "platform-change-set-typecheck",
+      "generated-client-drift",
+      "runtime-readback"
+    ],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": true
+  },
+  "invariants": {
+    "business": [
+      "A change set has one proposer and an independent approver.",
+      "Apply uses the validated revision and precondition snapshot.",
+      "Rollback records a mandatory reason and restores only governed non-sensitive state.",
+      "Every transition is persisted and auditable."
+    ],
+    "negative": [
+      "No actor approves or rejects its own change set.",
+      "No stale or conflicting change set is applied.",
+      "No secret or credential value is stored in a change set.",
+      "No existing sensitive target value is snapshotted.",
+      "No rollback occurs without a reason."
+    ]
+  },
+  "owners": {
+    "productManager": "repository-owner",
+    "productOwner": "repository-owner",
+    "uxJourneyOwner": "repository-owner",
+    "engineeringOwner": "platform-control",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Close the smallest safe vertical slice without treating implementation as product acceptance.",
+    "fixedConstraints": [
+      "Platform Control owns mutation truth.",
+      "OpenAPI owns the contract and generated type shape.",
+      "Maker-checker separation is mandatory.",
+      "Sensitive values are rejected fail-closed.",
+      "Runtime and visual evidence remain required before acceptance."
+    ],
+    "variableScope": [
+      "Control-panel composition",
+      "Error presentation",
+      "Readback visualization"
+    ],
+    "forbiddenScope": [
+      "Production deployment",
+      "Product acceptance by the implementing agent",
+      "Secret storage in change sets",
+      "Direct configuration mutation outside Platform Control"
+    ],
+    "forecastRange": "One bounded platform-governance capability",
+    "confidence": "medium",
+    "unknowns": [
+      "Independent product acceptance",
+      "Production-like runtime evidence",
+      "Final visual accessibility evidence"
+    ]
+  }
+}
