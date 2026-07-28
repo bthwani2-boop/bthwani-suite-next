@@ -91,6 +91,11 @@ function Invoke-PlatformFoundationMigrations {
   }
 }
 
+function Start-PlatformFoundationServices {
+  Invoke-PlatformFoundationMigrations
+  Invoke-Compose up -d identity-api providers-api platform-control-api
+}
+
 function Wait-PlatformFoundationServices {
   Wait-HttpReady -Name "Identity API" -Url "http://localhost:58082/identity/readiness"
   Wait-HttpReady -Name "Providers API" -Url "http://localhost:58087/providers/readiness"
@@ -104,12 +109,13 @@ switch ($Action) {
   }
   "up" {
     docker info | Out-Null
-    Invoke-PlatformFoundationMigrations
-    Invoke-Compose up -d identity-api providers-api platform-control-api
+    Start-PlatformFoundationServices
     Wait-PlatformFoundationServices
     Write-Host "Platform foundation runtime up: PASS"
   }
   "smoke" {
+    docker info | Out-Null
+    Start-PlatformFoundationServices
     Wait-PlatformFoundationServices
     $providers = Invoke-RestMethod -Uri "http://localhost:58087/providers/readiness" -TimeoutSec 10 -ErrorAction Stop
     $platform = Invoke-RestMethod -Uri "http://localhost:58088/platform/readiness" -TimeoutSec 10 -ErrorAction Stop
