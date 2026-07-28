@@ -90,14 +90,10 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/provider-penalties", gate(workforceServiceAuth(penalty.HandlePost(db))))
 	mux.HandleFunc("POST /wlt/provider-penalties/{penaltyId}/reverse", gate(workforceServiceAuth(penalty.HandleReverse(db))))
 
-	mux.HandleFunc("POST /wlt/ledger/entries", gate(serviceAuth(ledger.HandleAppendLedgerEntry(db))))
 	mux.HandleFunc("GET /wlt/ledger/entries/{entryId}", readGate(ledger.HandleGetLedgerEntry(db)))
 	mux.HandleFunc("GET /wlt/ledger/entries", readGate(ledger.HandleListLedgerEntries(db)))
 	mux.HandleFunc("GET /wlt/ledger/financial-summary", readGate(ledger.HandleFinancialSummary(db)))
 
-	mux.HandleFunc("PUT /wlt/payout-destinations/{partnerId}", gate(serviceAuth(payout.HandleUpsertPayoutDestinationGoverned(db))))
-	mux.HandleFunc("GET /wlt/payout-destinations/{partnerId}", readGate(payout.HandleGetPayoutDestination(db)))
-	mux.HandleFunc("POST /wlt/payout-destinations/{partnerId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePayoutDestination(db))))
 	mux.HandleFunc("PUT /wlt/payout-destinations/{actorType}/{actorId}", gate(serviceAuth(payout.HandleUpsertPayoutDestinationJRN037(db))))
 	mux.HandleFunc("GET /wlt/payout-destinations/{actorType}/{actorId}", readGate(payout.HandleGetPayoutDestinationJRN037(db)))
 	mux.HandleFunc("POST /wlt/payout-destinations/{actorType}/{actorId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePayoutDestinationJRN037(db))))
