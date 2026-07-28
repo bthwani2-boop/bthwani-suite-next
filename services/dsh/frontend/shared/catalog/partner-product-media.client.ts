@@ -1,6 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import type { DshMediaAsset } from "../media/dsh-media-api.client";
-import { uploadCatalogBinary } from "./catalog-binary-upload";
+import { uploadCatalogBinary } from "./catalog-binary-upload.adapter";
 import {
   completeAssetUpload,
   createAssetUploadIntent,
