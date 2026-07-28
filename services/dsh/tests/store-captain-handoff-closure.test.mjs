@@ -170,9 +170,11 @@ test("contextual CI delegates contracts, Node checks, journey gates and backend 
   assert.match(router, /uses: \.\/\.github\/workflows\/ci-node-verification\.yml/);
   assert.match(router, /uses: \.\/\.github\/workflows\/ci-backends\.yml/);
   assert.match(diagnosticsWorkflow, /pnpm --dir contracts typecheck/);
-  assert.match(nodeWorkflow, /pnpm run affected:typecheck/);
+  assert.match(nodeWorkflow, /run-affected-verification\.mjs typecheck lint/);
   assert.match(nodeWorkflow, /pnpm exec nx affected -t test/);
-  assert.match(nodeWorkflow, /pnpm run affected:lint/);
+  assert.match(nodeWorkflow, /pnpm run nx:typecheck/);
+  assert.match(nodeWorkflow, /pnpm run nx:lint/);
+  assert.match(nodeWorkflow, /pnpm run nx:build/);
   assert.match(nodeWorkflow, /Run detected journey gates/);
   assert.match(backendWorkflow, /name: Apply migrations/);
   assert.match(backendWorkflow, /go test \.\/\.\.\. -count=1/);
