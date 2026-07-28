@@ -26,6 +26,9 @@ func TestSearchActorsDecodesOpenAPIArrayAndSendsServiceIdentity(t *testing.T) {
 		if got := r.Header.Get("X-Service-Caller"); got != "workforce" {
 			t.Fatalf("unexpected service caller %q", got)
 		}
+		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-main" {
+			t.Fatalf("unexpected tenant %q", got)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]ActorView{{
 			ActorID: "field-1", Username: "ali", PhoneE164: "+967770000001",
@@ -34,7 +37,7 @@ func TestSearchActorsDecodesOpenAPIArrayAndSendsServiceIdentity(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token")
+	client := NewClient(server.URL, "service-token", "tenant-main")
 	actors, err := client.SearchActors(context.Background(), "field", "ali")
 	if err != nil {
 		t.Fatalf("SearchActors returned error: %v", err)
@@ -44,9 +47,7 @@ func TestSearchActorsDecodesOpenAPIArrayAndSendsServiceIdentity(t *testing.T) {
 	}
 }
 
-func TestActiveSaaSClientSendsTrustedTenantToEveryIdentityCall(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
+func TestClientSendsTrustedTenantToEveryIdentityCall(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-main" {
 			t.Fatalf("expected tenant-main, got %q", got)
@@ -56,15 +57,13 @@ func TestActiveSaaSClientSendsTrustedTenantToEveryIdentityCall(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token")
+	client := NewClient(server.URL, "service-token", "tenant-main")
 	if _, err := client.SearchActors(context.Background(), "field", ""); err != nil {
 		t.Fatalf("SearchActors returned error: %v", err)
 	}
 }
 
-func TestActiveSaaSProvisionUsesTrustedTenantInHeaderAndBody(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
+func TestProvisionUsesTrustedTenantInHeaderAndBody(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-main" {
 			t.Fatalf("expected tenant-main header, got %q", got)
@@ -81,7 +80,7 @@ func TestActiveSaaSProvisionUsesTrustedTenantInHeaderAndBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token")
+	client := NewClient(server.URL, "service-token", "tenant-main")
 	if _, err := client.Provision(context.Background(), ProvisionInput{
 		Username: "field-1", PhoneE164: "+967770000001", Role: "field",
 	}); err != nil {
@@ -89,10 +88,8 @@ func TestActiveSaaSProvisionUsesTrustedTenantInHeaderAndBody(t *testing.T) {
 	}
 }
 
-func TestActiveSaaSProvisionRejectsTenantOverrideBeforeNetwork(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
-	client := NewClient("https://identity.internal", "service-token")
+func TestProvisionRejectsTenantOverrideBeforeNetwork(t *testing.T) {
+	client := NewClient("https://identity.internal", "service-token", "tenant-main")
 
 	_, err := client.Provision(context.Background(), ProvisionInput{TenantID: "tenant-other"})
 	if !errors.Is(err, ErrTenantForbidden) {
@@ -100,11 +97,9 @@ func TestActiveSaaSProvisionRejectsTenantOverrideBeforeNetwork(t *testing.T) {
 	}
 }
 
-func TestActiveSaaSClientFailsClosedWithoutRuntimeTenant(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
-	client := NewClient("https://identity.internal", "service-token")
+func TestClientFailsClosedWithoutRuntimeTenant(t *testing.T) {
+	client := NewClient("https://identity.internal", "service-token", "")
 	if client.Configured() {
-		t.Fatal("expected active SaaS identity client without tenant to be unconfigured")
+		t.Fatal("expected identity client without tenant to be unconfigured")
 	}
 }
