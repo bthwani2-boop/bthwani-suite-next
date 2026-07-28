@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani WLT Core Service API
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     Canonical WLT core contract for liveness, trusted financial references,
     actor wallets, reconciliation administration and read-only ledger
@@ -17,8 +17,11 @@ x-bthwani-contracts:
   deliveryCollections: ./wlt.delivery-collections.openapi.yaml
   refunds: ./jrn-035-refunds.openapi.yaml
   settlementsCommissions: ./jrn-036-settlements-commissions.openapi.yaml
+  settlementOperations: ./wlt.settlement-operations.openapi.yaml
   payoutsDestinations: ./jrn-037-payouts-destinations.openapi.yaml
+  payoutFailureBoundary: ./wlt.payout-failure-boundary.openapi.yaml
   codCustody: ./jrn-038-cod-custody.openapi.yaml
+  codRecords: ./wlt.cod-records.openapi.yaml
   commercial: ./wlt.commercial.openapi.yaml
   commercialSummary: ./wlt.commercial-summary.openapi.yaml
   promotionFunding: ./wlt.promotion-funding.openapi.yaml
@@ -179,11 +182,7 @@ paths:
           application/json:
             schema: { type: object, additionalProperties: true }
       responses:
-        '200':
-          description: Reconciliation case assigned.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '200': { description: Reconciliation case assigned }
         '403': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
   /wlt/reconciliation-cases/{caseId}/resolve:
@@ -207,13 +206,146 @@ paths:
           application/json:
             schema: { type: object, additionalProperties: true }
       responses:
-        '200':
-          description: Reconciliation case resolved.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '200': { description: Reconciliation case resolved }
         '403': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
+  /wlt/cod-records:
+    get:
+      operationId: listWltCodRecords
+      summary: List tenant-local COD records.
+      tags: [WltCodRecords]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Tenant-local COD records }
+        '400': { $ref: '#/components/responses/Error' }
+    post:
+      operationId: createWltCodRecord
+      summary: Create tenant-local COD custody from WLT payment truth.
+      tags: [WltCodRecords]
+      security: [{ serviceBearer: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '201': { description: COD custody created }
+        '200': { description: Exact replay }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /wlt/cod-records/{codRecordId}:
+    get:
+      operationId: getWltCodRecord
+      summary: Read one tenant-local COD record.
+      tags: [WltCodRecords]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CodRecordId'
+      responses:
+        '200': { description: Tenant-local COD record }
+        '404': { $ref: '#/components/responses/Error' }
+  /wlt/settlements:
+    get:
+      operationId: listWltSettlements
+      summary: List tenant-local settlements.
+      tags: [WltSettlements]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Tenant-local settlements }
+        '400': { $ref: '#/components/responses/Error' }
+  /wlt/settlements/summary:
+    get:
+      operationId: getWltSettlementSummary
+      summary: Return the tenant-local settlement summary.
+      tags: [WltSettlements]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Tenant-local settlement summary }
+  /wlt/settlements/{settlementId}:
+    get:
+      operationId: getWltSettlement
+      summary: Read one tenant-local settlement.
+      tags: [WltSettlements]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/SettlementId'
+      responses:
+        '200': { description: Tenant-local settlement }
+        '404': { $ref: '#/components/responses/Error' }
+  /wlt/settlements/{settlementId}/post:
+    post:
+      operationId: postWltSettlement
+      summary: Post a pending tenant-local settlement and balanced journal atomically.
+      tags: [WltSettlements]
+      security: [{ serviceBearer: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/SettlementId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Settlement posted or replayed }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /wlt/payout-requests/{payoutId}/fail:
+    post:
+      operationId: failWltPayoutRequestClosed
+      summary: Reject manual payout failure and require reconciliation.
+      tags: [WltPayoutRequests]
+      security: [{ serviceBearer: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/PayoutId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { description: RECONCILIATION_REQUIRED }
   /wlt/ledger/entries:
     get:
       operationId: listWltLedgerEntries
@@ -243,11 +375,7 @@ paths:
           in: query
           schema: { type: string }
       responses:
-        '200':
-          description: Tenant-local immutable ledger entries.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '200': { description: Tenant-local immutable ledger entries }
         '400': { $ref: '#/components/responses/Error' }
   /wlt/ledger/entries/{entryId}:
     get:
@@ -264,11 +392,7 @@ paths:
           required: true
           schema: { type: string, minLength: 1 }
       responses:
-        '200':
-          description: Tenant-local immutable ledger entry.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '200': { description: Tenant-local immutable ledger entry }
         '404': { $ref: '#/components/responses/Error' }
   /wlt/ledger/financial-summary:
     get:
@@ -281,11 +405,7 @@ paths:
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/TenantId'
       responses:
-        '200':
-          description: Tenant-local financial summary.
-          content:
-            application/json:
-              schema: { type: object, additionalProperties: true }
+        '200': { description: Tenant-local financial summary }
 components:
   securitySchemes:
     serviceBearer:
@@ -337,6 +457,21 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1 }
+    CodRecordId:
+      name: codRecordId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    SettlementId:
+      name: settlementId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    PayoutId:
+      name: payoutId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
   responses:
     ReferenceResponse:
       description: Canonical WLT reference.
@@ -366,18 +501,7 @@ components:
       properties:
         status:
           type: string
-          enum:
-            - reference_created
-            - pending_provider
-            - authorization_pending
-            - authorized
-            - capture_pending
-            - captured
-            - cod_pending
-            - cod_collected
-            - failed
-            - expired
-            - provider_result_unknown
+          enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_collected, failed, expired, provider_result_unknown]
     Error:
       type: object
       required: [code, message]
