@@ -186,5 +186,3 @@ const styles = {
   noticeCard: { borderWidth: 1, borderColor: colorRoles.borderSubtle, borderRadius: 12, padding: spacing[3], gap: spacing[2], backgroundColor: colorRoles.surfaceMuted },
   noticeHeader: { flexDirection: "row-reverse" as const, justifyContent: "space-between" as const, alignItems: "center" as const },
 };
-
-export default ProviderAvailabilityNoticesPanel;
