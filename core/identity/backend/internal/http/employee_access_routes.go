@@ -21,6 +21,7 @@ func RegisterEmployeeAccessRoutes(handler http.Handler, repository *identity.Rep
 		panic("identity employee access routes require *http.ServeMux")
 	}
 	s := &employeeAccessServer{repository: repository}
+	mux.HandleFunc("GET /internal/employees/permission-bundles", s.serviceOnly(s.permissionBundles))
 	mux.HandleFunc("POST /internal/employees/provision", s.serviceOnly(s.provision))
 }
 
@@ -44,6 +45,10 @@ func (s *employeeAccessServer) serviceOnly(next http.HandlerFunc) http.HandlerFu
 	}
 }
 
+func (s *employeeAccessServer) permissionBundles(w http.ResponseWriter, _ *http.Request) {
+	sendJSON(w, http.StatusOK, map[string]any{"permissionBundles": identity.EmployeePermissionBundles()})
+}
+
 func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request) {
 	var input identity.EmployeeProvisionInput
 	if !decodeJSON(w, r, &input) {
@@ -64,7 +69,8 @@ func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request)
 		trustedTenantID = tenantID
 	}
 	if trustedTenantID == "" {
-		trustedTenantID = "local-dsh"
+		sendError(w, http.StatusBadRequest, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is required for employee provisioning")
+		return
 	}
 	input.TenantID = trustedTenantID
 	if err := s.repository.ValidateEmployeePhoneTenant(r.Context(), input.PhoneE164, trustedTenantID); err != nil {
