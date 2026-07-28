@@ -3,7 +3,6 @@ package http
 import (
 	"context"
 	"errors"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -121,28 +120,58 @@ func TestSaaSOtpBoundaryPreservesRateLimitError(t *testing.T) {
 	}
 }
 
-func TestSaaSOtpBoundaryPassesClientThroughWhenDeferredAndPreservesBody(t *testing.T) {
+func TestSaaSOtpBoundaryUsesExplicitDeferredTenant(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
-	repository := &fakeTenantOtpRepository{}
+	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "local-dsh")
+	repository := &fakeTenantOtpRepository{
+		result: identity.IssueActivationResult{ActivationID: "activation-local", Code: "123456"},
+	}
 	nextCalled := false
-	var downstreamBody string
-	handler := SaaSOtpBoundary(repository, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := SaaSOtpBoundary(repository, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		nextCalled = true
-		body, _ := io.ReadAll(r.Body)
-		downstreamBody = string(body)
-		w.WriteHeader(http.StatusNoContent)
 	}))
-	payload := `{"phone":"+967770000001","actorType":"client"}`
-	request := httptest.NewRequest(http.MethodPost, "/auth/otp/request", strings.NewReader(payload))
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/auth/otp/request",
+		strings.NewReader(`{"phone":"+967770000001","actorType":"client"}`),
+	)
 	response := httptest.NewRecorder()
 
 	handler.ServeHTTP(response, request)
 
-	if !nextCalled || repository.calls != 0 || response.Code != http.StatusNoContent {
-		t.Fatalf("expected deferred passthrough called=%v calls=%d status=%d", nextCalled, repository.calls, response.Code)
+	if nextCalled {
+		t.Fatal("deferred client OTP request reached the legacy handler")
 	}
-	if downstreamBody != payload {
-		t.Fatalf("request body changed during passthrough: got %q want %q", downstreamBody, payload)
+	if repository.calls != 1 || repository.tenantID != "local-dsh" {
+		t.Fatalf("expected explicit deferred tenant, calls=%d tenant=%q", repository.calls, repository.tenantID)
+	}
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "activation-local") {
+		t.Fatalf("unexpected deferred response status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestSaaSOtpBoundaryFailsClosedWithoutDeferredTenant(t *testing.T) {
+	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
+	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
+	repository := &fakeTenantOtpRepository{}
+	nextCalled := false
+	handler := SaaSOtpBoundary(repository, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		nextCalled = true
+	}))
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/auth/otp/request",
+		strings.NewReader(`{"phone":"+967770000001","actorType":"client"}`),
+	)
+	response := httptest.NewRecorder()
+
+	handler.ServeHTTP(response, request)
+
+	if nextCalled || repository.calls != 0 {
+		t.Fatalf("missing deferred tenant must fail closed, next=%v calls=%d", nextCalled, repository.calls)
+	}
+	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "SAAS_RUNTIME_CONFIG_INVALID") {
+		t.Fatalf("expected SAAS_RUNTIME_CONFIG_INVALID, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
