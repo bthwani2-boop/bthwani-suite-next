@@ -11,16 +11,19 @@ import (
 
 var ErrJrn036MutationIdempotencyConflict = errors.New("idempotency key was already used with different mutation inputs")
 
-// LoadJrn036MutationReceiptTx serializes callers sharing an idempotency key,
-// then returns the original canonical response when the exact mutation was
-// already committed. The advisory lock is transaction-scoped, so the receipt
-// and the financial mutation can be committed atomically by the caller.
+// LoadJrn036MutationReceiptTx serializes callers sharing a tenant-local
+// idempotency key, then returns the original canonical response when the exact
+// mutation was already committed.
 func LoadJrn036MutationReceiptTx(
 	ctx context.Context,
 	tx *sql.Tx,
 	idempotencyKey string,
 	requestHash string,
 ) (json.RawMessage, bool, error) {
+	tenantID, err := RequireTenantContext(ctx)
+	if err != nil {
+		return nil, false, err
+	}
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
 	requestHash = strings.TrimSpace(requestHash)
 	if idempotencyKey == "" || requestHash == "" {
@@ -33,17 +36,17 @@ func LoadJrn036MutationReceiptTx(
 	if _, err := tx.ExecContext(
 		ctx,
 		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
-		idempotencyKey,
+		tenantID+":"+idempotencyKey,
 	); err != nil {
 		return nil, false, err
 	}
 
 	var storedHash string
 	var responseText string
-	err := tx.QueryRowContext(ctx, `
+	err = tx.QueryRowContext(ctx, `
 		SELECT request_hash, response_json::text
 		FROM wlt_jrn036_mutation_receipts
-		WHERE idempotency_key = $1`, idempotencyKey).Scan(&storedHash, &responseText)
+		WHERE tenant_id = $1 AND idempotency_key = $2`, tenantID, idempotencyKey).Scan(&storedHash, &responseText)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}
@@ -65,6 +68,10 @@ func StoreJrn036MutationReceiptTx(
 	aggregateID string,
 	response any,
 ) error {
+	tenantID, err := RequireTenantContext(ctx)
+	if err != nil {
+		return err
+	}
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
 	requestHash = strings.TrimSpace(requestHash)
 	mutationType = strings.TrimSpace(mutationType)
@@ -78,8 +85,9 @@ func StoreJrn036MutationReceiptTx(
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO wlt_jrn036_mutation_receipts
-		(idempotency_key, request_hash, mutation_type, aggregate_id, response_json)
-		VALUES ($1, $2, $3, $4, $5::jsonb)`,
+		(tenant_id, idempotency_key, request_hash, mutation_type, aggregate_id, response_json)
+		VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+		tenantID,
 		idempotencyKey,
 		requestHash,
 		mutationType,
