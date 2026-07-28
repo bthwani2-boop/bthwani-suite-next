@@ -126,7 +126,7 @@ const TABS: { id: TabId; label: string; disabled?: boolean; reason?: string }[] 
   { id: "visibility", label: "النشر والرؤية" },
   { id: "import_export", label: "الاستيراد والتصدير" },
   { id: "cleanup_quality", label: "التنظيف والجودة" },
-  { id: "audit_logs", label: "سجل التدقيق", disabled: true, reason: "متاح للقراءة والتحقق عبر SQL/DB" },
+  { id: "audit_logs", label: "سجل التدقيق" },
 ];
 
 export type MainGroupId = "overview_analytics" | "taxonomy_products" | "media_content" | "tools_governance";
@@ -373,8 +373,9 @@ export function CatalogDashboardScreen() {
   };
 
 
-  const currentUserRole = state.kind === "authenticated" ? (state.identity.roles.includes("operator") ? "operator" : state.identity.roles[0]) : undefined;
-  const isOperator = hasCatalogPermission(currentUserRole, "catalog.taxonomy.manage");
+  const currentUserIdentity = state.kind === "authenticated" ? state.identity : undefined;
+  const currentUserRole = currentUserIdentity?.roles.includes("operator") ? "operator" : currentUserIdentity?.roles[0];
+  const canManageTaxonomy = hasCatalogPermission(currentUserIdentity, "catalog.taxonomy.manage");
 
   // KPI Calculations
   const domainsCount = controller.state.domains.items.length;
@@ -467,7 +468,7 @@ export function CatalogDashboardScreen() {
       )}
 
       {/* Filter and query options */}
-      {activeTab !== "overview" && activeTab !== "import_export" && (
+      {activeTab !== "overview" && activeTab !== "import_export" && activeTab !== "audit_logs" && (
         <CpFilterBar label="تصفية البيانات">
           {activeTab === "assortment" && (
             <div style={filterRowStyle}>
@@ -515,12 +516,25 @@ export function CatalogDashboardScreen() {
               <h3>الصلاحيات المتاحة</h3>
               <ul style={overviewListStyle}>
                 <li>دور المستخدم الحالي: <strong>{currentUserRole || ""}</strong></li>
-                <li>تعديل هيكل الكتالوج: <CpBadge tone={isOperator ? "success" : "neutral"}>{isOperator ? "متاح" : "غير متاح"}</CpBadge></li>
-                <li>اعتماد المنتجات وتفعيلها: <CpBadge tone={hasCatalogPermission(currentUserRole, "catalog.product.approve") ? "success" : "neutral"}>{hasCatalogPermission(currentUserRole, "catalog.product.approve") ? "متاح" : "غير متاح"}</CpBadge></li>
-                <li>نشر وإدارة الوسائط DAM: <CpBadge tone={hasCatalogPermission(currentUserRole, "catalog.media.manage") ? "success" : "neutral"}>{hasCatalogPermission(currentUserRole, "catalog.media.manage") ? "متاح" : "غير متاح"}</CpBadge></li>
+                <li>تعديل هيكل الكتالوج: <CpBadge tone={canManageTaxonomy ? "success" : "neutral"}>{canManageTaxonomy ? "متاح" : "غير متاح"}</CpBadge></li>
+                <li>اعتماد المنتجات وتفعيلها: <CpBadge tone={hasCatalogPermission(currentUserIdentity, "catalog.product.approve") ? "success" : "neutral"}>{hasCatalogPermission(currentUserIdentity, "catalog.product.approve") ? "متاح" : "غير متاح"}</CpBadge></li>
+                <li>نشر وإدارة الوسائط DAM: <CpBadge tone={hasCatalogPermission(currentUserIdentity, "catalog.media.manage") ? "success" : "neutral"}>{hasCatalogPermission(currentUserIdentity, "catalog.media.manage") ? "متاح" : "غير متاح"}</CpBadge></li>
               </ul>
             </div>
           </div>
+        )}
+
+        {activeTab === "audit_logs" && (
+          <CpStatePanel
+            role="status"
+            title="سجل التدقيق والتراجع المحكوم متاح"
+            description="يفتح المسار الحاكم نفسه المستخدم لإدارة الخصائص والبدائل وسجل التدقيق، دون إنشاء سجل محلي موازٍ."
+            code="CATALOG_AUDIT_AVAILABLE"
+          >
+            <CpButton onClick={() => router.push("/dsh/catalogs/governance")}>
+              فتح سجل التدقيق والتراجع المحكوم
+            </CpButton>
+          </CpStatePanel>
         )}
 
         {/* TAB 2: TAXONOMY */}
