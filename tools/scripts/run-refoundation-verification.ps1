@@ -53,6 +53,15 @@ function Get-TrackedStatus {
   return $status.Trim()
 }
 
+function Invoke-DockerConfigVerification {
+  Assert-Command -Name "docker"
+  Invoke-Checked -Name "Non-destructive Docker Compose validation" -Command "pwsh" -Arguments @(
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-File", "tools/scripts/check-refoundation-docker-config.ps1"
+  )
+}
+
 function Invoke-StaticVerification {
   Invoke-Checked -Name "Foundation gate" -Command "pnpm" -Arguments @("foundation:gate")
 }
@@ -61,6 +70,7 @@ function Invoke-FullVerification {
   $beforeStatus = Get-TrackedStatus
 
   Invoke-Checked -Name "Full foundation gate" -Command "pnpm" -Arguments @("foundation:gate", "--", "-Full")
+  Invoke-DockerConfigVerification
   Invoke-Checked -Name "Mobile manifest synchronization check" -Command "pnpm" -Arguments @("mobile:apps:check")
   Invoke-Checked -Name "Expo configuration verification" -Command "pnpm" -Arguments @("mobile:expo:verify")
   Invoke-Checked -Name "OpenAPI contract lint" -Command "pnpm" -Arguments @("contracts:lint")
@@ -90,7 +100,10 @@ function Invoke-Doctor {
   Invoke-Checked -Name "PowerShell version" -Command "pwsh" -Arguments @("-NoProfile", "-Command", '$PSVersionTable.PSVersion.ToString()')
   Invoke-Checked -Name "Docker client version" -Command "docker" -Arguments @("version", "--format", "{{.Client.Version}}")
   Invoke-Checked -Name "Refoundation control plane" -Command "node" -Arguments @("tools/scripts/check-refoundation-control-plane.mjs")
+  Invoke-Checked -Name "Refoundation readiness" -Command "node" -Arguments @("tools/scripts/check-refoundation-readiness.mjs")
+  Invoke-Checked -Name "Operational tooling" -Command "node" -Arguments @("tools/scripts/check-refoundation-operational-tooling.mjs")
   Invoke-Checked -Name "Protected foundation" -Command "node" -Arguments @("tools/scripts/check-refoundation-foundation.mjs")
+  Invoke-DockerConfigVerification
   Invoke-Checked -Name "Mobile manifest" -Command "pnpm" -Arguments @("mobile:apps:check")
   Invoke-Checked -Name "Expo configuration" -Command "pnpm" -Arguments @("mobile:expo:verify")
   Invoke-Checked -Name "Docker context status" -Command "pnpm" -Arguments @("runtime:context:status")
