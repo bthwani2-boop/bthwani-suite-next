@@ -1,13 +1,14 @@
 openapi: 3.1.0
 info:
   title: BThwani Identity Employee Access API
-  version: 0.1.2
+  version: 0.2.0
   description: >-
-    Workforce-only administrative employee provisioning. Identity derives the
-    effective control-panel roles and permissions from a closed permission
-    bundle catalogue; callers cannot submit arbitrary permissions. Employee
-    activation remains actor-bound through the canonical Identity activation
-    challenge endpoint with actorType=employee and surface=control-panel.
+    Workforce-only administrative employee provisioning. Identity owns and
+    publishes the canonical permission-bundle catalogue, derives effective
+    control-panel roles and permissions, and rejects arbitrary permission
+    submissions. Employee activation remains actor-bound through the canonical
+    Identity activation endpoint with actorType=employee and
+    surface=control-panel.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/identity
 x-bthwani-runtime-dependency: true
@@ -16,6 +17,34 @@ servers:
   - url: http://localhost:58082
     description: Local Identity runtime
 paths:
+  /internal/employees/permission-bundles:
+    get:
+      operationId: listAdministrativeEmployeePermissionBundles
+      tags: [internal-employees]
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Canonical Identity-owned administrative permission bundles.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [permissionBundles]
+                properties:
+                  permissionBundles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EmployeePermissionBundleDescriptor'
+        '401':
+          description: Invalid Workforce service token.
+        '403':
+          description: Caller or tenant context is forbidden.
   /internal/employees/provision:
     post:
       operationId: provisionAdministrativeEmployee
@@ -23,22 +52,9 @@ paths:
       security:
         - serviceToken: []
       parameters:
-        - name: Authorization
-          in: header
-          required: true
-          schema:
-            type: string
-            minLength: 1
-        - name: X-Service-Caller
-          in: header
-          required: true
-          schema:
-            const: workforce
-        - name: X-Tenant-ID
-          in: header
-          required: false
-          schema:
-            type: string
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
       requestBody:
         required: true
         content:
@@ -53,7 +69,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActorAdminView'
         '400':
-          description: Invalid bundle, department, phone, or username.
+          description: Missing tenant context or invalid bundle, department, phone, or username.
         '401':
           description: Invalid Workforce service token.
         '403':
@@ -65,35 +81,86 @@ components:
     serviceToken:
       type: http
       scheme: bearer
+  parameters:
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    ServiceCaller:
+      name: X-Service-Caller
+      in: header
+      required: true
+      schema:
+        const: workforce
+    TenantId:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
   schemas:
+    EmployeePermissionBundleCode:
+      type: string
+      enum:
+        - staff
+        - platform_owner
+        - platform_coordinator
+        - operations_manager
+        - partners_manager
+        - finance_manager
+        - support_manager
+        - hr_manager
+    EmployeePermissionBundleDescriptor:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - nameAr
+        - nameEn
+        - allowedEmploymentClasses
+        - departmentSelectionAllowed
+      properties:
+        code:
+          $ref: '#/components/schemas/EmployeePermissionBundleCode'
+        nameAr:
+          type: string
+          minLength: 1
+        nameEn:
+          type: string
+          minLength: 1
+        allowedEmploymentClasses:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        defaultDepartmentScope:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
+        departmentSelectionAllowed:
+          type: boolean
     EmployeeProvisionRequest:
       type: object
       additionalProperties: false
-      required: [username, phoneE164, permissionBundle, departmentScope]
+      required: [username, phoneE164, departmentScope, tenantId]
       properties:
         username:
           type: string
           minLength: 1
         phoneE164:
           type: string
-          minLength: 8
-          maxLength: 20
+          pattern: '^\+[1-9][0-9]{7,14}$'
         permissionBundle:
-          type: string
-          enum:
-            - staff
-            - platform_owner
-            - platform_coordinator
-            - operations_manager
-            - partners_manager
-            - finance_manager
-            - support_manager
-            - hr_manager
+          $ref: '#/components/schemas/EmployeePermissionBundleCode'
         departmentScope:
           type: string
           pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
         tenantId:
           type: string
+          minLength: 1
     ActorAdminView:
       type: object
       additionalProperties: false
