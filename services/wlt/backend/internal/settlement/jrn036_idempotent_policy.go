@@ -153,9 +153,9 @@ func UpsertGovernedSettlementPolicyIdempotent(
 		VALUES ($1, 'settlement_policy', $2, 'policy_version_created', $3,
 		        'operator', $4, $5,
 		        jsonb_build_object(
-		          'version', $6,
-		          'feeBasisPoints', $7,
-		          'status', $8))`,
+		          'version', $6::bigint,
+		          'feeBasisPoints', $7::integer,
+		          'status', $8::text))`,
 		tenantID,
 		partnerID,
 		input.OperatorID,
