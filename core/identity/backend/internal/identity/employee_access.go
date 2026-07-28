@@ -196,7 +196,7 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	}
 	tenantID := strings.TrimSpace(input.TenantID)
 	if tenantID == "" {
-		tenantID = "local-dsh"
+		return ActorAdminView{}, ErrInvalidActivation
 	}
 	supervisory := strings.TrimSpace(input.PermissionBundle) != "" && strings.TrimSpace(input.PermissionBundle) != EmployeeBundleStaff
 
