@@ -22,9 +22,3 @@ export function localPassword() {
 export function localPasswordDefault() {
   return registry.password;
 }
-
-export function localActor(key) {
-  const actor = registry.actors[key] ?? registry.platformActors[key];
-  if (!actor) throw new Error(`unknown local development actor: ${key}`);
-  return actor;
-}
