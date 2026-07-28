@@ -6,13 +6,17 @@
     "node": "package.json#engines.node and .node-version",
     "pnpm": "package.json#packageManager and package.json#engines.pnpm",
     "typescript": "package.json#devDependencies.typescript",
-    "go": "repository go.mod files and .go-version"
+    "go": "repository go.mod files and .go-version",
+    "easCli": "shared/config/toolchain-lock.json#locked.easCli and tools/mobile/eas.template.json#cli.version",
+    "expoDoctor": "shared/config/toolchain-lock.json#locked.expoDoctor"
   },
   "locked": {
     "node": "24.17.0",
     "pnpm": "10.34.0",
     "typescript": "~6.0.3",
-    "go": "1.26.5"
+    "go": "1.26.5",
+    "easCli": "21.3.0",
+    "expoDoctor": "1.20.1"
   },
   "root": {
     "packageManager": "pnpm@10.34.0",
@@ -35,7 +39,8 @@
     "enginesRequired": true,
     "workspaceRequired": true,
     "dockerImagesMustBePinned": true,
-    "goVersionMustBeUnified": true
+    "goVersionMustBeUnified": true,
+    "operationalCliVersionsMustBePinned": true
   },
   "verification": {
     "command": "pnpm refoundation:verify",
