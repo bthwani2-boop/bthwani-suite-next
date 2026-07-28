@@ -1,5 +1,5 @@
 import type { ActorIdentity } from "@bthwani/core-identity";
-import { postIdentityServerJson } from "./identity-server-http";
+import { postIdentityServerJson } from "./identity-server-http.adapter";
 
 export type IdentityTokenResponse = {
   readonly accessToken: string;
