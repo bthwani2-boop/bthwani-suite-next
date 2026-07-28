@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "frontend/shared/marketing/loyalty-subscriptions.types.ts",
+    "frontend/shared/marketing/subscription-lifecycle.types.ts",
+    "frontend/shared/marketing/subscription-lifecycle.api.ts",
+    "frontend/shared/marketing/use-subscription-lifecycle-controller.tsx",
+    "frontend/app-client/account/BenefitsHubScreen.tsx"
+  ]
+}
