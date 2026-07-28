@@ -8,10 +8,8 @@ import { fileURLToPath } from 'node:url';
 const registryPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'local-actors.json');
 const registry = JSON.parse(fs.readFileSync(registryPath, 'utf-8'));
 
-export const LOCAL_ACTORS_REGISTRY_PATH = registryPath;
 export const LOCAL_ACTORS = Object.freeze(registry.actors);
 export const LOCAL_PLATFORM_ACTORS = Object.freeze(registry.platformActors);
-export const LOCAL_TENANT_ID = registry.tenantId;
 export const LOCAL_PASSWORD_ENV_VAR = registry.passwordEnvVar;
 
 /** Local bootstrap password: an environment override wins, the registry is the default. */
@@ -29,8 +27,4 @@ export function localActor(key) {
   const actor = registry.actors[key] ?? registry.platformActors[key];
   if (!actor) throw new Error(`unknown local development actor: ${key}`);
   return actor;
-}
-
-export function localUsername(key) {
-  return localActor(key).username;
 }
