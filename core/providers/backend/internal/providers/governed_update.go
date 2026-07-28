@@ -15,14 +15,19 @@ type GovernedProviderUpdate struct {
 	RequestHash    string
 }
 
-// UpdateProviderGoverned commits the provider mutation, its secret-safe audit
-// record, and the idempotent response in one PostgreSQL transaction.
+// UpdateProviderGoverned commits the platform-global provider mutation, its
+// tenant-attributed secret-safe audit record, and the tenant-scoped idempotent
+// response in one PostgreSQL transaction.
 func (r *Repository) UpdateProviderGoverned(
 	ctx context.Context,
 	id string,
 	input UpdateProviderInput,
 	governance GovernedProviderUpdate,
 ) (ExternalProvider, error) {
+	tenantID, err := RequireTenantContext(ctx)
+	if err != nil {
+		return ExternalProvider{}, err
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return ExternalProvider{}, err
@@ -30,7 +35,7 @@ func (r *Repository) UpdateProviderGoverned(
 	defer tx.Rollback()
 
 	const operation = "provider.update"
-	lockKey := governance.ActorID + "|" + operation + "|" + governance.IdempotencyKey
+	lockKey := tenantID + "|" + governance.ActorID + "|" + operation + "|" + governance.IdempotencyKey
 	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, lockKey); err != nil {
 		return ExternalProvider{}, err
 	}
@@ -40,7 +45,8 @@ func (r *Repository) UpdateProviderGoverned(
 	err = tx.QueryRowContext(ctx, `
 		SELECT request_hash, response_body
 		FROM providers_idempotency
-		WHERE actor_id = $1 AND operation = $2 AND idempotency_key = $3`,
+		WHERE tenant_id = $1 AND actor_id = $2 AND operation = $3 AND idempotency_key = $4`,
+		tenantID,
 		governance.ActorID,
 		operation,
 		governance.IdempotencyKey,
@@ -121,6 +127,7 @@ func (r *Repository) UpdateProviderGoverned(
 	if err := insertProviderAuditTx(
 		ctx,
 		tx,
+		tenantID,
 		governance.ActorID,
 		governance.ActorRole,
 		id,
@@ -138,8 +145,9 @@ func (r *Repository) UpdateProviderGoverned(
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO providers_idempotency
-			(actor_id, operation, idempotency_key, request_hash, response_body)
-		VALUES ($1, $2, $3, $4, $5::jsonb)`,
+			(tenant_id, actor_id, operation, idempotency_key, request_hash, response_body)
+		VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+		tenantID,
 		governance.ActorID,
 		operation,
 		governance.IdempotencyKey,
@@ -158,6 +166,7 @@ func (r *Repository) UpdateProviderGoverned(
 func insertProviderAuditTx(
 	ctx context.Context,
 	tx *sql.Tx,
+	tenantID string,
 	actorID string,
 	actorRole string,
 	targetID string,
@@ -176,8 +185,9 @@ func insertProviderAuditTx(
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO providers_action_audit
-			(actor_id, actor_role, target_id, action, from_state, to_state, correlation_id)
-		VALUES ($1, $2, NULLIF($3, ''), $4, $5::jsonb, $6::jsonb, NULLIF($7, ''))`,
+			(tenant_id, actor_id, actor_role, target_id, action, from_state, to_state, correlation_id)
+		VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6::jsonb, $7::jsonb, NULLIF($8, ''))`,
+		tenantID,
 		actorID,
 		actorRole,
 		targetID,
