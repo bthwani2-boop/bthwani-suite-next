@@ -19,7 +19,7 @@ DshStoreServiceabilitySummary:
 
 DshCartItem:
   type: object
-  required: [id, cartId, productId, masterProductId, storeAssortmentId, productName, priceReference, unitPrice, quantity, version, createdAt, updatedAt]
+  required: [id, cartId, productId, masterProductId, storeAssortmentId, productName, priceReference, unitPrice, currency, quantity, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     cartId: { type: string }
@@ -28,7 +28,8 @@ DshCartItem:
     storeAssortmentId: { type: ["string", "null"], description: "The dsh_store_assortments row this cart line resolved against." }
     productName: { type: string, description: "Snapshotted server-side from the catalog product at add-to-cart time." }
     priceReference: { type: string, description: "Display label snapshotted from catalog — not a computed financial amount." }
-    unitPrice: { type: number, format: double, minimum: 0, description: "Snapshotted from the catalog product's unitPrice at add-to-cart time." }
+    unitPrice: { type: number, format: double, minimum: 0, description: "Snapshotted from the catalog assortment at add-to-cart time." }
+    currency: { type: string, pattern: "^[A-Z]{3}$", description: "Currency snapshotted with unitPrice from the same sovereign store assortment row." }
     quantity: { type: integer, minimum: 1 }
     version: { type: integer }
     createdAt: { type: string, format: date-time }
