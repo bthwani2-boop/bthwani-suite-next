@@ -8,81 +8,54 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(__dirname, "../clients/generated/wlt-api.ts"), "utf-8");
 
 describe("generated WLT API client coverage", () => {
-  test("includes WLT Foundation base operations", () => {
+  test("includes canonical WLT core operations", () => {
     assert.match(source, /getWltHealth/);
     assert.match(source, /getWltReadiness/);
     assert.match(source, /getWltPaymentStatusRef/);
     assert.match(source, /getWltSettlementStatusRef/);
     assert.match(source, /getWltRefundStatusRef/);
     assert.match(source, /getWltWalletStatusRef/);
-    assert.match(source, /createWltPaymentSessionReference/);
-    assert.match(source, /getWltPaymentSessionReference/);
-    assert.match(source, /WltPaymentSession/);
-    assert.match(source, /WltPaymentSessionResponse/);
+    assert.match(source, /getWltWallet/);
   });
 
-  test("includes WLT Payment Sessions payment capture operations", () => {
+  test("includes governed payment and refund lifecycles", () => {
+    assert.match(source, /createWltPaymentSession/);
     assert.match(source, /authorizeWltPaymentSession/);
     assert.match(source, /captureWltPaymentSession/);
-    assert.match(source, /expireWltPaymentSession/);
-    assert.match(source, /markWltCodCollected/);
-    assert.match(source, /WltAuthorizePaymentSessionRequest/);
-    assert.match(source, /WltCapturePaymentSessionResponse/);
-    assert.match(source, /WltPaymentSessionResponse/);
-  });
-
-  test("includes WLT Refund Status refund operations", () => {
+    assert.match(source, /cancelWltPaymentSessionForOrder/);
     assert.match(source, /createWltRefund/);
-    assert.match(source, /getWltRefund/);
-    assert.match(source, /listWltRefunds/);
     assert.match(source, /approveWltRefund/);
     assert.match(source, /completeWltRefund/);
-    assert.match(source, /rejectWltRefund/);
-    assert.match(source, /WltRefund[^s]/);
-    assert.match(source, /WltCreateRefundRequest/);
-    assert.match(source, /WltRefundResponse/);
-    assert.match(source, /WltRefundListResponse/);
+    assert.match(source, /reconcileWltRefund/);
   });
 
-  test("includes WLT Settlement Status settlement operations", () => {
+  test("includes governed settlement and commission lifecycles", () => {
     assert.match(source, /createWltSettlement/);
-    assert.match(source, /getWltSettlement/);
-    assert.match(source, /listWltSettlements/);
     assert.match(source, /postWltSettlement/);
     assert.match(source, /getWltSettlementSummary/);
-    assert.match(source, /WltSettlement[^s]/);
-    assert.match(source, /WltCreateSettlementRequest/);
-    assert.match(source, /WltSettlementResponse/);
-    assert.match(source, /WltSettlementListResponse/);
-    assert.match(source, /WltSettlementSummary/);
-    assert.match(source, /WltSettlementSummaryResponse/);
-  });
-
-  test("includes WLT Commission COD commission operations", () => {
-    assert.match(source, /createWltCodRecord/);
-    assert.match(source, /getWltCodRecord/);
-    assert.match(source, /listWltCodRecords/);
-    assert.match(source, /collectWltCod/);
-    assert.match(source, /remitWltCod/);
+    assert.match(source, /upsertWltCommissionPolicy/);
     assert.match(source, /createWltCommission/);
-    assert.match(source, /listWltCommissions/);
-    assert.match(source, /WltCodRecord[^s]/);
-    assert.match(source, /WltCreateCodRecordRequest/);
-    assert.match(source, /WltCodRecordResponse/);
-    assert.match(source, /WltCodRecordListResponse/);
-    assert.match(source, /WltCommission[^s]/);
-    assert.match(source, /WltCreateCommissionRequest/);
-    assert.match(source, /WltCommissionResponse/);
-    assert.match(source, /WltCommissionListResponse/);
+    assert.match(source, /adjustWltCommission/);
+    assert.match(source, /confirmWltCommission/);
+    assert.match(source, /settleWltCommission/);
+    assert.match(source, /rejectWltCommission/);
+    assert.match(source, /reverseWltCommission/);
   });
 
-  test("includes WLT Ledger ledger audit operations", () => {
-    assert.match(source, /appendWltLedgerEntry/);
-    assert.match(source, /getWltLedgerEntry/);
+  test("includes typed tenant-scoped payout destinations", () => {
+    assert.match(source, /\/wlt\/payout-destinations\/\{actorType\}\/\{actorId\}/);
+    assert.match(source, /getWltTypedPayoutDestination/);
+    assert.match(source, /upsertWltTypedPayoutDestination/);
+    assert.match(source, /deactivateWltTypedPayoutDestination/);
+    assert.match(source, /createWltDestinationBoundPayoutRequest/);
+    assert.doesNotMatch(source, /\/wlt\/payout-destinations\/\{partnerId\}/);
+  });
+
+  test("exposes ledger reads but no direct append operation", () => {
     assert.match(source, /listWltLedgerEntries/);
-    assert.match(source, /WltLedgerEntry[^R]/);
-    assert.match(source, /WltCreateLedgerEntryRequest/);
-    assert.match(source, /WltLedgerEntryResponse/);
-    assert.match(source, /WltLedgerEntryListResponse/);
+    assert.match(source, /getWltLedgerEntry/);
+    assert.match(source, /getWltLedgerFinancialSummary/);
+    assert.match(source, /post\?: never/);
+    assert.doesNotMatch(source, /appendWltLedgerEntry/);
   });
 });
