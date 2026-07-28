@@ -136,6 +136,8 @@ type CartItemValidation struct {
 	ReasonCode           string   `json:"reasonCode,omitempty"`
 	SnapshotUnitPrice    float64  `json:"snapshotUnitPrice"`
 	CurrentUnitPrice     *float64 `json:"currentUnitPrice,omitempty"`
+	SnapshotCurrency     string   `json:"snapshotCurrency"`
+	CurrentCurrency      *string  `json:"currentCurrency,omitempty"`
 	SnapshotAssortmentID *string  `json:"snapshotAssortmentId,omitempty"`
 	CurrentAssortmentID  *string  `json:"currentAssortmentId,omitempty"`
 }
@@ -154,10 +156,10 @@ type ClientCartView struct {
 	Validation CartValidation `json:"validation"`
 }
 
-// ValidateCart reconciles persisted snapshots with current assortment truth.
-// Snapshot values remain immutable; changed price, availability, product link,
-// or assortment identity blocks checkout until the client explicitly refreshes
-// or removes the affected line.
+// ValidateCart reconciles persisted price/currency snapshots with current
+// assortment truth. Snapshot values remain immutable; changed commercial
+// value, availability, product link, or assortment identity blocks checkout
+// until the client explicitly refreshes or removes the affected line.
 func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidation, error) {
 	result := CartValidation{
 		Ready:       true,
@@ -171,8 +173,10 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 			ci.master_product_id,
 			ci.store_assortment_id,
 			ci.unit_price::double precision,
+			ci.currency,
 			a.id,
 			a.unit_price::double precision,
+			a.currency,
 			a.available
 		FROM dsh_cart_items ci
 		JOIN dsh_carts c ON c.id = ci.cart_id
@@ -191,14 +195,17 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 		var snapshotAssortment sql.NullString
 		var currentAssortment sql.NullString
 		var currentPrice sql.NullFloat64
+		var currentCurrency sql.NullString
 		var currentAvailable sql.NullBool
 		if err := rows.Scan(
 			&item.ItemID,
 			&item.MasterProductID,
 			&snapshotAssortment,
 			&item.SnapshotUnitPrice,
+			&item.SnapshotCurrency,
 			&currentAssortment,
 			&currentPrice,
+			&currentCurrency,
 			&currentAvailable,
 		); err != nil {
 			return result, err
@@ -214,6 +221,10 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 		if currentPrice.Valid {
 			value := currentPrice.Float64
 			item.CurrentUnitPrice = &value
+		}
+		if currentCurrency.Valid {
+			value := currentCurrency.String
+			item.CurrentCurrency = &value
 		}
 
 		switch {
@@ -232,6 +243,16 @@ func ValidateCart(ctx context.Context, db *sql.DB, cartID string) (CartValidatio
 		case !currentPrice.Valid || currentPrice.Float64 <= 0:
 			item.Status = "unpriced"
 			item.ReasonCode = "PRICE_UNAVAILABLE"
+		case strings.TrimSpace(item.SnapshotCurrency) == "":
+			item.Status = "unpriced"
+			item.ReasonCode = "CURRENCY_SNAPSHOT_MISSING"
+		case !currentCurrency.Valid || strings.TrimSpace(currentCurrency.String) == "":
+			item.Status = "unpriced"
+			item.ReasonCode = "CURRENCY_UNAVAILABLE"
+		case item.SnapshotCurrency != currentCurrency.String:
+			item.Status = "price_changed"
+			item.ReasonCode = "CURRENCY_CHANGED"
+			result.PriceChanged = true
 		case int64(math.Round(item.SnapshotUnitPrice*100)) != int64(math.Round(currentPrice.Float64*100)):
 			item.Status = "price_changed"
 			item.ReasonCode = "PRICE_CHANGED"
