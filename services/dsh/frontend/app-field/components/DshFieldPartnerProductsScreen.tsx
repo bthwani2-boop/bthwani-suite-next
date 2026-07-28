@@ -18,6 +18,7 @@ import {
   colorRoles,
   Icon,
 } from '@bthwani/ui-kit';
+import { ProductProposalAdapter } from '../../shared/catalog';
 import { useFieldCatalogController } from '../../shared/partner';
 import type { MasterProduct } from '../../shared/catalog/central-catalog.types';
 
@@ -176,7 +177,6 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
         masterProductId: product.id,
         input: {
           unitPrice: price,
-          currency: 'YER',
           available: draft.stockStatus !== 'out_of_stock',
           stockStatus: draft.stockStatus,
           localNote: draft.localDescription.trim(),
@@ -471,12 +471,15 @@ export function DshFieldPartnerProductsScreen({ partnerId, onBack }: DshFieldPar
         {proposals.length ? (
           <View style={{ gap: spacing[2] }}>
             <Text role="bodyStrong" style={{ textAlign: 'right' }}>{`الاقتراحات المرسلة (${proposals.length})`}</Text>
-            {proposals.map((proposal) => (
-              <View key={proposal.id} style={{ padding: spacing[3], borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle, borderRadius: radius.md, flexDirection: 'row-reverse', gap: spacing[2] }}>
-                <Text role="bodyStrong" style={{ flex: 1, textAlign: 'right' }}>{proposal.proposedNameAr}</Text>
-                <Badge label="قيد المراجعة" tone="warning" />
-              </View>
-            ))}
+            {proposals.map((proposal) => {
+              const presentation = new ProductProposalAdapter(proposal);
+              return (
+                <View key={proposal.id} style={{ padding: spacing[3], borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle, borderRadius: radius.md, flexDirection: 'row-reverse', gap: spacing[2] }}>
+                  <Text role="bodyStrong" style={{ flex: 1, textAlign: 'right' }}>{proposal.proposedNameAr}</Text>
+                  <Badge label={presentation.getArabicLabel()} tone={presentation.getTone()} />
+                </View>
+              );
+            })}
           </View>
         ) : null}
       </ScrollView>
