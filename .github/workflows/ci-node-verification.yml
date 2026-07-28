@@ -78,7 +78,7 @@ jobs:
           run_check() {
             echo "===== $* =====" | tee -a "${log}"
             "$@" 2>&1 | tee -a "${log}"
-            return ${PIPESTATUS[0]}
+            return "${PIPESTATUS[0]}"
           }
           status=0
           if [[ "${FULL_VERIFICATION}" == "true" ]]; then
