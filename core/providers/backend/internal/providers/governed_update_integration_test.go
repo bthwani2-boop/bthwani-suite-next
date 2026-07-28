@@ -13,7 +13,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func TestGovernedProviderUpdateIsAtomicAuditedAndIdempotent(t *testing.T) {
+func TestGovernedProviderUpdateIsAtomicAuditedAndTenantIdempotent(t *testing.T) {
 	if os.Getenv("JRN039_DATABASE_TEST") != "1" {
 		t.Skip("set JRN039_DATABASE_TEST=1 after applying provider migrations")
 	}
@@ -26,8 +26,9 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndIdempotent(t *testing.T) {
 		t.Fatalf("open database: %v", err)
 	}
 	defer db.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	baseCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
+	ctx := WithTenantContext(baseCtx, "tenant-jrn039")
 
 	const providerID = "jrn039-atomic-provider"
 	cleanup := func() {
@@ -78,20 +79,29 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndIdempotent(t *testing.T) {
 	}
 
 	var auditCount, idempotencyCount int
-	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM providers_action_audit WHERE target_id = $1`, providerID).Scan(&auditCount); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM providers_action_audit WHERE tenant_id = 'tenant-jrn039' AND target_id = $1`, providerID).Scan(&auditCount); err != nil {
 		t.Fatalf("count audit rows: %v", err)
 	}
-	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM providers_idempotency WHERE actor_id = $1 AND operation = 'provider.update'`, operator.ActorID).Scan(&idempotencyCount); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM providers_idempotency WHERE tenant_id = 'tenant-jrn039' AND actor_id = $1 AND operation = 'provider.update'`, operator.ActorID).Scan(&idempotencyCount); err != nil {
 		t.Fatalf("count idempotency rows: %v", err)
 	}
 	if auditCount != 1 || idempotencyCount != 1 {
-		t.Fatalf("expected one atomic audit and idempotency row, got audit=%d idempotency=%d", auditCount, idempotencyCount)
+		t.Fatalf("expected one tenant-attributed audit and idempotency row, got audit=%d idempotency=%d", auditCount, idempotencyCount)
+	}
+
+	otherTenantCtx := WithTenantContext(baseCtx, "tenant-other")
+	otherTenant, err := service.UpdateProvider(otherTenantCtx, providerID, input, operator, "jrn039-correlation-other", "jrn039-idempotency-1")
+	if err != nil {
+		t.Fatalf("same idempotency key in another tenant was rejected: %v", err)
+	}
+	if otherTenant.UpdatedAt.Before(first.UpdatedAt) {
+		t.Fatalf("other tenant returned invalid provider state: first=%s other=%s", first.UpdatedAt, otherTenant.UpdatedAt)
 	}
 
 	inactive := false
 	_, err = service.UpdateProvider(ctx, providerID, UpdateProviderInput{Active: &inactive}, operator, "jrn039-correlation-conflict", "jrn039-idempotency-1")
 	if !errors.Is(err, ErrIdempotencyConflict) {
-		t.Fatalf("expected idempotency conflict, got %v", err)
+		t.Fatalf("expected same-tenant idempotency conflict, got %v", err)
 	}
 
 	if _, err := db.ExecContext(ctx, `
@@ -123,12 +133,20 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndIdempotent(t *testing.T) {
 	}
 	if err := db.QueryRowContext(ctx, `
 		SELECT count(*) FROM providers_idempotency
-		WHERE actor_id = $1 AND operation = 'provider.update' AND idempotency_key = 'jrn039-idempotency-rollback'`,
+		WHERE tenant_id = 'tenant-jrn039' AND actor_id = $1 AND operation = 'provider.update' AND idempotency_key = 'jrn039-idempotency-rollback'`,
 		operator.ActorID,
 	).Scan(&idempotencyCount); err != nil {
 		t.Fatalf("count rollback idempotency rows: %v", err)
 	}
 	if idempotencyCount != 0 {
 		t.Fatalf("idempotency response committed despite audit failure: %d", idempotencyCount)
+	}
+}
+
+func TestGovernedProviderUpdateRejectsMissingTenantContext(t *testing.T) {
+	repository := NewRepository(nil)
+	_, err := repository.UpdateProviderGoverned(context.Background(), "provider-1", UpdateProviderInput{}, GovernedProviderUpdate{})
+	if !errors.Is(err, ErrTenantContextRequired) {
+		t.Fatalf("expected ErrTenantContextRequired before database access, got %v", err)
 	}
 }
