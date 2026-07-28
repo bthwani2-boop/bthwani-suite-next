@@ -1,3 +1,4 @@
+import "./check-refoundation-control-plane.mjs";
 import "./check-refoundation-foundation.mjs";
 import fs from "node:fs";
 import path from "node:path";
