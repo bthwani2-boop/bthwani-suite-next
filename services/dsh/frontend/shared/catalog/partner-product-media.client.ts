@@ -134,7 +134,6 @@ export async function uploadPartnerProductMedia(
     mimeType: input.mimeType,
     sizeBytes: input.fileSizeBytes,
     altAr: input.altAr?.trim() || input.fileName,
-    sourceSurface: "app-partner",
     intendedEntityType: "store_assortment",
     intendedEntityId: assortment.id,
     intendedRole: PARTNER_CUSTOM_IMAGE_ROLE,
