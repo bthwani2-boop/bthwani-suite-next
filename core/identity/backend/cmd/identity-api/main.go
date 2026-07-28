@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -35,8 +36,15 @@ func main() {
 
 	repository := identity.NewRepository(db)
 	localBootstrap := identity.LocalBootstrap{
-		Enabled:  os.Getenv("IDENTITY_LOCAL_BOOTSTRAP") == "true",
+		Enabled:  strings.EqualFold(strings.TrimSpace(os.Getenv("IDENTITY_LOCAL_BOOTSTRAP")), "true"),
 		Password: os.Getenv("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"),
+	}
+	if localBootstrap.Enabled && strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active") {
+		log.Fatal("[identity-api] IDENTITY_LOCAL_BOOTSTRAP is forbidden when BTHWANI_SAAS_MODE=active")
+	}
+	bootstrapTenantID := strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID"))
+	if localBootstrap.Enabled && bootstrapTenantID == "" {
+		log.Fatal("[identity-api] BTHWANI_DEFAULT_TENANT_ID is required when local bootstrap is enabled")
 	}
 	if err := repository.BootstrapLocalActors(context.Background(), localBootstrap); err != nil {
 		log.Fatalf("[identity-api] local bootstrap: %v", err)
@@ -50,7 +58,7 @@ func main() {
 	if err := repository.RepairLocalBootstrapTenant(
 		context.Background(),
 		localBootstrap,
-		envOr("BTHWANI_DEFAULT_TENANT_ID", "local-dsh"),
+		bootstrapTenantID,
 	); err != nil {
 		log.Fatalf("[identity-api] local tenant repair: %v", err)
 	}
