@@ -80,8 +80,8 @@ jobs:
               Invoke-Phase "runtime:up" {
                 & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action up -Profiles $profiles
               }
-              Invoke-Phase "runtime:bootstrap-dev" {
-                & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action bootstrap-dev -Profiles $profiles -Force
+              Invoke-Phase "runtime:catalog-readback" {
+                & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action catalog-readback -Profiles $profiles
               }
               if ($profile -eq "full") {
                 Invoke-Phase "dsh-operator-governance-preflight" {
