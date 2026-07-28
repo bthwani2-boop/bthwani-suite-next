@@ -86,6 +86,7 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-111_legacy_ledger_entry_tenancy.sql" = "to_regclass('public.wlt_ledger_entries_tenant_idempotency_uq') IS NOT NULL AND to_regclass('public.wlt_ledger_entries_tenant_created_idx') IS NOT NULL"
   "wlt-112_payout_tenancy.sql" = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='wlt_payout_destinations' AND column_name='tenant_id' AND is_nullable='NO') AND to_regclass('public.wlt_payout_destinations_one_active_tenant_owner_idx') IS NOT NULL AND to_regclass('public.wlt_payout_requests_tenant_idempotency_uq') IS NOT NULL AND to_regclass('public.wlt_jrn037_payout_outbox_tenant_event_uq') IS NOT NULL AND to_regclass('public.wlt_jrn037_payout_reconciliation_tenant_single_claim_idx') IS NOT NULL"
   "wlt-113_payout_destination_tenant_unique_repair.sql" = "to_regclass('public.wlt_payout_destinations_one_active_owner_uidx') IS NULL AND to_regclass('public.wlt_payout_destinations_one_active_owner_idx') IS NULL AND to_regclass('public.wlt_payout_destinations_one_active_tenant_owner_idx') IS NOT NULL"
+  "wlt-114_payout_destination_request_tenant_key.sql" = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname='wlt_payout_destination_requests_pkey' AND pg_get_constraintdef(oid) LIKE '%tenant_id%idempotency_key%') AND to_regclass('public.wlt_payout_destination_requests_tenant_owner_idx') IS NOT NULL"
   "wlt-901_reconciliation_tenant_guard.sql" = "EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='wlt_reconciliation_case_tenant_guard' AND NOT tgisinternal)"
 }
 
