@@ -36,9 +36,9 @@ func seedOrderTruthCheckout(t *testing.T, db *sql.DB, tenantID, clientID, storeI
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_cart_items
-			(cart_id, product_id, product_name, price_reference, unit_price, quantity)
+			(cart_id, product_id, product_name, price_reference, unit_price, currency, quantity)
 		VALUES
-			($1::uuid, $2, 'JRN-011 governed item', '1250.00 YER', 1250.00, 2)`,
+			($1::uuid, $2, 'JRN-011 governed item', '1250.00 YER', 1250.00, 'YER', 2)`,
 		cartID, "jrn011-product-"+suffix,
 	); err != nil {
 		t.Fatalf("seed cart item: %v", err)
@@ -296,14 +296,21 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	}
 
 	var storedSnapshot json.RawMessage
+	var storedCurrency string
 	if err := db.QueryRow(`
-		SELECT item_snapshot FROM dsh_order_items
+		SELECT item_snapshot, currency FROM dsh_order_items
 		WHERE order_id=$1::uuid`, created.ID,
-	).Scan(&storedSnapshot); err != nil {
+	).Scan(&storedSnapshot, &storedCurrency); err != nil {
 		t.Fatalf("read item snapshot: %v", err)
 	}
-	if !json.Valid(storedSnapshot) || !containsJSONField(storedSnapshot, "productId") {
+	if !json.Valid(storedSnapshot) || !containsJSONField(storedSnapshot, "productId") || !containsJSONField(storedSnapshot, "currency") {
 		t.Fatalf("invalid stored item snapshot: %s", storedSnapshot)
+	}
+	if storedCurrency != created.Currency {
+		t.Fatalf("order item currency %q does not match order currency %q", storedCurrency, created.Currency)
+	}
+	if _, err := db.Exec(`UPDATE dsh_order_items SET currency='USD' WHERE order_id=$1::uuid`, created.ID); err == nil {
+		t.Fatal("order item commercial snapshot mutation must be rejected")
 	}
 }
 
