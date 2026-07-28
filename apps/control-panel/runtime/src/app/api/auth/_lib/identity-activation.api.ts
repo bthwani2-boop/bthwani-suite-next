@@ -1,4 +1,5 @@
 import type { ActorIdentity } from "@bthwani/core-identity";
+import { postIdentityServerJson } from "./identity-server-http";
 
 export type IdentityTokenResponse = {
   readonly accessToken: string;
@@ -35,41 +36,33 @@ export async function activateEmployeeAccessCode(input: {
   readonly phone: string;
   readonly code: string;
 }): Promise<EmployeeAccessCodeActivationResult> {
-  let response: Response;
-  try {
-    response = await fetch(new URL("/auth/activate", input.baseUrl), {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        actorType: "employee",
-        phone: input.phone.trim(),
-        code: input.code.trim(),
-        deviceFingerprint: "control-panel-access-code",
-      }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(8000),
-    });
-  } catch {
-    return { ok: false, status: 503, code: "IDENTITY_UNAVAILABLE" };
-  }
+  const response = await postIdentityServerJson<unknown>({
+    baseUrl: input.baseUrl,
+    path: "/auth/activate",
+    body: {
+      actorType: "employee",
+      phone: input.phone.trim(),
+      code: input.code.trim(),
+      deviceFingerprint: "control-panel-access-code",
+    },
+    timeoutMs: 8000,
+  });
 
   if (!response.ok) {
-    const errorBody = (await response.json().catch(() => ({}))) as { code?: unknown };
+    const errorBody = response.body as { code?: unknown } | null;
     return {
       ok: false,
-      status: response.status >= 400 ? response.status : 401,
-      code: typeof errorBody.code === "string" && errorBody.code.trim()
-        ? errorBody.code
-        : "ACCESS_CODE_FAILED",
+      status: response.status >= 400 ? response.status : 503,
+      code: response.error === "network"
+        ? "IDENTITY_UNAVAILABLE"
+        : typeof errorBody?.code === "string" && errorBody.code.trim()
+          ? errorBody.code
+          : "ACCESS_CODE_FAILED",
     };
   }
 
-  const payload = await response.json().catch(() => null);
-  if (!isTokenResponse(payload)) {
+  if (!isTokenResponse(response.body)) {
     return { ok: false, status: 502, code: "IDENTITY_INVALID_RESPONSE" };
   }
-  return { ok: true, tokens: payload };
+  return { ok: true, tokens: response.body };
 }
