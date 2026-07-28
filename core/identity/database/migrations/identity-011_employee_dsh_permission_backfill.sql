@@ -45,11 +45,11 @@ WITH employee_grants AS (
 ), merged_permissions AS (
   SELECT
     employee_grants.id,
-    jsonb_agg(DISTINCT permission) AS permissions
+    jsonb_agg(DISTINCT expanded.permission) AS permissions
   FROM employee_grants
   CROSS JOIN LATERAL jsonb_array_elements(
     employee_grants.existing_permissions || employee_grants.grants
-  ) AS permission
+  ) AS expanded(permission)
   WHERE employee_grants.grants <> '[]'::jsonb
   GROUP BY employee_grants.id
 )
@@ -64,6 +64,30 @@ WHERE actor.id = merged_permissions.id
 -- exact DSH permission required by its domain.
 DO $$
 BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM identity_actors
+    WHERE 'employee' = ANY(roles)
+      AND permissions @> '[{"service":"workforce","surface":"control-panel","action":"leadership:create","scope":"all"}]'::jsonb
+      AND NOT permissions @> '[
+        {"service":"dsh","surface":"control-panel","action":"platform.read","scope":"all"},
+        {"service":"dsh","surface":"control-panel","action":"platform.manage","scope":"all"}
+      ]'::jsonb
+  ) THEN
+    RAISE EXCEPTION 'platform owner DSH permissions are incomplete';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM identity_actors
+    WHERE 'employee' = ANY(roles)
+      AND permissions @> '[{"service":"workforce","surface":"control-panel","action":"leadership:read","scope":"all"}]'::jsonb
+      AND permissions @> '[{"service":"workforce","surface":"control-panel","action":"employee:create","scope":"all"}]'::jsonb
+      AND NOT permissions @> '[{"service":"dsh","surface":"control-panel","action":"platform.read","scope":"all"}]'::jsonb
+  ) THEN
+    RAISE EXCEPTION 'platform coordinator DSH permissions are incomplete';
+  END IF;
+
   IF EXISTS (
     SELECT 1
     FROM identity_actors
