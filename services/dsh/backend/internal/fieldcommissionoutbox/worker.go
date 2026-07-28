@@ -3,6 +3,7 @@ package fieldcommissionoutbox
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"time"
 
@@ -36,7 +37,14 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 		return err
 	}
 	for _, event := range events {
-		notifyCtx, cancel := context.WithTimeout(ctx, notifyTimeout)
+		if event.TenantID == "" {
+			err := fmt.Errorf("field commission event %s has no tenant context", event.ID)
+			if markErr := MarkFailed(db, event.ID, event.AttemptCount, err); markErr != nil {
+				log.Printf("[field-commission-outbox] failed to record missing tenant for event %s: %v", event.ID, markErr)
+			}
+			continue
+		}
+		notifyCtx, cancel := context.WithTimeout(wlt.WithTenantContext(ctx, event.TenantID), notifyTimeout)
 		err := client.DeliverFieldCategoryCommission(notifyCtx, wlt.DeliverFieldCategoryCommissionInput{
 			BeneficiaryActorID: event.FieldActorID,
 			VisitID:            event.VisitID,
@@ -48,7 +56,7 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 		})
 		cancel()
 		if err != nil {
-			log.Printf("[field-commission-outbox] delivery failed for visit %s category %s (attempt %d): %v", event.VisitID, event.PartnerCategory, event.AttemptCount+1, err)
+			log.Printf("[field-commission-outbox] delivery failed for tenant %s visit %s category %s (attempt %d): %v", event.TenantID, event.VisitID, event.PartnerCategory, event.AttemptCount+1, err)
 			if markErr := MarkFailed(db, event.ID, event.AttemptCount, err); markErr != nil {
 				log.Printf("[field-commission-outbox] failed to record retry state for event %s: %v", event.ID, markErr)
 			}
