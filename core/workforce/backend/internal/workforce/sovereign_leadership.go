@@ -15,31 +15,21 @@ import (
 	"workforce-api/internal/identityclient"
 )
 
-const (
-	PermissionBundleStaff               = "staff"
-	PermissionBundlePlatformOwner       = "platform_owner"
-	PermissionBundlePlatformCoordinator = "platform_coordinator"
-	PermissionBundleOperationsManager   = "operations_manager"
-	PermissionBundlePartnersManager     = "partners_manager"
-	PermissionBundleFinanceManager      = "finance_manager"
-	PermissionBundleSupportManager      = "support_manager"
-	PermissionBundleHRManager           = "hr_manager"
-)
-
 var sovereignDepartmentPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{1,63}$`)
+var sovereignPermissionBundlePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{1,63}$`)
 
 type SovereignAssignment struct {
-	ActorID            string    `json:"actorId"`
-	PermissionBundle   string    `json:"permissionBundle"`
-	DepartmentScope    string    `json:"departmentScope"`
-	StartsOn           string    `json:"startsOn"`
-	EndsOn             string    `json:"endsOn,omitempty"`
-	AssignmentStatus   string    `json:"assignmentStatus"`
-	CreatedByActorID   string    `json:"createdByActorId"`
-	UpdatedByActorID   string    `json:"updatedByActorId"`
-	Version            int       `json:"version"`
-	CreatedAt          time.Time `json:"createdAt"`
-	UpdatedAt          time.Time `json:"updatedAt"`
+	ActorID          string    `json:"actorId"`
+	PermissionBundle string    `json:"permissionBundle"`
+	DepartmentScope  string    `json:"departmentScope"`
+	StartsOn         string    `json:"startsOn"`
+	EndsOn           string    `json:"endsOn,omitempty"`
+	AssignmentStatus string    `json:"assignmentStatus"`
+	CreatedByActorID string    `json:"createdByActorId"`
+	UpdatedByActorID string    `json:"updatedByActorId"`
+	Version          int       `json:"version"`
+	CreatedAt        time.Time `json:"createdAt"`
+	UpdatedAt        time.Time `json:"updatedAt"`
 }
 
 type SovereignLeadershipRecord struct {
@@ -49,28 +39,28 @@ type SovereignLeadershipRecord struct {
 }
 
 type CreateSovereignLeaderInput struct {
-	FullNameAr             string   `json:"fullNameAr"`
-	FullNameEn             string   `json:"fullNameEn"`
-	PhoneE164              string   `json:"phoneE164"`
-	Department             string   `json:"department"`
-	PositionTitle          string   `json:"positionTitle"`
-	JobGrade               string   `json:"jobGrade"`
-	EmploymentClass        string   `json:"employmentClass"`
-	PermissionBundle       string   `json:"permissionBundle"`
-	OfficeLocation         string   `json:"officeLocation"`
-	SupervisorActorID      string   `json:"supervisorActorId"`
-	EngagementStartDate    string   `json:"engagementStartDate"`
-	AssignmentStartsOn     string   `json:"assignmentStartsOn"`
-	AssignmentEndsOn       string   `json:"assignmentEndsOn"`
-	GuaranteeType          string   `json:"guaranteeType"`
-	GuaranteeStatus        string   `json:"guaranteeStatus"`
-	GuaranteeReference     string   `json:"guaranteeReference"`
-	ResponsibilityScopes   []string `json:"responsibilityScopes"`
-	Notes                  string   `json:"notes"`
+	FullNameAr           string   `json:"fullNameAr"`
+	FullNameEn           string   `json:"fullNameEn"`
+	PhoneE164            string   `json:"phoneE164"`
+	Department           string   `json:"department"`
+	PositionTitle        string   `json:"positionTitle"`
+	JobGrade             string   `json:"jobGrade"`
+	EmploymentClass      string   `json:"employmentClass"`
+	PermissionBundle     string   `json:"permissionBundle"`
+	OfficeLocation       string   `json:"officeLocation"`
+	SupervisorActorID    string   `json:"supervisorActorId"`
+	EngagementStartDate  string   `json:"engagementStartDate"`
+	AssignmentStartsOn   string   `json:"assignmentStartsOn"`
+	AssignmentEndsOn     string   `json:"assignmentEndsOn"`
+	GuaranteeType        string   `json:"guaranteeType"`
+	GuaranteeStatus      string   `json:"guaranteeStatus"`
+	GuaranteeReference   string   `json:"guaranteeReference"`
+	ResponsibilityScopes []string `json:"responsibilityScopes"`
+	Notes                string   `json:"notes"`
 }
 
 type SovereignLeadershipCreationResult struct {
-	Leadership SovereignLeadershipRecord      `json:"leadership"`
+	Leadership SovereignLeadershipRecord     `json:"leadership"`
 	Activation identityclient.ActivationCode `json:"activation"`
 }
 
@@ -88,46 +78,49 @@ func normalizeSovereignDepartment(raw string) (string, error) {
 	return value, nil
 }
 
-func validLeadershipBundle(bundle string) bool {
-	switch bundle {
-	case PermissionBundlePlatformOwner,
-		PermissionBundlePlatformCoordinator,
-		PermissionBundleOperationsManager,
-		PermissionBundlePartnersManager,
-		PermissionBundleFinanceManager,
-		PermissionBundleSupportManager,
-		PermissionBundleHRManager:
-		return true
-	default:
-		return false
+func normalizeSovereignPermissionBundle(raw string) (string, error) {
+	value := strings.ToLower(strings.TrimSpace(raw))
+	if !sovereignPermissionBundlePattern.MatchString(value) {
+		return "", ErrInvalidInput
 	}
+	return value, nil
 }
 
-func validateLeadershipClassBundle(class, bundle string) bool {
-	switch class {
-	case "project_manager":
-		return bundle == PermissionBundlePlatformOwner
-	case "coordinator", "executive":
-		return bundle == PermissionBundlePlatformCoordinator
-	case "department_manager":
-		return bundle != PermissionBundlePlatformOwner && bundle != PermissionBundlePlatformCoordinator && validLeadershipBundle(bundle)
-	default:
-		return false
+func containsString(values []string, expected string) bool {
+	for _, value := range values {
+		if strings.TrimSpace(value) == expected {
+			return true
+		}
 	}
+	return false
 }
 
-func authorityScopesForBundle(bundle, department string) []string {
-	if bundle == PermissionBundlePlatformOwner {
-		return []string{"leadership:create", "leadership:update", "employee:create:all", "employee:update:all"}
+// resolveLeadershipBundle delegates bundle existence and applicability to
+// Identity's canonical registry. Workforce never expands the bundle into
+// executable authority scopes.
+func (s *Service) resolveLeadershipBundle(ctx context.Context, code, employmentClass, department string) (identityclient.EmployeePermissionBundleDescriptor, error) {
+	code, err := normalizeSovereignPermissionBundle(code)
+	if err != nil {
+		return identityclient.EmployeePermissionBundleDescriptor{}, err
 	}
-	if bundle == PermissionBundlePlatformCoordinator {
-		return []string{"leadership:read", "employee:create:all", "employee:update:all"}
+	employmentClass = strings.TrimSpace(employmentClass)
+	bundles, err := s.identity.EmployeePermissionBundles(ctx)
+	if err != nil {
+		return identityclient.EmployeePermissionBundleDescriptor{}, err
 	}
-	return []string{
-		"employee:create:department:" + department,
-		"employee:update:department:" + department,
-		"employee:suspend:department:" + department,
+	for _, bundle := range bundles {
+		if bundle.Code != code {
+			continue
+		}
+		if !containsString(bundle.AllowedEmploymentClasses, employmentClass) {
+			return identityclient.EmployeePermissionBundleDescriptor{}, ErrInvalidInput
+		}
+		if bundle.DefaultDepartmentScope != "" && !bundle.DepartmentSelectionAllowed && department != bundle.DefaultDepartmentScope {
+			return identityclient.EmployeePermissionBundleDescriptor{}, ErrInvalidInput
+		}
+		return bundle, nil
 	}
+	return identityclient.EmployeePermissionBundleDescriptor{}, ErrInvalidInput
 }
 
 func (r *Repository) SovereignAssignmentByActorID(ctx context.Context, actorID string) (SovereignAssignment, error) {
@@ -151,9 +144,9 @@ func (r *Repository) SovereignAssignmentByActorID(ctx context.Context, actorID s
 func (r *Repository) UpsertSovereignAssignment(ctx context.Context, actorID, operatorID string, expectedVersion int, bundle, department, startsOn, endsOn string) (SovereignAssignment, error) {
 	actorID = strings.TrimSpace(actorID)
 	operatorID = strings.TrimSpace(operatorID)
-	bundle = strings.TrimSpace(bundle)
+	bundle, bundleErr := normalizeSovereignPermissionBundle(bundle)
 	department, err := normalizeSovereignDepartment(department)
-	if err != nil || actorID == "" || operatorID == "" || !validLeadershipBundle(bundle) || expectedVersion < 0 {
+	if err != nil || bundleErr != nil || actorID == "" || operatorID == "" || expectedVersion < 0 {
 		return SovereignAssignment{}, ErrInvalidInput
 	}
 	if strings.TrimSpace(startsOn) == "" {
@@ -300,10 +293,15 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 	input.PermissionBundle = strings.TrimSpace(input.PermissionBundle)
 	input.EmploymentClass = strings.TrimSpace(input.EmploymentClass)
 	department, err := normalizeSovereignDepartment(input.Department)
-	if err != nil || input.FullNameAr == "" || input.PositionTitle == "" || !validateLeadershipClassBundle(input.EmploymentClass, input.PermissionBundle) {
+	if err != nil || input.FullNameAr == "" || input.PositionTitle == "" {
 		return SovereignLeadershipCreationResult{}, false, ErrInvalidInput
 	}
 	input.Department = department
+	bundle, err := s.resolveLeadershipBundle(ctx, input.PermissionBundle, input.EmploymentClass, department)
+	if err != nil {
+		return SovereignLeadershipCreationResult{}, false, err
+	}
+	input.PermissionBundle = bundle.Code
 	if input.GuaranteeType == "" {
 		input.GuaranteeType = "none"
 	}
@@ -349,10 +347,6 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 			SupervisorActorID: input.SupervisorActorID,
 		})
 	} else if personErr == nil {
-		// The phone already resolved to a workforce profile that predates this
-		// call. This endpoint creates new leadership hires; silently upserting
-		// into the existing profile would discard the newly submitted name and
-		// details while reporting success, so reject instead of merging.
 		return SovereignLeadershipCreationResult{}, false, identityclient.ErrPhoneAlreadyBound
 	}
 	if personErr != nil {
@@ -372,7 +366,6 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		EmploymentClass: input.EmploymentClass, GuaranteeType: input.GuaranteeType,
 		GuaranteeStatus: input.GuaranteeStatus, GuaranteeReference: input.GuaranteeReference,
 		ResponsibilityScopes: cleanScopeValues(input.ResponsibilityScopes),
-		AuthorityScopes: authorityScopesForBundle(input.PermissionBundle, department),
 		ManagedDepartmentCodes: []string{department}, Notes: input.Notes,
 	})
 	if err != nil {
@@ -434,8 +427,7 @@ func (s *Service) CreateDepartmentEmployee(ctx context.Context, operator Operato
 		return DepartmentEmployeeCreationResult{}, false, err
 	}
 	actor, err := s.identity.ProvisionEmployee(ctx, identityclient.EmployeeProvisionInput{
-		Username: workforceCode, PhoneE164: input.PhoneE164,
-		PermissionBundle: PermissionBundleStaff, DepartmentScope: department,
+		Username: workforceCode, PhoneE164: input.PhoneE164, DepartmentScope: department,
 	})
 	if err != nil {
 		return DepartmentEmployeeCreationResult{}, false, err
