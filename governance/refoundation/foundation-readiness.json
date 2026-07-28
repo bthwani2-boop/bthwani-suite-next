@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "phase": "FOUNDATION_ONLY",
+  "branch": "new",
+  "sourceBranch": "abdo",
+  "sourceCommit": "98ab47dd59e5fc6f615cbe96094ec61fa0c8ffa3",
+  "candidateCommit": null,
+  "overallDecision": "NEEDS_EVIDENCE",
+  "journeysStarted": false,
+  "claimPolicy": {
+    "implementationIsNotExecutionEvidence": true,
+    "staticPassIsNotRuntimeProof": true,
+    "remoteBuildRequiresRemoteEvidence": true,
+    "ciRequiresExactCommitEvidence": true,
+    "finalClosureForbiddenInFoundationPhase": true
+  },
+  "domains": [
+    {
+      "id": "scope-and-authority",
+      "implementationStatus": "IMPLEMENTED",
+      "evidenceStatus": "NEEDS_EVIDENCE",
+      "decision": "NEEDS_EVIDENCE",
+      "verificationRoute": "pnpm refoundation:verify",
+      "evidenceRequired": "Exact-commit execution output from the refoundation control-plane and foundation-scope checks.",
+      "claimLimit": "Proves only that the foundation-only policy and path restrictions executed on the candidate commit."
+    },
+    {
+      "id": "toolchain-and-workspace",
+      "implementationStatus": "IMPLEMENTED",
+      "evidenceStatus": "NEEDS_EVIDENCE",
+      "decision": "NEEDS_EVIDENCE",
+      "verificationRoute": "pnpm refoundation:doctor",
+      "evidenceRequired": "Installed Node, pnpm, Go, PowerShell, Git, and Docker versions plus workspace verification output.",
+      "claimLimit": "Tracked configuration does not prove the developer machine has the required binaries installed."
+    },
+    {
+      "id": "mobile-expo-eas",
+      "implementationStatus": "IMPLEMENTED",
+      "evidenceStatus": "NEEDS_EVIDENCE",
+      "decision": "NEEDS_EVIDENCE",
+      "verificationRoute": "pnpm mobile:apps:check && pnpm mobile:expo:verify",
+      "evidenceRequired": "Exact-commit mobile configuration checks and one successful EAS preflight for each app; remote build evidence remains separate.",
+      "claimLimit": "Preserved project IDs, packages, bundle identifiers, and pinned CLI configuration do not prove remote builds or devices succeeded."
+    },
+    {
+      "id": "docker-and-data-plane",
+      "implementationStatus": "IMPLEMENTED",
+      "evidenceStatus": "NEEDS_EVIDENCE",
+      "decision": "NEEDS_EVIDENCE",
+      "verificationRoute": "pnpm refoundation:verify:runtime",
+      "evidenceRequired": "Full runtime up, health, smoke, and non-destructive down output on the candidate commit.",
+      "claimLimit": "Compose and script review do not prove images built, migrations ran, services became ready, or data remained intact."
+    },
+    {
+      "id": "contracts-and-openapi",
+      "implementationStatus": "IMPLEMENTED",
+      "evidenceStatus": "NEEDS_EVIDENCE",
+      "decision": "NEEDS_EVIDENCE",
+      "verificationRoute": "pnpm contracts:lint && pnpm openapi:verify:dsh && pnpm guard:api-binding && pnpm guard:backend-api-binding",
+      "evidenceRequired": "Non-mutating contract lint, DSH composition verification, and binding guard output on the exact candidate commit.",
+      "claimLimit": "Contract checks do not prove live provider or production API behavior."
+    },
+    {
+      "id": "governance-skills-and-guards",
+      "implementationStatus": "IMPLEMENTED",
+      "evidenceStatus": "NEEDS_EVIDENCE",
+      "decision": "NEEDS_EVIDENCE",
+      "verificationRoute": "pnpm foundation:gate",
+      "evidenceRequired": "Foundation gate output showing registry, authority, skill, guard, cleanup, runtime-config, and binding checks passed.",
+      "claimLimit": "Registry integrity cannot substitute for human approval or runtime evidence."
+    },
+    {
+      "id": "security-and-secrets",
+      "implementationStatus": "IMPLEMENTED",
+      "evidenceStatus": "NEEDS_EVIDENCE",
+      "decision": "NEEDS_EVIDENCE",
+      "verificationRoute": "pnpm guard:secrets",
+      "evidenceRequired": "Redacted gitleaks result on the exact candidate commit and confirmation that local secret files remain untracked.",
+      "claimLimit": "Repository scanning does not prove external secret rotation, cloud permissions, or production security posture."
+    },
+    {
+      "id": "github-actions",
+      "implementationStatus": "IMPLEMENTED",
+      "evidenceStatus": "NEEDS_EVIDENCE",
+      "decision": "NEEDS_EVIDENCE",
+      "verificationRoute": ".github/workflows/ci.yml",
+      "evidenceRequired": "Completed GitHub Actions run attached to the exact candidate commit with all required jobs passing.",
+      "claimLimit": "Workflow source review and empty status responses are not CI execution evidence."
+    },
+    {
+      "id": "journey-freeze",
+      "implementationStatus": "IMPLEMENTED",
+      "evidenceStatus": "NEEDS_EVIDENCE",
+      "decision": "NEEDS_EVIDENCE",
+      "verificationRoute": "node tools/scripts/check-refoundation-foundation.mjs",
+      "evidenceRequired": "Exact-commit diff verification from the pinned abdo source commit showing only permitted foundation paths changed.",
+      "claimLimit": "This proves only that no product journey change entered this foundation round."
+    }
+  ],
+  "exitBlockedBy": [
+    "candidateCommit is not recorded",
+    "full local static verification evidence is not attached",
+    "full Docker runtime smoke evidence is not attached",
+    "four-app EAS preflight evidence is not attached",
+    "GitHub Actions exact-commit result is not attached",
+    "the repository owner has not started the second round"
+  ]
+}
