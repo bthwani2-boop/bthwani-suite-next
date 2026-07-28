@@ -173,5 +173,3 @@ const styles = StyleSheet.create({
   secondaryButton: { minHeight: 44, borderWidth: 1, borderColor: colorRoles.borderSubtle, borderRadius: 10, paddingHorizontal: spacing[3], alignItems: "center", justifyContent: "center" },
   disabled: { opacity: 0.5 },
 });
-
-export default ProviderIncidentsPanel;
