@@ -85,6 +85,37 @@ func TestDepartmentManagerBundleIsDepartmentScoped(t *testing.T) {
 	}
 }
 
+func TestEmployeeRolesReserveOperatorForPlatformOwner(t *testing.T) {
+	tests := []struct {
+		bundle          string
+		wantOperator    bool
+		wantSupervisory bool
+	}{
+		{bundle: EmployeeBundleStaff, wantOperator: false, wantSupervisory: false},
+		{bundle: EmployeeBundlePlatformCoordinator, wantOperator: false, wantSupervisory: true},
+		{bundle: EmployeeBundleOperationsManager, wantOperator: false, wantSupervisory: true},
+		{bundle: EmployeeBundlePartnersManager, wantOperator: false, wantSupervisory: true},
+		{bundle: EmployeeBundleFinanceManager, wantOperator: false, wantSupervisory: true},
+		{bundle: EmployeeBundleSupportManager, wantOperator: false, wantSupervisory: true},
+		{bundle: EmployeeBundleHRManager, wantOperator: false, wantSupervisory: true},
+		{bundle: EmployeeBundlePlatformOwner, wantOperator: true, wantSupervisory: true},
+	}
+	for _, test := range tests {
+		t.Run(test.bundle, func(t *testing.T) {
+			roles := mergeEmployeeRoles(nil, test.bundle)
+			if !hasRole(roles, "employee") {
+				t.Fatalf("bundle %s is missing employee role: %v", test.bundle, roles)
+			}
+			if got := hasRole(roles, "operator"); got != test.wantOperator {
+				t.Fatalf("bundle %s operator=%v want %v roles=%v", test.bundle, got, test.wantOperator, roles)
+			}
+			if got := hasRole(roles, "workforce.supervise.employee"); got != test.wantSupervisory {
+				t.Fatalf("bundle %s supervisory=%v want %v roles=%v", test.bundle, got, test.wantSupervisory, roles)
+			}
+		})
+	}
+}
+
 func TestEmployeeAccessRejectsProviderAndConsumerRoles(t *testing.T) {
 	tests := []struct {
 		name  string
