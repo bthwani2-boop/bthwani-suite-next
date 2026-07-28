@@ -16,11 +16,11 @@ DECLARE
   constraint_row record;
 BEGIN
   FOR constraint_row IN
-    SELECT constraint.conname
-    FROM pg_constraint constraint
-    WHERE constraint.conrelid = 'workforce_sovereign_leadership_assignments'::regclass
-      AND constraint.contype = 'c'
-      AND pg_get_constraintdef(constraint.oid) ILIKE '%permission_bundle%'
+    SELECT catalog_constraint.conname
+    FROM pg_constraint AS catalog_constraint
+    WHERE catalog_constraint.conrelid = 'workforce_sovereign_leadership_assignments'::regclass
+      AND catalog_constraint.contype = 'c'
+      AND pg_get_constraintdef(catalog_constraint.oid) ILIKE '%permission_bundle%'
   LOOP
     EXECUTE format(
       'ALTER TABLE workforce_sovereign_leadership_assignments DROP CONSTRAINT %I',
