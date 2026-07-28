@@ -164,4 +164,3 @@ const inputStyle: React.CSSProperties = {
   borderRadius: "0.5rem",
   background: colorRoles.surfaceBase,
 };
-
