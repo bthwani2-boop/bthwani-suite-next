@@ -32,8 +32,10 @@ VALUES
   ('wlt-wallet-captain-local-001', 'local-dsh', 'captain-local-001', 'captain', 'active', 'YER', 215000, 30000, 10000, 255000, 30000, 10000, '2026-07-22T08:02:00Z', '2026-07-22T08:02:00Z'),
   ('wlt-wallet-field-local-001',   'local-dsh', 'field-local-001',   'field',   'active', 'YER', 165000, 20000,  5000, 190000, 20000,  5000, '2026-07-22T08:03:00Z', '2026-07-22T08:03:00Z'),
   ('wlt-wallet-client-other-tenant-001', 'other-tenant', 'client-other-tenant-001', 'client', 'active', 'YER', 999999, 0, 0, 999999, 0, 0, '2026-07-22T08:04:00Z', '2026-07-22T08:04:00Z')
-ON CONFLICT (actor_type, actor_id) DO UPDATE SET
+ON CONFLICT (id) DO UPDATE SET
   tenant_id = EXCLUDED.tenant_id,
+  actor_id = EXCLUDED.actor_id,
+  actor_type = EXCLUDED.actor_type,
   status = EXCLUDED.status,
   currency = EXCLUDED.currency,
   available_balance_minor_units = EXCLUDED.available_balance_minor_units,
