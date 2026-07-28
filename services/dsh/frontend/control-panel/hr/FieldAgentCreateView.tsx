@@ -19,7 +19,7 @@ export function FieldAgentCreateView(props: {
   const [zoneId, setZoneId] = useState("");
 
   const createdAgent = state.kind === "created" ? state.provider : null;
-  
+
   React.useEffect(() => {
     if (createdAgent) {
       props.onCreated(createdAgent);
