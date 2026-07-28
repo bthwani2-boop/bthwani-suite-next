@@ -8,12 +8,20 @@ const read = (relative) => fs.readFileSync(path.join(repoRoot, relative), "utf8"
 
 test("employee platform access code has a same-origin HttpOnly BFF route", () => {
   const route = read("apps/control-panel/runtime/src/app/api/auth/activate/route.ts");
+  const identityActivation = read("apps/control-panel/runtime/src/app/api/auth/_lib/identity-activation.api.ts");
+  const identityTransport = read("apps/control-panel/runtime/src/app/api/auth/_lib/identity-server-http.adapter.ts");
+
   assert.match(route, /isSameOriginRequest\(request\)/);
-  assert.match(route, /actorType:\s*"employee"/);
+  assert.match(route, /activateEmployeeAccessCode\(\{\s*baseUrl,\s*phone,\s*code\s*\}\)/);
+  assert.match(identityActivation, /path:\s*"\/auth\/activate"/);
+  assert.match(identityActivation, /actorType:\s*"employee"/);
+  assert.match(identityActivation, /deviceFingerprint:\s*"control-panel-access-code"/);
+  assert.match(identityActivation, /postIdentityServerJson/);
+  assert.match(identityTransport, /cache:\s*"no-store"/);
   assert.match(route, /tokens\.identity\.roles\.includes\("operator"\)/);
   assert.match(route, /setSessionCookies\(response, tokens\)/);
   assert.match(route, /Cache-Control":\s*"no-store"/);
-  assert.doesNotMatch(route, /localStorage|sessionStorage/);
+  assert.doesNotMatch(`${route}\n${identityActivation}\n${identityTransport}`, /localStorage|sessionStorage/);
 });
 
 test("control-panel makes the platform-issued code the primary employee entry", () => {
@@ -36,7 +44,7 @@ test("employee invitation contract targets control-panel rather than webapp", ()
 
   assert.match(employeeAccess, /activationSurfaceByActorType\["employee"\]\s*=\s*"control-panel"/);
   assert.doesNotMatch(employeeAccess, /activationSurfaceByActorType\["employee"\]\s*=\s*"webapp"/);
-  assert.match(employeeContract, /actorType=employee and surface=control-panel/);
+  assert.match(employeeContract, /actorType=employee and\s+surface=control-panel/);
   assert.doesNotMatch(employeeContract, /surface=webapp/);
   assert.match(workforceClient, /expectedActorType\)\s*==\s*"employee"[\s\S]*return "control-panel"/);
 });
