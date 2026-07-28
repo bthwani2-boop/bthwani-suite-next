@@ -6,6 +6,7 @@
   "authority": {
     "humanPolicy": "governance/refoundation/FOUNDATION_ONLY_EXECUTION.md",
     "machinePolicy": "governance/refoundation/foundation-protection.policy.json",
+    "readinessLedger": "governance/refoundation/foundation-readiness.json",
     "authorityRegistry": "governance/authority/authority-precedence.json",
     "decisionIndex": "governance/00_DECISION_INDEX.md"
   },
@@ -44,6 +45,7 @@
   "verificationRoutes": {
     "foundationStatic": "pnpm foundation:gate",
     "foundationFullStatic": "pnpm foundation:gate -- -Full",
+    "readinessStatic": "node tools/scripts/check-refoundation-readiness.mjs",
     "mobileManifest": "pnpm mobile:apps:check",
     "mobileExpo": "pnpm mobile:expo:verify",
     "dockerStatus": "pnpm runtime:status",
@@ -55,46 +57,67 @@
   },
   "readinessDomains": [
     {
-      "id": "toolchain-workspace",
+      "id": "scope-and-authority",
+      "owner": "bthwani-current-workspace-authority",
+      "requiredPaths": ["governance/refoundation/FOUNDATION_ONLY_EXECUTION.md","governance/refoundation/foundation-protection.policy.json","governance/refoundation/foundation-readiness.json"],
+      "requiredChecks": ["readinessStatic","foundationStatic"],
+      "claimLimit": "Foundation phase and permitted-scope integrity only"
+    },
+    {
+      "id": "toolchain-and-workspace",
       "owner": "bthwani-platform-runtime-config",
-      "requiredPaths": ["package.json","pnpm-lock.yaml","pnpm-workspace.yaml","nx.json","tsconfig.base.json"],
+      "requiredPaths": ["package.json","pnpm-lock.yaml","pnpm-workspace.yaml","nx.json","tsconfig.base.json","shared/config/toolchain-lock.json"],
       "requiredChecks": ["foundationStatic"],
-      "claimLimit": "Static configuration only"
+      "claimLimit": "Tracked configuration only; installed binaries require doctor evidence"
     },
     {
       "id": "mobile-expo-eas",
       "owner": "bthwani-platform-runtime-config",
-      "requiredPaths": ["tools/mobile/mobile-apps.manifest.json","tools/mobile/defineBthwaniExpoApp.js","apps/mobile/eas"],
+      "requiredPaths": ["tools/mobile/mobile-apps.manifest.json","tools/mobile/defineBthwaniExpoApp.js","tools/mobile/eas.template.json","apps/mobile/eas-build-mobile.mjs","apps/mobile/eas"],
       "requiredChecks": ["mobileManifest","mobileExpo"],
       "claimLimit": "Configuration proof only; remote builds and devices remain separate evidence"
     },
     {
-      "id": "docker-data-plane",
+      "id": "docker-and-data-plane",
       "owner": "bthwani-docker-journey-runtime",
-      "requiredPaths": ["infra/docker/compose.runtime.yml","infra/docker/scripts/runtime.ps1"],
+      "requiredPaths": ["infra/docker/compose.runtime.yml","infra/docker/scripts/runtime.ps1","infra/docker/scripts/down-runtime.ps1","infra/docker/scripts/reset-runtime.ps1"],
       "requiredChecks": ["dockerStatus","dockerFullSmoke"],
       "claimLimit": "Runtime evidence required"
     },
     {
-      "id": "contracts-verification",
+      "id": "contracts-and-openapi",
       "owner": "bthwani-api-runtime-binding",
       "requiredPaths": ["contracts","core","services"],
       "requiredChecks": ["openApi"],
       "claimLimit": "Non-mutating contract and binding verification only"
     },
     {
-      "id": "governance-skills-guards",
+      "id": "governance-skills-and-guards",
       "owner": "bthwani-governance-contract-guardian",
       "requiredPaths": ["governance/authority","governance/skills","governance/guards","tools/guards"],
       "requiredChecks": ["foundationStatic","workflowPolicy"],
       "claimLimit": "Governance integrity only"
     },
     {
-      "id": "security-secrets",
+      "id": "security-and-secrets",
       "owner": "bthwani-security-secrets-privacy",
       "requiredPaths": ["governance/07_SECURITY_AND_SECRETS.md",".gitignore"],
       "requiredChecks": ["secrets"],
       "claimLimit": "Repository secret scan only"
+    },
+    {
+      "id": "github-actions",
+      "owner": "bthwani-ci-workflow-guardian",
+      "requiredPaths": [".github/workflows/ci.yml",".github/workflows/ci-node-diagnostics.yml"],
+      "requiredChecks": ["workflowPolicy","remoteCi"],
+      "claimLimit": "Workflow source integrity is not exact-commit CI execution evidence"
+    },
+    {
+      "id": "journey-freeze",
+      "owner": "bthwani-universal-task-router",
+      "requiredPaths": ["governance/refoundation/foundation-protection.policy.json","tools/scripts/check-refoundation-foundation.mjs"],
+      "requiredChecks": ["foundationStatic"],
+      "claimLimit": "Proves only that this round contains no product journey implementation"
     }
   ],
   "exitRequirements": [
