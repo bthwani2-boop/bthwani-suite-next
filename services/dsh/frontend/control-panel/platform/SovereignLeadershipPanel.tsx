@@ -13,45 +13,15 @@ import {
 import { Text } from "@bthwani/ui-kit";
 import {
   createSovereignLeader,
+  getSovereignLeadershipReferenceData,
   listSovereignLeadership,
   workforceErrorMessage,
+  type EmployeePermissionBundleDescriptor,
   type LeadershipEmploymentClass,
-  type LeadershipPermissionBundle,
   type SovereignLeadershipCreationResult,
   type SovereignLeadershipRecord,
+  type SovereignLeadershipReferenceData,
 } from "../../shared/workforce";
-
-const CLASS_LABELS: Record<LeadershipEmploymentClass, string> = {
-  project_manager: "مدير المشروع",
-  coordinator: "منسق المنصة",
-  executive: "إدارة تنفيذية",
-  department_manager: "مدير قسم",
-};
-
-const BUNDLE_LABELS: Record<LeadershipPermissionBundle, string> = {
-  platform_owner: "مالك المنصة ومدير المشروع",
-  platform_coordinator: "منسق المنصة",
-  operations_manager: "مدير العمليات",
-  partners_manager: "مدير الشركاء",
-  finance_manager: "مدير المالية",
-  support_manager: "مدير الدعم",
-  hr_manager: "مدير الموارد البشرية",
-};
-
-const DEPARTMENTS = [
-  { value: "dashboard", label: "الرئيسية (Dashboard)" },
-  { value: "operations", label: "العمليات (Operations)" },
-  { value: "analytics", label: "التحليلات (Analytics)" },
-  { value: "partners", label: "الشركاء والمتاجر (Partners)" },
-  { value: "catalogs", label: "اعتماد الكتالوجات (Catalogs)" },
-  { value: "marketing", label: "التسويق والاكتشاف (Marketing)" },
-  { value: "finance", label: "المالية والتسويات (Finance)" },
-  { value: "support", label: "الدعم والمساعدة (Support)" },
-  { value: "platform", label: "المنصة السيادية (Platform)" },
-  { value: "administration", label: "الإدارة والصلاحيات (Administration)" },
-  { value: "hr", label: "الموارد البشرية (HR)" },
-];
-const OFFICE_LOCATIONS = ["المقر الرئيسي", "صنعاء", "عدن", "تعز", "الحديدة", "حضرموت", "أخرى"];
 
 const selectStyle = {
   width: "100%",
@@ -69,12 +39,6 @@ const fieldLabelStyle = {
   gap: "6px",
 } as const;
 
-function defaultBundleForClass(value: LeadershipEmploymentClass): LeadershipPermissionBundle {
-  if (value === "project_manager") return "platform_owner";
-  if (value === "coordinator" || value === "executive") return "platform_coordinator";
-  return "operations_manager";
-}
-
 function assignmentDateError(startsOn: string, endsOn: string): string | null {
   const start = startsOn.trim();
   const end = endsOn.trim();
@@ -82,8 +46,16 @@ function assignmentDateError(startsOn: string, endsOn: string): string | null {
   return end < start ? "تاريخ نهاية التكليف يجب أن يساوي تاريخ البداية أو يأتي بعده" : null;
 }
 
+function bundleForCode(
+  references: SovereignLeadershipReferenceData | null,
+  code: string,
+): EmployeePermissionBundleDescriptor | undefined {
+  return references?.permissionBundles.find((bundle) => bundle.code === code);
+}
+
 export function SovereignLeadershipPanel() {
   const [records, setRecords] = useState<readonly SovereignLeadershipRecord[]>([]);
+  const [references, setReferences] = useState<SovereignLeadershipReferenceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -92,10 +64,11 @@ export function SovereignLeadershipPanel() {
 
   const [fullNameAr, setFullNameAr] = useState("");
   const [phoneE164, setPhoneE164] = useState("");
-  const [department, setDepartment] = useState("operations");
+  const [department, setDepartment] = useState("");
+  const [positionTitle, setPositionTitle] = useState("");
   const [jobGrade, setJobGrade] = useState("");
-  const [employmentClass, setEmploymentClass] = useState<LeadershipEmploymentClass>("department_manager");
-  const [permissionBundle, setPermissionBundle] = useState<LeadershipPermissionBundle>("operations_manager");
+  const [employmentClass, setEmploymentClass] = useState<LeadershipEmploymentClass | "">("");
+  const [permissionBundle, setPermissionBundle] = useState("");
   const [officeLocation, setOfficeLocation] = useState("");
   const [assignmentStartsOn, setAssignmentStartsOn] = useState("");
   const [assignmentEndsOn, setAssignmentEndsOn] = useState("");
@@ -113,7 +86,12 @@ export function SovereignLeadershipPanel() {
     setLoading(true);
     setLoadError(null);
     try {
-      setRecords(await listSovereignLeadership());
+      const [leadership, referenceData] = await Promise.all([
+        listSovereignLeadership(),
+        getSovereignLeadershipReferenceData(),
+      ]);
+      setRecords(leadership);
+      setReferences(referenceData);
     } catch (error) {
       setLoadError(workforceErrorMessage(error));
     } finally {
@@ -125,6 +103,34 @@ export function SovereignLeadershipPanel() {
     void reload();
   }, [reload]);
 
+  const availableBundles = useMemo(
+    () => references?.permissionBundles.filter((bundle) =>
+      employmentClass !== "" && bundle.allowedEmploymentClasses.includes(employmentClass),
+    ) ?? [],
+    [employmentClass, references],
+  );
+
+  const selectedBundle = useMemo(
+    () => bundleForCode(references, permissionBundle),
+    [permissionBundle, references],
+  );
+
+  useEffect(() => {
+    if (!employmentClass) {
+      setPermissionBundle("");
+      return;
+    }
+    if (!availableBundles.some((bundle) => bundle.code === permissionBundle)) {
+      setPermissionBundle(availableBundles.length === 1 ? availableBundles[0]!.code : "");
+    }
+  }, [availableBundles, employmentClass, permissionBundle]);
+
+  useEffect(() => {
+    if (selectedBundle?.defaultDepartmentScope && !selectedBundle.departmentSelectionAllowed) {
+      setDepartment(selectedBundle.defaultDepartmentScope);
+    }
+  }, [selectedBundle]);
+
   const dateError = useMemo(
     () => assignmentDateError(assignmentStartsOn, assignmentEndsOn),
     [assignmentEndsOn, assignmentStartsOn],
@@ -134,30 +140,14 @@ export function SovereignLeadershipPanel() {
     () =>
       fullNameAr.trim().length > 0 &&
       phoneE164.trim().length >= 9 &&
+      positionTitle.trim().length > 0 &&
+      employmentClass !== "" &&
+      permissionBundle.trim().length > 0 &&
       department.trim().length > 1 &&
       dateError === null &&
       !submitting,
-    [dateError, department, fullNameAr, phoneE164, submitting],
+    [dateError, department, employmentClass, fullNameAr, permissionBundle, phoneE164, positionTitle, submitting],
   );
-
-  const positionTitle = useMemo(() => {
-    if (employmentClass === "project_manager") return "مدير المشروع";
-    if (employmentClass === "coordinator") return "منسق المنصة";
-    if (employmentClass === "executive") return "إدارة تنفيذية";
-
-    const dept = DEPARTMENTS.find((item) => item.value === department);
-    if (dept) return `مدير ${dept.label.split(" (")[0]}`;
-    return "مدير قسم";
-  }, [employmentClass, department]);
-
-  const changeClass = (value: LeadershipEmploymentClass) => {
-    setEmploymentClass(value);
-    const bundle = defaultBundleForClass(value);
-    setPermissionBundle(bundle);
-    if (value === "project_manager" || value === "coordinator" || value === "executive") {
-      setDepartment("platform");
-    }
-  };
 
   const submit = async () => {
     const currentDateError = assignmentDateError(assignmentStartsOn, assignmentEndsOn);
@@ -165,7 +155,7 @@ export function SovereignLeadershipPanel() {
       setSubmitError(currentDateError);
       return;
     }
-    if (!canSubmit) return;
+    if (!canSubmit || employmentClass === "") return;
     setSubmitting(true);
     setSubmitError(null);
     setCreated(null);
@@ -194,7 +184,11 @@ export function SovereignLeadershipPanel() {
       setCreated(result);
       setFullNameAr("");
       setPhoneE164("");
+      setDepartment("");
+      setPositionTitle("");
       setJobGrade("");
+      setEmploymentClass("");
+      setPermissionBundle("");
       setOfficeLocation("");
       setAssignmentStartsOn("");
       setAssignmentEndsOn("");
@@ -208,13 +202,18 @@ export function SovereignLeadershipPanel() {
     }
   };
 
+  const bundleLabel = (code: string) =>
+    references?.permissionBundles.find((bundle) => bundle.code === code)?.nameAr ?? code;
+  const departmentLabel = (code: string) =>
+    references?.departments.find((item) => item.code === code)?.nameAr ?? code;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
       <CpStatePanel
         role="status"
         title="القيادة والكادر السيادي"
-        description="ينشئ مدير المشروع المنسقين ومديري الأقسام هنا. تحفظ Workforce التكليف الإداري، بينما تمنح Identity حزمة الصلاحيات الفعلية وتصدر دعوة تفعيل لوحة التحكم."
-        code="SOVEREIGN_LEADERSHIP_BOUND"
+        description="يحفظ Workforce التكليف والهيكل الإداري، بينما يملك Identity حزم الصلاحيات الفعلية والجلسات. تأتي جميع الخيارات من السجلات الحاكمة ولا تُعرّف داخل الشاشة."
+        code="IDENTITY_WORKFORCE_BOUNDARY_ENFORCED"
       />
 
       <section style={{ padding: "20px", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "12px", display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -225,31 +224,36 @@ export function SovereignLeadershipPanel() {
 
           <label style={fieldLabelStyle}>
             <span>الفئة الإدارية</span>
-            <select value={employmentClass} onChange={(event) => changeClass(event.target.value as LeadershipEmploymentClass)} style={selectStyle}>
-              {Object.entries(CLASS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
-          </label>
-
-          <label style={fieldLabelStyle}>
-            <span>القسم</span>
-            <select value={department} onChange={(event) => setDepartment(event.target.value)} style={selectStyle} disabled={employmentClass !== "department_manager"}>
-              <option value="">اختر القسم...</option>
-              {DEPARTMENTS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            <select value={employmentClass} onChange={(event) => setEmploymentClass(event.target.value as LeadershipEmploymentClass | "")} style={selectStyle} disabled={!references}>
+              <option value="">اختر الفئة...</option>
+              {references?.employmentClasses.map((item) => <option key={item.code} value={item.code}>{item.nameAr}</option>)}
             </select>
           </label>
 
           <label style={fieldLabelStyle}>
             <span>حزمة الصلاحيات</span>
-            <select value={permissionBundle} onChange={(event) => setPermissionBundle(event.target.value as LeadershipPermissionBundle)} style={selectStyle} disabled={employmentClass !== "department_manager"}>
-              {Object.entries(BUNDLE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            <select value={permissionBundle} onChange={(event) => setPermissionBundle(event.target.value)} style={selectStyle} disabled={!employmentClass || availableBundles.length <= 1}>
+              <option value="">اختر الحزمة...</option>
+              {availableBundles.map((bundle) => <option key={bundle.code} value={bundle.code}>{bundle.nameAr}</option>)}
             </select>
           </label>
 
           <label style={fieldLabelStyle}>
+            <span>القسم</span>
+            <select value={department} onChange={(event) => setDepartment(event.target.value)} style={selectStyle} disabled={!references || Boolean(selectedBundle && !selectedBundle.departmentSelectionAllowed)}>
+              <option value="">اختر القسم...</option>
+              {references?.departments.map((item) => <option key={item.code} value={item.code}>{item.nameAr}</option>)}
+            </select>
+          </label>
+
+          <CpTextInput value={positionTitle} onChange={setPositionTitle} aria-label="المسمى الوظيفي الرسمي" placeholder="المسمى الوظيفي الرسمي" />
+          <CpTextInput value={jobGrade} onChange={setJobGrade} aria-label="الدرجة الوظيفية" placeholder="الدرجة الوظيفية (اختيارية)" />
+
+          <label style={fieldLabelStyle}>
             <span>موقع العمل</span>
-            <select value={officeLocation} onChange={(event) => setOfficeLocation(event.target.value)} style={selectStyle}>
+            <select value={officeLocation} onChange={(event) => setOfficeLocation(event.target.value)} style={selectStyle} disabled={!references}>
               <option value="">موقع العمل (اختياري)</option>
-              {OFFICE_LOCATIONS.map((location) => <option key={location} value={location}>{location}</option>)}
+              {references?.officeLocations.map((location) => <option key={location.code} value={location.nameAr}>{location.nameAr}</option>)}
             </select>
           </label>
 
@@ -273,12 +277,8 @@ export function SovereignLeadershipPanel() {
           >
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
               <span>كود تفعيل لوحة التحكم: <strong>{created.activation.code}</strong> — ينتهي في {created.activation.expiresAt}</span>
-              <CpButton
-                variant="secondary"
-                aria-label="نسخ كود التفعيل"
-                onClick={() => void copyActivationCode(created.activation.code)}
-              >
-                {codeCopied ? "✅ تم النسخ" : "📋 نسخ الكود"}
+              <CpButton variant="secondary" aria-label="نسخ كود التفعيل" onClick={() => void copyActivationCode(created.activation.code)}>
+                {codeCopied ? "تم النسخ" : "نسخ الكود"}
               </CpButton>
             </div>
           </CpStatePanel>
@@ -315,8 +315,8 @@ export function SovereignLeadershipPanel() {
                 <tr key={record.employee.actorId}>
                   <CpTableCell>{record.employee.fullNameAr}</CpTableCell>
                   <CpTableCell>{record.governance.positionTitle}</CpTableCell>
-                  <CpTableCell>{record.assignment.departmentScope}</CpTableCell>
-                  <CpTableCell>{BUNDLE_LABELS[record.assignment.permissionBundle]}</CpTableCell>
+                  <CpTableCell>{departmentLabel(record.assignment.departmentScope)}</CpTableCell>
+                  <CpTableCell>{bundleLabel(record.assignment.permissionBundle)}</CpTableCell>
                   <CpTableCell><CpBadge tone="success">{record.assignment.assignmentStatus}</CpBadge></CpTableCell>
                   <CpTableCell>{record.assignment.startsOn}{record.assignment.endsOn ? ` — ${record.assignment.endsOn}` : " — مفتوح"}</CpTableCell>
                 </tr>
