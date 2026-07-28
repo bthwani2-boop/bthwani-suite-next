@@ -75,14 +75,11 @@ const (
 	ErrReferenceIdentityUnavailable referenceAuthError = "reference identity unavailable"
 )
 
-// RequireReferenceReader protects WLT read projections in active SaaS mode.
-// Authenticated DSH requests carry their server-owned tenant. End-user requests
-// derive the tenant from Identity and overwrite any matching client header only
-// after authentication; a conflicting client header is rejected.
+// RequireReferenceReader protects WLT reference projections in every runtime
+// mode. Authenticated DSH requests carry their server-owned tenant. End-user
+// requests derive the tenant from Identity; a client-supplied conflicting
+// tenant is rejected. Development and deferred modes never bypass this boundary.
 func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
-	if !strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active") {
-		return true
-	}
 	if tenantID, ok := trustedDshReferenceRequest(r); ok {
 		r.Header.Set("X-Tenant-ID", tenantID)
 		*r = *r.WithContext(WithTenantContext(r.Context(), tenantID))
