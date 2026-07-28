@@ -128,14 +128,25 @@ func employeeBundlePermissions(bundle, department string) ([]Permission, error) 
 	return permissions, nil
 }
 
-func mergeEmployeeRoles(existing []string, supervisory bool) []string {
+// mergeEmployeeRoles derives coarse authentication roles from the canonical
+// permission bundle. The broad DSH operator role is reserved for the sovereign
+// platform owner; every other employee must pass exact permission checks.
+func mergeEmployeeRoles(existing []string, bundle string) []string {
 	result := append([]string{}, existing...)
-	for _, required := range []string{"employee", "operator"} {
+	bundle = strings.TrimSpace(bundle)
+	if bundle == "" {
+		bundle = EmployeeBundleStaff
+	}
+	requiredRoles := []string{"employee"}
+	if bundle == EmployeeBundlePlatformOwner {
+		requiredRoles = append(requiredRoles, "operator")
+	}
+	for _, required := range requiredRoles {
 		if !hasRole(result, required) {
 			result = append(result, required)
 		}
 	}
-	if supervisory && !hasRole(result, "workforce.supervise.employee") {
+	if bundle != EmployeeBundleStaff && !hasRole(result, "workforce.supervise.employee") {
 		result = append(result, "workforce.supervise.employee")
 	}
 	return result
@@ -187,7 +198,11 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	if err != nil {
 		return ActorAdminView{}, err
 	}
-	permissions, err := employeeBundlePermissions(input.PermissionBundle, input.DepartmentScope)
+	permissionBundle := strings.TrimSpace(input.PermissionBundle)
+	if permissionBundle == "" {
+		permissionBundle = EmployeeBundleStaff
+	}
+	permissions, err := employeeBundlePermissions(permissionBundle, input.DepartmentScope)
 	if err != nil {
 		return ActorAdminView{}, err
 	}
@@ -195,7 +210,6 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	if tenantID == "" {
 		return ActorAdminView{}, ErrInvalidActivation
 	}
-	supervisory := strings.TrimSpace(input.PermissionBundle) != "" && strings.TrimSpace(input.PermissionBundle) != EmployeeBundleStaff
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -216,7 +230,7 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 		return ActorAdminView{}, err
 	}
 	actorID := "employee-" + suffix
-	roles := mergeEmployeeRoles(nil, supervisory)
+	roles := mergeEmployeeRoles(nil, permissionBundle)
 	permissionsJSON, err := json.Marshal(permissions)
 	if err != nil {
 		return ActorAdminView{}, err
@@ -257,7 +271,7 @@ func (r *Repository) BootstrapSovereignLeadershipAccess(ctx context.Context, inp
 	if err != nil {
 		return err
 	}
-	roles := mergeEmployeeRoles(actor.Roles, true)
+	roles := mergeEmployeeRoles(actor.Roles, EmployeeBundlePlatformOwner)
 	mergedPermissions := mergeEmployeePermissions(actor.Permissions, permissions)
 	permissionsJSON, err := json.Marshal(mergedPermissions)
 	if err != nil {
