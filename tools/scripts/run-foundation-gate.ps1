@@ -45,6 +45,10 @@ $results += [pscustomobject]@{
   ok = (Run-Step "refoundation-control-plane-check" { node tools/scripts/check-refoundation-control-plane.mjs })
 }
 $results += [pscustomobject]@{
+  step = "refoundation-operational-tooling-check"
+  ok = (Run-Step "refoundation-operational-tooling-check" { node tools/scripts/check-refoundation-operational-tooling.mjs })
+}
+$results += [pscustomobject]@{
   step = "refoundation-foundation-check"
   ok = (Run-Step "refoundation-foundation-check" { node tools/scripts/check-refoundation-foundation.mjs })
 }
