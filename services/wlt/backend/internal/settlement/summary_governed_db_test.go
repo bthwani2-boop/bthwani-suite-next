@@ -1,9 +1,12 @@
 package settlement
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
+
+	"wlt-api/internal/shared"
 )
 
 func TestListSettlementSummaryGoverned_AggregatesOnePartnerWithoutGroupBy(t *testing.T) {
@@ -13,23 +16,26 @@ func TestListSettlementSummaryGoverned_AggregatesOnePartnerWithoutGroupBy(t *tes
 	}
 	defer db.Close()
 
-	partnerID := fmt.Sprintf("partner-summary-%d", time.Now().UnixNano())
+	suffix := time.Now().UnixNano()
+	tenantID := fmt.Sprintf("tenant-summary-%d", suffix)
+	partnerID := fmt.Sprintf("partner-summary-%d", suffix)
 	_, err := db.Exec(`
 		INSERT INTO wlt_settlements
-			(partner_id, period_start, period_end, gross_amount, platform_fee, net_amount, currency, order_count, status)
+			(tenant_id, partner_id, period_start, period_end, gross_amount, platform_fee, net_amount, currency, order_count, status)
 		VALUES
-			($1, '2026-01-01', '2026-01-15', 1000, 100, 900, 'YER', 2, 'pending'),
-			($1, '2026-01-16', '2026-01-31', 2500, 250, 2250, 'YER', 3, 'settled')`,
-		partnerID,
+			($1, $2, '2026-01-01', '2026-01-15', 1000, 100, 900, 'YER', 2, 'pending'),
+			($1, $2, '2026-01-16', '2026-01-31', 2500, 250, 2250, 'YER', 3, 'settled')`,
+		tenantID, partnerID,
 	)
 	if err != nil {
 		t.Fatalf("failed to insert settlement summary fixtures: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE FROM wlt_settlements WHERE partner_id = $1`, partnerID)
+		_, _ = db.Exec(`DELETE FROM wlt_settlements WHERE tenant_id = $1 AND partner_id = $2`, tenantID, partnerID)
 	})
 
-	summary, err := ListSettlementSummaryGoverned(db, partnerID, "", "")
+	ctx := shared.WithTenantContext(context.Background(), tenantID)
+	summary, err := ListSettlementSummaryGoverned(ctx, db, partnerID, "", "")
 	if err != nil {
 		t.Fatalf("summary query failed: %v", err)
 	}
@@ -54,8 +60,11 @@ func TestListSettlementSummaryGoverned_ReturnsStableZeroSummary(t *testing.T) {
 	}
 	defer db.Close()
 
-	partnerID := fmt.Sprintf("partner-summary-empty-%d", time.Now().UnixNano())
-	summary, err := ListSettlementSummaryGoverned(db, partnerID, "", "")
+	suffix := time.Now().UnixNano()
+	tenantID := fmt.Sprintf("tenant-summary-empty-%d", suffix)
+	partnerID := fmt.Sprintf("partner-summary-empty-%d", suffix)
+	ctx := shared.WithTenantContext(context.Background(), tenantID)
+	summary, err := ListSettlementSummaryGoverned(ctx, db, partnerID, "", "")
 	if err != nil {
 		t.Fatalf("empty summary query failed: %v", err)
 	}
