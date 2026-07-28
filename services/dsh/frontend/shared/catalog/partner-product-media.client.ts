@@ -7,6 +7,7 @@ import {
   fetchPartnerStoreAssortment,
   unlinkCatalogAsset,
 } from "./central-catalog.api";
+import { validateImageFile } from "./catalog-media.controller-core";
 import type { CatalogAsset, CatalogAssetLink, StoreAssortment } from "./central-catalog.types";
 
 const apiBaseUrl = resolveDshApiBaseUrl().replace(/\/$/, "");
@@ -24,7 +25,7 @@ export type PartnerProductMediaUploadInput = {
   readonly storeId: string;
   readonly productId: string;
   readonly fileName: string;
-  readonly fileUri: string;
+  readonly body: Blob;
   readonly mimeType: string;
   readonly fileSizeBytes: number;
   readonly altAr?: string;
@@ -40,13 +41,14 @@ function mapLinkToMediaAsset(
   link: CatalogAssetLinkReadModel,
   productId: string,
 ): DshMediaAsset {
+  const url = publicUrl(link.publicUrl, link.status);
   return {
     id: link.assetId,
     entity_id: productId,
     entity_type: "product",
     media_key: link.assetId,
-    url: publicUrl(link.publicUrl, link.status),
-    public_url: publicUrl(link.publicUrl, link.status),
+    url,
+    public_url: url,
     mime_type: link.mimeType ?? "image/jpeg",
     created_at: link.createdAt,
     purpose: PARTNER_CUSTOM_IMAGE_ROLE,
@@ -89,12 +91,7 @@ async function requireStoreAssortment(
   return assortment;
 }
 
-async function uploadBinary(uploadUrl: string, fileUri: string, mimeType: string): Promise<void> {
-  const sourceResponse = await globalThis.fetch(fileUri);
-  if (!sourceResponse.ok) {
-    throw new Error(`PARTNER_PRODUCT_MEDIA_SOURCE_READ_FAILED_${sourceResponse.status}`);
-  }
-  const body = await sourceResponse.blob();
+async function uploadBinary(uploadUrl: string, body: Blob, mimeType: string): Promise<void> {
   const uploadResponse = await globalThis.fetch(uploadUrl, {
     method: "PUT",
     headers: { "Content-Type": mimeType },
@@ -125,6 +122,12 @@ export async function listPartnerProductMedia(
 export async function uploadPartnerProductMedia(
   input: PartnerProductMediaUploadInput,
 ): Promise<DshMediaAsset> {
+  const validationError = validateImageFile({
+    type: input.mimeType,
+    size: input.fileSizeBytes,
+  });
+  if (validationError) throw new Error(validationError);
+
   const assortment = await requireStoreAssortment(input.storeId, input.productId);
   const intent = await createAssetUploadIntent({
     fileName: input.fileName,
@@ -137,7 +140,7 @@ export async function uploadPartnerProductMedia(
     intendedRole: PARTNER_CUSTOM_IMAGE_ROLE,
   });
 
-  await uploadBinary(intent.uploadUrl, input.fileUri, input.mimeType);
+  await uploadBinary(intent.uploadUrl, input.body, input.mimeType);
 
   // CompleteAssetUpload atomically creates the pending-review link from the
   // intended target captured in the upload intent. Do not create a second link.
