@@ -36,6 +36,16 @@ function Invoke-Checked {
   }
 }
 
+function Invoke-BestEffortRuntimeDown {
+  Write-Host "`n== Stop full Docker runtime without deleting volumes ==" -ForegroundColor Cyan
+  $global:LASTEXITCODE = 0
+  & pnpm runtime:full:down
+  $exitCode = if ($null -eq $global:LASTEXITCODE) { 0 } else { [int]$global:LASTEXITCODE }
+  if ($exitCode -ne 0) {
+    Write-Warning "Runtime cleanup returned exit code $exitCode. No reset or volume deletion was attempted."
+  }
+}
+
 function Get-TrackedStatus {
   $global:LASTEXITCODE = 0
   $status = (& git status --porcelain=v1 --untracked-files=no 2>&1 | ForEach-Object { [string]$_ }) -join "`n"
@@ -103,15 +113,15 @@ switch ($Mode) {
   "Runtime" {
     Assert-Command -Name "docker"
     Invoke-FullVerification
-    $runtimeStarted = $false
+    $runtimeAttempted = $false
     try {
+      $runtimeAttempted = $true
       Invoke-Checked -Name "Start full Docker runtime" -Command "pnpm" -Arguments @("runtime:full:up")
-      $runtimeStarted = $true
       Invoke-Checked -Name "Full Docker runtime smoke" -Command "pnpm" -Arguments @("runtime:full:smoke")
     }
     finally {
-      if ($runtimeStarted) {
-        Invoke-Checked -Name "Stop full Docker runtime without deleting volumes" -Command "pnpm" -Arguments @("runtime:full:down")
+      if ($runtimeAttempted) {
+        Invoke-BestEffortRuntimeDown
       }
     }
   }
