@@ -1,0 +1,142 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Settlement Operations API
+  version: 1.0.0
+  description: Tenant-scoped settlement reads, financial summary and governed posting transition.
+x-bthwani-owner: services/wlt
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-owner: true
+servers:
+  - url: http://localhost:58083
+security:
+  - serviceBearer: []
+paths:
+  /wlt/settlements:
+    get:
+      operationId: listWltSettlements
+      tags: [WltSettlements]
+      summary: List tenant-local settlements.
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - name: partnerId
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: Tenant-local settlements }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /wlt/settlements/summary:
+    get:
+      operationId: getWltSettlementSummary
+      tags: [WltSettlements]
+      summary: Return the tenant-local settlement summary computed by WLT.
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Tenant-local settlement summary }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /wlt/settlements/{settlementId}:
+    get:
+      operationId: getWltSettlement
+      tags: [WltSettlements]
+      summary: Read one tenant-local settlement.
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/SettlementId'
+      responses:
+        '200': { description: Tenant-local settlement }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /wlt/settlements/{settlementId}/post:
+    post:
+      operationId: postWltSettlement
+      tags: [WltSettlements]
+      summary: Post a pending tenant-local settlement and its balanced journal atomically.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/SettlementId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                operatorId: { type: string, minLength: 1 }
+      responses:
+        '200': { description: Settlement posted or exactly replayed }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    serviceBearer:
+      type: http
+      scheme: bearer
+  parameters:
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema: { type: string, minLength: 8 }
+    ServiceCaller:
+      name: X-Service-Caller
+      in: header
+      required: true
+      schema: { type: string, const: dsh }
+    TenantId:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 120 }
+    SettlementId:
+      name: settlementId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+  responses:
+    Error:
+      description: Governed WLT error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
