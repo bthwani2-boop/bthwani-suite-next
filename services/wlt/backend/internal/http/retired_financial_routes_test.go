@@ -7,9 +7,19 @@ import (
 	"testing"
 )
 
+func trustedFinancialRouteTestRequest(t *testing.T, method, path string) *http.Request {
+	t.Helper()
+	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-service-token")
+	request := httptest.NewRequest(method, path, strings.NewReader(`{}`))
+	request.Header.Set("Authorization", "Bearer test-service-token")
+	request.Header.Set("X-Service-Caller", "dsh")
+	request.Header.Set("X-Tenant-ID", "tenant-retired-route-test")
+	return request
+}
+
 func TestLegacyLedgerWriteRouteIsNotRegistered(t *testing.T) {
 	router := NewRouter(nil, true)
-	req := httptest.NewRequest(http.MethodPost, "/wlt/ledger/entries", strings.NewReader(`{}`))
+	req := trustedFinancialRouteTestRequest(t, http.MethodPost, "/wlt/ledger/entries")
 	res := httptest.NewRecorder()
 
 	router.ServeHTTP(res, req)
@@ -29,7 +39,7 @@ func TestLegacyPartnerPayoutDestinationRoutesAreNotRegistered(t *testing.T) {
 		{http.MethodGet, "/wlt/payout-destinations/partner-legacy"},
 		{http.MethodPost, "/wlt/payout-destinations/partner-legacy/deactivate"},
 	} {
-		req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(`{}`))
+		req := trustedFinancialRouteTestRequest(t, tc.method, tc.path)
 		res := httptest.NewRecorder()
 		router.ServeHTTP(res, req)
 		if res.Code != http.StatusNotFound {
@@ -40,7 +50,7 @@ func TestLegacyPartnerPayoutDestinationRoutesAreNotRegistered(t *testing.T) {
 
 func TestUnifiedPayoutDestinationRouteRemainsRegistered(t *testing.T) {
 	router := NewRouter(nil, true)
-	req := httptest.NewRequest(http.MethodPut, "/wlt/payout-destinations/partner/partner-1", strings.NewReader(`{}`))
+	req := trustedFinancialRouteTestRequest(t, http.MethodPut, "/wlt/payout-destinations/partner/partner-1")
 	res := httptest.NewRecorder()
 
 	router.ServeHTTP(res, req)
