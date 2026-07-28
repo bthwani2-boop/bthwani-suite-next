@@ -161,9 +161,14 @@ SELECT CASE
     SELECT 1
     FROM runtime_schema_migrations
     WHERE migration_name = '$nameSql' AND checksum <> '$checksum'
-  ) THEN 1 / 0
-  ELSE 1
-END;
+  ) THEN 'true'
+  ELSE 'false'
+END AS checksum_mismatch \gset
+
+\if :checksum_mismatch
+\echo 'ERROR: immutable migration checksum mismatch for $nameSql'
+\quit 3
+\endif
 
 SELECT CASE
   WHEN EXISTS (SELECT 1 FROM runtime_schema_migrations WHERE migration_name = '$nameSql')
