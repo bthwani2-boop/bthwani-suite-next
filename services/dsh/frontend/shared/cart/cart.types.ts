@@ -39,6 +39,8 @@ export type DshCartItemValidation = {
   readonly reasonCode?: string;
   readonly snapshotUnitPrice: number;
   readonly currentUnitPrice?: number;
+  readonly snapshotCurrency: string;
+  readonly currentCurrency?: string;
   readonly snapshotAssortmentId?: string;
   readonly currentAssortmentId?: string;
 };
