@@ -113,7 +113,7 @@ jobs:
           cache-dependency-path: ${{ matrix.workdir }}/go.sum
       - name: Install PostgreSQL client
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
-      - name: Verify migration safety contracts
+      - name: Apply migrations and verify safety contracts
         shell: pwsh
         env:
           MIGRATION_DIRECTORY: ${{ matrix.migrations }}
