@@ -24,6 +24,8 @@
     "apps/mobile/eas/common.ps1",
     "tools/mobile/mobile-apps.manifest.json",
     "tools/mobile/defineBthwaniExpoApp.js",
+    "tools/scripts/check-refoundation-foundation.mjs",
+    "tools/scripts/run-foundation-gate.ps1",
     "apps/app-client/runtime/app.config.ts",
     "apps/app-client/runtime/eas.json",
     "apps/app-partner/runtime/app.config.ts",
