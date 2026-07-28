@@ -35,7 +35,7 @@ func TestResolveSuccess(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(Identity{
 			Subject:   "user-1",
-			TenantID:  "dsh",
+			TenantID:  "tenant-a",
 			Roles:     []string{"client"},
 			AuthState: "authenticated",
 		})
@@ -47,8 +47,8 @@ func TestResolveSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if identity.Subject != "user-1" {
-		t.Fatalf("expected subject=user-1, got %q", identity.Subject)
+	if identity.Subject != "user-1" || identity.TenantID != "tenant-a" {
+		t.Fatalf("unexpected identity subject=%q tenant=%q", identity.Subject, identity.TenantID)
 	}
 	if !identity.HasRole("client") {
 		t.Fatalf("expected identity to have role client")
@@ -100,7 +100,7 @@ func TestResolveOtherErrorStatus(t *testing.T) {
 func TestResolveRejectsUnauthenticatedState(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(Identity{Subject: "user-1", AuthState: "pending"})
+		_ = json.NewEncoder(w).Encode(Identity{Subject: "user-1", TenantID: "tenant-a", AuthState: "pending"})
 	}))
 	defer server.Close()
 
@@ -114,7 +114,7 @@ func TestResolveRejectsUnauthenticatedState(t *testing.T) {
 func TestResolveRejectsMissingSubject(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(Identity{AuthState: "authenticated"})
+		_ = json.NewEncoder(w).Encode(Identity{TenantID: "tenant-a", AuthState: "authenticated"})
 	}))
 	defer server.Close()
 
@@ -125,23 +125,19 @@ func TestResolveRejectsMissingSubject(t *testing.T) {
 	}
 }
 
-func TestActiveSaaSResolveAcceptsMatchingRuntimeTenant(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
+func TestResolveRejectsMissingTenant(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(Identity{
-			Subject: "user-1", TenantID: "tenant-main", Roles: []string{"client"}, AuthState: "authenticated",
-		})
+		_ = json.NewEncoder(w).Encode(Identity{Subject: "user-1", AuthState: "authenticated"})
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL)
-	if _, err := client.Resolve(context.Background(), "Bearer token-1"); err != nil {
-		t.Fatalf("expected matching tenant to resolve, got %v", err)
+	if _, err := client.Resolve(context.Background(), "Bearer token-1"); err != ErrUnauthenticated {
+		t.Fatalf("expected session without tenant to be rejected, got %v", err)
 	}
 }
 
-func TestActiveSaaSResolveRejectsCrossTenantIdentity(t *testing.T) {
+func TestResolveAcceptsSessionTenantInsteadOfProcessDefault(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
 	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -152,17 +148,9 @@ func TestActiveSaaSResolveRejectsCrossTenantIdentity(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL)
-	if _, err := client.Resolve(context.Background(), "Bearer cross-token"); err != ErrUnauthenticated {
-		t.Fatalf("expected cross-tenant identity rejection, got %v", err)
-	}
-}
-
-func TestActiveSaaSResolveFailsClosedWithoutRuntimeTenant(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
-	client := NewClient("https://identity.internal")
-	if _, err := client.Resolve(context.Background(), "Bearer token-1"); err != ErrIdentityUnavailable {
-		t.Fatalf("expected missing SaaS tenant configuration failure, got %v", err)
+	identity, err := client.Resolve(context.Background(), "Bearer tenant-other-token")
+	if err != nil || identity.TenantID != "tenant-other" {
+		t.Fatalf("expected authenticated session tenant to remain authoritative, identity=%#v err=%v", identity, err)
 	}
 }
 
