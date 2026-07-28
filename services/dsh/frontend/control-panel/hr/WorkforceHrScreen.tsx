@@ -96,7 +96,7 @@ function WorkforceHrScreenInner() {
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <CpTabs aria-label="نوع مقدم الخدمة" value={kind} onChange={(value) => navigateTo("list", value as ProviderKind)} items={KIND_TABS} />
-        
+
         <div style={{ marginTop: "16px" }}>
           <ProviderListView
             forcedKind={kind}
