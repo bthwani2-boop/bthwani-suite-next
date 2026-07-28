@@ -64,12 +64,12 @@ jobs:
               <<< "${entries}")"
           }
 
-          add_backend "${DSH}" dsh services/dsh/backend/go.mod 'services/dsh/database/migrations/*.sql' services/dsh/backend
-          add_backend "${WLT}" wlt services/wlt/backend/go.mod 'services/wlt/database/migrations/*.sql' services/wlt/backend
-          add_backend "${IDENTITY}" identity core/identity/backend/go.mod 'core/identity/database/migrations/*.sql' core/identity/backend
-          add_backend "${WORKFORCE}" workforce core/workforce/backend/go.mod 'core/workforce/database/migrations/*.sql' core/workforce/backend
-          add_backend "${PLATFORM}" platform core/platform-control/backend/go.mod 'core/platform-control/database/migrations/*.sql' core/platform-control/backend
-          add_backend "${PROVIDERS}" providers core/providers/backend/go.mod 'core/providers/database/migrations/*.sql' core/providers/backend
+          add_backend "${DSH}" dsh services/dsh/backend/go.mod services/dsh/database/migrations services/dsh/backend
+          add_backend "${WLT}" wlt services/wlt/backend/go.mod services/wlt/database/migrations services/wlt/backend
+          add_backend "${IDENTITY}" identity core/identity/backend/go.mod core/identity/database/migrations core/identity/backend
+          add_backend "${WORKFORCE}" workforce core/workforce/backend/go.mod core/workforce/database/migrations core/workforce/backend
+          add_backend "${PLATFORM}" platform core/platform-control/backend/go.mod core/platform-control/database/migrations core/platform-control/backend
+          add_backend "${PROVIDERS}" providers core/providers/backend/go.mod core/providers/database/migrations core/providers/backend
 
           count="$(jq 'length' <<< "${entries}")"
           echo "count=${count}" >> "${GITHUB_OUTPUT}"
@@ -113,29 +113,24 @@ jobs:
           cache-dependency-path: ${{ matrix.workdir }}/go.sum
       - name: Install PostgreSQL client
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
-      - name: Apply migrations
-        shell: bash
+      - name: Verify migration safety contracts
+        shell: pwsh
         env:
-          MIGRATIONS: ${{ matrix.migrations }}
+          MIGRATION_DIRECTORY: ${{ matrix.migrations }}
           BACKEND_KEY: ${{ matrix.key }}
         run: |
-          set -uo pipefail
-          log="${RUNNER_TEMP}/${BACKEND_KEY}-migration.log"
-          : >"${log}"
-          found=0
-          for migration in ${MIGRATIONS}; do
-            found=1
-            echo "===== ${migration} =====" >>"${log}"
-            if ! psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 -f "${migration}" >>"${log}" 2>&1; then
-              echo "::error title=${BACKEND_KEY} migration failed::${migration} failed; complete output is retained as an artifact."
-              tail -n 160 "${log}"
-              exit 1
-            fi
-          done
-          if [[ "${found}" -ne 1 ]]; then
-            echo "::error title=Migration discovery failed::No migrations matched ${MIGRATIONS}"
-            exit 1
-          fi
+          $log = Join-Path $env:RUNNER_TEMP "$env:BACKEND_KEY-migration.log"
+          $output = & pwsh -NoProfile -ExecutionPolicy Bypass `
+            -File tools/scripts/test-service-migration-runner.ps1 `
+            -ServiceKey $env:BACKEND_KEY `
+            -MigrationDirectory $env:MIGRATION_DIRECTORY `
+            -DatabaseUrl $env:DATABASE_URL 2>&1
+          $exitCode = $LASTEXITCODE
+          $output | Tee-Object -FilePath $log
+          if ($exitCode -ne 0) {
+            Write-Error "$env:BACKEND_KEY migration safety verification failed; complete output is retained as an artifact."
+            exit $exitCode
+          }
       - name: Test and build backend
         working-directory: ${{ matrix.workdir }}
         shell: bash
