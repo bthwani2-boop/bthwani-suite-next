@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -26,42 +25,37 @@ var (
 )
 
 type Client struct {
-	baseURL         string
-	serviceToken    string
-	defaultTenantID string
-	saasActive      bool
-	http            *http.Client
+	baseURL      string
+	serviceToken string
+	tenantID     string
+	http         *http.Client
 }
 
-func NewClient(baseURL, serviceToken string) *Client {
+// NewClient requires an explicit trusted tenant. Runtime callers must resolve
+// the tenant once at composition time; individual Workforce operations cannot
+// silently substitute or override it.
+func NewClient(baseURL, serviceToken, tenantID string) *Client {
 	return &Client{
-		baseURL:         strings.TrimRight(baseURL, "/"),
-		serviceToken:    serviceToken,
-		defaultTenantID: strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID")),
-		saasActive:      strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active"),
-		http:            &http.Client{Timeout: 10 * time.Second},
+		baseURL:      strings.TrimRight(baseURL, "/"),
+		serviceToken: serviceToken,
+		tenantID:     strings.TrimSpace(tenantID),
+		http:         &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
 func (c *Client) Configured() bool {
-	return c != nil && c.baseURL != "" && c.serviceToken != "" && (!c.saasActive || c.defaultTenantID != "")
+	return c != nil && c.baseURL != "" && c.serviceToken != "" && c.tenantID != ""
 }
 
 func (c *Client) trustedTenant(requested string) (string, error) {
+	if c == nil || c.tenantID == "" {
+		return "", ErrUnavailable
+	}
 	requested = strings.TrimSpace(requested)
-	if c.saasActive {
-		if c.defaultTenantID == "" {
-			return "", ErrUnavailable
-		}
-		if requested != "" && requested != c.defaultTenantID {
-			return "", ErrTenantForbidden
-		}
-		return c.defaultTenantID, nil
+	if requested != "" && requested != c.tenantID {
+		return "", ErrTenantForbidden
 	}
-	if requested != "" {
-		return requested, nil
-	}
-	return c.defaultTenantID, nil
+	return c.tenantID, nil
 }
 
 type ActorView struct {
@@ -199,13 +193,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 	}
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "workforce")
-	tenantID, err := c.trustedTenant("")
-	if err != nil {
-		return err
-	}
-	if tenantID != "" {
-		req.Header.Set("X-Tenant-ID", tenantID)
-	}
+	req.Header.Set("X-Tenant-ID", c.tenantID)
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
