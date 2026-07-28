@@ -13,19 +13,45 @@ import (
 
 const internalActivationBodyLimit = 32 * 1024
 
-type actorTenantLookup interface {
-	TenantForActor(ctx context.Context, actorID string) (string, error)
+type activationIssuerPermission struct {
+	Service string `json:"service"`
+	Surface string `json:"surface"`
+	Action  string `json:"action"`
+	Scope   string `json:"scope"`
 }
 
-type sqlActorTenantLookup struct {
+type activationActorAccess struct {
+	TenantID   string
+	Active     bool
+	Permissions []activationIssuerPermission
+}
+
+type actorAccessLookup interface {
+	AccessForActor(ctx context.Context, actorID string) (activationActorAccess, error)
+}
+
+type sqlActorAccessLookup struct {
 	db *sql.DB
 }
 
-func (l sqlActorTenantLookup) TenantForActor(ctx context.Context, actorID string) (string, error) {
-	var tenantID string
+func (l sqlActorAccessLookup) AccessForActor(ctx context.Context, actorID string) (activationActorAccess, error) {
+	var access activationActorAccess
+	var permissionsJSON []byte
 	err := l.db.QueryRowContext(ctx, `
-		SELECT tenant_id FROM identity_actors WHERE id = $1`, actorID).Scan(&tenantID)
-	return strings.TrimSpace(tenantID), err
+		SELECT tenant_id, active, permissions
+		FROM identity_actors
+		WHERE id = $1`, actorID).Scan(&access.TenantID, &access.Active, &permissionsJSON)
+	if err != nil {
+		return activationActorAccess{}, err
+	}
+	access.TenantID = strings.TrimSpace(access.TenantID)
+	trimmed := bytes.TrimSpace(permissionsJSON)
+	if len(trimmed) > 0 && string(trimmed) != "null" {
+		if err := json.Unmarshal(trimmed, &access.Permissions); err != nil {
+			return activationActorAccess{}, err
+		}
+	}
+	return access, nil
 }
 
 func isInternalActivationIssuePath(path string) bool {
@@ -36,69 +62,149 @@ func isInternalActivationIssuePath(path string) bool {
 	return len(parts) == 2 && parts[0] != "" && parts[1] == "activations"
 }
 
-func readActivationIssuerBody(w http.ResponseWriter, r *http.Request) (string, bool) {
+type activationIssuerRequest struct {
+	IssuedByActorID   string `json:"issuedByActorId"`
+	ExpectedActorType string `json:"expectedActorType"`
+}
+
+func readActivationIssuerBody(w http.ResponseWriter, r *http.Request) (activationIssuerRequest, bool) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, internalActivationBodyLimit+1))
 	if err != nil || len(body) > internalActivationBodyLimit {
 		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-		return "", false
+		return activationIssuerRequest{}, false
 	}
 	r.Body = io.NopCloser(bytes.NewReader(body))
 	r.ContentLength = int64(len(body))
 
-	var request struct {
-		IssuedByActorID string `json:"issuedByActorId"`
-	}
+	var request activationIssuerRequest
 	if err := json.Unmarshal(body, &request); err != nil {
 		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
-		return "", false
+		return activationIssuerRequest{}, false
 	}
-	issuerActorID := strings.TrimSpace(request.IssuedByActorID)
-	if issuerActorID == "" {
-		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "issuedByActorId is required")
-		return "", false
+	request.IssuedByActorID = strings.TrimSpace(request.IssuedByActorID)
+	request.ExpectedActorType = strings.TrimSpace(request.ExpectedActorType)
+	if request.IssuedByActorID == "" || request.ExpectedActorType == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "issuedByActorId and expectedActorType are required")
+		return activationIssuerRequest{}, false
 	}
-	return issuerActorID, true
+	return request, true
 }
 
-func saasActivationIssuerBoundary(lookup actorTenantLookup, next http.Handler) http.Handler {
+func requiredActivationIssueAction(actorType string) (string, bool) {
+	switch strings.TrimSpace(actorType) {
+	case "employee":
+		return "employee.activation:issue", true
+	case "partner", "field", "captain":
+		return "provider.activation:issue", true
+	default:
+		return "", false
+	}
+}
+
+func hasActivationIssuePermission(access activationActorAccess, requiredAction string) bool {
+	for _, permission := range access.Permissions {
+		if strings.TrimSpace(permission.Service) == "workforce" &&
+			strings.TrimSpace(permission.Surface) == "control-panel" &&
+			strings.TrimSpace(permission.Action) == requiredAction &&
+			strings.TrimSpace(permission.Scope) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func lookupActivationActor(
+	w http.ResponseWriter,
+	r *http.Request,
+	lookup actorAccessLookup,
+	actorID string,
+) (activationActorAccess, bool) {
+	access, err := lookup.AccessForActor(r.Context(), actorID)
+	if errors.Is(err, sql.ErrNoRows) {
+		sendError(w, http.StatusNotFound, "ACTOR_NOT_FOUND", "actor was not found")
+		return activationActorAccess{}, false
+	}
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
+		return activationActorAccess{}, false
+	}
+	return access, true
+}
+
+// saasActivationIssuerBoundary establishes the real human actor represented by
+// Workforce before Identity records or executes an activation issuance. The
+// service credential proves only the calling service; it never authorizes an
+// arbitrary issuedByActorId. The issuer must be active, hold Identity-owned
+// activation permission, and share the target actor's trusted tenant. Active
+// SaaS mode additionally pins both actors to the configured runtime tenant.
+func saasActivationIssuerBoundary(lookup actorAccessLookup, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost || !isInternalActivationIssuePath(r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}
-		tenantID, active, err := activeSaaSTenant()
+
+		request, ok := readActivationIssuerBody(w, r)
+		if !ok {
+			return
+		}
+		targetActorID := actorIDFromInternalPath(r.URL.Path)
+		if targetActorID == "" {
+			sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "activation target actor is required")
+			return
+		}
+		if request.IssuedByActorID == targetActorID {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "an actor cannot issue its own activation")
+			return
+		}
+
+		issuerAccess, ok := lookupActivationActor(w, r, lookup, request.IssuedByActorID)
+		if !ok {
+			return
+		}
+		targetAccess, ok := lookupActivationActor(w, r, lookup, targetActorID)
+		if !ok {
+			return
+		}
+		if !issuerAccess.Active {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "issuing actor is not active")
+			return
+		}
+		if issuerAccess.TenantID == "" || targetAccess.TenantID == "" {
+			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "issuer and target require trusted tenant context")
+			return
+		}
+		if issuerAccess.TenantID != targetAccess.TenantID {
+			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "issuing actor and target belong to different tenants")
+			return
+		}
+
+		runtimeTenantID, active, err := activeSaaSTenant()
 		if err != nil {
 			sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
 			return
 		}
-		if !active {
-			next.ServeHTTP(w, r)
+		if active && issuerAccess.TenantID != runtimeTenantID {
+			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "issuing actor does not belong to the active runtime tenant")
 			return
 		}
-		issuerActorID, ok := readActivationIssuerBody(w, r)
-		if !ok {
+
+		requiredAction, validActorType := requiredActivationIssueAction(request.ExpectedActorType)
+		if !validActorType {
+			sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "expectedActorType is not activatable")
 			return
 		}
-		issuerTenantID, err := lookup.TenantForActor(r.Context(), issuerActorID)
-		if errors.Is(err, sql.ErrNoRows) {
-			sendError(w, http.StatusNotFound, "ACTOR_NOT_FOUND", "issuing actor was not found")
+		if !hasActivationIssuePermission(issuerAccess, requiredAction) {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "issuing actor lacks activation permission")
 			return
 		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
-			return
-		}
-		if issuerTenantID != tenantID {
-			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "issuing actor belongs to another tenant")
-			return
-		}
+
 		next.ServeHTTP(w, r)
 	})
 }
 
-// SaaSActivationIssuerBoundary ensures both the target actor (validated by the
-// outer SaaSTenantBoundary) and the operator issuing the activation belong to
-// the same trusted runtime tenant.
+// SaaSActivationIssuerBoundary validates the human issuer and tenant boundary
+// for actor-bound activation issuance in every runtime mode.
 func SaaSActivationIssuerBoundary(db *sql.DB, next http.Handler) http.Handler {
-	return saasActivationIssuerBoundary(sqlActorTenantLookup{db: db}, next)
+	return saasActivationIssuerBoundary(sqlActorAccessLookup{db: db}, next)
 }
