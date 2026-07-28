@@ -38,7 +38,7 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-010_payout_destinations.sql"               = "to_regclass('public.wlt_payout_destinations') IS NOT NULL"
   "wlt-011_field_finance.sql"                     = "to_regclass('public.wlt_payout_requests') IS NOT NULL"
   "wlt-012_payout_idempotency_hash.sql"           = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_payout_requests' AND column_name = 'payload_hash')"
-  "wlt-013_wallet_actor_unique_and_field_commission_effect.sql" = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_wallets_actor_type_actor_id_key')"
+  "wlt-013_wallet_actor_unique_and_field_commission_effect.sql" = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_wallets_actor_type_actor_id_key' OR conname = 'wlt_wallets_tenant_actor_key')"
   "wlt-014_refund_session_idempotency.sql"        = "to_regclass('public.wlt_refunds_active_session_idx') IS NOT NULL"
   "wlt-015_provider_result_unknown_and_reconciliation.sql" = "to_regclass('public.wlt_reconciliation_cases') IS NOT NULL"
   "wlt-017_ledger_kernel.sql"                     = "to_regclass('public.wlt_ledger_accounts') IS NOT NULL"
@@ -80,6 +80,7 @@ $script:WltMigrationProbes = [ordered]@{
   "wlt-105_financial_tenant_context_and_ledger.sql" = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_ledger_accounts' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND to_regclass('public.wlt_ledger_transactions_source_tenant_uq') IS NOT NULL AND to_regclass('public.wlt_field_commission_category_policy_active_tenant_uq') IS NOT NULL AND to_regclass('public.wlt_jrn036_commission_evidence_tenant_idempotency_uq') IS NOT NULL AND to_regclass('public.wlt_jrn036_mutation_receipts_tenant_aggregate_idx') IS NOT NULL"
   "wlt-106_jrn036_settlement_tenancy.sql" = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_settlement_policies' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND to_regclass('public.wlt_jrn036_settlement_policy_tenant_current_idx') IS NOT NULL AND to_regclass('public.wlt_jrn036_settlement_completion_event_tenant_uidx') IS NOT NULL AND to_regclass('public.wlt_jrn036_settlement_request_tenant_hash_uidx') IS NOT NULL"
   "wlt-107_jrn036_commission_tenancy.sql" = "EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'wlt_jrn036_commission_policy_versions' AND column_name = 'tenant_id' AND is_nullable = 'NO') AND to_regclass('public.wlt_jrn036_commission_policy_active_tenant_uidx') IS NOT NULL AND to_regclass('public.wlt_commissions_tenant_idempotency_idx') IS NOT NULL AND to_regclass('public.wlt_jrn036_commission_adjustments_tenant_idempotency_uq') IS NOT NULL"
+  "wlt-108_wallet_tenant_identity.sql" = "EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'wlt_wallets_tenant_actor_key') AND to_regclass('public.wlt_wallets_tenant_status_updated_idx') IS NOT NULL"
 }
 
 function Test-WltMigrationProbeCoverage {
