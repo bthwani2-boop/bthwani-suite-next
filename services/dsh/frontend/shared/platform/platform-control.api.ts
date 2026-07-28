@@ -5,12 +5,7 @@ import type {
   PlatformRuntimeSnapshotWithSaaS,
   PlatformSaasRuntimeStatus,
 } from "@bthwani/core-platform-control/clients/generated/platform-control-saas-runtime";
-import type {
-  CreatePlatformChangeSetInput,
-  PlatformChangeSet,
-  RejectPlatformChangeSetInput,
-  RollbackPlatformChangeSetInput,
-} from "@bthwani/core-platform-control/clients/generated/platform-change-sets-api";
+import type { components as platformChangeSetComponents } from "@bthwani/core-platform-control/clients/generated/platform-change-sets-api";
 
 export type PlatformControlState = components["schemas"]["PlatformControlState"];
 export type { PlatformSaasRuntimeStatus };
@@ -21,7 +16,10 @@ export type PlatformFeatureFlag = components["schemas"]["PlatformFeatureFlag"];
 export type PlatformServicePosture = components["schemas"]["PlatformServicePosture"];
 export type PlatformHealthSnapshot = components["schemas"]["PlatformHealthSnapshot"];
 export type PlatformAuditEvent = components["schemas"]["PlatformAuditEvent"];
-export type { CreatePlatformChangeSetInput, PlatformChangeSet, RejectPlatformChangeSetInput, RollbackPlatformChangeSetInput };
+export type CreatePlatformChangeSetInput = platformChangeSetComponents["schemas"]["CreatePlatformChangeSetInput"];
+export type PlatformChangeSet = platformChangeSetComponents["schemas"]["PlatformChangeSet"];
+export type RejectPlatformChangeSetInput = platformChangeSetComponents["schemas"]["ReviewReasonInput"];
+export type RollbackPlatformChangeSetInput = platformChangeSetComponents["schemas"]["RollbackPlatformChangeSetInput"];
 export type PlatformRollout = components["schemas"]["PlatformRollout"];
 type GeneratedCreatePlatformRolloutInput = components["schemas"]["CreatePlatformRolloutInput"];
 export type CreatePlatformRolloutInput = Omit<GeneratedCreatePlatformRolloutInput, "healthGate"> & {
