@@ -84,12 +84,14 @@ jobs:
           if [[ "${FULL_VERIFICATION}" == "true" ]]; then
             run_check pnpm run nx:typecheck || status=$?
             run_check pnpm run nx:lint || status=$?
-            run_check pnpm run nx:test || status=$?
+            run_check pnpm exec nx run-many -t test --all --outputStyle=stream || status=$?
             run_check pnpm run nx:build || status=$?
           elif [[ "${VERIFICATION_TIER}" == "fast" ]]; then
-            run_check node tools/scripts/run-affected-verification.mjs typecheck lint test || status=$?
+            run_check node tools/scripts/run-affected-verification.mjs typecheck lint || status=$?
+            run_check pnpm exec nx affected -t test --outputStyle=stream || status=$?
           else
-            run_check node tools/scripts/run-affected-verification.mjs typecheck lint test build || status=$?
+            run_check node tools/scripts/run-affected-verification.mjs typecheck lint build || status=$?
+            run_check pnpm exec nx affected -t test --outputStyle=stream || status=$?
           fi
           echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
           exit "${status}"
