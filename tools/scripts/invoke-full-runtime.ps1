@@ -121,8 +121,10 @@ switch ($Action) {
     Write-Host "`nTrue full runtime down: PASS" -ForegroundColor Green
   }
   "migrate" {
+    # The platform migration path starts the shared PostgreSQL container and
+    # ensures every runtime database exists, including on pre-existing volumes.
+    Invoke-ScriptChecked -Name "Prepare and migrate Providers and Platform Control" -Script $PlatformRuntime -Parameters @{ Action = "migrate" }
     Invoke-ScriptChecked -Name "Migrate base runtime databases" -Script $BaseRuntime -Parameters @{ Action = "migrate"; Profiles = $BaseProfiles }
-    Invoke-ScriptChecked -Name "Migrate Providers and Platform Control" -Script $PlatformRuntime -Parameters @{ Action = "migrate" }
     Write-Host "`nTrue full runtime migrations: PASS" -ForegroundColor Green
   }
   "smoke" {
@@ -144,7 +146,7 @@ switch ($Action) {
   "rebuild-reset" {
     Assert-DestructiveActionAuthorized
     Invoke-PlatformBestEffortDown
-    Invoke-ScriptChecked -Name "Rebuild and reset base full runtime" -Script $BaseRuntime -Parameters @{ Action = "all"; Profiles = $BaseProfiles }
+    Invoke-ScriptChecked -Name "Rebuild and reset base full runtime" -Script $BaseRuntime -Parameters @{ Action = "all"; Profiles = $BaseProfiles; Force = $true }
     Invoke-ScriptChecked -Name "Start Providers and Platform Control after rebuild" -Script $PlatformRuntime -Parameters @{ Action = "up" }
     Write-Host "`nTrue full runtime rebuild-reset: PASS" -ForegroundColor Green
   }
