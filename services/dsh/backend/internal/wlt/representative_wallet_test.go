@@ -7,6 +7,10 @@ import (
 	"testing"
 )
 
+func representativeWalletTestContext() context.Context {
+	return WithTenantContext(context.Background(), "tenant-main")
+}
+
 func TestFinanceReadWalletAllowsEveryRepresentativeActorType(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Tenant-ID") != "tenant-main" {
@@ -20,7 +24,7 @@ func TestFinanceReadWalletAllowsEveryRepresentativeActorType(t *testing.T) {
 	for _, actorType := range []string{"client", "partner", "captain", "field"} {
 		t.Run(actorType, func(t *testing.T) {
 			status, _, err := client.FinanceReadWalletWithTenant(
-				context.Background(),
+				representativeWalletTestContext(),
 				actorType,
 				actorType+"-1",
 				"corr-"+actorType,
@@ -48,7 +52,7 @@ func TestFinanceReadWalletNormalizesActorTypeCase(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "test-service-token")
-	if _, _, err := client.FinanceReadWalletWithTenant(context.Background(), "CAPTAIN", "captain-9", "corr-9", "tenant-main"); err != nil {
+	if _, _, err := client.FinanceReadWalletWithTenant(representativeWalletTestContext(), "CAPTAIN", "captain-9", "corr-9", "tenant-main"); err != nil {
 		t.Fatalf("expected uppercase representative actor type to normalize: %v", err)
 	}
 	if gotPath != "/wlt/wallets/captain/captain-9" {
