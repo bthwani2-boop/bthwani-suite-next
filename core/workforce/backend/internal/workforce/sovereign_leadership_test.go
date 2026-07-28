@@ -1,43 +1,67 @@
 package workforce
 
-import "testing"
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 
-func TestLeadershipClassBundleMatrix(t *testing.T) {
-	tests := []struct {
-		class  string
-		bundle string
-		want   bool
-	}{
-		{"project_manager", PermissionBundlePlatformOwner, true},
-		{"project_manager", PermissionBundleOperationsManager, false},
-		{"coordinator", PermissionBundlePlatformCoordinator, true},
-		{"department_manager", PermissionBundleOperationsManager, true},
-		{"department_manager", PermissionBundlePlatformOwner, false},
-		{"staff", PermissionBundleHRManager, false},
-	}
-	for _, test := range tests {
-		if got := validateLeadershipClassBundle(test.class, test.bundle); got != test.want {
-			t.Fatalf("validateLeadershipClassBundle(%q,%q)=%v want %v", test.class, test.bundle, got, test.want)
+	"workforce-api/internal/identityclient"
+)
+
+func newBundleRegistryTestService(t *testing.T) (*Service, func()) {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/internal/employees/permission-bundles" {
+			http.NotFound(w, r)
+			return
 		}
-	}
+		if r.Header.Get("X-Tenant-ID") != "tenant-test" {
+			t.Fatalf("missing trusted tenant header: %q", r.Header.Get("X-Tenant-ID"))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"permissionBundles": []map[string]any{
+				{
+					"code": "platform_owner",
+					"nameAr": "مالك المنصة ومدير المشروع",
+					"nameEn": "Platform owner and project manager",
+					"allowedEmploymentClasses": []string{"project_manager"},
+					"defaultDepartmentScope": "platform",
+					"departmentSelectionAllowed": false,
+				},
+				{
+					"code": "operations_manager",
+					"nameAr": "مدير العمليات",
+					"nameEn": "Operations manager",
+					"allowedEmploymentClasses": []string{"department_manager"},
+					"departmentSelectionAllowed": true,
+				},
+			},
+		})
+	}))
+	service := &Service{identity: identityclient.NewClient(server.URL, "test-token", "tenant-test")}
+	return service, server.Close
 }
 
-func TestAuthorityScopesStayDepartmentBound(t *testing.T) {
-	scopes := authorityScopesForBundle(PermissionBundleOperationsManager, "operations")
-	for _, scope := range scopes {
-		if scope == "employee:create:all" || scope == "leadership:create" {
-			t.Fatalf("department manager received elevated scope %q", scope)
-		}
+func TestLeadershipBundleResolutionUsesIdentityRegistry(t *testing.T) {
+	service, closeServer := newBundleRegistryTestService(t)
+	defer closeServer()
+
+	bundle, err := service.resolveLeadershipBundle(context.Background(), "operations_manager", "department_manager", "operations")
+	if err != nil {
+		t.Fatalf("resolveLeadershipBundle: %v", err)
 	}
-	want := "employee:create:department:operations"
-	found := false
-	for _, scope := range scopes {
-		if scope == want {
-			found = true
-		}
+	if bundle.Code != "operations_manager" || !bundle.DepartmentSelectionAllowed {
+		t.Fatalf("unexpected bundle: %+v", bundle)
 	}
-	if !found {
-		t.Fatalf("missing %q in %v", want, scopes)
+
+	if _, err := service.resolveLeadershipBundle(context.Background(), "operations_manager", "project_manager", "operations"); err == nil {
+		t.Fatal("expected Identity registry employment-class mismatch to be rejected")
+	}
+	if _, err := service.resolveLeadershipBundle(context.Background(), "platform_owner", "project_manager", "operations"); err == nil {
+		t.Fatal("expected fixed Identity department scope mismatch to be rejected")
 	}
 }
 
@@ -51,5 +75,15 @@ func TestNormalizeSovereignDepartment(t *testing.T) {
 	}
 	if _, err := normalizeSovereignDepartment("../ops"); err == nil {
 		t.Fatal("expected traversal-like department to be rejected")
+	}
+}
+
+func TestNormalizeSovereignPermissionBundle(t *testing.T) {
+	got, err := normalizeSovereignPermissionBundle("operations_manager")
+	if err != nil || got != "operations_manager" {
+		t.Fatalf("normalizeSovereignPermissionBundle=%q,%v", got, err)
+	}
+	if _, err := normalizeSovereignPermissionBundle("../owner"); err == nil {
+		t.Fatal("expected traversal-like permission bundle to be rejected")
 	}
 }
