@@ -1,210 +1,255 @@
 package cod
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
+	"wlt-api/internal/shared"
 	"wlt-api/internal/wallet"
 )
 
-func TestCommissionLifecycle_ConfirmSettle_MovesWalletBuckets(t *testing.T) {
+type governedCommissionFixture struct {
+	ctx      context.Context
+	tenantID string
+	actorID  string
+	item     *Commission
+}
+
+func createGovernedCommissionFixture(t *testing.T, db interface {
+	BeginTx(context.Context, *sql.TxOptions) (*sql.Tx, error)
+}) governedCommissionFixture {
+	t.Helper()
+	panic("unreachable")
+}
+
+func createGovernedCommissionLifecycleFixture(t *testing.T, db *sql.DB) governedCommissionFixture {
+	t.Helper()
+	suffix := fmt.Sprint(time.Now().UnixNano())
+	tenantID := "tenant-commission-lifecycle-" + suffix
+	actorID := "field-actor-" + suffix
+	visitID := "visit-" + suffix
+	ctx := shared.WithTenantContext(context.Background(), tenantID)
+	maximum := int64(1000)
+
+	_, err := UpsertGovernedCommissionPolicyIdempotent(
+		ctx,
+		db,
+		UpsertGovernedCommissionPolicyInput{
+			PolicyID:                "field-visit-policy-" + suffix,
+			CommissionType:          "field_visit_fee",
+			SourceType:              "field_visit",
+			BeneficiaryActorType:    "field",
+			CalculationType:         "fixed",
+			FixedAmountMinorUnits:   1000,
+			MinimumAmountMinorUnits: 1000,
+			MaximumAmountMinorUnits: &maximum,
+			Currency:                "YER",
+			Status:                  "active",
+			ChangeReason:            "tenant-governed commission lifecycle test",
+			OperatorID:              "operator-test",
+		},
+		"policy-correlation-"+suffix,
+		"policy-idempotency-"+suffix,
+	)
+	if err != nil {
+		t.Fatalf("create governed commission policy: %v", err)
+	}
+
+	commission, err := CreateGovernedCommission(
+		ctx,
+		db,
+		CreateGovernedCommissionInput{
+			BeneficiaryActorID:   actorID,
+			BeneficiaryActorType: "field",
+			SourceType:           "field_visit",
+			SourceID:             visitID,
+			VisitID:              &visitID,
+			CommissionType:       "field_visit_fee",
+			SourceEvidenceID:     visitID,
+			SourceEvidenceHash:   "evidence-" + suffix,
+			SourceEvidenceStatus: "completed",
+			Currency:             "YER",
+			IdempotencyKey:       "commission-idempotency-" + suffix,
+		},
+		"commission-correlation-"+suffix,
+	)
+	if err != nil {
+		t.Fatalf("create governed field-visit commission: %v", err)
+	}
+	if commission == nil || commission.Status != "pending" {
+		t.Fatalf("expected pending governed commission, got %+v", commission)
+	}
+	return governedCommissionFixture{ctx: ctx, tenantID: tenantID, actorID: actorID, item: commission}
+}
+
+func TestGovernedCommissionLifecycleConfirmSettleMovesTenantWalletBuckets(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
+	fixture := createGovernedCommissionLifecycleFixture(t, db)
 
-	fieldActorID := fmt.Sprintf("field-actor-%d", time.Now().UnixNano())
-	visitID := fmt.Sprintf("visit-%d", time.Now().UnixNano())
-
-	c, err := CreateCommission(db, CreateCommissionInput{
-		BeneficiaryActorID:   fieldActorID,
-		BeneficiaryActorType: "field",
-		SourceType:           "field_visit",
-		SourceID:             visitID,
-		VisitID:              &visitID,
-		IdempotencyKey:       visitID,
-	})
+	confirmed, err := ConfirmGovernedCommission(
+		fixture.ctx,
+		db,
+		fixture.item.ID,
+		"operator-confirm",
+		"confirm-"+fixture.item.ID,
+	)
 	if err != nil {
-		t.Fatalf("failed to create field-visit commission: %v", err)
-	}
-	if c.Status != "pending" {
-		t.Fatalf("expected initial status 'pending', got %q", c.Status)
-	}
-
-	confirmed, err := ConfirmCommission(db, c.ID)
-	if err != nil {
-		t.Fatalf("confirm failed: %v", err)
+		t.Fatalf("confirm governed commission: %v", err)
 	}
 	if confirmed.Status != "confirmed" {
-		t.Fatalf("expected status 'confirmed', got %q", confirmed.Status)
+		t.Fatalf("expected confirmed status, got %q", confirmed.Status)
 	}
 
-	wBefore, err := wallet.GetWallet(db, "field", fieldActorID)
+	before, err := wallet.GetWalletForTenant(db, fixture.tenantID, "field", fixture.actorID)
 	if err != nil {
-		t.Fatalf("GetWallet failed: %v", err)
+		t.Fatalf("read tenant wallet before settle: %v", err)
 	}
-	if wBefore.PendingBalanceMinorUnits != c.AmountMinorUnits {
-		t.Fatalf("expected pending balance %d before settle, got %d", c.AmountMinorUnits, wBefore.PendingBalanceMinorUnits)
+	if before == nil || before.PendingBalanceMinorUnits != fixture.item.AmountMinorUnits {
+		t.Fatalf("unexpected tenant wallet before settle: %+v", before)
 	}
 
-	settled, err := SettleCommission(db, c.ID)
+	settled, err := SettleGovernedCommission(
+		fixture.ctx,
+		db,
+		fixture.item.ID,
+		"operator-settle",
+		"settle-"+fixture.item.ID,
+	)
 	if err != nil {
-		t.Fatalf("settle failed: %v", err)
+		t.Fatalf("settle governed commission: %v", err)
 	}
 	if settled.Status != "settled" {
-		t.Fatalf("expected status 'settled', got %q", settled.Status)
+		t.Fatalf("expected settled status, got %q", settled.Status)
 	}
 
-	wAfter, err := wallet.GetWallet(db, "field", fieldActorID)
+	after, err := wallet.GetWalletForTenant(db, fixture.tenantID, "field", fixture.actorID)
 	if err != nil {
-		t.Fatalf("GetWallet failed: %v", err)
+		t.Fatalf("read tenant wallet after settle: %v", err)
 	}
-	if wAfter.PendingBalanceMinorUnits != 0 {
-		t.Fatalf("expected pending balance 0 after settle, got %d", wAfter.PendingBalanceMinorUnits)
-	}
-	if wAfter.AvailableBalanceMinorUnits != c.AmountMinorUnits {
-		t.Fatalf("expected available balance %d after settle, got %d", c.AmountMinorUnits, wAfter.AvailableBalanceMinorUnits)
-	}
-	if wAfter.SettledTotalMinorUnits != c.AmountMinorUnits {
-		t.Fatalf("expected settled total %d after settle, got %d", c.AmountMinorUnits, wAfter.SettledTotalMinorUnits)
+	if after.PendingBalanceMinorUnits != 0 ||
+		after.AvailableBalanceMinorUnits != fixture.item.AmountMinorUnits ||
+		after.SettledTotalMinorUnits != fixture.item.AmountMinorUnits {
+		t.Fatalf("unexpected tenant wallet after settle: %+v", after)
 	}
 }
 
-func TestCommissionLifecycle_Settle_RequiresConfirmedFirst(t *testing.T) {
+func TestGovernedCommissionLifecycleSettleRequiresConfirmedFirst(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
+	fixture := createGovernedCommissionLifecycleFixture(t, db)
 
-	fieldActorID := fmt.Sprintf("field-actor-%d", time.Now().UnixNano())
-	visitID := fmt.Sprintf("visit-%d", time.Now().UnixNano())
-	c, err := CreateCommission(db, CreateCommissionInput{
-		BeneficiaryActorID:   fieldActorID,
-		BeneficiaryActorType: "field",
-		SourceType:           "field_visit",
-		SourceID:             visitID,
-		VisitID:              &visitID,
-		IdempotencyKey:       visitID,
-	})
-	if err != nil {
-		t.Fatalf("failed to create field-visit commission: %v", err)
-	}
-
-	if _, err := SettleCommission(db, c.ID); err != ErrCommissionNotInExpectedState {
-		t.Fatalf("expected ErrCommissionNotInExpectedState settling an unconfirmed commission, got %v", err)
+	if _, err := SettleGovernedCommission(
+		fixture.ctx,
+		db,
+		fixture.item.ID,
+		"operator-settle",
+		"settle-before-confirm-"+fixture.item.ID,
+	); err != ErrCommissionNotInExpectedState {
+		t.Fatalf("expected ErrCommissionNotInExpectedState, got %v", err)
 	}
 }
 
-func TestCommissionLifecycle_Reject_ReversesWalletEffect(t *testing.T) {
+func TestGovernedCommissionLifecycleRejectReversesTenantWalletAndLedger(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
+	fixture := createGovernedCommissionLifecycleFixture(t, db)
 
-	fieldActorID := fmt.Sprintf("field-actor-%d", time.Now().UnixNano())
-	visitID := fmt.Sprintf("visit-%d", time.Now().UnixNano())
-	c, err := CreateCommission(db, CreateCommissionInput{
-		BeneficiaryActorID:   fieldActorID,
-		BeneficiaryActorType: "field",
-		SourceType:           "field_visit",
-		SourceID:             visitID,
-		VisitID:              &visitID,
-		IdempotencyKey:       visitID,
-	})
+	rejected, err := RejectGovernedCommission(
+		fixture.ctx,
+		db,
+		fixture.item.ID,
+		"operator-reject",
+		"duplicate visit",
+		"reject-"+fixture.item.ID,
+	)
 	if err != nil {
-		t.Fatalf("failed to create field-visit commission: %v", err)
+		t.Fatalf("reject governed commission: %v", err)
 	}
-
-	wBefore, err := wallet.GetWallet(db, "field", fieldActorID)
-	if err != nil {
-		t.Fatalf("GetWallet failed: %v", err)
-	}
-	if wBefore.PendingBalanceMinorUnits != c.AmountMinorUnits {
-		t.Fatalf("expected pending balance %d before reject, got %d", c.AmountMinorUnits, wBefore.PendingBalanceMinorUnits)
+	if rejected.Status != "rejected" || rejected.ResolutionNote != "duplicate visit" {
+		t.Fatalf("unexpected rejected commission: %+v", rejected)
 	}
 
-	rejected, err := RejectCommission(db, c.ID, "duplicate visit")
+	after, err := wallet.GetWalletForTenant(db, fixture.tenantID, "field", fixture.actorID)
 	if err != nil {
-		t.Fatalf("reject failed: %v", err)
+		t.Fatalf("read tenant wallet after reject: %v", err)
 	}
-	if rejected.Status != "rejected" {
-		t.Fatalf("expected status 'rejected', got %q", rejected.Status)
-	}
-	if rejected.ResolutionNote != "duplicate visit" {
-		t.Fatalf("expected resolutionNote 'duplicate visit', got %q", rejected.ResolutionNote)
-	}
-
-	wAfter, err := wallet.GetWallet(db, "field", fieldActorID)
-	if err != nil {
-		t.Fatalf("GetWallet failed: %v", err)
-	}
-	if wAfter.PendingBalanceMinorUnits != 0 {
-		t.Fatalf("expected pending balance reversed to 0, got %d", wAfter.PendingBalanceMinorUnits)
-	}
-	if wAfter.EarnedTotalMinorUnits != 0 {
-		t.Fatalf("expected earned total reversed to 0, got %d", wAfter.EarnedTotalMinorUnits)
+	if after.PendingBalanceMinorUnits != 0 || after.EarnedTotalMinorUnits != 0 {
+		t.Fatalf("tenant wallet was not reversed: %+v", after)
 	}
 
 	var ledgerTxnCount int
-	if err := db.QueryRow("SELECT COUNT(*) FROM wlt_ledger_transactions WHERE reference_type = 'commission' AND reference_id = $1", c.ID).Scan(&ledgerTxnCount); err != nil {
-		t.Fatalf("failed to count ledger transactions: %v", err)
+	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_ledger_transactions
+		WHERE tenant_id=$1 AND reference_type='commission' AND reference_id=$2`,
+		fixture.tenantID, fixture.item.ID).Scan(&ledgerTxnCount); err != nil {
+		t.Fatalf("count tenant commission ledger transactions: %v", err)
 	}
 	if ledgerTxnCount != 2 {
-		t.Fatalf("expected 2 ledger transactions (earn + reject reversal) for this commission, got %d", ledgerTxnCount)
+		t.Fatalf("expected earn and rejection journal entries, got %d", ledgerTxnCount)
 	}
 }
 
-func TestCommissionLifecycle_Reverse_AfterSettled(t *testing.T) {
+func TestGovernedCommissionLifecycleReverseAfterSettled(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
+	fixture := createGovernedCommissionLifecycleFixture(t, db)
 
-	fieldActorID := fmt.Sprintf("field-actor-%d", time.Now().UnixNano())
-	visitID := fmt.Sprintf("visit-%d", time.Now().UnixNano())
-	c, err := CreateCommission(db, CreateCommissionInput{
-		BeneficiaryActorID:   fieldActorID,
-		BeneficiaryActorType: "field",
-		SourceType:           "field_visit",
-		SourceID:             visitID,
-		VisitID:              &visitID,
-		IdempotencyKey:       visitID,
-	})
-	if err != nil {
-		t.Fatalf("failed to create field-visit commission: %v", err)
+	if _, err := ConfirmGovernedCommission(
+		fixture.ctx, db, fixture.item.ID, "operator-confirm", "confirm-"+fixture.item.ID,
+	); err != nil {
+		t.Fatalf("confirm governed commission: %v", err)
 	}
-	if _, err := ConfirmCommission(db, c.ID); err != nil {
-		t.Fatalf("confirm failed: %v", err)
-	}
-	if _, err := SettleCommission(db, c.ID); err != nil {
-		t.Fatalf("settle failed: %v", err)
+	if _, err := SettleGovernedCommission(
+		fixture.ctx, db, fixture.item.ID, "operator-settle", "settle-"+fixture.item.ID,
+	); err != nil {
+		t.Fatalf("settle governed commission: %v", err)
 	}
 
-	reversed, err := ReverseCommission(db, c.ID, "found fraudulent after settlement")
+	reversed, err := ReverseGovernedCommission(
+		fixture.ctx,
+		db,
+		fixture.item.ID,
+		"operator-reverse",
+		"fraud confirmed after settlement",
+		"reverse-"+fixture.item.ID,
+	)
 	if err != nil {
-		t.Fatalf("reverse failed: %v", err)
+		t.Fatalf("reverse governed commission: %v", err)
 	}
 	if reversed.Status != "reversed" {
-		t.Fatalf("expected status 'reversed', got %q", reversed.Status)
+		t.Fatalf("expected reversed status, got %q", reversed.Status)
 	}
 
-	wAfter, err := wallet.GetWallet(db, "field", fieldActorID)
+	after, err := wallet.GetWalletForTenant(db, fixture.tenantID, "field", fixture.actorID)
 	if err != nil {
-		t.Fatalf("GetWallet failed: %v", err)
+		t.Fatalf("read tenant wallet after reverse: %v", err)
 	}
-	if wAfter.AvailableBalanceMinorUnits != 0 {
-		t.Fatalf("expected available balance reversed to 0, got %d", wAfter.AvailableBalanceMinorUnits)
-	}
-	if wAfter.SettledTotalMinorUnits != 0 {
-		t.Fatalf("expected settled total reversed to 0, got %d", wAfter.SettledTotalMinorUnits)
+	if after.AvailableBalanceMinorUnits != 0 || after.SettledTotalMinorUnits != 0 {
+		t.Fatalf("tenant wallet was not reversed: %+v", after)
 	}
 
-	if _, err := ReverseCommission(db, c.ID, "double reverse"); err != ErrCommissionNotInExpectedState {
-		t.Fatalf("expected ErrCommissionNotInExpectedState on double-reverse, got %v", err)
+	if _, err := ReverseGovernedCommission(
+		fixture.ctx,
+		db,
+		fixture.item.ID,
+		"operator-reverse",
+		"double reverse",
+		"double-reverse-"+fixture.item.ID,
+	); err != ErrCommissionNotInExpectedState {
+		t.Fatalf("expected ErrCommissionNotInExpectedState on double reverse, got %v", err)
 	}
 }
