@@ -7,8 +7,10 @@ import (
 	"strings"
 )
 
-// ValidateEmployeePhoneTenant prevents the Workforce employee provisioning
-// surface from attaching an actor that belongs to another SaaS tenant.
+// ValidateEmployeePhoneTenant enforces a create-only employee provisioning
+// boundary. A phone already attached to any actor is rejected before roles or
+// permissions can be mutated. Reassignment of an existing employee requires a
+// separate, audited Identity operation rather than an implicit phone upgrade.
 func (r *Repository) ValidateEmployeePhoneTenant(ctx context.Context, rawPhone, tenantID string) error {
 	phone, err := NormalizePhoneE164(rawPhone)
 	if err != nil {
@@ -27,8 +29,5 @@ func (r *Repository) ValidateEmployeePhoneTenant(ctx context.Context, rawPhone, 
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(existingTenantID) != tenantID {
-		return ErrPhoneAlreadyBound
-	}
-	return nil
+	return ErrPhoneAlreadyBound
 }
