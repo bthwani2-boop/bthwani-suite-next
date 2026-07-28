@@ -15,7 +15,6 @@ export type EmployeeGovernanceProfile = {
   readonly guaranteeStatus: EmployeeGuaranteeStatus;
   readonly guaranteeReference?: string;
   readonly responsibilityScopes: readonly string[];
-  readonly authorityScopes: readonly string[];
   readonly managedDepartmentCodes: readonly string[];
   readonly notes?: string;
   readonly updatedByActorId: string;
@@ -33,7 +32,6 @@ export type UpsertEmployeeGovernanceInput = {
   readonly guaranteeStatus: EmployeeGuaranteeStatus;
   readonly guaranteeReference: string;
   readonly responsibilityScopes: readonly string[];
-  readonly authorityScopes: readonly string[];
   readonly managedDepartmentCodes: readonly string[];
   readonly notes: string;
 };
