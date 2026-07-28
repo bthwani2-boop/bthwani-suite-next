@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "branch": "new",
+  "sourceBranch": "abdo",
+  "intent": "Preserve and improve the proven engineering foundation while product logic is replaced incrementally.",
+  "lockedToolchain": {
+    "nodeEngine": ">=24.17.0 <25",
+    "pnpm": "10.34.0",
+    "packageManager": "pnpm@10.34.0"
+  },
+  "requiredMobileApps": [
+    "app-client",
+    "app-partner",
+    "app-captain",
+    "app-field"
+  ],
+  "requiredFiles": [
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "nx.json",
+    "infra/docker/compose.runtime.yml",
+    "infra/docker/scripts/runtime.ps1",
+    "apps/mobile/eas/common.ps1",
+    "tools/mobile/mobile-apps.manifest.json",
+    "tools/mobile/defineBthwaniExpoApp.js",
+    "apps/app-client/runtime/app.config.ts",
+    "apps/app-client/runtime/eas.json",
+    "apps/app-partner/runtime/app.config.ts",
+    "apps/app-partner/runtime/eas.json",
+    "apps/app-captain/runtime/app.config.ts",
+    "apps/app-captain/runtime/eas.json",
+    "apps/app-field/runtime/app.config.ts",
+    "apps/app-field/runtime/eas.json"
+  ],
+  "protectedCapabilities": [
+    "Expo application configuration",
+    "EAS remote build project identity and profiles",
+    "Firebase provisioning",
+    "Google Maps native configuration",
+    "Sentry native configuration",
+    "Docker runtime orchestration",
+    "PostgreSQL and MinIO local runtime",
+    "pnpm workspace and Nx orchestration",
+    "OpenAPI generation and validation",
+    "local application start commands",
+    "CI and executable quality gates"
+  ],
+  "changeRules": [
+    "A protected capability may be improved but must not be removed without a tested replacement.",
+    "Deletion requires the replacement to be connected to the live runtime in the same change.",
+    "Toolchain version changes require all mobile configuration checks and runtime smoke checks to pass.",
+    "EAS project IDs, Android package names, and iOS bundle identifiers must remain stable unless an explicit migration is approved.",
+    "Docker volumes and production-like local data must not be destroyed by ordinary verification commands.",
+    "Product-logic cleanup must not be mixed with unrelated foundation rewrites in one commit."
+  ]
+}
