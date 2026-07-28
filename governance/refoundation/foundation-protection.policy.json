@@ -48,6 +48,8 @@
     }
   },
   "requiredFiles": [
+    ".gitignore",
+    ".graphifyignore",
     "package.json",
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
@@ -128,6 +130,8 @@
       "tools/"
     ],
     "allowedExactFiles": [
+      ".gitignore",
+      ".graphifyignore",
       "AGENTS.md",
       "GEMINI.md",
       "package.json",
