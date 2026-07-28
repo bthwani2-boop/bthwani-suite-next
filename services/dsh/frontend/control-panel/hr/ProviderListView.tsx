@@ -89,9 +89,9 @@ export function ProviderListView(props: {
     const field: FieldAgent[] = fieldList.state.kind === "ready" ? [...fieldList.state.fieldAgents] : [];
     const captains: FieldAgent[] = captainList.state.kind === "ready" ? [...captainList.state.captains] : [];
     const employees: FieldAgent[] = employeeList.state.kind === "ready" ? [...employeeList.state.employees] : [];
-    
+
     const activeFilter = props.forcedKind || typeFilter;
-    
+
     const rows = activeFilter === "field"
       ? field
       : activeFilter === "captain"
