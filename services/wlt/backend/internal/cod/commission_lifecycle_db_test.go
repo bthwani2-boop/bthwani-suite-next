@@ -2,6 +2,7 @@ package cod
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"testing"
 	"time"
@@ -15,13 +16,6 @@ type governedCommissionFixture struct {
 	tenantID string
 	actorID  string
 	item     *Commission
-}
-
-func createGovernedCommissionFixture(t *testing.T, db interface {
-	BeginTx(context.Context, *sql.TxOptions) (*sql.Tx, error)
-}) governedCommissionFixture {
-	t.Helper()
-	panic("unreachable")
 }
 
 func createGovernedCommissionLifecycleFixture(t *testing.T, db *sql.DB) governedCommissionFixture {
