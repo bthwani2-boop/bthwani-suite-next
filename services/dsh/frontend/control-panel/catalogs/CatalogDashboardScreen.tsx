@@ -43,18 +43,15 @@ import {
   reviewReel,
 } from "../../shared/catalog";
 
-
 import { CategoryControlRoom } from "./products/CategoryControlRoom";
 import { ReelsReviewPanel } from "./ReelsReviewPanel";
 import { StorePicker } from "./components/StorePicker";
 import { CategoryPicker } from "./components/CategoryPicker";
 import { ProductPicker } from "./components/ProductPicker";
 
-
 type StatusTone = "warning" | "success" | "danger" | "neutral" | "info";
 type DamEntityType = "domains" | "nodes" | "master-products" | "product-proposals";
 
-// ─── Style constants (static/layout styles reused across the screen) ────────
 const contentWrapperStyle: CSSProperties = { marginTop: "1rem", padding: "0 1rem" };
 const overviewGridStyle: CSSProperties = { display: "grid", gap: "1.5rem", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" };
 const overviewCardStyle: CSSProperties = { padding: "1.5rem", border: "1px solid color-mix(in srgb, currentColor 14%, transparent)", borderRadius: "0.5rem" };
@@ -187,7 +184,6 @@ export function CatalogDashboardScreen() {
   const [selectedAdoptedProductId, setSelectedAdoptedProductId] = useState<Record<string, string>>({});
   const [createProductInsteadOfLink, setCreateProductInsteadOfLink] = useState<Record<string, boolean>>({});
 
-  // Seed status state
   const [seedStatus, setSeedStatus] = useState<{
     domainsCount: number;
     nodesCount: number;
@@ -200,11 +196,9 @@ export function CatalogDashboardScreen() {
     missingSeeds: readonly string[];
   } | null>(null);
 
-  // DAM Assets state
   const [assets, setAssets] = useState<readonly CatalogAsset[]>([]);
   const [assetsLoading, setAssetsLoading] = useState(false);
 
-  // DAM upload form state
   const [uploadEntityType, setUploadEntityType] = useState<DamEntityType>("master-products");
   const [uploadEntityId, setUploadEntityId] = useState("");
   const [uploadRole, setUploadRole] = useState("gallery");
@@ -212,20 +206,18 @@ export function CatalogDashboardScreen() {
   const [uploading, setUploading] = useState(false);
   const uploadFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // DAM entity-link form state
   const [linkAssetId, setLinkAssetId] = useState("");
   const [linkEntityType, setLinkEntityType] = useState<DamEntityType>("master-products");
   const [linkEntityId, setLinkEntityId] = useState("");
   const [linkRole, setLinkRole] = useState("canonical_product_image");
   const [linking, setLinking] = useState(false);
 
-  // Missing-image indicator for the currently visible master products page
   const [missingImageProductIds, setMissingImageProductIds] = useState<ReadonlySet<string>>(new Set());
-
-  // Bulk selection for Master Products
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [bulkActivating, setBulkActivating] = useState(false);
+  const [bulkResultMessage, setBulkResultMessage] = useState<string | null>(null);
+  const [bulkResultError, setBulkResultError] = useState<string | null>(null);
 
-  // CSV Import state
   const [csvText, setCsvText] = useState("");
   const [importPreview, setImportPreview] = useState<{
     rows: readonly any[];
@@ -233,7 +225,6 @@ export function CatalogDashboardScreen() {
   } | null>(null);
   const [importing, setImporting] = useState(false);
 
-  // Pagination for Master Products
   const [productPage, setProductPage] = useState(0);
   const productsPerPage = 20;
 
@@ -251,15 +242,38 @@ export function CatalogDashboardScreen() {
     }
   }, [state.kind]);
 
-  const visibleMasterProducts = useMemo(
-    () =>
-      controller.state.masterProducts.items
-        .filter((m) => m.canonicalNameAr.includes(searchQuery) || (m.barcode && m.barcode.includes(searchQuery)))
-        .slice(productPage * productsPerPage, (productPage + 1) * productsPerPage),
-    [controller.state.masterProducts.items, searchQuery, productPage],
+  const masterProductsQuery = useMemo(
+    () => ({
+      ...(searchQuery.trim() ? { search: searchQuery.trim() } : {}),
+      limit: productsPerPage,
+      offset: productPage * productsPerPage,
+    }),
+    [searchQuery, productPage],
   );
 
-  // Derive "missing image" badges client-side from the asset-links query — no backend "missing" status exists.
+  useEffect(() => {
+    setProductPage(0);
+    setSelectedProductIds(new Set());
+    setBulkResultMessage(null);
+    setBulkResultError(null);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setSelectedProductIds(new Set());
+    setBulkResultMessage(null);
+    setBulkResultError(null);
+  }, [productPage]);
+
+  useEffect(() => {
+    if (state.kind !== "authenticated" || activeTab !== "master_products") return;
+    const timer = window.setTimeout(() => {
+      void controller.reloadMasterProducts(masterProductsQuery);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [state.kind, activeTab, masterProductsQuery, controller.reloadMasterProducts]);
+
+  const visibleMasterProducts = controller.state.masterProducts.items;
+
   useEffect(() => {
     if (state.kind !== "authenticated" || activeTab !== "master_products" || visibleMasterProducts.length === 0) {
       return;
@@ -275,7 +289,7 @@ export function CatalogDashboardScreen() {
               missing.add(m.id);
             }
           } catch {
-            // ignore per-product lookup failures; badge simply won't render for that item
+            // A failed media lookup is not converted into a false missing-image decision.
           }
         }),
       );
@@ -372,15 +386,39 @@ export function CatalogDashboardScreen() {
     }
   };
 
-
   const currentUserIdentity = state.kind === "authenticated" ? state.identity : undefined;
   const currentUserRole = currentUserIdentity?.roles.includes("operator") ? "operator" : currentUserIdentity?.roles[0];
   const canManageTaxonomy = hasCatalogPermission(currentUserIdentity, "catalog.taxonomy.manage");
+  const canManageProducts = hasCatalogPermission(currentUserIdentity, "catalog.product.manage");
 
-  // KPI Calculations
+  const handleBulkActivate = async () => {
+    const requestedIds = [...selectedProductIds];
+    if (!canManageProducts || requestedIds.length === 0 || bulkActivating) return;
+
+    setBulkActivating(true);
+    setBulkResultMessage(null);
+    setBulkResultError(null);
+    try {
+      const result = await controller.bulkSetMasterProductsActive(requestedIds, true, masterProductsQuery);
+      const failedIds = result.failures.map((failure) => failure.productId);
+      setSelectedProductIds(new Set(failedIds));
+      if (result.failures.length > 0) {
+        setBulkResultError(
+          `تم تفعيل ${result.succeededProductIds.length} من ${result.requested}، وتعذر تفعيل ${result.failures.length}. بقيت العناصر الفاشلة محددة لإعادة المحاولة.`,
+        );
+      } else {
+        setBulkResultMessage(`تم تفعيل ${result.succeededProductIds.length} منتج والتحقق من القراءة الراجعة.`);
+      }
+    } catch (error) {
+      setBulkResultError(error instanceof Error ? error.message : "تعذر التحقق من نتيجة التفعيل الجماعي.");
+    } finally {
+      setBulkActivating(false);
+    }
+  };
+
   const domainsCount = controller.state.domains.items.length;
   const nodesCount = controller.state.nodes.items.length;
-  const masterCount = controller.state.masterProducts.items.length;
+  const masterCount = controller.state.masterProducts.total;
   const proposalsPendingCount = controller.state.proposals.items.filter((p) =>
     ["partner-proposed", "partner-review", "marketing-review", "catalog-adopted", "catalog-approved"].includes(p.status)
   ).length;
@@ -437,7 +475,6 @@ export function CatalogDashboardScreen() {
         ) : null
       }
     >
-      {/* ─── 2-TIER TOP HORIZONTAL TAB NAVIGATION ─── */}
       <div dir="rtl" style={{ display: "flex", flexDirection: "column", gap: "0.75rem", padding: "0 1rem 1.25rem" }}>
         <CpTabs
           items={MAIN_TAB_GROUPS.map((group) => ({ value: group.id, label: `${group.label} (${group.subTabs.length})` }))}
@@ -456,7 +493,6 @@ export function CatalogDashboardScreen() {
         />
       </div>
 
-      {/* Seed status warning banner */}
       {seedStatus && seedStatus.missingSeeds.length > 0 && (
         <div style={{ margin: "0 1rem 1rem" }}>
           <CpStatePanel
@@ -467,7 +503,6 @@ export function CatalogDashboardScreen() {
         </div>
       )}
 
-      {/* Filter and query options */}
       {activeTab !== "overview" && activeTab !== "import_export" && activeTab !== "audit_logs" && (
         <CpFilterBar label="تصفية البيانات">
           {activeTab === "assortment" && (
@@ -494,10 +529,7 @@ export function CatalogDashboardScreen() {
         </CpFilterBar>
       )}
 
-      {/* DATA TABLES BY TAB */}
       <div style={contentWrapperStyle}>
-
-        {/* TAB 1: OVERVIEW */}
         {activeTab === "overview" && (
           <div style={overviewGridStyle}>
             <div style={overviewCardStyle}>
@@ -517,7 +549,7 @@ export function CatalogDashboardScreen() {
               <ul style={overviewListStyle}>
                 <li>دور المستخدم الحالي: <strong>{currentUserRole || ""}</strong></li>
                 <li>تعديل هيكل الكتالوج: <CpBadge tone={canManageTaxonomy ? "success" : "neutral"}>{canManageTaxonomy ? "متاح" : "غير متاح"}</CpBadge></li>
-                <li>اعتماد المنتجات وتفعيلها: <CpBadge tone={hasCatalogPermission(currentUserIdentity, "catalog.product.approve") ? "success" : "neutral"}>{hasCatalogPermission(currentUserIdentity, "catalog.product.approve") ? "متاح" : "غير متاح"}</CpBadge></li>
+                <li>إدارة المنتجات المركزية: <CpBadge tone={canManageProducts ? "success" : "neutral"}>{canManageProducts ? "متاح" : "غير متاح"}</CpBadge></li>
                 <li>نشر وإدارة الوسائط DAM: <CpBadge tone={hasCatalogPermission(currentUserIdentity, "catalog.media.manage") ? "success" : "neutral"}>{hasCatalogPermission(currentUserIdentity, "catalog.media.manage") ? "متاح" : "غير متاح"}</CpBadge></li>
               </ul>
             </div>
@@ -537,7 +569,6 @@ export function CatalogDashboardScreen() {
           </CpStatePanel>
         )}
 
-        {/* TAB 2: TAXONOMY */}
         {activeTab === "taxonomy" && (
           <div>
             <h3>الهيكل الهرمي L1 - L4</h3>
@@ -553,7 +584,6 @@ export function CatalogDashboardScreen() {
           </div>
         )}
 
-        {/* TAB 3: MASTER PRODUCTS */}
         {activeTab === "master_products" && (
           <div>
             <div style={sectionHeaderRowStyle}>
@@ -564,18 +594,28 @@ export function CatalogDashboardScreen() {
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
                 link.setAttribute("href", url);
-                link.setAttribute("download", `master_products_${Date.now()}.csv`);
+                link.setAttribute("download", `master_products_page_${productPage + 1}_${Date.now()}.csv`);
                 link.click();
-              }}>تصدير CSV</CpButton>
+                URL.revokeObjectURL(url);
+              }}>تصدير الصفحة CSV</CpButton>
               {selectedProductIds.size > 0 && (
-                <CpButton onClick={() => {
-                  alert(`سيتم تفعيل ${selectedProductIds.size} منتج. هذه ميزة تجريبية للإجراءات المجمعة.`);
-                  setSelectedProductIds(new Set());
-                }}>
-                  تفعيل المحدد ({selectedProductIds.size})
+                <CpButton
+                  disabled={bulkActivating || !canManageProducts}
+                  onClick={() => void handleBulkActivate()}
+                >
+                  {bulkActivating ? "جاري التفعيل والتحقق..." : `تفعيل المحدد (${selectedProductIds.size})`}
                 </CpButton>
               )}
             </div>
+            {bulkResultError ? (
+              <CpStatePanel role="alert" title="لم تكتمل كل تحديثات المنتجات" description={bulkResultError} code="CATALOG_BULK_PARTIAL_FAILURE" />
+            ) : null}
+            {bulkResultMessage ? (
+              <CpStatePanel role="status" title="تم التفعيل والقراءة الراجعة" description={bulkResultMessage} code="CATALOG_BULK_ACTIVATION_VERIFIED" />
+            ) : null}
+            {controller.state.masterProducts.error ? (
+              <CpStatePanel role="alert" title="تعذر تحميل المنتجات المركزية" description={controller.state.masterProducts.error} code="CATALOG_MASTER_PRODUCTS_LOAD_FAILED" />
+            ) : null}
             <DataTable
               columns={[
                 { key: "id", header: "المعرف", render: (m: any) => m.id },
@@ -623,13 +663,12 @@ export function CatalogDashboardScreen() {
               selectedRowKeys={selectedProductIds}
               onSelectionChange={setSelectedProductIds}
               page={productPage + 1}
-              totalPages={Math.ceil(controller.state.masterProducts.items.length / productsPerPage)}
+              totalPages={Math.max(1, Math.ceil(controller.state.masterProducts.total / productsPerPage))}
               onPageChange={(p) => setProductPage(p - 1)}
             />
           </div>
         )}
 
-        {/* TAB 4: PROPOSALS */}
         {activeTab === "proposals" && (
           <div style={proposalsColumnStyle}>
             <CpTabs
@@ -742,7 +781,6 @@ export function CatalogDashboardScreen() {
           </div>
         )}
 
-        {/* TAB 5: MARKETING & MEDIA */}
         {activeTab === "marketing_media" && (
           <div style={damSectionStyle}>
             <h3>مكتبة ومراجعة الصور DAM</h3>
@@ -846,7 +884,6 @@ export function CatalogDashboardScreen() {
           </div>
         )}
 
-        {/* TAB: REELS REVIEW */}
         {activeTab === "reels" && (
           <ReelsReviewPanel
             onReviewReel={async (reelId, decision, note) => {
@@ -855,7 +892,6 @@ export function CatalogDashboardScreen() {
           />
         )}
 
-        {/* TAB 6: POLICIES */}
         {activeTab === "policies" && (
           <div>
             <h3>سياسات الفئة والمنصة</h3>
@@ -890,7 +926,6 @@ export function CatalogDashboardScreen() {
           </div>
         )}
 
-        {/* TAB 7: ASSORTMENT */}
         {activeTab === "assortment" && (
           <div>
             <h3>تشكيلة المتجر الفعالة ({selectedStoreId})</h3>
@@ -960,7 +995,6 @@ export function CatalogDashboardScreen() {
           </div>
         )}
 
-        {/* TAB 8: VISIBILITY */}
         {activeTab === "visibility" && (
           <div>
             <h3>بوابة النشر والرؤية (Publishing Gates)</h3>
@@ -975,7 +1009,6 @@ export function CatalogDashboardScreen() {
           </div>
         )}
 
-        {/* TAB 9: IMPORT/EXPORT */}
         {activeTab === "import_export" && (
           <div>
             <h3>استيراد المنتجات المركزية عبر CSV</h3>
@@ -1042,7 +1075,6 @@ export function CatalogDashboardScreen() {
           </div>
         )}
 
-        {/* TAB 10: CLEANUP & QUALITY */}
         {activeTab === "cleanup_quality" && (
           <div>
             <h3>التنظيف واكتشاف المنتجات المكررة</h3>
@@ -1061,7 +1093,6 @@ export function CatalogDashboardScreen() {
             </div>
           </div>
         )}
-
       </div>
     </OperationsRoomFrame>
   );
