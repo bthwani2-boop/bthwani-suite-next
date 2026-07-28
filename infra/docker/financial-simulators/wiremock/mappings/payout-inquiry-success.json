@@ -1,0 +1,34 @@
+{
+  "priority": 10,
+  "request": {
+    "method": "GET",
+    "urlPath": "/financial/payout/inquiry",
+    "headers": {
+      "X-Correlation-ID": {
+        "matches": ".+"
+      }
+    },
+    "queryParameters": {
+      "providerReference": {
+        "matches": ".+"
+      },
+      "payoutRequestId": {
+        "matches": ".+"
+      },
+      "tenantId": {
+        "matches": ".+"
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "status": "completed",
+      "code": "OK",
+      "message": "simulated payout inquiry completed"
+    }
+  }
+}
