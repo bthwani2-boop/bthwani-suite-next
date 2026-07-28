@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "phase": "FOUNDATION_ONLY",
+  "branch": "new",
+  "journeysAllowed": false,
+  "authority": {
+    "humanPolicy": "governance/refoundation/FOUNDATION_ONLY_EXECUTION.md",
+    "machinePolicy": "governance/refoundation/foundation-protection.policy.json",
+    "authorityRegistry": "governance/authority/authority-precedence.json",
+    "decisionIndex": "governance/00_DECISION_INDEX.md"
+  },
+  "requiredSkills": [
+    {"id":"bthwani-current-workspace-authority","allowedStatus":["active"]},
+    {"id":"bthwani-universal-task-router","allowedStatus":["active"]},
+    {"id":"bthwani-evidence-gate-router","allowedStatus":["active"]},
+    {"id":"bthwani-agent-skill-integrity","allowedStatus":["conditional"]},
+    {"id":"bthwani-governance-contract-guardian","allowedStatus":["conditional"]},
+    {"id":"bthwani-ci-workflow-guardian","allowedStatus":["conditional"]},
+    {"id":"bthwani-guard-command-router","allowedStatus":["conditional"]},
+    {"id":"bthwani-platform-runtime-config","allowedStatus":["conditional"]},
+    {"id":"bthwani-docker-journey-runtime","allowedStatus":["conditional"]},
+    {"id":"bthwani-security-secrets-privacy","allowedStatus":["conditional"]}
+  ],
+  "requiredGuards": [
+    {"id":"foundation","exitLevel":"fail"},
+    {"id":"governance-schema","exitLevel":"fail"},
+    {"id":"agent-governance","exitLevel":"fail"},
+    {"id":"authority-separation","exitLevel":"fail"},
+    {"id":"guard-registry","exitLevel":"fail"},
+    {"id":"required-command-integrity","exitLevel":"fail"},
+    {"id":"cleanup-policy","exitLevel":"fail"},
+    {"id":"no-broken-imports","exitLevel":"fail"},
+    {"id":"runtime-config","exitLevel":"fail"},
+    {"id":"repo-size","exitLevel":"fail"},
+    {"id":"api-binding","exitLevel":"fail"},
+    {"id":"backend-api-binding","exitLevel":"fail"},
+    {"id":"secrets","exitLevel":"fail"},
+    {"id":"workflow-lint","exitLevel":"fail"},
+    {"id":"workflow-security","exitLevel":"fail"},
+    {"id":"actions-pin","exitLevel":"fail"},
+    {"id":"opa-policies","exitLevel":"fail"}
+  ],
+  "verificationRoutes": {
+    "foundationStatic": "pnpm foundation:gate",
+    "foundationFullStatic": "pnpm foundation:gate -- -Full",
+    "mobileManifest": "pnpm mobile:apps:check",
+    "mobileExpo": "pnpm mobile:expo:verify",
+    "dockerStatus": "pnpm runtime:status",
+    "dockerFullSmoke": "pnpm runtime:full:smoke",
+    "openApi": "pnpm contracts:lint && pnpm openapi:generate",
+    "secrets": "pnpm guard:secrets",
+    "workflowPolicy": "pnpm guard:workflow-lint && pnpm guard:workflow-security && pnpm guard:actions-pin",
+    "remoteCi": ".github/workflows/ci.yml"
+  },
+  "readinessDomains": [
+    {
+      "id": "toolchain-workspace",
+      "owner": "bthwani-platform-runtime-config",
+      "requiredPaths": ["package.json","pnpm-lock.yaml","pnpm-workspace.yaml","nx.json","tsconfig.base.json"],
+      "requiredChecks": ["foundationStatic"],
+      "claimLimit": "Static configuration only"
+    },
+    {
+      "id": "mobile-expo-eas",
+      "owner": "bthwani-platform-runtime-config",
+      "requiredPaths": ["tools/mobile/mobile-apps.manifest.json","tools/mobile/defineBthwaniExpoApp.js","apps/mobile/eas"],
+      "requiredChecks": ["mobileManifest","mobileExpo"],
+      "claimLimit": "Configuration proof only; remote builds and devices remain separate evidence"
+    },
+    {
+      "id": "docker-data-plane",
+      "owner": "bthwani-docker-journey-runtime",
+      "requiredPaths": ["infra/docker/compose.runtime.yml","infra/docker/scripts/runtime.ps1"],
+      "requiredChecks": ["dockerStatus","dockerFullSmoke"],
+      "claimLimit": "Runtime evidence required"
+    },
+    {
+      "id": "contracts-generation",
+      "owner": "bthwani-api-runtime-binding",
+      "requiredPaths": ["contracts","core","services"],
+      "requiredChecks": ["openApi"],
+      "claimLimit": "Contract and generation proof only"
+    },
+    {
+      "id": "governance-skills-guards",
+      "owner": "bthwani-governance-contract-guardian",
+      "requiredPaths": ["governance/authority","governance/skills","governance/guards","tools/guards"],
+      "requiredChecks": ["foundationStatic","workflowPolicy"],
+      "claimLimit": "Governance integrity only"
+    },
+    {
+      "id": "security-secrets",
+      "owner": "bthwani-security-secrets-privacy",
+      "requiredPaths": ["governance/07_SECURITY_AND_SECRETS.md",".gitignore"],
+      "requiredChecks": ["secrets"],
+      "claimLimit": "Repository secret scan only"
+    }
+  ],
+  "exitRequirements": [
+    "foundation contract passes on the exact candidate commit",
+    "registered governance skills and guards remain consistent",
+    "all four mobile project identities are preserved",
+    "mobile configuration checks pass",
+    "Docker full runtime smoke evidence is available",
+    "OpenAPI lint and generation pass",
+    "secret scanning passes with redacted output",
+    "CI completes on the exact candidate commit",
+    "no journey implementation exists after the pinned source commit",
+    "the repository owner explicitly starts the second round"
+  ]
+}
