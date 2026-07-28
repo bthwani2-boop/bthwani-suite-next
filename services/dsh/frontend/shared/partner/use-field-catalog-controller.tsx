@@ -49,7 +49,8 @@ export type FieldCatalogActionState =
 
 export type FieldStoreAssortmentInput = {
   readonly unitPrice: number;
-  readonly currency: string;
+  /** @deprecated Currency is resolved from the current assortment or by DSH Backend on create. */
+  readonly currency?: string;
   readonly available: boolean;
   readonly stockStatus: "in_stock" | "low_stock" | "out_of_stock";
   readonly localNote: string;
@@ -149,7 +150,7 @@ export function useFieldCatalogController(partnerId: string) {
         const existing = assortmentItems.find((item) => item.masterProductId === masterProductId);
         const assortment = await upsertFieldStoreAssortmentOCC(partnerId, storeState.storeId, masterProductId, {
           unitPrice: input.unitPrice,
-          currency: input.currency,
+          currency: existing?.currency ?? "",
           available: input.available,
           stockStatus: input.stockStatus,
           localNote: input.localNote,
@@ -187,7 +188,7 @@ export function useFieldCatalogController(partnerId: string) {
             return {
               masterProductId,
               unitPrice: input.unitPrice,
-              currency: input.currency,
+              currency: existing?.currency ?? "",
               available: input.available,
               stockStatus: input.stockStatus,
               localNote: input.localNote,
