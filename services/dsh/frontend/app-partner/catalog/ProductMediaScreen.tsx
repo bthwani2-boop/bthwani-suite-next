@@ -296,7 +296,12 @@ export function ProductMediaScreen({
         {assets.map((asset) => (
           <View key={asset.id} style={styles.assetCard}>
             {asset.url ? (
-              <Image source={{ uri: asset.url }} style={styles.preview} resizeMode="cover" />
+              <Image
+                source={{ uri: asset.url }}
+                style={styles.preview}
+                resizeMode="cover"
+                accessibilityLabel="صورة المنتج الخاصة بهذا المتجر"
+              />
             ) : (
               <View style={styles.pendingPreview}>
                 <Text role="bodyStrong" align="center">لا يوجد رابط عام قبل الاعتماد</Text>
