@@ -139,6 +139,9 @@ jobs:
         if: ${{ inputs.full_verification == 'true' || inputs.verification_tier == 'deep' }}
         run: |
           pnpm exec knip --config knip.json --reporter compact --reporter github-actions
+          pnpm run guard:logic-coverage
+          pnpm run guard:repo-naming
+          pnpm run guard:repo-structure
           pnpm run guard:logic-all
           pnpm run guard:repo-all
           pnpm run guard:performance-all
