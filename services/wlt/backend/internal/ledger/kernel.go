@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
 	"wlt-api/internal/shared"
 )
 
 var ErrUnbalancedTransaction = errors.New("ledger transaction is not balanced")
 var ErrLedgerReferenceConflict = errors.New("ledger reference already exists with a different posting payload")
+var ErrLedgerTenantConflict = errors.New("ledger reference does not belong to the trusted tenant")
 
 type LedgerLine struct {
 	AccountType      string
@@ -27,20 +29,57 @@ type Actor struct {
 	Type string
 }
 
-// PostLedgerTransaction is the only write path for the double-entry ledger.
-// Tenant ownership comes exclusively from the authenticated request context;
-// account identity, transaction idempotency and lines are all tenant-scoped.
-func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, referenceType, referenceID string, lines []LedgerLine, createdBy Actor) (string, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
-	if err != nil {
-		return "", err
+// resolveLedgerTenantContext keeps request context as the primary tenant
+// authority. Refund compatibility calls may omit it only because WLT can derive
+// the tenant from its own persisted refund row. A supplied mismatched tenant is
+// always rejected; no local/default tenant is invented.
+func resolveLedgerTenantContext(ctx context.Context, tx *sql.Tx, referenceType, referenceID string) (context.Context, string, error) {
+	trustedTenant, hasTrustedTenant := shared.TenantIDFromContext(ctx)
+	if referenceType != "refund" {
+		if !hasTrustedTenant {
+			_, err := shared.RequireTenantContext(ctx)
+			return ctx, "", err
+		}
+		return ctx, trustedTenant, nil
 	}
+
+	var persistedTenant string
+	if err := tx.QueryRowContext(ctx, `SELECT tenant_id FROM wlt_refunds WHERE id=$1`, referenceID).Scan(&persistedTenant); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ctx, "", fmt.Errorf("refund ledger reference not found")
+		}
+		return ctx, "", fmt.Errorf("resolve refund ledger tenant: %w", err)
+	}
+	persistedTenant = strings.TrimSpace(persistedTenant)
+	if persistedTenant == "" {
+		return ctx, "", fmt.Errorf("refund ledger tenant is missing")
+	}
+	if hasTrustedTenant {
+		if trustedTenant != persistedTenant {
+			return ctx, "", ErrLedgerTenantConflict
+		}
+		return ctx, trustedTenant, nil
+	}
+	trustedCtx := shared.WithTenantContext(ctx, persistedTenant)
+	return trustedCtx, persistedTenant, nil
+}
+
+// PostLedgerTransaction is the only write path for the double-entry ledger.
+// Tenant ownership comes from authenticated context. A refund-only compatibility
+// seam may derive it from WLT's canonical refund row, never from caller input.
+// Account identity, transaction idempotency and lines are all tenant-scoped.
+func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, referenceType, referenceID string, lines []LedgerLine, createdBy Actor) (string, error) {
 	if transactionType == "" {
 		return "", fmt.Errorf("transactionType is required")
 	}
 	if referenceType == "" || referenceID == "" {
 		return "", fmt.Errorf("referenceType and referenceId are required")
 	}
+	trustedCtx, tenantID, err := resolveLedgerTenantContext(ctx, tx, referenceType, referenceID)
+	if err != nil {
+		return "", err
+	}
+	ctx = trustedCtx
 	if len(lines) < 2 {
 		return "", fmt.Errorf("at least two ledger lines are required, got %d", len(lines))
 	}
