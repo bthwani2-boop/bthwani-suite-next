@@ -12,7 +12,7 @@ export function resolveWltCurrencyFractionDigits(currency: string): number {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: normalizedCurrency,
-    }).resolvedOptions().maximumFractionDigits;
+    }).resolvedOptions().maximumFractionDigits ?? 0;
   } catch {
     return 0;
   }
