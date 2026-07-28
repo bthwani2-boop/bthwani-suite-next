@@ -46,7 +46,7 @@ func refundTenantContextForSession(ctx context.Context, db *sql.DB, paymentSessi
 }
 
 // CreateRefundAtomicForTenant preserves order-cancellation compatibility while
-// using the JRN-035 amount reservation, tenant isolation, audit and idempotency
+// using the refunds amount reservation, tenant isolation, audit and idempotency
 // engine. Tenant ownership comes from the authenticated request context. The
 // compatibility path may derive it only from WLT's own payment-session record.
 func CreateRefundAtomicForTenant(ctx context.Context, db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {

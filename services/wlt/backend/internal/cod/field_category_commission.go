@@ -138,7 +138,7 @@ func UpsertFieldCategoryCommissionPolicy(
 		"currency": input.Currency,
 		"status": input.Status,
 	})
-	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_jrn036_audit_events(
+	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_audit_events(
 		tenant_id,aggregate_type,aggregate_id,action,actor_id,actor_type,reason,correlation_id,metadata)
 		VALUES($1,'commission_policy',$2,'field_category_policy_version_created',$3,'operator',$4,$5,$6::jsonb)`,
 		tenantID, policyID, input.UpdatedByActorID, input.ChangeReason, correlationID, string(metadata)); err != nil {
@@ -179,7 +179,7 @@ func normalizeFieldCategoryCommissionInput(input *CreateFieldCategoryCommissionI
 func getExistingFieldCategoryCommissionTx(ctx context.Context, tx *sql.Tx, tenantID, idempotencyKey string) (*Commission, string, error) {
 	var commissionID, requestHash string
 	err := tx.QueryRowContext(ctx, `SELECT commission_id,request_hash
-		FROM wlt_jrn036_commission_evidence
+		FROM wlt_commission_evidence
 		WHERE tenant_id=$1 AND idempotency_key=$2`, tenantID, idempotencyKey).Scan(&commissionID, &requestHash)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, "", nil
@@ -280,7 +280,7 @@ func CreateFieldCategoryCommission(
 	}, ledger.Actor{ID: "wlt", Type: "service"}); err != nil {
 		return nil, err
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_jrn036_commission_evidence(
+	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_commission_evidence(
 		tenant_id,commission_id,policy_id,policy_version,source_evidence_id,source_evidence_hash,
 		source_evidence_status,gross_basis_minor_units,calculated_amount_minor_units,
 		idempotency_key,request_hash)
@@ -299,7 +299,7 @@ func CreateFieldCategoryCommission(
 		"amountMinorUnits": policy.FixedAmountMinorUnits,
 		"currency": policy.Currency,
 	})
-	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_jrn036_audit_events(
+	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_audit_events(
 		tenant_id,aggregate_type,aggregate_id,action,actor_id,actor_type,correlation_id,metadata)
 		VALUES($1,'commission',$2,'field_category_commission_calculated',$3,'service',$4,$5::jsonb)`,
 		tenantID, commission.ID, input.BeneficiaryActorID, correlationID, string(metadata)); err != nil {

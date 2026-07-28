@@ -2525,7 +2525,7 @@ paths:
       operationId: getDshPartnerDispatchTracking
       summary: Partner reads reference-only bthwani_delivery captain assignment status.
       description: >-
-        JRN-017: the partner never sees the captain's live location or proof
+        domain-017: the partner never sees the captain's live location or proof
         of delivery here — only lifecycle status, for orders it owns.
       tags: [DshDispatch]
       security: [{ bearerAuth: [] }]
@@ -6447,7 +6447,7 @@ paths:
       operationId: getDshClientPartnerDeliveryTask
       summary: Return the authenticated client's reference partner_delivery status for the order.
       description: >-
-        Client-facing reference status for JRN-016. Read-only projection of
+        Client-facing reference status for domain-016. Read-only projection of
         the same partner_delivery task the store courier operates; the client
         never mutates it.
       tags: [DshPartnerDelivery]
@@ -9055,7 +9055,7 @@ components:
 
     DshCartItem:
       type: object
-      required: [id, cartId, productId, masterProductId, storeAssortmentId, productName, priceReference, unitPrice, quantity, version, createdAt, updatedAt]
+      required: [id, cartId, productId, masterProductId, storeAssortmentId, productName, priceReference, unitPrice, currency, quantity, version, createdAt, updatedAt]
       properties:
         id: { type: string }
         cartId: { type: string }
@@ -9064,7 +9064,8 @@ components:
         storeAssortmentId: { type: ["string", "null"], description: "The dsh_store_assortments row this cart line resolved against." }
         productName: { type: string, description: "Snapshotted server-side from the catalog product at add-to-cart time." }
         priceReference: { type: string, description: "Display label snapshotted from catalog — not a computed financial amount." }
-        unitPrice: { type: number, format: double, minimum: 0, description: "Snapshotted from the catalog product's unitPrice at add-to-cart time." }
+        unitPrice: { type: number, format: double, minimum: 0, description: "Snapshotted from the catalog assortment at add-to-cart time." }
+        currency: { type: string, pattern: "^[A-Z]{3}$", description: "Currency snapshotted with unitPrice from the same sovereign store assortment row." }
         quantity: { type: integer, minimum: 1 }
         version: { type: integer }
         createdAt: { type: string, format: date-time }
@@ -9257,17 +9258,21 @@ components:
 
     DshOrderItem:
       type: object
-      required: [id, productId, productName, quantity, unitPrice]
+      required: [id, productId, productName, quantity, unitPrice, currency]
       properties:
         id: { type: string }
         productId: { type: string }
         productName: { type: string }
         quantity: { type: integer, minimum: 1 }
         unitPrice: { type: number, format: double, minimum: 0 }
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+          description: Immutable currency copied from the governed checkout and order snapshot.
 
     DshOrder:
       type: object
-      required: [id, checkoutIntentId, storeId, fulfillmentMode, clientId, status, wltPaymentRefId, createdAt, updatedAt]
+      required: [id, checkoutIntentId, storeId, fulfillmentMode, clientId, status, wltPaymentRefId, currency, createdAt, updatedAt]
       properties:
         id: { type: string }
         checkoutIntentId: { type: string }
@@ -9290,6 +9295,10 @@ components:
         wltPaymentRefId:
           type: string
           description: "Opaque WLT payment reference. DSH never mutates financial truth."
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+          description: Immutable currency copied from the checkout pricing snapshot.
         items:
           type: array
           items: { $ref: "#/components/schemas/DshOrderItem" }
@@ -9476,7 +9485,7 @@ components:
       type: object
       required: [id, orderId, captainId, status, createdAt, updatedAt, deliveryStatus]
       description: >-
-        JRN-017 partner-facing reference status only. Never includes the
+        domain-017 partner-facing reference status only. Never includes the
         captain's location or proof-of-delivery reference.
       properties:
         id: { type: string }
@@ -11146,7 +11155,7 @@ components:
 
     # ── Administration Schemas ───────────────────────────────────────
 
-    # ── JRN-029 Operational Policy Schemas ────────────────────────────
+    # ── operational-policy Operational Policy Schemas ────────────────────────────
 
     DshAdminRole:
       type: object
@@ -11683,8 +11692,8 @@ components:
         status:
           type: string
           enum: [active, verified, no_show, consumed, cancelled]
-        cancelledAt: { type: [string, "null"], format: date-time }
-        cancellationReason: { type: [string, "null"] }
+        cancelledAt: { type: ["string", "null"], format: date-time }
+        cancellationReason: { type: ["string", "null"] }
         verificationMethod:
           type: ["string", "null"]
           description: "Known values: otp, no_show."

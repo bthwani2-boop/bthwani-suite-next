@@ -178,7 +178,7 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, m
 	mux.HandleFunc("GET /dsh/operator/operational-incidents", protected.handleListOperatorIncidents)
 	mux.HandleFunc("GET /dsh/operator/operational-incidents/{incidentId}", protected.handleGetOperatorIncident)
 
-	// Persisted SLA breach alerts (JRN-032-style reconcile pattern), distinct
+	// Persisted SLA breach alerts (style reconcile pattern), distinct
 	// from the volatile slaState embedded in each read response.
 	mux.HandleFunc("POST /dsh/operator/partner-delivery/sla-alerts/refresh", protected.handleRefreshDeliverySLAAlerts)
 	mux.HandleFunc("GET /dsh/operator/partner-delivery/sla-alerts", protected.handleListDeliverySLAAlerts)

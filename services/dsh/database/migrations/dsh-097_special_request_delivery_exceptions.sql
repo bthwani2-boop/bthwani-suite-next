@@ -2,7 +2,7 @@ BEGIN;
 
 -- The dispatch owner already supports assignments and deliveries sourced from
 -- either an order or a special request. Its exception overlay must preserve the
--- same source fork instead of rejecting JRN-022 assignments.
+-- same source fork instead of rejecting domain-022 assignments.
 ALTER TABLE dsh_delivery_exceptions
     ALTER COLUMN order_id DROP NOT NULL;
 

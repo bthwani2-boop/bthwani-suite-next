@@ -1,4 +1,4 @@
--- JRN-033 local runtime evidence: representative wallets must use the same
+-- representative-finance local runtime evidence: representative wallets must use the same
 -- actor ids and tenant that Identity's local bootstrap returns to DSH. WLT
 -- remains the sole owner of these balances and ledger rows; this seed is
 -- local-only, deterministic and idempotent.
@@ -66,11 +66,11 @@ INSERT INTO wlt_ledger_entries (
   created_at
 )
 VALUES
-  ('wled-jrn033-client-local-001',  'local-dsh', 'wallet_credit', 'client-local-001',  'client',  'runtime_seed', 'jrn-033-client',  'jrn-033-client-credit',  'runtime_evidence', 125000, 'YER', 'credit', 125000, 'رصيد محفظة العميل المحلي لإثبات JRN-033',  'jrn-033-seed-client-local-001',  '2026-07-22T08:00:00Z'),
-  ('wled-jrn033-partner-local-001', 'local-dsh', 'wallet_credit', 'partner-local-001', 'partner', 'runtime_seed', 'jrn-033-partner', 'jrn-033-partner-credit', 'runtime_evidence', 875000, 'YER', 'credit', 875000, 'رصيد محفظة الشريك المحلي لإثبات JRN-033', 'jrn-033-seed-partner-local-001', '2026-07-22T08:01:00Z'),
-  ('wled-jrn033-captain-local-001', 'local-dsh', 'earning',       'captain-local-001', 'captain', 'runtime_seed', 'jrn-033-captain', 'jrn-033-captain-credit', 'runtime_evidence', 215000, 'YER', 'credit', 215000, 'أرباح الكابتن المحلية لإثبات JRN-033',           'jrn-033-seed-captain-local-001', '2026-07-22T08:02:00Z'),
-  ('wled-jrn033-field-local-001',   'local-dsh', 'commission',    'field-local-001',   'field',   'runtime_seed', 'jrn-033-field',   'jrn-033-field-credit',   'runtime_evidence', 165000, 'YER', 'credit', 165000, 'عمولة الميداني المحلية لإثبات JRN-033',           'jrn-033-seed-field-local-001',   '2026-07-22T08:03:00Z'),
-  ('wled-jrn033-client-other-tenant-001', 'other-tenant', 'wallet_credit', 'client-other-tenant-001', 'client', 'runtime_seed', 'jrn-033-other-tenant', 'jrn-033-other-tenant-credit', 'runtime_evidence', 999999, 'YER', 'credit', 999999, 'قيد سلبي لإثبات منع القراءة عبر المستأجرات', 'jrn-033-seed-client-other-tenant-001', '2026-07-22T08:04:00Z')
+  ('wled-client-local-001',  'local-dsh', 'wallet_credit', 'client-local-001',  'client',  'runtime_seed', 'client',  'client-credit',  'runtime_evidence', 125000, 'YER', 'credit', 125000, 'رصيد محفظة العميل المحلي لإثبات representative-finance',  'seed-client-local-001',  '2026-07-22T08:00:00Z'),
+  ('wled-partner-local-001', 'local-dsh', 'wallet_credit', 'partner-local-001', 'partner', 'runtime_seed', 'partner', 'partner-credit', 'runtime_evidence', 875000, 'YER', 'credit', 875000, 'رصيد محفظة الشريك المحلي لإثبات representative-finance', 'seed-partner-local-001', '2026-07-22T08:01:00Z'),
+  ('wled-captain-local-001', 'local-dsh', 'earning',       'captain-local-001', 'captain', 'runtime_seed', 'captain', 'captain-credit', 'runtime_evidence', 215000, 'YER', 'credit', 215000, 'أرباح الكابتن المحلية لإثبات representative-finance',           'seed-captain-local-001', '2026-07-22T08:02:00Z'),
+  ('wled-field-local-001',   'local-dsh', 'commission',    'field-local-001',   'field',   'runtime_seed', 'field',   'field-credit',   'runtime_evidence', 165000, 'YER', 'credit', 165000, 'عمولة الميداني المحلية لإثبات representative-finance',           'seed-field-local-001',   '2026-07-22T08:03:00Z'),
+  ('wled-client-other-tenant-001', 'other-tenant', 'wallet_credit', 'client-other-tenant-001', 'client', 'runtime_seed', 'other-tenant', 'other-tenant-credit', 'runtime_evidence', 999999, 'YER', 'credit', 999999, 'قيد سلبي لإثبات منع القراءة عبر المستأجرات', 'seed-client-other-tenant-001', '2026-07-22T08:04:00Z')
 ON CONFLICT (id) DO UPDATE SET
   tenant_id = EXCLUDED.tenant_id,
   amount_minor_units = EXCLUDED.amount_minor_units,

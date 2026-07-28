@@ -1,4 +1,4 @@
--- JRN-031: governed maker-checker approval queue for administrative role assignments.
+-- governed-administration: governed maker-checker approval queue for administrative role assignments.
 
 CREATE TABLE IF NOT EXISTS dsh_admin_approval_requests (
   id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),

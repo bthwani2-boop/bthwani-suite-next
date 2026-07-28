@@ -39,19 +39,19 @@ function walk(directory) {
 }
 
 const requiredFiles = [
-  'governance/product/contracts/jrn-014-captain-dispatch.product-truth.json',
-  'governance/boundaries/jrn-014-dsh-wlt-dispatch-boundary.md',
-  'governance/runbooks/jrn-014-dispatch-operations.md',
+  'governance/product/contracts/captain-dispatch.product-truth.json',
+  'governance/boundaries/dsh-wlt-dispatch-boundary.md',
+  'governance/runbooks/dispatch-operations.md',
   'services/dsh/contracts/dsh.dispatch-governance.openapi.yaml',
-  'services/dsh/contracts/jrn-014-dispatch-operation-registry.json',
-  'services/dsh/contracts/jrn-014-surface-rbac-registry.json',
-  'services/dsh/contracts/jrn-014-dispatch-state-machine.json',
-  'services/dsh/contracts/jrn-014-cross-surface-binding.json',
-  'services/dsh/contracts/jrn-014-visible-states.json',
-  'services/dsh/contracts/jrn-014-security-privacy-registry.json',
-  'services/dsh/contracts/jrn-014-experience-quality-registry.json',
-  'services/dsh/contracts/jrn-014-observability-slo.json',
-  'services/dsh/contracts/jrn-014-legacy-cleanup.json',
+  'services/dsh/contracts/dispatch-operation-registry.json',
+  'services/dsh/contracts/surface-rbac-registry.json',
+  'services/dsh/contracts/dispatch-state-machine.json',
+  'services/dsh/contracts/cross-surface-binding.json',
+  'services/dsh/contracts/visible-states.json',
+  'services/dsh/contracts/security-privacy-registry.json',
+  'services/dsh/contracts/experience-quality-registry.json',
+  'services/dsh/contracts/observability-slo.json',
+  'services/dsh/contracts/legacy-cleanup.json',
   'services/dsh/database/migrations/dsh-079_dispatch_assignment_governance.sql',
   'services/dsh/backend/internal/dispatch/assignment_governance.go',
   'services/dsh/backend/internal/dispatch/assignment_governance_queries.go',
@@ -181,9 +181,9 @@ for (const path of jsonFiles) {
 }
 
 if (failures.length > 0) {
-  console.error('JRN-014 dispatch integrity gate failed:');
+  console.error('dispatch dispatch integrity gate failed:');
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log(`JRN-014 dispatch integrity gate passed (${requiredFiles.length} required files, ${frontendFiles.length} executable frontend files scanned).`);
+console.log(`dispatch dispatch integrity gate passed (${requiredFiles.length} required files, ${frontendFiles.length} executable frontend files scanned).`);

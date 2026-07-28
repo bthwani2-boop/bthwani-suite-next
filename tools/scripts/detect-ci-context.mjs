@@ -149,9 +149,9 @@ export function classifyFiles(inputFiles, options = {}) {
   );
   const journey = full || Boolean(manualJourney) || journeyIds.size > 0 || productJourneyGovernance;
 
-  const jrn040 = manualJourney === "JRN-040" || journeyIds.has("JRN-040") || has((file) =>
+  const domain-040 = manualJourney === "domain-040" || journeyIds.has("domain-040") || has((file) =>
     /jrn[-_]?040/i.test(file) ||
-    file === "services/dsh/tsconfig.jrn-040.json" ||
+    file === "services/dsh/tsconfig.domain-040.json" ||
     file === "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx"
   );
 
@@ -180,7 +180,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const infrastructurePolicy = infrastructure;
   const nomenclatureRequired = workflow || governance || frontend || contracts || dsh || wlt || identity || workforce || platform || providers;
   const policy = governancePolicy || workflowPolicy || securityPolicy || infrastructurePolicy;
-  const node = frontend || contracts || journey || jrn040;
+  const node = frontend || contracts || journey || domain-040;
   const backendChanged = dsh || wlt || identity || workforce || platform || providers;
   const deepRisk = full || workflow || security || infrastructure || workspaceManifest || mobileTooling || runtimeTooling || financialChanged || migrationChanged || nativeChanged || recoveryChanged;
   const standardRisk = deepRisk || policy || sharedBrain || database || contracts || backendChanged || journey;
@@ -197,7 +197,7 @@ export function classifyFiles(inputFiles, options = {}) {
     frontend ? "frontend" : "",
     contracts ? "contracts" : "",
     journey ? "journey" : "",
-    jrn040 ? "jrn040" : ""
+    domain-040 ? "domain-040" : ""
   ]).join("-") || "none";
 
   return {
@@ -231,8 +231,8 @@ export function classifyFiles(inputFiles, options = {}) {
     heavy,
     verification_tier: verificationTier,
     diagnostics,
-    jrn040,
-    platform_change_sets: jrn040,
+    domain-040,
+    platform_change_sets: domain-040,
     cleanup_changed: cleanupChanged,
     native_changed: nativeChanged,
     visual_changed: visualChanged,

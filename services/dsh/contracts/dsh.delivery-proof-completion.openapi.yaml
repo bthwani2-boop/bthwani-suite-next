@@ -3,7 +3,7 @@ info:
   title: BThwani DSH Delivery Proof Completion API
   version: 1.0.0
   description: >
-    JRN-018 actor-owned proof-of-delivery contract. DSH owns proof and order
+    delivery-proof actor-owned proof-of-delivery contract. DSH owns proof and order
     completion state. WLT receives only the durable delivery_completed handoff
     and remains the sole owner of financial truth.
 x-bthwani-owner: services/dsh

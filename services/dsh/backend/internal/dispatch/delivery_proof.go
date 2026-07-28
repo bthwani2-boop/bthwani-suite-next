@@ -225,7 +225,7 @@ func SubmitDeliveryProof(db *sql.DB, assignmentID, captainID string, input Submi
 		return nil, err
 	}
 	if current.OrderID == "" {
-		return nil, fmt.Errorf("%w: JRN-018 proof applies to customer orders only", ErrInvalid)
+		return nil, fmt.Errorf("%w: delivery-proof proof applies to customer orders only", ErrInvalid)
 	}
 	if current.Status != AssignmentAccepted || current.Delivery.Status != DeliveryArrivedCustomer {
 		return nil, fmt.Errorf("%w: proof requires an accepted assignment at arrived_customer", ErrConflict)

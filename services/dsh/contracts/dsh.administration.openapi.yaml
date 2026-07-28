@@ -1,7 +1,7 @@
 openapi: 3.1.0
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: services/dsh
-x-bthwani-journey: JRN-031
+x-bthwani-journey: governed-administration
 info:
   title: DSH Administration Governance API
   version: 2.0.0

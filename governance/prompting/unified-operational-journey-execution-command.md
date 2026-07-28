@@ -35,7 +35,7 @@ governing_protocol:
   governance/operational_journey_protocol_package
 
 journey_selection:
-  <ضع Journey ID واحدًا أو نطاقًا مصرحًا به، مثل JRN-001..JRN-005>
+  <ضع Journey ID واحدًا أو نطاقًا مصرحًا به، مثل partner-tenant..address-mutation>
 
 task_mode: implementation_or_closure
 execution_mode: CODE_FIRST_FIX_FIRST
@@ -70,7 +70,7 @@ journey_transition:
 
 لا تستخدم أسماء أو أرقام رحلات محفوظة في الذاكرة. استخرج الاسم والنطاق والمالك والشرائح من سجل الرحلات الحي في الـcommit المثبت.
 
-عند إعطاء نطاق مثل `JRN-005..JRN-010`، يكون هذا تفويضًا بتنفيذ هذه الرحلات فقط، بترتيبها، ولا يلزم طلب موافقة جديدة بين رحلة وأخرى داخل النطاق نفسه.
+عند إعطاء نطاق مثل `address-mutation..wlt-receipts`، يكون هذا تفويضًا بتنفيذ هذه الرحلات فقط، بترتيبها، ولا يلزم طلب موافقة جديدة بين رحلة وأخرى داخل النطاق نفسه.
 
 لا تبدأ أي رحلة خارج `journey_selection`.
 

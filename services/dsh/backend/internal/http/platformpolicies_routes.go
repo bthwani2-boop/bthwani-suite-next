@@ -40,7 +40,7 @@ func RegisterPlatformPolicyRoutes(
 	mux.HandleFunc("GET /dsh/captain/dispatch/financial-eligibility", protected.handleGetOwnCaptainFinancialEligibility)
 	mux.HandleFunc("POST /dsh/captain/dispatch/financial-eligibility/refresh", protected.handleRefreshOwnCaptainFinancialEligibility)
 
-	// JRN-029 unified operational policy closure. Existing zone/SLA/capacity
+	// operational-policy unified operational policy closure. Existing zone/SLA/capacity
 	// compatibility routes remain registered by registerUnifiedCatalogRoutes.
 	mux.HandleFunc("GET /dsh/operator/platform/operational-profiles/{zoneId}", protected.handleGetOperationalProfile)
 	mux.HandleFunc("PUT /dsh/operator/platform/operational-profiles/{zoneId}", protected.handleUpsertOperationalProfile)

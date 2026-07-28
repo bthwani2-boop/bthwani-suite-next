@@ -3,7 +3,7 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: BThwani WLT Payout Destination API
   version: 1.0.0
-  description: Sovereign WLT contract for encrypted partner payout destinations used by JRN-001.
+  description: Sovereign WLT contract for encrypted partner payout destinations used by partner-tenant.
 servers:
   - url: http://localhost:58083
 security:

@@ -159,7 +159,7 @@ func (s *protectedStoreServer) handleAnalyticsExportCSV(w http.ResponseWriter, r
 	}
 
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", `attachment; filename="jrn-032-operational-analytics.csv"`)
+	w.Header().Set("Content-Disposition", `attachment; filename="operational-analytics.csv"`)
 	writer := csv.NewWriter(w)
 	_ = writer.Write([]string{"section", "identity", "metric", "value", "windowFrom", "windowTo", "source"})
 	write := func(section, identity, metric, value string) {

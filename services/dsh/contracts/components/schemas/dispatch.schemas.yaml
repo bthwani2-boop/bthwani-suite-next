@@ -36,7 +36,7 @@ DshPartnerDispatchReference:
   type: object
   required: [id, orderId, captainId, status, createdAt, updatedAt, deliveryStatus]
   description: >-
-    JRN-017 partner-facing reference status only. Never includes the
+    domain-017 partner-facing reference status only. Never includes the
     captain's location or proof-of-delivery reference.
   properties:
     id: { type: string }

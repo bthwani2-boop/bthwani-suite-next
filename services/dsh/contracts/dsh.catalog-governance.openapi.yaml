@@ -3,7 +3,7 @@ info:
   title: BThwani DSH Catalog Governance API
   version: 1.0.0
   description: >-
-    Governed JRN-008 contract for PIM attributes, product relationships,
+    Governed catalog contract for PIM attributes, product relationships,
     temporary assortment pauses, catalog audit readback and guarded rollback.
 
 x-bthwani-owner: services/dsh

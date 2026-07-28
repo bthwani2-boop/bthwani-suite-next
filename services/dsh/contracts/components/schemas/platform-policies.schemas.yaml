@@ -38,7 +38,7 @@ DshUpsertStoreOnboardingFeePolicyRequest:
 
 # ── Administration Schemas ───────────────────────────────────────
 
-# ── JRN-029 Operational Policy Schemas ────────────────────────────
+# ── operational-policy Operational Policy Schemas ────────────────────────────
 
 DshOperationalPolicyFulfillmentMode:
   type: string

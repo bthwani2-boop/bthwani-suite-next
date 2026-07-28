@@ -47,7 +47,7 @@ func (s *protectedStoreServer) specialRequestFinancialReadback(ctx context.Conte
 		"readState":               "not_started",
 		"paymentSession":          nil,
 		"settlementApplicability": "not_applicable",
-		"settlementReason":        "JRN-022 has no partner settlement source; WLT payment-session status is the complete applicable financial readback.",
+		"settlementReason":        "domain-022 has no partner settlement source; WLT payment-session status is the complete applicable financial readback.",
 	}
 	if request.WltPaymentSessionID == nil || *request.WltPaymentSessionID == "" {
 		return result

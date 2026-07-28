@@ -209,7 +209,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		return nil, false, fmt.Errorf("%w: checkout intent is not eligible for order creation", ErrConflict)
 	}
 
-	// Legacy orders created before the JRN-011 attempt table are recovered
+	// Legacy orders created before the order-truth attempt table are recovered
 	// without a duplicate insert and are bound to this durable attempt.
 	var legacyOrderID string
 	err = tx.QueryRow(`

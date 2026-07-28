@@ -50,8 +50,8 @@ function orderErrorMessage(error: unknown): string {
 
 /**
  * Shared client journey controller. The order itself is always read from the
- * JRN-011 actor-scoped order-truth endpoint. Preparation, issues, dispatch and
- * JRN-017 live tracking remain separate read-only projections and cannot
+ * order-truth actor-scoped order-truth endpoint. Preparation, issues, dispatch and
+ * domain-017 live tracking remain separate read-only projections and cannot
  * override order truth.
  */
 export function useClientOrderJourneyController(orderId: string) {

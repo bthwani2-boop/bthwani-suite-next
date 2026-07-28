@@ -3,13 +3,13 @@ info:
   title: BThwani DSH Delivery Exceptions and Return-to-Store API
   version: 1.0.0
   description: >
-    Canonical JRN-020 operational contract for reporting delivery exceptions,
+    Canonical domain-020 operational contract for reporting delivery exceptions,
     acknowledging operational ownership, resolving retry/reassignment/return/cancellation,
     returning custody to the store, and cross-surface readback. DSH owns operational
     state only. Any cancellation financial effect is delegated to the governed WLT handoff.
 
 x-bthwani-owner: services/dsh
-x-bthwani-journey: JRN-020
+x-bthwani-journey: domain-020
 x-bthwani-truth-owner: services/dsh/backend/internal/dispatch/delivery_exceptions.go
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED

@@ -2,8 +2,8 @@ import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, Icon, Box, Button, spacing, radius, useTheme } from '@bthwani/ui-kit';
 import { ActorWalletPanel } from '../../actor-wallet';
-import { RepresentativeCommissionPanel } from '../../jrn036';
-import { PayoutDestinationPanel } from '../../jrn037';
+import { RepresentativeCommissionPanel } from '../../settlements-commissions';
+import { PayoutDestinationPanel } from '../../payouts-destinations';
 import { PartnerCodCustodyPanel } from '../../wlt-cod/PartnerCodCustodyPanel';
 
 export type WltDshPartnerBridgeProps = {

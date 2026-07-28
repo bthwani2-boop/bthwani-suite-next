@@ -14,7 +14,7 @@
 
 ## 37) Scope of this file
 
-Files `01`–`11` define what a single journey/topic must prove. This file adds the missing layer above that: how to work through **a range of journeys** (for example `JRN-005..JRN-010`) from a living journey registry, one journey at a time, and how to decompose a single journey into **vertical slices** that close one at a time instead of being treated as one large undifferentiated unit.
+Files `01`–`11` define what a single journey/topic must prove. This file adds the missing layer above that: how to work through **a range of journeys** (for example `address-mutation..wlt-receipts`) from a living journey registry, one journey at a time, and how to decompose a single journey into **vertical slices** that close one at a time instead of being treated as one large undifferentiated unit.
 
 This file does not create new authority. It generalizes sequencing discipline that was previously only described informally. The registry itself, `governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md`, remains `ACTIVE_CANONICAL` and outranks this package (see `governance/authority/authority-precedence.json`).
 
@@ -31,7 +31,7 @@ Before opening any journey:
 5. When execution surfaces a capability, contract, operation, migration, route, screen/tab, state transition, affected surface, or DSH/WLT relationship that is not registered, that is a **registry gap** and must be added before the journey can close (see `06_ORGANIZATION_PERFORMANCE_CLEANUP_SEQUENCE.md` §17.14 `journey_sequence_matrix`).
 6. Never delete historical journeys from the registry. Use `MERGED_INTO`, `RETIRED`, or `OUT_OF_SCOPE_FOR_THIS_JOURNEY` (the canonical decision-vocabulary value) with a reason and reference.
 
-A range such as `JRN-005..JRN-010` authorizes execution of exactly those journeys, in order, without requiring a fresh approval between journeys inside that same range — but it does not authorize opening any journey outside the range, and it does not by itself authorize Git/GitHub write actions (see `02_REMOTE_REF_SOURCE_GIT_GATES.md` §5 for what does).
+A range such as `address-mutation..wlt-receipts` authorizes execution of exactly those journeys, in order, without requiring a fresh approval between journeys inside that same range — but it does not authorize opening any journey outside the range, and it does not by itself authorize Git/GitHub write actions (see `02_REMOTE_REF_SOURCE_GIT_GATES.md` §5 for what does).
 
 ---
 

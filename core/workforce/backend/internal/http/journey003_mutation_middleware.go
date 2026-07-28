@@ -9,7 +9,7 @@ import (
 	"workforce-api/internal/workforce"
 )
 
-// Journey003MutationMiddleware owns the two JRN-003 mutations that cross an
+// Journey003MutationMiddleware owns the two workforce mutations that cross an
 // existing service boundary without duplicating the main router: operator city
 // governance and linking an opaque DSH mediaRef to a Workforce profile.
 func Journey003MutationMiddleware(next http.Handler, repo *workforce.Repository, authClient *auth.Client) http.Handler {

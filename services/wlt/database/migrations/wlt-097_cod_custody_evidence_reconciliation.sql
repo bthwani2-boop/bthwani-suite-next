@@ -1,4 +1,4 @@
--- JRN-038: COD cash custody, evidence, variance and reconciliation truth.
+-- cod-custody: COD cash custody, evidence, variance and reconciliation truth.
 --
 -- WLT remains the financial source of truth. A collection/remittance state
 -- transition is not considered complete unless the corresponding evidence and
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS wlt_cod_custody_evidence (
 CREATE INDEX IF NOT EXISTS wlt_cod_custody_evidence_record_created_idx
   ON wlt_cod_custody_evidence(cod_record_id, created_at DESC);
 
-CREATE OR REPLACE FUNCTION wlt_jrn038_reject_custody_evidence_mutation()
+CREATE OR REPLACE FUNCTION wlt_reject_custody_evidence_mutation()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -68,10 +68,10 @@ BEGIN
 END
 $$;
 
-DROP TRIGGER IF EXISTS wlt_jrn038_cod_custody_evidence_immutable_trigger ON wlt_cod_custody_evidence;
-CREATE TRIGGER wlt_jrn038_cod_custody_evidence_immutable_trigger
+DROP TRIGGER IF EXISTS wlt_cod_custody_evidence_immutable_trigger ON wlt_cod_custody_evidence;
+CREATE TRIGGER wlt_cod_custody_evidence_immutable_trigger
 BEFORE UPDATE OR DELETE ON wlt_cod_custody_evidence
-FOR EACH ROW EXECUTE FUNCTION wlt_jrn038_reject_custody_evidence_mutation();
+FOR EACH ROW EXECUTE FUNCTION wlt_reject_custody_evidence_mutation();
 
 CREATE TABLE IF NOT EXISTS wlt_cod_reconciliation_cases (
   id                           text PRIMARY KEY DEFAULT ('wcrc_' || gen_random_uuid()::text),
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS wlt_cod_reconciliation_audit_events (
 CREATE INDEX IF NOT EXISTS wlt_cod_reconciliation_audit_case_created_idx
   ON wlt_cod_reconciliation_audit_events(reconciliation_case_id, created_at, id);
 
-CREATE OR REPLACE FUNCTION wlt_jrn038_capture_reconciliation_audit()
+CREATE OR REPLACE FUNCTION wlt_capture_reconciliation_audit()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -166,12 +166,12 @@ BEGIN
 END
 $$;
 
-DROP TRIGGER IF EXISTS wlt_jrn038_cod_reconciliation_audit_trigger ON wlt_cod_reconciliation_cases;
-CREATE TRIGGER wlt_jrn038_cod_reconciliation_audit_trigger
+DROP TRIGGER IF EXISTS wlt_cod_reconciliation_audit_trigger ON wlt_cod_reconciliation_cases;
+CREATE TRIGGER wlt_cod_reconciliation_audit_trigger
 AFTER INSERT OR UPDATE ON wlt_cod_reconciliation_cases
-FOR EACH ROW EXECUTE FUNCTION wlt_jrn038_capture_reconciliation_audit();
+FOR EACH ROW EXECUTE FUNCTION wlt_capture_reconciliation_audit();
 
-CREATE OR REPLACE FUNCTION wlt_jrn038_reject_audit_mutation()
+CREATE OR REPLACE FUNCTION wlt_reject_audit_mutation()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -180,10 +180,10 @@ BEGIN
 END
 $$;
 
-DROP TRIGGER IF EXISTS wlt_jrn038_cod_reconciliation_audit_immutable_trigger ON wlt_cod_reconciliation_audit_events;
-CREATE TRIGGER wlt_jrn038_cod_reconciliation_audit_immutable_trigger
+DROP TRIGGER IF EXISTS wlt_cod_reconciliation_audit_immutable_trigger ON wlt_cod_reconciliation_audit_events;
+CREATE TRIGGER wlt_cod_reconciliation_audit_immutable_trigger
 BEFORE UPDATE OR DELETE ON wlt_cod_reconciliation_audit_events
-FOR EACH ROW EXECUTE FUNCTION wlt_jrn038_reject_audit_mutation();
+FOR EACH ROW EXECUTE FUNCTION wlt_reject_audit_mutation();
 
 COMMENT ON TABLE wlt_cod_custody_evidence IS
   'Immutable proof and accounting linkage for COD collection/remittance events.';

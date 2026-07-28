@@ -7,7 +7,7 @@ import type {
   SubscriptionPurchaseEnvelope,
 } from "./subscription-lifecycle.types";
 
-const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "jrn027");
+const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "subscription");
 
 let mutationSequence = 0;
 
@@ -16,7 +16,7 @@ function mutationIdentity(action: string, subject: string) {
   const seed = `${action}-${subject}-${Date.now().toString(36)}-${mutationSequence.toString(36)}`;
   return {
     idempotencyKey: seed,
-    correlationId: corrId(`jrn027-${action}`),
+    correlationId: corrId(`subscription-${action}`),
   };
 }
 

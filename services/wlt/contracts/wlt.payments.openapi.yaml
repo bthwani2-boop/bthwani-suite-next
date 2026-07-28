@@ -7,7 +7,7 @@ info:
     states, but it never owns provider or ledger truth. Provider webhook input
     is authenticated by its own HMAC signature rather than the DSH service token.
 x-bthwani-owner: services/wlt
-x-bthwani-journey: JRN-034
+x-bthwani-journey: domain-034
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: ENABLED
 x-bthwani-financial-owner: true

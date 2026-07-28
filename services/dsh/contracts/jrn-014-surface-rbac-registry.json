@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "journeyId": "JRN-014",
+  "journeyId": "dispatch",
   "defaultEffect": "DENY",
   "surfaces": [
     {

@@ -1,4 +1,4 @@
--- JRN-031: bind approved DSH administration roles to real permission checks.
+-- governed-administration: bind approved DSH administration roles to real permission checks.
 
 ALTER TABLE dsh_admin_roles
   ADD COLUMN IF NOT EXISTS permissions JSONB NOT NULL DEFAULT '[]'::jsonb;

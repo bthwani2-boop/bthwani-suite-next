@@ -1599,7 +1599,7 @@ export interface paths {
         };
         /**
          * Partner reads reference-only bthwani_delivery captain assignment status.
-         * @description JRN-017: the partner never sees the captain's live location or proof of delivery here — only lifecycle status, for orders it owns.
+         * @description domain-017: the partner never sees the captain's live location or proof of delivery here — only lifecycle status, for orders it owns.
          */
         get: operations["getDshPartnerDispatchTracking"];
         put?: never;
@@ -3972,7 +3972,7 @@ export interface paths {
         };
         /**
          * Return the authenticated client's reference partner_delivery status for the order.
-         * @description Client-facing reference status for JRN-016. Read-only projection of the same partner_delivery task the store courier operates; the client never mutates it.
+         * @description Client-facing reference status for domain-016. Read-only projection of the same partner_delivery task the store courier operates; the client never mutates it.
          */
         get: operations["getDshClientPartnerDeliveryTask"];
         put?: never;
@@ -5608,7 +5608,7 @@ export interface components {
         DshDispatchAssignmentResponse: {
             assignment: components["schemas"]["DshDispatchAssignment"];
         };
-        /** @description JRN-017 partner-facing reference status only. Never includes the captain's location or proof-of-delivery reference. */
+        /** @description domain-017 partner-facing reference status only. Never includes the captain's location or proof-of-delivery reference. */
         DshPartnerDispatchReference: {
             id: string;
             orderId: string;

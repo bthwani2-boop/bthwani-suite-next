@@ -15,7 +15,7 @@ import {
   formatDateTime,
 } from "@bthwani/ui-kit";
 import { useFieldFinanceController } from "../../shared/finance-wlt-link/field-finance";
-import { PayoutDestinationPanel } from "../../shared/finance-wlt-link/jrn037";
+import { PayoutDestinationPanel } from "../../shared/finance-wlt-link/payouts-destinations";
 import { ProviderIncidentsPanel } from "../../shared/workforce/ProviderIncidentsPanel";
 import { DshFieldReferenceTag } from "../components/DshFieldReferenceTag";
 

@@ -1,4 +1,4 @@
--- DSH-098 / JRN-007 S3: governed region and audience targeting for client-home content.
+-- DSH-098 / domain-007 S3: governed region and audience targeting for client-home content.
 -- Absence of rows for one target_type means unrestricted for that dimension.
 -- Content truth remains in dsh_home_banners/dsh_home_promos; this table owns only
 -- the targeting projection and therefore does not create a second content owner.
@@ -42,4 +42,4 @@ AFTER DELETE ON dsh_home_promos
 FOR EACH ROW EXECUTE FUNCTION dsh_cleanup_home_content_targets('promos');
 
 COMMENT ON TABLE dsh_home_content_targets IS
-  'JRN-007 targeting projection. Empty dimension = all; audience values are guest/authenticated.';
+  'domain-007 targeting projection. Empty dimension = all; audience values are guest/authenticated.';

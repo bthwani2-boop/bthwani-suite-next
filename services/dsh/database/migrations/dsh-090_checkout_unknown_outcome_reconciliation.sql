@@ -1,4 +1,4 @@
--- DSH-090: JRN-010 unknown WLT outcome and reconciliation state.
+-- DSH-090: wlt-receipts unknown WLT outcome and reconciliation state.
 -- DSH stores only an operational projection. WLT remains the financial authority.
 
 ALTER TABLE dsh_checkout_intents

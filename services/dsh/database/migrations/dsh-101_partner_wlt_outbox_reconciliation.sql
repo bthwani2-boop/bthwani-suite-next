@@ -1,4 +1,4 @@
--- DSH-101: durable JRN-001 handoff and reconciliation with WLT.
+-- DSH-101: durable partner-tenant handoff and reconciliation with WLT.
 -- No raw account, IBAN, or payout mobile value is stored here. The outbox
 -- contains only partner/event identity; reconciliation stores WLT references
 -- and masked values safe for operational readback.

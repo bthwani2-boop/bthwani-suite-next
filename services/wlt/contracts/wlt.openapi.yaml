@@ -15,12 +15,12 @@ x-bthwani-financial-owner: true
 x-bthwani-contracts:
   payments: ./wlt.payments.openapi.yaml
   deliveryCollections: ./wlt.delivery-collections.openapi.yaml
-  refunds: ./jrn-035-refunds.openapi.yaml
-  settlementsCommissions: ./jrn-036-settlements-commissions.openapi.yaml
+  refunds: ./refunds.openapi.yaml
+  settlementsCommissions: ./settlements-commissions.openapi.yaml
   settlementOperations: ./wlt.settlement-operations.openapi.yaml
-  payoutsDestinations: ./jrn-037-payouts-destinations.openapi.yaml
+  payoutsDestinations: ./payouts-destinations.openapi.yaml
   payoutFailureBoundary: ./wlt.payout-failure-boundary.openapi.yaml
-  codCustody: ./jrn-038-cod-custody.openapi.yaml
+  codCustody: ./cod-custody.openapi.yaml
   codRecords: ./wlt.cod-records.openapi.yaml
   commercial: ./wlt.commercial.openapi.yaml
   commercialSummary: ./wlt.commercial-summary.openapi.yaml
@@ -501,7 +501,18 @@ components:
       properties:
         status:
           type: string
-          enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_collected, failed, expired, provider_result_unknown]
+          enum: 
+            - reference_created
+            - pending_provider
+            - authorization_pending
+            - authorized
+            - capture_pending
+            - captured
+            - cod_pending
+            - cod_collected
+            - failed
+            - expired
+            - provider_result_unknown
     Error:
       type: object
       required: [code, message]
