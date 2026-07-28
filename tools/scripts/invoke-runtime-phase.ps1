@@ -98,6 +98,27 @@ $runtimeParameters = @{
 }
 if ($Force) { $runtimeParameters.Force = $true }
 
+function Invoke-RuntimeBasePhase {
+  param([switch]$Append)
+
+  $global:LASTEXITCODE = 0
+  if ($Append) {
+    & $phaseRuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath -Append
+  } else {
+    & $phaseRuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath
+  }
+  return $LASTEXITCODE
+}
+
+function Test-TransientPostgresBootstrapRestart {
+  if ($Action -ne "up" -or -not (Test-Path -LiteralPath $LogPath -PathType Leaf)) {
+    return $false
+  }
+
+  $logText = Get-Content -LiteralPath $LogPath -Raw
+  return $logText -match "database system is shutting down|the database system is starting up"
+}
+
 try {
   Set-Location -LiteralPath $RepoRoot
 
@@ -116,10 +137,15 @@ try {
       }
     }
   } elseif ($runtimeProfileList.Count -gt 0) {
-    $global:LASTEXITCODE = 0
-    & $phaseRuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath
-    if ($LASTEXITCODE -ne 0) {
-      throw "Runtime script action '$Action' failed with exit code $LASTEXITCODE"
+    $runtimeExitCode = Invoke-RuntimeBasePhase
+    if ($runtimeExitCode -ne 0 -and (Test-TransientPostgresBootstrapRestart)) {
+      Write-Warning "PostgreSQL bootstrap performed its one expected temporary-server restart. Retrying runtime:up once after stabilization."
+      "=== transient-postgres-bootstrap-retry: one retry ===" | Add-Content -LiteralPath $LogPath
+      Start-Sleep -Seconds 5
+      $runtimeExitCode = Invoke-RuntimeBasePhase -Append
+    }
+    if ($runtimeExitCode -ne 0) {
+      throw "Runtime script action '$Action' failed with exit code $runtimeExitCode"
     }
   } else {
     "Runtime base phase skipped: no non-WLT profiles remain for action '$Action'." |
