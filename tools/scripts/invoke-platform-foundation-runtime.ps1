@@ -48,7 +48,7 @@ function Invoke-Compose {
 function Wait-Postgres {
   for ($attempt = 1; $attempt -le 45; $attempt++) {
     $global:LASTEXITCODE = 0
-    & docker @ComposeArgs exec -T postgres pg_isready -U bthwani_runtime -d bthwani_runtime *> $null
+    & docker @ComposeArgs exec -T postgres sh -lc 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' *> $null
     if ($LASTEXITCODE -eq 0) { return }
     Start-Sleep -Seconds 2
   }
