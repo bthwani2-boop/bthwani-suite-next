@@ -143,10 +143,7 @@ func mergeEmployeeRoles(existing []string, supervisory bool) []string {
 
 // employeeAccessConflictsWithRoles protects the control-panel trust boundary.
 // A phone already used by a consumer, partner, field agent or captain cannot be
-// silently upgraded into an administrative employee. Such an upgrade would
-// grant operator permissions to a provider identity merely because the phone
-// matched. Existing employee/operator identities may still be updated through
-// the governed server-owned permission bundles.
+// silently upgraded into an administrative employee.
 func employeeAccessConflictsWithRoles(roles []string) bool {
 	for _, role := range roles {
 		switch strings.TrimSpace(role) {
@@ -178,9 +175,9 @@ func mergeEmployeePermissions(existing, requested []Permission) []Permission {
 	return result
 }
 
-// ProvisionEmployee provisions or upgrades one actor into an administrative
-// employee with an explicit, server-owned permission bundle. The caller cannot
-// submit arbitrary permissions.
+// ProvisionEmployee creates one new administrative actor with an explicit,
+// server-owned permission bundle. Existing phones are rejected; changing an
+// existing employee's bundle requires a separate audited Identity operation.
 func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvisionInput) (ActorAdminView, error) {
 	username := strings.TrimSpace(input.Username)
 	if username == "" {
@@ -206,30 +203,12 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	existing, err := actorByPhoneAnyRoleTx(ctx, tx, phone)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return ActorAdminView{}, err
-	}
+	_, err = actorByPhoneAnyRoleTx(ctx, tx, phone)
 	if err == nil {
-		if strings.TrimSpace(existing.TenantID) != tenantID || employeeAccessConflictsWithRoles(existing.Roles) {
-			return ActorAdminView{}, ErrPhoneAlreadyBound
-		}
-		roles := mergeEmployeeRoles(existing.Roles, supervisory)
-		mergedPermissions := mergeEmployeePermissions(existing.Permissions, permissions)
-		permissionsJSON, marshalErr := json.Marshal(mergedPermissions)
-		if marshalErr != nil {
-			return ActorAdminView{}, marshalErr
-		}
-		if _, err = tx.ExecContext(ctx, `
-			UPDATE identity_actors
-			SET roles=$2, permissions=$3::jsonb, updated_at=now()
-			WHERE id=$1`, existing.ID, pq.Array(roles), string(permissionsJSON)); err != nil {
-			return ActorAdminView{}, err
-		}
-		if err := tx.Commit(); err != nil {
-			return ActorAdminView{}, err
-		}
-		return r.ActorAdminByID(ctx, existing.ID)
+		return ActorAdminView{}, ErrPhoneAlreadyBound
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return ActorAdminView{}, err
 	}
 
 	suffix, err := randomToken(9)
