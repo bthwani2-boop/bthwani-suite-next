@@ -19,6 +19,10 @@ func UpsertGovernedCommissionPolicyIdempotent(
 	correlationID string,
 	idempotencyKey string,
 ) (*GovernedCommissionPolicy, error) {
+	tenantID, err := shared.RequireTenantContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	input.PolicyID = strings.TrimSpace(input.PolicyID)
 	input.CommissionType = strings.TrimSpace(input.CommissionType)
 	input.SourceType = strings.TrimSpace(input.SourceType)
@@ -96,6 +100,7 @@ func UpsertGovernedCommissionPolicyIdempotent(
 		maximum = fmt.Sprint(*input.MaximumAmountMinorUnits)
 	}
 	requestHash := hashCommissionParts(
+		tenantID,
 		"commission_policy",
 		input.PolicyID,
 		input.CommissionType,
@@ -116,7 +121,7 @@ func UpsertGovernedCommissionPolicyIdempotent(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	receipt, exists, err := shared.LoadJrn036MutationReceiptTx(
 		ctx,
@@ -142,10 +147,12 @@ func UpsertGovernedCommissionPolicyIdempotent(
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE wlt_jrn036_commission_policy_versions
 			SET status = 'inactive'
-			WHERE commission_type = $1
-			  AND source_type = $2
-			  AND beneficiary_actor_type = $3
+			WHERE tenant_id = $1
+			  AND commission_type = $2
+			  AND source_type = $3
+			  AND beneficiary_actor_type = $4
 			  AND status = 'active'`,
+			tenantID,
 			input.CommissionType,
 			input.SourceType,
 			input.BeneficiaryActorType,
@@ -158,21 +165,22 @@ func UpsertGovernedCommissionPolicyIdempotent(
 	if err := tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) + 1
 		FROM wlt_jrn036_commission_policy_versions
-		WHERE policy_id = $1`, input.PolicyID).Scan(&version); err != nil {
+		WHERE tenant_id = $1 AND policy_id = $2`, tenantID, input.PolicyID).Scan(&version); err != nil {
 		return nil, err
 	}
 
 	row := tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_jrn036_commission_policy_versions
-		(policy_id, version, commission_type, source_type, beneficiary_actor_type,
+		(tenant_id, policy_id, version, commission_type, source_type, beneficiary_actor_type,
 		 calculation_type, fixed_amount_minor_units, basis_points,
 		 minimum_amount_minor_units, maximum_amount_minor_units,
 		 currency, status, change_reason, updated_by_actor_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING policy_id, version, commission_type, source_type, beneficiary_actor_type,
 		          calculation_type, fixed_amount_minor_units, basis_points,
 		          minimum_amount_minor_units, maximum_amount_minor_units,
 		          currency, status, change_reason, updated_by_actor_id`,
+		tenantID,
 		input.PolicyID,
 		version,
 		input.CommissionType,
@@ -199,10 +207,11 @@ func UpsertGovernedCommissionPolicyIdempotent(
 	})
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_jrn036_audit_events
-		(aggregate_type, aggregate_id, action, actor_id, actor_type,
+		(tenant_id, aggregate_type, aggregate_id, action, actor_id, actor_type,
 		 reason, correlation_id, metadata)
-		VALUES ('commission_policy', $1, 'policy_version_created', $2,
-		        'operator', $3, $4, $5::jsonb)`,
+		VALUES ($1, 'commission_policy', $2, 'policy_version_created', $3,
+		        'operator', $4, $5, $6::jsonb)`,
+		tenantID,
 		input.PolicyID,
 		input.OperatorID,
 		input.ChangeReason,
