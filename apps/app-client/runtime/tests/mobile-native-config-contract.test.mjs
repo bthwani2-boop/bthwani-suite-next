@@ -45,7 +45,9 @@ test("Android Firebase configuration is isolated per application", () => {
 });
 
 test("mobile startup proves backends before Metro and avoids Expo Android stream piping", () => {
-  const launcher = fs.readFileSync(path.join(repoRoot, "tools/scripts/start-mobile-runtime.ps1"), "utf8");
+  const compatibility = fs.readFileSync(path.join(repoRoot, "tools/scripts/start-mobile-runtime.ps1"), "utf8");
+  const launcher = fs.readFileSync(path.join(repoRoot, "apps/mobile/start-mobile-runtime.ps1"), "utf8");
+  assert.match(compatibility, /apps\\mobile\\start-mobile-runtime\.ps1/);
   for (const marker of [
     "Ensure-BthwaniMobileBackend",
     "identity,workforce,dsh,wlt,media",
