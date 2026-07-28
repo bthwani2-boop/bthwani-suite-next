@@ -1,6 +1,7 @@
 package cod
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"wlt-api/internal/reference"
+	"wlt-api/internal/shared"
 	"wlt-api/internal/wallet"
 )
 
@@ -358,11 +360,13 @@ func TestCreateCodRecordUsesWltSessionAndCollectorIdentity(t *testing.T) {
 		return
 	}
 	defer db.Close()
+	tenantID := fmt.Sprintf("tenant-cod-test-%d", time.Now().UnixNano())
+	ctx := shared.WithTenantContext(context.Background(), tenantID)
 	checkoutIntentID := fmt.Sprintf("checkout-cod-%d", time.Now().UnixNano())
 	orderID := fmt.Sprintf("order-cod-%d", time.Now().UnixNano())
 	if _, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
 		CheckoutIntentID: checkoutIntentID,
-		TenantID:         "tenant-cod-test",
+		TenantID:         tenantID,
 		ClientID:         "client-cod-test",
 		StoreID:          "store-cod-test",
 		PaymentMethod:    "cod",
@@ -375,11 +379,11 @@ func TestCreateCodRecordUsesWltSessionAndCollectorIdentity(t *testing.T) {
 		t.Fatalf("create governed COD payment session: %v", err)
 	}
 	input := CreateCodRecordInput{OrderID: orderID, CollectorType: "store_courier", CollectorID: "courier-cod-test", PartnerID: "partner-cod-test", CheckoutIntentID: checkoutIntentID}
-	first, err := CreateCodRecord(db, input)
+	first, err := CreateCodRecordForTenant(ctx, db, input)
 	if err != nil {
 		t.Fatalf("create COD custody: %v", err)
 	}
-	second, err := CreateCodRecord(db, input)
+	second, err := CreateCodRecordForTenant(ctx, db, input)
 	if err != nil {
 		t.Fatalf("replay COD custody: %v", err)
 	}
@@ -400,10 +404,12 @@ func TestCreateCodRecordRejectsNonCodSession(t *testing.T) {
 		return
 	}
 	defer db.Close()
+	tenantID := fmt.Sprintf("tenant-wallet-test-%d", time.Now().UnixNano())
+	ctx := shared.WithTenantContext(context.Background(), tenantID)
 	checkoutIntentID := fmt.Sprintf("checkout-wallet-%d", time.Now().UnixNano())
 	if _, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
 		CheckoutIntentID: checkoutIntentID,
-		TenantID:         "tenant-wallet-test",
+		TenantID:         tenantID,
 		ClientID:         "client-wallet-test",
 		StoreID:          "store-wallet-test",
 		PaymentMethod:    "wallet",
@@ -415,7 +421,7 @@ func TestCreateCodRecordRejectsNonCodSession(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create governed wallet payment session: %v", err)
 	}
-	_, err := CreateCodRecord(db, CreateCodRecordInput{OrderID: fmt.Sprintf("order-wallet-%d", time.Now().UnixNano()), CollectorType: "captain", CollectorID: "captain-wallet-test", PartnerID: "partner-wallet-test", CheckoutIntentID: checkoutIntentID})
+	_, err := CreateCodRecordForTenant(ctx, db, CreateCodRecordInput{OrderID: fmt.Sprintf("order-wallet-%d", time.Now().UnixNano()), CollectorType: "captain", CollectorID: "captain-wallet-test", PartnerID: "partner-wallet-test", CheckoutIntentID: checkoutIntentID})
 	if err == nil {
 		t.Fatal("expected non-COD payment session to be rejected")
 	}
