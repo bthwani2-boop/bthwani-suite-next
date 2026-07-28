@@ -73,21 +73,7 @@ ALTER TABLE wlt_payout_destination_requests
 UPDATE wlt_payout_destination_requests request
 SET tenant_id = destination.tenant_id
 FROM wlt_payout_destinations destination
-WHERE request.destination_id = destination.id
-  AND (request.tenant_id IS NULL OR btrim(request.tenant_id) = '');
-
-WITH request_owner AS (
-  SELECT owner_actor_type, owner_actor_id, min(tenant_id) AS tenant_id
-  FROM wlt_payout_destinations
-  WHERE tenant_id <> 'legacy-unscoped'
-  GROUP BY owner_actor_type, owner_actor_id
-  HAVING count(DISTINCT tenant_id) = 1
-)
-UPDATE wlt_payout_destination_requests request
-SET tenant_id = owner.tenant_id
-FROM request_owner owner
-WHERE request.owner_actor_type = owner.owner_actor_type
-  AND request.owner_actor_id = owner.owner_actor_id
+WHERE request.payout_destination_id = destination.id
   AND (request.tenant_id IS NULL OR btrim(request.tenant_id) = '');
 
 UPDATE wlt_payout_destination_requests
@@ -102,7 +88,7 @@ CREATE UNIQUE INDEX wlt_payout_destination_requests_tenant_idempotency_uq
   ON wlt_payout_destination_requests (tenant_id, idempotency_key);
 CREATE INDEX wlt_payout_destination_requests_tenant_owner_created_idx
   ON wlt_payout_destination_requests
-    (tenant_id, owner_actor_type, owner_actor_id, created_at DESC);
+    (tenant_id, partner_id, created_at DESC);
 
 DROP INDEX IF EXISTS wlt_payout_requests_idempotency_idx;
 DROP INDEX IF EXISTS wlt_payout_requests_request_hash_idx;
