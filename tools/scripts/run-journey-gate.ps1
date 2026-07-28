@@ -46,17 +46,17 @@ $results = @()
 
 function Run-Step {
   param([Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)][scriptblock]$Block)
-  Write-Host "[ RUN ] $Name" -ForegroundColor Cyan
+  Write-Output "[ RUN ] $Name"
   $global:LASTEXITCODE = 0
   try {
-    & $Block 2>&1 | ForEach-Object { Write-Host $_ }
+    & $Block *>&1 | ForEach-Object { Write-Output $_ }
     $nativeExitCode = $global:LASTEXITCODE
     if ($nativeExitCode -ne 0) { throw "exit $nativeExitCode" }
-    Write-Host "[ OK  ] $Name" -ForegroundColor Green
+    Write-Output "[ OK  ] $Name"
     return $true
   }
   catch {
-    Write-Host "[ FAIL] $Name — $_" -ForegroundColor Red
+    Write-Output "[ FAIL] $Name — $_"
     return $false
   }
 }
@@ -123,14 +123,14 @@ if ($Runtime) {
 
 $failed = @($results | Where-Object { -not $_.ok })
 if ($failed.Count -gt 0) {
-  Write-Host ""
-  Write-Host "RESULT: FIX_REQUIRED journey=$Journey" -ForegroundColor Red
-  Write-Host "Failed steps: $($failed.step -join ', ')" -ForegroundColor Red
+  Write-Output ""
+  Write-Output "RESULT: FIX_REQUIRED journey=$Journey"
+  Write-Output "Failed steps: $($failed.step -join ', ')"
   throw "Journey gate failed: $($failed.step -join ', ')"
 }
 
 $scope = if ($Runtime) { "runtime" } else { "static" }
 $mode = if ($Full) { "full-explicit" } else { "targeted-default" }
-Write-Host ""
-Write-Host "RESULT: PASS scope=$scope mode=$mode journey=$Journey" -ForegroundColor Green
-Write-Host "PASS is scoped evidence only and does not imply CLOSED_WITH_EVIDENCE." -ForegroundColor Yellow
+Write-Output ""
+Write-Output "RESULT: PASS scope=$scope mode=$mode journey=$Journey"
+Write-Output "PASS is scoped evidence only and does not imply CLOSED_WITH_EVIDENCE."
