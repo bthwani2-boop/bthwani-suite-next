@@ -68,7 +68,6 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
   const [guaranteeStatus, setGuaranteeStatus] = useState<EmployeeGuaranteeStatus>("not_required");
   const [guaranteeReference, setGuaranteeReference] = useState("");
   const [responsibilityScopes, setResponsibilityScopes] = useState("");
-  const [authorityScopes, setAuthorityScopes] = useState("");
   const [managedDepartmentCodes, setManagedDepartmentCodes] = useState("");
   const [governanceNotes, setGovernanceNotes] = useState("");
 
@@ -107,7 +106,6 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
         setGuaranteeStatus(result.guaranteeStatus);
         setGuaranteeReference(result.guaranteeReference ?? "");
         setResponsibilityScopes(result.responsibilityScopes.join("، "));
-        setAuthorityScopes(result.authorityScopes.join("، "));
         setManagedDepartmentCodes(result.managedDepartmentCodes.join("، "));
         setGovernanceNotes(result.notes ?? "");
       })
@@ -134,7 +132,6 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
         guaranteeStatus,
         guaranteeReference: guaranteeReference.trim(),
         responsibilityScopes: splitScopes(responsibilityScopes),
-        authorityScopes: splitScopes(authorityScopes),
         managedDepartmentCodes: splitScopes(managedDepartmentCodes),
         notes: governanceNotes.trim(),
       });
@@ -255,7 +252,7 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
 
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", padding: 16, border: "1px solid var(--bthwani-control-panel-border)", borderRadius: 12 }}>
           <Text role="titleSm">المنصب والضمانة ونطاق المسؤولية</Text>
-          <CpMutedInline>هذه بيانات حوكمة إدارية. الصلاحيات التنفيذية الفعلية تظل مملوكة لخدمة Identity.</CpMutedInline>
+          <CpMutedInline>هذه بيانات تنظيمية فقط. الأدوار والصلاحيات التنفيذية تُدار حصريًا بواسطة Identity ولا يمكن تحريرها من ملف Workforce.</CpMutedInline>
           <div><Text role="bodySm">المسمى الرسمي *</Text><CpTextInput value={positionTitle} onChange={setPositionTitle} aria-label="المسمى الرسمي" /></div>
           <div><Text role="bodySm">الدرجة الوظيفية</Text><CpTextInput value={jobGrade} onChange={setJobGrade} aria-label="الدرجة الوظيفية" /></div>
           <select value={employmentClass} onChange={(event) => setEmploymentClass(event.target.value as EmployeeEmploymentClass)} style={selectStyle} aria-label="الفئة الإدارية">
@@ -269,7 +266,6 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
           </select>
           <div><Text role="bodySm">مرجع الضمانة</Text><CpTextInput value={guaranteeReference} onChange={setGuaranteeReference} aria-label="مرجع الضمانة" /></div>
           <div><Text role="bodySm">نطاقات المسؤولية</Text><CpTextInput value={responsibilityScopes} onChange={setResponsibilityScopes} placeholder="العمليات، الكباتن، جودة الخدمة" aria-label="نطاقات المسؤولية" /></div>
-          <div><Text role="bodySm">نطاقات السلطة المعتمدة</Text><CpTextInput value={authorityScopes} onChange={setAuthorityScopes} placeholder="اعتماد كابتن، تعليق حساب، مراجعة مخالفة" aria-label="نطاقات السلطة" /></div>
           <div><Text role="bodySm">رموز الأقسام المُدارة</Text><CpTextInput value={managedDepartmentCodes} onChange={setManagedDepartmentCodes} placeholder="operations, partners" aria-label="الأقسام المدارة" /></div>
           <div><Text role="bodySm">ملاحظات القرار</Text><CpTextInput value={governanceNotes} onChange={setGovernanceNotes} aria-label="ملاحظات القرار" /></div>
           {governanceError ? <CpStateView kind="error" title={governanceError} /> : null}
