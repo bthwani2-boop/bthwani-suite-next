@@ -1,7 +1,7 @@
 package cod
 
 import (
-	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"testing"
@@ -111,5 +111,3 @@ func TestCanonicalGenericRouteRejectsFieldVisitCommission(t *testing.T) {
 		t.Fatal("expected field visit to require the dedicated field commission route")
 	}
 }
-
-var _ = context.Background
