@@ -37,6 +37,8 @@ function normalizedJson(value) {
   return JSON.stringify(value);
 }
 
+const packageJson = json("package.json");
+const scripts = packageJson?.scripts ?? {};
 const toolchain = json("shared/config/toolchain-lock.json");
 const easVersion = toolchain?.locked?.easCli;
 const doctorVersion = toolchain?.locked?.expoDoctor;
@@ -91,6 +93,60 @@ expect(!/\bdown\b[^\r\n]*(?:\s-v\b|--volumes\b)/.test(downRuntime), "Ordinary Do
 const resetRuntime = read("infra/docker/scripts/reset-runtime.ps1");
 expect(/\bdown\s+-v\s+--remove-orphans\b/.test(resetRuntime), "Volume deletion must remain explicit in reset-runtime.ps1");
 
+const dockerConfigCheck = read("tools/scripts/check-refoundation-docker-config.ps1");
+expect(dockerConfigCheck.includes('config", "--quiet"'), "Docker configuration check must use config --quiet");
+expect(!/\b(?:up|down|stop|rm|reset)\b/.test(dockerConfigCheck.replace(/configuration/gi, "")), "Docker configuration check must not start, stop, reset, or remove runtime resources");
+
+const platformRuntime = read("tools/scripts/invoke-platform-foundation-runtime.ps1");
+for (const marker of [
+  '"--profile", "providers"',
+  '"--profile", "platform"',
+  'foreach ($service in @("providers", "platform-control"))',
+  'http://localhost:58087/providers/readiness',
+  'http://localhost:58088/platform/readiness',
+  '001_create_runtime_databases.sh',
+]) {
+  expect(platformRuntime.includes(marker), `Platform foundation runtime is missing ${marker}`);
+}
+expect(!/\bdown\b[^\r\n]*(?:\s-v\b|--volumes\b)/.test(platformRuntime), "Platform foundation runtime down must not delete volumes");
+
+const fullRuntime = read("tools/scripts/invoke-full-runtime.ps1");
+for (const marker of [
+  "invoke-platform-foundation-runtime.ps1",
+  "identity,workforce,dsh,wlt,financial-simulators,mail,media",
+  'ValidateSet("up", "down", "migrate", "smoke", "status", "bootstrap-dev", "reset", "rebuild-reset")',
+  "Assert-DestructiveActionAuthorized",
+  'Action = "reset"',
+  'Action = "all"',
+]) {
+  expect(fullRuntime.includes(marker), `True full runtime is missing ${marker}`);
+}
+expect(!/\bdown\b[^\r\n]*(?:\s-v\b|--volumes\b)/.test(fullRuntime), "True full runtime ordinary down must not delete volumes");
+expect(
+  scripts["runtime:full:reset"]?.includes("-Force") === true,
+  "runtime:full:reset must require explicit -Force",
+);
+expect(
+  scripts["runtime:full:rebuild-reset"]?.includes("-Force") === true,
+  "runtime:full:rebuild-reset must require explicit -Force",
+);
+for (const scriptName of [
+  "runtime:full",
+  "runtime:full:up",
+  "runtime:full:bootstrap-dev",
+  "runtime:full:down",
+  "runtime:full:reset",
+  "runtime:full:smoke",
+  "runtime:full:migrate",
+  "runtime:full:status",
+  "runtime:full:rebuild-reset",
+]) {
+  expect(
+    scripts[scriptName]?.includes("tools/scripts/invoke-full-runtime.ps1") === true,
+    `${scriptName} must use the true full-runtime orchestrator`,
+  );
+}
+
 const refoundationVerification = read("tools/scripts/run-refoundation-verification.ps1");
 expect(refoundationVerification.includes("runtime:full:down"), "Runtime verification must stop the full runtime");
 expect(refoundationVerification.includes("Invoke-BestEffortRuntimeDown"), "Runtime verification must clean partial startup");
@@ -122,5 +178,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `Refoundation operational-tooling check passed: eas-cli=${easVersion}, expo-doctor=${doctorVersion}, mobileApps=4, dockerVolumeBoundary=preserved.`,
+  `Refoundation operational-tooling check passed: eas-cli=${easVersion}, expo-doctor=${doctorVersion}, mobileApps=4, trueFullRuntime=preserved, dockerVolumeBoundary=preserved.`,
 );
