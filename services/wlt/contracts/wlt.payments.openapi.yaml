@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani WLT Payment Sessions API
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     WLT-owned payment session lifecycle. DSH may orchestrate and project these
     states, but it never owns provider or ledger truth. Provider webhook input
@@ -20,6 +20,8 @@ paths:
       summary: Create or replay a tenant-bound payment-session reference.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/TenantId'
@@ -63,6 +65,8 @@ paths:
       summary: Authorize the immutable session amount with durable replay protection.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
@@ -85,6 +89,8 @@ paths:
       summary: Capture an authorized session and atomically post its double-entry ledger transaction.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
@@ -107,6 +113,8 @@ paths:
       summary: Query authoritative provider status without repeating authorize or capture.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
@@ -150,23 +158,47 @@ paths:
       summary: Expire a legally expirable non-captured payment session.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
       responses:
         '200':
           description: Expired session.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentSessionResponse' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /wlt/payment-sessions/{paymentSessionId}/cod-collect:
+    post:
+      operationId: blockLegacyWltPaymentSessionCodCollect
+      summary: Reject legacy direct COD collection; custody transitions use delivery-collection routes.
+      tags: [WltPayments]
+      security: [{ serviceBearer: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '403': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
   /wlt/payment-sessions/{paymentSessionId}/cancel-for-order:
     post:
       operationId: cancelWltPaymentSessionForOrder
-      summary: Let WLT choose expiry or governed refund according to captured truth.
+      summary: Let WLT choose expiry or governed refund according to captured tenant truth.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
@@ -179,6 +211,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [orderId, clientId, reason]
               properties:
                 orderId: { type: string, minLength: 1 }
@@ -189,9 +222,44 @@ paths:
           description: Expiry, refund request, or no-op decision.
           content:
             application/json:
-              schema:
-                type: object
-                additionalProperties: true
+              schema: { type: object, additionalProperties: true }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /wlt/order-cancellations:
+    post:
+      operationId: cancelWltOrderFinancially
+      summary: Apply the tenant-bound expiry-or-refund decision for an order.
+      tags: [WltPayments]
+      security: [{ serviceBearer: [] }]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [paymentSessionId, orderId, clientId, reason]
+              properties:
+                paymentSessionId: { type: string, minLength: 1 }
+                orderId: { type: string, minLength: 1 }
+                clientId: { type: string, minLength: 1 }
+                reason: { type: string, minLength: 1, maxLength: 500 }
+      responses:
+        '200':
+          description: Expiry, refund request, or no-op decision.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
   /wlt/provider/webhooks/payment:
     post:
