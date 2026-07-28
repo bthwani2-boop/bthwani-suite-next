@@ -78,7 +78,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/cod-reconciliation-cases/{caseId}/assign", gate(serviceAuth(cod.HandleAssignCodReconciliationCase(db))))
 	mux.HandleFunc("POST /wlt/cod-reconciliation-cases/{caseId}/resolve", gate(serviceAuth(cod.HandleResolveCodReconciliationCase(db))))
 	mux.HandleFunc("PUT /wlt/commission-policies", gate(serviceAuth(cod.HandleUpsertGovernedCommissionPolicyIdempotent(db))))
-	mux.HandleFunc("POST /wlt/commissions", gate(serviceAuth(cod.HandleCreateGovernedCommission(db))))
+	mux.HandleFunc("POST /wlt/commissions", gate(serviceAuth(cod.HandleCreateCanonicalCommission(db))))
 	mux.HandleFunc("GET /wlt/commissions/{commissionId}", readGate(shared.RequireTenantScope(db, shared.TenantScopeConfig{Table: "wlt_commissions", IDPathValue: "commissionId"}, cod.HandleGetGovernedCommission(db))))
 	mux.HandleFunc("GET /wlt/commissions", readGate(shared.RequireTenantScope(db, shared.TenantScopeConfig{Table: "wlt_commissions", ListPath: "/wlt/commissions"}, cod.HandleListGovernedCommissions(db))))
 	mux.HandleFunc("POST /wlt/commissions/{commissionId}/adjust", gate(serviceAuth(cod.HandleAdjustGovernedCommission(db))))
