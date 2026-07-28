@@ -40,6 +40,10 @@ function Run-Step {
   }
 }
 
+$results += [pscustomobject]@{
+  step = "refoundation-foundation-check"
+  ok = (Run-Step "refoundation-foundation-check" { node tools/scripts/check-refoundation-foundation.mjs })
+}
 $results += [pscustomobject]@{ step = "git-diff-check"; ok = (Run-Step "git-diff-check" { git --no-pager diff --check }) }
 
 if ($Full) {
