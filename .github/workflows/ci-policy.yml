@@ -123,7 +123,7 @@ jobs:
         id: workflow_security
         if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
         continue-on-error: true
-        run: node tools/scripts/run-zizmor.mjs
+        run: pnpm run guard:workflow-security
 
       - name: Upload workflow security report
         if: ${{ steps.workflow_security.outcome == 'failure' }}
