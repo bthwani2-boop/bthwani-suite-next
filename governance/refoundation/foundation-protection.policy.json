@@ -12,7 +12,9 @@
     "pnpm": "10.34.0",
     "packageManager": "pnpm@10.34.0",
     "typescript": "~6.0.3",
-    "go": "1.26.5"
+    "go": "1.26.5",
+    "easCli": "21.3.0",
+    "expoDoctor": "1.20.1"
   },
   "mobileManifest": {
     "owner": "bthwani1",
@@ -64,17 +66,25 @@
     "shared/config/toolchain-lock.json",
     "governance/refoundation/FOUNDATION_ONLY_EXECUTION.md",
     "governance/refoundation/foundation-control-plane.json",
+    "governance/refoundation/foundation-readiness.json",
     "infra/docker/compose.runtime.yml",
     "infra/docker/scripts/runtime.ps1",
+    "infra/docker/scripts/down-runtime.ps1",
+    "infra/docker/scripts/reset-runtime.ps1",
+    "apps/mobile/eas-build-mobile.mjs",
     "apps/mobile/eas/common.ps1",
     "apps/mobile/eas/firebase.ps1",
+    "apps/mobile/eas/providers.ps1",
+    "apps/mobile/eas/workflow.ps1",
     "tools/mobile/mobile-apps.manifest.json",
     "tools/mobile/defineBthwaniExpoApp.js",
     "tools/mobile/eas.template.json",
     "tools/scripts/check-refoundation-control-plane.mjs",
     "tools/scripts/check-refoundation-foundation.mjs",
+    "tools/scripts/check-refoundation-operational-tooling.mjs",
     "tools/scripts/run-foundation-gate.ps1",
     "tools/scripts/run-refoundation-verification.ps1",
+    "tools/scripts/sync-mobile-apps.mjs",
     ".github/actions/setup-node-workspace/action.yml",
     ".github/workflows/lockfile-snapshot.yml",
     "apps/app-client/runtime/app.config.ts",
@@ -158,6 +168,7 @@
       "knip.strict.json"
     ],
     "allowedPatterns": [
+      "^apps/mobile/eas-build-mobile\\.mjs$",
       "^apps/mobile/eas/",
       "^apps/[^/]+/runtime/(app\\.config\\.ts|eas\\.json|start\\.ps1|package\\.json|tsconfig\\.json)$",
       "^(core|services)/[^/]+/backend/Dockerfile$"
