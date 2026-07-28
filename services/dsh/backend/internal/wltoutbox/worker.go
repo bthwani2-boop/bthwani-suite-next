@@ -55,6 +55,11 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 }
 
 func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string, error) {
+	if event.TenantID == "" {
+		return "", fmt.Errorf("WLT outbox event %s has no tenant context", event.ID)
+	}
+	ctx = wlt.WithTenantContext(ctx, event.TenantID)
+
 	switch event.EventType {
 	case EventTypeDeliveryCompleted:
 		collectorType := event.CollectorType
