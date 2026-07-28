@@ -63,7 +63,7 @@ paths:
               $ref: '#/components/schemas/EmployeeProvisionRequest'
       responses:
         '201':
-          description: Employee actor provisioned or upgraded idempotently.
+          description: New employee actor created with an Identity-owned permission bundle.
           content:
             application/json:
               schema:
@@ -75,7 +75,7 @@ paths:
         '403':
           description: Caller or tenant context is forbidden.
         '409':
-          description: Phone or username conflicts with another actor.
+          description: Phone or username is already bound to an existing actor.
 components:
   securitySchemes:
     serviceToken:
