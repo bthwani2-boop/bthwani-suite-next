@@ -2,7 +2,8 @@
   "schemaVersion": 1,
   "service": "WLT",
   "sourceContract": "services/wlt/contracts/wlt.openapi.yaml",
-  "state": "CONTRACT_REMOVED_RUNTIME_REMOVED",
+  "state": "CONTRACT_COMPATIBILITY_ONLY_RUNTIME_REMOVED",
+  "contractRemovalState": "REMOVED",
   "operations": [
     {
       "operation": "POST /wlt/ledger/entries",
