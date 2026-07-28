@@ -63,6 +63,7 @@ export async function fetchPublishedCatalog(storeId: string): Promise<CatalogSta
         description: product.brand || "",
         sku: product.sku || "",
         priceReference: String(product.unitPrice),
+        currency: product.currency,
         unitLabel: product.unit,
         stockStatus: product.stockStatus as CatalogProduct["stockStatus"],
         isActive: product.isActive,
