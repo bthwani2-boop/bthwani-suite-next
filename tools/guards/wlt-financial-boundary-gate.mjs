@@ -130,7 +130,7 @@ for (const [pattern, message] of [
 const settlementPostingFile = "services/wlt/backend/internal/settlement/settlement.go";
 const settlementPosting = read(settlementPostingFile);
 for (const [pattern, message] of [
-  [/WHERE id = \$1 AND status = 'pending'/, "SETTLEMENT_POST_MUST_REQUIRE_PENDING_STATE"],
+  [/WHERE\s+tenant_id\s*=\s*\$1\s+AND\s+id\s*=\s*\$2\s+AND\s+status\s*=\s*'pending'/, "SETTLEMENT_POST_MUST_REQUIRE_TRUSTED_TENANT_AND_PENDING_STATE"],
   [/platform_payable[\s\S]*wallet[\s\S]*platform_revenue/, "SETTLEMENT_BALANCED_ACCOUNTING_LINES_MISSING"],
   [/BeginTx[\s\S]*PostLedgerTransaction[\s\S]*tx\.Commit/, "SETTLEMENT_STATE_AND_JOURNAL_NOT_ATOMIC"],
 ]) {
