@@ -16,7 +16,7 @@ export type EmployeePermissionBundleDescriptor = {
   readonly code: LeadershipPermissionBundle;
   readonly nameAr: string;
   readonly nameEn: string;
-  readonly allowedEmploymentClasses: readonly LeadershipEmploymentClass[];
+  readonly allowedEmploymentClasses: readonly string[];
   readonly defaultDepartmentScope?: string;
   readonly departmentSelectionAllowed: boolean;
 };
