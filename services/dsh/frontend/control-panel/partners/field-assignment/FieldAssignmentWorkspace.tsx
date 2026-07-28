@@ -4,12 +4,12 @@ import React, { useState } from "react";
 import { CpButton, CpTextInput, CpStatePanel } from "@bthwani/control-panel/components";
 import { Text } from "@bthwani/ui-kit";
 import { WorkforceScopeManager } from "../../hr/WorkforceScopeManager";
-import type { ProviderKind } from "../../../shared/workforce";
+import type { WorkforceScopeActorRole } from "../../../shared/workforce";
 
 export function FieldAssignmentWorkspace() {
   const [actorIdInput, setActorIdInput] = useState("");
   const [activeActorId, setActiveActorId] = useState("");
-  const [activeRole, setActiveRole] = useState<ProviderKind>("field");
+  const [activeRole, setActiveRole] = useState<WorkforceScopeActorRole>("field");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -31,21 +31,22 @@ export function FieldAssignmentWorkspace() {
         <div style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
           <div style={{ flex: 1, maxWidth: "400px" }}>
             <Text role="bodySm" style={{ fontWeight: 600, marginBottom: "8px", display: "block" }}>
-              معرف الميداني (Actor ID)
+              معرف الميداني أو الكابتن (Actor ID)
             </Text>
             <CpTextInput
               value={actorIdInput}
               onChange={setActorIdInput}
-              placeholder="مثال: field-12345"
-              aria-label="معرف الميداني"
+              placeholder="مثال: field-12345 أو captain-12345"
+              aria-label="معرف الميداني أو الكابتن"
             />
           </div>
           <CpButton
             variant="primary"
             disabled={actorIdInput.trim().length === 0}
             onClick={() => {
-              setActiveActorId(actorIdInput.trim());
-              setActiveRole(actorIdInput.trim().startsWith("captain-") ? "captain" : "field");
+              const actorId = actorIdInput.trim();
+              setActiveActorId(actorId);
+              setActiveRole(actorId.startsWith("captain-") ? "captain" : "field");
             }}
           >
             بحث وعرض
@@ -67,8 +68,8 @@ export function FieldAssignmentWorkspace() {
       ) : (
         <CpStatePanel
           role="status"
-          title="لم يتم تحديد ميداني"
-          description="أدخل معرف الميداني في الأعلى للبدء بإسناد المتاجر والمناطق."
+          title="لم يتم تحديد مقدم خدمة"
+          description="أدخل معرف الميداني أو الكابتن في الأعلى للبدء بإسناد المتاجر والمناطق."
         />
       )}
     </div>
