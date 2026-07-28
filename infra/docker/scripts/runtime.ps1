@@ -689,12 +689,6 @@ function Invoke-DshMediaSeed {
   Write-Host "DSH media seed: PASS ($($ExpectedFiles.Count) objects verified)"
 }
 
-function Invoke-DshDevBootstrap {
-  Write-Host "`n--- DSH API Dev Bootstrap ---"
-  node tools/scripts/bootstrap-dev-data.mjs
-  if ($LASTEXITCODE -ne 0) { throw "DSH API Dev Bootstrap failed (exit $LASTEXITCODE)" }
-  Write-Host "DSH API Dev Bootstrap: PASS"
-}
 
 function Invoke-DshSmoke {
   Write-Host "`n--- DSH API smoke ---"
@@ -1192,7 +1186,6 @@ elseif ($Action -eq "bootstrap-dev") {
     Invoke-MinioInit
     Invoke-DshMediaSeed
     Wait-ForDshApi
-    Invoke-DshDevBootstrap
   } else {
     Write-Host "DSH profile is not active. Skipping bootstrap."
   }

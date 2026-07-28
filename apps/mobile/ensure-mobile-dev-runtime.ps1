@@ -130,11 +130,11 @@ function Repair-BthwaniMobileDevData {
     )
 
   Invoke-BthwaniProcess `
-    -Description "mobile-runtime-bootstrap-dev" `
+    -Description "mobile-runtime-catalog-readback" `
     -FilePath "pwsh" `
     -Arguments @(
       "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $RuntimePhase,
-      "-Action", "bootstrap-dev", "-Profiles", $Profiles, "-Force"
+      "-Action", "catalog-readback", "-Profiles", $Profiles, "-Force"
     )
 
   Invoke-BthwaniProcess `
