@@ -38,10 +38,30 @@ jobs:
             nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
             nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
       - name: Verify immutable diff
+        id: immutable_diff
+        continue-on-error: true
+        shell: bash
         env:
           BASE_SHA: ${{ inputs.base_sha }}
           HEAD_SHA: ${{ inputs.head_sha }}
-        run: git diff --check "${BASE_SHA}" "${HEAD_SHA}"
+        run: |
+          set +e
+          log="${RUNNER_TEMP}/immutable-diff.log"
+          git diff --check "${BASE_SHA}" "${HEAD_SHA}" 2>&1 | tee "${log}"
+          status=${PIPESTATUS[0]}
+          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
+          exit "${status}"
+      - name: Upload immutable diff diagnostics
+        if: ${{ steps.immutable_diff.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: immutable-diff-${{ github.run_id }}
+          path: ${{ runner.temp }}/immutable-diff.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce immutable diff result
+        if: ${{ steps.immutable_diff.outcome == 'failure' }}
+        run: exit 1
       - name: Verify exact affected or full Node graph
         id: node_graph
         continue-on-error: true
@@ -102,15 +122,38 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Run detected journey gates
+        id: journey_gates
+        continue-on-error: true
         shell: pwsh
         env:
           JOURNEY_SCOPE: ${{ inputs.journey_scope }}
         run: |
+          $log = Join-Path $env:RUNNER_TEMP "journey-gates.log"
+          $output = @()
+          $exitCode = 0
           $journeys = $env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() }
           foreach ($journey in $journeys) {
-            & ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim()
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $journeyOutput = & ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim() 2>&1
+            $journeyExitCode = $LASTEXITCODE
+            $output += $journeyOutput
+            if ($journeyExitCode -ne 0) {
+              $exitCode = $journeyExitCode
+              break
+            }
           }
+          $output | Tee-Object -FilePath $log
+          exit $exitCode
+      - name: Upload journey gate diagnostics
+        if: ${{ steps.journey_gates.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: journey-gates-${{ github.run_id }}
+          path: ${{ runner.temp }}/journey-gates.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce journey gate result
+        if: ${{ steps.journey_gates.outcome == 'failure' }}
+        run: exit 1
 
   platform_change_sets:
     name: Verify platform change-set binding
@@ -126,4 +169,23 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Verify platform change-set binding
-        run: pnpm exec tsc --noEmit -p services/dsh/tsconfig.jrn-040.json
+        id: platform_change_sets
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          log="${RUNNER_TEMP}/platform-change-sets.log"
+          pnpm exec tsc --noEmit -p services/dsh/tsconfig.jrn-040.json 2>&1 | tee "${log}"
+          status=${PIPESTATUS[0]}
+          exit "${status}"
+      - name: Upload platform change-set diagnostics
+        if: ${{ steps.platform_change_sets.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: platform-change-sets-${{ github.run_id }}
+          path: ${{ runner.temp }}/platform-change-sets.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce platform change-set result
+        if: ${{ steps.platform_change_sets.outcome == 'failure' }}
+        run: exit 1
