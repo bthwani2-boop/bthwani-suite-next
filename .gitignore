@@ -106,22 +106,18 @@ node-gates*.log
 !.agents/
 !.agents/**
 
-# Explicitly track markdown under docs/ and infra/. Documentation is not ignored
-# globally; these rules remain as defensive declarations for nested ignore files.
-!docs/**/*.md
-!infra/**/*.md
+# Markdown and text files are tracked by default. No repository-wide unignore
+# mirrors are required; .graphifyignore owns Graphify corpus exclusions.
 
 # Explicitly track operational journey checklist
 !tools/checklist/operational-journey-factory-checklist.md
 !tools/checklist/**/
-!tools/checklist/**/*.md
 
 # Explicitly track diagnostic scripts
 !tools/diagnostics/scripts/*.mjs
 
 # Explicitly track bthwani prompts
 !tools/prompts/
-!tools/prompts/**/*.md
 
 # Explicitly track the WLT Minimum Viable Financial Scope v1 governance doc
 !services/wlt/FINANCIAL_SCOPE_V1.md
