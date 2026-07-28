@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -28,11 +27,9 @@ func IsPaymentSessionOutcomeUnknown(err error) bool {
 }
 
 type Client struct {
-	baseURL         string
-	serviceToken    string
-	defaultTenantID string
-	saasActive      bool
-	http            *http.Client
+	baseURL      string
+	serviceToken string
+	http         *http.Client
 }
 
 type CreatePaymentSessionInput struct {
@@ -65,19 +62,16 @@ type PaymentSession struct {
 	UpdatedAt         string `json:"updatedAt"`
 }
 
-// NewClient builds a DSH-to-WLT client. Active SaaS requests must receive a
-// trusted tenant through their context; BTHWANI_DEFAULT_TENANT_ID remains only a
-// deferred/local compatibility fallback and is never an active-SaaS authority.
+// NewClient builds a DSH-to-WLT client. Every financial request must receive a
+// trusted tenant through its server-side context; process-wide or payload-only
+// tenant defaults are never ownership authorities.
 func NewClient(baseURL, serviceToken string) *Client {
-	saasActive := strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active")
 	return &Client{
-		baseURL:         strings.TrimRight(baseURL, "/"),
-		serviceToken:    serviceToken,
-		defaultTenantID: strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID")),
-		saasActive:      saasActive,
+		baseURL:      strings.TrimRight(baseURL, "/"),
+		serviceToken: serviceToken,
 		http: &http.Client{
 			Timeout:   10 * time.Second,
-			Transport: tenantRoundTripper{base: http.DefaultTransport, saasActive: saasActive},
+			Transport: tenantRoundTripper{base: http.DefaultTransport},
 		},
 	}
 }
@@ -89,25 +83,13 @@ func (c *Client) Configured() bool {
 func (c *Client) resolveTrustedTenant(ctx context.Context, requested string) (string, error) {
 	requested = strings.TrimSpace(requested)
 	trustedTenantID, hasTrustedTenant := TenantIDFromContext(ctx)
-	if c.saasActive {
-		if !hasTrustedTenant {
-			return "", fmt.Errorf("trusted tenant context is required for active SaaS WLT request")
-		}
-		if requested != "" && requested != trustedTenantID {
-			return "", fmt.Errorf("requested tenant does not match trusted request context")
-		}
-		return trustedTenantID, nil
+	if !hasTrustedTenant {
+		return "", fmt.Errorf("trusted tenant context is required for every WLT request")
 	}
-	if hasTrustedTenant {
-		if requested != "" && requested != trustedTenantID {
-			return "", fmt.Errorf("requested tenant does not match trusted request context")
-		}
-		return trustedTenantID, nil
+	if requested != "" && requested != trustedTenantID {
+		return "", fmt.Errorf("requested tenant does not match trusted request context")
 	}
-	if requested != "" {
-		return requested, nil
-	}
-	return c.defaultTenantID, nil
+	return trustedTenantID, nil
 }
 
 func (c *Client) setTrustedTenantHeader(req *http.Request, requested string) (string, error) {
@@ -115,9 +97,7 @@ func (c *Client) setTrustedTenantHeader(req *http.Request, requested string) (st
 	if err != nil {
 		return "", err
 	}
-	if tenantID != "" {
-		req.Header.Set("X-Tenant-ID", tenantID)
-	}
+	req.Header.Set("X-Tenant-ID", tenantID)
 	return tenantID, nil
 }
 
