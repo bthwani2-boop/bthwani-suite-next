@@ -85,7 +85,7 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreTenantLocal(t *testing.T) {
 	}
 	defer db.Close()
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("WLT_PAYOUT_DATA_KEY", "tenant-payout-test-key-32-bytes")
+	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "tenant-payout-test-key-32-bytes")
 
 	suffix := fmt.Sprint(time.Now().UnixNano())
 	tenants := []string{"tenant-payout-a-" + suffix, "tenant-payout-b-" + suffix}
