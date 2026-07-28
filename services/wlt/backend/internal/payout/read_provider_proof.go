@@ -80,20 +80,16 @@ func scanPayoutRequestWithProof(rows *sql.Rows) (*PayoutRequest, error) {
 	return &payoutRequest, nil
 }
 
-// HandleListPayoutRequestsWithProviderProof requires a tenantId query
-// parameter: the tenant_id predicate is mandatory and always applied first,
-// so no combination of the optional filters below can ever return another
-// tenant's payout requests.
 func HandleListPayoutRequestsWithProviderProof(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := strings.TrimSpace(r.URL.Query().Get("tenantId"))
+		tenantID, err := shared.RequireTenantContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", err.Error())
+			return
+		}
 		beneficiaryActorID := strings.TrimSpace(r.URL.Query().Get("beneficiaryActorId"))
 		beneficiaryActorType := strings.TrimSpace(r.URL.Query().Get("beneficiaryActorType"))
 		status := strings.TrimSpace(r.URL.Query().Get("status"))
-		if tenantID == "" {
-			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", "tenantId is required")
-			return
-		}
 		if (beneficiaryActorID == "") != (beneficiaryActorType == "") {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "beneficiaryActorId and beneficiaryActorType must be supplied together")
 			return
@@ -106,10 +102,8 @@ func HandleListPayoutRequestsWithProviderProof(db *sql.DB) http.HandlerFunc {
 		}
 
 		query := "SELECT " + payoutReadCols + " FROM wlt_payout_requests"
-		where := make([]string, 0, 3)
-		args := make([]any, 0, 4)
-		args = append(args, tenantID)
-		where = append(where, "tenant_id = $1")
+		where := []string{"tenant_id = $1"}
+		args := []any{tenantID}
 		if beneficiaryActorID != "" {
 			args = append(args, beneficiaryActorID, strings.ToLower(beneficiaryActorType))
 			where = append(where, fmt.Sprintf("beneficiary_actor_id = $%d AND beneficiary_actor_type = $%d", len(args)-1, len(args)))
@@ -147,12 +141,17 @@ func HandleListPayoutRequestsWithProviderProof(db *sql.DB) http.HandlerFunc {
 
 func HandleGetPayoutRequestWithProviderProof(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		tenantID, err := shared.RequireTenantContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", err.Error())
+			return
+		}
 		payoutID := strings.TrimSpace(r.PathValue("payoutId"))
 		if payoutID == "" {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 			return
 		}
-		rows, err := db.QueryContext(r.Context(), "SELECT "+payoutReadCols+" FROM wlt_payout_requests WHERE id = $1 LIMIT 1", payoutID)
+		rows, err := db.QueryContext(r.Context(), "SELECT "+payoutReadCols+" FROM wlt_payout_requests WHERE tenant_id=$1 AND id=$2 LIMIT 1", tenantID, payoutID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to query payout request")
 			return
