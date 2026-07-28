@@ -207,28 +207,31 @@ func handleTenantActorSearch(w http.ResponseWriter, r *http.Request, db *sql.DB,
 	sendJSON(w, http.StatusOK, views)
 }
 
-// SaaSTenantBoundary scopes Workforce-to-Identity actor administration to the
-// trusted runtime tenant. It does not trust tenantId from the request body and
-// it prevents search, read, activation and lifecycle operations from crossing
-// tenant boundaries before the repository handler executes.
+// SaaSTenantBoundary scopes every Workforce-to-Identity actor administration
+// request to the trusted service tenant. Active SaaS mode additionally pins
+// that tenant to the configured runtime tenant. It never trusts tenantId from
+// the request body and prevents search, read, activation and lifecycle
+// operations from crossing tenant boundaries before the repository executes.
 func SaaSTenantBoundary(db *sql.DB, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, "/internal/actors") {
 			next.ServeHTTP(w, r)
 			return
 		}
-		tenantID, active, err := activeSaaSTenant()
+		configuredTenantID, active, err := activeSaaSTenant()
 		if err != nil {
 			sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
 			return
 		}
-		if !active {
-			next.ServeHTTP(w, r)
+		requestedTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+		expectedTenantID := requestedTenantID
+		if active {
+			expectedTenantID = configuredTenantID
+		}
+		if !validateInternalTenantRequest(w, r, expectedTenantID) {
 			return
 		}
-		if !validateInternalTenantRequest(w, r, tenantID) {
-			return
-		}
+		tenantID := requestedTenantID
 		if r.Method == http.MethodPost && r.URL.Path == "/internal/actors/provision" {
 			if !rewriteProvisionTenant(w, r, db, tenantID) {
 				return
