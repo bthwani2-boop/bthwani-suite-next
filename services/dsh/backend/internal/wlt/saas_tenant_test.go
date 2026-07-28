@@ -9,16 +9,17 @@ import (
 	"testing"
 )
 
-func configureActiveSaaS(t *testing.T, tenantID string) {
+func configureActiveSaaS(t *testing.T) {
 	t.Helper()
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", tenantID)
+	// A configured default must not become an active-SaaS ownership fallback.
+	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "legacy-default")
 }
 
 func TestActiveSaaSClientPropagatesTrustedTenantToCodHandoff(t *testing.T) {
-	configureActiveSaaS(t, "tenant-main")
+	configureActiveSaaS(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-main" {
+		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-a" {
 			t.Fatalf("expected trusted tenant header, got %q", got)
 		}
 		w.WriteHeader(http.StatusCreated)
@@ -26,7 +27,8 @@ func TestActiveSaaSClientPropagatesTrustedTenantToCodHandoff(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	err := client.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{
+	ctx := WithTenantContext(context.Background(), "tenant-a")
+	err := client.NotifyDeliveryCollection(ctx, NotifyDeliveryCollectionInput{
 		OrderID:          "order-1",
 		CollectorType:    "captain",
 		CollectorID:      "captain-1",
@@ -39,27 +41,28 @@ func TestActiveSaaSClientPropagatesTrustedTenantToCodHandoff(t *testing.T) {
 }
 
 func TestActiveSaaSClientPropagatesTenantInPaymentBodyAndHeader(t *testing.T) {
-	configureActiveSaaS(t, "tenant-main")
+	configureActiveSaaS(t)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-main" {
+		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-b" {
 			t.Fatalf("expected trusted tenant header, got %q", got)
 		}
 		var input CreatePaymentSessionInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
-		if input.TenantID != "tenant-main" {
-			t.Fatalf("expected tenant-main in payment body, got %q", input.TenantID)
+		if input.TenantID != "tenant-b" {
+			t.Fatalf("expected tenant-b in payment body, got %q", input.TenantID)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"paymentSession": PaymentSession{ID: "ps-1", TenantID: "tenant-main"},
+			"paymentSession": PaymentSession{ID: "ps-1", TenantID: "tenant-b"},
 		})
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	if _, err := client.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{
+	ctx := WithTenantContext(context.Background(), "tenant-b")
+	if _, err := client.CreatePaymentSession(ctx, CreatePaymentSessionInput{
 		CheckoutIntentID: "checkout-1",
 		ClientID:         "client-1",
 		StoreID:          "store-1",
@@ -70,22 +73,39 @@ func TestActiveSaaSClientPropagatesTenantInPaymentBodyAndHeader(t *testing.T) {
 }
 
 func TestActiveSaaSClientRejectsTenantOverride(t *testing.T) {
-	configureActiveSaaS(t, "tenant-main")
+	configureActiveSaaS(t)
 	client := NewClient("https://wlt.internal", "service-token")
+	ctx := WithTenantContext(context.Background(), "tenant-a")
 
-	_, err := client.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{
-		TenantID:         "tenant-other",
+	_, err := client.CreatePaymentSession(ctx, CreatePaymentSessionInput{
+		TenantID:         "tenant-b",
 		CheckoutIntentID: "checkout-1",
 	})
-	if err == nil || !strings.Contains(err.Error(), "does not match active SaaS runtime tenant") {
+	if err == nil || !strings.Contains(err.Error(), "does not match trusted request context") {
 		t.Fatalf("expected tenant override rejection, got %v", err)
 	}
 }
 
-func TestActiveSaaSClientFailsClosedWithoutRuntimeTenant(t *testing.T) {
-	configureActiveSaaS(t, "")
+func TestActiveSaaSClientFailsClosedWithoutTrustedTenant(t *testing.T) {
+	configureActiveSaaS(t)
 	client := NewClient("https://wlt.internal", "service-token")
-	if client.Configured() {
-		t.Fatal("expected active SaaS client without tenant to be unconfigured")
+	if !client.Configured() {
+		t.Fatal("transport configuration must not depend on a process-wide tenant")
+	}
+	_, err := client.CreatePaymentSession(context.Background(), CreatePaymentSessionInput{
+		CheckoutIntentID: "checkout-1",
+	})
+	if err == nil || !strings.Contains(err.Error(), "trusted tenant context is required") {
+		t.Fatalf("expected missing trusted tenant rejection, got %v", err)
+	}
+}
+
+func TestDeferredClientKeepsExplicitCompatibilityTenant(t *testing.T) {
+	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
+	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "local-dsh")
+	client := NewClient("https://wlt.internal", "service-token")
+	tenantID, err := client.resolveTrustedTenant(context.Background(), "")
+	if err != nil || tenantID != "local-dsh" {
+		t.Fatalf("deferred compatibility tenant=%q err=%v", tenantID, err)
 	}
 }
