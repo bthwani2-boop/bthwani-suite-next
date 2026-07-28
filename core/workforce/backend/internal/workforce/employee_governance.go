@@ -10,9 +10,10 @@ import (
 	"time"
 )
 
-// EmployeeGovernanceProfile is the reviewed administrative assignment for an
-// employee. Identity remains the source of authentication roles and effective
-// permissions; these fields describe the approved organisational scope.
+// EmployeeGovernanceProfile is the reviewed organisational assignment for an
+// employee. Identity remains the only source of authentication roles and
+// effective permissions. Workforce stores responsibilities and managed
+// departments, never executable authority grants.
 type EmployeeGovernanceProfile struct {
 	ActorID                string    `json:"actorId"`
 	PositionTitle          string    `json:"positionTitle"`
@@ -22,7 +23,6 @@ type EmployeeGovernanceProfile struct {
 	GuaranteeStatus        string    `json:"guaranteeStatus"`
 	GuaranteeReference     string    `json:"guaranteeReference,omitempty"`
 	ResponsibilityScopes   []string  `json:"responsibilityScopes"`
-	AuthorityScopes        []string  `json:"authorityScopes"`
 	ManagedDepartmentCodes []string  `json:"managedDepartmentCodes"`
 	Notes                  string    `json:"notes,omitempty"`
 	UpdatedByActorID       string    `json:"updatedByActorId"`
@@ -32,17 +32,16 @@ type EmployeeGovernanceProfile struct {
 }
 
 type UpsertEmployeeGovernanceInput struct {
-	ExpectedVersion         int      `json:"expectedVersion"`
-	PositionTitle           string   `json:"positionTitle"`
-	JobGrade                string   `json:"jobGrade"`
-	EmploymentClass         string   `json:"employmentClass"`
-	GuaranteeType           string   `json:"guaranteeType"`
-	GuaranteeStatus         string   `json:"guaranteeStatus"`
-	GuaranteeReference      string   `json:"guaranteeReference"`
-	ResponsibilityScopes    []string `json:"responsibilityScopes"`
-	AuthorityScopes         []string `json:"authorityScopes"`
-	ManagedDepartmentCodes  []string `json:"managedDepartmentCodes"`
-	Notes                   string   `json:"notes"`
+	ExpectedVersion        int      `json:"expectedVersion"`
+	PositionTitle          string   `json:"positionTitle"`
+	JobGrade               string   `json:"jobGrade"`
+	EmploymentClass        string   `json:"employmentClass"`
+	GuaranteeType          string   `json:"guaranteeType"`
+	GuaranteeStatus        string   `json:"guaranteeStatus"`
+	GuaranteeReference     string   `json:"guaranteeReference"`
+	ResponsibilityScopes   []string `json:"responsibilityScopes"`
+	ManagedDepartmentCodes []string `json:"managedDepartmentCodes"`
+	Notes                  string   `json:"notes"`
 }
 
 func cleanScopeValues(values []string) []string {
@@ -71,7 +70,6 @@ func validateEmployeeGovernanceInput(input *UpsertEmployeeGovernanceInput) error
 	input.GuaranteeReference = strings.TrimSpace(input.GuaranteeReference)
 	input.Notes = strings.TrimSpace(input.Notes)
 	input.ResponsibilityScopes = cleanScopeValues(input.ResponsibilityScopes)
-	input.AuthorityScopes = cleanScopeValues(input.AuthorityScopes)
 	input.ManagedDepartmentCodes = cleanScopeValues(input.ManagedDepartmentCodes)
 	if input.PositionTitle == "" || input.ExpectedVersion < 0 {
 		return ErrInvalidInput
@@ -103,20 +101,17 @@ func decodeStringArray(raw []byte, target *[]string) error {
 
 func scanEmployeeGovernance(row rowScanner) (EmployeeGovernanceProfile, error) {
 	var profile EmployeeGovernanceProfile
-	var responsibilityJSON, authorityJSON, departmentsJSON []byte
+	var responsibilityJSON, departmentsJSON []byte
 	err := row.Scan(
 		&profile.ActorID, &profile.PositionTitle, &profile.JobGrade, &profile.EmploymentClass,
 		&profile.GuaranteeType, &profile.GuaranteeStatus, &profile.GuaranteeReference,
-		&responsibilityJSON, &authorityJSON, &departmentsJSON, &profile.Notes,
+		&responsibilityJSON, &departmentsJSON, &profile.Notes,
 		&profile.UpdatedByActorID, &profile.Version, &profile.CreatedAt, &profile.UpdatedAt,
 	)
 	if err != nil {
 		return EmployeeGovernanceProfile{}, err
 	}
 	if err := decodeStringArray(responsibilityJSON, &profile.ResponsibilityScopes); err != nil {
-		return EmployeeGovernanceProfile{}, err
-	}
-	if err := decodeStringArray(authorityJSON, &profile.AuthorityScopes); err != nil {
 		return EmployeeGovernanceProfile{}, err
 	}
 	if err := decodeStringArray(departmentsJSON, &profile.ManagedDepartmentCodes); err != nil {
@@ -127,8 +122,7 @@ func scanEmployeeGovernance(row rowScanner) (EmployeeGovernanceProfile, error) {
 
 const employeeGovernanceColumns = `actor_id, position_title, job_grade, employment_class,
 	guarantee_type, guarantee_status, guarantee_reference, responsibility_scopes,
-	authority_scopes, managed_department_codes, notes, updated_by_actor_id,
-	version, created_at, updated_at`
+	managed_department_codes, notes, updated_by_actor_id, version, created_at, updated_at`
 
 func (r *Repository) EmployeeGovernanceByActorID(ctx context.Context, actorID string) (EmployeeGovernanceProfile, error) {
 	actorID = strings.TrimSpace(actorID)
@@ -170,10 +164,6 @@ func (r *Repository) UpsertEmployeeGovernance(ctx context.Context, actorID, oper
 	if err != nil {
 		return EmployeeGovernanceProfile{}, err
 	}
-	authorityJSON, err := json.Marshal(input.AuthorityScopes)
-	if err != nil {
-		return EmployeeGovernanceProfile{}, err
-	}
 	departmentsJSON, err := json.Marshal(input.ManagedDepartmentCodes)
 	if err != nil {
 		return EmployeeGovernanceProfile{}, err
@@ -200,10 +190,10 @@ func (r *Repository) UpsertEmployeeGovernance(ctx context.Context, actorID, oper
 		}
 		_, err = tx.ExecContext(ctx, `INSERT INTO workforce_employee_governance(
 			actor_id,position_title,job_grade,employment_class,guarantee_type,guarantee_status,
-			guarantee_reference,responsibility_scopes,authority_scopes,managed_department_codes,
-			notes,updated_by_actor_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10::jsonb,$11,$12)`,
+			guarantee_reference,responsibility_scopes,managed_department_codes,notes,updated_by_actor_id)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10,$11)`,
 			actorID, input.PositionTitle, input.JobGrade, input.EmploymentClass, input.GuaranteeType,
-			input.GuaranteeStatus, input.GuaranteeReference, string(responsibilityJSON), string(authorityJSON),
+			input.GuaranteeStatus, input.GuaranteeReference, string(responsibilityJSON),
 			string(departmentsJSON), input.Notes, operatorID)
 	} else if err != nil {
 		return EmployeeGovernanceProfile{}, err
@@ -214,10 +204,10 @@ func (r *Repository) UpsertEmployeeGovernance(ctx context.Context, actorID, oper
 		_, err = tx.ExecContext(ctx, `UPDATE workforce_employee_governance SET
 			position_title=$2,job_grade=$3,employment_class=$4,guarantee_type=$5,
 			guarantee_status=$6,guarantee_reference=$7,responsibility_scopes=$8::jsonb,
-			authority_scopes=$9::jsonb,managed_department_codes=$10::jsonb,notes=$11,
-			updated_by_actor_id=$12,version=version+1,updated_at=now() WHERE actor_id=$1`,
+			managed_department_codes=$9::jsonb,notes=$10,updated_by_actor_id=$11,
+			version=version+1,updated_at=now() WHERE actor_id=$1`,
 			actorID, input.PositionTitle, input.JobGrade, input.EmploymentClass, input.GuaranteeType,
-			input.GuaranteeStatus, input.GuaranteeReference, string(responsibilityJSON), string(authorityJSON),
+			input.GuaranteeStatus, input.GuaranteeReference, string(responsibilityJSON),
 			string(departmentsJSON), input.Notes, operatorID)
 	}
 	if err != nil {
