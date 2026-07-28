@@ -67,12 +67,37 @@ jobs:
         if: ${{ steps.immutable_diff.outcome == 'failure' }}
         run: exit 1
       - name: Verify affected frontend diagnostics
+        id: frontend_diagnostics
         if: ${{ inputs.frontend == 'true' }}
+        continue-on-error: true
+        shell: bash
         run: |
-          pnpm run diagnostics:ui-kit
-          pnpm run guard:a11y
-          pnpm run guard:dependency-graph
-          pnpm run guard:ast-grep-rules
+          set +e
+          log="${RUNNER_TEMP}/frontend-diagnostics.log"
+          : >"${log}"
+          status=0
+          run_check() {
+            echo "===== $* =====" | tee -a "${log}"
+            "$@" 2>&1 | tee -a "${log}"
+            code=${PIPESTATUS[0]}
+            if [[ "${code}" -ne 0 ]]; then status="${code}"; fi
+          }
+          run_check pnpm run diagnostics:ui-kit
+          run_check pnpm run guard:a11y
+          run_check pnpm run guard:dependency-graph
+          run_check pnpm run guard:ast-grep-rules
+          exit "${status}"
+      - name: Upload frontend diagnostics
+        if: ${{ steps.frontend_diagnostics.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: frontend-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/frontend-diagnostics.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce frontend diagnostics result
+        if: ${{ steps.frontend_diagnostics.outcome == 'failure' }}
+        run: exit 1
       - name: Verify affected contracts and bindings
         id: contract_diagnostics
         if: ${{ inputs.contracts == 'true' }}
