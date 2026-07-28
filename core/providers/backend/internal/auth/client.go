@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -33,23 +32,22 @@ type Identity struct {
 }
 
 type Client struct {
-	baseURL         string
-	defaultTenantID string
-	saasActive      bool
-	http            *http.Client
+	baseURL string
+	http    *http.Client
 }
 
 func NewClient(baseURL string) *Client {
 	return &Client{
-		baseURL:         strings.TrimRight(baseURL, "/"),
-		defaultTenantID: strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID")),
-		saasActive:      strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active"),
-		http:            &http.Client{Timeout: 3 * time.Second},
+		baseURL: strings.TrimRight(baseURL, "/"),
+		http:    &http.Client{Timeout: 3 * time.Second},
 	}
 }
 
+// Resolve accepts only authenticated Identity assertions with an explicit
+// tenant. Identity owns tenant membership; process-wide defaults cannot select
+// or reject a valid tenant-scoped provider session.
 func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, error) {
-	if c.baseURL == "" || (c.saasActive && c.defaultTenantID == "") {
+	if c.baseURL == "" {
 		return Identity{}, ErrIdentityUnavailable
 	}
 	if !strings.HasPrefix(strings.TrimSpace(authorization), "Bearer ") {
@@ -75,10 +73,9 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 	if err := json.NewDecoder(resp.Body).Decode(&identity); err != nil {
 		return Identity{}, ErrIdentityUnavailable
 	}
-	if identity.AuthState != "authenticated" || identity.Subject == "" {
-		return Identity{}, ErrUnauthenticated
-	}
-	if c.saasActive && strings.TrimSpace(identity.TenantID) != c.defaultTenantID {
+	identity.Subject = strings.TrimSpace(identity.Subject)
+	identity.TenantID = strings.TrimSpace(identity.TenantID)
+	if identity.AuthState != "authenticated" || identity.Subject == "" || identity.TenantID == "" {
 		return Identity{}, ErrUnauthenticated
 	}
 	return identity, nil
