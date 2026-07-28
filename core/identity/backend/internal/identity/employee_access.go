@@ -50,6 +50,38 @@ func normalizeDepartmentCode(raw string) (string, error) {
 	return value, nil
 }
 
+// employeeDshPermissions maps administrative bundles to the exact DSH actions
+// consumed by control-panel routes. These grants replace broad operator-role
+// fallbacks for every non-owner employee.
+func employeeDshPermissions(bundle string) []Permission {
+	grant := func(actions ...string) []Permission {
+		permissions := make([]Permission, 0, len(actions))
+		for _, action := range actions {
+			permissions = append(permissions, Permission{
+				Service: "dsh", Surface: "control-panel", Action: action, Scope: "all",
+			})
+		}
+		return permissions
+	}
+
+	switch strings.TrimSpace(bundle) {
+	case EmployeeBundlePlatformOwner:
+		return grant("platform.read", "platform.manage")
+	case EmployeeBundlePlatformCoordinator:
+		return grant("platform.read")
+	case EmployeeBundleOperationsManager:
+		return grant("operations.read", "operations.manage")
+	case EmployeeBundlePartnersManager:
+		return grant("partners.read", "partners.manage", "partners.activate")
+	case EmployeeBundleFinanceManager:
+		return grant("finance.read", "finance.manage")
+	case EmployeeBundleSupportManager:
+		return grant("support.read", "support.manage")
+	default:
+		return nil
+	}
+}
+
 func employeeBundlePermissions(bundle, department string) ([]Permission, error) {
 	bundle = strings.TrimSpace(bundle)
 	if bundle == "" {
@@ -125,6 +157,7 @@ func employeeBundlePermissions(bundle, department string) ([]Permission, error) 
 	default:
 		return nil, ErrInvalidActivation
 	}
+	permissions = append(permissions, employeeDshPermissions(bundle)...)
 	return permissions, nil
 }
 
