@@ -4,6 +4,52 @@ import { read, repoRoot, toPosix } from "./_guard-utils.mjs";
 
 export const HTTP_METHODS = new Set(["get", "post", "put", "patch", "delete", "options"]);
 
+const runtimeRetirementRegistryFile =
+  "services/wlt/contracts/retired-runtime-operations.json";
+let runtimeRetirementRegistryCache;
+
+function runtimeRetirementRegistry() {
+  if (runtimeRetirementRegistryCache) return runtimeRetirementRegistryCache;
+  const absolute = path.join(repoRoot, runtimeRetirementRegistryFile);
+  if (!fs.existsSync(absolute)) {
+    runtimeRetirementRegistryCache = {
+      sourceContract: "",
+      operationKeys: new Set(),
+    };
+    return runtimeRetirementRegistryCache;
+  }
+
+  const document = JSON.parse(read(runtimeRetirementRegistryFile));
+  if (
+    document?.schemaVersion !== 1 ||
+    document?.service !== "WLT" ||
+    document?.state !== "CONTRACT_COMPATIBILITY_ONLY_RUNTIME_REMOVED" ||
+    typeof document?.sourceContract !== "string" ||
+    !Array.isArray(document?.operations)
+  ) {
+    throw new Error(
+      `${runtimeRetirementRegistryFile} must define the governed WLT runtime retirement contract`,
+    );
+  }
+
+  const operationKeys = new Set();
+  for (const item of document.operations) {
+    if (!item || typeof item.operation !== "string" || !item.operation.trim()) {
+      throw new Error(`${runtimeRetirementRegistryFile} contains an invalid operation`);
+    }
+    if (operationKeys.has(item.operation)) {
+      throw new Error(`${runtimeRetirementRegistryFile} contains duplicate ${item.operation}`);
+    }
+    operationKeys.add(item.operation);
+  }
+
+  runtimeRetirementRegistryCache = {
+    sourceContract: document.sourceContract,
+    operationKeys,
+  };
+  return runtimeRetirementRegistryCache;
+}
+
 function unquote(value) {
   const trimmed = value.trim();
   if (
@@ -407,7 +453,15 @@ export function parseOpenApiContract(file, visited = new Set()) {
     const key = `${operation.method} ${operation.path}`;
     if (!deduplicated.has(key)) deduplicated.set(key, operation);
   }
-  return [...deduplicated.values()];
+
+  const retirement = runtimeRetirementRegistry();
+  return [...deduplicated.values()].filter((operation) => {
+    const key = `${operation.method} ${operation.path}`;
+    return !(
+      file === retirement.sourceContract &&
+      retirement.operationKeys.has(key)
+    );
+  });
 }
 
 export function operationKey(operation) {
