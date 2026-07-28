@@ -254,11 +254,11 @@ func TestHandleMediaDownloadEndpoint(t *testing.T) {
 		var identity auth.Identity
 		switch authHeader {
 		case "Bearer operator-token":
-			identity = auth.Identity{Subject: "op-1", Roles: []string{"operator"}, AuthState: "authenticated"}
+			identity = auth.Identity{Subject: "op-1", TenantID: "tenant-a", Roles: []string{"operator"}, AuthState: "authenticated"}
 		case "Bearer field-owner-token":
-			identity = auth.Identity{Subject: "field-1", Roles: []string{"field"}, AuthState: "authenticated"}
+			identity = auth.Identity{Subject: "field-1", TenantID: "tenant-a", Roles: []string{"field"}, AuthState: "authenticated"}
 		case "Bearer field-non-owner-token":
-			identity = auth.Identity{Subject: "field-2", Roles: []string{"field"}, AuthState: "authenticated"}
+			identity = auth.Identity{Subject: "field-2", TenantID: "tenant-a", Roles: []string{"field"}, AuthState: "authenticated"}
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
 			_, _ = w.Write([]byte(`{"message":"unauthenticated"}`))
@@ -319,7 +319,7 @@ func TestHandleMediaDownloadEndpointDBIntegration(t *testing.T) {
 		var identity auth.Identity
 		switch authHeader {
 		case "Bearer operator-token":
-			identity = auth.Identity{Subject: "op-1", Roles: []string{"operator"}, AuthState: "authenticated"}
+			identity = auth.Identity{Subject: "op-1", TenantID: "local-dsh", Roles: []string{"operator"}, AuthState: "authenticated"}
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
 			return
