@@ -1,8 +1,9 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("up", "down", "migrate", "smoke", "status")]
-  [string]$Action
+  [ValidateSet("up", "down", "migrate", "smoke", "status", "bootstrap-dev", "reset", "rebuild-reset")]
+  [string]$Action,
+  [switch]$Force
 )
 
 Set-StrictMode -Version Latest
@@ -25,6 +26,23 @@ foreach ($requiredScript in @($BaseRuntimePhase, $BaseRuntime, $PlatformRuntime)
   }
 }
 
+function ConvertTo-NativeArguments {
+  param([Parameter(Mandatory = $true)][hashtable]$Parameters)
+
+  $arguments = @()
+  foreach ($entry in $Parameters.GetEnumerator()) {
+    $arguments += "-$($entry.Key)"
+    if ($entry.Value -is [bool]) {
+      if (-not $entry.Value) {
+        $arguments = $arguments[0..($arguments.Count - 2)]
+      }
+      continue
+    }
+    $arguments += [string]$entry.Value
+  }
+  return $arguments
+}
+
 function Invoke-ScriptChecked {
   param(
     [Parameter(Mandatory = $true)][string]$Name,
@@ -33,11 +51,23 @@ function Invoke-ScriptChecked {
   )
 
   Write-Host "`n== $Name ==" -ForegroundColor Cyan
+  $nativeArguments = @(
+    "-NoProfile",
+    "-ExecutionPolicy", "Bypass",
+    "-File", $Script
+  ) + @(ConvertTo-NativeArguments -Parameters $Parameters)
+
   $global:LASTEXITCODE = 0
-  & pwsh -NoProfile -ExecutionPolicy Bypass -File $Script @Parameters
+  & pwsh @nativeArguments
   $exitCode = if ($null -eq $global:LASTEXITCODE) { 0 } else { [int]$global:LASTEXITCODE }
   if ($exitCode -ne 0) {
     throw "$Name failed with exit code $exitCode"
+  }
+}
+
+function Assert-DestructiveActionAuthorized {
+  if (-not $Force) {
+    throw "Action '$Action' is destructive and requires -Force."
   }
 }
 
@@ -57,21 +87,36 @@ function Invoke-BaseBestEffortDown {
   }
 }
 
+function Invoke-FullStart {
+  param(
+    [Parameter(Mandatory = $true)][ValidateSet("up", "bootstrap-dev")][string]$BaseAction
+  )
+
+  $baseAttempted = $false
+  $platformAttempted = $false
+  try {
+    $baseAttempted = $true
+    if ($BaseAction -eq "up") {
+      Invoke-ScriptChecked -Name "Start base full runtime" -Script $BaseRuntimePhase -Parameters @{ Action = "up"; Profiles = $BaseProfiles }
+    } else {
+      Invoke-ScriptChecked -Name "Bootstrap base full runtime" -Script $BaseRuntime -Parameters @{ Action = "bootstrap-dev"; Profiles = $BaseProfiles; Force = $true }
+    }
+    $platformAttempted = $true
+    Invoke-ScriptChecked -Name "Start Providers and Platform Control" -Script $PlatformRuntime -Parameters @{ Action = "up" }
+    Write-Host "`nTrue full runtime $BaseAction: PASS" -ForegroundColor Green
+  } catch {
+    if ($platformAttempted) { Invoke-PlatformBestEffortDown }
+    if ($baseAttempted) { Invoke-BaseBestEffortDown }
+    throw
+  }
+}
+
 switch ($Action) {
   "up" {
-    $baseAttempted = $false
-    $platformAttempted = $false
-    try {
-      $baseAttempted = $true
-      Invoke-ScriptChecked -Name "Start base full runtime" -Script $BaseRuntimePhase -Parameters @{ Action = "up"; Profiles = $BaseProfiles }
-      $platformAttempted = $true
-      Invoke-ScriptChecked -Name "Start Providers and Platform Control" -Script $PlatformRuntime -Parameters @{ Action = "up" }
-      Write-Host "`nTrue full runtime up: PASS" -ForegroundColor Green
-    } catch {
-      if ($platformAttempted) { Invoke-PlatformBestEffortDown }
-      if ($baseAttempted) { Invoke-BaseBestEffortDown }
-      throw
-    }
+    Invoke-FullStart -BaseAction "up"
+  }
+  "bootstrap-dev" {
+    Invoke-FullStart -BaseAction "bootstrap-dev"
   }
   "down" {
     Invoke-PlatformBestEffortDown
@@ -91,5 +136,19 @@ switch ($Action) {
   "status" {
     Invoke-ScriptChecked -Name "Base full runtime status" -Script $BaseRuntime -Parameters @{ Action = "status"; Profiles = $BaseProfiles }
     Invoke-ScriptChecked -Name "Providers and Platform Control status" -Script $PlatformRuntime -Parameters @{ Action = "status" }
+  }
+  "reset" {
+    Assert-DestructiveActionAuthorized
+    Invoke-PlatformBestEffortDown
+    Invoke-ScriptChecked -Name "Reset base full runtime and volumes" -Script $BaseRuntime -Parameters @{ Action = "reset"; Profiles = $BaseProfiles }
+    Invoke-ScriptChecked -Name "Start Providers and Platform Control after reset" -Script $PlatformRuntime -Parameters @{ Action = "up" }
+    Write-Host "`nTrue full runtime reset: PASS" -ForegroundColor Green
+  }
+  "rebuild-reset" {
+    Assert-DestructiveActionAuthorized
+    Invoke-PlatformBestEffortDown
+    Invoke-ScriptChecked -Name "Rebuild and reset base full runtime" -Script $BaseRuntime -Parameters @{ Action = "all"; Profiles = $BaseProfiles }
+    Invoke-ScriptChecked -Name "Start Providers and Platform Control after rebuild" -Script $PlatformRuntime -Parameters @{ Action = "up" }
+    Write-Host "`nTrue full runtime rebuild-reset: PASS" -ForegroundColor Green
   }
 }
