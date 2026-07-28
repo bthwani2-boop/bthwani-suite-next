@@ -22,9 +22,9 @@ foreach ($store in $homeDisc.stores) {
     $storeDetails = Invoke-RestMethod "$ApiBase/dsh/stores/$($store.id)" -TimeoutSec 10
     if ($storeDetails.store.id -ne $store.id) { throw "Store details ID mismatch for $($store.id)" }
 
-    # Validate Store Images
+    # Validate canonical Store Images from DshStoreSummary/OpenAPI.
     if ([string]::IsNullOrWhiteSpace($storeDetails.store.logoUrl)) { throw "Store $($store.id) missing logoUrl" }
-    if ([string]::IsNullOrWhiteSpace($storeDetails.store.heroUrl)) { throw "Store $($store.id) missing heroUrl" }
+    if ([string]::IsNullOrWhiteSpace($storeDetails.store.heroImageUrl)) { throw "Store $($store.id) missing heroImageUrl" }
 
     # Store Catalog
     $catalog = Invoke-RestMethod "$ApiBase/dsh/stores/$($store.id)/catalog" -TimeoutSec 10
