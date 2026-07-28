@@ -31,11 +31,11 @@ x-bthwani-contracts:
     dshCatalogOverlay: ../services/dsh/contracts/dsh.catalog.overlay.yaml
     dshCatalogProposalReadback: ../services/dsh/contracts/dsh.catalog-proposal-readback.openapi.yaml
     dshCatalogGovernance: ../services/dsh/contracts/dsh.catalog-governance.openapi.yaml
-    dshCheckoutWltHandoff: ../services/dsh/contracts/dsh.jrn-010-checkout.openapi.yaml
+    dshCheckoutWltHandoff: ../services/dsh/contracts/dsh.checkout.openapi.yaml
     dshClientAddress: ../services/dsh/contracts/dsh.client-address.openapi.yaml
     dshClientAddressPrivacy: ../services/dsh/contracts/dsh.client-address-privacy.openapi.yaml
     dshClientMap: ../services/dsh/contracts/dsh.client-map.openapi.yaml
-    dshCodCustody: ../services/dsh/contracts/dsh.jrn-038-cod-custody.openapi.yaml
+    dshCodCustody: ../services/dsh/contracts/dsh.cod-custody.openapi.yaml
     dshDeliveryExceptions: ../services/dsh/contracts/dsh.delivery-exceptions.openapi.yaml
     dshDeliveryProofCompletion: ../services/dsh/contracts/dsh.delivery-proof-completion.openapi.yaml
     dshDeliveryProofMedia: ../services/dsh/contracts/dsh.delivery-proof-media.openapi.yaml
@@ -57,22 +57,22 @@ x-bthwani-contracts:
     dshPartnerOnboarding: ../services/dsh/contracts/dsh.partner-onboarding.openapi.yaml
     dshPartnerSupport: ../services/dsh/contracts/dsh.partner-support.openapi.yaml
     dshPaymentSessions: ../services/dsh/contracts/dsh.payment-sessions.openapi.yaml
-    dshPayoutDestinations: ../services/dsh/contracts/dsh.jrn-037-payouts-destinations.openapi.yaml
+    dshPayoutDestinations: ../services/dsh/contracts/dsh.payouts-destinations.openapi.yaml
     dshPlatformPolicies: ../services/dsh/contracts/dsh.platform-policies.openapi.yaml
     dshReels: ../services/dsh/contracts/dsh.reels.openapi.yaml
     dshRuntimeExtensions: ../services/dsh/contracts/dsh.runtime-extensions.openapi.yaml
-    dshRepresentativeFinance: ../services/dsh/contracts/jrn-033-representative-finance.openapi.yaml
-    dshRefunds: ../services/dsh/contracts/jrn-035-refunds.openapi.yaml
-    dshSettlementCommissions: ../services/dsh/contracts/dsh.jrn-036-settlements-commissions.openapi.yaml
+    dshRepresentativeFinance: ../services/dsh/contracts/representative-finance.openapi.yaml
+    dshRefunds: ../services/dsh/contracts/refunds.openapi.yaml
+    dshSettlementCommissions: ../services/dsh/contracts/dsh.settlements-commissions.openapi.yaml
     dshStoreCaptainHandoff: ../services/dsh/contracts/dsh.store-captain-handoff.openapi.yaml
     dshSupportGovernance: ../services/dsh/contracts/dsh.support-governance.openapi.yaml
     dshSupportMessageDelivery: ../services/dsh/contracts/dsh.support-message-delivery.openapi.yaml
-    dshWorkforceScopes: ../services/dsh/contracts/dsh.jrn-003-workforce-scopes.openapi.yaml
+    dshWorkforceScopes: ../services/dsh/contracts/dsh.workforce-scopes.openapi.yaml
     wlt: ../services/wlt/contracts/wlt.openapi.yaml
     wltPayments: ../services/wlt/contracts/wlt.payments.openapi.yaml
-    wltRefunds: ../services/wlt/contracts/jrn-035-refunds.openapi.yaml
-    wltSettlementsCommissions: ../services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml
-    wltPayoutDestinations: ../services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml
+    wltRefunds: ../services/wlt/contracts/refunds.openapi.yaml
+    wltSettlementsCommissions: ../services/wlt/contracts/settlements-commissions.openapi.yaml
+    wltPayoutDestinations: ../services/wlt/contracts/payouts-destinations.openapi.yaml
     wltCommercialBenefits: ../services/wlt/contracts/wlt.commercial.openapi.yaml
     wltCommercialBenefitsSummary: ../services/wlt/contracts/wlt.commercial-summary.openapi.yaml
     wltPromotionFunding: ../services/wlt/contracts/wlt.promotion-funding.openapi.yaml

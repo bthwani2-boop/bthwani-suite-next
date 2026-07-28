@@ -1,4 +1,4 @@
--- DSH-097: JRN-023 notification delivery audit, bounded retry and dead-letter state.
+-- DSH-097: domain-023 notification delivery audit, bounded retry and dead-letter state.
 
 ALTER TABLE dsh_operational_outbox_events
     ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ,

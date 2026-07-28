@@ -1,4 +1,4 @@
--- JRN-002 FS-08: durable deletion-outbox delivery, retry, and reconciliation fields.
+-- domain-002 FS-08: durable deletion-outbox delivery, retry, and reconciliation fields.
 
 ALTER TABLE identity_account_deletions_outbox
   ADD COLUMN IF NOT EXISTS event_key text,

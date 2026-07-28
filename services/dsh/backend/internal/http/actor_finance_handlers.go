@@ -165,7 +165,7 @@ func (s *protectedStoreServer) handleCaptainFinanceCommissions(w http.ResponseWr
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
-// Historical captain and field URLs delegate to the same actor-scoped JRN-037
+// Historical captain and field URLs delegate to the same actor-scoped payouts-destinations
 // handlers used by the current /me routes. No compatibility route can create
 // a payout without an active destination owned by the authenticated actor.
 func (s *protectedStoreServer) handleCaptainFinancePayouts(w http.ResponseWriter, r *http.Request) {

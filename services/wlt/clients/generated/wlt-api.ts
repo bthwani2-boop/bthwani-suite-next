@@ -4,10 +4,10 @@
  * Source contracts:
  * - services/wlt/contracts/wlt.openapi.yaml
  * - services/wlt/contracts/wlt.payments.openapi.yaml
- * - services/wlt/contracts/jrn-035-refunds.openapi.yaml
- * - services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml
- * - services/wlt/contracts/jrn-037-payouts-destinations.openapi.yaml
- * - services/wlt/contracts/jrn-038-cod-custody.openapi.yaml
+ * - services/wlt/contracts/refunds.openapi.yaml
+ * - services/wlt/contracts/settlements-commissions.openapi.yaml
+ * - services/wlt/contracts/payouts-destinations.openapi.yaml
+ * - services/wlt/contracts/cod-custody.openapi.yaml
  *
  * Direct ledger mutation and partner-only payout-destination operations are
  * intentionally absent. Financial writes are exposed only through governed
@@ -200,16 +200,18 @@ export interface components {
   schemas: {
     WltPaymentSession: { status: WltPaymentStatus; [key: string]: unknown };
     WltPaymentSessionResponse: { paymentSession: components["schemas"]["WltPaymentSession"] };
-    WltRefund: Record<string, unknown>;
-    WltRefundResponse: Record<string, unknown>;
-    WltSettlement: Record<string, unknown>;
-    WltSettlementResponse: Record<string, unknown>;
-    WltCommission: Record<string, unknown>;
-    WltCommissionResponse: Record<string, unknown>;
-    WltCodRecord: Record<string, unknown>;
-    WltCodRecordResponse: Record<string, unknown>;
-    WltLedgerEntry: Record<string, unknown>;
-    WltLedgerEntryResponse: Record<string, unknown>;
+    WltRefund: Record<string, any>;
+    WltRefundResponse: Record<string, any>;
+    WltSettlement: Record<string, any>;
+    WltSettlementResponse: Record<string, any>;
+    WltSettlementListResponse: Record<string, any>;
+    WltPayoutRequest: Record<string, any>;
+    WltCommission: Record<string, any>;
+    WltCommissionResponse: Record<string, any>;
+    WltCodRecord: Record<string, any>;
+    WltCodRecordResponse: Record<string, any>;
+    WltLedgerEntry: Record<string, any>;
+    WltLedgerEntryResponse: Record<string, any>;
     ErrorEnvelope: WltErrorEnvelope;
   };
 }

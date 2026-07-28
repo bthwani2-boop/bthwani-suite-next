@@ -16,7 +16,7 @@ CREATE UNIQUE INDEX wlt_cod_records_tenant_order_uq
 ALTER TABLE wlt_cod_custody_evidence
   ADD COLUMN IF NOT EXISTS tenant_id text;
 ALTER TABLE wlt_cod_custody_evidence
-  DISABLE TRIGGER wlt_jrn038_cod_custody_evidence_immutable_trigger;
+  DISABLE TRIGGER wlt_cod_custody_evidence_immutable_trigger;
 UPDATE wlt_cod_custody_evidence evidence
 SET tenant_id = record.tenant_id
 FROM wlt_cod_records record
@@ -41,12 +41,12 @@ DROP INDEX IF EXISTS wlt_cod_custody_evidence_record_created_idx;
 CREATE INDEX wlt_cod_custody_evidence_tenant_record_created_idx
   ON wlt_cod_custody_evidence (tenant_id, cod_record_id, created_at DESC);
 ALTER TABLE wlt_cod_custody_evidence
-  ENABLE TRIGGER wlt_jrn038_cod_custody_evidence_immutable_trigger;
+  ENABLE TRIGGER wlt_cod_custody_evidence_immutable_trigger;
 
 ALTER TABLE wlt_cod_reconciliation_cases
   ADD COLUMN IF NOT EXISTS tenant_id text;
 ALTER TABLE wlt_cod_reconciliation_cases
-  DISABLE TRIGGER wlt_jrn038_cod_reconciliation_audit_trigger;
+  DISABLE TRIGGER wlt_cod_reconciliation_audit_trigger;
 UPDATE wlt_cod_reconciliation_cases reconciliation
 SET tenant_id = record.tenant_id
 FROM wlt_cod_records record
@@ -71,7 +71,7 @@ CREATE INDEX wlt_cod_reconciliation_tenant_status_created_idx
 ALTER TABLE wlt_cod_reconciliation_audit_events
   ADD COLUMN IF NOT EXISTS tenant_id text;
 ALTER TABLE wlt_cod_reconciliation_audit_events
-  DISABLE TRIGGER wlt_jrn038_cod_reconciliation_audit_immutable_trigger;
+  DISABLE TRIGGER wlt_cod_reconciliation_audit_immutable_trigger;
 UPDATE wlt_cod_reconciliation_audit_events audit
 SET tenant_id = reconciliation.tenant_id
 FROM wlt_cod_reconciliation_cases reconciliation
@@ -87,9 +87,9 @@ CREATE INDEX wlt_cod_reconciliation_audit_tenant_case_created_idx
   ON wlt_cod_reconciliation_audit_events
     (tenant_id, reconciliation_case_id, created_at, id);
 ALTER TABLE wlt_cod_reconciliation_audit_events
-  ENABLE TRIGGER wlt_jrn038_cod_reconciliation_audit_immutable_trigger;
+  ENABLE TRIGGER wlt_cod_reconciliation_audit_immutable_trigger;
 
-CREATE OR REPLACE FUNCTION wlt_jrn038_capture_reconciliation_audit()
+CREATE OR REPLACE FUNCTION wlt_capture_reconciliation_audit()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -133,7 +133,7 @@ END
 $$;
 
 ALTER TABLE wlt_cod_reconciliation_cases
-  ENABLE TRIGGER wlt_jrn038_cod_reconciliation_audit_trigger;
+  ENABLE TRIGGER wlt_cod_reconciliation_audit_trigger;
 
 COMMENT ON COLUMN wlt_cod_custody_evidence.tenant_id IS
   'Tenant owning immutable COD custody proof and its idempotency identity.';

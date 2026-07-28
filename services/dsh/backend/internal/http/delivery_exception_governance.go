@@ -49,7 +49,7 @@ func deliveryExceptionPathID(path, prefix, suffix string) (string, bool) {
 	return id, true
 }
 
-// DeliveryExceptionGovernanceMiddleware intercepts only the two JRN-020
+// DeliveryExceptionGovernanceMiddleware intercepts only the two domain-020
 // mutation routes whose acceptance rules are stricter than the legacy router.
 // All other traffic is delegated unchanged to the existing unified router.
 func DeliveryExceptionGovernanceMiddleware(
@@ -86,7 +86,7 @@ func DeliveryExceptionGovernanceMiddleware(
 }
 
 // handleReportDeliveryExceptionGoverned keeps the domain primitive unchanged
-// while enforcing the JRN-020 evidence contract at the HTTP boundary. Location
+// while enforcing the domain-020 evidence contract at the HTTP boundary. Location
 // remains optional so safety incidents can still be reported when GPS is denied;
 // the operational note is the mandatory human-readable evidence.
 func (s *protectedStoreServer) handleReportDeliveryExceptionGoverned(w http.ResponseWriter, r *http.Request) {

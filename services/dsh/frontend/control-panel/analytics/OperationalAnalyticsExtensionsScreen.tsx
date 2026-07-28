@@ -156,7 +156,7 @@ export function OperationalAnalyticsExtensionsScreen(): React.ReactElement {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = "jrn-032-operational-analytics.csv";
+      anchor.download = "operational-analytics.csv";
       anchor.style.display = "none";
       document.body.appendChild(anchor);
       anchor.click();

@@ -9,7 +9,7 @@ import (
 )
 
 // CompleteRefundSovereign is retained as a provider-free compatibility seam;
-// it delegates to the canonical JRN-035 completion transaction.
+// it delegates to the canonical refunds completion transaction.
 func CompleteRefundSovereign(ctx context.Context, db *sql.DB, refundID string) (*Refund, error) {
 	item, err := finalizeGovernedRefundSuccess(
 		ctx, db, refundID, "wlt", "service", "legacy-refund:"+refundID,

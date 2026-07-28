@@ -11,7 +11,7 @@ import (
 
 // GET /dsh/client/orders/{orderId}/partner-delivery
 //
-// The client-facing reference status for JRN-016: the client never sees this
+// The client-facing reference status for domain-016: the client never sees this
 // for bthwani_delivery orders (those use dispatch tracking instead), only for
 // orders the store fulfils through its own fleet.
 func (s *protectedStoreServer) handleGetClientPartnerDeliveryTask(w http.ResponseWriter, r *http.Request) {

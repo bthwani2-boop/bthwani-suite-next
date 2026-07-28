@@ -108,7 +108,7 @@ CREATE INDEX IF NOT EXISTS idx_dsh_marketing_target_bindings_entity
   ON dsh_marketing_target_bindings (entity_type, entity_id, created_at DESC);
 
 -- ── Impression / click analytics ─────────────────────────────────────────
--- Producers are owned by JRN-007: app-client emits through the governed
+-- Producers are owned by domain-007: app-client emits through the governed
 -- /dsh/home-discovery/events route, which accepts only currently publishable
 -- home banners and promos before writing to these analytics truth tables.
 CREATE TABLE IF NOT EXISTS dsh_marketing_impressions (

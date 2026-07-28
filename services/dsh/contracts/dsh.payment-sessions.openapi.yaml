@@ -7,7 +7,7 @@ info:
     payment sessions. DSH proxies WLT truth and never persists a second ledger
     or provider state.
 x-bthwani-owner: services/dsh
-x-bthwani-journey: JRN-034
+x-bthwani-journey: domain-034
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: ENABLED
 servers:

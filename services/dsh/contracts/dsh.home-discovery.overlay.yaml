@@ -4,7 +4,7 @@ info:
   version: 1.0.0
 actions:
   - target: $.paths['/dsh/home-discovery'].get.parameters
-    description: Add the audience dimension consumed by the JRN-007 targeted home runtime.
+    description: Add the audience dimension consumed by the domain-007 targeted home runtime.
     update:
       - name: audienceSegment
         in: query

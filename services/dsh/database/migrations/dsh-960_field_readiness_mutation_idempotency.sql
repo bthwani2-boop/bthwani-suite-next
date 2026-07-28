@@ -1,4 +1,4 @@
--- DSH-960 / JRN-024: durable, actor-scoped mutation identity for field readiness.
+-- DSH-960 / domain-024: durable, actor-scoped mutation identity for field readiness.
 -- Business rows retain the operation identity while append-only receipts preserve replay results.
 
 BEGIN;

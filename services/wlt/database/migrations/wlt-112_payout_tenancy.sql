@@ -108,87 +108,87 @@ ALTER TABLE wlt_payout_requests
   REFERENCES wlt_payout_destinations (tenant_id, id)
   ON DELETE RESTRICT;
 
-ALTER TABLE wlt_jrn037_payout_audit_events
+ALTER TABLE wlt_payout_audit_events
   ADD COLUMN IF NOT EXISTS tenant_id text;
 
-UPDATE wlt_jrn037_payout_audit_events audit
+UPDATE wlt_payout_audit_events audit
 SET tenant_id = request.tenant_id
 FROM wlt_payout_requests request
 WHERE audit.aggregate_id = request.id
   AND audit.aggregate_type IN ('payout_request','payout_reconciliation')
   AND (audit.tenant_id IS NULL OR btrim(audit.tenant_id) = '');
-UPDATE wlt_jrn037_payout_audit_events audit
+UPDATE wlt_payout_audit_events audit
 SET tenant_id = destination.tenant_id
 FROM wlt_payout_destinations destination
 WHERE audit.aggregate_id = destination.id
   AND audit.aggregate_type = 'payout_destination'
   AND (audit.tenant_id IS NULL OR btrim(audit.tenant_id) = '');
-UPDATE wlt_jrn037_payout_audit_events
+UPDATE wlt_payout_audit_events
 SET tenant_id = 'legacy-unscoped'
 WHERE tenant_id IS NULL OR btrim(tenant_id) = '';
-ALTER TABLE wlt_jrn037_payout_audit_events
+ALTER TABLE wlt_payout_audit_events
   ALTER COLUMN tenant_id SET NOT NULL;
-DROP INDEX IF EXISTS wlt_jrn037_payout_audit_aggregate_idx;
-DROP INDEX IF EXISTS wlt_jrn037_payout_audit_correlation_idx;
-CREATE INDEX wlt_jrn037_payout_audit_tenant_aggregate_idx
-  ON wlt_jrn037_payout_audit_events
+DROP INDEX IF EXISTS wlt_payout_audit_aggregate_idx;
+DROP INDEX IF EXISTS wlt_payout_audit_correlation_idx;
+CREATE INDEX wlt_payout_audit_tenant_aggregate_idx
+  ON wlt_payout_audit_events
     (tenant_id, aggregate_type, aggregate_id, created_at DESC);
-CREATE INDEX wlt_jrn037_payout_audit_tenant_correlation_idx
-  ON wlt_jrn037_payout_audit_events
+CREATE INDEX wlt_payout_audit_tenant_correlation_idx
+  ON wlt_payout_audit_events
     (tenant_id, correlation_id, created_at DESC);
 
-ALTER TABLE wlt_jrn037_payout_outbox
+ALTER TABLE wlt_payout_outbox
   ADD COLUMN IF NOT EXISTS tenant_id text;
-UPDATE wlt_jrn037_payout_outbox outbox
+UPDATE wlt_payout_outbox outbox
 SET tenant_id = request.tenant_id
 FROM wlt_payout_requests request
 WHERE outbox.payout_request_id = request.id
   AND (outbox.tenant_id IS NULL OR btrim(outbox.tenant_id) = '');
-UPDATE wlt_jrn037_payout_outbox
+UPDATE wlt_payout_outbox
 SET tenant_id = 'legacy-unscoped'
 WHERE tenant_id IS NULL OR btrim(tenant_id) = '';
-ALTER TABLE wlt_jrn037_payout_outbox
+ALTER TABLE wlt_payout_outbox
   ALTER COLUMN tenant_id SET NOT NULL,
-  DROP CONSTRAINT IF EXISTS wlt_jrn037_payout_outbox_payout_request_id_event_type_key;
-CREATE UNIQUE INDEX wlt_jrn037_payout_outbox_tenant_event_uq
-  ON wlt_jrn037_payout_outbox (tenant_id, payout_request_id, event_type);
-DROP INDEX IF EXISTS wlt_jrn037_payout_outbox_pending_idx;
-CREATE INDEX wlt_jrn037_payout_outbox_tenant_pending_idx
-  ON wlt_jrn037_payout_outbox (tenant_id, created_at, id)
+  DROP CONSTRAINT IF EXISTS wlt_payout_outbox_payout_request_id_event_type_key;
+CREATE UNIQUE INDEX wlt_payout_outbox_tenant_event_uq
+  ON wlt_payout_outbox (tenant_id, payout_request_id, event_type);
+DROP INDEX IF EXISTS wlt_payout_outbox_pending_idx;
+CREATE INDEX wlt_payout_outbox_tenant_pending_idx
+  ON wlt_payout_outbox (tenant_id, created_at, id)
   WHERE delivered_at IS NULL;
-ALTER TABLE wlt_jrn037_payout_outbox
-  ADD CONSTRAINT wlt_jrn037_payout_outbox_request_tenant_fk
+ALTER TABLE wlt_payout_outbox
+  ADD CONSTRAINT wlt_payout_outbox_request_tenant_fk
   FOREIGN KEY (tenant_id, payout_request_id)
   REFERENCES wlt_payout_requests (tenant_id, id)
   ON DELETE RESTRICT;
 
-ALTER TABLE wlt_jrn037_payout_reconciliations
+ALTER TABLE wlt_payout_reconciliations
   ADD COLUMN IF NOT EXISTS tenant_id text;
-UPDATE wlt_jrn037_payout_reconciliations reconciliation
+UPDATE wlt_payout_reconciliations reconciliation
 SET tenant_id = request.tenant_id
 FROM wlt_payout_requests request
 WHERE reconciliation.payout_request_id = request.id
   AND (reconciliation.tenant_id IS NULL OR btrim(reconciliation.tenant_id) = '');
-UPDATE wlt_jrn037_payout_reconciliations
+UPDATE wlt_payout_reconciliations
 SET tenant_id = 'legacy-unscoped'
 WHERE tenant_id IS NULL OR btrim(tenant_id) = '';
-ALTER TABLE wlt_jrn037_payout_reconciliations
+ALTER TABLE wlt_payout_reconciliations
   ALTER COLUMN tenant_id SET NOT NULL;
-DROP INDEX IF EXISTS wlt_jrn037_payout_reconciliation_request_idx;
-DROP INDEX IF EXISTS wlt_jrn037_payout_reconciliation_single_claim_idx;
-CREATE INDEX wlt_jrn037_payout_reconciliation_tenant_request_idx
-  ON wlt_jrn037_payout_reconciliations
+DROP INDEX IF EXISTS wlt_payout_reconciliation_request_idx;
+DROP INDEX IF EXISTS wlt_payout_reconciliation_single_claim_idx;
+CREATE INDEX wlt_payout_reconciliation_tenant_request_idx
+  ON wlt_payout_reconciliations
     (tenant_id, payout_request_id, created_at DESC);
-CREATE UNIQUE INDEX wlt_jrn037_payout_reconciliation_tenant_single_claim_idx
-  ON wlt_jrn037_payout_reconciliations (tenant_id, payout_request_id)
+CREATE UNIQUE INDEX wlt_payout_reconciliation_tenant_single_claim_idx
+  ON wlt_payout_reconciliations (tenant_id, payout_request_id)
   WHERE resolved_at IS NULL;
-ALTER TABLE wlt_jrn037_payout_reconciliations
-  ADD CONSTRAINT wlt_jrn037_payout_reconciliation_request_tenant_fk
+ALTER TABLE wlt_payout_reconciliations
+  ADD CONSTRAINT wlt_payout_reconciliation_request_tenant_fk
   FOREIGN KEY (tenant_id, payout_request_id)
   REFERENCES wlt_payout_requests (tenant_id, id)
   ON DELETE RESTRICT;
 
-CREATE OR REPLACE FUNCTION wlt_jrn037_assert_reconciliation_claim()
+CREATE OR REPLACE FUNCTION wlt_assert_reconciliation_claim()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -208,7 +208,7 @@ BEGIN
   END IF;
 
   SELECT count(*) INTO active_claims
-  FROM wlt_jrn037_payout_reconciliations
+  FROM wlt_payout_reconciliations
   WHERE tenant_id = NEW.tenant_id
     AND payout_request_id = NEW.payout_request_id
     AND resolved_at IS NULL;
@@ -223,9 +223,9 @@ COMMENT ON COLUMN wlt_payout_destinations.tenant_id IS
   'Tenant owning encrypted payout destination truth.';
 COMMENT ON COLUMN wlt_payout_destination_requests.tenant_id IS
   'Tenant-local destination mutation idempotency identity.';
-COMMENT ON COLUMN wlt_jrn037_payout_outbox.tenant_id IS
+COMMENT ON COLUMN wlt_payout_outbox.tenant_id IS
   'Tenant copied from the payout request for isolated notification delivery.';
-COMMENT ON COLUMN wlt_jrn037_payout_reconciliations.tenant_id IS
+COMMENT ON COLUMN wlt_payout_reconciliations.tenant_id IS
   'Tenant copied from the payout request for isolated provider inquiry evidence.';
 
 COMMIT;

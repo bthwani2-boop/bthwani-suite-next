@@ -1,4 +1,4 @@
--- JRN-031: maker-checker lifecycle for creating DSH administration roles.
+-- governed-administration: maker-checker lifecycle for creating DSH administration roles.
 
 CREATE TABLE IF NOT EXISTS dsh_admin_role_definition_requests (
   id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),

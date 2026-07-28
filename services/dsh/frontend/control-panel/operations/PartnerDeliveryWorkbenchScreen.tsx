@@ -95,7 +95,7 @@ export function PartnerDeliveryWorkbenchScreen(_props: PartnerDeliveryWorkbenchS
         title="فصل أسطول الشريك عن أسطول بثواني"
         reason="مهام partner_delivery لا تدخل صندوق كباتن بثواني، ولا يجوز للمشغّل إنشاء إسناد كابتن لها."
         confidence="high"
-        auditTag="JRN_016_PARTNER_FLEET_BOUNDARY"
+        auditTag="PARTNER_FLEET_BOUNDARY"
       />
 
       {feedback ? (

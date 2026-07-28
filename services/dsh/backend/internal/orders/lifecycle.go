@@ -8,7 +8,7 @@ import (
 )
 
 // AcceptOrder is the compatibility entry point used by existing HTTP routes.
-// It delegates to the JRN-012 implementation so acceptance always initializes
+// It delegates to the domain-012 implementation so acceptance always initializes
 // the store policy snapshot and authoritative preparation SLA timestamps.
 func AcceptOrder(db *sql.DB, orderID, actorID string) (*Order, error) {
 	return AcceptOrderWithPreparation(db, orderID, actorID)

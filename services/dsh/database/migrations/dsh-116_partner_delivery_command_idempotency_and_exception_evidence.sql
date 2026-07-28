@@ -1,5 +1,5 @@
 -- dsh-116_partner_delivery_command_idempotency_and_exception_evidence.sql
--- JRN-016: durable command replay protection and governed delivery-exception evidence.
+-- domain-016: durable command replay protection and governed delivery-exception evidence.
 
 BEGIN;
 
@@ -12,7 +12,7 @@ ALTER TABLE dsh_partner_delivery_tasks
     DROP CONSTRAINT IF EXISTS chk_dsh_partner_delivery_exception_reason;
 
 -- Enforce the invariant for all new or changed rows without inventing a reason
--- for legacy exception rows that predate JRN-016 evidence persistence.
+-- for legacy exception rows that predate domain-016 evidence persistence.
 ALTER TABLE dsh_partner_delivery_tasks
     ADD CONSTRAINT chk_dsh_partner_delivery_exception_reason
     CHECK (

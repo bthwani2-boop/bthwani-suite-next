@@ -141,65 +141,65 @@ FROM known_tenants tenant
 CROSS JOIN legacy_policies policy
 ON CONFLICT (tenant_id, policy_id, version) DO NOTHING;
 
-ALTER TABLE wlt_jrn036_commission_evidence ADD COLUMN IF NOT EXISTS tenant_id text;
-UPDATE wlt_jrn036_commission_evidence evidence
+ALTER TABLE wlt_commission_evidence ADD COLUMN IF NOT EXISTS tenant_id text;
+UPDATE wlt_commission_evidence evidence
 SET tenant_id = commission.tenant_id
 FROM wlt_commissions commission
 WHERE commission.id = evidence.commission_id
   AND (evidence.tenant_id IS NULL OR btrim(evidence.tenant_id) = '');
-UPDATE wlt_jrn036_commission_evidence
+UPDATE wlt_commission_evidence
 SET tenant_id = 'legacy-unscoped'
 WHERE tenant_id IS NULL OR btrim(tenant_id) = '';
-ALTER TABLE wlt_jrn036_commission_evidence
+ALTER TABLE wlt_commission_evidence
   ALTER COLUMN tenant_id SET DEFAULT 'legacy-unscoped';
-ALTER TABLE wlt_jrn036_commission_evidence
+ALTER TABLE wlt_commission_evidence
   ALTER COLUMN tenant_id SET NOT NULL;
-ALTER TABLE wlt_jrn036_commission_evidence
-  DROP CONSTRAINT IF EXISTS wlt_jrn036_commission_evidence_idempotency_key_key;
-DROP INDEX IF EXISTS wlt_jrn036_commission_request_hash_uidx;
-CREATE UNIQUE INDEX wlt_jrn036_commission_evidence_tenant_idempotency_uq
-  ON wlt_jrn036_commission_evidence (tenant_id, idempotency_key);
-CREATE UNIQUE INDEX wlt_jrn036_commission_evidence_tenant_request_hash_uq
-  ON wlt_jrn036_commission_evidence (tenant_id, request_hash);
-CREATE INDEX wlt_jrn036_commission_evidence_tenant_commission_idx
-  ON wlt_jrn036_commission_evidence (tenant_id, commission_id);
+ALTER TABLE wlt_commission_evidence
+  DROP CONSTRAINT IF EXISTS wlt_commission_evidence_idempotency_key_key;
+DROP INDEX IF EXISTS wlt_commission_request_hash_uidx;
+CREATE UNIQUE INDEX wlt_commission_evidence_tenant_idempotency_uq
+  ON wlt_commission_evidence (tenant_id, idempotency_key);
+CREATE UNIQUE INDEX wlt_commission_evidence_tenant_request_hash_uq
+  ON wlt_commission_evidence (tenant_id, request_hash);
+CREATE INDEX wlt_commission_evidence_tenant_commission_idx
+  ON wlt_commission_evidence (tenant_id, commission_id);
 
-ALTER TABLE wlt_jrn036_audit_events ADD COLUMN IF NOT EXISTS tenant_id text;
-UPDATE wlt_jrn036_audit_events
+ALTER TABLE wlt_audit_events ADD COLUMN IF NOT EXISTS tenant_id text;
+UPDATE wlt_audit_events
 SET tenant_id = 'legacy-unscoped'
 WHERE tenant_id IS NULL OR btrim(tenant_id) = '';
-ALTER TABLE wlt_jrn036_audit_events
+ALTER TABLE wlt_audit_events
   ALTER COLUMN tenant_id SET DEFAULT 'legacy-unscoped';
-ALTER TABLE wlt_jrn036_audit_events
+ALTER TABLE wlt_audit_events
   ALTER COLUMN tenant_id SET NOT NULL;
-CREATE INDEX wlt_jrn036_audit_tenant_aggregate_idx
-  ON wlt_jrn036_audit_events (tenant_id, aggregate_type, aggregate_id, created_at DESC);
+CREATE INDEX wlt_audit_tenant_aggregate_idx
+  ON wlt_audit_events (tenant_id, aggregate_type, aggregate_id, created_at DESC);
 
-ALTER TABLE wlt_jrn036_mutation_receipts ADD COLUMN IF NOT EXISTS tenant_id text;
-UPDATE wlt_jrn036_mutation_receipts
+ALTER TABLE wlt_mutation_receipts ADD COLUMN IF NOT EXISTS tenant_id text;
+UPDATE wlt_mutation_receipts
 SET tenant_id = 'legacy-unscoped'
 WHERE tenant_id IS NULL OR btrim(tenant_id) = '';
-ALTER TABLE wlt_jrn036_mutation_receipts
+ALTER TABLE wlt_mutation_receipts
   ALTER COLUMN tenant_id SET DEFAULT 'legacy-unscoped';
-ALTER TABLE wlt_jrn036_mutation_receipts
+ALTER TABLE wlt_mutation_receipts
   ALTER COLUMN tenant_id SET NOT NULL;
-ALTER TABLE wlt_jrn036_mutation_receipts
-  DROP CONSTRAINT IF EXISTS wlt_jrn036_mutation_receipts_pkey;
-ALTER TABLE wlt_jrn036_mutation_receipts
-  ADD CONSTRAINT wlt_jrn036_mutation_receipts_pkey
+ALTER TABLE wlt_mutation_receipts
+  DROP CONSTRAINT IF EXISTS wlt_mutation_receipts_pkey;
+ALTER TABLE wlt_mutation_receipts
+  ADD CONSTRAINT wlt_mutation_receipts_pkey
   PRIMARY KEY (tenant_id, idempotency_key);
-DROP INDEX IF EXISTS wlt_jrn036_mutation_receipts_aggregate_idx;
-DROP INDEX IF EXISTS wlt_jrn036_mutation_receipts_request_hash_idx;
-CREATE INDEX wlt_jrn036_mutation_receipts_tenant_aggregate_idx
-  ON wlt_jrn036_mutation_receipts (tenant_id, mutation_type, aggregate_id, created_at DESC);
-CREATE INDEX wlt_jrn036_mutation_receipts_tenant_request_hash_idx
-  ON wlt_jrn036_mutation_receipts (tenant_id, request_hash);
+DROP INDEX IF EXISTS wlt_mutation_receipts_aggregate_idx;
+DROP INDEX IF EXISTS wlt_mutation_receipts_request_hash_idx;
+CREATE INDEX wlt_mutation_receipts_tenant_aggregate_idx
+  ON wlt_mutation_receipts (tenant_id, mutation_type, aggregate_id, created_at DESC);
+CREATE INDEX wlt_mutation_receipts_tenant_request_hash_idx
+  ON wlt_mutation_receipts (tenant_id, request_hash);
 
 COMMENT ON COLUMN wlt_ledger_accounts.tenant_id IS
   'Trusted tenant ownership. legacy-unscoped requires explicit financial reconciliation before production activation.';
 COMMENT ON COLUMN wlt_field_commission_category_policy_versions.tenant_id IS
   'Tenant owning this WLT commission policy; active policy uniqueness is tenant-local.';
-COMMENT ON COLUMN wlt_jrn036_audit_events.tenant_id IS
+COMMENT ON COLUMN wlt_audit_events.tenant_id IS
   'Tenant owning the audited financial aggregate. legacy-unscoped is compatibility-only and cannot prove SaaS isolation.';
 
 COMMIT;

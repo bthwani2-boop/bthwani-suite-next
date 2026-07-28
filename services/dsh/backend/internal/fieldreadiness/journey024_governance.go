@@ -162,7 +162,7 @@ func hasBlockingEscalation(ctx context.Context, q interface {
 	return count > 0, err
 }
 
-// CompleteGovernedVisit is the canonical completion transaction for JRN-024.
+// CompleteGovernedVisit is the canonical completion transaction for domain-024.
 // It validates fresh GPS evidence, exact evidence ownership and store binding,
 // all required checks, every blocking escalation state, and the commission
 // outbox write before committing the visit state.

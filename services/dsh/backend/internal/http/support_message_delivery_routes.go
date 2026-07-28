@@ -140,7 +140,7 @@ func (s *protectedStoreServer) handleMarkOperatorSupportMessagesRead(w http.Resp
 	store.SendJSON(w, http.StatusOK, map[string]any{"receipt": summary})
 }
 
-// RegisterSupportMessageDeliveryRoutes closes JRN-021 attachments and read-state
+// RegisterSupportMessageDeliveryRoutes closes incident-rescue attachments and read-state
 // behavior for actor conversations and the operator support surface.
 func RegisterSupportMessageDeliveryRoutes(
 	mux *http.ServeMux,

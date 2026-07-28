@@ -906,7 +906,7 @@
     operationId: getDshClientPartnerDeliveryTask
     summary: Return the authenticated client's reference partner_delivery status for the order.
     description: >-
-      Client-facing reference status for JRN-016. Read-only projection of
+      Client-facing reference status for domain-016. Read-only projection of
       the same partner_delivery task the store courier operates; the client
       never mutates it.
     tags: [DshPartnerDelivery]

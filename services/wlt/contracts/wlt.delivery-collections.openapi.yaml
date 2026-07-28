@@ -7,7 +7,7 @@ info:
     custody state, ledger linkage and reconciliation. DSH supplies only trusted
     delivery and collector identities through the authenticated tenant boundary.
 x-bthwani-owner: services/wlt
-x-bthwani-journey: JRN-038
+x-bthwani-journey: cod-custody
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER

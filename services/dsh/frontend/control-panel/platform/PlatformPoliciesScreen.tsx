@@ -23,7 +23,7 @@ import {
 } from "../../shared/platform";
 import { ClientAddressPrivacySection } from "./ClientAddressPrivacySection";
 import { DispatchBalancePolicySection } from "./DispatchBalancePolicySection";
-import { Jrn029OperationalPolicySection } from "./Jrn029OperationalPolicySection";
+import { OperationalPolicySection } from "./OperationalPolicySection";
 import { MapProviderHealthCard } from "./MapProviderHealthCard";
 import { OperationalPolicyGovernanceSection } from "./OperationalPolicyGovernanceSection";
 import { ServiceAreaGovernanceSection } from "./ServiceAreaGovernanceSection";
@@ -152,7 +152,7 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
       </View>
 
       <OperationalPolicyGovernanceSection />
-      <Jrn029OperationalPolicySection />
+      <OperationalPolicySection />
       <StoreOnboardingFeePolicySection authKind="authenticated" />
     </View>
   );

@@ -40,7 +40,7 @@ const aggregateScripts = new Set([
 ]);
 
 const canonicalSourceById = new Map([
-  ["jrn-040-platform-change-sets", "tools/guards/platform-change-sets-gate.mjs"],
+  ["platform-change-sets", "tools/guards/platform-change-sets-gate.mjs"],
 ]);
 
 function readJson(relativePath) {

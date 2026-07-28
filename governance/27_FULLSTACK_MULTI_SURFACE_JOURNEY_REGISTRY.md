@@ -66,54 +66,54 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 
 | ID | الرحلة | المالك الرئيسي | القرار الابتدائي |
 | --- | --- | --- | --- |
-| JRN-001 | تأهيل الشريك والمتجر ونشره | DSH + Identity + Workforce | NEEDS_EVIDENCE |
-| JRN-002 | الهوية والتفعيل والجلسات | Identity | NEEDS_EVIDENCE |
-| JRN-003 | القوى العاملة والموارد البشرية | Workforce + Identity + DSH | NEEDS_EVIDENCE |
-| JRN-004 | اكتشاف المتاجر وسياقها وحوكمتها | DSH | READY_FOR_REVIEW |
-| JRN-005 | دفتر عناوين العميل | DSH | NEEDS_EVIDENCE |
-| JRN-006 | الخرائط ومناطق الخدمة وخصوصية العناوين | Providers + DSH | NEEDS_EVIDENCE |
-| JRN-007 | الصفحة الرئيسية والاكتشاف التسويقي | DSH | READY_FOR_REVIEW |
-| JRN-008 | الكتالوج المركزي والوسائط والتشكيلة | DSH | NEEDS_EVIDENCE |
-| JRN-009 | العربة وقابلية الخدمة | DSH | NEEDS_EVIDENCE |
-| JRN-010 | Checkout وتسليم جلسة الدفع إلى WLT | DSH + WLT | READY_FOR_REVIEW |
-| JRN-011 | إنشاء الطلب وحقيقة الطلب | DSH | NEEDS_EVIDENCE |
-| JRN-012 | قبول الطلب وتحضيره وجاهزيته | DSH | NEEDS_EVIDENCE |
-| JRN-013 | العهدة الثنائية من المتجر إلى الكابتن | DSH | NEEDS_EVIDENCE |
-| JRN-014 | الإسناد والتوزيع للكابتن | DSH | NEEDS_EVIDENCE |
-| JRN-015 | استلام العميل من الفرع | DSH | NEEDS_EVIDENCE |
-| JRN-016 | توصيل الشريك | DSH | NEEDS_EVIDENCE |
-| JRN-017 | تنفيذ الكابتن والتتبع الحي | DSH | NEEDS_EVIDENCE |
-| JRN-018 | إثبات التسليم وإكمال الطلب | DSH + WLT handoff | NEEDS_EVIDENCE |
-| JRN-019 | الإلغاء التشغيلي وتسليم الاسترداد | DSH + WLT | NEEDS_EVIDENCE |
-| JRN-020 | استثناءات التوصيل والعودة إلى المتجر | DSH | CLOSED_WITH_EVIDENCE |
-| JRN-021 | الدعم والمحادثات والحوادث وإنقاذ الطلب | DSH | CLOSED_WITH_EVIDENCE |
-| JRN-022 | الطلبات الخاصة: عونك وشي إن | DSH | CLOSED_WITH_EVIDENCE |
-| JRN-023 | الإشعارات والتواصل مع الممثلين | DSH + providers | CLOSED_WITH_EVIDENCE |
-| JRN-024 | الزيارات الميدانية وجودة وجاهزية المتجر | Workforce + DSH | CLOSED_WITH_EVIDENCE |
-| JRN-025 | الحملات والمؤشرات وعروض الشركاء | DSH | CLOSED_WITH_EVIDENCE |
-| JRN-026 | القسائم وتسعير التوصيل وسياسات الولاء | DSH + WLT boundary | CLOSED_WITH_EVIDENCE |
-| JRN-027 | الاشتراكات والمنافع التجارية | DSH + WLT | CLOSED_WITH_EVIDENCE |
-| JRN-028 | تمويل العروض والترويج | DSH + WLT | CLOSED_WITH_EVIDENCE |
-| JRN-029 | المناطق وSLA والسعة وأنماط التوصيل | DSH | CLOSED_WITH_EVIDENCE |
-| JRN-030 | ربط أسطول الشريك والكباتن | DSH + Identity | CLOSED_WITH_EVIDENCE |
-| JRN-031 | الإدارة والأدوار والاعتمادات والتدقيق | DSH + Identity + Workforce | NEEDS_EVIDENCE |
-| JRN-032 | التحليلات والأداء التشغيلي | DSH + WLT read models | NEEDS_EVIDENCE |
-| JRN-033 | محافظ الممثلين والمالية المرجعية | WLT + DSH BFF | NEEDS_EVIDENCE |
-| JRN-034 | المدفوعات وجلسات الدفع | WLT + DSH reference | NEEDS_EVIDENCE |
-| JRN-035 | الاستردادات المالية | WLT + DSH reference | NEEDS_EVIDENCE |
-| JRN-036 | التسويات والعمولات | WLT + DSH evidence | NEEDS_EVIDENCE |
-| JRN-037 | المدفوعات الصادرة ووجهاتها | WLT | NEEDS_EVIDENCE |
-| JRN-038 | COD والعهدة النقدية والدفتر والمصالحة | WLT + DSH handoff | NEEDS_EVIDENCE |
-| JRN-039 | متغيرات المنصة والمزودون والصحة | Platform Control + Providers | NEEDS_EVIDENCE |
-| JRN-040 | مجموعات تغييرات المنصة | Platform Control | NEEDS_EVIDENCE |
-| JRN-041 | الإطلاق التدريجي والتراجع | Platform Control | NEEDS_EVIDENCE |
-| JRN-042 | Runtime والبيانات والترحيلات والنسخ الاحتياطي | Platform/Runtime | NEEDS_EVIDENCE |
-| JRN-043 | SDLC والحوكمة والبوابات وCI والإصدار | Governance + CI + Release | NEEDS_EVIDENCE |
-| JRN-044 | SaaS والعزل والتفعيل التجاري المشروط | SaaS governance | OUT_OF_SCOPE_FOR_THIS_JOURNEY |
+| partner-tenant | تأهيل الشريك والمتجر ونشره | DSH + Identity + Workforce | NEEDS_EVIDENCE |
+| domain-002 | الهوية والتفعيل والجلسات | Identity | NEEDS_EVIDENCE |
+| workforce | القوى العاملة والموارد البشرية | Workforce + Identity + DSH | NEEDS_EVIDENCE |
+| governance | اكتشاف المتاجر وسياقها وحوكمتها | DSH | READY_FOR_REVIEW |
+| address-mutation | دفتر عناوين العميل | DSH | NEEDS_EVIDENCE |
+| address-topology | الخرائط ومناطق الخدمة وخصوصية العناوين | Providers + DSH | NEEDS_EVIDENCE |
+| domain-007 | الصفحة الرئيسية والاكتشاف التسويقي | DSH | READY_FOR_REVIEW |
+| catalog | الكتالوج المركزي والوسائط والتشكيلة | DSH | NEEDS_EVIDENCE |
+| cart | العربة وقابلية الخدمة | DSH | NEEDS_EVIDENCE |
+| wlt-receipts | Checkout وتسليم جلسة الدفع إلى WLT | DSH + WLT | READY_FOR_REVIEW |
+| order-truth | إنشاء الطلب وحقيقة الطلب | DSH | NEEDS_EVIDENCE |
+| domain-012 | قبول الطلب وتحضيره وجاهزيته | DSH | NEEDS_EVIDENCE |
+| slice-closure | العهدة الثنائية من المتجر إلى الكابتن | DSH | NEEDS_EVIDENCE |
+| dispatch | الإسناد والتوزيع للكابتن | DSH | NEEDS_EVIDENCE |
+| pickup-mutation | استلام العميل من الفرع | DSH | NEEDS_EVIDENCE |
+| domain-016 | توصيل الشريك | DSH | NEEDS_EVIDENCE |
+| domain-017 | تنفيذ الكابتن والتتبع الحي | DSH | NEEDS_EVIDENCE |
+| delivery-proof | إثبات التسليم وإكمال الطلب | DSH + WLT handoff | NEEDS_EVIDENCE |
+| domain-019 | الإلغاء التشغيلي وتسليم الاسترداد | DSH + WLT | NEEDS_EVIDENCE |
+| domain-020 | استثناءات التوصيل والعودة إلى المتجر | DSH | CLOSED_WITH_EVIDENCE |
+| incident-rescue | الدعم والمحادثات والحوادث وإنقاذ الطلب | DSH | CLOSED_WITH_EVIDENCE |
+| domain-022 | الطلبات الخاصة: عونك وشي إن | DSH | CLOSED_WITH_EVIDENCE |
+| domain-023 | الإشعارات والتواصل مع الممثلين | DSH + providers | CLOSED_WITH_EVIDENCE |
+| domain-024 | الزيارات الميدانية وجودة وجاهزية المتجر | Workforce + DSH | CLOSED_WITH_EVIDENCE |
+| marketing | الحملات والمؤشرات وعروض الشركاء | DSH | CLOSED_WITH_EVIDENCE |
+| domain-026 | القسائم وتسعير التوصيل وسياسات الولاء | DSH + WLT boundary | CLOSED_WITH_EVIDENCE |
+| subscription | الاشتراكات والمنافع التجارية | DSH + WLT | CLOSED_WITH_EVIDENCE |
+| promotion-funding | تمويل العروض والترويج | DSH + WLT | CLOSED_WITH_EVIDENCE |
+| operational-policy | المناطق وSLA والسعة وأنماط التوصيل | DSH | CLOSED_WITH_EVIDENCE |
+| fleet-action | ربط أسطول الشريك والكباتن | DSH + Identity | CLOSED_WITH_EVIDENCE |
+| governed-administration | الإدارة والأدوار والاعتمادات والتدقيق | DSH + Identity + Workforce | NEEDS_EVIDENCE |
+| analytics | التحليلات والأداء التشغيلي | DSH + WLT read models | NEEDS_EVIDENCE |
+| representative-finance | محافظ الممثلين والمالية المرجعية | WLT + DSH BFF | NEEDS_EVIDENCE |
+| domain-034 | المدفوعات وجلسات الدفع | WLT + DSH reference | NEEDS_EVIDENCE |
+| refunds | الاستردادات المالية | WLT + DSH reference | NEEDS_EVIDENCE |
+| settlements-commissions | التسويات والعمولات | WLT + DSH evidence | NEEDS_EVIDENCE |
+| payouts-destinations | المدفوعات الصادرة ووجهاتها | WLT | NEEDS_EVIDENCE |
+| cod-custody | COD والعهدة النقدية والدفتر والمصالحة | WLT + DSH handoff | NEEDS_EVIDENCE |
+| domain-039 | متغيرات المنصة والمزودون والصحة | Platform Control + Providers | NEEDS_EVIDENCE |
+| domain-040 | مجموعات تغييرات المنصة | Platform Control | NEEDS_EVIDENCE |
+| rollout-governance | الإطلاق التدريجي والتراجع | Platform Control | NEEDS_EVIDENCE |
+| runtime-governance | Runtime والبيانات والترحيلات والنسخ الاحتياطي | Platform/Runtime | NEEDS_EVIDENCE |
+| domain-043 | SDLC والحوكمة والبوابات وCI والإصدار | Governance + CI + Release | NEEDS_EVIDENCE |
+| domain-044 | SaaS والعزل والتفعيل التجاري المشروط | SaaS governance | OUT_OF_SCOPE_FOR_THIS_JOURNEY |
 
 ## تفاصيل الرحلات والشرائح الوظيفية
 
-### JRN-001 — تأهيل الشريك والمتجر ونشره
+### partner-tenant — تأهيل الشريك والمتجر ونشره
 
 الأسطح المرشحة: `app-field`, `app-partner`, `control-panel`.
 
@@ -128,7 +128,7 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 - التفعيل والنشر والإخفاء والتعليق وإعادة التفعيل.
 - سجل التدقيق وقراءة الحالة الذاتية للشريك.
 
-### JRN-002 — الهوية والتفعيل والجلسات
+### domain-002 — الهوية والتفعيل والجلسات
 
 الأسطح المرشحة: جميع الأسطح ذات تسجيل الدخول، و`control-panel` للإدارة.
 
@@ -144,7 +144,7 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 - حذف الحساب وإخفاء الهوية وإدارة outbox المرتبط.
 - فرض الدور والصلاحية والسطح ومنع actor leakage.
 
-### JRN-003 — القوى العاملة والموارد البشرية
+### workforce — القوى العاملة والموارد البشرية
 
 الأسطح المرشحة: `app-field`, `app-captain`, `app-partner`, `control-panel`.
 
@@ -160,7 +160,7 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 - الملف الذاتي `workforce/me` والتحديثات الذاتية المسموحة.
 - نطاقات DSH للمتاجر والمناطق وربطها بـactor_id.
 
-### JRN-004 — اكتشاف المتاجر وسياقها وحوكمتها
+### governance — اكتشاف المتاجر وسياقها وحوكمتها
 
 الأسطح المرشحة: `app-client`, `app-partner`, `app-captain`, `app-field`, `control-panel`.
 
@@ -176,13 +176,13 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 
 حالة التنفيذ الحالية: `READY_FOR_REVIEW`.
 
-- سجل الشرائح: `services/dsh/contracts/jrn-004-slice-verification-registry.json`.
-- Product Truth: `governance/product-truth/JRN-004_STORE_DISCOVERY_CONTEXT_GOVERNANCE.md`.
-- دليل التنفيذ: `governance/evidence/JRN-004_SLICE_EXECUTION_LOG.md`.
-- بوابة نفس الالتزام: `journeys/jrn-004/fullstack-slices`.
+- سجل الشرائح: `services/dsh/contracts/slice-verification-registry.json`.
+- Product Truth: `governance/product-truth/STORE_DISCOVERY_CONTEXT_GOVERNANCE.md`.
+- دليل التنفيذ: `governance/evidence/SLICE_EXECUTION_LOG.md`.
+- بوابة نفس الالتزام: `journeys/governance/fullstack-slices`.
 - جميع الشرائح الوظيفية و`FS-01..FS-18` مغلقة داخليًا؛ الموافقات المستقلة فقط متبقية قبل `CLOSED_WITH_EVIDENCE`.
 
-### JRN-005 — دفتر عناوين العميل
+### address-mutation — دفتر عناوين العميل
 
 الأسطح المرشحة: `app-client`, `control-panel` للسياسات فقط.
 
@@ -195,7 +195,7 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 - read-after-write وحالات offline/conflict/retry.
 - منع تخزين عناوين محلية باعتبارها حقيقة تشغيلية.
 
-### JRN-006 — الخرائط ومناطق الخدمة وخصوصية العناوين
+### address-topology — الخرائط ومناطق الخدمة وخصوصية العناوين
 
 الأسطح المرشحة: `app-client`, `control-panel`، وكل سطح يحتاج موقعًا محكومًا.
 
@@ -208,7 +208,7 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 - إخفاء أو anonymize العناوين المنتهية.
 - حماية PII والتدقيق ومنع التسريب بين الممثلين.
 
-### JRN-007 — الصفحة الرئيسية والاكتشاف التسويقي
+### domain-007 — الصفحة الرئيسية والاكتشاف التسويقي
 
 الأسطح المرشحة: `app-client`, `control-panel`.
 
@@ -221,7 +221,7 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 - العرض الفعلي في تطبيق العميل وحالات empty/error/offline.
 - قياس الظهور والنقر دون ادعاء بيانات غير موجودة.
 
-### JRN-008 — الكتالوج المركزي والوسائط والتشكيلة
+### catalog — الكتالوج المركزي والوسائط والتشكيلة
 
 الأسطح المرشحة: `app-client`, `app-partner`, `app-field`, `control-panel`.
 
@@ -236,7 +236,7 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 - الموافقات والسياسات وحالة Seeds والتدقيق والتراجع.
 - كتالوج العميل المنشور ومنع أي كتالوج محلي موازٍ.
 
-### JRN-009 — العربة وقابلية الخدمة
+### cart — العربة وقابلية الخدمة
 
 الأسطح المرشحة: `app-client`, `control-panel`.
 
@@ -249,13 +249,13 @@ Initial baseline commit: `466d34bacdd7fde4cc1c351e094d3d4604b33268`
 - منع العربة متعددة المتاجر إذا لم يعتمدها Product Truth.
 - رؤية العربات تشغيليًا من لوحة التحكم دون تعديل مالي.
 
-### JRN-010 — Checkout وتسليم جلسة الدفع إلى WLT
+### wlt-receipts — Checkout وتسليم جلسة الدفع إلى WLT
 
 tracking_status: READY_FOR_REVIEW
 decision: READY_FOR_REVIEW
 last_verified_commit: `72de130ff4cc3341f13261f3c10d68cf7a6930fa`
 workflow_run_id: `29871710692`
-status_context: `journeys/jrn-010/all-slices`
+status_context: `journeys/wlt-receipts/all-slices`
 technical_slices: `FS-01..FS-18 COMPLETE`
 owner_services: `DSH`, `WLT`
 required_surfaces: `app-client`, `control-panel`, `dsh-backend`, `dsh-postgresql`, `wlt-boundary`
@@ -276,7 +276,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - التعافي من نتيجة مزود غير معروفة والمصالحة اللاحقة.
 - مراقبة Checkout Intent من لوحة التحكم.
 
-### JRN-011 — إنشاء الطلب وحقيقة الطلب
+### order-truth — إنشاء الطلب وحقيقة الطلب
 
 الأسطح المرشحة: `app-client`, `app-partner`, `control-panel`.
 
@@ -289,7 +289,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - عرض الطلب للشريك ولوحة التحكم.
 - سجل الأحداث والتدقيق وreadback متعدد الأسطح.
 
-### JRN-012 — قبول الطلب وتحضيره وجاهزيته
+### domain-012 — قبول الطلب وتحضيره وجاهزيته
 
 الأسطح المرشحة: `app-partner`, `app-client`, `app-captain`, `control-panel`.
 
@@ -303,7 +303,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - إظهار الجاهزية للشريك والكابتن والعميل والمشغل.
 - التدقيق ومرشح التسوية إلى WLT دون حساب مالي في DSH.
 
-### JRN-013 — العهدة الثنائية من المتجر إلى الكابتن
+### slice-closure — العهدة الثنائية من المتجر إلى الكابتن
 
 الأسطح المرشحة: `app-partner`, `app-captain`, `app-client`, `control-panel`.
 
@@ -317,7 +317,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - إبطال المحاولة السابقة عند إعادة الإسناد وإنشاء محاولة جديدة.
 - حفظ الطرفين والأوقات والإصدار والتدقيق.
 
-### JRN-014 — الإسناد والتوزيع للكابتن
+### dispatch — الإسناد والتوزيع للكابتن
 
 الأسطح المرشحة: `app-captain`, `app-client`, `control-panel`.
 
@@ -330,7 +330,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - الأولوية والمسافة والسعة دون بيانات وهمية.
 - لوحة متابعة التوزيع وسجل القرارات.
 
-### JRN-015 — استلام العميل من الفرع
+### pickup-mutation — استلام العميل من الفرع
 
 الأسطح المرشحة: `app-client`, `app-partner`, `control-panel`.
 
@@ -344,7 +344,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - تمديد نافذة الاستلام من المشغل مع السبب.
 - رؤية الجلسة وحالاتها في لوحة التحكم.
 
-### JRN-016 — توصيل الشريك
+### domain-016 — توصيل الشريك
 
 الأسطح المرشحة: `app-partner`, `app-captain`, `app-client`, `control-panel`.
 
@@ -357,7 +357,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - مراقبة مهام توصيل الشريك وتفاصيلها.
 - منع خلط توصيل الشريك مع إسناد أسطول بثواني.
 
-### JRN-017 — تنفيذ الكابتن والتتبع الحي
+### domain-017 — تنفيذ الكابتن والتتبع الحي
 
 الأسطح المرشحة: `app-captain`, `app-client`, `app-partner`, `control-panel`.
 
@@ -371,7 +371,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - انقطاع الشبكة والمزامنة اللاحقة ومنع إعادة الأحداث.
 - تعذر الوصول وإعادة المحاولة والتصعيد.
 
-### JRN-018 — إثبات التسليم وإكمال الطلب
+### delivery-proof — إثبات التسليم وإكمال الطلب
 
 الأسطح المرشحة: `app-captain`, `app-client`, `control-panel` مع WLT handoff.
 
@@ -385,7 +385,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - عرض الدليل المسموح للعميل والمشغل.
 - إرسال حدث إكمال دائم إلى WLT للتسوية.
 
-### JRN-019 — الإلغاء التشغيلي وتسليم الاسترداد
+### domain-019 — الإلغاء التشغيلي وتسليم الاسترداد
 
 الأسطح المرشحة: `app-client`, `app-partner`, `control-panel` مع WLT.
 
@@ -398,7 +398,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - متابعة حالة الإلغاء والاسترداد متعدد الأسطح.
 - التدقيق وIdempotency والتعافي من فشل عبور الخدمات.
 
-### JRN-020 — استثناءات التوصيل والعودة إلى المتجر
+### domain-020 — استثناءات التوصيل والعودة إلى المتجر
 
 الأسطح المرشحة: `app-captain`, `app-partner`, `app-client`, `control-panel`.
 
@@ -411,7 +411,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - إغلاق محاولة التوصيل ومنع التسليم المتأخر.
 - تسليم الأثر المالي إلى WLT دون احتسابه في DSH.
 
-### JRN-021 — الدعم والمحادثات والحوادث وإنقاذ الطلب
+### incident-rescue — الدعم والمحادثات والحوادث وإنقاذ الطلب
 
 الأسطح المرشحة: `app-client`, `app-partner`, `app-captain`, `control-panel`.
 
@@ -426,7 +426,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - الحوادث وصفوف التصعيد والقرارات والإغلاق.
 - سجل أحداث الدعم والتدقيق.
 
-### JRN-022 — الطلبات الخاصة: عونك وشي إن
+### domain-022 — الطلبات الخاصة: عونك وشي إن
 
 الأسطح المرشحة: `app-client`, `app-captain`, `control-panel`.
 
@@ -440,7 +440,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - متابعة الحالة والأدلة والاستثناءات والإغلاق.
 - تسليم مرجع الدفع أو التسوية إلى WLT عند انطباقه.
 
-### JRN-023 — الإشعارات والتواصل مع الممثلين
+### domain-023 — الإشعارات والتواصل مع الممثلين
 
 الأسطح المرشحة: التطبيقات الأربعة و`control-panel`.
 
@@ -454,7 +454,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - retry وdead-letter والفشل الدائم.
 - سجل الإرسال والتسليم والتدقيق.
 
-### JRN-024 — الزيارات الميدانية وجودة وجاهزية المتجر
+### domain-024 — الزيارات الميدانية وجودة وجاهزية المتجر
 
 الأسطح المرشحة: `app-field`, `app-partner`, `control-panel`.
 
@@ -468,7 +468,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - قراءة الشريك للتقدم والنواقص.
 - قرار لوحة التحكم والتدقيق.
 
-### JRN-025 — الحملات والمؤشرات وعروض الشركاء
+### marketing — الحملات والمؤشرات وعروض الشركاء
 
 الأسطح المرشحة: `control-panel`, `app-partner`, `app-client` للعرض.
 
@@ -482,7 +482,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - الربط باكتشاف الصفحة الرئيسية دون ازدواج الملكية.
 - قياس الظهور والأداء والتدقيق.
 
-### JRN-026 — القسائم وتسعير التوصيل وسياسات الولاء
+### domain-026 — القسائم وتسعير التوصيل وسياسات الولاء
 
 الأسطح المرشحة: `control-panel`, `app-partner`, `app-client` مع WLT عند الأثر المالي.
 
@@ -495,7 +495,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - منع احتساب أو تمويل مالي داخل DSH.
 - تسليم التمويل أو القيد إلى WLT والمصالحة.
 
-### JRN-027 — الاشتراكات والمنافع التجارية
+### subscription — الاشتراكات والمنافع التجارية
 
 الأسطح المرشحة: `app-client`, `control-panel` مع WLT.
 
@@ -508,7 +508,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - الانتهاء والتجديد والإلغاء والتعويض.
 - منع ادعاء مشترك أو إيراد دون دليل مالي وتشغيلي.
 
-### JRN-028 — تمويل العروض والترويج
+### promotion-funding — تمويل العروض والترويج
 
 الأسطح المرشحة: `control-panel` مع DSH/WLT boundary.
 
@@ -521,7 +521,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - Idempotency والتزامن ومنع التجاوز المالي.
 - دفتر الأستاذ والمصالحة والتدقيق المالي.
 
-### JRN-029 — المناطق وSLA والسعة وأنماط التوصيل
+### operational-policy — المناطق وSLA والسعة وأنماط التوصيل
 
 الأسطح المرشحة: `control-panel`، ويظهر الأثر في كل سطح معني.
 
@@ -534,7 +534,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - أثر السياسات على العربة وCheckout والطلب والتوزيع.
 - التدقيق والنسخ والتراجع.
 
-### JRN-030 — ربط أسطول الشريك والكباتن
+### fleet-action — ربط أسطول الشريك والكباتن
 
 الأسطح المرشحة: `app-partner`, `app-captain`, `control-panel`.
 
@@ -547,7 +547,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - منع الربط بين tenants أو الشركاء دون صلاحية.
 - سجل التدقيق والإشعارات.
 
-### JRN-031 — الإدارة والأدوار والاعتمادات والتدقيق
+### governed-administration — الإدارة والأدوار والاعتمادات والتدقيق
 
 الأسطح المرشحة: `control-panel` مع أثر صلاحيات على جميع الأسطح.
 
@@ -561,7 +561,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - Rollback للقرارات القابلة للعكس.
 - تشخيص المتاجر والعمليات مع إخفاء البيانات الحساسة.
 
-### JRN-032 — التحليلات والأداء التشغيلي
+### analytics — التحليلات والأداء التشغيلي
 
 الأسطح المرشحة: `control-panel`, `app-partner` وقراءات محددة لبقية الأسطح.
 
@@ -575,7 +575,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - منع الأرقام الثابتة أو التجريبية في الشاشات.
 - lineage والتدقيق وتوقيت تحديث المؤشر.
 
-### JRN-033 — محافظ الممثلين والمالية المرجعية
+### representative-finance — محافظ الممثلين والمالية المرجعية
 
 الأسطح المرشحة: التطبيقات الأربعة و`control-panel` عبر WLT وDSH BFF عند الحاجة.
 
@@ -588,7 +588,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - منع أي mutation لرصيد WLT داخل DSH أو التطبيقات.
 - حدود القراءة والتدقيق بين DSH وWLT.
 
-### JRN-034 — المدفوعات وجلسات الدفع
+### domain-034 — المدفوعات وجلسات الدفع
 
 الأسطح المرشحة: `app-client`, `control-panel` مع WLT.
 
@@ -602,7 +602,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - عرض الحالة إلى DSH دون نقل ملكية الحقيقة.
 - المصالحة والتدقيق.
 
-### JRN-035 — الاستردادات المالية
+### refunds — الاستردادات المالية
 
 الأسطح المرشحة: `app-client`, `app-partner`, `control-panel` مع WLT.
 
@@ -616,7 +616,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - إعادة مرجع الحالة إلى DSH والإشعارات.
 - المصالحة والنزاع والتدقيق.
 
-### JRN-036 — التسويات والعمولات
+### settlements-commissions — التسويات والعمولات
 
 الأسطح المرشحة: `app-partner`, `app-captain`, `app-field`, `control-panel` مع WLT.
 
@@ -629,7 +629,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - الخصومات والتعديلات مع السبب.
 - العرض المرجعي للممثلين والتدقيق.
 
-### JRN-037 — المدفوعات الصادرة ووجهاتها
+### payouts-destinations — المدفوعات الصادرة ووجهاتها
 
 الأسطح المرشحة: `app-partner`, `app-captain`, `app-field`, `control-panel` مع WLT.
 
@@ -642,7 +642,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - complete/fail المتحكم بهما ومنع التكرار.
 - الإشعار ودفتر الأستاذ والمصالحة والتدقيق.
 
-### JRN-038 — COD والعهدة النقدية والدفتر والمصالحة
+### cod-custody — COD والعهدة النقدية والدفتر والمصالحة
 
 الأسطح المرشحة: `app-captain`, `app-partner`, `control-panel` مع WLT.
 
@@ -656,7 +656,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - إنشاء حالة مصالحة وتعيينها والتحقيق وحلها.
 - أثر المصالحة على التسوية والتقارير والتدقيق.
 
-### JRN-039 — متغيرات المنصة والمزودون والصحة
+### domain-039 — متغيرات المنصة والمزودون والصحة
 
 الأسطح المرشحة: `control-panel`، مع أثر على كل خدمة وسطح تابع.
 
@@ -669,7 +669,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - إعدادات حساسة دون كشف secrets.
 - سجل التدقيق والتغييرات وقراءة الأثر.
 
-### JRN-040 — مجموعات تغييرات المنصة
+### domain-040 — مجموعات تغييرات المنصة
 
 الأسطح المرشحة: `control-panel`.
 
@@ -682,7 +682,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - rollback إلى نسخة سليمة.
 - سجل التدقيق ومنع التطبيق المتكرر أو المتعارض.
 
-### JRN-041 — الإطلاق التدريجي والتراجع
+### rollout-governance — الإطلاق التدريجي والتراجع
 
 الأسطح المرشحة: `control-panel` مع أثر مضبوط على الأسطح المستهدفة.
 
@@ -695,7 +695,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - منع تجاوز الموافقات أو نشر متغير غير معتمد.
 - التدقيق والتنبيهات ودليل الاستعادة.
 
-### JRN-042 — Runtime والبيانات والترحيلات والنسخ الاحتياطي
+### runtime-governance — Runtime والبيانات والترحيلات والنسخ الاحتياطي
 
 الأسطح المرشحة: `control-panel` للقراءة السيادية، والتنفيذ لفرق Runtime فقط.
 
@@ -710,7 +710,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - إدارة الإعدادات والأسرار دون تسريب.
 - rollback وخطة التعافي من الكوارث.
 
-### JRN-043 — SDLC والحوكمة والبوابات وCI والإصدار
+### domain-043 — SDLC والحوكمة والبوابات وCI والإصدار
 
 الأسطح المرشحة: المستودع وGitHub وبيئات البناء والإصدار.
 
@@ -725,7 +725,7 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 - قواعد PR والدمج والإصدار والتوقيع والrollback.
 - عدم ادعاء closure قبل runtime وrelease وproduction evidence المنطبق.
 
-### JRN-044 — SaaS والعزل والتفعيل التجاري المشروط
+### domain-044 — SaaS والعزل والتفعيل التجاري المشروط
 
 الحالة الافتراضية: `OUT_OF_SCOPE_FOR_THIS_JOURNEY` حتى يصدر تفويض مستقل.
 
@@ -746,13 +746,13 @@ independent_review_pending: Product Owner؛ QA/device/accessibility؛ Security/F
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-07-21 | REGISTRY | استخراج السجل الأولي من baseline الفرع | sambassam | `466d34bacdd7fde4cc1c351e094d3d4604b33268` | جميع الأسطح مسجلة لا مُثبتة | NEEDS_EVIDENCE | تقييم كل رحلة وتحديثها على commits لاحقة |
 
-| 2026-07-21 | JRN-001 | FS-01..FS-18 sequential execution | sambassam | `246d4e63d75fecaa64a982938885bb2bfd6249cb` | app-field, app-partner, control-panel, app-client public projection | READY_FOR_REVIEW | Product, QA, Security, Release, device runtime and production evidence pending |
-| 2026-07-21 | JRN-015 | cross_journey_dependency_repair: removed duplicate `GET /dsh/partner/orders/{orderId}/pickup` registration in `RegisterOrderJourneyRoutes` that panicked `net/http.ServeMux` at startup (dead `handleGetPartnerPickupSession`/`pickup.ResolveStage` removed; live path is `handleGetPartnerPickupState` + `pickup.ResolvePartnerStage`, covered by `TestJourneys015Through020ExposeGovernedRoutes`) | sambassam | see commit `00e616b1` and its rebase into current head | app-partner, control-panel (backend startup unblocked) | FIX_REQUIRED closed | none known; DB-integration authz coverage for the read path still relies on existing `pickup`-package DB tests |
-| 2026-07-21 | JRN-015 | FS-06/FS-07/FS-09/FS-10/FS-12: closed the `app-client` gap — added `GET /dsh/client/orders/{orderId}/pickup` (client-scoped, reuses `orders.GetClientOrder` ownership check and `pickup.ResolvePartnerStage`), registered `getDshClientPickupSession` in `dsh.openapi.yaml`, regenerated `services/dsh/clients/generated/dsh-api.ts`, added `fetchClientPickupState` + `useClientPickupSessionController` to the shared pickup brain, and built `PickupSessionScreen` in `app-client` wired to the `pickup_otp` notification's previously-orphaned `action_url` (`/orders/{orderId}/pickup`) | sambassam | `501ad0c7` | app-client, app-partner (unchanged), control-panel (unchanged) | READY_FOR_REVIEW | Product Owner sign-off on the new client-visible screen, DB-integration authz test (client cannot read another client's session), device/runtime and QA/security/accessibility evidence pending |
-| 2026-07-21 | JRN-011 | cross_journey_dependency_repair: `internal/wlt/payment_session.go` redeclared `PaymentSession` (collided with the create-handoff type in `client.go`), called an undefined `c.requestJSON`, and referenced undefined `ErrNotConfigured` — the whole DSH backend module failed `go build`, blocking verification of any journey. Renamed the read model to `PaymentSessionDetail`, implemented `GetPaymentSession` on the established `/wlt/...` + `Authorization: Bearer` + `{"paymentSession":...}` envelope convention shared by every other real `Client` method, and corrected `payment_session_test.go` to that same contract instead of the invented one | sambassam | `e5560177` | none (backend build/startup unblocked for all surfaces) | FIX_REQUIRED closed | none known |
-| 2026-07-21 | JRN-016 | FS-06/FS-09/FS-10/FS-12: closed the `app-client` gap — the client's order tracking screen only ever fetched captain dispatch tracking, which 404s for `partner_delivery` orders, so the client saw a permanent "no captain assigned yet" state even after the store's own courier had departed or arrived. Added `GET /dsh/client/orders/{orderId}/partner-delivery` (client-scoped, same ownership pattern as the pickup client endpoint) and, while there, also registered the previously-uncontracted partner `GET /dsh/partner/orders/{orderId}/partner-delivery` in `dsh.openapi.yaml`; regenerated the client; branched `OrderTrackingScreen` on `fulfillmentMode` to render the store courier's real status | sambassam | `b92d117d` | app-client, app-partner (unchanged, already wired via `PartnerFulfillmentActionsPanel`), control-panel (unchanged, already covered by `PartnerDeliveryWorkbenchScreen`) | READY_FOR_REVIEW | Product Owner sign-off on the client-visible status text, DB-integration authz test, device/runtime and QA/security/accessibility evidence pending |
+| 2026-07-21 | partner-tenant | FS-01..FS-18 sequential execution | sambassam | `246d4e63d75fecaa64a982938885bb2bfd6249cb` | app-field, app-partner, control-panel, app-client public projection | READY_FOR_REVIEW | Product, QA, Security, Release, device runtime and production evidence pending |
+| 2026-07-21 | pickup-mutation | cross_journey_dependency_repair: removed duplicate `GET /dsh/partner/orders/{orderId}/pickup` registration in `RegisterOrderJourneyRoutes` that panicked `net/http.ServeMux` at startup (dead `handleGetPartnerPickupSession`/`pickup.ResolveStage` removed; live path is `handleGetPartnerPickupState` + `pickup.ResolvePartnerStage`, covered by `TestJourneys015Through020ExposeGovernedRoutes`) | sambassam | see commit `00e616b1` and its rebase into current head | app-partner, control-panel (backend startup unblocked) | FIX_REQUIRED closed | none known; DB-integration authz coverage for the read path still relies on existing `pickup`-package DB tests |
+| 2026-07-21 | pickup-mutation | FS-06/FS-07/FS-09/FS-10/FS-12: closed the `app-client` gap — added `GET /dsh/client/orders/{orderId}/pickup` (client-scoped, reuses `orders.GetClientOrder` ownership check and `pickup.ResolvePartnerStage`), registered `getDshClientPickupSession` in `dsh.openapi.yaml`, regenerated `services/dsh/clients/generated/dsh-api.ts`, added `fetchClientPickupState` + `useClientPickupSessionController` to the shared pickup brain, and built `PickupSessionScreen` in `app-client` wired to the `pickup_otp` notification's previously-orphaned `action_url` (`/orders/{orderId}/pickup`) | sambassam | `501ad0c7` | app-client, app-partner (unchanged), control-panel (unchanged) | READY_FOR_REVIEW | Product Owner sign-off on the new client-visible screen, DB-integration authz test (client cannot read another client's session), device/runtime and QA/security/accessibility evidence pending |
+| 2026-07-21 | order-truth | cross_journey_dependency_repair: `internal/wlt/payment_session.go` redeclared `PaymentSession` (collided with the create-handoff type in `client.go`), called an undefined `c.requestJSON`, and referenced undefined `ErrNotConfigured` — the whole DSH backend module failed `go build`, blocking verification of any journey. Renamed the read model to `PaymentSessionDetail`, implemented `GetPaymentSession` on the established `/wlt/...` + `Authorization: Bearer` + `{"paymentSession":...}` envelope convention shared by every other real `Client` method, and corrected `payment_session_test.go` to that same contract instead of the invented one | sambassam | `e5560177` | none (backend build/startup unblocked for all surfaces) | FIX_REQUIRED closed | none known |
+| 2026-07-21 | domain-016 | FS-06/FS-09/FS-10/FS-12: closed the `app-client` gap — the client's order tracking screen only ever fetched captain dispatch tracking, which 404s for `partner_delivery` orders, so the client saw a permanent "no captain assigned yet" state even after the store's own courier had departed or arrived. Added `GET /dsh/client/orders/{orderId}/partner-delivery` (client-scoped, same ownership pattern as the pickup client endpoint) and, while there, also registered the previously-uncontracted partner `GET /dsh/partner/orders/{orderId}/partner-delivery` in `dsh.openapi.yaml`; regenerated the client; branched `OrderTrackingScreen` on `fulfillmentMode` to render the store courier's real status | sambassam | `b92d117d` | app-client, app-partner (unchanged, already wired via `PartnerFulfillmentActionsPanel`), control-panel (unchanged, already covered by `PartnerDeliveryWorkbenchScreen`) | READY_FOR_REVIEW | Product Owner sign-off on the client-visible status text, DB-integration authz test, device/runtime and QA/security/accessibility evidence pending |
 
-| 2026-07-21 | JRN-010 | FS-01..FS-18 technical implementation and same-commit verification | sambassam | `72de130ff4cc3341f13261f3c10d68cf7a6930fa` / workflow `29871710692` | app-client, control-panel, DSH backend/PostgreSQL, WLT boundary | READY_FOR_REVIEW | Independent Product, QA/device/accessibility, Security/Finance and Release/Production approvals pending |
+| 2026-07-21 | wlt-receipts | FS-01..FS-18 technical implementation and same-commit verification | sambassam | `72de130ff4cc3341f13261f3c10d68cf7a6930fa` / workflow `29871710692` | app-client, control-panel, DSH backend/PostgreSQL, WLT boundary | READY_FOR_REVIEW | Independent Product, QA/device/accessibility, Security/Finance and Release/Production approvals pending |
 
 ## قالب إضافة رحلة أو تحديثها
 
@@ -779,22 +779,22 @@ open_gaps: []
 
 يُعد السجل محدثًا فقط عندما تتطابق أسماء الرحلات والشرائح مع Product Truth والعقود والـoperation IDs والمسارات والـmigrations وخريطة القدرات والأسطح في الـcommit المثبت، وتُسجل أي فجوة أو استبعاد بوضوح. تحديث السجل ليس تنفيذًا، ونجاح فحصه لا يساوي إغلاق الرحلات.
 
-<!-- JRN-020-030-CLOSURE-2026-07-21 -->
-## سجل إغلاق JRN-020..JRN-030 — 2026-07-21
+<!-- 030-CLOSURE-2026-07-21 -->
+## سجل إغلاق domain-020..fleet-action — 2026-07-21
 
 - `repository_mode`: `REMOTE_ONLY`
 - `target_ref`: `sambassam`
 - `decision`: `CLOSED_WITH_EVIDENCE`
 - `proof_commit`: `fbf7b11985ac8740efa0766f845e01634c73a8ee`
 - `proof_run_id`: `29851583176`
-- `status_context`: `journeys/jrn-020-030/final-closure`
-- `permanent_gate`: `.github/workflows/jrn-020-030-final-closure.yml`
+- `status_context`: `journeys/030/final-closure`
+- `permanent_gate`: `.github/workflows/030-final-closure.yml`
 - نجحت العقود والـbindings والحراس وحدود DSH/WLT وTypeScript وDSH Go وWLT Go وPostgreSQL migrations والـSQL invariants والتشغيل الحي لمسارات DSH.
-- ملف الدليل التفصيلي: `governance/evidence/JRN-020-030_FULLSTACK_CLOSURE.json`.
+- ملف الدليل التفصيلي: `governance/evidence/030_FULLSTACK_CLOSURE.json`.
 - لم يُنشأ Pull Request ولم يُنفذ Merge أو Force Push ضمن هذا الإغلاق.
 
-<!-- JRN-007-CODE-CLOSURE-2026-07-21 -->
-## إغلاق الكود للرحلة JRN-007 — 2026-07-21
+<!-- CODE-CLOSURE-2026-07-21 -->
+## إغلاق الكود للرحلة domain-007 — 2026-07-21
 
 - `repository_mode`: `REMOTE_ONLY`
 - `target_ref`: `sambassam`
@@ -803,11 +803,11 @@ open_gaps: []
 - `code_closure`: `COMPLETE`
 - `verified_implementation_commit`: `7018be0d7de0abd6ce98311a7cb0ad245b93ac49`
 - `proof_run_id`: `29867162535`
-- `status_context`: `journeys/jrn-007/home-discovery`
+- `status_context`: `journeys/domain-007/home-discovery`
 - `permanent_gate`: `.github/workflows/manual-deep-verification.yml`
-- `product_truth`: `governance/product-truth/JRN-007_HOME_DISCOVERY_PRODUCT_TRUTH.md`
-- `evidence`: `governance/evidence/JRN-007_FULLSTACK_MULTI_SURFACE_CLOSURE.json`
-- أُغلقت الشرائح `JRN-007-S1..S8` في الكود الفعلي: المجموعات والفئات، البنرات والوسائط والإجراءات، الاستهداف الإقليمي والجماهيري، الجدولة والنشر، CRUD المحكوم، منع ازدواج الملكية، حالات تطبيق العميل، وقياس الظهور والنقر المحكوم بالسياق.
+- `product_truth`: `governance/product-truth/HOME_DISCOVERY_PRODUCT_TRUTH.md`
+- `evidence`: `governance/evidence/FULLSTACK_MULTI_SURFACE_CLOSURE.json`
+- أُغلقت الشرائح `S1..S8` في الكود الفعلي: المجموعات والفئات، البنرات والوسائط والإجراءات، الاستهداف الإقليمي والجماهيري، الجدولة والنشر، CRUD المحكوم، منع ازدواج الملكية، حالات تطبيق العميل، وقياس الظهور والنقر المحكوم بالسياق.
 - `open_code_gaps`: `[]`
 - لا تُستخدم `CLOSED_WITH_EVIDENCE` قبل الموافقات المستقلة وأدلة الجهاز الفعلي والإصدار المطلوبة في السجل الحاكم.
 - لم يُنشأ Pull Request ولم يُنفذ Merge أو Force Push ضمن هذا الإغلاق.

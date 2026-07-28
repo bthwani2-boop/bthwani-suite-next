@@ -1,4 +1,4 @@
--- DSH-099: retain JRN-001 audit and evidence.
+-- DSH-099: retain partner-tenant audit and evidence.
 -- Partner onboarding evidence is immutable operational history. Deleting a
 -- partner, reviewed document, or published store must not cascade-delete the
 -- actor, decision, and correlation trail used for review and incident analysis.
