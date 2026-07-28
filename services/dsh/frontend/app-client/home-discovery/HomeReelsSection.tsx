@@ -24,6 +24,7 @@ import {
 } from "@bthwani/ui-kit";
 import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
 import type { HomePublicReel } from "../../shared/home-discovery";
+import { isPlayableVideoUrl } from "../../shared/home-discovery/playable-video-url.adapter";
 
 export type HomeReelsLoadState = "idle" | "loading" | "ready" | "empty" | "error";
 
@@ -35,26 +36,6 @@ type Props = {
   readonly onReelPress?: ((reel: HomePublicReel) => void) | undefined;
   readonly onItemImpression?: ((reel: HomePublicReel) => void) | undefined;
 };
-
-function isPrivateDevelopmentHost(hostname: string): boolean {
-  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") return true;
-  if (/^10\./.test(hostname) || /^192\.168\./.test(hostname)) return true;
-  const match = /^172\.(\d+)\./.exec(hostname);
-  if (!match) return false;
-  const secondOctet = Number.parseInt(match[1] ?? "0", 10);
-  return secondOctet >= 16 && secondOctet <= 31;
-}
-
-function isPlayableVideoUrl(value: string): boolean {
-  const normalized = value.trim();
-  try {
-    const url = new URL(normalized);
-    if (url.protocol === "https:") return true;
-    return url.protocol === "http:" && isPrivateDevelopmentHost(url.hostname);
-  } catch {
-    return false;
-  }
-}
 
 function reelTitle(reel: HomePublicReel): string {
   return reel.titleAr || reel.titleEn || "فيديو مختار";
@@ -112,6 +93,7 @@ function ReelSlide({
   const target = targetCopy(reel);
   const subtitle = reelSubtitle(reel);
   const highlight = reelHighlight(reel);
+
   return (
     <View style={[styles.slideShell, { height }]}>
       <View style={styles.slideCard}>
@@ -140,16 +122,42 @@ function ReelSlide({
           <Text style={styles.swipeHint}>اسحب للأعلى أو للأسفل</Text>
         </View>
         <View style={styles.slideBody}>
-          <Text style={styles.slideTitle} numberOfLines={2}>{reelTitle(reel)}</Text>
-          {subtitle ? <Text style={styles.slideSubtitle} numberOfLines={3}>{subtitle}</Text> : null}
-          {highlight ? <Text style={styles.slideHighlight} numberOfLines={2}>{highlight}</Text> : null}
-          {!subtitle && !highlight ? <Text style={styles.targetDescription}>{target.description}</Text> : null}
+          <Text style={styles.slideTitle} numberOfLines={2}>
+            {reelTitle(reel)}
+          </Text>
+          {subtitle ? (
+            <Text style={styles.slideSubtitle} numberOfLines={3}>
+              {subtitle}
+            </Text>
+          ) : null}
+          {highlight ? (
+            <Text style={styles.slideHighlight} numberOfLines={2}>
+              {highlight}
+            </Text>
+          ) : null}
+          {!subtitle && !highlight ? (
+            <Text style={styles.targetDescription}>{target.description}</Text>
+          ) : null}
           {onOpenStore ? (
             <Button label={target.label} tone="primary" onPress={onOpenStore} />
           ) : null}
         </View>
       </View>
     </View>
+  );
+}
+
+function CloseButton({ onPress }: { readonly onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="إغلاق الفيديوهات"
+      hitSlop={10}
+      style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
+      onPress={onPress}
+    >
+      <Text style={styles.closeGlyph}>×</Text>
+    </Pressable>
   );
 }
 
@@ -164,6 +172,7 @@ function ReelsStateModal({
 }) {
   const loading = loadState === "idle" || loadState === "loading";
   const error = loadState === "error";
+
   return (
     <Modal
       visible
@@ -177,7 +186,13 @@ function ReelsStateModal({
         <View style={styles.stateCard}>
           <StateView
             tone={error ? "danger" : "neutral"}
-            title={loading ? "جاري تحميل الفيديوهات..." : error ? "تعذر تحميل الفيديوهات" : "لا توجد فيديوهات معتمدة بعد"}
+            title={
+              loading
+                ? "جاري تحميل الفيديوهات..."
+                : error
+                  ? "تعذر تحميل الفيديوهات"
+                  : "لا توجد فيديوهات معتمدة بعد"
+            }
             description={
               loading
                 ? "يتم الآن جلب الفيديوهات المعتمدة من DSH."
@@ -185,7 +200,9 @@ function ReelsStateModal({
                   ? "تحقق من الاتصال ثم أعد المحاولة."
                   : "تظهر هنا الفيديوهات التي يرفعها الشركاء وتعتمدها إدارة التسويق."
             }
-            {...(!loading && onRetry ? { actionLabel: "إعادة المحاولة", onActionPress: onRetry } : {})}
+            {...(!loading && onRetry
+              ? { actionLabel: "إعادة المحاولة", onActionPress: onRetry }
+              : {})}
           />
         </View>
         <CloseButton onPress={onClose} />
@@ -222,16 +239,16 @@ function VerticalReelsModal({
     onItemImpressionRef.current = onItemImpression;
   }, [onItemImpression]);
 
-  const handleViewableItemsChanged = React.useRef((info: {
-    readonly viewableItems: readonly ViewToken[];
-  }) => {
-    const firstVisible = info.viewableItems.find((item) => item.isViewable);
-    if (typeof firstVisible?.index === "number") setActiveIndex(firstVisible.index);
-    const reel = firstVisible?.item as HomePublicReel | undefined;
-    if (!reel || impressedIds.current.has(reel.id)) return;
-    impressedIds.current.add(reel.id);
-    onItemImpressionRef.current?.(reel);
-  }).current;
+  const handleViewableItemsChanged = React.useRef(
+    (info: { readonly viewableItems: readonly ViewToken[] }) => {
+      const firstVisible = info.viewableItems.find((item) => item.isViewable);
+      if (typeof firstVisible?.index === "number") setActiveIndex(firstVisible.index);
+      const reel = firstVisible?.item as HomePublicReel | undefined;
+      if (!reel || impressedIds.current.has(reel.id)) return;
+      impressedIds.current.add(reel.id);
+      onItemImpressionRef.current?.(reel);
+    },
+  ).current;
 
   React.useEffect(() => {
     setActiveIndex(safeInitialIndex);
@@ -281,20 +298,6 @@ function VerticalReelsModal({
         <CloseButton onPress={onClose} />
       </View>
     </Modal>
-  );
-}
-
-function CloseButton({ onPress }: { readonly onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="إغلاق الفيديوهات"
-      hitSlop={10}
-      style={({ pressed }) => [styles.closeButton, pressed && styles.closeButtonPressed]}
-      onPress={onPress}
-    >
-      <Text style={styles.closeGlyph}>×</Text>
-    </Pressable>
   );
 }
 
@@ -362,7 +365,9 @@ export function HomeReelsSection({
                       accessibilityLabel={`غلاف ${reelTitle(item)}`}
                     />
                   ) : null}
-                  {item.posterUrl ? <View pointerEvents="none" style={styles.cardPosterScrim} /> : null}
+                  {item.posterUrl ? (
+                    <View pointerEvents="none" style={styles.cardPosterScrim} />
+                  ) : null}
                   <View style={styles.playButton}>
                     <Text style={styles.playIcon}>▶</Text>
                   </View>
@@ -371,7 +376,9 @@ export function HomeReelsSection({
                   </View>
                 </View>
                 <View style={styles.copyWrap}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>{reelTitle(item)}</Text>
+                  <Text style={styles.cardTitle} numberOfLines={1}>
+                    {reelTitle(item)}
+                  </Text>
                   <Text style={styles.cardSubtitle} numberOfLines={1}>
                     {reelSubtitle(item) || "اضغط ثم اسحب للتنقل"}
                   </Text>
