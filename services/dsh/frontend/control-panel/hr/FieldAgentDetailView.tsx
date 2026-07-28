@@ -9,13 +9,13 @@ import {
   ENGAGEMENT_STATUS_LABEL_AR,
   appendProviderDocument,
   useFieldAgentDetailController,
-  type SupervisorCandidate } from "../../shared/workforce";
+  type SupervisorCandidate,
+} from "../../shared/workforce";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { ProviderActivationWorkspace } from "../shared";
 import { ProviderOperationalCorePanel } from "./ProviderOperationalCorePanel";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
-
 import { ZonePicker } from "./ZonePicker";
 
 export function FieldAgentDetailView(props: { readonly actorId: string; readonly onBack: () => void }) {
@@ -84,7 +84,8 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
         const mediaRef = await uploadProviderMedia(agent.actorId, "field", {
           uri: objectUrl,
           name: file.name,
-          mimeType: file.type || "application/octet-stream" });
+          mimeType: file.type || "application/octet-stream",
+        });
         if (purpose === "photo") {
           await controller.update({ expectedVersion: agent.version, photoMediaRef: mediaRef });
         } else {
@@ -126,7 +127,6 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
           display: "flex",
           flexDirection: "column",
           gap: "20px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
         }}>
           <Text role="titleMd" style={{ marginBottom: "8px" }}>المعلومات الأساسية</Text>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
@@ -159,7 +159,8 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
                   fullNameAr: fullNameAr.trim(),
                   engagementStartDate: engagementStartDate.trim() || undefined,
                   serviceZoneId: zoneId,
-                  supervisorActorId: supervisor?.actorId })
+                  supervisorActorId: supervisor?.actorId,
+                })
               }
             >
               {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ الملف التشغيلي"}
@@ -175,7 +176,6 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
           display: "flex",
           flexDirection: "column",
           gap: "16px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
         }}>
           <Text role="titleMd">الصورة والوثائق</Text>
           <div style={{ display: "flex", gap: "24px" }}>
