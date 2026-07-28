@@ -11,7 +11,6 @@ import (
 func configureReferenceSaaS(t *testing.T) {
 	t.Helper()
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "service-token")
 }
 
@@ -19,27 +18,44 @@ func referenceRequest() *http.Request {
 	return httptest.NewRequest(http.MethodGet, "/wlt/references/payment-status?orderId=order-1", nil)
 }
 
-func TestReferenceReaderAcceptsTrustedDshService(t *testing.T) {
+func TestReferenceReaderAcceptsDistinctTrustedDshTenants(t *testing.T) {
+	configureReferenceSaaS(t)
+	for _, tenantID := range []string{"tenant-a", "tenant-b"} {
+		request := referenceRequest()
+		request.Header.Set("Authorization", "Bearer service-token")
+		request.Header.Set("X-Service-Caller", "dsh")
+		request.Header.Set("X-Tenant-ID", tenantID)
+		response := httptest.NewRecorder()
+
+		if !RequireReferenceReader(response, request) {
+			t.Fatalf("trusted DSH tenant %s was rejected status=%d body=%s", tenantID, response.Code, response.Body.String())
+		}
+		if request.Header.Get("X-Tenant-ID") != tenantID {
+			t.Fatalf("trusted service tenant changed: got %q want %q", request.Header.Get("X-Tenant-ID"), tenantID)
+		}
+	}
+}
+
+func TestReferenceReaderRejectsTrustedDshWithoutTenant(t *testing.T) {
 	configureReferenceSaaS(t)
 	request := referenceRequest()
 	request.Header.Set("Authorization", "Bearer service-token")
 	request.Header.Set("X-Service-Caller", "dsh")
-	request.Header.Set("X-Tenant-ID", "tenant-main")
 	response := httptest.NewRecorder()
 
-	if !RequireReferenceReader(response, request) {
-		t.Fatalf("trusted DSH reference read was rejected status=%d body=%s", response.Code, response.Body.String())
+	if RequireReferenceReader(response, request) {
+		t.Fatal("trusted DSH request without tenant was accepted")
 	}
 }
 
-func TestReferenceReaderAcceptsMatchingIdentitySession(t *testing.T) {
+func TestReferenceReaderAcceptsIdentityTenantAndInstallsIt(t *testing.T) {
 	configureReferenceSaaS(t)
 	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer user-token" {
 			t.Fatalf("unexpected identity authorization %q", r.Header.Get("Authorization"))
 		}
 		_ = json.NewEncoder(w).Encode(referenceIdentity{
-			Subject: "client-1", TenantID: "tenant-main", AuthState: "authenticated",
+			Subject: "client-1", TenantID: "tenant-a", AuthState: "authenticated",
 		})
 	}))
 	defer identityServer.Close()
@@ -49,29 +65,53 @@ func TestReferenceReaderAcceptsMatchingIdentitySession(t *testing.T) {
 	response := httptest.NewRecorder()
 
 	if !RequireReferenceReader(response, request) {
-		t.Fatalf("matching Identity session was rejected status=%d body=%s", response.Code, response.Body.String())
+		t.Fatalf("Identity session was rejected status=%d body=%s", response.Code, response.Body.String())
+	}
+	if request.Header.Get("X-Tenant-ID") != "tenant-a" {
+		t.Fatalf("identity tenant was not installed, got %q", request.Header.Get("X-Tenant-ID"))
 	}
 }
 
-func TestReferenceReaderRejectsCrossTenantIdentityDespiteClientHeader(t *testing.T) {
+func TestReferenceReaderRejectsHeaderThatConflictsWithIdentity(t *testing.T) {
 	configureReferenceSaaS(t)
 	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(referenceIdentity{
-			Subject: "client-2", TenantID: "tenant-other", AuthState: "authenticated",
+			Subject: "client-2", TenantID: "tenant-b", AuthState: "authenticated",
 		})
 	}))
 	defer identityServer.Close()
 	t.Setenv("IDENTITY_API_BASE_URL", identityServer.URL)
 	request := referenceRequest()
-	request.Header.Set("Authorization", "Bearer cross-token")
-	request.Header.Set("X-Tenant-ID", "tenant-main")
+	request.Header.Set("Authorization", "Bearer user-token")
+	request.Header.Set("X-Tenant-ID", "tenant-a")
 	response := httptest.NewRecorder()
 
 	if RequireReferenceReader(response, request) {
-		t.Fatal("cross-tenant Identity session was accepted")
+		t.Fatal("client header overrode Identity tenant")
 	}
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_FORBIDDEN") {
 		t.Fatalf("expected TENANT_CONTEXT_FORBIDDEN, status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestReferenceReaderRejectsIdentityWithoutTenant(t *testing.T) {
+	configureReferenceSaaS(t)
+	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(referenceIdentity{
+			Subject: "client-3", TenantID: "", AuthState: "authenticated",
+		})
+	}))
+	defer identityServer.Close()
+	t.Setenv("IDENTITY_API_BASE_URL", identityServer.URL)
+	request := referenceRequest()
+	request.Header.Set("Authorization", "Bearer user-token")
+	response := httptest.NewRecorder()
+
+	if RequireReferenceReader(response, request) {
+		t.Fatal("Identity session without tenant was accepted")
+	}
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_REQUIRED") {
+		t.Fatalf("expected TENANT_CONTEXT_REQUIRED, status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
@@ -86,19 +126,6 @@ func TestReferenceReaderRejectsMissingIdentitySession(t *testing.T) {
 	}
 	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "IDENTITY_UNAVAILABLE") {
 		t.Fatalf("expected IDENTITY_UNAVAILABLE, status=%d body=%s", response.Code, response.Body.String())
-	}
-}
-
-func TestReferenceReaderFailsClosedWithoutRuntimeTenant(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
-	response := httptest.NewRecorder()
-
-	if RequireReferenceReader(response, referenceRequest()) {
-		t.Fatal("active SaaS reference read without runtime tenant was accepted")
-	}
-	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "SAAS_TENANT_NOT_CONFIGURED") {
-		t.Fatalf("expected SAAS_TENANT_NOT_CONFIGURED, status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
