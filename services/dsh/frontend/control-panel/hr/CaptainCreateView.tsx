@@ -26,7 +26,7 @@ export function CaptainCreateView(props: {
   const [vehicleType, setVehicleType] = useState("");
 
   const createdCaptain = state.kind === "created" ? state.provider : null;
-  
+
   React.useEffect(() => {
     if (createdCaptain) {
       props.onCreated(createdCaptain);
