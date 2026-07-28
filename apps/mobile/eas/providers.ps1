@@ -1,3 +1,18 @@
+function Get-MobileToolchainLock {
+    $path = Join-Path $RepoRoot 'shared\config\toolchain-lock.json'
+    Assert-File -Path $path
+    return Get-Content -LiteralPath $path -Raw | ConvertFrom-Json -Depth 20
+}
+
+function Get-PinnedEasCliSpecifier {
+    $toolchain = Get-MobileToolchainLock
+    $version = [string]$toolchain.locked.easCli
+    if ($version -notmatch '^\d+\.\d+\.\d+$') {
+        throw 'shared/config/toolchain-lock.json must pin locked.easCli.'
+    }
+    return "eas-cli@$version"
+}
+
 function Update-GoogleInput {
     param([Parameter(Mandatory)][string] $Sha1)
     if (-not (Test-Path -LiteralPath $GoogleInputLocalPath -PathType Leaf)) {
@@ -187,7 +202,7 @@ function Set-EasVariable {
     )
 
     Invoke-EasEnvironmentCommand -Arguments @(
-        'dlx', 'eas-cli@latest', 'env:set', 'development',
+        'dlx', (Get-PinnedEasCliSpecifier), 'env:set', 'development',
         '--name', $Name, '--value', $Value, '--type', $Type,
         '--visibility', $Visibility, '--scope', 'project', '--non-interactive'
     ) -SecretValues $SecretValues | Out-Null
