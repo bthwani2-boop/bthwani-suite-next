@@ -94,9 +94,8 @@ function Invoke-FullStart {
   $platformAttempted = $false
   try {
     $baseAttempted = $true
-    if ($BaseAction -eq "up") {
-      Invoke-ScriptChecked -Name "Start base full runtime" -Script $BaseRuntimePhase -Parameters @{ Action = "up"; Profiles = $BaseProfiles }
-    } else {
+    Invoke-ScriptChecked -Name "Start base full runtime" -Script $BaseRuntimePhase -Parameters @{ Action = "up"; Profiles = $BaseProfiles }
+    if ($BaseAction -eq "bootstrap-dev") {
       Invoke-ScriptChecked -Name "Bootstrap base full runtime" -Script $BaseRuntime -Parameters @{ Action = "bootstrap-dev"; Profiles = $BaseProfiles; Force = $true }
     }
     $platformAttempted = $true
@@ -138,7 +137,7 @@ switch ($Action) {
   "reset" {
     Assert-DestructiveActionAuthorized
     Invoke-PlatformBestEffortDown
-    Invoke-ScriptChecked -Name "Reset base full runtime and volumes" -Script $BaseRuntime -Parameters @{ Action = "reset"; Profiles = $BaseProfiles }
+    Invoke-ScriptChecked -Name "Reset base full runtime and volumes" -Script $BaseRuntime -Parameters @{ Action = "reset"; Profiles = $BaseProfiles; Force = $true }
     Invoke-ScriptChecked -Name "Start Providers and Platform Control after reset" -Script $PlatformRuntime -Parameters @{ Action = "up" }
     Write-Host "`nTrue full runtime reset: PASS" -ForegroundColor Green
   }
