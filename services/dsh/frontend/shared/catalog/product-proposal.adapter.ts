@@ -1,23 +1,33 @@
 import type { ProductProposal } from "./central-catalog.types";
-import { PRODUCT_PROPOSAL_PIPELINE_METADATA } from "./central-catalog-product-pipeline";
+import {
+  PRODUCT_PROPOSAL_PIPELINE_METADATA,
+  type ProductApprovalStateMetadata,
+} from "./central-catalog-product-pipeline";
 
 export class ProductProposalAdapter {
   constructor(private readonly p: ProductProposal) {}
 
+  private get metadata(): ProductApprovalStateMetadata | undefined {
+    return PRODUCT_PROPOSAL_PIPELINE_METADATA[this.p.status];
+  }
+
   getArabicLabel(): string {
-    return PRODUCT_PROPOSAL_PIPELINE_METADATA[this.p.status]?.labelAr ?? this.p.status;
+    return this.metadata?.labelAr ?? this.p.status;
+  }
+
+  getTone(): ProductApprovalStateMetadata["tone"] {
+    return this.metadata?.tone ?? "neutral";
   }
 
   isTerminal(): boolean {
-    const next = PRODUCT_PROPOSAL_PIPELINE_METADATA[this.p.status]?.allowedNextStatuses ?? [];
-    return next.length === 0;
+    return (this.metadata?.allowedNextStatuses ?? []).length === 0;
   }
 
   canPartnerAdvance(): boolean {
-    return PRODUCT_PROPOSAL_PIPELINE_METADATA[this.p.status]?.partnerCanAdvance ?? false;
+    return this.metadata?.partnerCanAdvance ?? false;
   }
 
   isClientVisible(): boolean {
-    return this.p.status === "client-visible";
+    return this.metadata?.isClientVisible ?? false;
   }
 }
