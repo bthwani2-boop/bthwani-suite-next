@@ -20,6 +20,10 @@ func UpsertGovernedSettlementPolicyIdempotent(
 	correlationID string,
 	idempotencyKey string,
 ) (*GovernedSettlementPolicy, error) {
+	tenantID, err := shared.RequireTenantContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	partnerID = strings.TrimSpace(partnerID)
 	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
 	input.Status = strings.ToLower(strings.TrimSpace(input.Status))
@@ -52,6 +56,7 @@ func UpsertGovernedSettlementPolicyIdempotent(
 	}
 
 	requestHash := hashSettlementParts(
+		tenantID,
 		"settlement_policy",
 		partnerID,
 		fmt.Sprint(input.FeeBasisPoints),
@@ -67,7 +72,7 @@ func UpsertGovernedSettlementPolicyIdempotent(
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck
 
 	receipt, exists, err := shared.LoadJrn036MutationReceiptTx(
 		ctx,
@@ -91,14 +96,15 @@ func UpsertGovernedSettlementPolicyIdempotent(
 
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_settlement_policies
-		(partner_id, fee_basis_points, currency, status, updated_by_operator_id)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (partner_id) DO UPDATE SET
+		(tenant_id, partner_id, fee_basis_points, currency, status, updated_by_operator_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (tenant_id, partner_id) DO UPDATE SET
 		  fee_basis_points = EXCLUDED.fee_basis_points,
 		  currency = EXCLUDED.currency,
 		  status = EXCLUDED.status,
 		  updated_by_operator_id = EXCLUDED.updated_by_operator_id,
 		  updated_at = NOW()`,
+		tenantID,
 		partnerID,
 		input.FeeBasisPoints,
 		input.Currency,
@@ -112,18 +118,19 @@ func UpsertGovernedSettlementPolicyIdempotent(
 	if err := tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) + 1
 		FROM wlt_jrn036_settlement_policy_versions
-		WHERE partner_id = $1`, partnerID).Scan(&version); err != nil {
+		WHERE tenant_id = $1 AND partner_id = $2`, tenantID, partnerID).Scan(&version); err != nil {
 		return nil, err
 	}
 
 	row := tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_jrn036_settlement_policy_versions
-		(partner_id, version, fee_basis_points, currency, status, cycle_days,
+		(tenant_id, partner_id, version, fee_basis_points, currency, status, cycle_days,
 		 minimum_net_minor_units, change_reason, updated_by_operator_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING partner_id, version, fee_basis_points, currency, status,
 		          cycle_days, minimum_net_minor_units, change_reason,
 		          updated_by_operator_id`,
+		tenantID,
 		partnerID,
 		version,
 		input.FeeBasisPoints,
@@ -141,14 +148,15 @@ func UpsertGovernedSettlementPolicyIdempotent(
 
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_jrn036_audit_events
-		(aggregate_type, aggregate_id, action, actor_id, actor_type, reason,
+		(tenant_id, aggregate_type, aggregate_id, action, actor_id, actor_type, reason,
 		 correlation_id, metadata)
-		VALUES ('settlement_policy', $1, 'policy_version_created', $2,
-		        'operator', $3, $4,
+		VALUES ($1, 'settlement_policy', $2, 'policy_version_created', $3,
+		        'operator', $4, $5,
 		        jsonb_build_object(
-		          'version', $5,
-		          'feeBasisPoints', $6,
-		          'status', $7))`,
+		          'version', $6,
+		          'feeBasisPoints', $7,
+		          'status', $8))`,
+		tenantID,
 		partnerID,
 		input.OperatorID,
 		input.ChangeReason,
