@@ -1,23 +1,14 @@
 package payout
 
-import (
-	"context"
-	"database/sql"
+import "database/sql"
 
-	"wlt-api/internal/shared"
-)
-
-// GetPayoutRequest reloads the basic payout projection after the caller has
-// already established the trusted tenant context and completed a tenant-scoped
-// lock/transition. The tenant predicate remains mandatory on the readback.
-func GetPayoutRequest(ctx context.Context, db *sql.DB, payoutID string) (*PayoutRequest, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := db.QueryContext(ctx,
-		"SELECT "+requestCols+" FROM wlt_payout_requests WHERE tenant_id = $1 AND id = $2 LIMIT 1",
-		tenantID,
+// GetPayoutRequest reloads the basic payout projection after the reconciliation
+// handler has already acquired and validated the payout through lockedPayout.
+// Direct HTTP reads use the tenant-scoped HandleGetPayoutRequestWithProviderProof
+// path; this compatibility helper must not become a standalone read authority.
+func GetPayoutRequest(db *sql.DB, payoutID string) (*PayoutRequest, error) {
+	rows, err := db.Query(
+		"SELECT "+requestCols+" FROM wlt_payout_requests WHERE id = $1 LIMIT 1",
 		payoutID,
 	)
 	if err != nil {
