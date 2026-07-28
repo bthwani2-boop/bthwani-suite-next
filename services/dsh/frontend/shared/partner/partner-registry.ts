@@ -11,6 +11,7 @@ export type PartnerWorkspaceTabId =
   | 'contracts'
   | 'deactivation'
   | 'stores'
+  | 'field_assignment'
   | 'all_partners';
 
 export type PartnerSubTabItem = {
@@ -42,6 +43,7 @@ export const PARTNER_PRIMARY_TABS: readonly PartnerWorkspaceTabItem[] = [
   { id: 'contracts', label: 'العقود والشكاوى' },
   { id: 'deactivation', label: 'إلغاء التفعيل' },
   { id: 'stores', label: 'المتاجر والفروع' },
+  { id: 'field_assignment', label: 'إسناد متاجر للميداني' },
   { id: 'all_partners', label: 'كل الشركاء' },
 ];
 
@@ -94,6 +96,9 @@ export const PARTNER_SUB_TAB_DEFINITIONS: Readonly<Record<PartnerWorkspaceTabId,
   ],
   all_partners: [
     { id: 'partners_list', label: 'قائمة الشركاء' },
+  ],
+  field_assignment: [
+    { id: 'assign_stores', label: 'إسناد متاجر' },
   ],
 };
 

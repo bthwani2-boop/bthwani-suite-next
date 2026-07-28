@@ -37,10 +37,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       data-bth-theme="light"
       data-ui-theme="light"
       className={`${cairo.variable} ${inter.variable}`}
+      suppressHydrationWarning
     >
-      <head>
+      <head suppressHydrationWarning>
         <WebThemeStyle />
-        <style>{`
+      </head>
+      <body>
+        <style dangerouslySetInnerHTML={{ __html: `
           *, *::before, *::after { box-sizing: border-box; }
 
           :root {
@@ -84,9 +87,7 @@ ${renderCssVariableBlock(buildCpLegacyAliasVariables())}
             0%, 100% { opacity: 1; }
             50%       { opacity: 0.4; }
           }
-        `}</style>
-      </head>
-      <body>
+        `}} />
         <Providers>{children}</Providers>
       </body>
     </html>

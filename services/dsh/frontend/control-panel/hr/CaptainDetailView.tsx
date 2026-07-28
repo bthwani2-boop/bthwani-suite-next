@@ -14,9 +14,10 @@ import {
 } from "../../shared/workforce";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
 import { ProviderActivationWorkspace } from "../shared";
+import { ProviderOperationalCorePanel } from "./ProviderOperationalCorePanel";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
-import { WorkforceScopeManager } from "./WorkforceScopeManager";
+
 import { ZonePicker } from "./ZonePicker";
 
 const LICENSE_LABEL: Record<LicenseStatus, string> = {
@@ -163,7 +164,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
           </div>
           <div>
             <Text role="bodySm">تاريخ بداية الارتباط</Text>
-            <CpTextInput value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
+            <CpTextInput type="date" value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
           </div>
           <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
           <div>
@@ -180,7 +181,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
           </div>
           <div>
             <Text role="bodySm">تاريخ انتهاء الرخصة</Text>
-            <CpTextInput value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" aria-label="تاريخ انتهاء الرخصة" />
+            <CpTextInput type="date" value={licenseExpiresAt} onChange={setLicenseExpiresAt} placeholder="YYYY-MM-DD" aria-label="تاريخ انتهاء الرخصة" />
           </div>
 
           <Text role="bodySm" style={{ fontWeight: "bold" }}>المشرف</Text>
@@ -233,7 +234,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
           </div>
         </div>
 
-        <WorkforceScopeManager actorId={captain.actorId} actorRole="captain" />
+        <ProviderOperationalCorePanel actorId={captain.actorId} kind="captain" />
         <ProviderActivationWorkspace providerKind="captain" initialActorId={captain.actorId} entrySource="hr" />
       </div>
     </DetailPageFrame>

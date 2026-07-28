@@ -60,12 +60,13 @@ function statusTone(status: EngagementStatus): CpBadgeTone {
 }
 
 export function ProviderListView(props: {
+  readonly forcedKind?: ProviderKind;
   readonly onCreate: () => void;
   readonly onOpen: (actorId: string, kind: ProviderKind) => void;
   readonly onReference: () => void;
   readonly onActivation: () => void;
 }) {
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>(props.forcedKind || "all");
   const fieldList = useFieldAgentListController();
   const captainList = useCaptainListController();
   const employeeList = useEmployeeListController();
@@ -88,15 +89,18 @@ export function ProviderListView(props: {
     const field: FieldAgent[] = fieldList.state.kind === "ready" ? [...fieldList.state.fieldAgents] : [];
     const captains: FieldAgent[] = captainList.state.kind === "ready" ? [...captainList.state.captains] : [];
     const employees: FieldAgent[] = employeeList.state.kind === "ready" ? [...employeeList.state.employees] : [];
-    const rows = typeFilter === "field"
+    
+    const activeFilter = props.forcedKind || typeFilter;
+    
+    const rows = activeFilter === "field"
       ? field
-      : typeFilter === "captain"
+      : activeFilter === "captain"
         ? captains
-        : typeFilter === "employee"
+        : activeFilter === "employee"
           ? employees
           : [...field, ...captains, ...employees];
     return rows.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  }, [fieldList.state, captainList.state, employeeList.state, typeFilter]);
+  }, [fieldList.state, captainList.state, employeeList.state, typeFilter, props.forcedKind]);
 
   const loading = fieldList.state.kind === "loading" || captainList.state.kind === "loading" || employeeList.state.kind === "loading";
   const errorState = fieldList.state.kind === "error"
@@ -134,34 +138,41 @@ export function ProviderListView(props: {
   ) : combined.length === 0 ? (
     <CpStatePanel role="status" title="لا توجد نتائج مطابقة." />
   ) : undefined;
+  const header = (
+    <CpPageHeader title="سجل Workforce الموحد">
+      <CpButton variant="primary" onClick={props.onCreate}>إضافة عضو</CpButton>
+      <CpButton variant="secondary" onClick={props.onActivation}>تفعيل مقدمي الخدمة</CpButton>
+      <CpButton variant="ghost" onClick={props.onReference}>المدن والورديات</CpButton>
+    </CpPageHeader>
+  );
+
+  const filterBar = (
+    <CpFilterBar label="فلاتر Workforce">
+      <CpSearchInput value={query} onChange={setQuery} placeholder="FLD-000123 أو CAP-000123 أو EMP-000123" aria-label="بحث بالاسم أو الرقم الوظيفي" wide />
+      {!props.forcedKind && (
+        <CpTabs aria-label="النوع" value={typeFilter} onChange={(value) => setTypeFilter(value as TypeFilter)} items={TYPE_TABS} />
+      )}
+      <CpTabs aria-label="الحالة" value={status ?? ""} onChange={(value) => setStatus(value === "" ? undefined : (value as EngagementStatus))} items={STATUS_TABS} />
+    </CpFilterBar>
+  );
+
+  const toolbar = (
+    <CpKpiStrip>
+      <CpKpiCard label="إجمالي" value={counts.total} />
+      <CpKpiCard label="بانتظار التفعيل" value={counts.pending} />
+      <CpKpiCard label="نشط" value={counts.active} />
+      <CpKpiCard label="موقوف" value={counts.suspended} />
+    </CpKpiStrip>
+  );
 
   return (
     <DataTablePageFrame
-      header={
-        <CpPageHeader title="سجل Workforce الموحد">
-          <CpButton variant="primary" onClick={props.onCreate}>إضافة عضو</CpButton>
-          <CpButton variant="secondary" onClick={props.onActivation}>تفعيل مقدمي الخدمة</CpButton>
-          <CpButton variant="ghost" onClick={props.onReference}>المدن والورديات</CpButton>
-        </CpPageHeader>
-      }
-      filters={
-        <CpFilterBar label="فلاتر Workforce">
-          <CpSearchInput value={query} onChange={setQuery} placeholder="FLD-000123 أو CAP-000123 أو EMP-000123" aria-label="بحث بالاسم أو الرقم الوظيفي" wide />
-          <CpTabs aria-label="النوع" value={typeFilter} onChange={(value) => setTypeFilter(value as TypeFilter)} items={TYPE_TABS} />
-          <CpTabs aria-label="الحالة" value={status ?? ""} onChange={(value) => setStatus(value === "" ? undefined : (value as EngagementStatus))} items={STATUS_TABS} />
-        </CpFilterBar>
-      }
-      toolbar={
-        <CpKpiStrip>
-          <CpKpiCard label="إجمالي" value={counts.total} />
-          <CpKpiCard label="بانتظار التفعيل" value={counts.pending} />
-          <CpKpiCard label="نشط" value={counts.active} />
-          <CpKpiCard label="موقوف" value={counts.suspended} />
-        </CpKpiStrip>
-      }
+      header={props.forcedKind ? undefined : header}
+      filters={filterBar}
+      toolbar={props.forcedKind ? undefined : toolbar}
       stateView={stateView}
     >
-      <CpTable aria-label="سجل Workforce">
+      <CpTable aria-label={props.forcedKind ? `سجل ${props.forcedKind}` : "سجل Workforce"}>
         <thead>
           <tr>
             <CpTableHeaderCell>الاسم</CpTableHeaderCell>

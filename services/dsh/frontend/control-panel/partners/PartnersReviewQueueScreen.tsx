@@ -19,6 +19,7 @@ import { StoreManagementScreen } from "./stores/StoreManagementScreen";
 import { FieldReadinessQueueScreen } from "./field-readiness/FieldReadinessQueueScreen";
 import { PartnerGovernanceWorkspaceScreen } from "./PartnerGovernanceWorkspaceScreen";
 import { PartnerCreatePanel } from "./PartnerCreatePanel";
+import { FieldAssignmentWorkspace } from "./field-assignment/FieldAssignmentWorkspace";
 
 type Props = {
   readonly onOpenPartner?: (partnerId: string) => void;
@@ -65,6 +66,7 @@ export function PartnersReviewQueueScreen({ onOpenPartner }: Props) {
 
   const renderContent = () => {
     if (activeTab === "field_readiness") return <FieldReadinessQueueScreen />;
+    if (activeTab === "field_assignment") return <FieldAssignmentWorkspace />;
     if (activeTab === "stores") return <StoreManagementScreen />;
     if (activeTab === "all_partners") {
       return <PartnerListScreen {...(onOpenPartner ? { onSelectPartner: onOpenPartner } : {})} />;

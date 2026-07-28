@@ -111,7 +111,7 @@ export function WorkforceScopeManager(props: {
       {!loading ? (
         <>
           <Text role="bodyStrong">مناطق الخدمة</Text>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "16px" }}>
             {areas.map((area) => (
               <CpButton
                 key={area.code}
@@ -119,27 +119,8 @@ export function WorkforceScopeManager(props: {
                 disabled={saving}
                 onClick={() => toggleArea(area.code)}
               >
-                {area.code} · {area.stores} متجر
+                {area.code}
               </CpButton>
-            ))}
-          </div>
-
-          <Text role="bodyStrong">المتاجر المحددة</Text>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {options.map((store) => (
-              <div key={store.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
-                <div style={{ flex: 1 }}>
-                  <Text role="bodySm">{store.displayName}</Text>
-                  <CpMutedInline tight>{store.id} · {store.serviceAreaCode}</CpMutedInline>
-                </div>
-                <CpButton
-                  variant={selectedStoreIds.includes(store.id) ? "primary" : "secondary"}
-                  disabled={saving}
-                  onClick={() => toggleStore(store.id)}
-                >
-                  {selectedStoreIds.includes(store.id) ? "محدد" : "تحديد"}
-                </CpButton>
-              </div>
             ))}
           </div>
 

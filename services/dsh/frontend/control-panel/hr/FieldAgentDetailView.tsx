@@ -11,9 +11,11 @@ import {
   useFieldAgentDetailController,
   type SupervisorCandidate } from "../../shared/workforce";
 import { uploadProviderMedia } from "../../shared/media/field-document-media";
+import { ProviderActivationWorkspace } from "../shared";
+import { ProviderOperationalCorePanel } from "./ProviderOperationalCorePanel";
 import { WorkforceErrorState } from "../../shared/workforce/WorkforceErrorState";
 import { SupervisorPicker } from "./SupervisorPicker";
-import { WorkforceScopeManager } from "./WorkforceScopeManager";
+
 import { ZonePicker } from "./ZonePicker";
 
 export function FieldAgentDetailView(props: { readonly actorId: string; readonly onBack: () => void }) {
@@ -21,7 +23,6 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
   const agent = controller.state.kind === "ready" ? controller.state.agent : null;
 
   const [fullNameAr, setFullNameAr] = useState("");
-  const [fullNameEn, setFullNameEn] = useState("");
   const [zoneId, setZoneId] = useState("");
   const [engagementStartDate, setEngagementStartDate] = useState("");
   const [supervisor, setSupervisor] = useState<SupervisorCandidate | null>(null);
@@ -31,7 +32,6 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
   useEffect(() => {
     if (!agent) return;
     setFullNameAr(agent.fullNameAr);
-    setFullNameEn(agent.fullNameEn ?? "");
     setZoneId(agent.fieldProfile?.serviceZoneId ?? "");
     setEngagementStartDate(agent.engagementStartDate ?? "");
     setSupervisor(
@@ -113,53 +113,83 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
         </CpPageHeader>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         <CpMutedInline>
           الميداني مقدم خدمة مستقل بلا وردية أو حضور. التفعيل وإصدار كود الدخول من صلاحية قسم الشراكات بعد اكتمال بوابة التفعيل.
         </CpMutedInline>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          <div>
-            <Text role="bodySm">الاسم بالعربية *</Text>
-            <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" />
+        <section style={{ 
+          padding: "24px", 
+          border: "1px solid var(--bthwani-control-panel-border)", 
+          borderRadius: "16px", 
+          background: "var(--bthwani-control-panel-surface)", 
+          display: "flex", 
+          flexDirection: "column", 
+          gap: "20px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+        }}>
+          <Text role="titleMd" style={{ marginBottom: "8px" }}>المعلومات الأساسية</Text>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <Text role="bodySm" style={{ fontWeight: 600 }}>الاسم بالعربية *</Text>
+              <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <Text role="bodySm" style={{ fontWeight: 600 }}>تاريخ بداية الارتباط</Text>
+              <CpTextInput type="date" value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
+            </div>
           </div>
-          <div>
-            <Text role="bodySm">الاسم بالإنجليزية</Text>
-            <CpTextInput value={fullNameEn} onChange={setFullNameEn} aria-label="الاسم بالإنجليزية" />
+          <div style={{ height: "1px", background: "var(--bthwani-control-panel-border)", margin: "8px 0" }} />
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <Text role="bodySm" style={{ fontWeight: 600 }}>مسؤول المتابعة والمشرف المباشر</Text>
+            <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} />
           </div>
-          <div>
-            <Text role="bodySm">تاريخ بداية الارتباط</Text>
-            <CpTextInput value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
-          </div>
-          <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
-
-          <Text role="bodySm" style={{ fontWeight: "bold" }}>مسؤول المتابعة</Text>
-          <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} />
           {controller.actionError ? <CpStateView kind="error" title={controller.actionError} /> : null}
 
-          <CpButton
-            variant="primary"
-            disabled={!canSave}
-            onClick={() =>
-              void controller.update({
-                expectedVersion: agent.version,
-                fullNameAr: fullNameAr.trim(),
-                fullNameEn: fullNameEn.trim() || undefined,
-                engagementStartDate: engagementStartDate.trim() || undefined,
-                serviceZoneId: zoneId,
-                supervisorActorId: supervisor?.actorId })
-            }
-          >
-            {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ الملف التشغيلي"}
-          </CpButton>
-        </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px" }}>
+            <CpButton
+              variant="primary"
+              disabled={!canSave}
+              onClick={() =>
+                void controller.update({
+                  expectedVersion: agent.version,
+                  fullNameAr: fullNameAr.trim(),
+                  engagementStartDate: engagementStartDate.trim() || undefined,
+                  serviceZoneId: zoneId,
+                  supervisorActorId: supervisor?.actorId })
+              }
+            >
+              {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ الملف التشغيلي"}
+            </CpButton>
+          </div>
+        </section>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <Text role="titleSm">الصورة والوثائق</Text>
-          <Text role="bodySm">الصورة: {agent.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
-          <Text role="bodySm">الوثائق: {profile?.documentMediaRefs.length ?? 0}</Text>
+        <section style={{ 
+          padding: "24px", 
+          border: "1px solid var(--bthwani-control-panel-border)", 
+          borderRadius: "16px", 
+          background: "var(--bthwani-control-panel-surface)", 
+          display: "flex", 
+          flexDirection: "column", 
+          gap: "16px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+        }}>
+          <Text role="titleMd">الصورة والوثائق</Text>
+          <div style={{ display: "flex", gap: "24px" }}>
+            <Text role="bodySm">
+              <span style={{ color: "var(--bthwani-control-panel-text-muted)" }}>الصورة:</span>{" "}
+              <span style={{ fontWeight: 600 }}>{agent.photoMediaRef ? "مرتبطة" : "مفقودة"}</span>
+            </Text>
+            <Text role="bodySm">
+              <span style={{ color: "var(--bthwani-control-panel-text-muted)" }}>الوثائق:</span>{" "}
+              <span style={{ fontWeight: 600 }}>{profile?.documentMediaRefs.length ?? 0}</span>
+            </Text>
+          </div>
           {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "8px" }}>
             <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>
               {uploadBusy ? "جارٍ الرفع…" : "رفع صورة شخصية"}
             </CpButton>
@@ -167,9 +197,10 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
               {uploadBusy ? "جارٍ الرفع…" : "رفع وثيقة"}
             </CpButton>
           </div>
-        </div>
+        </section>
 
-        <WorkforceScopeManager actorId={agent.actorId} actorRole="field" />
+        <ProviderOperationalCorePanel actorId={agent.actorId} kind="field" />
+        <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
       </div>
     </DetailPageFrame>
   );
