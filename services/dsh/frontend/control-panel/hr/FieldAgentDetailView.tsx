@@ -118,13 +118,13 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
           الميداني مقدم خدمة مستقل بلا وردية أو حضور. التفعيل وإصدار كود الدخول من صلاحية قسم الشراكات بعد اكتمال بوابة التفعيل.
         </CpMutedInline>
 
-        <section style={{ 
-          padding: "24px", 
-          border: "1px solid var(--bthwani-control-panel-border)", 
-          borderRadius: "16px", 
-          background: "var(--bthwani-control-panel-surface)", 
-          display: "flex", 
-          flexDirection: "column", 
+        <section style={{
+          padding: "24px",
+          border: "1px solid var(--bthwani-control-panel-border)",
+          borderRadius: "16px",
+          background: "var(--bthwani-control-panel-surface)",
+          display: "flex",
+          flexDirection: "column",
           gap: "20px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
         }}>
@@ -167,13 +167,13 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
           </div>
         </section>
 
-        <section style={{ 
-          padding: "24px", 
-          border: "1px solid var(--bthwani-control-panel-border)", 
-          borderRadius: "16px", 
-          background: "var(--bthwani-control-panel-surface)", 
-          display: "flex", 
-          flexDirection: "column", 
+        <section style={{
+          padding: "24px",
+          border: "1px solid var(--bthwani-control-panel-border)",
+          borderRadius: "16px",
+          background: "var(--bthwani-control-panel-surface)",
+          display: "flex",
+          flexDirection: "column",
           gap: "16px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
         }}>
