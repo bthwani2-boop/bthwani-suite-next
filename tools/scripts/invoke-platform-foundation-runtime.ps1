@@ -55,6 +55,10 @@ function Wait-Postgres {
   throw "PostgreSQL did not become ready for platform foundation migrations."
 }
 
+function Ensure-PlatformDatabases {
+  Invoke-Compose exec -T postgres sh /docker-entrypoint-initdb.d/001_create_runtime_databases.sh
+}
+
 function Wait-HttpReady {
   param(
     [Parameter(Mandatory = $true)][string]$Name,
@@ -77,6 +81,7 @@ function Wait-HttpReady {
 function Invoke-PlatformFoundationMigrations {
   Invoke-Compose up -d postgres
   Wait-Postgres
+  Ensure-PlatformDatabases
 
   foreach ($service in @("providers", "platform-control")) {
     & pwsh -NoProfile -ExecutionPolicy Bypass -File $MigrationScript -Service $service
