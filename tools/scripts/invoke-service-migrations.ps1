@@ -72,6 +72,30 @@ function Invoke-DatabaseSql {
   return (($output | ForEach-Object { "$_" }) -join "`n").Trim()
 }
 
+function ConvertFrom-LegacyTransactionBoundaries {
+  param(
+    [Parameter(Mandatory = $true)][string]$Content,
+    [Parameter(Mandatory = $true)][string]$MigrationName
+  )
+
+  $beginPattern = "(?im)^\s*BEGIN(?:\s+(?:WORK|TRANSACTION))?\s*;\s*(?:--.*)?$"
+  $commitPattern = "(?im)^\s*COMMIT(?:\s+(?:WORK|TRANSACTION))?\s*;\s*(?:--.*)?$"
+  $beginCount = [regex]::Matches($Content, $beginPattern).Count
+  $commitCount = [regex]::Matches($Content, $commitPattern).Count
+
+  if ($beginCount -ne $commitCount) {
+    throw "Migration $MigrationName contains unbalanced legacy transaction boundaries: BEGIN=$beginCount COMMIT=$commitCount."
+  }
+
+  if ($beginCount -gt 0) {
+    Write-Host "  Normalizing $beginCount legacy transaction boundary pair(s): $MigrationName"
+    $Content = [regex]::Replace($Content, $beginPattern, "-- transaction boundary owned by canonical runner")
+    $Content = [regex]::Replace($Content, $commitPattern, "-- transaction boundary owned by canonical runner")
+  }
+
+  return $Content
+}
+
 function Get-OrderedMigrationFiles {
   $files = @(Get-ChildItem -LiteralPath $MigrationPath -File -Filter "*.sql" |
     Sort-Object { $_.Name.ToLowerInvariant() }, Name)
@@ -86,7 +110,7 @@ function Get-OrderedMigrationFiles {
     throw "Duplicate migration filenames detected for '$ServiceKey': $($duplicateNames.Name -join ', ')"
   }
 
-  $seenIdentifiers = @{}
+  $identifierOwners = @{}
   foreach ($file in $files) {
     if ($file.Length -eq 0) {
       throw "Migration is empty: $($file.Name)"
@@ -98,10 +122,10 @@ function Get-OrderedMigrationFiles {
     )
     if ($identifierMatch.Success) {
       $identifier = $identifierMatch.Groups["id"].Value.ToLowerInvariant()
-      if ($seenIdentifiers.ContainsKey($identifier)) {
-        throw "Duplicate migration identifier '$identifier' for '$ServiceKey': $($seenIdentifiers[$identifier]) and $($file.Name)"
+      if (-not $identifierOwners.ContainsKey($identifier)) {
+        $identifierOwners[$identifier] = [System.Collections.Generic.List[string]]::new()
       }
-      $seenIdentifiers[$identifier] = $file.Name
+      $identifierOwners[$identifier].Add($file.Name)
     }
 
     $content = Get-Content -Raw -LiteralPath $file.FullName
@@ -109,7 +133,7 @@ function Get-OrderedMigrationFiles {
       @{ Pattern = "(?im)^\s*CREATE\s+(?:UNIQUE\s+)?INDEX\s+CONCURRENTLY\b"; Reason = "CREATE INDEX CONCURRENTLY requires a separately governed online migration" },
       @{ Pattern = "(?im)^\s*REINDEX\s+.*\s+CONCURRENTLY\b"; Reason = "REINDEX CONCURRENTLY cannot run inside the required atomic transaction" },
       @{ Pattern = "(?im)^\s*VACUUM\b"; Reason = "VACUUM cannot run inside the required atomic transaction" },
-      @{ Pattern = "(?im)^\s*(?:BEGIN|COMMIT|ROLLBACK)\s*;"; Reason = "the canonical runner owns the transaction boundary" },
+      @{ Pattern = "(?im)^\s*ROLLBACK(?:\s+(?:WORK|TRANSACTION))?\s*;"; Reason = "ROLLBACK is forbidden because the canonical runner owns failure recovery" },
       @{ Pattern = "(?im)^\s*(?:CREATE|DROP)\s+DATABASE\b"; Reason = "database lifecycle changes are outside service migration authority" },
       @{ Pattern = "(?im)^\s*ALTER\s+SYSTEM\b"; Reason = "cluster configuration is outside service migration authority" }
     )
@@ -118,6 +142,18 @@ function Get-OrderedMigrationFiles {
         throw "Migration $($file.Name) is not atomic: $($rule.Reason)."
       }
     }
+
+    ConvertFrom-LegacyTransactionBoundaries -Content $content -MigrationName $file.Name | Out-Null
+  }
+
+  $collisions = @($identifierOwners.GetEnumerator() |
+    Where-Object { $_.Value.Count -gt 1 } |
+    Sort-Object Name)
+  if ($collisions.Count -gt 0) {
+    $details = $collisions | ForEach-Object {
+      "identifier '$($_.Key)': $($_.Value -join ', ')"
+    }
+    throw "Duplicate migration identifiers detected for '$ServiceKey':`n- $($details -join "`n- ")"
   }
 
   return $files
@@ -150,7 +186,9 @@ foreach ($file in $files) {
     throw "Migration checksum mismatch for $($file.Name): recorded=$recorded current=$checksum. Applied migrations are immutable; add a new migration."
   }
 
-  $migrationSql = Get-Content -Raw -LiteralPath $file.FullName
+  $migrationSql = ConvertFrom-LegacyTransactionBoundaries `
+    -Content (Get-Content -Raw -LiteralPath $file.FullName) `
+    -MigrationName $file.Name
   $payload = @"
 SET LOCAL lock_timeout = '${LockTimeoutSeconds}s';
 SET LOCAL statement_timeout = '${StatementTimeoutMinutes}min';
