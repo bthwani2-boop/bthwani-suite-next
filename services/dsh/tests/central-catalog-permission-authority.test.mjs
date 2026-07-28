@@ -13,6 +13,12 @@ test("catalog UI authorization consumes Identity permission claims", () => {
   assert.match(source, /hasServiceControlPanelPermission\(identityOrFallbackRole, "dsh", permission\)/);
 });
 
+test("catalog UI permission vocabulary includes backend assortment and seed actions", () => {
+  assert.match(source, /"catalog\.assortment\.read"/);
+  assert.match(source, /"catalog\.assortment\.manage"/);
+  assert.match(source, /"catalog\.seed\.read"/);
+});
+
 test("catalog UI does not expand admin or staff roles locally", () => {
   assert.doesNotMatch(source, /actorRole === "admin"/);
   assert.doesNotMatch(source, /actorRole === "staff"/);
