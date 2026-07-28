@@ -30,23 +30,23 @@ var employeePermissionBundleRegistry = []EmployeePermissionBundleDescriptor{
 	},
 	{
 		Code: EmployeeBundleOperationsManager, NameAr: "مدير العمليات", NameEn: "Operations manager",
-		AllowedEmploymentClasses: []string{"department_manager"}, DepartmentSelectionAllowed: true,
+		AllowedEmploymentClasses: []string{"department_manager"}, DefaultDepartmentScope: "operations",
 	},
 	{
 		Code: EmployeeBundlePartnersManager, NameAr: "مدير الشركاء", NameEn: "Partners manager",
-		AllowedEmploymentClasses: []string{"department_manager"}, DepartmentSelectionAllowed: true,
+		AllowedEmploymentClasses: []string{"department_manager"}, DefaultDepartmentScope: "partners",
 	},
 	{
 		Code: EmployeeBundleFinanceManager, NameAr: "مدير المالية", NameEn: "Finance manager",
-		AllowedEmploymentClasses: []string{"department_manager"}, DepartmentSelectionAllowed: true,
+		AllowedEmploymentClasses: []string{"department_manager"}, DefaultDepartmentScope: "finance",
 	},
 	{
 		Code: EmployeeBundleSupportManager, NameAr: "مدير الدعم", NameEn: "Support manager",
-		AllowedEmploymentClasses: []string{"department_manager"}, DepartmentSelectionAllowed: true,
+		AllowedEmploymentClasses: []string{"department_manager"}, DefaultDepartmentScope: "support",
 	},
 	{
 		Code: EmployeeBundleHRManager, NameAr: "مدير الموارد البشرية", NameEn: "HR manager",
-		AllowedEmploymentClasses: []string{"department_manager"}, DepartmentSelectionAllowed: true,
+		AllowedEmploymentClasses: []string{"department_manager"}, DefaultDepartmentScope: "hr",
 	},
 }
 
