@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -32,38 +31,22 @@ type Identity struct {
 }
 
 type Client struct {
-	baseURL         string
-	defaultTenantID string
-	saasActive      bool
-	http            *http.Client
+	baseURL string
+	http    *http.Client
 }
 
 func NewClient(baseURL string) *Client {
 	return &Client{
-		baseURL:         strings.TrimRight(baseURL, "/"),
-		defaultTenantID: strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID")),
-		saasActive:      strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active"),
-		http:            &http.Client{Timeout: 3 * time.Second},
+		baseURL: strings.TrimRight(baseURL, "/"),
+		http:    &http.Client{Timeout: 3 * time.Second},
 	}
 }
 
-func (c *Client) tenantConfigured() bool {
-	return !c.saasActive || c.defaultTenantID != ""
-}
-
-func (c *Client) identityMatchesRuntimeTenant(identity Identity) bool {
-	if !c.saasActive {
-		return true
-	}
-	return strings.TrimSpace(identity.TenantID) == c.defaultTenantID
-}
-
-// Resolve accepts Identity assertions only for the trusted active SaaS tenant.
-// Cross-tenant identities are treated as unauthenticated so every DSH
-// requireActor/requirePermission call fails closed without trusting a tenant
-// selector from the browser.
+// Resolve accepts only authenticated Identity assertions with an explicit
+// tenant. The Identity session is the tenant authority; a process-wide default
+// tenant is never used to select or reject a valid tenant-scoped session.
 func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, error) {
-	if c.baseURL == "" || !c.tenantConfigured() {
+	if c.baseURL == "" {
 		return Identity{}, ErrIdentityUnavailable
 	}
 	if !strings.HasPrefix(strings.TrimSpace(authorization), "Bearer ") {
@@ -89,9 +72,11 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 	if err := json.NewDecoder(resp.Body).Decode(&identity); err != nil {
 		return Identity{}, ErrIdentityUnavailable
 	}
-	if identity.AuthState != "authenticated" || identity.Subject == "" || !c.identityMatchesRuntimeTenant(identity) {
+	if identity.AuthState != "authenticated" || strings.TrimSpace(identity.Subject) == "" || strings.TrimSpace(identity.TenantID) == "" {
 		return Identity{}, ErrUnauthenticated
 	}
+	identity.Subject = strings.TrimSpace(identity.Subject)
+	identity.TenantID = strings.TrimSpace(identity.TenantID)
 	return identity, nil
 }
 
