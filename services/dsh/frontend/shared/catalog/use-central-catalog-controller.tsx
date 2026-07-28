@@ -343,6 +343,7 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
       return runMutationWithReadback(
         () => occApi.upsertOperatorStoreAssortmentOCC(storeId, masterProductId, {
           ...input,
+          currency: current?.currency ?? "",
           expectedVersion: current?.version,
         }),
         () => loadStoreAssortment(storeId),
