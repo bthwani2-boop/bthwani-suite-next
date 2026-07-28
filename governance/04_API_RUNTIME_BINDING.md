@@ -30,7 +30,7 @@ immutable commit
 ## Contract ownership
 
 - `contracts/master.openapi.yaml` is an index only.
-- `core/identity/contracts/auth.openapi.yaml` owns authentication, session, and actor-identity contracts.
+- `core/identity/contracts/identity.openapi.yaml` owns authentication, session, actor-identity, and internal administrative employee provisioning contracts.
 - `core/providers/contracts/providers.openapi.yaml` owns the declared external-provider control contract; runtime adapters, registry, audit, and mutations remain with their implementation owners.
 - `services/<service>/contracts/<service>.openapi.yaml` owns public service operations.
 

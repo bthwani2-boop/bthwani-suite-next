@@ -7,7 +7,8 @@ import { composeDshOpenApi } from "../scripts/dsh-openapi-modular-lib.mjs";
 
 const contracts = [
   "contracts/master.openapi.yaml",
-  "core/identity/contracts/auth.openapi.yaml",
+  "core/identity/contracts/generated/identity.bundle.openapi.yaml",
+  "core/platform-control/contracts/platform-control.openapi.yaml",
   "core/providers/contracts/providers.openapi.yaml",
   "core/workforce/contracts/workforce.openapi.yaml",
   "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",

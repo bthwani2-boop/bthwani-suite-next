@@ -10,6 +10,10 @@
   "scripts": {
     "contracts:spectral": "spectral lint \"{core,services,apps,contracts}/**/*.openapi.yaml\"",
     "contracts:lint": "node tools/important-scripts/contracts-foundation.mjs && pnpm run contracts:spectral",
+    "contracts:snapshot": "node tools/contracts/contract-surface-snapshot.mjs",
+    "contracts:compare": "node tools/contracts/contract-surface-snapshot.mjs --compare",
+    "contracts:inventory": "node tools/contracts/contract-inventory.mjs",
+    "contracts:refs": "node tools/contracts/contract-reference-scan.mjs",
     "foundation:gate": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1",
     "typecheck": "pnpm -r --if-present typecheck",
     "build": "pnpm -r --if-present build",
@@ -99,11 +103,13 @@
     "openapi:generate:dsh": "pnpm --dir services/dsh openapi:generate",
     "openapi:generate:dsh-catalog": "node tools/scripts/generate-dsh-catalog-client.mjs",
     "openapi:generate:wlt": "pnpm exec openapi-typescript services/wlt/contracts/wlt.openapi.yaml -o services/wlt/clients/generated/wlt-api.ts",
-    "openapi:generate:identity": "pnpm exec openapi-typescript core/identity/contracts/auth.openapi.yaml -o core/identity/clients/generated/identity-api.ts",
+    "openapi:compose:identity": "node tools/scripts/compose-identity-openapi.mjs",
+    "openapi:generate:identity": "pnpm run openapi:compose:identity && pnpm exec openapi-typescript core/identity/contracts/generated/identity.bundle.openapi.yaml -o core/identity/clients/generated/identity-api.ts",
     "openapi:generate:workforce": "pnpm exec openapi-typescript core/workforce/contracts/workforce.openapi.yaml -o core/workforce/clients/generated/workforce-api.ts",
     "openapi:generate:platform-control": "pnpm exec openapi-typescript core/platform-control/contracts/platform-control.openapi.yaml -o core/platform-control/clients/generated/platform-control-api.ts",
     "openapi:generate:providers": "pnpm exec openapi-typescript core/providers/contracts/providers.openapi.yaml -o core/providers/clients/generated/providers-api.ts",
     "openapi:generate": "pnpm run openapi:generate:dsh && pnpm run openapi:generate:dsh-catalog && pnpm run openapi:generate:wlt && pnpm run openapi:generate:identity && pnpm run openapi:generate:workforce && pnpm run openapi:generate:platform-control && pnpm run openapi:generate:providers",
+    "guard:no-root-openapi": "node tools/guards/no-root-openapi-gate.mjs",
     "guard:api-binding": "node tools/guards/api-binding-gate.mjs",
     "guard:backend-api-binding": "node tools/guards/backend-api-binding-gate.mjs",
     "guard:service-manifest-drift": "node tools/guards/service-manifest-drift-gate.mjs",
@@ -267,7 +273,8 @@
     "openapi-typescript": "7.13.0",
     "sherif": "1.11.1",
     "size-limit": "^11.1.6",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "yaml": "2.9.0"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

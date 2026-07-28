@@ -177,7 +177,7 @@ jobs:
         run: |
           set +e
           log="${RUNNER_TEMP}/platform-change-sets.log"
-          generated="${RUNNER_TEMP}/platform-change-sets-api.ts"
+          generated="${RUNNER_TEMP}/platform-control-api.ts"
           status=0
           run_check() {
             echo "===== $* =====" | tee -a "${log}"
@@ -185,9 +185,8 @@ jobs:
             code=${PIPESTATUS[0]}
             if [[ "${code}" -ne 0 ]]; then status="${code}"; fi
           }
-          run_check pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false
-          run_check pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/platform-change-sets.openapi.yaml -o "${generated}"
-          run_check diff -u core/platform-control/clients/generated/platform-change-sets-api.ts "${generated}"
+          run_check pnpm exec openapi-typescript core/platform-control/contracts/platform-control.openapi.yaml -o "${generated}"
+          run_check diff -u core/platform-control/clients/generated/platform-control-api.ts "${generated}"
           run_check node tools/guards/platform-change-sets-gate.mjs
           exit "${status}"
       - name: Upload platform change-set diagnostics
@@ -197,7 +196,7 @@ jobs:
           name: platform-change-sets-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/platform-change-sets.log
-            ${{ runner.temp }}/platform-change-sets-api.ts
+            ${{ runner.temp }}/platform-control-api.ts
           if-no-files-found: error
           retention-days: 7
       - name: Enforce platform change-set result

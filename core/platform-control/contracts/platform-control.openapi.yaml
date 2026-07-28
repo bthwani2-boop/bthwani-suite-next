@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: BThwani Core Platform Control API
-  version: 0.3.0
-  description: Sovereign platform-control read model, governed maker-checker changes, live health aggregation, and progressive feature-flag delivery.
+  version: 0.4.0
+  description: Sovereign platform-control read model, governed maker-checker changes, live health aggregation, and progressive feature-flag delivery, including progressive rollout recovery guidance (absorbed from jrn-041-progressive-rollout.openapi.yaml and platform-change-sets.openapi.yaml).
 
 x-bthwani-owner: core/platform-control
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -253,12 +253,20 @@ paths:
   /platform/v1/change-sets/{id}/rollback:
     post:
       operationId: rollbackPlatformChangeSet
-      summary: Atomically roll back an applied change set from captured snapshots.
+      summary: Atomically roll back an applied change set from captured snapshots with a mandatory reason.
       tags: [PlatformChangeSets]
       parameters: [{ $ref: "#/components/parameters/ChangeSetId" }]
+      # requestBody reconciled from platform-change-sets.openapi.yaml's rollbackPlatformChangeSet,
+      # which required a reason body that this operation was missing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RollbackPlatformChangeSetInput" }
       responses:
         "200": { $ref: "#/components/responses/PlatformChangeSetResponse" }
         "409": { $ref: "#/components/responses/PlatformError" }
+        "422": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/rollouts:
     get:
       operationId: listPlatformRollouts
@@ -299,6 +307,23 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/PlatformRolloutResponse" }
         "404": { $ref: "#/components/responses/PlatformError" }
+  /platform/v1/rollouts/{id}/recovery:
+    get:
+      operationId: getPlatformRolloutRecovery
+      summary: Return canonical legal actions and the approved recovery plan for one rollout.
+      tags: [PlatformRollouts]
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
+      responses:
+        "200":
+          description: Recovery guidance derived from persisted rollout and change-set truth.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [recovery]
+                properties:
+                  recovery: { $ref: "#/components/schemas/PlatformRolloutRecoveryGuide" }
+        "404": { $ref: "#/components/responses/PlatformError" }
   /platform/v1/rollouts/{id}/advance:
     post:
       operationId: advancePlatformRollout
@@ -312,6 +337,15 @@ paths:
     post:
       operationId: pausePlatformRollout
       summary: Pause a running rollout.
+      tags: [PlatformRollouts]
+      parameters: [{ $ref: "#/components/parameters/RolloutId" }]
+      responses:
+        "200": { $ref: "#/components/responses/PlatformRolloutResponse" }
+        "409": { $ref: "#/components/responses/PlatformError" }
+  /platform/v1/rollouts/{id}/resume:
+    post:
+      operationId: resumePlatformRollout
+      summary: Resume a paused rollout after health evaluation without advancing percentage.
       tags: [PlatformRollouts]
       parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
@@ -396,9 +430,11 @@ components:
     PlatformRolloutStatus:
       type: string
       enum: [running, paused, completed, aborted, rolled_back, failed]
+    # required/properties.saas absorbed from platform-control.saas.overlay.yaml
+    # (governed SaaS activation and trusted tenant runtime projection).
     PlatformRuntimeSnapshot:
       type: object
-      required: [status, revision, generatedAt, variablesState, flagsState, rolloutsState, healthState, auditState, rollbackState, servicesState, evidence]
+      required: [status, revision, generatedAt, variablesState, flagsState, rolloutsState, healthState, auditState, rollbackState, servicesState, evidence, saas]
       properties:
         status: { $ref: "#/components/schemas/PlatformControlState" }
         revision: { type: string }
@@ -413,6 +449,30 @@ components:
         evidence:
           type: array
           items: { type: string }
+        saas: { $ref: "#/components/schemas/PlatformSaasRuntimeStatus" }
+    # Absorbed from platform-control.saas.overlay.yaml (server-owned SaaS runtime status).
+    PlatformSaasRuntimeStatus:
+      type: object
+      additionalProperties: false
+      required:
+        - mode
+        - commercialActivationState
+        - productionDeploymentAuthorized
+        - defaultTenantId
+        - runtimeEnabled
+      properties:
+        mode:
+          type: string
+          enum: [active, deferred]
+        commercialActivationState:
+          type: string
+          enum: [blocked, eligible, authorized, active]
+        productionDeploymentAuthorized:
+          type: boolean
+        defaultTenantId:
+          type: string
+        runtimeEnabled:
+          type: boolean
     PlatformEffectiveRuntimeConfig:
       type: object
       required: [revision, stale, fallbackUsed, evaluationTrace, values]
@@ -501,9 +561,16 @@ components:
         valueType: { type: string }
         classification: { type: string }
         expectedRevision: { type: integer, format: int64, minimum: 0 }
+        # preconditionSnapshot/validatedRevision/itemValidatedAt reconciled from
+        # platform-change-sets.openapi.yaml, which tracked these fields (backed by
+        # platform-005_change_set_validation.sql) while this file's copy did not.
+        preconditionSnapshot:
+          description: Full target state captured during validation; absent for a new target.
+        validatedRevision: { type: integer, format: int64, minimum: 0 }
+        itemValidatedAt: { type: string, format: date-time }
         beforeValue: {}
         proposedValue: {}
-        appliedRevision: { type: integer, format: int64 }
+        appliedRevision: { type: integer, format: int64, minimum: 1 }
     PlatformChangeSet:
       type: object
       required: [id, title, reason, impactAssessment, rollbackPlan, status, proposerActorId, version, createdAt, updatedAt, items]
@@ -530,6 +597,7 @@ components:
         rolledBackAt: { type: string, format: date-time }
         items:
           type: array
+          maxItems: 50
           items: { $ref: "#/components/schemas/PlatformChangeSetItem" }
     PlatformRollout:
       type: object
@@ -566,6 +634,30 @@ components:
         completedAt: { type: string, format: date-time }
         abortedAt: { type: string, format: date-time }
         rolledBackAt: { type: string, format: date-time }
+    # Absorbed from jrn-041-progressive-rollout.openapi.yaml (getPlatformRolloutRecovery),
+    # adapted to reference this file's own PlatformRolloutStatus rather than jrn-041's
+    # separately-declared RolloutStatus, to avoid a duplicate enum under a new name.
+    PlatformRolloutRecoveryGuide:
+      type: object
+      required: [rolloutId, changeSetId, featureFlagKey, status, healthState, currentPercentage, canAdvance, canPause, canResume, canAbort, canRollback, recommendedAction, rollbackPlan, recoverySteps, requiredPermission]
+      properties:
+        rolloutId: { type: string, format: uuid }
+        changeSetId: { type: string, format: uuid }
+        featureFlagKey: { type: string }
+        status: { $ref: "#/components/schemas/PlatformRolloutStatus" }
+        healthState: { $ref: "#/components/schemas/PlatformControlState" }
+        currentPercentage: { type: integer, minimum: 0, maximum: 100 }
+        canAdvance: { type: boolean }
+        canPause: { type: boolean }
+        canResume: { type: boolean }
+        canAbort: { type: boolean }
+        canRollback: { type: boolean }
+        recommendedAction: { type: string }
+        rollbackPlan: { type: string }
+        recoverySteps:
+          type: array
+          items: { type: string }
+        requiredPermission: { const: "platform:rollouts:manage" }
     CreatePlatformChangeSetItemInput:
       type: object
       required: [targetType, targetKey, ownerService, expectedRevision, proposedValue]
@@ -590,12 +682,23 @@ components:
         items:
           type: array
           minItems: 1
+          maxItems: 50
           items: { $ref: "#/components/schemas/CreatePlatformChangeSetItemInput" }
     RejectPlatformChangeSetInput:
       type: object
+      additionalProperties: false
       required: [reason]
       properties:
-        reason: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 1, maxLength: 4000 }
+    # Absorbed from platform-change-sets.openapi.yaml as a distinct schema (rather than
+    # reusing RejectPlatformChangeSetInput) to preserve the reject/rollback governance
+    # distinction tracked by tools/guards/platform-change-sets-gate.mjs.
+    RollbackPlatformChangeSetInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 4000 }
     CreatePlatformRolloutInput:
       type: object
       required: [changeSetId, featureFlagKey, targetScope, steps, healthGate]

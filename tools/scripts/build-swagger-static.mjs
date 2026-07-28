@@ -11,7 +11,7 @@ const specsDir = path.join(outputDir, "specs");
 
 const specs = [
   { input: "contracts/master.openapi.yaml", name: "Master API Index" },
-  { input: "core/identity/contracts/auth.openapi.yaml", name: "Core - Identity API" },
+  { input: "core/identity/contracts/generated/identity.bundle.openapi.yaml", name: "Core - Identity API" },
   { input: "core/platform-control/contracts/platform-control.openapi.yaml", name: "Core - Platform Control API" },
   { input: "core/providers/contracts/providers.openapi.yaml", name: "Core - Providers API" },
   { input: "core/workforce/contracts/workforce.openapi.yaml", name: "Core - Workforce API" },

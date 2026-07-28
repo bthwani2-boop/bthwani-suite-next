@@ -1,0 +1,84 @@
+# BThwani Identity OpenAPI schemas module: employee-access.
+# Absorbed from core/identity/contracts/employee-access.openapi.yaml.
+# Source of truth. Referenced by ../../identity.openapi.yaml; do not add an openapi root here.
+
+EmployeePermissionBundleCode:
+  type: string
+  enum:
+    - staff
+    - platform_owner
+    - platform_coordinator
+    - operations_manager
+    - partners_manager
+    - finance_manager
+    - support_manager
+    - hr_manager
+EmployeePermissionBundleDescriptor:
+  type: object
+  additionalProperties: false
+  required:
+    - code
+    - nameAr
+    - nameEn
+    - allowedEmploymentClasses
+    - departmentSelectionAllowed
+  properties:
+    code:
+      $ref: "#/EmployeePermissionBundleCode"
+    nameAr:
+      type: string
+      minLength: 1
+    nameEn:
+      type: string
+      minLength: 1
+    allowedEmploymentClasses:
+      type: array
+      minItems: 1
+      items:
+        type: string
+    defaultDepartmentScope:
+      type: string
+      pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
+    departmentSelectionAllowed:
+      type: boolean
+EmployeeProvisionRequest:
+  type: object
+  additionalProperties: false
+  required: [username, phoneE164, departmentScope, tenantId]
+  properties:
+    username:
+      type: string
+      minLength: 1
+    phoneE164:
+      type: string
+      pattern: '^\+[1-9][0-9]{7,14}$'
+    permissionBundle:
+      $ref: "#/EmployeePermissionBundleCode"
+    departmentScope:
+      type: string
+      pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
+    tenantId:
+      type: string
+      minLength: 1
+# Renamed from ActorAdminView (its original name in employee-access.openapi.yaml) because
+# core/identity/contracts/identity.openapi.yaml already declares an ActorAdminView schema
+# whose `roles` property is restricted to a different enum (client/partner/captain/field/
+# operator/system) that does not cover employee actor roles. Keeping both distinct avoids
+# silently narrowing or duplicating either schema's validation intent.
+EmployeeActorAdminView:
+  type: object
+  additionalProperties: false
+  required: [actorId, username, phoneE164, roles, active]
+  properties:
+    actorId:
+      type: string
+    username:
+      type: string
+    phoneE164:
+      type: string
+    roles:
+      type: array
+      items:
+        type: string
+    active:
+      type: boolean

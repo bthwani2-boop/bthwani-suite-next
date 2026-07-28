@@ -37,7 +37,7 @@ Record donor extraction decisions without importing old governance history.
 | governance/10_DSH_WLT_FINANCIAL_BOUNDARY.md | MOVE_TO_NONCANONICAL |
 | governance/14_TOOLCHAIN_VERSION_LOCK.md | MOVE_TO_NONCANONICAL |
 | contracts/master.openapi.yaml | ADOPT_AFTER_REWRITE |
-| core/identity/contracts/auth.openapi.yaml | ADOPT_AFTER_REWRITE |
+| core/identity/contracts/identity.openapi.yaml | ADOPT_AFTER_REWRITE |
 | core/providers/contracts/providers.openapi.yaml | ADOPT_AFTER_REWRITE |
 
 ## Acceptance condition

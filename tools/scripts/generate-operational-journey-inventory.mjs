@@ -109,7 +109,7 @@ const sourceFiles = {
   cross_surface_closure_map: "services/dsh/frontend/shared/operations/geo-heatmap.helpers.ts",
   dsh_openapi: "services/dsh/contracts/dsh.openapi.yaml",
   wlt_openapi: "services/wlt/contracts/wlt.openapi.yaml",
-  identity_openapi: "core/identity/contracts/auth.openapi.yaml"
+  identity_openapi: "core/identity/contracts/identity.openapi.yaml"
 };
 
 const openapiFiles = listFiles(".", (rel) => rel.endsWith(".openapi.yaml"));

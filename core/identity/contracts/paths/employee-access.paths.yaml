@@ -1,0 +1,63 @@
+# BThwani Identity OpenAPI path-items module: employee-access.
+# Absorbed from core/identity/contracts/employee-access.openapi.yaml.
+# Source of truth. Referenced by ../identity.openapi.yaml; do not add an openapi root here.
+
+/internal/employees/permission-bundles:
+  get:
+    operationId: listAdministrativeEmployeePermissionBundles
+    tags: [internal-employees]
+    security:
+      - serviceToken: []
+    parameters:
+      - $ref: "../identity.openapi.yaml#/components/parameters/Authorization"
+      - $ref: "../identity.openapi.yaml#/components/parameters/WorkforceServiceCaller"
+      - $ref: "../identity.openapi.yaml#/components/parameters/TenantId"
+    responses:
+      "200":
+        description: Canonical Identity-owned administrative permission bundles.
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [permissionBundles]
+              properties:
+                permissionBundles:
+                  type: array
+                  items:
+                    $ref: "../components/schemas/employee-access.schemas.yaml#/EmployeePermissionBundleDescriptor"
+      "401":
+        description: Invalid Workforce service token.
+      "403":
+        description: Caller or tenant context is forbidden.
+/internal/employees/provision:
+  post:
+    operationId: provisionAdministrativeEmployee
+    tags: [internal-employees]
+    security:
+      - serviceToken: []
+    parameters:
+      - $ref: "../identity.openapi.yaml#/components/parameters/Authorization"
+      - $ref: "../identity.openapi.yaml#/components/parameters/WorkforceServiceCaller"
+      - $ref: "../identity.openapi.yaml#/components/parameters/TenantId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/employee-access.schemas.yaml#/EmployeeProvisionRequest"
+    responses:
+      "201":
+        description: New employee actor created with an Identity-owned permission bundle.
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/employee-access.schemas.yaml#/EmployeeActorAdminView"
+      "400":
+        description: Missing tenant context or invalid bundle, department, phone, or username.
+      "401":
+        description: Invalid Workforce service token.
+      "403":
+        description: Caller or tenant context is forbidden.
+      "409":
+        description: Phone or username is already bound to an existing actor.

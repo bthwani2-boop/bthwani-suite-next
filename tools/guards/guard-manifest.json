@@ -22,6 +22,7 @@
       "no-broken-imports",
       "runtime-config",
       "ui-kit-boundary",
+      "no-root-openapi",
       "api-binding",
       "backend-api-binding"
     ],

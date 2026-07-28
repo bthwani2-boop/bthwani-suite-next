@@ -1,10 +1,12 @@
 openapi: 3.1.0
 info:
   title: BThwani Core Identity API
-  version: 0.3.0
-  description: Authentication, rotating sessions, actor identity, roles, permissions, and internal actor provisioning.
+  version: 0.4.0
+  description: Authentication, rotating sessions, actor identity, roles, permissions, and internal actor provisioning, including internal administrative employee provisioning (absorbed from employee-access.openapi.yaml).
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/identity
+x-bthwani-contract-layout: MODULAR
+x-bthwani-bundle: ./generated/identity.bundle.openapi.yaml
 servers:
   - url: http://localhost:58082
     description: Local identity runtime
@@ -462,6 +464,10 @@ paths:
           description: Pending activation codes revoked.
         "401":
           $ref: "#/components/responses/Unauthenticated"
+  /internal/employees/permission-bundles:
+    $ref: "./paths/employee-access.paths.yaml#/~1internal~1employees~1permission-bundles"
+  /internal/employees/provision:
+    $ref: "./paths/employee-access.paths.yaml#/~1internal~1employees~1provision"
 components:
   securitySchemes:
     bearerAuth:
@@ -493,6 +499,20 @@ components:
       schema:
         type: string
         minLength: 1
+    TenantId:
+      in: header
+      name: X-Tenant-ID
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    WorkforceServiceCaller:
+      in: header
+      name: X-Service-Caller
+      required: true
+      description: Absorbed from employee-access.openapi.yaml; stricter than ServiceCaller because these internal-employees endpoints accept only the Workforce service caller.
+      schema:
+        const: workforce
   responses:
     InvalidRequest:
       description: Request validation failed.
@@ -788,4 +808,12 @@ components:
         expiresAt:
           type: string
           format: date-time
+    EmployeePermissionBundleCode:
+      $ref: "./components/schemas/employee-access.schemas.yaml#/EmployeePermissionBundleCode"
+    EmployeePermissionBundleDescriptor:
+      $ref: "./components/schemas/employee-access.schemas.yaml#/EmployeePermissionBundleDescriptor"
+    EmployeeProvisionRequest:
+      $ref: "./components/schemas/employee-access.schemas.yaml#/EmployeeProvisionRequest"
+    EmployeeActorAdminView:
+      $ref: "./components/schemas/employee-access.schemas.yaml#/EmployeeActorAdminView"
 

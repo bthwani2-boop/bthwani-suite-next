@@ -9,9 +9,10 @@ const governanceCapabilityId = [governancePrefix, governanceNumber, "PLATFORM", 
 const productTruthFile = `governance/product/contracts/${governanceSlug}-platform-change-sets.product-truth.json`;
 const validationMigrationFile = "core/platform-control/database/migrations/platform-005_change_set_validation.sql";
 const sensitiveBoundaryMigrationFile = "core/platform-control/database/migrations/platform-006_sensitive_change_boundary.sql";
-const contractFile = "core/platform-control/contracts/platform-change-sets.openapi.yaml";
-const generatedClientFile = "core/platform-control/clients/generated/platform-change-sets-api.ts";
-const typecheckFile = "services/dsh/tsconfig.platform-change-sets.json";
+// Absorbed into the unified platform-control entry contract and its single generated
+// client; the standalone platform-change-sets.openapi.yaml / *-api.ts / tsconfig were retired.
+const contractFile = "core/platform-control/contracts/platform-control.openapi.yaml";
+const generatedClientFile = "core/platform-control/clients/generated/platform-control-api.ts";
 const visualizationProofFile = "services/dsh/tests/platform-governance-visualization.test.mjs";
 const strictBoundaryFile = "core/platform-control/backend/internal/platformcontrol/change_set_strict_boundary.go";
 const strictBoundaryProofFile = "core/platform-control/backend/internal/platformcontrol/change_set_strict_boundary_test.go";
@@ -35,7 +36,6 @@ const requiredFiles = [
   httpProofFile,
   contractFile,
   generatedClientFile,
-  typecheckFile,
   "services/dsh/frontend/shared/platform/platform-control.api.ts",
   "services/dsh/frontend/shared/platform/use-platform-change-workflow-controller.tsx",
   "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx",
@@ -204,16 +204,10 @@ if (failures.length === 0) {
     "itemValidatedAt",
     "CreatePlatformChangeSetItemInput",
   ]);
-  requireText(typecheckFile, [
-    "platform-change-sets-api.ts",
-    "PlatformChangeWorkflowPanel.tsx",
-    "dist-platform-change-sets",
-  ]);
   requireText("services/dsh/frontend/shared/platform/platform-control.api.ts", [
     "RollbackPlatformChangeSetInput",
     "rollbackPlatformChangeSet",
     "body: input",
-    "clients/generated/platform-change-sets-api",
   ]);
   requireText("services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx", [
     "تفاصيل الطلب والفرق المتوقع",
@@ -233,8 +227,7 @@ if (failures.length === 0) {
   requireText(verificationWorkflowFile, [
     "platform_change_sets:",
     "name: Verify platform change-set binding",
-    "pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false",
-    "openapi-typescript ../../core/platform-control/contracts/platform-change-sets.openapi.yaml",
+    "openapi-typescript core/platform-control/contracts/platform-control.openapi.yaml",
     "node tools/guards/platform-change-sets-gate.mjs",
   ]);
 

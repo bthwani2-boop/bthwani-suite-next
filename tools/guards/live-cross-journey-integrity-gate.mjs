@@ -72,7 +72,7 @@ for (const forbidden of ['action: "*"', "devBypassLogin", "resolveDevBypassIdent
 forbidInDirectory("services/dsh/frontend", [".ts", ".tsx"], /devBypassLogin/g, "JRN002_FRONTEND_DEVELOPER_BYPASS_FORBIDDEN");
 forbidInDirectory("services/dsh/frontend/control-panel", [".ts", ".tsx"], /useIdentitySession/g, "JRN002_CONTROL_PANEL_LEGACY_SESSION_HOOK_FORBIDDEN");
 
-const authContract = "core/identity/contracts/auth.openapi.yaml";
+const authContract = "core/identity/contracts/identity.openapi.yaml";
 requireText(authContract, "minLength: 6", "JRN002_PASSWORD_CONTRACT_MINIMUM_MISSING");
 const identityRepository = "core/identity/backend/internal/identity/repository.go";
 for (const marker of ["len(input.Password) < 6", "loginLockoutThreshold", "identity_login_attempts"]) {

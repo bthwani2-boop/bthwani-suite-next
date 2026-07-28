@@ -298,7 +298,8 @@ if (state?.commercialActivationState === "ACTIVATION_AUTHORIZED" || state?.comme
       markers: ["TestSaaSTenantContextAcceptsIdentityOwnedTenant", "TestSaaSTenantContextRejectsCrossTenantIdentity", "TestSaaSTenantContextRejectsClientTenantOverride"],
     },
     {
-      path: "core/platform-control/contracts/platform-control.saas.overlay.yaml",
+      // Absorbed from platform-control.saas.overlay.yaml (merged into schemas, overlay file retired).
+      path: "core/platform-control/contracts/platform-control.openapi.yaml",
       markers: ["PlatformRuntimeSnapshot", "PlatformSaasRuntimeStatus", "defaultTenantId", "runtimeEnabled"],
     },
     {

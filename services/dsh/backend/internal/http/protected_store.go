@@ -632,7 +632,7 @@ func (s *protectedStoreServer) requireActor(
 // a Permission{Service:"dsh", Surface:surface, Action:action} entry --
 // letting a non-operator be granted just one narrow capability (e.g. media
 // review) without full operator power. surface must be one of Identity's
-// contract-defined surfaces (core/identity/contracts/auth.openapi.yaml);
+// contract-defined surfaces (core/identity/contracts/identity.openapi.yaml);
 // "control-panel" is used for every control-panel-governed domain (catalog,
 // marketing, finance, administration, ...) rather than inventing a
 // domain-specific surface per feature.

@@ -25,7 +25,6 @@ export const platformControlServiceManifest = {
 
   contracts: [
     "contracts/platform-control.openapi.yaml",
-    "contracts/platform-control.saas.overlay.yaml",
   ],
   generatedClients: [
     "clients/generated/platform-control-api.ts",

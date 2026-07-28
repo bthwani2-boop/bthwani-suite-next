@@ -150,10 +150,8 @@ const services = [
   },
   {
     name: "Identity",
-    openapi: "core/identity/contracts/auth.openapi.yaml",
-    additionalOpenapi: [
-      "core/identity/contracts/employee-access.openapi.yaml",
-    ],
+    openapi: "core/identity/contracts/identity.openapi.yaml",
+    additionalOpenapi: [],
     router: "core/identity/backend/internal/http/server.go",
     routerDir: "core/identity/backend/internal/http",
   },

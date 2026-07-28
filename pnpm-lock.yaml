@@ -131,6 +131,9 @@ importers:
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
+      yaml:
+        specifier: 2.9.0
+        version: 2.9.0
 
   apps/app-captain/runtime:
     dependencies:
@@ -9783,9 +9786,7 @@ snapshots:
       metro-config: 0.84.4
       metro-runtime: 0.84.4
     transitivePeerDependencies:
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-color@2.1.0': {}
 
