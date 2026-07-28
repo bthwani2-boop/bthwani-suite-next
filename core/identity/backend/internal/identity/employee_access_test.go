@@ -85,6 +85,75 @@ func TestDepartmentManagerBundleIsDepartmentScoped(t *testing.T) {
 	}
 }
 
+func TestEmployeeBundlesGrantOnlyTheirExactDshDomain(t *testing.T) {
+	tests := []struct {
+		bundle     string
+		department string
+		required   []string
+		forbidden  []string
+	}{
+		{
+			bundle: EmployeeBundleStaff, department: "operations",
+			forbidden: []string{"operations.read", "partners.read", "finance.read", "support.read", "platform.read"},
+		},
+		{
+			bundle: EmployeeBundlePlatformCoordinator, department: "platform",
+			required: []string{"platform.read"}, forbidden: []string{"platform.manage", "operations.manage"},
+		},
+		{
+			bundle: EmployeeBundleOperationsManager, department: "operations",
+			required: []string{"operations.read", "operations.manage"}, forbidden: []string{"finance.manage", "partners.manage"},
+		},
+		{
+			bundle: EmployeeBundlePartnersManager, department: "partners",
+			required: []string{"partners.read", "partners.manage", "partners.activate"}, forbidden: []string{"operations.manage", "finance.manage"},
+		},
+		{
+			bundle: EmployeeBundleFinanceManager, department: "finance",
+			required: []string{"finance.read", "finance.manage"}, forbidden: []string{"operations.manage", "support.manage"},
+		},
+		{
+			bundle: EmployeeBundleSupportManager, department: "support",
+			required: []string{"support.read", "support.manage"}, forbidden: []string{"finance.manage", "partners.manage"},
+		},
+		{
+			bundle: EmployeeBundleHRManager, department: "hr",
+			forbidden: []string{"operations.manage", "partners.manage", "finance.manage", "support.manage", "platform.manage"},
+		},
+		{
+			bundle: EmployeeBundlePlatformOwner, department: "platform",
+			required: []string{"platform.read", "platform.manage"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.bundle, func(t *testing.T) {
+			permissions, err := employeeBundlePermissions(test.bundle, test.department)
+			if err != nil {
+				t.Fatalf("employeeBundlePermissions: %v", err)
+			}
+			hasAction := func(action string) bool {
+				for _, permission := range permissions {
+					if permission.Service == "dsh" && permission.Surface == "control-panel" && permission.Action == action && permission.Scope == "all" {
+						return true
+					}
+				}
+				return false
+			}
+			for _, action := range test.required {
+				if !hasAction(action) {
+					t.Fatalf("bundle %s is missing exact DSH action %s", test.bundle, action)
+				}
+			}
+			for _, action := range test.forbidden {
+				if hasAction(action) {
+					t.Fatalf("bundle %s unexpectedly grants DSH action %s", test.bundle, action)
+				}
+			}
+		})
+	}
+}
+
 func TestEmployeeRolesReserveOperatorForPlatformOwner(t *testing.T) {
 	tests := []struct {
 		bundle          string
