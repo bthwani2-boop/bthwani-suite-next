@@ -32,7 +32,8 @@ test("WLT retired operation registry records full contract and runtime removal",
   assert.equal(retirement.schemaVersion, 1);
   assert.equal(retirement.service, "WLT");
   assert.equal(retirement.sourceContract, "services/wlt/contracts/wlt.openapi.yaml");
-  assert.equal(retirement.state, "CONTRACT_REMOVED_RUNTIME_REMOVED");
+  assert.equal(retirement.state, "CONTRACT_COMPATIBILITY_ONLY_RUNTIME_REMOVED");
+  assert.equal(retirement.contractRemovalState, "REMOVED");
   assert.ok(Array.isArray(retirement.operations));
   assert.ok(retirement.operations.length > 0);
 
