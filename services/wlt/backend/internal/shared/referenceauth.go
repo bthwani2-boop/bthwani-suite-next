@@ -85,6 +85,7 @@ func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
 	}
 	if tenantID, ok := trustedDshReferenceRequest(r); ok {
 		r.Header.Set("X-Tenant-ID", tenantID)
+		*r = *r.WithContext(WithTenantContext(r.Context(), tenantID))
 		return true
 	}
 	identity, err := resolveReferenceIdentity(r.Context(), r.Header.Get("Authorization"))
@@ -107,5 +108,6 @@ func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 	r.Header.Set("X-Tenant-ID", identityTenantID)
+	*r = *r.WithContext(WithTenantContext(r.Context(), identityTenantID))
 	return true
 }
