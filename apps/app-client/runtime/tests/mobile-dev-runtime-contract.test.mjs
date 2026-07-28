@@ -29,13 +29,14 @@ test('mobile development data has one canonical implementation and checks all go
     '/dsh/home-discovery',
     '/dsh/partner/scopes',
     '/workforce/me',
-    'field-local-001',
-    'captain-local-001',
+    'LOCAL_ACTORS',
+    "for (const role of ['field', 'captain'])",
     "MODE === 'repair'",
     "process.env.NODE_ENV === 'production'",
   ]) {
     assert.match(canonical, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
+  assert.doesNotMatch(canonical, /field-local-001|captain-local-001/);
 });
 
 test('mobile preflight has one canonical runtime and data convergence owner', () => {
