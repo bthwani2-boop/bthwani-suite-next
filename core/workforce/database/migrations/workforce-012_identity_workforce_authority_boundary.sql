@@ -8,11 +8,26 @@
 ALTER TABLE workforce_employee_governance
   DROP COLUMN IF EXISTS authority_scopes;
 
-ALTER TABLE workforce_sovereign_leadership_assignments
-  DROP CONSTRAINT IF EXISTS workforce_sovereign_leadership_assignments_permission_bundle_check;
-
-ALTER TABLE workforce_sovereign_leadership_assignments
-  DROP CONSTRAINT IF EXISTS workforce_sovereign_leadership_permission_bundle_format_chk;
+-- PostgreSQL truncates automatically generated constraint names to 63 bytes.
+-- Discover the legacy enum CHECK by its definition instead of assuming its
+-- generated name, then replace it with a stable format-only boundary.
+DO $$
+DECLARE
+  constraint_row record;
+BEGIN
+  FOR constraint_row IN
+    SELECT constraint.conname
+    FROM pg_constraint constraint
+    WHERE constraint.conrelid = 'workforce_sovereign_leadership_assignments'::regclass
+      AND constraint.contype = 'c'
+      AND pg_get_constraintdef(constraint.oid) ILIKE '%permission_bundle%'
+  LOOP
+    EXECUTE format(
+      'ALTER TABLE workforce_sovereign_leadership_assignments DROP CONSTRAINT %I',
+      constraint_row.conname
+    );
+  END LOOP;
+END $$;
 
 ALTER TABLE workforce_sovereign_leadership_assignments
   ADD CONSTRAINT workforce_sovereign_leadership_permission_bundle_format_chk
