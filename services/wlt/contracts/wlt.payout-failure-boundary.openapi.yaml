@@ -1,0 +1,95 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Payout Failure Boundary
+  version: 1.0.0
+  description: Fail-closed route proving that ambiguous provider payouts cannot be manually failed or release held funds outside reconciliation.
+x-bthwani-owner: services/wlt
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-owner: true
+servers:
+  - url: http://localhost:58083
+security:
+  - serviceBearer: []
+paths:
+  /wlt/payout-requests/{payoutId}/fail:
+    post:
+      operationId: failWltPayoutRequestClosed
+      tags: [WltPayoutRequests]
+      summary: Reject manual payout failure and require provider reconciliation.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/PayoutId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [operatorId]
+              properties:
+                operatorId: { type: string, minLength: 1 }
+      responses:
+        '403': { $ref: '#/components/responses/Error' }
+        '409':
+          description: RECONCILIATION_REQUIRED; held funds remain unchanged.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+components:
+  securitySchemes:
+    serviceBearer:
+      type: http
+      scheme: bearer
+  parameters:
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema: { type: string, minLength: 8 }
+    ServiceCaller:
+      name: X-Service-Caller
+      in: header
+      required: true
+      schema: { type: string, const: dsh }
+    TenantId:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 120 }
+    PayoutId:
+      name: payoutId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+  responses:
+    Error:
+      description: Governed WLT error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
