@@ -65,34 +65,44 @@ type PaymentSession struct {
 	UpdatedAt         string `json:"updatedAt"`
 }
 
-// NewClient builds a client for calling WLT. The tenant is resolved from the
-// trusted DSH runtime environment, never from a browser header. In active SaaS
-// mode every WLT call is required to carry that tenant and explicit request
-// tenant values may only confirm, never override, the runtime tenant.
+// NewClient builds a DSH-to-WLT client. Active SaaS requests must receive a
+// trusted tenant through their context; BTHWANI_DEFAULT_TENANT_ID remains only a
+// deferred/local compatibility fallback and is never an active-SaaS authority.
 func NewClient(baseURL, serviceToken string) *Client {
+	saasActive := strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active")
 	return &Client{
 		baseURL:         strings.TrimRight(baseURL, "/"),
 		serviceToken:    serviceToken,
 		defaultTenantID: strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID")),
-		saasActive:      strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active"),
-		http:            &http.Client{Timeout: 10 * time.Second},
+		saasActive:      saasActive,
+		http: &http.Client{
+			Timeout:   10 * time.Second,
+			Transport: tenantRoundTripper{base: http.DefaultTransport, saasActive: saasActive},
+		},
 	}
 }
 
 func (c *Client) Configured() bool {
-	return c != nil && c.baseURL != "" && c.serviceToken != "" && (!c.saasActive || c.defaultTenantID != "")
+	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
-func (c *Client) resolveTrustedTenant(requested string) (string, error) {
+func (c *Client) resolveTrustedTenant(ctx context.Context, requested string) (string, error) {
 	requested = strings.TrimSpace(requested)
+	trustedTenantID, hasTrustedTenant := TenantIDFromContext(ctx)
 	if c.saasActive {
-		if c.defaultTenantID == "" {
-			return "", fmt.Errorf("active SaaS WLT client requires BTHWANI_DEFAULT_TENANT_ID")
+		if !hasTrustedTenant {
+			return "", fmt.Errorf("trusted tenant context is required for active SaaS WLT request")
 		}
-		if requested != "" && requested != c.defaultTenantID {
-			return "", fmt.Errorf("requested tenant does not match active SaaS runtime tenant")
+		if requested != "" && requested != trustedTenantID {
+			return "", fmt.Errorf("requested tenant does not match trusted request context")
 		}
-		return c.defaultTenantID, nil
+		return trustedTenantID, nil
+	}
+	if hasTrustedTenant {
+		if requested != "" && requested != trustedTenantID {
+			return "", fmt.Errorf("requested tenant does not match trusted request context")
+		}
+		return trustedTenantID, nil
 	}
 	if requested != "" {
 		return requested, nil
@@ -101,7 +111,7 @@ func (c *Client) resolveTrustedTenant(requested string) (string, error) {
 }
 
 func (c *Client) setTrustedTenantHeader(req *http.Request, requested string) (string, error) {
-	tenantID, err := c.resolveTrustedTenant(requested)
+	tenantID, err := c.resolveTrustedTenant(req.Context(), requested)
 	if err != nil {
 		return "", err
 	}
@@ -115,7 +125,7 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	if !c.Configured() {
 		return nil, fmt.Errorf("WLT payment-session handoff is not configured")
 	}
-	resolvedTenantID, err := c.resolveTrustedTenant(input.TenantID)
+	resolvedTenantID, err := c.resolveTrustedTenant(ctx, input.TenantID)
 	if err != nil {
 		return nil, fmt.Errorf("resolve WLT payment tenant: %w", err)
 	}
