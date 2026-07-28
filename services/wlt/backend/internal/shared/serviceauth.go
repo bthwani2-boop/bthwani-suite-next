@@ -23,28 +23,17 @@ func requireTrustedSaaSTenant(w http.ResponseWriter, r *http.Request) bool {
 		SendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", "active SaaS mode requires authorized or active commercial state")
 		return false
 	}
-
-	defaultTenantID := strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID"))
-	if defaultTenantID == "" {
-		SendError(w, http.StatusServiceUnavailable, "SAAS_TENANT_NOT_CONFIGURED", "BTHWANI_DEFAULT_TENANT_ID is required in active SaaS mode")
-		return false
-	}
 	if requestTenantID == "" {
 		SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required in active SaaS mode")
-		return false
-	}
-	if subtle.ConstantTimeCompare([]byte(requestTenantID), []byte(defaultTenantID)) != 1 {
-		SendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "service tenant does not match the active runtime tenant")
 		return false
 	}
 	return true
 }
 
-// RequireServiceCaller enforces that a request carries a valid shared-secret
-// bearer token (compared in constant time), the expected X-Service-Caller and,
-// when SaaS runtime mode is active, a trusted X-Tenant-ID matching the runtime
-// tenant. The tenant header is accepted only after service authentication and
-// is never trusted as a browser-supplied ownership selector.
+// RequireServiceCaller validates the shared-secret bearer token and expected
+// service identity before accepting X-Tenant-ID as a service-to-service tenant
+// context. Active SaaS mode fails closed when the authenticated caller omits the
+// tenant; no process-wide default tenant is used as an ownership authority.
 func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, expectedCaller string) bool {
 	expectedToken := os.Getenv(tokenEnvVar)
 	if expectedToken == "" {
