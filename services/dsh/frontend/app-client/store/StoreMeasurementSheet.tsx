@@ -93,7 +93,7 @@ export const StoreMeasurementSheet = React.memo(function StoreMeasurementSheet({
                 ) : null}
                 {product.priceReference ? (
                   <Text style={styles.productMeta}>
-                    السعر المعروض: {product.priceReference}
+                    السعر المعروض: {product.priceReference} {product.currency}
                   </Text>
                 ) : null}
               </View>
