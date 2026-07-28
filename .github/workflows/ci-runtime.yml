@@ -87,9 +87,11 @@ jobs:
                 Invoke-Phase "dsh-operator-governance-preflight" {
                   & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1
                 }
-              }
-              Invoke-Phase "runtime:smoke" {
-                & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles $profiles
+                Invoke-Phase "runtime:full:smoke" { pnpm run runtime:full:smoke }
+              } else {
+                Invoke-Phase "runtime:smoke" {
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles $profiles
+                }
               }
               if ($profile -in @("wlt-finance", "full")) {
                 Invoke-Phase "representative-financial-readback" {
@@ -117,7 +119,7 @@ jobs:
             throw
           }
 
-      - name: Stop selected runtime profile
+      - name: Stop runtime
         if: ${{ always() }}
         shell: pwsh
         env:
