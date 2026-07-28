@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BThwaniSingleOwnerMode",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "repository",
+    "mode",
+    "status",
+    "ownerIdentity",
+    "authoritySource",
+    "authorizedAt",
+    "acknowledgements",
+    "approvalPolicy",
+    "executorPolicy"
+  ],
+  "properties": {
+    "$schema": { "const": "./single-owner-mode.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "repository": { "const": "bthwani2-boop/bthwani-suite-next" },
+    "mode": { "const": "SOLE_OWNER" },
+    "status": { "enum": ["ACTIVE", "INACTIVE"] },
+    "ownerIdentity": { "type": "string", "minLength": 1 },
+    "authoritySource": { "const": "CURRENT_USER_INSTRUCTION" },
+    "authorizedAt": { "type": "string", "format": "date" },
+    "acknowledgements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reducedHumanSeparationOfDuties",
+        "automatedChecksRemainMandatory",
+        "blanketAuthorizationIsNotOutcomeAcceptance"
+      ],
+      "properties": {
+        "reducedHumanSeparationOfDuties": { "const": true },
+        "automatedChecksRemainMandatory": { "const": true },
+        "blanketAuthorizationIsNotOutcomeAcceptance": { "const": true }
+      }
+    },
+    "approvalPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ownerMayApproveOwnChanges",
+        "allowedDomains",
+        "protectedDomains",
+        "requirements"
+      ],
+      "properties": {
+        "ownerMayApproveOwnChanges": { "const": true },
+        "allowedDomains": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "product_model_approval",
+              "implementation_readiness",
+              "product_acceptance",
+              "ux_acceptance",
+              "architecture_approval",
+              "governance_contract_approval",
+              "ci_workflow_approval",
+              "implementation_review",
+              "qa_approval"
+            ]
+          }
+        },
+        "protectedDomains": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "authentication_authorization_sessions",
+              "pii_privacy_secrets_credentials",
+              "tenant_isolation",
+              "security_approval",
+              "financial_control",
+              "migrations_and_production_data",
+              "critical_high_vulnerability_acceptance",
+              "residual_risk_acceptance",
+              "release_approval",
+              "deployment",
+              "production_verification",
+              "final_closure"
+            ]
+          }
+        },
+        "requirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "explicitCurrentTaskApproval",
+            "exactScopeRecorded",
+            "exactCommitRequiredForOutcomeApproval",
+            "sameCommitAutomatedChecksRequired",
+            "githubAuditEvidenceRequired",
+            "failedChecksMayNotBeWaived"
+          ],
+          "properties": {
+            "explicitCurrentTaskApproval": { "const": true },
+            "exactScopeRecorded": { "const": true },
+            "exactCommitRequiredForOutcomeApproval": { "const": true },
+            "sameCommitAutomatedChecksRequired": { "const": true },
+            "githubAuditEvidenceRequired": { "const": true },
+            "failedChecksMayNotBeWaived": { "const": true }
+          }
+        }
+      }
+    },
+    "executorPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mayImpersonateOwner",
+        "mayConvertBlanketAuthorizationIntoOutcomeAcceptance",
+        "maySelfApproveProtectedDomains",
+        "mayMergeFailingCommit",
+        "mayBypassRepositoryProtection"
+      ],
+      "properties": {
+        "mayImpersonateOwner": { "const": false },
+        "mayConvertBlanketAuthorizationIntoOutcomeAcceptance": { "const": false },
+        "maySelfApproveProtectedDomains": { "const": false },
+        "mayMergeFailingCommit": { "const": false },
+        "mayBypassRepositoryProtection": { "const": false }
+      }
+    }
+  }
+}

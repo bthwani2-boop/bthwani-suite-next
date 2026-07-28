@@ -231,10 +231,11 @@ async function patchProvider(operatorToken, kind, actorId, payload) {
   });
 }
 
-function fieldSovereignMatches(person, zoneId) {
+function fieldSovereignMatches(person, zoneId, shiftCode) {
   return person?.fullNameAr === 'مندوب بثواني المحلي'
     && person?.photoMediaRef === 'local-dev/workforce/field-profile.jpg'
-    && person?.fieldProfile?.serviceZoneId === zoneId;
+    && person?.fieldProfile?.serviceZoneId === zoneId
+    && person?.fieldProfile?.shiftCode === shiftCode;
 }
 
 function captainSovereignMatches(person, zoneId) {
@@ -254,12 +255,13 @@ async function repairField(operatorToken, fieldToken, zone, shift) {
     engagementType: 'independent_contractor',
     engagementStartDate: '2026-01-01',
     serviceZoneId: zone.id,
+    shiftCode: shift.code,
     photoMediaRef: 'local-dev/workforce/field-profile.jpg',
   };
   await createOrAttachProvider(operatorToken, 'field', createPayload);
 
   let detail = await getProvider(operatorToken, 'field', LOCAL_ACTORS.field.actorId);
-  if (!fieldSovereignMatches(detail, zone.id)) {
+  if (!fieldSovereignMatches(detail, zone.id, shift.code)) {
     detail = await patchProvider(operatorToken, 'field', LOCAL_ACTORS.field.actorId, {
       expectedVersion: detail.version,
       fullNameAr: createPayload.fullNameAr,
@@ -267,6 +269,7 @@ async function repairField(operatorToken, fieldToken, zone, shift) {
       engagementType: createPayload.engagementType,
       engagementStartDate: createPayload.engagementStartDate,
       serviceZoneId: zone.id,
+      shiftCode: shift.code,
       photoMediaRef: createPayload.photoMediaRef,
     });
   }

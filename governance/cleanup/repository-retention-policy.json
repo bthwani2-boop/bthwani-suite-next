@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 3,
+  "decision": "FUNCTION_BASED_RETENTION_WITH_GIT_HISTORY_AS_DEFAULT_ARCHIVE",
+  "archivalOverDeletion": false,
+  "gitHistoryIsDefaultArchive": true,
+  "ageIsDecisionCriterion": false,
+  "ciSourceMutation": "FORBIDDEN",
+  "privilegedRemediationWorkflow": null,
+  "generatedOutputRoots": [
+    ".diagnostics/",
+    "coverage/",
+    "dist/",
+    "build/",
+    "out/",
+    "graphify-out/"
+  ],
+  "generatedOutputDirectoryNames": [
+    "__generated__",
+    ".cache",
+    ".expo",
+    ".nx",
+    "playwright-report",
+    "test-results",
+    "screenshots-temp",
+    "artifacts-local"
+  ],
+  "generatedOutputDirectoryNameExceptions": [
+    "**/clients/generated/**"
+  ],
+  "forbiddenTrackedPathPrefixes": [
+    "tools/scripts/scratch/",
+    "tools/tmp/",
+    "tmp/",
+    "temp/",
+    "logs/",
+    ".diagnostics/",
+    ".github/workflows/temp/"
+  ],
+  "temporaryWorkflowException": null,
+  "temporaryWorkflowPolicy": {
+    "trackedTemporaryWorkflow": "FORBIDDEN_BY_DEFAULT",
+    "automaticTaskBranch": "FORBIDDEN",
+    "allowedOnlyWhen": "An explicit current human instruction names the temporary workflow or branch path, or existing branch protection makes direct work impossible and the human explicitly authorizes the alternate path.",
+    "defaultAlternative": "Use an existing reusable workflow or an untracked local script for scoped verification."
+  },
+  "forbiddenTrackedFilenamePatterns": [
+    "(^|/)tmp[-_.]",
+    "(^|/)(copy|backup|bak)[-_.]",
+    "\\.(tmp|bak|old|orig|rej)$",
+    "(~|\\.swp)$"
+  ],
+  "portableTrackedConfiguration": {
+    "files": [
+      ".claude/settings.json",
+      ".vscode/settings.json"
+    ],
+    "forbiddenContentPatterns": [
+      "[A-Za-z]:\\\\Users\\\\",
+      "/[cC]/Users/",
+      "AppData[/\\\\]Local[/\\\\]Temp",
+      "Bash\\(git (?:push|commit|rebase|stash|checkout)",
+      "DATABASE_URL=",
+      "postgres://[^\\s\"]+:[^\\s\"]+@"
+    ]
+  },
+  "allowedTrackedLogRoots": [],
+  "evidence": {
+    "roots": [],
+    "maximumUnreferencedAgeDays": 180,
+    "ageOnlyDiagnostic": true,
+    "permanentRoots": [],
+    "referenceIndexes": []
+  },
+  "documents": {
+    "roots": ["docs/", "governance/"],
+    "archiveRoot": "governance/archive/",
+    "archiveByDefault": false,
+    "archiveRequiresClass": ["LEGAL_AUDIT", "SECURITY_EXCEPTION", "FINANCIAL_CONTROL", "RELEASE_AUDIT"],
+    "retiredMarkers": [
+      "status: retired",
+      "status: obsolete",
+      "status: superseded",
+      "STATUS: RETIRED",
+      "STATUS: OBSOLETE",
+      "STATUS: SUPERSEDED"
+    ],
+    "deleteExactNormalizedDuplicates": true,
+    "deleteEmptyDocuments": true
+  },
+  "maintenanceScripts": {
+    "root": "tools/scripts/",
+    "oneOffPrefixes": [
+      "apply-",
+      "close-",
+      "finalize-",
+      "fix-",
+      "integrate-",
+      "patch-",
+      "update-"
+    ],
+    "maximumUnreferencedAgeDays": 90,
+    "ageOnlyDiagnostic": true
+  },
+  "retentionClasses": {
+    "retain": [
+      "CANONICAL_SOURCE",
+      "EXECUTABLE_POLICY",
+      "ACTIVE_CONTRACT",
+      "LEGAL_AUDIT",
+      "SECURITY_EXCEPTION",
+      "FINANCIAL_CONTROL",
+      "RELEASE_MANIFEST",
+      "ESSENTIAL_OPERATIONAL_RUNBOOK"
+    ],
+    "removeOrMerge": [
+      "GENERATED",
+      "REPRODUCIBLE",
+      "TASK_TEMPORARY",
+      "UNCONSUMED",
+      "DUPLICATE",
+      "SUPERSEDED",
+      "HISTORICAL_ONLY",
+      "STALE_CONTRADICTORY",
+      "NO_OWNER",
+      "NO_VALIDATOR",
+      "NO_OPERATIONAL_CONSUMER"
+    ]
+  },
+  "deletionPolicy": {
+    "safeAutomaticClasses": [
+      "scratch",
+      "temporary",
+      "generated-output"
+    ],
+    "safeManualRemediationClasses": [
+      "retired-document",
+      "stale-evidence",
+      "duplicate-document",
+      "empty-document",
+      "unconsumed-document",
+      "superseded-document"
+    ],
+    "requiresExplicitHumanOrAgentCommit": true,
+    "forbiddenAutomaticClasses": [
+      "source",
+      "contract",
+      "migration",
+      "active-governance",
+      "audit",
+      "security-exception",
+      "financial-control",
+      "release-manifest"
+    ]
+  }
+}

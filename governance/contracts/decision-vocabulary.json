@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 3,
+  "canonicalDecisions": [
+    {"id":"PASS","class":"pass","terminal":false,"scopePolicy":"DECLARED_SCOPE","description":"The explicitly declared evidence scope passed. PASS never implies another evidence scope or final closure."},
+    {"id":"FIX_REQUIRED","class":"fail","terminal":false,"description":"One or more in-scope acceptance conditions failed and require repository changes."},
+    {"id":"BLOCKED_EXTERNAL","class":"blocked","terminal":false,"description":"Completion depends on access, approval, infrastructure, provider behavior, or evidence outside the repository execution boundary."},
+    {"id":"NEEDS_EVIDENCE","class":"pending","terminal":false,"description":"The implementation may exist, but the evidence needed for the requested claim is missing or stale."},
+    {"id":"READY_FOR_REVIEW","class":"pending","terminal":false,"description":"Implementation and targeted checks are ready for independent review; this is not approval or closure."},
+    {"id":"OUT_OF_SCOPE_FOR_THIS_JOURNEY","class":"excluded","terminal":false,"description":"The item is explicitly excluded from the declared journey and must not be counted as passed, failed, implemented, or closed."},
+    {"id":"QA_BLOCK","class":"blocked","terminal":false,"description":"Independent quality acceptance has not passed."},
+    {"id":"SECURITY_BLOCK","class":"blocked","terminal":false,"description":"Required application-security acceptance has not passed."},
+    {"id":"RELEASE_BLOCK","class":"blocked","terminal":false,"description":"Release, deployment, rollback, or operational readiness has not passed."},
+    {"id":"PROTOCOL_VIOLATION","class":"fail","terminal":false,"description":"Execution violated an applicable governance, safety, scope, authority, or evidence contract."},
+    {"id":"CLOSED_WITH_EVIDENCE","class":"closed","terminal":true,"scopePolicy":"ALL_APPLICABLE","description":"Every evidence scope applicable to the declared impact passed on the same immutable commit with required independent approvals and no open blocker."}
+  ],
+  "aliases": [
+    {"alias":"CODE_CHECK_PASS","canonical":"PASS","evidenceScope":"static"},
+    {"alias":"CODE_CHECK_FAIL","canonical":"FIX_REQUIRED","evidenceScope":"static"},
+    {"alias":"DSH_WLT_CODE_CLOSURE_PASS","canonical":"PASS","evidenceScope":"static","deprecated":true},
+    {"alias":"DSH_WLT_CODE_CLOSURE_FAIL","canonical":"FIX_REQUIRED","evidenceScope":"static","deprecated":true},
+    {"alias":"RUNTIME_SMOKE_PASS","canonical":"PASS","evidenceScope":"runtime"},
+    {"alias":"RUNTIME_SMOKE_FAIL","canonical":"FIX_REQUIRED","evidenceScope":"runtime"},
+    {"alias":"UI_VISUAL_PASS","canonical":"PASS","evidenceScope":"visual"},
+    {"alias":"READY_FOR_PR","canonical":"READY_FOR_REVIEW","evidenceScope":"static","deprecated":true},
+    {"alias":"BLOCKED_NEEDS_EVIDENCE","canonical":"NEEDS_EVIDENCE","evidenceScope":"none","deprecated":true},
+    {"alias":"NEEDS_RUNTIME_EVIDENCE","canonical":"NEEDS_EVIDENCE","evidenceScope":"runtime","deprecated":true},
+    {"alias":"GATE_PASS","canonical":"PASS","evidenceScope":"static","deprecated":true},
+    {"alias":"HARD_BLOCKED_EXTERNAL_ONLY","canonical":"BLOCKED_EXTERNAL","evidenceScope":"none","deprecated":true},
+    {"alias":"CLOSED","canonical":"CLOSED_WITH_EVIDENCE","evidenceScope":"production","deprecated":true}
+  ],
+  "closureRules": {
+    "closedDecision":"CLOSED_WITH_EVIDENCE",
+    "scopePolicy":"ALL_APPLICABLE",
+    "baseRequiredScopes":["static"],
+    "conditionalRequiredScopes":["product","runtime","visual","qa","security","finance","isolation","governance","ci","release","production"],
+    "forbiddenOpenClasses":["fail","blocked","pending"]
+  }
+}

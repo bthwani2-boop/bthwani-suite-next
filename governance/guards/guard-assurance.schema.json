@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BThwani Guard Assurance Registry",
+  "type": "object",
+  "required": ["schemaVersion", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["guardId", "assuranceClass", "proves", "doesNotProve", "closureEligible"],
+        "additionalProperties": false,
+        "properties": {
+          "guardId": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "assuranceClass": {
+            "enum": [
+              "SCHEMA_INTEGRITY",
+              "POLICY_ALIGNMENT",
+              "LIFECYCLE_INTEGRITY",
+              "STATIC_AST",
+              "STATIC_BINDING",
+              "STATIC_HEURISTIC",
+              "STATIC_ANTI_STUB",
+              "SCOPED_REGRESSION",
+              "CONFIGURATION_BUDGET",
+              "STATIC_SECURITY_AUDIT",
+              "SYNTAX_VALIDATION",
+              "IMMUTABLE_REFERENCE",
+              "RUNTIME_ACCESSIBILITY"
+            ]
+          },
+          "proves": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+          "doesNotProve": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+          "closureEligible": { "const": false },
+          "requiredFollowUpForRuntimeClaim": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "REPLACE_CAPABILITY_ID",
+  "state": "DISCOVERY",
+  "problem": {
+    "statement": "Replace this statement with the verified user or operational problem to solve.",
+    "affectedActors": ["replace-actor"],
+    "currentWorkaround": "Describe the current workaround or state that exists before implementation.",
+    "frequency": "unknown",
+    "severity": "unknown",
+    "evidenceState": "UNPROVEN",
+    "evidenceReferences": []
+  },
+  "actors": [
+    {
+      "id": "replace-actor",
+      "role": "Replace with a real actor role",
+      "permittedActions": [],
+      "forbiddenActions": ["Must not receive actions belonging to another role"]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "control-panel",
+      "required": false,
+      "exclusionReason": "Template only; select and justify every real required or excluded surface.",
+      "actors": ["replace-actor"],
+      "routesOrScreens": [],
+      "operationIds": [],
+      "states": ["not_applicable"],
+      "actions": []
+    }
+  ],
+  "outcome": {
+    "statement": "Replace with the observable actor or business outcome expected from the capability.",
+    "primaryMetric": "replace_metric",
+    "guardrailMetrics": [],
+    "baselineState": "unknown",
+    "targetState": "not_yet_approved",
+    "observationWindow": "not_yet_defined"
+  },
+  "acceptance": {
+    "criteria": ["Replace with a measurable functional acceptance criterion"],
+    "failureStates": ["The capability appears on the wrong surface or for the wrong actor"],
+    "requiredChecks": ["product-truth contract validation"],
+    "runtimeEvidenceRequired": false,
+    "visualEvidenceRequired": false
+  },
+  "invariants": {
+    "business": ["The capability must preserve its declared domain ownership"],
+    "negative": ["An excluded actor or surface must not receive the capability"]
+  },
+  "owners": {
+    "productManager": "PRODUCT_MANAGER_AUTHORITY",
+    "productOwner": "PRODUCT_OWNER_ACCEPTANCE_AUTHORITY",
+    "uxJourneyOwner": "UX_JOURNEY_AUTHORITY",
+    "engineeringOwner": "ENGINEERING",
+    "productManagerApproval": "PENDING",
+    "productOwnerApproval": "PENDING",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "not_yet_defined",
+    "fixedConstraints": ["security", "financial_correctness", "domain_boundaries", "cross_surface_truth"],
+    "variableScope": [],
+    "forbiddenScope": ["fake runtime claims", "role leakage", "unapproved surface omission", "architectural duplication"],
+    "forecastRange": "unknown",
+    "confidence": "low",
+    "unknowns": ["problem evidence", "surface allocation", "acceptance details"]
+  }
+}
