@@ -94,7 +94,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("GET /wlt/ledger/entries", readGate(ledger.HandleListLedgerEntries(db)))
 	mux.HandleFunc("GET /wlt/ledger/financial-summary", readGate(ledger.HandleFinancialSummary(db)))
 
-	mux.HandleFunc("PUT /wlt/payout-destinations/{actorType}/{actorId}", gate(serviceAuth(payout.HandleUpsertPayoutDestinationJRN037(db))))
+	mux.HandleFunc("PUT /wlt/payout-destinations/{actorType}/{actorId}", gate(serviceAuth(payout.HandleUpsertCanonicalPayoutDestination(db))))
 	mux.HandleFunc("GET /wlt/payout-destinations/{actorType}/{actorId}", readGate(payout.HandleGetPayoutDestinationJRN037(db)))
 	mux.HandleFunc("POST /wlt/payout-destinations/{actorType}/{actorId}/deactivate", gate(serviceAuth(payout.HandleDeactivatePayoutDestinationJRN037(db))))
 
