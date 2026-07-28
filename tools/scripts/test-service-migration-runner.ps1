@@ -3,9 +3,9 @@
   Verifies the canonical service migration runner against a real PostgreSQL database.
 
 .DESCRIPTION
-  Covers a fresh but non-empty database, deterministic re-execution, immutable
-  checksums, per-migration atomic rollback, and roll-forward recovery after a
-  partially failed batch.
+  Covers upgrade from a previous migration set with existing data, deterministic
+  re-execution, immutable checksums, per-migration atomic rollback, and roll-forward
+  recovery after a partially failed batch.
 #>
 
 [CmdletBinding()]
@@ -110,13 +110,15 @@ if ($canonicalFiles.Count -eq 0) {
 }
 
 $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-migration-$ServiceKey-$([guid]::NewGuid().ToString('N'))"
+$previousDirectory = Join-Path $temporaryRoot "previous-version"
 $driftDirectory = Join-Path $temporaryRoot "checksum-drift"
 $partialDirectory = Join-Path $temporaryRoot "partial-failure"
+New-Item -ItemType Directory -Path $previousDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $driftDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $partialDirectory -Force | Out-Null
 
 try {
-  Write-Host "--- ${ServiceKey}: fresh non-empty database ---"
+  Write-Host "--- ${ServiceKey}: previous-version database with existing data ---"
   Invoke-DatabaseSql -Sql @"
 CREATE TABLE IF NOT EXISTS $SentinelTable (
   id INTEGER PRIMARY KEY,
@@ -127,18 +129,37 @@ VALUES (1, 'preexisting-data')
 ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
 "@ | Out-Null
 
+  $previousCount = [Math]::Max(0, $canonicalFiles.Count - 1)
+  if ($previousCount -gt 0) {
+    foreach ($file in $canonicalFiles[0..($previousCount - 1)]) {
+      Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $previousDirectory $file.Name)
+    }
+    Invoke-RunnerProcess -Directory $previousDirectory -ExpectSuccess $true
+
+    $previousLedgerCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM runtime_schema_migrations;"
+    if ([int]$previousLedgerCount -ne $previousCount) {
+      throw "Previous-version ledger count mismatch for '$ServiceKey': expected=$previousCount actual=$previousLedgerCount"
+    }
+  }
+
+  Write-Host "--- ${ServiceKey}: upgrade to current migration set ---"
   Invoke-RunnerProcess -Directory $MigrationPath -ExpectSuccess $true
 
   $sentinelCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM $SentinelTable WHERE id = 1 AND payload = 'preexisting-data';"
   if ($sentinelCount -ne "1") {
-    throw "Pre-existing data was not preserved while applying '$ServiceKey' migrations."
+    throw "Pre-existing data was not preserved while upgrading '$ServiceKey' migrations."
+  }
+
+  $ledgerCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM runtime_schema_migrations;"
+  if ([int]$ledgerCount -ne $canonicalFiles.Count) {
+    throw "Migration ledger count mismatch for '$ServiceKey': expected=$($canonicalFiles.Count) actual=$ledgerCount"
   }
 
   Write-Host "--- ${ServiceKey}: deterministic re-execution ---"
   Invoke-RunnerProcess -Directory $MigrationPath -ExpectSuccess $true
-  $ledgerCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM runtime_schema_migrations;"
-  if ([int]$ledgerCount -ne $canonicalFiles.Count) {
-    throw "Migration ledger count mismatch for '$ServiceKey': expected=$($canonicalFiles.Count) actual=$ledgerCount"
+  $rerunLedgerCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM runtime_schema_migrations;"
+  if ([int]$rerunLedgerCount -ne $canonicalFiles.Count) {
+    throw "Re-execution changed the canonical ledger for '$ServiceKey'."
   }
 
   Write-Host "--- ${ServiceKey}: checksum immutability ---"
