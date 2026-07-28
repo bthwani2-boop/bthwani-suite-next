@@ -129,19 +129,19 @@ jobs:
           JOURNEY_SCOPE: ${{ inputs.journey_scope }}
         run: |
           $log = Join-Path $env:RUNNER_TEMP "journey-gates.log"
-          $output = @()
+          Set-Content -Path $log -Value ""
           $exitCode = 0
           $journeys = $env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() }
           foreach ($journey in $journeys) {
+            "===== $($journey.Trim()) =====" | Tee-Object -FilePath $log -Append
             $journeyOutput = & ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim() 2>&1
             $journeyExitCode = $LASTEXITCODE
-            $output += $journeyOutput
+            $journeyOutput | Tee-Object -FilePath $log -Append
             if ($journeyExitCode -ne 0) {
               $exitCode = $journeyExitCode
               break
             }
           }
-          $output | Tee-Object -FilePath $log
           exit $exitCode
       - name: Upload journey gate diagnostics
         if: ${{ steps.journey_gates.outcome == 'failure' }}
@@ -193,7 +193,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: platform-change-sets-${{ github.run_id }}
-          path: ${{ runner.temp }}/platform-change-sets.log
+          path: |
+            ${{ runner.temp }}/platform-change-sets.log
+            ${{ runner.temp }}/platform-change-sets-api.ts
           if-no-files-found: error
           retention-days: 7
       - name: Enforce platform change-set result
