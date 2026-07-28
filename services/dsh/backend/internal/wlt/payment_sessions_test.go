@@ -8,6 +8,10 @@ import (
 	"testing"
 )
 
+func trustedPaymentSessionContext() context.Context {
+	return WithTenantContext(context.Background(), "tenant-main")
+}
+
 func TestReadPaymentSessionTimelineForwardsGovernedHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -35,7 +39,7 @@ func TestReadPaymentSessionTimelineForwardsGovernedHeaders(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	status, body, err := client.ReadPaymentSessionTimeline(context.Background(), " tenant-main ", "payment-session-1", "corr-1")
+	status, body, err := client.ReadPaymentSessionTimeline(trustedPaymentSessionContext(), " tenant-main ", "payment-session-1", "corr-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -75,7 +79,7 @@ func TestRefreshPaymentSessionProviderStatusBuildsReplaySafeMutation(t *testing.
 
 	client := NewClient(server.URL, "service-token")
 	for range 2 {
-		status, _, err := client.RefreshPaymentSessionProviderStatus(context.Background(), "tenant-main", "payment-session-2", "", "")
+		status, _, err := client.RefreshPaymentSessionProviderStatus(trustedPaymentSessionContext(), "tenant-main", "payment-session-2", "", "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -90,7 +94,7 @@ func TestPaymentSessionBoundaryRejectsMissingIdentity(t *testing.T) {
 	if _, _, err := client.ReadPaymentSessionTimeline(context.Background(), "", "payment-session-1", "corr"); err == nil {
 		t.Fatal("expected missing tenant to fail")
 	}
-	if _, _, err := client.RefreshPaymentSessionProviderStatus(context.Background(), "tenant-main", "", "corr", "idem"); err == nil {
+	if _, _, err := client.RefreshPaymentSessionProviderStatus(trustedPaymentSessionContext(), "tenant-main", "", "corr", "idem"); err == nil {
 		t.Fatal("expected missing payment session to fail")
 	}
 }
