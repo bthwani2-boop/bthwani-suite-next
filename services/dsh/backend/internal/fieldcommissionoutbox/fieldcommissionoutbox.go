@@ -22,6 +22,7 @@ type Event struct {
 	ID                 string
 	EventID            string
 	EventType          string
+	TenantID           string
 	FieldActorID       string
 	VisitID            string
 	StoreID            string
@@ -55,14 +56,17 @@ func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 	if input.IdempotencyKey == "" {
 		input.IdempotencyKey = fmt.Sprintf("field_visit_commission:%s", input.VisitID)
 	}
-	var partnerID, partnerCategory string
+	var tenantID, partnerID, partnerCategory string
 	err := tx.QueryRow(`
-		SELECT COALESCE(s.partner_id,''), COALESCE(NULLIF(btrim(p.category),''),'default')
+		SELECT btrim(s.tenant_id), COALESCE(s.partner_id,''), COALESCE(NULLIF(btrim(p.category),''),'default')
 		FROM dsh_stores s
-		LEFT JOIN dsh_partners p ON p.id=s.partner_id
-		WHERE s.id=$1`, input.StoreID).Scan(&partnerID, &partnerCategory)
+		LEFT JOIN dsh_partners p ON p.id=s.partner_id AND p.tenant_id=s.tenant_id
+		WHERE s.id=$1`, input.StoreID).Scan(&tenantID, &partnerID, &partnerCategory)
 	if err != nil {
 		return fmt.Errorf("resolve field commission partner evidence: %w", err)
+	}
+	if tenantID == "" {
+		return fmt.Errorf("store %s has no trusted tenant for field commission", input.StoreID)
 	}
 	if strings.TrimSpace(partnerID) == "" {
 		return fmt.Errorf("store %s has no partner for field commission", input.StoreID)
@@ -90,15 +94,18 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	defer tx.Rollback() //nolint:errcheck
 
 	rows, err := tx.Query(`
-		SELECT id, event_id, event_type, field_actor_id, visit_id::text, store_id,
-		       COALESCE(partner_id,''), partner_category,
-		       COALESCE(commission_policy_id,''), correlation_id::text,
-		       idempotency_key, occurred_at, attempt_count
-		FROM dsh_field_commission_outbox
-		WHERE status = 'pending' AND next_retry_at <= NOW()
-		ORDER BY created_at
+		SELECT outbox.id, outbox.event_id, outbox.event_type, btrim(store.tenant_id),
+		       outbox.field_actor_id, outbox.visit_id::text, outbox.store_id,
+		       COALESCE(outbox.partner_id,''), outbox.partner_category,
+		       COALESCE(outbox.commission_policy_id,''), outbox.correlation_id::text,
+		       outbox.idempotency_key, outbox.occurred_at, outbox.attempt_count
+		FROM dsh_field_commission_outbox outbox
+		JOIN dsh_stores store ON store.id=outbox.store_id
+		WHERE outbox.status = 'pending' AND outbox.next_retry_at <= NOW()
+		  AND btrim(store.tenant_id) <> ''
+		ORDER BY outbox.created_at
 		LIMIT $1
-		FOR UPDATE SKIP LOCKED`, limit)
+		FOR UPDATE OF outbox SKIP LOCKED`, limit)
 	if err != nil {
 		return nil, fmt.Errorf("claim field commission outbox batch: %w", err)
 	}
@@ -106,7 +113,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	for rows.Next() {
 		var e Event
 		if err := rows.Scan(
-			&e.ID, &e.EventID, &e.EventType, &e.FieldActorID, &e.VisitID,
+			&e.ID, &e.EventID, &e.EventType, &e.TenantID, &e.FieldActorID, &e.VisitID,
 			&e.StoreID, &e.PartnerID, &e.PartnerCategory,
 			&e.CommissionPolicyID, &e.CorrelationID, &e.IdempotencyKey,
 			&e.OccurredAt, &e.AttemptCount,
