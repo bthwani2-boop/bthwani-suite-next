@@ -116,7 +116,7 @@ New-Item -ItemType Directory -Path $driftDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $partialDirectory -Force | Out-Null
 
 try {
-  Write-Host "--- $ServiceKey: fresh non-empty database ---"
+  Write-Host "--- ${ServiceKey}: fresh non-empty database ---"
   Invoke-DatabaseSql -Sql @"
 CREATE TABLE IF NOT EXISTS $SentinelTable (
   id INTEGER PRIMARY KEY,
@@ -134,14 +134,14 @@ ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
     throw "Pre-existing data was not preserved while applying '$ServiceKey' migrations."
   }
 
-  Write-Host "--- $ServiceKey: deterministic re-execution ---"
+  Write-Host "--- ${ServiceKey}: deterministic re-execution ---"
   Invoke-RunnerProcess -Directory $MigrationPath -ExpectSuccess $true
   $ledgerCount = Invoke-DatabaseSql -TuplesOnly -Sql "SELECT count(*) FROM runtime_schema_migrations;"
   if ([int]$ledgerCount -ne $canonicalFiles.Count) {
     throw "Migration ledger count mismatch for '$ServiceKey': expected=$($canonicalFiles.Count) actual=$ledgerCount"
   }
 
-  Write-Host "--- $ServiceKey: checksum immutability ---"
+  Write-Host "--- ${ServiceKey}: checksum immutability ---"
   Copy-Item -Path (Join-Path $MigrationPath "*") -Destination $driftDirectory -Recurse -Force
   $driftFile = Get-ChildItem -LiteralPath $driftDirectory -File -Filter "*.sql" |
     Sort-Object { $_.Name.ToLowerInvariant() }, Name |
@@ -150,7 +150,7 @@ ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload;
   Invoke-RunnerProcess -Directory $driftDirectory -ExpectSuccess $false
   Invoke-RunnerProcess -Directory $MigrationPath -ExpectSuccess $true
 
-  Write-Host "--- $ServiceKey: partial failure rollback and roll-forward ---"
+  Write-Host "--- ${ServiceKey}: partial failure rollback and roll-forward ---"
   Set-Content -LiteralPath (Join-Path $partialDirectory $ProbeOneFile) -Value @"
 CREATE TABLE $ProbeOneTable (
   id INTEGER PRIMARY KEY,
