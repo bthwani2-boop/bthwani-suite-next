@@ -1,6 +1,6 @@
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("up", "bootstrap-dev", "smoke")]
+  [ValidateSet("up", "catalog-readback", "smoke")]
   [string]$Action,
 
   [Parameter(Mandatory = $true)]
@@ -14,6 +14,7 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
 $RuntimeSmokeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime-dispatch.ps1"
 $CatalogSeedScript = Join-Path $RepoRoot "services/dsh/database/scripts/apply-central-catalog-seed.ps1"
+$CatalogReadbackScript = Join-Path $RepoRoot "tools/scripts/verify-catalog.ps1"
 $AuthenticatedWltSmokeScript = Join-Path $RepoRoot "tools/scripts/finance/smoke-wlt-authenticated-runtime.ps1"
 $DshSmokeDiagnosticScript = Join-Path $RepoRoot "tools/scripts/runtime/diagnose-dsh-smoke-auth-boundary.ps1"
 $LogRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
@@ -100,7 +101,21 @@ if ($Force) { $runtimeParameters.Force = $true }
 try {
   Set-Location -LiteralPath $RepoRoot
 
-  if ($runtimeProfileList.Count -gt 0) {
+  if ($Action -eq "catalog-readback") {
+    if ($ProfileList -notcontains "dsh") {
+      "Catalog readback skipped: DSH profile is not active." | Tee-Object -FilePath $LogPath
+    } else {
+      if (-not (Test-Path -LiteralPath $CatalogReadbackScript -PathType Leaf)) {
+        throw "Central catalog readback script not found: $CatalogReadbackScript"
+      }
+      Write-Host "`n=== runtime:catalog-readback ==="
+      $global:LASTEXITCODE = 0
+      & $CatalogReadbackScript 2>&1 | Tee-Object -FilePath $LogPath
+      if ($LASTEXITCODE -ne 0) {
+        throw "Central catalog readback failed with exit code $LASTEXITCODE"
+      }
+    }
+  } elseif ($runtimeProfileList.Count -gt 0) {
     $global:LASTEXITCODE = 0
     & $phaseRuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath
     if ($LASTEXITCODE -ne 0) {
