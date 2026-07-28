@@ -15,6 +15,14 @@ func configureIdentityActiveSaaS(t *testing.T) {
 	t.Setenv("IDENTITY_WORKFORCE_SERVICE_TOKEN", "service-token")
 }
 
+func configureIdentityDeferredSaaS(t *testing.T) {
+	t.Helper()
+	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
+	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "eligible_for_review")
+	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
+	t.Setenv("IDENTITY_WORKFORCE_SERVICE_TOKEN", "service-token")
+}
+
 func internalActorRequest(method, path string) *http.Request {
 	request := httptest.NewRequest(method, path, nil)
 	request.Header.Set("Authorization", "Bearer service-token")
@@ -83,19 +91,42 @@ func TestProvisionTenantOverrideIsRejectedBeforeDatabaseAccess(t *testing.T) {
 	}
 }
 
-func TestDeferredSaaSLeavesInternalActorRouterUnchanged(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
+func TestDeferredSaaSTenantBoundaryFailsClosedWithoutTenant(t *testing.T) {
+	configureIdentityDeferredSaaS(t)
 	nextCalled := false
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		nextCalled = true
 		w.WriteHeader(http.StatusNoContent)
 	})
-	request := httptest.NewRequest(http.MethodGet, "/internal/actors/search", nil)
+	request := internalActorRequest(http.MethodGet, "/internal/actors")
+	response := httptest.NewRecorder()
+
+	SaaSTenantBoundary(nil, next).ServeHTTP(response, request)
+	if nextCalled {
+		t.Fatal("deferred SaaS request without trusted tenant reached the actor router")
+	}
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_REQUIRED") {
+		t.Fatalf("expected TENANT_CONTEXT_REQUIRED, got status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
+func TestDeferredSaaSTenantBoundaryAcceptsTrustedServiceTenant(t *testing.T) {
+	configureIdentityDeferredSaaS(t)
+	nextCalled := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nextCalled = true
+		if tenantID := r.Header.Get("X-Tenant-ID"); tenantID != "tenant-main" {
+			t.Fatalf("unexpected tenant header %q", tenantID)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	request := internalActorRequest(http.MethodGet, "/internal/actors")
+	request.Header.Set("X-Tenant-ID", "tenant-main")
 	response := httptest.NewRecorder()
 
 	SaaSTenantBoundary(nil, next).ServeHTTP(response, request)
 	if !nextCalled || response.Code != http.StatusNoContent {
-		t.Fatalf("expected deferred mode passthrough, called=%v status=%d", nextCalled, response.Code)
+		t.Fatalf("expected trusted deferred request passthrough, called=%v status=%d body=%s", nextCalled, response.Code, response.Body.String())
 	}
 }
 
