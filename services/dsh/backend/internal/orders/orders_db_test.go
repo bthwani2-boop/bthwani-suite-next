@@ -32,7 +32,8 @@ func openRequiredDB(t *testing.T) *sql.DB {
 }
 
 // TestCreateOrderStoresRealPriceSnapshotDBIntegration proves order items are
-// created with the real catalog-derived unit price, not a hardcoded 0.
+// created with the real catalog-derived unit price and checkout currency, not
+// hardcoded or missing commercial values.
 func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
@@ -60,8 +61,8 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	}
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_cart_items (cart_id, product_id, product_name, price_reference, unit_price, quantity)
-		VALUES ($1::uuid, 'priced-product', 'Priced Product', '42.00 YER', 42.00, 2)`,
+		INSERT INTO dsh_cart_items (cart_id, product_id, product_name, price_reference, unit_price, currency, quantity)
+		VALUES ($1::uuid, 'priced-product', 'Priced Product', '42.00 USD', 42.00, 'USD', 2)`,
 		cartID); err != nil {
 		t.Fatalf("failed to insert priced cart item: %v", err)
 	}
@@ -73,7 +74,7 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 			payment_method, wlt_payment_session_id, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash
 		)
 		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery', 'cod', $5,
-		        8400, 0, 0, 8400, 'YER', repeat('a', 64))
+		        8400, 0, 0, 8400, 'USD', repeat('a', 64))
 		RETURNING id::text`,
 		tenantID, clientID, cartID, storeID, "wlt-ps-"+suffix,
 	).Scan(&intentID); err != nil {
@@ -96,12 +97,19 @@ func TestCreateOrderStoresRealPriceSnapshotDBIntegration(t *testing.T) {
 	}
 
 	var storedUnitPrice float64
-	if err := db.QueryRowContext(ctx, `SELECT unit_price FROM dsh_order_items WHERE order_id = $1::uuid`, order.ID).
-		Scan(&storedUnitPrice); err != nil {
-		t.Fatalf("failed to read stored order item price: %v", err)
+	var storedCurrency string
+	var snapshotCurrency string
+	if err := db.QueryRowContext(ctx, `
+		SELECT unit_price, currency, item_snapshot->>'currency'
+		FROM dsh_order_items WHERE order_id = $1::uuid`, order.ID).
+		Scan(&storedUnitPrice, &storedCurrency, &snapshotCurrency); err != nil {
+		t.Fatalf("failed to read stored order item commercial snapshot: %v", err)
 	}
 	if storedUnitPrice != 42.00 {
 		t.Fatalf("expected dsh_order_items.unit_price=42.00, got %v", storedUnitPrice)
+	}
+	if storedCurrency != "USD" || snapshotCurrency != "USD" {
+		t.Fatalf("expected order item and JSON snapshot currency=USD, got column=%q snapshot=%q", storedCurrency, snapshotCurrency)
 	}
 }
 
