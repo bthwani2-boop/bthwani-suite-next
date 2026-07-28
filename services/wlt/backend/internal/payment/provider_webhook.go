@@ -114,7 +114,8 @@ func HandlePaymentProviderWebhook(db *sql.DB) http.HandlerFunc {
 			parsed = parsed.UTC()
 			occurredAt = &parsed
 		}
-		application, err := ApplyAuthoritativeProviderEvent(r.Context(), db, ProviderEventInput{
+		providerCtx := shared.WithTenantContext(r.Context(), envelope.TenantID)
+		application, err := ApplyAuthoritativeProviderEvent(providerCtx, db, ProviderEventInput{
 			EventID:           envelope.EventID,
 			TenantID:          envelope.TenantID,
 			PaymentSessionID:  envelope.PaymentSessionID,
