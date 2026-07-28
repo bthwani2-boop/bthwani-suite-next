@@ -12,12 +12,19 @@ const require = createRequire(import.meta.url);
 
 const mobileApps = ['app-client', 'app-partner', 'app-captain', 'app-field'];
 
-test('mobile development data script is syntactically valid and checks all governed surfaces', () => {
-  const scriptPath = path.join(repoRoot, 'tools/scripts/mobile-dev-data.mjs');
-  const syntax = spawnSync(process.execPath, ['--check', scriptPath], { encoding: 'utf8' });
-  assert.equal(syntax.status, 0, syntax.stderr || syntax.stdout);
+test('mobile development data has one canonical implementation and checks all governed surfaces', () => {
+  const compatibilityPath = path.join(repoRoot, 'tools/scripts/mobile-dev-data.mjs');
+  const canonicalPath = path.join(repoRoot, 'apps/mobile/mobile-dev-data.mjs');
+  for (const scriptPath of [compatibilityPath, canonicalPath]) {
+    const syntax = spawnSync(process.execPath, ['--check', scriptPath], { encoding: 'utf8' });
+    assert.equal(syntax.status, 0, syntax.stderr || syntax.stdout);
+  }
 
-  const source = fs.readFileSync(scriptPath, 'utf8');
+  const compatibility = fs.readFileSync(compatibilityPath, 'utf8');
+  const canonical = fs.readFileSync(canonicalPath, 'utf8');
+  assert.match(compatibility, /apps\/mobile\/mobile-dev-data\.mjs/);
+  assert.equal(compatibility.split(/\r?\n/).filter(Boolean).length, 1);
+
   for (const required of [
     '/dsh/home-discovery',
     '/dsh/partner/scopes',
@@ -27,32 +34,52 @@ test('mobile development data script is syntactically valid and checks all gover
     "MODE === 'repair'",
     "process.env.NODE_ENV === 'production'",
   ]) {
-    assert.match(source, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.match(canonical, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 });
 
-test('mobile preflight converges runtime seeds, catalog bootstrap and Workforce profiles', () => {
-  const source = read('tools/scripts/ensure-mobile-dev-runtime.ps1');
-  assert.match(source, /-Action", "seed"/);
-  assert.match(source, /-Action", "bootstrap-dev"/);
-  assert.match(source, /mobile-dev-data\.mjs/);
-  assert.match(source, /--repair/);
-  assert.match(source, /--check/);
-  assert.match(source, /BthwaniMobileDevRuntimeBootstrap/);
+test('mobile preflight has one canonical runtime and data convergence owner', () => {
+  const compatibility = read('tools/scripts/ensure-mobile-dev-runtime.ps1');
+  const canonical = read('apps/mobile/ensure-mobile-dev-runtime.ps1');
+
+  assert.match(compatibility, /apps\\mobile\\ensure-mobile-dev-runtime\.ps1/);
+  for (const marker of [
+    '-Action", "seed"',
+    '-Action", "bootstrap-dev"',
+    'mobile-dev-data.mjs',
+    '--repair',
+    '--check',
+    'BthwaniMobileDevRuntimeBootstrap',
+    'Ensure-BthwaniMobileBackend',
+  ]) {
+    assert.ok(canonical.includes(marker), `missing canonical mobile preflight marker: ${marker}`);
+  }
 });
 
-test('every mobile launcher executes the shared preflight before Metro', () => {
+test('every mobile launcher reaches the shared preflight before Metro', () => {
+  const shared = read('apps/mobile/mobile.ps1');
+  const preflightIndex = shared.indexOf('$EnsureRuntimeScript');
+  const runnerIndex = shared.indexOf('$RuntimeScript');
+  const preflightCallIndex = shared.indexOf('& $EnsureRuntimeScript');
+  const runnerCallIndex = shared.indexOf('& $RuntimeScript');
+  assert.ok(preflightIndex >= 0 && runnerIndex >= 0);
+  assert.ok(preflightCallIndex > preflightIndex);
+  assert.ok(runnerCallIndex > preflightCallIndex);
+
   for (const app of mobileApps) {
-    const source = read(`apps/${app}/runtime/start.ps1`);
-    const preflightIndex = source.indexOf('ensure-mobile-dev-runtime.ps1');
-    const runnerIndex = source.indexOf('start-mobile-runtime.ps1');
-    assert.ok(preflightIndex >= 0, `${app} is missing the mobile data preflight`);
-    assert.ok(runnerIndex > preflightIndex, `${app} must run preflight before the Metro runner`);
+    const start = read(`apps/${app}/runtime/start.ps1`);
+    const appWrapper = read(`apps/${app}/runtime/mobile.ps1`);
+    assert.match(start, /mobile\.ps1/);
+    assert.match(appWrapper, /apps?\\mobile\\mobile\.ps1|\.\.\\\.\.\\mobile\\mobile\.ps1/);
+    assert.match(appWrapper, new RegExp(`-App\\s+'${app}'`));
   }
 });
 
 test('Android development client opens once outside Expo stream piping', () => {
-  const source = read('tools/scripts/start-mobile-runtime.ps1');
+  const compatibility = read('tools/scripts/start-mobile-runtime.ps1');
+  const source = read('apps/mobile/start-mobile-runtime.ps1');
+  assert.match(compatibility, /apps\\mobile\\start-mobile-runtime\.ps1/);
+
   const argumentsStart = source.indexOf('$ExpoArguments = @(');
   const argumentsEnd = source.indexOf('if ($ShouldClearCache) {', argumentsStart);
   assert.ok(argumentsStart >= 0 && argumentsEnd > argumentsStart, 'Expo argument array is missing');
