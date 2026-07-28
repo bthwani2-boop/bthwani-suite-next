@@ -23,6 +23,12 @@ const KIND_TABS: Array<{ label: string; value: ProviderKind }> = [
   { label: "موظف إداري", value: "employee" },
 ];
 
+function providerKindLabel(kind: ProviderKind): string {
+  if (kind === "captain") return "الكابتن";
+  if (kind === "employee") return "الموظف";
+  return "الميداني";
+}
+
 function WorkforceHrScreenInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -66,8 +72,8 @@ function WorkforceHrScreenInner() {
     return (
       <EditorPageFrame header={<CpPageHeader title="تمت الإضافة بنجاح"><CpButton variant="ghost" onClick={() => navigateTo("list", kind)}>رجوع للقائمة</CpButton></CpPageHeader>}>
         <div style={{ display: "flex", flexDirection: "column", gap: "24px", alignItems: "center", justifyContent: "center", padding: "64px 20px" }}>
-          <CpBadge tone="success" size="lg">تمت إضافة {kind === "captain" ? "الكابتن" : "الميداني"} بنجاح!</CpBadge>
-          <CpButton variant="primary" size="lg" onClick={() => navigateTo("detail", kind, actorId)}>
+          <CpBadge tone="success">تمت إضافة {providerKindLabel(kind)} بنجاح!</CpBadge>
+          <CpButton variant="primary" onClick={() => navigateTo("detail", kind, actorId)}>
             تفعيل
           </CpButton>
         </div>
