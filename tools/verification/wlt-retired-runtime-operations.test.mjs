@@ -23,11 +23,16 @@ function routeRegistration(operation) {
   return `mux.HandleFunc("${method} ${path}"`;
 }
 
-test("WLT runtime retirement registry is explicit and unique", () => {
+function contractedPath(operation) {
+  const path = operation.slice(operation.indexOf(" ") + 1);
+  return `  ${path}:`;
+}
+
+test("WLT retired operation registry records full contract and runtime removal", () => {
   assert.equal(retirement.schemaVersion, 1);
   assert.equal(retirement.service, "WLT");
   assert.equal(retirement.sourceContract, "services/wlt/contracts/wlt.openapi.yaml");
-  assert.equal(retirement.state, "CONTRACT_COMPATIBILITY_ONLY_RUNTIME_REMOVED");
+  assert.equal(retirement.state, "CONTRACT_REMOVED_RUNTIME_REMOVED");
   assert.ok(Array.isArray(retirement.operations));
   assert.ok(retirement.operations.length > 0);
 
@@ -35,19 +40,16 @@ test("WLT runtime retirement registry is explicit and unique", () => {
   assert.equal(new Set(keys).size, keys.length, "retired operation keys must be unique");
 });
 
-test("retired WLT operations remain historical contract debt but cannot return to runtime", () => {
+test("retired WLT operations are absent while canonical replacements stay bound", () => {
   for (const item of retirement.operations) {
     assert.match(item.operation, /^(GET|POST|PUT|PATCH|DELETE) \/wlt\//);
     assert.ok(typeof item.reason === "string" && item.reason.trim().length >= 24);
-
-    const path = item.operation.slice(item.operation.indexOf(" ") + 1);
-    assert.ok(rootContract.includes(`  ${path}:`), `${item.operation} must remain discoverable until root-contract cleanup removes it`);
+    assert.ok(!rootContract.includes(contractedPath(item.operation)), `${item.operation} must stay absent from the active WLT contract`);
     assert.ok(!router.includes(routeRegistration(item.operation)), `${item.operation} must stay absent from WLT runtime`);
 
     if (item.canonicalRoute) {
       assert.ok(router.includes(routeRegistration(item.canonicalRoute)), `${item.canonicalRoute} must stay registered`);
-      const canonicalPath = item.canonicalRoute.slice(item.canonicalRoute.indexOf(" ") + 1);
-      assert.ok(payoutContract.includes(`  ${canonicalPath}:`), `${item.canonicalRoute} must stay contracted`);
+      assert.ok(payoutContract.includes(contractedPath(item.canonicalRoute)), `${item.canonicalRoute} must stay contracted`);
     }
   }
 });
