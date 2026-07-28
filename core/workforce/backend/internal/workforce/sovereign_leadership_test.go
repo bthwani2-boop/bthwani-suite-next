@@ -36,7 +36,8 @@ func newBundleRegistryTestService(t *testing.T) (*Service, func()) {
 					"nameAr": "مدير العمليات",
 					"nameEn": "Operations manager",
 					"allowedEmploymentClasses": []string{"department_manager"},
-					"departmentSelectionAllowed": true,
+					"defaultDepartmentScope": "operations",
+					"departmentSelectionAllowed": false,
 				},
 			},
 		})
@@ -53,12 +54,15 @@ func TestLeadershipBundleResolutionUsesIdentityRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolveLeadershipBundle: %v", err)
 	}
-	if bundle.Code != "operations_manager" || !bundle.DepartmentSelectionAllowed {
+	if bundle.Code != "operations_manager" || bundle.DepartmentSelectionAllowed || bundle.DefaultDepartmentScope != "operations" {
 		t.Fatalf("unexpected bundle: %+v", bundle)
 	}
 
 	if _, err := service.resolveLeadershipBundle(context.Background(), "operations_manager", "project_manager", "operations"); err == nil {
 		t.Fatal("expected Identity registry employment-class mismatch to be rejected")
+	}
+	if _, err := service.resolveLeadershipBundle(context.Background(), "operations_manager", "department_manager", "finance"); err == nil {
+		t.Fatal("expected Identity-owned manager department mismatch to be rejected")
 	}
 	if _, err := service.resolveLeadershipBundle(context.Background(), "platform_owner", "project_manager", "operations"); err == nil {
 		t.Fatal("expected fixed Identity department scope mismatch to be rejected")
