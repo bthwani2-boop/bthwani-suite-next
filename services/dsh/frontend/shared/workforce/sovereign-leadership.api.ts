@@ -4,14 +4,29 @@ import type { ActivationCodeResult, Employee } from "./workforce.types";
 const { request } = createDshHttpClient("/api/workforce", "workforce", 15000);
 
 export type LeadershipEmploymentClass = "coordinator" | "department_manager" | "executive" | "project_manager";
-export type LeadershipPermissionBundle =
-  | "platform_owner"
-  | "platform_coordinator"
-  | "operations_manager"
-  | "partners_manager"
-  | "finance_manager"
-  | "support_manager"
-  | "hr_manager";
+export type LeadershipPermissionBundle = string;
+
+export type WorkforceReferenceOption = {
+  readonly code: string;
+  readonly nameAr: string;
+  readonly nameEn: string;
+};
+
+export type EmployeePermissionBundleDescriptor = {
+  readonly code: LeadershipPermissionBundle;
+  readonly nameAr: string;
+  readonly nameEn: string;
+  readonly allowedEmploymentClasses: readonly LeadershipEmploymentClass[];
+  readonly defaultDepartmentScope?: string;
+  readonly departmentSelectionAllowed: boolean;
+};
+
+export type SovereignLeadershipReferenceData = {
+  readonly employmentClasses: readonly WorkforceReferenceOption[];
+  readonly departments: readonly WorkforceReferenceOption[];
+  readonly officeLocations: readonly WorkforceReferenceOption[];
+  readonly permissionBundles: readonly EmployeePermissionBundleDescriptor[];
+};
 
 export type SovereignLeadershipGovernance = {
   readonly actorId: string;
@@ -22,7 +37,6 @@ export type SovereignLeadershipGovernance = {
   readonly guaranteeStatus: string;
   readonly guaranteeReference?: string;
   readonly responsibilityScopes: readonly string[];
-  readonly authorityScopes: readonly string[];
   readonly managedDepartmentCodes: readonly string[];
   readonly notes?: string;
   readonly version: number;
@@ -69,6 +83,10 @@ export type SovereignLeadershipCreationResult = {
   readonly leadership: SovereignLeadershipRecord;
   readonly activation: ActivationCodeResult;
 };
+
+export async function getSovereignLeadershipReferenceData(): Promise<SovereignLeadershipReferenceData> {
+  return request<SovereignLeadershipReferenceData>("/workforce/sovereign-leadership/reference-data");
+}
 
 export async function listSovereignLeadership(): Promise<readonly SovereignLeadershipRecord[]> {
   const result = await request<{ leadership: SovereignLeadershipRecord[] }>("/workforce/sovereign-leadership");
