@@ -13,7 +13,8 @@ import (
 var ErrVersionConflict = errors.New("cart version conflict")
 
 // GovernedCheckoutSnapshot is the OCC-locked, server-priced cart snapshot used
-// by checkout. Amounts are minor units and never originate from client input.
+// by checkout. Amounts and currency are snapshotted from DSH catalog truth and
+// never originate from client input.
 type GovernedCheckoutSnapshot struct {
 	SubtotalMinorUnits int64
 	Currency           string
@@ -53,7 +54,7 @@ func ComputeCheckoutSnapshotTx(
 	}
 
 	rows, err := tx.QueryContext(ctx, `
-		SELECT product_id,quantity,unit_price
+		SELECT product_id,quantity,unit_price,currency
 		FROM dsh_cart_items
 		WHERE cart_id=$1::uuid
 		ORDER BY created_at,id`, cartID)
@@ -64,6 +65,7 @@ func ComputeCheckoutSnapshotTx(
 
 	const maxInt64 = int64(1<<63 - 1)
 	var subtotal int64
+	currency := ""
 	itemCount := 0
 	hasher := sha256.New()
 	hasher.Write([]byte(fmt.Sprintf("%s|%s|%s|v%d", cartID, clientID, lockedStoreID, currentVersion)))
@@ -71,11 +73,20 @@ func ComputeCheckoutSnapshotTx(
 		var productID string
 		var quantity int
 		var unitPrice float64
-		if err := rows.Scan(&productID, &quantity, &unitPrice); err != nil {
+		var itemCurrency string
+		if err := rows.Scan(&productID, &quantity, &unitPrice, &itemCurrency); err != nil {
 			return nil, err
 		}
 		if quantity <= 0 || unitPrice <= 0 || math.IsNaN(unitPrice) || math.IsInf(unitPrice, 0) {
 			return nil, ErrCartItemMissingPrice
+		}
+		if itemCurrency == "" {
+			return nil, ErrCartItemCurrency
+		}
+		if currency == "" {
+			currency = itemCurrency
+		} else if currency != itemCurrency {
+			return nil, ErrCartItemCurrency
 		}
 		unitMinorUnits := int64(math.Round(unitPrice * 100))
 		if unitMinorUnits <= 0 || int64(quantity) > maxInt64/unitMinorUnits {
@@ -86,18 +97,18 @@ func ComputeCheckoutSnapshotTx(
 			return nil, fmt.Errorf("%w: cart total exceeds supported range", ErrInvalid)
 		}
 		subtotal += lineTotal
-		hasher.Write([]byte(fmt.Sprintf("|%s:%d:%d", productID, quantity, unitMinorUnits)))
+		hasher.Write([]byte(fmt.Sprintf("|%s:%d:%d:%s", productID, quantity, unitMinorUnits, itemCurrency)))
 		itemCount++
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	if itemCount == 0 || subtotal <= 0 {
+	if itemCount == 0 || subtotal <= 0 || currency == "" {
 		return nil, fmt.Errorf("%w: cart has no priced items", ErrInvalid)
 	}
 	return &GovernedCheckoutSnapshot{
 		SubtotalMinorUnits: subtotal,
-		Currency:           "YER",
+		Currency:           currency,
 		SnapshotHash:       hex.EncodeToString(hasher.Sum(nil)),
 		ItemCount:          itemCount,
 		CartVersion:        currentVersion,
