@@ -13,8 +13,11 @@ func TestEmployeeDshPermissionBackfillIsIdempotentAndFailClosed(t *testing.T) {
 	}
 	text := string(migration)
 	for _, required := range []string{
-		"jsonb_agg(DISTINCT permission)",
+		"jsonb_agg(DISTINCT expanded.permission)",
+		"AS expanded(permission)",
 		"actor.permissions IS DISTINCT FROM merged_permissions.permissions",
+		"platform.read",
+		"platform.manage",
 		"department:operations",
 		"operations.read",
 		"operations.manage",
@@ -24,6 +27,8 @@ func TestEmployeeDshPermissionBackfillIsIdempotentAndFailClosed(t *testing.T) {
 		"finance.manage",
 		"department:support",
 		"support.manage",
+		"RAISE EXCEPTION 'platform owner DSH permissions are incomplete'",
+		"RAISE EXCEPTION 'platform coordinator DSH permissions are incomplete'",
 		"RAISE EXCEPTION 'operations manager DSH permissions are incomplete'",
 		"RAISE EXCEPTION 'partners manager DSH permissions are incomplete'",
 		"RAISE EXCEPTION 'finance manager DSH permissions are incomplete'",
