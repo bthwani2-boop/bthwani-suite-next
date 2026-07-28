@@ -12,19 +12,12 @@ func requireTrustedSaaSTenant(w http.ResponseWriter, r *http.Request) bool {
 	activation := strings.ToLower(strings.TrimSpace(os.Getenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE")))
 	requestTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 
-	if mode != "active" {
-		if strings.HasPrefix(r.URL.Path, "/wlt/promotion-funding/") && requestTenantID == "" {
-			SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required for promotion funding")
-			return false
-		}
-		return true
-	}
-	if activation != "authorized" && activation != "active" {
+	if mode == "active" && activation != "authorized" && activation != "active" {
 		SendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", "active SaaS mode requires authorized or active commercial state")
 		return false
 	}
 	if requestTenantID == "" {
-		SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required in active SaaS mode")
+		SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required for every WLT financial request")
 		return false
 	}
 	return true
@@ -32,8 +25,8 @@ func requireTrustedSaaSTenant(w http.ResponseWriter, r *http.Request) bool {
 
 // RequireServiceCaller validates the shared-secret bearer token and expected
 // service identity before accepting X-Tenant-ID as a service-to-service tenant
-// context. Active SaaS mode fails closed when the authenticated caller omits the
-// tenant; no process-wide default tenant is used as an ownership authority.
+// context. Every WLT financial request fails closed when the authenticated
+// caller omits its tenant; no process-wide, local, or legacy fallback is used.
 func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, expectedCaller string) bool {
 	expectedToken := os.Getenv(tokenEnvVar)
 	if expectedToken == "" {
@@ -56,8 +49,7 @@ func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, e
 	if !requireTrustedSaaSTenant(w, r) {
 		return false
 	}
-	if tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID")); tenantID != "" {
-		*r = *r.WithContext(WithTenantContext(r.Context(), tenantID))
-	}
+	tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	*r = *r.WithContext(WithTenantContext(r.Context(), tenantID))
 	return true
 }
