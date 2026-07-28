@@ -8,9 +8,8 @@ import (
 	"testing"
 )
 
-func configureReferenceSaaS(t *testing.T) {
+func configureReferenceAuth(t *testing.T) {
 	t.Helper()
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "service-token")
 }
 
@@ -19,7 +18,7 @@ func referenceRequest() *http.Request {
 }
 
 func TestReferenceReaderAcceptsDistinctTrustedDshTenants(t *testing.T) {
-	configureReferenceSaaS(t)
+	configureReferenceAuth(t)
 	for _, tenantID := range []string{"tenant-a", "tenant-b"} {
 		request := referenceRequest()
 		request.Header.Set("Authorization", "Bearer service-token")
@@ -33,11 +32,14 @@ func TestReferenceReaderAcceptsDistinctTrustedDshTenants(t *testing.T) {
 		if request.Header.Get("X-Tenant-ID") != tenantID {
 			t.Fatalf("trusted service tenant changed: got %q want %q", request.Header.Get("X-Tenant-ID"), tenantID)
 		}
+		if contextualTenant, ok := TenantIDFromContext(request.Context()); !ok || contextualTenant != tenantID {
+			t.Fatalf("tenant context not installed: tenant=%q ok=%v", contextualTenant, ok)
+		}
 	}
 }
 
 func TestReferenceReaderRejectsTrustedDshWithoutTenant(t *testing.T) {
-	configureReferenceSaaS(t)
+	configureReferenceAuth(t)
 	request := referenceRequest()
 	request.Header.Set("Authorization", "Bearer service-token")
 	request.Header.Set("X-Service-Caller", "dsh")
@@ -49,7 +51,7 @@ func TestReferenceReaderRejectsTrustedDshWithoutTenant(t *testing.T) {
 }
 
 func TestReferenceReaderAcceptsIdentityTenantAndInstallsIt(t *testing.T) {
-	configureReferenceSaaS(t)
+	configureReferenceAuth(t)
 	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer user-token" {
 			t.Fatalf("unexpected identity authorization %q", r.Header.Get("Authorization"))
@@ -73,7 +75,7 @@ func TestReferenceReaderAcceptsIdentityTenantAndInstallsIt(t *testing.T) {
 }
 
 func TestReferenceReaderRejectsHeaderThatConflictsWithIdentity(t *testing.T) {
-	configureReferenceSaaS(t)
+	configureReferenceAuth(t)
 	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(referenceIdentity{
 			Subject: "client-2", TenantID: "tenant-b", AuthState: "authenticated",
@@ -95,7 +97,7 @@ func TestReferenceReaderRejectsHeaderThatConflictsWithIdentity(t *testing.T) {
 }
 
 func TestReferenceReaderRejectsIdentityWithoutTenant(t *testing.T) {
-	configureReferenceSaaS(t)
+	configureReferenceAuth(t)
 	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(referenceIdentity{
 			Subject: "client-3", TenantID: "", AuthState: "authenticated",
@@ -116,7 +118,7 @@ func TestReferenceReaderRejectsIdentityWithoutTenant(t *testing.T) {
 }
 
 func TestReferenceReaderRejectsMissingIdentitySession(t *testing.T) {
-	configureReferenceSaaS(t)
+	configureReferenceAuth(t)
 	t.Setenv("IDENTITY_API_BASE_URL", "")
 	request := referenceRequest()
 	response := httptest.NewRecorder()
@@ -129,10 +131,25 @@ func TestReferenceReaderRejectsMissingIdentitySession(t *testing.T) {
 	}
 }
 
-func TestReferenceReaderPreservesDeferredCompatibility(t *testing.T) {
+func TestReferenceReaderDoesNotBypassAuthInDeferredMode(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
+	configureReferenceAuth(t)
+	request := referenceRequest()
 	response := httptest.NewRecorder()
-	if !RequireReferenceReader(response, referenceRequest()) {
-		t.Fatalf("deferred reference read was rejected status=%d body=%s", response.Code, response.Body.String())
+	if RequireReferenceReader(response, request) {
+		t.Fatal("deferred unauthenticated reference read was accepted")
+	}
+}
+
+func TestReferenceReaderAcceptsTrustedDshInDeferredMode(t *testing.T) {
+	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
+	configureReferenceAuth(t)
+	request := referenceRequest()
+	request.Header.Set("Authorization", "Bearer service-token")
+	request.Header.Set("X-Service-Caller", "dsh")
+	request.Header.Set("X-Tenant-ID", "tenant-deferred")
+	response := httptest.NewRecorder()
+	if !RequireReferenceReader(response, request) {
+		t.Fatalf("deferred trusted service read rejected status=%d body=%s", response.Code, response.Body.String())
 	}
 }
