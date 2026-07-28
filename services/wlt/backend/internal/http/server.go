@@ -69,7 +69,7 @@ func NewRouter(db *sql.DB, mutationsEnabled bool) *http.ServeMux {
 	mux.HandleFunc("POST /wlt/settlements/{settlementId}/post", gate(serviceAuth(settlement.HandlePostSettlement(db))))
 	mux.HandleFunc("PUT /wlt/settlement-policies/{partnerId}", gate(serviceAuth(settlement.HandleUpsertGovernedSettlementPolicyIdempotent(db))))
 
-	mux.HandleFunc("POST /wlt/cod-records", gate(serviceAuth(cod.HandleCreateCodRecordAtomic(db))))
+	mux.HandleFunc("POST /wlt/cod-records", gate(serviceAuth(cod.HandleCreateCodRecordTenant(db))))
 	mux.HandleFunc("GET /wlt/cod-records/{codRecordId}", readGate(shared.RequireTenantScope(db, shared.TenantScopeConfig{Table: "wlt_cod_records", IDPathValue: "codRecordId"}, cod.HandleGetCodRecord(db))))
 	mux.HandleFunc("GET /wlt/cod-records", readGate(shared.RequireTenantScope(db, shared.TenantScopeConfig{Table: "wlt_cod_records", ListPath: "/wlt/cod-records"}, cod.HandleListCodRecords(db))))
 	mux.HandleFunc("POST /wlt/cod-records/{codRecordId}/collect", gate(serviceAuth(cod.HandleCollectCodSovereign(db))))
