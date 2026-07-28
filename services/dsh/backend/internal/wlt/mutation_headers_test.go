@@ -10,6 +10,10 @@ import (
 	"testing"
 )
 
+func trustedMutationTestContext() context.Context {
+	return WithTenantContext(context.Background(), "tenant-a")
+}
+
 func requireMutationHeaders(t *testing.T, r *http.Request) {
 	t.Helper()
 	if strings.TrimSpace(r.Header.Get("X-Correlation-ID")) == "" {
@@ -17,6 +21,9 @@ func requireMutationHeaders(t *testing.T, r *http.Request) {
 	}
 	if strings.TrimSpace(r.Header.Get("Idempotency-Key")) == "" {
 		t.Fatal("missing Idempotency-Key")
+	}
+	if r.Header.Get("X-Tenant-ID") != "tenant-a" {
+		t.Fatalf("unexpected X-Tenant-ID %q", r.Header.Get("X-Tenant-ID"))
 	}
 }
 
@@ -56,7 +63,7 @@ func TestNotifyDeliveryCollectionAddsDeterministicHeaders(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	if err := client.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{
+	if err := client.NotifyDeliveryCollection(trustedMutationTestContext(), NotifyDeliveryCollectionInput{
 		OrderID:          "order-1",
 		CollectorType:    "captain",
 		CollectorID:      "captain-1",
@@ -82,7 +89,7 @@ func TestDeliverFieldCommissionUsesSameBodyAndHeaderIdempotencyKey(t *testing.T)
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	if err := client.DeliverFieldCommission(context.Background(), DeliverFieldCommissionInput{
+	if err := client.DeliverFieldCommission(trustedMutationTestContext(), DeliverFieldCommissionInput{
 		BeneficiaryActorID: "field-1",
 		VisitID:            "visit-1",
 		SourceID:           "visit-1",
@@ -107,7 +114,7 @@ func TestActorFinanceCodMutationAddsFallbackCorrelation(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	status, _, err := client.FinanceWriteCodRecord(context.Background(), "cod-1", "collect", proof, "")
+	status, _, err := client.FinanceWriteCodRecord(trustedMutationTestContext(), "cod-1", "collect", proof, "")
 	if err != nil {
 		t.Fatalf("expected governed fallback correlation: %v", err)
 	}
@@ -125,7 +132,7 @@ func TestSettlementMutationAddsRequiredHeaders(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	if _, _, err := client.FinanceWriteSettlement(context.Background(), http.MethodPost, "/wlt/settlements", []byte(`{}`), "order-1"); err != nil {
+	if _, _, err := client.FinanceWriteSettlement(trustedMutationTestContext(), http.MethodPost, "/wlt/settlements", []byte(`{}`), "order-1"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -139,7 +146,7 @@ func TestCommercialProductWriteAddsRequiredHeaders(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	product, err := client.CreateCommercialProduct(context.Background(), CreateCommercialProductInput{Reference: "plus"})
+	product, err := client.CreateCommercialProduct(trustedMutationTestContext(), CreateCommercialProductInput{Reference: "plus"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -178,7 +185,7 @@ func TestSubscriptionPaymentSessionAddsFallbackHeaders(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	session, err := client.CreateSubscriptionPaymentSession(context.Background(), CreateSubscriptionPaymentSessionInput{
+	session, err := client.CreateSubscriptionPaymentSession(trustedMutationTestContext(), CreateSubscriptionPaymentSessionInput{
 		SubscriptionPurchaseID: "purchase-1",
 		ProductReference:       "plus",
 		ClientID:               "client-1",
