@@ -1,9 +1,12 @@
 package wallet
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"wlt-api/internal/shared"
 )
 
 const walletCols = `id, actor_id, actor_type, status, currency,
@@ -34,15 +37,15 @@ func scanWallet(s walletScanner) (*Wallet, error) {
 	return &w, nil
 }
 
-// GetWallet is retained for internal WLT callers that already own a globally
-// resolved actor identity. HTTP representative reads must use
-// GetWalletForTenant so a finance operator cannot cross a SaaS tenant boundary.
+// GetWallet is a deferred-runtime compatibility reader only. It is deliberately
+// restricted to the explicit legacy-unscoped partition so it can never choose
+// an arbitrary tenant wallet when identical actor ids exist across tenants.
+// Active HTTP and domain paths must use GetWalletForTenant.
 func GetWallet(db *sql.DB, actorType, actorID string) (*Wallet, error) {
 	const q = `
 		SELECT ` + walletCols + `
 		FROM wlt_wallets
-		WHERE actor_type = $1 AND actor_id = $2
-		ORDER BY updated_at DESC
+		WHERE tenant_id = 'legacy-unscoped' AND actor_type = $1 AND actor_id = $2
 		LIMIT 1`
 
 	row := db.QueryRow(q, actorType, actorID)
@@ -51,7 +54,7 @@ func GetWallet(db *sql.DB, actorType, actorID string) (*Wallet, error) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get wallet: %w", err)
+		return nil, fmt.Errorf("get legacy wallet: %w", err)
 	}
 	return w, nil
 }
@@ -65,7 +68,6 @@ func GetWalletForTenant(db *sql.DB, tenantID, actorType, actorID string) (*Walle
 		SELECT ` + walletCols + `
 		FROM wlt_wallets
 		WHERE tenant_id = $1 AND actor_type = $2 AND actor_id = $3
-		ORDER BY updated_at DESC
 		LIMIT 1`
 
 	row := db.QueryRow(q, tenantID, actorType, actorID)
@@ -79,28 +81,47 @@ func GetWalletForTenant(db *sql.DB, tenantID, actorType, actorID string) (*Walle
 	return w, nil
 }
 
-// EnsureWalletTx creates a zero-balance wallet row for (actorType, actorID) if
-// one doesn't already exist, then returns the current row locked FOR UPDATE
-// so the caller can safely read-modify-write balances within its own
-// transaction. currency is only used when creating a new row.
-func EnsureWalletTx(tx *sql.Tx, actorType, actorID, currency string) (*Wallet, error) {
+// EnsureWalletForTenantTx creates or locks exactly one wallet inside the
+// authenticated tenant. Currency is authoritative on creation and must remain
+// stable for subsequent calls.
+func EnsureWalletForTenantTx(ctx context.Context, tx *sql.Tx, actorType, actorID, currency string) (*Wallet, error) {
+	tenantID, err := shared.RequireTenantContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	actorType = strings.TrimSpace(actorType)
+	actorID = strings.TrimSpace(actorID)
+	currency = strings.ToUpper(strings.TrimSpace(currency))
+	if actorType == "" || actorID == "" || len(currency) != 3 {
+		return nil, fmt.Errorf("actorType, actorId and a three-letter currency are required")
+	}
+
 	const insertQ = `
-		INSERT INTO wlt_wallets (actor_id, actor_type, status, currency)
-		VALUES ($2, $1, 'active', $3)
-		ON CONFLICT (actor_type, actor_id) DO NOTHING`
-	if _, err := tx.Exec(insertQ, actorType, actorID, currency); err != nil {
-		return nil, fmt.Errorf("ensure wallet: insert: %w", err)
+		INSERT INTO wlt_wallets (tenant_id, actor_id, actor_type, status, currency)
+		VALUES ($1, $3, $2, 'active', $4)
+		ON CONFLICT (tenant_id, actor_type, actor_id) DO NOTHING`
+	if _, err := tx.ExecContext(ctx, insertQ, tenantID, actorType, actorID, currency); err != nil {
+		return nil, fmt.Errorf("ensure tenant wallet: insert: %w", err)
 	}
 
 	const selectQ = `
 		SELECT ` + walletCols + `
 		FROM wlt_wallets
-		WHERE actor_type = $1 AND actor_id = $2
+		WHERE tenant_id = $1 AND actor_type = $2 AND actor_id = $3
 		FOR UPDATE`
-	row := tx.QueryRow(selectQ, actorType, actorID)
+	row := tx.QueryRowContext(ctx, selectQ, tenantID, actorType, actorID)
 	w, err := scanWallet(row)
 	if err != nil {
-		return nil, fmt.Errorf("ensure wallet: select: %w", err)
+		return nil, fmt.Errorf("ensure tenant wallet: select: %w", err)
+	}
+	if w.Currency != currency {
+		return nil, fmt.Errorf("wallet currency %s does not match requested currency %s", w.Currency, currency)
 	}
 	return w, nil
+}
+
+// EnsureWalletTx preserves package compatibility for deferred/local callers.
+// In active SaaS mode it fails closed because no trusted tenant is present.
+func EnsureWalletTx(tx *sql.Tx, actorType, actorID, currency string) (*Wallet, error) {
+	return EnsureWalletForTenantTx(context.Background(), tx, actorType, actorID, currency)
 }
