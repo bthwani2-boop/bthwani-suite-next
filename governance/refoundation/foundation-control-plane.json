@@ -49,7 +49,8 @@
     "mobileManifest": "pnpm mobile:apps:check",
     "mobileExpo": "pnpm mobile:expo:verify",
     "dockerConfig": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-refoundation-docker-config.ps1",
-    "dockerStatus": "pnpm runtime:status",
+    "dockerStatus": "pnpm runtime:full:status",
+    "dockerMigrate": "pnpm runtime:full:migrate",
     "dockerFullSmoke": "pnpm runtime:full:smoke",
     "openApi": "pnpm contracts:lint && pnpm openapi:verify:dsh && pnpm guard:api-binding && pnpm guard:backend-api-binding",
     "secrets": "pnpm guard:secrets",
@@ -81,9 +82,9 @@
     {
       "id": "docker-and-data-plane",
       "owner": "bthwani-docker-journey-runtime",
-      "requiredPaths": ["infra/docker/compose.runtime.yml","infra/docker/compose.financial-simulators.yml","infra/docker/compose.observability.yml","infra/docker/scripts/runtime.ps1","infra/docker/scripts/down-runtime.ps1","infra/docker/scripts/reset-runtime.ps1","tools/scripts/check-refoundation-docker-config.ps1"],
-      "requiredChecks": ["dockerConfig","dockerStatus","dockerFullSmoke"],
-      "claimLimit": "Configuration proof is static; runtime evidence remains required"
+      "requiredPaths": ["infra/docker/compose.runtime.yml","infra/docker/compose.financial-simulators.yml","infra/docker/compose.observability.yml","infra/docker/scripts/runtime.ps1","infra/docker/scripts/down-runtime.ps1","infra/docker/scripts/reset-runtime.ps1","infra/docker/scripts/invoke-runtime-database-migrations.ps1","tools/scripts/check-refoundation-docker-config.ps1","tools/scripts/invoke-platform-foundation-runtime.ps1","tools/scripts/invoke-full-runtime.ps1"],
+      "requiredChecks": ["dockerConfig","dockerStatus","dockerMigrate","dockerFullSmoke"],
+      "claimLimit": "Configuration proof is static; migrations, health, and smoke require runtime evidence"
     },
     {
       "id": "contracts-and-openapi",
@@ -126,7 +127,7 @@
     "registered governance skills and guards remain consistent",
     "all four mobile project identities are preserved",
     "mobile configuration checks pass",
-    "Docker Compose configuration and full runtime smoke evidence are available",
+    "true full runtime configuration, migration, health, and smoke evidence are available",
     "OpenAPI lint and non-mutating binding verification pass",
     "secret scanning passes with redacted output",
     "CI completes on the exact candidate commit",
