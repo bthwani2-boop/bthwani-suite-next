@@ -1,5 +1,6 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import type { DshMediaAsset } from "../media/dsh-media-api.client";
+import { uploadCatalogBinary } from "./catalog-binary-upload";
 import {
   completeAssetUpload,
   createAssetUploadIntent,
@@ -91,17 +92,6 @@ async function requireStoreAssortment(
   return assortment;
 }
 
-async function uploadBinary(uploadUrl: string, body: Blob, mimeType: string): Promise<void> {
-  const uploadResponse = await globalThis.fetch(uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": mimeType },
-    body,
-  });
-  if (!uploadResponse.ok) {
-    throw new Error(`PARTNER_PRODUCT_MEDIA_UPLOAD_FAILED_${uploadResponse.status}`);
-  }
-}
-
 export async function listPartnerProductMedia(
   storeId: string,
   productId: string,
@@ -139,7 +129,11 @@ export async function uploadPartnerProductMedia(
     intendedRole: PARTNER_CUSTOM_IMAGE_ROLE,
   });
 
-  await uploadBinary(intent.uploadUrl, input.body, input.mimeType);
+  await uploadCatalogBinary({
+    uploadUrl: intent.uploadUrl,
+    body: input.body,
+    mimeType: input.mimeType,
+  });
 
   // CompleteAssetUpload atomically creates the pending-review link from the
   // intended target captured in the upload intent. Do not create a second link.
