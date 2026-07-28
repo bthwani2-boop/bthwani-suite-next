@@ -53,5 +53,11 @@ func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, e
 		SendError(w, http.StatusForbidden, "SERVICE_CALLER_FORBIDDEN", "unexpected service caller")
 		return false
 	}
-	return requireTrustedSaaSTenant(w, r)
+	if !requireTrustedSaaSTenant(w, r) {
+		return false
+	}
+	if tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID")); tenantID != "" {
+		*r = *r.WithContext(WithTenantContext(r.Context(), tenantID))
+	}
+	return true
 }
