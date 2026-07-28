@@ -37,12 +37,20 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 		return err
 	}
 	for _, event := range events {
-		deliverCtx, cancel := context.WithTimeout(ctx, notifyTimeout)
+		if event.TenantID == "" {
+			deliverErr := fmt.Errorf("checkout finance event %s has no tenant context", event.ID)
+			if markErr := MarkFailedWithProjection(db, event.ID, event.AttemptCount, deliverErr); markErr != nil {
+				log.Printf("[checkout-finance-outbox] failed to record missing tenant for event %s: %v", event.ID, markErr)
+			}
+			continue
+		}
+		deliverCtx, cancel := context.WithTimeout(wlt.WithTenantContext(ctx, event.TenantID), notifyTimeout)
 		result, deliverErr := dispatch(deliverCtx, client, event)
 		cancel()
 		if deliverErr != nil {
 			log.Printf(
-				"[checkout-finance-outbox] delivery failed for payment session %s event %s (attempt %d): %v",
+				"[checkout-finance-outbox] delivery failed for tenant %s payment session %s event %s (attempt %d): %v",
+				event.TenantID,
 				event.PaymentSessionID,
 				event.EventType,
 				event.AttemptCount+1,
