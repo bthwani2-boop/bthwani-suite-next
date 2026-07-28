@@ -175,8 +175,18 @@ jobs:
         run: |
           set +e
           log="${RUNNER_TEMP}/platform-change-sets.log"
-          pnpm exec tsc --noEmit -p services/dsh/tsconfig.jrn-040.json 2>&1 | tee "${log}"
-          status=${PIPESTATUS[0]}
+          generated="${RUNNER_TEMP}/platform-change-sets-api.ts"
+          status=0
+          run_check() {
+            echo "===== $* =====" | tee -a "${log}"
+            "$@" 2>&1 | tee -a "${log}"
+            code=${PIPESTATUS[0]}
+            if [[ "${code}" -ne 0 ]]; then status="${code}"; fi
+          }
+          run_check pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false
+          run_check pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/platform-change-sets.openapi.yaml -o "${generated}"
+          run_check diff -u core/platform-control/clients/generated/platform-change-sets-api.ts "${generated}"
+          run_check node tools/guards/platform-change-sets-gate.mjs
           exit "${status}"
       - name: Upload platform change-set diagnostics
         if: ${{ steps.platform_change_sets.outcome == 'failure' }}
