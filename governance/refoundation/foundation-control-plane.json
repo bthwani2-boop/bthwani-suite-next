@@ -14,6 +14,7 @@
     {"id":"bthwani-universal-task-router","allowedStatus":["active"]},
     {"id":"bthwani-evidence-gate-router","allowedStatus":["active"]},
     {"id":"bthwani-agent-skill-integrity","allowedStatus":["conditional"]},
+    {"id":"bthwani-api-runtime-binding","allowedStatus":["conditional"]},
     {"id":"bthwani-governance-contract-guardian","allowedStatus":["conditional"]},
     {"id":"bthwani-ci-workflow-guardian","allowedStatus":["conditional"]},
     {"id":"bthwani-guard-command-router","allowedStatus":["conditional"]},
@@ -47,7 +48,7 @@
     "mobileExpo": "pnpm mobile:expo:verify",
     "dockerStatus": "pnpm runtime:status",
     "dockerFullSmoke": "pnpm runtime:full:smoke",
-    "openApi": "pnpm contracts:lint && pnpm openapi:generate",
+    "openApi": "pnpm contracts:lint && pnpm openapi:verify:dsh && pnpm guard:api-binding && pnpm guard:backend-api-binding",
     "secrets": "pnpm guard:secrets",
     "workflowPolicy": "pnpm guard:workflow-lint && pnpm guard:workflow-security && pnpm guard:actions-pin",
     "remoteCi": ".github/workflows/ci.yml"
@@ -75,11 +76,11 @@
       "claimLimit": "Runtime evidence required"
     },
     {
-      "id": "contracts-generation",
+      "id": "contracts-verification",
       "owner": "bthwani-api-runtime-binding",
       "requiredPaths": ["contracts","core","services"],
       "requiredChecks": ["openApi"],
-      "claimLimit": "Contract and generation proof only"
+      "claimLimit": "Non-mutating contract and binding verification only"
     },
     {
       "id": "governance-skills-guards",
@@ -102,7 +103,7 @@
     "all four mobile project identities are preserved",
     "mobile configuration checks pass",
     "Docker full runtime smoke evidence is available",
-    "OpenAPI lint and generation pass",
+    "OpenAPI lint and non-mutating binding verification pass",
     "secret scanning passes with redacted output",
     "CI completes on the exact candidate commit",
     "no journey implementation exists after the pinned source commit",
