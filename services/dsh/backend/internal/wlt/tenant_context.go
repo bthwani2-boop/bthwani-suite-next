@@ -25,8 +25,7 @@ func TenantIDFromContext(ctx context.Context) (string, bool) {
 }
 
 type tenantRoundTripper struct {
-	base       http.RoundTripper
-	saasActive bool
+	base http.RoundTripper
 }
 
 func (transport tenantRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -36,17 +35,14 @@ func (transport tenantRoundTripper) RoundTrip(req *http.Request) (*http.Response
 	}
 
 	trustedTenantID, hasTrustedTenant := TenantIDFromContext(req.Context())
-	headerTenantID := strings.TrimSpace(req.Header.Get("X-Tenant-ID"))
-	if transport.saasActive {
-		if !hasTrustedTenant {
-			return nil, fmt.Errorf("trusted tenant context is required for active SaaS WLT request")
-		}
-		if headerTenantID != "" && headerTenantID != trustedTenantID {
-			return nil, fmt.Errorf("WLT tenant header does not match trusted request context")
-		}
+	if !hasTrustedTenant {
+		return nil, fmt.Errorf("trusted tenant context is required for every WLT request")
 	}
-
-	if hasTrustedTenant && headerTenantID != trustedTenantID {
+	headerTenantID := strings.TrimSpace(req.Header.Get("X-Tenant-ID"))
+	if headerTenantID != "" && headerTenantID != trustedTenantID {
+		return nil, fmt.Errorf("WLT tenant header does not match trusted request context")
+	}
+	if headerTenantID != trustedTenantID {
 		clone := req.Clone(req.Context())
 		clone.Header = req.Header.Clone()
 		clone.Header.Set("X-Tenant-ID", trustedTenantID)
