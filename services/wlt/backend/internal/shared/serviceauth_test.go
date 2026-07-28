@@ -18,7 +18,6 @@ func configureActiveSaaS(t *testing.T) {
 	t.Helper()
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
 	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "authorized")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
 }
 
 func TestRequireServiceCallerRequiresPromotionFundingTenant(t *testing.T) {
@@ -56,7 +55,7 @@ func TestRequireServiceCallerDoesNotRequireTenantOutsideActiveSaaS(t *testing.T)
 		"TEST_WLT_SERVICE_TOKEN",
 		"dsh",
 	) {
-		t.Fatalf("unrelated governed read was rejected with status=%d", recorder.Code)
+		t.Fatalf("deferred governed read was rejected with status=%d", recorder.Code)
 	}
 }
 
@@ -78,46 +77,48 @@ func TestRequireServiceCallerRequiresTenantForEveryActiveSaaSCall(t *testing.T) 
 	}
 }
 
-func TestRequireServiceCallerRejectsCrossTenantServiceCall(t *testing.T) {
+func TestRequireServiceCallerAcceptsDistinctAuthenticatedTenants(t *testing.T) {
+	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
+	configureActiveSaaS(t)
+
+	for _, tenantID := range []string{"tenant-a", "tenant-b"} {
+		request := authorizedServiceRequest("/wlt/settlements")
+		request.Header.Set("X-Tenant-ID", tenantID)
+		recorder := httptest.NewRecorder()
+		if !RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
+			t.Fatalf("authenticated tenant %s was rejected status=%d body=%s", tenantID, recorder.Code, recorder.Body.String())
+		}
+	}
+}
+
+func TestRequireServiceCallerDoesNotTrustTenantBeforeServiceAuthentication(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
 	configureActiveSaaS(t)
 	request := authorizedServiceRequest("/wlt/settlements")
-	request.Header.Set("X-Tenant-ID", "tenant-other")
+	request.Header.Set("Authorization", "Bearer wrong-token")
+	request.Header.Set("X-Tenant-ID", "tenant-a")
 	recorder := httptest.NewRecorder()
 
 	if RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatal("cross-tenant service call was accepted")
+		t.Fatal("tenant header bypassed service authentication")
 	}
-	if recorder.Code != http.StatusForbidden || !strings.Contains(recorder.Body.String(), "TENANT_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected TENANT_CONTEXT_FORBIDDEN, got status=%d body=%s", recorder.Code, recorder.Body.String())
-	}
-}
-
-func TestRequireServiceCallerAcceptsTrustedActiveSaaSTenant(t *testing.T) {
-	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	configureActiveSaaS(t)
-	request := authorizedServiceRequest("/wlt/settlements")
-	request.Header.Set("X-Tenant-ID", "tenant-main")
-	recorder := httptest.NewRecorder()
-
-	if !RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatalf("trusted tenant was rejected with status=%d body=%s", recorder.Code, recorder.Body.String())
+	if recorder.Code != http.StatusForbidden || !strings.Contains(recorder.Body.String(), "SERVICE_TOKEN_INVALID") {
+		t.Fatalf("expected SERVICE_TOKEN_INVALID, got status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 }
 
-func TestRequireServiceCallerFailsClosedWhenActiveTenantIsUnconfigured(t *testing.T) {
+func TestRequireServiceCallerFailsClosedForInvalidActiveSaaSState(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "authorized")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
+	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "blocked")
 	request := authorizedServiceRequest("/wlt/settlements")
-	request.Header.Set("X-Tenant-ID", "tenant-main")
+	request.Header.Set("X-Tenant-ID", "tenant-a")
 	recorder := httptest.NewRecorder()
 
 	if RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatal("active SaaS call was accepted without configured runtime tenant")
+		t.Fatal("active SaaS call was accepted with blocked commercial state")
 	}
-	if recorder.Code != http.StatusServiceUnavailable || !strings.Contains(recorder.Body.String(), "SAAS_TENANT_NOT_CONFIGURED") {
-		t.Fatalf("expected SAAS_TENANT_NOT_CONFIGURED, got status=%d body=%s", recorder.Code, recorder.Body.String())
+	if recorder.Code != http.StatusServiceUnavailable || !strings.Contains(recorder.Body.String(), "SAAS_RUNTIME_CONFIG_INVALID") {
+		t.Fatalf("expected SAAS_RUNTIME_CONFIG_INVALID, got status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 }
