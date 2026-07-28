@@ -1,15 +1,9 @@
-import type { ActorIdentity } from "@bthwani/core-identity";
 import { NextResponse } from "next/server";
 import { isSameOriginRequest, setSessionCookies } from "../_lib/cookies";
 import { resolveIdentityServerBaseUrl } from "../_lib/env";
+import { activateEmployeeAccessCode } from "../_lib/identity-activation.api";
 
 export const runtime = "nodejs";
-
-type IdentityTokenResponse = {
-  readonly accessToken: string;
-  readonly refreshToken: string;
-  readonly identity: ActorIdentity;
-};
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -49,42 +43,18 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  let identityResponse: Response;
-  try {
-    identityResponse = await fetch(new URL("/auth/activate", baseUrl), {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        actorType: "employee",
-        phone: phone.trim(),
-        code: code.trim(),
-        deviceFingerprint: "control-panel-access-code",
-      }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(8000),
-    });
-  } catch {
+  const activation = await activateEmployeeAccessCode({ baseUrl, phone, code });
+  if (!activation.ok) {
     return NextResponse.json(
-      { code: "IDENTITY_UNAVAILABLE" },
-      { status: 503, headers: { "Cache-Control": "no-store" } },
-    );
-  }
-
-  if (!identityResponse.ok) {
-    const errorBody = (await identityResponse.json().catch(() => ({}))) as { code?: string };
-    return NextResponse.json(
-      { code: errorBody.code ?? "ACCESS_CODE_FAILED" },
+      { code: activation.code },
       {
-        status: identityResponse.status >= 400 ? identityResponse.status : 401,
+        status: activation.status,
         headers: { "Cache-Control": "no-store" },
       },
     );
   }
 
-  const tokens = (await identityResponse.json()) as IdentityTokenResponse;
+  const { tokens } = activation;
   if (!tokens.identity.roles.includes("operator")) {
     return NextResponse.json(
       { code: "CONTROL_PANEL_FORBIDDEN" },
