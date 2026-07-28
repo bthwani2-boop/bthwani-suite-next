@@ -80,6 +80,7 @@
     "tools/mobile/defineBthwaniExpoApp.js",
     "tools/mobile/eas.template.json",
     "tools/scripts/check-refoundation-control-plane.mjs",
+    "tools/scripts/check-refoundation-readiness.mjs",
     "tools/scripts/check-refoundation-foundation.mjs",
     "tools/scripts/check-refoundation-operational-tooling.mjs",
     "tools/scripts/run-foundation-gate.ps1",
