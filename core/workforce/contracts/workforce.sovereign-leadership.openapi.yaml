@@ -1,17 +1,35 @@
 openapi: 3.1.0
 info:
   title: BThwani Workforce Sovereign Leadership API
-  version: 0.1.0
+  version: 0.2.0
   description: >-
     Project-manager-owned leadership creation and department-scoped employee
-    management. Workforce owns organisational assignments and validity windows;
-    Identity owns effective permissions and activation sessions.
+    management. Workforce owns organisational assignments, responsibilities and
+    validity windows. Identity owns permission-bundle definitions, effective
+    permissions, authentication and activation sessions.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/workforce
 servers:
   - url: http://localhost:58086
     description: Local Workforce runtime
 paths:
+  /workforce/sovereign-leadership/reference-data:
+    get:
+      operationId: getSovereignLeadershipReferenceData
+      tags: [sovereign-leadership]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: >-
+            Workforce-owned organisational references combined with the
+            Identity-owned permission-bundle registry.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SovereignLeadershipReferenceData'
+        '403':
+          description: leadership read or create authority is required.
   /workforce/sovereign-leadership:
     get:
       operationId: listSovereignLeadership
@@ -25,6 +43,7 @@ paths:
             application/json:
               schema:
                 type: object
+                additionalProperties: false
                 required: [leadership]
                 properties:
                   leadership:
@@ -44,6 +63,7 @@ paths:
           required: true
           schema:
             type: string
+            minLength: 1
       requestBody:
         required: true
         content:
@@ -52,7 +72,7 @@ paths:
               $ref: '#/components/schemas/CreateSovereignLeaderRequest'
       responses:
         '201':
-          description: Leadership profile, effective permission bundle and activation challenge created.
+          description: Leadership profile, Identity-owned bundle reference and activation challenge created.
           content:
             application/json:
               schema:
@@ -60,7 +80,9 @@ paths:
         '403':
           description: Only leadership:create/all may execute this journey.
         '409':
-          description: Idempotency or optimistic-lock conflict.
+          description: Idempotency, duplicate phone or optimistic-lock conflict.
+        '422':
+          description: Identity rejected the bundle or its employment-class applicability.
   /workforce/department-employees:
     get:
       operationId: listDepartmentEmployees
@@ -81,6 +103,7 @@ paths:
           required: true
           schema:
             type: string
+            minLength: 1
       requestBody:
         required: true
         content:
@@ -89,7 +112,7 @@ paths:
               $ref: '#/components/schemas/CreateDepartmentEmployeeRequest'
       responses:
         '201':
-          description: Department employee and one-time webapp activation created.
+          description: Department employee and one-time control-panel activation created.
         '403':
           description: employee:create with matching department scope is required.
 components:
@@ -98,19 +121,78 @@ components:
       type: http
       scheme: bearer
   schemas:
-    PermissionBundle:
+    PermissionBundleCode:
       type: string
-      enum:
-        - platform_owner
-        - platform_coordinator
-        - operations_manager
-        - partners_manager
-        - finance_manager
-        - support_manager
-        - hr_manager
+      pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
+      description: >-
+        Opaque Identity-owned permission-bundle identifier. Workforce stores it
+        only as a reference and must not enumerate or expand it.
     LeadershipEmploymentClass:
       type: string
       enum: [coordinator, department_manager, executive, project_manager]
+    WorkforceReferenceOption:
+      type: object
+      additionalProperties: false
+      required: [code, nameAr, nameEn]
+      properties:
+        code:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
+        nameAr:
+          type: string
+          minLength: 1
+        nameEn:
+          type: string
+          minLength: 1
+    EmployeePermissionBundleDescriptor:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - nameAr
+        - nameEn
+        - allowedEmploymentClasses
+        - departmentSelectionAllowed
+      properties:
+        code:
+          $ref: '#/components/schemas/PermissionBundleCode'
+        nameAr:
+          type: string
+          minLength: 1
+        nameEn:
+          type: string
+          minLength: 1
+        allowedEmploymentClasses:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        defaultDepartmentScope:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
+        departmentSelectionAllowed:
+          type: boolean
+    SovereignLeadershipReferenceData:
+      type: object
+      additionalProperties: false
+      required: [employmentClasses, departments, officeLocations, permissionBundles]
+      properties:
+        employmentClasses:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkforceReferenceOption'
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkforceReferenceOption'
+        officeLocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkforceReferenceOption'
+        permissionBundles:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmployeePermissionBundleDescriptor'
     CreateSovereignLeaderRequest:
       type: object
       additionalProperties: false
@@ -129,8 +211,7 @@ components:
           type: string
         phoneE164:
           type: string
-          minLength: 8
-          maxLength: 20
+          pattern: '^\+[1-9][0-9]{7,14}$'
         department:
           type: string
           pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
@@ -142,7 +223,7 @@ components:
         employmentClass:
           $ref: '#/components/schemas/LeadershipEmploymentClass'
         permissionBundle:
-          $ref: '#/components/schemas/PermissionBundle'
+          $ref: '#/components/schemas/PermissionBundleCode'
         officeLocation:
           type: string
         supervisorActorId:
@@ -177,14 +258,18 @@ components:
       properties:
         fullNameAr:
           type: string
+          minLength: 1
         fullNameEn:
           type: string
         phoneE164:
           type: string
+          pattern: '^\+[1-9][0-9]{7,14}$'
         department:
           type: string
+          pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
         role:
           type: string
+          minLength: 1
         officeLocation:
           type: string
         supervisorActorId:
@@ -192,33 +277,121 @@ components:
         engagementStartDate:
           type: string
           format: date
+    EmployeeSummary:
+      type: object
+      additionalProperties: true
+      required: [actorId, fullNameAr, workforceCode]
+      properties:
+        actorId:
+          type: string
+        fullNameAr:
+          type: string
+        fullNameEn:
+          type: string
+        workforceCode:
+          type: string
+    SovereignLeadershipGovernance:
+      type: object
+      additionalProperties: false
+      required:
+        - actorId
+        - positionTitle
+        - jobGrade
+        - employmentClass
+        - guaranteeType
+        - guaranteeStatus
+        - responsibilityScopes
+        - managedDepartmentCodes
+        - version
+      properties:
+        actorId:
+          type: string
+        positionTitle:
+          type: string
+        jobGrade:
+          type: string
+        employmentClass:
+          $ref: '#/components/schemas/LeadershipEmploymentClass'
+        guaranteeType:
+          type: string
+        guaranteeStatus:
+          type: string
+        guaranteeReference:
+          type: string
+        responsibilityScopes:
+          type: array
+          items:
+            type: string
+        managedDepartmentCodes:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+    SovereignLeadershipAssignment:
+      type: object
+      additionalProperties: false
+      required:
+        - actorId
+        - permissionBundle
+        - departmentScope
+        - startsOn
+        - assignmentStatus
+        - version
+      properties:
+        actorId:
+          type: string
+        permissionBundle:
+          $ref: '#/components/schemas/PermissionBundleCode'
+        departmentScope:
+          type: string
+        startsOn:
+          type: string
+          format: date
+        endsOn:
+          type: string
+          format: date
+        assignmentStatus:
+          type: string
+          enum: [active, suspended, expired, ended]
+        version:
+          type: integer
+          minimum: 1
     SovereignLeadershipRecord:
       type: object
+      additionalProperties: false
       required: [employee, governance, assignment]
       properties:
         employee:
-          type: object
+          $ref: '#/components/schemas/EmployeeSummary'
         governance:
-          type: object
+          $ref: '#/components/schemas/SovereignLeadershipGovernance'
         assignment:
-          type: object
+          $ref: '#/components/schemas/SovereignLeadershipAssignment'
+    ActivationCodeResult:
+      type: object
+      additionalProperties: false
+      required: [activationId, code, maskedPhone, expiresAt]
+      properties:
+        activationId:
+          type: string
+        code:
+          type: string
+          pattern: '^[0-9]{6}$'
+        maskedPhone:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
     SovereignLeadershipCreationResult:
       type: object
+      additionalProperties: false
       required: [leadership, activation]
       properties:
         leadership:
           $ref: '#/components/schemas/SovereignLeadershipRecord'
         activation:
-          type: object
-          required: [activationId, code, maskedPhone, expiresAt]
-          properties:
-            activationId:
-              type: string
-            code:
-              type: string
-              pattern: '^[0-9]{6}$'
-            maskedPhone:
-              type: string
-            expiresAt:
-              type: string
-              format: date-time
+          $ref: '#/components/schemas/ActivationCodeResult'
