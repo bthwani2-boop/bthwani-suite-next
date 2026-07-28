@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"dsh-api/internal/store"
+	"dsh-api/internal/wlt"
 )
 
 var representativeWalletActorTypes = map[string]struct{}{
@@ -35,48 +36,82 @@ func writeRepresentativeFinanceResponse(w http.ResponseWriter, status int, body 
 
 func (s *protectedStoreServer) handleOwnRepresentativeWallet(w http.ResponseWriter, r *http.Request, actorType string) {
 	actor, ok := s.requireActor(w, r, actorType)
-	if !ok { return }
-	status, body, err := s.wlt.FinanceReadWalletWithTenant(r.Context(), actorType, actor.ID, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	if !ok {
+		return
+	}
+	trustedContext := wlt.WithTenantContext(r.Context(), actor.TenantID)
+	status, body, err := s.wlt.FinanceReadWalletWithTenant(trustedContext, actorType, actor.ID, r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleOwnRepresentativeLedger(w http.ResponseWriter, r *http.Request, actorType string) {
 	actor, ok := s.requireActor(w, r, actorType)
-	if !ok { return }
+	if !ok {
+		return
+	}
 	query := url.Values{"actorId": {actor.ID}, "actorType": {actorType}}
 	for _, key := range []string{"entryType", "limit", "cursor"} {
-		if value := strings.TrimSpace(r.URL.Query().Get(key)); value != "" { query.Set(key, value) }
+		if value := strings.TrimSpace(r.URL.Query().Get(key)); value != "" {
+			query.Set(key, value)
+		}
 	}
-	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	trustedContext := wlt.WithTenantContext(r.Context(), actor.TenantID)
+	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleOwnRepresentativeCommissions(w http.ResponseWriter, r *http.Request, actorType string) {
 	actor, ok := s.requireActor(w, r, actorType)
-	if !ok { return }
+	if !ok {
+		return
+	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	trustedContext := wlt.WithTenantContext(r.Context(), actor.TenantID)
+	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleOwnRepresentativePayoutRequests(w http.ResponseWriter, r *http.Request, actorType string) {
 	actor, ok := s.requireActor(w, r, actorType)
-	if !ok { return }
+	if !ok {
+		return
+	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	trustedContext := wlt.WithTenantContext(r.Context(), actor.TenantID)
+	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
-func (s *protectedStoreServer) handleClientOwnWallet(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeWallet(w, r, "client") }
-func (s *protectedStoreServer) handleClientOwnLedger(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeLedger(w, r, "client") }
-func (s *protectedStoreServer) handlePartnerOwnWallet(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeWallet(w, r, "partner") }
-func (s *protectedStoreServer) handlePartnerOwnLedger(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeLedger(w, r, "partner") }
-func (s *protectedStoreServer) handlePartnerOwnCommissions(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeCommissions(w, r, "partner") }
-func (s *protectedStoreServer) handlePartnerOwnPayoutRequests(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativePayoutRequests(w, r, "partner") }
-func (s *protectedStoreServer) handleCaptainOwnWallet(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeWallet(w, r, "captain") }
-func (s *protectedStoreServer) handleCaptainOwnLedger(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeLedger(w, r, "captain") }
-func (s *protectedStoreServer) handleFieldOwnWallet(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeWallet(w, r, "field") }
-func (s *protectedStoreServer) handleFieldOwnLedger(w http.ResponseWriter, r *http.Request) { s.handleOwnRepresentativeLedger(w, r, "field") }
+func (s *protectedStoreServer) handleClientOwnWallet(w http.ResponseWriter, r *http.Request) {
+	s.handleOwnRepresentativeWallet(w, r, "client")
+}
+func (s *protectedStoreServer) handleClientOwnLedger(w http.ResponseWriter, r *http.Request) {
+	s.handleOwnRepresentativeLedger(w, r, "client")
+}
+func (s *protectedStoreServer) handlePartnerOwnWallet(w http.ResponseWriter, r *http.Request) {
+	s.handleOwnRepresentativeWallet(w, r, "partner")
+}
+func (s *protectedStoreServer) handlePartnerOwnLedger(w http.ResponseWriter, r *http.Request) {
+	s.handleOwnRepresentativeLedger(w, r, "partner")
+}
+func (s *protectedStoreServer) handlePartnerOwnCommissions(w http.ResponseWriter, r *http.Request) {
+	s.handleOwnRepresentativeCommissions(w, r, "partner")
+}
+func (s *protectedStoreServer) handlePartnerOwnPayoutRequests(w http.ResponseWriter, r *http.Request) {
+	s.handleOwnRepresentativePayoutRequests(w, r, "partner")
+}
+func (s *protectedStoreServer) handleCaptainOwnWallet(w http.ResponseWriter, r *http.Request) {
+	s.handleOwnRepresentativeWallet(w, r, "captain")
+}
+func (s *protectedStoreServer) handleCaptainOwnLedger(w http.ResponseWriter, r *http.Request) {
+	s.handleOwnRepresentativeLedger(w, r, "captain")
+}
+func (s *protectedStoreServer) handleFieldOwnWallet(w http.ResponseWriter, r *http.Request) {
+	s.handleOwnRepresentativeWallet(w, r, "field")
+}
+func (s *protectedStoreServer) handleFieldOwnLedger(w http.ResponseWriter, r *http.Request) {
+	s.handleOwnRepresentativeLedger(w, r, "field")
+}
 
 func resolveControlPanelRepresentativeActor(w http.ResponseWriter, r *http.Request) (string, string, bool) {
 	actorType, ok := normalizeRepresentativeWalletActorType(r.PathValue("actorType"))
@@ -94,23 +129,35 @@ func resolveControlPanelRepresentativeActor(w http.ResponseWriter, r *http.Reque
 
 func (s *protectedStoreServer) handleControlPanelRepresentativeWallet(w http.ResponseWriter, r *http.Request) {
 	operator, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
-	if !ok { return }
+	if !ok {
+		return
+	}
 	actorType, actorID, ok := resolveControlPanelRepresentativeActor(w, r)
-	if !ok { return }
-	status, body, err := s.wlt.FinanceReadWalletWithTenant(r.Context(), actorType, actorID, r.Header.Get("X-Correlation-ID"), operator.TenantID)
+	if !ok {
+		return
+	}
+	trustedContext := wlt.WithTenantContext(r.Context(), operator.TenantID)
+	status, body, err := s.wlt.FinanceReadWalletWithTenant(trustedContext, actorType, actorID, r.Header.Get("X-Correlation-ID"), operator.TenantID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleControlPanelRepresentativeLedger(w http.ResponseWriter, r *http.Request) {
 	operator, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
-	if !ok { return }
+	if !ok {
+		return
+	}
 	actorType, actorID, ok := resolveControlPanelRepresentativeActor(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 	query := url.Values{"actorId": {actorID}, "actorType": {actorType}}
 	for _, key := range []string{"entryType", "limit", "cursor"} {
-		if value := strings.TrimSpace(r.URL.Query().Get(key)); value != "" { query.Set(key, value) }
+		if value := strings.TrimSpace(r.URL.Query().Get(key)); value != "" {
+			query.Set(key, value)
+		}
 	}
-	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), operator.TenantID)
+	trustedContext := wlt.WithTenantContext(r.Context(), operator.TenantID)
+	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), operator.TenantID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
