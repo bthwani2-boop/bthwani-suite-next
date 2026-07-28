@@ -31,13 +31,11 @@ function ConvertTo-NativeArguments {
 
   $arguments = @()
   foreach ($entry in $Parameters.GetEnumerator()) {
-    $arguments += "-$($entry.Key)"
     if ($entry.Value -is [bool]) {
-      if (-not $entry.Value) {
-        $arguments = $arguments[0..($arguments.Count - 2)]
-      }
+      if ($entry.Value) { $arguments += "-$($entry.Key)" }
       continue
     }
+    $arguments += "-$($entry.Key)"
     $arguments += [string]$entry.Value
   }
   return $arguments
