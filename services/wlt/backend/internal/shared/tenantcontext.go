@@ -3,7 +3,6 @@ package shared
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -19,14 +18,12 @@ func TenantIDFromContext(ctx context.Context) (string, bool) {
 	return tenantID, tenantID != ""
 }
 
-// RequireTenantContext returns the authenticated request tenant. Deferred/local
-// runtimes retain an explicit legacy scope, while active SaaS fails closed.
+// RequireTenantContext returns the trusted request tenant and fails closed when
+// no authenticated tenant was propagated. Financial code must never invent a
+// process-wide, local, or legacy tenant ownership fallback.
 func RequireTenantContext(ctx context.Context) (string, error) {
 	if tenantID, ok := TenantIDFromContext(ctx); ok {
 		return tenantID, nil
 	}
-	if strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active") {
-		return "", fmt.Errorf("trusted tenant context is required")
-	}
-	return "legacy-unscoped", nil
+	return "", fmt.Errorf("trusted tenant context is required")
 }
