@@ -178,5 +178,3 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.45 },
   laterButton: { minHeight: 40, alignItems: "center", justifyContent: "center" },
 });
-
-export default ClientOrderRatingGate;
