@@ -20,6 +20,7 @@ import {
 import type { DshMediaAsset } from "../../shared/media/dsh-media-api.client";
 import {
   listPartnerProductMedia,
+  readCatalogNativeUriAsBlob,
   unlinkPartnerProductMedia,
   uploadPartnerProductMedia,
 } from "../../shared/catalog";
@@ -131,11 +132,7 @@ async function pickNativeImage(): Promise<PickedImage | null> {
   const selected = result.canceled ? undefined : result.assets[0];
   if (!selected) return null;
 
-  const sourceResponse = await globalThis.fetch(selected.uri);
-  if (!sourceResponse.ok) {
-    throw new Error(`PARTNER_PRODUCT_MEDIA_SOURCE_READ_FAILED_${sourceResponse.status}`);
-  }
-  const body = await sourceResponse.blob();
+  const body = await readCatalogNativeUriAsBlob(selected.uri);
   return {
     body,
     fileName: selected.fileName || `partner-product-image-${Date.now()}.jpg`,
