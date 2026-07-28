@@ -110,7 +110,8 @@ func main() {
 		deliveryExceptionGovernedRouter,
 	)
 	availabilityGuardedRouter := dshHttp.OperationsAvailabilityMiddleware(db, governedIncidentRouter)
-	handler := dshHttp.CorsMiddleware(authMode, availabilityGuardedRouter)
+	tenantGuardedRouter := dshHttp.TrustedTenantContextMiddleware(identityClient, availabilityGuardedRouter)
+	handler := dshHttp.CorsMiddleware(authMode, tenantGuardedRouter)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
 	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)
@@ -199,7 +200,7 @@ func newMediaProvider(ctx context.Context) *media.Provider {
 		PublicEndpoint: publicEndpoint,
 		AccessKey:      accessKey,
 		SecretKey:      secretKey,
-		Bucket:          bucket,
+		Bucket:         bucket,
 		UseSSL:         useSSL,
 		PublicUseSSL:    publicUseSSL,
 	}, 15*time.Second)
