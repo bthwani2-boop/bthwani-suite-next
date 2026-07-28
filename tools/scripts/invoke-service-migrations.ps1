@@ -3,9 +3,11 @@
   Applies one service's PostgreSQL migrations through an immutable checksum ledger.
 
 .DESCRIPTION
-  Discovers migrations deterministically, rejects duplicate identifiers and
-  transaction-incompatible SQL, serializes concurrent runners through the ledger
-  table, applies each migration atomically, and verifies the recorded checksum.
+  Uses the complete case-insensitive filename as the canonical migration identity,
+  orders files deterministically, rejects unsafe SQL, serializes concurrent runners
+  through the ledger table, applies each migration atomically, and verifies the
+  recorded SHA-256 checksum. Numeric filename prefixes remain legacy ordering hints;
+  they are not a second migration authority.
 #>
 
 [CmdletBinding()]
@@ -107,25 +109,12 @@ function Get-OrderedMigrationFiles {
     Group-Object { $_.Name.ToLowerInvariant() } |
     Where-Object Count -gt 1
   if ($duplicateNames) {
-    throw "Duplicate migration filenames detected for '$ServiceKey': $($duplicateNames.Name -join ', ')"
+    throw "Duplicate canonical migration filenames detected for '$ServiceKey': $($duplicateNames.Name -join ', ')"
   }
 
-  $identifierOwners = @{}
   foreach ($file in $files) {
     if ($file.Length -eq 0) {
       throw "Migration is empty: $($file.Name)"
-    }
-
-    $identifierMatch = [regex]::Match(
-      $file.BaseName,
-      "(?i)(?:^|[-_])(?<id>[0-9]{3,}[a-z]?)(?:[-_]|$)"
-    )
-    if ($identifierMatch.Success) {
-      $identifier = $identifierMatch.Groups["id"].Value.ToLowerInvariant()
-      if (-not $identifierOwners.ContainsKey($identifier)) {
-        $identifierOwners[$identifier] = [System.Collections.Generic.List[string]]::new()
-      }
-      $identifierOwners[$identifier].Add($file.Name)
     }
 
     $content = Get-Content -Raw -LiteralPath $file.FullName
@@ -144,16 +133,6 @@ function Get-OrderedMigrationFiles {
     }
 
     ConvertFrom-LegacyTransactionBoundaries -Content $content -MigrationName $file.Name | Out-Null
-  }
-
-  $collisions = @($identifierOwners.GetEnumerator() |
-    Where-Object { $_.Value.Count -gt 1 } |
-    Sort-Object Name)
-  if ($collisions.Count -gt 0) {
-    $details = $collisions | ForEach-Object {
-      "identifier '$($_.Key)': $($_.Value -join ', ')"
-    }
-    throw "Duplicate migration identifiers detected for '$ServiceKey':`n- $($details -join "`n- ")"
   }
 
   return $files
