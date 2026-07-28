@@ -235,9 +235,9 @@
     ]
   },
   "owners": {
-    "productManager": "repository-owner",
-    "productOwner": "repository-owner",
-    "uxJourneyOwner": "repository-owner",
+    "productManager": "PRODUCT_MANAGER_AUTHORITY",
+    "productOwner": "PRODUCT_OWNER_ACCEPTANCE_AUTHORITY",
+    "uxJourneyOwner": "UX_JOURNEY_AUTHORITY",
     "engineeringOwner": "platform-control",
     "productManagerApproval": "PENDING",
     "productOwnerApproval": "PENDING",
