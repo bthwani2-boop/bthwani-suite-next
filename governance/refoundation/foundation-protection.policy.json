@@ -1,27 +1,62 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "branch": "new",
   "sourceBranch": "abdo",
-  "intent": "Preserve and improve the proven engineering foundation while product logic is replaced incrementally.",
+  "sourceCommit": "98ab47dd59e5fc6f615cbe96094ec61fa0c8ffa3",
+  "phase": "FOUNDATION_ONLY",
+  "journeysAllowed": false,
+  "intent": "Preserve and improve the proven engineering foundation before any product journey implementation begins.",
   "lockedToolchain": {
     "nodeEngine": ">=24.17.0 <25",
+    "nodeRuntime": "24.17.0",
     "pnpm": "10.34.0",
     "packageManager": "pnpm@10.34.0"
   },
-  "requiredMobileApps": [
-    "app-client",
-    "app-partner",
-    "app-captain",
-    "app-field"
-  ],
+  "mobileManifest": {
+    "owner": "bthwani1",
+    "appLine": "next",
+    "sourceRepo": "bthwani-suite-next",
+    "apps": {
+      "app-client": {
+        "slug": "app-client-next",
+        "scheme": "bthwani-client-next",
+        "androidPackage": "com.bthwani.client.next",
+        "iosBundleIdentifier": "com.bthwani.client.next",
+        "projectId": "abec897b-1f5f-409d-8286-607a5a6b69e2"
+      },
+      "app-partner": {
+        "slug": "app-partner-next",
+        "scheme": "bthwani-partner-next",
+        "androidPackage": "com.bthwani.partner.next",
+        "iosBundleIdentifier": "com.bthwani.partner.next",
+        "projectId": "4cde7be0-7582-4a6b-9ae0-d74f2d149580"
+      },
+      "app-captain": {
+        "slug": "app-captain-next",
+        "scheme": "bthwani-captain-next",
+        "androidPackage": "com.bthwani.captain.next",
+        "iosBundleIdentifier": "com.bthwani.captain.next",
+        "projectId": "07382a76-4dc5-460f-b4a7-7105d724bae6"
+      },
+      "app-field": {
+        "slug": "app-field-next",
+        "scheme": "bthwani-field-next",
+        "androidPackage": "com.bthwani.field.next",
+        "iosBundleIdentifier": "com.bthwani.field.next",
+        "projectId": "08b6c8dc-80a2-4271-9904-d941a3d98914"
+      }
+    }
+  },
   "requiredFiles": [
     "package.json",
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml",
     "nx.json",
+    "tsconfig.base.json",
     "infra/docker/compose.runtime.yml",
     "infra/docker/scripts/runtime.ps1",
     "apps/mobile/eas/common.ps1",
+    "apps/mobile/eas/firebase.ps1",
     "tools/mobile/mobile-apps.manifest.json",
     "tools/mobile/defineBthwaniExpoApp.js",
     "tools/scripts/check-refoundation-foundation.mjs",
@@ -35,6 +70,72 @@
     "apps/app-field/runtime/app.config.ts",
     "apps/app-field/runtime/eas.json"
   ],
+  "requiredWorkspaceEntries": [
+    "apps/*/runtime",
+    "shared/app-shell",
+    "shared/data-runtime",
+    "shared/media-runtime",
+    "shared/ui-kit",
+    "services/*",
+    "core/identity",
+    "core/platform-control",
+    "core/providers",
+    "core/workforce",
+    "contracts"
+  ],
+  "requiredPackageScripts": {
+    "foundation:gate": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1",
+    "runtime:full:up": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action up -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media",
+    "runtime:full:smoke": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles identity,workforce,dsh,wlt,financial-simulators,mail,media",
+    "client": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-client/runtime/start.ps1",
+    "partner": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-partner/runtime/start.ps1",
+    "captain": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-captain/runtime/start.ps1",
+    "field": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-field/runtime/start.ps1",
+    "control": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/control-panel/runtime/start.ps1",
+    "mobile:apps:check": "node tools/scripts/sync-mobile-apps.mjs --check",
+    "mobile:expo:verify": "node tools/scripts/guard-mobile-apps.mjs",
+    "mobile:eas": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/mobile-eas.ps1",
+    "openapi:generate": "pnpm run openapi:generate:dsh && pnpm run openapi:generate:dsh-catalog && pnpm run openapi:generate:wlt && pnpm run openapi:generate:identity && pnpm run openapi:generate:workforce && pnpm run openapi:generate:platform-control && pnpm run openapi:generate:providers",
+    "guard:runtime-config": "node tools/guards/runtime-config-gate.mjs",
+    "guard:secrets": "gitleaks detect --log-opts=\"HEAD\" --source . --no-banner --redact --verbose"
+  },
+  "requiredDockerMarkers": [
+    "postgres:",
+    "minio:",
+    "identity-api:",
+    "workforce-api:",
+    "providers-api:",
+    "platform-control-api:",
+    "wlt-api:",
+    "dsh-api:",
+    "127.0.0.1:",
+    "healthcheck:"
+  ],
+  "foundationChangeScope": {
+    "allowedPrefixes": [
+      ".agents/",
+      ".github/",
+      "governance/",
+      "infra/",
+      "tools/"
+    ],
+    "allowedExactFiles": [
+      "AGENTS.md",
+      "GEMINI.md",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "nx.json",
+      "tsconfig.base.json",
+      "knip.json",
+      "knip.strict.json"
+    ],
+    "allowedPatterns": [
+      "^apps/mobile/eas/",
+      "^apps/[^/]+/runtime/(app\\.config\\.ts|eas\\.json|start\\.ps1|package\\.json|tsconfig\\.json)$",
+      "^(core|services)/[^/]+/backend/Dockerfile$"
+    ]
+  },
   "protectedCapabilities": [
     "Expo application configuration",
     "EAS remote build project identity and profiles",
@@ -49,6 +150,7 @@
     "CI and executable quality gates"
   ],
   "changeRules": [
+    "No product journey implementation is permitted while phase is FOUNDATION_ONLY.",
     "A protected capability may be improved but must not be removed without a tested replacement.",
     "Deletion requires the replacement to be connected to the live runtime in the same change.",
     "Toolchain version changes require all mobile configuration checks and runtime smoke checks to pass.",
