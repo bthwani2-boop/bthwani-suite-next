@@ -43,10 +43,11 @@ function canOrderProduct(product: CatalogProduct): boolean {
   return product.isActive && product.stockStatus !== "out_of_stock";
 }
 
-function toProductCardPrice(priceReference: string) {
+function toProductCardPrice(priceReference: string, currency: string) {
   const numeric = Number(priceReference);
-  if (Number.isFinite(numeric) && numeric >= 0) {
-    return { value: numeric, currency: "د.ي" } as const;
+  const normalizedCurrency = currency.trim();
+  if (Number.isFinite(numeric) && numeric >= 0 && normalizedCurrency) {
+    return { value: numeric, currency: normalizedCurrency } as const;
   }
   return {
     label: priceReference.trim() || "يُثبت السعر عند الإضافة",
@@ -242,7 +243,7 @@ export function StoreDetailShell({
               categories.find((category) => category.id === item.categoryId)?.name ??
               "عام"
             }
-            price={toProductCardPrice(item.priceReference)}
+            price={toProductCardPrice(item.priceReference, item.currency)}
             {...(orderable
               ? {
                   onAdd: () => handleOpenProduct(item),
