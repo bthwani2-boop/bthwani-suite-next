@@ -116,6 +116,28 @@ func TestEmployeeRolesReserveOperatorForPlatformOwner(t *testing.T) {
 	}
 }
 
+func TestEmployeeOperatorRepairMigrationIsFailClosed(t *testing.T) {
+	migration, err := os.ReadFile("../../../database/migrations/identity-010_employee_operator_role_repair.sql")
+	if err != nil {
+		t.Fatalf("read employee operator repair migration: %v", err)
+	}
+	text := string(migration)
+	for _, required := range []string{
+		"array_remove(roles, 'operator')",
+		"'employee' = ANY(roles)",
+		"permission->>'action' = 'leadership:create'",
+		"permission->>'scope' = 'all'",
+		"RAISE EXCEPTION 'non-owner employee still has operator role'",
+	} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("employee operator repair migration is missing %s", required)
+		}
+	}
+	if strings.Contains(text, "username =") {
+		t.Fatal("employee operator repair must not trust a username as owner authority")
+	}
+}
+
 func TestEmployeeAccessRejectsProviderAndConsumerRoles(t *testing.T) {
 	tests := []struct {
 		name  string
