@@ -136,15 +136,41 @@ jobs:
         if: ${{ steps.contract_diagnostics.outcome == 'failure' }}
         run: exit 1
       - name: Run deep repository diagnostics
+        id: deep_repository_diagnostics
         if: ${{ inputs.full_verification == 'true' || inputs.verification_tier == 'deep' }}
+        continue-on-error: true
+        shell: bash
         run: |
-          pnpm exec knip --config knip.json --reporter compact --reporter github-actions
-          pnpm run guard:logic-coverage
-          pnpm run guard:repo-naming
-          pnpm run guard:repo-structure
-          pnpm run guard:logic-all
-          pnpm run guard:repo-all
-          pnpm run guard:performance-all
+          set +e
+          log="${RUNNER_TEMP}/deep-repository-diagnostics.log"
+          : >"${log}"
+          status=0
+          run_check() {
+            echo "===== $* =====" | tee -a "${log}"
+            "$@" 2>&1 | tee -a "${log}"
+            code=${PIPESTATUS[0]}
+            if [[ "${code}" -ne 0 && "${status}" -eq 0 ]]; then status="${code}"; fi
+          }
+          run_check pnpm exec knip --config knip.json --reporter compact --reporter github-actions
+          run_check pnpm run guard:logic-coverage
+          run_check pnpm run guard:repo-naming
+          run_check pnpm run guard:repo-structure
+          run_check pnpm run guard:logic-all
+          run_check pnpm run guard:repo-all
+          run_check pnpm run guard:performance-all
+          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
+          exit "${status}"
+      - name: Upload deep repository diagnostics
+        if: ${{ steps.deep_repository_diagnostics.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deep-repository-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/deep-repository-diagnostics.log
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enforce deep repository diagnostics result
+        if: ${{ steps.deep_repository_diagnostics.outcome == 'failure' }}
+        run: exit 1
       - name: Record strict dead-code backlog without allowing new closure claims
         if: ${{ inputs.full_verification == 'true' || inputs.verification_tier == 'deep' }}
         continue-on-error: true
