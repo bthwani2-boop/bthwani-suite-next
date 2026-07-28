@@ -1,9 +1,11 @@
 -- WLT-105: converge active financial writes on trusted per-request tenant truth.
 --
 -- Historical rows that cannot be attributed without external reconciliation stay
--- explicitly classified as legacy-unscoped. New active-SaaS code never reads or
--- writes that scope. Wallet accounts are attributed when one unambiguous WLT
--- wallet owner exists; transaction/line attribution follows those wallet legs.
+-- explicitly classified as legacy-unscoped. Active-SaaS code must never select
+-- that scope. Wallet accounts are attributed only when one unambiguous WLT
+-- wallet owner exists; transaction and line attribution follows those wallet legs.
+
+BEGIN;
 
 ALTER TABLE wlt_ledger_accounts ADD COLUMN IF NOT EXISTS tenant_id text;
 ALTER TABLE wlt_ledger_transactions ADD COLUMN IF NOT EXISTS tenant_id text;
@@ -12,7 +14,7 @@ ALTER TABLE wlt_ledger_lines ADD COLUMN IF NOT EXISTS tenant_id text;
 WITH unambiguous_wallet_owner AS (
   SELECT actor_type, actor_id, currency, min(tenant_id) AS tenant_id
   FROM wlt_wallets
-  WHERE btrim(tenant_id) <> ''
+  WHERE btrim(tenant_id) <> '' AND tenant_id <> 'legacy-unscoped'
   GROUP BY actor_type, actor_id, currency
   HAVING count(DISTINCT tenant_id) = 1
 )
@@ -27,7 +29,9 @@ WHERE account.account_type = 'wallet'
 
 WITH inferred_transaction_tenant AS (
   SELECT line.ledger_transaction_id,
-         min(account.tenant_id) FILTER (WHERE account.tenant_id IS NOT NULL AND account.tenant_id <> 'legacy-unscoped') AS tenant_id
+         min(account.tenant_id) FILTER (
+           WHERE account.tenant_id IS NOT NULL AND account.tenant_id <> 'legacy-unscoped'
+         ) AS tenant_id
   FROM wlt_ledger_lines line
   JOIN wlt_ledger_accounts account ON account.id = line.account_id
   GROUP BY line.ledger_transaction_id
@@ -113,13 +117,17 @@ CREATE INDEX wlt_field_commission_category_policy_tenant_history_idx
   ON wlt_field_commission_category_policy_versions (tenant_id, partner_category, version DESC);
 
 WITH known_tenants AS (
-  SELECT tenant_id FROM wlt_wallets WHERE tenant_id <> 'legacy-unscoped' AND btrim(tenant_id) <> ''
+  SELECT tenant_id FROM wlt_wallets
+  WHERE tenant_id <> 'legacy-unscoped' AND btrim(tenant_id) <> ''
   UNION
-  SELECT tenant_id FROM wlt_payment_sessions WHERE tenant_id <> 'legacy-unscoped' AND btrim(tenant_id) <> ''
+  SELECT tenant_id FROM wlt_payment_sessions
+  WHERE tenant_id <> 'legacy-unscoped' AND btrim(tenant_id) <> ''
   UNION
-  SELECT tenant_id FROM wlt_commissions WHERE tenant_id <> 'legacy-unscoped' AND btrim(tenant_id) <> ''
+  SELECT tenant_id FROM wlt_commissions
+  WHERE tenant_id <> 'legacy-unscoped' AND btrim(tenant_id) <> ''
 ), legacy_policies AS (
-  SELECT * FROM wlt_field_commission_category_policy_versions WHERE tenant_id = 'legacy-unscoped'
+  SELECT * FROM wlt_field_commission_category_policy_versions
+  WHERE tenant_id = 'legacy-unscoped'
 )
 INSERT INTO wlt_field_commission_category_policy_versions (
   tenant_id, policy_id, partner_category, version, fixed_amount_minor_units,
@@ -142,7 +150,10 @@ WHERE commission.id = evidence.commission_id
 UPDATE wlt_jrn036_commission_evidence
 SET tenant_id = 'legacy-unscoped'
 WHERE tenant_id IS NULL OR btrim(tenant_id) = '';
-ALTER TABLE wlt_jrn036_commission_evidence ALTER COLUMN tenant_id SET NOT NULL;
+ALTER TABLE wlt_jrn036_commission_evidence
+  ALTER COLUMN tenant_id SET DEFAULT 'legacy-unscoped';
+ALTER TABLE wlt_jrn036_commission_evidence
+  ALTER COLUMN tenant_id SET NOT NULL;
 ALTER TABLE wlt_jrn036_commission_evidence
   DROP CONSTRAINT IF EXISTS wlt_jrn036_commission_evidence_idempotency_key_key;
 DROP INDEX IF EXISTS wlt_jrn036_commission_request_hash_uidx;
@@ -157,11 +168,38 @@ ALTER TABLE wlt_jrn036_audit_events ADD COLUMN IF NOT EXISTS tenant_id text;
 UPDATE wlt_jrn036_audit_events
 SET tenant_id = 'legacy-unscoped'
 WHERE tenant_id IS NULL OR btrim(tenant_id) = '';
-ALTER TABLE wlt_jrn036_audit_events ALTER COLUMN tenant_id SET NOT NULL;
+ALTER TABLE wlt_jrn036_audit_events
+  ALTER COLUMN tenant_id SET DEFAULT 'legacy-unscoped';
+ALTER TABLE wlt_jrn036_audit_events
+  ALTER COLUMN tenant_id SET NOT NULL;
 CREATE INDEX wlt_jrn036_audit_tenant_aggregate_idx
   ON wlt_jrn036_audit_events (tenant_id, aggregate_type, aggregate_id, created_at DESC);
+
+ALTER TABLE wlt_jrn036_mutation_receipts ADD COLUMN IF NOT EXISTS tenant_id text;
+UPDATE wlt_jrn036_mutation_receipts
+SET tenant_id = 'legacy-unscoped'
+WHERE tenant_id IS NULL OR btrim(tenant_id) = '';
+ALTER TABLE wlt_jrn036_mutation_receipts
+  ALTER COLUMN tenant_id SET DEFAULT 'legacy-unscoped';
+ALTER TABLE wlt_jrn036_mutation_receipts
+  ALTER COLUMN tenant_id SET NOT NULL;
+ALTER TABLE wlt_jrn036_mutation_receipts
+  DROP CONSTRAINT IF EXISTS wlt_jrn036_mutation_receipts_pkey;
+ALTER TABLE wlt_jrn036_mutation_receipts
+  ADD CONSTRAINT wlt_jrn036_mutation_receipts_pkey
+  PRIMARY KEY (tenant_id, idempotency_key);
+DROP INDEX IF EXISTS wlt_jrn036_mutation_receipts_aggregate_idx;
+DROP INDEX IF EXISTS wlt_jrn036_mutation_receipts_request_hash_idx;
+CREATE INDEX wlt_jrn036_mutation_receipts_tenant_aggregate_idx
+  ON wlt_jrn036_mutation_receipts (tenant_id, mutation_type, aggregate_id, created_at DESC);
+CREATE INDEX wlt_jrn036_mutation_receipts_tenant_request_hash_idx
+  ON wlt_jrn036_mutation_receipts (tenant_id, request_hash);
 
 COMMENT ON COLUMN wlt_ledger_accounts.tenant_id IS
   'Trusted tenant ownership. legacy-unscoped requires explicit financial reconciliation before production activation.';
 COMMENT ON COLUMN wlt_field_commission_category_policy_versions.tenant_id IS
   'Tenant owning this WLT commission policy; active policy uniqueness is tenant-local.';
+COMMENT ON COLUMN wlt_jrn036_audit_events.tenant_id IS
+  'Tenant owning the audited financial aggregate. legacy-unscoped is compatibility-only and cannot prove SaaS isolation.';
+
+COMMIT;
