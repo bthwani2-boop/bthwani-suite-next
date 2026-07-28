@@ -19,7 +19,17 @@
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
   },
   "peerDependencies": {
+    "expo-document-picker": "~56.0.4",
+    "expo-video": "~56.1.4",
     "react": "19.2.3"
+  },
+  "peerDependenciesMeta": {
+    "expo-document-picker": {
+      "optional": true
+    },
+    "expo-video": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@bthwani/control-panel": "workspace:*",
