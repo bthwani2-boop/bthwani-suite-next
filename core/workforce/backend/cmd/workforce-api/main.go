@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -51,7 +52,10 @@ func main() {
 	if wltServiceToken == "" {
 		log.Fatal("[workforce-api] WORKFORCE_WLT_SERVICE_TOKEN is required")
 	}
-	tenantID := envOr("BTHWANI_DEFAULT_TENANT_ID", "local-dsh")
+	tenantID := strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID"))
+	if tenantID == "" {
+		log.Fatal("[workforce-api] BTHWANI_DEFAULT_TENANT_ID is required; silent tenant fallback is forbidden")
+	}
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
@@ -64,7 +68,7 @@ func main() {
 	}
 
 	repo := workforce.NewRepository(db)
-	identity := identityclient.NewClient(identityBaseURL, serviceToken)
+	identity := identityclient.NewClient(identityBaseURL, serviceToken, tenantID)
 	dsh := dshclient.NewClient(dshBaseURL, dshServiceToken, tenantID)
 	wlt := wltclient.NewClient(wltBaseURL, wltServiceToken, tenantID)
 	service := workforce.NewService(repo, identity, dsh)
