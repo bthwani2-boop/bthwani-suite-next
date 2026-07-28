@@ -241,6 +241,7 @@ func marshalOrder(o *orders.Order) map[string]any {
 			"productName": it.ProductName,
 			"quantity":    it.Quantity,
 			"unitPrice":   it.UnitPrice,
+			"currency":    it.Currency,
 		}
 	}
 	return map[string]any{
@@ -252,6 +253,7 @@ func marshalOrder(o *orders.Order) map[string]any {
 		"status":           string(o.Status),
 		"rejectionReason":  o.RejectionReason,
 		"wltPaymentRefId":  o.WltPaymentRefID,
+		"currency":         o.Currency,
 		"totalPrice":       totalPrice,
 		"items":            items,
 		"createdAt":        o.CreatedAt,
