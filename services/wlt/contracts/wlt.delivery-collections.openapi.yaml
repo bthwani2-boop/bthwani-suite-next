@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
   title: BThwani WLT Delivery Collection Custody API
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     Fulfillment-neutral collection custody routes. WLT owns amount, currency,
     custody state, ledger linkage and reconciliation. DSH supplies only trusted
-    delivery and collector identities through the service boundary.
+    delivery and collector identities through the authenticated tenant boundary.
 x-bthwani-owner: services/wlt
 x-bthwani-journey: JRN-038
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -20,13 +20,39 @@ security:
   - serviceBearer: []
 paths:
   /wlt/delivery-collections:
+    post:
+      operationId: createWltDeliveryCollectionHandoff
+      summary: Derive tenant-local collection custody from WLT payment-session truth.
+      tags: [WltDeliveryCollections]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateDeliveryCollectionRequest' }
+      responses:
+        '200': { description: Delivery was prepaid and no COD custody record is applicable, or an existing record was replayed }
+        '201': { description: Tenant-local COD custody record created from WLT payment truth }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/FeatureNotEnabled' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
     get:
       operationId: listWltDeliveryCollections
-      summary: List delivery collection custody records through the internal financial boundary.
+      summary: List tenant-local delivery collection custody records.
       tags: [WltDeliveryCollections]
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
         - name: captainId
           in: query
           schema: { type: string }
@@ -47,11 +73,12 @@ paths:
   /wlt/delivery-collections/{codRecordId}:
     get:
       operationId: getWltDeliveryCollection
-      summary: Read one delivery collection custody record.
+      summary: Read one tenant-local delivery collection custody record.
       tags: [WltDeliveryCollections]
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CodRecordId'
       responses:
         '200': { description: Delivery collection custody record }
@@ -69,6 +96,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CodRecordId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
@@ -76,8 +104,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/CollectDeliveryCollectionRequest'
+            schema: { $ref: '#/components/schemas/CollectDeliveryCollectionRequest' }
       responses:
         '200': { description: Collection committed atomically or replayed exactly }
         '400': { $ref: '#/components/responses/InvalidRequest' }
@@ -95,6 +122,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
+        - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CodRecordId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
@@ -102,8 +130,7 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/RemitDeliveryCollectionRequest'
+            schema: { $ref: '#/components/schemas/RemitDeliveryCollectionRequest' }
       responses:
         '200': { description: Remittance committed atomically or replayed exactly }
         '400': { $ref: '#/components/responses/InvalidRequest' }
@@ -127,6 +154,11 @@ components:
       in: header
       required: true
       schema: { type: string, const: dsh }
+    TenantId:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 120 }
     CodRecordId:
       name: codRecordId
       in: path
@@ -136,7 +168,7 @@ components:
       name: Idempotency-Key
       in: header
       required: true
-      schema: { type: string, minLength: 3, maxLength: 200 }
+      schema: { type: string, minLength: 8, maxLength: 200 }
     CorrelationId:
       name: X-Correlation-ID
       in: header
@@ -146,6 +178,17 @@ components:
     CollectionActorType:
       type: string
       enum: [captain, store_courier, partner_store, partner, operator]
+    CreateDeliveryCollectionRequest:
+      type: object
+      additionalProperties: false
+      required: [orderId, collectorType, collectorId, partnerId, checkoutIntentId]
+      properties:
+        orderId: { type: string, minLength: 1 }
+        collectorType: { type: string, enum: [captain, store_courier, partner_store] }
+        collectorId: { type: string, minLength: 1 }
+        captainId: { type: string }
+        partnerId: { type: string, minLength: 1 }
+        checkoutIntentId: { type: string, minLength: 1 }
     CollectDeliveryCollectionRequest:
       type: object
       additionalProperties: false
@@ -170,5 +213,5 @@ components:
     Unauthorized: { description: Missing or invalid service authentication }
     Forbidden: { description: Caller is not permitted to read financial custody truth }
     FeatureNotEnabled: { description: FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true }
-    NotFound: { description: Delivery collection record not found }
+    NotFound: { description: Delivery collection or tenant-local payment session not found }
     Conflict: { description: Invalid custody transition, replay conflict, or actor mismatch }
