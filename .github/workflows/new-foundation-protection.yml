@@ -1,0 +1,33 @@
+name: New Branch Foundation Protection
+
+on:
+  push:
+    branches:
+      - new
+  pull_request:
+    branches:
+      - new
+
+permissions:
+  contents: read
+
+concurrency:
+  group: new-foundation-protection-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  foundation-protection:
+    name: Verify preserved engineering foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.17.0
+
+      - name: Verify foundation policy
+        run: node tools/guards/foundation-protection-gate.mjs
