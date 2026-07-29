@@ -103,11 +103,20 @@ function Invoke-RuntimeBasePhase {
 
   $global:LASTEXITCODE = 0
   if ($Append) {
-    & $phaseRuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath -Append
+    & $phaseRuntimeScript @runtimeParameters 2>&1 |
+      Tee-Object -FilePath $LogPath -Append |
+      Out-Host
   } else {
-    & $phaseRuntimeScript @runtimeParameters 2>&1 | Tee-Object -FilePath $LogPath
+    & $phaseRuntimeScript @runtimeParameters 2>&1 |
+      Tee-Object -FilePath $LogPath |
+      Out-Host
   }
-  return $LASTEXITCODE
+
+  # A PowerShell function emits every uncaptured pipeline object. Without
+  # Out-Host above, callers receive the complete runtime log plus the integer
+  # exit code, and the non-empty log is incorrectly treated as a failed code.
+  $exitCode = $LASTEXITCODE
+  return [int]$exitCode
 }
 
 function Test-TransientPostgresBootstrapRestart {
