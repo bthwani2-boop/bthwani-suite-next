@@ -77,6 +77,7 @@ for (const file of listFiles()) {
 }
 
 // 3. governed settlement creation must stay fully source-derived and WLT-owned.
+const canonicalSettlementOperationId = "createWltEvidenceBackedSettlement";
 const operationStateFile = "services/wlt/contracts/operation-state.json";
 let operationState;
 try {
@@ -90,7 +91,7 @@ try {
 }
 
 const settlementOperation = operationState?.operations?.find(
-  (operation) => operation.operationId === "createWltSettlement",
+  (operation) => operation.operationId === canonicalSettlementOperationId,
 );
 if (!settlementOperation) {
   violations.push({ file: operationStateFile, line: 0, message: "CREATE_SETTLEMENT_OPERATION_STATE_MISSING" });
@@ -107,6 +108,9 @@ if (!settlementOperation) {
   if (!Array.isArray(settlementOperation.activationEvidence) || settlementOperation.activationEvidence.length < 8) {
     violations.push({ file: operationStateFile, line: 0, message: "CREATE_SETTLEMENT_ACTIVATION_EVIDENCE_INCOMPLETE" });
   }
+}
+if (operationState?.operations?.some((operation) => operation.operationId === "createWltSettlement")) {
+  violations.push({ file: operationStateFile, line: 0, message: "RETIRED_SETTLEMENT_OPERATION_ID_REINTRODUCED" });
 }
 
 const settlementSourceFile = "services/wlt/backend/internal/settlement/governed_source.go";
@@ -191,35 +195,92 @@ for (const marker of [
   }
 }
 
-const openApiFile = "services/wlt/contracts/wlt.openapi.yaml";
-const openApi = read(openApiFile);
-const settlementPathStart = openApi.indexOf("  /wlt/settlements:");
-const settlementPathEnd = openApi.indexOf("\n  /wlt/settlements/summary:", settlementPathStart);
+const wltCoreContractFile = "services/wlt/contracts/wlt.openapi.yaml";
+const wltCoreContract = read(wltCoreContractFile);
+const canonicalSettlementContractFile = "services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml";
+const canonicalSettlementContract = read(canonicalSettlementContractFile);
+if (!wltCoreContract.includes("settlementsCommissions: ./jrn-036-settlements-commissions.openapi.yaml")) {
+  violations.push({
+    file: wltCoreContractFile,
+    line: 0,
+    message: "CANONICAL_SETTLEMENT_CONTRACT_NOT_INDEXED",
+  });
+}
+
+const settlementPathStart = canonicalSettlementContract.indexOf("  /wlt/settlements:");
+const settlementPathEnd = canonicalSettlementContract.indexOf("\n  /wlt/settlements/{settlementId}/evidence:", settlementPathStart);
 const settlementContract = settlementPathStart >= 0
-  ? openApi.slice(settlementPathStart, settlementPathEnd > settlementPathStart ? settlementPathEnd : undefined)
+  ? canonicalSettlementContract.slice(
+      settlementPathStart,
+      settlementPathEnd > settlementPathStart ? settlementPathEnd : undefined,
+    )
   : "";
 for (const marker of [
-  "operationId: createWltSettlement",
+  `operationId: ${canonicalSettlementOperationId}`,
   "x-bthwani-mutation-approved: true",
   "x-bthwani-default-enabled: false",
+  "$ref: '#/components/schemas/CreateSettlementRequest'",
 ]) {
   if (!settlementContract.includes(marker)) {
-    violations.push({ file: openApiFile, line: 0, message: `SETTLEMENT_OPENAPI_ACTIVE_MARKER_MISSING ${marker}` });
+    violations.push({
+      file: canonicalSettlementContractFile,
+      line: 0,
+      message: `SETTLEMENT_OPENAPI_ACTIVE_MARKER_MISSING ${marker}`,
+    });
   }
 }
-const settlementSchemaStart = openApi.indexOf("    WltCreateSettlementRequest:");
-const settlementSchemaEnd = openApi.indexOf("\n    WltSettlementResponse:", settlementSchemaStart);
-const settlementSchema = settlementSchemaStart >= 0
-  ? openApi.slice(settlementSchemaStart, settlementSchemaEnd > settlementSchemaStart ? settlementSchemaEnd : undefined)
+
+const sourceSchemaStart = canonicalSettlementContract.indexOf("    VerifiedDeliveredOrderSource:");
+const sourceSchemaEnd = canonicalSettlementContract.indexOf("\n    CreateSettlementRequest:", sourceSchemaStart);
+const sourceSchema = sourceSchemaStart >= 0
+  ? canonicalSettlementContract.slice(
+      sourceSchemaStart,
+      sourceSchemaEnd > sourceSchemaStart ? sourceSchemaEnd : undefined,
+    )
   : "";
-for (const marker of ["orderSources", "orderId", "grossAmountMinorUnits", "deliveredAt", "operatorId"]) {
+for (const marker of [
+  "orderId",
+  "grossAmountMinorUnits",
+  "currency",
+  "deliveredAt",
+  "pricingSnapshotHash",
+  "completionEventId",
+  "completionEvidenceHash",
+  "cancellationStatus",
+]) {
+  if (!sourceSchema.includes(marker)) {
+    violations.push({
+      file: canonicalSettlementContractFile,
+      line: 0,
+      message: `SETTLEMENT_SOURCE_SCHEMA_MISSING ${marker}`,
+    });
+  }
+}
+
+const settlementSchemaStart = canonicalSettlementContract.indexOf("    CreateSettlementRequest:");
+const settlementSchemaEnd = canonicalSettlementContract.indexOf("\n    SettlementPolicyInput:", settlementSchemaStart);
+const settlementSchema = settlementSchemaStart >= 0
+  ? canonicalSettlementContract.slice(
+      settlementSchemaStart,
+      settlementSchemaEnd > settlementSchemaStart ? settlementSchemaEnd : undefined,
+    )
+  : "";
+for (const marker of ["partnerId", "periodStart", "periodEnd", "orderSources", "operatorId"]) {
   if (!settlementSchema.includes(marker)) {
-    violations.push({ file: openApiFile, line: 0, message: `SETTLEMENT_SOURCE_SCHEMA_MISSING ${marker}` });
+    violations.push({
+      file: canonicalSettlementContractFile,
+      line: 0,
+      message: `SETTLEMENT_REQUEST_SCHEMA_MISSING ${marker}`,
+    });
   }
 }
 for (const forbidden of ["grossAmount:", "platformFee:", "netAmount:", "orderCount:"]) {
   if (settlementSchema.includes(forbidden)) {
-    violations.push({ file: openApiFile, line: 0, message: `CALLER_SUPPLIED_SETTLEMENT_FIELD_FORBIDDEN ${forbidden}` });
+    violations.push({
+      file: canonicalSettlementContractFile,
+      line: 0,
+      message: `CALLER_SUPPLIED_SETTLEMENT_FIELD_FORBIDDEN ${forbidden}`,
+    });
   }
 }
 
