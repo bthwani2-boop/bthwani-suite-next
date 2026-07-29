@@ -1,27 +1,39 @@
-name: Validclean Full Repository Audit
+name: Validclean Reconstruction Package Audit
 
 on:
   workflow_dispatch:
   push:
     branches: [validclean]
     paths:
-      - "tools/validclean-repository-reconstruction/audit-full-repository.mjs"
+      - "tools/validclean-repository-reconstruction/**"
       - ".github/workflows/validclean-full-repository-audit.yml"
   pull_request:
     branches: [abdo]
     types: [opened, synchronize, reopened]
     paths:
-      - "tools/validclean-repository-reconstruction/audit-full-repository.mjs"
+      - "tools/validclean-repository-reconstruction/**"
       - ".github/workflows/validclean-full-repository-audit.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: validclean-full-repository-audit-${{ github.event.pull_request.number || github.ref }}
+  group: validclean-reconstruction-package-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  package:
+    name: Verify current reconstruction package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout immutable package candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - name: Verify package state and document registry
+        run: node tools/validclean-repository-reconstruction/verify-package-state.mjs
+
   audit:
     name: Audit fbc013923 baseline
     runs-on: ubuntu-24.04
