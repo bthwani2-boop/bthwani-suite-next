@@ -1,78 +1,78 @@
-# 07 — نقطة الموافقة قبل التنفيذ
+# 07 — سجل التفويض وحدود التنفيذ
 
-## الحالة الحالية
+## حالة التفويض
 
 ```yaml
-branch_created: true
-plan_package_created: true
-implementation_started: false
-files_deleted: 0
-runtime_files_modified: 0
-contracts_modified: 0
-migrations_modified: 0
-governance_modified: 0
-pull_request_created: false
-merge_performed: false
-production_changed: false
+implementation_authorized: true
+authorized_branch: validclean
+authorized_on: 2026-07-29
+scope: REPOSITORY_WIDE_RECONSTRUCTION
+create_move_merge_delete_files: authorized_with_evidence
+contract_database_runtime_governance_changes: authorized
+read_only_diagnostic_pr: created
+merge_to_master: false
+production_deployment: false
+production_data_or_secrets_changes: false
+force_push_or_history_rewrite: false
 ```
 
-## ما تعنيه الموافقة على هذه الحزمة
+صدرت موافقات صريحة متعددة على بدء التنفيذ والاستمرار ومعالجة الأسباب الجذرية، مع صلاحية إعادة الهيكلة والحذف والدمج والنقل والإنشاء داخل `validclean`.
 
-عند صدور موافقة صريحة على بدء التنفيذ، يكون التفويض محصورًا في:
+لا تُطلب موافقة جديدة لكل شريحة؛ الاستثناءات الوحيدة:
 
-1. العمل مباشرة على `validclean`.
-2. بدء الموجة 0 ثم الموجة 1.
-3. إصلاح P0 بترتيب الاعتماديات.
-4. حذف أو دمج الملفات فقط وفق بروتوكول `05_DELETION_RETENTION_PROTOCOL.md`.
-5. إنشاء Commits ذرية صغيرة قابلة للتراجع.
-6. تشغيل الفحوص المتأثرة وRuntime عند الحاجة.
-7. الاستمرار داخل الفرع دون فتح PR أو دمج `master` إلا بطلب مستقل صريح.
+- قرار منتج جوهري لا يمكن استنتاجه من Product Truth.
+- إجراء يمس Production أو بيانات/أسرار حقيقية.
+- دمج `master` أو Release/Store submission.
+- إعادة كتابة تاريخ Git.
+- قبول خطر أمني أو مالي بدل إصلاحه.
 
-## ما لا تمنحه الموافقة تلقائيًا
+## ما يسمح به التفويض
 
-حتى بعد الموافقة على التنفيذ، لا يُفترض تلقائيًا:
+1. جرد كل ملف ومجلد.
+2. اختيار المالك الحاكم لكل حقيقة.
+3. إعادة بناء العقود والعملاء والترحيلات والحراس.
+4. نقل المستهلكين إلى البديل الصحيح.
+5. حذف البقايا والـNamespaces الوهمية بعد الإثبات.
+6. تشغيل CI وDocker وقواعد بيانات اختبار وRuntime smoke.
+7. إنشاء Commits ذرية قابلة للتراجع.
+8. استخدام PR المسودة رقم 194 للتشخيص والـsame-SHA CI فقط.
 
-- Force push أو إعادة كتابة التاريخ.
-- دمج إلى `master`.
+## ما لا يسمح به تلقائيًا
+
+- دمج PR 194 أو أي PR.
+- نشر Production أو EAS/Stores.
+- تعديل أسرار أو حسابات مزودين حقيقية.
 - حذف بيانات Production.
 - تشغيل Migration مدمرة على Production.
-- نشر EAS/Stores أو Release.
-- تغيير أسرار أو حسابات مزودين حقيقية.
-- قبول مخاطر أمنية أو مالية متبقية.
-- إعلان إغلاق نهائي دون أدلة.
+- Force push.
+- إعلان إغلاق مع أدلة ناقصة.
 
-## أول دفعة تنفيذ مقترحة بعد الموافقة
+## بروتوكول الحذف
 
-### Slice VC-000 — Baseline and inventory
-
-- تثبيت رأس `validclean`.
-- تشغيل فحوص الحوكمة والعقود والأمن وRuntime القابلة للتشغيل عن بعد أو محليًا.
-- بناء جرد المسارات والمالكين والمستهلكين.
-- إخراج قرارات أول نطاق P0.
-
-### Slice VC-001 — Identity activation backdoor removal
-
-- حذف `000000` من Repository.
-- توحيد خريطة surface.
-- إضافة اختبارات Repository سلبية.
-- التحقق من مسارات التفعيل الحقيقية لكل actor type.
-
-### Slice VC-002 — Master OpenAPI uniqueness
-
-- جرد مستهلكي `/openapi.yaml` و`contracts/master.openapi.yaml`.
-- تثبيت `contracts/master.openapi.yaml` كمرجع وحيد.
-- تحديث المستهلكين.
-- حذف المصدر الموازي.
-- إضافة حارس عام لمنع تكراره.
-
-لا تبدأ `VC-002` قبل ضمان عدم خلطها مع تغييرات Identity في Commit واحد.
-
-## صيغة الموافقة المطلوبة
-
-تكفي موافقة صريحة مثل:
+أي حذف يجب أن يثبت:
 
 ```text
-موافق على حزمة validclean. ابدأ التنفيذ على الفرع validclean وفق الموجات والبوابات، دون PR أو دمج master.
+canonical replacement
+→ all consumers migrated
+→ dynamic discovery checked
+→ tests/runtime pass
+→ protected invariant retained
+→ old path deleted
+→ recurrence gate added
 ```
 
-بعدها يبدأ التنفيذ ولا تعاد مطالبة المالك بتأكيد ما سبق، إلا إذا ظهر قرار منتج جديد غير محسوم، خطر Production، أو تعارض خارجي يمنع الاستمرار بأمان.
+السجل العملي في:
+
+```text
+11_DELETE_MERGE_MOVE_REGISTER.md
+```
+
+## بروتوكول التنفيذ
+
+المرجع الحاكم:
+
+```text
+10_REPOSITORY_WIDE_EXECUTION_LEDGER.md
+```
+
+لا تعاد هذه الحدود داخل ملفات أخرى. `plan.manifest.json` هو السجل الآلي، وREADME هو المدخل البشري.
