@@ -96,6 +96,10 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 	if len(input.Password) < 6 {
 		return errors.New("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD must contain at least 6 characters")
 	}
+	tenantID := strings.TrimSpace(input.TenantID)
+	if tenantID == "" {
+		return errors.New("BTHWANI_DEFAULT_TENANT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
+	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -155,16 +159,18 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 		_, err = r.db.ExecContext(ctx, `
 			INSERT INTO identity_actors
 				(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
-			VALUES ($1, $2, $3, 'local-dsh', $4, $5, $6::jsonb, true, now())
+			VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, true, now())
 			ON CONFLICT (id) DO UPDATE SET
 				username = EXCLUDED.username,
 				password_hash = EXCLUDED.password_hash,
+				tenant_id = EXCLUDED.tenant_id,
 				phone_e164 = EXCLUDED.phone_e164,
 				roles = EXCLUDED.roles,
 				permissions = EXCLUDED.permissions,
 				active = true,
 				updated_at = now()`,
-			actor.id, actor.username, string(hash), actor.phone, pq.Array([]string{actor.role}), string(permissions))
+			actor.id, actor.username, string(hash), tenantID, actor.phone,
+			pq.Array([]string{actor.role}), string(permissions))
 		if err != nil {
 			return err
 		}
