@@ -1,105 +1,125 @@
 # 01 — مصفوفة تشخيص المستودع كاملة
 
-## 1. منهج الجرد بعد الموافقة
+## 1. حالة الجرد
 
-سيُفحص كل ملف ومجلد على `validclean` وفق سجل قرار موحد، لا وفق العمر أو الاسم أو الانطباع:
+تم تنفيذ جرد كل الملفات المتتبعة على:
+
+```text
+fbc0139234e2bdb34a8de77d74a6b91297a754b0
+```
+
+المخرجات الكاملة موجودة في Artifact GitHub، بينما تلتزم الحزمة بالنتائج والقرارات الدائمة فقط.
+
+```yaml
+total_paths: 3938
+source: 2120
+test: 414
+database: 403
+runtime: 329
+tooling: 236
+governance: 218
+contract: 159
+documentation: 34
+generated: 25
+```
+
+## 2. سجل القرار الموحد
+
+كل مسار يخضع للنموذج:
 
 ```yaml
 path:
 kind: source | contract | migration | generated | test | runtime | governance | tooling | documentation | asset
 owner:
-truth_class: CANONICAL | GENERATED | READ_ONLY_PROJECTION | ADAPTER | EPHEMERAL | EXTERNAL | LEGACY | UNKNOWN
-runtime_consumer:
-build_consumer:
-human_consumer:
+truth_class: CANONICAL | GENERATED_DERIVATIVE | READ_ONLY_PROJECTION | ADAPTER | EPHEMERAL | EXTERNAL | LEGACY | UNKNOWN
+runtime_consumers: []
+build_consumers: []
+human_consumers: []
 validator:
-duplicate_of:
 security_impact:
 financial_impact:
-tenant_scope:
+migration_impact:
 replacement:
-decision: KEEP_ACTIVE | REPAIR_FOUNDATION | MERGE_TO_OWNER | MOVE_TO_OWNER | REGENERATE | REPLACE_THEN_DELETE | DELETE_PROVEN_DEAD | BLOCKED
+decision: KEEP_ACTIVE | REPAIR_FOUNDATION | MERGE_TO_CANONICAL_OWNER | MOVE_TO_OWNER | GENERATE_FROM_CANONICAL_SOURCE | MOVE_TO_BUILD_ARTIFACT | REPLACE_THEN_DELETE | DELETE_PROVEN_DEAD | BLOCKED_PENDING_EVIDENCE
 evidence:
 verification:
 ```
 
-لا يُحذف أي مسار `UNKNOWN` حتى يتحول إلى قرار مثبت. ولا يُحتفظ بأي ملف دائم بلا مالك أو مستهلك أو سبب بقاء.
+لا يُحذف `UNKNOWN`، ولا يبقى ملف دائم بلا مالك أو مستهلك أو سبب بقاء.
 
-## 2. مصفوفة المجالات والمجلدات
+## 3. مصفوفة النطاقات
 
-| النطاق | التشخيص المطلوب | الأخطار المرجحة | الحقيقة النهائية المطلوبة | بوابة الإغلاق |
-|---|---|---|---|---|
-| جذر المستودع | فحص الملفات الرئيسية والفهارس والإعدادات والنسخ المكررة | فهرسان OpenAPI، تعليمات متعارضة، ملفات انتقالية | جذر رقيق يحيل إلى مالك واحد لكل موضوع | صفر سلطات جذرية مكررة |
-| `apps/` | فحص كل تطبيق ومساراته وRuntime واختباراته وإعداداته الأصلية | منطق أعمال محلي، fetch مباشر، شاشات يتيمة، نجاح وهمي | التطبيقات طبقة تركيب وعرض مرتبطة بالعقل المشترك | صفر raw API وواجهات غير مربوطة |
-| `core/identity/` | Actors، المصادقة، التفعيل، الجلسات، الأجهزة، الأدوار والصلاحيات | رمز شامل، Tenant fallback، خرائط surface مكررة، Bootstrap متسرب | Identity مالك وحيد للهوية والوصول | اختبارات سلبية مباشرة وRuntime readback |
-| `core/workforce/` | الملفات المهنية والتكليفات والجاهزية والهيكل الإداري | خلط الهوية بالموظف، عقود متوازية، حالات محلية | Workforce مالك وحيد للملف الوظيفي والمهني | عقد واحد + DB constraints + ربط Identity |
-| `core/platform-control/` | السياسات السيادية والتغييرات الحساسة وRollout | تحوله إلى مخزن عام للوحة التحكم أو تكرار سياسات الخدمات | Control Plane محدود وواضح | منع عمليات المجال العادية داخله |
-| `core/providers/` | تعريف المزودين والصحة والإعدادات ومراجع الأسرار | كشف أسرار، ملكية متداخلة، إعدادات محلية داخل الخدمات | Provider registry واحد مع مراجع أسرار فقط | فحوص أسرار وصحة وتفويض خدمة-إلى-خدمة |
-| `services/dsh/` | المتاجر والكتالوج والسلة والطلب والتنفيذ والتوصيل والدعم | عقود كثيرة متوازية، Legacy routes، حقيقة مالية خارج WLT، منطق سطح محلي | DSH أوركسترا التشغيل ومالك حقيقة الطلب والتنفيذ | Route-contract-client-surface parity |
-| `services/wlt/` | المحافظ والدفتر والمدفوعات والعمولات والتسويات والاستردادات | عميل يدوي، Registry تقاعد، schemas عامة، قوائم حارس مكررة | WLT مالك مالي وحيد ودفتر ذري | Invariants مالية + Idempotency + reconciliation |
-| `services/* الأخرى` | إثبات الحاجة والمالك وحدود كل خدمة | مجلدات فارغة، أسماء مجالات غير مفعلة، حقائق مكررة | خدمة فقط عند وجود مسؤولية وRuntime وعقد وبيانات | حذف المجلد غير المفعّل أو تسجيله مؤجلًا بوضوح |
-| `contracts/` | الفهرس المركزي والـschemas المشتركة | Root يعرف تفاصيل Modules أو يكرر عقود الخدمات | Master index واحد يسجل service entries فقط | Master uniqueness guard |
-| قواعد البيانات | Migrations، indexes، seeds، scripts، tests | تعديل تاريخي، أرقام مكررة، إصلاح بعد الكتابة، Seeds كحقيقة | Ledger ترحيلات حاكم، قيود وفهارس مملوكة | fresh/old/replay/failure tests |
-| `frontend/shared` | Controllers، adapters، view models، error mapping | Shared يتحول إلى مخزن عشوائي أو يكرر أنواعًا مولدة | عقل مشترك لكل مجال، والأسطح رقيقة | import/binding/consumer checks |
-| `infra/` | Docker، Compose، شبكات، تخزين، محاكيات، readiness | حذف أساس مفيد، Retry يخفي الخلل، ملفات فارغة غير مفسرة | Runtime موحد قابل للتشغيل من بيئة نظيفة | health/readiness/smoke/recovery |
-| `tools/` | scripts، generators، diagnostics، manifests | أوامر aliases، scripts غير مستهلكة، أدوات تعدّل الحقيقة | أدوات قليلة ذات عقود واضحة ومخرجات حتمية | command registry + dead-script scan |
-| `tools/guards/` | مصدر بيانات كل حارس وما يثبته | Guard يكرر الحقيقة أو يختبر صياغة/ترقيع | الحارس يقرأ المصدر الحاكم ولا يمتلك نسخة منه | mutation tests للحراس الحرجة |
-| `governance/` | السلطة والمفردات والمنتج وSaaS والحراس والسجلات | تضخم، Status متعارض، ملفات تاريخية نشطة، مراجع مكسورة | طبقة صغيرة مقروءة آليًا ذات أسبقية واحدة | governance gates على SHA نفسه |
-| `.agents/` | adapters، skills، registries، authority boundaries | مهارات مكررة، Adapter سميك، صلاحيات غير واضحة | Skills رقيقة مسجلة، بلا سلطة موازية | registry parity + frontmatter validation |
-| `.github/` | Workflows، CODEOWNERS، permissions، action pins | تكرار workflows، صلاحيات واسعة، نتائج من SHA مختلف | CI تحقق فقط، fail-closed، same-SHA | workflow lint/security/pins |
-| `docs/` | تشغيل حي، ADRs، إرشادات المستخدم والمطور | تقارير تاريخية وضجيج وروابط مطلقة | وثائق تشغيلية مستهلكة فقط | link check + owner + retirement condition |
-| الاختبارات | تصنيف كل اختبار بحسب السلوك الذي يحميه | حذف الحماية باسم التنظيف أو اختبار Patch قديم | اختبارات Capability وSecurity وFinance وMigration وRuntime | coverage by invariant لا بعدد الملفات |
-| generated/evidence | فحص قابلية إعادة التوليد والاستهلاك | ملفات مولدة معدلة يدويًا أو أدلة تاريخية ملتزمة | Generated حتمي أو CI artifact، لا حقيقة ثانية | delete-regenerate-diff |
+| النطاق | النتائج المثبتة | الهدف النهائي | بوابة الإغلاق |
+|---|---|---|---|
+| الجذر | تقارير ومسارات مطلقة وملفات إعداد متطابقة | Root رقيق بلا تقارير تاريخية أو مصادر موازية | صفر stale root files وصفر machine paths |
+| `apps/` | `.gitkeep` واسع، إعدادات Mobile متطابقة، احتمال webapp/website متوازيين | أسطح فعلية فقط، app-local files مولدة أو محكومة | صفر orphan apps/shells/raw calls |
+| Identity | الدفعة السابقة أصلحت bypass/fallback لكن CI الكامل غير مثبت | مالك وحيد للهوية والجلسات والأجهزة | اختبارات سلبية وCI وRuntime readback |
+| Workforce | عقود بلا owner وبعض الأسماء Journey-based | ملف مهني وإداري واحد مرتبط بـactor_id | رحلة employee/provider كاملة |
+| Platform Control | operationIds مصدرية مكررة بين entry/modules | Entry رقيق + modules + bundle | صفر canonical operation collisions |
+| Providers | Prefix ترحيل `002` متكرر | Manifest وتاريخ محكوم | صفر unregistered migrations |
+| DSH Contracts | 8 عمليات مصدرية مكررة، عقود بلا owner، أسماء jrn-* | ملكية مجال واحدة وBundle حتمي | صفر collisions/owner gaps/drift |
+| DSH DB | عشرات Prefix collisions وتاريخ Lexical | Manifest صريح وتسمية جديدة monotonic | fresh/upgrade/replay/checksum pass |
+| DSH Runtime | لم يُثبت repo-wide route/contract/surface parity | حقيقة الطلب والتنفيذ الوحيدة | صفر legacy/live drift |
+| WLT | Bundle/Client تحسنا، لكن DB/Runtime invariants غير مثبتة | مالك مالي وحيد | كل invariants والرحلات المالية ناجحة |
+| Shared frontend | WLT bridges/facades generated بلا provenance أو مستهلك ظاهر | عقلان مشتركان حاكمان بلا ui_copy | صفر generated UI copies/raw rules |
+| `infra/` | مجلدات فارغة ومسارات تشغيل محتملة | مكونات مرتبطة فعليًا بـCompose/Runbook | clean environment startup |
+| `tools/` | 47 مرشحًا بلا inbound reference و16 alias group | أدوات مسجلة قليلة | صفر unregistered/dead tools |
+| `tools/guards/` | بعض الحراس تحمل قوائم أو نصوصًا بديلة | Guards تقارن المصادر الحاكمة | mutation tests لكل حارس حرج |
+| `governance/` | تقارير استخراج ومسارات محلية وحالات تاريخية | Canonical index صغير | صفر active historical reports |
+| `.agents/` | Archive داخل active tree واحتمال Skills غير مستهلكة | Skills مسجلة وAdapters رقيقة | registry parity وصفر active archive |
+| `.github/` | يجب إبقاء read-only/same-SHA؛ منع auto-commit | CI تحقق فقط | صفر source mutation/unpinned actions |
+| Generated | 7 بلا provenance و9 مرشحين بلا مستهلك ظاهر | مولد حتمي أو build artifact | delete-regenerate-diff |
 
-## 3. ترتيب الخطورة
+## 4. ترتيب الخطورة
 
-### P0 — يمنع أي إعادة هيكلة واسعة
+### P0
 
-- مصادقة أو جلسة أو رمز ثابت أو باب خلفي.
-- Tenant أو Actor أو Permission غير موثوق.
-- مصدران قابلان للكتابة للحقيقة نفسها.
-- دفتر أو رصيد أو عمولة خارج WLT.
-- Migration مدمرة أو غير قابلة للاستعادة.
-- عقد رئيسي مكرر أو عميل مولد يدويًا.
-- حذف حماية أمنية أو مالية دون بديل.
+- مصدران قابلان للتحرير للعملية نفسها.
+- ترحيلات بلا ترتيب تاريخي صريح.
+- مصادقة أو نطاق غير موثوق.
+- Financial mutation خارج WLT.
+- Migration history modified.
+- Contract/route/client divergence في مسار حساس.
 
-### P1 — يسبب انحرافًا مستمرًا
+### P1
 
-- Legacy runtime حي بلا تاريخ إزالة.
-- Registry يكرر Router أو OpenAPI أو package scripts.
-- منطق أعمال داخل Surface أو BFF.
-- Runtime restart أو fallback يخفي جاهزية خاطئة.
-- Governance references إلى ملفات غير موجودة.
-- اختبارات تحفظ Patch بدل القاعدة.
+- عقد بلا owner/state.
+- Generated بلا provenance أو consumer proof.
+- مسار محلي داخل التشغيل.
+- Legacy route أو fallback بلا expiry.
+- منطق مجال داخل Surface.
+- Governance state متعارض.
 
-### P2 — ضجيج وتعقيد وتكلفة صيانة
+### P2
 
-- Aliases غير المبررة.
-- ملفات فارغة أو مجلدات مؤجلة بلا بيان.
-- تقارير وEvidence قابلة لإعادة التوليد.
-- Docs قديمة أو روابط مطلقة.
-- أسماء رحلات تاريخية داخل أسماء كود دائم.
-- Adapters وtypes وschemas متكررة.
+- Aliases.
+- `.gitkeep` وNamespaces وهمية.
+- تقارير وأرشيفات داخل active tree.
+- إعدادات متطابقة بلا generator.
+- أدوات غير مسجلة.
 
-## 4. ناتج الجرد الإلزامي
+## 5. ناتج كل موجة
 
-بعد الموافقة، لا يبدأ الحذف مباشرة. أول ناتج تنفيذي سيكون ملفًا مولدًا مؤقتًا خارج Git أو CI artifact يحتوي قرار كل مسار. تُلتزم في Git فقط القواعد الدائمة أو التغييرات الفعلية، لا سجل فحص ضخم دائم.
-
-الإحصاءات المطلوبة قبل أول حذف:
+لكل موجة ملف قرار صغير أو تحديث Manifest، وليس تقريرًا ضخمًا دائمًا:
 
 ```yaml
-total_paths:
-canonical_sources:
-generated_derivatives:
-read_only_projections:
-active_adapters:
-legacy_candidates:
-duplicate_candidates:
-unknown_ownership:
-security_protected:
-financial_protected:
-migration_protected:
-runtime_protected:
+scope:
+source_sha:
+canonical_owner:
+paths_kept: []
+paths_moved: []
+paths_merged: []
+paths_generated: []
+paths_deleted: []
+blocked: []
+verification_commands: []
+verification_sha:
+closure_state:
 ```
 
-شرط الانتقال: `unknown_ownership = 0` داخل الدفعة المراد تعديلها، وليس بالضرورة على المستودع كله قبل أي إصلاح P0 محدود.
+## 6. شروط الانتقال
+
+- داخل أي نطاق P0: `UNKNOWN_OWNERSHIP = 0` قبل الحذف.
+- لا تنتقل الشريحة قبل ترحيل المستهلكين وحذف البقايا.
+- التنفيذ الحاكم في `10_REPOSITORY_WIDE_EXECUTION_LEDGER.md`.
+- الإغلاق الحاكم في `17_FINAL_CLOSURE_MATRIX.md`.
