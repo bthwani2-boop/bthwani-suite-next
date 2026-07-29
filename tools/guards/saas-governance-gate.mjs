@@ -86,6 +86,11 @@ const productSchema = readJson(productSchemaPath);
 
 const canonicalPlatformClassification =
   "UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_WALLET_PLATFORM_WITH_B2B_PARTNER_CAPABILITIES_AND_DEFERRED_OPERATOR_SAAS_READINESS";
+const canonicalBoundarySemantics = {
+  partnerAccessModel: "MANAGED_B2B_PLATFORM_ACCESS",
+  operatorSaasReadiness: "DEFERRED",
+  operatorSaasTenantCandidate: "EXTERNAL_PLATFORM_OPERATOR",
+};
 const retiredPartnerSaasClassification = [
   "UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_WALLET_PLATFORM_WITH",
   "PARTNER",
@@ -117,6 +122,30 @@ if (
     line: 0,
     message: `PRODUCT_SCHEMA_PLATFORM_CLASSIFICATION_MISMATCH expected ${canonicalPlatformClassification}`,
   });
+}
+
+for (const [field, value] of Object.entries(canonicalBoundarySemantics)) {
+  if (!platformModel.includes(`${field}: ${value}`)) {
+    violations.push({
+      file: platformModelPath,
+      line: 0,
+      message: `PLATFORM_BOUNDARY_SEMANTIC_MISMATCH ${field}=${value}`,
+    });
+  }
+  if (platformContract?.platformModel?.[field] !== value) {
+    violations.push({
+      file: platformContractPath,
+      line: 0,
+      message: `PRODUCT_PLATFORM_BOUNDARY_SEMANTIC_MISMATCH ${field}=${value}`,
+    });
+  }
+  if (productSchema?.properties?.platformModel?.properties?.[field]?.const !== value) {
+    violations.push({
+      file: productSchemaPath,
+      line: 0,
+      message: `PRODUCT_SCHEMA_BOUNDARY_SEMANTIC_MISMATCH ${field}=${value}`,
+    });
+  }
 }
 
 const partnerContext = platformContract?.platformModel?.contextSemantics;
