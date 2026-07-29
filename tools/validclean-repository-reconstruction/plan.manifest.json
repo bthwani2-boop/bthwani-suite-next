@@ -23,7 +23,7 @@
   },
   "execution": {
     "startedFromSha": "083eeeeb039b6537cf96a0a3128d3d42cdb62de8",
-    "lastRecordedSha": "391068d0cceb8f96d0ecda6502b9964f73cef1e6",
+    "lastRecordedSha": "d65c777d867cca8b94ef2b2e2b2105d4422b4d7d",
     "currentWave": "identity_and_contract_foundation",
     "slices": {
       "VC-000-baseline-and-inventory": "IN_PROGRESS",
@@ -31,7 +31,9 @@
       "VC-002-master-openapi-uniqueness": "IMPLEMENTED_PENDING_VERIFICATION",
       "VC-003-wlt-retired-operation-registry-removal": "IMPLEMENTED_PENDING_VERIFICATION",
       "VC-004-wlt-generated-client-reconstruction": "DIAGNOSIS_IN_PROGRESS",
-      "VC-005-trusted-platform-scope-and-tenant-fallback-removal": "PARTIALLY_IMPLEMENTED_PENDING_VERIFICATION"
+      "VC-005-trusted-platform-scope-and-tenant-fallback-removal": "PARTIALLY_IMPLEMENTED_PENDING_VERIFICATION",
+      "VC-006-local-bootstrap-direct-tenant-write": "IMPLEMENTED_PENDING_VERIFICATION",
+      "VC-007-cross-tenant-actor-provisioning-block": "IMPLEMENTED_PENDING_VERIFICATION"
     },
     "verification": {
       "sameShaRequired": true,
@@ -57,6 +59,8 @@
     "identity_universal_activation_code_000000",
     "fragmented_actor_type_surface_mapping",
     "identity_local_dsh_bootstrap_scope",
+    "identity_repair_after_incorrect_bootstrap_write",
+    "identity_cross_tenant_existing_phone_reuse",
     "wlt_retired_operations_parallel_registry",
     "manual_generalized_wlt_generated_client",
     "cleaning_removed_referenced_governance_authorities",
