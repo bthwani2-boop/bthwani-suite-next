@@ -1,198 +1,147 @@
-# 06 — بوابات الصفر والتحقق والإغلاق
+# 06 — بروتوكول التحقق وبوابات الصفر
 
-## 1. عدادات يجب أن تساوي صفرًا
+## المصدر الحاكم للعدادات
 
-```yaml
-parallel_writable_sources: 0
-duplicate_truth_owners: 0
-duplicate_master_contract_indexes: 0
-duplicate_method_paths: 0
-duplicate_operation_ids: 0
-manual_contract_registries: 0
-manual_generated_clients: 0
-contract_runtime_drift: 0
-client_regeneration_diff: 0
-unresolved_contract_refs: 0
-universal_activation_codes: 0
-silent_scope_or_tenant_fallbacks: 0
-repair_after_incorrect_write: 0
-role_permission_fallbacks: 0
-untrusted_actor_or_scope_inputs: 0
-legacy_runtime_routes: 0
-legacy_read_fallbacks: 0
-legacy_write_paths: 0
-compatibility_layers_without_expiry: 0
-financial_truth_outside_wlt: 0
-direct_ledger_write_routes: 0
-unbalanced_financial_transactions: 0
-surface_business_logic: 0
-raw_surface_api_calls: 0
-surface_local_domain_enums: 0
-ui_success_without_readback: 0
-backend_effect_without_consumer: 0
-runtime_reachable_mocks: 0
-patch_preservation_tests: 0
-unowned_permanent_files: 0
-broken_governance_references: 0
-unregistered_active_skills: 0
-guards_with_parallel_truth_lists: 0
-duplicate_or_unjustified_alias_commands: 0
-stale_committed_evidence: 0
-skipped_critical_checks: 0
-failed_required_checks: 0
+جميع عدادات الإغلاق التفصيلية موجودة في:
+
+```text
+17_FINAL_CLOSURE_MATRIX.md
 ```
 
-## 2. البوابات الإيجابية المطلوبة
+هذا الملف يحدد طريقة الإثبات فقط. لا يجوز إنشاء قائمة عدادات موازية هنا أو في Guard يدوي.
 
-```yaml
-canonical_owner_proven: PASS
-actor_and_scope_model_proven: PASS
-authentication_proven: PASS
-authorization_proven: PASS
-session_and_device_lifecycle_proven: PASS
-organization_and_data_isolation_proven: PASS
-contract_runtime_parity: PASS
-generated_client_reproducibility: PASS
-database_migration_safety: PASS
-financial_invariants: PASS
-idempotency_and_concurrency: PASS
-outbox_and_event_delivery: PASS
-runtime_readiness: PASS
-runtime_readback: PASS
-multi_surface_consistency: PASS
-governance_integrity: PASS
-workflow_security: PASS
-same_sha_ci: PASS
-cleanup_residue_scan: PASS
-```
+## طبقات التحقق
 
-## 3. طبقات التحقق
+### 1. Static
 
-### Static
+- Typecheck/lint/build.
+- Broken imports وdependency direction.
+- Dead files مع فحص الاستثناءات والاكتشاف الديناميكي.
+- لا Generated أو Build output غير قابل لإعادة التوليد.
 
-- typecheck/lint/build المتأثر.
-- broken imports.
-- dependency direction.
-- dead files مع مراجعة الاستثناءات.
+### 2. Contracts
 
-### Contracts
+- Compose جميع عقود الخدمة.
+- Spectral/Schema validation دون crash أو skip.
+- Canonical operation ownership.
+- Route/contract/client parity.
+- Delete/regenerate/diff للـBundles والعملاء.
 
-- Spectral/JSON Schema.
-- bundle composition.
-- uniqueness.
-- runtime parity.
-- generated client zero diff.
+### 3. Database
 
-### Database
+- Fresh database.
+- Upgrade من Snapshot سابق.
+- Manifest/checksum validation.
+- Replay بلا تغييرات.
+- Partial failure/rollback/ledger integrity.
+- Constraints/indexes/backfills/read-after-write.
+- Backup/restore عندما توجد كتابة مدمرة أو ترحيل بيانات.
 
-- fresh database.
-- previous data.
-- migration replay.
-- partial failure and resume.
-- constraints/indexes.
-- read-after-write.
-- backup/restore عند الانطباق.
+### 4. Security
 
-### Security
+- Unauthenticated.
+- Expired/revoked challenge/session/device.
+- Wrong actor/surface/organization/store/tenant/scope.
+- Privilege escalation وidentifier swapping.
+- Service impersonation.
+- Secrets/PII logging.
 
-- unauthenticated.
-- expired/revoked session.
-- wrong actor/surface/scope.
-- privilege escalation.
-- direct object identifier swapping.
-- service impersonation.
-- secrets/PII logging.
+### 5. Finance
 
-### Finance
-
-- duplicate request.
-- provider timeout/unknown result.
-- provider success + local save failure.
-- local save + response failure.
-- refund full/partial.
+- Duplicate/idempotency/concurrency.
+- Provider timeout/unknown result.
+- Provider success + local persistence failure.
+- Local persistence + response failure.
+- Refund full/partial.
 - COD custody.
-- settlement and reconciliation.
-- cross-organization isolation.
+- Commission/settlement/payout/reconciliation.
+- Cross-organization isolation.
 
-### Runtime
+### 6. Runtime
 
-- clean startup.
-- health/readiness/liveness.
-- dependencies unavailable.
-- restart/recovery.
-- no hidden seed or fallback.
-- actual write and readback.
+- Clean checkout startup.
+- Health/readiness/liveness.
+- Dependency unavailable/recovery.
+- لا hidden seed أو local fallback.
+- Actual write/readback.
+- لا restart wrapper يخفي سبب الفشل.
 
-### Multi-surface
+### 7. Multi-surface
 
-- action from the owning surface.
-- backend persistence.
-- readback in every affected surface.
-- blocked and error states.
-- no surface-specific truth drift.
+- Action من السطح المالك.
+- Backend transaction.
+- Persistence/readback.
+- جميع الأسطح المتأثرة.
+- Loading/empty/error/blocked/offline/unknown states.
+- Negative authorization.
 
-### Governance and CI
+### 8. Governance and CI
 
-- all AGENTS references exist.
-- precedence and decision vocabulary validate.
-- skill and guard registries match disk and package scripts.
-- workflows are verification-only, least privilege, pinned, fail-closed.
-- evidence belongs to final SHA.
+- Authority references موجودة.
+- Governance index يطابق القرص.
+- Skills/guards/tools registries تطابق المستهلكين.
+- Workflows read-only افتراضيًا ومثبتة بـSHA.
+- لا source mutation ذاتي.
+- الأدلة من SHA المرشح نفسه.
 
-## 4. exact-SHA
+## exact-SHA
 
 ```text
 Implemented SHA
 = Reviewed SHA
-= Tested SHA
+= Static-tested SHA
+= DB-tested SHA
 = Runtime-proven SHA
 = CI candidate SHA
 ```
 
-إذا تحرك رأس الفرع بعد الدليل، يعاد التحقق المتأثر. لا تُستخدم نتائج فرع أو التزام سابق لإغلاق الرأس الجديد.
+إذا تحرك رأس الفرع بعد الدليل، تعاد الفحوص المتأثرة. لا تُستخدم نتائج `fbc013923` لإغلاق رأس لاحق؛ هو مرجع جرد فقط.
 
-## 5. القرارات المسموحة
+## حالات التنفيذ
+
+الحالات المسموحة للشرائح محددة في `10_REPOSITORY_WIDE_EXECUTION_LEDGER.md`:
 
 ```text
-FIX_REQUIRED
-NEEDS_EVIDENCE
-BLOCKED_EXTERNAL
-READY_FOR_OWNER_REVIEW
+NOT_STARTED
+DIAGNOSIS_COMPLETE
+IMPLEMENTATION_IN_PROGRESS
+BLOCKED_BY_DEPENDENCY
+IMPLEMENTED_PENDING_DB_PROOF
+IMPLEMENTED_PENDING_RUNTIME_PROOF
+VERIFIED_SAME_SHA
 CLOSED_WITH_EVIDENCE
 ```
 
-الحالة الافتراضية `FIX_REQUIRED`.
+حالة الحزمة الحالية مستقلة عن حالات الشرائح وتوجد في `plan.manifest.json` وREADME فقط.
 
-لا يستخدم `CLOSED_WITH_EVIDENCE` عند:
-
-- بقاء أي عداد حرج أكبر من صفر.
-- فشل Check إلزامي.
-- غياب Runtime proof لنطاق تشغيلي.
-- غياب مراجعة مالية/أمنية مستقلة عند تغير نطاق محمي.
-- اختلاف SHA بين الاختبار والمرشح.
-
-## 6. معيار النجاح الحقيقي
+## الإغلاق
 
 لا يكفي:
 
-- كثرة الملفات المحذوفة.
+- حذف عدد كبير من الملفات.
 - نجاح Build أو Typecheck.
 - مرور Regex guard.
-- ظهور رسالة نجاح في UI.
-- وجود وثيقة أو Product Truth.
+- وجود وثيقة أو شاشة.
 - تشغيل Mock أو Seed.
 
-النجاح هو:
+الإغلاق الحقيقي:
 
 ```text
 مالك واحد
 → كتابة صحيحة
-→ عقد مطابق
-→ بيانات محفوظة بقيود صحيحة
+→ عقد وعميل مطابقان
+→ بيانات بقيود صحيحة
 → قراءة راجعة
-→ ظهور صحيح في الأسطح
-→ فشل ومنع واختبارات سلبية
+→ أسطح متسقة
+→ اختبارات منع وفشل
 → Runtime حقيقي
-→ صفر بقايا موازية
-→ دليل على SHA النهائي
+→ حذف البقايا
+→ جميع عدادات 17 = صفر
+→ دليل على SHA نهائي واحد
+```
+
+الحالة النهائية الوحيدة المقبولة:
+
+```text
+CLOSED_WITH_EVIDENCE
 ```
