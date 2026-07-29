@@ -84,7 +84,17 @@ if (fs.existsSync(rootAuthPath)) {
   });
 }
 
-// 3. Validate that services/auth directory does not exist
+// 3. The repository has exactly one master API index. A root-level
+// openapi.yaml is a parallel source of truth even when it contains no paths.
+const parallelRootMasterPath = path.join(repoRoot, "openapi.yaml");
+if (fs.existsSync(parallelRootMasterPath)) {
+  violations.push({
+    file: "openapi.yaml",
+    message: "parallel master OpenAPI index is forbidden; use contracts/master.openapi.yaml only"
+  });
+}
+
+// 4. Validate that services/auth directory does not exist
 const servicesAuthPath = path.join(repoRoot, "services/auth");
 if (fs.existsSync(servicesAuthPath)) {
   violations.push({
@@ -93,7 +103,7 @@ if (fs.existsSync(servicesAuthPath)) {
   });
 }
 
-// 4. Validate contracts/master.openapi.yaml and collect referenced files
+// 5. Validate contracts/master.openapi.yaml and collect referenced files
 const masterRelPath = "contracts/master.openapi.yaml";
 const masterFullPath = path.join(repoRoot, masterRelPath);
 
@@ -133,6 +143,13 @@ if (!fs.existsSync(masterFullPath)) {
         });
       }
 
+      if (masterParsed["x-bthwani-contract-role"] !== "MASTER_INDEX_ONLY") {
+        violations.push({
+          file: masterRelPath,
+          message: "canonical master contract must declare x-bthwani-contract-role: MASTER_INDEX_ONLY"
+        });
+      }
+
       // Validate referenced contracts under x-bthwani-contracts
       const contractsGroup = masterParsed["x-bthwani-contracts"];
       if (!contractsGroup) {
@@ -168,7 +185,7 @@ if (!fs.existsSync(masterFullPath)) {
   }
 }
 
-// 5. Gather all contract files and validate metadata rules
+// 6. Gather all contract files and validate metadata rules
 const contractFiles = listFiles().filter((file) => {
   return file.endsWith(".openapi.yaml") ||
          file.endsWith(".openapi.yml") ||
@@ -205,6 +222,14 @@ for (const contractFile of contractFiles) {
       message: `Failed to parse contract YAML: ${err.message}`
     });
     continue;
+  }
+
+  // Any second MASTER_INDEX_ONLY declaration is a parallel source of truth.
+  if (parsed["x-bthwani-contract-role"] === "MASTER_INDEX_ONLY" && contractFile !== masterRelPath) {
+    violations.push({
+      file: contractFile,
+      message: `MASTER_INDEX_ONLY is reserved for ${masterRelPath}`
+    });
   }
 
   // Validate x-bthwani-contract-state
@@ -248,7 +273,7 @@ for (const contractFile of contractFiles) {
   }
 }
 
-// 6. Validate that WltPaymentSession statuses in wlt.openapi.yaml match DB migrations
+// 7. Validate that WltPaymentSession statuses in wlt.openapi.yaml match DB migrations
 const wltOpenApiPath = path.join(repoRoot, "services/wlt/contracts/wlt.openapi.yaml");
 const wltMigrationPath = path.join(repoRoot, "services/wlt/database/migrations/wlt-002_payment_capture.sql");
 
@@ -260,26 +285,26 @@ if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
       const dbStatuses = statusChkMatch[1]
         .split(",")
         .map(s => s.trim().replace(/['"]/g, ""));
-      
+
       const openApiContent = fs.readFileSync(wltOpenApiPath, "utf8");
       const openApiLines = openApiContent.split(/\r?\n/);
       let insideWltPaymentSession = false;
       let insideStatus = false;
       let insideEnum = false;
       const schemaStatusEnum = [];
-      
+
       for (const line of openApiLines) {
         const indentMatch = line.match(/^(\s*)/);
         const indent = indentMatch ? indentMatch[1].length : 0;
         const trimmed = line.trim();
-        
+
         if (trimmed.startsWith("WltPaymentSession:")) {
           insideWltPaymentSession = true;
           insideStatus = false;
           insideEnum = false;
           continue;
         }
-        
+
         if (insideWltPaymentSession) {
           if (indent <= 4 && trimmed !== "" && !trimmed.startsWith("WltPaymentSession:") && !trimmed.startsWith("properties:") && !trimmed.startsWith("required:")) {
             insideWltPaymentSession = false;
@@ -287,7 +312,7 @@ if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
             insideEnum = false;
           }
         }
-        
+
         if (insideWltPaymentSession) {
           if (trimmed.startsWith("status:")) {
             insideStatus = true;
@@ -315,7 +340,7 @@ if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
           }
         }
       }
-      
+
       if (schemaStatusEnum.length > 0) {
         for (const dbStatus of dbStatuses) {
           if (!schemaStatusEnum.includes(dbStatus)) {
