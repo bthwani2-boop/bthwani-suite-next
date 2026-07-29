@@ -34,7 +34,7 @@ services:
       - bthwani-postgres-runtime-data:/var/lib/postgresql/data
       - ../data-plane/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "grep -aq '^postgres' /proc/1/cmdline && pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 20
