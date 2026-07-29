@@ -3,7 +3,7 @@ name: Validclean WLT Materialization
 on:
   push:
     branches: [validclean]
-    paths:
+    paths: &wlt_materialization_paths
       - "services/wlt/contracts/**"
       - "services/wlt/clients/generated/wlt-api.ts"
       - "services/wlt/package.json"
@@ -18,13 +18,16 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/validclean-wlt-materialize.yml"
+  pull_request:
+    branches: [abdo]
+    paths: *wlt_materialization_paths
 
 permissions:
   contents: write
 
 concurrency:
-  group: validclean-wlt-materialize-${{ github.ref }}
-  cancel-in-progress: false
+  group: validclean-wlt-materialize-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   materialize:
@@ -67,6 +70,7 @@ jobs:
           pnpm --dir services/wlt typecheck
 
       - name: Commit deterministic artifacts and source wiring
+        if: ${{ github.event_name == 'push' }}
         shell: bash
         run: |
           set -euo pipefail
