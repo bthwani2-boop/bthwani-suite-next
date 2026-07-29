@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-901_reconciliation_tenant_guard.sql",
+  "cutover": "wlt-902_contextual_finance_object_names.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -444,6 +444,13 @@
       "file": "wlt-901_reconciliation_tenant_guard.sql",
       "sha256": "6657f4ec1e2c9e1122c5f05dd760cbf598de2a7b18f08cecea195db3c7153e39",
       "historicalPrefix": "901",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 64,
+      "file": "wlt-902_contextual_finance_object_names.sql",
+      "sha256": "42cbdb213c8b36e2ac0d92e7672ab68e76faea389399229e757ec10059540f65",
+      "historicalPrefix": "902",
       "state": "HISTORICAL_IMMUTABLE"
     }
   ]
