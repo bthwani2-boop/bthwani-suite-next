@@ -188,7 +188,7 @@ if (failures.length === 0) {
     "platform_change_sets:",
     "name: Verify platform change-set binding",
     "pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false",
-    "openapi-typescript ../../core/platform-control/contracts/platform-change-sets.openapi.yaml",
+    "openapi-typescript ../../core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml",
     "node tools/guards/platform-change-sets-gate.mjs",
   ]);
 }
