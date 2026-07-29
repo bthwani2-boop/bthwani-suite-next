@@ -32,15 +32,15 @@
     },
     {
       "path": "/dsh/client/checkout-intents",
-      "projectionContract": "dsh.jrn-010-checkout.openapi.yaml"
+      "projectionContract": "dsh.checkout.openapi.yaml"
     },
     {
       "path": "/dsh/client/checkout-intents/{intentId}",
-      "projectionContract": "dsh.jrn-010-checkout.openapi.yaml"
+      "projectionContract": "dsh.checkout.openapi.yaml"
     },
     {
       "path": "/dsh/client/checkout-intents/{intentId}/cancel",
-      "projectionContract": "dsh.jrn-010-checkout.openapi.yaml"
+      "projectionContract": "dsh.checkout.openapi.yaml"
     },
     {
       "path": "/dsh/client/orders/{orderId}/partner-delivery",
@@ -56,11 +56,11 @@
     },
     {
       "path": "/dsh/control-panel/finance/refunds",
-      "projectionContract": "jrn-035-refunds.openapi.yaml"
+      "projectionContract": "dsh.refunds.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/refunds/{refundId}",
-      "projectionContract": "jrn-035-refunds.openapi.yaml"
+      "projectionContract": "dsh.refunds.openapi.yaml"
     },
     {
       "path": "/dsh/field/catalog/master-products",
@@ -72,19 +72,19 @@
     },
     {
       "path": "/dsh/field/me/finance/commissions",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/field/me/finance/ledger-entries",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/field/me/finance/payout-requests",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/field/me/finance/wallet",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/field/partners/{partnerId}",
@@ -120,7 +120,7 @@
     },
     {
       "path": "/dsh/internal/wlt/payment-session-events",
-      "projectionContract": "dsh.jrn-010-checkout.openapi.yaml"
+      "projectionContract": "dsh.checkout.openapi.yaml"
     },
     {
       "path": "/dsh/operator/catalog/assets",
@@ -180,11 +180,11 @@
     },
     {
       "path": "/dsh/operator/checkout-intents",
-      "projectionContract": "dsh.jrn-010-checkout.openapi.yaml"
+      "projectionContract": "dsh.checkout.openapi.yaml"
     },
     {
       "path": "/dsh/operator/checkout-intents/{intentId}/reconcile",
-      "projectionContract": "dsh.jrn-010-checkout.openapi.yaml"
+      "projectionContract": "dsh.checkout.openapi.yaml"
     },
     {
       "path": "/dsh/operator/delivery-exceptions",
@@ -251,6 +251,26 @@
       "projectionContract": "dsh.platform-policies.openapi.yaml"
     },
     {
+      "path": "/dsh/operator/platform/operational-policy/audit",
+      "projectionContract": "dsh.operational-policy.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/operational-policy/audit/{eventId}/rollback",
+      "projectionContract": "dsh.operational-policy.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/operational-profiles/{zoneId}",
+      "projectionContract": "dsh.operational-policy.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes",
+      "projectionContract": "dsh.operational-policy.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes/{fulfillmentMode}",
+      "projectionContract": "dsh.operational-policy.openapi.yaml"
+    },
+    {
       "path": "/dsh/operator/platform/serviceability/{zoneId}",
       "projectionContract": "dsh.platform-policies.openapi.yaml"
     },
@@ -269,6 +289,14 @@
     {
       "path": "/dsh/operator/platform/zones/{zoneId}",
       "projectionContract": "dsh.platform-policies.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/reels",
+      "projectionContract": "dsh.reels.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/reels/{reelId}/review",
+      "projectionContract": "dsh.reels.openapi.yaml"
     },
     {
       "path": "/dsh/operator/stores/{storeId}/assortment",
@@ -387,6 +415,10 @@
       "projectionContract": "dsh.delivery-exceptions.openapi.yaml"
     },
     {
+      "path": "/dsh/partner/reels",
+      "projectionContract": "dsh.reels.openapi.yaml"
+    },
+    {
       "path": "/dsh/partner/stores/{storeId}/assortment",
       "projectionContract": "dsh.catalog.openapi.yaml"
     },
@@ -395,8 +427,16 @@
       "projectionContract": "dsh.catalog.openapi.yaml"
     },
     {
+      "path": "/dsh/platform/operational-policy/evaluate",
+      "projectionContract": "dsh.operational-policy.openapi.yaml"
+    },
+    {
       "path": "/dsh/platform/store-onboarding-fee",
       "projectionContract": "dsh.platform-policies.openapi.yaml"
+    },
+    {
+      "path": "/dsh/public/reels",
+      "projectionContract": "dsh.reels.openapi.yaml"
     }
   ],
   "orphanProjectionPaths": [
@@ -409,28 +449,40 @@
       "projectionContract": "dsh.store-captain-handoff.openapi.yaml"
     },
     {
+      "path": "/dsh/captain/dispatch/financial-eligibility",
+      "projectionContract": "dsh.captain-financial-eligibility.openapi.yaml"
+    },
+    {
+      "path": "/dsh/captain/dispatch/financial-eligibility/refresh",
+      "projectionContract": "dsh.captain-financial-eligibility.openapi.yaml"
+    },
+    {
       "path": "/dsh/captain/me/finance/commissions",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/captain/me/finance/ledger-entries",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/captain/me/finance/payout-destination",
-      "projectionContract": "dsh.jrn-037-payouts-destinations.openapi.yaml"
+      "projectionContract": "dsh.payouts-destinations.openapi.yaml"
     },
     {
       "path": "/dsh/captain/me/finance/payout-destination/deactivate",
-      "projectionContract": "dsh.jrn-037-payouts-destinations.openapi.yaml"
+      "projectionContract": "dsh.payouts-destinations.openapi.yaml"
     },
     {
       "path": "/dsh/captain/me/finance/payout-requests",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/captain/me/finance/wallet",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/captain/me/ratings/summary",
+      "projectionContract": "dsh.incident-governance.openapi.yaml"
     },
     {
       "path": "/dsh/captain/partner-fleet/connect",
@@ -490,11 +542,15 @@
     },
     {
       "path": "/dsh/client/me/finance/ledger-entries",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/client/me/finance/wallet",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/me/ratings/pending-order",
+      "projectionContract": "dsh.incident-governance.openapi.yaml"
     },
     {
       "path": "/dsh/client/order-truth",
@@ -517,8 +573,16 @@
       "projectionContract": "dsh.delivery-proof-completion.openapi.yaml"
     },
     {
+      "path": "/dsh/client/orders/{orderId}/rating-prompt",
+      "projectionContract": "dsh.incident-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/client/orders/{orderId}/ratings",
+      "projectionContract": "dsh.incident-governance.openapi.yaml"
+    },
+    {
       "path": "/dsh/client/orders/{orderId}/refunds",
-      "projectionContract": "jrn-035-refunds.openapi.yaml"
+      "projectionContract": "dsh.refunds.openapi.yaml"
     },
     {
       "path": "/dsh/client/support/tickets",
@@ -534,43 +598,43 @@
     },
     {
       "path": "/dsh/control-panel/finance/cod-reconciliation-cases",
-      "projectionContract": "dsh.jrn-038-cod-custody.openapi.yaml"
+      "projectionContract": "dsh.cod-custody.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign",
-      "projectionContract": "dsh.jrn-038-cod-custody.openapi.yaml"
+      "projectionContract": "dsh.cod-custody.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve",
-      "projectionContract": "dsh.jrn-038-cod-custody.openapi.yaml"
+      "projectionContract": "dsh.cod-custody.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/commission-policies",
-      "projectionContract": "dsh.jrn-036-settlements-commissions.openapi.yaml"
+      "projectionContract": "dsh.settlements-commissions.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/commissions/{commissionId}",
-      "projectionContract": "dsh.jrn-036-settlements-commissions.openapi.yaml"
+      "projectionContract": "dsh.settlements-commissions.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/commissions/{commissionId}/adjust",
-      "projectionContract": "dsh.jrn-036-settlements-commissions.openapi.yaml"
+      "projectionContract": "dsh.settlements-commissions.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/commissions/{commissionId}/confirm",
-      "projectionContract": "dsh.jrn-036-settlements-commissions.openapi.yaml"
+      "projectionContract": "dsh.settlements-commissions.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/commissions/{commissionId}/reject",
-      "projectionContract": "dsh.jrn-036-settlements-commissions.openapi.yaml"
+      "projectionContract": "dsh.settlements-commissions.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/commissions/{commissionId}/reverse",
-      "projectionContract": "dsh.jrn-036-settlements-commissions.openapi.yaml"
+      "projectionContract": "dsh.settlements-commissions.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/commissions/{commissionId}/settle",
-      "projectionContract": "dsh.jrn-036-settlements-commissions.openapi.yaml"
+      "projectionContract": "dsh.settlements-commissions.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status",
@@ -582,43 +646,43 @@
     },
     {
       "path": "/dsh/control-panel/finance/payout-requests/{payoutId}/audit",
-      "projectionContract": "dsh.jrn-037-payouts-destinations.openapi.yaml"
+      "projectionContract": "dsh.payouts-destinations.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/payout-requests/{payoutId}/reconcile",
-      "projectionContract": "dsh.jrn-037-payouts-destinations.openapi.yaml"
+      "projectionContract": "dsh.payouts-destinations.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/refunds/{refundId}/approve",
-      "projectionContract": "jrn-035-refunds.openapi.yaml"
+      "projectionContract": "dsh.refunds.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/refunds/{refundId}/audit",
-      "projectionContract": "jrn-035-refunds.openapi.yaml"
+      "projectionContract": "dsh.refunds.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/refunds/{refundId}/complete",
-      "projectionContract": "jrn-035-refunds.openapi.yaml"
+      "projectionContract": "dsh.refunds.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/refunds/{refundId}/reconcile",
-      "projectionContract": "jrn-035-refunds.openapi.yaml"
+      "projectionContract": "dsh.refunds.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/refunds/{refundId}/reject",
-      "projectionContract": "jrn-035-refunds.openapi.yaml"
+      "projectionContract": "dsh.refunds.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/settlements/{settlementId}/evidence",
-      "projectionContract": "dsh.jrn-036-settlements-commissions.openapi.yaml"
+      "projectionContract": "dsh.settlements-commissions.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/wallets/{actorType}/{actorId}",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/field/catalog/attributes",
@@ -638,11 +702,15 @@
     },
     {
       "path": "/dsh/field/me/finance/payout-destination",
-      "projectionContract": "dsh.jrn-037-payouts-destinations.openapi.yaml"
+      "projectionContract": "dsh.payouts-destinations.openapi.yaml"
     },
     {
       "path": "/dsh/field/me/finance/payout-destination/deactivate",
-      "projectionContract": "dsh.jrn-037-payouts-destinations.openapi.yaml"
+      "projectionContract": "dsh.payouts-destinations.openapi.yaml"
+    },
+    {
+      "path": "/dsh/field/me/ratings/summary",
+      "projectionContract": "dsh.incident-governance.openapi.yaml"
     },
     {
       "path": "/dsh/field/partners/{partnerId}/assortment-pauses",
@@ -659,6 +727,10 @@
     {
       "path": "/dsh/home-discovery/events",
       "projectionContract": "dsh.home-marketing-events.openapi.yaml"
+    },
+    {
+      "path": "/dsh/internal/workforce/availability-projections",
+      "projectionContract": "dsh.runtime-extensions.openapi.yaml"
     },
     {
       "path": "/dsh/notifications/push-endpoints",
@@ -765,12 +837,32 @@
       "projectionContract": "dsh.dispatch-governance.openapi.yaml"
     },
     {
+      "path": "/dsh/operator/dispatch/capacity-forecast",
+      "projectionContract": "dsh.runtime-extensions.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/dispatch/capacity-policies/{serviceAreaCode}",
+      "projectionContract": "dsh.runtime-extensions.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/dispatch/captains/{captainId}/financial-eligibility",
+      "projectionContract": "dsh.captain-financial-eligibility.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh",
+      "projectionContract": "dsh.captain-financial-eligibility.openapi.yaml"
+    },
+    {
       "path": "/dsh/operator/dispatch/captains/{captainId}/profile",
       "projectionContract": "dsh.dispatch-governance.openapi.yaml"
     },
     {
       "path": "/dsh/operator/dispatch/decisions",
       "projectionContract": "dsh.dispatch-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/dispatch/heatmap",
+      "projectionContract": "dsh.runtime-extensions.openapi.yaml"
     },
     {
       "path": "/dsh/operator/dispatch/tracking-alerts",
@@ -850,15 +942,7 @@
     },
     {
       "path": "/dsh/operator/partner-delivery/sla-alerts",
-      "projectionContract": "dsh.fulfillment-operations.openapi.yaml"
-    },
-    {
-      "path": "/dsh/operator/partner-delivery/sla-alerts",
       "projectionContract": "dsh.partner-delivery.openapi.yaml"
-    },
-    {
-      "path": "/dsh/operator/partner-delivery/sla-alerts/{alertId}/acknowledge",
-      "projectionContract": "dsh.fulfillment-operations.openapi.yaml"
     },
     {
       "path": "/dsh/operator/partner-delivery/sla-alerts/{alertId}/acknowledge",
@@ -866,15 +950,7 @@
     },
     {
       "path": "/dsh/operator/partner-delivery/sla-alerts/refresh",
-      "projectionContract": "dsh.fulfillment-operations.openapi.yaml"
-    },
-    {
-      "path": "/dsh/operator/partner-delivery/sla-alerts/refresh",
       "projectionContract": "dsh.partner-delivery.openapi.yaml"
-    },
-    {
-      "path": "/dsh/operator/pickups/sla-alerts",
-      "projectionContract": "dsh.fulfillment-operations.openapi.yaml"
     },
     {
       "path": "/dsh/operator/pickups/sla-alerts",
@@ -882,19 +958,15 @@
     },
     {
       "path": "/dsh/operator/pickups/sla-alerts/{alertId}/acknowledge",
-      "projectionContract": "dsh.fulfillment-operations.openapi.yaml"
-    },
-    {
-      "path": "/dsh/operator/pickups/sla-alerts/{alertId}/acknowledge",
       "projectionContract": "dsh.partner-delivery.openapi.yaml"
     },
     {
       "path": "/dsh/operator/pickups/sla-alerts/refresh",
-      "projectionContract": "dsh.fulfillment-operations.openapi.yaml"
+      "projectionContract": "dsh.partner-delivery.openapi.yaml"
     },
     {
-      "path": "/dsh/operator/pickups/sla-alerts/refresh",
-      "projectionContract": "dsh.partner-delivery.openapi.yaml"
+      "path": "/dsh/operator/platform/dispatch-balance-policy",
+      "projectionContract": "dsh.captain-financial-eligibility.openapi.yaml"
     },
     {
       "path": "/dsh/operator/platform/map-provider-health",
@@ -923,6 +995,10 @@
     {
       "path": "/dsh/operator/privacy/client-addresses/status",
       "projectionContract": "dsh.client-address-privacy.openapi.yaml"
+    },
+    {
+      "path": "/dsh/operator/reels/{reelId}/media/{kind}",
+      "projectionContract": "dsh.reels.openapi.yaml"
     },
     {
       "path": "/dsh/operator/stores/{storeId}/assortment-pauses",
@@ -990,11 +1066,11 @@
     },
     {
       "path": "/dsh/operator/workforce/employees/{actorId}/media/uploads",
-      "projectionContract": "dsh.jrn-003-workforce-scopes.openapi.yaml"
+      "projectionContract": "dsh.workforce-scopes.openapi.yaml"
     },
     {
       "path": "/dsh/operator/workforce/scopes/{actorId}",
-      "projectionContract": "dsh.jrn-003-workforce-scopes.openapi.yaml"
+      "projectionContract": "dsh.workforce-scopes.openapi.yaml"
     },
     {
       "path": "/dsh/partner/catalog/attributes",
@@ -1014,39 +1090,47 @@
     },
     {
       "path": "/dsh/partner/me/finance/cod-records",
-      "projectionContract": "dsh.jrn-038-cod-custody.openapi.yaml"
+      "projectionContract": "dsh.cod-custody.openapi.yaml"
     },
     {
       "path": "/dsh/partner/me/finance/cod-records/{recordId}/remit",
-      "projectionContract": "dsh.jrn-038-cod-custody.openapi.yaml"
+      "projectionContract": "dsh.cod-custody.openapi.yaml"
     },
     {
       "path": "/dsh/partner/me/finance/commissions",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/partner/me/finance/ledger-entries",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/partner/me/finance/payout-destination",
-      "projectionContract": "dsh.jrn-037-payouts-destinations.openapi.yaml"
+      "projectionContract": "dsh.payouts-destinations.openapi.yaml"
     },
     {
       "path": "/dsh/partner/me/finance/payout-destination/deactivate",
-      "projectionContract": "dsh.jrn-037-payouts-destinations.openapi.yaml"
+      "projectionContract": "dsh.payouts-destinations.openapi.yaml"
     },
     {
       "path": "/dsh/partner/me/finance/payout-requests",
-      "projectionContract": "dsh.jrn-037-payouts-destinations.openapi.yaml"
+      "projectionContract": "dsh.payouts-destinations.openapi.yaml"
     },
     {
       "path": "/dsh/partner/me/finance/payout-requests",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
     },
     {
       "path": "/dsh/partner/me/finance/wallet",
-      "projectionContract": "jrn-033-representative-finance.openapi.yaml"
+      "projectionContract": "dsh.representative-finance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/me/ratings/field",
+      "projectionContract": "dsh.incident-governance.openapi.yaml"
+    },
+    {
+      "path": "/dsh/partner/me/ratings/field/prompt",
+      "projectionContract": "dsh.incident-governance.openapi.yaml"
     },
     {
       "path": "/dsh/partner/order-truth",
@@ -1066,15 +1150,7 @@
     },
     {
       "path": "/dsh/partner/orders/{orderId}/pickup/extend-window",
-      "projectionContract": "dsh.fulfillment-operations.openapi.yaml"
-    },
-    {
-      "path": "/dsh/partner/orders/{orderId}/pickup/extend-window",
       "projectionContract": "dsh.partner-delivery.openapi.yaml"
-    },
-    {
-      "path": "/dsh/partner/orders/{orderId}/pickup/reschedule",
-      "projectionContract": "dsh.fulfillment-operations.openapi.yaml"
     },
     {
       "path": "/dsh/partner/orders/{orderId}/pickup/reschedule",
@@ -1082,7 +1158,7 @@
     },
     {
       "path": "/dsh/partner/orders/{orderId}/refunds",
-      "projectionContract": "jrn-035-refunds.openapi.yaml"
+      "projectionContract": "dsh.refunds.openapi.yaml"
     },
     {
       "path": "/dsh/partner/stores/{storeId}/assortment-pauses",
@@ -1236,48 +1312,6 @@
       ]
     },
     {
-      "path": "/dsh/operator/partner-delivery/sla-alerts",
-      "projectionContracts": [
-        "dsh.fulfillment-operations.openapi.yaml",
-        "dsh.partner-delivery.openapi.yaml"
-      ]
-    },
-    {
-      "path": "/dsh/operator/partner-delivery/sla-alerts/{alertId}/acknowledge",
-      "projectionContracts": [
-        "dsh.fulfillment-operations.openapi.yaml",
-        "dsh.partner-delivery.openapi.yaml"
-      ]
-    },
-    {
-      "path": "/dsh/operator/partner-delivery/sla-alerts/refresh",
-      "projectionContracts": [
-        "dsh.fulfillment-operations.openapi.yaml",
-        "dsh.partner-delivery.openapi.yaml"
-      ]
-    },
-    {
-      "path": "/dsh/operator/pickups/sla-alerts",
-      "projectionContracts": [
-        "dsh.fulfillment-operations.openapi.yaml",
-        "dsh.partner-delivery.openapi.yaml"
-      ]
-    },
-    {
-      "path": "/dsh/operator/pickups/sla-alerts/{alertId}/acknowledge",
-      "projectionContracts": [
-        "dsh.fulfillment-operations.openapi.yaml",
-        "dsh.partner-delivery.openapi.yaml"
-      ]
-    },
-    {
-      "path": "/dsh/operator/pickups/sla-alerts/refresh",
-      "projectionContracts": [
-        "dsh.fulfillment-operations.openapi.yaml",
-        "dsh.partner-delivery.openapi.yaml"
-      ]
-    },
-    {
       "path": "/dsh/partner/catalog/product-proposals",
       "projectionContracts": [
         "dsh.catalog-proposal-readback.openapi.yaml",
@@ -1287,28 +1321,14 @@
     {
       "path": "/dsh/partner/me/finance/payout-requests",
       "projectionContracts": [
-        "dsh.jrn-037-payouts-destinations.openapi.yaml",
-        "jrn-033-representative-finance.openapi.yaml"
+        "dsh.payouts-destinations.openapi.yaml",
+        "dsh.representative-finance.openapi.yaml"
       ]
     },
     {
       "path": "/dsh/partner/orders/{orderId}/partner-delivery/proof",
       "projectionContracts": [
         "dsh.delivery-proof-media.openapi.yaml",
-        "dsh.partner-delivery.openapi.yaml"
-      ]
-    },
-    {
-      "path": "/dsh/partner/orders/{orderId}/pickup/extend-window",
-      "projectionContracts": [
-        "dsh.fulfillment-operations.openapi.yaml",
-        "dsh.partner-delivery.openapi.yaml"
-      ]
-    },
-    {
-      "path": "/dsh/partner/orders/{orderId}/pickup/reschedule",
-      "projectionContracts": [
-        "dsh.fulfillment-operations.openapi.yaml",
         "dsh.partner-delivery.openapi.yaml"
       ]
     }
@@ -1322,6 +1342,12 @@
     },
     "dsh.analytics-extensions.openapi.yaml": {
       "pathCount": 7,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.captain-financial-eligibility.openapi.yaml": {
+      "pathCount": 5,
       "owner": "services/dsh",
       "parentContract": null,
       "contractRole": "governed-projection"
@@ -1344,6 +1370,12 @@
       "parentContract": "contracts/dsh.openapi.yaml",
       "contractRole": "executable-fragment"
     },
+    "dsh.checkout.openapi.yaml": {
+      "pathCount": 6,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
     "dsh.client-address-privacy.openapi.yaml": {
       "pathCount": 4,
       "owner": "services/dsh",
@@ -1357,6 +1389,12 @@
       "contractRole": "governed-projection"
     },
     "dsh.client-map.openapi.yaml": {
+      "pathCount": 5,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.cod-custody.openapi.yaml": {
       "pathCount": 5,
       "owner": "services/dsh",
       "parentContract": null,
@@ -1386,12 +1424,6 @@
       "parentContract": null,
       "contractRole": "governed-projection"
     },
-    "dsh.fulfillment-operations.openapi.yaml": {
-      "pathCount": 8,
-      "owner": "services/dsh",
-      "parentContract": "services/dsh/contracts/dsh.openapi.yaml",
-      "contractRole": "governed-projection"
-    },
     "dsh.home-marketing-events.openapi.yaml": {
       "pathCount": 2,
       "owner": "services/dsh",
@@ -1405,37 +1437,7 @@
       "contractRole": "governed-projection"
     },
     "dsh.incident-governance.openapi.yaml": {
-      "pathCount": 5,
-      "owner": "services/dsh",
-      "parentContract": null,
-      "contractRole": "governed-projection"
-    },
-    "dsh.jrn-003-workforce-scopes.openapi.yaml": {
-      "pathCount": 2,
-      "owner": "services/dsh",
-      "parentContract": null,
-      "contractRole": "governed-projection"
-    },
-    "dsh.jrn-010-checkout.openapi.yaml": {
-      "pathCount": 6,
-      "owner": "services/dsh",
-      "parentContract": null,
-      "contractRole": "governed-projection"
-    },
-    "dsh.jrn-036-settlements-commissions.openapi.yaml": {
-      "pathCount": 8,
-      "owner": "services/dsh",
-      "parentContract": null,
-      "contractRole": "governed-projection"
-    },
-    "dsh.jrn-037-payouts-destinations.openapi.yaml": {
-      "pathCount": 9,
-      "owner": "services/dsh",
-      "parentContract": null,
-      "contractRole": "governed-projection"
-    },
-    "dsh.jrn-038-cod-custody.openapi.yaml": {
-      "pathCount": 5,
+      "pathCount": 12,
       "owner": "services/dsh",
       "parentContract": null,
       "contractRole": "governed-projection"
@@ -1454,6 +1456,12 @@
     },
     "dsh.notifications-governance.openapi.yaml": {
       "pathCount": 3,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.operational-policy.openapi.yaml": {
+      "pathCount": 6,
       "owner": "services/dsh",
       "parentContract": null,
       "contractRole": "governed-projection"
@@ -1512,8 +1520,44 @@
       "parentContract": null,
       "contractRole": "governed-projection"
     },
+    "dsh.payouts-destinations.openapi.yaml": {
+      "pathCount": 9,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
     "dsh.platform-policies.openapi.yaml": {
       "pathCount": 7,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.reels.openapi.yaml": {
+      "pathCount": 5,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.refunds.openapi.yaml": {
+      "pathCount": 9,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.representative-finance.openapi.yaml": {
+      "pathCount": 16,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.runtime-extensions.openapi.yaml": {
+      "pathCount": 4,
+      "owner": "services/dsh",
+      "parentContract": null,
+      "contractRole": "governed-projection"
+    },
+    "dsh.settlements-commissions.openapi.yaml": {
+      "pathCount": 8,
       "owner": "services/dsh",
       "parentContract": null,
       "contractRole": "governed-projection"
@@ -1536,14 +1580,8 @@
       "parentContract": null,
       "contractRole": "governed-projection"
     },
-    "jrn-033-representative-finance.openapi.yaml": {
-      "pathCount": 16,
-      "owner": "services/dsh",
-      "parentContract": null,
-      "contractRole": "governed-projection"
-    },
-    "jrn-035-refunds.openapi.yaml": {
-      "pathCount": 9,
+    "dsh.workforce-scopes.openapi.yaml": {
+      "pathCount": 2,
       "owner": "services/dsh",
       "parentContract": null,
       "contractRole": "governed-projection"

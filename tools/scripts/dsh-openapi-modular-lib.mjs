@@ -9,6 +9,7 @@ export const entryContractPath = path.join(contractsDirectory, 'dsh.openapi.yaml
 export const generatedBundlePath = path.join(contractsDirectory, 'generated/dsh.bundle.openapi.yaml');
 export const manifestPath = path.join(contractsDirectory, 'dsh.modular.manifest.json');
 export const ownershipReportPath = path.join(contractsDirectory, 'dsh.contract-ownership.json');
+export const ownershipCollisionAllowlistPath = path.join(contractsDirectory, 'dsh.contract-ownership-allowlist.json');
 
 const PATH_DOMAINS = [
   'system',
@@ -317,7 +318,7 @@ function writeText(filePath, content) {
   fs.writeFileSync(filePath, content.endsWith('\n') ? content : `${content}\n`, 'utf8');
 }
 
-function parseContractStructure(text) {
+export function parseContractStructure(text) {
   const lines = text.replace(/\r\n/g, '\n').split('\n');
   const pathsIndex = findTopLevelSection(lines, 'paths');
   if (pathsIndex === -1) throw new Error('DSH contract is missing top-level paths section.');
@@ -605,7 +606,7 @@ function buildManifest(pathEntries, componentSections) {
   };
 }
 
-function collectSiblingContractOwnership(currentPathKeys) {
+export function collectSiblingContractOwnership(currentPathKeys) {
   const report = {
     formatVersion: 2,
     sovereignContract: 'services/dsh/contracts/dsh.openapi.yaml',
@@ -815,11 +816,32 @@ export function verifyDshOpenApiModular() {
     }
   }
 
+  const freshOwnership = collectSiblingContractOwnership(structure.pathEntries.map((entry) => entry.key));
   if (fs.existsSync(ownershipReportPath)) {
-    const ownership = JSON.parse(readText(ownershipReportPath));
-    if ((ownership.duplicatePaths ?? []).length > 0) {
-      failures.push(`DSH contract ownership has duplicate paths: ${ownership.duplicatePaths.map((item) => `${item.path} (${item.siblingContract})`).join(', ')}`);
+    const committedOwnership = readText(ownershipReportPath);
+    if (committedOwnership !== JSON.stringify(freshOwnership, null, 2)) {
+      failures.push('DSH contract ownership report is stale; regenerate services/dsh/contracts/dsh.contract-ownership.json.');
     }
+  } else {
+    failures.push('Missing DSH contract ownership report.');
+  }
+
+  const allowedCollisionKeys = new Set();
+  if (fs.existsSync(ownershipCollisionAllowlistPath)) {
+    const allowlist = JSON.parse(readText(ownershipCollisionAllowlistPath));
+    for (const entry of allowlist.entries ?? []) {
+      if (!entry.path || !entry.reason || !Array.isArray(entry.projectionContracts)) {
+        failures.push(`DSH contract ownership allowlist entry is missing path, reason, or projectionContracts: ${JSON.stringify(entry)}`);
+        continue;
+      }
+      allowedCollisionKeys.add(`${entry.path}::${entry.projectionContracts.slice().sort().join(',')}`);
+    }
+  }
+  const unallowedCollisions = freshOwnership.projectionCollisions.filter(
+    (collision) => !allowedCollisionKeys.has(`${collision.path}::${collision.projectionContracts.slice().sort().join(',')}`),
+  );
+  if (unallowedCollisions.length > 0) {
+    failures.push(`DSH contract ownership has unreviewed path collisions: ${unallowedCollisions.map((item) => `${item.path} (${item.projectionContracts.join(', ')})`).join('; ')}`);
   }
 
   if (failures.length > 0) {
