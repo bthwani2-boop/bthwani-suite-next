@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import Ajv from "ajv";
 import { fail, repoRoot } from "./_guard-utils.mjs";
 
@@ -29,6 +30,38 @@ function readText(relativePath) {
   return fs.readFileSync(fullPath, "utf8");
 }
 
+function trackedTextFiles() {
+  const extensions = new Set([
+    ".cjs",
+    ".go",
+    ".js",
+    ".json",
+    ".md",
+    ".mjs",
+    ".ps1",
+    ".sh",
+    ".sql",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".yaml",
+    ".yml",
+  ]);
+  try {
+    return execFileSync("git", ["ls-files", "-z"], { cwd: repoRoot, encoding: "utf8" })
+      .split("\0")
+      .filter(Boolean)
+      .filter((file) => extensions.has(path.extname(file).toLowerCase()));
+  } catch (error) {
+    violations.push({
+      file: ".",
+      line: 0,
+      message: `TRACKED_FILE_SCAN_FAILED ${error.message}`,
+    });
+    return [];
+  }
+}
+
 const statePath = "governance/saas/saas-governance.json";
 const schemaPath = "governance/saas/saas-governance.schema.json";
 const authorizationPath = "governance/saas/activation-authorization.json";
@@ -53,8 +86,13 @@ const productSchema = readJson(productSchemaPath);
 
 const canonicalPlatformClassification =
   "UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_WALLET_PLATFORM_WITH_B2B_PARTNER_CAPABILITIES_AND_DEFERRED_OPERATOR_SAAS_READINESS";
-const retiredPartnerSaasClassification =
-  "UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_WALLET_PLATFORM_WITH_PARTNER_SAAS_CAPABILITIES";
+const retiredPartnerSaasClassification = [
+  "UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_WALLET_PLATFORM_WITH",
+  "PARTNER",
+  "SAAS",
+  "CAPABILITIES",
+].join("_");
+const retiredPartnerSaasProse = new RegExp(["partner", "SaaS", "capabilities"].join("\\s+"), "i");
 
 if (!platformModel.includes(`classification: ${canonicalPlatformClassification}`)) {
   violations.push({
@@ -90,12 +128,9 @@ if (partnerContext?.partnerOrganization !== "NOT_A_TENANT" || partnerContext?.st
   });
 }
 
-for (const [file, content] of [
-  [platformModelPath, platformModel],
-  [platformContractPath, JSON.stringify(platformContract ?? {})],
-  [productSchemaPath, JSON.stringify(productSchema ?? {})],
-]) {
-  if (content.includes(retiredPartnerSaasClassification) || /partner SaaS capabilities/i.test(content)) {
+for (const file of trackedTextFiles()) {
+  const content = fs.readFileSync(path.join(repoRoot, file), "utf8");
+  if (content.includes(retiredPartnerSaasClassification) || retiredPartnerSaasProse.test(content)) {
     violations.push({
       file,
       line: 0,
