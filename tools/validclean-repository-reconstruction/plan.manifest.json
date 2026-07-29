@@ -96,16 +96,16 @@
     "closureMatrix": "tools/validclean-repository-reconstruction/17_FINAL_CLOSURE_MATRIX.md",
     "lastPackageInputSha": "04e702468282451f5efc8d72bd8b3e4496969d00",
     "headResolutionPolicy": "Resolve refs/heads/validclean externally; the manifest does not self-reference its own commit SHA.",
-    "currentWave": "PACKAGE_REBASELINE_AND_P0_FOUNDATION",
+    "currentWave": "WAVE_0_1_CONTRACTS_AND_MIGRATIONS_CLOSED",
     "slices": {
       "VC-100-full-tracked-file-inventory": "VERIFIED_SAME_SHA",
       "VC-101-package-state-unification": "VERIFIED_SAME_SHA",
       "VC-102-path-decision-registry": "VERIFIED_SAME_SHA",
-      "VC-110-platform-control-contract-reconstruction": "DIAGNOSIS_COMPLETE",
-      "VC-120-dsh-contract-reconstruction": "DIAGNOSIS_COMPLETE",
-      "VC-130-migration-history-reconstruction": "DIAGNOSIS_COMPLETE",
-      "VC-140-openapi-ownership-metadata": "DIAGNOSIS_COMPLETE",
-      "VC-150-generated-client-provenance-all-services": "DIAGNOSIS_COMPLETE",
+      "VC-110-platform-control-contract-reconstruction": "VERIFIED_SAME_SHA",
+      "VC-120-dsh-contract-reconstruction": "VERIFIED_SAME_SHA",
+      "VC-130-migration-history-reconstruction": "VERIFIED_SAME_SHA",
+      "VC-140-openapi-ownership-metadata": "VERIFIED_SAME_SHA",
+      "VC-150-generated-client-provenance-all-services": "VERIFIED_SAME_SHA",
       "VC-160-identity-trust-closure": "NOT_STARTED",
       "VC-170-actor-organization-tenant-migration": "NOT_STARTED",
       "VC-180-wlt-financial-invariants": "NOT_STARTED",
@@ -146,6 +146,43 @@
     "16_GOVERNANCE_AGENTS_GUARDS_REDUCTION.md",
     "17_FINAL_CLOSURE_MATRIX.md"
   ],
+  "wave01Closure": {
+    "verifiedSameSha": "21a8491fe362f9fbf2b4edeca13718e2b0c14921",
+    "scope": "VC-101, VC-102, VC-110, VC-120 (partial), VC-130 (dsh only), VC-140, VC-150 (platform-control only)",
+    "notRepositoryClosure": true,
+    "verificationCommandsRun": [
+      "pnpm run typecheck (repo-wide, all workspaces)",
+      "pnpm run lint (repo-wide, all workspaces)",
+      "pnpm run guard:logic-all",
+      "node tools/guards/wlt-openapi-bundle-gate.mjs",
+      "node tools/guards/dsh-openapi-modular-gate.mjs",
+      "node tools/guards/migration-manifest-drift-gate.mjs",
+      "node tools/guards/platform-control-client-provenance-gate.mjs",
+      "go build ./... && go vet ./... (core/platform-control/backend, services/dsh/backend)",
+      "git status --porcelain empty and HEAD unchanged across the full run"
+    ],
+    "resolvedThisWave": [
+      "Platform Control: entry contract stopped duplicating change-set/rollout operations; jrn-041-progressive-rollout renamed to platform-progressive-rollout with JRN-041 kept as x-bthwani-journey-id metadata; 3 generated clients wired and provenance-gated.",
+      "DSH: dsh.fulfillment-operations.openapi.yaml deleted as a proven pure duplicate of dsh.partner-delivery.openapi.yaml (8 collisions); 9 permanent contracts renamed off jrn-* filenames (workforce-scopes, checkout, operational-policy, settlements-commissions, payouts-destinations, cod-custody, representative-finance(-tenancy), refunds); dsh-openapi-modular-lib.mjs's ownership-collision check fixed from a vacuous field-name bug to a real, allowlist-backed enforcement.",
+      "DSH migrations: manifest.json snapshot (186 files) generated from the real PowerShell Sort-Object execution order (verified to differ from naive ASCII sort), with a drift gate.",
+      "OpenAPI ownership metadata: x-bthwani-owner backfilled on the 15 remaining source contracts missing it repo-wide (core/workforce, services/dsh, services/wlt)."
+    ],
+    "namingDecisions": {
+      "T1_permanent_domain_contracts_openapi_files": "Renamed off jrn-0NN filenames to <service>.<domain>.openapi.yaml; journey id preserved as x-bthwani-journey-id metadata. Applied to WLT (prior session) and Platform Control + DSH (this session).",
+      "T2_data_contract_json_registries": "Renamed off jrn-0NN filenames with journeyId retained as a JSON field. Applied to services/dsh/contracts/dsh.representative-finance-tenancy.contract.json this session.",
+      "T3_governance_journey_registries": "Left as-is: governance/**/JRN-* files and services/dsh/contracts/jrn-004/006/011/013/014-*.json are keyed by journey id as their real indexing scheme, not domain contract names. Confirmed by sampling every jrn-004/006/011/013/014 file for a journeyId field this session.",
+      "T4_journey_scoped_tests": "Left as-is: filenames like jrn-029-operational-policy.test.mjs correctly describe test scope, not contract identity."
+    },
+    "needsEvidence": [
+      "VC-120: 4 DSH cross-contract path-ownership collision pairs (catalog-proposal-readback/catalog, marketing-commercial/partner-commercial-closure, payouts-destinations/representative-finance, delivery-proof-media/partner-delivery) recorded in services/dsh/contracts/dsh.contract-ownership-allowlist.json, deferred to VC-180/VC-190.",
+      "VC-130: identity, workforce, providers, platform-control, wlt migrations still lack a manifest.json; migration-manifest-drift-gate.mjs SKIPs them rather than passing them.",
+      "VC-140: possible naming/ownership collision between services/wlt/contracts/wlt.payout-destination.openapi.yaml (singular, not bundle-composed) and wlt.payouts-destinations.openapi.yaml (plural, canonical) discovered but not resolved; deferred to VC-180.",
+      "VC-150: identity/workforce/providers/dsh generated clients still lack a delete-regenerate-diff gate equivalent to WLT's and Platform Control's.",
+      "Discovered, unrelated to this wave's changes: services/dsh/clients/generated/dsh-api.ts is stale relative to its source bundle (currency-field schema additions never regenerated); confirmed pre-existing via git stash; not fixed here to stay in scope.",
+      "Database/runtime proofs (fresh/upgrade DB, financial invariants, CI same-SHA) remain BLOCKED_EXTERNAL / NEEDS_EVIDENCE as in the prior session; no Docker/Postgres or CI run available this session.",
+      "githubWorkflowRunsVisibleToConnector: 0 -- same-SHA CI evidence unavailable; CLOSED_WITH_EVIDENCE is not used for this wave."
+    ]
+  },
   "hardRules": {
     "noDeletionWithoutConsumptionAndReplacementProof": true,
     "protectSecurityFinanceMigrationRuntimeInvariants": true,
