@@ -1,8 +1,7 @@
 name: Temporary Platform Contract Regeneration
 
 on:
-  push:
-    branches: [validclean]
+  pull_request:
     paths:
       - .github/workflows/tmp-regenerate-platform-contract.yml
       - core/platform-control/contracts/**
