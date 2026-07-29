@@ -1,195 +1,41 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "BThwani SaaS Governance State",
+  "title": "BThwani Partner SaaS Capability Governance",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schemaVersion",
     "platformMode",
-    "saasReadinessMode",
-    "commercialActivationState",
-    "activationAuthorization",
-    "tenantDefinition",
+    "partnerSaasModel",
+    "partnerAccessModel",
+    "partnerOrganizationBoundary",
+    "storeBoundary",
+    "operatorContextPurpose",
     "trustedOperatorContextRequired",
-    "clientSuppliedTenantTrusted",
-    "deferredCommercialFeatures",
-    "activationEvidence",
+    "clientSuppliedOperatorContextTrusted",
+    "partnerCapabilities",
     "canonicalDecision",
     "decisionVocabulary"
   ],
   "properties": {
-    "schemaVersion": { "const": 2 },
+    "schemaVersion": { "const": 3 },
     "platformMode": { "const": "BTHWANI_NATIVE_PLATFORM" },
-    "saasReadinessMode": { "enum": ["NOT_APPLICABLE", "SAAS_READY_DEFERRED", "SAAS_ACTIVE"] },
-    "commercialActivationState": {
-      "enum": ["BLOCKED_BY_POLICY", "ELIGIBLE_FOR_REVIEW", "ACTIVATION_AUTHORIZED", "ACTIVE"]
-    },
-    "activationAuthorization": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["authorizationPath", "status", "targetRef", "productionDeploymentAuthorized"],
-      "properties": {
-        "authorizationPath": { "const": "governance/saas/activation-authorization.json" },
-        "status": { "enum": ["NOT_AUTHORIZED", "AUTHORIZED"] },
-        "targetRef": { "type": "string", "minLength": 1 },
-        "productionDeploymentAuthorized": { "type": "boolean" }
-      }
-    },
-    "tenantDefinition": { "type": "string", "minLength": 1 },
+    "partnerSaasModel": { "const": "EMBEDDED_PLATFORM_CAPABILITY" },
+    "partnerAccessModel": { "const": "MANAGED_B2B_PLATFORM_ACCESS" },
+    "partnerOrganizationBoundary": { "const": "BUSINESS_SCOPE_NOT_TENANT" },
+    "storeBoundary": { "const": "BUSINESS_SCOPE_NOT_TENANT" },
+    "operatorContextPurpose": { "const": "TRUST_AND_DATA_ISOLATION" },
     "trustedOperatorContextRequired": { "const": true },
-    "clientSuppliedTenantTrusted": { "const": false },
-    "deferredCommercialFeatures": {
+    "clientSuppliedOperatorContextTrusted": { "const": false },
+    "partnerCapabilities": {
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
       "items": { "type": "string", "minLength": 1 }
     },
-    "activationEvidence": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "tenantOwnedEntitiesClassified",
-        "operatorContextPropagationVerified",
-        "crossTenantNegativeTestsPassed",
-        "crossTenantDataLeakageZero",
-        "criticalVulnerabilitiesZero",
-        "unacceptedHighVulnerabilitiesZero",
-        "tenantBackupRestoreVerified",
-        "tenantExportDeletionVerified",
-        "perTenantObservabilityAvailable",
-        "quotaIsolationVerified",
-        "wltTenantFinancialIsolationVerified",
-        "independentSecurityReviewPassed",
-        "incidentRollbackRunbooksVerified",
-        "legalPrivacyCommercialModelApproved"
-      ],
-      "properties": {
-        "tenantOwnedEntitiesClassified": { "$ref": "#/definitions/evidenceState" },
-        "operatorContextPropagationVerified": { "$ref": "#/definitions/evidenceState" },
-        "crossTenantNegativeTestsPassed": { "$ref": "#/definitions/evidenceState" },
-        "crossTenantDataLeakageZero": { "$ref": "#/definitions/evidenceState" },
-        "criticalVulnerabilitiesZero": { "$ref": "#/definitions/evidenceState" },
-        "unacceptedHighVulnerabilitiesZero": { "$ref": "#/definitions/evidenceState" },
-        "tenantBackupRestoreVerified": { "$ref": "#/definitions/evidenceState" },
-        "tenantExportDeletionVerified": { "$ref": "#/definitions/evidenceState" },
-        "perTenantObservabilityAvailable": { "$ref": "#/definitions/evidenceState" },
-        "quotaIsolationVerified": { "$ref": "#/definitions/evidenceState" },
-        "wltTenantFinancialIsolationVerified": { "$ref": "#/definitions/evidenceState" },
-        "independentSecurityReviewPassed": { "$ref": "#/definitions/evidenceState" },
-        "incidentRollbackRunbooksVerified": { "$ref": "#/definitions/evidenceState" },
-        "legalPrivacyCommercialModelApproved": { "$ref": "#/definitions/evidenceState" }
-      }
-    },
     "canonicalDecision": {
       "enum": ["PASS", "FIX_REQUIRED", "BLOCKED_EXTERNAL", "NEEDS_EVIDENCE", "PROTOCOL_VIOLATION", "CLOSED_WITH_EVIDENCE"]
     },
     "decisionVocabulary": { "const": "governance/contracts/decision-vocabulary.json" }
-  },
-  "allOf": [
-    {
-      "if": { "properties": { "commercialActivationState": { "const": "ACTIVE" } } },
-      "then": {
-        "properties": {
-          "saasReadinessMode": { "const": "SAAS_ACTIVE" },
-          "canonicalDecision": { "const": "CLOSED_WITH_EVIDENCE" },
-          "activationAuthorization": {
-            "properties": {
-              "status": { "const": "AUTHORIZED" },
-              "productionDeploymentAuthorized": { "const": true }
-            }
-          },
-          "activationEvidence": {
-            "properties": {
-              "tenantOwnedEntitiesClassified": { "const": "PROVEN" },
-              "operatorContextPropagationVerified": { "const": "PROVEN" },
-              "crossTenantNegativeTestsPassed": { "const": "PROVEN" },
-              "crossTenantDataLeakageZero": { "const": "PROVEN" },
-              "criticalVulnerabilitiesZero": { "const": "PROVEN" },
-              "unacceptedHighVulnerabilitiesZero": { "const": "PROVEN" },
-              "tenantBackupRestoreVerified": { "const": "PROVEN" },
-              "tenantExportDeletionVerified": { "const": "PROVEN" },
-              "perTenantObservabilityAvailable": { "const": "PROVEN" },
-              "quotaIsolationVerified": { "const": "PROVEN" },
-              "wltTenantFinancialIsolationVerified": { "const": "PROVEN" },
-              "independentSecurityReviewPassed": { "const": "PROVEN" },
-              "incidentRollbackRunbooksVerified": { "const": "PROVEN" },
-              "legalPrivacyCommercialModelApproved": { "const": "PROVEN" }
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "commercialActivationState": { "const": "ACTIVATION_AUTHORIZED" } } },
-      "then": {
-        "properties": {
-          "saasReadinessMode": { "const": "SAAS_READY_DEFERRED" },
-          "canonicalDecision": { "enum": ["NEEDS_EVIDENCE", "FIX_REQUIRED", "BLOCKED_EXTERNAL"] },
-          "activationAuthorization": {
-            "properties": {
-              "status": { "const": "AUTHORIZED" },
-              "productionDeploymentAuthorized": { "const": false }
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "commercialActivationState": { "const": "ELIGIBLE_FOR_REVIEW" } } },
-      "then": {
-        "properties": {
-          "saasReadinessMode": { "const": "SAAS_READY_DEFERRED" },
-          "canonicalDecision": { "enum": ["NEEDS_EVIDENCE", "FIX_REQUIRED", "BLOCKED_EXTERNAL"] },
-          "activationAuthorization": {
-            "properties": {
-              "productionDeploymentAuthorized": { "const": false }
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "saasReadinessMode": { "const": "SAAS_ACTIVE" } } },
-      "then": {
-        "properties": {
-          "commercialActivationState": { "const": "ACTIVE" }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "activationAuthorization": {
-            "properties": { "status": { "const": "NOT_AUTHORIZED" } }
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "saasReadinessMode": { "enum": ["NOT_APPLICABLE", "SAAS_READY_DEFERRED"] },
-          "commercialActivationState": { "enum": ["BLOCKED_BY_POLICY", "ELIGIBLE_FOR_REVIEW"] },
-          "activationAuthorization": {
-            "properties": {
-              "productionDeploymentAuthorized": { "const": false }
-            }
-          }
-        }
-      }
-    },
-    {
-      "if": { "properties": { "commercialActivationState": { "const": "BLOCKED_BY_POLICY" } } },
-      "then": {
-        "properties": {
-          "saasReadinessMode": { "enum": ["NOT_APPLICABLE", "SAAS_READY_DEFERRED"] },
-          "canonicalDecision": { "enum": ["NEEDS_EVIDENCE", "BLOCKED_EXTERNAL", "FIX_REQUIRED"] },
-          "activationAuthorization": {
-            "properties": { "status": { "const": "NOT_AUTHORIZED" } }
-          }
-        }
-      }
-    }
-  ],
-  "definitions": {
-    "evidenceState": { "enum": ["NOT_APPLICABLE", "NOT_PROVEN", "PROVEN"] }
   }
 }
