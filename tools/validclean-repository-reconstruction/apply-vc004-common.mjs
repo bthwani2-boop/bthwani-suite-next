@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const contractsDir = 'services/wlt/contracts';
 const entryPath = path.join(contractsDir, 'wlt.openapi.yaml');
+const commonPath = path.join(contractsDir, 'wlt.common.openapi.yaml');
 const commonReference = './wlt.common.openapi.yaml';
 const commonParameters = ['Authorization', 'ServiceCaller', 'TenantId', 'CorrelationId', 'IdempotencyKey'];
 
@@ -32,6 +33,21 @@ function componentSectionBounds(lines, sectionName) {
     }
   }
   return { components, start, end };
+}
+
+function componentEntries(content, sectionName) {
+  const lines = content.split('\n');
+  const section = componentSectionBounds(lines, sectionName);
+  if (!section) return [];
+  const starts = [];
+  for (let index = section.start + 1; index < section.end; index += 1) {
+    const match = lines[index].match(/^    ([A-Za-z0-9_.-]+):\s*(?:#.*)?$/);
+    if (match) starts.push({ name: match[1], index });
+  }
+  return starts.map((entry, position) => ({
+    name: entry.name,
+    lines: lines.slice(entry.index, starts[position + 1]?.index ?? section.end),
+  }));
 }
 
 function removeComponentEntry(content, sectionName, entryName) {
@@ -75,11 +91,14 @@ function ensureSecurityAlias(content) {
     lines.splice(components + 1, 0, '  securitySchemes:');
     section = componentSectionBounds(lines, 'securitySchemes');
   }
-  const alias = [
-    '    serviceBearer:',
-    `      $ref: '${commonReference}#/components/securitySchemes/serviceBearer'`,
-  ];
-  lines.splice(section.start + 1, 0, ...alias);
+  if (!lines.slice(section.start + 1, section.end).some((line) => line === '    serviceBearer:')) {
+    lines.splice(
+      section.start + 1,
+      0,
+      '    serviceBearer:',
+      `      $ref: '${commonReference}#/components/securitySchemes/serviceBearer'`,
+    );
+  }
   return lines.join('\n');
 }
 
@@ -105,19 +124,124 @@ function externalizeTransportComponents(content) {
   return ensureSecurityAlias(result);
 }
 
+function scalarFromBlock(lines, field) {
+  const pattern = new RegExp(`^\\s+${field}:\\s*([^#]+?)\\s*$`);
+  for (const line of lines) {
+    const match = line.match(pattern);
+    if (match) return match[1].trim().replace(/^['"]|['"]$/g, '');
+  }
+  return undefined;
+}
+
+function numericConstraint(lines, field) {
+  const inline = lines.join('\n').match(new RegExp(`${field}:\\s*(\\d+)`));
+  return inline ? Number(inline[1]) : undefined;
+}
+
+function parseSimpleStringParameter(entry) {
+  const source = entry.lines.join('\n');
+  if (/\$ref:/.test(source) || /\benum:/.test(source) || /\bpattern:/.test(source) || /\bformat:/.test(source)) {
+    return null;
+  }
+  const name = scalarFromBlock(entry.lines, 'name');
+  const location = scalarFromBlock(entry.lines, 'in');
+  const required = scalarFromBlock(entry.lines, 'required') ?? 'false';
+  const typeMatch = source.match(/\btype:\s*string\b/);
+  if (!name || !location || !typeMatch) return null;
+  return {
+    componentName: entry.name,
+    name,
+    location,
+    required,
+    minLength: numericConstraint(entry.lines, 'minLength'),
+    maxLength: numericConstraint(entry.lines, 'maxLength'),
+  };
+}
+
+function canonicalSharedParameter(name, definitions) {
+  const parsed = definitions.map(({ entry }) => parseSimpleStringParameter(entry));
+  if (parsed.some((value) => value === null)) return null;
+  const first = parsed[0];
+  if (parsed.some((value) => (
+    value.componentName !== first.componentName
+    || value.name !== first.name
+    || value.location !== first.location
+    || value.required !== first.required
+  ))) return null;
+
+  const minimums = parsed.map((value) => value.minLength).filter(Number.isFinite);
+  const maximums = parsed.map((value) => value.maxLength).filter(Number.isFinite);
+  const minLength = minimums.length > 0 ? Math.max(...minimums) : undefined;
+  const maxLength = maximums.length > 0 ? Math.min(...maximums) : undefined;
+  if (minLength !== undefined && maxLength !== undefined && minLength > maxLength) {
+    throw new Error(`Incompatible WLT parameter constraints for ${name}: minLength ${minLength} exceeds maxLength ${maxLength}`);
+  }
+  const schemaFields = ['type: string'];
+  if (minLength !== undefined) schemaFields.push(`minLength: ${minLength}`);
+  if (maxLength !== undefined) schemaFields.push(`maxLength: ${maxLength}`);
+  return [
+    `    ${name}:`,
+    `      name: ${first.name}`,
+    `      in: ${first.location}`,
+    `      required: ${first.required}`,
+    `      schema: { ${schemaFields.join(', ')} }`,
+  ];
+}
+
+function appendCommonParameters(commonContent, entries) {
+  if (entries.length === 0) return commonContent;
+  const lines = commonContent.split('\n');
+  const section = componentSectionBounds(lines, 'parameters');
+  if (!section) throw new Error('WLT common contract is missing components.parameters');
+  let offset = 0;
+  for (const entry of entries) {
+    if (lines.slice(section.start + 1, section.end + offset).some((line) => line === `    ${entry.name}:`)) continue;
+    lines.splice(section.end + offset, 0, ...entry.lines);
+    offset += entry.lines.length;
+  }
+  return lines.join('\n');
+}
+
 let entry = read(entryPath);
 if (!entry.includes(`  common: ${commonReference}\n`)) {
   entry = entry.replace('x-bthwani-contracts:\n', `x-bthwani-contracts:\n  common: ${commonReference}\n`);
 }
-write(entryPath, externalizeTransportComponents(entry));
 
 const indexedSources = [...entry.matchAll(/^  [A-Za-z0-9_.-]+:\s+\.\/(.+\.openapi\.yaml)\s*$/gm)]
   .map((match) => match[1])
   .filter((file) => file !== 'wlt.common.openapi.yaml');
-for (const source of indexedSources) {
-  const file = path.join(contractsDir, source);
-  write(file, externalizeTransportComponents(read(file)));
+const contractPaths = [entryPath, ...indexedSources.map((source) => path.join(contractsDir, source))];
+const contractContents = new Map(contractPaths.map((file) => [file, externalizeTransportComponents(read(file))]));
+
+const parameterOwners = new Map();
+for (const [file, content] of contractContents) {
+  for (const parameterEntry of componentEntries(content, 'parameters')) {
+    const owners = parameterOwners.get(parameterEntry.name) ?? [];
+    owners.push({ file, entry: parameterEntry });
+    parameterOwners.set(parameterEntry.name, owners);
+  }
 }
+
+const derivedCommonParameters = [];
+for (const [name, definitions] of parameterOwners) {
+  if (definitions.length < 2 || commonParameters.includes(name)) continue;
+  const canonical = canonicalSharedParameter(name, definitions);
+  if (!canonical) continue;
+  derivedCommonParameters.push({ name, lines: canonical });
+  for (const [file, content] of contractContents) {
+    let next = content.replace(
+      new RegExp(`(\\$ref:\\s*["']?)#\\/components\\/parameters\\/${name}(["']?)`, 'g'),
+      (_, prefix, suffix) => `${prefix}${commonReference}#/components/parameters/${name}${suffix}`,
+    );
+    next = removeComponentEntry(next, 'parameters', name);
+    contractContents.set(file, next);
+  }
+}
+
+derivedCommonParameters.sort((left, right) => left.name.localeCompare(right.name));
+let common = appendCommonParameters(read(commonPath), derivedCommonParameters);
+write(commonPath, common);
+for (const [file, content] of contractContents) write(file, content);
 
 const composerPath = 'tools/scripts/wlt-openapi-bundle-lib.mjs';
 let composer = read(composerPath);
@@ -188,4 +312,7 @@ function prepareContractForBundle(contract) {
 }
 write(composerPath, composer);
 
-console.log(`VC-004 centralized WLT transport components across ${indexedSources.length + 1} contracts.`);
+console.log(
+  `VC-004 centralized WLT transport components across ${indexedSources.length + 1} contracts; `
+  + `${derivedCommonParameters.length} compatible shared path parameters derived.`,
+);
