@@ -24,7 +24,7 @@ components:
       name: Authorization
       in: header
       required: true
-      schema: { type: string, minLength: 8 }
+      schema: { type: string, minLength: 8, pattern: '^Bearer .+' }
     ServiceCaller:
       name: X-Service-Caller
       in: header
@@ -39,6 +39,11 @@ components:
       name: X-Correlation-ID
       in: header
       required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    CorrelationIdOptional:
+      name: X-Correlation-ID
+      in: header
+      required: false
       schema: { type: string, minLength: 1, maxLength: 200 }
     IdempotencyKey:
       name: Idempotency-Key
