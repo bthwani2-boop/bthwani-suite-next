@@ -100,28 +100,33 @@ func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFu
 	})
 }
 
-func enforceSaasOperatorContext(w http.ResponseWriter, r *http.Request, identity auth.Identity) bool {
-	status, err := currentSaasRuntimeStatus()
-	if err != nil {
-		sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
-		return false
+func configuredOperatorContextID() (string, error) {
+	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
+	if operatorContextID == "" {
+		return "", errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required")
 	}
-	if !status.RuntimeEnabled {
-		return true
+	return operatorContextID, nil
+}
+
+func enforceOperatorContext(w http.ResponseWriter, r *http.Request, identity auth.Identity) bool {
+	configuredContextID, err := configuredOperatorContextID()
+	if err != nil {
+		sendError(w, http.StatusServiceUnavailable, "OPERATOR_CONTEXT_CONFIG_INVALID", err.Error())
+		return false
 	}
 
 	identityOperatorContextID := strings.TrimSpace(identity.OperatorContextID)
 	if identityOperatorContextID == "" {
-		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "authenticated identity has no trusted tenant context")
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "authenticated identity has no trusted operator context")
 		return false
 	}
-	if identityOperatorContextID != status.DefaultOperatorContextID {
-		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "identity tenant does not match the active runtime tenant")
+	if identityOperatorContextID != configuredContextID {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "identity operator context does not match the platform context")
 		return false
 	}
 	requestedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 	if requestedOperatorContextID != "" && requestedOperatorContextID != identityOperatorContextID {
-		sendError(w, http.StatusForbidden, "UNTRUSTED_OPERATOR_CONTEXT", "client-supplied tenant context does not match the authenticated identity")
+		sendError(w, http.StatusForbidden, "UNTRUSTED_OPERATOR_CONTEXT", "client-supplied operator context does not match the authenticated identity")
 		return false
 	}
 	return true
@@ -138,7 +143,7 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 			return
 		}
-		if !enforceSaasOperatorContext(w, r, identity) {
+		if !enforceOperatorContext(w, r, identity) {
 			return
 		}
 		next(w, r, identity)
@@ -147,19 +152,7 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 
 func (s *server) runtimeConfig(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	_ = identity
-	saas, err := currentSaasRuntimeStatus()
-	if err != nil {
-		sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
-		return
-	}
-	response := struct {
-		platformcontrol.RuntimeSnapshot
-		SaaS saasRuntimeStatus `json:"saas"`
-	}{
-		RuntimeSnapshot: s.service.RuntimeSnapshot(r.Context()),
-		SaaS:            saas,
-	}
-	sendJSON(w, http.StatusOK, response)
+	sendJSON(w, http.StatusOK, s.service.RuntimeSnapshot(r.Context()))
 }
 
 func (s *server) effectiveRuntimeConfig(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
