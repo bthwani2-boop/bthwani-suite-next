@@ -27,10 +27,10 @@ Prevent technically valid implementation of the wrong product, wrong actor permi
 ## Read before
 
 - `governance/authority/authority-precedence.json`
-- `governance/product/PRODUCT_TRUTH_POLICY.md`
+- `governance/policies/product.md`
 - `governance/product/product-truth.schema.json`
 - `governance/product/contracts/TEMPLATE.product-truth.json`
-- `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`
+- `governance/policies/release.md`
 - `governance/contracts/decision-vocabulary.json`
 
 ## Authority boundary

@@ -22,8 +22,8 @@ Own verification of the DSH/WLT financial boundary for checkout, payments, COD, 
 
 ## Read before
 
-- `governance/02_SERVICES_AND_SURFACES.md`
-- `governance/06_EVIDENCE_AND_GATES.md`
+- `governance/policies/contracts.md`
+- `governance/policies/release.md`
 - `services/dsh/SERVICE_BLUEPRINT.md`
 - `services/wlt/SERVICE_BLUEPRINT.md`
 - applicable DSH and WLT contracts, manifests, backend, database, clients, and shared frontend paths

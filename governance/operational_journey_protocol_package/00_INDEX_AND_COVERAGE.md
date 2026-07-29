@@ -65,7 +65,7 @@ A user-visible, role-sensitive, cross-surface, commercial, or workflow capabilit
 Product authority is owned by:
 
 ```text
-governance/product/PRODUCT_TRUTH_POLICY.md
+governance/policies/product.md
 ```
 
 ## Decision integration

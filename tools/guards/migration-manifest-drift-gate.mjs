@@ -3,7 +3,7 @@
 // the files actually on disk: unregistered files, missing files, checksum
 // drift, duplicate ordinals/filenames, or a new legacy numeric-prefix
 // collision introduced after the manifest's cutover file. Per
-// tools/validclean-repository-reconstruction/12_DATABASE_MIGRATION_RECONSTRUCTION.md.
+// Historical migrations are immutable; new migrations extend the manifest.
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";

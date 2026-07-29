@@ -34,7 +34,7 @@ const skillRelative = "governance/skills/skills-registry.json";
 const rolesRelative = "governance/operational_journey_protocol_package/sdlc/roles-and-authority.yaml";
 const impactSchemaRelative = "governance/operational_journey_protocol_package/sdlc/change-impact.schema.json";
 const artifactSchemaRelative = "governance/operational_journey_protocol_package/sdlc/artifact-manifest.schema.json";
-const authorityDocRelative = "governance/26_SDLC_TEAM_AND_STAGE_GATES.md";
+const authorityDocRelative = "governance/policies/release.md";
 
 const decisions = readJson(decisionRelative);
 const agents = readJson(agentRelative);

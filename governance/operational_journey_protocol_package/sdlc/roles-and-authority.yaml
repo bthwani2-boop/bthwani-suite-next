@@ -1,7 +1,7 @@
 version: 3
-authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+authority: governance/policies/release.md
 decision_vocabulary: governance/contracts/decision-vocabulary.json
-product_truth_authority: governance/product/PRODUCT_TRUTH_POLICY.md
+product_truth_authority: governance/policies/product.md
 authorities:
   sdlc_program_authority:
     owns: [stage_state, transition_legality]

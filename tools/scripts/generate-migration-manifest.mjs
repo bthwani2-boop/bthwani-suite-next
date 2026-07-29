@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Snapshots the real, already-proven execution order of one service's SQL
-// migrations into a committed manifest.json, per
-// tools/validclean-repository-reconstruction/12_DATABASE_MIGRATION_RECONSTRUCTION.md.
+// Snapshots the real execution order of one service's SQL migrations into a
+// committed manifest.json. The manifest locks immutable history; SQL files and
+// the migration runner remain the execution truth.
 //
 // The real runner (tools/scripts/invoke-service-migrations.ps1) sorts with
 // `Sort-Object { $_.Name.ToLowerInvariant() }, Name`, which is .NET's

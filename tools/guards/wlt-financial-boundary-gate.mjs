@@ -26,7 +26,7 @@ for (const file of listCodeFiles()) {
     violations.push({
       file,
       line: lineNumber(content, match.index),
-      message: "financial mutation belongs to WLT only. Policy source: governance/02_SERVICES_AND_SURFACES.md",
+      message: "financial mutation belongs to WLT only. Policy source: governance/policies/contracts.md",
     });
   }
 }

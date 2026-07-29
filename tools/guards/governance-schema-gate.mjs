@@ -77,7 +77,7 @@ const enforcementRelative = "governance/github/repository-enforcement.json";
 const workflowRegistryRelative = "governance/github/workflow-registry.json";
 const singleOwnerRelative = "governance/authority/single-owner-mode.json";
 const saasRelative = "governance/saas/saas-governance.json";
-const decisionIndexRelative = "governance/00_DECISION_INDEX.md";
+const decisionIndexRelative = "governance/GOVERNANCE.md";
 
 const authority = validateDocument(authorityRelative, "governance/authority/authority-precedence.schema.json", "AUTHORITY");
 const decisions = validateDocument(decisionRelative, "governance/contracts/decision-vocabulary.schema.json", "DECISION");

@@ -4,7 +4,7 @@ Goal: choose the smallest sufficient code-based check.
 
 ## Default mode — CODE_BASED_LEAN
 
-The canonical policy for default execution is detailed in [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md).
+The canonical policy for default execution is detailed in [GOVERNANCE.md](../governance/GOVERNANCE.md).
 
 Use this for normal implementation.
 
@@ -26,7 +26,7 @@ Not required by default:
 - full guard suite
 - repeated status/diff artifacts
 
-All token-drain path and file exclusions from [LEAN_CODE_BASED_CHECK.md](../governance/LEAN_CODE_BASED_CHECK.md) apply to all scans and file checks.
+All scope and evidence rules from [GOVERNANCE.md](../governance/GOVERNANCE.md) apply to scans and file checks.
 
 ## Automation and Sizing Policy
 * **LeanCTX Lifecycle Integration**: Sizing down a gate does not bypass LeanCTX. LeanCTX must be utilized in the understanding and diagnostic phase of all tasks. Automated execution scripts or guards are strictly for the execution and verification/evidence phase as required.

@@ -1,5 +1,5 @@
 version: 3
-authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+authority: governance/policies/release.md
 decision_vocabulary: governance/contracts/decision-vocabulary.json
 initial_stage: G0_INTAKE
 ordered_stages:

@@ -27,7 +27,7 @@ This skill reconciles independently produced evidence and issues the canonical f
 ## Read before
 
 - `governance/contracts/decision-vocabulary.json`
-- `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`
+- `governance/policies/release.md`
 - `governance/github/repository-enforcement.json`
 - `governance/guards/guard-assurance.json`
 - applicable Product Truth, SDLC artifact, and change-impact documents;

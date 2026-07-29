@@ -28,7 +28,7 @@
 
 1. `governance/authority/authority-precedence.json`
 2. `AGENTS.md` ثم `.agents/INDEX.md` و`.agents/AUTHORITY_BOUNDARY.md` و`.agents/COMMAND_SAFETY_POLICY.md`
-3. الحوكمة القانونية الفعالة، بما فيها `governance/product/PRODUCT_TRUTH_POLICY.md` و`governance/contracts/decision-vocabulary.json`
+3. الحوكمة القانونية الفعالة، بما فيها `governance/policies/product.md` و`governance/contracts/decision-vocabulary.json`
 4. حزمة البروتوكول الكاملة في `governance/operational_journey_protocol_package` (الملفات `00`–`11` + `sdlc/` + `annexes/` عند انطباقها)
 
 هذا الأمر مقترن إلزاميًا بـ: فهرس التغطية `00_INDEX_AND_COVERAGE.md`، بوابة عدم القفز `10_EXECUTION_PLAN_NO_SKIP_GATE.md`، وضع الكود-أولًا `11_CODE_FIRST_FULLSTACK_SURFACE_COVERAGE_MODE.md`، وملحق `annexes/SAAS_READINESS_AND_TENANCY_GATES.md` عند انطباقه عبر سجل السيادة فقط. لا يجوز لأي ملف في الحزمة أن يتجاوز سيادة أعلى، ولا يجوز إصدار `CLOSED_WITH_EVIDENCE` من مصفوفة أو مستند منفرد.
@@ -37,7 +37,7 @@
 
 ## 3) الانضباط الهندسي بمستوى CTO ومراحل SDLC
 
-نفّذ بعقلية **CTO مسؤول عن النظام كاملًا**، لا بعقلية منفّذ مهمة معزولة: كل قرار تقني يُقاس بأثره على البنية الكلية، والملكية الصحيحة، والمخاطر، وقابلية الصيانة، والحقيقة التشغيلية والمالية — وفق الأدوار والصلاحيات المعرفة في `sdlc/roles-and-authority.yaml` وكتالوج البوابات `sdlc/gate-catalog.yaml` وآلة الحالات `sdlc/lifecycle.state-machine.yaml` المشتقة من `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`.
+نفّذ بعقلية **CTO مسؤول عن النظام كاملًا**، لا بعقلية منفّذ مهمة معزولة: كل قرار تقني يُقاس بأثره على البنية الكلية، والملكية الصحيحة، والمخاطر، وقابلية الصيانة، والحقيقة التشغيلية والمالية — وفق الأدوار والصلاحيات المعرفة في `sdlc/roles-and-authority.yaml` وكتالوج البوابات `sdlc/gate-catalog.yaml` وآلة الحالات `sdlc/lifecycle.state-machine.yaml` المشتقة من `governance/policies/release.md`.
 
 - عند وجود أثر على مراحل SDLC أو QA أو الأمن أو الإصدار أو runtime أو الإنتاج: **يجب** تشغيل `pnpm run guard:sdlc` مع stage/artifact/impact المناسب، أو إثبات عدم الانطباق بدليل — لا بتصريح عام.
 - لا يجوز تحويل تحقق شكلي أو فحص جزئي إلى إغلاق نهائي، ولا القفز فوق أي بوابة مرحلية.

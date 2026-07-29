@@ -1,5 +1,5 @@
 version: 1
-authority: governance/07_SECURITY_AND_SECRETS.md
+authority: governance/policies/security.md
 secure_sdlc_refs:
   - NIST_SSDF_1_1
   - OWASP_SAMM_V2

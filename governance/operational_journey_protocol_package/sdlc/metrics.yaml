@@ -1,5 +1,5 @@
 version: 1
-authority: governance/26_SDLC_TEAM_AND_STAGE_GATES.md
+authority: governance/policies/release.md
 quality_metrics:
   - requirements_linked_to_tests
   - completed_capabilities_across_surfaces

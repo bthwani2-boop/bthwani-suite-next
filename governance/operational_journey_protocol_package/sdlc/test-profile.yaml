@@ -1,5 +1,5 @@
 version: 1
-authority: governance/06_EVIDENCE_AND_GATES.md
+authority: governance/policies/release.md
 default_strategy: affected_only
 checks_by_impact:
   docs_only:

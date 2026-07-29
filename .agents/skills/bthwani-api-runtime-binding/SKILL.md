@@ -26,7 +26,7 @@ This skill owns API/runtime binding analysis and verification only. It does not 
 
 ## Read before
 
-- `governance/04_API_RUNTIME_BINDING.md`
+- `governance/policies/contracts.md`
 - the owning service OpenAPI contract
 - backend router and handler
 - generated client

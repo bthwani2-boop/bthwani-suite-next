@@ -121,18 +121,6 @@
       "mayUseSecrets": false,
       "requiredPinnedActions": true,
       "purpose": "Core read-only exact-SHA affected and risk-expanded manual verification with optional full runtime proof and a machine-readable decision artifact."
-    },
-    {
-      "id": "validclean-full-repository-audit",
-      "path": ".github/workflows/validclean-full-repository-audit.yml",
-      "class": "READ_ONLY_DIAGNOSTIC",
-      "name": "Validclean Reconstruction Package Audit",
-      "triggers": ["workflow_dispatch", "push", "pull_request"],
-      "permissions": { "contents": "read" },
-      "mayMutateSource": false,
-      "mayUseSecrets": false,
-      "requiredPinnedActions": true,
-      "purpose": "Read-only verification of the validclean reconstruction package state plus a re-run of the pinned full tracked-file audit against the immutable fbc0139234e2bdb34a8de77d74a6b91297a754b0 baseline. Retirement condition: removed together with tools/validclean-repository-reconstruction once VC-320 records its closure state."
     }
   ]
 }

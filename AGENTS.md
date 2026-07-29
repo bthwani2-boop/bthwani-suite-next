@@ -23,7 +23,7 @@ governance/contracts/decision-vocabulary.json
 Product-visible, role-sensitive, cross-surface, commercial, or workflow changes are governed by:
 
 ```text
-governance/product/PRODUCT_TRUTH_POLICY.md
+governance/policies/product.md
 ```
 
 SaaS readiness and tenant-governance state are encoded in:

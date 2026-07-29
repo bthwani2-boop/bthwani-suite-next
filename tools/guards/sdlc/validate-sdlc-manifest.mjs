@@ -101,9 +101,9 @@ for (const requiredAuthority of [
   "governance/guards/guard-registry.json",
   "governance/guards/guard-assurance.json",
   "governance/github/repository-enforcement.json",
-  "governance/product/PRODUCT_TRUTH_POLICY.md",
+  "governance/policies/product.md",
   "governance/saas/saas-governance.json",
-  "governance/26_SDLC_TEAM_AND_STAGE_GATES.md",
+  "governance/policies/release.md",
 ]) if (!fs.existsSync(path.join(repoRoot, requiredAuthority))) violations.push({ file: requiredAuthority, message: "MISSING_ACTIVE_SDLC_AUTHORITY" });
 
 fail(guardId, violations);

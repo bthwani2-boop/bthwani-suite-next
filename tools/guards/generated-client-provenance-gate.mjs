@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Proves the provenance of every tracked file under a */clients/generated/
 // directory, per VC-150 in
-// tools/validclean-repository-reconstruction/10_REPOSITORY_WIDE_EXECUTION_LEDGER.md.
+// Every registered generated client must be reproducible from its owner contract.
 //
 // Two things are enforced:
 //   1. No orphans. Every file in a declared generated root is registered in

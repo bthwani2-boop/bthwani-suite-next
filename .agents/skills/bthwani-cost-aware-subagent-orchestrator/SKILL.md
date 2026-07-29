@@ -32,7 +32,7 @@ This skill orchestrates only. It does not replace Product Truth, architecture, Q
 - `governance/authority/authority-precedence.json`
 - `AGENTS.md`
 - `governance/contracts/decision-vocabulary.json`
-- `governance/product/PRODUCT_TRUTH_POLICY.md` when product impact applies
+- `governance/policies/product.md` when product impact applies
 - `governance/agents/agent-registry.json`
 - `governance/skills/skills-registry.json`
 - `references/WORK_UNIT_CONTRACT.md`
