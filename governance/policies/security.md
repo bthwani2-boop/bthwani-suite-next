@@ -10,7 +10,7 @@ and logs omit secrets, tokens, payment data, unnecessary PII, and private media.
 Identity owns authentication, sessions, and actor identity. Services own
 object-level authorization for their resources. Platform context is derived from
 trusted identity or authenticated server delegation; a client cannot choose or
-override it. Partner organization and store are not tenants.
+override it. Partner organization and store are not operator contexts.
 
 Authentication, authorization, privacy, isolation, WLT finance, uploads,
 providers, infrastructure, and CI changes require applicable threat boundaries,

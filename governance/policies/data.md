@@ -18,4 +18,4 @@ explicit and never a default verification step.
 
 Active isolation fields use `platform_context_id`. Domain ownership uses
 `partner_organization_id`, `store_id`, `actor_id`, and `captain_affiliation`.
-Partner and store records are never tenant identities.
+Partner and store records are never operator context identities.

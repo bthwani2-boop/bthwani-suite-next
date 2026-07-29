@@ -18,37 +18,37 @@
 
 ```yaml
 topic_definition:
-  ref: <REF>
-  resolved_commit_sha:
-  task_mode: analysis_only | implementation_or_closure | merge_review
-  purpose:
-  in_scope:
-  out_of_scope:
-  owning_service: DSH | WLT | BOTH | OTHER
-  owning_shared_brain:
-  related_backend_modules:
-  related_database_tables:
-  migrations_required: true | false
-  api_contracts_required:
-  api_clients_required:
-  required_surfaces:
-  optional_surfaces:
-  read_only_surfaces:
-  forbidden_surfaces:
-  primary_control_panel_section:
-  secondary_control_panel_sections:
-  read_only_control_panel_sections:
-  forbidden_control_panel_sections:
-  permissions:
-  states:
-  state_transitions:
-  loading_empty_error_success_contract:
-  blocked_disabled_retry_offline_contract:
-  tests_required:
-  guards_required:
-  runtime_evidence_required: true | false
-  ci_required: true | false
-  evidence_required:
+ ref: <REF>
+ resolved_commit_sha:
+ task_mode: analysis_only | implementation_or_closure | merge_review
+ purpose:
+ in_scope:
+ out_of_scope:
+ owning_service: DSH | WLT | BOTH | OTHER
+ owning_shared_brain:
+ related_backend_modules:
+ related_database_tables:
+ migrations_required: true | false
+ api_contracts_required:
+ api_clients_required:
+ required_surfaces:
+ optional_surfaces:
+ read_only_surfaces:
+ forbidden_surfaces:
+ primary_control_panel_section:
+ secondary_control_panel_sections:
+ read_only_control_panel_sections:
+ forbidden_control_panel_sections:
+ permissions:
+ states:
+ state_transitions:
+ loading_empty_error_success_contract:
+ blocked_disabled_retry_offline_contract:
+ tests_required:
+ guards_required:
+ runtime_evidence_required: true | false
+ ci_required: true | false
+ evidence_required:
 ```
 
 قواعد التعريف:
@@ -65,42 +65,42 @@ topic_definition:
 
 ```yaml
 entity_boundary:
-  primary_entity:
-  secondary_entities:
-  partner_store_relationship:
-  partner_owned_truths:
-  store_owned_truths:
-  forbidden_entity_conflation:
-  naming_policy:
+ primary_entity:
+ secondary_entities:
+ partner_store_relationship:
+ partner_owned_truths:
+ store_owned_truths:
+ forbidden_entity_conflation:
+ naming_policy:
 ```
 
 غياب `entity_boundary` مكتملًا في أي رحلة DSH فيها Partner أو Store = `FIX_REQUIRED`.
 
-وسّع `topic_definition` بهذه الحقول عندما تنطبق شروط ملحق SaaS/Tenancy:
+وسّع `topic_definition` بهذه الحقول عندما تنطبق شروط ملحق platform/isolation:
 
 ```yaml
 saas_context:
-  mode: NOT_APPLICABLE | SAAS_READY_DEFERRED | SAAS_ACTIVE
-  tenant_entity_defined: true | false
-  tenant_context_source:
-  tenant_selection_authority:
-  tenant_owned_entities:
-  global_entities:
-  tenant_isolation_model:
-  cross_tenant_access_policy:
-  privileged_cross_tenant_workflow:
-  tenant_data_classification:
-  tenant_data_residency:
-  tenant_export_required: true | false
-  tenant_deletion_required: true | false
-  tenant_backup_restore_required: true | false
-  tenant_observability_required: true | false
-  tenant_quota_required: true | false
-  entitlement_impact: NONE | READ_ONLY | REQUIRED
-  subscription_impact: NONE | READ_ONLY | REQUIRED
-  metering_impact: NONE | READ_ONLY | REQUIRED
-  billing_impact: NONE | READ_ONLY | REQUIRED
-  saas_activation_gate_required: true | false
+ mode: NOT_APPLICABLE | SAAS_READY_DEFERRED | SAAS_ACTIVE
+ tenant_entity_defined: true | false
+ tenant_context_source:
+ tenant_selection_authority:
+ tenant_owned_entities:
+ global_entities:
+ tenant_isolation_model:
+ cross_tenant_access_policy:
+ privileged_cross_tenant_workflow:
+ tenant_data_classification:
+ tenant_data_residency:
+ tenant_export_required: true | false
+ tenant_deletion_required: true | false
+ tenant_backup_restore_required: true | false
+ tenant_observability_required: true | false
+ tenant_quota_required: true | false
+ entitlement_impact: NONE | READ_ONLY | REQUIRED
+ subscription_impact: NONE | READ_ONLY | REQUIRED
+ metering_impact: NONE | READ_ONLY | REQUIRED
+ billing_impact: NONE | READ_ONLY | REQUIRED
+ saas_activation_gate_required: true | false
 ```
 
 إذا كانت الرحلة تمس بيانات مملوكة لمستأجر أو عملية عابرة للمستأجرين ولم تملأ `saas_context` فالنتيجة `FIX_REQUIRED`.
@@ -112,12 +112,12 @@ saas_context:
 التعريف الملزم:
 
 - `Partner` / الشريك:
-  هو الكيان القانوني أو التجاري أو التشغيلي الذي يخضع للانضمام والاعتماد والتحقق.
-  يملك الهوية القانونية، الوثائق، المالك، حالة الانضمام، قرارات الاعتماد، سجل التدقيق، والجاهزية التشغيلية العامة.
+ هو الكيان القانوني أو التجاري أو التشغيلي الذي يخضع للانضمام والاعتماد والتحقق.
+ يملك الهوية القانونية، الوثائق، المالك، حالة الانضمام، قرارات الاعتماد، سجل التدقيق، والجاهزية التشغيلية العامة.
 
 - `Store` / المتجر:
-  هو نقطة البيع أو الفرع أو الواجهة التجارية التي تظهر للعميل وتستقبل الكتالوج والطلبات.
-  يملك الاسم الظاهر للعميل، الفرع/الموقع، الكتالوج، أوقات العمل، serviceability، marketing visibility، client visibility، وربط الطلبات.
+ هو نقطة البيع أو الفرع أو الواجهة التجارية التي تظهر للعميل وتستقبل الكتالوج والطلبات.
+ يملك الاسم الظاهر للعميل، الفرع/الموقع، الكتالوج، أوقات العمل، serviceability، marketing visibility، client visibility، وربط الطلبات.
 
 العلاقة الحاكمة:
 

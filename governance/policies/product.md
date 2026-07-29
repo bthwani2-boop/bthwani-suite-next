@@ -20,5 +20,5 @@ runtime, or commercial state. Product files define semantics and acceptance;
 OpenAPI and runtime source own routes and operation identifiers.
 
 The canonical platform model is `governance/product/platform-model.yaml`.
-SaaS remains deferred until its separate state contract and protected evidence
+platform remains deferred until its separate state contract and protected evidence
 authorize activation.

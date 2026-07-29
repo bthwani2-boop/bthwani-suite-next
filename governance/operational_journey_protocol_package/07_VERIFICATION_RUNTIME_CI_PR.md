@@ -37,35 +37,35 @@ git grep -n "localStorage\|sessionStorage\|AsyncStorage" -- services/dsh/fronten
 
 ```powershell
 $TopicPaths = @(
-  "services\dsh\frontend\shared\<topic>",
-  "services\dsh\frontend\app-client\<topic>",
-  "services\dsh\frontend\app-partner\<topic>",
-  "services\dsh\frontend\app-field\<topic>",
-  "services\dsh\frontend\app-captain\<topic>",
-  "services\dsh\frontend\control-panel\<topic>",
-  "services\wlt\frontend\shared\dsh\<topic>",
-  "services\wlt\frontend\app-client\<topic>",
-  "services\wlt\frontend\app-partner\<topic>",
-  "services\wlt\frontend\app-field\<topic>",
-  "services\wlt\frontend\app-captain\<topic>",
-  "services\wlt\frontend\control-panel\<topic>"
+ "services\dsh\frontend\shared\<topic>",
+ "services\dsh\frontend\app-client\<topic>",
+ "services\dsh\frontend\app-partner\<topic>",
+ "services\dsh\frontend\app-field\<topic>",
+ "services\dsh\frontend\app-captain\<topic>",
+ "services\dsh\frontend\control-panel\<topic>",
+ "services\wlt\frontend\shared\dsh\<topic>",
+ "services\wlt\frontend\app-client\<topic>",
+ "services\wlt\frontend\app-partner\<topic>",
+ "services\wlt\frontend\app-field\<topic>",
+ "services\wlt\frontend\app-captain\<topic>",
+ "services\wlt\frontend\control-panel\<topic>"
 )
 
 Get-ChildItem -Path $TopicPaths -Include *.ts,*.tsx -ErrorAction SilentlyContinue |
-  ForEach-Object {
-    $lines = (Get-Content $_.FullName).Count
-    [PSCustomObject]@{ Lines = $lines; Path = $_.FullName }
-  } |
-  Where-Object { $_.Lines -gt 350 } |
-  Sort-Object Lines -Descending
+ ForEach-Object {
+ $lines = (Get-Content $_.FullName).Count
+ [PSCustomObject]@{ Lines = $lines; Path = $_.FullName }
+ } |
+ Where-Object { $_.Lines -gt 350 } |
+ Sort-Object Lines -Descending
 ```
 
 فحص أسماء مشبوهة:
 
 ```powershell
 Get-ChildItem -Recurse services\dsh\frontend,services\wlt\frontend -Include *.ts,*.tsx |
-  Where-Object { $_.Name -match "(old|temp|copy|backup|final|final2|test2|new|legacy|random)" } |
-  Select-Object FullName
+ Where-Object { $_.Name -match "(old|temp|copy|backup|final|final2|test2|new|legacy|random)" } |
+ Select-Object FullName
 ```
 
 فحوصات عامة حسب النطاق:
@@ -117,33 +117,33 @@ Runtime Evidence إلزامي عند `implementation_or_closure` إذا كانت
 
 ```yaml
 runtime_evidence_matrix:
-  backend_boot:
-    command:
-    expected:
-    actual:
-    status: PASS | FAIL | BLOCKED | N/A
-  database_boot:
-    command:
-    expected:
-    actual:
-    status:
-  api_smoke:
-    endpoint:
-    request:
-    expected_response:
-    actual_response:
-    status:
-  surface_boot:
-    surface:
-    command:
-    expected:
-    actual:
-    status:
-  cross_surface_flow:
-    step:
-    expected:
-    actual:
-    status:
+ backend_boot:
+ command:
+ expected:
+ actual:
+ status: PASS | FAIL | BLOCKED | N/A
+ database_boot:
+ command:
+ expected:
+ actual:
+ status:
+ api_smoke:
+ endpoint:
+ request:
+ expected_response:
+ actual_response:
+ status:
+ surface_boot:
+ surface:
+ command:
+ expected:
+ actual:
+ status:
+ cross_surface_flow:
+ step:
+ expected:
+ actual:
+ status:
 ```
 
 ---
@@ -162,13 +162,13 @@ CI غير متاح = CI_NOT_CONFIGURED وليس PASS
 
 ```yaml
 ci_status:
-  configured: true | false
-  latest_run_found: true | false
-  latest_run_status: PASS | FAIL | PENDING | CI_NOT_CONFIGURED | BLOCKED
-  workflow_paths:
-  checked_commit_sha:
-  verification_command_or_source:
-  decision_impact:
+ configured: true | false
+ latest_run_found: true | false
+ latest_run_status: PASS | FAIL | PENDING | CI_NOT_CONFIGURED | BLOCKED
+ workflow_paths:
+ checked_commit_sha:
+ verification_command_or_source:
+ decision_impact:
 ```
 
 ---
@@ -191,54 +191,54 @@ ci_status:
 
 ```yaml
 merge_review_matrix:
-  base_ref:
-  head_ref:
-  head_commit_sha:
-  changed_files:
-  diff_scope_status: PASS | FAIL | BLOCKED
-  ci_status:
-  tests_status:
-  guards_status:
-  ownership_status:
-  financial_boundary_status:
-  backend_api_database_status:
-  runtime_status:
-  merge_decision: MERGE_READY | DO_NOT_MERGE | BLOCKED_NEEDS_EVIDENCE
-  blockers:
+ base_ref:
+ head_ref:
+ head_commit_sha:
+ changed_files:
+ diff_scope_status: PASS | FAIL | BLOCKED
+ ci_status:
+ tests_status:
+ guards_status:
+ ownership_status:
+ financial_boundary_status:
+ backend_api_database_status:
+ runtime_status:
+ merge_decision: MERGE_READY | DO_NOT_MERGE | BLOCKED_NEEDS_EVIDENCE
+ blockers:
 ```
 
 ## Frontend-Backend Runtime Journey Verification
 
 `````yaml
 frontend_backend_runtime_journey_matrix:
-  - journey:
-    source_surface:
-    source_control:
+ - journey:
+ source_surface:
+ source_control:
 
-    ui_input:
-    generated_request:
-    actual_http_request:
-    backend_decoded_request:
-    validation_result:
+ ui_input:
+ generated_request:
+ actual_http_request:
+ backend_decoded_request:
+ validation_result:
 
-    service_decision:
-    repository_operation:
-    database_before:
-    database_after:
+ service_decision:
+ repository_operation:
+ database_before:
+ database_after:
 
-    actual_http_response:
-    generated_client_result:
-    shared_controller_state:
-    rendered_surface_state:
+ actual_http_response:
+ generated_client_result:
+ shared_controller_state:
+ rendered_surface_state:
 
-    related_surface_readbacks:
-    permission_negative_test:
-    validation_negative_test:
-    backend_failure_test:
-    stale_state_test:
-    duplicate_submission_test:
+ related_surface_readbacks:
+ permission_negative_test:
+ validation_negative_test:
+ backend_failure_test:
+ stale_state_test:
+ duplicate_submission_test:
 
-    final_result:
+ final_result:
 `````
 
 > القواعد:
@@ -254,27 +254,27 @@ frontend_backend_runtime_journey_matrix:
 
 ```yaml
 operational_protocol_workflow_contract:
-  workflow_path: .github/workflows/operational-protocol-ci.yml
-  default_mode: affected
-  heavy_checks: conditional
-  runtime_proof: conditional
-  final_job: final-protocol-gate
+ workflow_path: .github/workflows/operational-protocol-ci.yml
+ default_mode: affected
+ heavy_checks: conditional
+ runtime_proof: conditional
+ final_job: final-protocol-gate
 ```
 
-## 24) SaaS/Tenancy Verification
+## 24) platform/isolation Verification
 
-When `saas_context.mode` is `SAAS_READY_DEFERRED` or `SAAS_ACTIVE`, affected verification must include the tenant matrices from `05_MATRICES_BACKEND_DATABASE_API_SECURITY.md` and the annex gate.
+When `saas_context.mode` is `SAAS_READY_DEFERRED` or `SAAS_ACTIVE`, affected verification must include the operator context matrices from `05_MATRICES_BACKEND_DATABASE_API_SECURITY.md` and the annex gate.
 
 Minimum required proof:
 
-* tenant context source is trusted
-* tenant-owned data is classified
-* backend queries enforce tenant scope
-* cross-tenant negative cases are covered
+* operator context source is trusted
+* operator context-owned data is classified
+* backend queries enforce operator context scope
+* cross-operator-context negative cases are covered
 * delegated operator access is audited when present
-* WLT financial references remain tenant-safe when affected
+* WLT financial references remain operator context-safe when affected
 
-Missing tenant proof in an applicable journey returns `FIX_REQUIRED`.
+Missing operator context proof in an applicable journey returns `FIX_REQUIRED`.
 
 ## 25) SDLC Stage Gate Verification
 

@@ -32,7 +32,6 @@
     {"path": "governance/authority/single-owner-mode.schema.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["single_owner_mode_schema"]},
     {"path": "governance/product/product-truth.schema.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["product_truth_schema"]},
     {"path": "governance/product/platform-model.yaml", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["platform_model"]},
-    {"path": "governance/saas", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["partner_saas_capabilities", "partner_scope_isolation"]},
     {"path": "tools/guards/guard-manifest.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["guard_sets", "guard_execution_policy"]},
     {"path": ".agents/skills", "classification": "OWNER_CONTRACT", "precedenceId": "OWNER_SKILL_CONTRACT", "authorityDomains": ["declared_active_skill_scope"]},
     {"path": "GEMINI.md", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["gemini_cli_adapter"]},
