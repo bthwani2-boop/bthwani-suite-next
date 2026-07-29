@@ -50,7 +50,7 @@ const cases = [
     assert.match(concurrencyProof, /BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE/);
     assert.match(concurrencyProof, /concurrent transitions produced more than one financial event/);
     assert.doesNotMatch(wltJSON, /IdempotencyKey\s+string/);
-    assert.match(serviceAuth, /MISSING_TENANT_ID/);
+    assert.match(serviceAuth, /MISSING_operator_context_id/);
   }],
   ["Promotion Funding outbox, recovery, reconciliation, and operator read model", () => {
     assert.match(couponsHTTP, /coupons\.ListFundingLifecycleDiagnostics/);
