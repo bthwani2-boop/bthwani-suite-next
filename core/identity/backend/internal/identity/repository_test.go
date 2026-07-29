@@ -124,10 +124,10 @@ func TestScopedActivationIdempotencyKeyIncludesTypeAndSurface(t *testing.T) {
 	}
 }
 
-func TestRequestOtpRejectsWorkforceManagedRolesBeforeDatabaseAccess(t *testing.T) {
+func TestRequestOtpForTenantRejectsWorkforceManagedRolesBeforeDatabaseAccess(t *testing.T) {
 	repo := &Repository{}
 	for _, role := range []string{"field", "captain"} {
-		_, err := repo.RequestOtp(context.Background(), OtpInput{
+		_, err := repo.RequestOtpForTenant(context.Background(), "tenant-1", OtpInput{
 			ActorType: role,
 			Phone:     "+967777123456",
 		})

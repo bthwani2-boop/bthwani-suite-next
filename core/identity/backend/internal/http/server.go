@@ -24,7 +24,6 @@ func NewRouter(db *sql.DB, repository *identity.Repository) http.Handler {
 	mux.HandleFunc("GET /identity/health", s.health)
 	mux.HandleFunc("GET /identity/readiness", s.readiness)
 	mux.HandleFunc("POST /auth/login", s.login)
-	mux.HandleFunc("POST /auth/otp/request", s.requestOtp)
 	mux.HandleFunc("POST /auth/activate", s.activate)
 	mux.HandleFunc("POST /auth/refresh", s.refresh)
 	mux.HandleFunc("POST /auth/logout", s.logout)
@@ -129,28 +128,6 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendJSON(w, http.StatusOK, tokenResponse(pair))
-}
-
-func (s *server) requestOtp(w http.ResponseWriter, r *http.Request) {
-	var request identity.OtpInput
-	if !decodeJSON(w, r, &request) {
-		return
-	}
-	result, err := s.repository.RequestOtp(r.Context(), request)
-	if err != nil {
-		switch err {
-		case identity.ErrActivationRateLimited:
-			sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
-		case identity.ErrInvalidActivation:
-			sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid phone or actor type")
-		case identity.ErrActivationUnavailable:
-			sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation is not configured")
-		default:
-			sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
-		}
-		return
-	}
-	sendJSON(w, http.StatusOK, result)
 }
 
 func (s *server) activate(w http.ResponseWriter, r *http.Request) {
