@@ -43,11 +43,12 @@ func main() {
 	localBootstrap := identity.LocalBootstrap{
 		Enabled:  strings.EqualFold(strings.TrimSpace(os.Getenv("IDENTITY_LOCAL_BOOTSTRAP")), "true"),
 		Password: os.Getenv("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"),
+		TenantID: bootstrapTenantID,
 	}
 	if localBootstrap.Enabled && saasMode == "active" {
 		log.Fatal("[identity-api] IDENTITY_LOCAL_BOOTSTRAP is forbidden when BTHWANI_SAAS_MODE=active")
 	}
-	if localBootstrap.Enabled && bootstrapTenantID == "" {
+	if localBootstrap.Enabled && localBootstrap.TenantID == "" {
 		log.Fatal("[identity-api] BTHWANI_DEFAULT_TENANT_ID is required when local bootstrap is enabled")
 	}
 	if err := repository.BootstrapLocalActors(context.Background(), localBootstrap); err != nil {
@@ -58,13 +59,6 @@ func main() {
 	}
 	if err := repository.BootstrapSovereignLeadershipAccess(context.Background(), localBootstrap); err != nil {
 		log.Fatalf("[identity-api] local sovereign leadership bootstrap: %v", err)
-	}
-	if err := repository.RepairLocalBootstrapTenant(
-		context.Background(),
-		localBootstrap,
-		bootstrapTenantID,
-	); err != nil {
-		log.Fatalf("[identity-api] local tenant repair: %v", err)
 	}
 
 	router := identityhttp.NewRouter(db, repository)
