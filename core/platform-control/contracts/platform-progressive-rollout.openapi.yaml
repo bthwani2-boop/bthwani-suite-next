@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
-  title: BThwani JRN-041 Progressive Rollout and Recovery API
+  title: BThwani Platform Progressive Rollout and Recovery API
   version: 1.0.0
   description: Governed progressive feature-flag rollout, explicit pause/resume, health-gated advancement, abort, rollback and recovery guidance.
 x-bthwani-owner: core/platform-control
-x-bthwani-journey: JRN-041
+x-bthwani-journey-id: JRN-041
 x-bthwani-contract-state: CONTRACT_ACTIVE
 servers:
   - url: http://localhost:58084

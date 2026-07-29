@@ -13,6 +13,8 @@ const specs = [
   { input: "contracts/master.openapi.yaml", name: "Master API Index" },
   { input: "core/identity/contracts/auth.openapi.yaml", name: "Core - Identity API" },
   { input: "core/platform-control/contracts/platform-control.openapi.yaml", name: "Core - Platform Control API" },
+  { input: "core/platform-control/contracts/platform-change-sets.openapi.yaml", name: "Core - Platform Control Change Sets API" },
+  { input: "core/platform-control/contracts/platform-progressive-rollout.openapi.yaml", name: "Core - Platform Control Progressive Rollout API" },
   { input: "core/providers/contracts/providers.openapi.yaml", name: "Core - Providers API" },
   { input: "core/workforce/contracts/workforce.openapi.yaml", name: "Core - Workforce API" },
   { input: "services/dsh/contracts/generated/dsh.bundle.openapi.yaml", name: "Services - DSH API" },

@@ -1,4 +1,5 @@
 openapi: 3.1.0
+x-bthwani-owner: core/platform-control
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: BThwani Platform Change Sets API
