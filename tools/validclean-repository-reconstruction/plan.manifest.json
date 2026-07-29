@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "planId": "validclean-repository-reconstruction",
+  "status": "PLAN_ONLY_AWAITING_OWNER_APPROVAL",
+  "repository": "bthwani2-boop/bthwani-suite-next",
+  "branch": "validclean",
+  "source": {
+    "branch": "abdo",
+    "sha": "98ab47dd59e5fc6f615cbe96094ec61fa0c8ffa3",
+    "rejectedAlternative": {
+      "branch": "cleaning",
+      "sha": "731133fc0d727510cbc4e3b2896abd7f55fca7a0",
+      "reason": "Mass deletion includes protected tests and governance authorities still referenced by AGENTS.md; safe replacements are unproven."
+    }
+  },
+  "implementationAuthorized": false,
+  "pullRequestAuthorized": false,
+  "mergeAuthorized": false,
+  "productionAuthorized": false,
+  "documents": [
+    "README.md",
+    "00_REMOTE_BASELINE_AND_FINDINGS.md",
+    "01_REPOSITORY_DIAGNOSIS_MATRIX.md",
+    "02_PRODUCT_AND_OWNERSHIP_MODEL.md",
+    "03_OPENAPI_RECONSTRUCTION_PLAN.md",
+    "04_EXECUTION_WAVES.md",
+    "05_DELETION_RETENTION_PROTOCOL.md",
+    "06_ZERO_TOLERANCE_GATES.md",
+    "07_APPROVAL_CHECKPOINT.md"
+  ],
+  "verifiedCriticalFindings": [
+    "duplicate_active_master_openapi_indexes",
+    "identity_universal_activation_code_000000",
+    "fragmented_actor_type_surface_mapping",
+    "identity_local_dsh_bootstrap_scope",
+    "wlt_retired_operations_parallel_registry",
+    "manual_generalized_wlt_generated_client",
+    "cleaning_removed_referenced_governance_authorities",
+    "cleaning_mass_deleted_protected_test_scopes",
+    "command_alias_and_runtime_interface_inflation"
+  ],
+  "executionOrder": [
+    "baseline",
+    "repository_inventory",
+    "identity_and_trust",
+    "actor_organization_scope_model",
+    "openapi_and_generated_clients",
+    "wlt_financial_truth",
+    "dsh_operational_truth",
+    "workforce_and_administration",
+    "shared_frontend_and_surfaces",
+    "database_and_migrations",
+    "runtime_and_infrastructure",
+    "governance_agents_guards",
+    "tools_commands_documentation",
+    "final_same_sha_verification"
+  ],
+  "firstSlicesAfterApproval": [
+    "VC-000-baseline-and-inventory",
+    "VC-001-identity-activation-backdoor-removal",
+    "VC-002-master-openapi-uniqueness"
+  ],
+  "hardRules": {
+    "noImplementationBeforeApproval": true,
+    "noDeletionWithoutConsumptionProof": true,
+    "protectSecurityFinanceMigrationRuntimeTests": true,
+    "singleTruthOwner": true,
+    "singleWritablePath": true,
+    "noManualGeneratedClients": true,
+    "noPermanentLegacyFallback": true,
+    "noMasterMergeWithoutSeparateExplicitInstruction": true,
+    "sameShaEvidenceRequired": true
+  }
+}
