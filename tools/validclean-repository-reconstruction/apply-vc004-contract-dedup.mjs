@@ -27,5 +27,13 @@ removeBoundedPathRange(
   'root payout failure boundary',
 );
 
+// The dedicated COD-record contract owns create/list/read semantics and the
+// request schema derived from WLT payment truth.
+removeBoundedPathRange(
+  '  /wlt/cod-records:\n',
+  '  /wlt/ledger/entries:\n',
+  'root COD record operations',
+);
+
 fs.writeFileSync(entryPath, entry.endsWith('\n') ? entry : `${entry}\n`, 'utf8');
 console.log('VC-004 specialized WLT contract ownership applied.');
