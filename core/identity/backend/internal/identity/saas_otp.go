@@ -3,7 +3,6 @@ package identity
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"strings"
 
@@ -12,34 +11,24 @@ import (
 
 var ErrTenantMismatch = errors.New("actor tenant does not match active runtime tenant")
 
+// otpRoleSurface and otpRolePermissions delegate to the single central
+// activation registry so the public OTP path can never diverge from it —
+// see TestActivationIssuancePoliciesSeparatePublicAndWorkforceRoles, which
+// asserts field/captain must stay Workforce-managed-only and unreachable
+// here.
 func otpRoleSurface(role string) (string, error) {
-	if surface, ok := activationSurfaceFor(role); ok {
-		return surface, nil
-	}
-	switch role {
-	case "client":
-		return "app-client", nil
-	case "partner":
-		return "app-partner", nil
-	default:
+	if !publicOtpActorTypes[role] {
 		return "", ErrInvalidActivation
 	}
+	surface, ok := activationSurfaceFor(role)
+	if !ok {
+		return "", ErrInvalidActivation
+	}
+	return surface, nil
 }
 
 func otpRolePermissions(role, surface string) ([]byte, error) {
-	switch role {
-	case "client":
-		return json.Marshal([]Permission{
-			{Service: "dsh", Surface: "app-client", Action: "store:read", Scope: "all"},
-		})
-	case "partner":
-		return json.Marshal([]Permission{
-			{Service: "dsh", Surface: "app-partner", Action: "store:read", Scope: "own"},
-			{Service: "dsh", Surface: "app-partner", Action: "store:write", Scope: "own"},
-		})
-	default:
-		return providerPermissions(surface)
-	}
+	return publicActorPermissions(role, surface)
 }
 
 // RequestOtpForTenant is the SaaS-safe OTP provisioning path. The tenant is
