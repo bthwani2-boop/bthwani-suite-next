@@ -1,32 +1,78 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "planId": "validclean-repository-reconstruction",
-  "status": "READY_FOR_OWNER_REVIEW",
+  "status": "REPOSITORY_WIDE_RECONSTRUCTION_AUTHORIZED",
   "repository": "bthwani2-boop/bthwani-suite-next",
   "branch": "validclean",
-  "source": {
-    "branch": "abdo",
-    "sha": "98ab47dd59e5fc6f615cbe96094ec61fa0c8ffa3",
+  "stateSources": {
+    "machine": "tools/validclean-repository-reconstruction/plan.manifest.json",
+    "human": "tools/validclean-repository-reconstruction/README.md",
+    "rule": "Both sources must declare the same package status; slice statuses live only in 10_REPOSITORY_WIDE_EXECUTION_LEDGER.md and this manifest."
+  },
+  "sourceHistory": {
+    "originalBranch": "abdo",
+    "originalSha": "98ab47dd59e5fc6f615cbe96094ec61fa0c8ffa3",
     "rejectedAlternative": {
       "branch": "cleaning",
       "sha": "731133fc0d727510cbc4e3b2896abd7f55fca7a0",
-      "reason": "Mass deletion includes protected tests and governance authorities still referenced by AGENTS.md; safe replacements are unproven."
+      "reason": "Mass deletion removed protected tests and governance authorities without proven replacements."
     }
   },
   "authorization": {
     "implementationAuthorized": true,
     "authorizedOn": "2026-07-29",
-    "authorizationSource": "CURRENT_USER_INSTRUCTION",
-    "pullRequestAuthorized": false,
-    "mergeAuthorized": false,
-    "productionAuthorized": false
+    "scope": "REPOSITORY_WIDE_RECONSTRUCTION",
+    "createMoveMergeDeleteFiles": true,
+    "contractDatabaseRuntimeGovernanceChanges": true,
+    "diagnosticDraftPullRequest": 194,
+    "mergeToMasterAuthorized": false,
+    "productionDeploymentAuthorized": false,
+    "productionDataOrSecretsChangesAuthorized": false,
+    "forcePushOrHistoryRewriteAuthorized": false
   },
-  "execution": {
-    "startedFromSha": "083eeeeb039b6537cf96a0a3128d3d42cdb62de8",
-    "lastRecordedSha": "0549bb863c8b3e09d775b1de50df4fe7df69d80e",
-    "currentWave": "identity_and_contract_foundation",
+  "pinnedAudit": {
+    "targetSha": "fbc0139234e2bdb34a8de77d74a6b91297a754b0",
+    "shortSha": "fbc013923",
+    "workflowRunId": 30422464222,
+    "artifactId": 8712393270,
+    "artifactSha256": "64fd8d9a875a5acc2cb41f2765052d26df871b1b38434f451f0eed2897383895",
+    "mode": "READ_ONLY_PINNED_CHECKOUT",
+    "totalTrackedPaths": 3938,
+    "totalBytes": 32209598,
+    "totalTextLines": 509826,
+    "protectedPaths": {
+      "security": 347,
+      "financial": 598,
+      "migration": 403,
+      "runtime": 344
+    },
+    "correctedFindings": {
+      "total": 345,
+      "P0": 56,
+      "P1": 60,
+      "P2": 229,
+      "byCode": {
+        "canonicalOperationIdCollisions": 24,
+        "migrationPrefixCollisions": 32,
+        "absoluteLocalPaths": 21,
+        "generatedProvenanceMissing": 7,
+        "openapiOwnerMissing": 22,
+        "unconsumedGeneratedCandidates": 9,
+        "packageStateConflictsAtAuditTarget": 1,
+        "duplicateScriptAliasGroups": 16,
+        "emptyTrackedFiles": 87,
+        "exactDuplicateContentGroups": 36,
+        "noisePathCandidates": 19,
+        "unconsumedToolCandidates": 47
+      }
+    },
+    "interpretation": "The audit is a structural baseline, not proof that every candidate is defective or safe to delete. Generated derivatives are excluded from canonical operation-owner collisions."
+  },
+  "legacyExecutionBatch": {
+    "scope": "IDENTITY_WLT_CONTRACT_FOUNDATION_ONLY",
+    "referenceSha": "fbc0139234e2bdb34a8de77d74a6b91297a754b0",
+    "notRepositoryClosure": true,
     "slices": {
-      "VC-000-baseline-and-inventory": "INVENTORY_SCOPED_TO_MODIFIED_BATCH",
       "VC-001-identity-activation-backdoor-removal": "VERIFIED_LOCAL_SAME_SHA",
       "VC-002-master-openapi-uniqueness": "VERIFIED_LOCAL_SAME_SHA",
       "VC-003-wlt-retired-operation-registry-removal": "VERIFIED_LOCAL_SAME_SHA",
@@ -36,35 +82,47 @@
       "VC-007-cross-tenant-actor-provisioning-block": "VERIFIED_LOCAL_SAME_SHA",
       "VC-008-wlt-contract-naming-unification": "VERIFIED_LOCAL_SAME_SHA_PARTIAL_SCOPE"
     },
-    "verification": {
-      "sameShaRequired": true,
-      "githubCommitStatusesObserved": 0,
-      "githubWorkflowRunsVisibleToConnector": 0,
-      "localRemoteCheckoutAvailable": false,
-      "decision": "READY_FOR_OWNER_REVIEW"
-    },
-    "namingDecisions": {
-      "wltContractsRenamedToDomainNames": true,
-      "journeyIdPreservedAs": "x-bthwani-journey-id (per-file scalar, not filename)",
-      "dshContractsWithJrnNames": "NOT_TOUCHED_THIS_SESSION — same defect class as WLT (dsh.jrn-003/010/036/037/038, jrn-035, jrn-033-representative-finance), but services/dsh/contracts has ~40 files and contract-registry.ts + dsh.contract-ownership.json + master.openapi.yaml carry dozens of live cross-references not diagnosed this session; needs its own dedicated pass before renaming.",
-      "governanceAndTestFilesWithJrnNames": "INTENTIONALLY_KEPT — governance/**/JRN-*, services/dsh/tests/jrn-*.test.mjs, services/wlt/database/tests/jrn-*: JRN-0NN is the real journey-registry key there (governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md), not a naming defect."
-    },
-    "needsEvidence": [
-      "contracts:spectral / verify:full — spectral lint crashes (nimma 'Cannot read properties of null (reading enum)') on services/dsh/contracts/dsh.administration.openapi.yaml specifically; confirmed pre-existing (present before this session's first commit), confirmed isolated to that one file, root cause in nimma's JIT compiler not identified within this session's effort budget. contracts-typecheck.mjs (the WLT/DSH/identity bundle-scoped check VC-002/VC-004 actually depend on) passes cleanly.",
-      "core/identity/backend/internal/identity test execution — a local Windows Application Control policy blocks the compiled test binary specifically when tenant_fallback_scan_test.go (added this session) is present, due to its source-file-scanning I/O pattern; go build and go vet both pass cleanly, and every test in the package was independently verified passing with that one file temporarily removed. Not reproduced in the http package or any other Go package this session. Expected to run normally in CI.",
-      "database_migration_safety / financial_invariants / idempotency_and_concurrency / outbox_and_event_delivery / runtime_readiness / runtime_readback — services/wlt/backend Go DB-dependent tests fail locally with 'column tenant_id does not exist' etc.; the wlt-105 migration defining it exists in services/wlt/database/migrations/ but was never applied to this session's local Postgres (no Docker runtime was started). Not a code defect — requires pnpm run runtime:wlt:up + migrate to produce real evidence.",
-      "parallel_writable_sources / duplicate_truth_owners / canonical_owner_proven / actor_and_scope_model_proven / multi_surface_consistency — no single automated command proves these repo-wide; would require the full VC-000 inventory sweep across all services, not only the WLT/identity paths touched this session.",
-      "manual_generated_clients (identity/workforce/platform-control/providers/dsh) — only WLT has an equivalent bundle-gate provenance check (wlt-openapi-bundle-gate.mjs); the other four services' generated clients have no analogous check.",
-      "same_sha_ci — githubWorkflowRunsVisibleToConnector: 0, so the CI-candidate-SHA leg of the exact-SHA chain is unproven; BLOCKED_EXTERNAL until a CI run is observable."
-      ],
-    "sessionSummary": {
-      "roundA": "Removed .github/workflows/validclean-wlt-materialize.yml — auto-pushed to validclean on WLT-path changes (contents:write + git commit/push), violating workflow_security and no-autonomous-commit protocol.",
-      "roundB": "Full read-only re-verification pass; found and fixed 3 defects discovered by actually exercising the suite for the first time: invalid .spectral.yaml invalid-ref rule override (crashed Spectral entirely), a stale contradictory test in partner_access_test.go, and archived a stale VC-003 retirement-registry test that asserted the existence of a file contracts-foundation.mjs forbids.",
-      "roundC": "Ran the three apply-vc004*.mjs codemods for the first time (bundle/client never existed before). Fixed a real bug in apply-vc004-common.mjs (computed x-bthwani-contracts.common insertion was discarded by a stale re-read before write), a real bug in wlt-openapi-bundle-lib.mjs (findTopLevelSection couldn't strip scalar stamps, producing a duplicate YAML key), several dangling/colliding component refs across 6 WLT contract files, and an unconditionally-broken post?:never gate check. Proved bundle/client determinism via two independent regenerations.",
-      "roundD": "Repointed contracts-foundation.mjs's WltPaymentSession check and contracts/master.openapi.yaml's WLT index (8 entries -> 1) at the now-real bundle/entry contract.",
-      "roundE": "Found RequestOtpForTenant (the SaaS-safe path) had no guard against Workforce-managed roles at all — the deleted default-tenant RequestOtp accidentally covered this gap. Fixed otpRoleSurface/otpRolePermissions to delegate to the single central registry first, added coverage, then removed the default-tenant tenant_id='local-dsh' provisioning path and its bare mux route, migrating rather than deleting its test coverage, and added a source scan against reintroducing the literal.",
-      "roundF": "Renamed 4 WLT contracts from jrn-0NN-* to domain names (wlt.refunds/settlements-commissions/payouts-destinations/cod-custody), preserving the JRN cross-reference as x-bthwani-journey-id data. Surfaced and fixed a real bug in normalize-openapi-metadata.mjs (schema-name collection ran past the end of the schemas: subsection into sibling sections once the bundle's cross-file section order differed from any single source file) and a real missing-schema gap on POST /wlt/delivery-collections, both only reachable once a real bundle existed to lint.",
-      "roundG": "Full verify:full, guard:logic-all, cleanup:check, contracts:lint (bundle-scoped), guard:api-binding/backend-api-binding/wlt-financial-boundary, identity go build+vet all pass on the final pinned SHA. DSH's parallel jrn-* naming defect and repo-wide inventory (VC-000 full scope) are explicitly out of this session's scope, not silently closed."
+    "knownEvidenceLimitations": [
+      "No complete repository-wide ownership proof existed in the legacy batch.",
+      "DSH contract composition and permanent jrn-* names were not closed.",
+      "Database and runtime financial invariants were not proven on a fully migrated runtime.",
+      "Generated-client provenance was not established for identity, workforce, platform-control, providers and DSH.",
+      "The legacy package contained conflicting package-state declarations."
+    ]
+  },
+  "execution": {
+    "program": "VC-100_TO_VC-320",
+    "ledger": "tools/validclean-repository-reconstruction/10_REPOSITORY_WIDE_EXECUTION_LEDGER.md",
+    "closureMatrix": "tools/validclean-repository-reconstruction/17_FINAL_CLOSURE_MATRIX.md",
+    "lastPackageInputSha": "04e702468282451f5efc8d72bd8b3e4496969d00",
+    "headResolutionPolicy": "Resolve refs/heads/validclean externally; the manifest does not self-reference its own commit SHA.",
+    "currentWave": "PACKAGE_REBASELINE_AND_P0_FOUNDATION",
+    "slices": {
+      "VC-100-full-tracked-file-inventory": "VERIFIED_SAME_SHA",
+      "VC-101-package-state-unification": "IMPLEMENTATION_IN_PROGRESS",
+      "VC-102-path-decision-registry": "DIAGNOSIS_COMPLETE",
+      "VC-110-platform-control-contract-reconstruction": "DIAGNOSIS_COMPLETE",
+      "VC-120-dsh-contract-reconstruction": "DIAGNOSIS_COMPLETE",
+      "VC-130-migration-history-reconstruction": "DIAGNOSIS_COMPLETE",
+      "VC-140-openapi-ownership-metadata": "DIAGNOSIS_COMPLETE",
+      "VC-150-generated-client-provenance-all-services": "DIAGNOSIS_COMPLETE",
+      "VC-160-identity-trust-closure": "NOT_STARTED",
+      "VC-170-actor-organization-tenant-migration": "NOT_STARTED",
+      "VC-180-wlt-financial-invariants": "NOT_STARTED",
+      "VC-190-dsh-operational-truth": "NOT_STARTED",
+      "VC-200-workforce-and-administration": "NOT_STARTED",
+      "VC-210-shared-frontend-brains": "DIAGNOSIS_COMPLETE",
+      "VC-220-surface-closure": "NOT_STARTED",
+      "VC-230-runtime-interface-reduction": "DIAGNOSIS_COMPLETE",
+      "VC-240-mobile-platform-normalization": "DIAGNOSIS_COMPLETE",
+      "VC-250-infrastructure-namespace-cleanup": "DIAGNOSIS_COMPLETE",
+      "VC-260-governance-authority-reduction": "DIAGNOSIS_COMPLETE",
+      "VC-270-agents-skills-guards-reconstruction": "DIAGNOSIS_COMPLETE",
+      "VC-280-tooling-command-cleanup": "DIAGNOSIS_COMPLETE",
+      "VC-290-documentation-path-cleanup": "DIAGNOSIS_COMPLETE",
+      "VC-300-same-sha-full-verification": "NOT_STARTED",
+      "VC-310-final-deletion-sweep": "NOT_STARTED",
+      "VC-320-closure-declaration": "NOT_STARTED"
     }
   },
   "documents": [
@@ -76,51 +134,29 @@
     "04_EXECUTION_WAVES.md",
     "05_DELETION_RETENTION_PROTOCOL.md",
     "06_ZERO_TOLERANCE_GATES.md",
-    "07_APPROVAL_CHECKPOINT.md"
-  ],
-  "verifiedCriticalFindings": [
-    "duplicate_active_master_openapi_indexes",
-    "identity_universal_activation_code_000000",
-    "fragmented_actor_type_surface_mapping",
-    "identity_local_dsh_bootstrap_scope",
-    "identity_repair_after_incorrect_bootstrap_write",
-    "identity_cross_tenant_existing_phone_reuse",
-    "wlt_retired_operations_parallel_registry",
-    "manual_generalized_wlt_generated_client",
-    "cleaning_removed_referenced_governance_authorities",
-    "cleaning_mass_deleted_protected_test_scopes",
-    "command_alias_and_runtime_interface_inflation"
-  ],
-  "executionOrder": [
-    "baseline",
-    "repository_inventory",
-    "identity_and_trust",
-    "actor_organization_scope_model",
-    "openapi_and_generated_clients",
-    "wlt_financial_truth",
-    "dsh_operational_truth",
-    "workforce_and_administration",
-    "shared_frontend_and_surfaces",
-    "database_and_migrations",
-    "runtime_and_infrastructure",
-    "governance_agents_guards",
-    "tools_commands_documentation",
-    "final_same_sha_verification"
-  ],
-  "firstSlicesAfterApproval": [
-    "VC-000-baseline-and-inventory",
-    "VC-001-identity-activation-backdoor-removal",
-    "VC-002-master-openapi-uniqueness"
+    "07_APPROVAL_CHECKPOINT.md",
+    "08_PINNED_FULL_REPOSITORY_AUDIT.md",
+    "09_CANONICAL_TARGET_ARCHITECTURE.md",
+    "10_REPOSITORY_WIDE_EXECUTION_LEDGER.md",
+    "11_DELETE_MERGE_MOVE_REGISTER.md",
+    "12_DATABASE_MIGRATION_RECONSTRUCTION.md",
+    "13_OPENAPI_AND_GENERATED_CLIENT_RECONSTRUCTION.md",
+    "14_NOISE_AND_NAMESPACE_ELIMINATION.md",
+    "15_FULLSTACK_SURFACE_AND_RUNTIME_CLOSURE.md",
+    "16_GOVERNANCE_AGENTS_GUARDS_REDUCTION.md",
+    "17_FINAL_CLOSURE_MATRIX.md"
   ],
   "hardRules": {
-    "noImplementationBeforeApproval": true,
-    "noDeletionWithoutConsumptionProof": true,
-    "protectSecurityFinanceMigrationRuntimeTests": true,
+    "noDeletionWithoutConsumptionAndReplacementProof": true,
+    "protectSecurityFinanceMigrationRuntimeInvariants": true,
     "singleTruthOwner": true,
     "singleWritablePath": true,
     "noManualGeneratedClients": true,
     "noPermanentLegacyFallback": true,
+    "noWriteWrongThenRepair": true,
+    "noAutonomousSourceMutationInCI": true,
     "noMasterMergeWithoutSeparateExplicitInstruction": true,
-    "sameShaEvidenceRequired": true
+    "sameShaEvidenceRequired": true,
+    "onlyFinalState": "CLOSED_WITH_EVIDENCE"
   }
 }
