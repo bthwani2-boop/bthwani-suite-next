@@ -4,6 +4,7 @@ import { basename, dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { normalizeOpenApiMetadata } from "../contracts/normalize-openapi-metadata.mjs";
 import { composeDshOpenApi } from "../scripts/dsh-openapi-modular-lib.mjs";
+import { composeWltOpenApi } from "../scripts/wlt-openapi-bundle-lib.mjs";
 
 const contracts = [
   "contracts/master.openapi.yaml",
@@ -11,7 +12,7 @@ const contracts = [
   "core/providers/contracts/providers.openapi.yaml",
   "core/workforce/contracts/workforce.openapi.yaml",
   "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
-  "services/wlt/contracts/wlt.openapi.yaml",
+  "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
 ];
 
 const repoRoot = new URL("../..", import.meta.url);
@@ -87,7 +88,11 @@ try {
     stdio: "inherit",
   });
   composeDshOpenApi({ write: true });
+  composeWltOpenApi({ write: true });
   run("dsh-openapi-modular", "node", ["tools/guards/dsh-openapi-modular-gate.mjs"], {
+    stdio: "inherit",
+  });
+  run("wlt-openapi-bundle", "node", ["tools/guards/wlt-openapi-bundle-gate.mjs"], {
     stdio: "inherit",
   });
 
