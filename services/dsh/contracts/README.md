@@ -7,12 +7,12 @@
 - `components/*.yaml`: shared parameters, responses, security schemes, and other component maps.
 - `generated/dsh.bundle.openapi.yaml`: deterministic monolithic bundle used for client generation and Swagger. Never edit it directly.
 - `dsh.modular.manifest.json`: expected path, operation, component, and domain counts.
-- `dsh.contract-ownership.json`: cross-contract path ownership audit.
+- `dsh.contract-ownership.json`: ignored diagnostic derived from the sovereign entry and projection contracts; compose regenerates it and it must never be committed or edited.
 - `contract.manifest.yaml`: bounded-context manifest. Its `modules` list must match the entry's `x-bthwani-contracts` exactly.
 
 ## Commands
 
-`pnpm --dir services/dsh openapi:compose` regenerates the bundle.
+`pnpm --dir services/dsh openapi:compose` regenerates the bundle and current ownership diagnostic.
 
 `pnpm --dir services/dsh openapi:generate` regenerates the bundle and TypeScript client.
 
@@ -25,3 +25,4 @@
 3. Add reusable schemas under the correct domain module and reference them through the root contract.
 4. Do not add root-relative `#/components/...` references inside module files; module references must point back to `dsh.openapi.yaml`.
 5. Do not edit generated artifacts manually.
+6. Do not commit the ownership diagnostic; Git history stores source changes and compose derives the report when needed.
