@@ -188,6 +188,80 @@ openapi_state_missing = 0
 master_service_entry_count = 6
 ```
 
+### VC-140b — Payout destination ownership collision (P0 runtime defect)
+
+الحالة: `VERIFIED_SAME_SHA`
+
+البند كان مسجلًا كتضارب تسمية مؤجل. التحقيق أظهر أنه ليس تضارب تسمية بل **عطبًا حيًا في الإنتاج**.
+
+الأدلة:
+
+```text
+services/wlt/contracts/wlt.payout-destination.openapi.yaml   (مفرد، CONTRACT_ACTIVE)
+  /wlt/payout-destinations/{partnerId}
+  غير مفهرس في x-bthwani-contracts، غير مُركَّب في الـbundle
+
+services/wlt/contracts/wlt.payouts-destinations.openapi.yaml (جمع، canonical)
+  /wlt/payout-destinations/{actorType}/{actorId}
+  مفهرس ومُركَّب
+
+services/wlt/backend/internal/http/server.go:97-99
+  المسارات المسجلة فعليًا هي {actorType}/{actorId} فقط
+
+services/wlt/backend/internal/http/retired_financial_routes_test.go
+  TestLegacyPartnerPayoutDestinationRoutesAreNotRegistered يشترط 404 للشكل القديم — ويمر
+```
+
+أي أن WLT تقاعدت من الشكل الخاص بالشريك، لكن العقد المفرد بقي حيًا، و**DSH بقيت تستدعيه**:
+
+```text
+services/dsh/backend/internal/wlt/payout_destination.go
+  → PUT/GET  /wlt/payout-destinations/{partnerId}
+  → POST     /wlt/payout-destinations/{partnerId}/deactivate
+
+مستدعاة من مسارات إنتاج حقيقية:
+  internal/partner/onboarding_integrity_handlers.go   (تسليم وجهة الصرف عند تسجيل الشريك)
+  internal/partnerwltoutbox/outbox.go                 (التعطيل والقراءة الارتجاعية)
+```
+
+ولم يكن الخلل في المسار وحده. مقارنة الحمولات كشفت عطبين إضافيين كانا سيمنعان النجاح حتى بعد تصحيح المسار:
+
+```text
+الحقل    createdByActorId  ←→  operatorId
+         والمعالج يستعمل DisallowUnknownFields ⇒ 400 على الحقل القديم
+الاستجابة  {...}  ←→  { "payoutDestination": { ... , ownerActorId, ownerActorType } }
+         والعميل كان يتحقق من ref.PartnerID الذي لا وجود له في العقد الحاكم
+```
+
+الأعمال:
+
+- ترحيل `payout_destination.go` إلى العقد الحاكم: مسار عبر دالة واحدة `partnerPayoutDestinationPath` تُنتج `/wlt/payout-destinations/partner/{id}`، وسم JSON إلى `operatorId`، وفك الغلاف `payoutDestinationEnvelope` مع تحقق من `ownerActorType == "partner"` و`ownerActorID == partnerID`.
+- حذف `wlt.payout-destination.openapi.yaml`؛ آخر مرجع له كان `tools/scripts/build-swagger-static.mjs` ⇒ حُوِّل إلى العقد الحاكم.
+- ثلاثة اختبارات تمنع الرجوع في `payout_destination_contract_test.go`: تثبيت المسار مقابل العقد نفسه، ورفض `createdByActorId`، ورفض وجهة مملوكة لفاعل آخر.
+
+الدليل التشغيلي (Postgres الحي، وليس بناءً فقط):
+
+```text
+DSH_REQUIRE_DB_TESTS=true DATABASE_URL=…@127.0.0.1:55432/dsh_runtime
+go test ./internal/partnerwltoutbox/...
+  TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration                     PASS
+  TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegration    PASS
+```
+
+مُتحقَّق منه بالطفرة: إعادة المسار إلى الشكل المتقاعد تُفشل اختبارين؛ استعادته تُنجحهما.
+
+ملاحظتان مكتشفتان أثناء الشريحة، خارج نطاقها، مُسجَّلتان لـVC-300:
+
+- الحاويات العاملة ليست مبنية من HEAD (صورة `bthwani-wlt-api-runtime` من `2026-07-28` ما زالت تخدم المسار المتقاعد بـ401 بدل 404). أي دليل runtime يجب أن يسبقه إعادة بناء، وإلا فهو دليل على شفرة أخرى.
+- `pnpm run contracts:lint` يفشل بـ`Cannot read properties of null (reading 'enum')` داخل Spectral. مُثبت أنه سابق لهذه الشريحة عبر `git stash`.
+
+الإغلاق:
+
+```text
+duplicate_truth_owners (payout destinations) = 0
+contract_without_route (payout destinations) = 0
+```
+
 ### VC-150 — Generated client provenance for all services
 
 يشمل:

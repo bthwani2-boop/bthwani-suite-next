@@ -29,7 +29,7 @@ const specs = [
   { input: "services/dsh/contracts/dsh.platform-policies.openapi.yaml", name: "Services - DSH Platform Policies API" },
   { input: "services/dsh/contracts/dsh.support-governance.openapi.yaml", name: "Services - DSH Support Governance API" },
   { input: "services/wlt/contracts/wlt.openapi.yaml", name: "Services - WLT API" },
-  { input: "services/wlt/contracts/wlt.payout-destination.openapi.yaml", name: "Services - WLT Payout Destination" },
+  { input: "services/wlt/contracts/wlt.payouts-destinations.openapi.yaml", name: "Services - WLT Payout Destinations and Outbound Payments" },
   { input: "services/wlt/contracts/wlt.commercial.openapi.yaml", name: "Services - WLT Commercial API" },
   { input: "services/wlt/contracts/wlt.promotion-funding.openapi.yaml", name: "Services - WLT Promotion Funding API" },
 ];

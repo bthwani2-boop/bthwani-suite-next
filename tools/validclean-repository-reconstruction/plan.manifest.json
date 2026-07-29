@@ -106,6 +106,7 @@
       "VC-130-migration-history-reconstruction": "VERIFIED_SAME_SHA",
       "VC-130b-migration-manifest-all-services": "VERIFIED_SAME_SHA",
       "VC-140-openapi-ownership-metadata": "VERIFIED_SAME_SHA",
+      "VC-140b-payout-destination-ownership-collision": "VERIFIED_SAME_SHA",
       "VC-150-generated-client-provenance-all-services": "VERIFIED_SAME_SHA",
       "VC-150b-generated-client-provenance-generalized": "IMPLEMENTATION_IN_PROGRESS",
       "VC-160-identity-trust-closure": "NOT_STARTED",
@@ -178,10 +179,12 @@
     "needsEvidence": [
       "VC-120: 4 DSH cross-contract path-ownership collision pairs (catalog-proposal-readback/catalog, marketing-commercial/partner-commercial-closure, payouts-destinations/representative-finance, delivery-proof-media/partner-delivery) recorded in services/dsh/contracts/dsh.contract-ownership-allowlist.json, deferred to VC-180/VC-190.",
       "VC-130: RESOLVED in VC-130b -- all six services now carry a committed migrations/manifest.json, the gate's SKIP escape hatch is gone, and guard:migration-manifest-drift runs unconditionally in ci-policy.yml.",
-      "VC-140: possible naming/ownership collision between services/wlt/contracts/wlt.payout-destination.openapi.yaml (singular, not bundle-composed) and wlt.payouts-destinations.openapi.yaml (plural, canonical) discovered but not resolved; deferred to VC-180.",
+      "VC-140: RESOLVED in VC-140b -- not a naming collision but a live production defect. WLT had retired the partner-only /wlt/payout-destinations/{partnerId} surface (enforced by retired_financial_routes_test.go) while DSH kept calling it from partner onboarding and the partner-WLT outbox, with a mismatched createdByActorId field and an unwrapped response shape. DSH migrated to /wlt/payout-destinations/partner/{id} with operatorId and the payoutDestination envelope, the retired contract deleted, three regression tests added, and both partner-WLT outbox DB integration tests pass against live Postgres.",
+      "VC-300 input discovered in VC-140b: the running runtime containers are not built from HEAD (bthwani-wlt-api-runtime image dated 2026-07-28 still serves the retired payout path). Runtime evidence must be preceded by a rebuild or it proves a different revision.",
+      "VC-300 input discovered in VC-140b: pnpm run contracts:lint fails inside Spectral with 'Cannot read properties of null (reading enum)'. Confirmed pre-existing via git stash; owner VC-190.",
       "VC-150: PARTIALLY RESOLVED in VC-150b -- one generalized generated-client-provenance-gate now proves delete-regenerate-diff = 0 for all 8 openapi-typescript clients and rejects unregistered files in any clients/generated directory. providers-api.ts (never actually generated) and dsh-api.ts (stale currency fields) were regenerated. STILL OPEN: manual_generated_clients = 2, not 0 -- services/dsh/clients/generated/dsh-catalog-api.ts (owner VC-190) and core/platform-control/clients/generated/platform-control-saas-runtime.ts (owner VC-220) are hand-authored facades behind AUTO-GENERATED headers.",
-      "Discovered, unrelated to this wave's changes: services/dsh/clients/generated/dsh-api.ts is stale relative to its source bundle (currency-field schema additions never regenerated); confirmed pre-existing via git stash; not fixed here to stay in scope.",
-      "Database/runtime proofs (fresh/upgrade DB, financial invariants, CI same-SHA) remain BLOCKED_EXTERNAL / NEEDS_EVIDENCE as in the prior session; no Docker/Postgres or CI run available this session.",
+      "RESOLVED in VC-150b: services/dsh/clients/generated/dsh-api.ts was stale relative to its source bundle (currency-field schema additions never regenerated); regenerated and now gated.",
+      "Database/runtime proofs (fresh/upgrade DB, financial invariants) are NO LONGER blocked externally: a full Docker stack including postgres:16-alpine on 127.0.0.1:55432 plus all six service containers is available, and DB-backed Go integration tests were run against it in VC-140b. CI same-SHA evidence remains unavailable -- see githubWorkflowRunsVisibleToConnector below.",
       "githubWorkflowRunsVisibleToConnector: 0 -- same-SHA CI evidence unavailable; CLOSED_WITH_EVIDENCE is not used for this wave."
     ]
   },
