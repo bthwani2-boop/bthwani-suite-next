@@ -191,7 +191,9 @@
       "knip.json",
       "knip.strict.json",
       "services/wlt/backend/internal/ledger/refund_tenant_resolution_test.go",
-      "services/wlt/clients/generated/wlt-api.ts"
+      "services/wlt/clients/generated/wlt-api.ts",
+      "services/wlt/contracts/operation-state.json",
+      "services/wlt/tests/wlt-api-client.test.mjs"
     ],
     "allowedPatterns": [
       "^apps/mobile/eas-build-mobile\\.mjs$",
@@ -223,6 +225,7 @@
     "Every destructive runtime alias must use an explicit Force-guarded wrapper.",
     "The only runtime-service source exception in this foundation round is the named WLT verification fixture repair; no runtime behavior may change.",
     "The only WLT client exception is an exact generated type-surface alignment with existing backend JSON; no endpoint or product behavior may be added.",
+    "The WLT settlement operation identifier may be aligned across canonical contract metadata, generated client coverage, and guards only; route and runtime behavior must remain unchanged.",
     "Product-logic cleanup must not be mixed with unrelated foundation rewrites in one commit."
   ]
 }
