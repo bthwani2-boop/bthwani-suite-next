@@ -32,7 +32,7 @@ x-bthwani-generated-from:
   - services/wlt/contracts/wlt.commercial-summary.openapi.yaml
   - services/wlt/contracts/wlt.promotion-funding.openapi.yaml
   - services/wlt/contracts/wlt.workforce-finance.openapi.yaml
-x-bthwani-source-digest: bc7b432b92649259a3ecb8dc52e4ad7fc8c84b538274da59c095283a6fe3c064
+x-bthwani-source-digest: 9e83b9e2723c46af6dc8456126d98f8a754ab7e11a80fa7cef0727228c6f22e1
 
 paths:
   /wlt/health:
@@ -610,8 +610,16 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/CreateDeliveryCollectionRequest' }
       responses:
-        '200': { description: Delivery was prepaid and no COD custody record is applicable, or an existing record was replayed }
-        '201': { description: Tenant-local COD custody record created from WLT payment truth }
+        '200':
+          description: Delivery was prepaid and no COD custody record is applicable, or an existing record was replayed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryCollectionHandoffResponse' }
+        '201':
+          description: Tenant-local COD custody record created from WLT payment truth
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryCollectionHandoffResponse' }
         '400': { $ref: '#/components/responses/CollectionInvalidRequest' }
         '401': { $ref: '#/components/responses/CollectionUnauthorized' }
         '403': { $ref: '#/components/responses/CollectionFeatureNotEnabled' }
@@ -2160,6 +2168,7 @@ paths:
   /wlt/field-commission-category-policies/{partnerCategory}:
     put:
       operationId: upsertFieldCommissionCategoryPolicy
+      tags: [WltWorkforceFinance]
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PartnerCategory'
@@ -2209,6 +2218,7 @@ paths:
   /wlt/provider-penalties/{penaltyId}/reverse:
     post:
       operationId: reverseProviderPenalty
+      tags: [WltWorkforceFinance]
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PenaltyId'
@@ -2835,6 +2845,34 @@ components:
         actorId: { type: string, minLength: 1 }
         actorType: { $ref: '#/components/schemas/CollectionActorType' }
         note: { type: string, maxLength: 4000 }
+
+    DeliveryCollectionRecord:
+      type: object
+      required: [id, orderId, collectorType, collectorId, partnerId, amountMinorUnits, currency, status, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        captainId: { type: string }
+        collectorType: { type: string }
+        collectorId: { type: string }
+        partnerId: { type: string }
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string }
+        status: { type: string }
+        collectedAt: { type: string, nullable: true }
+        remittedAt: { type: string, nullable: true }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    DeliveryCollectionHandoffResponse:
+      type: object
+      required: [codRecord, applicable, replayed]
+      properties:
+        codRecord:
+          allOf: [{ $ref: '#/components/schemas/DeliveryCollectionRecord' }]
+          nullable: true
+        applicable: { type: boolean }
+        replayed: { type: boolean }
 
     RemitDeliveryCollectionRequest:
       type: object

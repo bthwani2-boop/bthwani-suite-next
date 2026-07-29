@@ -1668,6 +1668,27 @@ export interface components {
             actorType: components["schemas"]["CollectionActorType"];
             note?: string;
         };
+        DeliveryCollectionRecord: {
+            id: string;
+            orderId: string;
+            captainId?: string;
+            collectorType: string;
+            collectorId: string;
+            partnerId: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            status: string;
+            collectedAt?: string | null;
+            remittedAt?: string | null;
+            createdAt: string;
+            updatedAt: string;
+        };
+        DeliveryCollectionHandoffResponse: {
+            codRecord: components["schemas"]["DeliveryCollectionRecord"] | null;
+            applicable: boolean;
+            replayed: boolean;
+        };
         RemitDeliveryCollectionRequest: {
             proofReference: string;
             actorId: string;
@@ -3358,19 +3379,23 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Delivery was prepaid and no COD custody record is applicable */
+            /** @description Delivery was prepaid and no COD custody record is applicable, or an existing record was replayed */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeliveryCollectionHandoffResponse"];
+                };
             };
             /** @description Tenant-local COD custody record created from WLT payment truth */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DeliveryCollectionHandoffResponse"];
+                };
             };
             400: components["responses"]["CollectionInvalidRequest"];
             401: components["responses"]["CollectionUnauthorized"];
