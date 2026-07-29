@@ -91,6 +91,8 @@
     "tools/scripts/run-refoundation-verification.ps1",
     "tools/scripts/invoke-platform-foundation-runtime.ps1",
     "tools/scripts/invoke-full-runtime.ps1",
+    "tools/scripts/invoke-destructive-runtime.ps1",
+    "tools/scripts/run-next-bundle-diagnostics.mjs",
     "tools/scripts/sync-mobile-apps.mjs",
     ".github/actions/setup-node-workspace/action.yml",
     ".github/workflows/lockfile-snapshot.yml",
@@ -131,6 +133,14 @@
     "runtime:full:migrate": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-full-runtime.ps1 -Action migrate",
     "runtime:full:status": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-full-runtime.ps1 -Action status",
     "runtime:full:rebuild-reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-full-runtime.ps1 -Action rebuild-reset -Force",
+    "docker:runtime:reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-destructive-runtime.ps1 -Action reset -Profiles dsh,media -Force",
+    "runtime:reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-destructive-runtime.ps1 -Action reset -Profiles dsh,media -Force",
+    "runtime:all:rebuild-reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-destructive-runtime.ps1 -Action all -Profiles dsh,media -Force",
+    "runtime:identity:rebuild-reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-destructive-runtime.ps1 -Action all -Profiles identity -Force",
+    "runtime:wlt:rebuild-reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-destructive-runtime.ps1 -Action all -Profiles wlt -Force",
+    "runtime:dev-core:rebuild-reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-destructive-runtime.ps1 -Action all -Profiles dsh -Force",
+    "runtime:dev-financial:rebuild-reset": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-destructive-runtime.ps1 -Action all -Profiles wlt,financial-simulators,mail -Force",
+    "diagnostics:next-bundle": "node tools/scripts/run-next-bundle-diagnostics.mjs",
     "client": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-client/runtime/start.ps1",
     "partner": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-partner/runtime/start.ps1",
     "captain": "pwsh -NoProfile -ExecutionPolicy Bypass -File apps/app-captain/runtime/start.ps1",
@@ -208,6 +218,7 @@
     "Toolchain version changes require all mobile configuration checks and runtime smoke checks to pass.",
     "EAS project IDs, Android package names, and iOS bundle identifiers must remain stable unless an explicit migration is approved.",
     "Docker volumes and production-like local data must not be destroyed by ordinary verification commands.",
+    "Every destructive runtime alias must use an explicit Force-guarded wrapper.",
     "Product-logic cleanup must not be mixed with unrelated foundation rewrites in one commit."
   ]
 }
