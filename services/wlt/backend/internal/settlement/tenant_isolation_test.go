@@ -67,9 +67,9 @@ func TestSettlementPolicySamePartnerAndIdempotencyKeyAreTenantLocal(t *testing.T
 	tenantB := "tenant-settlement-b-" + suffix
 
 	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE FROM wlt_jrn036_mutation_receipts WHERE tenant_id IN ($1,$2)`, tenantA, tenantB)
-		_, _ = db.Exec(`DELETE FROM wlt_jrn036_audit_events WHERE tenant_id IN ($1,$2)`, tenantA, tenantB)
-		_, _ = db.Exec(`DELETE FROM wlt_jrn036_settlement_policy_versions WHERE tenant_id IN ($1,$2) AND partner_id=$3`, tenantA, tenantB, partnerID)
+		_, _ = db.Exec(`DELETE FROM wlt_mutation_receipts WHERE tenant_id IN ($1,$2)`, tenantA, tenantB)
+		_, _ = db.Exec(`DELETE FROM wlt_finance_audit_events WHERE tenant_id IN ($1,$2)`, tenantA, tenantB)
+		_, _ = db.Exec(`DELETE FROM wlt_settlement_policy_versions WHERE tenant_id IN ($1,$2) AND partner_id=$3`, tenantA, tenantB, partnerID)
 		_, _ = db.Exec(`DELETE FROM wlt_settlement_policies WHERE tenant_id IN ($1,$2) AND partner_id=$3`, tenantA, tenantB, partnerID)
 	})
 
@@ -107,7 +107,7 @@ func TestSettlementPolicySamePartnerAndIdempotencyKeyAreTenantLocal(t *testing.T
 	if policyCount != 2 {
 		t.Fatalf("expected two tenant-local settlement policies, got %d", policyCount)
 	}
-	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_jrn036_mutation_receipts WHERE idempotency_key=$1 AND tenant_id IN ($2,$3)`, idempotencyKey, tenantA, tenantB).Scan(&receiptCount); err != nil {
+	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_mutation_receipts WHERE idempotency_key=$1 AND tenant_id IN ($2,$3)`, idempotencyKey, tenantA, tenantB).Scan(&receiptCount); err != nil {
 		t.Fatal(err)
 	}
 	if receiptCount != 2 {

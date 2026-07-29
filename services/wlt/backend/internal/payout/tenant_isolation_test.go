@@ -97,7 +97,7 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreTenantLocal(t *testing.T) {
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM wlt_jrn037_payout_outbox WHERE tenant_id = ANY($1::text[])`, pqPayoutTextArray(tenants))
 		_, _ = db.Exec(`DELETE FROM wlt_jrn037_payout_reconciliations WHERE tenant_id = ANY($1::text[])`, pqPayoutTextArray(tenants))
-		_, _ = db.Exec(`DELETE FROM wlt_jrn037_payout_audit_events WHERE tenant_id = ANY($1::text[])`, pqPayoutTextArray(tenants))
+		_, _ = db.Exec(`DELETE FROM wlt_payout_audit_events WHERE tenant_id = ANY($1::text[])`, pqPayoutTextArray(tenants))
 		_, _ = db.Exec(`DELETE FROM wlt_payout_requests WHERE tenant_id = ANY($1::text[])`, pqPayoutTextArray(tenants))
 		_, _ = db.Exec(`DELETE FROM wlt_payout_destination_requests WHERE tenant_id = ANY($1::text[])`, pqPayoutTextArray(tenants))
 		_, _ = db.Exec(`DELETE FROM wlt_payout_destinations WHERE tenant_id = ANY($1::text[])`, pqPayoutTextArray(tenants))

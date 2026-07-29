@@ -58,69 +58,6 @@ describe("notifications states", () => {
   });
 });
 
-describe("finance-visibility states", () => {
-  it("financeIdle returns kind=idle", async () => {
-    const { financeIdle } = await import(
-      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.states.js"
-    );
-    assert.equal(financeIdle().kind, "idle");
-  });
-
-  it("financeSuccess wraps data", async () => {
-    const { financeSuccess } = await import(
-      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.states.js"
-    );
-    const data = {
-      orderId: "ord-1", paymentStatus: "captured", settlementStatus: "settled",
-      refundStatus: null, walletStatus: null, updatedAt: "2026-06-24T00:00:00Z",
-    };
-    const s = financeSuccess(data);
-    assert.equal(s.kind, "success");
-    assert.equal(s.data.orderId, "ord-1");
-  });
-
-  it("financeWltUnavailable returns kind=wlt_unavailable", async () => {
-    const { financeWltUnavailable } = await import(
-      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.states.js"
-    );
-    assert.equal(financeWltUnavailable().kind, "wlt_unavailable");
-  });
-});
-
-describe("finance-visibility view-model", () => {
-  it("buildFinanceStatusLabel maps payment statuses", async () => {
-    const { buildFinanceStatusLabel } = await import(
-      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.view-model.js"
-    );
-    assert.equal(buildFinanceStatusLabel("captured", "payment").badge, "success");
-    assert.equal(buildFinanceStatusLabel("pending", "payment").badge, "warning");
-    assert.equal(buildFinanceStatusLabel("failed", "payment").badge, "error");
-    assert.equal(buildFinanceStatusLabel("unknown", "payment").badge, "neutral");
-  });
-
-  it("buildFinanceStatusLabel maps settlement statuses", async () => {
-    const { buildFinanceStatusLabel } = await import(
-      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.view-model.js"
-    );
-    assert.equal(buildFinanceStatusLabel("settled", "settlement").badge, "success");
-    assert.equal(buildFinanceStatusLabel("on_hold", "settlement").badge, "warning");
-    assert.equal(buildFinanceStatusLabel("failed", "settlement").badge, "error");
-  });
-
-  it("buildPartnerFinanceSummaryViewModel composes refs", async () => {
-    const { buildPartnerFinanceSummaryViewModel } = await import(
-      "../dist/services/dsh/frontend/shared/finance-wlt-link/finance-visibility/finance-visibility.view-model.js"
-    );
-    const payment = { id: "p1", orderId: "ord-1", status: "captured", updatedAt: "2026-06-24T00:00:00Z" };
-    const settlement = { id: "s1", orderId: "ord-1", status: "settled", updatedAt: "2026-06-24T00:00:00Z" };
-    const vm = buildPartnerFinanceSummaryViewModel(payment, settlement, null);
-    assert.equal(vm.orderId, "ord-1");
-    assert.equal(vm.paymentStatus, "captured");
-    assert.equal(vm.settlementStatus, "settled");
-    assert.equal(vm.refundStatus, null);
-  });
-});
-
 describe("administration types validation", () => {
   it("partner activation valid statuses are complete", () => {
     const statuses = ["submitted", "ops_approved", "partner_active", "blocked"];

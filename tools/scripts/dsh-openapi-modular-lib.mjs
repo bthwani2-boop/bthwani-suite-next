@@ -737,7 +737,13 @@ export function composeDshOpenApi({ write = true } = {}) {
   }
   if (structure.suffix.length > 0) output.push(...structure.suffix);
   const bundled = `${trimTrailingBlankLines(output).join('\n')}\n`;
-  if (write) writeText(generatedBundlePath, bundled);
+  if (write) {
+    writeText(generatedBundlePath, bundled);
+    writeText(
+      ownershipReportPath,
+      JSON.stringify(collectSiblingContractOwnership(structure.pathEntries.map((entry) => entry.key)), null, 2),
+    );
+  }
   return bundled;
 }
 

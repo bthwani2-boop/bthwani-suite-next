@@ -94,7 +94,7 @@ func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreTenantLocal(t *t
 	tenantB := "tenant-payout-b-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM wlt_payout_destination_requests WHERE tenant_id IN ($1,$2)`, tenantA, tenantB)
-		_, _ = db.Exec(`DELETE FROM wlt_jrn037_payout_audit_events WHERE tenant_id IN ($1,$2) AND aggregate_type='payout_destination'`, tenantA, tenantB)
+		_, _ = db.Exec(`DELETE FROM wlt_payout_audit_events WHERE tenant_id IN ($1,$2) AND aggregate_type='payout_destination'`, tenantA, tenantB)
 		_, _ = db.Exec(`DELETE FROM wlt_payout_destinations WHERE tenant_id IN ($1,$2) AND owner_actor_id=$3`, tenantA, tenantB, actorID)
 	})
 

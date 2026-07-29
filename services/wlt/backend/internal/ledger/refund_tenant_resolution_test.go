@@ -38,9 +38,9 @@ func seedRefundLedgerReference(t *testing.T, operatorContextID string) (*sqlTest
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_refunds
-			(id,tenant_id,payment_session_id,order_id,client_id,amount_minor_units,currency,reason,status)
-		VALUES($1,$2,$3,$4,$5,1000,'YER','tenant resolution test','approved')`,
-		refundID, operatorContextID, sessionID, orderID, clientID); err != nil {
+			(id,tenant_id,payment_session_id,order_id,client_id,amount_minor_units,currency,reason,status,idempotency_key,provider_idempotency_key)
+		VALUES($1,$2,$3,$4,$5,1000,'YER','tenant resolution test','approved',$6,$7)`,
+		refundID, operatorContextID, sessionID, orderID, clientID, "refund-test-"+suffix, "provider-refund-test-"+suffix); err != nil {
 		_ = tx.Rollback()
 		_ = db.Close()
 		t.Fatalf("seed refund: %v", err)
@@ -52,9 +52,9 @@ func seedRefundLedgerReference(t *testing.T, operatorContextID string) (*sqlTest
 }
 
 type sqlTestReference struct {
-	db       interface{ Close() error }
-	tx       *sql.Tx
-	refundID string
+	db                interface{ Close() error }
+	tx                *sql.Tx
+	refundID          string
 	operatorContextID string
 }
 
