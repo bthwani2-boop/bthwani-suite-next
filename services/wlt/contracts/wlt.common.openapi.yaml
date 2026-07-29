@@ -12,7 +12,8 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
 x-bthwani-runtime-dependency: true
 x-bthwani-financial-owner: true
-paths: {}
+paths:
+  x-bthwani-components-only: true
 components:
   securitySchemes:
     serviceBearer:
