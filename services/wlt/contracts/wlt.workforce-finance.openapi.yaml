@@ -15,6 +15,7 @@ paths:
   /wlt/field-commission-category-policies/{partnerCategory}:
     put:
       operationId: upsertFieldCommissionCategoryPolicy
+      tags: [WltWorkforceFinance]
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PartnerCategory'
@@ -61,6 +62,7 @@ paths:
   /wlt/provider-penalties/{penaltyId}/reverse:
     post:
       operationId: reverseProviderPenalty
+      tags: [WltWorkforceFinance]
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PenaltyId'

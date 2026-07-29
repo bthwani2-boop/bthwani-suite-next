@@ -38,8 +38,16 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/CreateDeliveryCollectionRequest' }
       responses:
-        '200': { description: Delivery was prepaid and no COD custody record is applicable, or an existing record was replayed }
-        '201': { description: Tenant-local COD custody record created from WLT payment truth }
+        '200':
+          description: Delivery was prepaid and no COD custody record is applicable, or an existing record was replayed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryCollectionHandoffResponse' }
+        '201':
+          description: Tenant-local COD custody record created from WLT payment truth
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeliveryCollectionHandoffResponse' }
         '400': { $ref: '#/components/responses/CollectionInvalidRequest' }
         '401': { $ref: '#/components/responses/CollectionUnauthorized' }
         '403': { $ref: '#/components/responses/CollectionFeatureNotEnabled' }
@@ -167,6 +175,32 @@ components:
         actorId: { type: string, minLength: 1 }
         actorType: { $ref: '#/components/schemas/CollectionActorType' }
         note: { type: string, maxLength: 4000 }
+    DeliveryCollectionRecord:
+      type: object
+      required: [id, orderId, collectorType, collectorId, partnerId, amountMinorUnits, currency, status, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        captainId: { type: string }
+        collectorType: { type: string }
+        collectorId: { type: string }
+        partnerId: { type: string }
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string }
+        status: { type: string }
+        collectedAt: { type: string, nullable: true }
+        remittedAt: { type: string, nullable: true }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+    DeliveryCollectionHandoffResponse:
+      type: object
+      required: [codRecord, applicable, replayed]
+      properties:
+        codRecord:
+          allOf: [{ $ref: '#/components/schemas/DeliveryCollectionRecord' }]
+          nullable: true
+        applicable: { type: boolean }
+        replayed: { type: boolean }
     RemitDeliveryCollectionRequest:
       type: object
       additionalProperties: false
