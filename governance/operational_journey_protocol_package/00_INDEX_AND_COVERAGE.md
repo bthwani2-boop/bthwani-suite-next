@@ -82,9 +82,9 @@ A package matrix or document may not issue `CLOSED_WITH_EVIDENCE` by itself.
 
 Historical source files and traces may be used to discover intent, but they are never current implementation truth. Branch names, dates, phase claims, local paths, old readiness states, and historical pass labels must not be copied into active evidence without current verification.
 
-## SaaS boundary
+## Partner SaaS boundary
 
-The SaaS readiness annex is conditional and does not authorize SaaS implementation or commercial activation. SaaS remains outside the current execution scope unless explicitly authorized in a separate task.
+Partner SaaS is an embedded BThwani capability set governed by `annexes/PARTNER_SAAS_CAPABILITY_AND_ISOLATION_GATES.md`. Partner organizations and stores are business authorization scopes, not platform-isolation tenants. Applicable journeys must preserve trusted operator context, object authorization, and DSH/WLT ownership boundaries.
 
 ## Verification rule
 
