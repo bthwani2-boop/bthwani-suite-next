@@ -53,19 +53,14 @@ function trackedTextFiles() {
       .filter(Boolean)
       .filter((file) => extensions.has(path.extname(file).toLowerCase()));
   } catch (error) {
-    violations.push({
-      file: ".",
-      line: 0,
-      message: `TRACKED_FILE_SCAN_FAILED ${error.message}`,
-    });
+    violations.push({ file: ".", line: 0, message: `TRACKED_FILE_SCAN_FAILED ${error.message}` });
     return [];
   }
 }
 
 const statePath = "governance/saas/saas-governance.json";
 const schemaPath = "governance/saas/saas-governance.schema.json";
-const authorizationPath = "governance/saas/activation-authorization.json";
-const annexPath = "governance/operational_journey_protocol_package/annexes/SAAS_READINESS_AND_TENANCY_GATES.md";
+const annexPath = "governance/operational_journey_protocol_package/annexes/PARTNER_SAAS_CAPABILITY_AND_ISOLATION_GATES.md";
 const decisionsPath = "governance/contracts/decision-vocabulary.json";
 const runtimeEnvPath = "infra/docker/env/runtime.env.example";
 const composePath = "infra/docker/compose.runtime.yml";
@@ -75,7 +70,6 @@ const productSchemaPath = "governance/product/product-truth.schema.json";
 
 const state = readJson(statePath);
 const schema = readJson(schemaPath);
-const authorization = readJson(authorizationPath);
 const decisions = readJson(decisionsPath);
 const annex = readText(annexPath);
 const runtimeEnv = readText(runtimeEnvPath);
@@ -84,89 +78,12 @@ const platformModel = readText(platformModelPath);
 const platformContract = readJson(platformContractPath);
 const productSchema = readJson(productSchemaPath);
 
-const canonicalPlatformClassification =
-  "UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_WALLET_PLATFORM_WITH_B2B_PARTNER_CAPABILITIES_AND_DEFERRED_OPERATOR_SAAS_READINESS";
-const canonicalBoundarySemantics = {
-  partnerAccessModel: "MANAGED_B2B_PLATFORM_ACCESS",
-  operatorSaasReadiness: "DEFERRED",
-  operatorSaasTenantCandidate: "EXTERNAL_PLATFORM_OPERATOR",
+const canonicalClassification =
+  "UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_FINANCIAL_PLATFORM_WITH_PARTNER_SAAS_CAPABILITIES";
+const canonicalPartnerModel = {
+  partnerAccessModel: "MANAGED_PARTNER_SAAS_CAPABILITY",
+  partnerSaasModel: "EMBEDDED_PLATFORM_CAPABILITY",
 };
-const retiredPartnerSaasClassification = [
-  "UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_WALLET_PLATFORM_WITH",
-  "PARTNER",
-  "SAAS",
-  "CAPABILITIES",
-].join("_");
-const retiredPartnerSaasProse = new RegExp(["partner", "SaaS", "capabilities"].join("\\s+"), "i");
-
-if (!platformModel.includes(`classification: ${canonicalPlatformClassification}`)) {
-  violations.push({
-    file: platformModelPath,
-    line: 0,
-    message: `PLATFORM_CLASSIFICATION_MISMATCH expected ${canonicalPlatformClassification}`,
-  });
-}
-if (platformContract?.platformModel?.classification !== canonicalPlatformClassification) {
-  violations.push({
-    file: platformContractPath,
-    line: 0,
-    message: `PRODUCT_PLATFORM_CLASSIFICATION_MISMATCH expected ${canonicalPlatformClassification}`,
-  });
-}
-if (
-  productSchema?.properties?.platformModel?.properties?.classification?.const !==
-  canonicalPlatformClassification
-) {
-  violations.push({
-    file: productSchemaPath,
-    line: 0,
-    message: `PRODUCT_SCHEMA_PLATFORM_CLASSIFICATION_MISMATCH expected ${canonicalPlatformClassification}`,
-  });
-}
-
-for (const [field, value] of Object.entries(canonicalBoundarySemantics)) {
-  if (!platformModel.includes(`${field}: ${value}`)) {
-    violations.push({
-      file: platformModelPath,
-      line: 0,
-      message: `PLATFORM_BOUNDARY_SEMANTIC_MISMATCH ${field}=${value}`,
-    });
-  }
-  if (platformContract?.platformModel?.[field] !== value) {
-    violations.push({
-      file: platformContractPath,
-      line: 0,
-      message: `PRODUCT_PLATFORM_BOUNDARY_SEMANTIC_MISMATCH ${field}=${value}`,
-    });
-  }
-  if (productSchema?.properties?.platformModel?.properties?.[field]?.const !== value) {
-    violations.push({
-      file: productSchemaPath,
-      line: 0,
-      message: `PRODUCT_SCHEMA_BOUNDARY_SEMANTIC_MISMATCH ${field}=${value}`,
-    });
-  }
-}
-
-const partnerContext = platformContract?.platformModel?.contextSemantics;
-if (partnerContext?.partnerOrganization !== "NOT_A_TENANT" || partnerContext?.store !== "NOT_A_TENANT") {
-  violations.push({
-    file: platformContractPath,
-    line: 0,
-    message: "PARTNER_AND_STORE_MUST_NOT_BE_TENANT_BOUNDARIES",
-  });
-}
-
-for (const file of trackedTextFiles()) {
-  const content = fs.readFileSync(path.join(repoRoot, file), "utf8");
-  if (content.includes(retiredPartnerSaasClassification) || retiredPartnerSaasProse.test(content)) {
-    violations.push({
-      file,
-      line: 0,
-      message: "RETIRED_PARTNER_SAAS_CLASSIFICATION_FORBIDDEN",
-    });
-  }
-}
 
 if (state && schema) {
   try {
@@ -176,117 +93,112 @@ if (state && schema) {
         violations.push({
           file: statePath,
           line: 0,
-          message: `SAAS_SCHEMA_VIOLATION ${error.instancePath || "/"} ${error.message}`,
+          message: `PARTNER_SAAS_SCHEMA_VIOLATION ${error.instancePath || "/"} ${error.message}`,
         });
       }
     }
   } catch (error) {
-    violations.push({ file: schemaPath, line: 0, message: `SAAS_SCHEMA_COMPILE_FAILURE ${error.message}` });
+    violations.push({ file: schemaPath, line: 0, message: `PARTNER_SAAS_SCHEMA_COMPILE_FAILURE ${error.message}` });
   }
 }
 
 const canonicalDecisions = new Set((decisions?.canonicalDecisions ?? []).map((entry) => entry.id));
 if (state && !canonicalDecisions.has(state.canonicalDecision)) {
-  violations.push({ file: statePath, line: 0, message: `NONCANONICAL_SAAS_DECISION ${state.canonicalDecision}` });
+  violations.push({ file: statePath, line: 0, message: `NONCANONICAL_PARTNER_SAAS_DECISION ${state.canonicalDecision}` });
 }
 
-if (state?.activationAuthorization?.status === "AUTHORIZED") {
-  if (state.activationAuthorization.authorizationPath !== authorizationPath) {
-    violations.push({ file: statePath, line: 0, message: "AUTHORIZATION_PATH_MISMATCH" });
-  }
-  if (
-    authorization?.status !== "AUTHORIZED" ||
-    authorization?.source !== "USER_EXPLICIT_INSTRUCTION" ||
-    authorization?.targetRef !== state.activationAuthorization.targetRef
-  ) {
-    violations.push({ file: authorizationPath, line: 0, message: "MATCHING_EXPLICIT_AUTHORIZATION_MISSING" });
-  }
-}
-
-if (state?.commercialActivationState === "ACTIVE") {
-  const unresolved = Object.entries(state.activationEvidence ?? []).filter(([, value]) => value !== "PROVEN");
-  for (const [key, value] of unresolved) {
-    violations.push({ file: statePath, line: 0, message: `ACTIVE_SAAS_WITH_UNPROVEN_EVIDENCE ${key}=${value}` });
-  }
-  if (
-    state.activationAuthorization?.status !== "AUTHORIZED" ||
-    state.activationAuthorization?.productionDeploymentAuthorized !== true
-  ) {
-    violations.push({ file: statePath, line: 0, message: "ACTIVE_SAAS_REQUIRES_MATCHING_PRODUCTION_AUTHORIZATION" });
+for (const [field, expected] of Object.entries({
+  platformMode: "BTHWANI_NATIVE_PLATFORM",
+  partnerSaasModel: "EMBEDDED_PLATFORM_CAPABILITY",
+  partnerAccessModel: "MANAGED_B2B_PLATFORM_ACCESS",
+  partnerOrganizationBoundary: "BUSINESS_SCOPE_NOT_TENANT",
+  storeBoundary: "BUSINESS_SCOPE_NOT_TENANT",
+  operatorContextPurpose: "TRUST_AND_DATA_ISOLATION",
+  trustedOperatorContextRequired: true,
+  clientSuppliedOperatorContextTrusted: false,
+})) {
+  if (state?.[field] !== expected) {
+    violations.push({ file: statePath, line: 0, message: `PARTNER_SAAS_STATE_MISMATCH ${field}=${String(expected)}` });
   }
 }
 
-const deferred = new Set(state?.deferredCommercialFeatures ?? []);
-for (const feature of [
-  "commercial subscription billing",
-  "self-service tenant signup",
-  "white-label customization",
-  "custom domains",
-  "complex usage metering",
-  "database per tenant",
+if (!platformModel.includes(`classification: ${canonicalClassification}`)) {
+  violations.push({ file: platformModelPath, line: 0, message: `PLATFORM_CLASSIFICATION_MISMATCH expected ${canonicalClassification}` });
+}
+for (const [field, value] of Object.entries(canonicalPartnerModel)) {
+  if (!platformModel.includes(`${field}: ${value}`)) {
+    violations.push({ file: platformModelPath, line: 0, message: `PLATFORM_PARTNER_MODEL_MISMATCH ${field}=${value}` });
+  }
+  if (platformContract?.platformModel?.[field] !== value) {
+    violations.push({ file: platformContractPath, line: 0, message: `PRODUCT_PARTNER_MODEL_MISMATCH ${field}=${value}` });
+  }
+  if (productSchema?.properties?.platformModel?.properties?.[field]?.const !== value) {
+    violations.push({ file: productSchemaPath, line: 0, message: `PRODUCT_SCHEMA_PARTNER_MODEL_MISMATCH ${field}=${value}` });
+  }
+}
+if (platformContract?.platformModel?.classification !== canonicalClassification) {
+  violations.push({ file: platformContractPath, line: 0, message: `PRODUCT_PLATFORM_CLASSIFICATION_MISMATCH expected ${canonicalClassification}` });
+}
+if (productSchema?.properties?.platformModel?.properties?.classification?.const !== canonicalClassification) {
+  violations.push({ file: productSchemaPath, line: 0, message: `PRODUCT_SCHEMA_PLATFORM_CLASSIFICATION_MISMATCH expected ${canonicalClassification}` });
+}
+
+const context = platformContract?.platformModel?.contextSemantics;
+if (
+  context?.operatorContext !== "PLATFORM_ISOLATION_CONTEXT" ||
+  context?.operatorContextPurpose !== "TRUST_AND_DATA_ISOLATION" ||
+  context?.partnerOrganization !== "BUSINESS_SCOPE_NOT_TENANT" ||
+  context?.store !== "BUSINESS_SCOPE_NOT_TENANT"
+) {
+  violations.push({ file: platformContractPath, line: 0, message: "PARTNER_AND_STORE_BOUNDARY_MODEL_INVALID" });
+}
+
+for (const marker of [
+  "partner_saas_model: EMBEDDED_PLATFORM_CAPABILITY",
+  "partner_access_model: MANAGED_B2B_PLATFORM_ACCESS",
+  "partner_organization_boundary: BUSINESS_SCOPE_NOT_TENANT",
+  "store_boundary: BUSINESS_SCOPE_NOT_TENANT",
+  "operator_context_purpose: TRUST_AND_DATA_ISOLATION",
 ]) {
-  if (!deferred.has(feature)) {
-    violations.push({ file: statePath, line: 0, message: `DEFERRED_COMMERCIAL_FEATURE_MISSING ${feature}` });
-  }
-}
-
-const annexMarkers = [
-  `saas_readiness_mode: ${state?.saasReadinessMode}`,
-  `commercial_activation_state: ${state?.commercialActivationState}`,
-  `activation_authorization_status: ${state?.activationAuthorization?.status}`,
-  `activation_authorization_target_ref: ${state?.activationAuthorization?.targetRef}`,
-  `production_deployment_authorized: ${String(state?.activationAuthorization?.productionDeploymentAuthorized)}`,
-  `canonical_decision: ${state?.canonicalDecision}`,
-];
-for (const marker of annexMarkers) {
   if (!annex.includes(marker)) {
-    violations.push({ file: annexPath, line: 0, message: `SAAS_ANNEX_STATE_MISMATCH expected ${marker}` });
+    violations.push({ file: annexPath, line: 0, message: `PARTNER_SAAS_ANNEX_MISMATCH expected ${marker}` });
   }
 }
 
-const runtimeModeByReadiness = {
-  NOT_APPLICABLE: "deferred",
-  SAAS_READY_DEFERRED: "deferred",
-  SAAS_ACTIVE: "active",
-};
-const runtimeActivationByCommercialState = {
-  BLOCKED_BY_POLICY: "blocked",
-  ELIGIBLE_FOR_REVIEW: "eligible",
-  ACTIVATION_AUTHORIZED: "authorized",
-  ACTIVE: "active",
-};
-const expectedRuntimeMode = runtimeModeByReadiness[state?.saasReadinessMode];
-const expectedCommercialActivation = runtimeActivationByCommercialState[state?.commercialActivationState];
-const expectedProductionAuthorization = String(
-  state?.activationAuthorization?.productionDeploymentAuthorized ?? false,
-);
-
-for (const marker of [
-  `BTHWANI_SAAS_MODE=${expectedRuntimeMode}`,
-  `BTHWANI_COMMERCIAL_ACTIVATION_STATE=${expectedCommercialActivation}`,
-  `BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED=${expectedProductionAuthorization}`,
-]) {
-  if (!runtimeEnv.includes(marker)) {
-    violations.push({ file: runtimeEnvPath, line: 0, message: `SAAS_RUNTIME_ENV_DEFAULT_MISMATCH expected ${marker}` });
-  }
-}
-
-for (const marker of [
-  `BTHWANI_SAAS_MODE: "\${BTHWANI_SAAS_MODE:-${expectedRuntimeMode}}"`,
-  `BTHWANI_COMMERCIAL_ACTIVATION_STATE: "\${BTHWANI_COMMERCIAL_ACTIVATION_STATE:-${expectedCommercialActivation}}"`,
-  `BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED: "\${BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED:-${expectedProductionAuthorization}}"`,
-]) {
-  if (!compose.includes(marker)) {
-    violations.push({ file: composePath, line: 0, message: `SAAS_COMPOSE_DEFAULT_MISMATCH expected ${marker}` });
-  }
-}
-
-const retiredRuntimeContextVariable = ["BTHWANI", "DEFAULT", "TENANT", "ID"].join("_");
-if (runtimeEnv.includes(retiredRuntimeContextVariable) || compose.includes(retiredRuntimeContextVariable)) {
-  violations.push({ file: runtimeEnvPath, line: 0, message: "LEGACY_RUNTIME_TENANT_VARIABLE_FORBIDDEN" });
-}
-if (!runtimeEnv.includes("BTHWANI_OPERATOR_CONTEXT_ID=") || !compose.includes("BTHWANI_OPERATOR_CONTEXT_ID:")) {
+if (!runtimeEnv.includes("BTHWANI_OPERATOR_CONTEXT_ID=")) {
   violations.push({ file: runtimeEnvPath, line: 0, message: "OPERATOR_CONTEXT_RUNTIME_BINDING_MISSING" });
+}
+if (!compose.includes("BTHWANI_OPERATOR_CONTEXT_ID:")) {
+  violations.push({ file: composePath, line: 0, message: "OPERATOR_CONTEXT_COMPOSE_BINDING_MISSING" });
+}
+
+const forbiddenTokenParts = [
+  ["BTHWANI", "SAAS", "MODE"],
+  ["BTHWANI", "COMMERCIAL", "ACTIVATION", "STATE"],
+  ["BTHWANI", "PRODUCTION", "DEPLOYMENT", "AUTHORIZED"],
+  ["commercial", "Activation", "State"],
+  ["production", "Deployment", "Authorized"],
+  ["SAAS", "READY", "DEFERRED"],
+  ["SAAS", "ACTIVE"],
+  ["ACTIVATION", "AUTHORIZED"],
+  ["activation", "authorization.json"],
+  ["SAAS", "READINESS", "AND", "TENANCY", "GATES.md"],
+  ["operator", "Saas", "Readiness"],
+  ["operator", "Saas", "Tenant", "Candidate"],
+  ["Platform", "Saas", "Runtime", "Status"],
+  ["deferred", "operator", "SaaS", "readiness"],
+];
+const forbiddenTokens = forbiddenTokenParts.map((parts) => parts.join(parts[0] === "commercial" || parts[0] === "production" || parts[0] === "operator" || parts[0] === "Platform" ? "" : "_"));
+const scanExclusions = new Set(["tools/guards/saas-governance-gate.mjs"]);
+
+for (const file of trackedTextFiles()) {
+  if (scanExclusions.has(file)) continue;
+  const content = fs.readFileSync(path.join(repoRoot, file), "utf8");
+  for (const token of forbiddenTokens) {
+    if (content.includes(token)) {
+      violations.push({ file, line: 0, message: `RETIRED_MULTI_TENANT_ACTIVATION_TOKEN ${token}` });
+    }
+  }
 }
 
 fail(guardId, violations);
