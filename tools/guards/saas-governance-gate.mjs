@@ -36,6 +36,9 @@ const annexPath = "governance/operational_journey_protocol_package/annexes/SAAS_
 const decisionsPath = "governance/contracts/decision-vocabulary.json";
 const runtimeEnvPath = "infra/docker/env/runtime.env.example";
 const composePath = "infra/docker/compose.runtime.yml";
+const platformModelPath = "governance/product/platform-model.yaml";
+const platformContractPath = "governance/product/contracts/bthwani-platform-model.product-truth.json";
+const productSchemaPath = "governance/product/product-truth.schema.json";
 
 const state = readJson(statePath);
 const schema = readJson(schemaPath);
@@ -44,6 +47,62 @@ const decisions = readJson(decisionsPath);
 const annex = readText(annexPath);
 const runtimeEnv = readText(runtimeEnvPath);
 const compose = readText(composePath);
+const platformModel = readText(platformModelPath);
+const platformContract = readJson(platformContractPath);
+const productSchema = readJson(productSchemaPath);
+
+const canonicalPlatformClassification =
+  "UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_WALLET_PLATFORM_WITH_B2B_PARTNER_CAPABILITIES_AND_DEFERRED_OPERATOR_SAAS_READINESS";
+const retiredPartnerSaasClassification =
+  "UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_WALLET_PLATFORM_WITH_PARTNER_SAAS_CAPABILITIES";
+
+if (!platformModel.includes(`classification: ${canonicalPlatformClassification}`)) {
+  violations.push({
+    file: platformModelPath,
+    line: 0,
+    message: `PLATFORM_CLASSIFICATION_MISMATCH expected ${canonicalPlatformClassification}`,
+  });
+}
+if (platformContract?.platformModel?.classification !== canonicalPlatformClassification) {
+  violations.push({
+    file: platformContractPath,
+    line: 0,
+    message: `PRODUCT_PLATFORM_CLASSIFICATION_MISMATCH expected ${canonicalPlatformClassification}`,
+  });
+}
+if (
+  productSchema?.properties?.platformModel?.properties?.classification?.const !==
+  canonicalPlatformClassification
+) {
+  violations.push({
+    file: productSchemaPath,
+    line: 0,
+    message: `PRODUCT_SCHEMA_PLATFORM_CLASSIFICATION_MISMATCH expected ${canonicalPlatformClassification}`,
+  });
+}
+
+const partnerContext = platformContract?.platformModel?.contextSemantics;
+if (partnerContext?.partnerOrganization !== "NOT_A_TENANT" || partnerContext?.store !== "NOT_A_TENANT") {
+  violations.push({
+    file: platformContractPath,
+    line: 0,
+    message: "PARTNER_AND_STORE_MUST_NOT_BE_TENANT_BOUNDARIES",
+  });
+}
+
+for (const [file, content] of [
+  [platformModelPath, platformModel],
+  [platformContractPath, JSON.stringify(platformContract ?? {})],
+  [productSchemaPath, JSON.stringify(productSchema ?? {})],
+]) {
+  if (content.includes(retiredPartnerSaasClassification) || /partner SaaS capabilities/i.test(content)) {
+    violations.push({
+      file,
+      line: 0,
+      message: "RETIRED_PARTNER_SAAS_CLASSIFICATION_FORBIDDEN",
+    });
+  }
+}
 
 if (state && schema) {
   try {
