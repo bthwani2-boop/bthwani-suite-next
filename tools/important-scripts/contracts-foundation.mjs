@@ -286,8 +286,8 @@ for (const contractFile of contractFiles) {
   }
 }
 
-// 7. Validate that WltPaymentSession statuses in wlt.openapi.yaml match DB migrations
-const wltOpenApiPath = path.join(repoRoot, "services/wlt/contracts/wlt.openapi.yaml");
+// 7. Validate that WltPaymentSession statuses in the canonical WLT bundle match DB migrations
+const wltOpenApiPath = path.join(repoRoot, "services/wlt/contracts/generated/wlt.bundle.openapi.yaml");
 const wltMigrationPath = path.join(repoRoot, "services/wlt/database/migrations/wlt-002_payment_capture.sql");
 
 if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
@@ -340,6 +340,16 @@ if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
           }
           if (insideStatus) {
             if (trimmed.startsWith("enum:")) {
+              const inlineMatch = trimmed.match(/^enum:\s*\[([^\]]*)\]\s*$/);
+              if (inlineMatch) {
+                for (const value of inlineMatch[1].split(",")) {
+                  const cleaned = value.trim().replace(/^['"]|['"]$/g, "");
+                  if (cleaned !== "") schemaStatusEnum.push(cleaned);
+                }
+                insideEnum = false;
+                insideStatus = false;
+                continue;
+              }
               insideEnum = true;
               continue;
             }
@@ -358,14 +368,14 @@ if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
         for (const dbStatus of dbStatuses) {
           if (!schemaStatusEnum.includes(dbStatus)) {
             violations.push({
-              file: "services/wlt/contracts/wlt.openapi.yaml",
+              file: "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
               message: `OpenAPI WltPaymentSession.status enum is missing state '${dbStatus}' defined in DB migration wlt-002_payment_capture.sql`
             });
           }
         }
       } else {
         violations.push({
-          file: "services/wlt/contracts/wlt.openapi.yaml",
+          file: "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
           message: "Failed to find WltPaymentSession.status enum in OpenAPI schema"
         });
       }
@@ -377,7 +387,7 @@ if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
     }
   } catch (err) {
     violations.push({
-      file: "services/wlt/contracts/wlt.openapi.yaml",
+      file: "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
       message: `Error validating OpenAPI statuses against DB migrations: ${err.message}`
     });
   }
