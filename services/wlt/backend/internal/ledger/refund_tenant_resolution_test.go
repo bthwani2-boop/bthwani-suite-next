@@ -27,6 +27,7 @@ func seedRefundLedgerReference(t *testing.T, tenantID string) (*sqlTestReference
 	refundID := "refund-ledger-" + suffix
 	orderID := "refund-order-" + suffix
 	clientID := "refund-client-" + suffix
+	idempotencyKey := "refund-idempotency-" + suffix
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_payment_sessions
 			(id,tenant_id,checkout_intent_id,client_id,store_id,payment_method,status,amount_minor_units,currency)
@@ -38,9 +39,9 @@ func seedRefundLedgerReference(t *testing.T, tenantID string) (*sqlTestReference
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_refunds
-			(id,tenant_id,payment_session_id,order_id,client_id,amount_minor_units,currency,reason,status)
-		VALUES($1,$2,$3,$4,$5,1000,'YER','tenant resolution test','approved')`,
-		refundID, tenantID, sessionID, orderID, clientID); err != nil {
+			(id,tenant_id,payment_session_id,order_id,client_id,idempotency_key,amount_minor_units,currency,reason,status)
+		VALUES($1,$2,$3,$4,$5,$6,1000,'YER','tenant resolution test','approved')`,
+		refundID, tenantID, sessionID, orderID, clientID, idempotencyKey); err != nil {
 		_ = tx.Rollback()
 		_ = db.Close()
 		t.Fatalf("seed refund: %v", err)
