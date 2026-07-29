@@ -71,6 +71,14 @@ if (!entry.includes('x-bthwani-contract-layout: INDEXED')) {
     'WLT runtime metadata anchor',
   );
 }
+const duplicateSettlementStart = entry.indexOf('  /wlt/settlements:\n');
+const duplicateSettlementEnd = entry.indexOf('  /wlt/payout-requests/{payoutId}/fail:\n');
+if (duplicateSettlementStart >= 0) {
+  if (duplicateSettlementEnd <= duplicateSettlementStart) {
+    throw new Error('VC-004 migration could not bound duplicate root settlement operations');
+  }
+  entry = `${entry.slice(0, duplicateSettlementStart)}${entry.slice(duplicateSettlementEnd)}`;
+}
 write(entryPath, entry);
 
 const composerPath = 'tools/scripts/wlt-openapi-bundle-lib.mjs';
