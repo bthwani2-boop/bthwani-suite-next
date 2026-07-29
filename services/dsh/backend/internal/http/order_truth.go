@@ -199,7 +199,7 @@ func (s *protectedStoreServer) handleListOperatorOrderTruth(w http.ResponseWrite
 	}
 	list, err := orders.ListOperatorOrderTruth(s.db, actor.OperatorContextID, strings.TrimSpace(r.URL.Query().Get("status")), parseOrderTruthLimit(r))
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list tenant order truth")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list OperatorContext order truth")
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"orders": list})
@@ -211,7 +211,7 @@ func (s *protectedStoreServer) handleGetOperatorOrderTruth(w http.ResponseWriter
 		return
 	}
 	truth, err := orders.GetOperatorScopedOrderTruth(s.db, r.PathValue("orderId"), actor.OperatorContextID)
-	if writeOrderTruthReadFailure(w, err, "failed to read tenant order truth") {
+	if writeOrderTruthReadFailure(w, err, "failed to read OperatorContext order truth") {
 		return
 	}
 	orders.RedactOrderTruthForViewer(truth, "operator")

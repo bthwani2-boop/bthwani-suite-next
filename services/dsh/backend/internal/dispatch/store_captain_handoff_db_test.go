@@ -29,7 +29,7 @@ func seedOutboundHandoffFixture(t *testing.T, db *sql.DB) outboundHandoffFixture
 		PartnerID: "handoff-partner-" + suffix,
 	}
 	clientID := "handoff-client-" + suffix
-	operatorContextID := "handoff-tenant-" + suffix
+	operatorContextID := "handoff-OperatorContext-" + suffix
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_partners (id, legal_name_ar, display_name, legal_identity_number, primary_phone)
@@ -51,7 +51,7 @@ func seedOutboundHandoffFixture(t *testing.T, db *sql.DB) outboundHandoffFixture
 	}
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_checkout_intents (
-			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
+			operator_context_id, client_id, cart_id, store_id, state, fulfillment_mode,
 			payment_method, wlt_payment_session_id,
 			subtotal_minor_units, delivery_fee_minor_units, discount_minor_units,
 			total_minor_units, currency, pricing_snapshot_hash
@@ -64,7 +64,7 @@ func seedOutboundHandoffFixture(t *testing.T, db *sql.DB) outboundHandoffFixture
 		t.Fatalf("insert checkout intent: %v", err)
 	}
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status)
+		INSERT INTO dsh_orders (operator_context_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status)
 		VALUES ($1, $2::uuid, $3, 'bthwani_delivery', $4, 'driver_assigned')
 		RETURNING id::text`, operatorContextID, fixture.CheckoutIntentID, fixture.StoreID, clientID,
 	).Scan(&fixture.OrderID); err != nil {

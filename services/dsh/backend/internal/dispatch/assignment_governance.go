@@ -152,10 +152,10 @@ func UpsertCaptainDispatchProfile(db *sql.DB, input CaptainDispatchProfileInput)
 	var version int
 	err := db.QueryRow(`
 		INSERT INTO dsh_captain_dispatch_profiles (
-			tenant_id, captain_id, accreditation_status, availability_status,
+			operator_context_id, captain_id, accreditation_status, availability_status,
 			max_active_assignments, priority_score, updated_by
 		) VALUES ($1,$2,$3,$4,$5,$6,$7)
-		ON CONFLICT (tenant_id, captain_id) DO UPDATE SET
+		ON CONFLICT (operator_context_id, captain_id) DO UPDATE SET
 			accreditation_status=EXCLUDED.accreditation_status,
 			availability_status=EXCLUDED.availability_status,
 			max_active_assignments=EXCLUDED.max_active_assignments,
@@ -206,7 +206,7 @@ func ListCaptainDispatchCandidates(db *sql.DB, operatorContextID, serviceAreaCod
 		limit = 100
 	}
 	rows, err := db.Query(`
-		SELECT p.tenant_id, p.captain_id, s.service_area_code,
+		SELECT p.operator_context_id, p.captain_id, s.service_area_code,
 		       p.accreditation_status, p.availability_status,
 		       p.max_active_assignments,
 		       COUNT(a.id) FILTER (WHERE a.status='accepted' OR (a.status='offered' AND a.response_deadline_at>NOW()))::int,
@@ -216,10 +216,10 @@ func ListCaptainDispatchCandidates(db *sql.DB, operatorContextID, serviceAreaCod
 		  ON s.actor_id=p.captain_id AND s.actor_role='captain' AND s.active=true
 		 AND s.service_area_code=$2
 		LEFT JOIN dsh_assignments a
-		  ON a.tenant_id=p.tenant_id AND a.captain_id=p.captain_id
+		  ON a.operator_context_id=p.operator_context_id AND a.captain_id=p.captain_id
 		 AND (a.status='accepted' OR (a.status='offered' AND a.response_deadline_at>NOW()))
-		WHERE p.tenant_id=$1
-		GROUP BY p.tenant_id,p.captain_id,s.service_area_code,p.accreditation_status,
+		WHERE p.operator_context_id=$1
+		GROUP BY p.operator_context_id,p.captain_id,s.service_area_code,p.accreditation_status,
 		         p.availability_status,p.max_active_assignments,p.priority_score,p.version,p.updated_at
 		ORDER BY
 		  CASE WHEN p.accreditation_status='approved' AND p.availability_status='available' THEN 0 ELSE 1 END,
@@ -290,7 +290,7 @@ func validateCaptainForAssignmentTx(tx *sql.Tx, operatorContextID, captainID, se
 	err := tx.QueryRow(`
 		SELECT accreditation_status, availability_status, max_active_assignments
 		FROM dsh_captain_dispatch_profiles
-		WHERE tenant_id=$1 AND captain_id=$2
+		WHERE operator_context_id=$1 AND captain_id=$2
 		FOR UPDATE`, operatorContextID, captainID,
 	).Scan(&accreditation, &availability, &maxActive)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -317,7 +317,7 @@ func validateCaptainForAssignmentTx(tx *sql.Tx, operatorContextID, captainID, se
 	var active int
 	if err = tx.QueryRow(`
 		SELECT COUNT(*)::int FROM dsh_assignments
-		WHERE tenant_id=$1 AND captain_id=$2
+		WHERE operator_context_id=$1 AND captain_id=$2
 		  AND (status='accepted' OR (status='offered' AND response_deadline_at>NOW()))`,
 		operatorContextID, captainID,
 	).Scan(&active); err != nil {
@@ -334,7 +334,7 @@ func validateCaptainAcceptanceTx(tx *sql.Tx, operatorContextID, captainID string
 	err := tx.QueryRow(`
 		SELECT accreditation_status, availability_status
 		FROM dsh_captain_dispatch_profiles
-		WHERE tenant_id=$1 AND captain_id=$2
+		WHERE operator_context_id=$1 AND captain_id=$2
 		FOR UPDATE`, operatorContextID, captainID,
 	).Scan(&accreditation, &availability)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -366,7 +366,7 @@ func CreateGovernedAssignment(db *sql.DB, input GovernedCreateAssignmentInput) (
 	var existingID, existingCaptainID string
 	err = tx.QueryRow(`
 		SELECT id::text, captain_id FROM dsh_assignments
-		WHERE tenant_id=$1 AND idempotency_key=$2`, input.OperatorContextID, input.IdempotencyKey,
+		WHERE operator_context_id=$1 AND idempotency_key=$2`, input.OperatorContextID, input.IdempotencyKey,
 	).Scan(&existingID, &existingCaptainID)
 	if err == nil {
 		row := tx.QueryRow(assignmentSelectSQL()+` WHERE a.id=$1::uuid AND a.captain_id=$2`, existingID, existingCaptainID)
@@ -386,21 +386,21 @@ func CreateGovernedAssignment(db *sql.DB, input GovernedCreateAssignmentInput) (
 		return nil, false, err
 	}
 
-	var fulfillmentMode, orderTenant, orderServiceArea string
+	var fulfillmentMode, orderOperatorContext, orderServiceArea string
 	err = tx.QueryRow(`
-		SELECT o.fulfillment_mode, o.tenant_id, COALESCE(s.service_area_code,'')
+		SELECT o.fulfillment_mode, o.operator_context_id, COALESCE(s.service_area_code,'')
 		FROM dsh_orders o
 		JOIN dsh_stores s ON s.id=o.store_id
 		WHERE o.id=$1::uuid
 		FOR UPDATE OF o`, input.OrderID,
-	).Scan(&fulfillmentMode, &orderTenant, &orderServiceArea)
+	).Scan(&fulfillmentMode, &orderOperatorContext, &orderServiceArea)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, ErrNotFound
 	}
 	if err != nil {
 		return nil, false, err
 	}
-	if orderTenant != input.OperatorContextID || fulfillmentMode != "bthwani_delivery" {
+	if orderOperatorContext != input.OperatorContextID || fulfillmentMode != "bthwani_delivery" {
 		return nil, false, fmt.Errorf("%w: order is not eligible for platform-captain dispatch", ErrConflict)
 	}
 	if orderServiceArea == "" || orderServiceArea != input.ServiceAreaCode {
@@ -426,7 +426,7 @@ func CreateGovernedAssignment(db *sql.DB, input GovernedCreateAssignmentInput) (
 	var activeAssignmentID string
 	err = tx.QueryRow(`
 		SELECT id::text FROM dsh_assignments
-		WHERE tenant_id=$1 AND order_id=$2::uuid
+		WHERE operator_context_id=$1 AND order_id=$2::uuid
 		  AND (status='accepted' OR (status='offered' AND response_deadline_at>NOW()))
 		ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, input.OperatorContextID, input.OrderID,
 	).Scan(&activeAssignmentID)
@@ -445,7 +445,7 @@ func CreateGovernedAssignment(db *sql.DB, input GovernedCreateAssignmentInput) (
 	assignment, err := scanAssignmentRow(tx.QueryRow(`
 		INSERT INTO dsh_assignments (
 			order_id,captain_id,assigned_by,status,response_deadline_at,
-			tenant_id,service_area_code,idempotency_key,priority,distance_meters,
+			operator_context_id,service_area_code,idempotency_key,priority,distance_meters,
 			offer_reason,supersedes_assignment_id
 		) VALUES (
 			$1::uuid,$2,$3,$4,NOW()+($5*INTERVAL '1 second'),
@@ -508,7 +508,7 @@ func AcceptGovernedAssignment(db *sql.DB, assignmentID, captainID string) (*Assi
 		return nil, err
 	}
 	var operatorContextID string
-	if err = tx.QueryRow(`SELECT tenant_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&operatorContextID); err != nil {
+	if err = tx.QueryRow(`SELECT operator_context_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&operatorContextID); err != nil {
 		return nil, err
 	}
 	if current.Status != AssignmentOffered {
@@ -562,7 +562,7 @@ func DeclineGovernedAssignment(db *sql.DB, assignmentID, captainID, reasonCode, 
 		return nil, err
 	}
 	var operatorContextID string
-	if err = tx.QueryRow(`SELECT tenant_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&operatorContextID); err != nil {
+	if err = tx.QueryRow(`SELECT operator_context_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&operatorContextID); err != nil {
 		return nil, err
 	}
 	if current.Status != AssignmentOffered {
@@ -615,7 +615,7 @@ func ExpireOverdueAssignments(db *sql.DB, operatorContextID, actorID string, lim
 	}
 	defer tx.Rollback()
 	rows, err := tx.Query(assignmentSelectSQL()+`
-		WHERE a.tenant_id=$1 AND a.status='offered' AND a.response_deadline_at<=NOW()
+		WHERE a.operator_context_id=$1 AND a.status='offered' AND a.response_deadline_at<=NOW()
 		ORDER BY a.response_deadline_at ASC LIMIT $2 FOR UPDATE OF a,d`, operatorContextID, limit)
 	if err != nil {
 		return 0, err
@@ -688,7 +688,7 @@ func CancelGovernedAssignment(db *sql.DB, assignmentID, actorID, reasonCode, rea
 		return fmt.Errorf("%w: assignment cannot be cancelled after pickup execution starts", ErrConflict)
 	}
 	var operatorContextID string
-	if err = tx.QueryRow(`SELECT tenant_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&operatorContextID); err != nil {
+	if err = tx.QueryRow(`SELECT operator_context_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&operatorContextID); err != nil {
 		return err
 	}
 	if current.OrderID != "" {
@@ -745,7 +745,7 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 	var replayID, replayCaptainID, replaySupersedesID string
 	err = tx.QueryRow(`
 		SELECT id::text, captain_id, COALESCE(supersedes_assignment_id::text,'')
-		FROM dsh_assignments WHERE tenant_id=$1 AND idempotency_key=$2`,
+		FROM dsh_assignments WHERE operator_context_id=$1 AND idempotency_key=$2`,
 		input.OperatorContextID, input.IdempotencyKey,
 	).Scan(&replayID, &replayCaptainID, &replaySupersedesID)
 	if err == nil {
@@ -782,13 +782,13 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 	}
 	var operatorContextID, orderServiceArea string
 	if err = tx.QueryRow(`
-		SELECT tenant_id, COALESCE(service_area_code,'')
+		SELECT operator_context_id, COALESCE(service_area_code,'')
 		FROM dsh_assignments WHERE id=$1::uuid`, input.AssignmentID,
 	).Scan(&operatorContextID, &orderServiceArea); err != nil {
 		return nil, err
 	}
 	if input.OperatorContextID != operatorContextID || input.ServiceAreaCode != orderServiceArea {
-		return nil, fmt.Errorf("%w: tenant or service-area mismatch", ErrConflict)
+		return nil, fmt.Errorf("%w: OperatorContext or service-area mismatch", ErrConflict)
 	}
 	if err = validateCaptainForAssignmentTx(tx, operatorContextID, input.CaptainID, input.ServiceAreaCode); err != nil {
 		return nil, err
@@ -818,7 +818,7 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 	}
 	assignment, err := scanAssignmentRow(tx.QueryRow(`
 		INSERT INTO dsh_assignments (
-			order_id,captain_id,assigned_by,status,response_deadline_at,tenant_id,service_area_code,
+			order_id,captain_id,assigned_by,status,response_deadline_at,operator_context_id,service_area_code,
 			idempotency_key,priority,distance_meters,offer_reason,supersedes_assignment_id
 		) VALUES ($1::uuid,$2,$3,'offered',NOW()+($4*INTERVAL '1 second'),$5,$6,$7,$8,$9,NULLIF($10,''),$11::uuid)
 		RETURNING id::text,order_id::text,captain_id,assigned_by,status,response_deadline_at,
@@ -866,11 +866,11 @@ func ListDispatchDecisions(db *sql.DB, operatorContextID, assignmentID, orderID 
 		limit = 100
 	}
 	rows, err := db.Query(`
-		SELECT id::text,tenant_id,COALESCE(assignment_id::text,''),COALESCE(order_id::text,''),
+		SELECT id::text,operator_context_id,COALESCE(assignment_id::text,''),COALESCE(order_id::text,''),
 		       COALESCE(captain_id,''),action,COALESCE(reason_code,''),COALESCE(reason,''),
 		       actor_id,actor_role,metadata,created_at
 		FROM dsh_dispatch_decisions
-		WHERE tenant_id=$1
+		WHERE operator_context_id=$1
 		  AND (NULLIF($2,'') IS NULL OR assignment_id=NULLIF($2,'')::uuid)
 		  AND (NULLIF($3,'') IS NULL OR order_id=NULLIF($3,'')::uuid)
 		ORDER BY created_at DESC LIMIT $4`, operatorContextID, assignmentID, orderID, limit)
@@ -891,13 +891,13 @@ func ListDispatchDecisions(db *sql.DB, operatorContextID, assignmentID, orderID 
 	return items, rows.Err()
 }
 
-func ListOperatorAssignmentsInTenant(db *sql.DB, operatorContextID string, limit int) ([]Assignment, error) {
+func ListOperatorAssignmentsInOperatorContext(db *sql.DB, operatorContextID string, limit int) ([]Assignment, error) {
 	operatorContextID = normalizeOperatorContextID(operatorContextID)
 	if limit <= 0 || limit > 500 {
 		limit = 200
 	}
 	rows, err := db.Query(assignmentSelectSQL()+`
-		WHERE a.tenant_id=$1
+		WHERE a.operator_context_id=$1
 		ORDER BY a.created_at DESC
 		LIMIT $2`, operatorContextID, limit)
 	if err != nil {
@@ -907,7 +907,7 @@ func ListOperatorAssignmentsInTenant(db *sql.DB, operatorContextID string, limit
 	return scanAssignments(rows)
 }
 
-func ListCaptainAssignmentsInTenant(db *sql.DB, operatorContextID, captainID string, limit int) ([]Assignment, error) {
+func ListCaptainAssignmentsInOperatorContext(db *sql.DB, operatorContextID, captainID string, limit int) ([]Assignment, error) {
 	operatorContextID = normalizeOperatorContextID(operatorContextID)
 	captainID = strings.TrimSpace(captainID)
 	if captainID == "" {
@@ -917,7 +917,7 @@ func ListCaptainAssignmentsInTenant(db *sql.DB, operatorContextID, captainID str
 		limit = 100
 	}
 	rows, err := db.Query(assignmentSelectSQL()+`
-		WHERE a.tenant_id=$1 AND a.captain_id=$2
+		WHERE a.operator_context_id=$1 AND a.captain_id=$2
 		  AND a.status IN ('offered','accepted')
 		  AND d.status NOT IN ('delivered','cancelled')
 		ORDER BY a.created_at DESC
@@ -940,7 +940,7 @@ func insertDispatchDecisionTx(tx *sql.Tx, operatorContextID, assignmentID, order
 	}
 	_, err = tx.Exec(`
 		INSERT INTO dsh_dispatch_decisions (
-			tenant_id,assignment_id,order_id,captain_id,action,reason_code,reason,actor_id,actor_role,metadata
+			operator_context_id,assignment_id,order_id,captain_id,action,reason_code,reason,actor_id,actor_role,metadata
 		) VALUES ($1,NULLIF($2,'')::uuid,NULLIF($3,'')::uuid,NULLIF($4,''),$5,NULLIF($6,''),NULLIF($7,''),$8,$9,$10::jsonb)`,
 		normalizeOperatorContextID(operatorContextID), assignmentID, orderID, captainID, action, reasonCode, reason, actorID, actorRole, string(encoded))
 	return err

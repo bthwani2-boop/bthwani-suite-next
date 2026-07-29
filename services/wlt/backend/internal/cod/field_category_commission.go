@@ -16,7 +16,7 @@ import (
 var (
 	ErrFieldCategoryPolicyMissing  = errors.New("active field commission category policy is required")
 	ErrFieldCategoryPolicyConflict = errors.New("field commission category policy version conflict")
-	ErrFieldWalletUnavailable      = errors.New("tenant field wallet is unavailable")
+	ErrFieldWalletUnavailable      = errors.New("OperatorContext field wallet is unavailable")
 )
 
 type FieldCategoryCommissionPolicy struct {
@@ -90,7 +90,7 @@ func UpsertFieldCategoryCommissionPolicy(
 	if operatorContextID == "" || input.ExpectedVersion < 0 || input.FixedAmountMinorUnits <= 0 || len(input.Currency) != 3 ||
 		(input.Status != "active" && input.Status != "inactive") || len(input.ChangeReason) < 3 ||
 		input.UpdatedByActorID == "" || correlationID == "" {
-		return nil, fmt.Errorf("tenant, valid amount, currency, status, reason, actor and correlationId are required")
+		return nil, fmt.Errorf("OperatorContext, valid amount, currency, status, reason, actor and correlationId are required")
 	}
 
 	tx, err := db.BeginTx(ctx, nil)
@@ -104,7 +104,7 @@ func UpsertFieldCategoryCommissionPolicy(
 	var currentVersion int64
 	err = tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(version),0)
 		FROM wlt_field_commission_category_policy_versions
-		WHERE tenant_id=$1 AND partner_category=$2`, operatorContextID, partnerCategory).Scan(&currentVersion)
+		WHERE operator_context_id=$1 AND partner_category=$2`, operatorContextID, partnerCategory).Scan(&currentVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -114,14 +114,14 @@ func UpsertFieldCategoryCommissionPolicy(
 	if input.Status == "active" {
 		if _, err := tx.ExecContext(ctx, `UPDATE wlt_field_commission_category_policy_versions
 			SET status='inactive'
-			WHERE tenant_id=$1 AND partner_category=$2 AND status='active'`, operatorContextID, partnerCategory); err != nil {
+			WHERE operator_context_id=$1 AND partner_category=$2 AND status='active'`, operatorContextID, partnerCategory); err != nil {
 			return nil, err
 		}
 	}
 	version := currentVersion + 1
 	policyID := "field-category-" + partnerCategory
 	policy, err := scanFieldCategoryPolicy(tx.QueryRowContext(ctx, `INSERT INTO wlt_field_commission_category_policy_versions(
-		tenant_id,policy_id,partner_category,version,fixed_amount_minor_units,currency,status,
+		operator_context_id,policy_id,partner_category,version,fixed_amount_minor_units,currency,status,
 		change_reason,updated_by_actor_id)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
 		RETURNING policy_id,partner_category,version,fixed_amount_minor_units,currency,status,change_reason,updated_by_actor_id`,
@@ -139,7 +139,7 @@ func UpsertFieldCategoryCommissionPolicy(
 		"status": input.Status,
 	})
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_finance_audit_events(
-		tenant_id,aggregate_type,aggregate_id,action,actor_id,actor_type,reason,correlation_id,metadata)
+		operator_context_id,aggregate_type,aggregate_id,action,actor_id,actor_type,reason,correlation_id,metadata)
 		VALUES($1,'commission_policy',$2,'field_category_policy_version_created',$3,'operator',$4,$5,$6::jsonb)`,
 		operatorContextID, policyID, input.UpdatedByActorID, input.ChangeReason, correlationID, string(metadata)); err != nil {
 		return nil, err
@@ -156,7 +156,7 @@ func getActiveFieldCategoryPolicyTx(ctx context.Context, tx *sql.Tx, operatorCon
 		policy_id,partner_category,version,fixed_amount_minor_units,currency,status,
 		change_reason,updated_by_actor_id
 		FROM wlt_field_commission_category_policy_versions
-		WHERE tenant_id=$1 AND partner_category IN ($2,'default') AND status='active'
+		WHERE operator_context_id=$1 AND partner_category IN ($2,'default') AND status='active'
 		ORDER BY CASE WHEN partner_category=$2 THEN 0 ELSE 1 END, version DESC
 		LIMIT 1`, operatorContextID, category))
 }
@@ -180,7 +180,7 @@ func getExistingFieldCategoryCommissionTx(ctx context.Context, tx *sql.Tx, opera
 	var commissionID, requestHash string
 	err := tx.QueryRowContext(ctx, `SELECT commission_id,request_hash
 		FROM wlt_commission_evidence
-		WHERE tenant_id=$1 AND idempotency_key=$2`, operatorContextID, idempotencyKey).Scan(&commissionID, &requestHash)
+		WHERE operator_context_id=$1 AND idempotency_key=$2`, operatorContextID, idempotencyKey).Scan(&commissionID, &requestHash)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, "", nil
 	}
@@ -188,7 +188,7 @@ func getExistingFieldCategoryCommissionTx(ctx context.Context, tx *sql.Tx, opera
 		return nil, "", err
 	}
 	commission, err := scanCommission(tx.QueryRowContext(ctx, `SELECT `+commissionCols+`
-		FROM wlt_commissions WHERE tenant_id=$1 AND id=$2`, operatorContextID, commissionID))
+		FROM wlt_commissions WHERE operator_context_id=$1 AND id=$2`, operatorContextID, commissionID))
 	return commission, requestHash, err
 }
 
@@ -240,7 +240,7 @@ func CreateFieldCategoryCommission(
 
 	var walletStatus, walletCurrency string
 	err = tx.QueryRowContext(ctx, `SELECT status,currency FROM wlt_wallets
-		WHERE tenant_id=$1 AND actor_type='field' AND actor_id=$2 FOR UPDATE`,
+		WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2 FOR UPDATE`,
 		operatorContextID, input.BeneficiaryActorID).Scan(&walletStatus, &walletCurrency)
 	if errors.Is(err, sql.ErrNoRows) || walletStatus != "active" || walletCurrency != policy.Currency {
 		return nil, ErrFieldWalletUnavailable
@@ -250,7 +250,7 @@ func CreateFieldCategoryCommission(
 	}
 
 	commission, err := scanCommission(tx.QueryRowContext(ctx, `INSERT INTO wlt_commissions(
-		tenant_id,beneficiary_actor_id,beneficiary_actor_type,source_type,source_id,
+		operator_context_id,beneficiary_actor_id,beneficiary_actor_type,source_type,source_id,
 		visit_id,store_id,partner_id,partner_category,commission_policy_id,
 		commission_type,amount_minor_units,currency,idempotency_key)
 		VALUES($1,$2,'field','field_visit',$3,$3::uuid,$4,$5,$6,$7,
@@ -266,7 +266,7 @@ func CreateFieldCategoryCommission(
 		pending_balance_minor_units=pending_balance_minor_units+$1,
 		earned_total_minor_units=earned_total_minor_units+$1,
 		last_ledger_entry_at=now(),updated_at=now()
-		WHERE tenant_id=$2 AND actor_type='field' AND actor_id=$3`,
+		WHERE operator_context_id=$2 AND actor_type='field' AND actor_id=$3`,
 		policy.FixedAmountMinorUnits, operatorContextID, input.BeneficiaryActorID)
 	if err != nil {
 		return nil, err
@@ -281,7 +281,7 @@ func CreateFieldCategoryCommission(
 		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_commission_evidence(
-		tenant_id,commission_id,policy_id,policy_version,source_evidence_id,source_evidence_hash,
+		operator_context_id,commission_id,policy_id,policy_version,source_evidence_id,source_evidence_hash,
 		source_evidence_status,gross_basis_minor_units,calculated_amount_minor_units,
 		idempotency_key,request_hash)
 		VALUES($1,$2,$3,$4,$5,$6,'completed',0,$7,$8,$9)`,
@@ -300,7 +300,7 @@ func CreateFieldCategoryCommission(
 		"currency": policy.Currency,
 	})
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_finance_audit_events(
-		tenant_id,aggregate_type,aggregate_id,action,actor_id,actor_type,correlation_id,metadata)
+		operator_context_id,aggregate_type,aggregate_id,action,actor_id,actor_type,correlation_id,metadata)
 		VALUES($1,'commission',$2,'field_category_commission_calculated',$3,'service',$4,$5::jsonb)`,
 		operatorContextID, commission.ID, input.BeneficiaryActorID, correlationID, string(metadata)); err != nil {
 		return nil, err

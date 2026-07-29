@@ -34,7 +34,7 @@ func seedCommissionPaymentSession(t *testing.T, operatorContextID, status string
 		db.Close()
 		t.Fatalf("create WLT payment session: %v", err)
 	}
-	if _, err := db.Exec(`UPDATE wlt_payment_sessions SET status=$2 WHERE tenant_id=$1 AND id=$3`, operatorContextID, status, session.ID); err != nil {
+	if _, err := db.Exec(`UPDATE wlt_payment_sessions SET status=$2 WHERE operator_context_id=$1 AND id=$3`, operatorContextID, status, session.ID); err != nil {
 		db.Close()
 		t.Fatalf("set payment session status: %v", err)
 	}
@@ -42,7 +42,7 @@ func seedCommissionPaymentSession(t *testing.T, operatorContextID, status string
 }
 
 func TestCanonicalOrderCommissionOverridesCallerFinancialFields(t *testing.T) {
-	operatorContextID := "tenant-canonical-commission-" + fmt.Sprint(time.Now().UnixNano())
+	operatorContextID := "OperatorContext-canonical-commission-" + fmt.Sprint(time.Now().UnixNano())
 	paymentSessionID, db := seedCommissionPaymentSession(t, operatorContextID, "captured", 987654, "YER")
 	if db == nil {
 		return
@@ -64,10 +64,10 @@ func TestCanonicalOrderCommissionOverridesCallerFinancialFields(t *testing.T) {
 	}
 }
 
-func TestCanonicalOrderCommissionRejectsCrossTenantPaymentSession(t *testing.T) {
-	ownerTenant := "tenant-owner-" + fmt.Sprint(time.Now().UnixNano())
-	otherTenant := "tenant-other-" + fmt.Sprint(time.Now().UnixNano())
-	paymentSessionID, db := seedCommissionPaymentSession(t, ownerTenant, "captured", 5000, "YER")
+func TestCanonicalOrderCommissionRejectsCrossOperatorContextPaymentSession(t *testing.T) {
+	ownerOperatorContext := "OperatorContext-owner-" + fmt.Sprint(time.Now().UnixNano())
+	otherOperatorContext := "OperatorContext-other-" + fmt.Sprint(time.Now().UnixNano())
+	paymentSessionID, db := seedCommissionPaymentSession(t, ownerOperatorContext, "captured", 5000, "YER")
 	if db == nil {
 		return
 	}
@@ -78,14 +78,14 @@ func TestCanonicalOrderCommissionRejectsCrossTenantPaymentSession(t *testing.T) 
 		SourceType:           "order",
 		SourceEvidenceID:     paymentSessionID,
 	}
-	err := bindCanonicalCommissionFinancialTruth(db, otherTenant, &input)
+	err := bindCanonicalCommissionFinancialTruth(db, otherOperatorContext, &input)
 	if !errors.Is(err, ErrCommissionSourceFinancialTruthMissing) {
-		t.Fatalf("expected cross-tenant payment truth rejection, got %v", err)
+		t.Fatalf("expected cross-OperatorContext payment truth rejection, got %v", err)
 	}
 }
 
 func TestCanonicalOrderCommissionRejectsUncapturedPaymentSession(t *testing.T) {
-	operatorContextID := "tenant-uncaptured-" + fmt.Sprint(time.Now().UnixNano())
+	operatorContextID := "OperatorContext-uncaptured-" + fmt.Sprint(time.Now().UnixNano())
 	paymentSessionID, db := seedCommissionPaymentSession(t, operatorContextID, "authorized", 5000, "YER")
 	if db == nil {
 		return
@@ -107,7 +107,7 @@ func TestCanonicalGenericRouteRejectsFieldVisitCommission(t *testing.T) {
 		BeneficiaryActorType: "field",
 		SourceType:           "field_visit",
 	}
-	if err := bindCanonicalCommissionFinancialTruth(nil, "tenant-field", &input); err == nil {
+	if err := bindCanonicalCommissionFinancialTruth(nil, "OperatorContext-field", &input); err == nil {
 		t.Fatal("expected field visit to require the dedicated field commission route")
 	}
 }

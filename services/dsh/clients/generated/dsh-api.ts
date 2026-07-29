@@ -1635,7 +1635,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List refunds for the authenticated tenant and optional order */
+        /** List refunds for the authenticated OperatorContext and optional order */
         get: operations["listDshControlPanelFinanceRefunds"];
         put?: never;
         /** Request a partial or full remaining refund */
@@ -1687,7 +1687,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read one authenticated-tenant-scoped canonical refund */
+        /** Read one authenticated-OperatorContext-scoped canonical refund */
         get: operations["getDshControlPanelFinanceRefund"];
         put?: never;
         post?: never;
@@ -6756,7 +6756,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List orders owned by the authenticated client in the current tenant. */
+        /** List orders owned by the authenticated client in the current OperatorContext. */
         get: operations["listClientOrderTruth"];
         put?: never;
         /** Create one immutable order from an eligible actor-owned Checkout Intent. */
@@ -6842,7 +6842,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List tenant order truth for an operator with operations.read. */
+        /** List OperatorContext order truth for an operator with operations.read. */
         get: operations["listOperatorOrderTruth"];
         put?: never;
         post?: never;
@@ -6859,7 +6859,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read redacted tenant-scoped operational diagnostics. */
+        /** Read redacted OperatorContext-scoped operational diagnostics. */
         get: operations["getOperatorOrderTruthDiagnostics"];
         put?: never;
         post?: never;
@@ -6876,7 +6876,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read one tenant order for an operator with operations.read. */
+        /** Read one OperatorContext order for an operator with operations.read. */
         get: operations["getOperatorOrderTruth"];
         put?: never;
         post?: never;
@@ -9500,7 +9500,7 @@ export interface components {
         WltPaymentCallbackEnvelope: {
             checkoutIntentId?: string;
             specialRequestId?: string;
-            /** @description Trusted tenant context for special-request sourced payment sessions. */
+            /** @description Trusted OperatorContext context for special-request sourced payment sessions. */
             operatorContextId?: string;
             paymentSessionId: string;
             /** @enum {string} */
@@ -14464,7 +14464,7 @@ export interface components {
                 "application/json": components["schemas"]["ErrorResponse"];
             };
         };
-        /** @description State, eligibility, capacity, idempotency, tenant, or version conflict. */
+        /** @description State, eligibility, capacity, idempotency, OperatorContext, or version conflict. */
         DshDispatchGovernanceConflict: {
             headers: {
                 [name: string]: unknown;
@@ -15143,7 +15143,7 @@ export interface components {
                 "application/json": components["schemas"]["CompletionPersistenceError"];
             };
         };
-        /** @description Invalid request, missing authenticated tenant or missing reconciliation evidence */
+        /** @description Invalid request, missing authenticated OperatorContext or missing reconciliation evidence */
         DshRefundsBadRequest: {
             headers: {
                 [name: string]: unknown;
@@ -15161,7 +15161,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description Permission, tenant mismatch, maker-checker or store scope denied */
+        /** @description Permission, OperatorContext mismatch, maker-checker or store scope denied */
         DshRefundsForbidden: {
             headers: {
                 [name: string]: unknown;
@@ -15413,7 +15413,7 @@ export interface components {
         DshOrderRescueCorrelationId: string;
         Status: string;
         Limit: number;
-        /** @description Durable mutation key scoped by tenant and authenticated client. */
+        /** @description Durable mutation key scoped by OperatorContext and authenticated client. */
         DshOrderTruthIdempotencyKey: string;
         DshOrderTruthCorrelationId: string;
         StatusFilter: string;
@@ -17971,7 +17971,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-visible operational checkout projections. */
+            /** @description OperatorContext-visible operational checkout projections. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -28196,7 +28196,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description Durable mutation key scoped by tenant and authenticated client. */
+                /** @description Durable mutation key scoped by OperatorContext and authenticated client. */
                 "Idempotency-Key": components["parameters"]["DshOrderTruthIdempotencyKey"];
                 "X-Correlation-ID"?: components["parameters"]["DshOrderTruthCorrelationId"];
             };
@@ -28348,7 +28348,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-scoped operational order truth. */
+            /** @description OperatorContext-scoped operational order truth. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -28394,7 +28394,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Tenant-scoped operational order truth. */
+            /** @description OperatorContext-scoped operational order truth. */
             200: {
                 headers: {
                     [name: string]: unknown;

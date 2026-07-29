@@ -55,7 +55,7 @@ func commissionHasWalletEffectTx(
 	var governed bool
 	err := tx.QueryRowContext(ctx, `SELECT EXISTS (
 		SELECT 1 FROM wlt_commission_evidence
-		WHERE tenant_id=$1 AND commission_id=$2)`, operatorContextID, commission.ID).Scan(&governed)
+		WHERE operator_context_id=$1 AND commission_id=$2)`, operatorContextID, commission.ID).Scan(&governed)
 	return governed, err
 }
 
@@ -81,7 +81,7 @@ func appendCommissionAudit(
 	}
 	_, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_finance_audit_events
-		(tenant_id,aggregate_type,aggregate_id,action,actor_id,actor_type,reason,correlation_id)
+		(operator_context_id,aggregate_type,aggregate_id,action,actor_id,actor_type,reason,correlation_id)
 		VALUES ($1,'commission',$2,$3,$4,$5,$6,$7)`,
 		operatorContextID, commissionID, action, operatorID, actorType, reason, correlationID)
 	return err
@@ -112,7 +112,7 @@ func ConfirmGovernedCommission(
 	}
 	row := tx.QueryRowContext(ctx, `UPDATE wlt_commissions
 		SET status='confirmed',confirmed_at=NOW(),updated_at=NOW()
-		WHERE tenant_id=$1 AND id=$2 AND status='pending'
+		WHERE operator_context_id=$1 AND id=$2 AND status='pending'
 		RETURNING `+commissionCols, operatorContextID, commission.ID)
 	updated, err := scanCommission(row)
 	if err != nil {
@@ -160,7 +160,7 @@ func SettleGovernedCommission(
 			    available_balance_minor_units=available_balance_minor_units+$1,
 			    settled_total_minor_units=settled_total_minor_units+$1,
 			    updated_at=NOW()
-			WHERE tenant_id=$2 AND actor_type=$3 AND actor_id=$4
+			WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4
 			  AND pending_balance_minor_units>=$1`,
 			commission.AmountMinorUnits, operatorContextID, commission.BeneficiaryActorType, commission.BeneficiaryActorID)
 		if err != nil {
@@ -172,7 +172,7 @@ func SettleGovernedCommission(
 	}
 	row := tx.QueryRowContext(ctx, `UPDATE wlt_commissions
 		SET status='settled',settled_at=NOW(),updated_at=NOW()
-		WHERE tenant_id=$1 AND id=$2 AND status='confirmed'
+		WHERE operator_context_id=$1 AND id=$2 AND status='confirmed'
 		RETURNING `+commissionCols, operatorContextID, commission.ID)
 	updated, err := scanCommission(row)
 	if err != nil {
@@ -224,7 +224,7 @@ func RejectGovernedCommission(
 			SET pending_balance_minor_units=pending_balance_minor_units-$1,
 			    earned_total_minor_units=earned_total_minor_units-$1,
 			    updated_at=NOW()
-			WHERE tenant_id=$2 AND actor_type=$3 AND actor_id=$4
+			WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4
 			  AND pending_balance_minor_units>=$1
 			  AND earned_total_minor_units>=$1`,
 			commission.AmountMinorUnits, operatorContextID, commission.BeneficiaryActorType, commission.BeneficiaryActorID)
@@ -244,7 +244,7 @@ func RejectGovernedCommission(
 	}
 	row := tx.QueryRowContext(ctx, `UPDATE wlt_commissions
 		SET status='rejected',rejected_at=NOW(),resolution_note=$3,updated_at=NOW()
-		WHERE tenant_id=$1 AND id=$2 AND status='pending'
+		WHERE operator_context_id=$1 AND id=$2 AND status='pending'
 		RETURNING `+commissionCols, operatorContextID, commission.ID, reason)
 	updated, err := scanCommission(row)
 	if err != nil {
@@ -296,7 +296,7 @@ func ReverseGovernedCommission(
 			SET available_balance_minor_units=available_balance_minor_units-$1,
 			    settled_total_minor_units=settled_total_minor_units-$1,
 			    updated_at=NOW()
-			WHERE tenant_id=$2 AND actor_type=$3 AND actor_id=$4
+			WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4
 			  AND available_balance_minor_units>=$1
 			  AND settled_total_minor_units>=$1`,
 			commission.AmountMinorUnits, operatorContextID, commission.BeneficiaryActorType, commission.BeneficiaryActorID)
@@ -316,7 +316,7 @@ func ReverseGovernedCommission(
 	}
 	row := tx.QueryRowContext(ctx, `UPDATE wlt_commissions
 		SET status='reversed',reversed_at=NOW(),resolution_note=$3,updated_at=NOW()
-		WHERE tenant_id=$1 AND id=$2 AND status='settled'
+		WHERE operator_context_id=$1 AND id=$2 AND status='settled'
 		RETURNING `+commissionCols, operatorContextID, commission.ID, reason)
 	updated, err := scanCommission(row)
 	if err != nil {
@@ -341,7 +341,7 @@ func GetGovernedCommissionDetail(
 		return nil, err
 	}
 	commission, err := scanCommission(db.QueryRowContext(ctx, `SELECT `+commissionCols+`
-		FROM wlt_commissions WHERE tenant_id=$1 AND id=$2`, operatorContextID, strings.TrimSpace(commissionID)))
+		FROM wlt_commissions WHERE operator_context_id=$1 AND id=$2`, operatorContextID, strings.TrimSpace(commissionID)))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -354,7 +354,7 @@ func GetGovernedCommissionDetail(
 		source_evidence_hash,source_evidence_status,gross_basis_minor_units,
 		calculated_amount_minor_units,verified_at::text
 		FROM wlt_commission_evidence
-		WHERE tenant_id=$1 AND commission_id=$2`, operatorContextID, commission.ID).Scan(
+		WHERE operator_context_id=$1 AND commission_id=$2`, operatorContextID, commission.ID).Scan(
 		&evidence.PolicyID,
 		&evidence.PolicyVersion,
 		&evidence.SourceEvidenceID,
@@ -371,7 +371,7 @@ func GetGovernedCommissionDetail(
 	}
 	rows, err := db.QueryContext(ctx, `SELECT id,delta_minor_units,reason,operator_id,created_at::text
 		FROM wlt_commission_adjustments
-		WHERE tenant_id=$1 AND commission_id=$2 ORDER BY created_at,id`, operatorContextID, commission.ID)
+		WHERE operator_context_id=$1 AND commission_id=$2 ORDER BY created_at,id`, operatorContextID, commission.ID)
 	if err != nil {
 		return nil, err
 	}

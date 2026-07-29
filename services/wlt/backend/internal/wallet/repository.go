@@ -39,13 +39,13 @@ func scanWallet(s walletScanner) (*Wallet, error) {
 
 // GetWallet is a deferred-runtime compatibility reader only. It is deliberately
 // restricted to the explicit legacy-unscoped partition so it can never choose
-// an arbitrary tenant wallet when identical actor ids exist across tenants.
-// Active HTTP and domain paths must use GetWalletForTenant.
+// an arbitrary OperatorContext wallet when identical actor ids exist across OperatorContexts.
+// Active HTTP and domain paths must use GetWalletForOperatorContext.
 func GetWallet(db *sql.DB, actorType, actorID string) (*Wallet, error) {
 	const q = `
 		SELECT ` + walletCols + `
 		FROM wlt_wallets
-		WHERE tenant_id = 'legacy-unscoped' AND actor_type = $1 AND actor_id = $2
+		WHERE operator_context_id = 'legacy-unscoped' AND actor_type = $1 AND actor_id = $2
 		LIMIT 1`
 
 	row := db.QueryRow(q, actorType, actorID)
@@ -59,7 +59,7 @@ func GetWallet(db *sql.DB, actorType, actorID string) (*Wallet, error) {
 	return w, nil
 }
 
-func GetWalletForTenant(db *sql.DB, operatorContextID, actorType, actorID string) (*Wallet, error) {
+func GetWalletForOperatorContext(db *sql.DB, operatorContextID, actorType, actorID string) (*Wallet, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
 		return nil, fmt.Errorf("operatorContextId is required")
@@ -67,7 +67,7 @@ func GetWalletForTenant(db *sql.DB, operatorContextID, actorType, actorID string
 	const q = `
 		SELECT ` + walletCols + `
 		FROM wlt_wallets
-		WHERE tenant_id = $1 AND actor_type = $2 AND actor_id = $3
+		WHERE operator_context_id = $1 AND actor_type = $2 AND actor_id = $3
 		LIMIT 1`
 
 	row := db.QueryRow(q, operatorContextID, actorType, actorID)
@@ -76,15 +76,15 @@ func GetWalletForTenant(db *sql.DB, operatorContextID, actorType, actorID string
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get tenant wallet: %w", err)
+		return nil, fmt.Errorf("get OperatorContext wallet: %w", err)
 	}
 	return w, nil
 }
 
-// EnsureWalletForTenantTx creates or locks exactly one wallet inside the
-// authenticated tenant. Currency is authoritative on creation and must remain
+// EnsureWalletForOperatorContextTx creates or locks exactly one wallet inside the
+// authenticated OperatorContext. Currency is authoritative on creation and must remain
 // stable for subsequent calls.
-func EnsureWalletForTenantTx(ctx context.Context, tx *sql.Tx, actorType, actorID, currency string) (*Wallet, error) {
+func EnsureWalletForOperatorContextTx(ctx context.Context, tx *sql.Tx, actorType, actorID, currency string) (*Wallet, error) {
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
@@ -97,22 +97,22 @@ func EnsureWalletForTenantTx(ctx context.Context, tx *sql.Tx, actorType, actorID
 	}
 
 	const insertQ = `
-		INSERT INTO wlt_wallets (tenant_id, actor_id, actor_type, status, currency)
+		INSERT INTO wlt_wallets (operator_context_id, actor_id, actor_type, status, currency)
 		VALUES ($1, $3, $2, 'active', $4)
-		ON CONFLICT (tenant_id, actor_type, actor_id) DO NOTHING`
+		ON CONFLICT (operator_context_id, actor_type, actor_id) DO NOTHING`
 	if _, err := tx.ExecContext(ctx, insertQ, operatorContextID, actorType, actorID, currency); err != nil {
-		return nil, fmt.Errorf("ensure tenant wallet: insert: %w", err)
+		return nil, fmt.Errorf("ensure OperatorContext wallet: insert: %w", err)
 	}
 
 	const selectQ = `
 		SELECT ` + walletCols + `
 		FROM wlt_wallets
-		WHERE tenant_id = $1 AND actor_type = $2 AND actor_id = $3
+		WHERE operator_context_id = $1 AND actor_type = $2 AND actor_id = $3
 		FOR UPDATE`
 	row := tx.QueryRowContext(ctx, selectQ, operatorContextID, actorType, actorID)
 	w, err := scanWallet(row)
 	if err != nil {
-		return nil, fmt.Errorf("ensure tenant wallet: select: %w", err)
+		return nil, fmt.Errorf("ensure OperatorContext wallet: select: %w", err)
 	}
 	if w.Currency != currency {
 		return nil, fmt.Errorf("wallet currency %s does not match requested currency %s", w.Currency, currency)
@@ -121,7 +121,7 @@ func EnsureWalletForTenantTx(ctx context.Context, tx *sql.Tx, actorType, actorID
 }
 
 // EnsureWalletTx preserves package compatibility for deferred/local callers.
-// In active SaaS mode it fails closed because no trusted tenant is present.
+// In active SaaS mode it fails closed because no trusted OperatorContext is present.
 func EnsureWalletTx(tx *sql.Tx, actorType, actorID, currency string) (*Wallet, error) {
-	return EnsureWalletForTenantTx(context.Background(), tx, actorType, actorID, currency)
+	return EnsureWalletForOperatorContextTx(context.Background(), tx, actorType, actorID, currency)
 }

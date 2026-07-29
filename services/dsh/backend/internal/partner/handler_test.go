@@ -31,6 +31,6 @@ func TestOperatorContextIDFromContextIgnoresSpoofableHeadersAndQuery(t *testing.
 	req.Header.Set("X-Organization-ID", "spoofed-organization")
 
 	if operatorContextID, ok := OperatorContextIDFromContext(req.Context()); ok || operatorContextID != "" {
-		t.Fatalf("OperatorContextIDFromContext must ignore client-controlled tenant selectors, got operatorContextID=%q ok=%v", operatorContextID, ok)
+		t.Fatalf("OperatorContextIDFromContext must ignore client-controlled OperatorContext selectors, got operatorContextID=%q ok=%v", operatorContextID, ok)
 	}
 }

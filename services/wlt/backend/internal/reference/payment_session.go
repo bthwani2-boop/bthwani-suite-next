@@ -12,11 +12,11 @@ import (
 )
 
 var ErrIdempotencyConflict = errors.New("payment session idempotency conflict")
-var ErrTenantMismatch = errors.New("payment session tenant does not match trusted DSH tenant")
+var ErrOperatorContextMismatch = errors.New("payment session OperatorContext does not match trusted DSH OperatorContext")
 
 const paymentSessionCols = `id, checkout_intent_id, special_request_id,
 	 subscription_purchase_id, commercial_product_reference,
-	 tenant_id,
+	 operator_context_id,
 	 client_id, store_id, payment_method, status, provider_reference, amount_minor_units,
 	 currency, captured_at, created_at, updated_at`
 
@@ -133,7 +133,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	const q = `
 		INSERT INTO wlt_payment_sessions
 			(checkout_intent_id, special_request_id, subscription_purchase_id,
-			 commercial_product_reference, tenant_id, client_id, store_id,
+			 commercial_product_reference, operator_context_id, client_id, store_id,
 			 payment_method, status, amount_minor_units, currency, cart_snapshot_hash,
 			 idempotency_key, correlation_id)
 		VALUES (NULLIF($1, ''), NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''),
@@ -192,11 +192,11 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 		}
 		trustedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 		if trustedOperatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Operator-Context-ID is required for payment-session creation")
+			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Operator-Context-ID is required for payment-session creation")
 			return
 		}
 		if trustedOperatorContextID != strings.TrimSpace(input.OperatorContextID) {
-			shared.SendError(w, http.StatusForbidden, "TENANT_MISMATCH", ErrTenantMismatch.Error())
+			shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", ErrOperatorContextMismatch.Error())
 			return
 		}
 		input.OperatorContextID = trustedOperatorContextID
@@ -225,7 +225,7 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 
 // GetPaymentSessionByCheckoutIntent looks up the payment session WLT created
 // for a given DSH checkout intent. This service-only compatibility read is safe
-// in the current single-tenant deployment; tenant-scoped creation and source
+// in the current single-OperatorContext deployment; OperatorContext-scoped creation and source
 // uniqueness remain mandatory.
 func GetPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*PaymentSession, error) {
 	return getPaymentSessionByCheckoutIntent(db, "", checkoutIntentID)
@@ -235,7 +235,7 @@ func getPaymentSessionByCheckoutIntent(db *sql.DB, operatorContextID string, che
 	q := `SELECT ` + paymentSessionCols + ` FROM wlt_payment_sessions WHERE checkout_intent_id = $1`
 	args := []any{checkoutIntentID}
 	if operatorContextID != "" {
-		q += ` AND tenant_id = $2`
+		q += ` AND operator_context_id = $2`
 		args = append(args, operatorContextID)
 	}
 	session, err := scanPaymentSession(db.QueryRow(q, args...))
@@ -249,7 +249,7 @@ func getPaymentSessionBySpecialRequest(db *sql.DB, operatorContextID string, spe
 	q := `SELECT ` + paymentSessionCols + ` FROM wlt_payment_sessions WHERE special_request_id = $1`
 	args := []any{specialRequestID}
 	if operatorContextID != "" {
-		q += ` AND tenant_id = $2`
+		q += ` AND operator_context_id = $2`
 		args = append(args, operatorContextID)
 	}
 	session, err := scanPaymentSession(db.QueryRow(q, args...))
@@ -263,7 +263,7 @@ func getPaymentSessionBySubscriptionPurchase(db *sql.DB, operatorContextID strin
 	q := `SELECT ` + paymentSessionCols + ` FROM wlt_payment_sessions WHERE subscription_purchase_id = $1`
 	args := []any{purchaseID}
 	if operatorContextID != "" {
-		q += ` AND tenant_id = $2`
+		q += ` AND operator_context_id = $2`
 		args = append(args, operatorContextID)
 	}
 	session, err := scanPaymentSession(db.QueryRow(q, args...))

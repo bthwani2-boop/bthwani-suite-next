@@ -58,15 +58,15 @@ func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 	}
 	var operatorContextID, partnerID, partnerCategory string
 	err := tx.QueryRow(`
-		SELECT btrim(s.tenant_id), COALESCE(s.partner_id,''), COALESCE(NULLIF(btrim(p.category),''),'default')
+		SELECT btrim(s.operator_context_id), COALESCE(s.partner_id,''), COALESCE(NULLIF(btrim(p.category),''),'default')
 		FROM dsh_stores s
-		LEFT JOIN dsh_partners p ON p.id=s.partner_id AND p.tenant_id=s.tenant_id
+		LEFT JOIN dsh_partners p ON p.id=s.partner_id AND p.operator_context_id=s.operator_context_id
 		WHERE s.id=$1`, input.StoreID).Scan(&operatorContextID, &partnerID, &partnerCategory)
 	if err != nil {
 		return fmt.Errorf("resolve field commission partner evidence: %w", err)
 	}
 	if operatorContextID == "" {
-		return fmt.Errorf("store %s has no trusted tenant for field commission", input.StoreID)
+		return fmt.Errorf("store %s has no trusted OperatorContext for field commission", input.StoreID)
 	}
 	if strings.TrimSpace(partnerID) == "" {
 		return fmt.Errorf("store %s has no partner for field commission", input.StoreID)
@@ -94,7 +94,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	defer tx.Rollback() //nolint:errcheck
 
 	rows, err := tx.Query(`
-		SELECT outbox.id, outbox.event_id, outbox.event_type, btrim(store.tenant_id),
+		SELECT outbox.id, outbox.event_id, outbox.event_type, btrim(store.operator_context_id),
 		       outbox.field_actor_id, outbox.visit_id::text, outbox.store_id,
 		       COALESCE(outbox.partner_id,''), outbox.partner_category,
 		       COALESCE(outbox.commission_policy_id,''), outbox.correlation_id::text,
@@ -102,7 +102,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		FROM dsh_field_commission_outbox outbox
 		JOIN dsh_stores store ON store.id=outbox.store_id
 		WHERE outbox.status = 'pending' AND outbox.next_retry_at <= NOW()
-		  AND btrim(store.tenant_id) <> ''
+		  AND btrim(store.operator_context_id) <> ''
 		ORDER BY outbox.created_at
 		LIMIT $1
 		FOR UPDATE OF outbox SKIP LOCKED`, limit)

@@ -18,7 +18,7 @@ var (
 	ErrNotFound          = errors.New("promotion funding reservation not found")
 	ErrConflict          = errors.New("promotion funding conflict")
 	ErrInvalidTransition = errors.New("invalid promotion funding transition")
-	ErrTenantMismatch    = errors.New("promotion funding tenant mismatch")
+	ErrOperatorContextMismatch    = errors.New("promotion funding OperatorContext mismatch")
 )
 
 type Reservation struct {
@@ -47,7 +47,7 @@ type Reservation struct {
 	UpdatedAt                string  `json:"updatedAt"`
 }
 
-const reservationColumns = `id,tenant_id,external_reference,checkout_intent_id,
+const reservationColumns = `id,operator_context_id,external_reference,checkout_intent_id,
 	coupon_redemption_id,coupon_id,client_id,partner_id,
 	platform_funded_minor_units,partner_funded_minor_units,total_discount_minor_units,
 	currency,status,order_id,idempotency_key,correlation_id,
@@ -179,7 +179,7 @@ func sameReserve(existing *Reservation, input ReserveInput) bool {
 func getByIdempotency(ctx context.Context, db *sql.DB, operatorContextID, key string) (*Reservation, error) {
 	reservation, err := scanReservation(db.QueryRowContext(ctx, `SELECT `+reservationColumns+`
 		FROM wlt_promotion_funding_reservations
-		WHERE tenant_id=$1 AND idempotency_key=$2`, operatorContextID, key))
+		WHERE operator_context_id=$1 AND idempotency_key=$2`, operatorContextID, key))
 	if errors.Is(err, ErrNotFound) {
 		return nil, nil
 	}
@@ -211,7 +211,7 @@ func Reserve(ctx context.Context, db *sql.DB, input ReserveInput) (*Reservation,
 
 	reservation, err := scanReservation(tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_promotion_funding_reservations
-			(tenant_id,external_reference,checkout_intent_id,coupon_redemption_id,
+			(operator_context_id,external_reference,checkout_intent_id,coupon_redemption_id,
 			 coupon_id,client_id,partner_id,platform_funded_minor_units,
 			 partner_funded_minor_units,total_discount_minor_units,currency,
 			 status,idempotency_key,correlation_id)
@@ -254,7 +254,7 @@ func Get(ctx context.Context, db *sql.DB, operatorContextID, reservationID strin
 		return nil, ErrInvalid
 	}
 	return scanReservation(db.QueryRowContext(ctx, `SELECT `+reservationColumns+`
-		FROM wlt_promotion_funding_reservations WHERE id=$1 AND tenant_id=$2`,
+		FROM wlt_promotion_funding_reservations WHERE id=$1 AND operator_context_id=$2`,
 		strings.TrimSpace(reservationID), strings.TrimSpace(operatorContextID)))
 }
 
@@ -309,7 +309,7 @@ func transition(ctx context.Context, db *sql.DB, reservationID, target string, i
 	defer func() { _ = tx.Rollback() }()
 
 	current, err := scanReservation(tx.QueryRowContext(ctx, `SELECT `+reservationColumns+`
-		FROM wlt_promotion_funding_reservations WHERE id=$1 AND tenant_id=$2 FOR UPDATE`,
+		FROM wlt_promotion_funding_reservations WHERE id=$1 AND operator_context_id=$2 FOR UPDATE`,
 		reservationID, input.OperatorContextID))
 	if err != nil {
 		return nil, err
@@ -331,12 +331,12 @@ func transition(ctx context.Context, db *sql.DB, reservationID, target string, i
 	case "committed":
 		updated, err = scanReservation(tx.QueryRowContext(ctx, `UPDATE wlt_promotion_funding_reservations
 			SET status='committed',order_id=$3,committed_at=NOW(),updated_at=NOW()
-			WHERE id=$1 AND tenant_id=$2 AND status='reserved'
+			WHERE id=$1 AND operator_context_id=$2 AND status='reserved'
 			RETURNING `+reservationColumns, reservationID, input.OperatorContextID, input.OrderID))
 	case "released":
 		updated, err = scanReservation(tx.QueryRowContext(ctx, `UPDATE wlt_promotion_funding_reservations
 			SET status='released',released_at=NOW(),release_reason=$3,updated_at=NOW()
-			WHERE id=$1 AND tenant_id=$2 AND status='reserved'
+			WHERE id=$1 AND operator_context_id=$2 AND status='reserved'
 			RETURNING `+reservationColumns, reservationID, input.OperatorContextID, input.Reason))
 	case "reversed":
 		if current.OrderID == nil || *current.OrderID != input.OrderID {
@@ -344,7 +344,7 @@ func transition(ctx context.Context, db *sql.DB, reservationID, target string, i
 		}
 		updated, err = scanReservation(tx.QueryRowContext(ctx, `UPDATE wlt_promotion_funding_reservations
 			SET status='reversed',reversed_at=NOW(),reversal_reason=$3,updated_at=NOW()
-			WHERE id=$1 AND tenant_id=$2 AND status='committed'
+			WHERE id=$1 AND operator_context_id=$2 AND status='committed'
 			RETURNING `+reservationColumns, reservationID, input.OperatorContextID, input.Reason))
 	default:
 		return nil, ErrInvalid
@@ -394,15 +394,15 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 	return true
 }
 
-func tenantAssertion(w http.ResponseWriter, r *http.Request, payloadOperatorContextID string) (string, bool) {
+func OperatorContextAssertion(w http.ResponseWriter, r *http.Request, payloadOperatorContextID string) (string, bool) {
 	payloadOperatorContextID = strings.TrimSpace(payloadOperatorContextID)
 	assertedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 	if payloadOperatorContextID == "" {
-		shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "operatorContextId is required")
+		shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "operatorContextId is required")
 		return "", false
 	}
 	if assertedOperatorContextID != "" && assertedOperatorContextID != payloadOperatorContextID {
-		shared.SendError(w, http.StatusForbidden, "TENANT_MISMATCH", ErrTenantMismatch.Error())
+		shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", ErrOperatorContextMismatch.Error())
 		return "", false
 	}
 	return payloadOperatorContextID, true
@@ -429,7 +429,7 @@ func HandleReserve(db *sql.DB) http.HandlerFunc {
 		if !decodeJSON(w, r, &input) {
 			return
 		}
-		if _, ok := tenantAssertion(w, r, input.OperatorContextID); !ok {
+		if _, ok := OperatorContextAssertion(w, r, input.OperatorContextID); !ok {
 			return
 		}
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
@@ -461,7 +461,7 @@ func transitionHandler(db *sql.DB, target string) http.HandlerFunc {
 		if !decodeJSON(w, r, &input) {
 			return
 		}
-		if _, ok := tenantAssertion(w, r, input.OperatorContextID); !ok {
+		if _, ok := OperatorContextAssertion(w, r, input.OperatorContextID); !ok {
 			return
 		}
 		input.IdempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))

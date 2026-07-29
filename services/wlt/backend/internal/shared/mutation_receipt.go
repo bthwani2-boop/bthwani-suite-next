@@ -46,7 +46,7 @@ func LoadMutationReceiptTx(
 	err = tx.QueryRowContext(ctx, `
 		SELECT request_hash, response_json::text
 		FROM wlt_mutation_receipts
-		WHERE tenant_id = $1 AND idempotency_key = $2`, operatorContextID, idempotencyKey).Scan(&storedHash, &responseText)
+		WHERE operator_context_id = $1 AND idempotency_key = $2`, operatorContextID, idempotencyKey).Scan(&storedHash, &responseText)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}
@@ -85,7 +85,7 @@ func StoreMutationReceiptTx(
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO wlt_mutation_receipts
-		(tenant_id, idempotency_key, request_hash, mutation_type, aggregate_id, response_json)
+		(operator_context_id, idempotency_key, request_hash, mutation_type, aggregate_id, response_json)
 		VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
 		operatorContextID,
 		idempotencyKey,

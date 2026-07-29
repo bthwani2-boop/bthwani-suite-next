@@ -11,8 +11,8 @@ import (
 )
 
 // ListSettlementSummaryGoverned returns a deterministic aggregate row scoped
-// to the authenticated request tenant. Identical partner identifiers may exist
-// in different tenants without sharing financial totals.
+// to the authenticated request OperatorContext. Identical partner identifiers may exist
+// in different OperatorContexts without sharing financial totals.
 func ListSettlementSummaryGoverned(ctx context.Context, db *sql.DB, partnerID, periodStart, periodEnd string) (*SettlementSummary, error) {
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
@@ -34,7 +34,7 @@ func ListSettlementSummaryGoverned(ctx context.Context, db *sql.DB, partnerID, p
 			COUNT(*),
 			COALESCE(MAX(currency), 'YER')
 		FROM wlt_settlements
-		WHERE tenant_id = $1
+		WHERE operator_context_id = $1
 		  AND partner_id = $2
 		  AND ($3 = '' OR period_start >= $3::date)
 		  AND ($4 = '' OR period_end <= $4::date)`

@@ -47,28 +47,28 @@ func financeReadPathAllowed(path string) bool {
 
 var financeReadWalletAllowlist = map[string]struct{}{"client": {}, "partner": {}, "captain": {}, "field": {}}
 
-// FinanceReadWallet intentionally fails without tenant context. Representative
-// wallet reads must use FinanceReadWalletWithTenant with the tenant resolved by
+// FinanceReadWallet intentionally fails without OperatorContext context. Representative
+// wallet reads must use FinanceReadWalletWithOperatorContext with the OperatorContext resolved by
 // Identity; retaining this method makes stale call sites fail closed at compile-
 // compatible runtime rather than silently issuing an unscoped financial read.
 func (c *Client) FinanceReadWallet(ctx context.Context, actorType, actorID, correlationID string) (int, []byte, error) {
-	return 0, nil, fmt.Errorf("WLT wallet tenant id is required; use FinanceReadWalletWithTenant")
+	return 0, nil, fmt.Errorf("WLT wallet OperatorContext id is required; use FinanceReadWalletWithOperatorContext")
 }
 
-func (c *Client) FinanceReadWalletWithTenant(ctx context.Context, actorType, actorID, correlationID, operatorContextID string) (int, []byte, error) {
+func (c *Client) FinanceReadWalletWithOperatorContext(ctx context.Context, actorType, actorID, correlationID, operatorContextID string) (int, []byte, error) {
 	if !c.Configured() { return 0, nil, fmt.Errorf("WLT integration is not configured") }
 	actorType = strings.ToLower(strings.TrimSpace(actorType)); actorID = strings.TrimSpace(actorID); operatorContextID = strings.TrimSpace(operatorContextID)
 	if _, ok := financeReadWalletAllowlist[actorType]; !ok { return 0, nil, fmt.Errorf("WLT wallet actor type %q is not allowlisted", actorType) }
 	if actorID == "" || len(actorID) > 200 { return 0, nil, fmt.Errorf("WLT wallet actor id must be non-empty and no longer than 200 characters") }
-	if operatorContextID == "" { return 0, nil, fmt.Errorf("WLT wallet tenant id is required") }
+	if operatorContextID == "" { return 0, nil, fmt.Errorf("WLT wallet OperatorContext id is required") }
 	return c.financeReadRequest(ctx, "/wlt/wallets/"+url.PathEscape(actorType)+"/"+url.PathEscape(actorID), nil, correlationID, operatorContextID)
 }
 
 func (c *Client) FinanceRead(ctx context.Context, path string, query url.Values, correlationID string) (int, []byte, error) {
-	return c.FinanceReadWithTenant(ctx, path, query, correlationID, "")
+	return c.FinanceReadWithOperatorContext(ctx, path, query, correlationID, "")
 }
 
-func (c *Client) FinanceReadWithTenant(ctx context.Context, path string, query url.Values, correlationID, operatorContextID string) (int, []byte, error) {
+func (c *Client) FinanceReadWithOperatorContext(ctx context.Context, path string, query url.Values, correlationID, operatorContextID string) (int, []byte, error) {
 	if !c.Configured() { return 0, nil, fmt.Errorf("WLT integration is not configured") }
 	if !financeReadPathAllowed(path) { return 0, nil, fmt.Errorf("WLT finance read path %q is not allowlisted", path) }
 	return c.financeReadRequest(ctx, path, query, correlationID, operatorContextID)
@@ -87,10 +87,10 @@ func (c *Client) financeReadRequest(ctx context.Context, path string, query url.
 }
 
 func (c *Client) FinanceWrite(ctx context.Context, method, path string, body []byte, correlationID string) (int, []byte, error) {
-	return c.FinanceWriteWithTenant(ctx, method, path, body, correlationID, "")
+	return c.FinanceWriteWithOperatorContext(ctx, method, path, body, correlationID, "")
 }
 
-func (c *Client) FinanceWriteWithTenant(ctx context.Context, method, path string, body []byte, correlationID, operatorContextID string) (int, []byte, error) {
+func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, path string, body []byte, correlationID, operatorContextID string) (int, []byte, error) {
 	if !c.Configured() { return 0, nil, fmt.Errorf("WLT integration is not configured") }
 	if method != http.MethodPost && method != http.MethodPut && method != http.MethodPatch { return 0, nil, fmt.Errorf("WLT finance write method %q is not allowlisted", method) }
 	if !financeWritePathAllowed(path) { return 0, nil, fmt.Errorf("WLT finance write path %q is not allowlisted", path) }

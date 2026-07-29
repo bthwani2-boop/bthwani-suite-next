@@ -567,7 +567,7 @@
     },
     {
       "ordinal": 81,
-      "file": "dsh-073_checkout_tenant_lock.sql",
+      "file": "dsh-073_checkout_OperatorContext_lock.sql",
       "sha256": "5a63eb54ff09f8c2b0e89cac718ede5866c48ef5b7a54908bbff7b056b0bc0ed",
       "historicalPrefix": "073",
       "state": "HISTORICAL_IMMUTABLE"
@@ -700,7 +700,7 @@
     },
     {
       "ordinal": 100,
-      "file": "dsh-085_wlt_outbox_tenant_context.sql",
+      "file": "dsh-085_wlt_outbox_OperatorContext_context.sql",
       "sha256": "1a521dab79867029766a048fedd76b330b285941349f1b65191de7e04cedfe10",
       "historicalPrefix": "085",
       "state": "HISTORICAL_IMMUTABLE"
@@ -714,7 +714,7 @@
     },
     {
       "ordinal": 102,
-      "file": "dsh-087_loyalty_outbox_tenant_context.sql",
+      "file": "dsh-087_loyalty_outbox_OperatorContext_context.sql",
       "sha256": "4a221848f1819b59bb85ce8a816fb1b02501f18deff3c7b51dd3482dcfe0cfa3",
       "historicalPrefix": "087",
       "state": "HISTORICAL_IMMUTABLE"
@@ -980,7 +980,7 @@
     },
     {
       "ordinal": 140,
-      "file": "dsh-103_jrn001_partner_tenant_isolation.sql",
+      "file": "dsh-103_jrn001_partner_OperatorContext_isolation.sql",
       "sha256": "99cf41627b770bec96046723f2aa42f2b6698e4b78b2e645cd3b7eb954d157bd",
       "historicalPrefix": "103",
       "state": "HISTORICAL_IMMUTABLE"
@@ -1232,7 +1232,7 @@
     },
     {
       "ordinal": 176,
-      "file": "dsh-951_catalog_approval_tenant_scope.sql",
+      "file": "dsh-951_catalog_approval_OperatorContext_scope.sql",
       "sha256": "ca21c632f495887a6cd35b8b9bd8f182a3155b78ef933bceaeab231a27220581",
       "historicalPrefix": "951",
       "state": "HISTORICAL_IMMUTABLE"
@@ -1253,7 +1253,7 @@
     },
     {
       "ordinal": 179,
-      "file": "dsh-954_trusted_tenant_session_context.sql",
+      "file": "dsh-954_trusted_OperatorContext_session_context.sql",
       "sha256": "1fd5fd7a308fdfa8812161cc4af1f3b7fcf2f8ce39bf8cde5b35b5608eb2e5a4",
       "historicalPrefix": "954",
       "state": "HISTORICAL_IMMUTABLE"

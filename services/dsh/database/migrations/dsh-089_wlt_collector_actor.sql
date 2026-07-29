@@ -91,10 +91,10 @@ BEGIN
      WHERE id = NEW.store_id;
 
     INSERT INTO dsh_wlt_outbox_events
-      (event_type, tenant_id, order_id, captain_id, collector_type, collector_id,
+      (event_type, operator_context_id, order_id, captain_id, collector_type, collector_id,
        partner_id, checkout_intent_id)
     VALUES
-      ('delivery_completed', NEW.tenant_id, NEW.id, NULL, 'partner_store', v_partner_id,
+      ('delivery_completed', NEW.operator_context_id, NEW.id, NULL, 'partner_store', v_partner_id,
        v_partner_id, NEW.checkout_intent_id)
     ON CONFLICT DO NOTHING;
 

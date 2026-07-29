@@ -14,9 +14,9 @@ import (
 
 func requiredTestOperatorContextID(t *testing.T) string {
 	t.Helper()
-	operatorContextID := os.Getenv("DSH_TEST_TENANT_ID")
+	operatorContextID := os.Getenv("DSH_TEST_operator_context_id")
 	if operatorContextID == "" {
-		t.Fatal("DSH_TEST_TENANT_ID is required when DSH_REQUIRE_DB_TESTS=true")
+		t.Fatal("DSH_TEST_operator_context_id is required when DSH_REQUIRE_DB_TESTS=true")
 	}
 	return operatorContextID
 }

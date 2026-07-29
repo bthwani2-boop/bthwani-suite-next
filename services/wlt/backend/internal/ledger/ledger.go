@@ -85,10 +85,10 @@ func scanEntryRow(rows *sql.Rows) (*LedgerEntry, error) {
 	return &e, nil
 }
 
-// AppendLedgerEntryForTenant is retained only for controlled compatibility
+// AppendLedgerEntryForOperatorContext is retained only for controlled compatibility
 // and migration tooling. Runtime financial mutations must use the balanced
 // PostLedgerTransaction kernel; no HTTP route registers this function.
-func AppendLedgerEntryForTenant(ctx context.Context, db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, error) {
+func AppendLedgerEntryForOperatorContext(ctx context.Context, db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, error) {
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func AppendLedgerEntryForTenant(ctx context.Context, db *sql.DB, input CreateLed
 	}
 	const q = `
 		INSERT INTO wlt_ledger_entries
-			(tenant_id, entry_type, actor_id, actor_type, source_type, source_id, order_id, visit_id, store_id, partner_id, commission_event_id, reference_id, reference_type,
+			(operator_context_id, entry_type, actor_id, actor_type, source_type, source_id, order_id, visit_id, store_id, partner_id, commission_event_id, reference_id, reference_type,
 			 amount_minor_units, currency, debit_credit, balance_after, description, idempotency_key)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 		RETURNING ` + ledgerCols
@@ -124,10 +124,10 @@ func AppendLedgerEntryForTenant(ctx context.Context, db *sql.DB, input CreateLed
 }
 
 func AppendLedgerEntry(db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, error) {
-	return AppendLedgerEntryForTenant(context.Background(), db, input)
+	return AppendLedgerEntryForOperatorContext(context.Background(), db, input)
 }
 
-func GetLedgerEntryForTenant(ctx context.Context, db *sql.DB, entryID string) (*LedgerEntry, error) {
+func GetLedgerEntryForOperatorContext(ctx context.Context, db *sql.DB, entryID string) (*LedgerEntry, error) {
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
@@ -136,7 +136,7 @@ func GetLedgerEntryForTenant(ctx context.Context, db *sql.DB, entryID string) (*
 	if entryID == "" {
 		return nil, fmt.Errorf("entryId is required")
 	}
-	const q = `SELECT ` + ledgerCols + ` FROM wlt_ledger_entries WHERE tenant_id = $1 AND id = $2`
+	const q = `SELECT ` + ledgerCols + ` FROM wlt_ledger_entries WHERE operator_context_id = $1 AND id = $2`
 	row := db.QueryRowContext(ctx, q, operatorContextID, entryID)
 	e, err := scanEntry(row)
 	if errorsIsNoRows(err) {
@@ -146,7 +146,7 @@ func GetLedgerEntryForTenant(ctx context.Context, db *sql.DB, entryID string) (*
 }
 
 func GetLedgerEntry(db *sql.DB, entryID string) (*LedgerEntry, error) {
-	return GetLedgerEntryForTenant(context.Background(), db, entryID)
+	return GetLedgerEntryForOperatorContext(context.Background(), db, entryID)
 }
 
 func errorsIsNoRows(err error) bool {
@@ -173,7 +173,7 @@ func ListLedgerEntries(db *sql.DB, params ListLedgerEntriesParams) ([]*LedgerEnt
 		limit = 50
 	}
 
-	q := `SELECT ` + ledgerCols + ` FROM wlt_ledger_entries WHERE tenant_id = $1`
+	q := `SELECT ` + ledgerCols + ` FROM wlt_ledger_entries WHERE operator_context_id = $1`
 	args := []any{operatorContextID}
 	idx := 2
 
@@ -198,7 +198,7 @@ func ListLedgerEntries(db *sql.DB, params ListLedgerEntriesParams) ([]*LedgerEnt
 		idx++
 	}
 	if params.Cursor != "" {
-		q += fmt.Sprintf(" AND created_at < (SELECT created_at FROM wlt_ledger_entries WHERE id = $%d AND tenant_id = $1)", idx)
+		q += fmt.Sprintf(" AND created_at < (SELECT created_at FROM wlt_ledger_entries WHERE id = $%d AND operator_context_id = $1)", idx)
 		args = append(args, params.Cursor)
 		idx++
 	}
@@ -234,7 +234,7 @@ func HandleAppendLedgerEntry(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		e, err := AppendLedgerEntryForTenant(r.Context(), db, input)
+		e, err := AppendLedgerEntryForOperatorContext(r.Context(), db, input)
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -245,7 +245,7 @@ func HandleAppendLedgerEntry(db *sql.DB) http.HandlerFunc {
 
 func HandleGetLedgerEntry(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		e, err := GetLedgerEntryForTenant(r.Context(), db, r.PathValue("entryId"))
+		e, err := GetLedgerEntryForOperatorContext(r.Context(), db, r.PathValue("entryId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -262,7 +262,7 @@ func HandleListLedgerEntries(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, err := shared.RequireOperatorContext(r.Context())
 		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", err.Error())
+			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", err.Error())
 			return
 		}
 		q := r.URL.Query()

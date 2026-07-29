@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $Timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-$OperatorContextId = "tenant-runtime-matrix"
+$OperatorContextId = "OperatorContext-runtime-matrix"
 $CorrelationId = "wlt-runtime-matrix-$Timestamp"
 $ServiceToken = "dev-only-dsh-wlt-shared-secret"
 

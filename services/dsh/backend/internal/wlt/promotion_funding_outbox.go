@@ -11,7 +11,7 @@ import (
 )
 
 // PromotionFundingOutboxInput is used only by the durable DSH outbox worker.
-// The transition is idempotent in WLT and carries the tenant explicitly.
+// The transition is idempotent in WLT and carries the OperatorContext explicitly.
 type PromotionFundingOutboxInput struct {
 	OperatorContextID       string `json:"operatorContextId"`
 	OrderID        string `json:"orderId,omitempty"`

@@ -86,19 +86,19 @@ func decodeCanonicalPayoutRef(t *testing.T, recorder *httptest.ResponseRecorder)
 	return envelope.PayoutDestination
 }
 
-func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreTenantLocal(t *testing.T) {
+func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreOperatorContextLocal(t *testing.T) {
 	db := openPayoutRequiredDB(t)
 	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "jrn-037-db-test-encryption-key")
 	actorID := governedPayoutActorID()
-	tenantA := "tenant-payout-a-" + strconv.FormatInt(time.Now().UnixNano(), 10)
-	tenantB := "tenant-payout-b-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	OperatorContextA := "OperatorContext-payout-a-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	OperatorContextB := "OperatorContext-payout-b-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE FROM wlt_payout_destination_requests WHERE tenant_id IN ($1,$2)`, tenantA, tenantB)
-		_, _ = db.Exec(`DELETE FROM wlt_payout_audit_events WHERE tenant_id IN ($1,$2) AND aggregate_type='payout_destination'`, tenantA, tenantB)
-		_, _ = db.Exec(`DELETE FROM wlt_payout_destinations WHERE tenant_id IN ($1,$2) AND owner_actor_id=$3`, tenantA, tenantB, actorID)
+		_, _ = db.Exec(`DELETE FROM wlt_payout_destination_requests WHERE operator_context_id IN ($1,$2)`, OperatorContextA, OperatorContextB)
+		_, _ = db.Exec(`DELETE FROM wlt_payout_audit_events WHERE operator_context_id IN ($1,$2) AND aggregate_type='payout_destination'`, OperatorContextA, OperatorContextB)
+		_, _ = db.Exec(`DELETE FROM wlt_payout_destinations WHERE operator_context_id IN ($1,$2) AND owner_actor_id=$3`, OperatorContextA, OperatorContextB, actorID)
 	})
 
-	first := executeCanonicalPayoutDestinationRequest(t, db, tenantA, "partner", actorID, "payout-key-0001", "123456789")
+	first := executeCanonicalPayoutDestinationRequest(t, db, OperatorContextA, "partner", actorID, "payout-key-0001", "123456789")
 	if first.Code != http.StatusCreated {
 		t.Fatalf("first payout status = %d, want 201; body=%s", first.Code, first.Body.String())
 	}
@@ -107,7 +107,7 @@ func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreTenantLocal(t *t
 		t.Fatalf("first payout response is not masked: %#v", firstRef)
 	}
 
-	replay := executeCanonicalPayoutDestinationRequest(t, db, tenantA, "partner", actorID, "payout-key-0001", "123456789")
+	replay := executeCanonicalPayoutDestinationRequest(t, db, OperatorContextA, "partner", actorID, "payout-key-0001", "123456789")
 	if replay.Code != http.StatusOK {
 		t.Fatalf("identical replay status = %d, want 200; body=%s", replay.Code, replay.Body.String())
 	}
@@ -116,12 +116,12 @@ func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreTenantLocal(t *t
 		t.Fatalf("identical replay created a new destination: first=%s replay=%s", firstRef.ID, replayRef.ID)
 	}
 
-	conflict := executeCanonicalPayoutDestinationRequest(t, db, tenantA, "partner", actorID, "payout-key-0001", "987654321")
+	conflict := executeCanonicalPayoutDestinationRequest(t, db, OperatorContextA, "partner", actorID, "payout-key-0001", "987654321")
 	if conflict.Code != http.StatusConflict {
 		t.Fatalf("payload-divergent replay status = %d, want 409; body=%s", conflict.Code, conflict.Body.String())
 	}
 
-	second := executeCanonicalPayoutDestinationRequest(t, db, tenantA, "partner", actorID, "payout-key-0002", "987654321")
+	second := executeCanonicalPayoutDestinationRequest(t, db, OperatorContextA, "partner", actorID, "payout-key-0002", "987654321")
 	if second.Code != http.StatusCreated {
 		t.Fatalf("second payout status = %d, want 201; body=%s", second.Code, second.Body.String())
 	}
@@ -130,36 +130,36 @@ func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreTenantLocal(t *t
 		t.Fatal("new idempotency key did not create a new payout destination")
 	}
 
-	// The same actor identity and idempotency key are independent in another tenant.
-	otherTenant := executeCanonicalPayoutDestinationRequest(t, db, tenantB, "partner", actorID, "payout-key-0001", "555555555")
-	if otherTenant.Code != http.StatusCreated {
-		t.Fatalf("cross-tenant same actor/key status = %d, want 201; body=%s", otherTenant.Code, otherTenant.Body.String())
+	// The same actor identity and idempotency key are independent in another OperatorContext.
+	otherOperatorContext := executeCanonicalPayoutDestinationRequest(t, db, OperatorContextB, "partner", actorID, "payout-key-0001", "555555555")
+	if otherOperatorContext.Code != http.StatusCreated {
+		t.Fatalf("cross-OperatorContext same actor/key status = %d, want 201; body=%s", otherOperatorContext.Code, otherOperatorContext.Body.String())
 	}
-	otherTenantRef := decodeCanonicalPayoutRef(t, otherTenant)
-	if otherTenantRef.ID == firstRef.ID || otherTenantRef.ID == secondRef.ID {
-		t.Fatal("cross-tenant request reused another tenant's destination")
+	otherOperatorContextRef := decodeCanonicalPayoutRef(t, otherOperatorContext)
+	if otherOperatorContextRef.ID == firstRef.ID || otherOperatorContextRef.ID == secondRef.ID {
+		t.Fatal("cross-OperatorContext request reused another OperatorContext's destination")
 	}
 
-	for _, operatorContextID := range []string{tenantA, tenantB} {
+	for _, operatorContextID := range []string{OperatorContextA, OperatorContextB} {
 		var activeCount int
 		if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_payout_destinations
-			WHERE tenant_id=$1 AND owner_actor_type='partner' AND owner_actor_id=$2 AND active=true`, operatorContextID, actorID).Scan(&activeCount); err != nil {
+			WHERE operator_context_id=$1 AND owner_actor_type='partner' AND owner_actor_id=$2 AND active=true`, operatorContextID, actorID).Scan(&activeCount); err != nil {
 			t.Fatal(err)
 		}
 		if activeCount != 1 {
-			t.Fatalf("tenant %s active destination count=%d, want 1", operatorContextID, activeCount)
+			t.Fatalf("OperatorContext %s active destination count=%d, want 1", operatorContextID, activeCount)
 		}
 	}
 
-	var tenantARequestCount, tenantBRequestCount int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_payout_destination_requests WHERE tenant_id=$1`, tenantA).Scan(&tenantARequestCount); err != nil {
+	var OperatorContextARequestCount, OperatorContextBRequestCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_payout_destination_requests WHERE operator_context_id=$1`, OperatorContextA).Scan(&OperatorContextARequestCount); err != nil {
 		t.Fatal(err)
 	}
-	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_payout_destination_requests WHERE tenant_id=$1`, tenantB).Scan(&tenantBRequestCount); err != nil {
+	if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_payout_destination_requests WHERE operator_context_id=$1`, OperatorContextB).Scan(&OperatorContextBRequestCount); err != nil {
 		t.Fatal(err)
 	}
-	if tenantARequestCount != 2 || tenantBRequestCount != 1 {
-		t.Fatalf("tenant-local request counts are wrong: tenantA=%d tenantB=%d", tenantARequestCount, tenantBRequestCount)
+	if OperatorContextARequestCount != 2 || OperatorContextBRequestCount != 1 {
+		t.Fatalf("OperatorContext-local request counts are wrong: OperatorContextA=%d OperatorContextB=%d", OperatorContextARequestCount, OperatorContextBRequestCount)
 	}
 
 	var rawAccount, rawIBAN, rawMobile string
@@ -170,7 +170,7 @@ func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreTenantLocal(t *t
 		       iban_encrypted IS NOT NULL,
 		       payout_mobile_number_encrypted IS NOT NULL
 		FROM wlt_payout_destinations
-		WHERE tenant_id=$1 AND id=$2`, tenantA, secondRef.ID,
+		WHERE operator_context_id=$1 AND id=$2`, OperatorContextA, secondRef.ID,
 	).Scan(&rawAccount, &rawIBAN, &rawMobile, &accountEncrypted, &ibanEncrypted, &mobileEncrypted); err != nil {
 		t.Fatal(err)
 	}

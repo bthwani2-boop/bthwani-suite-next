@@ -34,7 +34,7 @@ const schemaFiles = [
   "governance/guards/guard-assurance.schema.json",
   "governance/github/repository-enforcement.schema.json",
   "governance/product/product-truth.schema.json",
-  "governance/saas/saas-governance.schema.json",
+  "governance/partner_platform/partner_platform-governance.schema.json",
   "governance/operational_journey_protocol_package/sdlc/artifact-manifest.schema.json",
   "governance/operational_journey_protocol_package/sdlc/change-impact.schema.json",
 ];
@@ -59,8 +59,8 @@ const semanticMarkers = new Map([
     "PROTOCOL_VIOLATION", "all_applicable_evidence_scopes_required_for_closure",
     "independent_reviewer_owns_g4_implementation_verification", "reviewer_must_differ_from_author_executor_and_coordinator",
     "governance_change_requires_governance_contract_authority", "ci_change_requires_ci_workflow_authority",
-    "wlt_finance_change_requires_financial_control_authority", "tenant_or_isolation_change_requires_isolation_security_approval",
-    "residual_risk_requires_risk_acceptance_authority", "saas_activation_requires_explicit_product_security_finance_isolation_release_and_production_evidence",
+    "wlt_finance_change_requires_financial_control_authority", "OperatorContext_or_isolation_change_requires_isolation_security_approval",
+    "residual_risk_requires_risk_acceptance_authority", "partner_activation_requires_explicit_product_security_finance_isolation_release_and_production_evidence",
   ]],
   ["roles-and-authority.yaml", [
     "version: 3", "sdlc_program_authority:", "product_manager_authority:", "product_owner_acceptance_authority:",
@@ -78,7 +78,7 @@ const semanticMarkers = new Map([
     '"notApplicableStages"', '"stageExclusions"', '"finance"', '"isolation"', '"governance"', '"ci"', '"PROTOCOL_VIOLATION"',
   ]],
   ["change-impact.schema.json", [
-    '"schemaVersion": { "const": 3 }', '"visual"', '"qa"', '"wltFinance"', '"tenant"',
+    '"schemaVersion": { "const": 3 }', '"visual"', '"qa"', '"wltFinance"', '"OperatorContext"',
     '"governance"', '"ci"', '"release"', '"production"',
   ]],
   ["templates/capability-intake.yaml", ["productImpact:", "productTruthContract:", "productManagerAuthority:", "productOwnerAcceptanceAuthority:"]],
@@ -102,7 +102,7 @@ for (const requiredAuthority of [
   "governance/guards/guard-assurance.json",
   "governance/github/repository-enforcement.json",
   "governance/policies/product.md",
-  "governance/saas/saas-governance.json",
+  "governance/partner_platform/partner_platform-governance.json",
   "governance/policies/release.md",
 ]) if (!fs.existsSync(path.join(repoRoot, requiredAuthority))) violations.push({ file: requiredAuthority, message: "MISSING_ACTIVE_SDLC_AUTHORITY" });
 

@@ -94,7 +94,7 @@ func ResolveActorStore(ctx context.Context, db *sql.DB, actor StoreActor) (*DshS
 	err := db.QueryRowContext(ctx, `
 		SELECT store_id, scope_type
 		FROM dsh_store_actor_scopes
-		WHERE actor_id = $1 AND actor_role = $2 AND tenant_id = $3 AND active = true
+		WHERE actor_id = $1 AND actor_role = $2 AND operator_context_id = $3 AND active = true
 		ORDER BY created_at ASC
 		LIMIT 1`, actor.ID, actor.Role, actor.OperatorContextID).Scan(&scope.StoreID, &scope.Type)
 	if err == sql.ErrNoRows {
@@ -103,7 +103,7 @@ func ResolveActorStore(ctx context.Context, db *sql.DB, actor StoreActor) (*DshS
 	if err != nil {
 		return nil, StoreScope{}, err
 	}
-	row, err := GetStoreByIDInternalForTenant(ctx, db, actor.OperatorContextID, scope.StoreID)
+	row, err := GetStoreByIDInternalForOperatorContext(ctx, db, actor.OperatorContextID, scope.StoreID)
 	return row, scope, err
 }
 
@@ -123,7 +123,7 @@ func ResolveActorStoreForID(ctx context.Context, db *sql.DB, actor StoreActor, s
 	err := db.QueryRowContext(ctx, `
 		SELECT store_id, scope_type
 		FROM dsh_store_actor_scopes
-		WHERE actor_id = $1 AND actor_role = $2 AND store_id = $3 AND tenant_id = $4 AND active = true`,
+		WHERE actor_id = $1 AND actor_role = $2 AND store_id = $3 AND operator_context_id = $4 AND active = true`,
 		actor.ID, actor.Role, storeID, actor.OperatorContextID).Scan(&scope.StoreID, &scope.Type)
 	if err == sql.ErrNoRows {
 		return nil, StoreScope{}, ErrScopedStoreNotFound
@@ -131,7 +131,7 @@ func ResolveActorStoreForID(ctx context.Context, db *sql.DB, actor StoreActor, s
 	if err != nil {
 		return nil, StoreScope{}, err
 	}
-	row, err := GetStoreByIDInternalForTenant(ctx, db, actor.OperatorContextID, scope.StoreID)
+	row, err := GetStoreByIDInternalForOperatorContext(ctx, db, actor.OperatorContextID, scope.StoreID)
 	return row, scope, err
 }
 
@@ -147,14 +147,14 @@ func ActorCanAccessStore(ctx context.Context, db queryer, actor StoreActor, stor
 	if actor.Role == "operator" || strings.HasPrefix(actor.Role, "permission:") {
 		err := db.QueryRowContext(ctx, `
 			SELECT EXISTS (
-				SELECT 1 FROM dsh_stores WHERE id = $1 AND tenant_id = $2
+				SELECT 1 FROM dsh_stores WHERE id = $1 AND operator_context_id = $2
 			)`, storeID, actor.OperatorContextID).Scan(&exists)
 		return exists, err
 	}
 	err := db.QueryRowContext(ctx, `
 		SELECT EXISTS (
 			SELECT 1 FROM dsh_store_actor_scopes
-			WHERE actor_id = $1 AND actor_role = $2 AND store_id = $3 AND tenant_id = $4 AND active = true
+			WHERE actor_id = $1 AND actor_role = $2 AND store_id = $3 AND operator_context_id = $4 AND active = true
 		)`, actor.ID, actor.Role, storeID, actor.OperatorContextID).Scan(&exists)
 	return exists, err
 }

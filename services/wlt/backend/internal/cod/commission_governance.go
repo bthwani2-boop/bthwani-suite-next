@@ -20,7 +20,7 @@ var (
 	ErrCommissionEvidenceRequired      = errors.New("verified source evidence is required")
 	ErrCommissionIdempotencyConflict   = errors.New("idempotency key was already used with different commission inputs")
 	ErrCommissionAdjustmentInvalid     = errors.New("commission adjustment is invalid")
-	ErrCommissionWalletUnavailable     = errors.New("tenant commission wallet is unavailable")
+	ErrCommissionWalletUnavailable     = errors.New("OperatorContext commission wallet is unavailable")
 )
 
 type GovernedCommissionPolicy struct {
@@ -209,7 +209,7 @@ func getActiveGovernedCommissionPolicyTx(
 		       minimum_amount_minor_units, maximum_amount_minor_units,
 		       currency, status, change_reason, updated_by_actor_id
 		FROM wlt_commission_policy_versions
-		WHERE tenant_id = $1
+		WHERE operator_context_id = $1
 		  AND commission_type = $2
 		  AND source_type = $3
 		  AND beneficiary_actor_type = $4
@@ -220,7 +220,7 @@ func getActiveGovernedCommissionPolicyTx(
 }
 
 // UpsertGovernedCommissionPolicy is retained as a compatibility adapter only.
-// All writes converge on the tenant-local idempotent implementation.
+// All writes converge on the OperatorContext-local idempotent implementation.
 func UpsertGovernedCommissionPolicy(
 	ctx context.Context,
 	db *sql.DB,
@@ -254,7 +254,7 @@ func getGovernedCommissionByIdempotencyKeyTx(
 	idempotencyKey string,
 ) (*Commission, error) {
 	row := tx.QueryRowContext(ctx, `SELECT `+commissionCols+`
-		FROM wlt_commissions WHERE tenant_id=$1 AND idempotency_key=$2`, operatorContextID, idempotencyKey)
+		FROM wlt_commissions WHERE operator_context_id=$1 AND idempotency_key=$2`, operatorContextID, idempotencyKey)
 	commission, err := scanCommission(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -269,7 +269,7 @@ func getGovernedCommissionForUpdateTx(
 	commissionID string,
 ) (*Commission, error) {
 	row := tx.QueryRowContext(ctx, `SELECT `+commissionCols+`
-		FROM wlt_commissions WHERE tenant_id=$1 AND id=$2 FOR UPDATE`, operatorContextID, commissionID)
+		FROM wlt_commissions WHERE operator_context_id=$1 AND id=$2 FOR UPDATE`, operatorContextID, commissionID)
 	commission, err := scanCommission(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -286,15 +286,15 @@ func ensureGovernedCommissionWalletTx(
 	currency string,
 ) error {
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO wlt_wallets (tenant_id, actor_id, actor_type, status, currency)
+		INSERT INTO wlt_wallets (operator_context_id, actor_id, actor_type, status, currency)
 		VALUES ($1,$2,$3,'active',$4)
-		ON CONFLICT (tenant_id, actor_type, actor_id)
+		ON CONFLICT (operator_context_id, actor_type, actor_id)
 		DO NOTHING`, operatorContextID, actorID, actorType, currency); err != nil {
 		return err
 	}
 	var status, storedCurrency string
 	if err := tx.QueryRowContext(ctx, `SELECT status,currency FROM wlt_wallets
-		WHERE tenant_id=$1 AND actor_type=$2 AND actor_id=$3 FOR UPDATE`,
+		WHERE operator_context_id=$1 AND actor_type=$2 AND actor_id=$3 FOR UPDATE`,
 		operatorContextID, actorType, actorID).Scan(&status, &storedCurrency); err != nil {
 		return err
 	}
@@ -350,7 +350,7 @@ func CreateGovernedCommission(
 		var storedHash string
 		hashErr := tx.QueryRowContext(ctx, `SELECT request_hash
 			FROM wlt_commission_evidence
-			WHERE tenant_id=$1 AND commission_id=$2`, operatorContextID, existing.ID).Scan(&storedHash)
+			WHERE operator_context_id=$1 AND commission_id=$2`, operatorContextID, existing.ID).Scan(&storedHash)
 		if hashErr == nil && storedHash != requestHash {
 			return nil, ErrCommissionIdempotencyConflict
 		}
@@ -387,7 +387,7 @@ func CreateGovernedCommission(
 
 	row := tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_commissions
-		(tenant_id, beneficiary_actor_id, beneficiary_actor_type, source_type, source_id,
+		(operator_context_id, beneficiary_actor_id, beneficiary_actor_type, source_type, source_id,
 		 visit_id, store_id, commission_policy_id, commission_type,
 		 amount_minor_units, currency, idempotency_key)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
@@ -425,7 +425,7 @@ func CreateGovernedCommission(
 		    earned_total_minor_units = earned_total_minor_units + $1,
 		    last_ledger_entry_at = NOW(),
 		    updated_at = NOW()
-		WHERE tenant_id=$2 AND actor_type=$3 AND actor_id=$4 AND status='active'`,
+		WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4 AND status='active'`,
 		amount,
 		operatorContextID,
 		input.BeneficiaryActorType,
@@ -467,7 +467,7 @@ func CreateGovernedCommission(
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_commission_evidence
-		(tenant_id, commission_id, policy_id, policy_version, source_evidence_id,
+		(operator_context_id, commission_id, policy_id, policy_version, source_evidence_id,
 		 source_evidence_hash, source_evidence_status, gross_basis_minor_units,
 		 calculated_amount_minor_units, idempotency_key, request_hash)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
@@ -494,7 +494,7 @@ func CreateGovernedCommission(
 	})
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_finance_audit_events
-		(tenant_id, aggregate_type, aggregate_id, action, actor_id, actor_type,
+		(operator_context_id, aggregate_type, aggregate_id, action, actor_id, actor_type,
 		 correlation_id, metadata)
 		VALUES ($1,'commission',$2,'commission_calculated',$3,
 		        'service',$4,$5::jsonb)`,
@@ -564,10 +564,10 @@ func ApplyGovernedCommissionAdjustment(
 	var adjustmentID string
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_commission_adjustments
-		(tenant_id, commission_id, delta_minor_units, reason, operator_id,
+		(operator_context_id, commission_id, delta_minor_units, reason, operator_id,
 		 idempotency_key, request_hash)
 		VALUES ($1,$2,$3,$4,$5,$6,$7)
-		ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+		ON CONFLICT (operator_context_id, idempotency_key) DO NOTHING
 		RETURNING id`,
 		operatorContextID,
 		commissionID,
@@ -583,7 +583,7 @@ func ApplyGovernedCommissionAdjustment(
 		if err := tx.QueryRowContext(ctx, `
 			SELECT commission_id, request_hash
 			FROM wlt_commission_adjustments
-			WHERE tenant_id=$1 AND idempotency_key=$2`, operatorContextID, input.IdempotencyKey).Scan(
+			WHERE operator_context_id=$1 AND idempotency_key=$2`, operatorContextID, input.IdempotencyKey).Scan(
 			&existingCommissionID,
 			&existingHash,
 		); err != nil {
@@ -606,7 +606,7 @@ func ApplyGovernedCommissionAdjustment(
 		SET pending_balance_minor_units = pending_balance_minor_units + $1,
 		    earned_total_minor_units = earned_total_minor_units + $1,
 		    updated_at = NOW()
-		WHERE tenant_id=$2
+		WHERE operator_context_id=$2
 		  AND actor_type=$3
 		  AND actor_id=$4
 		  AND pending_balance_minor_units + $1 >= 0
@@ -627,7 +627,7 @@ func ApplyGovernedCommissionAdjustment(
 		SET amount_minor_units=$3,
 		    resolution_note=$4,
 		    updated_at=NOW()
-		WHERE tenant_id=$1 AND id=$2`, operatorContextID, commissionID, newAmount, input.Reason); err != nil {
+		WHERE operator_context_id=$1 AND id=$2`, operatorContextID, commissionID, newAmount, input.Reason); err != nil {
 		return nil, err
 	}
 
@@ -682,7 +682,7 @@ func ApplyGovernedCommissionAdjustment(
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_finance_audit_events
-		(tenant_id, aggregate_type, aggregate_id, action, actor_id, actor_type,
+		(operator_context_id, aggregate_type, aggregate_id, action, actor_id, actor_type,
 		 reason, correlation_id, metadata)
 		VALUES ($1,'commission_adjustment',$2,$3,$4,'operator',$5,$6,
 		        jsonb_build_object(

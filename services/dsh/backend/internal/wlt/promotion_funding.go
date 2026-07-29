@@ -63,7 +63,7 @@ func (c *Client) promotionFundingRequest(
 	}
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
-		return nil, fmt.Errorf("WLT promotion funding tenant id is required")
+		return nil, fmt.Errorf("WLT promotion funding OperatorContext id is required")
 	}
 	encoded, err := json.Marshal(input)
 	if err != nil {

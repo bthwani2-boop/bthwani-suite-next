@@ -25,7 +25,7 @@ func captainCanReadOrderPreparation(
 			SELECT 1
 			FROM dsh_assignments
 			WHERE order_id=$1::uuid
-			  AND tenant_id=$2
+			  AND operator_context_id=$2
 			  AND captain_id=$3
 			  AND status IN ('offered','accepted','completed')
 		)`, orderID, operatorContextID, captainID).Scan(&allowed)

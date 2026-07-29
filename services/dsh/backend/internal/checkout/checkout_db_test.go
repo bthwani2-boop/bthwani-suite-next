@@ -52,7 +52,7 @@ func seedStore(t *testing.T, db *sql.DB) string {
 func TestCancelIntentEnqueuesExpireSessionWhenPaymentSessionExistsDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	storeID := seedStore(t, db)
-	operatorContextID := uniqueID("checkout-cancel-test-tenant")
+	operatorContextID := uniqueID("checkout-cancel-test-OperatorContext")
 	clientID := uniqueID("checkout-cancel-test-client")
 	paymentSessionID := uniqueID("ps")
 
@@ -104,7 +104,7 @@ func TestCancelIntentEnqueuesExpireSessionWhenPaymentSessionExistsDBIntegration(
 func TestCancelIntentEnqueuesNothingWithoutPaymentSessionDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	storeID := seedStore(t, db)
-	operatorContextID := uniqueID("checkout-cancel-test-tenant")
+	operatorContextID := uniqueID("checkout-cancel-test-OperatorContext")
 	clientID := uniqueID("checkout-cancel-test-client")
 
 	intent, err := CreateIntent(db, CreateIntentInput{

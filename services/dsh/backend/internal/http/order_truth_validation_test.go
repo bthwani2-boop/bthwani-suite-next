@@ -8,7 +8,7 @@ import (
 func TestSafeOrderCreateCorrelationNeverExposesMutationKey(t *testing.T) {
 	const key = "order-create-key:private-idempotency-value"
 	generated := safeOrderCreateCorrelation(
-		"tenant-yemen",
+		"OperatorContext-yemen",
 		"client-1001",
 		"8ba4e0d1-2f80-42b5-a88a-f8600cf2c4f5",
 		key,
@@ -18,7 +18,7 @@ func TestSafeOrderCreateCorrelationNeverExposesMutationKey(t *testing.T) {
 		t.Fatalf("generated correlation leaked the idempotency key: %q", generated)
 	}
 	if replay := safeOrderCreateCorrelation(
-		"tenant-yemen",
+		"OperatorContext-yemen",
 		"client-1001",
 		"8ba4e0d1-2f80-42b5-a88a-f8600cf2c4f5",
 		key,
@@ -27,7 +27,7 @@ func TestSafeOrderCreateCorrelationNeverExposesMutationKey(t *testing.T) {
 		t.Fatalf("missing and reused correlations must resolve to the same safe trace: %q != %q", replay, generated)
 	}
 	if explicit := safeOrderCreateCorrelation(
-		"tenant-yemen",
+		"OperatorContext-yemen",
 		"client-1001",
 		"8ba4e0d1-2f80-42b5-a88a-f8600cf2c4f5",
 		key,

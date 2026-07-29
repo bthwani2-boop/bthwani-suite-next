@@ -163,7 +163,7 @@ for (const [pattern, message] of [
 const settlementPostingFile = "services/wlt/backend/internal/settlement/settlement.go";
 const settlementPosting = read(settlementPostingFile);
 for (const [pattern, message] of [
-  [/WHERE\s+tenant_id\s*=\s*\$1\s+AND\s+id\s*=\s*\$2\s+AND\s+status\s*=\s*'pending'/, "SETTLEMENT_POST_MUST_REQUIRE_TRUSTED_TENANT_AND_PENDING_STATE"],
+  [/WHERE\s+operator_context_id\s*=\s*\$1\s+AND\s+id\s*=\s*\$2\s+AND\s+status\s*=\s*'pending'/, "SETTLEMENT_POST_MUST_REQUIRE_TRUSTED_OperatorContext_AND_PENDING_STATE"],
   [/platform_payable[\s\S]*wallet[\s\S]*platform_revenue/, "SETTLEMENT_BALANCED_ACCOUNTING_LINES_MISSING"],
   [/BeginTx[\s\S]*PostLedgerTransaction[\s\S]*tx\.Commit/, "SETTLEMENT_STATE_AND_JOURNAL_NOT_ATOMIC"],
 ]) {
@@ -267,13 +267,13 @@ function requireCommercialText(file, text, message) {
 }
 
 const genericHandler = requireCommercialText(
-  "services/wlt/backend/internal/reference/trusted_tenant_handler.go",
+  "services/wlt/backend/internal/reference/trusted_operator_context_handler.go",
   "subscription purchases must use /wlt/commercial/payment-sessions",
   "GENERIC_PAYMENT_ROUTE_ACCEPTS_SUBSCRIPTION",
 );
 if (!genericHandler.includes("input.SubscriptionPurchaseID") || !genericHandler.includes("input.CommercialProductReference")) {
   violations.push({
-    file: "services/wlt/backend/internal/reference/trusted_tenant_handler.go",
+    file: "services/wlt/backend/internal/reference/trusted_operator_context_handler.go",
     line: 0,
     message: "GENERIC_PAYMENT_ROUTE_SOURCE_GUARD_MISSING",
   });

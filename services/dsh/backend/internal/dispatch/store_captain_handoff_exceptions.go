@@ -281,7 +281,7 @@ func reportStoreCaptainHandoffException(
 
 	var orderID, storeID, captainID, assignmentStatus, deliveryStatus, handoffStatus, operatorContextID string
 	err = tx.QueryRow(`
-		SELECT o.id::text, o.store_id, o.tenant_id,
+		SELECT o.id::text, o.store_id, o.operator_context_id,
 		       a.captain_id, a.status, d.status, h.status
 		FROM dsh_store_captain_handoffs h
 		JOIN dsh_assignments a ON a.id = h.assignment_id
@@ -357,7 +357,7 @@ func reportStoreCaptainHandoffException(
 	var exceptionID string
 	err = tx.QueryRow(`
 		INSERT INTO dsh_delivery_exceptions (
-			tenant_id,
+			operator_context_id,
 			assignment_id,
 			order_id,
 			captain_id,

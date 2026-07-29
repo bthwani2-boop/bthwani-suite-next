@@ -1,6 +1,6 @@
 param(
   [string]$BaseUrl = "http://localhost:58083",
-  [string]$OperatorContextId = "tenant-yemen"
+  [string]$OperatorContextId = "OperatorContext-yemen"
 )
 
 Set-StrictMode -Version Latest

@@ -56,7 +56,7 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 
 func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string, error) {
 	if event.OperatorContextID == "" {
-		return "", fmt.Errorf("WLT outbox event %s has no tenant context", event.ID)
+		return "", fmt.Errorf("WLT outbox event %s has no OperatorContext context", event.ID)
 	}
 	ctx = wlt.WithOperatorContext(ctx, event.OperatorContextID)
 

@@ -62,13 +62,13 @@ func ReadPaymentSessionTimeline(db *sql.DB, operatorContextID, sessionID string)
 	var session PaymentSession
 	var ledgerID, lastEventID, lastProviderStatus string
 	err := db.QueryRow(`
-		SELECT id, checkout_intent_id, special_request_id, tenant_id, client_id,
+		SELECT id, checkout_intent_id, special_request_id, operator_context_id, client_id,
 		       store_id, payment_method, status, provider_reference,
 		       amount_minor_units, currency, captured_at, created_at, updated_at,
 		       COALESCE(capture_ledger_transaction_id, ''),
 		       COALESCE(last_provider_event_id, ''), last_provider_status
 		FROM wlt_payment_sessions
-		WHERE id = $1 AND tenant_id = $2`, sessionID, operatorContextID).Scan(
+		WHERE id = $1 AND operator_context_id = $2`, sessionID, operatorContextID).Scan(
 		&session.ID, &session.CheckoutIntentID, &session.SpecialRequestID,
 		&session.OperatorContextID, &session.ClientID, &session.StoreID,
 		&session.PaymentMethod, &session.Status, &session.ProviderReference,
@@ -96,7 +96,7 @@ func ReadPaymentSessionTimeline(db *sql.DB, operatorContextID, sessionID string)
 		SELECT id, operation, state, response_status, provider_reference,
 		       correlation_id, created_at, updated_at, completed_at
 		FROM wlt_payment_operation_receipts
-		WHERE tenant_id = $1 AND payment_session_id = $2
+		WHERE operator_context_id = $1 AND payment_session_id = $2
 		ORDER BY created_at DESC`, operatorContextID, sessionID)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func ReadPaymentSessionTimeline(db *sql.DB, operatorContextID, sessionID string)
 		       processing_state, processing_result, signature_timestamp,
 		       occurred_at, received_at, processed_at
 		FROM wlt_payment_provider_events
-		WHERE tenant_id = $1 AND payment_session_id = $2
+		WHERE operator_context_id = $1 AND payment_session_id = $2
 		ORDER BY received_at DESC`, operatorContextID, sessionID)
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func HandleGetPaymentSessionTimeline(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 		if operatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Operator-Context-ID is required")
+			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Operator-Context-ID is required")
 			return
 		}
 		timeline, err := ReadPaymentSessionTimeline(db, operatorContextID, r.PathValue("paymentSessionId"))

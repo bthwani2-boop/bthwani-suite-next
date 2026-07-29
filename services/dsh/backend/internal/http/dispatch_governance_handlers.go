@@ -75,7 +75,7 @@ func (s *protectedStoreServer) handleListGovernedOperatorDispatchAssignments(w h
 		writeGovernedDispatchError(w, err)
 		return
 	}
-	list, err := dispatch.ListOperatorAssignmentsInTenant(s.db, operatorContextID, 200)
+	list, err := dispatch.ListOperatorAssignmentsInOperatorContext(s.db, operatorContextID, 200)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -98,7 +98,7 @@ func (s *protectedStoreServer) handleListGovernedCaptainDispatchAssignments(w ht
 		writeGovernedDispatchError(w, err)
 		return
 	}
-	list, err := dispatch.ListCaptainAssignmentsInTenant(s.db, operatorContextID, actor.ID, 100)
+	list, err := dispatch.ListCaptainAssignmentsInOperatorContext(s.db, operatorContextID, actor.ID, 100)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
@@ -117,7 +117,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 		return
 	}
 	if strings.TrimSpace(actor.OperatorContextID) == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "captain tenant context is required")
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "captain OperatorContext context is required")
 		return
 	}
 	financialEligibility, err := s.refreshCaptainFinancialEligibility(r, actor.OperatorContextID, actor.ID)

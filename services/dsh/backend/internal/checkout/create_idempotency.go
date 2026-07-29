@@ -62,7 +62,7 @@ func FindCreateIdempotencyTx(
 	err = tx.QueryRowContext(ctx, `
 		SELECT checkout_intent_id::text, request_fingerprint
 		FROM dsh_checkout_create_idempotency
-		WHERE tenant_id = $1 AND client_id = $2 AND idempotency_key = $3`,
+		WHERE operator_context_id = $1 AND client_id = $2 AND idempotency_key = $3`,
 		operatorContextID, clientID, key,
 	).Scan(&record.IntentID, &record.RequestFingerprint)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -95,7 +95,7 @@ func BindCreateIdempotencyTx(
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO dsh_checkout_create_idempotency
-			(tenant_id, client_id, idempotency_key, request_fingerprint, checkout_intent_id)
+			(operator_context_id, client_id, idempotency_key, request_fingerprint, checkout_intent_id)
 		VALUES ($1, $2, $3, $4, $5::uuid)`,
 		operatorContextID, clientID, key, fingerprint, intentID,
 	)

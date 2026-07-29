@@ -32,7 +32,7 @@ func refundOperatorContextForSession(ctx context.Context, db *sql.DB, paymentSes
 	}
 	var operatorContextID string
 	if err := db.QueryRowContext(ctx, `
-		SELECT tenant_id FROM wlt_payment_sessions WHERE id=$1`, paymentSessionID).Scan(&operatorContextID); err != nil {
+		SELECT operator_context_id FROM wlt_payment_sessions WHERE id=$1`, paymentSessionID).Scan(&operatorContextID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ctx, "", fmt.Errorf("payment session not found")
 		}
@@ -40,16 +40,16 @@ func refundOperatorContextForSession(ctx context.Context, db *sql.DB, paymentSes
 	}
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
-		return ctx, "", fmt.Errorf("payment session tenant is missing")
+		return ctx, "", fmt.Errorf("payment session OperatorContext is missing")
 	}
 	return shared.WithOperatorContext(ctx, operatorContextID), operatorContextID, nil
 }
 
-// CreateRefundAtomicForTenant preserves order-cancellation compatibility while
+// CreateRefundAtomicForOperatorContext preserves order-cancellation compatibility while
 // using the governed amount reservation, context isolation, audit and idempotency
-// engine. Tenant ownership comes from the authenticated request context. The
+// engine. OperatorContext ownership comes from the authenticated request context. The
 // compatibility path may derive it only from WLT's own payment-session record.
-func CreateRefundAtomicForTenant(ctx context.Context, db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {
+func CreateRefundAtomicForOperatorContext(ctx context.Context, db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {
 	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
 	input.ClientID = strings.TrimSpace(input.ClientID)
@@ -77,9 +77,9 @@ func CreateRefundAtomicForTenant(ctx context.Context, db *sql.DB, input CreateRe
 }
 
 // CreateRefundAtomic is the package-level compatibility adapter. It never
-// invents a tenant; it resolves ownership from the referenced WLT session.
+// invents a OperatorContext; it resolves ownership from the referenced WLT session.
 func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {
-	return CreateRefundAtomicForTenant(context.Background(), db, input)
+	return CreateRefundAtomicForOperatorContext(context.Background(), db, input)
 }
 
 func HandleCreateRefundAtomic(db *sql.DB) http.HandlerFunc {
@@ -91,7 +91,7 @@ func HandleCreateRefundAtomic(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		created, wasCreated, err := CreateRefundAtomicForTenant(r.Context(), db, input)
+		created, wasCreated, err := CreateRefundAtomicForOperatorContext(r.Context(), db, input)
 		if errors.Is(err, ErrRefundReferenceConflict) {
 			shared.SendError(w, http.StatusConflict, "REFUND_REFERENCE_CONFLICT", err.Error())
 			return

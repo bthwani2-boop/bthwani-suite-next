@@ -106,7 +106,7 @@ func claimRefundMutationReceipt(
 	var receipt refundMutationReceipt
 	err = tx.QueryRow(`
 		INSERT INTO wlt_refund_operation_receipts
-			(tenant_id,operation,request_path,idempotency_key,request_hash,actor_id,reason,correlation_id,request_body)
+			(operator_context_id,operation,request_path,idempotency_key,request_hash,actor_id,reason,correlation_id,request_body)
 		VALUES($1,$2,$3,$4,$5,NULLIF($6,''),NULLIF($7,''),NULLIF($8,''),$9)
 		ON CONFLICT DO NOTHING
 		RETURNING id::text,request_hash,status,response_status,response_content_type,response_body`,
@@ -125,7 +125,7 @@ func claimRefundMutationReceipt(
 	err = tx.QueryRow(`
 		SELECT id::text,request_hash,status,response_status,response_content_type,response_body
 		FROM wlt_refund_operation_receipts
-		WHERE tenant_id=$1 AND operation=$2 AND request_path=$3 AND idempotency_key=$4
+		WHERE operator_context_id=$1 AND operation=$2 AND request_path=$3 AND idempotency_key=$4
 		FOR UPDATE`, operatorContextID, operation, path, idempotencyKey,
 	).Scan(&receipt.ID, &receipt.RequestHash, &receipt.Status, &receipt.ResponseStatus, &receipt.ResponseContentType, &receipt.ResponseBody)
 	if err != nil {
@@ -203,7 +203,7 @@ func RequireMutationIdempotency(db *sql.DB, operation string, next http.HandlerF
 		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 		idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 		if operatorContextID == "" || idempotencyKey == "" {
-			shared.SendError(w, http.StatusBadRequest, "REFUND_IDEMPOTENCY_REQUIRED", "refund tenant and Idempotency-Key are required")
+			shared.SendError(w, http.StatusBadRequest, "REFUND_IDEMPOTENCY_REQUIRED", "refund OperatorContext and Idempotency-Key are required")
 			return
 		}
 

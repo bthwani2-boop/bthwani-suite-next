@@ -28,7 +28,7 @@ func HandleRefreshProviderStatus(db *sql.DB) http.HandlerFunc {
 		}
 		trustedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 		if trustedOperatorContextID == "" || trustedOperatorContextID != session.OperatorContextID {
-			shared.SendError(w, http.StatusForbidden, "TENANT_MISMATCH", "payment session does not belong to the trusted tenant")
+			shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", "payment session does not belong to the trusted OperatorContext")
 			return
 		}
 		if session.Status == "captured" || session.Status == "failed" || session.Status == "expired" {

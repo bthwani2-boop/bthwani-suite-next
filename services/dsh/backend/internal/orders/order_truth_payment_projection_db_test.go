@@ -49,7 +49,7 @@ func TestJRN011PaymentProjectionDBIntegration(t *testing.T) {
 	if err := db.QueryRow(`
 		SELECT payment_status_projection, version, payment_projection_source_updated_at
 		FROM dsh_orders
-		WHERE id=$1::uuid AND tenant_id=$2`, created.ID, fixture.OperatorContextID,
+		WHERE id=$1::uuid AND operator_context_id=$2`, created.ID, fixture.OperatorContextID,
 	).Scan(&projection, &version, &sourceUpdatedAt); err != nil {
 		t.Fatalf("read captured projection: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestJRN011PaymentProjectionDBIntegration(t *testing.T) {
 	if err := db.QueryRow(`
 		SELECT COUNT(*)
 		FROM dsh_order_status_events
-		WHERE tenant_id=$1 AND order_id=$2::uuid
+		WHERE operator_context_id=$1 AND order_id=$2::uuid
 		  AND event_type='order.payment_projection_updated'`, fixture.OperatorContextID, created.ID,
 	).Scan(&projectionEventCount); err != nil {
 		t.Fatalf("count captured projection events: %v", err)
@@ -88,7 +88,7 @@ func TestJRN011PaymentProjectionDBIntegration(t *testing.T) {
 	if err := db.QueryRow(`
 		SELECT payment_status_projection, version, payment_projection_source_updated_at
 		FROM dsh_orders
-		WHERE id=$1::uuid AND tenant_id=$2`, created.ID, fixture.OperatorContextID,
+		WHERE id=$1::uuid AND operator_context_id=$2`, created.ID, fixture.OperatorContextID,
 	).Scan(&projectionAfterStale, &versionAfterStale, &sourceAfterStale); err != nil {
 		t.Fatalf("read projection after stale source: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestJRN011PaymentProjectionDBIntegration(t *testing.T) {
 	if err := db.QueryRow(`
 		SELECT COUNT(*)
 		FROM dsh_order_status_events
-		WHERE tenant_id=$1 AND order_id=$2::uuid
+		WHERE operator_context_id=$1 AND order_id=$2::uuid
 		  AND event_type='order.payment_projection_updated'`, fixture.OperatorContextID, created.ID,
 	).Scan(&projectionEventCount); err != nil {
 		t.Fatalf("recount projection events: %v", err)

@@ -4,7 +4,7 @@
  * BTHWANI_DEEP_TOOLS_GOVERNANCE_V5_AND_OSS_TOOLCHAIN_ACTIVATION — OSS Policy Compliance Gate
  *
  * Ensures all tools in the catalog are Open Source or Free (oss_free: true).
- * Strictly forbids paid SaaS/proprietary additions.
+ * Strictly forbids paid partner_platform/proprietary additions.
  *
  * FAIL: any tool with oss_free !== true is found in the registry.
  */
@@ -26,7 +26,7 @@ if (fs.existsSync(catalogPath)) {
       violations.push({
         file: "tools/toolchain/tool-catalog.v5.json",
         line: 0,
-        message: `PROPRIETARY_TOOL_FORBIDDEN: Tool '${entry.id}' is not marked as open source/free. Paid/SaaS tools are prohibited.`,
+        message: `PROPRIETARY_TOOL_FORBIDDEN: Tool '${entry.id}' is not marked as open source/free. Paid/partner_platform tools are prohibited.`,
       });
     }
   }

@@ -98,7 +98,7 @@ export async function fetchOwnRepresentativeLedger(
 }
 
 /**
- * Operator-only read boundary. The backend resolves the operator tenant from
+ * Operator-only read boundary. The backend resolves the operator OperatorContext from
  * the authenticated session and rejects unsupported actor types and IDs.
  */
 export async function fetchRepresentativeWallet(

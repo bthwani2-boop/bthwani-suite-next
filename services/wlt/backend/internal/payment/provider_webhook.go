@@ -99,7 +99,7 @@ func HandlePaymentProviderWebhook(db *sql.DB) http.HandlerFunc {
 		}
 		expectedType := providerEventTypeForStatus(envelope.Status)
 		if envelope.EventID == "" || envelope.OperatorContextID == "" || envelope.PaymentSessionID == "" || expectedType == "" || envelope.Type != expectedType {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_WEBHOOK", "provider webhook identity type status tenant and paymentSessionId must be valid")
+			shared.SendError(w, http.StatusBadRequest, "INVALID_WEBHOOK", "provider webhook identity type status OperatorContext and paymentSessionId must be valid")
 			return
 		}
 		payloadHashBytes := sha256.Sum256(body)
@@ -131,8 +131,8 @@ func HandlePaymentProviderWebhook(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "PROVIDER_EVENT_REPLAY_CONFLICT", err.Error())
 			return
 		}
-		if errors.Is(err, ErrProviderTenantMismatch) {
-			shared.SendError(w, http.StatusConflict, "PROVIDER_TENANT_MISMATCH", err.Error())
+		if errors.Is(err, ErrProviderOperatorContextMismatch) {
+			shared.SendError(w, http.StatusConflict, "PROVIDER_OperatorContext_MISMATCH", err.Error())
 			return
 		}
 		if errors.Is(err, ErrIllegalProviderTransition) {

@@ -25,7 +25,7 @@ const boundaryInterceptedRoutes = new Map([
     new Map([
       [
         "POST /auth/otp/request",
-        "intercepted by SaaSOtpBoundary (core/identity/backend/internal/http/saas_otp_boundary.go) before the router",
+        "intercepted by partner_platformOtpBoundary (core/identity/backend/internal/http/partner_platform_otp_boundary.go) before the router",
       ],
     ]),
   ],

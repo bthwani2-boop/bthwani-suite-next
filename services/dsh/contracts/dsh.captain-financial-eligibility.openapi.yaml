@@ -3,7 +3,7 @@ x-bthwani-owner: services/dsh
 info:
   title: BThwani DSH Captain Financial Eligibility API
   version: 1.0.1
-  description: Tenant-scoped WLT wallet readback and DSH-owned dispatch balance policy. No ledger or balance truth is stored in DSH.
+  description: OperatorContext-scoped WLT wallet readback and DSH-owned dispatch balance policy. No ledger or balance truth is stored in DSH.
 servers:
   - url: /api/dsh
 security:

@@ -44,7 +44,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	t.Helper()
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	operatorContextID := "tenant-pickup-test-" + suffix
+	operatorContextID := "OperatorContext-pickup-test-" + suffix
 	f := fixture{
 		partnerID: "pk-test-partner-" + suffix,
 		storeID:   "pk-test-store-" + suffix,
@@ -77,7 +77,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 
 	var checkoutIntentID string
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_checkout_intents (tenant_id, client_id, cart_id, store_id, state, fulfillment_mode, payment_method, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash)
+		INSERT INTO dsh_checkout_intents (operator_context_id, client_id, cart_id, store_id, state, fulfillment_mode, payment_method, subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash)
 		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'pickup', 'wallet',
 		        1000, 0, 0, 1000, 'YER', repeat('d', 64))
 		RETURNING id::text`,
@@ -87,7 +87,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	}
 
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status)
+		INSERT INTO dsh_orders (operator_context_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status)
 		VALUES ($1, $2::uuid, $3, 'pickup', $4, $5)
 		RETURNING id::text`,
 		operatorContextID, checkoutIntentID, f.storeID, f.clientID, orderStatus,

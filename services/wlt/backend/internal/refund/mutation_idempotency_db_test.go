@@ -28,7 +28,7 @@ func TestGovernedRefundRuntimeMutationIdempotencyReplayAndConflict(t *testing.T)
 
 	first := httptest.NewRecorder()
 	firstRequest := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"operatorId":"checker-1","reason":"independent approval"}`))
-	firstRequest.Header.Set("X-Operator-Context-ID", "tenant-dev-001")
+	firstRequest.Header.Set("X-Operator-Context-ID", "OperatorContext-dev-001")
 	firstRequest.Header.Set("Idempotency-Key", key)
 	firstRequest.Header.Set("X-Correlation-ID", "corr-mutation-replay")
 	handler(first, firstRequest)
@@ -41,7 +41,7 @@ func TestGovernedRefundRuntimeMutationIdempotencyReplayAndConflict(t *testing.T)
 
 	second := httptest.NewRecorder()
 	secondRequest := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{ "reason": "independent approval", "operatorId": "checker-1" }`))
-	secondRequest.Header.Set("X-Operator-Context-ID", "tenant-dev-001")
+	secondRequest.Header.Set("X-Operator-Context-ID", "OperatorContext-dev-001")
 	secondRequest.Header.Set("Idempotency-Key", key)
 	secondRequest.Header.Set("X-Correlation-ID", "corr-mutation-replay-retry")
 	handler(second, secondRequest)
@@ -57,7 +57,7 @@ func TestGovernedRefundRuntimeMutationIdempotencyReplayAndConflict(t *testing.T)
 
 	changed := httptest.NewRecorder()
 	changedRequest := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"operatorId":"checker-1","reason":"changed approval reason"}`))
-	changedRequest.Header.Set("X-Operator-Context-ID", "tenant-dev-001")
+	changedRequest.Header.Set("X-Operator-Context-ID", "OperatorContext-dev-001")
 	changedRequest.Header.Set("Idempotency-Key", key)
 	changedRequest.Header.Set("X-Correlation-ID", "corr-mutation-conflict")
 	handler(changed, changedRequest)
@@ -76,7 +76,7 @@ func TestGovernedRefundRuntimeMutationIdempotencyReplayAndConflict(t *testing.T)
 	if err := db.QueryRow(`
 		SELECT status,COALESCE(actor_id,''),COALESCE(reason,''),COALESCE(correlation_id,''),response_status
 		FROM wlt_refund_operation_receipts
-		WHERE tenant_id='tenant-dev-001' AND operation='approve' AND request_path=$1 AND idempotency_key=$2`, path, key,
+		WHERE operator_context_id='OperatorContext-dev-001' AND operation='approve' AND request_path=$1 AND idempotency_key=$2`, path, key,
 	).Scan(&status, &requestActor, &requestReason, &correlationID, &responseStatus); err != nil {
 		t.Fatalf("read mutation receipt evidence: %v", err)
 	}

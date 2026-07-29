@@ -9,7 +9,7 @@ BEGIN
   SELECT COUNT(*)
   INTO eligible_count
   FROM dsh_stores
-  WHERE tenant_id = 'local-dsh'
+  WHERE operator_context_id = 'local-dsh'
     AND is_visible = true
     AND status = 'active'
     AND serviceability_status IN ('serviceable', 'limited')
@@ -31,7 +31,7 @@ BEGIN
   SELECT COUNT(*)
   INTO incomplete_count
   FROM dsh_stores
-  WHERE tenant_id = 'local-dsh'
+  WHERE operator_context_id = 'local-dsh'
     AND status = 'active'
     AND is_visible = true
     AND partner_readiness = 'ready'

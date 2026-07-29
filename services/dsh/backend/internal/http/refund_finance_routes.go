@@ -4,7 +4,7 @@ import "net/http"
 
 // registerRefundFinanceRoutes keeps financial bounded registrars composed from
 // one extension point. WLT remains the financial owner; DSH enforces actor,
-// tenant and privacy boundaries before proxying canonical commands or reads.
+// OperatorContext and privacy boundaries before proxying canonical commands or reads.
 func registerRefundFinanceRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("POST /dsh/control-panel/finance/refunds", s.handleCreateFinanceRefund)
 	mux.HandleFunc("POST /dsh/control-panel/finance/refunds/{refundId}/approve", s.handleApproveFinanceRefund)

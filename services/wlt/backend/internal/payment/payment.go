@@ -109,7 +109,7 @@ func getSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 
 const selectCols = `
 	SELECT id, checkout_intent_id, special_request_id,
-	       tenant_id,
+	       operator_context_id,
 	       client_id, store_id, payment_method,
 	       status, provider_reference, amount_minor_units, currency,
 	       captured_at, created_at, updated_at
@@ -224,7 +224,7 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financ
 		SET status = 'authorized', provider_reference = $2, updated_at = NOW()
 		WHERE id = $1 AND status = 'authorization_pending'
 		RETURNING id, checkout_intent_id, special_request_id,
-		          tenant_id,
+		          operator_context_id,
 		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
@@ -414,7 +414,7 @@ func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*
 		SET status = 'captured', provider_reference = $2, captured_at = NOW(), updated_at = NOW()
 		WHERE id = $1 AND status = 'capture_pending'
 		RETURNING id, checkout_intent_id, special_request_id,
-		          tenant_id,
+		          operator_context_id,
 		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
@@ -446,7 +446,7 @@ func MarkCodPending(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		SET status = 'cod_pending', updated_at = NOW()
 		WHERE id = $1
 		RETURNING id, checkout_intent_id, special_request_id,
-		          tenant_id,
+		          operator_context_id,
 		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
@@ -467,7 +467,7 @@ func MarkCodCollected(db *sql.DB, sessionID string) (*PaymentSession, error) {
 		SET status = 'cod_collected', captured_at = NOW(), updated_at = NOW()
 		WHERE id = $1
 		RETURNING id, checkout_intent_id, special_request_id,
-		          tenant_id,
+		          operator_context_id,
 		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`
@@ -527,7 +527,7 @@ func expireSessionTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
 		SET status = 'expired', updated_at = NOW()
 		WHERE id = $1
 		RETURNING id, checkout_intent_id, special_request_id,
-		          tenant_id,
+		          operator_context_id,
 		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`

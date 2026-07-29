@@ -5,7 +5,7 @@ info:
   description: >-
     Fulfillment-neutral collection custody routes. WLT owns amount, currency,
     custody state, ledger linkage and reconciliation. DSH supplies only trusted
-    delivery and collector identities through the authenticated tenant boundary.
+    delivery and collector identities through the authenticated OperatorContext boundary.
 x-bthwani-owner: services/wlt
 x-bthwani-capability: delivery-collections
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -22,7 +22,7 @@ paths:
   /wlt/delivery-collections:
     post:
       operationId: createWltDeliveryCollectionHandoff
-      summary: Derive tenant-local collection custody from WLT payment-session truth.
+      summary: Derive OperatorContext-local collection custody from WLT payment-session truth.
       tags: [WltDeliveryCollections]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
@@ -44,7 +44,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DeliveryCollectionHandoffResponse' }
         '201':
-          description: Tenant-local COD custody record created from WLT payment truth
+          description: OperatorContext-local COD custody record created from WLT payment truth
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DeliveryCollectionHandoffResponse' }
@@ -55,7 +55,7 @@ paths:
         '409': { $ref: '#/components/responses/CollectionConflict' }
     get:
       operationId: listWltDeliveryCollections
-      summary: List tenant-local delivery collection custody records.
+      summary: List OperatorContext-local delivery collection custody records.
       tags: [WltDeliveryCollections]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
@@ -81,7 +81,7 @@ paths:
   /wlt/delivery-collections/{codRecordId}:
     get:
       operationId: getWltDeliveryCollection
-      summary: Read one tenant-local delivery collection custody record.
+      summary: Read one OperatorContext-local delivery collection custody record.
       tags: [WltDeliveryCollections]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
@@ -220,6 +220,6 @@ components:
     CollectionFeatureNotEnabled:
       description: FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true
     CollectionNotFound:
-      description: Delivery collection or tenant-local payment session not found
+      description: Delivery collection or OperatorContext-local payment session not found
     CollectionConflict:
       description: Invalid custody transition, replay conflict, or actor mismatch

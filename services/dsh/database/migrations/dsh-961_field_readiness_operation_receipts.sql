@@ -1,5 +1,5 @@
 -- DSH-961 / JRN-024: append-only receipts for replayable platform-workforce field mutations.
--- The field actor is globally owned by core/workforce. Merchant tenant context belongs
+-- The field actor is globally owned by core/workforce. Merchant OperatorContext context belongs
 -- to the target store/partner resource and is not part of the actor's mutation identity.
 
 BEGIN;

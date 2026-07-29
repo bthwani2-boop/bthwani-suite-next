@@ -50,7 +50,7 @@ func (s *protectedStoreServer) refreshCaptainFinancialEligibility(
 	if err != nil {
 		return dispatch.CaptainFinancialEligibilitySnapshot{}, err
 	}
-	status, body, err := s.wlt.FinanceReadWalletWithTenant(
+	status, body, err := s.wlt.FinanceReadWalletWithOperatorContext(
 		r.Context(),
 		"captain",
 		captainID,
@@ -199,7 +199,7 @@ func (s *protectedStoreServer) handleRefreshOwnCaptainFinancialEligibility(w htt
 		return
 	}
 	if strings.TrimSpace(actor.OperatorContextID) == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "captain tenant context is required")
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "captain OperatorContext context is required")
 		return
 	}
 	snapshot, err := s.refreshCaptainFinancialEligibility(r, actor.OperatorContextID, actor.ID)
@@ -216,7 +216,7 @@ func (s *protectedStoreServer) handleGetOwnCaptainFinancialEligibility(w http.Re
 		return
 	}
 	if strings.TrimSpace(actor.OperatorContextID) == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "captain tenant context is required")
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "captain OperatorContext context is required")
 		return
 	}
 	snapshot, err := dispatch.GetCaptainFinancialEligibilitySnapshot(r.Context(), s.db, actor.OperatorContextID, actor.ID)

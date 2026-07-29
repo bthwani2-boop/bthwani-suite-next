@@ -478,7 +478,6 @@ export interface components {
             rollbackState: components["schemas"]["PlatformControlState"];
             servicesState: components["schemas"]["PlatformControlState"];
             evidence: string[];
-            saas: components["schemas"]["PlatformSaasRuntimeStatus"];
         };
         PlatformEffectiveRuntimeConfig: {
             revision: string;
@@ -728,15 +727,6 @@ export interface components {
         PlatformRolloutError: {
             code: string;
             message: string;
-        };
-        PlatformSaasRuntimeStatus: {
-            /** @enum {string} */
-            mode: "active" | "deferred";
-            /** @enum {string} */
-            commercialActivationState: "blocked" | "eligible" | "authorized" | "active";
-            productionDeploymentAuthorized: boolean;
-            defaultOperatorContextId: string;
-            runtimeEnabled: boolean;
         };
     };
     responses: {

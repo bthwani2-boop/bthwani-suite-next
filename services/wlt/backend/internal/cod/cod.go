@@ -256,9 +256,9 @@ func GetCodRecord(db *sql.DB, codRecordID string) (*CodRecord, error) {
 	return c, err
 }
 
-// ListCodRecords requires a operatorContextID: the tenant_id predicate is mandatory
+// ListCodRecords requires a operatorContextID: the operator_context_id predicate is mandatory
 // and is always ANDed onto whichever caller-supplied filter is used, so a
-// caller can never see another tenant's COD records via this query.
+// caller can never see another OperatorContext's COD records via this query.
 func ListCodRecords(db *sql.DB, operatorContextID, captainID, partnerID, orderID string) ([]*CodRecord, error) {
 	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID == "" {
 		return nil, fmt.Errorf("operatorContextId is required")
@@ -266,13 +266,13 @@ func ListCodRecords(db *sql.DB, operatorContextID, captainID, partnerID, orderID
 	var q string
 	var arg string
 	if captainID = strings.TrimSpace(captainID); captainID != "" {
-		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE tenant_id = $1 AND collector_type='captain' AND collector_id = $2 ORDER BY created_at DESC`
+		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE operator_context_id = $1 AND collector_type='captain' AND collector_id = $2 ORDER BY created_at DESC`
 		arg = captainID
 	} else if partnerID = strings.TrimSpace(partnerID); partnerID != "" {
-		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE tenant_id = $1 AND partner_id = $2 ORDER BY created_at DESC`
+		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE operator_context_id = $1 AND partner_id = $2 ORDER BY created_at DESC`
 		arg = partnerID
 	} else if orderID = strings.TrimSpace(orderID); orderID != "" {
-		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE tenant_id = $1 AND order_id = $2 ORDER BY created_at DESC`
+		q = `SELECT ` + codCols + ` FROM wlt_cod_records WHERE operator_context_id = $1 AND order_id = $2 ORDER BY created_at DESC`
 		arg = orderID
 	} else {
 		return nil, fmt.Errorf("captainId, partnerId, or orderId query parameter is required")

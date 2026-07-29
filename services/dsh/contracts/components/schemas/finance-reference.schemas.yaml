@@ -14,7 +14,7 @@ WltPaymentCallbackEnvelope:
     specialRequestId: { type: string }
     operatorContextId:
       type: string
-      description: Trusted tenant context for special-request sourced payment sessions.
+      description: Trusted OperatorContext context for special-request sourced payment sessions.
     paymentSessionId: { type: string }
     status:
       type: string

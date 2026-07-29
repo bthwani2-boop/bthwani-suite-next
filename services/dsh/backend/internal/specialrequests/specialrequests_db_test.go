@@ -267,9 +267,9 @@ func TestSpecialRequestsAuditAtomicityDBIntegration(t *testing.T) {
 			t.Fatalf("begin failed: %v", err)
 		}
 		status := StatusUnderReview
-		if _, err := repo.UpdateInTenantTx(ctx, tx, "", req.ID, req.Version, UpdateInput{Status: &status}); err != nil {
+		if _, err := repo.UpdateInOperatorContextTx(ctx, tx, "", req.ID, req.Version, UpdateInput{Status: &status}); err != nil {
 			_ = tx.Rollback()
-			t.Fatalf("UpdateInTenantTx failed: %v", err)
+			t.Fatalf("UpdateInOperatorContextTx failed: %v", err)
 		}
 		// entity_id is UUID NOT NULL (dsh-054): a malformed value forces
 		// exactly the kind of audit-write failure service.go now guards
@@ -309,10 +309,10 @@ func TestSpecialRequestsAuditAtomicityDBIntegration(t *testing.T) {
 			t.Fatalf("begin failed: %v", err)
 		}
 		status := StatusUnderReview
-		updated, err := repo.UpdateInTenantTx(ctx, tx, "", req.ID, req.Version, UpdateInput{Status: &status})
+		updated, err := repo.UpdateInOperatorContextTx(ctx, tx, "", req.ID, req.Version, UpdateInput{Status: &status})
 		if err != nil {
 			_ = tx.Rollback()
-			t.Fatalf("UpdateInTenantTx failed: %v", err)
+			t.Fatalf("UpdateInOperatorContextTx failed: %v", err)
 		}
 		if err := WriteAuditEvent(tx, req.ID, "operator", "operator", "transition", "", "", nil, nil); err != nil {
 			_ = tx.Rollback()
@@ -388,25 +388,25 @@ func TestSpecialRequestsListAndGetOwnershipDBIntegration(t *testing.T) {
 		}
 	})
 
-	t.Run("tenant scope masks same-client request from another tenant", func(t *testing.T) {
-		tenantA := "tenant-a-" + testSuffix()
-		tenantB := "tenant-b-" + testSuffix()
+	t.Run("OperatorContext scope masks same-client request from another OperatorContext", func(t *testing.T) {
+		OperatorContextA := "OperatorContext-a-" + testSuffix()
+		OperatorContextB := "OperatorContext-b-" + testSuffix()
 		clientID := newClientID(t)
-		req, err := svc.CreateInTenant(ctx, tenantA, clientID, validSheinInput(clientID))
+		req, err := svc.CreateInOperatorContext(ctx, OperatorContextA, clientID, validSheinInput(clientID))
 		if err != nil {
-			t.Fatalf("create for tenant A failed: %v", err)
+			t.Fatalf("create for OperatorContext A failed: %v", err)
 		}
 		cleanupRequest(t, db, req.ID)
 
-		if _, err := svc.GetForClientInTenant(ctx, tenantB, req.ID, clientID); !errors.Is(err, ErrNotFound) {
-			t.Fatalf("expected cross-tenant GetForClientInTenant to mask as ErrNotFound, got %v", err)
+		if _, err := svc.GetForClientInOperatorContext(ctx, OperatorContextB, req.ID, clientID); !errors.Is(err, ErrNotFound) {
+			t.Fatalf("expected cross-OperatorContext GetForClientInOperatorContext to mask as ErrNotFound, got %v", err)
 		}
-		items, total, err := svc.ListForClientInTenant(ctx, tenantB, clientID, 50, 0)
+		items, total, err := svc.ListForClientInOperatorContext(ctx, OperatorContextB, clientID, 50, 0)
 		if err != nil {
-			t.Fatalf("cross-tenant ListForClientInTenant failed: %v", err)
+			t.Fatalf("cross-OperatorContext ListForClientInOperatorContext failed: %v", err)
 		}
 		if total != 0 || len(items) != 0 {
-			t.Fatalf("expected tenant B list to be empty, got total=%d len=%d", total, len(items))
+			t.Fatalf("expected OperatorContext B list to be empty, got total=%d len=%d", total, len(items))
 		}
 	})
 }

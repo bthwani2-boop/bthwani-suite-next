@@ -100,33 +100,21 @@ func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFu
 	})
 }
 
-func configuredOperatorContextID() (string, error) {
-	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-	if operatorContextID == "" {
-		return "", errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required")
-	}
-	return operatorContextID, nil
-}
-
 func enforceOperatorContext(w http.ResponseWriter, r *http.Request, identity auth.Identity) bool {
-	configuredContextID, err := configuredOperatorContextID()
-	if err != nil {
-		sendError(w, http.StatusServiceUnavailable, "OPERATOR_CONTEXT_CONFIG_INVALID", err.Error())
-		return false
-	}
-
+	defaultOperatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
 	identityOperatorContextID := strings.TrimSpace(identity.OperatorContextID)
+
 	if identityOperatorContextID == "" {
-		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "authenticated identity has no trusted operator context")
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "authenticated identity has no trusted tenant context")
 		return false
 	}
-	if identityOperatorContextID != configuredContextID {
-		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "identity operator context does not match the platform context")
+	if defaultOperatorContextID != "" && identityOperatorContextID != defaultOperatorContextID {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "identity tenant does not match the active runtime tenant")
 		return false
 	}
 	requestedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 	if requestedOperatorContextID != "" && requestedOperatorContextID != identityOperatorContextID {
-		sendError(w, http.StatusForbidden, "UNTRUSTED_OPERATOR_CONTEXT", "client-supplied operator context does not match the authenticated identity")
+		sendError(w, http.StatusForbidden, "UNTRUSTED_OPERATOR_CONTEXT", "client-supplied tenant context does not match the authenticated identity")
 		return false
 	}
 	return true
@@ -152,7 +140,12 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 
 func (s *server) runtimeConfig(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	_ = identity
-	sendJSON(w, http.StatusOK, s.service.RuntimeSnapshot(r.Context()))
+	response := struct {
+		platformcontrol.RuntimeSnapshot
+	}{
+		RuntimeSnapshot: s.service.RuntimeSnapshot(r.Context()),
+	}
+	sendJSON(w, http.StatusOK, response)
 }
 
 func (s *server) effectiveRuntimeConfig(w http.ResponseWriter, r *http.Request, identity auth.Identity) {

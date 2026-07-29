@@ -77,16 +77,16 @@ func validateCanonicalDestinationInput(input *governedDestinationInput) error {
 
 func scanCanonicalDestination(tx *sql.Tx, operatorContextID, destinationID string) (*governedDestinationRef, error) {
 	return scanGovernedDestination(tx.QueryRow(`SELECT `+governedDestinationReturning+`
-		FROM wlt_payout_destinations WHERE tenant_id=$1 AND id=$2`, operatorContextID, destinationID))
+		FROM wlt_payout_destinations WHERE operator_context_id=$1 AND id=$2`, operatorContextID, destinationID))
 }
 
 // HandleUpsertCanonicalPayoutDestination is the runtime write boundary for
-// typed payout destinations. Idempotency identity is tenant-local, request
+// typed payout destinations. Idempotency identity is OperatorContext-local, request
 // fingerprints include the typed owner, and replay can never read another
-// tenant's encrypted destination.
+// OperatorContext's encrypted destination.
 func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := requirePayoutTenant(w, r)
+		operatorContextID, ok := requirePayoutOperatorContext(w, r)
 		if !ok {
 			return
 		}
@@ -135,7 +135,7 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 
 		var previousHash, previousDestinationID string
 		err = tx.QueryRowContext(r.Context(), `SELECT request_hash,payout_destination_id
-			FROM wlt_payout_destination_requests WHERE tenant_id=$1 AND idempotency_key=$2`, operatorContextID, idempotencyKey).Scan(&previousHash, &previousDestinationID)
+			FROM wlt_payout_destination_requests WHERE operator_context_id=$1 AND idempotency_key=$2`, operatorContextID, idempotencyKey).Scan(&previousHash, &previousDestinationID)
 		if err == nil {
 			if previousHash != requestHash {
 				shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used with different payout destination inputs")
@@ -160,7 +160,7 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 
 		if _, err := tx.ExecContext(r.Context(), `UPDATE wlt_payout_destinations
 			SET active=false,updated_at=now()
-			WHERE tenant_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true`, operatorContextID, actorType, actorID); err != nil {
+			WHERE operator_context_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true`, operatorContextID, actorType, actorID); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to retire current payout destination")
 			return
 		}
@@ -170,7 +170,7 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 		}
 		destination, err := scanGovernedDestination(tx.QueryRowContext(r.Context(), `
 			INSERT INTO wlt_payout_destinations
-				(tenant_id,partner_id,owner_actor_id,owner_actor_type,beneficiary_name,bank_name,bank_branch,
+				(operator_context_id,partner_id,owner_actor_id,owner_actor_type,beneficiary_name,bank_name,bank_branch,
 				 account_number_encrypted,iban_encrypted,payout_mobile_number_encrypted,
 				 settlement_preference,bank_account_holder_matches_owner,bank_notes,
 				 masked_account_number,masked_iban,masked_mobile_number,active,created_by_actor_id)
@@ -186,7 +186,7 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		if _, err := tx.ExecContext(r.Context(), `INSERT INTO wlt_payout_destination_requests
-			(tenant_id,partner_id,idempotency_key,request_hash,payout_destination_id,correlation_id)
+			(operator_context_id,partner_id,idempotency_key,request_hash,payout_destination_id,correlation_id)
 			VALUES($1,$2,$3,$4,$5,$6)`, operatorContextID, actorID, idempotencyKey, requestHash, destination.ID, correlationID); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to bind payout destination request identity")
 			return

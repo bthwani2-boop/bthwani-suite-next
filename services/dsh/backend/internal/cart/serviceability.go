@@ -24,7 +24,7 @@ func (err *StoreConflictError) Error() string {
 func (err *StoreConflictError) Unwrap() error { return ErrStoreConflict }
 
 // GetOrCreateSingleStoreCart enforces the Product Truth decision that a client
-// may own at most one active cart across the whole tenant. The advisory lock and
+// may own at most one active cart across the whole OperatorContext. The advisory lock and
 // the database partial unique index close both application and concurrent-write
 // paths. Switching stores is explicit; the server never silently destroys a
 // different store's active cart.

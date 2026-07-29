@@ -55,7 +55,7 @@ function Invoke-WltJson {
     try {
       $responseBody = $_.ErrorDetails.Message
     } catch { }
-    throw "WLT request failed: method=$Method path=$Path tenant=$OperatorContextId status=$statusCode body=$responseBody"
+    throw "WLT request failed: method=$Method path=$Path OperatorContext=$OperatorContextId status=$statusCode body=$responseBody"
   }
 }
 
@@ -87,7 +87,7 @@ if ($capture.paymentSession.currency -ne "YER") { throw "WLT capture did not ret
 
 $readback = Invoke-WltJson -Method "GET" -Path "/wlt/payment-sessions/$sessionId"
 if ($readback.paymentSession.status -ne "captured") { throw "WLT readback did not preserve captured status" }
-if ($readback.paymentSession.operatorContextId -ne $OperatorContextId) { throw "WLT readback did not preserve tenant identity" }
+if ($readback.paymentSession.operatorContextId -ne $OperatorContextId) { throw "WLT readback did not preserve OperatorContext identity" }
 
 $refund = Invoke-WltJson -Method "POST" -Path "/wlt/refunds" -OperationIdempotencyKey "$IdempotencyKey-refund-create" -Body @{
   operatorContextId = $OperatorContextId

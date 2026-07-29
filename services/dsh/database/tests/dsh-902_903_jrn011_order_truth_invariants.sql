@@ -18,27 +18,27 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE indexname='uq_dsh_orders_tenant_order_number'
-      AND indexdef ILIKE '%UNIQUE%tenant_id%order_number%'
-  ) THEN missing := array_append(missing, 'tenant order-number uniqueness'); END IF;
+    WHERE indexname='uq_dsh_orders_OperatorContext_order_number'
+      AND indexdef ILIKE '%UNIQUE%operator_context_id%order_number%'
+  ) THEN missing := array_append(missing, 'OperatorContext order-number uniqueness'); END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE indexname='uq_dsh_orders_tenant_correlation'
-      AND indexdef ILIKE '%UNIQUE%tenant_id%correlation_id%'
-  ) THEN missing := array_append(missing, 'tenant correlation uniqueness'); END IF;
+    WHERE indexname='uq_dsh_orders_OperatorContext_correlation'
+      AND indexdef ILIKE '%UNIQUE%operator_context_id%correlation_id%'
+  ) THEN missing := array_append(missing, 'OperatorContext correlation uniqueness'); END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
     WHERE indexname='dsh_order_create_idempotency_pkey'
-      AND indexdef ILIKE '%tenant_id%client_id%idempotency_key%'
-  ) THEN missing := array_append(missing, 'tenant/client idempotency key'); END IF;
+      AND indexdef ILIKE '%operator_context_id%client_id%idempotency_key%'
+  ) THEN missing := array_append(missing, 'OperatorContext/client idempotency key'); END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE indexname='dsh_order_create_idempotency_tenant_id_checkout_intent_id_key'
-      AND indexdef ILIKE '%tenant_id%checkout_intent_id%'
-  ) THEN missing := array_append(missing, 'one order attempt per tenant checkout'); END IF;
+    WHERE indexname='dsh_order_create_idempotency_operator_context_id_checkout_intent_id_key'
+      AND indexdef ILIKE '%operator_context_id%checkout_intent_id%'
+  ) THEN missing := array_append(missing, 'one order attempt per OperatorContext checkout'); END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_trigger
@@ -52,8 +52,8 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_name='dsh_order_status_events' AND column_name='tenant_id' AND is_nullable='NO'
-  ) THEN missing := array_append(missing, 'tenant-scoped events'); END IF;
+    WHERE table_name='dsh_order_status_events' AND column_name='operator_context_id' AND is_nullable='NO'
+  ) THEN missing := array_append(missing, 'OperatorContext-scoped events'); END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes

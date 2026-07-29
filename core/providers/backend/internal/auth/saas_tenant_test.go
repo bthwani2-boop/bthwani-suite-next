@@ -23,7 +23,6 @@ func TestProvidersAuthAcceptsIdentityTenant(t *testing.T) {
 }
 
 func TestProvidersAuthAcceptsSessionTenantInsteadOfProcessDefault(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "tenant-main")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{
@@ -52,7 +51,6 @@ func TestProvidersAuthRejectsSessionWithoutTenant(t *testing.T) {
 }
 
 func TestProvidersAuthDoesNotDependOnProcessTenantConfiguration(t *testing.T) {
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{

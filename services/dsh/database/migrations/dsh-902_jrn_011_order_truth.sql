@@ -35,14 +35,14 @@ ALTER TABLE dsh_orders
   ALTER COLUMN order_number SET NOT NULL,
   ALTER COLUMN correlation_id SET NOT NULL;
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_orders_tenant_order_number
-  ON dsh_orders(tenant_id, order_number);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_orders_tenant_correlation
-  ON dsh_orders(tenant_id, correlation_id);
-CREATE INDEX IF NOT EXISTS idx_dsh_orders_tenant_client_created
-  ON dsh_orders(tenant_id, client_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_dsh_orders_tenant_store_created
-  ON dsh_orders(tenant_id, store_id, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_orders_OperatorContext_order_number
+  ON dsh_orders(operator_context_id, order_number);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_orders_OperatorContext_correlation
+  ON dsh_orders(operator_context_id, correlation_id);
+CREATE INDEX IF NOT EXISTS idx_dsh_orders_OperatorContext_client_created
+  ON dsh_orders(operator_context_id, client_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_dsh_orders_OperatorContext_store_created
+  ON dsh_orders(operator_context_id, store_id, created_at DESC);
 
 ALTER TABLE dsh_order_items
   ADD COLUMN IF NOT EXISTS item_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -60,7 +60,7 @@ SET item_snapshot = CASE WHEN item_snapshot = '{}'::jsonb THEN jsonb_build_objec
       ELSE line_total_minor_units END;
 
 ALTER TABLE dsh_order_status_events
-  ADD COLUMN IF NOT EXISTS tenant_id TEXT,
+  ADD COLUMN IF NOT EXISTS operator_context_id TEXT,
   ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '',
   ADD COLUMN IF NOT EXISTS event_type TEXT NOT NULL DEFAULT 'order.status_changed',
   ADD COLUMN IF NOT EXISTS correlation_id TEXT NOT NULL DEFAULT '',
@@ -69,20 +69,20 @@ ALTER TABLE dsh_order_status_events
   ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 UPDATE dsh_order_status_events e
-SET tenant_id = o.tenant_id,
+SET operator_context_id = o.operator_context_id,
     correlation_id = CASE WHEN e.correlation_id = '' THEN o.correlation_id ELSE e.correlation_id END,
     event_type = CASE WHEN e.from_status = '' AND e.to_status = 'pending' THEN 'order.created' ELSE e.event_type END
 FROM dsh_orders o
-WHERE o.id = e.order_id AND e.tenant_id IS NULL;
+WHERE o.id = e.order_id AND e.operator_context_id IS NULL;
 
-ALTER TABLE dsh_order_status_events ALTER COLUMN tenant_id SET NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_dsh_order_events_tenant_order_created
-  ON dsh_order_status_events(tenant_id, order_id, created_at, id);
+ALTER TABLE dsh_order_status_events ALTER COLUMN operator_context_id SET NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_dsh_order_events_OperatorContext_order_created
+  ON dsh_order_status_events(operator_context_id, order_id, created_at, id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_order_events_order_version_type
   ON dsh_order_status_events(order_id, order_version, event_type);
 
 CREATE TABLE IF NOT EXISTS dsh_order_create_idempotency (
-  tenant_id TEXT NOT NULL,
+  operator_context_id TEXT NOT NULL,
   client_id TEXT NOT NULL,
   idempotency_key TEXT NOT NULL,
   checkout_intent_id UUID NOT NULL REFERENCES dsh_checkout_intents(id) ON DELETE RESTRICT,
@@ -91,13 +91,13 @@ CREATE TABLE IF NOT EXISTS dsh_order_create_idempotency (
   correlation_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   completed_at TIMESTAMPTZ,
-  PRIMARY KEY (tenant_id, client_id, idempotency_key),
-  UNIQUE (tenant_id, checkout_intent_id)
+  PRIMARY KEY (operator_context_id, client_id, idempotency_key),
+  UNIQUE (operator_context_id, checkout_intent_id)
 );
 
 CREATE TABLE IF NOT EXISTS dsh_order_event_outbox (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id TEXT NOT NULL,
+  operator_context_id TEXT NOT NULL,
   order_id UUID NOT NULL REFERENCES dsh_orders(id) ON DELETE RESTRICT,
   event_id UUID NOT NULL REFERENCES dsh_order_status_events(id) ON DELETE RESTRICT,
   event_type TEXT NOT NULL,
@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS dsh_order_event_outbox (
   published_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (tenant_id, event_id)
+  UNIQUE (operator_context_id, event_id)
 );
 CREATE INDEX IF NOT EXISTS idx_dsh_order_outbox_dispatch
   ON dsh_order_event_outbox(status, next_attempt_at, created_at)
@@ -126,9 +126,9 @@ BEGIN
          ci.wlt_payment_session_id, ci.updated_at
   INTO checkout_row
   FROM dsh_checkout_intents ci
-  WHERE ci.id = NEW.checkout_intent_id AND ci.tenant_id = NEW.tenant_id
+  WHERE ci.id = NEW.checkout_intent_id AND ci.operator_context_id = NEW.operator_context_id
   FOR SHARE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'checkout intent is outside order tenant'; END IF;
+  IF NOT FOUND THEN RAISE EXCEPTION 'checkout intent is outside order OperatorContext'; END IF;
 
   NEW.order_number := COALESCE(NULLIF(NEW.order_number, ''),
     'ORD-' || TO_CHAR(NOW() AT TIME ZONE 'UTC', 'YYMMDD') || '-' || UPPER(SUBSTRING(REPLACE(NEW.id::text, '-', '') FROM 1 FOR 8)));
@@ -155,14 +155,14 @@ FOR EACH ROW EXECUTE FUNCTION dsh_jrn011_apply_order_truth();
 CREATE OR REPLACE FUNCTION dsh_jrn011_protect_order_snapshot()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-  IF ROW(NEW.checkout_intent_id, NEW.tenant_id, NEW.store_id, NEW.client_id,
+  IF ROW(NEW.checkout_intent_id, NEW.operator_context_id, NEW.store_id, NEW.client_id,
          NEW.fulfillment_mode, NEW.order_number, NEW.correlation_id,
          NEW.delivery_address_id, NEW.delivery_address_snapshot,
          NEW.subtotal_minor_units, NEW.discount_minor_units, NEW.total_minor_units,
          NEW.currency, NEW.pricing_snapshot_hash, NEW.coupon_id,
          NEW.coupon_redemption_id, NEW.coupon_code_last4)
      IS DISTINCT FROM
-     ROW(OLD.checkout_intent_id, OLD.tenant_id, OLD.store_id, OLD.client_id,
+     ROW(OLD.checkout_intent_id, OLD.operator_context_id, OLD.store_id, OLD.client_id,
          OLD.fulfillment_mode, OLD.order_number, OLD.correlation_id,
          OLD.delivery_address_id, OLD.delivery_address_snapshot,
          OLD.subtotal_minor_units, OLD.discount_minor_units, OLD.total_minor_units,

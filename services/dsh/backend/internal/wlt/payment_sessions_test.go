@@ -9,7 +9,7 @@ import (
 )
 
 func trustedPaymentSessionContext() context.Context {
-	return WithOperatorContext(context.Background(), "tenant-main")
+	return WithOperatorContext(context.Background(), "OperatorContext-main")
 }
 
 func TestReadPaymentSessionTimelineForwardsGovernedHeaders(t *testing.T) {
@@ -26,8 +26,8 @@ func TestReadPaymentSessionTimelineForwardsGovernedHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected DSH service caller")
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "tenant-main" {
-			t.Fatalf("expected tenant-main, got %q", r.Header.Get("X-Operator-Context-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-main" {
+			t.Fatalf("expected OperatorContext-main, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		if r.Header.Get("X-Correlation-ID") != "corr-1" {
 			t.Fatalf("expected corr-1, got %q", r.Header.Get("X-Correlation-ID"))
@@ -39,7 +39,7 @@ func TestReadPaymentSessionTimelineForwardsGovernedHeaders(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	status, body, err := client.ReadPaymentSessionTimeline(trustedPaymentSessionContext(), " tenant-main ", "payment-session-1", "corr-1")
+	status, body, err := client.ReadPaymentSessionTimeline(trustedPaymentSessionContext(), " OperatorContext-main ", "payment-session-1", "corr-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -57,8 +57,8 @@ func TestRefreshPaymentSessionProviderStatusBuildsReplaySafeMutation(t *testing.
 		if r.URL.EscapedPath() != "/wlt/payment-sessions/payment-session-2/refresh-provider-status" {
 			t.Fatalf("unexpected path %q", r.URL.EscapedPath())
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "tenant-main" {
-			t.Fatalf("expected tenant-main")
+		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-main" {
+			t.Fatalf("expected OperatorContext-main")
 		}
 		if r.Header.Get("X-Correlation-ID") != "payment-session-2" {
 			t.Fatalf("empty correlation must fall back to the payment session id, got %q", r.Header.Get("X-Correlation-ID"))
@@ -79,7 +79,7 @@ func TestRefreshPaymentSessionProviderStatusBuildsReplaySafeMutation(t *testing.
 
 	client := NewClient(server.URL, "service-token")
 	for range 2 {
-		status, _, err := client.RefreshPaymentSessionProviderStatus(trustedPaymentSessionContext(), "tenant-main", "payment-session-2", "", "")
+		status, _, err := client.RefreshPaymentSessionProviderStatus(trustedPaymentSessionContext(), "OperatorContext-main", "payment-session-2", "", "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -92,9 +92,9 @@ func TestRefreshPaymentSessionProviderStatusBuildsReplaySafeMutation(t *testing.
 func TestPaymentSessionBoundaryRejectsMissingIdentity(t *testing.T) {
 	client := NewClient("https://wlt.internal", "service-token")
 	if _, _, err := client.ReadPaymentSessionTimeline(context.Background(), "", "payment-session-1", "corr"); err == nil {
-		t.Fatal("expected missing tenant to fail")
+		t.Fatal("expected missing OperatorContext to fail")
 	}
-	if _, _, err := client.RefreshPaymentSessionProviderStatus(trustedPaymentSessionContext(), "tenant-main", "", "corr", "idem"); err == nil {
+	if _, _, err := client.RefreshPaymentSessionProviderStatus(trustedPaymentSessionContext(), "OperatorContext-main", "", "corr", "idem"); err == nil {
 		t.Fatal("expected missing payment session to fail")
 	}
 }

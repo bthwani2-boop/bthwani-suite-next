@@ -1,6 +1,6 @@
 -- DSH-099: fail-closed captain financial eligibility for governed platform dispatch.
 -- WLT remains the balance and ledger owner. DSH stores only a short-lived,
--- tenant-scoped readback used to guard new governed offers and acceptance.
+-- OperatorContext-scoped readback used to guard new governed offers and acceptance.
 
 CREATE TABLE IF NOT EXISTS dsh_platform_dispatch_balance_policy (
   id                                      smallint PRIMARY KEY DEFAULT 1 CHECK (id = 1),
@@ -21,7 +21,7 @@ VALUES (1)
 ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS dsh_captain_financial_eligibility (
-  tenant_id                               text NOT NULL CHECK (btrim(tenant_id) <> ''),
+  operator_context_id                               text NOT NULL CHECK (btrim(operator_context_id) <> ''),
   captain_id                              text NOT NULL CHECK (btrim(captain_id) <> ''),
   wallet_id                               text NOT NULL CHECK (btrim(wallet_id) <> ''),
   wallet_status                           text NOT NULL CHECK (btrim(wallet_status) <> ''),
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS dsh_captain_financial_eligibility (
   snapshot_reference                      text NOT NULL CHECK (btrim(snapshot_reference) <> ''),
   checked_at                              timestamptz NOT NULL DEFAULT now(),
   expires_at                              timestamptz NOT NULL,
-  PRIMARY KEY (tenant_id, captain_id),
+  PRIMARY KEY (operator_context_id, captain_id),
   CHECK (expires_at > checked_at)
 );
 
@@ -41,7 +41,7 @@ CREATE INDEX IF NOT EXISTS dsh_captain_financial_eligibility_expiry_idx
   ON dsh_captain_financial_eligibility(expires_at, eligible);
 
 CREATE OR REPLACE FUNCTION dsh_financial_snapshot_is_eligible(
-  requested_tenant_id text,
+  requested_operator_context_id text,
   requested_captain_id text
 )
 RETURNS boolean
@@ -51,7 +51,7 @@ AS $$
   SELECT COALESCE((
     SELECT eligible AND expires_at > now()
     FROM dsh_captain_financial_eligibility
-    WHERE tenant_id = requested_tenant_id
+    WHERE operator_context_id = requested_operator_context_id
       AND captain_id = requested_captain_id
   ), false);
 $$;
@@ -72,7 +72,7 @@ BEGIN
     RETURN NEW;
   END IF;
 
-  IF dsh_financial_snapshot_is_eligible(NEW.tenant_id, NEW.captain_id) = false THEN
+  IF dsh_financial_snapshot_is_eligible(NEW.operator_context_id, NEW.captain_id) = false THEN
     RAISE EXCEPTION USING
       ERRCODE = 'P0001',
       MESSAGE = 'CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED';
@@ -89,7 +89,7 @@ DROP TRIGGER IF EXISTS trg_dsh_governed_acceptance_financial_eligibility
 DROP TRIGGER IF EXISTS trg_dsh_governed_offer_financial_eligibility
   ON dsh_assignments;
 CREATE TRIGGER trg_dsh_assignment_captain_financial_eligibility
-BEFORE INSERT OR UPDATE OF status, captain_id, tenant_id, idempotency_key
+BEFORE INSERT OR UPDATE OF status, captain_id, operator_context_id, idempotency_key
 ON dsh_assignments
 FOR EACH ROW EXECUTE FUNCTION dsh_assert_governed_assignment_financial_eligibility();
 

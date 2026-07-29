@@ -85,7 +85,7 @@ func ProcessNext(ctx context.Context, db *sql.DB, client *wlt.Client) (bool, err
 		return false, err
 	}
 	if strings.TrimSpace(event.OperatorContextID) == "" {
-		return true, recordDeliveryFailure(ctx, db, event, fmt.Errorf("partner WLT event has no tenant context"))
+		return true, recordDeliveryFailure(ctx, db, event, fmt.Errorf("partner WLT event has no OperatorContext context"))
 	}
 
 	deliveryCtx := wlt.WithOperatorContext(ctx, event.OperatorContextID)
@@ -107,7 +107,7 @@ func ProcessNext(ctx context.Context, db *sql.DB, client *wlt.Client) (bool, err
 			UPDATE dsh_partner_wlt_outbox outbox
 			SET status = 'delivered', delivered_at = now(), last_error = '', updated_at = now()
 			FROM dsh_partners partner
-			WHERE outbox.id = $1::uuid AND partner.id=outbox.partner_id AND partner.tenant_id=$2`, event.ID, event.OperatorContextID)
+			WHERE outbox.id = $1::uuid AND partner.id=outbox.partner_id AND partner.operator_context_id=$2`, event.ID, event.OperatorContextID)
 		return true, err
 	}
 	return true, recordDeliveryFailure(ctx, db, event, deliveryErr)
@@ -126,7 +126,7 @@ func recordDeliveryFailure(ctx context.Context, db *sql.DB, event Event, deliver
 		    available_at = now() + ($4 * interval '1 second'),
 		    updated_at = now()
 		FROM dsh_partners partner
-		WHERE outbox.id = $1::uuid AND partner.id=outbox.partner_id AND partner.tenant_id=$5`,
+		WHERE outbox.id = $1::uuid AND partner.id=outbox.partner_id AND partner.operator_context_id=$5`,
 		event.ID, status, deliveryErr.Error(), int(backoff.Seconds()), event.OperatorContextID,
 	)
 	if updateErr != nil {
@@ -144,7 +144,7 @@ func claimNext(ctx context.Context, db *sql.DB) (Event, error) {
 
 	var event Event
 	err = tx.QueryRowContext(ctx, `
-		SELECT outbox.id::text, btrim(partner.tenant_id), outbox.partner_id,
+		SELECT outbox.id::text, btrim(partner.operator_context_id), outbox.partner_id,
 		       outbox.activation_event_id::text, outbox.event_type,
 		       outbox.actor_id, outbox.correlation_id, outbox.idempotency_key,
 		       outbox.attempt_count + 1
@@ -152,7 +152,7 @@ func claimNext(ctx context.Context, db *sql.DB) (Event, error) {
 		JOIN dsh_partners partner ON partner.id=outbox.partner_id
 		WHERE outbox.status IN ('pending','retry')
 		  AND outbox.available_at <= now()
-		  AND btrim(partner.tenant_id) <> ''
+		  AND btrim(partner.operator_context_id) <> ''
 		ORDER BY outbox.created_at ASC
 		FOR UPDATE OF outbox SKIP LOCKED
 		LIMIT 1`,
@@ -168,7 +168,7 @@ func claimNext(ctx context.Context, db *sql.DB) (Event, error) {
 		UPDATE dsh_partner_wlt_outbox outbox
 		SET status = 'processing', attempt_count = $2, updated_at = now()
 		FROM dsh_partners partner
-		WHERE outbox.id = $1::uuid AND partner.id=outbox.partner_id AND partner.tenant_id=$3`, event.ID, event.AttemptCount, event.OperatorContextID); err != nil {
+		WHERE outbox.id = $1::uuid AND partner.id=outbox.partner_id AND partner.operator_context_id=$3`, event.ID, event.AttemptCount, event.OperatorContextID); err != nil {
 		return Event{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -190,14 +190,14 @@ func retryDelay(attempt int) time.Duration {
 
 func Reconcile(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	rows, err := db.QueryContext(ctx, `
-		SELECT btrim(tenant_id), id,
+		SELECT btrim(operator_context_id), id,
 		       COALESCE(payout_destination_id,''),
 		       COALESCE(masked_account_number,''),
 		       COALESCE(masked_iban,''),
 		       COALESCE(masked_mobile_number,''),
 		       activation_status
 		FROM dsh_partners
-		WHERE btrim(tenant_id) <> ''
+		WHERE btrim(operator_context_id) <> ''
 		ORDER BY updated_at ASC
 		LIMIT 500`)
 	if err != nil {
@@ -281,7 +281,7 @@ func upsertCase(ctx context.Context, db *sql.DB, partner partnerReadback, issue 
 			wlt_masked_iban, wlt_masked_mobile_number
 		)
 		SELECT $1,$2,$3,$4,$5,$6,$7
-		WHERE EXISTS (SELECT 1 FROM dsh_partners WHERE id=$1 AND tenant_id=$8)
+		WHERE EXISTS (SELECT 1 FROM dsh_partners WHERE id=$1 AND operator_context_id=$8)
 		ON CONFLICT (partner_id, issue_type) DO UPDATE SET
 			dsh_payout_destination_id = EXCLUDED.dsh_payout_destination_id,
 			wlt_payout_destination_id = EXCLUDED.wlt_payout_destination_id,
@@ -304,6 +304,6 @@ func resolvePartnerCases(ctx context.Context, db *sql.DB, operatorContextID, par
 		    last_detected_at = now()
 		FROM dsh_partners partner
 		WHERE cases.partner_id = $1 AND cases.status = 'open'
-		  AND partner.id=cases.partner_id AND partner.tenant_id=$2`, partnerID, operatorContextID)
+		  AND partner.id=cases.partner_id AND partner.operator_context_id=$2`, partnerID, operatorContextID)
 	return err
 }

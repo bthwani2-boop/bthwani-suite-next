@@ -17,6 +17,6 @@ Requirements:
 - `notification-icon.png`: Android-only 96×96 all-white glyph with transparency.
 - Files are source inputs, not generated build outputs.
 - The four surfaces may use differentiated glyphs, but the brand system and ownership must remain consistent.
-- No tenant logo may replace the sovereign application identity. Tenant branding belongs to governed runtime content or a future white-label entitlement, not to an unreviewed native build.
+- No OperatorContext logo may replace the sovereign application identity. OperatorContext branding belongs to governed runtime content or a future white-label entitlement, not to an unreviewed native build.
 
 `defineBthwaniExpoApp.js` binds these files when present. `guard-mobile-apps.mjs --require-build-secrets` blocks remote builds when any file is absent.

@@ -17,11 +17,10 @@ func authorizedServiceRequest(path string) *http.Request {
 
 func configureActiveSaaS(t *testing.T) {
 	t.Helper()
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
 	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "authorized")
 }
 
-func TestRequireServiceCallerRequiresPromotionFundingTenant(t *testing.T) {
+func TestRequireServiceCallerRequiresPromotionFundingOperatorContext(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
 
 	missing := httptest.NewRecorder()
@@ -34,20 +33,19 @@ func TestRequireServiceCallerRequiresPromotionFundingTenant(t *testing.T) {
 		t.Fatal("promotion funding request without X-Operator-Context-ID was accepted")
 	}
 	if missing.Code != http.StatusBadRequest {
-		t.Fatalf("missing tenant status=%d, want %d", missing.Code, http.StatusBadRequest)
+		t.Fatalf("missing OperatorContext status=%d, want %d", missing.Code, http.StatusBadRequest)
 	}
 
 	presentRequest := authorizedServiceRequest("/wlt/promotion-funding/reservations/pfr_123")
-	presentRequest.Header.Set("X-Operator-Context-ID", "tenant-1")
+	presentRequest.Header.Set("X-Operator-Context-ID", "OperatorContext-1")
 	present := httptest.NewRecorder()
 	if !RequireServiceCaller(present, presentRequest, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatalf("asserted tenant was rejected with status=%d", present.Code)
+		t.Fatalf("asserted OperatorContext was rejected with status=%d", present.Code)
 	}
 }
 
-func TestRequireServiceCallerRequiresTenantOutsideActiveSaaS(t *testing.T) {
+func TestRequireServiceCallerRequiresOperatorContextOutsideActiveSaaS(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
 	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "blocked")
 
 	missing := httptest.NewRecorder()
@@ -59,22 +57,22 @@ func TestRequireServiceCallerRequiresTenantOutsideActiveSaaS(t *testing.T) {
 	) {
 		t.Fatal("financial request without X-Operator-Context-ID was accepted outside active SaaS")
 	}
-	if missing.Code != http.StatusBadRequest || !strings.Contains(missing.Body.String(), "MISSING_TENANT_ID") {
-		t.Fatalf("expected MISSING_TENANT_ID, got status=%d body=%s", missing.Code, missing.Body.String())
+	if missing.Code != http.StatusBadRequest || !strings.Contains(missing.Body.String(), "MISSING_operator_context_id") {
+		t.Fatalf("expected MISSING_operator_context_id, got status=%d body=%s", missing.Code, missing.Body.String())
 	}
 
 	presentRequest := authorizedServiceRequest("/wlt/settlements")
-	presentRequest.Header.Set("X-Operator-Context-ID", "tenant-deferred")
+	presentRequest.Header.Set("X-Operator-Context-ID", "OperatorContext-deferred")
 	present := httptest.NewRecorder()
 	if !RequireServiceCaller(present, presentRequest, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatalf("explicit deferred tenant was rejected with status=%d body=%s", present.Code, present.Body.String())
+		t.Fatalf("explicit deferred OperatorContext was rejected with status=%d body=%s", present.Code, present.Body.String())
 	}
-	if operatorContextID, ok := OperatorContextIDFromContext(presentRequest.Context()); !ok || operatorContextID != "tenant-deferred" {
-		t.Fatalf("trusted tenant was not propagated, tenant=%q ok=%v", operatorContextID, ok)
+	if operatorContextID, ok := OperatorContextIDFromContext(presentRequest.Context()); !ok || operatorContextID != "OperatorContext-deferred" {
+		t.Fatalf("trusted OperatorContext was not propagated, OperatorContext=%q ok=%v", operatorContextID, ok)
 	}
 }
 
-func TestRequireServiceCallerRequiresTenantForEveryActiveSaaSCall(t *testing.T) {
+func TestRequireServiceCallerRequiresOperatorContextForEveryActiveSaaSCall(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
 	configureActiveSaaS(t)
 
@@ -85,37 +83,37 @@ func TestRequireServiceCallerRequiresTenantForEveryActiveSaaSCall(t *testing.T) 
 		"TEST_WLT_SERVICE_TOKEN",
 		"dsh",
 	) {
-		t.Fatal("active SaaS service call without tenant was accepted")
+		t.Fatal("active SaaS service call without OperatorContext was accepted")
 	}
-	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), "MISSING_TENANT_ID") {
-		t.Fatalf("expected MISSING_TENANT_ID, got status=%d body=%s", recorder.Code, recorder.Body.String())
+	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), "MISSING_operator_context_id") {
+		t.Fatalf("expected MISSING_operator_context_id, got status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 }
 
-func TestRequireServiceCallerAcceptsDistinctAuthenticatedTenants(t *testing.T) {
+func TestRequireServiceCallerAcceptsDistinctAuthenticatedOperatorContexts(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
 	configureActiveSaaS(t)
 
-	for _, operatorContextID := range []string{"tenant-a", "tenant-b"} {
+	for _, operatorContextID := range []string{"OperatorContext-a", "OperatorContext-b"} {
 		request := authorizedServiceRequest("/wlt/settlements")
 		request.Header.Set("X-Operator-Context-ID", operatorContextID)
 		recorder := httptest.NewRecorder()
 		if !RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-			t.Fatalf("authenticated tenant %s was rejected status=%d body=%s", operatorContextID, recorder.Code, recorder.Body.String())
+			t.Fatalf("authenticated OperatorContext %s was rejected status=%d body=%s", operatorContextID, recorder.Code, recorder.Body.String())
 		}
 	}
 }
 
-func TestRequireServiceCallerDoesNotTrustTenantBeforeServiceAuthentication(t *testing.T) {
+func TestRequireServiceCallerDoesNotTrustOperatorContextBeforeServiceAuthentication(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
 	configureActiveSaaS(t)
 	request := authorizedServiceRequest("/wlt/settlements")
 	request.Header.Set("Authorization", "Bearer wrong-token")
-	request.Header.Set("X-Operator-Context-ID", "tenant-a")
+	request.Header.Set("X-Operator-Context-ID", "OperatorContext-a")
 	recorder := httptest.NewRecorder()
 
 	if RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatal("tenant header bypassed service authentication")
+		t.Fatal("OperatorContext header bypassed service authentication")
 	}
 	if recorder.Code != http.StatusForbidden || !strings.Contains(recorder.Body.String(), "SERVICE_TOKEN_INVALID") {
 		t.Fatalf("expected SERVICE_TOKEN_INVALID, got status=%d body=%s", recorder.Code, recorder.Body.String())
@@ -124,10 +122,9 @@ func TestRequireServiceCallerDoesNotTrustTenantBeforeServiceAuthentication(t *te
 
 func TestRequireServiceCallerFailsClosedForInvalidActiveSaaSState(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	t.Setenv("BTHWANI_SAAS_MODE", "active")
 	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "blocked")
 	request := authorizedServiceRequest("/wlt/settlements")
-	request.Header.Set("X-Operator-Context-ID", "tenant-a")
+	request.Header.Set("X-Operator-Context-ID", "OperatorContext-a")
 	recorder := httptest.NewRecorder()
 
 	if RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
@@ -138,15 +135,15 @@ func TestRequireServiceCallerFailsClosedForInvalidActiveSaaSState(t *testing.T) 
 	}
 }
 
-func TestRequireOperatorContextFailsClosedWithoutTrustedTenant(t *testing.T) {
+func TestRequireOperatorContextFailsClosedWithoutTrustedOperatorContext(t *testing.T) {
 	operatorContextID, err := RequireOperatorContext(context.Background())
 	if err == nil || operatorContextID != "" {
-		t.Fatalf("missing tenant context returned tenant=%q err=%v", operatorContextID, err)
+		t.Fatalf("missing OperatorContext context returned OperatorContext=%q err=%v", operatorContextID, err)
 	}
 
-	ctx := WithOperatorContext(context.Background(), "tenant-a")
+	ctx := WithOperatorContext(context.Background(), "OperatorContext-a")
 	operatorContextID, err = RequireOperatorContext(ctx)
-	if err != nil || operatorContextID != "tenant-a" {
-		t.Fatalf("trusted tenant context returned tenant=%q err=%v", operatorContextID, err)
+	if err != nil || operatorContextID != "OperatorContext-a" {
+		t.Fatalf("trusted OperatorContext context returned OperatorContext=%q err=%v", operatorContextID, err)
 	}
 }

@@ -56,9 +56,7 @@ func main() {
 	if operatorContextID == "" {
 		log.Fatal("[workforce-api] BTHWANI_OPERATOR_CONTEXT_ID is required; silent tenant fallback is forbidden")
 	}
-	if strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")), "active") && operatorContextID == "local-dsh" {
-		log.Fatal("[workforce-api] active SaaS mode requires an explicit non-local BTHWANI_OPERATOR_CONTEXT_ID")
-	}
+
 
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {

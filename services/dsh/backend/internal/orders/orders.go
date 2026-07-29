@@ -89,7 +89,7 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 		FROM dsh_checkout_intents
 		WHERE id = $1::uuid
 		  AND client_id = $2
-		  AND tenant_id = $3
+		  AND operator_context_id = $3
 		  AND wlt_payment_session_id <> ''
 		  AND (
 		        (state = 'payment_pending' AND payment_method = 'cod')
@@ -99,7 +99,7 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 		input.CheckoutIntentID, input.ClientID, input.OperatorContextID,
 	).Scan(&cartID, &storeID, &wltPaymentSessionID, &checkoutCurrency)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: checkout intent is not ready for order creation in tenant", ErrConflict)
+		return nil, fmt.Errorf("%w: checkout intent is not ready for order creation in OperatorContext", ErrConflict)
 	}
 	if err != nil {
 		return nil, err
@@ -147,8 +147,8 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 
 	var order Order
 	err = tx.QueryRow(`
-		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status, wlt_payment_ref_id)
-		VALUES ($3, $1::uuid, $2, (SELECT fulfillment_mode FROM dsh_checkout_intents WHERE id = $1::uuid AND tenant_id=$3), $4, $5, $6)
+		INSERT INTO dsh_orders (operator_context_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status, wlt_payment_ref_id)
+		VALUES ($3, $1::uuid, $2, (SELECT fulfillment_mode FROM dsh_checkout_intents WHERE id = $1::uuid AND operator_context_id=$3), $4, $5, $6)
 		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at`,
 		input.CheckoutIntentID, storeID, input.OperatorContextID, input.ClientID, string(StatusPending), wltPaymentSessionID,
@@ -195,7 +195,7 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 	result, err := tx.Exec(`
 		UPDATE dsh_checkout_intents
 		SET state = 'confirmed', version = version + 1, updated_at = NOW()
-		WHERE id = $1::uuid AND tenant_id=$2 AND client_id = $3
+		WHERE id = $1::uuid AND operator_context_id=$2 AND client_id = $3
 		  AND state IN ('payment_pending','payment_confirmed')`,
 		input.CheckoutIntentID, input.OperatorContextID, input.ClientID,
 	)
@@ -245,7 +245,7 @@ func GetClientOrder(db *sql.DB, orderID, operatorContextID, clientID string) (*O
 		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
 		FROM dsh_orders
-		WHERE id = $1::uuid AND tenant_id=$2 AND client_id = $3`, orderID, operatorContextID, clientID))
+		WHERE id = $1::uuid AND operator_context_id=$2 AND client_id = $3`, orderID, operatorContextID, clientID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -271,7 +271,7 @@ func ListClientOrders(db *sql.DB, operatorContextID, clientID string, limit int)
 		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
 		FROM dsh_orders
-		WHERE tenant_id=$1 AND client_id = $2
+		WHERE operator_context_id=$1 AND client_id = $2
 		ORDER BY created_at DESC
 		LIMIT $3`, operatorContextID, clientID, limit)
 	if err != nil {

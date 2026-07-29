@@ -161,7 +161,7 @@ func (s *protectedStoreServer) handleCaptainFinanceCommissions(w http.ResponseWr
 		return
 	}
 	query := url.Values{"captainId": {actor.ID}}
-	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWithOperatorContext(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 

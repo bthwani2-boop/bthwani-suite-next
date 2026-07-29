@@ -208,7 +208,7 @@ func (s *protectedStoreServer) loadMediaReference(ctx context.Context, mediaRef 
 
 func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context, actor store.StoreActor, ref mediaReference) (bool, error) {
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
-	partnerBelongsToTenant := func() (bool, error) {
+	partnerBelongsToOperatorContext := func() (bool, error) {
 		if ref.PartnerID == "" || operatorContextID == "" {
 			return false, nil
 		}
@@ -216,7 +216,7 @@ func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context,
 		err := s.db.QueryRowContext(ctx, `
 			SELECT EXISTS (
 				SELECT 1 FROM dsh_partners
-				WHERE id = $1 AND tenant_id = $2
+				WHERE id = $1 AND operator_context_id = $2
 			)`, ref.PartnerID, operatorContextID).Scan(&allowed)
 		return allowed, err
 	}
@@ -226,7 +226,7 @@ func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context,
 		if ref.PartnerID == "" {
 			return true, nil
 		}
-		return partnerBelongsToTenant()
+		return partnerBelongsToOperatorContext()
 	case "field":
 		if ref.OwnerActorID != actor.ID || ref.OwnerActorRole != "field" {
 			return false, nil
@@ -234,7 +234,7 @@ func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context,
 		if ref.PartnerID == "" {
 			return true, nil
 		}
-		return partnerBelongsToTenant()
+		return partnerBelongsToOperatorContext()
 	case "captain":
 		if ref.OwnerActorID != actor.ID || ref.OwnerActorRole != "captain" {
 			return false, nil
@@ -242,7 +242,7 @@ func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context,
 		if ref.PartnerID == "" {
 			return true, nil
 		}
-		return partnerBelongsToTenant()
+		return partnerBelongsToOperatorContext()
 	case "partner":
 		if ref.PartnerID == "" || operatorContextID == "" {
 			return false, nil
@@ -254,11 +254,11 @@ func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context,
 				FROM dsh_store_actor_scopes scopes
 				JOIN dsh_stores stores
 				  ON stores.id = scopes.store_id
-				 AND stores.tenant_id = $3
+				 AND stores.operator_context_id = $3
 				WHERE scopes.actor_id = $1
 				  AND scopes.actor_role = 'partner'
 				  AND scopes.active = true
-				  AND scopes.tenant_id = $3
+				  AND scopes.operator_context_id = $3
 				  AND stores.partner_id = $2
 			)`, actor.ID, ref.PartnerID, operatorContextID).Scan(&allowed)
 		return allowed, err

@@ -5,7 +5,7 @@ BEGIN;
 -- keeps the workflow deterministic while preserving every completed round.
 CREATE TABLE IF NOT EXISTS dsh_special_request_information_exchanges (
     id                          UUID PRIMARY KEY,
-    tenant_id                   TEXT NOT NULL,
+    operator_context_id                   TEXT NOT NULL,
     special_request_id          UUID NOT NULL REFERENCES dsh_special_requests(id) ON DELETE CASCADE,
     client_id                   TEXT NOT NULL,
     requested_by_operator_id    TEXT NOT NULL,
@@ -25,11 +25,11 @@ CREATE TABLE IF NOT EXISTS dsh_special_request_information_exchanges (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_dsh_special_request_information_pending
-    ON dsh_special_request_information_exchanges (tenant_id, special_request_id)
+    ON dsh_special_request_information_exchanges (operator_context_id, special_request_id)
     WHERE status = 'pending';
 
 CREATE INDEX IF NOT EXISTS idx_dsh_special_request_information_history
-    ON dsh_special_request_information_exchanges (tenant_id, special_request_id, requested_at DESC);
+    ON dsh_special_request_information_exchanges (operator_context_id, special_request_id, requested_at DESC);
 
 -- Distinguish a missing-information request from quote approval. Both require
 -- customer input, but only customer_approval may create a WLT payment session.

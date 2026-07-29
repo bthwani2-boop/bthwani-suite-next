@@ -37,7 +37,7 @@ type subscriptionPurchase struct {
 	UpdatedAt             string `json:"updatedAt"`
 }
 
-const subscriptionPurchaseSelect = `id, tenant_id, client_id, plan_id::TEXT,
+const subscriptionPurchaseSelect = `id, operator_context_id, client_id, plan_id::TEXT,
 	wlt_product_reference, wlt_payment_session_id, wlt_subscription_id,
 	renewal_of_purchase_id, payment_method, status, lifecycle_version,
 	failure_code, activated_at::TEXT, expires_at::TEXT, cancelled_at::TEXT,
@@ -131,7 +131,7 @@ func (s *protectedStoreServer) getSubscriptionPurchase(
 ) (*subscriptionPurchase, error) {
 	item, err := scanSubscriptionPurchase(s.db.QueryRow(`SELECT `+subscriptionPurchaseSelect+`
 		FROM dsh_subscription_purchases
-		WHERE id=$1 AND tenant_id=$2 AND client_id=$3`, purchaseID, operatorContextID, clientID))
+		WHERE id=$1 AND operator_context_id=$2 AND client_id=$3`, purchaseID, operatorContextID, clientID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, marketing.ErrNotFound
 	}
@@ -145,7 +145,7 @@ func (s *protectedStoreServer) getSubscriptionPurchaseByIdempotency(
 ) (*subscriptionPurchase, error) {
 	item, err := scanSubscriptionPurchase(s.db.QueryRow(`SELECT `+subscriptionPurchaseSelect+`
 		FROM dsh_subscription_purchases
-		WHERE tenant_id=$1 AND client_id=$2 AND idempotency_key=$3`, operatorContextID, clientID, idempotencyKey))
+		WHERE operator_context_id=$1 AND client_id=$2 AND idempotency_key=$3`, operatorContextID, clientID, idempotencyKey))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -159,7 +159,7 @@ func (s *protectedStoreServer) getSubscriptionPurchaseByWLTSubscription(
 ) (*subscriptionPurchase, error) {
 	item, err := scanSubscriptionPurchase(s.db.QueryRow(`SELECT `+subscriptionPurchaseSelect+`
 		FROM dsh_subscription_purchases
-		WHERE tenant_id=$1 AND client_id=$2 AND wlt_subscription_id=$3
+		WHERE operator_context_id=$1 AND client_id=$2 AND wlt_subscription_id=$3
 		ORDER BY CASE WHEN renewal_of_purchase_id IS NULL THEN 0 ELSE 1 END, created_at
 		LIMIT 1`, operatorContextID, clientID, subscriptionID))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -190,7 +190,7 @@ func appendSubscriptionLifecycleEvent(
 		return err
 	}
 	_, err = tx.Exec(`INSERT INTO dsh_subscription_lifecycle_events
-		(purchase_id, tenant_id, client_id, event_type, from_status, to_status,
+		(purchase_id, operator_context_id, client_id, event_type, from_status, to_status,
 		 wlt_payment_session_id, wlt_subscription_id, idempotency_key,
 		 correlation_id, actor_id, metadata)
 		VALUES ($1,$2,$3,$4,NULLIF($5,''),$6,NULLIF($7,''),NULLIF($8,''),$9,$10,$11,$12)
@@ -253,7 +253,7 @@ func (s *protectedStoreServer) initializeSubscriptionPurchase(
 	}
 	defer func() { _ = tx.Rollback() }()
 	item, err := scanSubscriptionPurchase(tx.QueryRow(`INSERT INTO dsh_subscription_purchases
-		(id, tenant_id, client_id, plan_id, wlt_product_reference,
+		(id, operator_context_id, client_id, plan_id, wlt_product_reference,
 		 payment_method, status, idempotency_key, correlation_id, renewal_of_purchase_id)
 		VALUES ($1,$2,$3,$4,$5,$6,'initiated',$7,$8,NULLIF($9,''))
 		RETURNING `+subscriptionPurchaseSelect,
@@ -352,7 +352,7 @@ func (s *protectedStoreServer) handleCreateSubscriptionPurchase(w http.ResponseW
 	}
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
 	if operatorContextID == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "authenticated client OperatorContext is required")
 		return
 	}
 	item, err := s.getSubscriptionPurchaseByIdempotency(operatorContextID, actor.ID, idempotencyKey)
@@ -393,7 +393,7 @@ func (s *protectedStoreServer) handleGetSubscriptionPurchase(w http.ResponseWrit
 	}
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
 	if operatorContextID == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "authenticated client OperatorContext is required")
 		return
 	}
 	item, err := s.getSubscriptionPurchase(operatorContextID, actor.ID, r.PathValue("purchaseId"))
@@ -450,7 +450,7 @@ func (s *protectedStoreServer) handleActivateSubscriptionPurchase(w http.Respons
 	}
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
 	if operatorContextID == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "authenticated client OperatorContext is required")
 		return
 	}
 	item, err := s.getSubscriptionPurchase(operatorContextID, actor.ID, r.PathValue("purchaseId"))
@@ -556,7 +556,7 @@ func (s *protectedStoreServer) handleRenewSubscriptionPurchase(w http.ResponseWr
 	}
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
 	if operatorContextID == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "authenticated client OperatorContext is required")
 		return
 	}
 	subscription, err := s.wlt.GetCommercialSubscriptionLifecycle(r.Context(), r.PathValue("subscriptionId"))
@@ -635,7 +635,7 @@ func (s *protectedStoreServer) handleCancelSubscriptionPurchase(w http.ResponseW
 	}
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
 	if operatorContextID == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "authenticated client tenant is required")
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "authenticated client OperatorContext is required")
 		return
 	}
 	var body struct {
@@ -691,7 +691,7 @@ func (s *protectedStoreServer) handleCancelSubscriptionPurchase(w http.ResponseW
 		SET status=$4, cancelled_at=NOW(), cancellation_reason=$5,
 		    compensation_status=COALESCE(NULLIF($6,''),'not_required'),
 		    compensation_reference=$7, expires_at=$8
-		WHERE tenant_id=$1 AND client_id=$2 AND wlt_subscription_id=$3
+		WHERE operator_context_id=$1 AND client_id=$2 AND wlt_subscription_id=$3
 		  AND status NOT IN ('cancelled','expired','compensated','failed')`,
 		operatorContextID, actor.ID, subscription.ID, targetStatus, body.Reason,
 		compensationStatus, compensationReference, subscription.EndsAt); err != nil {

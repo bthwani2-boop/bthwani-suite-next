@@ -3,7 +3,7 @@
 BEGIN;
 
 ALTER TABLE wlt_refunds
-  ADD COLUMN IF NOT EXISTS tenant_id TEXT,
+  ADD COLUMN IF NOT EXISTS operator_context_id TEXT,
   ADD COLUMN IF NOT EXISTS requested_by_operator_id TEXT NOT NULL DEFAULT 'dsh-order-cancellation',
   ADD COLUMN IF NOT EXISTS approved_by_operator_id TEXT,
   ADD COLUMN IF NOT EXISTS rejected_by_operator_id TEXT,
@@ -19,14 +19,14 @@ ALTER TABLE wlt_refunds
   ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1;
 
 UPDATE wlt_refunds r
-SET tenant_id = ps.tenant_id
+SET operator_context_id = ps.operator_context_id
 FROM wlt_payment_sessions ps
 WHERE ps.id = r.payment_session_id
-  AND (r.tenant_id IS NULL OR r.tenant_id = '');
+  AND (r.operator_context_id IS NULL OR r.operator_context_id = '');
 
 UPDATE wlt_refunds
-SET tenant_id = 'tenant-dev-001'
-WHERE tenant_id IS NULL OR tenant_id = '';
+SET operator_context_id = 'OperatorContext-dev-001'
+WHERE operator_context_id IS NULL OR operator_context_id = '';
 
 UPDATE wlt_refunds
 SET idempotency_key = 'legacy:' || id
@@ -77,12 +77,12 @@ ALTER TABLE wlt_refunds
   );
 
 ALTER TABLE wlt_refunds
-  ALTER COLUMN tenant_id SET NOT NULL,
+  ALTER COLUMN operator_context_id SET NOT NULL,
   ALTER COLUMN idempotency_key SET NOT NULL,
   ALTER COLUMN provider_idempotency_key SET NOT NULL;
 
 -- WLT-035 originally normalized every refund to the full captured amount.
--- JRN-035 replaces that rule with a tenant/client/currency/payment-state guard
+-- JRN-035 replaces that rule with a OperatorContext/client/currency/payment-state guard
 -- that preserves the requested partial amount while never allowing an amount
 -- outside the original financial operation.
 CREATE OR REPLACE FUNCTION wlt_validate_refund_payment_reference()
@@ -90,14 +90,14 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_tenant_id TEXT;
+  v_operator_context_id TEXT;
   v_client_id TEXT;
   v_amount BIGINT;
   v_currency TEXT;
   v_status TEXT;
 BEGIN
-  SELECT tenant_id, client_id, amount_minor_units, currency, status
-    INTO v_tenant_id, v_client_id, v_amount, v_currency, v_status
+  SELECT operator_context_id, client_id, amount_minor_units, currency, status
+    INTO v_operator_context_id, v_client_id, v_amount, v_currency, v_status
     FROM wlt_payment_sessions
    WHERE id = NEW.payment_session_id
    FOR SHARE;
@@ -105,8 +105,8 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'payment session not found for refund';
   END IF;
-  IF NEW.tenant_id <> v_tenant_id THEN
-    RAISE EXCEPTION 'refund tenant does not match payment session tenant';
+  IF NEW.operator_context_id <> v_operator_context_id THEN
+    RAISE EXCEPTION 'refund OperatorContext does not match payment session OperatorContext';
   END IF;
   IF NEW.client_id <> v_client_id THEN
     RAISE EXCEPTION 'refund client does not match payment session owner';
@@ -145,17 +145,17 @@ ALTER TABLE wlt_refunds
 
 DROP INDEX IF EXISTS wlt_refunds_active_session_idx;
 CREATE UNIQUE INDEX IF NOT EXISTS wlt_refunds_session_idempotency_idx
-  ON wlt_refunds (tenant_id, payment_session_id, idempotency_key);
+  ON wlt_refunds (operator_context_id, payment_session_id, idempotency_key);
 CREATE INDEX IF NOT EXISTS wlt_refunds_remaining_amount_idx
-  ON wlt_refunds (tenant_id, payment_session_id, status);
+  ON wlt_refunds (operator_context_id, payment_session_id, status);
 CREATE INDEX IF NOT EXISTS wlt_refunds_provider_unknown_idx
-  ON wlt_refunds (tenant_id, updated_at)
+  ON wlt_refunds (operator_context_id, updated_at)
   WHERE status = 'provider_unknown';
 
 CREATE TABLE IF NOT EXISTS wlt_refund_audit_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   refund_id TEXT NOT NULL REFERENCES wlt_refunds(id) ON DELETE CASCADE,
-  tenant_id TEXT NOT NULL,
+  operator_context_id TEXT NOT NULL,
   event_type TEXT NOT NULL,
   actor_id TEXT NOT NULL,
   actor_type TEXT NOT NULL,
@@ -172,8 +172,8 @@ CREATE TABLE IF NOT EXISTS wlt_refund_audit_events (
 );
 CREATE INDEX IF NOT EXISTS wlt_refund_audit_refund_idx
   ON wlt_refund_audit_events (refund_id, created_at);
-CREATE INDEX IF NOT EXISTS wlt_refund_audit_tenant_idx
-  ON wlt_refund_audit_events (tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS wlt_refund_audit_operator_context_idx
+  ON wlt_refund_audit_events (operator_context_id, created_at DESC);
 
 ALTER TABLE wlt_reconciliation_cases
   DROP CONSTRAINT IF EXISTS wlt_reconciliation_cases_operation_check;

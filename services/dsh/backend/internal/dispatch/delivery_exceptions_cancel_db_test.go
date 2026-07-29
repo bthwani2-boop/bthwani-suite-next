@@ -12,7 +12,7 @@ import (
 func TestDeliveryExceptionCancelsOrderBeforePickupDBIntegration(t *testing.T) {
 	db := openDispatchRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	operatorContextID := "tenant-cancel-" + suffix
+	operatorContextID := "OperatorContext-cancel-" + suffix
 	storeID := "cancel-store-" + suffix
 	captainID := "cancel-captain-" + suffix
 	clientID := uuid.NewString()
@@ -22,13 +22,13 @@ func TestDeliveryExceptionCancelsOrderBeforePickupDBIntegration(t *testing.T) {
 	}
 	var checkoutIntentID string
 	if err := db.QueryRow(`
-		INSERT INTO dsh_checkout_intents(tenant_id,client_id,cart_id,store_id,state,fulfillment_mode,payment_method,wlt_payment_session_id,subtotal_minor_units,delivery_fee_minor_units,discount_minor_units,total_minor_units,currency,pricing_snapshot_hash)
+		INSERT INTO dsh_checkout_intents(operator_context_id,client_id,cart_id,store_id,state,fulfillment_mode,payment_method,wlt_payment_session_id,subtotal_minor_units,delivery_fee_minor_units,discount_minor_units,total_minor_units,currency,pricing_snapshot_hash)
 		VALUES($1,$2,gen_random_uuid(),$3,'confirmed','bthwani_delivery','wallet',$4,1000,0,0,1000,'YER',repeat('c',64)) RETURNING id::text`, operatorContextID, clientID, storeID, "cancel-payment-"+suffix).Scan(&checkoutIntentID); err != nil {
 		t.Fatalf("insert checkout: %v", err)
 	}
 	var orderID string
 	if err := db.QueryRow(`
-		INSERT INTO dsh_orders(tenant_id,checkout_intent_id,store_id,fulfillment_mode,client_id,status,wlt_payment_ref_id)
+		INSERT INTO dsh_orders(operator_context_id,checkout_intent_id,store_id,fulfillment_mode,client_id,status,wlt_payment_ref_id)
 		VALUES($1,$2::uuid,$3,'bthwani_delivery',$4,'driver_arrived_store',$5) RETURNING id::text`, operatorContextID, checkoutIntentID, storeID, clientID, "cancel-payment-"+suffix).Scan(&orderID); err != nil {
 		t.Fatalf("insert order: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestDeliveryExceptionCancelsOrderBeforePickupDBIntegration(t *testing.T) {
 func TestDeliveryExceptionRejectsDirectCancelAfterPickupDBIntegration(t *testing.T) {
 	db := openDispatchRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	operatorContextID := "tenant-cancel-blocked-" + suffix
+	operatorContextID := "OperatorContext-cancel-blocked-" + suffix
 	storeID := "cancel-blocked-store-" + suffix
 	captainID := "cancel-blocked-captain-" + suffix
 	clientID := uuid.NewString()
@@ -109,11 +109,11 @@ func TestDeliveryExceptionRejectsDirectCancelAfterPickupDBIntegration(t *testing
 		t.Fatal(err)
 	}
 	var checkoutIntentID string
-	if err := db.QueryRow(`INSERT INTO dsh_checkout_intents(tenant_id,client_id,cart_id,store_id,state,fulfillment_mode,payment_method,wlt_payment_session_id,subtotal_minor_units,delivery_fee_minor_units,discount_minor_units,total_minor_units,currency,pricing_snapshot_hash) VALUES($1,$2,gen_random_uuid(),$3,'confirmed','bthwani_delivery','wallet',$4,1000,0,0,1000,'YER',repeat('d',64)) RETURNING id::text`, operatorContextID, clientID, storeID, "cancel-blocked-payment-"+suffix).Scan(&checkoutIntentID); err != nil {
+	if err := db.QueryRow(`INSERT INTO dsh_checkout_intents(operator_context_id,client_id,cart_id,store_id,state,fulfillment_mode,payment_method,wlt_payment_session_id,subtotal_minor_units,delivery_fee_minor_units,discount_minor_units,total_minor_units,currency,pricing_snapshot_hash) VALUES($1,$2,gen_random_uuid(),$3,'confirmed','bthwani_delivery','wallet',$4,1000,0,0,1000,'YER',repeat('d',64)) RETURNING id::text`, operatorContextID, clientID, storeID, "cancel-blocked-payment-"+suffix).Scan(&checkoutIntentID); err != nil {
 		t.Fatal(err)
 	}
 	var orderID string
-	if err := db.QueryRow(`INSERT INTO dsh_orders(tenant_id,checkout_intent_id,store_id,fulfillment_mode,client_id,status,wlt_payment_ref_id) VALUES($1,$2::uuid,$3,'bthwani_delivery',$4,'picked_up',$5) RETURNING id::text`, operatorContextID, checkoutIntentID, storeID, clientID, "cancel-blocked-payment-"+suffix).Scan(&orderID); err != nil {
+	if err := db.QueryRow(`INSERT INTO dsh_orders(operator_context_id,checkout_intent_id,store_id,fulfillment_mode,client_id,status,wlt_payment_ref_id) VALUES($1,$2::uuid,$3,'bthwani_delivery',$4,'picked_up',$5) RETURNING id::text`, operatorContextID, checkoutIntentID, storeID, clientID, "cancel-blocked-payment-"+suffix).Scan(&orderID); err != nil {
 		t.Fatal(err)
 	}
 	var assignmentID string
@@ -141,7 +141,7 @@ func TestDeliveryExceptionRejectsDirectCancelAfterPickupDBIntegration(t *testing
 func TestDeliveryExceptionCancelRejectsStaleVersionDBIntegration(t *testing.T) {
 	db := openDispatchRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	operatorContextID := "tenant-cancel-stale-" + suffix
+	operatorContextID := "OperatorContext-cancel-stale-" + suffix
 	storeID := "cancel-stale-store-" + suffix
 	captainID := "cancel-stale-captain-" + suffix
 	clientID := uuid.NewString()
@@ -150,11 +150,11 @@ func TestDeliveryExceptionCancelRejectsStaleVersionDBIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	var checkoutIntentID string
-	if err := db.QueryRow(`INSERT INTO dsh_checkout_intents(tenant_id,client_id,cart_id,store_id,state,fulfillment_mode,payment_method,wlt_payment_session_id,subtotal_minor_units,delivery_fee_minor_units,discount_minor_units,total_minor_units,currency,pricing_snapshot_hash) VALUES($1,$2,gen_random_uuid(),$3,'confirmed','bthwani_delivery','wallet',$4,1000,0,0,1000,'YER',repeat('e',64)) RETURNING id::text`, operatorContextID, clientID, storeID, "cancel-stale-payment-"+suffix).Scan(&checkoutIntentID); err != nil {
+	if err := db.QueryRow(`INSERT INTO dsh_checkout_intents(operator_context_id,client_id,cart_id,store_id,state,fulfillment_mode,payment_method,wlt_payment_session_id,subtotal_minor_units,delivery_fee_minor_units,discount_minor_units,total_minor_units,currency,pricing_snapshot_hash) VALUES($1,$2,gen_random_uuid(),$3,'confirmed','bthwani_delivery','wallet',$4,1000,0,0,1000,'YER',repeat('e',64)) RETURNING id::text`, operatorContextID, clientID, storeID, "cancel-stale-payment-"+suffix).Scan(&checkoutIntentID); err != nil {
 		t.Fatal(err)
 	}
 	var orderID string
-	if err := db.QueryRow(`INSERT INTO dsh_orders(tenant_id,checkout_intent_id,store_id,fulfillment_mode,client_id,status,wlt_payment_ref_id) VALUES($1,$2::uuid,$3,'bthwani_delivery',$4,'driver_assigned',$5) RETURNING id::text`, operatorContextID, checkoutIntentID, storeID, clientID, "cancel-stale-payment-"+suffix).Scan(&orderID); err != nil {
+	if err := db.QueryRow(`INSERT INTO dsh_orders(operator_context_id,checkout_intent_id,store_id,fulfillment_mode,client_id,status,wlt_payment_ref_id) VALUES($1,$2::uuid,$3,'bthwani_delivery',$4,'driver_assigned',$5) RETURNING id::text`, operatorContextID, checkoutIntentID, storeID, clientID, "cancel-stale-payment-"+suffix).Scan(&orderID); err != nil {
 		t.Fatal(err)
 	}
 	var assignmentID string

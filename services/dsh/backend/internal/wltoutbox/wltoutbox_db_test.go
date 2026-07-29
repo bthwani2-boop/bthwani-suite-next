@@ -32,15 +32,15 @@ func openRequiredDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// seedOrderFixture creates the minimal tenant/store/cart/checkout-intent/order
-// chain dsh_wlt_outbox_events' foreign keys and tenant-isolation constraints
+// seedOrderFixture creates the minimal OperatorContext/store/cart/checkout-intent/order
+// chain dsh_wlt_outbox_events' foreign keys and OperatorContext-isolation constraints
 // require, including the immutable governed pricing snapshot enforced for every
 // checkout intent, and registers cleanup.
 func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID string) {
 	t.Helper()
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	operatorContextID := "tenant-wlt-outbox-test-" + suffix
+	operatorContextID := "OperatorContext-wlt-outbox-test-" + suffix
 	storeID := "wlt-outbox-test-store-" + suffix
 	clientID := "wlt-outbox-test-client-" + suffix
 
@@ -64,7 +64,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID strin
 
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_checkout_intents (
-			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
+			operator_context_id, client_id, cart_id, store_id, state, fulfillment_mode,
 			payment_method, wlt_payment_session_id,
 			subtotal_minor_units, delivery_fee_minor_units, discount_minor_units,
 			total_minor_units, currency, pricing_snapshot_hash
@@ -78,7 +78,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID strin
 	}
 
 	if err := db.QueryRowContext(ctx, `
-		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status)
+		INSERT INTO dsh_orders (operator_context_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status)
 		VALUES ($1, $2::uuid, $3, 'bthwani_delivery', $4, 'pending')
 		RETURNING id::text`,
 		operatorContextID, checkoutIntentID, storeID, clientID,

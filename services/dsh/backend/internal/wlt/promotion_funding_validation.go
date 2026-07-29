@@ -47,7 +47,7 @@ func validatePromotionFundingTransitionResponse(
 		return fmt.Errorf("WLT promotion funding transition returned a different reservation")
 	}
 	if reservation.OperatorContextID != strings.TrimSpace(input.OperatorContextID) {
-		return fmt.Errorf("WLT promotion funding transition returned a different tenant")
+		return fmt.Errorf("WLT promotion funding transition returned a different OperatorContext")
 	}
 	expectedStatus := map[string]string{
 		"commit":  "committed",

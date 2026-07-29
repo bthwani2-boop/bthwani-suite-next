@@ -11,7 +11,7 @@ func TestReservationJSONHidesInternalMutationMetadata(t *testing.T) {
 	partnerID := "partner-1"
 	orderID := "order-1"
 	payload, err := json.Marshal(Reservation{
-		ID: "pfr_123", OperatorContextID: "tenant-1", ExternalReference: "dsh:redemption-1",
+		ID: "pfr_123", OperatorContextID: "OperatorContext-1", ExternalReference: "dsh:redemption-1",
 		CheckoutIntentID: "checkout-1", CouponRedemptionID: "redemption-1",
 		CouponID: "coupon-1", ClientID: "client-1", PartnerID: &partnerID,
 		PlatformFundedMinorUnits: 600, PartnerFundedMinorUnits: 400,
@@ -34,7 +34,7 @@ func TestReservationJSONHidesInternalMutationMetadata(t *testing.T) {
 		}
 	}
 	for _, required := range []string{
-		`"id":"pfr_123"`, `"operatorContextId":"tenant-1"`,
+		`"id":"pfr_123"`, `"operatorContextId":"OperatorContext-1"`,
 		`"platformFundedMinorUnits":600`, `"status":"committed"`,
 	} {
 		if !strings.Contains(encoded, required) {

@@ -14,7 +14,7 @@ import (
 )
 
 // POST /dsh/internal/wlt/payment-session-events
-// WLT is the payment and refund authority. Every event is tenant-scoped before
+// WLT is the payment and refund authority. Every event is OperatorContext-scoped before
 // DSH changes checkout, order, coupon, loyalty, or promotion-funding state.
 func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWriter, r *http.Request) {
 	if !requireWltServiceCaller(w, r) {
@@ -111,7 +111,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 		body.Status,
 	)
 	if errors.Is(err, checkout.ErrNotFound) {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found in tenant")
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found in OperatorContext")
 		return
 	}
 	if errors.Is(err, checkout.ErrPaymentSessionMismatch) {
@@ -184,13 +184,13 @@ func handleConfirmedRefundEffect(w http.ResponseWriter, s *protectedStoreServer,
 	}
 	var exists bool
 	if err := s.db.QueryRow(`SELECT EXISTS(
-		SELECT 1 FROM dsh_orders WHERE id=$1::uuid AND tenant_id=$2
+		SELECT 1 FROM dsh_orders WHERE id=$1::uuid AND operator_context_id=$2
 	)`, orderID, operatorContextID).Scan(&exists); err != nil {
-		store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to verify refund order tenant")
+		store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to verify refund order OperatorContext")
 		return
 	}
 	if !exists {
-		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found in tenant")
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found in OperatorContext")
 		return
 	}
 

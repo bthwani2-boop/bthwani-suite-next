@@ -15,7 +15,7 @@ if ([string]::IsNullOrWhiteSpace($DatabaseUser)) { $DatabaseUser = 'wlt_runtime'
 if ([string]::IsNullOrWhiteSpace($DatabaseName)) { $DatabaseName = 'wlt_runtime' }
 
 $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-$operatorContextId = 'tenant-dev-001'
+$operatorContextId = 'OperatorContext-dev-001'
 $checkoutIntentId = "cod-smoke-checkout-$timestamp"
 $orderId = "cod-smoke-order-$timestamp"
 $captainId = "cod-smoke-captain-$timestamp"

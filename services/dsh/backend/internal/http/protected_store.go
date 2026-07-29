@@ -314,7 +314,7 @@ func (s *protectedStoreServer) handleOperatorStores(w http.ResponseWriter, r *ht
 		return
 	}
 	if strings.TrimSpace(actor.OperatorContextID) == "" {
-		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted tenant context is required")
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return
 	}
 	listQuery, errMessage := store.ParseListQuery(r.URL.Query())
@@ -322,9 +322,9 @@ func (s *protectedStoreServer) handleOperatorStores(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", errMessage)
 		return
 	}
-	result, err := store.ListAllStoresForTenant(s.db, actor.OperatorContextID, listQuery)
+	result, err := store.ListAllStoresForOperatorContext(s.db, actor.OperatorContextID, listQuery)
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not load tenant stores")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not load OperatorContext stores")
 		return
 	}
 	store.SendJSON(w, http.StatusOK, result)
@@ -336,10 +336,10 @@ func (s *protectedStoreServer) handleOperatorStoreDetail(w http.ResponseWriter, 
 		return
 	}
 	if strings.TrimSpace(actor.OperatorContextID) == "" {
-		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted tenant context is required")
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return
 	}
-	row, err := store.GetStoreByIDInternalForTenant(r.Context(), s.db, actor.OperatorContextID, r.PathValue("storeId"))
+	row, err := store.GetStoreByIDInternalForOperatorContext(r.Context(), s.db, actor.OperatorContextID, r.PathValue("storeId"))
 	if err != nil {
 		s.writeStoreError(w, err)
 		return
@@ -447,10 +447,10 @@ func (s *protectedStoreServer) handleStoreAudit(w http.ResponseWriter, r *http.R
 		return
 	}
 	if strings.TrimSpace(actor.OperatorContextID) == "" {
-		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted tenant context is required")
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return
 	}
-	if _, err := store.GetStoreByIDInternalForTenant(r.Context(), s.db, actor.OperatorContextID, r.PathValue("storeId")); err != nil {
+	if _, err := store.GetStoreByIDInternalForOperatorContext(r.Context(), s.db, actor.OperatorContextID, r.PathValue("storeId")); err != nil {
 		s.writeStoreError(w, err)
 		return
 	}

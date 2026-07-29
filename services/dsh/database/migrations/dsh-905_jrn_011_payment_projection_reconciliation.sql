@@ -8,7 +8,7 @@ ALTER TABLE dsh_orders
 
 CREATE TABLE IF NOT EXISTS dsh_order_payment_projection_reconciliation (
   order_id UUID PRIMARY KEY REFERENCES dsh_orders(id) ON DELETE CASCADE,
-  tenant_id TEXT NOT NULL,
+  operator_context_id TEXT NOT NULL,
   wlt_payment_session_id TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending','processing','retry','scheduled','paused')),
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS dsh_order_payment_projection_reconciliation (
   last_error TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (tenant_id, wlt_payment_session_id)
+  UNIQUE (operator_context_id, wlt_payment_session_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_dsh_order_payment_reconciliation_due
@@ -28,8 +28,8 @@ CREATE INDEX IF NOT EXISTS idx_dsh_order_payment_reconciliation_due
   WHERE status IN ('pending','retry','scheduled','processing');
 
 INSERT INTO dsh_order_payment_projection_reconciliation
-  (order_id, tenant_id, wlt_payment_session_id, status, next_attempt_at)
-SELECT id, tenant_id, wlt_payment_ref_id, 'pending', NOW()
+  (order_id, operator_context_id, wlt_payment_session_id, status, next_attempt_at)
+SELECT id, operator_context_id, wlt_payment_ref_id, 'pending', NOW()
 FROM dsh_orders
 WHERE wlt_payment_ref_id <> ''
 ON CONFLICT (order_id) DO NOTHING;
@@ -39,11 +39,11 @@ RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW.wlt_payment_ref_id <> '' THEN
     INSERT INTO dsh_order_payment_projection_reconciliation
-      (order_id, tenant_id, wlt_payment_session_id, status, next_attempt_at)
+      (order_id, operator_context_id, wlt_payment_session_id, status, next_attempt_at)
     VALUES
-      (NEW.id, NEW.tenant_id, NEW.wlt_payment_ref_id, 'pending', NOW())
+      (NEW.id, NEW.operator_context_id, NEW.wlt_payment_ref_id, 'pending', NOW())
     ON CONFLICT (order_id) DO UPDATE
-      SET tenant_id=EXCLUDED.tenant_id,
+      SET operator_context_id=EXCLUDED.operator_context_id,
           wlt_payment_session_id=EXCLUDED.wlt_payment_session_id,
           status='pending',
           next_attempt_at=NOW(),
@@ -59,7 +59,7 @@ FOR EACH ROW EXECUTE FUNCTION dsh_jrn011_schedule_payment_projection();
 
 -- Replace the prior eight-character suffix for future orders. Existing numbers
 -- remain immutable. Twelve UUID hexadecimal characters provide a materially
--- larger collision space while the tenant unique index remains authoritative.
+-- larger collision space while the OperatorContext unique index remains authoritative.
 CREATE OR REPLACE FUNCTION dsh_jrn011_apply_order_truth()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
@@ -69,9 +69,9 @@ BEGIN
          ci.wlt_payment_session_id, ci.updated_at
   INTO checkout_row
   FROM dsh_checkout_intents ci
-  WHERE ci.id = NEW.checkout_intent_id AND ci.tenant_id = NEW.tenant_id
+  WHERE ci.id = NEW.checkout_intent_id AND ci.operator_context_id = NEW.operator_context_id
   FOR SHARE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'checkout intent is outside order tenant'; END IF;
+  IF NOT FOUND THEN RAISE EXCEPTION 'checkout intent is outside order OperatorContext'; END IF;
 
   NEW.order_number := COALESCE(NULLIF(NEW.order_number, ''),
     'ORD-' || TO_CHAR(NOW() AT TIME ZONE 'UTC', 'YYMMDD') || '-' ||

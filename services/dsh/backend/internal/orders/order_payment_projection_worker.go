@@ -107,7 +107,7 @@ func claimPaymentProjectionWork(ctx context.Context, db *sql.DB, limit int) ([]p
 		    updated_at=NOW()
 		FROM due
 		WHERE r.order_id=due.order_id
-		RETURNING r.order_id::text,r.tenant_id,r.wlt_payment_session_id,r.attempt_count`, limit)
+		RETURNING r.order_id::text,r.operator_context_id,r.wlt_payment_session_id,r.attempt_count`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func applyPaymentProjection(ctx context.Context, db *sql.DB, item paymentProject
 	err = tx.QueryRowContext(ctx, `
 		SELECT payment_status_projection,status,correlation_id,version,payment_projection_source_updated_at
 		FROM dsh_orders
-		WHERE id=$1::uuid AND tenant_id=$2 AND wlt_payment_ref_id=$3
+		WHERE id=$1::uuid AND operator_context_id=$2 AND wlt_payment_ref_id=$3
 		FOR UPDATE`, item.OrderID, item.OperatorContextID, item.SessionID,
 	).Scan(&currentProjection, &currentOrderStatus, &correlationID, &currentVersion, &currentSourceUpdated)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -170,7 +170,7 @@ func applyPaymentProjection(ctx context.Context, db *sql.DB, item paymentProject
 			    payment_projection_reconciled_at=NOW(),
 			    version=version+1,
 			    updated_at=NOW()
-			WHERE id=$3::uuid AND tenant_id=$4 AND wlt_payment_ref_id=$5
+			WHERE id=$3::uuid AND operator_context_id=$4 AND wlt_payment_ref_id=$5
 			RETURNING version`, projection, session.UpdatedAt, item.OrderID, item.OperatorContextID, item.SessionID,
 		).Scan(&newVersion)
 		if err != nil {
@@ -179,7 +179,7 @@ func applyPaymentProjection(ctx context.Context, db *sql.DB, item paymentProject
 		metadata := fmt.Sprintf(`{"source":"WLT","paymentProjection":%q,"wltStatus":%q}`, projection, session.Status)
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO dsh_order_status_events
-			(order_id,tenant_id,actor_role,actor_id,from_status,to_status,note,event_type,
+			(order_id,operator_context_id,actor_role,actor_id,from_status,to_status,note,event_type,
 			 correlation_id,causation_id,order_version,metadata)
 			VALUES ($1::uuid,$2,'system','wlt',$3,$3,'verified WLT projection changed',
 			        'order.payment_projection_updated',$4,$5,$6,$7::jsonb)`,
@@ -201,7 +201,7 @@ func applyPaymentProjection(ctx context.Context, db *sql.DB, item paymentProject
 			    payment_projection_source_updated_at=CASE
 			      WHEN payment_projection_source_updated_at IS NULL OR payment_projection_source_updated_at < $1
 			      THEN $1 ELSE payment_projection_source_updated_at END
-			WHERE id=$2::uuid AND tenant_id=$3 AND wlt_payment_ref_id=$4`,
+			WHERE id=$2::uuid AND operator_context_id=$3 AND wlt_payment_ref_id=$4`,
 			session.UpdatedAt, item.OrderID, item.OperatorContextID, item.SessionID,
 		)
 		if err != nil {
@@ -220,7 +220,7 @@ func applyPaymentProjection(ctx context.Context, db *sql.DB, item paymentProject
 		    last_source_updated_at=$3,
 		    last_error='',
 		    updated_at=NOW()
-		WHERE order_id=$4::uuid AND tenant_id=$5 AND wlt_payment_session_id=$6`,
+		WHERE order_id=$4::uuid AND operator_context_id=$5 AND wlt_payment_session_id=$6`,
 		int64(nextAttempt/time.Second), session.Status, session.UpdatedAt, item.OrderID, item.OperatorContextID, item.SessionID,
 	)
 	if err != nil {
@@ -253,7 +253,7 @@ func markPaymentProjectionFailure(ctx context.Context, db *sql.DB, item paymentP
 		    lease_expires_at=NULL,
 		    last_error=LEFT($3,1000),
 		    updated_at=NOW()
-		WHERE order_id=$4::uuid AND tenant_id=$5 AND wlt_payment_session_id=$6`,
+		WHERE order_id=$4::uuid AND operator_context_id=$5 AND wlt_payment_session_id=$6`,
 		status,
 		int64(retryAfter/time.Second),
 		failure.Error(),

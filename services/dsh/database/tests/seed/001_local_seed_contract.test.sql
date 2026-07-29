@@ -26,39 +26,39 @@ BEGIN
     SELECT 1
     FROM dsh_stores
     WHERE id = 'store-test-grocery'
-      AND tenant_id = 'local-dsh'
+      AND operator_context_id = 'local-dsh'
   ) THEN
-    RAISE EXCEPTION 'canonical local grocery store seed is missing or tenant ownership drifted';
+    RAISE EXCEPTION 'canonical local grocery store seed is missing or OperatorContext ownership drifted';
   END IF;
 
   IF NOT EXISTS (
     SELECT 1
     FROM dsh_partners
     WHERE id = 'prt_partner_local_001'
-      AND tenant_id = 'local-dsh'
+      AND operator_context_id = 'local-dsh'
   ) THEN
-    RAISE EXCEPTION 'canonical local partner seed is missing or tenant ownership drifted';
+    RAISE EXCEPTION 'canonical local partner seed is missing or OperatorContext ownership drifted';
   END IF;
 
   IF EXISTS (
     SELECT 1 FROM dsh_stores
-    WHERE tenant_id IS NULL OR btrim(tenant_id) = ''
+    WHERE operator_context_id IS NULL OR btrim(operator_context_id) = ''
   ) THEN
-    RAISE EXCEPTION 'local store seeds created unowned tenant rows';
+    RAISE EXCEPTION 'local store seeds created unowned OperatorContext rows';
   END IF;
 
   IF EXISTS (
     SELECT 1 FROM dsh_partners
-    WHERE tenant_id IS NULL OR btrim(tenant_id) = ''
+    WHERE operator_context_id IS NULL OR btrim(operator_context_id) = ''
   ) THEN
-    RAISE EXCEPTION 'local partner seeds created unowned tenant rows';
+    RAISE EXCEPTION 'local partner seeds created unowned OperatorContext rows';
   END IF;
 
   SELECT COUNT(*)
   INTO published_storefront_count
   FROM dsh_stores s
   JOIN dsh_partners partner ON partner.id = s.partner_id
-  WHERE s.tenant_id = 'local-dsh'
+  WHERE s.operator_context_id = 'local-dsh'
     AND s.id IN (
       'store-test-grocery',
       'store-1002',

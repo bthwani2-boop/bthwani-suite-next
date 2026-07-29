@@ -9,21 +9,21 @@ import (
 	"time"
 )
 
-func TestPaymentOperationHashBindsTenantSessionAndOperation(t *testing.T) {
-	base := paymentOperationHash("tenant-a", "ps-1", "authorize")
+func TestPaymentOperationHashBindsOperatorContextSessionAndOperation(t *testing.T) {
+	base := paymentOperationHash("OperatorContext-a", "ps-1", "authorize")
 	if len(base) != 64 {
 		t.Fatalf("expected sha256 hex hash, got %q", base)
 	}
 	for name, candidate := range map[string]string{
-		"tenant":    paymentOperationHash("tenant-b", "ps-1", "authorize"),
-		"session":   paymentOperationHash("tenant-a", "ps-2", "authorize"),
-		"operation": paymentOperationHash("tenant-a", "ps-1", "capture"),
+		"OperatorContext":    paymentOperationHash("OperatorContext-b", "ps-1", "authorize"),
+		"session":   paymentOperationHash("OperatorContext-a", "ps-2", "authorize"),
+		"operation": paymentOperationHash("OperatorContext-a", "ps-1", "capture"),
 	} {
 		if candidate == base {
 			t.Fatalf("%s change must alter request hash", name)
 		}
 	}
-	if paymentOperationHash("tenant-a", "ps-1", "authorize") != base {
+	if paymentOperationHash("OperatorContext-a", "ps-1", "authorize") != base {
 		t.Fatal("same operation identity must produce a stable hash")
 	}
 }

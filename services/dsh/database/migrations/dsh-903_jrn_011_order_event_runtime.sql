@@ -21,13 +21,13 @@ RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
   order_row RECORD;
 BEGIN
-  SELECT tenant_id, correlation_id, version
+  SELECT operator_context_id, correlation_id, version
   INTO order_row
   FROM dsh_orders
   WHERE id=NEW.order_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'order event references missing order'; END IF;
 
-  NEW.tenant_id := order_row.tenant_id;
+  NEW.operator_context_id := order_row.operator_context_id;
   NEW.correlation_id := COALESCE(NULLIF(NEW.correlation_id,''), order_row.correlation_id);
   NEW.causation_id := COALESCE(NEW.causation_id,'');
   NEW.actor_id := COALESCE(NEW.actor_id,'');
@@ -50,9 +50,9 @@ CREATE OR REPLACE FUNCTION dsh_jrn011_publish_order_event_to_outbox()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
   INSERT INTO dsh_order_event_outbox
-    (tenant_id,order_id,event_id,event_type,correlation_id,causation_id,payload)
+    (operator_context_id,order_id,event_id,event_type,correlation_id,causation_id,payload)
   VALUES
-    (NEW.tenant_id,NEW.order_id,NEW.id,NEW.event_type,NEW.correlation_id,NEW.causation_id,
+    (NEW.operator_context_id,NEW.order_id,NEW.id,NEW.event_type,NEW.correlation_id,NEW.causation_id,
      jsonb_build_object(
        'eventId',NEW.id,
        'eventType',NEW.event_type,
@@ -66,7 +66,7 @@ BEGIN
        'metadata',NEW.metadata,
        'occurredAt',NEW.created_at
      ))
-  ON CONFLICT (tenant_id,event_id) DO NOTHING;
+  ON CONFLICT (operator_context_id,event_id) DO NOTHING;
   RETURN NEW;
 END $$;
 

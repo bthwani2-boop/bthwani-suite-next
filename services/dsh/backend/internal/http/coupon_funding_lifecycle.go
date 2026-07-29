@@ -16,7 +16,7 @@ func fundingCorrelation(correlationID, fallback string) string {
 	return strings.TrimSpace(fallback)
 }
 
-func fundingTenant(requested string, projection *coupons.FundingProjection) string {
+func fundingOperatorContext(requested string, projection *coupons.FundingProjection) string {
 	if value := strings.TrimSpace(requested); value != "" {
 		return value
 	}
@@ -36,13 +36,13 @@ func (s *protectedStoreServer) reserveCouponFunding(
 	if err != nil || projection == nil {
 		return projection, err
 	}
-	operatorContextID = fundingTenant(operatorContextID, projection)
+	operatorContextID = fundingOperatorContext(operatorContextID, projection)
 	if operatorContextID == "" {
-		return nil, fmt.Errorf("coupon funding tenant is required")
+		return nil, fmt.Errorf("coupon funding OperatorContext is required")
 	}
 	if projection.Status == "reserved" && projection.WLTReservationID != "" {
 		if projection.OperatorContextID != "" && projection.OperatorContextID != operatorContextID {
-			return nil, fmt.Errorf("coupon funding tenant mismatch")
+			return nil, fmt.Errorf("coupon funding OperatorContext mismatch")
 		}
 		return projection, nil
 	}
@@ -101,12 +101,12 @@ func (s *protectedStoreServer) releaseCouponFunding(
 	if err != nil || projection == nil {
 		return err
 	}
-	operatorContextID = fundingTenant(operatorContextID, projection)
+	operatorContextID = fundingOperatorContext(operatorContextID, projection)
 	if projection.WLTReservationID == "" || projection.Status == "released" || projection.Status == "reversed" {
 		return nil
 	}
 	if operatorContextID == "" {
-		return fmt.Errorf("coupon funding tenant is missing")
+		return fmt.Errorf("coupon funding OperatorContext is missing")
 	}
 	if projection.Status == "committed" {
 		return fmt.Errorf("committed coupon funding cannot be released")
@@ -136,9 +136,9 @@ func (s *protectedStoreServer) commitCouponFunding(
 	if err != nil || projection == nil {
 		return err
 	}
-	operatorContextID = fundingTenant(operatorContextID, projection)
+	operatorContextID = fundingOperatorContext(operatorContextID, projection)
 	if projection.WLTReservationID == "" || operatorContextID == "" {
-		return fmt.Errorf("coupon funding reservation or tenant is missing")
+		return fmt.Errorf("coupon funding reservation or OperatorContext is missing")
 	}
 	if projection.Status == "committed" {
 		return nil
@@ -169,12 +169,12 @@ func (s *protectedStoreServer) reverseCouponFunding(
 	if err != nil || projection == nil {
 		return err
 	}
-	operatorContextID = fundingTenant(operatorContextID, projection)
+	operatorContextID = fundingOperatorContext(operatorContextID, projection)
 	if projection.WLTReservationID == "" || projection.Status == "reversed" {
 		return nil
 	}
 	if operatorContextID == "" {
-		return fmt.Errorf("coupon funding tenant is missing")
+		return fmt.Errorf("coupon funding OperatorContext is missing")
 	}
 	if projection.Status != "committed" {
 		return fmt.Errorf("only committed coupon funding can be reversed")

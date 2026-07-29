@@ -26,7 +26,7 @@ ALTER TABLE wlt_commissions
   ADD COLUMN IF NOT EXISTS partner_category text NOT NULL DEFAULT 'default';
 
 CREATE INDEX IF NOT EXISTS wlt_commissions_partner_category_idx
-  ON wlt_commissions(tenant_id, partner_category, created_at DESC);
+  ON wlt_commissions(operator_context_id, partner_category, created_at DESC);
 
 INSERT INTO wlt_field_commission_category_policy_versions(
   policy_id,partner_category,version,fixed_amount_minor_units,currency,status,

@@ -146,13 +146,13 @@ type UpdateInput struct {
 type Repository interface {
 	Create(ctx context.Context, input CreateInput) (*SpecialRequest, error)
 	Get(ctx context.Context, id string) (*SpecialRequest, error)
-	GetInTenant(ctx context.Context, operatorContextID string, id string) (*SpecialRequest, error)
+	GetInOperatorContext(ctx context.Context, operatorContextID string, id string) (*SpecialRequest, error)
 	Update(ctx context.Context, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error)
-	UpdateInTenant(ctx context.Context, operatorContextID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error)
+	UpdateInOperatorContext(ctx context.Context, operatorContextID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error)
 	ListByClient(ctx context.Context, clientID string, limit, offset int) ([]SpecialRequest, int, error)
-	ListByClientInTenant(ctx context.Context, operatorContextID string, clientID string, limit, offset int) ([]SpecialRequest, int, error)
+	ListByClientInOperatorContext(ctx context.Context, operatorContextID string, clientID string, limit, offset int) ([]SpecialRequest, int, error)
 	ListForOperator(ctx context.Context, reqType *string, status *string, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error)
-	ListForOperatorInTenant(ctx context.Context, operatorContextID string, reqType *string, status *string, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error)
+	ListForOperatorInOperatorContext(ctx context.Context, operatorContextID string, reqType *string, status *string, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error)
 }
 
 type PostgresRepository struct {
@@ -183,7 +183,7 @@ func clampLimit(limit int) int {
 
 const specialRequestColumns = `
 	id, client_id, request_type, status, version, workflow_stage,
-	tenant_id,
+	operator_context_id,
 	customer_notes, currency, estimated_amount_reference, estimated_amount_minor_units, wlt_payment_session_id, correlation_id,
 	product_url, quantity, size, color, variant_notes, delivery_address_reference,
 	pickup_address_reference, dropoff_address_reference, pickup_location, dropoff_location, item_type, schedule_mode, scheduled_at, handling_requirements,
@@ -217,8 +217,8 @@ func scanSpecialRequest(scan func(...any) error) (*SpecialRequest, error) {
 // queryRower is satisfied by both *sql.DB and *sql.Tx, letting Create/update
 // run against either a pooled connection or a caller-owned transaction. The
 // Tx variants exist so a mutation and the audit event describing it (see
-// service.go's Create/ApplyOperatorTransitionInTenant/
-// CancelForClientInTenant) commit or roll back together.
+// service.go's Create/ApplyOperatorTransitionInOperatorContext/
+// CancelForClientInOperatorContext) commit or roll back together.
 type queryRower interface {
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
@@ -239,7 +239,7 @@ func (r *PostgresRepository) createWith(ctx context.Context, exec queryRower, in
 	id := uuid.New().String()
 	query := `
 		INSERT INTO dsh_special_requests (
-			id, tenant_id, client_id, request_type, status, idempotency_key, workflow_stage, correlation_id,
+			id, operator_context_id, client_id, request_type, status, idempotency_key, workflow_stage, correlation_id,
 			customer_notes, product_url, quantity, size, color, variant_notes, delivery_address_reference,
 			pickup_address_reference, dropoff_address_reference, pickup_location, dropoff_location, item_type, schedule_mode, scheduled_at, handling_requirements
 		) VALUES (
@@ -247,7 +247,7 @@ func (r *PostgresRepository) createWith(ctx context.Context, exec queryRower, in
 			$9, $10, $11, $12, $13, $14, $15,
 			$16, $17, $18::jsonb, $19::jsonb, $20, $21, $22, $23
 		)
-		ON CONFLICT (tenant_id, client_id, idempotency_key) WHERE idempotency_key IS NOT NULL
+		ON CONFLICT (operator_context_id, client_id, idempotency_key) WHERE idempotency_key IS NOT NULL
 		DO UPDATE SET updated_at = now()
 		RETURNING ` + specialRequestColumns
 
@@ -274,10 +274,10 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (*SpecialReques
 	return req, nil
 }
 
-func (r *PostgresRepository) GetInTenant(ctx context.Context, operatorContextID string, id string) (*SpecialRequest, error) {
+func (r *PostgresRepository) GetInOperatorContext(ctx context.Context, operatorContextID string, id string) (*SpecialRequest, error) {
 	query := `SELECT ` + specialRequestColumns + `
 		FROM dsh_special_requests
-		WHERE tenant_id = $1 AND id = $2
+		WHERE operator_context_id = $1 AND id = $2
 	`
 	req, err := scanSpecialRequest(r.db.QueryRowContext(ctx, query, operatorContextID, id).Scan)
 	if err == sql.ErrNoRows {
@@ -293,12 +293,12 @@ func (r *PostgresRepository) Update(ctx context.Context, id string, expectedVers
 	return r.updateWith(ctx, r.db, "", id, expectedVersion, input)
 }
 
-func (r *PostgresRepository) UpdateInTenant(ctx context.Context, operatorContextID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
+func (r *PostgresRepository) UpdateInOperatorContext(ctx context.Context, operatorContextID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
 	return r.updateWith(ctx, r.db, operatorContextID, id, expectedVersion, input)
 }
 
-// UpdateInTenantTx is UpdateInTenant's transactional counterpart.
-func (r *PostgresRepository) UpdateInTenantTx(ctx context.Context, tx *sql.Tx, operatorContextID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
+// UpdateInOperatorContextTx is UpdateInOperatorContext's transactional counterpart.
+func (r *PostgresRepository) UpdateInOperatorContextTx(ctx context.Context, tx *sql.Tx, operatorContextID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
 	return r.updateWith(ctx, tx, operatorContextID, id, expectedVersion, input)
 }
 
@@ -313,7 +313,7 @@ func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, op
 		input.FulfillmentPreparedAt, input.ReadyForDeliveryAt, input.CaptainAssignedAt, input.PickedUpAt, input.DeliveredAt,
 	}
 	if operatorContextID != "" {
-		where = "tenant_id = $25 AND id = $1 AND version = $2"
+		where = "operator_context_id = $25 AND id = $1 AND version = $2"
 		args = append(args, operatorContextID)
 	}
 	query := `
@@ -353,7 +353,7 @@ func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, op
 		versionQuery := `SELECT version FROM dsh_special_requests WHERE id = $1`
 		versionArgs := []any{id}
 		if operatorContextID != "" {
-			versionQuery = `SELECT version FROM dsh_special_requests WHERE tenant_id = $1 AND id = $2`
+			versionQuery = `SELECT version FROM dsh_special_requests WHERE operator_context_id = $1 AND id = $2`
 			versionArgs = []any{operatorContextID, id}
 		}
 		verErr := exec.QueryRowContext(ctx, versionQuery, versionArgs...).Scan(&currentVersion)
@@ -385,16 +385,16 @@ func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, op
 // driver handles the base use case without complex cross-module coupling. Mappings
 // stage sync for dispatch-driven transitions can follow in a later phase.
 func TransitionDispatchStatus(tx *sql.Tx, id string, allowedFrom []RequestStatus, toStatus RequestStatus) error {
-	return TransitionDispatchStatusInTenant(tx, "", id, allowedFrom, toStatus)
+	return TransitionDispatchStatusInOperatorContext(tx, "", id, allowedFrom, toStatus)
 }
 
-func TransitionDispatchStatusInTenant(tx *sql.Tx, operatorContextID string, id string, allowedFrom []RequestStatus, toStatus RequestStatus) error {
+func TransitionDispatchStatusInOperatorContext(tx *sql.Tx, operatorContextID string, id string, allowedFrom []RequestStatus, toStatus RequestStatus) error {
 	var currentStatus RequestStatus
 	var version int
 	query := `SELECT status, version FROM dsh_special_requests WHERE id = $1 FOR UPDATE`
 	args := []any{id}
 	if operatorContextID != "" {
-		query = `SELECT status, version FROM dsh_special_requests WHERE tenant_id = $1 AND id = $2 FOR UPDATE`
+		query = `SELECT status, version FROM dsh_special_requests WHERE operator_context_id = $1 AND id = $2 FOR UPDATE`
 		args = []any{operatorContextID, id}
 	}
 	err := tx.QueryRow(query, args...).Scan(&currentStatus, &version)
@@ -427,7 +427,7 @@ func TransitionDispatchStatusInTenant(tx *sql.Tx, operatorContextID string, id s
 		WHERE id = $4`
 	updateArgs := []any{string(toStatus), setCompletedAt, setCancelledAt, id}
 	if operatorContextID != "" {
-		updateQuery += ` AND tenant_id = $5`
+		updateQuery += ` AND operator_context_id = $5`
 		updateArgs = append(updateArgs, operatorContextID)
 	}
 	_, err = tx.Exec(updateQuery, updateArgs...)
@@ -479,9 +479,9 @@ func (e *ErrDispatchNotReady) Unwrap() error { return ErrNotReadyForDispatch }
 // for it.
 //
 // It must be called inside the same transaction that will perform the
-// dispatch assignment (immediately before TransitionDispatchStatusInTenant),
+// dispatch assignment (immediately before TransitionDispatchStatusInOperatorContext),
 // so the readiness check and the resulting status transition are atomic
-// together: locking here and re-locking in TransitionDispatchStatusInTenant
+// together: locking here and re-locking in TransitionDispatchStatusInOperatorContext
 // within the same tx is safe (Postgres row locks are reentrant within a
 // transaction).
 func CheckSheinDispatchReadiness(tx *sql.Tx, operatorContextID, id string) error {
@@ -492,7 +492,7 @@ func CheckSheinDispatchReadiness(tx *sql.Tx, operatorContextID, id string) error
 	if operatorContextID != "" {
 		query = `SELECT request_type, workflow_stage, purchased_at, inbound_received_at,
 			sorting_completed_at, fulfillment_prepared_at, ready_for_delivery_at
-			FROM dsh_special_requests WHERE tenant_id = $1 AND id = $2 FOR UPDATE`
+			FROM dsh_special_requests WHERE operator_context_id = $1 AND id = $2 FOR UPDATE`
 		args = []any{operatorContextID, id}
 	}
 
@@ -557,21 +557,21 @@ func CheckSheinDispatchReadiness(tx *sql.Tx, operatorContextID, id string) error
 }
 
 func (r *PostgresRepository) ListByClient(ctx context.Context, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
-	return r.ListByClientInTenant(ctx, DefaultOperatorContextID, clientID, limit, offset)
+	return r.ListByClientInOperatorContext(ctx, DefaultOperatorContextID, clientID, limit, offset)
 }
 
-func (r *PostgresRepository) ListByClientInTenant(ctx context.Context, operatorContextID string, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
+func (r *PostgresRepository) ListByClientInOperatorContext(ctx context.Context, operatorContextID string, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
 	limit = clampLimit(limit)
 
 	var total int
-	err := r.db.QueryRowContext(ctx, "SELECT count(*) FROM dsh_special_requests WHERE tenant_id = $1 AND client_id = $2", operatorContextID, clientID).Scan(&total)
+	err := r.db.QueryRowContext(ctx, "SELECT count(*) FROM dsh_special_requests WHERE operator_context_id = $1 AND client_id = $2", operatorContextID, clientID).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	query := `SELECT ` + specialRequestColumns + `
 		FROM dsh_special_requests
-		WHERE tenant_id = $1 AND client_id = $2
+		WHERE operator_context_id = $1 AND client_id = $2
 		ORDER BY created_at DESC
 		LIMIT $3 OFFSET $4
 	`
@@ -596,13 +596,13 @@ func (r *PostgresRepository) ListByClientInTenant(ctx context.Context, operatorC
 }
 
 func (r *PostgresRepository) ListForOperator(ctx context.Context, reqType *string, status *string, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
-	return r.ListForOperatorInTenant(ctx, DefaultOperatorContextID, reqType, status, workflowStage, limit, offset)
+	return r.ListForOperatorInOperatorContext(ctx, DefaultOperatorContextID, reqType, status, workflowStage, limit, offset)
 }
 
-func (r *PostgresRepository) ListForOperatorInTenant(ctx context.Context, operatorContextID string, reqType *string, status *string, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
+func (r *PostgresRepository) ListForOperatorInOperatorContext(ctx context.Context, operatorContextID string, reqType *string, status *string, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
 	limit = clampLimit(limit)
 
-	whereClause := "WHERE tenant_id = $1"
+	whereClause := "WHERE operator_context_id = $1"
 	var args []interface{} = []interface{}{operatorContextID}
 	argIdx := 2
 	if reqType != nil && *reqType != "" {

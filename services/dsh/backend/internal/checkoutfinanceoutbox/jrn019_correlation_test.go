@@ -11,7 +11,7 @@ import (
 )
 
 func TestDispatchPreservesPersistedCancellationCorrelation(t *testing.T) {
-	const operatorContextID = "tenant-a"
+	const operatorContextID = "OperatorContext-a"
 	var gotCorrelation string
 	var gotOperatorContextID string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

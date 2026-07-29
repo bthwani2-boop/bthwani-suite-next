@@ -35,7 +35,7 @@ func GetClientScopedOrderTruth(db *sql.DB, orderID, operatorContextID, clientID 
 	var scopedID string
 	err := db.QueryRow(`
 		SELECT id::text FROM dsh_orders
-		WHERE id=$1::uuid AND tenant_id=$2 AND client_id=$3`, orderID, operatorContextID, clientID,
+		WHERE id=$1::uuid AND operator_context_id=$2 AND client_id=$3`, orderID, operatorContextID, clientID,
 	).Scan(&scopedID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -56,7 +56,7 @@ func GetPartnerScopedOrderTruth(db *sql.DB, orderID, operatorContextID, storeID 
 	var scopedID string
 	err := db.QueryRow(`
 		SELECT id::text FROM dsh_orders
-		WHERE id=$1::uuid AND tenant_id=$2 AND store_id=$3`, orderID, operatorContextID, storeID,
+		WHERE id=$1::uuid AND operator_context_id=$2 AND store_id=$3`, orderID, operatorContextID, storeID,
 	).Scan(&scopedID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -106,18 +106,18 @@ func listOrderTruthByScope(db *sql.DB, operatorContextID, viewerRole, scopeID, s
 	var err error
 	switch viewerRole {
 	case "client":
-		rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 AND client_id=$2 ORDER BY created_at DESC LIMIT $3`, operatorContextID, scopeID, limit)
+		rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE operator_context_id=$1 AND client_id=$2 ORDER BY created_at DESC LIMIT $3`, operatorContextID, scopeID, limit)
 	case "partner":
 		if status == "" {
-			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 AND store_id=$2 ORDER BY created_at DESC LIMIT $3`, operatorContextID, scopeID, limit)
+			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE operator_context_id=$1 AND store_id=$2 ORDER BY created_at DESC LIMIT $3`, operatorContextID, scopeID, limit)
 		} else {
-			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 AND store_id=$2 AND status=$3 ORDER BY created_at DESC LIMIT $4`, operatorContextID, scopeID, status, limit)
+			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE operator_context_id=$1 AND store_id=$2 AND status=$3 ORDER BY created_at DESC LIMIT $4`, operatorContextID, scopeID, status, limit)
 		}
 	case "operator":
 		if status == "" {
-			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT $2`, operatorContextID, limit)
+			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE operator_context_id=$1 ORDER BY created_at DESC LIMIT $2`, operatorContextID, limit)
 		} else {
-			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 AND status=$2 ORDER BY created_at DESC LIMIT $3`, operatorContextID, status, limit)
+			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE operator_context_id=$1 AND status=$2 ORDER BY created_at DESC LIMIT $3`, operatorContextID, status, limit)
 		}
 	default:
 		return nil, ErrInvalid

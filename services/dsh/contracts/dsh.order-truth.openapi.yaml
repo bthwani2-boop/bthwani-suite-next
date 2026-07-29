@@ -47,7 +47,7 @@ paths:
     get:
       tags: ["dsh-client"]
       operationId: listClientOrderTruth
-      summary: List orders owned by the authenticated client in the current tenant.
+      summary: List orders owned by the authenticated client in the current OperatorContext.
       parameters:
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -126,13 +126,13 @@ paths:
     get:
       tags: ["dsh-operator"]
       operationId: listOperatorOrderTruth
-      summary: List tenant order truth for an operator with operations.read.
+      summary: List OperatorContext order truth for an operator with operations.read.
       parameters:
         - $ref: '#/components/parameters/Status'
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: Tenant-scoped operational order truth.
+          description: OperatorContext-scoped operational order truth.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OrderCollectionEnvelope' }
@@ -142,7 +142,7 @@ paths:
     get:
       tags: ["dsh-operator"]
       operationId: getOperatorOrderTruthDiagnostics
-      summary: Read redacted tenant-scoped operational diagnostics.
+      summary: Read redacted OperatorContext-scoped operational diagnostics.
       responses:
         '200':
           description: Order truth service indicators and alert codes without PII.
@@ -155,12 +155,12 @@ paths:
     get:
       tags: ["dsh-operator"]
       operationId: getOperatorOrderTruth
-      summary: Read one tenant order for an operator with operations.read.
+      summary: Read one OperatorContext order for an operator with operations.read.
       parameters:
         - $ref: '#/components/parameters/OrderId'
       responses:
         '200':
-          description: Tenant-scoped operational order truth.
+          description: OperatorContext-scoped operational order truth.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OrderEnvelope' }
@@ -178,7 +178,7 @@ components:
       name: Idempotency-Key
       in: header
       required: true
-      description: Durable mutation key scoped by tenant and authenticated client.
+      description: Durable mutation key scoped by OperatorContext and authenticated client.
       schema: { type: string, minLength: 16, maxLength: 200 }
     CorrelationId:
       name: X-Correlation-ID

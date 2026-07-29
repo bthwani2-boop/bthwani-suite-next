@@ -12,7 +12,7 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 	db := openRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 
-	partner1, err := CreatePartnerForTenant(db, partnerTestOperatorContextID, CreatePartnerInput{
+	partner1, err := CreatePartnerForOperatorContext(db, partnerTestOperatorContextID, CreatePartnerInput{
 		LegalNameAr:         "شريك اختبار أ " + suffix,
 		LegalNameEn:         "Partner A " + suffix,
 		DisplayName:         "Partner A " + suffix,
@@ -28,7 +28,7 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	partner2, err := CreatePartnerForTenant(db, partnerTestOperatorContextID, CreatePartnerInput{
+	partner2, err := CreatePartnerForOperatorContext(db, partnerTestOperatorContextID, CreatePartnerInput{
 		LegalNameAr:         "شريك اختبار ب " + suffix,
 		LegalNameEn:         "Partner B " + suffix,
 		DisplayName:         "Partner B " + suffix,
@@ -50,7 +50,7 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 
 	_, err = db.Exec(`
 		INSERT INTO dsh_stores
-			(id, tenant_id, slug, display_name, status, city_code, service_area_code, serviceability_status, partner_id)
+			(id, operator_context_id, slug, display_name, status, city_code, service_area_code, serviceability_status, partner_id)
 		VALUES
 		($1, $6, $1, 'Store A1', 'active', 'SAH', 'SAH-CEN', 'serviceable', $4),
 		($2, $6, $2, 'Store A2', 'active', 'SAH', 'SAH-CEN', 'serviceable', $4),
@@ -95,9 +95,9 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			scopes, err := ListPartnerScopesForActorForTenant(db, partnerTestOperatorContextID, tc.partnerID, tc.actorID)
+			scopes, err := ListPartnerScopesForActorForOperatorContext(db, partnerTestOperatorContextID, tc.partnerID, tc.actorID)
 			if err != nil {
-				t.Fatalf("ListPartnerScopesForActorForTenant failed: %v", err)
+				t.Fatalf("ListPartnerScopesForActorForOperatorContext failed: %v", err)
 			}
 			if len(scopes) != len(tc.wantStores) {
 				t.Fatalf("got %d scopes, want %d", len(scopes), len(tc.wantStores))

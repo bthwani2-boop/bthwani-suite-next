@@ -82,10 +82,10 @@ test("PII and privacy code is deep", () => {
   assert.equal(result.verification_tier, "deep");
 });
 
-test("tenant context changes are deep", () => {
-  const result = classifyFiles(["services/dsh/backend/internal/tenant-context/context.go"]);
-  assert.equal(result.tenant_context_changed, true);
-  assert.equal(result.tenant_isolation_changed, true);
+test("OperatorContext context changes are deep", () => {
+  const result = classifyFiles(["services/dsh/backend/internal/OperatorContext-context/context.go"]);
+  assert.equal(result.OperatorContext_context_changed, true);
+  assert.equal(result.OperatorContext_isolation_changed, true);
   assert.equal(result.runtime_profile, "identity-security");
   assert.equal(result.verification_tier, "deep");
 });
@@ -142,9 +142,9 @@ test("classification exports every required routing key", () => {
     "dsh", "wlt", "identity", "workforce", "platform", "providers", "database",
     "runtime", "runtime_profile", "shared_brain", "heavy", "verification_tier", "diagnostics",
     "platform_change_sets", "cleanup_changed", "native_changed", "visual_changed",
-    "tenant_isolation_changed", "financial_changed", "migration_changed", "shared_contract_changed",
+    "OperatorContext_isolation_changed", "financial_changed", "migration_changed", "shared_contract_changed",
     "recovery_changed", "observability_changed", "auth_changed", "session_changed", "rbac_changed",
-    "privacy_changed", "pii_changed", "secrets_changed", "tenant_context_changed"
+    "privacy_changed", "pii_changed", "secrets_changed", "OperatorContext_context_changed"
   ];
   assert.deepEqual(Object.keys(result).sort(), expected.sort());
 });

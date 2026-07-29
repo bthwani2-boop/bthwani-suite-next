@@ -35,10 +35,10 @@ func catalogApprovalOrigin(role string) (source, stage string, ok bool) {
 	}
 }
 
-func requireCatalogApprovalTenant(w http.ResponseWriter, actor store.StoreActor) (string, bool) {
+func requireCatalogApprovalOperatorContext(w http.ResponseWriter, actor store.StoreActor) (string, bool) {
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
 	if operatorContextID == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_REQUIRED", "catalog approval access requires tenant context")
+		store.SendError(w, http.StatusForbidden, "OperatorContext_REQUIRED", "catalog approval access requires OperatorContext context")
 		return "", false
 	}
 	return operatorContextID, true
@@ -50,7 +50,7 @@ func (s *protectedStoreServer) handleCreateCatalogApproval(w http.ResponseWriter
 	if !ok {
 		return
 	}
-	operatorContextID, ok := requireCatalogApprovalTenant(w, actor)
+	operatorContextID, ok := requireCatalogApprovalOperatorContext(w, actor)
 	if !ok {
 		return
 	}
@@ -88,7 +88,7 @@ func (s *protectedStoreServer) handleCreateCatalogApproval(w http.ResponseWriter
 		Metadata:     metadata,
 	})
 	if errors.Is(err, catalogapproval.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "tenant, entityType, actor, and title are required")
+		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "OperatorContext, entityType, actor, and title are required")
 		return
 	}
 	if err != nil {
@@ -104,7 +104,7 @@ func (s *protectedStoreServer) handleListCatalogApprovals(w http.ResponseWriter,
 	if !ok {
 		return
 	}
-	operatorContextID, ok := requireCatalogApprovalTenant(w, actor)
+	operatorContextID, ok := requireCatalogApprovalOperatorContext(w, actor)
 	if !ok {
 		return
 	}
@@ -126,7 +126,7 @@ func (s *protectedStoreServer) handleListPartnerCatalogApprovals(w http.Response
 	if !ok {
 		return
 	}
-	operatorContextID, ok := requireCatalogApprovalTenant(w, actor)
+	operatorContextID, ok := requireCatalogApprovalOperatorContext(w, actor)
 	if !ok {
 		return
 	}
@@ -148,7 +148,7 @@ func (s *protectedStoreServer) handleGetCatalogApproval(w http.ResponseWriter, r
 	if !ok {
 		return
 	}
-	operatorContextID, ok := requireCatalogApprovalTenant(w, actor)
+	operatorContextID, ok := requireCatalogApprovalOperatorContext(w, actor)
 	if !ok {
 		return
 	}
@@ -170,7 +170,7 @@ func (s *protectedStoreServer) handleTransitionCatalogApproval(w http.ResponseWr
 	if !ok {
 		return
 	}
-	operatorContextID, ok := requireCatalogApprovalTenant(w, actor)
+	operatorContextID, ok := requireCatalogApprovalOperatorContext(w, actor)
 	if !ok {
 		return
 	}
@@ -190,7 +190,7 @@ func (s *protectedStoreServer) handleTransitionCatalogApproval(w http.ResponseWr
 		body.ActionLabel,
 	)
 	if errors.Is(err, catalogapproval.ErrInvalid) {
-		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "tenant, toStage, and actionLabel are required")
+		store.SendError(w, http.StatusBadRequest, "INVALID_INPUT", "OperatorContext, toStage, and actionLabel are required")
 		return
 	}
 	if errors.Is(err, catalogapproval.ErrInvalidTransition) {

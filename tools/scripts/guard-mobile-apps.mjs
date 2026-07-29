@@ -252,14 +252,14 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   }
   const appRoot = fs.readFileSync(path.join(dir, "src", "index.ts"), "utf8");
   for (const marker of ["persistenceKey", "createBthwaniOfflineMutationQueue", "clearBthwaniQueryClient", "registerIdentityBeforeSessionEndHook"]) {
-    if (!appRoot.includes(marker)) fail(`${key}: tenant-safe data runtime marker missing: ${marker}`);
+    if (!appRoot.includes(marker)) fail(`${key}: OperatorContext-safe data runtime marker missing: ${marker}`);
   }
   if ((key === "app-captain" || key === "app-field") && !appRoot.includes("wireBatteryAwareQueue")) {
     fail(`${key}: battery-aware offline synchronization is required`);
   }
   const sentryRuntime = fs.readFileSync(path.join(dir, "src", "observability", "sentry.ts"), "utf8");
   for (const marker of ["sendDefaultPii: false", "beforeSend", "SENTRY_TRACES_SAMPLE_RATE", "FORBIDDEN_KEY"]) {
-    if (!sentryRuntime.includes(marker)) fail(`${key}: Sentry SaaS privacy marker missing: ${marker}`);
+    if (!sentryRuntime.includes(marker)) fail(`${key}: Sentry partner_platform privacy marker missing: ${marker}`);
   }
 
   if (requireBuildSecrets && buildSecretsTargetApps.includes(key)) {

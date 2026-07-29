@@ -41,7 +41,7 @@ func RecordOrderTruthAudit(db *sql.DB, input OrderTruthAuditInput) error {
 	if err != nil { return err }
 	_, err = db.Exec(`
 		INSERT INTO dsh_order_truth_audit
-		(tenant_id,actor_id,actor_role,order_id,checkout_intent_id,event_type,result_code,correlation_id,metadata)
+		(operator_context_id,actor_id,actor_role,order_id,checkout_intent_id,event_type,result_code,correlation_id,metadata)
 		VALUES ($1,$2,$3,NULLIF($4,'')::uuid,NULLIF($5,'')::uuid,$6,$7,$8,$9::jsonb)`,
 		input.OperatorContextID,
 		input.ActorID,

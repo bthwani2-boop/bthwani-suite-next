@@ -31,7 +31,7 @@ func (c *Client) FinanceRefundWrite(
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if correlationID == "" || idempotencyKey == "" || operatorContextID == "" {
-		return 0, nil, fmt.Errorf("refund correlation id, idempotency key and tenant id are required")
+		return 0, nil, fmt.Errorf("refund correlation id, idempotency key and OperatorContext id are required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(body))
 	if err != nil {

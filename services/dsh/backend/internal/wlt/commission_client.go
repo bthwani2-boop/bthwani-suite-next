@@ -35,8 +35,8 @@ func (c *Client) FinanceWriteCommission(
 		return 0, nil, fmt.Errorf("build WLT governed commission request: %w", err)
 	}
 	setServiceHeaders(req, c.serviceToken)
-	if _, err := c.setTrustedTenantHeader(req, ""); err != nil {
-		return 0, nil, fmt.Errorf("prepare WLT governed commission tenant: %w", err)
+	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT governed commission OperatorContext: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if err := setRequiredMutationHeaders(

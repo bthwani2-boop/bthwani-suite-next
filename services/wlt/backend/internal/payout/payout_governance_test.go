@@ -37,7 +37,7 @@ func TestNormalizeGovernedOwner(t *testing.T) {
 	}
 }
 
-func TestGovernedPayoutHashBindsTenantDestinationAndIntent(t *testing.T) {
+func TestGovernedPayoutHashBindsOperatorContextDestinationAndIntent(t *testing.T) {
 	t.Parallel()
 
 	base := governedCreatePayoutInput{
@@ -47,12 +47,12 @@ func TestGovernedPayoutHashBindsTenantDestinationAndIntent(t *testing.T) {
 		AmountMinorUnits:     12500,
 		Currency:             "YER",
 	}
-	baseHash := governedPayoutHash("tenant-main", base)
+	baseHash := governedPayoutHash("OperatorContext-main", base)
 	if baseHash == "" {
 		t.Fatal("expected non-empty payout hash")
 	}
-	if governedPayoutHash("tenant-other", base) == baseHash {
-		t.Fatal("hash did not change across tenants")
+	if governedPayoutHash("OperatorContext-other", base) == baseHash {
+		t.Fatal("hash did not change across OperatorContexts")
 	}
 
 	cases := map[string]governedCreatePayoutInput{
@@ -77,7 +77,7 @@ func TestGovernedPayoutHashBindsTenantDestinationAndIntent(t *testing.T) {
 		name, input := name, input
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			if got := governedPayoutHash("tenant-main", input); got == baseHash {
+			if got := governedPayoutHash("OperatorContext-main", input); got == baseHash {
 				t.Fatalf("hash did not change for %s", name)
 			}
 		})

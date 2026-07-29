@@ -57,7 +57,7 @@ type ReverseInput struct {
 	ReversedByActorID string `json:"reversedByActorId"`
 }
 
-const columns = `id,tenant_id,incident_id,provider_actor_id,provider_actor_type,
+const columns = `id,operator_context_id,incident_id,provider_actor_id,provider_actor_type,
 	amount_minor_units,currency,reason,status,ledger_transaction_id,
 	COALESCE(reversal_ledger_transaction_id,''),posted_by_actor_id,
 	COALESCE(reversed_by_actor_id,''),COALESCE(reversed_reason,''),idempotency_key,
@@ -96,7 +96,7 @@ func normalizePost(input *PostInput) error {
 }
 
 func existingForIncidentTx(ctx context.Context, tx *sql.Tx, operatorContextID, incidentID string) (*ProviderPenalty, error) {
-	item, err := scan(tx.QueryRowContext(ctx, `SELECT `+columns+` FROM wlt_provider_penalties WHERE tenant_id=$1 AND incident_id=$2`, operatorContextID, incidentID))
+	item, err := scan(tx.QueryRowContext(ctx, `SELECT `+columns+` FROM wlt_provider_penalties WHERE operator_context_id=$1 AND incident_id=$2`, operatorContextID, incidentID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -107,7 +107,7 @@ func Post(ctx context.Context, db *sql.DB, operatorContextID, idempotencyKey str
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
 	if operatorContextID == "" || idempotencyKey == "" {
-		return ProviderPenalty{}, fmt.Errorf("tenant and idempotency key are required")
+		return ProviderPenalty{}, fmt.Errorf("OperatorContext and idempotency key are required")
 	}
 	if err := normalizePost(&input); err != nil {
 		return ProviderPenalty{}, err
@@ -138,7 +138,7 @@ func Post(ctx context.Context, db *sql.DB, operatorContextID, idempotencyKey str
 	var walletStatus, walletCurrency string
 	var available int64
 	err = tx.QueryRowContext(ctx, `SELECT status,currency,available_balance_minor_units
-		FROM wlt_wallets WHERE tenant_id=$1 AND actor_type=$2 AND actor_id=$3 FOR UPDATE`,
+		FROM wlt_wallets WHERE operator_context_id=$1 AND actor_type=$2 AND actor_id=$3 FOR UPDATE`,
 		operatorContextID, input.ProviderActorType, input.ProviderActorID).Scan(&walletStatus, &walletCurrency, &available)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ProviderPenalty{}, ErrWalletUnavailable
@@ -163,12 +163,12 @@ func Post(ctx context.Context, db *sql.DB, operatorContextID, idempotencyKey str
 	if _, err := tx.ExecContext(ctx, `UPDATE wlt_wallets SET
 		available_balance_minor_units=available_balance_minor_units-$1,
 		last_ledger_entry_at=now(),updated_at=now()
-		WHERE tenant_id=$2 AND actor_type=$3 AND actor_id=$4`,
+		WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4`,
 		input.AmountMinorUnits, operatorContextID, input.ProviderActorType, input.ProviderActorID); err != nil {
 		return ProviderPenalty{}, err
 	}
 	item, err := scan(tx.QueryRowContext(ctx, `INSERT INTO wlt_provider_penalties(
-		tenant_id,incident_id,provider_actor_id,provider_actor_type,amount_minor_units,
+		operator_context_id,incident_id,provider_actor_id,provider_actor_type,amount_minor_units,
 		currency,reason,ledger_transaction_id,posted_by_actor_id,idempotency_key)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING `+columns,
 		operatorContextID, input.IncidentID, input.ProviderActorID, input.ProviderActorType, input.AmountMinorUnits,
@@ -188,14 +188,14 @@ func Reverse(ctx context.Context, db *sql.DB, operatorContextID, penaltyID strin
 	input.Reason = strings.TrimSpace(input.Reason)
 	input.ReversedByActorID = strings.TrimSpace(input.ReversedByActorID)
 	if operatorContextID == "" || penaltyID == "" || len(input.Reason) < 3 || input.ReversedByActorID == "" {
-		return ProviderPenalty{}, fmt.Errorf("tenant, penaltyId, reason and reversedByActorId are required")
+		return ProviderPenalty{}, fmt.Errorf("OperatorContext, penaltyId, reason and reversedByActorId are required")
 	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return ProviderPenalty{}, err
 	}
 	defer tx.Rollback() //nolint:errcheck
-	item, err := scan(tx.QueryRowContext(ctx, `SELECT `+columns+` FROM wlt_provider_penalties WHERE tenant_id=$1 AND id=$2 FOR UPDATE`, operatorContextID, penaltyID))
+	item, err := scan(tx.QueryRowContext(ctx, `SELECT `+columns+` FROM wlt_provider_penalties WHERE operator_context_id=$1 AND id=$2 FOR UPDATE`, operatorContextID, penaltyID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return ProviderPenalty{}, ErrNotFound
 	}
@@ -210,7 +210,7 @@ func Reverse(ctx context.Context, db *sql.DB, operatorContextID, penaltyID strin
 	}
 	var walletStatus, walletCurrency string
 	if err := tx.QueryRowContext(ctx, `SELECT status,currency FROM wlt_wallets
-		WHERE tenant_id=$1 AND actor_type=$2 AND actor_id=$3 FOR UPDATE`,
+		WHERE operator_context_id=$1 AND actor_type=$2 AND actor_id=$3 FOR UPDATE`,
 		operatorContextID, item.ProviderActorType, item.ProviderActorID).Scan(&walletStatus, &walletCurrency); err != nil {
 		return ProviderPenalty{}, ErrWalletUnavailable
 	}
@@ -227,13 +227,13 @@ func Reverse(ctx context.Context, db *sql.DB, operatorContextID, penaltyID strin
 	if _, err := tx.ExecContext(ctx, `UPDATE wlt_wallets SET
 		available_balance_minor_units=available_balance_minor_units+$1,
 		last_ledger_entry_at=now(),updated_at=now()
-		WHERE tenant_id=$2 AND actor_type=$3 AND actor_id=$4`,
+		WHERE operator_context_id=$2 AND actor_type=$3 AND actor_id=$4`,
 		item.AmountMinorUnits, operatorContextID, item.ProviderActorType, item.ProviderActorID); err != nil {
 		return ProviderPenalty{}, err
 	}
 	item, err = scan(tx.QueryRowContext(ctx, `UPDATE wlt_provider_penalties SET status='reversed',
 		reversal_ledger_transaction_id=$3,reversed_by_actor_id=$4,reversed_reason=$5,
-		reversed_at=now(),updated_at=now() WHERE tenant_id=$1 AND id=$2 RETURNING `+columns,
+		reversed_at=now(),updated_at=now() WHERE operator_context_id=$1 AND id=$2 RETURNING `+columns,
 		operatorContextID, item.ID, ledgerID, input.ReversedByActorID, input.Reason))
 	if err != nil {
 		return ProviderPenalty{}, err

@@ -160,7 +160,7 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 		current          OrderStatus
 	)
 	err = tx.QueryRow(`
-		SELECT checkout_intent_id::text, client_id, tenant_id, wlt_payment_ref_id, status
+		SELECT checkout_intent_id::text, client_id, operator_context_id, wlt_payment_ref_id, status
 		FROM dsh_orders
 		WHERE id=$1::uuid
 		FOR UPDATE`, input.OrderID).Scan(
@@ -258,7 +258,7 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 	}
 	if _, err := tx.Exec(`
 		INSERT INTO dsh_order_cancellations(
-			order_id,tenant_id,actor_id,actor_role,reason_code,reason_note,
+			order_id,operator_context_id,actor_id,actor_role,reason_code,reason_note,
 			from_status,to_status,financial_closure_status,correlation_id)
 		VALUES($1::uuid,$2,$3,$4,$5,NULLIF($6,''),$7,$8,$9,$10)`,
 		input.OrderID,

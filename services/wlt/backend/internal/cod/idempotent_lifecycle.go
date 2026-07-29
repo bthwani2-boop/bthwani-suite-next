@@ -96,7 +96,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 		row := tx.QueryRowContext(ctx, `
 			UPDATE wlt_commissions
 			SET status='confirmed', confirmed_at=NOW(), updated_at=NOW()
-			WHERE tenant_id=$1 AND id=$2 AND status='pending'
+			WHERE operator_context_id=$1 AND id=$2 AND status='pending'
 			RETURNING `+commissionCols, operatorContextID, commission.ID)
 		updated, err = scanCommission(row)
 		auditAction = "commission_confirmed"
@@ -116,7 +116,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 				    available_balance_minor_units=available_balance_minor_units+$1,
 				    settled_total_minor_units=settled_total_minor_units+$1,
 				    updated_at=NOW()
-				WHERE tenant_id=$2
+				WHERE operator_context_id=$2
 				  AND actor_type=$3
 				  AND actor_id=$4
 				  AND pending_balance_minor_units>=$1`,
@@ -135,7 +135,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 		row := tx.QueryRowContext(ctx, `
 			UPDATE wlt_commissions
 			SET status='settled', settled_at=NOW(), updated_at=NOW()
-			WHERE tenant_id=$1 AND id=$2 AND status='confirmed'
+			WHERE operator_context_id=$1 AND id=$2 AND status='confirmed'
 			RETURNING `+commissionCols, operatorContextID, commission.ID)
 		updated, err = scanCommission(row)
 		auditAction = "commission_settled"
@@ -154,7 +154,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 				SET pending_balance_minor_units=pending_balance_minor_units-$1,
 				    earned_total_minor_units=earned_total_minor_units-$1,
 				    updated_at=NOW()
-				WHERE tenant_id=$2
+				WHERE operator_context_id=$2
 				  AND actor_type=$3
 				  AND actor_id=$4
 				  AND pending_balance_minor_units>=$1
@@ -202,7 +202,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 			UPDATE wlt_commissions
 			SET status='rejected', rejected_at=NOW(), resolution_note=$3,
 			    updated_at=NOW()
-			WHERE tenant_id=$1 AND id=$2 AND status='pending'
+			WHERE operator_context_id=$1 AND id=$2 AND status='pending'
 			RETURNING `+commissionCols, operatorContextID, commission.ID, reason)
 		updated, err = scanCommission(row)
 		auditAction = "commission_rejected"
@@ -221,7 +221,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 				SET available_balance_minor_units=available_balance_minor_units-$1,
 				    settled_total_minor_units=settled_total_minor_units-$1,
 				    updated_at=NOW()
-				WHERE tenant_id=$2
+				WHERE operator_context_id=$2
 				  AND actor_type=$3
 				  AND actor_id=$4
 				  AND available_balance_minor_units>=$1
@@ -269,7 +269,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 			UPDATE wlt_commissions
 			SET status='reversed', reversed_at=NOW(), resolution_note=$3,
 			    updated_at=NOW()
-			WHERE tenant_id=$1 AND id=$2 AND status='settled'
+			WHERE operator_context_id=$1 AND id=$2 AND status='settled'
 			RETURNING `+commissionCols, operatorContextID, commission.ID, reason)
 		updated, err = scanCommission(row)
 		auditAction = "commission_reversed"

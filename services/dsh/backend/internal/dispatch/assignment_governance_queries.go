@@ -32,7 +32,7 @@ func GetAssignmentGovernance(db *sql.DB, assignmentID string) (*AssignmentGovern
 	}
 	var item AssignmentGovernance
 	err := db.QueryRow(`
-		SELECT id::text, tenant_id, COALESCE(service_area_code,''), priority,
+		SELECT id::text, operator_context_id, COALESCE(service_area_code,''), priority,
 		       distance_meters, COALESCE(offer_reason,''), COALESCE(response_reason,''),
 		       expired_at, cancelled_at, COALESCE(cancelled_by,''),
 		       COALESCE(supersedes_assignment_id::text,''), version
@@ -54,7 +54,7 @@ func ListAssignmentGovernance(db *sql.DB, assignmentIDs []string) (map[string]As
 		return map[string]AssignmentGovernance{}, nil
 	}
 	rows, err := db.Query(`
-		SELECT id::text, tenant_id, COALESCE(service_area_code,''), priority,
+		SELECT id::text, operator_context_id, COALESCE(service_area_code,''), priority,
 		       distance_meters, COALESCE(offer_reason,''), COALESCE(response_reason,''),
 		       expired_at, cancelled_at, COALESCE(cancelled_by,''),
 		       COALESCE(supersedes_assignment_id::text,''), version

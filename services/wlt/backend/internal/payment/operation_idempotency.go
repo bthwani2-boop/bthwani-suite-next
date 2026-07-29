@@ -63,7 +63,7 @@ func HandleGovernedPaymentOperation(db *sql.DB, operation string, next http.Hand
 			return
 		}
 		if trustedOperatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Operator-Context-ID is required")
+			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Operator-Context-ID is required")
 			return
 		}
 		if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
@@ -85,7 +85,7 @@ func HandleGovernedPaymentOperation(db *sql.DB, operation string, next http.Hand
 			return
 		}
 		if session.OperatorContextID != trustedOperatorContextID {
-			shared.SendError(w, http.StatusForbidden, "TENANT_MISMATCH", "payment session does not belong to the trusted tenant")
+			shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", "payment session does not belong to the trusted OperatorContext")
 			return
 		}
 		if session.PaymentMethod == "cod" {
@@ -131,10 +131,10 @@ func claimOperationReceipt(db *sql.DB, operatorContextID, sessionID, operation, 
 	var receipt operationReceipt
 	err := db.QueryRow(`
 		INSERT INTO wlt_payment_operation_receipts
-			(tenant_id, payment_session_id, operation, idempotency_key, request_hash, correlation_id)
+			(operator_context_id, payment_session_id, operation, idempotency_key, request_hash, correlation_id)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (tenant_id, payment_session_id, operation, idempotency_key) DO NOTHING
-		RETURNING id, tenant_id, request_hash, state`,
+		ON CONFLICT (operator_context_id, payment_session_id, operation, idempotency_key) DO NOTHING
+		RETURNING id, operator_context_id, request_hash, state`,
 		operatorContextID, sessionID, operation, key, requestHash, correlationID,
 	).Scan(&receipt.ID, &receipt.OperatorContextID, &receipt.RequestHash, &receipt.State)
 	if err == nil {
@@ -144,9 +144,9 @@ func claimOperationReceipt(db *sql.DB, operatorContextID, sessionID, operation, 
 		return operationReceipt{}, false, err
 	}
 	err = db.QueryRow(`
-		SELECT id, tenant_id, request_hash, state
+		SELECT id, operator_context_id, request_hash, state
 		FROM wlt_payment_operation_receipts
-		WHERE tenant_id = $1 AND payment_session_id = $2 AND operation = $3 AND idempotency_key = $4`,
+		WHERE operator_context_id = $1 AND payment_session_id = $2 AND operation = $3 AND idempotency_key = $4`,
 		operatorContextID, sessionID, operation, key,
 	).Scan(&receipt.ID, &receipt.OperatorContextID, &receipt.RequestHash, &receipt.State)
 	return receipt, false, err

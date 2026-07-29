@@ -13,7 +13,7 @@ import (
 
 var ErrUnbalancedTransaction = errors.New("ledger transaction is not balanced")
 var ErrLedgerReferenceConflict = errors.New("ledger reference already exists with a different posting payload")
-var ErrLedgerTenantConflict = errors.New("ledger reference does not belong to the trusted tenant")
+var ErrLedgerOperatorContextConflict = errors.New("ledger reference does not belong to the trusted OperatorContext")
 
 type LedgerLine struct {
 	AccountType      string
@@ -29,45 +29,45 @@ type Actor struct {
 	Type string
 }
 
-// resolveLedgerOperatorContext keeps request context as the primary tenant
+// resolveLedgerOperatorContext keeps request context as the primary OperatorContext
 // authority. Refund compatibility calls may omit it only because WLT can derive
-// the tenant from its own persisted refund row. A supplied mismatched tenant is
-// always rejected; no local/default tenant is invented.
+// the OperatorContext from its own persisted refund row. A supplied mismatched OperatorContext is
+// always rejected; no local/default OperatorContext is invented.
 func resolveLedgerOperatorContext(ctx context.Context, tx *sql.Tx, referenceType, referenceID string) (context.Context, string, error) {
-	trustedTenant, hasTrustedTenant := shared.OperatorContextIDFromContext(ctx)
+	trustedOperatorContext, hasTrustedOperatorContext := shared.OperatorContextIDFromContext(ctx)
 	if referenceType != "refund" {
-		if !hasTrustedTenant {
+		if !hasTrustedOperatorContext {
 			_, err := shared.RequireOperatorContext(ctx)
 			return ctx, "", err
 		}
-		return ctx, trustedTenant, nil
+		return ctx, trustedOperatorContext, nil
 	}
 
-	var persistedTenant string
-	if err := tx.QueryRowContext(ctx, `SELECT tenant_id FROM wlt_refunds WHERE id=$1`, referenceID).Scan(&persistedTenant); err != nil {
+	var persistedOperatorContext string
+	if err := tx.QueryRowContext(ctx, `SELECT operator_context_id FROM wlt_refunds WHERE id=$1`, referenceID).Scan(&persistedOperatorContext); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ctx, "", fmt.Errorf("refund ledger reference not found")
 		}
-		return ctx, "", fmt.Errorf("resolve refund ledger tenant: %w", err)
+		return ctx, "", fmt.Errorf("resolve refund ledger OperatorContext: %w", err)
 	}
-	persistedTenant = strings.TrimSpace(persistedTenant)
-	if persistedTenant == "" {
-		return ctx, "", fmt.Errorf("refund ledger tenant is missing")
+	persistedOperatorContext = strings.TrimSpace(persistedOperatorContext)
+	if persistedOperatorContext == "" {
+		return ctx, "", fmt.Errorf("refund ledger OperatorContext is missing")
 	}
-	if hasTrustedTenant {
-		if trustedTenant != persistedTenant {
-			return ctx, "", ErrLedgerTenantConflict
+	if hasTrustedOperatorContext {
+		if trustedOperatorContext != persistedOperatorContext {
+			return ctx, "", ErrLedgerOperatorContextConflict
 		}
-		return ctx, trustedTenant, nil
+		return ctx, trustedOperatorContext, nil
 	}
-	trustedCtx := shared.WithOperatorContext(ctx, persistedTenant)
-	return trustedCtx, persistedTenant, nil
+	trustedCtx := shared.WithOperatorContext(ctx, persistedOperatorContext)
+	return trustedCtx, persistedOperatorContext, nil
 }
 
 // PostLedgerTransaction is the only write path for the double-entry ledger.
-// Tenant ownership comes from authenticated context. A refund-only compatibility
+// OperatorContext ownership comes from authenticated context. A refund-only compatibility
 // seam may derive it from WLT's canonical refund row, never from caller input.
-// Account identity, transaction idempotency and lines are all tenant-scoped.
+// Account identity, transaction idempotency and lines are all OperatorContext-scoped.
 func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, referenceType, referenceID string, lines []LedgerLine, createdBy Actor) (string, error) {
 	if transactionType == "" {
 		return "", fmt.Errorf("transactionType is required")
@@ -121,9 +121,9 @@ func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, ref
 	err = tx.QueryRowContext(ctx, `
 		WITH inserted AS (
 			INSERT INTO wlt_ledger_transactions
-				(tenant_id, transaction_type, reference_type, reference_id, created_by_actor_id, created_by_actor_type)
+				(operator_context_id, transaction_type, reference_type, reference_id, created_by_actor_id, created_by_actor_type)
 			VALUES ($1, $2, $3, $4, NULLIF($5, ''), NULLIF($6, ''))
-			ON CONFLICT (tenant_id, transaction_type, reference_type, reference_id)
+			ON CONFLICT (operator_context_id, transaction_type, reference_type, reference_id)
 				WHERE reference_type <> '' AND reference_id <> ''
 			DO NOTHING
 			RETURNING id
@@ -132,7 +132,7 @@ func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, ref
 		UNION ALL
 		SELECT id, false
 		FROM wlt_ledger_transactions
-		WHERE tenant_id = $1 AND transaction_type = $2 AND reference_type = $3 AND reference_id = $4
+		WHERE operator_context_id = $1 AND transaction_type = $2 AND reference_type = $3 AND reference_id = $4
 		ORDER BY 2 DESC
 		LIMIT 1`,
 		operatorContextID, transactionType, referenceType, referenceID, createdBy.ID, createdBy.Type,
@@ -163,22 +163,22 @@ func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, ref
 		err = tx.QueryRowContext(ctx, `
 			UPDATE wlt_ledger_accounts
 			SET balance_minor_units = balance_minor_units + $1, updated_at = now()
-			WHERE id = $2 AND tenant_id = $3
+			WHERE id = $2 AND operator_context_id = $3
 			RETURNING balance_minor_units`,
 			delta, accountID, operatorContextID,
 		).Scan(&runningBalance)
 		if err != nil {
-			return "", fmt.Errorf("update tenant account balance: %w", err)
+			return "", fmt.Errorf("update OperatorContext account balance: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO wlt_ledger_lines
-				(tenant_id, ledger_transaction_id, account_id, debit_credit, amount_minor_units, currency, running_balance_after)
+				(operator_context_id, ledger_transaction_id, account_id, debit_credit, amount_minor_units, currency, running_balance_after)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 			operatorContextID, transactionID, accountID, line.DebitCredit, line.AmountMinorUnits, line.Currency, runningBalance,
 		)
 		if err != nil {
-			return "", fmt.Errorf("insert tenant ledger line: %w", err)
+			return "", fmt.Errorf("insert OperatorContext ledger line: %w", err)
 		}
 	}
 
@@ -194,11 +194,11 @@ func assertExistingTransactionMatches(ctx context.Context, tx *sql.Tx, operatorC
 		       l.amount_minor_units,
 		       l.currency
 		FROM wlt_ledger_lines l
-		JOIN wlt_ledger_accounts a ON a.id = l.account_id AND a.tenant_id = l.tenant_id
-		JOIN wlt_ledger_transactions t ON t.id = l.ledger_transaction_id AND t.tenant_id = l.tenant_id
-		WHERE l.tenant_id = $1 AND l.ledger_transaction_id = $2`, operatorContextID, transactionID)
+		JOIN wlt_ledger_accounts a ON a.id = l.account_id AND a.operator_context_id = l.operator_context_id
+		JOIN wlt_ledger_transactions t ON t.id = l.ledger_transaction_id AND t.operator_context_id = l.operator_context_id
+		WHERE l.operator_context_id = $1 AND l.ledger_transaction_id = $2`, operatorContextID, transactionID)
 	if err != nil {
-		return fmt.Errorf("read existing tenant ledger transaction: %w", err)
+		return fmt.Errorf("read existing OperatorContext ledger transaction: %w", err)
 	}
 	defer rows.Close()
 
@@ -206,12 +206,12 @@ func assertExistingTransactionMatches(ctx context.Context, tx *sql.Tx, operatorC
 	for rows.Next() {
 		var line LedgerLine
 		if err := rows.Scan(&line.AccountType, &line.ActorType, &line.ActorID, &line.DebitCredit, &line.AmountMinorUnits, &line.Currency); err != nil {
-			return fmt.Errorf("scan existing tenant ledger transaction: %w", err)
+			return fmt.Errorf("scan existing OperatorContext ledger transaction: %w", err)
 		}
 		actualKeys = append(actualKeys, ledgerLineKey(line))
 	}
 	if err := rows.Err(); err != nil {
-		return fmt.Errorf("read existing tenant ledger lines: %w", err)
+		return fmt.Errorf("read existing OperatorContext ledger lines: %w", err)
 	}
 
 	expectedKeys := make([]string, 0, len(expected))
@@ -241,13 +241,13 @@ func getOrCreateAccountTx(ctx context.Context, tx *sql.Tx, operatorContextID, ac
 	if accountType == "wallet" {
 		err = tx.QueryRowContext(ctx, `
 			SELECT id FROM wlt_ledger_accounts
-			WHERE tenant_id = $1 AND account_type = 'wallet' AND actor_type = $2 AND actor_id = $3 AND currency = $4`,
+			WHERE operator_context_id = $1 AND account_type = 'wallet' AND actor_type = $2 AND actor_id = $3 AND currency = $4`,
 			operatorContextID, actorType, actorID, currency,
 		).Scan(&id)
 	} else {
 		err = tx.QueryRowContext(ctx, `
 			SELECT id FROM wlt_ledger_accounts
-			WHERE tenant_id = $1 AND account_type = $2 AND currency = $3 AND actor_id IS NULL`,
+			WHERE operator_context_id = $1 AND account_type = $2 AND currency = $3 AND actor_id IS NULL`,
 			operatorContextID, accountType, currency,
 		).Scan(&id)
 	}
@@ -260,18 +260,18 @@ func getOrCreateAccountTx(ctx context.Context, tx *sql.Tx, operatorContextID, ac
 
 	if accountType == "wallet" {
 		err = tx.QueryRowContext(ctx, `
-			INSERT INTO wlt_ledger_accounts (tenant_id, account_type, actor_type, actor_id, currency)
+			INSERT INTO wlt_ledger_accounts (operator_context_id, account_type, actor_type, actor_id, currency)
 			VALUES ($1, 'wallet', $2, $3, $4)
-			ON CONFLICT (tenant_id, account_type, actor_type, actor_id, currency) WHERE account_type = 'wallet'
+			ON CONFLICT (operator_context_id, account_type, actor_type, actor_id, currency) WHERE account_type = 'wallet'
 			DO UPDATE SET updated_at = wlt_ledger_accounts.updated_at
 			RETURNING id`,
 			operatorContextID, actorType, actorID, currency,
 		).Scan(&id)
 	} else {
 		err = tx.QueryRowContext(ctx, `
-			INSERT INTO wlt_ledger_accounts (tenant_id, account_type, currency)
+			INSERT INTO wlt_ledger_accounts (operator_context_id, account_type, currency)
 			VALUES ($1, $2, $3)
-			ON CONFLICT (tenant_id, account_type, currency) WHERE account_type <> 'wallet'
+			ON CONFLICT (operator_context_id, account_type, currency) WHERE account_type <> 'wallet'
 			DO UPDATE SET updated_at = wlt_ledger_accounts.updated_at
 			RETURNING id`,
 			operatorContextID, accountType, currency,

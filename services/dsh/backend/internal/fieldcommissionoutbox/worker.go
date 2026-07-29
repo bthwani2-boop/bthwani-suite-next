@@ -38,9 +38,9 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	}
 	for _, event := range events {
 		if event.OperatorContextID == "" {
-			err := fmt.Errorf("field commission event %s has no tenant context", event.ID)
+			err := fmt.Errorf("field commission event %s has no OperatorContext context", event.ID)
 			if markErr := MarkFailed(db, event.ID, event.AttemptCount, err); markErr != nil {
-				log.Printf("[field-commission-outbox] failed to record missing tenant for event %s: %v", event.ID, markErr)
+				log.Printf("[field-commission-outbox] failed to record missing OperatorContext for event %s: %v", event.ID, markErr)
 			}
 			continue
 		}
@@ -56,7 +56,7 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 		})
 		cancel()
 		if err != nil {
-			log.Printf("[field-commission-outbox] delivery failed for tenant %s visit %s category %s (attempt %d): %v", event.OperatorContextID, event.VisitID, event.PartnerCategory, event.AttemptCount+1, err)
+			log.Printf("[field-commission-outbox] delivery failed for OperatorContext %s visit %s category %s (attempt %d): %v", event.OperatorContextID, event.VisitID, event.PartnerCategory, event.AttemptCount+1, err)
 			if markErr := MarkFailed(db, event.ID, event.AttemptCount, err); markErr != nil {
 				log.Printf("[field-commission-outbox] failed to record retry state for event %s: %v", event.ID, markErr)
 			}

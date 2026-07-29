@@ -36,7 +36,7 @@ func openRequiredDB(t *testing.T) *sql.DB {
 func createPartnerFixture(t *testing.T, db *sql.DB, prefix string) Partner {
 	t.Helper()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	p, err := CreatePartnerForTenant(db, partnerTestOperatorContextID, CreatePartnerInput{
+	p, err := CreatePartnerForOperatorContext(db, partnerTestOperatorContextID, CreatePartnerInput{
 		LegalNameAr:         "مؤسسة اختبار " + prefix + " " + suffix,
 		LegalNameEn:         prefix + " Smoke " + suffix,
 		DisplayName:         "شريك اختبار " + prefix + " " + suffix,
@@ -68,7 +68,7 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 	p := createPartnerFixture(t, db, "IT")
 	storeID := partnerStoreID(t, db, p.ID)
 
-	stores, err := LinkPartnerStoreForTenant(db, partnerTestOperatorContextID, p.ID, storeID, "operator-local-001")
+	stores, err := LinkPartnerStoreForOperatorContext(db, partnerTestOperatorContextID, p.ID, storeID, "operator-local-001")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 				    marketing_visibility = 'visible',
 				    version = version + 1,
 				    updated_at = NOW()
-				WHERE id = $1 AND tenant_id = $2`, storeID, partnerTestOperatorContextID); err != nil {
+				WHERE id = $1 AND operator_context_id = $2`, storeID, partnerTestOperatorContextID); err != nil {
 				t.Fatalf("failed to satisfy store publication gates: %v", err)
 			}
 		}
@@ -121,7 +121,7 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 	if err := db.QueryRow(`
 		SELECT actor_surface
 		FROM dsh_partner_activation_events
-		WHERE partner_id = $1 AND tenant_id = $2 AND to_status = 'client_visible'
+		WHERE partner_id = $1 AND operator_context_id = $2 AND to_status = 'client_visible'
 		ORDER BY created_at DESC
 		LIMIT 1`, p.ID, partnerTestOperatorContextID).Scan(&surface); err != nil {
 		t.Fatal(err)
@@ -206,7 +206,7 @@ func TestReviewDocumentClearsStaleRejectionReasonAfterApproval(t *testing.T) {
 func assertStoreReadiness(t *testing.T, db *sql.DB, storeID, want string) {
 	t.Helper()
 	var got string
-	if err := db.QueryRow(`SELECT partner_readiness FROM dsh_stores WHERE id = $1 AND tenant_id = $2`, storeID, partnerTestOperatorContextID).Scan(&got); err != nil {
+	if err := db.QueryRow(`SELECT partner_readiness FROM dsh_stores WHERE id = $1 AND operator_context_id = $2`, storeID, partnerTestOperatorContextID).Scan(&got); err != nil {
 		t.Fatal(err)
 	}
 	if got != want {

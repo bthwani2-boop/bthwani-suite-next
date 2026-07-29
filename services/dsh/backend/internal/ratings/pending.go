@@ -20,17 +20,17 @@ func PendingClientOrderRatingPrompt(ctx context.Context, db *sql.DB, operatorCon
 	err := db.QueryRowContext(ctx, `
 		SELECT o.id::text
 		FROM dsh_orders o
-		WHERE o.tenant_id=$1 AND o.client_id=$2 AND o.status='delivered'
+		WHERE o.operator_context_id=$1 AND o.client_id=$2 AND o.status='delivered'
 		  AND (
 		    NOT EXISTS (
 		      SELECT 1 FROM dsh_provider_ratings r
-		      WHERE r.tenant_id=o.tenant_id AND r.rater_actor_id=o.client_id
+		      WHERE r.operator_context_id=o.operator_context_id AND r.rater_actor_id=o.client_id
 		        AND r.source_kind='order_delivery' AND r.source_id=o.id::text
 		        AND r.target_kind='captain' AND r.status='active'
 		    ) OR
 		    NOT EXISTS (
 		      SELECT 1 FROM dsh_provider_ratings r
-		      WHERE r.tenant_id=o.tenant_id AND r.rater_actor_id=o.client_id
+		      WHERE r.operator_context_id=o.operator_context_id AND r.rater_actor_id=o.client_id
 		        AND r.source_kind='order_delivery' AND r.source_id=o.id::text
 		        AND r.target_kind='order' AND r.status='active'
 		    )

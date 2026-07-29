@@ -5,7 +5,7 @@ info:
   description: >-
     Canonical cross-contract transport components for the WLT service. Domain
     schemas remain owned by their journey contracts; authentication headers,
-    tenant context, correlation, idempotency and the runtime error envelope are
+    OperatorContext context, correlation, idempotency and the runtime error envelope are
     defined exactly once here.
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -80,7 +80,7 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1 }
-    TenantHeader:
+    OperatorContextHeader:
       name: X-Operator-Context-ID
       in: header
       required: true

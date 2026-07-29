@@ -60,7 +60,7 @@ type CreateSettlementInput struct {
 	OrderCount  int    `json:"orderCount"`
 }
 
-const settlementCols = `id, tenant_id, partner_id, period_start, period_end, gross_amount, platform_fee,
+const settlementCols = `id, operator_context_id, partner_id, period_start, period_end, gross_amount, platform_fee,
 	net_amount, currency, order_count, status, settled_at, created_at, updated_at`
 
 func scanSettlement(row *sql.Row) (*Settlement, error) {
@@ -129,7 +129,7 @@ func getSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settl
 	if err != nil {
 		return nil, err
 	}
-	const q = `SELECT ` + settlementCols + ` FROM wlt_settlements WHERE tenant_id = $1 AND id = $2`
+	const q = `SELECT ` + settlementCols + ` FROM wlt_settlements WHERE operator_context_id = $1 AND id = $2`
 	s, err := scanSettlement(db.QueryRowContext(ctx, q, operatorContextID, settlementID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -138,7 +138,7 @@ func getSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settl
 }
 
 // GetSettlement retains deferred-runtime compatibility. Active SaaS callers use
-// the HTTP handler, which provides the authenticated tenant context.
+// the HTTP handler, which provides the authenticated OperatorContext context.
 func GetSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
 	return getSettlement(context.Background(), db, settlementID)
 }
@@ -150,14 +150,14 @@ func ListPartnerSettlements(ctx context.Context, db *sql.DB, requestedOperatorCo
 	}
 	requestedOperatorContextID = strings.TrimSpace(requestedOperatorContextID)
 	if requestedOperatorContextID != "" && requestedOperatorContextID != operatorContextID {
-		return nil, fmt.Errorf("tenant filter does not match trusted tenant context")
+		return nil, fmt.Errorf("OperatorContext filter does not match trusted OperatorContext context")
 	}
 	partnerID = strings.TrimSpace(partnerID)
 	var rows *sql.Rows
 	if partnerID == "" {
-		rows, err = db.QueryContext(ctx, `SELECT `+settlementCols+` FROM wlt_settlements WHERE tenant_id = $1 ORDER BY period_start DESC LIMIT 50`, operatorContextID)
+		rows, err = db.QueryContext(ctx, `SELECT `+settlementCols+` FROM wlt_settlements WHERE operator_context_id = $1 ORDER BY period_start DESC LIMIT 50`, operatorContextID)
 	} else {
-		rows, err = db.QueryContext(ctx, `SELECT `+settlementCols+` FROM wlt_settlements WHERE tenant_id = $1 AND partner_id = $2 ORDER BY period_start DESC`, operatorContextID, partnerID)
+		rows, err = db.QueryContext(ctx, `SELECT `+settlementCols+` FROM wlt_settlements WHERE operator_context_id = $1 AND partner_id = $2 ORDER BY period_start DESC`, operatorContextID, partnerID)
 	}
 	if err != nil {
 		return nil, err
@@ -196,7 +196,7 @@ func ListSettlementSummary(ctx context.Context, db *sql.DB, partnerID, periodSta
 			COUNT(*),
 			COALESCE(MAX(currency), 'YER')
 		FROM wlt_settlements
-		WHERE tenant_id = $1 AND partner_id = $2
+		WHERE operator_context_id = $1 AND partner_id = $2
 		  AND ($3 = '' OR period_start >= $3::date)
 		  AND ($4 = '' OR period_end <= $4::date)`
 	var summary SettlementSummary
@@ -242,12 +242,12 @@ func postSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Sett
 	row := tx.QueryRowContext(ctx, `
 		UPDATE wlt_settlements
 		SET status = 'settled', settled_at = NOW(), updated_at = NOW()
-		WHERE tenant_id = $1 AND id = $2 AND status = 'pending'
+		WHERE operator_context_id = $1 AND id = $2 AND status = 'pending'
 		RETURNING `+settlementCols, operatorContextID, settlementID)
 	settlement, err := scanSettlement(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		var status string
-		lookupErr := tx.QueryRowContext(ctx, `SELECT status FROM wlt_settlements WHERE tenant_id = $1 AND id = $2`, operatorContextID, settlementID).Scan(&status)
+		lookupErr := tx.QueryRowContext(ctx, `SELECT status FROM wlt_settlements WHERE operator_context_id = $1 AND id = $2`, operatorContextID, settlementID).Scan(&status)
 		if errors.Is(lookupErr, sql.ErrNoRows) {
 			return nil, nil
 		}

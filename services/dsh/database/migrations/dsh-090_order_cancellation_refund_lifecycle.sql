@@ -124,7 +124,7 @@ ALTER TABLE dsh_orders ADD CONSTRAINT dsh_orders_status_check
 CREATE TABLE IF NOT EXISTS dsh_order_cancellations (
     id                         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id                   UUID        NOT NULL UNIQUE REFERENCES dsh_orders(id) ON DELETE CASCADE,
-    tenant_id                  TEXT        NOT NULL,
+    operator_context_id                  TEXT        NOT NULL,
     actor_id                   TEXT        NOT NULL,
     actor_role                 TEXT        NOT NULL CHECK (actor_role IN ('client','partner','operator','system')),
     reason_code                TEXT        NOT NULL,
@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS dsh_order_cancellations (
     correlation_id             TEXT        NOT NULL,
     created_at                 TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at                 TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (tenant_id, correlation_id)
+    UNIQUE (operator_context_id, correlation_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_dsh_order_cancellations_order

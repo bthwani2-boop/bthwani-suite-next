@@ -183,9 +183,9 @@ const (
 	maxAddressLength = 500
 )
 
-const DefaultOperatorContextID = "tenant-dev-001"
+const DefaultOperatorContextID = "OperatorContext-dev-001"
 
-func tenantOrDefault(operatorContextID string) string {
+func OperatorContextOrDefault(operatorContextID string) string {
 	if strings.TrimSpace(operatorContextID) == "" {
 		return DefaultOperatorContextID
 	}
@@ -193,12 +193,12 @@ func tenantOrDefault(operatorContextID string) string {
 }
 
 func (s *Service) Create(ctx context.Context, clientID string, in CreateInput) (*SpecialRequest, error) {
-	return s.CreateInTenant(ctx, tenantOrDefault(in.OperatorContextID), clientID, in)
+	return s.CreateInOperatorContext(ctx, OperatorContextOrDefault(in.OperatorContextID), clientID, in)
 }
 
-func (s *Service) CreateInTenant(ctx context.Context, operatorContextID string, clientID string, in CreateInput) (*SpecialRequest, error) {
+func (s *Service) CreateInOperatorContext(ctx context.Context, operatorContextID string, clientID string, in CreateInput) (*SpecialRequest, error) {
 	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: tenant is required", ErrInvalid)
+		return nil, fmt.Errorf("%w: OperatorContext is required", ErrInvalid)
 	}
 	if clientID == "" {
 		return nil, fmt.Errorf("%w: client is required", ErrInvalid)
@@ -330,11 +330,11 @@ func validateTextField(field string, value *string, maxLen int) error {
 }
 
 func (s *Service) GetForClient(ctx context.Context, id, clientID string) (*SpecialRequest, error) {
-	return s.GetForClientInTenant(ctx, DefaultOperatorContextID, id, clientID)
+	return s.GetForClientInOperatorContext(ctx, DefaultOperatorContextID, id, clientID)
 }
 
-func (s *Service) GetForClientInTenant(ctx context.Context, operatorContextID string, id, clientID string) (*SpecialRequest, error) {
-	req, err := s.repo.GetInTenant(ctx, operatorContextID, id)
+func (s *Service) GetForClientInOperatorContext(ctx context.Context, operatorContextID string, id, clientID string) (*SpecialRequest, error) {
+	req, err := s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -345,26 +345,26 @@ func (s *Service) GetForClientInTenant(ctx context.Context, operatorContextID st
 }
 
 func (s *Service) ListForClient(ctx context.Context, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
-	return s.ListForClientInTenant(ctx, DefaultOperatorContextID, clientID, limit, offset)
+	return s.ListForClientInOperatorContext(ctx, DefaultOperatorContextID, clientID, limit, offset)
 }
 
-func (s *Service) ListForClientInTenant(ctx context.Context, operatorContextID string, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
-	return s.repo.ListByClientInTenant(ctx, operatorContextID, clientID, limit, offset)
+func (s *Service) ListForClientInOperatorContext(ctx context.Context, operatorContextID string, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
+	return s.repo.ListByClientInOperatorContext(ctx, operatorContextID, clientID, limit, offset)
 }
 
 func (s *Service) GetForOperator(ctx context.Context, id string) (*SpecialRequest, error) {
-	return s.GetForOperatorInTenant(ctx, DefaultOperatorContextID, id)
+	return s.GetForOperatorInOperatorContext(ctx, DefaultOperatorContextID, id)
 }
 
-func (s *Service) GetForOperatorInTenant(ctx context.Context, operatorContextID string, id string) (*SpecialRequest, error) {
-	return s.repo.GetInTenant(ctx, operatorContextID, id)
+func (s *Service) GetForOperatorInOperatorContext(ctx context.Context, operatorContextID string, id string) (*SpecialRequest, error) {
+	return s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 }
 
 func (s *Service) ListForOperator(ctx context.Context, reqType, status, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
-	return s.ListForOperatorInTenant(ctx, DefaultOperatorContextID, reqType, status, workflowStage, limit, offset)
+	return s.ListForOperatorInOperatorContext(ctx, DefaultOperatorContextID, reqType, status, workflowStage, limit, offset)
 }
 
-func (s *Service) ListForOperatorInTenant(ctx context.Context, operatorContextID string, reqType, status, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
+func (s *Service) ListForOperatorInOperatorContext(ctx context.Context, operatorContextID string, reqType, status, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
 	if reqType != nil && *reqType != "" {
 		rt := RequestType(*reqType)
 		if rt != TypeSheinAssistedPurchase && rt != TypeAwnakErrand {
@@ -376,7 +376,7 @@ func (s *Service) ListForOperatorInTenant(ctx context.Context, operatorContextID
 			return nil, 0, fmt.Errorf("%w: status is invalid", ErrInvalid)
 		}
 	}
-	return s.repo.ListForOperatorInTenant(ctx, operatorContextID, reqType, status, workflowStage, limit, offset)
+	return s.repo.ListForOperatorInOperatorContext(ctx, operatorContextID, reqType, status, workflowStage, limit, offset)
 }
 
 func isValidStatus(status RequestStatus) bool {
@@ -390,11 +390,11 @@ func isValidStatus(status RequestStatus) bool {
 }
 
 func (s *Service) CancelForClient(ctx context.Context, id, clientID string, expectedVersion *int) (*SpecialRequest, error) {
-	return s.CancelForClientInTenant(ctx, DefaultOperatorContextID, id, clientID, expectedVersion)
+	return s.CancelForClientInOperatorContext(ctx, DefaultOperatorContextID, id, clientID, expectedVersion)
 }
 
-func (s *Service) CancelForClientInTenant(ctx context.Context, operatorContextID string, id, clientID string, expectedVersion *int) (*SpecialRequest, error) {
-	current, err := s.repo.GetInTenant(ctx, operatorContextID, id)
+func (s *Service) CancelForClientInOperatorContext(ctx context.Context, operatorContextID string, id, clientID string, expectedVersion *int) (*SpecialRequest, error) {
+	current, err := s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -422,7 +422,7 @@ func (s *Service) CancelForClientInTenant(ctx context.Context, operatorContextID
 	}
 	defer tx.Rollback()
 
-	updated, err := s.repo.UpdateInTenantTx(ctx, tx, operatorContextID, id, version, update)
+	updated, err := s.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, id, version, update)
 	if err != nil {
 		return nil, err
 	}
@@ -461,11 +461,11 @@ func (s *Service) CancelForClientInTenant(ctx context.Context, operatorContextID
 }
 
 func (s *Service) ApplyOperatorTransition(ctx context.Context, id string, expectedVersion int, in UpdateInput) (*SpecialRequest, error) {
-	return s.ApplyOperatorTransitionInTenant(ctx, DefaultOperatorContextID, id, expectedVersion, in)
+	return s.ApplyOperatorTransitionInOperatorContext(ctx, DefaultOperatorContextID, id, expectedVersion, in)
 }
 
-func (s *Service) ApplyOperatorTransitionInTenant(ctx context.Context, operatorContextID string, id string, expectedVersion int, in UpdateInput) (*SpecialRequest, error) {
-	current, err := s.repo.GetInTenant(ctx, operatorContextID, id)
+func (s *Service) ApplyOperatorTransitionInOperatorContext(ctx context.Context, operatorContextID string, id string, expectedVersion int, in UpdateInput) (*SpecialRequest, error) {
+	current, err := s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -550,7 +550,7 @@ func (s *Service) ApplyOperatorTransitionInTenant(ctx context.Context, operatorC
 	}
 	defer tx.Rollback()
 
-	updated, err := s.repo.UpdateInTenantTx(ctx, tx, operatorContextID, id, expectedVersion, update)
+	updated, err := s.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, id, expectedVersion, update)
 	if err != nil {
 		return nil, err
 	}

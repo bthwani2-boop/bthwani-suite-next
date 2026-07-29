@@ -10,11 +10,11 @@ func TestCreateIntentRejectsMissingRequiredFields(t *testing.T) {
 		name  string
 		input CreateIntentInput
 	}{
-		{"missing id", CreateIntentInput{OperatorContextID: "tenant-1", ClientID: "c1", CartID: "cart1", StoreID: "s1"}},
+		{"missing id", CreateIntentInput{OperatorContextID: "OperatorContext-1", ClientID: "c1", CartID: "cart1", StoreID: "s1"}},
 		{"missing operatorContextId", CreateIntentInput{ID: "i1", ClientID: "c1", CartID: "cart1", StoreID: "s1"}},
-		{"missing clientId", CreateIntentInput{ID: "i1", OperatorContextID: "tenant-1", CartID: "cart1", StoreID: "s1"}},
-		{"missing cartId", CreateIntentInput{ID: "i1", OperatorContextID: "tenant-1", ClientID: "c1", StoreID: "s1"}},
-		{"missing storeId", CreateIntentInput{ID: "i1", OperatorContextID: "tenant-1", ClientID: "c1", CartID: "cart1"}},
+		{"missing clientId", CreateIntentInput{ID: "i1", OperatorContextID: "OperatorContext-1", CartID: "cart1", StoreID: "s1"}},
+		{"missing cartId", CreateIntentInput{ID: "i1", OperatorContextID: "OperatorContext-1", ClientID: "c1", StoreID: "s1"}},
+		{"missing storeId", CreateIntentInput{ID: "i1", OperatorContextID: "OperatorContext-1", ClientID: "c1", CartID: "cart1"}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -57,19 +57,19 @@ func TestApplyWltPaymentEventRejectsMissingFields(t *testing.T) {
 	if _, err := ApplyWltPaymentEvent(nil, "", "intent-1", "session-1", "captured"); err != ErrInvalid {
 		t.Fatalf("expected ErrInvalid for missing operatorContextId, got %v", err)
 	}
-	if _, err := ApplyWltPaymentEvent(nil, "tenant-1", "", "session-1", "captured"); err != ErrInvalid {
+	if _, err := ApplyWltPaymentEvent(nil, "OperatorContext-1", "", "session-1", "captured"); err != ErrInvalid {
 		t.Fatalf("expected ErrInvalid for missing intentId, got %v", err)
 	}
-	if _, err := ApplyWltPaymentEvent(nil, "tenant-1", "intent-1", "", "captured"); err != ErrInvalid {
+	if _, err := ApplyWltPaymentEvent(nil, "OperatorContext-1", "intent-1", "", "captured"); err != ErrInvalid {
 		t.Fatalf("expected ErrInvalid for missing paymentSessionId, got %v", err)
 	}
-	if _, err := ApplyWltPaymentEvent(nil, "tenant-1", "intent-1", "session-1", ""); err != ErrInvalid {
+	if _, err := ApplyWltPaymentEvent(nil, "OperatorContext-1", "intent-1", "session-1", ""); err != ErrInvalid {
 		t.Fatalf("expected ErrInvalid for missing status, got %v", err)
 	}
 }
 
 func TestApplyWltPaymentEventRejectsUnsupportedStatus(t *testing.T) {
-	_, err := ApplyWltPaymentEvent(nil, "tenant-1", "intent-1", "session-1", "not-a-real-status")
+	_, err := ApplyWltPaymentEvent(nil, "OperatorContext-1", "intent-1", "session-1", "not-a-real-status")
 	if !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid for unsupported status, got %v", err)
 	}

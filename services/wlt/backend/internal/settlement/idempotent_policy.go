@@ -96,9 +96,9 @@ func UpsertGovernedSettlementPolicyIdempotent(
 
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_settlement_policies
-		(tenant_id, partner_id, fee_basis_points, currency, status, updated_by_operator_id)
+		(operator_context_id, partner_id, fee_basis_points, currency, status, updated_by_operator_id)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (tenant_id, partner_id) DO UPDATE SET
+		ON CONFLICT (operator_context_id, partner_id) DO UPDATE SET
 		  fee_basis_points = EXCLUDED.fee_basis_points,
 		  currency = EXCLUDED.currency,
 		  status = EXCLUDED.status,
@@ -118,13 +118,13 @@ func UpsertGovernedSettlementPolicyIdempotent(
 	if err := tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) + 1
 		FROM wlt_settlement_policy_versions
-		WHERE tenant_id = $1 AND partner_id = $2`, operatorContextID, partnerID).Scan(&version); err != nil {
+		WHERE operator_context_id = $1 AND partner_id = $2`, operatorContextID, partnerID).Scan(&version); err != nil {
 		return nil, err
 	}
 
 	row := tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_settlement_policy_versions
-		(tenant_id, partner_id, version, fee_basis_points, currency, status, cycle_days,
+		(operator_context_id, partner_id, version, fee_basis_points, currency, status, cycle_days,
 		 minimum_net_minor_units, change_reason, updated_by_operator_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING partner_id, version, fee_basis_points, currency, status,
@@ -148,7 +148,7 @@ func UpsertGovernedSettlementPolicyIdempotent(
 
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_finance_audit_events
-		(tenant_id, aggregate_type, aggregate_id, action, actor_id, actor_type, reason,
+		(operator_context_id, aggregate_type, aggregate_id, action, actor_id, actor_type, reason,
 		 correlation_id, metadata)
 		VALUES ($1, 'settlement_policy', $2, 'policy_version_created', $3,
 		        'operator', $4, $5,

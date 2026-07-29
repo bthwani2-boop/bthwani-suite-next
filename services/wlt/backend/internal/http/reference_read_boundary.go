@@ -10,7 +10,7 @@ import (
 // ReferenceReadBoundary protects the narrow WLT projections that historically
 // remained public. Health/readiness and all non-reference routes preserve their
 // existing ownership; active SaaS reference reads require a trusted DSH service
-// or a same-tenant Identity session.
+// or a same-OperatorContext Identity session.
 func ReferenceReadBoundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/wlt/references/") {

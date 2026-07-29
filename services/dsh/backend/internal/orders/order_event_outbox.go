@@ -52,7 +52,7 @@ func ClaimOrderEvents(db *sql.DB, limit int) ([]OrderOutboxRecord, error) {
 		SET status='processing', attempt_count=o.attempt_count+1, updated_at=NOW()
 		FROM candidates c
 		WHERE o.id=c.id
-		RETURNING o.id::text,o.tenant_id,o.order_id::text,o.event_id::text,o.event_type,
+		RETURNING o.id::text,o.operator_context_id,o.order_id::text,o.event_id::text,o.event_type,
 		          o.correlation_id,o.causation_id,o.payload,o.attempt_count`, limit)
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func MarkOrderEventPublished(db *sql.DB, outboxID, operatorContextID string) err
 	result, err := db.Exec(`
 		UPDATE dsh_order_event_outbox
 		SET status='published', published_at=NOW(), last_error='', updated_at=NOW()
-		WHERE id=$1::uuid AND tenant_id=$2 AND status='processing'`, outboxID, operatorContextID)
+		WHERE id=$1::uuid AND operator_context_id=$2 AND status='processing'`, outboxID, operatorContextID)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func MarkOrderEventRetry(db *sql.DB, outboxID, operatorContextID, failure string
 		      ELSE NOW()+($3 * INTERVAL '1 second')
 		    END,
 		    last_error=LEFT($4,1000), updated_at=NOW()
-		WHERE id=$1::uuid AND tenant_id=$2 AND status='processing'`,
+		WHERE id=$1::uuid AND operator_context_id=$2 AND status='processing'`,
 		outboxID, operatorContextID, retrySeconds, failure)
 	if err != nil {
 		return err
@@ -149,8 +149,8 @@ func GetOrderOutboxRecord(db *sql.DB, operatorContextID, eventID string) (*Order
 	var record OrderOutboxRecord
 	var payload []byte
 	err := db.QueryRow(`
-		SELECT id::text,tenant_id,order_id::text,event_id::text,event_type,correlation_id,causation_id,payload,attempt_count
-		FROM dsh_order_event_outbox WHERE tenant_id=$1 AND event_id=$2::uuid`, operatorContextID, eventID,
+		SELECT id::text,operator_context_id,order_id::text,event_id::text,event_type,correlation_id,causation_id,payload,attempt_count
+		FROM dsh_order_event_outbox WHERE operator_context_id=$1 AND event_id=$2::uuid`, operatorContextID, eventID,
 	).Scan(
 		&record.ID,
 		&record.OperatorContextID,

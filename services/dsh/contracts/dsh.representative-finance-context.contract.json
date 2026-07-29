@@ -3,18 +3,18 @@
   "capabilityId": "REPRESENTATIVE_FINANCE_CONTEXT",
   "parentContract": "services/dsh/contracts/dsh.representative-finance.openapi.yaml",
   "truthOwner": "WLT",
-  "tenantBoundary": {
+  "OperatorContextBoundary": {
     "source": "core.identity.session.operatorContextId",
-    "clientSuppliedTenantAccepted": false,
-    "description": "The tenant is derived from the authenticated Identity session and forwarded server-to-server by DSH. Browser query, path, and header values cannot select the WLT tenant.",
-    "walletLookupKey": ["tenant_id", "actor_type", "actor_id"],
-    "ledgerLookupKey": ["tenant_id", "actor_type", "actor_id"],
-    "crossTenantWalletBehavior": "NOT_FOUND",
-    "crossTenantLedgerBehavior": "EMPTY_COLLECTION"
+    "clientSuppliedOperatorContextAccepted": false,
+    "description": "The OperatorContext is derived from the authenticated Identity session and forwarded server-to-server by DSH. Browser query, path, and header values cannot select the WLT OperatorContext.",
+    "walletLookupKey": ["OperatorContext_id", "actor_type", "actor_id"],
+    "ledgerLookupKey": ["OperatorContext_id", "actor_type", "actor_id"],
+    "crossOperatorContextWalletBehavior": "NOT_FOUND",
+    "crossOperatorContextLedgerBehavior": "EMPTY_COLLECTION"
   },
   "invariants": [
-    "Self-service representative finance uses the actor and tenant resolved from the bearer session.",
-    "Control-panel representative finance uses the operator tenant resolved from the bearer session.",
+    "Self-service representative finance uses the actor and OperatorContext resolved from the bearer session.",
+    "Control-panel representative finance uses the operator OperatorContext resolved from the bearer session.",
     "DSH forwards X-Operator-Context-ID only from trusted Identity context.",
     "WLT rejects representative wallet and ledger reads without X-Operator-Context-ID.",
     "No frontend can override actorId, actorType, or operatorContextId for a self-service financial read.",
@@ -24,8 +24,8 @@
     "anonymous request rejected",
     "cross-role request rejected",
     "unsupported representative actor rejected",
-    "cross-tenant wallet hidden as not found",
-    "cross-tenant ledger hidden as empty",
+    "cross-OperatorContext wallet hidden as not found",
+    "cross-OperatorContext ledger hidden as empty",
     "direct browser-style WLT call rejected",
     "DSH and frontend balance mutation absent"
   ]

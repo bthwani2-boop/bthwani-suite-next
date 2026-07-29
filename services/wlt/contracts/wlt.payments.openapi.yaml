@@ -17,7 +17,7 @@ paths:
   /wlt/payment-sessions:
     post:
       operationId: createWltPaymentSession
-      summary: Create or replay a tenant-bound payment-session reference.
+      summary: Create or replay a OperatorContext-bound payment-session reference.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
       x-bthwani-mutation-approved: false
@@ -44,7 +44,7 @@ paths:
   /wlt/payment-sessions/{paymentSessionId}:
     get:
       operationId: getWltPaymentSession
-      summary: Read one payment session in the trusted tenant.
+      summary: Read one payment session in the trusted OperatorContext.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -194,7 +194,7 @@ paths:
   /wlt/payment-sessions/{paymentSessionId}/cancel-for-order:
     post:
       operationId: cancelWltPaymentSessionForOrder
-      summary: Let WLT choose expiry or governed refund according to captured tenant truth.
+      summary: Let WLT choose expiry or governed refund according to captured OperatorContext truth.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
       x-bthwani-mutation-approved: false
@@ -228,7 +228,7 @@ paths:
   /wlt/order-cancellations:
     post:
       operationId: cancelWltOrderFinancially
-      summary: Apply the tenant-bound expiry-or-refund decision for an order.
+      summary: Apply the OperatorContext-bound expiry-or-refund decision for an order.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
       x-bthwani-mutation-approved: false

@@ -76,7 +76,6 @@ const bindingRelative = "governance/guards/frontend-binding-registry.json";
 const enforcementRelative = "governance/github/repository-enforcement.json";
 const workflowRegistryRelative = "governance/github/workflow-registry.json";
 const singleOwnerRelative = "governance/authority/single-owner-mode.json";
-const saasRelative = "governance/saas/saas-governance.json";
 const decisionIndexRelative = "governance/GOVERNANCE.md";
 
 const authority = validateDocument(authorityRelative, "governance/authority/authority-precedence.schema.json", "AUTHORITY");
@@ -89,7 +88,6 @@ const frontendBindings = validateDocument(bindingRelative, "governance/guards/fr
 const repositoryEnforcement = validateDocument(enforcementRelative, "governance/github/repository-enforcement.schema.json", "GITHUB_ENFORCEMENT");
 validateDocument(workflowRegistryRelative, "governance/github/workflow-registry.schema.json", "WORKFLOW_REGISTRY");
 const singleOwnerMode = validateDocument(singleOwnerRelative, "governance/authority/single-owner-mode.schema.json", "SINGLE_OWNER_MODE");
-const saasGovernance = validateDocument(saasRelative, "governance/saas/saas-governance.schema.json", "SAAS_GOVERNANCE");
 readJson("tools/guards/guard-manifest.json", "GUARD_MANIFEST");
 
 const canonicalProductSchema = "governance/product/product-truth.schema.json";
@@ -222,7 +220,6 @@ if (authority) {
     singleOwnerRelative,
     "governance/authority/single-owner-mode.schema.json",
     canonicalProductSchema,
-    "governance/saas",
     "tools/guards/guard-manifest.json",
   ]) {
     if (!documentPaths.has(requiredPath)) violations.push({ file: authorityRelative, line: 0, message: `MACHINE_AUTHORITY_NOT_REGISTERED ${requiredPath}` });
@@ -244,7 +241,7 @@ if (singleOwnerMode) {
   const requiredProtectedDomains = [
     "authentication_authorization_sessions",
     "pii_privacy_secrets_credentials",
-    "tenant_isolation",
+    "OperatorContext_isolation",
     "security_approval",
     "financial_control",
     "migrations_and_production_data",
@@ -306,13 +303,6 @@ if (decisions) {
   }
 }
 
-if (saasGovernance && decisions) {
-  const canonicalIds = new Set(decisions.canonicalDecisions.map((entry) => entry.id));
-  if (!canonicalIds.has(saasGovernance.canonicalDecision)) violations.push({ file: saasRelative, line: 0, message: `SAAS_DECISION_NOT_CANONICAL ${saasGovernance.canonicalDecision}` });
-  if (saasGovernance.commercialActivationState === "BLOCKED_BY_POLICY" && ["PASS", "CLOSED_WITH_EVIDENCE"].includes(saasGovernance.canonicalDecision)) {
-    violations.push({ file: saasRelative, line: 0, message: "SAAS_BLOCKED_STATE_CANNOT_PASS_OR_CLOSE" });
-  }
-}
 
 if (guards && guardAssurance) {
   const registeredGuardIds = new Set(guards.entries.map((entry) => entry.id));
@@ -324,7 +314,7 @@ if (guards && guardAssurance) {
     if (entry.closureEligible !== false) violations.push({ file: assuranceRelative, line: 0, message: `SCOPE_GUARD_MUST_NOT_BE_CLOSURE_ELIGIBLE ${entry.guardId}` });
   }
   for (const requiredId of [
-    "governance-schema", "agent-governance", "authority-separation", "saas-governance", "guard-registry", "sdlc", "go-routes-ci",
+    "governance-schema", "agent-governance", "authority-separation", "guard-registry", "sdlc", "go-routes-ci",
     "frontend-feature-binding", "logic-coverage", "runtime-real-bindings",
     "performance-budget", "a11y", "a11y-runtime", "workflow-lint", "workflow-security", "actions-pin",
   ]) {

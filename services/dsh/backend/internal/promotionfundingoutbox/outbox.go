@@ -63,7 +63,7 @@ func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 		return fmt.Errorf("promotion funding outbox: unsupported event type %q", input.EventType)
 	}
 	_, err := tx.Exec(`INSERT INTO dsh_promotion_funding_outbox
-		(event_type,tenant_id,checkout_intent_id,coupon_redemption_id,
+		(event_type,operator_context_id,checkout_intent_id,coupon_redemption_id,
 		 wlt_funding_reservation_id,order_id,reason,idempotency_key,correlation_id)
 		VALUES ($1,$2,$3::uuid,$4::uuid,$5,$6::uuid,$7,$8,$9)
 		ON CONFLICT (idempotency_key) DO NOTHING`,
@@ -96,7 +96,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	}
 	defer tx.Rollback()
 
-	rows, err := tx.Query(`SELECT id::TEXT,event_type,tenant_id,
+	rows, err := tx.Query(`SELECT id::TEXT,event_type,operator_context_id,
 		checkout_intent_id::TEXT,coupon_redemption_id::TEXT,
 		wlt_funding_reservation_id,COALESCE(order_id::TEXT,''),reason,
 		idempotency_key,correlation_id,attempt_count

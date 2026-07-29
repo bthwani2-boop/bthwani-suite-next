@@ -93,11 +93,11 @@ func UpsertCaptainFinancialEligibilitySnapshot(
 	var snapshot CaptainFinancialEligibilitySnapshot
 	err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_captain_financial_eligibility(
-			tenant_id,captain_id,wallet_id,wallet_status,available_balance_minor_units,
+			operator_context_id,captain_id,wallet_id,wallet_status,available_balance_minor_units,
 			minimum_dispatch_balance_minor_units,currency,eligible,ineligibility_reason,
 			snapshot_reference,checked_at,expires_at
 		) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now(),now()+($11*interval '1 second'))
-		ON CONFLICT(tenant_id,captain_id) DO UPDATE SET
+		ON CONFLICT(operator_context_id,captain_id) DO UPDATE SET
 			wallet_id=excluded.wallet_id,wallet_status=excluded.wallet_status,
 			available_balance_minor_units=excluded.available_balance_minor_units,
 			minimum_dispatch_balance_minor_units=excluded.minimum_dispatch_balance_minor_units,
@@ -105,7 +105,7 @@ func UpsertCaptainFinancialEligibilitySnapshot(
 			ineligibility_reason=excluded.ineligibility_reason,
 			snapshot_reference=excluded.snapshot_reference,checked_at=excluded.checked_at,
 			expires_at=excluded.expires_at
-		RETURNING tenant_id,captain_id,wallet_id,wallet_status,available_balance_minor_units,
+		RETURNING operator_context_id,captain_id,wallet_id,wallet_status,available_balance_minor_units,
 			minimum_dispatch_balance_minor_units,currency,eligible,ineligibility_reason,
 			snapshot_reference,checked_at,expires_at`,
 		operatorContextID, captainID, wallet.WalletID, wallet.WalletStatus,
@@ -136,11 +136,11 @@ func GetCaptainFinancialEligibilitySnapshot(
 ) (CaptainFinancialEligibilitySnapshot, error) {
 	var snapshot CaptainFinancialEligibilitySnapshot
 	err := db.QueryRowContext(ctx, `
-		SELECT tenant_id,captain_id,wallet_id,wallet_status,available_balance_minor_units,
+		SELECT operator_context_id,captain_id,wallet_id,wallet_status,available_balance_minor_units,
 			minimum_dispatch_balance_minor_units,currency,eligible,ineligibility_reason,
 			snapshot_reference,checked_at,expires_at
 		FROM dsh_captain_financial_eligibility
-		WHERE tenant_id=$1 AND captain_id=$2`,
+		WHERE operator_context_id=$1 AND captain_id=$2`,
 		normalizeOperatorContextID(operatorContextID), strings.TrimSpace(captainID),
 	).Scan(
 		&snapshot.OperatorContextID,

@@ -9,7 +9,6 @@ import (
 func TestReferenceReadBoundaryProtectsGetReferenceRoutesInEveryMode(t *testing.T) {
 	for _, mode := range []string{"active", "deferred", ""} {
 		t.Run(mode, func(t *testing.T) {
-			t.Setenv("BTHWANI_SAAS_MODE", mode)
 			t.Setenv("IDENTITY_API_BASE_URL", "")
 
 			nextCalled := false

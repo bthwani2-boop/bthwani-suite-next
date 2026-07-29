@@ -3,7 +3,7 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS dsh_order_truth_audit (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id TEXT NOT NULL,
+  operator_context_id TEXT NOT NULL,
   actor_id TEXT NOT NULL DEFAULT '',
   actor_role TEXT NOT NULL DEFAULT 'system',
   order_id UUID REFERENCES dsh_orders(id) ON DELETE SET NULL,
@@ -24,12 +24,12 @@ CREATE TABLE IF NOT EXISTS dsh_order_truth_audit (
   ))
 );
 
-CREATE INDEX IF NOT EXISTS idx_dsh_order_truth_audit_tenant_created
-  ON dsh_order_truth_audit(tenant_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_dsh_order_truth_audit_tenant_type_created
-  ON dsh_order_truth_audit(tenant_id, event_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_dsh_order_truth_audit_OperatorContext_created
+  ON dsh_order_truth_audit(operator_context_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_dsh_order_truth_audit_OperatorContext_type_created
+  ON dsh_order_truth_audit(operator_context_id, event_type, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_dsh_order_truth_audit_correlation
-  ON dsh_order_truth_audit(tenant_id, correlation_id)
+  ON dsh_order_truth_audit(operator_context_id, correlation_id)
   WHERE correlation_id <> '';
 
 -- Audit metadata must remain redacted. Address, token, idempotency key, payment

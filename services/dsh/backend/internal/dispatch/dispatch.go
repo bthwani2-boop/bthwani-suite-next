@@ -171,7 +171,7 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	if err = specialrequests.CheckSheinDispatchReadiness(tx, input.OperatorContextID, input.SpecialRequestID); err != nil {
 		return nil, mapSpecialRequestError(err)
 	}
-	if err = specialrequests.TransitionDispatchStatusInTenant(tx, input.OperatorContextID, input.SpecialRequestID,
+	if err = specialrequests.TransitionDispatchStatusInOperatorContext(tx, input.OperatorContextID, input.SpecialRequestID,
 		[]specialrequests.RequestStatus{specialrequests.StatusApproved}, specialrequests.StatusAssigned); err != nil {
 		return nil, mapSpecialRequestError(err)
 	}
@@ -209,7 +209,7 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	if _, err = tx.Exec(`
 		UPDATE dsh_special_requests
 		SET dispatch_assignment_id = $1, version = version + 1
-		WHERE id = $2 AND tenant_id = $3`,
+		WHERE id = $2 AND operator_context_id = $3`,
 		assignment.ID, input.SpecialRequestID, input.OperatorContextID); err != nil {
 		return nil, err
 	}

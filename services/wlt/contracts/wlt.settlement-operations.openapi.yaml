@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: BThwani WLT Settlement Operations API
   version: 1.0.0
-  description: Tenant-scoped settlement reads, financial summary and governed posting transition.
+  description: OperatorContext-scoped settlement reads, financial summary and governed posting transition.
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: ENABLED
@@ -17,7 +17,7 @@ paths:
     get:
       operationId: listWltSettlements
       tags: [WltSettlements]
-      summary: List tenant-local settlements.
+      summary: List OperatorContext-local settlements.
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -30,7 +30,7 @@ paths:
           schema: { type: string }
       responses:
         '200':
-          description: Tenant-local settlements
+          description: OperatorContext-local settlements
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SettlementListResponse' }
@@ -41,13 +41,13 @@ paths:
     get:
       operationId: getWltSettlementSummary
       tags: [WltSettlements]
-      summary: Return the tenant-local settlement summary computed by WLT.
+      summary: Return the OperatorContext-local settlement summary computed by WLT.
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
       responses:
-        '200': { description: Tenant-local settlement summary }
+        '200': { description: OperatorContext-local settlement summary }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
@@ -55,14 +55,14 @@ paths:
     get:
       operationId: getWltSettlement
       tags: [WltSettlements]
-      summary: Read one tenant-local settlement.
+      summary: Read one OperatorContext-local settlement.
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/SettlementId'
       responses:
-        '200': { description: Tenant-local settlement }
+        '200': { description: OperatorContext-local settlement }
         '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
@@ -70,7 +70,7 @@ paths:
     post:
       operationId: postWltSettlement
       tags: [WltSettlements]
-      summary: Post a pending tenant-local settlement and its balanced journal atomically.
+      summary: Post a pending OperatorContext-local settlement and its balanced journal atomically.
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:

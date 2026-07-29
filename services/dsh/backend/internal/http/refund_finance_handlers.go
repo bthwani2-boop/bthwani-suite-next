@@ -243,7 +243,7 @@ func (s *protectedStoreServer) handleFinanceRefundAudit(w http.ResponseWriter, r
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "refundId is required")
 		return
 	}
-	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/refunds/"+url.PathEscape(refundID)+"/audit", nil, r.Header.Get("X-Correlation-ID"), operatorContextID)
+	status, body, err := s.wlt.FinanceReadWithOperatorContext(r.Context(), "/wlt/refunds/"+url.PathEscape(refundID)+"/audit", nil, r.Header.Get("X-Correlation-ID"), operatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT refund audit read failed")
 		return
@@ -272,7 +272,7 @@ func (s *protectedStoreServer) proxyPrivacyRefunds(w http.ResponseWriter, r *htt
 	if clientID != "" {
 		query.Set("clientId", clientID)
 	}
-	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/refunds", query, r.Header.Get("X-Correlation-ID"), operatorContextID)
+	status, body, err := s.wlt.FinanceReadWithOperatorContext(r.Context(), "/wlt/refunds", query, r.Header.Get("X-Correlation-ID"), operatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT refund read failed")
 		return
@@ -289,7 +289,7 @@ func (s *protectedStoreServer) proxyPrivacyRefunds(w http.ResponseWriter, r *htt
 	store.SendJSON(w, http.StatusOK, map[string]any{"refunds": items})
 }
 
-// Native clients do not supply a trusted tenant header. The tenant is derived
+// Native clients do not supply a trusted OperatorContext header. The OperatorContext is derived
 // from the authenticated actor's owned order before WLT is queried.
 func (s *protectedStoreServer) handleClientOrderRefunds(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
@@ -303,7 +303,7 @@ func (s *protectedStoreServer) handleClientOrderRefunds(w http.ResponseWriter, r
 	}
 	var operatorContextID string
 	if err := s.db.QueryRowContext(r.Context(), `
-		SELECT tenant_id FROM dsh_orders
+		SELECT operator_context_id FROM dsh_orders
 		WHERE id=$1::uuid AND client_id=$2`, orderID, actor.ID).Scan(&operatorContextID); err != nil {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found for client")
 		return
@@ -323,7 +323,7 @@ func (s *protectedStoreServer) handlePartnerOrderRefunds(w http.ResponseWriter, 
 	}
 	var operatorContextID string
 	if err := s.db.QueryRowContext(r.Context(), `
-		SELECT tenant_id FROM dsh_orders
+		SELECT operator_context_id FROM dsh_orders
 		WHERE id=$1::uuid AND store_id=$2`, orderID, storeID).Scan(&operatorContextID); err != nil {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found for partner store")
 		return

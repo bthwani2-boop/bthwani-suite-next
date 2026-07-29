@@ -27,8 +27,8 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
     WHERE tablename='dsh_order_payment_projection_reconciliation'
-      AND indexdef ILIKE '%UNIQUE%tenant_id%wlt_payment_session_id%'
-  ) THEN missing := array_append(missing, 'tenant WLT session uniqueness'); END IF;
+      AND indexdef ILIKE '%UNIQUE%operator_context_id%wlt_payment_session_id%'
+  ) THEN missing := array_append(missing, 'OperatorContext WLT session uniqueness'); END IF;
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_trigger

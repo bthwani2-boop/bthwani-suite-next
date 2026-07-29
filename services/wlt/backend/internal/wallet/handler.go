@@ -28,7 +28,7 @@ func HandleGetWallet(db *sql.DB) http.HandlerFunc {
 		actorID := strings.TrimSpace(r.PathValue("actorId"))
 
 		if operatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", "X-Operator-Context-ID is required for representative finance reads")
+			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", "X-Operator-Context-ID is required for representative finance reads")
 			return
 		}
 		if !ok {
@@ -40,13 +40,13 @@ func HandleGetWallet(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		wallet, err := GetWalletForTenant(db, operatorContextID, actorType, actorID)
+		wallet, err := GetWalletForOperatorContext(db, operatorContextID, actorType, actorID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to fetch wallet")
 			return
 		}
 		if wallet == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "wallet not found in the authenticated tenant")
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "wallet not found in the authenticated OperatorContext")
 			return
 		}
 

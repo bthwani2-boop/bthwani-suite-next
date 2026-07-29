@@ -39,7 +39,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	storeID := strings.TrimSpace(body.StoreID)
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if cartID == "" || storeID == "" || actor.OperatorContextID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId, storeId and authenticated tenant are required")
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId, storeId and authenticated OperatorContext are required")
 		return
 	}
 	if len(idempotencyKey) < 16 || len(idempotencyKey) > 200 {

@@ -147,7 +147,7 @@ func UpsertGovernedCommissionPolicyIdempotent(
 		if _, err := tx.ExecContext(ctx, `
 			UPDATE wlt_commission_policy_versions
 			SET status = 'inactive'
-			WHERE tenant_id = $1
+			WHERE operator_context_id = $1
 			  AND commission_type = $2
 			  AND source_type = $3
 			  AND beneficiary_actor_type = $4
@@ -165,13 +165,13 @@ func UpsertGovernedCommissionPolicyIdempotent(
 	if err := tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) + 1
 		FROM wlt_commission_policy_versions
-		WHERE tenant_id = $1 AND policy_id = $2`, operatorContextID, input.PolicyID).Scan(&version); err != nil {
+		WHERE operator_context_id = $1 AND policy_id = $2`, operatorContextID, input.PolicyID).Scan(&version); err != nil {
 		return nil, err
 	}
 
 	row := tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_commission_policy_versions
-		(tenant_id, policy_id, version, commission_type, source_type, beneficiary_actor_type,
+		(operator_context_id, policy_id, version, commission_type, source_type, beneficiary_actor_type,
 		 calculation_type, fixed_amount_minor_units, basis_points,
 		 minimum_amount_minor_units, maximum_amount_minor_units,
 		 currency, status, change_reason, updated_by_actor_id)
@@ -207,7 +207,7 @@ func UpsertGovernedCommissionPolicyIdempotent(
 	})
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_finance_audit_events
-		(tenant_id, aggregate_type, aggregate_id, action, actor_id, actor_type,
+		(operator_context_id, aggregate_type, aggregate_id, action, actor_id, actor_type,
 		 reason, correlation_id, metadata)
 		VALUES ($1, 'commission_policy', $2, 'policy_version_created', $3,
 		        'operator', $4, $5, $6::jsonb)`,

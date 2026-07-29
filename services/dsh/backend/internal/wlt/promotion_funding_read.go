@@ -10,7 +10,7 @@ import (
 )
 
 // GetPromotionFundingReservation reads sovereign WLT state for DSH
-// reconciliation. It never accepts a tenant inferred from the reservation ID.
+// reconciliation. It never accepts a OperatorContext inferred from the reservation ID.
 func (c *Client) GetPromotionFundingReservation(
 	ctx context.Context,
 	reservationID string,
@@ -22,7 +22,7 @@ func (c *Client) GetPromotionFundingReservation(
 	reservationID = strings.TrimSpace(reservationID)
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if reservationID == "" || operatorContextID == "" {
-		return nil, fmt.Errorf("promotion funding reservation and tenant are required")
+		return nil, fmt.Errorf("promotion funding reservation and OperatorContext are required")
 	}
 
 	req, err := http.NewRequestWithContext(

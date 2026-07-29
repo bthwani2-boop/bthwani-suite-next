@@ -74,7 +74,7 @@ func BeginWltPaymentEventTx(
 
 	result, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_checkout_wlt_event_receipts (
-			event_key, tenant_id, checkout_intent_id, payment_session_id,
+			event_key, operator_context_id, checkout_intent_id, payment_session_id,
 			wlt_status, payload_hash, correlation_id
 		) VALUES ($1,$2,$3::uuid,$4,$5,$6,$7)
 		ON CONFLICT (event_key) DO NOTHING`,
@@ -99,7 +99,7 @@ func BeginWltPaymentEventTx(
 
 	var existingPayloadHash, existingOperatorContextID, existingIntentID, existingSessionID, existingStatus string
 	if err := tx.QueryRowContext(ctx, `
-		SELECT payload_hash, tenant_id, checkout_intent_id::text, payment_session_id, wlt_status
+		SELECT payload_hash, operator_context_id, checkout_intent_id::text, payment_session_id, wlt_status
 		FROM dsh_checkout_wlt_event_receipts
 		WHERE event_key=$1
 		FOR UPDATE`, eventKey).Scan(
@@ -142,7 +142,7 @@ func MarkWltPaymentEventAppliedTx(
 	result, err := tx.ExecContext(ctx, `
 		UPDATE dsh_checkout_wlt_event_receipts
 		SET applied_at=COALESCE(applied_at,NOW()), last_received_at=NOW()
-		WHERE event_key=$1 AND tenant_id=$2 AND checkout_intent_id=$3::uuid`,
+		WHERE event_key=$1 AND operator_context_id=$2 AND checkout_intent_id=$3::uuid`,
 		eventKey,
 		input.OperatorContextID,
 		input.CheckoutIntentID,
@@ -162,7 +162,7 @@ func MarkWltPaymentEventAppliedTx(
 		SET last_wlt_status=$1,
 		    last_wlt_event_at=NOW(),
 		    reconciliation_attempt_count=reconciliation_attempt_count+1
-		WHERE id=$2::uuid AND tenant_id=$3`,
+		WHERE id=$2::uuid AND operator_context_id=$3`,
 		input.Status,
 		input.CheckoutIntentID,
 		input.OperatorContextID,
@@ -171,17 +171,17 @@ func MarkWltPaymentEventAppliedTx(
 }
 
 func GetIntentForServiceTx(ctx context.Context, tx *sql.Tx, operatorContextID, intentID string) (*Intent, error) {
-	operatorContextID = normalizeTenant(operatorContextID)
+	operatorContextID = normalizeOperatorContext(operatorContextID)
 	intentID = strings.TrimSpace(intentID)
 	if operatorContextID == "" || intentID == "" {
 		return nil, ErrInvalid
 	}
 	intent, err := scanIntent(tx.QueryRowContext(ctx, `
-		SELECT id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		SELECT id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		       state, payment_method, wlt_payment_session_id,
 		       delivery_address, note, version, created_at, updated_at
 		FROM dsh_checkout_intents
-		WHERE id=$1::uuid AND tenant_id=$2`, intentID, operatorContextID))
+		WHERE id=$1::uuid AND operator_context_id=$2`, intentID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -198,7 +198,7 @@ func ApplyWltPaymentEventTx(
 	paymentSessionID,
 	wltStatus string,
 ) (*Intent, error) {
-	operatorContextID = normalizeTenant(operatorContextID)
+	operatorContextID = normalizeOperatorContext(operatorContextID)
 	intentID = strings.TrimSpace(intentID)
 	paymentSessionID = strings.TrimSpace(paymentSessionID)
 	wltStatus = strings.TrimSpace(wltStatus)
@@ -211,11 +211,11 @@ func ApplyWltPaymentEventTx(
 		return nil, err
 	}
 	current, err := scanIntent(tx.QueryRowContext(ctx, `
-		SELECT id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		SELECT id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		       state, payment_method, wlt_payment_session_id,
 		       delivery_address, note, version, created_at, updated_at
 		FROM dsh_checkout_intents
-		WHERE id=$1::uuid AND tenant_id=$2
+		WHERE id=$1::uuid AND operator_context_id=$2
 		FOR UPDATE`, intentID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -236,9 +236,9 @@ func ApplyWltPaymentEventTx(
 	intent, err := scanIntent(tx.QueryRowContext(ctx, `
 		UPDATE dsh_checkout_intents
 		SET state=$1, version=version+1, updated_at=NOW()
-		WHERE id=$2::uuid AND tenant_id=$3 AND wlt_payment_session_id=$4
+		WHERE id=$2::uuid AND operator_context_id=$3 AND wlt_payment_session_id=$4
 		  AND state='payment_pending'
-		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`,
 		string(targetState), intentID, operatorContextID, paymentSessionID))

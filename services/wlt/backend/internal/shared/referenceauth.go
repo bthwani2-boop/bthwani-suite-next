@@ -76,9 +76,9 @@ const (
 )
 
 // RequireReferenceReader protects WLT reference projections in every runtime
-// mode. Authenticated DSH requests carry their server-owned tenant. End-user
-// requests derive the tenant from Identity; a client-supplied conflicting
-// tenant is rejected. Development and deferred modes never bypass this boundary.
+// mode. Authenticated DSH requests carry their server-owned OperatorContext. End-user
+// requests derive the OperatorContext from Identity; a client-supplied conflicting
+// OperatorContext is rejected. Development and deferred modes never bypass this boundary.
 func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
 	if operatorContextID, ok := trustedDshReferenceRequest(r); ok {
 		r.Header.Set("X-Operator-Context-ID", operatorContextID)
@@ -96,12 +96,12 @@ func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
 	}
 	identityOperatorContextID := strings.TrimSpace(identity.OperatorContextID)
 	if identityOperatorContextID == "" {
-		SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "identity session has no trusted tenant context")
+		SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "identity session has no trusted OperatorContext context")
 		return false
 	}
 	requestOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 	if requestOperatorContextID != "" && requestOperatorContextID != identityOperatorContextID {
-		SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "client tenant does not match the authenticated identity")
+		SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "client OperatorContext does not match the authenticated identity")
 		return false
 	}
 	r.Header.Set("X-Operator-Context-ID", identityOperatorContextID)

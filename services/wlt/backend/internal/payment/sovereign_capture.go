@@ -74,7 +74,7 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client
 		    updated_at = NOW()
 		WHERE id = $1 AND status = 'capture_pending'
 		RETURNING id, checkout_intent_id, special_request_id,
-		          tenant_id,
+		          operator_context_id,
 		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`

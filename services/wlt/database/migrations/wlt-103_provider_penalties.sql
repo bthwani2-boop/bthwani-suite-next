@@ -4,7 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS wlt_provider_penalties (
   id                              text PRIMARY KEY DEFAULT ('wpen_' || gen_random_uuid()::text),
-  tenant_id                       text NOT NULL CHECK (btrim(tenant_id) <> ''),
+  operator_context_id                       text NOT NULL CHECK (btrim(operator_context_id) <> ''),
   incident_id                     text NOT NULL CHECK (btrim(incident_id) <> ''),
   provider_actor_id               text NOT NULL CHECK (btrim(provider_actor_id) <> ''),
   provider_actor_type             text NOT NULL CHECK (provider_actor_type IN ('captain','field')),
@@ -21,13 +21,13 @@ CREATE TABLE IF NOT EXISTS wlt_provider_penalties (
   created_at                      timestamptz NOT NULL DEFAULT now(),
   reversed_at                     timestamptz,
   updated_at                      timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (tenant_id, incident_id),
-  UNIQUE (tenant_id, idempotency_key),
+  UNIQUE (operator_context_id, incident_id),
+  UNIQUE (operator_context_id, idempotency_key),
   CHECK (status <> 'reversed' OR (reversal_ledger_transaction_id IS NOT NULL AND reversed_at IS NOT NULL AND btrim(COALESCE(reversed_reason,'')) <> ''))
 );
 
 CREATE INDEX IF NOT EXISTS wlt_provider_penalties_actor_idx
-  ON wlt_provider_penalties(tenant_id, provider_actor_type, provider_actor_id, created_at DESC);
+  ON wlt_provider_penalties(operator_context_id, provider_actor_type, provider_actor_id, created_at DESC);
 
 COMMENT ON TABLE wlt_provider_penalties IS
   'WLT-owned wallet debit and reversal records generated from governed Workforce incidents.';

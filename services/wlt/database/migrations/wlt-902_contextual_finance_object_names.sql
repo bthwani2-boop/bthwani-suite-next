@@ -86,10 +86,10 @@ BEGIN
   END IF;
 
   INSERT INTO wlt_payout_audit_events
-    (tenant_id, aggregate_type, aggregate_id, action, actor_id, actor_type,
+    (operator_context_id, aggregate_type, aggregate_id, action, actor_id, actor_type,
      reason, correlation_id, metadata)
   VALUES (
-    NEW.tenant_id, 'payout_request', NEW.id, event_name,
+    NEW.operator_context_id, 'payout_request', NEW.id, event_name,
     transition_actor_id, transition_actor_type,
     COALESCE(NEW.failure_reason, ''), transition_correlation,
     jsonb_build_object(
@@ -102,10 +102,10 @@ BEGIN
   );
 
   INSERT INTO wlt_payout_outbox
-    (tenant_id, payout_request_id, event_type, recipient_actor_id,
+    (operator_context_id, payout_request_id, event_type, recipient_actor_id,
      recipient_actor_type, payload, correlation_id)
   VALUES (
-    NEW.tenant_id, NEW.id, event_name, NEW.beneficiary_actor_id,
+    NEW.operator_context_id, NEW.id, event_name, NEW.beneficiary_actor_id,
     NEW.beneficiary_actor_type,
     jsonb_build_object(
       'status', NEW.status,
@@ -114,7 +114,7 @@ BEGIN
     ),
     transition_correlation
   )
-  ON CONFLICT (tenant_id, payout_request_id, event_type) DO NOTHING;
+  ON CONFLICT (operator_context_id, payout_request_id, event_type) DO NOTHING;
 
   RETURN NEW;
 END;

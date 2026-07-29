@@ -90,7 +90,7 @@ func PartnerFieldRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID
 		  FROM dsh_stores st
 		  JOIN dsh_store_actor_scopes scope ON scope.store_id=st.id
 		  WHERE st.partner_id=p.id AND scope.actor_id=$1 AND scope.actor_role='partner'
-		    AND scope.tenant_id=$2 AND scope.active=true
+		    AND scope.operator_context_id=$2 AND scope.active=true
 		)
 		  AND p.activation_status IN ('partner_active','client_visible')
 		ORDER BY CASE WHEN p.activation_status='client_visible' THEN 0 ELSE 1 END, p.updated_at DESC
@@ -111,7 +111,7 @@ func PartnerFieldRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID
 	if err := db.QueryRowContext(ctx, `
 		SELECT EXISTS (
 		  SELECT 1 FROM dsh_provider_ratings
-		  WHERE tenant_id=$1 AND rater_actor_id=$2 AND source_kind='partner_activation'
+		  WHERE operator_context_id=$1 AND rater_actor_id=$2 AND source_kind='partner_activation'
 		    AND source_id=$3 AND target_kind='field' AND status='active'
 		)`, operatorContextID, partnerActorID, prompt.PartnerID).Scan(&prompt.Completed); err != nil {
 		return PartnerFieldPrompt{}, err
@@ -159,7 +159,7 @@ func ClientOrderRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID,
 		         ORDER BY COALESCE(a.completed_at,a.accepted_at,a.updated_at) DESC LIMIT 1
 		       ),'')
 		FROM dsh_orders o
-		WHERE o.id=$1::uuid AND o.client_id=$2 AND o.tenant_id=$3`, orderID, clientActorID, operatorContextID).Scan(
+		WHERE o.id=$1::uuid AND o.client_id=$2 AND o.operator_context_id=$3`, orderID, clientActorID, operatorContextID).Scan(
 		&prompt.OrderID, &prompt.OrderNumber, &status, &prompt.CaptainActorID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ClientOrderPrompt{}, ErrNotFound
@@ -178,7 +178,7 @@ func ClientOrderRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID,
 	prompt.Eligible = true
 	rows, err := db.QueryContext(ctx, `
 		SELECT target_kind FROM dsh_provider_ratings
-		WHERE tenant_id=$1 AND rater_actor_id=$2 AND source_kind='order_delivery'
+		WHERE operator_context_id=$1 AND rater_actor_id=$2 AND source_kind='order_delivery'
 		  AND source_id=$3 AND status='active'`, operatorContextID, clientActorID, orderID)
 	if err != nil {
 		return ClientOrderPrompt{}, err
@@ -252,15 +252,15 @@ func upsertRatingTx(ctx context.Context, tx *sql.Tx, input ratingInput) (Rating,
 	err := tx.QueryRowContext(ctx, `
 		WITH previous AS (
 		  SELECT id FROM dsh_provider_ratings
-		  WHERE tenant_id=$1 AND rater_actor_id=$2 AND source_kind=$3 AND source_id=$4 AND target_kind=$5
+		  WHERE operator_context_id=$1 AND rater_actor_id=$2 AND source_kind=$3 AND source_id=$4 AND target_kind=$5
 		), upserted AS (
 		  INSERT INTO dsh_provider_ratings
-		    (tenant_id,rater_kind,rater_actor_id,target_kind,target_actor_id,source_kind,source_id,score,comment,status)
+		    (operator_context_id,rater_kind,rater_actor_id,target_kind,target_actor_id,source_kind,source_id,score,comment,status)
 		  VALUES ($1,$6,$2,$5,$7,$3,$4,$8,$9,'active')
-		  ON CONFLICT (tenant_id,rater_actor_id,source_kind,source_id,target_kind)
+		  ON CONFLICT (operator_context_id,rater_actor_id,source_kind,source_id,target_kind)
 		  DO UPDATE SET score=EXCLUDED.score,comment=EXCLUDED.comment,status='active',
 		                target_actor_id=EXCLUDED.target_actor_id,updated_at=now()
-		  RETURNING id::text,tenant_id,rater_kind,rater_actor_id,target_kind,target_actor_id,source_kind,source_id,
+		  RETURNING id::text,operator_context_id,rater_kind,rater_actor_id,target_kind,target_actor_id,source_kind,source_id,
 		            score,comment,status,created_at,updated_at
 		)
 		SELECT u.*, NOT EXISTS(SELECT 1 FROM previous) FROM upserted u`,
@@ -271,7 +271,7 @@ func upsertRatingTx(ctx context.Context, tx *sql.Tx, input ratingInput) (Rating,
 	if err != nil { return Rating{}, err }
 	action := "updated"; if created { action = "created" }
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_provider_rating_events(rating_id,tenant_id,action,actor_id,score,comment,correlation_id)
+		INSERT INTO dsh_provider_rating_events(rating_id,operator_context_id,action,actor_id,score,comment,correlation_id)
 		VALUES ($1::uuid,$2,$3,$4,$5,$6,$7)`, rating.ID,rating.OperatorContextID,action,rating.RaterActorID,rating.Score,rating.Comment,strings.TrimSpace(input.CorrelationID)); err != nil {
 		return Rating{}, err
 	}
@@ -286,9 +286,9 @@ func Summary(ctx context.Context, db *sql.DB, operatorContextID, targetKind, tar
 	var last sql.NullTime
 	if err:=db.QueryRowContext(ctx,`
 		SELECT COALESCE(AVG(score),0)::float8,COUNT(*)::int,MAX(updated_at)
-		FROM dsh_provider_ratings WHERE tenant_id=$1 AND target_kind=$2 AND target_actor_id=$3 AND status='active'`,operatorContextID,targetKind,targetActorID).Scan(&summary.AverageScore,&summary.RatingCount,&last);err!=nil{return RatingSummary{},err}
+		FROM dsh_provider_ratings WHERE operator_context_id=$1 AND target_kind=$2 AND target_actor_id=$3 AND status='active'`,operatorContextID,targetKind,targetActorID).Scan(&summary.AverageScore,&summary.RatingCount,&last);err!=nil{return RatingSummary{},err}
 	if last.Valid { summary.LastRatedAt=last.Time.UTC().Format(time.RFC3339) }
-	rows,err:=db.QueryContext(ctx,`SELECT score,COUNT(*)::int FROM dsh_provider_ratings WHERE tenant_id=$1 AND target_kind=$2 AND target_actor_id=$3 AND status='active' GROUP BY score`,operatorContextID,targetKind,targetActorID)
+	rows,err:=db.QueryContext(ctx,`SELECT score,COUNT(*)::int FROM dsh_provider_ratings WHERE operator_context_id=$1 AND target_kind=$2 AND target_actor_id=$3 AND status='active' GROUP BY score`,operatorContextID,targetKind,targetActorID)
 	if err!=nil{return RatingSummary{},err};defer rows.Close()
 	for rows.Next(){var score,count int;if err:=rows.Scan(&score,&count);err!=nil{return RatingSummary{},err};summary.Distribution[fmt.Sprint(score)]=count}
 	return summary,rows.Err()

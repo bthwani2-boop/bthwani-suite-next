@@ -3,7 +3,6 @@ import { resolvePlatformControlApiBaseUrl } from "../_kernel/platform-control-ap
 import type { components } from "@bthwani/core-platform-control";
 
 export type PlatformControlState = components["schemas"]["PlatformControlState"];
-export type PlatformSaasRuntimeStatus = components["schemas"]["PlatformSaasRuntimeStatus"];
 export type PlatformRuntimeSnapshot = components["schemas"]["PlatformRuntimeSnapshot"];
 export type PlatformEffectiveRuntimeConfig = components["schemas"]["PlatformEffectiveRuntimeConfig"];
 export type PlatformVariable = components["schemas"]["PlatformVariable"];

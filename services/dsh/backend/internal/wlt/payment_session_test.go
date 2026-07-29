@@ -9,7 +9,7 @@ import (
 )
 
 func paymentSessionTestContext() context.Context {
-	return WithOperatorContext(context.Background(), "tenant-a")
+	return WithOperatorContext(context.Background(), "OperatorContext-a")
 }
 
 func TestGetPaymentSessionUsesServiceTokenAndParsesTruth(t *testing.T) {
@@ -24,8 +24,8 @@ func TestGetPaymentSessionUsesServiceTokenAndParsesTruth(t *testing.T) {
 		if got := r.Header.Get("Authorization"); got != "Bearer service-secret" {
 			t.Fatalf("authorization=%q", got)
 		}
-		if got := r.Header.Get("X-Operator-Context-ID"); got != "tenant-a" {
-			t.Fatalf("tenant=%q", got)
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "OperatorContext-a" {
+			t.Fatalf("OperatorContext=%q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"paymentSession": {

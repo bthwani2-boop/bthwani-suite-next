@@ -70,7 +70,7 @@ func PrepareFundingForIntent(ctx context.Context, db *sql.DB, checkoutIntentID s
 	err := db.QueryRowContext(ctx, `
 		SELECT r.id::TEXT,r.coupon_id::TEXT,r.checkout_intent_id::TEXT,
 		       r.client_actor_id,r.discount_minor_units,r.currency,
-		       COALESCE(r.funding_tenant_id,''),r.funding_status,
+		       COALESCE(r.funding_operator_context_id,''),r.funding_status,
 		       COALESCE(r.wlt_funding_reservation_id,''),
 		       c.funding_source,c.platform_share_bps,c.funding_partner_id,
 		       s.partner_id
@@ -168,7 +168,7 @@ func AttachWLTReservation(ctx context.Context, db *sql.DB, redemptionID, reserva
 		return ErrInvalid
 	}
 	result, err := db.ExecContext(ctx, `UPDATE dsh_coupon_redemptions
-		SET funding_status='reserved',funding_tenant_id=$3,wlt_funding_reservation_id=$2,
+		SET funding_status='reserved',funding_operator_context_id=$3,wlt_funding_reservation_id=$2,
 		    funding_failure_code='',funding_updated_at=NOW(),updated_at=NOW()
 		WHERE id=$1::uuid AND funding_status='pending'`, redemptionID, reservationID, operatorContextID)
 	if err != nil {
@@ -232,7 +232,7 @@ func FundingByIntent(ctx context.Context, db *sql.DB, checkoutIntentID string) (
 	var projection FundingProjection
 	var partner sql.NullString
 	err := db.QueryRowContext(ctx, `SELECT id::TEXT,coupon_id::TEXT,checkout_intent_id::TEXT,
-		client_actor_id,COALESCE(funding_tenant_id,''),funding_partner_id,
+		client_actor_id,COALESCE(funding_operator_context_id,''),funding_partner_id,
 		platform_funded_minor_units,partner_funded_minor_units,
 		discount_minor_units,currency,COALESCE(wlt_funding_reservation_id,''),funding_status
 		FROM dsh_coupon_redemptions WHERE checkout_intent_id=$1::uuid`, checkoutIntentID).Scan(

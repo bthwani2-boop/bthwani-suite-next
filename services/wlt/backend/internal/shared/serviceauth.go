@@ -7,26 +7,20 @@ import (
 	"strings"
 )
 
-func requireTrustedSaaSTenant(w http.ResponseWriter, r *http.Request) bool {
-	mode := strings.ToLower(strings.TrimSpace(os.Getenv("BTHWANI_SAAS_MODE")))
-	activation := strings.ToLower(strings.TrimSpace(os.Getenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE")))
+func requireTrustedOperatorContext(w http.ResponseWriter, r *http.Request) bool {
 	requestOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 
-	if mode == "active" && activation != "authorized" && activation != "active" {
-		SendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", "active SaaS mode requires authorized or active commercial state")
-		return false
-	}
 	if requestOperatorContextID == "" {
-		SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Operator-Context-ID is required for every WLT financial request")
+		SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Operator-Context-ID is required for every WLT financial request")
 		return false
 	}
 	return true
 }
 
 // RequireServiceCaller validates the shared-secret bearer token and expected
-// service identity before accepting X-Operator-Context-ID as a service-to-service tenant
+// service identity before accepting X-Operator-Context-ID as a service-to-service OperatorContext
 // context. Every WLT financial request fails closed when the authenticated
-// caller omits its tenant; no process-wide, local, or legacy fallback is used.
+// caller omits its OperatorContext; no process-wide, local, or legacy fallback is used.
 func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, expectedCaller string) bool {
 	expectedToken := os.Getenv(tokenEnvVar)
 	if expectedToken == "" {
@@ -46,7 +40,7 @@ func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, e
 		SendError(w, http.StatusForbidden, "SERVICE_CALLER_FORBIDDEN", "unexpected service caller")
 		return false
 	}
-	if !requireTrustedSaaSTenant(w, r) {
+	if !requireTrustedOperatorContext(w, r) {
 		return false
 	}
 	operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))

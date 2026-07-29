@@ -13,7 +13,7 @@ import (
 
 var ErrProviderEventConflict = errors.New("provider event identity already exists with a different payload")
 var ErrIllegalProviderTransition = errors.New("provider result is not legal from the current payment-session state")
-var ErrProviderTenantMismatch = errors.New("provider event tenant does not own the payment session")
+var ErrProviderOperatorContextMismatch = errors.New("provider event OperatorContext does not own the payment session")
 
 type ProviderEventInput struct {
 	EventID           string
@@ -36,7 +36,7 @@ type ProviderResultApplication struct {
 
 // ApplyAuthoritativeProviderEvent is the only asynchronous/provider-readback
 // path that may finalize a payment session. The session is locked and its
-// tenant is verified before an event row is accepted. Provider event
+// OperatorContext is verified before an event row is accepted. Provider event
 // persistence, legal state transition, reconciliation resolution, capture
 // ledger posting and DSH outbox projection commit or roll back together.
 func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input ProviderEventInput) (*ProviderResultApplication, error) {
@@ -60,14 +60,14 @@ func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input Prov
 		return nil, nil
 	}
 	if session.OperatorContextID != input.OperatorContextID {
-		return nil, ErrProviderTenantMismatch
+		return nil, ErrProviderOperatorContextMismatch
 	}
 
 	inserted := false
 	err = tx.QueryRowContext(ctx, `
 		WITH inserted AS (
 			INSERT INTO wlt_payment_provider_events
-				(provider_event_id, tenant_id, payment_session_id, event_type, provider_status,
+				(provider_event_id, operator_context_id, payment_session_id, event_type, provider_status,
 				 provider_reference, payload_hash, signature_timestamp, occurred_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			ON CONFLICT DO NOTHING
@@ -87,7 +87,7 @@ func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input Prov
 	if !inserted {
 		var existingHash, existingSessionID, existingOperatorContextID string
 		err = tx.QueryRowContext(ctx, `
-			SELECT payload_hash, payment_session_id, tenant_id
+			SELECT payload_hash, payment_session_id, operator_context_id
 			FROM wlt_payment_provider_events
 			WHERE provider_event_id = $1`, input.EventID,
 		).Scan(&existingHash, &existingSessionID, &existingOperatorContextID)
@@ -184,7 +184,7 @@ func legalAuthoritativeTransition(current, next string) bool {
 
 func getSessionForUpdateTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
 	return scanSessionNullable(tx.QueryRow(`
-		SELECT id, checkout_intent_id, special_request_id, tenant_id, client_id,
+		SELECT id, checkout_intent_id, special_request_id, operator_context_id, client_id,
 		       store_id, payment_method, status, provider_reference,
 		       amount_minor_units, currency, captured_at, created_at, updated_at
 		FROM wlt_payment_sessions WHERE id = $1 FOR UPDATE`, sessionID))
@@ -215,7 +215,7 @@ func postCapturedProviderResult(ctx context.Context, tx *sql.Tx, session *Paymen
 		    capture_ledger_transaction_id = $3, last_provider_event_id = $4,
 		    last_provider_status = 'captured', updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, special_request_id, tenant_id, client_id,
+		RETURNING id, checkout_intent_id, special_request_id, operator_context_id, client_id,
 		          store_id, payment_method, status, provider_reference,
 		          amount_minor_units, currency, captured_at, created_at, updated_at`,
 		session.ID, providerReference, ledgerTransactionID, eventID)
@@ -236,7 +236,7 @@ func updateAuthoritativeSessionState(ctx context.Context, tx *sql.Tx, session *P
 		SET status = $2, provider_reference = CASE WHEN $3 = '' THEN provider_reference ELSE $3 END,
 		    last_provider_event_id = $4, last_provider_status = $2, updated_at = NOW()
 		WHERE id = $1
-		RETURNING id, checkout_intent_id, special_request_id, tenant_id, client_id,
+		RETURNING id, checkout_intent_id, special_request_id, operator_context_id, client_id,
 		          store_id, payment_method, status, provider_reference,
 		          amount_minor_units, currency, captured_at, created_at, updated_at`,
 		session.ID, status, providerReference, eventID)

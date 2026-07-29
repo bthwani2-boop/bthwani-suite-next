@@ -21,7 +21,7 @@ paths:
     get:
       tags: ["dsh-control-panel"]
       operationId: listDshControlPanelFinanceRefunds
-      summary: List refunds for the authenticated tenant and optional order
+      summary: List refunds for the authenticated OperatorContext and optional order
       parameters:
         - $ref: '#/components/parameters/CorrelationHeaderOptional'
         - name: orderId
@@ -70,7 +70,7 @@ paths:
     get:
       tags: ["dsh-control-panel"]
       operationId: getDshControlPanelFinanceRefund
-      summary: Read one authenticated-tenant-scoped canonical refund
+      summary: Read one authenticated-OperatorContext-scoped canonical refund
       parameters:
         - $ref: '#/components/parameters/RefundId'
         - $ref: '#/components/parameters/CorrelationHeaderOptional'
@@ -431,7 +431,7 @@ components:
         - $ref: '#/components/schemas/MutationReceiptError'
   responses:
     BadRequest:
-      description: Invalid request, missing authenticated tenant or missing reconciliation evidence
+      description: Invalid request, missing authenticated OperatorContext or missing reconciliation evidence
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -441,7 +441,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
     Forbidden:
-      description: Permission, tenant mismatch, maker-checker or store scope denied
+      description: Permission, OperatorContext mismatch, maker-checker or store scope denied
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }

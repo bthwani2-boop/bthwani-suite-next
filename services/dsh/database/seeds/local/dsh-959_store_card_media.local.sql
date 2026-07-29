@@ -104,4 +104,4 @@ SET hero_image_url = '/dsh/public/media/' || store_media.cover_asset_id || '/ori
     updated_at = NOW()
 FROM store_media
 WHERE store.id = store_media.store_id
-  AND store.tenant_id = 'local-dsh';
+  AND store.operator_context_id = 'local-dsh';

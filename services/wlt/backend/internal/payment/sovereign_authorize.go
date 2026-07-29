@@ -61,7 +61,7 @@ func AuthorizeSessionWithProviderSovereign(ctx context.Context, db *sql.DB, clie
 		    last_provider_status = 'authorized', updated_at = NOW()
 		WHERE id = $1 AND status = 'authorization_pending'
 		RETURNING id, checkout_intent_id, special_request_id,
-		          tenant_id,
+		          operator_context_id,
 		          client_id, store_id, payment_method,
 		          status, provider_reference, amount_minor_units, currency,
 		          captured_at, created_at, updated_at`

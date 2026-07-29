@@ -38,9 +38,9 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	}
 	for _, event := range events {
 		if event.OperatorContextID == "" {
-			deliverErr := fmt.Errorf("checkout finance event %s has no tenant context", event.ID)
+			deliverErr := fmt.Errorf("checkout finance event %s has no OperatorContext context", event.ID)
 			if markErr := MarkFailedWithProjection(db, event.ID, event.AttemptCount, deliverErr); markErr != nil {
-				log.Printf("[checkout-finance-outbox] failed to record missing tenant for event %s: %v", event.ID, markErr)
+				log.Printf("[checkout-finance-outbox] failed to record missing OperatorContext for event %s: %v", event.ID, markErr)
 			}
 			continue
 		}
@@ -49,7 +49,7 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 		cancel()
 		if deliverErr != nil {
 			log.Printf(
-				"[checkout-finance-outbox] delivery failed for tenant %s payment session %s event %s (attempt %d): %v",
+				"[checkout-finance-outbox] delivery failed for OperatorContext %s payment session %s event %s (attempt %d): %v",
 				event.OperatorContextID,
 				event.PaymentSessionID,
 				event.EventType,

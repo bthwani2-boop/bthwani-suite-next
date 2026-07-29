@@ -558,7 +558,6 @@ components:
         - rollbackState
         - servicesState
         - evidence
-        - saas
       properties:
         status:
           $ref: "#/components/schemas/PlatformControlState"
@@ -585,8 +584,6 @@ components:
           type: array
           items:
             type: string
-        saas:
-          $ref: "#/components/schemas/PlatformSaasRuntimeStatus"
     PlatformEffectiveRuntimeConfig:
       type: object
       required:
@@ -1249,34 +1246,6 @@ components:
           type: string
         message:
           type: string
-    PlatformSaasRuntimeStatus:
-      type: object
-      additionalProperties: false
-      required:
-        - mode
-        - commercialActivationState
-        - productionDeploymentAuthorized
-        - defaultOperatorContextId
-        - runtimeEnabled
-      properties:
-        mode:
-          type: string
-          enum:
-            - active
-            - deferred
-        commercialActivationState:
-          type: string
-          enum:
-            - blocked
-            - eligible
-            - authorized
-            - active
-        productionDeploymentAuthorized:
-          type: boolean
-        defaultOperatorContextId:
-          type: string
-        runtimeEnabled:
-          type: boolean
   parameters:
     ChangeSetId:
       name: id
@@ -1301,5 +1270,4 @@ x-bthwani-source-files:
   - core/platform-control/contracts/platform-control.openapi.yaml
   - core/platform-control/contracts/platform-change-sets.openapi.yaml
   - core/platform-control/contracts/platform-progressive-rollout.openapi.yaml
-  - core/platform-control/contracts/platform-control.saas.overlay.yaml
-x-bthwani-source-sha256: dae5e8008916b12af296fe655284e605d2fd53861c231f94f4235cdee91eb431
+x-bthwani-source-sha256: 5bcec60c88c988e3772b84cf120efb7e6fcab66f6f40c170fa0a90bf137e7f43

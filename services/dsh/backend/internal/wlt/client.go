@@ -63,15 +63,15 @@ type PaymentSession struct {
 }
 
 // NewClient builds a DSH-to-WLT client. Every financial request must receive a
-// trusted tenant through its server-side context; process-wide or payload-only
-// tenant defaults are never ownership authorities.
+// trusted OperatorContext through its server-side context; process-wide or payload-only
+// OperatorContext defaults are never ownership authorities.
 func NewClient(baseURL, serviceToken string) *Client {
 	return &Client{
 		baseURL:      strings.TrimRight(baseURL, "/"),
 		serviceToken: serviceToken,
 		http: &http.Client{
 			Timeout:   10 * time.Second,
-			Transport: tenantRoundTripper{base: http.DefaultTransport},
+			Transport: OperatorContextRoundTripper{base: http.DefaultTransport},
 		},
 	}
 }
@@ -80,20 +80,20 @@ func (c *Client) Configured() bool {
 	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
-func (c *Client) resolveTrustedTenant(ctx context.Context, requested string) (string, error) {
+func (c *Client) resolveTrustedOperatorContext(ctx context.Context, requested string) (string, error) {
 	requested = strings.TrimSpace(requested)
-	trustedOperatorContextID, hasTrustedTenant := OperatorContextIDFromContext(ctx)
-	if !hasTrustedTenant {
-		return "", fmt.Errorf("trusted tenant context is required for every WLT request")
+	trustedOperatorContextID, hasTrustedOperatorContext := OperatorContextIDFromContext(ctx)
+	if !hasTrustedOperatorContext {
+		return "", fmt.Errorf("trusted OperatorContext context is required for every WLT request")
 	}
 	if requested != "" && requested != trustedOperatorContextID {
-		return "", fmt.Errorf("requested tenant does not match trusted request context")
+		return "", fmt.Errorf("requested OperatorContext does not match trusted request context")
 	}
 	return trustedOperatorContextID, nil
 }
 
-func (c *Client) setTrustedTenantHeader(req *http.Request, requested string) (string, error) {
-	operatorContextID, err := c.resolveTrustedTenant(req.Context(), requested)
+func (c *Client) setTrustedOperatorContextHeader(req *http.Request, requested string) (string, error) {
+	operatorContextID, err := c.resolveTrustedOperatorContext(req.Context(), requested)
 	if err != nil {
 		return "", err
 	}
@@ -105,9 +105,9 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	if !c.Configured() {
 		return nil, fmt.Errorf("WLT payment-session handoff is not configured")
 	}
-	resolvedOperatorContextID, err := c.resolveTrustedTenant(ctx, input.OperatorContextID)
+	resolvedOperatorContextID, err := c.resolveTrustedOperatorContext(ctx, input.OperatorContextID)
 	if err != nil {
-		return nil, fmt.Errorf("resolve WLT payment tenant: %w", err)
+		return nil, fmt.Errorf("resolve WLT payment OperatorContext: %w", err)
 	}
 	input.OperatorContextID = resolvedOperatorContextID
 	body, err := json.Marshal(input)
@@ -122,8 +122,8 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedTenantHeader(req, resolvedOperatorContextID); err != nil {
-		return nil, fmt.Errorf("prepare WLT payment tenant: %w", err)
+	if _, err := c.setTrustedOperatorContextHeader(req, resolvedOperatorContextID); err != nil {
+		return nil, fmt.Errorf("prepare WLT payment OperatorContext: %w", err)
 	}
 	correlationID := strings.TrimSpace(input.CorrelationID)
 	if correlationID == "" {
@@ -205,8 +205,8 @@ func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliv
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedTenantHeader(req, ""); err != nil {
-		return fmt.Errorf("prepare WLT COD tenant: %w", err)
+	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+		return fmt.Errorf("prepare WLT COD OperatorContext: %w", err)
 	}
 	correlationID := strings.TrimSpace(input.CorrelationID)
 	if correlationID == "" {
@@ -272,8 +272,8 @@ func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldC
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedTenantHeader(req, ""); err != nil {
-		return fmt.Errorf("prepare WLT commission tenant: %w", err)
+	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+		return fmt.Errorf("prepare WLT commission OperatorContext: %w", err)
 	}
 	if err := setRequiredMutationHeaders(req, correlationID, input.IdempotencyKey); err != nil {
 		return fmt.Errorf("prepare WLT field commission request: %w", err)
@@ -308,8 +308,8 @@ func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlatio
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedTenantHeader(req, ""); err != nil {
-		return fmt.Errorf("prepare WLT expire tenant: %w", err)
+	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+		return fmt.Errorf("prepare WLT expire OperatorContext: %w", err)
 	}
 	if strings.TrimSpace(correlationID) == "" {
 		correlationID = paymentSessionID

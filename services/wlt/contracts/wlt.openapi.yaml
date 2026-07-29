@@ -60,7 +60,7 @@ paths:
   /wlt/references/payment-status:
     get:
       operationId: getWltPaymentStatusRef
-      summary: Return the tenant-bound payment status reference for an order.
+      summary: Return the OperatorContext-bound payment status reference for an order.
       tags: [WltReferences]
       parameters:
         - $ref: '#/components/parameters/OrderIdQuery'
@@ -71,7 +71,7 @@ paths:
   /wlt/references/settlement-status:
     get:
       operationId: getWltSettlementStatusRef
-      summary: Return the tenant-bound settlement status reference for an order.
+      summary: Return the OperatorContext-bound settlement status reference for an order.
       tags: [WltReferences]
       parameters:
         - $ref: '#/components/parameters/OrderIdQuery'
@@ -82,7 +82,7 @@ paths:
   /wlt/references/refund-status:
     get:
       operationId: getWltRefundStatusRef
-      summary: Return the tenant-bound refund status reference for an order.
+      summary: Return the OperatorContext-bound refund status reference for an order.
       tags: [WltReferences]
       parameters:
         - $ref: '#/components/parameters/OrderIdQuery'
@@ -93,7 +93,7 @@ paths:
   /wlt/references/wallet-status:
     get:
       operationId: getWltWalletStatusRef
-      summary: Return the tenant-bound wallet status reference for an actor.
+      summary: Return the OperatorContext-bound wallet status reference for an actor.
       tags: [WltReferences]
       parameters:
         - name: actorType
@@ -111,7 +111,7 @@ paths:
   /wlt/wallets/{actorType}/{actorId}:
     get:
       operationId: getWltWallet
-      summary: Return the tenant-local operational wallet for an actor.
+      summary: Return the OperatorContext-local operational wallet for an actor.
       tags: [WltWallets]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -122,7 +122,7 @@ paths:
         - $ref: '#/components/parameters/ActorIdPath'
       responses:
         '200':
-          description: Tenant-local actor wallet.
+          description: OperatorContext-local actor wallet.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WalletEnvelope' }
@@ -131,7 +131,7 @@ paths:
   /wlt/reconciliation-cases:
     get:
       operationId: listWltReconciliationCases
-      summary: List tenant-local reconciliation cases.
+      summary: List OperatorContext-local reconciliation cases.
       tags: [WltReconciliation]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -143,7 +143,7 @@ paths:
           schema: { type: string, enum: [open, resolved] }
       responses:
         '200':
-          description: Tenant-local reconciliation cases.
+          description: OperatorContext-local reconciliation cases.
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
@@ -151,7 +151,7 @@ paths:
   /wlt/reconciliation-cases/{caseId}:
     get:
       operationId: getWltReconciliationCase
-      summary: Read one tenant-local reconciliation case.
+      summary: Read one OperatorContext-local reconciliation case.
       tags: [WltReconciliation]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -161,7 +161,7 @@ paths:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CaseId'
       responses:
         '200':
-          description: Tenant-local reconciliation case.
+          description: OperatorContext-local reconciliation case.
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
@@ -169,7 +169,7 @@ paths:
   /wlt/reconciliation-cases/{caseId}/assign:
     post:
       operationId: assignWltReconciliationCase
-      summary: Assign a tenant-local reconciliation case.
+      summary: Assign a OperatorContext-local reconciliation case.
       tags: [WltReconciliation]
       security: [{ serviceBearer: [] }]
       x-bthwani-mutation-approved: false
@@ -193,7 +193,7 @@ paths:
   /wlt/reconciliation-cases/{caseId}/resolve:
     post:
       operationId: resolveWltReconciliationCase
-      summary: Resolve a tenant-local reconciliation case.
+      summary: Resolve a OperatorContext-local reconciliation case.
       tags: [WltReconciliation]
       security: [{ serviceBearer: [] }]
       x-bthwani-mutation-approved: false
@@ -217,7 +217,7 @@ paths:
   /wlt/ledger/entries:
     get:
       operationId: listWltLedgerEntries
-      summary: List tenant-local immutable ledger entries.
+      summary: List OperatorContext-local immutable ledger entries.
       tags: [WltLedger]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -244,7 +244,7 @@ paths:
           schema: { type: string }
       responses:
         '200':
-          description: Tenant-local immutable ledger entries
+          description: OperatorContext-local immutable ledger entries
           content:
             application/json:
               schema: { $ref: '#/components/schemas/LedgerEntryListResponse' }
@@ -252,7 +252,7 @@ paths:
   /wlt/ledger/entries/{entryId}:
     get:
       operationId: getWltLedgerEntry
-      summary: Read one tenant-local immutable ledger entry.
+      summary: Read one OperatorContext-local immutable ledger entry.
       tags: [WltLedger]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -265,7 +265,7 @@ paths:
           schema: { type: string, minLength: 1 }
       responses:
         '200':
-          description: Tenant-local immutable ledger entry
+          description: OperatorContext-local immutable ledger entry
           content:
             application/json:
               schema: { $ref: '#/components/schemas/LedgerEntry' }
@@ -273,7 +273,7 @@ paths:
   /wlt/ledger/financial-summary:
     get:
       operationId: getWltLedgerFinancialSummary
-      summary: Return account-type-aware tenant-local financial totals.
+      summary: Return account-type-aware OperatorContext-local financial totals.
       tags: [WltLedger]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -281,7 +281,7 @@ paths:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
       responses:
-        '200': { description: Tenant-local financial summary }
+        '200': { description: OperatorContext-local financial summary }
 components:
   securitySchemes:
     serviceBearer:

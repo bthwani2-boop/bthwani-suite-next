@@ -61,7 +61,7 @@ paths:
           schema: {$ref: '#/components/schemas/CheckoutIntentState'}
       responses:
         '200':
-          description: Tenant-visible operational checkout projections.
+          description: OperatorContext-visible operational checkout projections.
           content:
             application/json:
               schema:

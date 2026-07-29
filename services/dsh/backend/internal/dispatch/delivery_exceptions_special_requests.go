@@ -31,7 +31,7 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 		correlationID    sql.NullString
 	)
 	if err := tx.QueryRow(`
-		SELECT sr.id::text, a.status, d.status, sr.request_type, sr.status, sr.version, sr.tenant_id, sr.correlation_id
+		SELECT sr.id::text, a.status, d.status, sr.request_type, sr.status, sr.version, sr.operator_context_id, sr.correlation_id
 		FROM dsh_assignments a
 		JOIN dsh_deliveries d ON d.assignment_id = a.id
 		JOIN dsh_special_requests sr ON sr.id = a.special_request_id
@@ -82,7 +82,7 @@ func resolveSpecialRequestExceptionReassignCaptainTx(
 		UPDATE dsh_special_requests
 		SET status = 'assigned', workflow_stage = $1, dispatch_assignment_id = $2::uuid,
 		    captain_assigned_at = NOW(), version = version + 1, updated_at = NOW()
-		WHERE id = $3::uuid AND tenant_id = $4 AND version = $5
+		WHERE id = $3::uuid AND operator_context_id = $4 AND version = $5
 		  AND status IN ('approved', 'assigned', 'in_progress')`,
 		stage, replacementAssignmentID, specialRequestID, operatorContextID, requestVersion)
 	if err != nil {

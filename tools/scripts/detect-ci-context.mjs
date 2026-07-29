@@ -97,8 +97,8 @@ export function classifyFiles(inputFiles, options = {}) {
   const secretsChanged = full || starts("governance/security/", "tools/security/") || has((file) =>
     /(^|\/)(secret|secrets|credential|credentials|signing|keystore|certificate)(\/|[-_.])/i.test(file)
   );
-  const operatorContextChanged = full || starts("governance/saas/") || has((file) =>
-    /(^|\/)(tenant|tenancy|tenant-context|tenant-isolation|cross-tenant)(\/|[-_.])/i.test(file)
+  const operatorContextChanged = full || starts("governance/partner_platform/") || has((file) =>
+    /(^|\/)(OperatorContext|tenancy|OperatorContext-context|OperatorContext-isolation|cross-OperatorContext)(\/|[-_.])/i.test(file)
   );
   const protectedSecurityChanged = authChanged || sessionChanged || rbacChanged || privacyChanged || piiChanged || secretsChanged || operatorContextChanged;
   const security = workflow || protectedSecurityChanged || starts("governance/security/", "tools/security/");
@@ -237,7 +237,7 @@ export function classifyFiles(inputFiles, options = {}) {
     cleanup_changed: cleanupChanged,
     native_changed: nativeChanged,
     visual_changed: visualChanged,
-    tenant_isolation_changed: operatorContextChanged,
+    OperatorContext_isolation_changed: operatorContextChanged,
     financial_changed: financialChanged,
     migration_changed: migrationChanged,
     shared_contract_changed: sharedContractChanged,
@@ -249,7 +249,7 @@ export function classifyFiles(inputFiles, options = {}) {
     privacy_changed: privacyChanged,
     pii_changed: piiChanged,
     secrets_changed: secretsChanged,
-    tenant_context_changed: operatorContextChanged
+    OperatorContext_context_changed: operatorContextChanged
   };
 }
 

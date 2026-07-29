@@ -85,12 +85,12 @@ func NewIntentID(db *sql.DB) (string, error) {
 	return id, nil
 }
 
-func normalizeTenant(operatorContextID string) string {
+func normalizeOperatorContext(operatorContextID string) string {
 	return strings.TrimSpace(operatorContextID)
 }
 
 func CreateIntent(db *sql.DB, input CreateIntentInput) (*Intent, error) {
-	input.OperatorContextID = normalizeTenant(input.OperatorContextID)
+	input.OperatorContextID = normalizeOperatorContext(input.OperatorContextID)
 	if input.ID == "" || input.OperatorContextID == "" || input.ClientID == "" || input.CartID == "" || input.StoreID == "" {
 		return nil, ErrInvalid
 	}
@@ -103,10 +103,10 @@ func CreateIntent(db *sql.DB, input CreateIntentInput) (*Intent, error) {
 
 	const q = `
 		INSERT INTO dsh_checkout_intents
-			(id, tenant_id, client_id, cart_id, store_id, fulfillment_mode, state, payment_method,
+			(id, operator_context_id, client_id, cart_id, store_id, fulfillment_mode, state, payment_method,
 			 wlt_payment_session_id, delivery_address, note)
 		VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
 
@@ -119,79 +119,79 @@ func CreateIntent(db *sql.DB, input CreateIntentInput) (*Intent, error) {
 }
 
 func AttachWltPaymentSession(db *sql.DB, intentID, operatorContextID, clientID, paymentSessionID string) (*Intent, error) {
-	operatorContextID = normalizeTenant(operatorContextID)
+	operatorContextID = normalizeOperatorContext(operatorContextID)
 	if intentID == "" || operatorContextID == "" || clientID == "" || paymentSessionID == "" {
 		return nil, ErrInvalid
 	}
 	const q = `
 		UPDATE dsh_checkout_intents
 		SET state = $1, wlt_payment_session_id = $2, version = version + 1, updated_at = NOW()
-		WHERE id = $3::uuid AND tenant_id = $4 AND client_id = $5
+		WHERE id = $3::uuid AND operator_context_id = $4 AND client_id = $5
 		  AND state IN ('pending', 'wlt_handoff_failed', 'wlt_outcome_unknown')
-		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
 	row := db.QueryRow(q, string(StatePaymentPending), paymentSessionID, intentID, operatorContextID, clientID)
 	intent, err := scanIntent(row)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: intent not found, tenant mismatch, or not handoff-ready", ErrConflict)
+		return nil, fmt.Errorf("%w: intent not found, OperatorContext mismatch, or not handoff-ready", ErrConflict)
 	}
 	return intent, err
 }
 
 func MarkWltOutcomeUnknown(db *sql.DB, intentID, operatorContextID, clientID string) (*Intent, error) {
-	operatorContextID = normalizeTenant(operatorContextID)
+	operatorContextID = normalizeOperatorContext(operatorContextID)
 	if intentID == "" || operatorContextID == "" || clientID == "" {
 		return nil, ErrInvalid
 	}
 	const q = `
 		UPDATE dsh_checkout_intents
 		SET state = $1, version = version + 1, updated_at = NOW()
-		WHERE id = $2::uuid AND tenant_id = $3 AND client_id = $4
+		WHERE id = $2::uuid AND operator_context_id = $3 AND client_id = $4
 		  AND state IN ('pending', 'wlt_handoff_failed', 'wlt_outcome_unknown')
-		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
 	row := db.QueryRow(q, string(StateWltOutcomeUnknown), intentID, operatorContextID, clientID)
 	intent, err := scanIntent(row)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: intent not found, tenant mismatch, or not handoff-reconcilable", ErrConflict)
+		return nil, fmt.Errorf("%w: intent not found, OperatorContext mismatch, or not handoff-reconcilable", ErrConflict)
 	}
 	return intent, err
 }
 
 func MarkWltHandoffFailed(db *sql.DB, intentID, operatorContextID, clientID string) (*Intent, error) {
-	operatorContextID = normalizeTenant(operatorContextID)
+	operatorContextID = normalizeOperatorContext(operatorContextID)
 	if intentID == "" || operatorContextID == "" || clientID == "" {
 		return nil, ErrInvalid
 	}
 	const q = `
 		UPDATE dsh_checkout_intents
 		SET state = $1, version = version + 1, updated_at = NOW()
-		WHERE id = $2::uuid AND tenant_id = $3 AND client_id = $4
+		WHERE id = $2::uuid AND operator_context_id = $3 AND client_id = $4
 		  AND state IN ('pending', 'payment_pending', 'wlt_outcome_unknown')
-		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
 	row := db.QueryRow(q, string(StateWltHandoffFailed), intentID, operatorContextID, clientID)
 	intent, err := scanIntent(row)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: intent not found, tenant mismatch, or not handoff-ready", ErrConflict)
+		return nil, fmt.Errorf("%w: intent not found, OperatorContext mismatch, or not handoff-ready", ErrConflict)
 	}
 	return intent, err
 }
 
 func GetIntent(db *sql.DB, intentID, operatorContextID, clientID string) (*Intent, error) {
-	operatorContextID = normalizeTenant(operatorContextID)
+	operatorContextID = normalizeOperatorContext(operatorContextID)
 	if intentID == "" || operatorContextID == "" || clientID == "" {
 		return nil, ErrInvalid
 	}
 	const q = `
-		SELECT id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		SELECT id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		       state, payment_method, wlt_payment_session_id,
 		       delivery_address, note, version, created_at, updated_at
 		FROM dsh_checkout_intents
-		WHERE id = $1::uuid AND tenant_id = $2 AND client_id = $3`
+		WHERE id = $1::uuid AND operator_context_id = $2 AND client_id = $3`
 	row := db.QueryRow(q, intentID, operatorContextID, clientID)
 	intent, err := scanIntent(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -201,7 +201,7 @@ func GetIntent(db *sql.DB, intentID, operatorContextID, clientID string) (*Inten
 }
 
 func CancelIntent(db *sql.DB, intentID, operatorContextID, clientID string) (*Intent, error) {
-	operatorContextID = normalizeTenant(operatorContextID)
+	operatorContextID = normalizeOperatorContext(operatorContextID)
 	if intentID == "" || operatorContextID == "" || clientID == "" {
 		return nil, ErrInvalid
 	}
@@ -214,15 +214,15 @@ func CancelIntent(db *sql.DB, intentID, operatorContextID, clientID string) (*In
 	const q = `
 		UPDATE dsh_checkout_intents
 		SET state = $1, version = version + 1, updated_at = NOW()
-		WHERE id = $2::uuid AND tenant_id = $3 AND client_id = $4
+		WHERE id = $2::uuid AND operator_context_id = $3 AND client_id = $4
 		  AND state IN ('pending', 'wlt_handoff_failed', 'wlt_outcome_unknown', 'payment_pending')
-		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`
 	row := tx.QueryRow(q, string(StateCancelled), intentID, operatorContextID, clientID)
 	intent, err := scanIntent(row)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("%w: not found, tenant mismatch, or already closed", ErrConflict)
+		return nil, fmt.Errorf("%w: not found, OperatorContext mismatch, or already closed", ErrConflict)
 	}
 	if err != nil {
 		return nil, err
@@ -255,7 +255,7 @@ func ListOperatorIntents(db *sql.DB, stateFilter string, limit int) ([]Intent, e
 	)
 	if stateFilter != "" {
 		rows, err = db.Query(`
-			SELECT id, COALESCE(tenant_id,''), client_id, cart_id::text, store_id::text, fulfillment_mode,
+			SELECT id, COALESCE(operator_context_id,''), client_id, cart_id::text, store_id::text, fulfillment_mode,
 			       state, payment_method, wlt_payment_session_id,
 			       delivery_address, note, version, created_at, updated_at
 			FROM dsh_checkout_intents
@@ -264,7 +264,7 @@ func ListOperatorIntents(db *sql.DB, stateFilter string, limit int) ([]Intent, e
 			LIMIT $2`, stateFilter, limit)
 	} else {
 		rows, err = db.Query(`
-			SELECT id, COALESCE(tenant_id,''), client_id, cart_id::text, store_id::text, fulfillment_mode,
+			SELECT id, COALESCE(operator_context_id,''), client_id, cart_id::text, store_id::text, fulfillment_mode,
 			       state, payment_method, wlt_payment_session_id,
 			       delivery_address, note, version, created_at, updated_at
 			FROM dsh_checkout_intents
@@ -315,7 +315,7 @@ func GetIntentForOperator(db *sql.DB, intentID string) (*Intent, error) {
 		return nil, ErrInvalid
 	}
 	row := db.QueryRow(`
-		SELECT id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		SELECT id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		       state, payment_method, wlt_payment_session_id,
 		       delivery_address, note, version, created_at, updated_at
 		FROM dsh_checkout_intents
@@ -328,16 +328,16 @@ func GetIntentForOperator(db *sql.DB, intentID string) (*Intent, error) {
 }
 
 func GetIntentForService(db *sql.DB, operatorContextID, intentID string) (*Intent, error) {
-	operatorContextID = normalizeTenant(operatorContextID)
+	operatorContextID = normalizeOperatorContext(operatorContextID)
 	if operatorContextID == "" || intentID == "" {
 		return nil, ErrInvalid
 	}
 	row := db.QueryRow(`
-		SELECT id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		SELECT id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		       state, payment_method, wlt_payment_session_id,
 		       delivery_address, note, version, created_at, updated_at
 		FROM dsh_checkout_intents
-		WHERE id = $1::uuid AND tenant_id = $2`, intentID, operatorContextID)
+		WHERE id = $1::uuid AND operator_context_id = $2`, intentID, operatorContextID)
 	intent, err := scanIntent(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -363,7 +363,7 @@ func paymentEventTargetState(wltStatus string) (IntentState, bool, error) {
 }
 
 func ApplyWltPaymentEvent(db *sql.DB, operatorContextID, intentID, paymentSessionID, wltStatus string) (*Intent, error) {
-	operatorContextID = normalizeTenant(operatorContextID)
+	operatorContextID = normalizeOperatorContext(operatorContextID)
 	if operatorContextID == "" || intentID == "" || paymentSessionID == "" || wltStatus == "" {
 		return nil, ErrInvalid
 	}
@@ -380,11 +380,11 @@ func ApplyWltPaymentEvent(db *sql.DB, operatorContextID, intentID, paymentSessio
 	defer tx.Rollback()
 
 	current, err := scanIntent(tx.QueryRow(`
-		SELECT id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		SELECT id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		       state, payment_method, wlt_payment_session_id,
 		       delivery_address, note, version, created_at, updated_at
 		FROM dsh_checkout_intents
-		WHERE id = $1::uuid AND tenant_id = $2
+		WHERE id = $1::uuid AND operator_context_id = $2
 		FOR UPDATE`, intentID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -408,9 +408,9 @@ func ApplyWltPaymentEvent(db *sql.DB, operatorContextID, intentID, paymentSessio
 	intent, err := scanIntent(tx.QueryRow(`
 		UPDATE dsh_checkout_intents
 		SET state = $1, version = version + 1, updated_at = NOW()
-		WHERE id = $2::uuid AND tenant_id = $3 AND wlt_payment_session_id = $4
+		WHERE id = $2::uuid AND operator_context_id = $3 AND wlt_payment_session_id = $4
 		  AND state = 'payment_pending'
-		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
+		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`,
 		string(targetState), intentID, operatorContextID, paymentSessionID))

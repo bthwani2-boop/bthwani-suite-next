@@ -44,7 +44,7 @@ func uniqueActorID(prefix string) string {
 }
 
 func trustedLedgerTestContext() context.Context {
-	return shared.WithOperatorContext(context.Background(), "tenant-ledger-tests")
+	return shared.WithOperatorContext(context.Background(), "OperatorContext-ledger-tests")
 }
 
 func TestPostLedgerTransaction_RejectsUnbalanced(t *testing.T) {
@@ -115,7 +115,7 @@ func TestPostLedgerTransaction_BalancedMultiLineTransaction(t *testing.T) {
 	}
 
 	var lineCount int
-	if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM wlt_ledger_lines WHERE tenant_id = $1 AND ledger_transaction_id = $2", "tenant-ledger-tests", txnID).Scan(&lineCount); err != nil {
+	if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM wlt_ledger_lines WHERE operator_context_id = $1 AND ledger_transaction_id = $2", "OperatorContext-ledger-tests", txnID).Scan(&lineCount); err != nil {
 		t.Fatalf("count lines: %v", err)
 	}
 	if lineCount != 3 {
@@ -154,7 +154,7 @@ func TestPostLedgerTransaction_IdempotentRetryDoesNotMoveBalanceTwice(t *testing
 	}
 
 	var walletBalance int64
-	if err := tx.QueryRowContext(ctx, "SELECT balance_minor_units FROM wlt_ledger_accounts WHERE tenant_id = $1 AND account_type = 'wallet' AND actor_type = 'client' AND actor_id = $2", "tenant-ledger-tests", actorID).Scan(&walletBalance); err != nil {
+	if err := tx.QueryRowContext(ctx, "SELECT balance_minor_units FROM wlt_ledger_accounts WHERE operator_context_id = $1 AND account_type = 'wallet' AND actor_type = 'client' AND actor_id = $2", "OperatorContext-ledger-tests", actorID).Scan(&walletBalance); err != nil {
 		t.Fatalf("read wallet balance: %v", err)
 	}
 	if walletBalance != 5000 {
@@ -242,7 +242,7 @@ func TestPostLedgerTransaction_ConcurrentPostsDontLoseUpdates(t *testing.T) {
 	}
 
 	var finalBalance int64
-	if err := db.QueryRowContext(ctx, "SELECT balance_minor_units FROM wlt_ledger_accounts WHERE tenant_id = $1 AND account_type = 'wallet' AND actor_type = 'captain' AND actor_id = $2", "tenant-ledger-tests", actorID).Scan(&finalBalance); err != nil {
+	if err := db.QueryRowContext(ctx, "SELECT balance_minor_units FROM wlt_ledger_accounts WHERE operator_context_id = $1 AND account_type = 'wallet' AND actor_type = 'captain' AND actor_id = $2", "OperatorContext-ledger-tests", actorID).Scan(&finalBalance); err != nil {
 		t.Fatalf("read final balance: %v", err)
 	}
 	expected := int64(goroutines * perGoroutine * 100)

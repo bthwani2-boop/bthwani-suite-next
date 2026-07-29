@@ -6,7 +6,7 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS wlt_refund_operation_receipts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id TEXT NOT NULL,
+  operator_context_id TEXT NOT NULL,
   operation TEXT NOT NULL,
   request_path TEXT NOT NULL,
   idempotency_key TEXT NOT NULL,
@@ -34,14 +34,14 @@ CREATE TABLE IF NOT EXISTS wlt_refund_operation_receipts (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS wlt_refund_operation_receipts_identity_uq
-  ON wlt_refund_operation_receipts (tenant_id, operation, request_path, idempotency_key);
+  ON wlt_refund_operation_receipts (operator_context_id, operation, request_path, idempotency_key);
 
 CREATE INDEX IF NOT EXISTS wlt_refund_operation_receipts_processing_idx
   ON wlt_refund_operation_receipts (created_at)
   WHERE status = 'processing';
 
 CREATE INDEX IF NOT EXISTS wlt_refund_operation_receipts_correlation_idx
-  ON wlt_refund_operation_receipts (tenant_id, correlation_id, created_at DESC)
+  ON wlt_refund_operation_receipts (operator_context_id, correlation_id, created_at DESC)
   WHERE correlation_id IS NOT NULL;
 
 COMMIT;

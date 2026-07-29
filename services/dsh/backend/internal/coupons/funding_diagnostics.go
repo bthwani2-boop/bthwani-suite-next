@@ -43,7 +43,7 @@ func ListFundingLifecycleDiagnostics(db *sql.DB, limit int) ([]FundingLifecycleD
 	}
 	rows, err := db.Query(`
 		SELECT r.id::TEXT,r.coupon_id::TEXT,r.checkout_intent_id::TEXT,
-		       COALESCE(r.funding_tenant_id,''),COALESCE(r.funding_partner_id,''),
+		       COALESCE(r.funding_operator_context_id,''),COALESCE(r.funding_partner_id,''),
 		       r.platform_funded_minor_units,r.partner_funded_minor_units,
 		       r.discount_minor_units,r.currency,r.funding_status,
 		       COALESCE(r.wlt_funding_reservation_id,''),r.funding_failure_code,

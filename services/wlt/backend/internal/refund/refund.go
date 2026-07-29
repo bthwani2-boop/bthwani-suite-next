@@ -47,7 +47,7 @@ func trustedRefundContext(db *sql.DB, refundID string) (context.Context, error) 
 		return nil, fmt.Errorf("refundId is required")
 	}
 	var operatorContextID string
-	if err := db.QueryRow(`SELECT tenant_id FROM wlt_refunds WHERE id=$1`, refundID).Scan(&operatorContextID); err != nil {
+	if err := db.QueryRow(`SELECT operator_context_id FROM wlt_refunds WHERE id=$1`, refundID).Scan(&operatorContextID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -55,7 +55,7 @@ func trustedRefundContext(db *sql.DB, refundID string) (context.Context, error) 
 	}
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
-		return nil, fmt.Errorf("refund tenant is missing")
+		return nil, fmt.Errorf("refund OperatorContext is missing")
 	}
 	return shared.WithOperatorContext(context.Background(), operatorContextID), nil
 }
@@ -83,7 +83,7 @@ func ListRefunds(db *sql.DB, orderID, clientID string) ([]*Refund, error) {
 }
 
 // ApproveRefund is retained for internal tests and older callers. It derives
-// tenant ownership only from WLT's persisted refund record before entering the
+// OperatorContext ownership only from WLT's persisted refund record before entering the
 // governed maker-checker transition.
 func ApproveRefund(db *sql.DB, refundID string) (*Refund, error) {
 	ctx, err := trustedRefundContext(db, refundID)

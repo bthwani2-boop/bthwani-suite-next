@@ -47,7 +47,7 @@ func seedOrderTruthCheckout(t *testing.T, db *sql.DB, operatorContextID, clientI
 	var checkoutID string
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_checkout_intents (
-			tenant_id, client_id, cart_id, store_id, state, fulfillment_mode,
+			operator_context_id, client_id, cart_id, store_id, state, fulfillment_mode,
 			payment_method, wlt_payment_session_id, delivery_address,
 			subtotal_minor_units, delivery_fee_minor_units, discount_minor_units,
 			total_minor_units, currency, pricing_snapshot_hash
@@ -74,7 +74,7 @@ func seedOrderTruthDBFixture(t *testing.T, db *sql.DB) orderTruthDBFixture {
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	fixture := orderTruthDBFixture{
-		OperatorContextID:      "tenant-jrn011-" + suffix,
+		OperatorContextID:      "OperatorContext-jrn011-" + suffix,
 		ClientID:      "client-jrn011-" + suffix,
 		OtherClientID: "client-jrn011-other-" + suffix,
 		StoreID:       "store-jrn011-" + suffix,
@@ -176,7 +176,7 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	if err := db.QueryRow(`
 		SELECT COUNT(*)
 		FROM dsh_orders
-		WHERE tenant_id=$1 AND checkout_intent_id=$2::uuid`,
+		WHERE operator_context_id=$1 AND checkout_intent_id=$2::uuid`,
 		fixture.OperatorContextID, fixture.CheckoutID,
 	).Scan(&orderCount); err != nil {
 		t.Fatalf("count created orders: %v", err)
@@ -188,7 +188,7 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	var eventID string
 	if err := db.QueryRow(`
 		SELECT id::text FROM dsh_order_status_events
-		WHERE tenant_id=$1 AND order_id=$2::uuid AND event_type='order.created'
+		WHERE operator_context_id=$1 AND order_id=$2::uuid AND event_type='order.created'
 		ORDER BY created_at, id
 		LIMIT 1`,
 		fixture.OperatorContextID, created.ID,
@@ -199,21 +199,21 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	var eventCount, outboxCount, completedAttemptCount int
 	if err := db.QueryRow(`
 		SELECT COUNT(*) FROM dsh_order_status_events
-		WHERE tenant_id=$1 AND order_id=$2::uuid AND event_type='order.created'`,
+		WHERE operator_context_id=$1 AND order_id=$2::uuid AND event_type='order.created'`,
 		fixture.OperatorContextID, created.ID,
 	).Scan(&eventCount); err != nil {
 		t.Fatalf("count order.created events: %v", err)
 	}
 	if err := db.QueryRow(`
 		SELECT COUNT(*) FROM dsh_order_event_outbox
-		WHERE tenant_id=$1 AND order_id=$2::uuid AND event_type='order.created'`,
+		WHERE operator_context_id=$1 AND order_id=$2::uuid AND event_type='order.created'`,
 		fixture.OperatorContextID, created.ID,
 	).Scan(&outboxCount); err != nil {
 		t.Fatalf("count transactional outbox rows: %v", err)
 	}
 	if err := db.QueryRow(`
 		SELECT COUNT(*) FROM dsh_order_create_idempotency
-		WHERE tenant_id=$1 AND client_id=$2 AND idempotency_key=$3
+		WHERE operator_context_id=$1 AND client_id=$2 AND idempotency_key=$3
 		  AND order_id=$4::uuid AND completed_at IS NOT NULL`,
 		fixture.OperatorContextID, fixture.ClientID, idempotencyKey, created.ID,
 	).Scan(&completedAttemptCount); err != nil {
@@ -243,7 +243,7 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	if _, err := db.Exec(`
 		UPDATE dsh_order_event_outbox
 		SET status='retry', next_attempt_at=NOW(), published_at=NULL, updated_at=NOW()
-		WHERE tenant_id=$1 AND event_id=$2::uuid`, fixture.OperatorContextID, eventID); err != nil {
+		WHERE operator_context_id=$1 AND event_id=$2::uuid`, fixture.OperatorContextID, eventID); err != nil {
 		t.Fatalf("reset order event for replay simulation: %v", err)
 	}
 	if err := ProcessOrderEventBridgeOnce(context.Background(), db); err != nil {
@@ -327,10 +327,10 @@ func ExampleCreateOrderTruthInput() {
 	input := CreateOrderTruthInput{
 		CheckoutIntentID: "8ba4e0d1-2f80-42b5-a88a-f8600cf2c4f5",
 		ClientID:         "client-1001",
-		OperatorContextID:         "tenant-yemen",
+		OperatorContextID:         "OperatorContext-yemen",
 		IdempotencyKey:   "order-create-key-1001",
 		CorrelationID:    "order-create-trace-1001",
 	}
 	fmt.Println(input.OperatorContextID, input.ClientID)
-	// Output: tenant-yemen client-1001
+	// Output: OperatorContext-yemen client-1001
 }

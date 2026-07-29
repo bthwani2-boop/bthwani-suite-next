@@ -38,7 +38,7 @@ func lockedPayout(ctx context.Context, tx *sql.Tx, payoutID string) (*PayoutRequ
 		return nil, err
 	}
 	rows, err := tx.QueryContext(ctx,
-		"SELECT "+requestCols+" FROM wlt_payout_requests WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
+		"SELECT "+requestCols+" FROM wlt_payout_requests WHERE operator_context_id = $1 AND id = $2 FOR UPDATE",
 		operatorContextID,
 		payoutID,
 	)

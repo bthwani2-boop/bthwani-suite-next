@@ -128,7 +128,7 @@ func unavailableCaptainForRequest(r *http.Request, db *sql.DB) (bool, string, er
 		}
 		assignmentID := parts[4]
 		var operatorContextID, captainID string
-		err := db.QueryRowContext(r.Context(), `SELECT tenant_id,captain_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&operatorContextID, &captainID)
+		err := db.QueryRowContext(r.Context(), `SELECT operator_context_id,captain_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&operatorContextID, &captainID)
 		if err != nil {
 			return false, "", nil
 		}

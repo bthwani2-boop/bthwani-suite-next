@@ -39,7 +39,7 @@ function resolveCanonicalOperationsGroup(
 /**
  * Workspaces remain in source control for reuse, but are withheld from the
  * production navigation until a sovereign read model, mutation contract,
- * tenant authorization, audit trail, and readback are all present.
+ * OperatorContext authorization, audit trail, and readback are all present.
  *
  * Keeping this policy next to route resolution prevents a crafted query
  * string from bypassing the navigation gate and mounting an unbound surface.

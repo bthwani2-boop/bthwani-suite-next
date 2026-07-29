@@ -482,7 +482,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
     Conflict:
-      description: State, eligibility, capacity, idempotency, tenant, or version conflict.
+      description: State, eligibility, capacity, idempotency, OperatorContext, or version conflict.
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }

@@ -14,6 +14,7 @@ x-bthwani-scope: platform-runtime-control
 x-bthwani-contracts:
   changeSets: ./platform-change-sets.openapi.yaml
   progressiveRollout: ./platform-progressive-rollout.openapi.yaml
+x-bthwani-overlays: {}
 
 paths:
   /platform/health:

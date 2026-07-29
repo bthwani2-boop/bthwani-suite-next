@@ -8,7 +8,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE IF NOT EXISTS dsh_promotion_funding_outbox (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_type TEXT NOT NULL CHECK (event_type IN ('commit', 'release', 'reverse')),
-    tenant_id TEXT NOT NULL,
+    operator_context_id TEXT NOT NULL,
     checkout_intent_id UUID NOT NULL REFERENCES dsh_checkout_intents(id) ON DELETE RESTRICT,
     coupon_redemption_id UUID NOT NULL REFERENCES dsh_coupon_redemptions(id) ON DELETE RESTRICT,
     wlt_funding_reservation_id TEXT NOT NULL CHECK (btrim(wlt_funding_reservation_id) <> ''),

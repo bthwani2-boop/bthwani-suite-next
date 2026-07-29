@@ -197,7 +197,7 @@ func (s *protectedStoreServer) handleCreateSpecialRequest(w http.ResponseWriter,
 		ScheduledAt:              body.ScheduledAt,
 		HandlingRequirements:     body.HandlingRequirements,
 	}
-	req, err := svc.CreateInTenant(r.Context(), actor.OperatorContextID, actor.ID, input)
+	req, err := svc.CreateInOperatorContext(r.Context(), actor.OperatorContextID, actor.ID, input)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
@@ -213,7 +213,7 @@ func (s *protectedStoreServer) handleListClientSpecialRequests(w http.ResponseWr
 	}
 	limit, offset := parseLimitOffset(r)
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	reqs, total, err := svc.ListForClientInTenant(r.Context(), actor.OperatorContextID, actor.ID, limit, offset)
+	reqs, total, err := svc.ListForClientInOperatorContext(r.Context(), actor.OperatorContextID, actor.ID, limit, offset)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
@@ -239,7 +239,7 @@ func (s *protectedStoreServer) handleGetClientSpecialRequest(w http.ResponseWrit
 	}
 	reqID := r.PathValue("requestId")
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	req, err := svc.GetForClientInTenant(r.Context(), actor.OperatorContextID, reqID, actor.ID)
+	req, err := svc.GetForClientInOperatorContext(r.Context(), actor.OperatorContextID, reqID, actor.ID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
@@ -264,7 +264,7 @@ func (s *protectedStoreServer) handleCancelClientSpecialRequest(w http.ResponseW
 	}
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
 	svc.SetWltClient(s.wlt)
-	updated, err := svc.CancelForClientInTenant(r.Context(), actor.OperatorContextID, reqID, actor.ID, body.ExpectedVersion)
+	updated, err := svc.CancelForClientInOperatorContext(r.Context(), actor.OperatorContextID, reqID, actor.ID, body.ExpectedVersion)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
@@ -298,7 +298,7 @@ func (s *protectedStoreServer) handleApproveSpecialRequestQuote(w http.ResponseW
 	}
 
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	req, err := svc.GetForClientInTenant(r.Context(), actor.OperatorContextID, reqID, actor.ID)
+	req, err := svc.GetForClientInOperatorContext(r.Context(), actor.OperatorContextID, reqID, actor.ID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
@@ -327,7 +327,7 @@ func (s *protectedStoreServer) handleApproveSpecialRequestQuote(w http.ResponseW
 		return
 	}
 
-	updated, err := svc.AttachWltPaymentSessionInTenant(r.Context(), actor.OperatorContextID, reqID, *body.ExpectedVersion, paymentSession.ID)
+	updated, err := svc.AttachWltPaymentSessionInOperatorContext(r.Context(), actor.OperatorContextID, reqID, *body.ExpectedVersion, paymentSession.ID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
@@ -355,7 +355,7 @@ func (s *protectedStoreServer) handleListOperatorSpecialRequests(w http.Response
 		workflowStage = &ws
 	}
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	reqs, total, err := svc.ListForOperatorInTenant(r.Context(), actor.OperatorContextID, reqType, status, workflowStage, limit, offset)
+	reqs, total, err := svc.ListForOperatorInOperatorContext(r.Context(), actor.OperatorContextID, reqType, status, workflowStage, limit, offset)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
@@ -381,7 +381,7 @@ func (s *protectedStoreServer) handleGetOperatorSpecialRequest(w http.ResponseWr
 	}
 	reqID := r.PathValue("requestId")
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	req, err := svc.GetForOperatorInTenant(r.Context(), actor.OperatorContextID, reqID)
+	req, err := svc.GetForOperatorInOperatorContext(r.Context(), actor.OperatorContextID, reqID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
@@ -452,7 +452,7 @@ func (s *protectedStoreServer) handleUpdateOperatorSpecialRequest(w http.Respons
 		PickedUpAt:                body.PickedUpAt,
 		DeliveredAt:               body.DeliveredAt,
 	}
-	updated, err := svc.ApplyOperatorTransitionInTenant(r.Context(), actor.OperatorContextID, reqID, *body.ExpectedVersion, input)
+	updated, err := svc.ApplyOperatorTransitionInOperatorContext(r.Context(), actor.OperatorContextID, reqID, *body.ExpectedVersion, input)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return

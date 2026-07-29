@@ -19,9 +19,9 @@ type GovernedCommissionQuery struct {
 	Limit                int
 }
 
-// ListGovernedCommissions requires a OperatorContextID: the tenant_id predicate is
+// ListGovernedCommissions requires a OperatorContextID: the operator_context_id predicate is
 // mandatory and always applied first, so no combination of the optional
-// filters below can ever return another tenant's commissions.
+// filters below can ever return another OperatorContext's commissions.
 func ListGovernedCommissions(db *sql.DB, query GovernedCommissionQuery) ([]*Commission, error) {
 	query.OperatorContextID = strings.TrimSpace(query.OperatorContextID)
 	query.SourceID = strings.TrimSpace(query.SourceID)
@@ -43,7 +43,7 @@ func ListGovernedCommissions(db *sql.DB, query GovernedCommissionQuery) ([]*Comm
 		args = append(args, value)
 		conditions = append(conditions, fmt.Sprintf("%s = $%d", column, len(args)))
 	}
-	appendCondition("tenant_id", query.OperatorContextID)
+	appendCondition("operator_context_id", query.OperatorContextID)
 	if query.SourceID != "" {
 		appendCondition("source_id", query.SourceID)
 	}

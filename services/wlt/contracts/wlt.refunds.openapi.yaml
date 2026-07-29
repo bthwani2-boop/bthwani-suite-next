@@ -8,7 +8,7 @@ info:
   description: >-
     Canonical financial refund contract. WLT owns amount, provider,
     ledger, reconciliation and audit truth. All routes are service-authenticated
-    and tenant-scoped by the trusted DSH caller. Every mutation is claimed by a
+    and OperatorContext-scoped by the trusted DSH caller. Every mutation is claimed by a
     durable idempotency receipt before business execution, and provider outcomes
     are not acknowledged unless their state is durably persisted.
 servers:
@@ -20,10 +20,10 @@ paths:
     get:
       tags: [wlt-refunds]
       operationId: listWltRefunds
-      summary: List tenant-scoped refunds
+      summary: List OperatorContext-scoped refunds
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
         - name: orderId
@@ -49,7 +49,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
@@ -78,11 +78,11 @@ paths:
     get:
       tags: [wlt-refunds]
       operationId: getWltRefund
-      summary: Read one tenant-scoped refund
+      summary: Read one OperatorContext-scoped refund
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
       responses:
@@ -104,7 +104,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
@@ -133,7 +133,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
@@ -166,7 +166,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
@@ -201,7 +201,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
@@ -229,7 +229,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
       responses:
@@ -407,7 +407,7 @@ components:
         application/json:
           schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
     RefundForbidden:
-      description: Tenant, feature gate, or authority denied
+      description: OperatorContext, feature gate, or authority denied
       content:
         application/json:
           schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
@@ -417,7 +417,7 @@ components:
         application/json:
           schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
     RefundNotFound:
-      description: Refund not found in the trusted tenant
+      description: Refund not found in the trusted OperatorContext
       content:
         application/json:
           schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }

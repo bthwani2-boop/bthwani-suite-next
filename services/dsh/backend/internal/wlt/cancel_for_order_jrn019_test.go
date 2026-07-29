@@ -10,7 +10,7 @@ import (
 )
 
 func trustedCancellationTestContext() context.Context {
-	return WithOperatorContext(context.Background(), "tenant-a")
+	return WithOperatorContext(context.Background(), "OperatorContext-a")
 }
 
 func TestCancelSessionForOrderUsesExplicitCorrelation(t *testing.T) {
@@ -40,8 +40,8 @@ func TestCancelSessionForOrderUsesExplicitCorrelation(t *testing.T) {
 	if gotCorrelation != "cancel-command-19" {
 		t.Fatalf("X-Correlation-ID=%q want cancel-command-19", gotCorrelation)
 	}
-	if gotOperatorContextID != "tenant-a" {
-		t.Fatalf("X-Operator-Context-ID=%q want tenant-a", gotOperatorContextID)
+	if gotOperatorContextID != "OperatorContext-a" {
+		t.Fatalf("X-Operator-Context-ID=%q want OperatorContext-a", gotOperatorContextID)
 	}
 	if result.Action != "none" || result.SessionStatus != "cancelled" {
 		t.Fatalf("unexpected result: %+v", result)

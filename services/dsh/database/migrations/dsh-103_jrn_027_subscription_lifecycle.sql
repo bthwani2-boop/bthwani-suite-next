@@ -1,6 +1,6 @@
 -- DSH-103: JRN-027 operational subscription orchestration.
 --
--- DSH owns the purchase workflow, tenant/client isolation and WLT references.
+-- DSH owns the purchase workflow, OperatorContext/client isolation and WLT references.
 -- Money, payment capture, entitlement periods, loyalty balances and compensation
 -- completion remain exclusively owned by WLT.
 
@@ -91,7 +91,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_dsh_subscription_purchase_wlt_subscription
     WHERE wlt_subscription_id IS NOT NULL AND renewal_of_purchase_id IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_dsh_subscription_purchases_client_lifecycle
-    ON dsh_subscription_purchases(tenant_id, client_id, status, updated_at DESC);
+    ON dsh_subscription_purchases(operator_context_id, client_id, status, updated_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_dsh_subscription_purchases_wlt_subscription
     ON dsh_subscription_purchases(wlt_subscription_id, updated_at DESC)
@@ -100,7 +100,7 @@ CREATE INDEX IF NOT EXISTS idx_dsh_subscription_purchases_wlt_subscription
 CREATE TABLE IF NOT EXISTS dsh_subscription_lifecycle_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     purchase_id TEXT NOT NULL REFERENCES dsh_subscription_purchases(id),
-    tenant_id TEXT NOT NULL,
+    operator_context_id TEXT NOT NULL,
     client_id TEXT NOT NULL,
     event_type TEXT NOT NULL CHECK (event_type IN (
         'purchase_initiated',
@@ -131,7 +131,7 @@ CREATE INDEX IF NOT EXISTS idx_dsh_subscription_lifecycle_events_purchase
     ON dsh_subscription_lifecycle_events(purchase_id, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_dsh_subscription_lifecycle_events_client
-    ON dsh_subscription_lifecycle_events(tenant_id, client_id, created_at DESC);
+    ON dsh_subscription_lifecycle_events(operator_context_id, client_id, created_at DESC);
 
 CREATE OR REPLACE FUNCTION dsh_reject_subscription_lifecycle_event_mutation()
 RETURNS TRIGGER
@@ -162,7 +162,7 @@ AS $$
 BEGIN
     IF NEW.plan_id <> OLD.plan_id
        OR NEW.client_id <> OLD.client_id
-       OR NEW.tenant_id <> OLD.tenant_id
+       OR NEW.operator_context_id <> OLD.operator_context_id
        OR NEW.wlt_product_reference <> OLD.wlt_product_reference
        OR NEW.idempotency_key <> OLD.idempotency_key
        OR COALESCE(NEW.renewal_of_purchase_id, '') <> COALESCE(OLD.renewal_of_purchase_id, '') THEN

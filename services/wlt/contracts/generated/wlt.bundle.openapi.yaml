@@ -32,7 +32,7 @@ x-bthwani-generated-from:
   - services/wlt/contracts/wlt.commercial-summary.openapi.yaml
   - services/wlt/contracts/wlt.promotion-funding.openapi.yaml
   - services/wlt/contracts/wlt.workforce-finance.openapi.yaml
-x-bthwani-source-digest: 91f3dd21a9ca0902929aef476c0ebf6d44b058764acb18fd3a66f9f699b874b8
+x-bthwani-source-digest: b9fc50c7dbd50219676e54e916c6aab0b3f64d2794328d2eec90fdab6d61608f
 
 paths:
   /wlt/health:
@@ -63,7 +63,7 @@ paths:
   /wlt/references/payment-status:
     get:
       operationId: getWltPaymentStatusRef
-      summary: Return the tenant-bound payment status reference for an order.
+      summary: Return the OperatorContext-bound payment status reference for an order.
       tags: [WltReferences]
       parameters:
         - $ref: '#/components/parameters/OrderIdQuery'
@@ -75,7 +75,7 @@ paths:
   /wlt/references/settlement-status:
     get:
       operationId: getWltSettlementStatusRef
-      summary: Return the tenant-bound settlement status reference for an order.
+      summary: Return the OperatorContext-bound settlement status reference for an order.
       tags: [WltReferences]
       parameters:
         - $ref: '#/components/parameters/OrderIdQuery'
@@ -87,7 +87,7 @@ paths:
   /wlt/references/refund-status:
     get:
       operationId: getWltRefundStatusRef
-      summary: Return the tenant-bound refund status reference for an order.
+      summary: Return the OperatorContext-bound refund status reference for an order.
       tags: [WltReferences]
       parameters:
         - $ref: '#/components/parameters/OrderIdQuery'
@@ -99,7 +99,7 @@ paths:
   /wlt/references/wallet-status:
     get:
       operationId: getWltWalletStatusRef
-      summary: Return the tenant-bound wallet status reference for an actor.
+      summary: Return the OperatorContext-bound wallet status reference for an actor.
       tags: [WltReferences]
       parameters:
         - name: actorType
@@ -118,7 +118,7 @@ paths:
   /wlt/wallets/{actorType}/{actorId}:
     get:
       operationId: getWltWallet
-      summary: Return the tenant-local operational wallet for an actor.
+      summary: Return the OperatorContext-local operational wallet for an actor.
       tags: [WltWallets]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -129,7 +129,7 @@ paths:
         - $ref: '#/components/parameters/ActorIdPath'
       responses:
         '200':
-          description: Tenant-local actor wallet.
+          description: OperatorContext-local actor wallet.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WalletEnvelope' }
@@ -139,7 +139,7 @@ paths:
   /wlt/reconciliation-cases:
     get:
       operationId: listWltReconciliationCases
-      summary: List tenant-local reconciliation cases.
+      summary: List OperatorContext-local reconciliation cases.
       tags: [WltReconciliation]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -151,7 +151,7 @@ paths:
           schema: { type: string, enum: [open, resolved] }
       responses:
         '200':
-          description: Tenant-local reconciliation cases.
+          description: OperatorContext-local reconciliation cases.
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
@@ -160,7 +160,7 @@ paths:
   /wlt/reconciliation-cases/{caseId}:
     get:
       operationId: getWltReconciliationCase
-      summary: Read one tenant-local reconciliation case.
+      summary: Read one OperatorContext-local reconciliation case.
       tags: [WltReconciliation]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -170,7 +170,7 @@ paths:
         - $ref: '#/components/parameters/CaseId'
       responses:
         '200':
-          description: Tenant-local reconciliation case.
+          description: OperatorContext-local reconciliation case.
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
@@ -179,7 +179,7 @@ paths:
   /wlt/reconciliation-cases/{caseId}/assign:
     post:
       operationId: assignWltReconciliationCase
-      summary: Assign a tenant-local reconciliation case.
+      summary: Assign a OperatorContext-local reconciliation case.
       tags: [WltReconciliation]
       security: [{ serviceBearer: [] }]
       x-bthwani-mutation-approved: false
@@ -204,7 +204,7 @@ paths:
   /wlt/reconciliation-cases/{caseId}/resolve:
     post:
       operationId: resolveWltReconciliationCase
-      summary: Resolve a tenant-local reconciliation case.
+      summary: Resolve a OperatorContext-local reconciliation case.
       tags: [WltReconciliation]
       security: [{ serviceBearer: [] }]
       x-bthwani-mutation-approved: false
@@ -229,7 +229,7 @@ paths:
   /wlt/ledger/entries:
     get:
       operationId: listWltLedgerEntries
-      summary: List tenant-local immutable ledger entries.
+      summary: List OperatorContext-local immutable ledger entries.
       tags: [WltLedger]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -256,7 +256,7 @@ paths:
           schema: { type: string }
       responses:
         '200':
-          description: Tenant-local immutable ledger entries
+          description: OperatorContext-local immutable ledger entries
           content:
             application/json:
               schema: { $ref: '#/components/schemas/LedgerEntryListResponse' }
@@ -265,7 +265,7 @@ paths:
   /wlt/ledger/entries/{entryId}:
     get:
       operationId: getWltLedgerEntry
-      summary: Read one tenant-local immutable ledger entry.
+      summary: Read one OperatorContext-local immutable ledger entry.
       tags: [WltLedger]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -278,7 +278,7 @@ paths:
           schema: { type: string, minLength: 1 }
       responses:
         '200':
-          description: Tenant-local immutable ledger entry
+          description: OperatorContext-local immutable ledger entry
           content:
             application/json:
               schema: { $ref: '#/components/schemas/LedgerEntry' }
@@ -287,7 +287,7 @@ paths:
   /wlt/ledger/financial-summary:
     get:
       operationId: getWltLedgerFinancialSummary
-      summary: Return account-type-aware tenant-local financial totals.
+      summary: Return account-type-aware OperatorContext-local financial totals.
       tags: [WltLedger]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -295,12 +295,12 @@ paths:
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/OperatorContextId'
       responses:
-        '200': { description: Tenant-local financial summary }
+        '200': { description: OperatorContext-local financial summary }
 
   /wlt/payment-sessions:
     post:
       operationId: createWltPaymentSession
-      summary: Create or replay a tenant-bound payment-session reference.
+      summary: Create or replay a OperatorContext-bound payment-session reference.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
       x-bthwani-mutation-approved: false
@@ -328,7 +328,7 @@ paths:
   /wlt/payment-sessions/{paymentSessionId}:
     get:
       operationId: getWltPaymentSession
-      summary: Read one payment session in the trusted tenant.
+      summary: Read one payment session in the trusted OperatorContext.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
       parameters:
@@ -485,7 +485,7 @@ paths:
   /wlt/payment-sessions/{paymentSessionId}/cancel-for-order:
     post:
       operationId: cancelWltPaymentSessionForOrder
-      summary: Let WLT choose expiry or governed refund according to captured tenant truth.
+      summary: Let WLT choose expiry or governed refund according to captured OperatorContext truth.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
       x-bthwani-mutation-approved: false
@@ -520,7 +520,7 @@ paths:
   /wlt/order-cancellations:
     post:
       operationId: cancelWltOrderFinancially
-      summary: Apply the tenant-bound expiry-or-refund decision for an order.
+      summary: Apply the OperatorContext-bound expiry-or-refund decision for an order.
       tags: [WltPayments]
       security: [{ serviceBearer: [] }]
       x-bthwani-mutation-approved: false
@@ -594,7 +594,7 @@ paths:
   /wlt/delivery-collections:
     post:
       operationId: createWltDeliveryCollectionHandoff
-      summary: Derive tenant-local collection custody from WLT payment-session truth.
+      summary: Derive OperatorContext-local collection custody from WLT payment-session truth.
       tags: [WltDeliveryCollections]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
@@ -616,7 +616,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DeliveryCollectionHandoffResponse' }
         '201':
-          description: Tenant-local COD custody record created from WLT payment truth
+          description: OperatorContext-local COD custody record created from WLT payment truth
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DeliveryCollectionHandoffResponse' }
@@ -627,7 +627,7 @@ paths:
         '409': { $ref: '#/components/responses/CollectionConflict' }
     get:
       operationId: listWltDeliveryCollections
-      summary: List tenant-local delivery collection custody records.
+      summary: List OperatorContext-local delivery collection custody records.
       tags: [WltDeliveryCollections]
       parameters:
         - $ref: '#/components/parameters/Authorization'
@@ -654,7 +654,7 @@ paths:
   /wlt/delivery-collections/{codRecordId}:
     get:
       operationId: getWltDeliveryCollection
-      summary: Read one tenant-local delivery collection custody record.
+      summary: Read one OperatorContext-local delivery collection custody record.
       tags: [WltDeliveryCollections]
       parameters:
         - $ref: '#/components/parameters/Authorization'
@@ -726,10 +726,10 @@ paths:
     get:
       tags: [wlt-refunds]
       operationId: listWltRefunds
-      summary: List tenant-scoped refunds
+      summary: List OperatorContext-scoped refunds
       parameters:
         - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/CorrelationIdOptional'
         - name: orderId
@@ -755,7 +755,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
@@ -785,11 +785,11 @@ paths:
     get:
       tags: [wlt-refunds]
       operationId: getWltRefund
-      summary: Read one tenant-scoped refund
+      summary: Read one OperatorContext-scoped refund
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/CorrelationIdOptional'
       responses:
@@ -812,7 +812,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
@@ -842,7 +842,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
@@ -876,7 +876,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
@@ -912,7 +912,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
@@ -941,7 +941,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/CorrelationIdOptional'
       responses:
@@ -984,7 +984,7 @@ paths:
     get:
       operationId: listWltSettlements
       tags: [WltSettlements]
-      summary: List tenant-local settlements.
+      summary: List OperatorContext-local settlements.
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
@@ -997,7 +997,7 @@ paths:
           schema: { type: string }
       responses:
         '200':
-          description: Tenant-local settlements
+          description: OperatorContext-local settlements
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SettlementListResponse' }
@@ -1223,13 +1223,13 @@ paths:
     get:
       operationId: getWltSettlementSummary
       tags: [WltSettlements]
-      summary: Return the tenant-local settlement summary computed by WLT.
+      summary: Return the OperatorContext-local settlement summary computed by WLT.
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/OperatorContextId'
       responses:
-        '200': { description: Tenant-local settlement summary }
+        '200': { description: OperatorContext-local settlement summary }
         '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
@@ -1238,14 +1238,14 @@ paths:
     get:
       operationId: getWltSettlement
       tags: [WltSettlements]
-      summary: Read one tenant-local settlement.
+      summary: Read one OperatorContext-local settlement.
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
         - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/SettlementId'
       responses:
-        '200': { description: Tenant-local settlement }
+        '200': { description: OperatorContext-local settlement }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
@@ -1254,7 +1254,7 @@ paths:
     post:
       operationId: postWltSettlement
       tags: [WltSettlements]
-      summary: Post a pending tenant-local settlement and its balanced journal atomically.
+      summary: Post a pending OperatorContext-local settlement and its balanced journal atomically.
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -1675,7 +1675,7 @@ paths:
     post:
       operationId: createWltCodRecord
       tags: [WltCodRecords]
-      summary: Create or replay tenant-local COD custody from WLT payment truth.
+      summary: Create or replay OperatorContext-local COD custody from WLT payment truth.
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -1690,7 +1690,7 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/CreateCodRecordRequest' }
       responses:
-        '201': { description: Tenant-local COD record created }
+        '201': { description: OperatorContext-local COD record created }
         '200': { description: Exact replay of the existing COD record }
         '400': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
@@ -1698,7 +1698,7 @@ paths:
     get:
       operationId: listWltCodRecords
       tags: [WltCodRecords]
-      summary: List tenant-local COD records by one governed filter.
+      summary: List OperatorContext-local COD records by one governed filter.
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
@@ -1713,7 +1713,7 @@ paths:
           in: query
           schema: { type: string }
       responses:
-        '200': { description: Tenant-local COD records }
+        '200': { description: OperatorContext-local COD records }
         '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
@@ -1722,7 +1722,7 @@ paths:
     get:
       operationId: getWltCodRecord
       tags: [WltCodRecords]
-      summary: Read one tenant-local COD record.
+      summary: Read one OperatorContext-local COD record.
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
@@ -1732,7 +1732,7 @@ paths:
           required: true
           schema: { type: string, minLength: 1 }
       responses:
-        '200': { description: Tenant-local COD record }
+        '200': { description: OperatorContext-local COD record }
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
@@ -2056,7 +2056,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
         - $ref: '#/components/parameters/CorrelationHeader'
       requestBody:
@@ -2078,7 +2078,7 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/ReservationId'
       responses:
         '200': { $ref: '#/components/responses/ReservationResponse' }
@@ -2096,7 +2096,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/ReservationId'
@@ -2122,7 +2122,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/ReservationId'
@@ -2148,7 +2148,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: '#/components/parameters/OperatorContextHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/ReservationId'
@@ -2345,7 +2345,7 @@ components:
       required: true
       schema: { type: string, minLength: 1 }
 
-    TenantHeader:
+    OperatorContextHeader:
       name: X-Operator-Context-ID
       in: header
       required: true
@@ -2437,7 +2437,7 @@ components:
       description: FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true
 
     CollectionNotFound:
-      description: Delivery collection or tenant-local payment session not found
+      description: Delivery collection or OperatorContext-local payment session not found
 
     CollectionConflict:
       description: Invalid custody transition, replay conflict, or actor mismatch
@@ -2455,7 +2455,7 @@ components:
           schema: { $ref: '#/components/schemas/Error' }
 
     RefundForbidden:
-      description: Tenant, feature gate, or authority denied
+      description: OperatorContext, feature gate, or authority denied
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
@@ -2467,7 +2467,7 @@ components:
           schema: { $ref: '#/components/schemas/Error' }
 
     RefundNotFound:
-      description: Refund not found in the trusted tenant
+      description: Refund not found in the trusted OperatorContext
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
