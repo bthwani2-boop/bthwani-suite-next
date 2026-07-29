@@ -190,7 +190,8 @@
       "shared/config/toolchain-lock.json",
       "knip.json",
       "knip.strict.json",
-      "services/wlt/backend/internal/ledger/refund_tenant_resolution_test.go"
+      "services/wlt/backend/internal/ledger/refund_tenant_resolution_test.go",
+      "services/wlt/clients/generated/wlt-api.ts"
     ],
     "allowedPatterns": [
       "^apps/mobile/eas-build-mobile\\.mjs$",
@@ -220,7 +221,8 @@
     "EAS project IDs, Android package names, and iOS bundle identifiers must remain stable unless an explicit migration is approved.",
     "Docker volumes and production-like local data must not be destroyed by ordinary verification commands.",
     "Every destructive runtime alias must use an explicit Force-guarded wrapper.",
-    "The only service-code exception in this foundation round is the named WLT verification fixture repair; no runtime behavior may change.",
+    "The only runtime-service source exception in this foundation round is the named WLT verification fixture repair; no runtime behavior may change.",
+    "The only WLT client exception is an exact generated type-surface alignment with existing backend JSON; no endpoint or product behavior may be added.",
     "Product-logic cleanup must not be mixed with unrelated foundation rewrites in one commit."
   ]
 }
