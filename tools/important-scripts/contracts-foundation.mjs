@@ -94,6 +94,19 @@ if (fs.existsSync(parallelRootMasterPath)) {
   });
 }
 
+// A removed operation must be absent from the active contract and runtime.
+// A subtractive registry creates a second mutable definition of API truth.
+const retiredWltRegistryPath = path.join(
+  repoRoot,
+  "services/wlt/contracts/retired-runtime-operations.json",
+);
+if (fs.existsSync(retiredWltRegistryPath)) {
+  violations.push({
+    file: "services/wlt/contracts/retired-runtime-operations.json",
+    message: "subtractive WLT retirement registries are forbidden; retired operations must be absent from contract and runtime"
+  });
+}
+
 // 4. Validate that services/auth directory does not exist
 const servicesAuthPath = path.join(repoRoot, "services/auth");
 if (fs.existsSync(servicesAuthPath)) {
