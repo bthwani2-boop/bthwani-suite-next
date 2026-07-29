@@ -23,12 +23,22 @@
   },
   "execution": {
     "startedFromSha": "083eeeeb039b6537cf96a0a3128d3d42cdb62de8",
-    "lastRecordedSha": "16d9cff8ea5fe19e9d1387085a5f4a088db1f1d2",
+    "lastRecordedSha": "d30ce1546302c7a6940c790ce1ca6781bc33a38b",
     "currentWave": "identity_and_contract_foundation",
     "slices": {
       "VC-000-baseline-and-inventory": "IN_PROGRESS",
-      "VC-001-identity-activation-backdoor-removal": "IN_PROGRESS",
-      "VC-002-master-openapi-uniqueness": "IMPLEMENTED_PENDING_VERIFICATION"
+      "VC-001-identity-activation-backdoor-removal": "IMPLEMENTED_PENDING_VERIFICATION",
+      "VC-002-master-openapi-uniqueness": "IMPLEMENTED_PENDING_VERIFICATION",
+      "VC-003-wlt-retired-operation-registry-removal": "IMPLEMENTED_PENDING_VERIFICATION",
+      "VC-004-wlt-generated-client-reconstruction": "DIAGNOSIS_IN_PROGRESS",
+      "VC-005-trusted-platform-scope-and-tenant-fallback-removal": "DIAGNOSIS_IN_PROGRESS"
+    },
+    "verification": {
+      "sameShaRequired": true,
+      "githubCommitStatusesObserved": 0,
+      "githubWorkflowRunsVisibleToConnector": 0,
+      "localRemoteCheckoutAvailable": false,
+      "decision": "IMPLEMENTED_PENDING_VERIFICATION"
     }
   },
   "documents": [
