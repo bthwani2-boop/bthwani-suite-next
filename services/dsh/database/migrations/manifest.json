@@ -3,7 +3,7 @@
   "service": "dsh",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "dsh-961_field_readiness_operation_receipts.sql",
+  "cutover": "dsh-962_platform_context_error_contract.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -1305,6 +1305,13 @@
       "file": "dsh-961_field_readiness_operation_receipts.sql",
       "sha256": "b55a64fd0f8bf055fdec4006cfb12d14ef053257439f083af7070ef57e6848dc",
       "historicalPrefix": "961",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 187,
+      "file": "dsh-962_platform_context_error_contract.sql",
+      "sha256": "d20fa5991c11f417231960cc6e80fdcddf8cb7408c296cd70ffdd4195f4096a5",
+      "historicalPrefix": "962",
       "state": "HISTORICAL_IMMUTABLE"
     }
   ]

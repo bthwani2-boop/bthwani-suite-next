@@ -17,6 +17,14 @@
       "source_file": "tools/scripts/run-journey-gate.ps1"
     },
     {
+      "id": "journey-runtime",
+      "name": "Journey Runtime Guard Set",
+      "script": "guard:journey-runtime",
+      "exit_level": "fail",
+      "description": "Runs the journey guard set with explicit runtime verification; a pass remains scoped runtime evidence.",
+      "source_file": "tools/scripts/run-journey-gate.ps1"
+    },
+    {
       "id": "ui-kit-boundary",
       "name": "UI Kit Boundary Gate",
       "script": "guard:ui-kit-boundary",

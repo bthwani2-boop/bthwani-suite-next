@@ -6,7 +6,9 @@ Status: ACTIVE_CANONICAL
 
 A service is active only when its current service manifest, blueprint, contracts, implementation, and registered surfaces support that claim. This document defines ownership structure; it does not fabricate activation.
 
-Registered service domains include `dsh`, `wlt`, `knz`, `arb`, `amn`, `esf`, `mrf`, `snd`, and `kwd`. Live service manifests own their current capability and readiness state.
+The active service domains are `dsh` and `wlt`. Reserved names without a
+manifest, contract, runtime, persistence, and owned surface are not service
+domains and must not be represented by placeholder packages.
 
 ## Surface authority
 

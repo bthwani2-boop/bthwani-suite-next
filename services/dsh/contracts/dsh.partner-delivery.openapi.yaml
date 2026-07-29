@@ -83,21 +83,6 @@ paths:
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
-  /dsh/partner/orders/{orderId}/partner-delivery/proof:
-    post:
-      operationId: submitDshPartnerDeliveryProof
-      tags: [DshPartnerDelivery]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ProofRequest' }
-      responses:
-        '200': { $ref: '#/components/responses/TaskResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-        '422': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/partner/orders/{orderId}/partner-delivery/exception:
     post:
       operationId: raiseDshPartnerDeliveryException
@@ -430,14 +415,6 @@ components:
           required: [storeCourierId]
           properties:
             storeCourierId: { type: string, minLength: 1 }
-    ProofRequest:
-      allOf:
-        - { $ref: '#/components/schemas/MutationRequest' }
-        - type: object
-          required: [proofMethod, proofReference]
-          properties:
-            proofMethod: { type: string, minLength: 1 }
-            proofReference: { type: string, minLength: 1 }
     ExceptionRequest:
       allOf:
         - { $ref: '#/components/schemas/MutationRequest' }

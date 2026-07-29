@@ -1,18 +1,6 @@
--- DSH-954: complete the trusted server-side tenant-context contract.
---
--- Tenant ownership remains explicit or parent-derived. A missing tenant may be
--- supplied only through the PostgreSQL session setting `bthwani.tenant_id`,
--- which is controlled by the backend/worker connection and is never a column
--- default. This keeps production fail-closed while allowing isolated workers,
--- migrations, and DB integration tests to establish trusted request context.
-
-CREATE OR REPLACE FUNCTION dsh_trusted_tenant_context()
-RETURNS TEXT
-LANGUAGE SQL
-STABLE
-AS $$
-  SELECT NULLIF(BTRIM(current_setting('bthwani.tenant_id', TRUE)), '');
-$$;
+-- DSH-962: apply the platform-context error vocabulary without rewriting
+-- immutable historical migrations. Column and setting renames are intentionally
+-- handled by a separate schema migration once every runtime consumer is moved.
 
 CREATE OR REPLACE FUNCTION dsh_enforce_partner_tenant()
 RETURNS TRIGGER
@@ -24,14 +12,14 @@ BEGIN
   IF TG_OP = 'UPDATE'
      AND OLD.tenant_id IS NOT NULL
      AND NEW.tenant_id IS DISTINCT FROM OLD.tenant_id THEN
-    RAISE EXCEPTION 'TENANT_OWNERSHIP_IMMUTABLE: partner tenant cannot change'
+    RAISE EXCEPTION 'PLATFORM_CONTEXT_OWNERSHIP_IMMUTABLE: partner context cannot change'
       USING ERRCODE = '23514';
   END IF;
 
   IF NEW.tenant_id IS NULL OR BTRIM(NEW.tenant_id) = '' THEN
     session_tenant := dsh_trusted_tenant_context();
     IF session_tenant IS NULL THEN
-      RAISE EXCEPTION 'TENANT_CONTEXT_REQUIRED: trusted partner tenant is required';
+      RAISE EXCEPTION 'PLATFORM_CONTEXT_REQUIRED: trusted partner context is required';
     END IF;
     NEW.tenant_id := session_tenant;
   END IF;
@@ -39,11 +27,6 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
-DROP TRIGGER IF EXISTS trg_dsh_partners_tenant ON dsh_partners;
-CREATE TRIGGER trg_dsh_partners_tenant
-BEFORE INSERT OR UPDATE ON dsh_partners
-FOR EACH ROW EXECUTE FUNCTION dsh_enforce_partner_tenant();
 
 CREATE OR REPLACE FUNCTION dsh_enforce_store_tenant()
 RETURNS TRIGGER
@@ -59,14 +42,14 @@ BEGIN
     WHERE id = NEW.partner_id;
 
     IF owner_tenant IS NULL OR BTRIM(owner_tenant) = '' THEN
-      RAISE EXCEPTION 'TENANT_CONTEXT_REQUIRED: partner tenant not found';
+      RAISE EXCEPTION 'PLATFORM_CONTEXT_REQUIRED: partner context not found';
     END IF;
 
     IF TG_OP = 'UPDATE'
        AND OLD.tenant_id IS NOT NULL
        AND BTRIM(OLD.tenant_id) <> ''
        AND OLD.tenant_id IS DISTINCT FROM owner_tenant THEN
-      RAISE EXCEPTION 'TENANT_OWNERSHIP_IMMUTABLE: store cannot move across tenants'
+      RAISE EXCEPTION 'PLATFORM_CONTEXT_OWNERSHIP_IMMUTABLE: store cannot move across contexts'
         USING ERRCODE = '23514';
     END IF;
 
@@ -75,7 +58,7 @@ BEGIN
     IF NEW.tenant_id IS NULL OR BTRIM(NEW.tenant_id) = '' THEN
       session_tenant := dsh_trusted_tenant_context();
       IF session_tenant IS NULL THEN
-        RAISE EXCEPTION 'TENANT_CONTEXT_REQUIRED: trusted store tenant is required';
+        RAISE EXCEPTION 'PLATFORM_CONTEXT_REQUIRED: trusted store context is required';
       END IF;
       NEW.tenant_id := session_tenant;
     END IF;
@@ -84,7 +67,7 @@ BEGIN
        AND OLD.tenant_id IS NOT NULL
        AND BTRIM(OLD.tenant_id) <> ''
        AND NEW.tenant_id IS DISTINCT FROM OLD.tenant_id THEN
-      RAISE EXCEPTION 'TENANT_OWNERSHIP_IMMUTABLE: store tenant cannot change'
+      RAISE EXCEPTION 'PLATFORM_CONTEXT_OWNERSHIP_IMMUTABLE: store context cannot change'
         USING ERRCODE = '23514';
     END IF;
   END IF;
@@ -92,8 +75,3 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
-DROP TRIGGER IF EXISTS trg_dsh_stores_tenant ON dsh_stores;
-CREATE TRIGGER trg_dsh_stores_tenant
-BEFORE INSERT OR UPDATE ON dsh_stores
-FOR EACH ROW EXECUTE FUNCTION dsh_enforce_store_tenant();

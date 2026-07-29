@@ -54,7 +54,7 @@
       "required": true,
       "actors": ["customer"],
       "routesOrScreens": ["commerce", "checkout", "orders", "financial references"],
-      "operationIds": [],
+      "operationIds": ["createDshCheckoutIntent", "getDshPaymentSessionTimeline"],
       "states": ["loading", "success", "empty", "forbidden", "failure"],
       "actions": ["consume DSH commerce, fulfillment, and financial facade"]
     },
@@ -99,7 +99,7 @@
       "required": true,
       "actors": ["operator", "partner", "captain", "field", "customer"],
       "routesOrScreens": ["Identity trusted context", "DSH operational facade", "WLT internal financial owner"],
-      "operationIds": [],
+      "operationIds": ["requestOtp", "createDshCheckoutIntent", "getWltPaymentStatusRef"],
       "states": ["authorized", "forbidden", "unavailable", "conflict"],
       "actions": ["derive trusted context", "enforce object authorization", "preserve domain ownership"]
     },

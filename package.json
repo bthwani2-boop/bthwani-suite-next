@@ -15,7 +15,7 @@
     "build": "pnpm -r --if-present build",
     "guard:foundation": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-foundation-gate.ps1",
     "guard:journey": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1",
-    "guard:journey:runtime": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Runtime",
+    "guard:journey-runtime": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Runtime",
     "guard:journey:full": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/run-journey-gate.ps1 -Full",
     "docker:runtime:up": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles dsh,media",
     "docker:runtime:down": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles dsh,media",
