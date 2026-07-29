@@ -15,5 +15,4 @@ regenerateScript: pnpm run openapi:generate:platform-control
 modules:
   - ./platform-change-sets.openapi.yaml
   - ./platform-progressive-rollout.openapi.yaml
-overlays:
-  - ./platform-control.saas.overlay.yaml
+overlays: []
