@@ -62,7 +62,6 @@ function Test-BthwaniMobileBackend {
   $checks = @(
     @{ Uri = "http://127.0.0.1:58082/identity/health"; Status = "healthy" },
     @{ Uri = "http://127.0.0.1:58086/workforce/health"; Status = "healthy" },
-    @{ Uri = "http://127.0.0.1:58083/wlt/health"; Status = "healthy" },
     @{ Uri = "http://127.0.0.1:58080/dsh/health"; Status = "healthy" }
   )
 
@@ -111,7 +110,7 @@ function Ensure-BthwaniMobileBackend {
     )
 
   if (-not (Test-BthwaniMobileBackend)) {
-    throw "Mobile backend startup completed, but Identity, Workforce, WLT or DSH is still unhealthy."
+    throw "Mobile backend startup completed, but an application-facing Identity, Workforce, or DSH endpoint is still unhealthy."
   }
 }
 

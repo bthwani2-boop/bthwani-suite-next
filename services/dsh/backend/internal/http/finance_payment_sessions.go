@@ -7,26 +7,16 @@ import (
 	"dsh-api/internal/store"
 )
 
-// requiredPaymentTenant resolves the finance tenant from the authenticated
-// Identity actor. Browser-controlled selectors are never accepted as the
-// authority boundary; an optional legacy selector may only confirm the actor
-// tenant and is rejected when it disagrees.
-func requiredPaymentTenant(w http.ResponseWriter, r *http.Request, actorOperatorContextID string) (string, bool) {
-	operatorContextID := strings.TrimSpace(actorOperatorContextID)
-	if operatorContextID == "" {
-		store.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "authenticated actor tenant is required")
+// requiredPaymentPlatformContext resolves the financial platform context only
+// from the authenticated Identity actor. Client headers, query parameters, and
+// request bodies are not inputs to this trust boundary.
+func requiredPaymentPlatformContext(w http.ResponseWriter, actorPlatformContextID string) (string, bool) {
+	platformContextID := strings.TrimSpace(actorPlatformContextID)
+	if platformContextID == "" {
+		store.SendError(w, http.StatusBadRequest, "MISSING_PLATFORM_CONTEXT_ID", "authenticated actor platform context is required")
 		return "", false
 	}
-
-	suppliedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
-	if suppliedOperatorContextID == "" {
-		suppliedOperatorContextID = strings.TrimSpace(r.URL.Query().Get("operatorContextId"))
-	}
-	if suppliedOperatorContextID != "" && suppliedOperatorContextID != operatorContextID {
-		store.SendError(w, http.StatusForbidden, "TENANT_MISMATCH", "tenant selector does not match authenticated actor")
-		return "", false
-	}
-	return operatorContextID, true
+	return platformContextID, true
 }
 
 // GET /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline
@@ -39,7 +29,7 @@ func (s *protectedStoreServer) handleFinancePaymentSessionTimeline(w http.Respon
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
 		return
 	}
-	operatorContextID, ok := requiredPaymentTenant(w, r, actor.OperatorContextID)
+	platformContextID, ok := requiredPaymentPlatformContext(w, actor.OperatorContextID)
 	if !ok {
 		return
 	}
@@ -48,7 +38,7 @@ func (s *protectedStoreServer) handleFinancePaymentSessionTimeline(w http.Respon
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "paymentSessionId is required")
 		return
 	}
-	status, body, err := s.wlt.ReadPaymentSessionTimeline(r.Context(), operatorContextID, paymentSessionID, r.Header.Get("X-Correlation-ID"))
+	status, body, err := s.wlt.ReadPaymentSessionTimeline(r.Context(), platformContextID, paymentSessionID, r.Header.Get("X-Correlation-ID"))
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT payment timeline read failed")
 		return
@@ -68,7 +58,7 @@ func (s *protectedStoreServer) handleRefreshFinancePaymentSessionProviderStatus(
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
 		return
 	}
-	operatorContextID, ok := requiredPaymentTenant(w, r, actor.OperatorContextID)
+	platformContextID, ok := requiredPaymentPlatformContext(w, actor.OperatorContextID)
 	if !ok {
 		return
 	}
@@ -78,7 +68,7 @@ func (s *protectedStoreServer) handleRefreshFinancePaymentSessionProviderStatus(
 		return
 	}
 	status, body, err := s.wlt.RefreshPaymentSessionProviderStatus(
-		r.Context(), operatorContextID, paymentSessionID,
+		r.Context(), platformContextID, paymentSessionID,
 		r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"),
 	)
 	if err != nil {

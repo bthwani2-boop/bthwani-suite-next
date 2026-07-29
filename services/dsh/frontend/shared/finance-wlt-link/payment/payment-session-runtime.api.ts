@@ -1,7 +1,4 @@
-import type {
-  WltPaymentOperationEnvelope,
-  WltPaymentTimelineEnvelope,
-} from "@bthwani/wlt";
+import type { WltPaymentOperationEnvelope, WltPaymentTimelineEnvelope } from "./payment-session.types";
 import { resolveDshApiBaseUrl } from "../../_kernel/dsh-api-base-url";
 import { corrId, createDshHttpClient } from "../../_kernel/dsh-http-request";
 
@@ -30,16 +27,15 @@ function classify(error: unknown): PaymentSessionRuntimeError {
   return { state: "error", code: value.code ?? `HTTP_${value.status ?? "ERROR"}`, message: value.message ?? "تعذر تحميل الحقيقة المالية الحاكمة." };
 }
 
-function timelinePath(paymentSessionId: string, operatorContextId: string): string {
-  return `/dsh/control-panel/finance/payment-sessions/${encodeURIComponent(paymentSessionId)}/timeline?operatorContextId=${encodeURIComponent(operatorContextId)}`;
+function timelinePath(paymentSessionId: string): string {
+  return `/dsh/control-panel/finance/payment-sessions/${encodeURIComponent(paymentSessionId)}/timeline`;
 }
 
 export async function loadPaymentSessionTimeline(
   paymentSessionId: string,
-  operatorContextId: string,
 ): Promise<{ readonly ok: true; readonly data: WltPaymentTimelineEnvelope } | { readonly ok: false; readonly error: PaymentSessionRuntimeError }> {
   try {
-    const data = await request<WltPaymentTimelineEnvelope>(timelinePath(paymentSessionId, operatorContextId));
+    const data = await request<WltPaymentTimelineEnvelope>(timelinePath(paymentSessionId));
     return { ok: true, data };
   } catch (error) {
     return { ok: false, error: classify(error) };
@@ -48,12 +44,11 @@ export async function loadPaymentSessionTimeline(
 
 export async function refreshPaymentSessionProviderStatus(
   paymentSessionId: string,
-  operatorContextId: string,
 ): Promise<{ readonly ok: true; readonly data: WltPaymentOperationEnvelope } | { readonly ok: false; readonly error: PaymentSessionRuntimeError }> {
   const correlationId = corrId("payment-status-refresh");
   try {
     const data = await request<WltPaymentOperationEnvelope>(
-      `/dsh/control-panel/finance/payment-sessions/${encodeURIComponent(paymentSessionId)}/refresh-provider-status?operatorContextId=${encodeURIComponent(operatorContextId)}`,
+      `/dsh/control-panel/finance/payment-sessions/${encodeURIComponent(paymentSessionId)}/refresh-provider-status`,
       {
         method: "POST",
         correlationId,

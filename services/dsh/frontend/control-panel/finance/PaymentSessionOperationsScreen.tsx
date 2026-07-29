@@ -9,7 +9,7 @@ import {
   presentWltPaymentSessionStatus,
   requiresWltPaymentReconciliation,
   type WltPaymentSessionTimeline,
-} from "@bthwani/wlt";
+} from "../../shared/finance-wlt-link/payment";
 import {
   loadPaymentSessionTimeline,
   refreshPaymentSessionProviderStatus,
@@ -31,7 +31,6 @@ function toBadgeTone(tone: "action" | "success" | "warning" | "danger" | "info")
 }
 
 export function PaymentSessionOperationsScreen() {
-  const [operatorContextId, setOperatorContextId] = useState("");
   const [paymentSessionId, setPaymentSessionId] = useState("");
   const [state, setState] = useState<ScreenState>("idle");
   const [timeline, setTimeline] = useState<WltPaymentSessionTimeline | null>(null);
@@ -42,13 +41,13 @@ export function PaymentSessionOperationsScreen() {
     [timeline],
   );
 
-  const canSubmit = operatorContextId.trim().length > 0 && paymentSessionId.trim().length > 0 && state !== "loading" && state !== "refreshing";
+  const canSubmit = paymentSessionId.trim().length > 0 && state !== "loading" && state !== "refreshing";
 
   const readTimeline = async () => {
     if (!canSubmit) return;
     setState("loading");
     setError(null);
-    const result = await loadPaymentSessionTimeline(paymentSessionId.trim(), operatorContextId.trim());
+    const result = await loadPaymentSessionTimeline(paymentSessionId.trim());
     if (!result.ok) {
       setTimeline(null);
       setError(result.error);
@@ -63,7 +62,7 @@ export function PaymentSessionOperationsScreen() {
     if (!canSubmit || !timeline) return;
     setState("refreshing");
     setError(null);
-    const result = await refreshPaymentSessionProviderStatus(paymentSessionId.trim(), operatorContextId.trim());
+    const result = await refreshPaymentSessionProviderStatus(paymentSessionId.trim());
     if (!result.ok) {
       setError(result.error);
       setState(errorState(result.error));
@@ -77,7 +76,7 @@ export function PaymentSessionOperationsScreen() {
       return (
         <StateView
           title="ابحث عن جلسة دفع"
-          description="أدخل معرف المستأجر ومعرف الجلسة لقراءة الحقيقة من WLT عبر وكيل DSH المحكوم."
+          description="أدخل معرف الجلسة؛ يستمد DSH سياق المنصة من جلسة المشغل الموثوقة."
         />
       );
     }
@@ -178,10 +177,6 @@ export function PaymentSessionOperationsScreen() {
             }}
           >
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
-              <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-                <Text role="caption">معرف المستأجر</Text>
-                <CpTextInput aria-label="معرف المستأجر" value={operatorContextId} onChange={setOperatorContextId} placeholder="tenant-main" />
-              </label>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
                 <Text role="caption">معرف جلسة الدفع</Text>
                 <CpTextInput aria-label="معرف جلسة الدفع" value={paymentSessionId} onChange={setPaymentSessionId} placeholder="payment-session-id" />

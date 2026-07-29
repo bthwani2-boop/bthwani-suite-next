@@ -9,7 +9,7 @@ import type {
   WltLedgerEntryFormatted,
   WltLedgerEntryKind,
   WltLedgerEntryStatus,
-} from "./wlt-dsh-finance-hub.types";
+} from "./finance-hub.types";
 
 export function formatWltYer(minorUnits: number): string {
   const major = Math.abs(minorUnits) / 100;
@@ -111,8 +111,7 @@ function buildFinancialCenterSections(summary: WltFinancialSummaryRaw | null): {
   };
 }
 
-import type { components } from "../../../clients/generated/wlt-api";
-type WltLedgerEntry = components["schemas"]["LedgerEntry"];
+type WltLedgerEntry = WltDshFinanceRuntimeReadModel["ledgerEntries"][number];
 
 function partyLabel(entry: WltLedgerEntry): string {
   const subject = (entry as any).subject ?? entry.actorId ?? '';
@@ -143,7 +142,7 @@ function toFinancialCenterEntry(entry: WltLedgerEntry): WltLedgerEntryFormatted 
   const amount: number = typeof entry.amountMinorUnits === 'number' ? entry.amountMinorUnits : 0;
   const debitCredit: string = (entry as any).debitCredit ?? '';
   const status = mapEntryStatus((entry as any).status ?? '');
-  const sideLabel = ACCOUNT_TYPE_LABELS[entry.actorType] ?? entry.entryType ?? entry.referenceType ?? '';
+  const sideLabel = ACCOUNT_TYPE_LABELS[entry.actorType ?? ''] ?? entry.entryType ?? entry.referenceType ?? '';
 
   return {
     id: entry.id,

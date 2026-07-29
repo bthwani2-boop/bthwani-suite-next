@@ -10,7 +10,7 @@ import { PayoutRequestsPanel } from "./PayoutRequestsPanel";
 import { ReconciliationCasesPanel } from "./ReconciliationCasesPanel";
 import { CodReconciliationCasesPanel } from "./CodReconciliationCasesPanel";
 import { RefundsCommandPanel } from "./RefundsCommandPanel";
-import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from "@bthwani/wlt";
+import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from "../../shared/finance-wlt-link/finance/finance-hub.types";
 
 type FinanceTabItem = { readonly id: string; readonly label: string; readonly active: boolean };
 

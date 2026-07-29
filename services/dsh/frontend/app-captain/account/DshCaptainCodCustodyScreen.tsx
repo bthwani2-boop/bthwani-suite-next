@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Box, MobileScrollView, StateView, TopBar, useTheme } from "@bthwani/ui-kit";
-import type { WltDshCodReference } from "@bthwani/wlt";
+import type { WltDshCodReference } from "../../shared/finance-wlt-link/wlt-cod/wlt-cod.api";
 import {
   CaptainCodCustodyActions,
 } from "../../shared/finance-wlt-link/wlt-cod/CaptainCodCustodyActions";

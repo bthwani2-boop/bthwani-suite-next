@@ -56,6 +56,4 @@ modules:
   - ./dsh.support-message-delivery.openapi.yaml
   - ./dsh.workforce-scopes.openapi.yaml
 overlays:
-  - ./dsh.catalog.overlay.yaml
-  - ./dsh.home-discovery.overlay.yaml
   - ./dsh.store-operational-context.overlay.yaml

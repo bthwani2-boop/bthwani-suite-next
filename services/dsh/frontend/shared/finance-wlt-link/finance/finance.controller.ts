@@ -11,7 +11,7 @@ import {
   buildFinanceHref,
   FINANCE_CANONICAL_GROUPS,
 } from './finance-registry';
-import { buildWltDshFinanceHubViewModel } from '@bthwani/wlt';
+import { buildWltDshFinanceHubViewModel } from './finance-hub.view-model';
 import {
   loadDshFinanceRuntimeReadModel,
   approvePayoutRequest,
@@ -38,7 +38,7 @@ import type {
 import type {
   WltDshFinanceRuntimeResult,
   WltDshFinanceHubViewModel,
-} from '@bthwani/wlt';
+} from './finance-hub.types';
 
 export type UseFinanceControllerProps = {
   group?: CanonicalFinanceGroupId;

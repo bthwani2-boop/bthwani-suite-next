@@ -59,8 +59,6 @@ x-bthwani-contracts:
   supportMessageDelivery: ./dsh.support-message-delivery.openapi.yaml
   workforceScopes: ./dsh.workforce-scopes.openapi.yaml
 x-bthwani-overlays:
-  catalog: ./dsh.catalog.overlay.yaml
-  homeDiscovery: ./dsh.home-discovery.overlay.yaml
   storeOperationalContext: ./dsh.store-operational-context.overlay.yaml
 
 paths:

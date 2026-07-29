@@ -3,6 +3,39 @@ import { fail, lineNumber, listCodeFiles, listFiles, read } from "./_guard-utils
 const guardId = "wlt-financial-boundary-gate";
 const violations = [];
 
+// 0. Applications and the control panel may consume finance only through DSH.
+// WLT remains an internal service-to-service dependency of DSH.
+const directAppWltPatterns = [
+  [/@bthwani\/wlt\b/, "APPLICATION_IMPORTS_WLT_DIRECTLY"],
+  [/\bWLT_API_BASE_URL\b/, "APPLICATION_CONFIGURES_WLT_DIRECTLY"],
+  [/\/api\/wlt(?:\/|["'`])/, "APPLICATION_EXPOSES_WLT_ROUTE"],
+  [/\b58083\b/, "APPLICATION_EXPOSES_WLT_PORT"],
+  [/services\/wlt\b/, "APPLICATION_REFERENCES_WLT_SOURCE"],
+];
+const appBoundaryFiles = [
+  ...listFiles().filter(
+    (file) =>
+      file.startsWith("apps/") &&
+      !file.includes("/tests/") &&
+      !file.includes("/test/") &&
+      !file.includes(".test.") &&
+      !file.includes(".spec."),
+  ),
+  "apps/control-panel/runtime/start.ps1",
+  "apps/mobile/ensure-mobile-dev-runtime.ps1",
+  "apps/mobile/reverse-all.ps1",
+  "apps/mobile/start-mobile-runtime.ps1",
+];
+for (const file of new Set(appBoundaryFiles)) {
+  const content = read(file);
+  for (const [pattern, message] of directAppWltPatterns) {
+    const match = pattern.exec(content);
+    if (match) {
+      violations.push({ file, line: lineNumber(content, match.index), message });
+    }
+  }
+}
+
 // 1. no-financial-mutation-outside-wlt. Frontend command names are callers of
 // the WLT-owned API and are not financial truth owners; this rule protects
 // backend/domain persistence and mutation code.

@@ -14,7 +14,7 @@ import {
 import { useCartController, useServiceabilityController } from "../../shared/cart";
 import type { DshCart, DshFulfillmentMode } from "../../shared/cart";
 import type { DshPaymentMethod } from "../../shared/checkout";
-import { useWltDshPaymentController } from "../../shared/finance-wlt-link";
+import { useDshPaymentController } from "../../shared/finance-wlt-link";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
 
 type Props = {
@@ -64,7 +64,7 @@ export function GovernedCartScreen({
   );
   const presentationCurrency = cartCurrencies.size === 1 ? [...cartCurrencies][0] ?? "" : "";
   const currencySnapshotValid = cartCurrencies.size === 1 && presentationCurrency.length === 3;
-  const payment = useWltDshPaymentController();
+  const payment = useDshPaymentController();
 
   React.useEffect(() => {
     if (cart) setFulfillmentMode(cart.fulfillmentMode);

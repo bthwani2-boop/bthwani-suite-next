@@ -303,154 +303,24 @@ for (const file of [...deprecatedReferenceFiles].sort()) {
   }
 }
 
-// 5. Deferred Nx projects require explicit, machine-readable exclusions and may not masquerade as active projects.
-const deferredFile = "governance/projects/deferred-projects.json";
-const deferred = readJson(deferredFile);
-const deferredEntries = new Map();
-if (
-  deferred?.schemaVersion !== 1 ||
-  deferred?.decision !== "DEFERRED_WITH_EXPLICIT_EXCLUSION" ||
-  !Array.isArray(deferred?.projects)
-) {
-  violations.push({
-    file: deferredFile,
-    line: 0,
-    message: "INVALID_DEFERRED_PROJECT_REGISTRY",
-  });
-} else {
-  for (const entry of deferred.projects) {
-    const root = toPosix(entry?.root ?? "");
-    if (
-      !root ||
-      typeof entry.owner !== "string" ||
-      !entry.owner.trim() ||
-      typeof entry.reason !== "string" ||
-      entry.reason.trim().length < 20 ||
-      !Array.isArray(entry.activationRequirements) ||
-      entry.activationRequirements.length < 3
-    ) {
-      violations.push({
-        file: deferredFile,
-        line: 0,
-        message: `MALFORMED_DEFERRED_PROJECT:${root || "unknown"}`,
-      });
-      continue;
-    }
-    if (deferredEntries.has(root)) {
-      violations.push({
-        file: deferredFile,
-        line: 0,
-        message: `DUPLICATE_DEFERRED_PROJECT:${root}`,
-      });
-    }
-    deferredEntries.set(root, entry);
-  }
-}
-
+// 5. Disabled placeholder projects are forbidden. Git history is the archive;
+// inactive products must not remain as fake Nx/package surfaces.
 const projectFiles = [
   ...walk(path.join(repoRoot, "apps")),
   ...walk(path.join(repoRoot, "services")),
   ...walk(path.join(repoRoot, "core")),
   ...walk(path.join(repoRoot, "shared")),
 ].filter((file) => file.endsWith("/project.json"));
-const observedDeferredRoots = new Set();
-const requiredDisabledTargets = new Set(["typecheck", "build", "test", "lint"]);
 
 for (const projectFile of projectFiles) {
   const project = readJson(projectFile);
   if (!project) continue;
   const root = toPosix(project.root ?? path.posix.dirname(projectFile));
-  const disabled = project.x_bthwani_nxDisabled === true;
-  const registered = deferredEntries.has(root);
-
-  if (disabled) {
-    observedDeferredRoots.add(root);
-    if (!registered) {
-      violations.push({
-        file: projectFile,
-        line: 0,
-        message: `UNREGISTERED_DEFERRED_PROJECT:${root}`,
-      });
-    }
-    if (Object.keys(project.targets ?? {}).length !== 0) {
-      violations.push({
-        file: projectFile,
-        line: 0,
-        message: `DEFERRED_PROJECT_HAS_ACTIVE_TARGETS:${root}`,
-      });
-    }
-    const disabledTargets = new Set(
-      Object.keys(project.x_bthwani_disabledTargets ?? {}),
-    );
-    for (const target of requiredDisabledTargets) {
-      if (!disabledTargets.has(target)) {
-        violations.push({
-          file: projectFile,
-          line: 0,
-          message: `DEFERRED_TARGET_NOT_DECLARED:${root}:${target}`,
-        });
-      }
-    }
-    if (
-      typeof project.x_bthwani_nxDisabledReason !== "string" ||
-      project.x_bthwani_nxDisabledReason.trim().length < 20 ||
-      !Number.isFinite(Date.parse(project.x_bthwani_nxDisabledAt ?? ""))
-    ) {
-      violations.push({
-        file: projectFile,
-        line: 0,
-        message: `DEFERRED_PROJECT_METADATA_INVALID:${root}`,
-      });
-    }
-
-    const packageFile = `${root}/package.json`;
-    const pkg = readJson(packageFile);
-    if (!pkg) {
-      violations.push({
-        file: packageFile,
-        line: 0,
-        message: `DEFERRED_PROJECT_PACKAGE_MISSING:${root}`,
-      });
-    } else {
-      if (pkg.x_bthwani_nxDisabled !== true) {
-        violations.push({
-          file: packageFile,
-          line: 0,
-          message: `DEFERRED_PACKAGE_FLAG_MISSING:${root}`,
-        });
-      }
-      if (Object.keys(pkg.scripts ?? {}).length !== 0) {
-        violations.push({
-          file: packageFile,
-          line: 0,
-          message: `DEFERRED_PACKAGE_HAS_ACTIVE_SCRIPTS:${root}`,
-        });
-      }
-      for (const target of requiredDisabledTargets) {
-        if (!(target in (pkg.x_bthwani_disabledScripts ?? {}))) {
-          violations.push({
-            file: packageFile,
-            line: 0,
-            message: `DEFERRED_PACKAGE_SCRIPT_NOT_DECLARED:${root}:${target}`,
-          });
-        }
-      }
-    }
-  } else if (registered) {
+  if (project.x_bthwani_nxDisabled === true) {
     violations.push({
       file: projectFile,
       line: 0,
-      message: `ACTIVE_PROJECT_STILL_REGISTERED_AS_DEFERRED:${root}`,
-    });
-  }
-}
-
-for (const root of deferredEntries.keys()) {
-  if (!observedDeferredRoots.has(root)) {
-    violations.push({
-      file: deferredFile,
-      line: 0,
-      message: `STALE_DEFERRED_PROJECT_ENTRY:${root}`,
+      message: `DISABLED_PLACEHOLDER_PROJECT_FORBIDDEN:${root}`,
     });
   }
 }

@@ -122,14 +122,42 @@ export type WltCloseStatus = {
   readonly businessDate: string;
 };
 
-import type { components } from "../../../clients/generated/wlt-api";
+type LedgerEntry = {
+  readonly id: string;
+  readonly actorId?: string;
+  readonly actorType?: string;
+  readonly entryType?: string;
+  readonly referenceType?: string;
+  readonly referenceId?: string;
+  readonly orderId?: string | null;
+  readonly amountMinorUnits?: number;
+  readonly debitCredit?: string;
+  readonly status?: string;
+};
+
+type SettlementListResponse = Record<string, unknown>;
+type GovernedRefund = Record<string, unknown>;
+type PayoutRequest = {
+  readonly id: string;
+  readonly beneficiaryActorId: string;
+  readonly beneficiaryActorType: string;
+  readonly payoutDestinationId: string;
+  readonly amountMinorUnits: number;
+  readonly currency: string;
+  readonly status: string;
+  readonly reconciliationStatus?: string;
+  readonly requestedAt: string;
+  readonly failureReason?: string;
+  readonly providerReference?: string;
+  readonly providerStatus?: string;
+};
 
 export type WltDshFinanceRuntimeReadModel = {
   readonly runtimeApiUrl: string;
-  readonly overview: components["schemas"]["SettlementListResponse"] | null;
-  readonly ledgerEntries: readonly components["schemas"]["LedgerEntry"][];
-  readonly refunds: readonly components["schemas"]["GovernedRefund"][];
-  readonly payoutRequests: readonly components["schemas"]["PayoutRequest"][];
+  readonly overview: SettlementListResponse | null;
+  readonly ledgerEntries: readonly LedgerEntry[];
+  readonly refunds: readonly GovernedRefund[];
+  readonly payoutRequests: readonly PayoutRequest[];
   readonly financialSummary: WltFinancialSummaryRaw | null;
   readonly closeStatus?: WltCloseStatus;
   readonly fetchedAt: string;

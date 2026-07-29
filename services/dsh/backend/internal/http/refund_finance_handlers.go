@@ -102,7 +102,7 @@ func (s *protectedStoreServer) handleCreateFinanceRefund(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	operatorContextID, ok := requiredPaymentTenant(w, r, actor.OperatorContextID)
+	operatorContextID, ok := requiredPaymentPlatformContext(w, actor.OperatorContextID)
 	if !ok {
 		return
 	}
@@ -137,7 +137,7 @@ func (s *protectedStoreServer) refundDecisionCommand(w http.ResponseWriter, r *h
 	if !ok {
 		return
 	}
-	operatorContextID, ok := requiredPaymentTenant(w, r, actor.OperatorContextID)
+	operatorContextID, ok := requiredPaymentPlatformContext(w, actor.OperatorContextID)
 	if !ok {
 		return
 	}
@@ -177,7 +177,7 @@ func (s *protectedStoreServer) handleCompleteFinanceRefund(w http.ResponseWriter
 	if !ok {
 		return
 	}
-	operatorContextID, ok := requiredPaymentTenant(w, r, actor.OperatorContextID)
+	operatorContextID, ok := requiredPaymentPlatformContext(w, actor.OperatorContextID)
 	if !ok {
 		return
 	}
@@ -197,7 +197,7 @@ func (s *protectedStoreServer) handleReconcileFinanceRefund(w http.ResponseWrite
 	if !ok {
 		return
 	}
-	operatorContextID, ok := requiredPaymentTenant(w, r, actor.OperatorContextID)
+	operatorContextID, ok := requiredPaymentPlatformContext(w, actor.OperatorContextID)
 	if !ok {
 		return
 	}
@@ -234,7 +234,7 @@ func (s *protectedStoreServer) handleFinanceRefundAudit(w http.ResponseWriter, r
 	if !ok {
 		return
 	}
-	operatorContextID, ok := requiredPaymentTenant(w, r, actor.OperatorContextID)
+	operatorContextID, ok := requiredPaymentPlatformContext(w, actor.OperatorContextID)
 	if !ok {
 		return
 	}

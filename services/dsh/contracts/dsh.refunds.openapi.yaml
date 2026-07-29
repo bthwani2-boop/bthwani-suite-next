@@ -6,10 +6,10 @@ info:
   title: DSH Financial Refund Orchestration
   version: 1.2.1
   description: >-
-    DSH validates actor, permission, authenticated tenant
+    DSH validates actor, permission, authenticated platform context
     and owned-order scope, then delegates all financial truth to WLT. The actor
-    tenant from Identity is authoritative; an optional X-Operator-Context-ID selector may
-    only confirm that tenant and a mismatch is rejected. Client and partner reads
+    platform context from Identity is authoritative; no client selector is accepted.
+    Client and partner reads
     intentionally exclude provider and operator evidence. WLT idempotency and
     outcome-persistence failures are propagated without changing status or body.
 servers:
@@ -23,7 +23,6 @@ paths:
       operationId: listDshControlPanelFinanceRefunds
       summary: List refunds for the authenticated tenant and optional order
       parameters:
-        - $ref: '#/components/parameters/TenantHeader'
         - $ref: '#/components/parameters/CorrelationHeaderOptional'
         - name: orderId
           in: query
@@ -43,7 +42,6 @@ paths:
       operationId: createDshFinanceRefund
       summary: Request a partial or full remaining refund
       parameters:
-        - $ref: '#/components/parameters/TenantHeader'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
       requestBody:
@@ -75,7 +73,6 @@ paths:
       summary: Read one authenticated-tenant-scoped canonical refund
       parameters:
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
         - $ref: '#/components/parameters/CorrelationHeaderOptional'
       responses:
         '200':
@@ -94,7 +91,6 @@ paths:
       summary: Approve a requested refund as an independent operator
       parameters:
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
       requestBody:
@@ -120,7 +116,6 @@ paths:
       summary: Reject a requested refund as an independent operator
       parameters:
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
       requestBody:
@@ -150,7 +145,6 @@ paths:
         retry permission and must not cause another provider call.
       parameters:
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
       requestBody:
@@ -183,7 +177,6 @@ paths:
       summary: Resolve an unknown provider result with evidence
       parameters:
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
         - $ref: '#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/IdempotencyHeader'
       requestBody:
@@ -208,7 +201,6 @@ paths:
       summary: Read operator, provider and lifecycle audit evidence
       parameters:
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
         - $ref: '#/components/parameters/CorrelationHeaderOptional'
       responses:
         '200':
@@ -269,14 +261,6 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
-    TenantHeader:
-      name: X-Operator-Context-ID
-      in: header
-      required: false
-      description: >-
-        Optional legacy tenant confirmation. DSH derives the authoritative tenant
-        from the authenticated Identity actor and rejects a supplied mismatch.
-      schema: { type: string, minLength: 1 }
     CorrelationHeader:
       name: X-Correlation-ID
       in: header

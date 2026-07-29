@@ -21,7 +21,6 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
         '200':
@@ -43,7 +42,6 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
@@ -70,11 +68,6 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1, maxLength: 200 }
-    OperatorContextId:
-      name: operatorContextId
-      in: query
-      required: true
-      schema: { type: string, minLength: 1, maxLength: 120 }
     IdempotencyKey:
       name: Idempotency-Key
       in: header

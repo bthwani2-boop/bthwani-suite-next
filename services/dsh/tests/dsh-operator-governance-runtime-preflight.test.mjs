@@ -10,14 +10,16 @@ describe("DSH operator governance runtime preflight", () => {
   const workflow = source("../../../.github/workflows/ci-runtime.yml");
   const preflight = source("../../../tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1");
 
-  it("runs after bootstrap and before the broad runtime smoke", () => {
-    const bootstrap = workflow.indexOf('Invoke-LoggedPhase "runtime:full:bootstrap-dev"');
-    const diagnostic = workflow.indexOf('Invoke-LoggedPhase "dsh-operator-governance-preflight"');
-    const broadSmoke = workflow.indexOf('Invoke-LoggedPhase "runtime:full:smoke"');
-    assert.ok(bootstrap >= 0);
-    assert.ok(diagnostic > bootstrap);
+  it("runs after runtime startup and catalog readback and before the broad runtime smoke", () => {
+    const runtimeUp = workflow.indexOf('Invoke-Phase "runtime:up"');
+    const catalogReadback = workflow.indexOf('Invoke-Phase "runtime:catalog-readback"');
+    const diagnostic = workflow.indexOf('Invoke-Phase "dsh-operator-governance-preflight"');
+    const broadSmoke = workflow.indexOf('Invoke-Phase "runtime:full:smoke"');
+    assert.ok(runtimeUp >= 0);
+    assert.ok(catalogReadback > runtimeUp);
+    assert.ok(diagnostic > catalogReadback);
     assert.ok(broadSmoke > diagnostic);
-    assert.match(workflow, /DSH operator governance preflight: PASS/);
+    assert.match(preflight, /DSH operator governance preflight: PASS/);
   });
 
   it("names every request and preserves non-success response bodies", () => {
