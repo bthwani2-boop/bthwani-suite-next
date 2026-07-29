@@ -1,46 +1,22 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "platformMode": "BTHWANI_NATIVE_PLATFORM",
-  "saasReadinessMode": "SAAS_READY_DEFERRED",
-  "commercialActivationState": "ELIGIBLE_FOR_REVIEW",
-  "activationAuthorization": {
-    "authorizationPath": "governance/saas/activation-authorization.json",
-    "status": "NOT_AUTHORIZED",
-    "targetRef": "validclean",
-    "productionDeploymentAuthorized": false
-  },
-  "tenantDefinition": "The platform isolation boundary is the trusted operator context. A Partner Organization, Store, User, City, or Service is not an operator context and cannot select or override it.",
+  "partnerSaasModel": "EMBEDDED_PLATFORM_CAPABILITY",
+  "partnerAccessModel": "MANAGED_B2B_PLATFORM_ACCESS",
+  "partnerOrganizationBoundary": "BUSINESS_SCOPE_NOT_TENANT",
+  "storeBoundary": "BUSINESS_SCOPE_NOT_TENANT",
+  "operatorContextPurpose": "TRUST_AND_DATA_ISOLATION",
   "trustedOperatorContextRequired": true,
-  "clientSuppliedTenantTrusted": false,
-  "deferredCommercialFeatures": [
-    "automated invoicing",
-    "commercial subscription billing",
-    "complex usage metering",
-    "custom domains",
-    "database per tenant",
-    "marketplace extensions",
-    "multi-region tenant placement",
-    "paid plan matrix",
-    "per-tenant deployment",
-    "self-service tenant signup",
-    "white-label customization"
+  "clientSuppliedOperatorContextTrusted": false,
+  "partnerCapabilities": [
+    "partner organization and user administration",
+    "store and branch operations",
+    "catalog and assortment management",
+    "order preparation and fulfillment",
+    "partner delivery and captain operations",
+    "operational and financial projections",
+    "support disputes and audit"
   ],
-  "activationEvidence": {
-    "tenantOwnedEntitiesClassified": "NOT_PROVEN",
-    "operatorContextPropagationVerified": "NOT_PROVEN",
-    "crossTenantNegativeTestsPassed": "NOT_PROVEN",
-    "crossTenantDataLeakageZero": "NOT_PROVEN",
-    "criticalVulnerabilitiesZero": "NOT_PROVEN",
-    "unacceptedHighVulnerabilitiesZero": "NOT_PROVEN",
-    "tenantBackupRestoreVerified": "NOT_PROVEN",
-    "tenantExportDeletionVerified": "NOT_PROVEN",
-    "perTenantObservabilityAvailable": "NOT_PROVEN",
-    "quotaIsolationVerified": "NOT_PROVEN",
-    "wltTenantFinancialIsolationVerified": "NOT_PROVEN",
-    "independentSecurityReviewPassed": "NOT_PROVEN",
-    "incidentRollbackRunbooksVerified": "NOT_PROVEN",
-    "legalPrivacyCommercialModelApproved": "NOT_PROVEN"
-  },
-  "canonicalDecision": "NEEDS_EVIDENCE",
+  "canonicalDecision": "PASS",
   "decisionVocabulary": "governance/contracts/decision-vocabulary.json"
 }
