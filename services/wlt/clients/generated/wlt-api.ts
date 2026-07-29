@@ -16,6 +16,21 @@
 
 export type WltActorType = "client" | "partner" | "captain" | "field" | "system" | "platform";
 export type WltPayoutActorType = "partner" | "captain" | "field";
+export type WltPayoutStatus =
+  | "pending"
+  | "approved"
+  | "provider_pending"
+  | "provider_result_unknown"
+  | "processing"
+  | "completed"
+  | "rejected"
+  | "failed";
+export type WltPayoutReconciliationStatus =
+  | "not_required"
+  | "required"
+  | "inquiry_pending"
+  | "resolved_success"
+  | "resolved_failed";
 export type WltPaymentStatus =
   | "reference_created"
   | "pending_provider"
@@ -212,7 +227,30 @@ export interface components {
     WltCommissionResponse: Record<string, unknown>;
     WltCodRecord: Record<string, unknown>;
     WltCodRecordResponse: Record<string, unknown>;
-    WltPayoutRequest: Record<string, unknown>;
+    WltPayoutRequest: {
+      id: string;
+      beneficiaryActorId: string;
+      beneficiaryActorType: WltPayoutActorType;
+      payoutDestinationId: string;
+      amountMinorUnits: number;
+      currency: string;
+      status: WltPayoutStatus;
+      reconciliationStatus: WltPayoutReconciliationStatus;
+      requestedAt: string;
+      approvedAt?: string | null;
+      rejectedAt?: string | null;
+      processedAt?: string | null;
+      completedAt?: string | null;
+      failedAt?: string | null;
+      reconciledAt?: string | null;
+      failureReason?: string;
+      providerReference?: string;
+      providerStatus?: string;
+      approvedByOperatorId?: string;
+      processedByOperatorId?: string;
+      completedByOperatorId?: string;
+      reconciledByOperatorId?: string;
+    };
     WltLedgerEntry: {
       id: string;
       entryType: string;
