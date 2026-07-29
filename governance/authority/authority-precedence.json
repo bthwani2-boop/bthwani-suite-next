@@ -23,7 +23,6 @@
     {"path": "governance/policies/data.md", "classification": "ACTIVE_CANONICAL", "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE", "authorityDomains": ["database", "migrations", "data_plane"]},
     {"path": "governance/policies/runtime.md", "classification": "ACTIVE_CANONICAL", "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE", "authorityDomains": ["runtime", "toolchain_versions", "performance"]},
     {"path": "governance/policies/release.md", "classification": "ACTIVE_CANONICAL", "precedenceId": "ACTIVE_CANONICAL_GOVERNANCE", "authorityDomains": ["evidence", "sdlc", "stage_gates", "release", "production"]},
-
     {"path": "governance/contracts", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["decision_vocabulary", "shared_contract_schemas"]},
     {"path": "governance/agents", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["agent_roles", "approval_domains"]},
     {"path": "governance/skills", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["skill_lifecycle", "skill_dependencies", "skill_routing"]},
@@ -33,9 +32,8 @@
     {"path": "governance/authority/single-owner-mode.schema.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["single_owner_mode_schema"]},
     {"path": "governance/product/product-truth.schema.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["product_truth_schema"]},
     {"path": "governance/product/platform-model.yaml", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["platform_model"]},
-    {"path": "governance/saas", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["saas_readiness_state", "commercial_activation_policy"]},
+    {"path": "governance/saas", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["partner_saas_capabilities", "partner_scope_isolation"]},
     {"path": "tools/guards/guard-manifest.json", "classification": "ACTIVE_CANONICAL", "precedenceId": "MACHINE_READABLE_CONTRACT", "authorityDomains": ["guard_sets", "guard_execution_policy"]},
-
     {"path": ".agents/skills", "classification": "OWNER_CONTRACT", "precedenceId": "OWNER_SKILL_CONTRACT", "authorityDomains": ["declared_active_skill_scope"]},
     {"path": "GEMINI.md", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["gemini_cli_adapter"]},
     {"path": "governance/github/repository-enforcement.json", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["github_enforcement_snapshot"], "scopeLimit": "Requires live GitHub verification before any current enforcement claim."},
