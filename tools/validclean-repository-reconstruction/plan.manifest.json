@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "planId": "validclean-repository-reconstruction",
-  "status": "PLAN_ONLY_AWAITING_OWNER_APPROVAL",
+  "status": "EXECUTION_IN_PROGRESS",
   "repository": "bthwani2-boop/bthwani-suite-next",
   "branch": "validclean",
   "source": {
@@ -13,10 +13,24 @@
       "reason": "Mass deletion includes protected tests and governance authorities still referenced by AGENTS.md; safe replacements are unproven."
     }
   },
-  "implementationAuthorized": false,
-  "pullRequestAuthorized": false,
-  "mergeAuthorized": false,
-  "productionAuthorized": false,
+  "authorization": {
+    "implementationAuthorized": true,
+    "authorizedOn": "2026-07-29",
+    "authorizationSource": "CURRENT_USER_INSTRUCTION",
+    "pullRequestAuthorized": false,
+    "mergeAuthorized": false,
+    "productionAuthorized": false
+  },
+  "execution": {
+    "startedFromSha": "083eeeeb039b6537cf96a0a3128d3d42cdb62de8",
+    "lastRecordedSha": "16d9cff8ea5fe19e9d1387085a5f4a088db1f1d2",
+    "currentWave": "identity_and_contract_foundation",
+    "slices": {
+      "VC-000-baseline-and-inventory": "IN_PROGRESS",
+      "VC-001-identity-activation-backdoor-removal": "IN_PROGRESS",
+      "VC-002-master-openapi-uniqueness": "IMPLEMENTED_PENDING_VERIFICATION"
+    }
+  },
   "documents": [
     "README.md",
     "00_REMOTE_BASELINE_AND_FINDINGS.md",
