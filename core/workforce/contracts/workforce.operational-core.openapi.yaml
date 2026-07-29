@@ -3,6 +3,7 @@ info:
   title: BThwani Workforce Operational Core API
   version: 1.0.0
   description: Progressive independent-provider onboarding, availability, incidents, appeals, and evidence-backed captain classification.
+x-bthwani-owner: core/workforce
 servers:
   - url: /api/workforce
 security:
