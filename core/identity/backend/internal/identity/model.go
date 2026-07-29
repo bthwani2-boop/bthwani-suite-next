@@ -43,6 +43,7 @@ type TokenPair struct {
 type LocalBootstrap struct {
 	Enabled  bool
 	Password string
+	TenantID string
 }
 
 type IssueActivationForActorInput struct {
