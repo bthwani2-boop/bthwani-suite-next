@@ -668,7 +668,8 @@ func maskPhone(phone string) string {
 }
 
 // ProvisionActor creates an inactive actor for a Workforce-managed provider.
-// It is intentionally limited to field and captain roles.
+// It is intentionally limited to field and captain roles and requires the
+// trusted scope supplied by the authenticated Workforce service boundary.
 func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInput) (ActorAdminView, error) {
 	role := strings.TrimSpace(input.Role)
 	surface, ok := workforceActivationSurfaceFor(role)
@@ -681,7 +682,7 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 	}
 	tenantID := strings.TrimSpace(input.TenantID)
 	if tenantID == "" {
-		tenantID = "local-dsh"
+		return ActorAdminView{}, ErrInvalidActivation
 	}
 	phone, err := NormalizePhoneE164(input.PhoneE164)
 	if err != nil {
