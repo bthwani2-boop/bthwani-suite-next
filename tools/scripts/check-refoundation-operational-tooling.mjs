@@ -147,6 +147,44 @@ for (const scriptName of [
   );
 }
 
+const destructiveRuntime = read("tools/scripts/invoke-destructive-runtime.ps1");
+for (const marker of [
+  'ValidateSet("reset", "all")',
+  "if (-not $Force)",
+  "infra/docker/scripts/runtime.ps1",
+  "-Force",
+]) {
+  expect(destructiveRuntime.includes(marker), `Destructive runtime wrapper is missing ${marker}`);
+}
+for (const scriptName of [
+  "docker:runtime:reset",
+  "runtime:reset",
+  "runtime:all:rebuild-reset",
+  "runtime:identity:rebuild-reset",
+  "runtime:wlt:rebuild-reset",
+  "runtime:dev-core:rebuild-reset",
+  "runtime:dev-financial:rebuild-reset",
+]) {
+  expect(
+    scripts[scriptName]?.includes("tools/scripts/invoke-destructive-runtime.ps1") === true,
+    `${scriptName} must use the Force-guarded destructive runtime wrapper`,
+  );
+  expect(scripts[scriptName]?.includes("-Force") === true, `${scriptName} must pass explicit -Force`);
+}
+
+const nextBundleDiagnostics = read("tools/scripts/run-next-bundle-diagnostics.mjs");
+for (const marker of [
+  'process.platform === "win32" ? "pnpm.cmd" : "pnpm"',
+  'ANALYZE: "true"',
+  'shell: false',
+]) {
+  expect(nextBundleDiagnostics.includes(marker), `Portable Next bundle diagnostics is missing ${marker}`);
+}
+expect(
+  scripts["diagnostics:next-bundle"] === "node tools/scripts/run-next-bundle-diagnostics.mjs",
+  "diagnostics:next-bundle must use the cross-platform Node launcher",
+);
+
 const refoundationVerification = read("tools/scripts/run-refoundation-verification.ps1");
 expect(refoundationVerification.includes("runtime:full:down"), "Runtime verification must stop the full runtime");
 expect(refoundationVerification.includes("Invoke-BestEffortRuntimeDown"), "Runtime verification must clean partial startup");
@@ -178,5 +216,5 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `Refoundation operational-tooling check passed: eas-cli=${easVersion}, expo-doctor=${doctorVersion}, mobileApps=4, trueFullRuntime=preserved, dockerVolumeBoundary=preserved.`,
+  `Refoundation operational-tooling check passed: eas-cli=${easVersion}, expo-doctor=${doctorVersion}, mobileApps=4, trueFullRuntime=preserved, destructiveAliases=guarded, portableDiagnostics=preserved, dockerVolumeBoundary=preserved.`,
 );
