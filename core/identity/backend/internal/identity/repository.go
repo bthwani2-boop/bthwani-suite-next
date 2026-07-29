@@ -705,6 +705,9 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return ActorAdminView{}, err
 	}
+	if err == nil && strings.TrimSpace(existing.TenantID) != tenantID {
+		return ActorAdminView{}, ErrForbidden
+	}
 	if err == nil {
 		if hasRole(existing.Roles, role) {
 			if err := tx.Commit(); err != nil {
