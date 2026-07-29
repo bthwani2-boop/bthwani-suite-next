@@ -21,11 +21,11 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -34,17 +34,17 @@ paths:
       responses:
         '201': { description: Tenant-local COD record created }
         '200': { description: Exact replay of the existing COD record }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
     get:
       operationId: listWltCodRecords
       tags: [WltCodRecords]
       summary: List tenant-local COD records by one governed filter.
       parameters:
-        - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
         - name: captainId
           in: query
           schema: { type: string }
@@ -56,58 +56,31 @@ paths:
           schema: { type: string }
       responses:
         '200': { description: Tenant-local COD records }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/cod-records/{codRecordId}:
     get:
       operationId: getWltCodRecord
       tags: [WltCodRecords]
       summary: Read one tenant-local COD record.
       parameters:
-        - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
         - name: codRecordId
           in: path
           required: true
           schema: { type: string, minLength: 1 }
       responses:
         '200': { description: Tenant-local COD record }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
 components:
   securitySchemes:
     serviceBearer:
-      type: http
-      scheme: bearer
-  parameters:
-    Authorization:
-      name: Authorization
-      in: header
-      required: true
-      schema: { type: string, minLength: 8 }
-    ServiceCaller:
-      name: X-Service-Caller
-      in: header
-      required: true
-      schema: { type: string, const: dsh }
-    TenantId:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1, maxLength: 120 }
-    CorrelationId:
-      name: X-Correlation-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 8, maxLength: 200 }
+      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
   schemas:
     CreateCodRecordRequest:
       type: object
@@ -120,15 +93,3 @@ components:
         collectorId: { type: string, minLength: 1 }
         partnerId: { type: string, minLength: 1 }
         checkoutIntentId: { type: string, minLength: 1 }
-    Error:
-      type: object
-      required: [code, message]
-      properties:
-        code: { type: string }
-        message: { type: string }
-  responses:
-    Error:
-      description: Governed WLT error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }

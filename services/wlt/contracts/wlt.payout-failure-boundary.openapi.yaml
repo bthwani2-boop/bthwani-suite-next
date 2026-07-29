@@ -21,12 +21,12 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/PayoutId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -38,58 +38,13 @@ paths:
               properties:
                 operatorId: { type: string, minLength: 1 }
       responses:
-        '403': { $ref: '#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '409':
           description: RECONCILIATION_REQUIRED; held funds remain unchanged.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Error' }
+              schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
 components:
   securitySchemes:
     serviceBearer:
-      type: http
-      scheme: bearer
-  parameters:
-    Authorization:
-      name: Authorization
-      in: header
-      required: true
-      schema: { type: string, minLength: 8 }
-    ServiceCaller:
-      name: X-Service-Caller
-      in: header
-      required: true
-      schema: { type: string, const: dsh }
-    TenantId:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1, maxLength: 120 }
-    PayoutId:
-      name: payoutId
-      in: path
-      required: true
-      schema: { type: string, minLength: 1 }
-    CorrelationId:
-      name: X-Correlation-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 8, maxLength: 200 }
-  schemas:
-    Error:
-      type: object
-      required: [code, message]
-      properties:
-        code: { type: string }
-        message: { type: string }
-  responses:
-    Error:
-      description: Governed WLT error
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'

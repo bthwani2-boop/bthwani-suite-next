@@ -50,6 +50,41 @@ components:
       in: header
       required: true
       schema: { type: string, minLength: 8, maxLength: 200 }
+    CaseId:
+      name: caseId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    CodRecordId:
+      name: codRecordId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationHeader:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyHeader:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 255 }
+    PayoutId:
+      name: payoutId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    SettlementId:
+      name: settlementId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    TenantHeader:
+      name: X-Tenant-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
   schemas:
     Error:
       type: object

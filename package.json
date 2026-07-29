@@ -98,7 +98,7 @@
     "openapi:compose:dsh": "pnpm --dir services/dsh openapi:compose",
     "openapi:generate:dsh": "pnpm --dir services/dsh openapi:generate",
     "openapi:generate:dsh-catalog": "node tools/scripts/generate-dsh-catalog-client.mjs",
-    "openapi:generate:wlt": "pnpm exec openapi-typescript services/wlt/contracts/wlt.openapi.yaml -o services/wlt/clients/generated/wlt-api.ts",
+    "openapi:generate:wlt": "pnpm --dir services/wlt openapi:generate",
     "openapi:generate:identity": "pnpm exec openapi-typescript core/identity/contracts/auth.openapi.yaml -o core/identity/clients/generated/identity-api.ts",
     "openapi:generate:workforce": "pnpm exec openapi-typescript core/workforce/contracts/workforce.openapi.yaml -o core/workforce/clients/generated/workforce-api.ts",
     "openapi:generate:platform-control": "pnpm exec openapi-typescript core/platform-control/contracts/platform-control.openapi.yaml -o core/platform-control/clients/generated/platform-control-api.ts",
@@ -238,7 +238,11 @@
     "verify": "pnpm run affected:typecheck && pnpm run affected:lint && pnpm run affected:test",
     "verify:full": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run guard:governance-all",
     "runtime:verify": "pnpm run runtime:full:smoke",
-    "cleanup:check": "pnpm run guard:cleanup-policy && pnpm run guard:orphan-files"
+    "cleanup:check": "pnpm run guard:cleanup-policy && pnpm run guard:orphan-files",
+    "openapi:compose:wlt": "pnpm --dir services/wlt openapi:compose",
+    "openapi:lint:wlt": "node tools/guards/wlt-openapi-bundle-gate.mjs",
+    "openapi:verify:wlt": "pnpm --dir services/wlt openapi:verify",
+    "guard:wlt-openapi-bundle": "node tools/guards/wlt-openapi-bundle-gate.mjs"
   },
   "devDependencies": {
     "@ast-grep/cli": "0.43.0",

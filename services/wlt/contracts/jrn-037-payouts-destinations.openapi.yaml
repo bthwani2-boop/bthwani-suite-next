@@ -25,13 +25,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PayoutDestinationEnvelope'
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/PayoutNotFound' }
     put:
       tags: ["wlt-payout-destinations"]
       operationId: upsertWltTypedPayoutDestination
       parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -45,20 +45,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PayoutDestinationEnvelope'
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '400': { $ref: '#/components/responses/PayoutInvalidRequest' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
   /wlt/payout-destinations/{actorType}/{actorId}/deactivate:
     parameters:
       - $ref: '#/components/parameters/ActorType'
       - $ref: '#/components/parameters/ActorId'
-      - $ref: '#/components/parameters/CorrelationId'
-      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+      - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
     post:
       tags: ["wlt-payout-destinations"]
       operationId: deactivateWltTypedPayoutDestination
       responses:
         '204': { description: Destination deactivated. }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/PayoutNotFound' }
   /wlt/payout-requests:
     get:
       tags: ["wlt-payout-requests"]
@@ -90,8 +90,8 @@ paths:
       tags: ["wlt-payout-requests"]
       operationId: createWltDestinationBoundPayoutRequest
       parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -109,11 +109,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
   /wlt/payout-requests/{payoutId}:
     parameters:
-      - $ref: '#/components/parameters/PayoutId'
+      - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
     get:
       tags: ["wlt-payout-requests"]
       operationId: getWltPayoutRequest
@@ -123,66 +123,66 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/PayoutNotFound' }
   /wlt/payout-requests/{payoutId}/approve:
     post:
       tags: ["wlt-payout-requests"]
       operationId: approveWltPayoutRequest
       parameters:
-        - $ref: '#/components/parameters/PayoutId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
       responses:
         '200': { $ref: '#/components/responses/PayoutResponse' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
   /wlt/payout-requests/{payoutId}/reject:
     post:
       tags: ["wlt-payout-requests"]
       operationId: rejectWltPayoutRequest
       parameters:
-        - $ref: '#/components/parameters/PayoutId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
       responses:
         '200': { $ref: '#/components/responses/PayoutResponse' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
   /wlt/payout-requests/{payoutId}/process:
     post:
       tags: ["wlt-payout-requests"]
       operationId: processWltPayoutRequest
       parameters:
-        - $ref: '#/components/parameters/PayoutId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
       responses:
         '200': { $ref: '#/components/responses/PayoutResponse' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
         '502': { $ref: '#/components/responses/ProviderError' }
   /wlt/payout-requests/{payoutId}/complete:
     post:
       tags: ["wlt-payout-requests"]
       operationId: completeWltPayoutRequest
       parameters:
-        - $ref: '#/components/parameters/PayoutId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
       responses:
         '200': { $ref: '#/components/responses/PayoutResponse' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
   /wlt/payout-requests/{payoutId}/reconcile:
     post:
       tags: ["wlt-payout-requests"]
       operationId: reconcileWltPayoutRequest
       parameters:
-        - $ref: '#/components/parameters/PayoutId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/OperatorBody' }
       responses:
         '200':
@@ -190,15 +190,15 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '403': { $ref: '#/components/responses/PayoutForbidden' }
+        '409': { $ref: '#/components/responses/PayoutConflict' }
         '502': { $ref: '#/components/responses/ProviderError' }
   /wlt/payout-requests/{payoutId}/audit:
     get:
       tags: ["wlt-payout-requests"]
       operationId: listWltPayoutAudit
       parameters:
-        - $ref: '#/components/parameters/PayoutId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/PayoutId'
       responses:
         '200':
           description: Append-only correlation-linked audit.
@@ -214,8 +214,7 @@ paths:
 components:
   securitySchemes:
     serviceBearer:
-      type: http
-      scheme: bearer
+      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
   parameters:
     ActorType:
       name: actorType
@@ -227,21 +226,6 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1, maxLength: 200 }
-    PayoutId:
-      name: payoutId
-      in: path
-      required: true
-      schema: { type: string, minLength: 1 }
-    CorrelationId:
-      name: X-Correlation-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
   requestBodies:
     OperatorBody:
       required: true
@@ -259,21 +243,21 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/PayoutRequestEnvelope' }
-    InvalidRequest:
+    PayoutInvalidRequest:
       description: Invalid request.
-      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
-    Forbidden:
+      content: { application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } } }
+    PayoutForbidden:
       description: Actor scope or maker-checker rule failed.
-      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
-    NotFound:
+      content: { application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } } }
+    PayoutNotFound:
       description: Resource not found.
-      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
-    Conflict:
+      content: { application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } } }
+    PayoutConflict:
       description: Invalid transition, inactive destination, balance mismatch, or idempotency conflict.
-      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+      content: { application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } } }
     ProviderError:
       description: Provider unavailable, declined, invalid, or still ambiguous.
-      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+      content: { application/json: { schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' } } }
   schemas:
     PayoutActorType:
       type: string
@@ -376,9 +360,3 @@ components:
         correlationId: { type: string }
         metadata: { type: object, additionalProperties: true }
         createdAt: { type: string, format: date-time }
-    Error:
-      type: object
-      required: [code, message]
-      properties:
-        code: { type: string }
-        message: { type: string }

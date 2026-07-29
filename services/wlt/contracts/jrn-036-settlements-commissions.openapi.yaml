@@ -11,7 +11,7 @@ info:
 servers:
   - url: http://localhost:58083
 security:
-  - DshServiceToken: []
+  - serviceBearer: []
 paths:
   /wlt/settlements:
     post:
@@ -20,8 +20,8 @@ paths:
       x-bthwani-mutation-approved: true
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -39,14 +39,14 @@ paths:
                 properties:
                   settlement: { $ref: '#/components/schemas/Settlement' }
         '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/SettlementConflict' }
   /wlt/settlements/{settlementId}/evidence:
     get:
       tags: ["wlt-settlements"]
       operationId: listWltSettlementEvidence
       parameters:
-        - $ref: '#/components/parameters/SettlementId'
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/SettlementId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       responses:
         '200':
           description: Immutable operational and refund evidence used in the settlement
@@ -65,8 +65,8 @@ paths:
       operationId: upsertWltSettlementPolicy
       parameters:
         - $ref: '#/components/parameters/PartnerId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -75,14 +75,14 @@ paths:
       responses:
         '200':
           description: Append-only policy version created, or original version replayed for an exact retry
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/SettlementConflict' }
   /wlt/commission-policies:
     put:
       tags: ["wlt-commission-policies"]
       operationId: upsertWltCommissionPolicy
       parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -91,13 +91,13 @@ paths:
       responses:
         '200':
           description: Append-only commission policy version created, or original version replayed for an exact retry
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/SettlementConflict' }
   /wlt/commissions:
     get:
       tags: ["wlt-commissions"]
       operationId: listWltGovernedCommissions
       parameters:
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - name: Authorization
           in: header
           required: true
@@ -139,8 +139,8 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -157,14 +157,14 @@ paths:
                 properties:
                   commission: { $ref: '#/components/schemas/Commission' }
         '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/SettlementConflict' }
   /wlt/commissions/{commissionId}:
     get:
       tags: ["wlt-commissions"]
       operationId: getWltGovernedCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       responses:
         '200':
           description: Commission with policy evidence and reasoned adjustments
@@ -177,8 +177,8 @@ paths:
       operationId: adjustWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -195,76 +195,60 @@ paths:
       responses:
         '200':
           description: Reasoned adjustment applied atomically
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/SettlementConflict' }
   /wlt/commissions/{commissionId}/confirm:
     post:
       tags: ["wlt-commissions"]
       operationId: confirmWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/LifecycleAction' }
       responses:
         '200': { description: Pending commission confirmed or original response replayed }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/SettlementConflict' }
   /wlt/commissions/{commissionId}/settle:
     post:
       tags: ["wlt-commissions"]
       operationId: settleWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/LifecycleAction' }
       responses:
         '200': { description: Confirmed commission settled or original response replayed }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/SettlementConflict' }
   /wlt/commissions/{commissionId}/reject:
     post:
       tags: ["wlt-commissions"]
       operationId: rejectWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/ReasonedLifecycleAction' }
       responses:
         '200': { description: Pending commission rejected with reason or original response replayed }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/SettlementConflict' }
   /wlt/commissions/{commissionId}/reverse:
     post:
       tags: ["wlt-commissions"]
       operationId: reverseWltCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody: { $ref: '#/components/requestBodies/ReasonedLifecycleAction' }
       responses:
         '200': { description: Settled commission reversed with reason or original response replayed }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409': { $ref: '#/components/responses/SettlementConflict' }
 components:
   securitySchemes:
-    DshServiceToken:
-      type: http
-      scheme: bearer
+    serviceBearer:
+      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
   parameters:
-    CorrelationId:
-      name: X-Correlation-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 1, maxLength: 200 }
-    SettlementId:
-      name: settlementId
-      in: path
-      required: true
-      schema: { type: string }
     CommissionId:
       name: commissionId
       in: path
@@ -298,18 +282,12 @@ components:
               operatorId: { type: string, minLength: 1 }
               reason: { type: string, minLength: 1 }
   responses:
-    Conflict:
+    SettlementConflict:
       description: Missing policy, invalid evidence, illegal state or idempotency conflict
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
   schemas:
-    Error:
-      type: object
-      required: [code, message]
-      properties:
-        code: { type: string }
-        message: { type: string }
     RepresentativeActorType:
       type: string
       enum: [partner, captain, field]

@@ -112,7 +112,7 @@ function buildFinancialCenterSections(summary: WltFinancialSummaryRaw | null): {
 }
 
 import type { components } from "../../../clients/generated/wlt-api";
-type WltLedgerEntry = components["schemas"]["WltLedgerEntry"];
+type WltLedgerEntry = components["schemas"]["LedgerEntry"];
 
 function partyLabel(entry: WltLedgerEntry): string {
   const subject = (entry as any).subject ?? entry.actorId ?? '';

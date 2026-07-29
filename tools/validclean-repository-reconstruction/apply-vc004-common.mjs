@@ -210,8 +210,11 @@ if (!entry.includes(`  common: ${commonReference}\n`)) {
 const indexedSources = [...entry.matchAll(/^  [A-Za-z0-9_.-]+:\s+\.\/(.+\.openapi\.yaml)\s*$/gm)]
   .map((match) => match[1])
   .filter((file) => file !== 'wlt.common.openapi.yaml');
-const contractPaths = [entryPath, ...indexedSources.map((source) => path.join(contractsDir, source))];
-const contractContents = new Map(contractPaths.map((file) => [file, externalizeTransportComponents(read(file))]));
+const contractPaths = indexedSources.map((source) => path.join(contractsDir, source));
+const contractContents = new Map([
+  [entryPath, externalizeTransportComponents(entry)],
+  ...contractPaths.map((file) => [file, externalizeTransportComponents(read(file))]),
+]);
 
 const parameterOwners = new Map();
 for (const [file, content] of contractContents) {

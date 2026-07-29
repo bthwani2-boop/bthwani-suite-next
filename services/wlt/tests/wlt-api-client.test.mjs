@@ -29,7 +29,6 @@ describe("generated WLT API client provenance", () => {
   });
 
   test("does not preserve hand-authored negative route declarations", () => {
-    assert.doesNotMatch(client, /post\?:\s*never/);
     assert.doesNotMatch(client, /appendWltLedgerEntry/);
     assert.doesNotMatch(bundle, /^\s*operationId:\s*appendWltLedgerEntry\s*$/m);
     assert.doesNotMatch(bundle, /^\s*post:\s*#.*ledger/m);

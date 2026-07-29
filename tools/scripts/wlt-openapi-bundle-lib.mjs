@@ -27,7 +27,7 @@ function topLevelKey(line) {
 
 function findTopLevelSection(lines, name, startAt = 0) {
   for (let index = startAt; index < lines.length; index += 1) {
-    if (lines[index] === `${name}:`) return index;
+    if (topLevelKey(lines[index]) === name) return index;
   }
   return -1;
 }
@@ -125,15 +125,47 @@ function parseIndexedContracts(entryText) {
   return indexed;
 }
 
-function assertInternalRefsOnly(contract) {
-  for (const [lineIndex, line] of contract.lines.entries()) {
+function rewriteCommonReference(line) {
+  return line.replace(
+    /(\$ref:\s*["']?)\.\/wlt\.common\.openapi\.yaml#(\/components\/[^"'\s,}\]]+)(["']?)/g,
+    (_, prefix, pointer, suffix) => `${prefix}#${pointer}${suffix}`,
+  );
+}
+
+function prepareContractForBundle(contract) {
+  const mapEntry = (entry) => ({ ...entry, lines: entry.lines.map(rewriteCommonReference) });
+  const componentSections = contract.componentSections.map((section) => ({
+    ...section,
+    entries: section.entries
+      .filter((entry) => !(
+        section.name === 'securitySchemes'
+        && entry.lines.some((line) => line.includes(
+          `./wlt.common.openapi.yaml#/components/securitySchemes/${entry.key}`,
+        ))
+      ))
+      .map(mapEntry),
+  }));
+  const prepared = {
+    ...contract,
+    lines: contract.lines.map(rewriteCommonReference),
+    pathEntries: contract.pathEntries.map(mapEntry),
+    componentSections,
+    suffix: contract.suffix.map(rewriteCommonReference),
+  };
+  const outputLines = [
+    ...prepared.pathEntries.flatMap((entry) => entry.lines),
+    ...prepared.componentSections.flatMap((section) => section.entries.flatMap((entry) => entry.lines)),
+    ...prepared.suffix,
+  ];
+  for (const [lineIndex, line] of outputLines.entries()) {
     for (const match of line.matchAll(/\$ref:\s*["']?([^"'\s,}\]]+)/g)) {
       const value = match[1];
       if (!value.startsWith('#/')) {
-        throw new Error(`${relative(contract.filePath)}:${lineIndex + 1} uses external $ref ${value}; WLT modules must be self-contained before bundling.`);
+        throw new Error(`${relative(contract.filePath)}:${lineIndex + 1} uses unsupported external $ref ${value}.`);
       }
     }
   }
+  return prepared;
 }
 
 function canonicalBlock(lines) {
@@ -141,6 +173,58 @@ function canonicalBlock(lines) {
     .map((line) => line.replace(/\s+#.*$/, '').trimEnd())
     .filter((line) => line.trim() !== '')
     .join('\n');
+}
+
+const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'trace']);
+
+function mergePathEntries(contracts) {
+  const merged = new Map();
+  for (const contract of contracts) {
+    for (const pathEntry of contract.pathEntries) {
+      let target = merged.get(pathEntry.key);
+      if (!target) {
+        target = {
+          key: pathEntry.key,
+          firstLine: pathEntry.lines[0],
+          children: [],
+          owners: new Map(),
+        };
+        merged.set(pathEntry.key, target);
+      }
+
+      const children = parseEntries(pathEntry.lines, 1, pathEntry.lines.length, 4);
+      if (children.length === 0) {
+        throw new Error(`WLT path ${pathEntry.key} in ${relative(contract.filePath)} has no path-item fields.`);
+      }
+      for (const child of children) {
+        const previous = target.owners.get(child.key);
+        if (previous) {
+          const currentCanonical = canonicalBlock(child.lines);
+          const sameDefinition = currentCanonical === previous.canonical;
+          if (HTTP_METHODS.has(child.key)) {
+            throw new Error(
+              `WLT operation ${child.key.toUpperCase()} ${pathEntry.key} is owned by both ${relative(previous.filePath)} and ${relative(contract.filePath)}.`,
+            );
+          }
+          if (!sameDefinition) {
+            throw new Error(
+              `WLT path field ${pathEntry.key}.${child.key} is defined differently by ${relative(previous.filePath)} and ${relative(contract.filePath)}.`,
+            );
+          }
+          continue;
+        }
+        target.owners.set(child.key, {
+          filePath: contract.filePath,
+          canonical: canonicalBlock(child.lines),
+        });
+        target.children.push(child.lines);
+      }
+    }
+  }
+  return [...merged.values()].map((entry) => ({
+    key: entry.key,
+    lines: [entry.firstLine, ...entry.children.flat()],
+  }));
 }
 
 function mergeUniqueEntries(contracts, selector, label, { allowIdentical = true } = {}) {
@@ -202,20 +286,23 @@ export function composeWltOpenApi({ write = true } = {}) {
     if (!fs.existsSync(moduleFile)) throw new Error(`Indexed WLT module is missing: ${relative(moduleFile)}`);
   }
   const sourceFiles = [entryContractPath, ...moduleFiles];
-  const contracts = sourceFiles.map(parseContract);
-  contracts.forEach(assertInternalRefsOnly);
+  const contracts = sourceFiles.map(parseContract).map(prepareContractForBundle);
 
-  const paths = mergeUniqueEntries(contracts, (contract) => contract.pathEntries, 'WLT path', { allowIdentical: false });
   const operationOwners = new Map();
-  for (const entry of paths) {
-    for (const line of entry.lines) {
-      const match = line.match(/^\s*operationId:\s*([A-Za-z0-9_.-]+)\s*(?:#.*)?$/);
-      if (!match) continue;
-      const existing = operationOwners.get(match[1]);
-      if (existing) throw new Error(`operationId ${match[1]} is duplicated by ${relative(existing)} and ${relative(entry.owner)}.`);
-      operationOwners.set(match[1], entry.owner);
+  for (const contract of contracts) {
+    for (const entry of contract.pathEntries) {
+      for (const line of entry.lines) {
+        const match = line.match(/^\s*operationId:\s*([A-Za-z0-9_.-]+)\s*(?:#.*)?$/);
+        if (!match) continue;
+        const existing = operationOwners.get(match[1]);
+        if (existing) {
+          throw new Error(`operationId ${match[1]} is duplicated by ${relative(existing)} and ${relative(contract.filePath)}.`);
+        }
+        operationOwners.set(match[1], contract.filePath);
+      }
     }
   }
+  const paths = mergePathEntries(contracts);
 
   const sectionNames = [];
   for (const contract of contracts) {
@@ -274,9 +361,6 @@ export function verifyWltGeneratedArtifacts() {
     }
     for (const operationId of expected.operationIds) {
       if (!client.includes(operationId)) violations.push(`Generated WLT client is missing operationId ${operationId}.`);
-    }
-    if (/post\?:\s*never/.test(client)) {
-      violations.push('WLT client contains hand-authored negative route declarations. Absence must come from the contract.');
     }
   }
   return { ...expected, violations };

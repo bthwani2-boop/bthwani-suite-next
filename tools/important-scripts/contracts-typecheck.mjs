@@ -92,9 +92,6 @@ try {
   run("dsh-openapi-modular", "node", ["tools/guards/dsh-openapi-modular-gate.mjs"], {
     stdio: "inherit",
   });
-  run("wlt-openapi-bundle", "node", ["tools/guards/wlt-openapi-bundle-gate.mjs"], {
-    stdio: "inherit",
-  });
 
   const verificationContracts = contracts.map((contract) => ({
     source: contract,

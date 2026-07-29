@@ -90,7 +90,7 @@ try {
 }
 
 const settlementOperation = operationState?.operations?.find(
-  (operation) => operation.operationId === "createWltSettlement",
+  (operation) => operation.operationId === "createWltEvidenceBackedSettlement",
 );
 if (!settlementOperation) {
   violations.push({ file: operationStateFile, line: 0, message: "CREATE_SETTLEMENT_OPERATION_STATE_MISSING" });
@@ -191,15 +191,15 @@ for (const marker of [
   }
 }
 
-const openApiFile = "services/wlt/contracts/wlt.openapi.yaml";
+const openApiFile = "services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml";
 const openApi = read(openApiFile);
 const settlementPathStart = openApi.indexOf("  /wlt/settlements:");
-const settlementPathEnd = openApi.indexOf("\n  /wlt/settlements/summary:", settlementPathStart);
+const settlementPathEnd = openApi.indexOf("\ncomponents:", settlementPathStart);
 const settlementContract = settlementPathStart >= 0
   ? openApi.slice(settlementPathStart, settlementPathEnd > settlementPathStart ? settlementPathEnd : undefined)
   : "";
 for (const marker of [
-  "operationId: createWltSettlement",
+  "operationId: createWltEvidenceBackedSettlement",
   "x-bthwani-mutation-approved: true",
   "x-bthwani-default-enabled: false",
 ]) {
@@ -207,10 +207,11 @@ for (const marker of [
     violations.push({ file: openApiFile, line: 0, message: `SETTLEMENT_OPENAPI_ACTIVE_MARKER_MISSING ${marker}` });
   }
 }
-const settlementSchemaStart = openApi.indexOf("    WltCreateSettlementRequest:");
-const settlementSchemaEnd = openApi.indexOf("\n    WltSettlementResponse:", settlementSchemaStart);
+const settlementSchemaStart = openApi.indexOf("    VerifiedDeliveredOrderSource:");
+const settlementSchemaEnd = openApi.indexOf("\n    CreateSettlementRequest:", settlementSchemaStart);
+const settlementSchemaTail = openApi.indexOf("\n    SettlementPolicyInput:", settlementSchemaEnd);
 const settlementSchema = settlementSchemaStart >= 0
-  ? openApi.slice(settlementSchemaStart, settlementSchemaEnd > settlementSchemaStart ? settlementSchemaEnd : undefined)
+  ? openApi.slice(settlementSchemaStart, settlementSchemaTail > settlementSchemaEnd ? settlementSchemaTail : undefined)
   : "";
 for (const marker of ["orderSources", "orderId", "grossAmountMinorUnits", "deliveredAt", "operatorId"]) {
   if (!settlementSchema.includes(marker)) {

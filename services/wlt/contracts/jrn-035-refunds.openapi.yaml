@@ -20,10 +20,10 @@ paths:
       operationId: listWltRefunds
       summary: List tenant-scoped refunds
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/CorrelationHeaderOptional'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
         - name: orderId
           in: query
           schema: { type: string, minLength: 1 }
@@ -37,8 +37,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RefundListEnvelope' }
         '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '401': { $ref: '#/components/responses/RefundUnauthorized' }
+        '403': { $ref: '#/components/responses/RefundForbidden' }
     post:
       tags: [wlt-refunds]
       operationId: createWltRefund
@@ -46,11 +46,11 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
       requestBody:
         required: true
         content:
@@ -68,9 +68,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RefundEnvelope' }
         '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '401': { $ref: '#/components/responses/RefundUnauthorized' }
+        '403': { $ref: '#/components/responses/RefundForbidden' }
+        '409': { $ref: '#/components/responses/RefundConflict' }
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /wlt/refunds/{refundId}:
     get:
@@ -78,20 +78,20 @@ paths:
       operationId: getWltRefund
       summary: Read one tenant-scoped refund
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/CorrelationHeaderOptional'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
       responses:
         '200':
           description: Canonical refund
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RefundEnvelope' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/RefundUnauthorized' }
+        '403': { $ref: '#/components/responses/RefundForbidden' }
+        '404': { $ref: '#/components/responses/RefundNotFound' }
   /wlt/refunds/{refundId}/approve:
     post:
       tags: [wlt-refunds]
@@ -100,12 +100,12 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
       requestBody:
         required: true
         content:
@@ -118,8 +118,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RefundEnvelope' }
         '403': { $ref: '#/components/responses/MakerCheckerViolation' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '404': { $ref: '#/components/responses/RefundNotFound' }
+        '409': { $ref: '#/components/responses/RefundConflict' }
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /wlt/refunds/{refundId}/reject:
     post:
@@ -129,12 +129,12 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
       requestBody:
         required: true
         content:
@@ -147,8 +147,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RefundEnvelope' }
         '403': { $ref: '#/components/responses/MakerCheckerViolation' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '404': { $ref: '#/components/responses/RefundNotFound' }
+        '409': { $ref: '#/components/responses/RefundConflict' }
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /wlt/refunds/{refundId}/complete:
     post:
@@ -162,12 +162,12 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
       requestBody:
         required: true
         content:
@@ -184,9 +184,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ProviderUnknownError' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '403': { $ref: '#/components/responses/RefundForbidden' }
+        '404': { $ref: '#/components/responses/RefundNotFound' }
+        '409': { $ref: '#/components/responses/RefundConflict' }
         '500': { $ref: '#/components/responses/CompletionPersistenceFailure' }
         '502': { $ref: '#/components/responses/ProviderFailure' }
   /wlt/refunds/{refundId}/reconcile:
@@ -197,12 +197,12 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
       requestBody:
         required: true
         content:
@@ -215,9 +215,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/RefundEnvelope' }
         '400': { $ref: '#/components/responses/BadRequest' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '403': { $ref: '#/components/responses/RefundForbidden' }
+        '404': { $ref: '#/components/responses/RefundNotFound' }
+        '409': { $ref: '#/components/responses/RefundConflict' }
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
   /wlt/refunds/{refundId}/audit:
     get:
@@ -225,61 +225,33 @@ paths:
       operationId: listWltRefundAudit
       summary: List append-only refund audit evidence
       parameters:
-        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/CorrelationHeaderOptional'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
       responses:
         '200':
           description: Ordered audit events
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AuditEnvelope' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/RefundUnauthorized' }
+        '403': { $ref: '#/components/responses/RefundForbidden' }
+        '404': { $ref: '#/components/responses/RefundNotFound' }
 components:
   securitySchemes:
+    serviceBearer:
+      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
     bearerAuth:
       type: http
       scheme: bearer
   parameters:
-    AuthorizationHeader:
-      name: Authorization
-      in: header
-      required: true
-      schema: { type: string, minLength: 8 }
     RefundId:
       name: refundId
       in: path
       required: true
       schema: { type: string, minLength: 1 }
-    TenantHeader:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-    ServiceCallerHeader:
-      name: X-Service-Caller
-      in: header
-      required: true
-      schema: { type: string, const: dsh }
-    CorrelationHeader:
-      name: X-Correlation-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-    CorrelationHeaderOptional:
-      name: X-Correlation-ID
-      in: header
-      required: false
-      schema: { type: string, minLength: 1 }
-    IdempotencyHeader:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 8, maxLength: 255 }
   schemas:
     RefundStatus:
       type: string
@@ -397,27 +369,21 @@ components:
         auditEvents:
           type: array
           items: { $ref: '#/components/schemas/RefundAuditEvent' }
-    Error:
-      type: object
-      required: [code, message]
-      properties:
-        code: { type: string }
-        message: { type: string }
     ProviderUnknownError:
       allOf:
-        - $ref: '#/components/schemas/Error'
+        - $ref: './wlt.common.openapi.yaml#/components/schemas/Error'
         - type: object
           properties:
             code: { const: PROVIDER_RESULT_UNKNOWN }
     OutcomePersistenceError:
       allOf:
-        - $ref: '#/components/schemas/Error'
+        - $ref: './wlt.common.openapi.yaml#/components/schemas/Error'
         - type: object
           properties:
             code: { const: REFUND_OUTCOME_PERSISTENCE_FAILED }
     MutationReceiptError:
       allOf:
-        - $ref: '#/components/schemas/Error'
+        - $ref: './wlt.common.openapi.yaml#/components/schemas/Error'
         - type: object
           properties:
             code:
@@ -432,32 +398,32 @@ components:
       description: Invalid request or evidence
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
-    Unauthorized:
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
+    RefundUnauthorized:
       description: Missing or invalid service authentication
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
-    Forbidden:
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
+    RefundForbidden:
       description: Tenant, feature gate, or authority denied
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
     MakerCheckerViolation:
       description: Request maker attempted to review the same refund, or feature gate denied the transition
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
-    NotFound:
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
+    RefundNotFound:
       description: Refund not found in the trusted tenant
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
-    Conflict:
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
+    RefundConflict:
       description: Lifecycle, amount, changed-payload or in-progress idempotency conflict
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
     MutationReceiptFailure:
       description: The mutation receipt could not be claimed or completed durably
       content:
@@ -472,4 +438,4 @@ components:
       description: Definitive provider failure
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }

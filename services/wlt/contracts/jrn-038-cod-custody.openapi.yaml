@@ -19,9 +19,9 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/CodRecordId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CodRecordId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -35,11 +35,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CodCustodyMutationResult'
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '400': { $ref: '#/components/responses/CustodyInvalidRequest' }
+        '401': { $ref: '#/components/responses/CustodyUnauthorized' }
+        '403': { $ref: '#/components/responses/CustodyForbidden' }
+        '404': { $ref: '#/components/responses/CustodyNotFound' }
+        '409': { $ref: '#/components/responses/CustodyConflict' }
   /wlt/cod-records/{codRecordId}/remit:
     post:
       tags: ["wlt-cod-records"]
@@ -47,9 +47,9 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/CodRecordId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CodRecordId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -63,11 +63,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CodCustodyMutationResult'
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '400': { $ref: '#/components/responses/CustodyInvalidRequest' }
+        '401': { $ref: '#/components/responses/CustodyUnauthorized' }
+        '403': { $ref: '#/components/responses/CustodyForbidden' }
+        '404': { $ref: '#/components/responses/CustodyNotFound' }
+        '409': { $ref: '#/components/responses/CustodyConflict' }
   /wlt/cod-reconciliation-cases:
     get:
       tags: ["wlt-cod-reconciliation-cases"]
@@ -90,17 +90,17 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/CodReconciliationCase'
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '400': { $ref: '#/components/responses/CustodyInvalidRequest' }
+        '401': { $ref: '#/components/responses/CustodyUnauthorized' }
+        '403': { $ref: '#/components/responses/CustodyForbidden' }
   /wlt/cod-reconciliation-cases/{caseId}/assign:
     post:
       tags: ["wlt-cod-reconciliation-cases"]
       operationId: assignCodReconciliationCase
       parameters:
-        - $ref: '#/components/parameters/CaseId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CaseId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -119,18 +119,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CodReconciliationCaseEnvelope'
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '400': { $ref: '#/components/responses/CustodyInvalidRequest' }
+        '401': { $ref: '#/components/responses/CustodyUnauthorized' }
+        '403': { $ref: '#/components/responses/CustodyForbidden' }
+        '409': { $ref: '#/components/responses/CustodyConflict' }
   /wlt/cod-reconciliation-cases/{caseId}/resolve:
     post:
       tags: ["wlt-cod-reconciliation-cases"]
       operationId: resolveCodReconciliationCase
       parameters:
-        - $ref: '#/components/parameters/CaseId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CaseId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -152,12 +152,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CodReconciliationCaseEnvelope'
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '400': { $ref: '#/components/responses/CustodyInvalidRequest' }
+        '401': { $ref: '#/components/responses/CustodyUnauthorized' }
+        '403': { $ref: '#/components/responses/CustodyForbidden' }
+        '409': { $ref: '#/components/responses/CustodyConflict' }
 components:
   securitySchemes:
+    serviceBearer:
+      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
     DshServiceBearer:
       type: http
       scheme: bearer
@@ -165,29 +167,8 @@ components:
       type: apiKey
       in: header
       name: X-Service-Caller
-  parameters:
-    CodRecordId:
-      in: path
-      name: codRecordId
-      required: true
-      schema: { type: string, minLength: 1 }
-    CaseId:
-      in: path
-      name: caseId
-      required: true
-      schema: { type: string, minLength: 1 }
-    CorrelationId:
-      in: header
-      name: X-Correlation-ID
-      required: true
-      schema: { type: string, minLength: 3 }
-    IdempotencyKey:
-      in: header
-      name: Idempotency-Key
-      required: true
-      schema: { type: string, minLength: 3 }
   schemas:
-    ActorType:
+    CustodyActorType:
       type: string
       enum: [captain, store_courier, partner_store, partner, operator]
     CollectCodInput:
@@ -198,7 +179,7 @@ components:
         actualAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
         proofReference: { type: string, minLength: 3, maxLength: 512 }
         actorId: { type: string, minLength: 1 }
-        actorType: { $ref: '#/components/schemas/ActorType' }
+        actorType: { $ref: '#/components/schemas/CustodyActorType' }
         note: { type: string, maxLength: 4000, default: '' }
     RemitCodInput:
       type: object
@@ -207,7 +188,7 @@ components:
       properties:
         proofReference: { type: string, minLength: 3, maxLength: 512 }
         actorId: { type: string, minLength: 1 }
-        actorType: { $ref: '#/components/schemas/ActorType' }
+        actorType: { $ref: '#/components/schemas/CustodyActorType' }
         note: { type: string, maxLength: 4000, default: '' }
     CodRecord:
       type: object
@@ -288,36 +269,29 @@ components:
       properties:
         codReconciliationCase:
           $ref: '#/components/schemas/CodReconciliationCase'
-    Error:
-      type: object
-      additionalProperties: true
-      required: [code, message]
-      properties:
-        code: { type: string }
-        message: { type: string }
   responses:
-    InvalidRequest:
+    CustodyInvalidRequest:
       description: Invalid request.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
-    Unauthorized:
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
+    CustodyUnauthorized:
       description: Missing or invalid service authentication.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
-    Forbidden:
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
+    CustodyForbidden:
       description: Actor or mutation gate forbids the operation.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
-    NotFound:
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
+    CustodyNotFound:
       description: COD record was not found.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
-    Conflict:
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
+    CustodyConflict:
       description: State, evidence or idempotency conflict.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }

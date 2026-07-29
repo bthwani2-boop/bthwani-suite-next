@@ -19,10 +19,10 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
       requestBody:
         required: true
         content:
@@ -30,25 +30,25 @@ paths:
             schema: { $ref: '#/components/schemas/ReservePromotionFundingRequest' }
       responses:
         '201': { $ref: '#/components/responses/ReservationResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/promotion-funding/reservations/{reservationId}:
     get:
       operationId: getWltPromotionFundingReservation
       tags: [WltPromotionFunding]
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
         - $ref: '#/components/parameters/ReservationId'
       responses:
         '200': { $ref: '#/components/responses/ReservationResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/promotion-funding/reservations/{reservationId}/commit:
     post:
       operationId: commitWltPromotionFunding
@@ -57,10 +57,10 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/ReservationId'
       requestBody:
         required: true
@@ -69,11 +69,11 @@ paths:
             schema: { $ref: '#/components/schemas/CommitPromotionFundingRequest' }
       responses:
         '200': { $ref: '#/components/responses/ReservationResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/promotion-funding/reservations/{reservationId}/release:
     post:
       operationId: releaseWltPromotionFunding
@@ -82,10 +82,10 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/ReservationId'
       requestBody:
         required: true
@@ -94,11 +94,11 @@ paths:
             schema: { $ref: '#/components/schemas/ReleasePromotionFundingRequest' }
       responses:
         '200': { $ref: '#/components/responses/ReservationResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
   /wlt/promotion-funding/reservations/{reservationId}/reverse:
     post:
       operationId: reverseWltPromotionFunding
@@ -107,10 +107,10 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/ServiceCallerHeader'
-        - $ref: '#/components/parameters/TenantHeader'
-        - $ref: '#/components/parameters/IdempotencyHeader'
-        - $ref: '#/components/parameters/CorrelationHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
         - $ref: '#/components/parameters/ReservationId'
       requestBody:
         required: true
@@ -119,35 +119,17 @@ paths:
             schema: { $ref: '#/components/schemas/ReversePromotionFundingRequest' }
       responses:
         '200': { $ref: '#/components/responses/ReservationResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '404': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
 components:
   securitySchemes:
+    serviceBearer:
+      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
     bearerAuth: { type: http, scheme: bearer }
   parameters:
-    ServiceCallerHeader:
-      name: X-Service-Caller
-      in: header
-      required: true
-      schema: { type: string, enum: [dsh] }
-    TenantHeader:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-    IdempotencyHeader:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-    CorrelationHeader:
-      name: X-Correlation-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
     ReservationId:
       name: reservationId
       in: path
@@ -168,15 +150,8 @@ components:
       description: Governed error response.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/Error' }
+          schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
   schemas:
-    Error:
-      type: object
-      additionalProperties: false
-      required: [code, message]
-      properties:
-        code: { type: string }
-        message: { type: string }
     ReservePromotionFundingRequest:
       type: object
       additionalProperties: false

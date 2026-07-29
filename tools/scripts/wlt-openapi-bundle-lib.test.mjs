@@ -22,7 +22,7 @@ test('WLT composition includes critical governed financial operations', () => {
     'createWltPaymentSession',
     'captureWltPaymentSession',
     'createWltRefund',
-    'createWltSettlement',
+    'createWltEvidenceBackedSettlement',
     'createWltDestinationBoundPayoutRequest',
     'listWltLedgerEntries',
   ]) {

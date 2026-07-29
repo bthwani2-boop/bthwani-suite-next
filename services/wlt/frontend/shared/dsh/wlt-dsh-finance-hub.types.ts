@@ -126,10 +126,10 @@ import type { components } from "../../../clients/generated/wlt-api";
 
 export type WltDshFinanceRuntimeReadModel = {
   readonly runtimeApiUrl: string;
-  readonly overview: components["schemas"]["WltSettlementListResponse"] | null;
-  readonly ledgerEntries: readonly components["schemas"]["WltLedgerEntry"][];
-  readonly refunds: readonly components["schemas"]["WltRefund"][];
-  readonly payoutRequests: readonly components["schemas"]["WltPayoutRequest"][];
+  readonly overview: components["schemas"]["SettlementListResponse"] | null;
+  readonly ledgerEntries: readonly components["schemas"]["LedgerEntry"][];
+  readonly refunds: readonly components["schemas"]["GovernedRefund"][];
+  readonly payoutRequests: readonly components["schemas"]["PayoutRequest"][];
   readonly financialSummary: WltFinancialSummaryRaw | null;
   readonly closeStatus?: WltCloseStatus;
   readonly fetchedAt: string;

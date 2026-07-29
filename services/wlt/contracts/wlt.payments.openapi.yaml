@@ -23,10 +23,10 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
@@ -38,9 +38,9 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentSessionResponse' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/payment-sessions/{paymentSessionId}:
     get:
       operationId: getWltPaymentSession
@@ -49,16 +49,16 @@ paths:
       security: [{ serviceBearer: [] }]
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
       responses:
         '200':
           description: Payment session.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentSessionResponse' }
-        '400': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/payment-sessions/{paymentSessionId}/authorize:
     post:
       operationId: authorizeWltPaymentSession
@@ -69,20 +69,20 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       responses:
         '200':
           description: Authorized or exact idempotent replay.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentOperationResponse' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
-        '502': { $ref: '#/components/responses/Error' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '502': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/payment-sessions/{paymentSessionId}/capture:
     post:
       operationId: captureWltPaymentSession
@@ -93,20 +93,20 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       responses:
         '200':
           description: Captured with exactly-once ledger effect or exact replay.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentOperationResponse' }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
-        '502': { $ref: '#/components/responses/Error' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '502': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/payment-sessions/{paymentSessionId}/refresh-provider-status:
     post:
       operationId: refreshWltPaymentSessionProviderStatus
@@ -117,19 +117,19 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       responses:
         '200':
           description: Current authoritative state.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentOperationResponse' }
-        '403': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
-        '502': { $ref: '#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '502': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/payment-sessions/{paymentSessionId}/timeline:
     get:
       operationId: getWltPaymentSessionTimeline
@@ -138,8 +138,8 @@ paths:
       security: [{ serviceBearer: [] }]
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
       responses:
         '200':
           description: Governed payment timeline.
@@ -150,8 +150,8 @@ paths:
                 required: [paymentTimeline]
                 properties:
                   paymentTimeline: { $ref: '#/components/schemas/PaymentTimeline' }
-        '400': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/payment-sessions/{paymentSessionId}/expire:
     post:
       operationId: expireWltPaymentSession
@@ -162,18 +162,18 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       responses:
         '200':
           description: Expired session.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PaymentSessionResponse' }
-        '403': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/payment-sessions/{paymentSessionId}/cod-collect:
     post:
       operationId: blockLegacyWltPaymentSessionCodCollect
@@ -184,13 +184,13 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       responses:
-        '403': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/payment-sessions/{paymentSessionId}/cancel-for-order:
     post:
       operationId: cancelWltPaymentSessionForOrder
@@ -201,10 +201,10 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
@@ -223,8 +223,8 @@ paths:
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
-        '403': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/order-cancellations:
     post:
       operationId: cancelWltOrderFinancially
@@ -234,10 +234,10 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
@@ -257,10 +257,10 @@ paths:
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
-        '400': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '404': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/provider/webhooks/payment:
     post:
       operationId: receiveWltPaymentProviderWebhook
@@ -293,41 +293,20 @@ paths:
                   idempotentReplay: { type: boolean }
                   ledgerTransactionId: { type: string }
                   paymentSession: { $ref: '#/components/schemas/PaymentSession' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
-        '503': { $ref: '#/components/responses/Error' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '503': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
 components:
   securitySchemes:
     serviceBearer:
-      type: http
-      scheme: bearer
+      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
   parameters:
     PaymentSessionId:
       name: paymentSessionId
       in: path
       required: true
       schema: { type: string, minLength: 1 }
-    ServiceCaller:
-      name: X-Service-Caller
-      in: header
-      required: true
-      schema: { type: string, const: dsh }
-    TenantId:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1, maxLength: 120 }
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 8, maxLength: 200 }
-    CorrelationId:
-      name: X-Correlation-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1, maxLength: 200 }
   schemas:
     PaymentStatus:
       type: string
@@ -465,9 +444,3 @@ components:
           properties:
             code: { type: string }
             message: { type: string }
-  responses:
-    Error:
-      description: Governed error envelope.
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorEnvelope' }

@@ -27,11 +27,11 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/CorrelationId'
-        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -40,19 +40,19 @@ paths:
       responses:
         '200': { description: Delivery was prepaid and no COD custody record is applicable, or an existing record was replayed }
         '201': { description: Tenant-local COD custody record created from WLT payment truth }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/FeatureNotEnabled' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '400': { $ref: '#/components/responses/CollectionInvalidRequest' }
+        '401': { $ref: '#/components/responses/CollectionUnauthorized' }
+        '403': { $ref: '#/components/responses/CollectionFeatureNotEnabled' }
+        '404': { $ref: '#/components/responses/CollectionNotFound' }
+        '409': { $ref: '#/components/responses/CollectionConflict' }
     get:
       operationId: listWltDeliveryCollections
       summary: List tenant-local delivery collection custody records.
       tags: [WltDeliveryCollections]
       parameters:
-        - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
         - name: captainId
           in: query
           schema: { type: string }
@@ -67,25 +67,25 @@ paths:
           schema: { type: string }
       responses:
         '200': { description: Delivery collection custody records }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '400': { $ref: '#/components/responses/CollectionInvalidRequest' }
+        '401': { $ref: '#/components/responses/CollectionUnauthorized' }
+        '403': { $ref: '#/components/responses/CollectionForbidden' }
   /wlt/delivery-collections/{codRecordId}:
     get:
       operationId: getWltDeliveryCollection
       summary: Read one tenant-local delivery collection custody record.
       tags: [WltDeliveryCollections]
       parameters:
-        - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/CodRecordId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CodRecordId'
       responses:
         '200': { description: Delivery collection custody record }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '400': { $ref: '#/components/responses/CollectionInvalidRequest' }
+        '401': { $ref: '#/components/responses/CollectionUnauthorized' }
+        '403': { $ref: '#/components/responses/CollectionForbidden' }
+        '404': { $ref: '#/components/responses/CollectionNotFound' }
   /wlt/delivery-collections/{codRecordId}/collect:
     post:
       operationId: collectWltDeliveryCollection
@@ -94,12 +94,12 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/CodRecordId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CodRecordId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
@@ -107,11 +107,11 @@ paths:
             schema: { $ref: '#/components/schemas/CollectDeliveryCollectionRequest' }
       responses:
         '200': { description: Collection committed atomically or replayed exactly }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/FeatureNotEnabled' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '400': { $ref: '#/components/responses/CollectionInvalidRequest' }
+        '401': { $ref: '#/components/responses/CollectionUnauthorized' }
+        '403': { $ref: '#/components/responses/CollectionFeatureNotEnabled' }
+        '404': { $ref: '#/components/responses/CollectionNotFound' }
+        '409': { $ref: '#/components/responses/CollectionConflict' }
   /wlt/delivery-collections/{codRecordId}/remit:
     post:
       operationId: remitWltDeliveryCollection
@@ -120,12 +120,12 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
-        - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/CodRecordId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CodRecordId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
@@ -133,47 +133,15 @@ paths:
             schema: { $ref: '#/components/schemas/RemitDeliveryCollectionRequest' }
       responses:
         '200': { description: Remittance committed atomically or replayed exactly }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/FeatureNotEnabled' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '400': { $ref: '#/components/responses/CollectionInvalidRequest' }
+        '401': { $ref: '#/components/responses/CollectionUnauthorized' }
+        '403': { $ref: '#/components/responses/CollectionFeatureNotEnabled' }
+        '404': { $ref: '#/components/responses/CollectionNotFound' }
+        '409': { $ref: '#/components/responses/CollectionConflict' }
 components:
   securitySchemes:
     serviceBearer:
-      type: http
-      scheme: bearer
-  parameters:
-    Authorization:
-      name: Authorization
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
-    ServiceCaller:
-      name: X-Service-Caller
-      in: header
-      required: true
-      schema: { type: string, const: dsh }
-    TenantId:
-      name: X-Tenant-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 1, maxLength: 120 }
-    CodRecordId:
-      name: codRecordId
-      in: path
-      required: true
-      schema: { type: string, minLength: 1 }
-    IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 8, maxLength: 200 }
-    CorrelationId:
-      name: X-Correlation-ID
-      in: header
-      required: true
-      schema: { type: string, minLength: 3, maxLength: 200 }
+      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
   schemas:
     CollectionActorType:
       type: string
@@ -209,9 +177,15 @@ components:
         actorType: { $ref: '#/components/schemas/CollectionActorType' }
         note: { type: string, maxLength: 4000 }
   responses:
-    InvalidRequest: { description: Invalid request }
-    Unauthorized: { description: Missing or invalid service authentication }
-    Forbidden: { description: Caller is not permitted to read financial custody truth }
-    FeatureNotEnabled: { description: FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true }
-    NotFound: { description: Delivery collection or tenant-local payment session not found }
-    Conflict: { description: Invalid custody transition, replay conflict, or actor mismatch }
+    CollectionInvalidRequest:
+      description: Invalid request
+    CollectionUnauthorized:
+      description: Missing or invalid service authentication
+    CollectionForbidden:
+      description: Caller is not permitted to read financial custody truth
+    CollectionFeatureNotEnabled:
+      description: FEATURE_NOT_ENABLED unless WLT_MUTATIONS_ENABLED=true
+    CollectionNotFound:
+      description: Delivery collection or tenant-local payment session not found
+    CollectionConflict:
+      description: Invalid custody transition, replay conflict, or actor mismatch

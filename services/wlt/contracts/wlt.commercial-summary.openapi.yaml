@@ -40,6 +40,8 @@ paths:
 
 components:
   securitySchemes:
+    serviceBearer:
+      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
     bearerAuth:
       type: http
       scheme: bearer
