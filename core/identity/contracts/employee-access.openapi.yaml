@@ -44,7 +44,7 @@ paths:
         '401':
           description: Invalid Workforce service token.
         '403':
-          description: Caller or tenant context is forbidden.
+          description: Caller or operator context is forbidden.
   /internal/employees/provision:
     post:
       operationId: provisionAdministrativeEmployee
@@ -69,11 +69,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ActorAdminView'
         '400':
-          description: Missing tenant context or invalid bundle, department, phone, or username.
+          description: Missing operator context or invalid bundle, department, phone, or username.
         '401':
           description: Invalid Workforce service token.
         '403':
-          description: Caller or tenant context is forbidden.
+          description: Caller or operator context is forbidden.
         '409':
           description: Phone or username is already bound to an existing actor.
 components:

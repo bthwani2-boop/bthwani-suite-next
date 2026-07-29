@@ -141,65 +141,65 @@ FROM known_OperatorContexts OperatorContext
 CROSS JOIN legacy_policies policy
 ON CONFLICT (operator_context_id, policy_id, version) DO NOTHING;
 
-ALTER TABLE wlt_jrn036_commission_evidence ADD COLUMN IF NOT EXISTS operator_context_id text;
-UPDATE wlt_jrn036_commission_evidence evidence
+ALTER TABLE wlt_commission_evidence ADD COLUMN IF NOT EXISTS operator_context_id text;
+UPDATE wlt_commission_evidence evidence
 SET operator_context_id = commission.operator_context_id
 FROM wlt_commissions commission
 WHERE commission.id = evidence.commission_id
   AND (evidence.operator_context_id IS NULL OR btrim(evidence.operator_context_id) = '');
-UPDATE wlt_jrn036_commission_evidence
+UPDATE wlt_commission_evidence
 SET operator_context_id = 'legacy-unscoped'
 WHERE operator_context_id IS NULL OR btrim(operator_context_id) = '';
-ALTER TABLE wlt_jrn036_commission_evidence
+ALTER TABLE wlt_commission_evidence
   ALTER COLUMN operator_context_id SET DEFAULT 'legacy-unscoped';
-ALTER TABLE wlt_jrn036_commission_evidence
+ALTER TABLE wlt_commission_evidence
   ALTER COLUMN operator_context_id SET NOT NULL;
-ALTER TABLE wlt_jrn036_commission_evidence
-  DROP CONSTRAINT IF EXISTS wlt_jrn036_commission_evidence_idempotency_key_key;
-DROP INDEX IF EXISTS wlt_jrn036_commission_request_hash_uidx;
-CREATE UNIQUE INDEX wlt_jrn036_commission_evidence_operator_context_idempotency_uq
-  ON wlt_jrn036_commission_evidence (operator_context_id, idempotency_key);
-CREATE UNIQUE INDEX wlt_jrn036_commission_evidence_OperatorContext_request_hash_uq
-  ON wlt_jrn036_commission_evidence (operator_context_id, request_hash);
-CREATE INDEX wlt_jrn036_commission_evidence_OperatorContext_commission_idx
-  ON wlt_jrn036_commission_evidence (operator_context_id, commission_id);
+ALTER TABLE wlt_commission_evidence
+  DROP CONSTRAINT IF EXISTS wlt_commission_evidence_idempotency_key_key;
+DROP INDEX IF EXISTS wlt_commission_request_hash_uidx;
+CREATE UNIQUE INDEX wlt_commission_evidence_operator_context_idempotency_uq
+  ON wlt_commission_evidence (operator_context_id, idempotency_key);
+CREATE UNIQUE INDEX wlt_commission_evidence_OperatorContext_request_hash_uq
+  ON wlt_commission_evidence (operator_context_id, request_hash);
+CREATE INDEX wlt_commission_evidence_OperatorContext_commission_idx
+  ON wlt_commission_evidence (operator_context_id, commission_id);
 
-ALTER TABLE wlt_jrn036_audit_events ADD COLUMN IF NOT EXISTS operator_context_id text;
-UPDATE wlt_jrn036_audit_events
+ALTER TABLE wlt_audit_events ADD COLUMN IF NOT EXISTS operator_context_id text;
+UPDATE wlt_audit_events
 SET operator_context_id = 'legacy-unscoped'
 WHERE operator_context_id IS NULL OR btrim(operator_context_id) = '';
-ALTER TABLE wlt_jrn036_audit_events
+ALTER TABLE wlt_audit_events
   ALTER COLUMN operator_context_id SET DEFAULT 'legacy-unscoped';
-ALTER TABLE wlt_jrn036_audit_events
+ALTER TABLE wlt_audit_events
   ALTER COLUMN operator_context_id SET NOT NULL;
-CREATE INDEX wlt_jrn036_audit_OperatorContext_aggregate_idx
-  ON wlt_jrn036_audit_events (operator_context_id, aggregate_type, aggregate_id, created_at DESC);
+CREATE INDEX wlt_audit_OperatorContext_aggregate_idx
+  ON wlt_audit_events (operator_context_id, aggregate_type, aggregate_id, created_at DESC);
 
-ALTER TABLE wlt_jrn036_mutation_receipts ADD COLUMN IF NOT EXISTS operator_context_id text;
-UPDATE wlt_jrn036_mutation_receipts
+ALTER TABLE wlt_mutation_receipts ADD COLUMN IF NOT EXISTS operator_context_id text;
+UPDATE wlt_mutation_receipts
 SET operator_context_id = 'legacy-unscoped'
 WHERE operator_context_id IS NULL OR btrim(operator_context_id) = '';
-ALTER TABLE wlt_jrn036_mutation_receipts
+ALTER TABLE wlt_mutation_receipts
   ALTER COLUMN operator_context_id SET DEFAULT 'legacy-unscoped';
-ALTER TABLE wlt_jrn036_mutation_receipts
+ALTER TABLE wlt_mutation_receipts
   ALTER COLUMN operator_context_id SET NOT NULL;
-ALTER TABLE wlt_jrn036_mutation_receipts
-  DROP CONSTRAINT IF EXISTS wlt_jrn036_mutation_receipts_pkey;
-ALTER TABLE wlt_jrn036_mutation_receipts
-  ADD CONSTRAINT wlt_jrn036_mutation_receipts_pkey
+ALTER TABLE wlt_mutation_receipts
+  DROP CONSTRAINT IF EXISTS wlt_mutation_receipts_pkey;
+ALTER TABLE wlt_mutation_receipts
+  ADD CONSTRAINT wlt_mutation_receipts_pkey
   PRIMARY KEY (operator_context_id, idempotency_key);
-DROP INDEX IF EXISTS wlt_jrn036_mutation_receipts_aggregate_idx;
-DROP INDEX IF EXISTS wlt_jrn036_mutation_receipts_request_hash_idx;
-CREATE INDEX wlt_jrn036_mutation_receipts_OperatorContext_aggregate_idx
-  ON wlt_jrn036_mutation_receipts (operator_context_id, mutation_type, aggregate_id, created_at DESC);
-CREATE INDEX wlt_jrn036_mutation_receipts_OperatorContext_request_hash_idx
-  ON wlt_jrn036_mutation_receipts (operator_context_id, request_hash);
+DROP INDEX IF EXISTS wlt_mutation_receipts_aggregate_idx;
+DROP INDEX IF EXISTS wlt_mutation_receipts_request_hash_idx;
+CREATE INDEX wlt_mutation_receipts_OperatorContext_aggregate_idx
+  ON wlt_mutation_receipts (operator_context_id, mutation_type, aggregate_id, created_at DESC);
+CREATE INDEX wlt_mutation_receipts_OperatorContext_request_hash_idx
+  ON wlt_mutation_receipts (operator_context_id, request_hash);
 
 COMMENT ON COLUMN wlt_ledger_accounts.operator_context_id IS
   'Trusted OperatorContext ownership. legacy-unscoped requires explicit financial reconciliation before production activation.';
 COMMENT ON COLUMN wlt_field_commission_category_policy_versions.operator_context_id IS
   'OperatorContext owning this WLT commission policy; active policy uniqueness is OperatorContext-local.';
-COMMENT ON COLUMN wlt_jrn036_audit_events.operator_context_id IS
+COMMENT ON COLUMN wlt_audit_events.operator_context_id IS
   'OperatorContext owning the audited financial aggregate. legacy-unscoped is compatibility-only and cannot prove SaaS isolation.';
 
 COMMIT;

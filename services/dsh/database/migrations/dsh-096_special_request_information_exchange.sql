@@ -1,6 +1,6 @@
 BEGIN;
 
--- JRN-022: operators may request missing information without overloading
+-- : operators may request missing information without overloading
 -- rejection_reason or client-authored notes. One pending exchange per request
 -- keeps the workflow deterministic while preserving every completed round.
 CREATE TABLE IF NOT EXISTS dsh_special_request_information_exchanges (

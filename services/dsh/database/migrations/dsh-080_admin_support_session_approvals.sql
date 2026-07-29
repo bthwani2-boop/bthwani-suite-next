@@ -1,4 +1,4 @@
--- JRN-031: maker-checker approval and operational readback for support sessions.
+-- : maker-checker approval and operational readback for support sessions.
 
 CREATE TABLE IF NOT EXISTS dsh_admin_support_session_requests (
   id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),

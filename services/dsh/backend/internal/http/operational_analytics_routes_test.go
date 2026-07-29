@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestJRN032AnalyticsRoutesRegistered(t *testing.T) {
+func TestAnalyticsRoutesRegistered(t *testing.T) {
 	mux := NewRouter(nil, nil, nil, nil, nil)
 	RegisterPartnerSelfRoutes(mux, nil, nil, nil, nil)
 	RegisterOperationalAnalyticsRoutes(mux, nil, nil, nil, nil)

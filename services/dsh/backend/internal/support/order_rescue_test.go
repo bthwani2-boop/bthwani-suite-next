@@ -2,7 +2,7 @@ package support
 
 import "testing"
 
-func TestJRN021OrderRescueTransitions(t *testing.T) {
+func TestOrderRescueTransitions(t *testing.T) {
 	allowed := []struct {
 		from OrderRescueStatus
 		to   OrderRescueStatus
@@ -24,7 +24,7 @@ func TestJRN021OrderRescueTransitions(t *testing.T) {
 	}
 }
 
-func TestJRN021WLTBoundaryIsReferenceOnly(t *testing.T) {
+func TestWLTBoundaryIsReferenceOnly(t *testing.T) {
 	if err := validateOrderRescueDecision(RescueOwnerWLTReferenceOnly, RescueActionOpenWLTVisibility); err != nil {
 		t.Fatalf("expected read-only WLT visibility decision to be valid: %v", err)
 	}

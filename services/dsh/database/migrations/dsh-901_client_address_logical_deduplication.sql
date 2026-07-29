@@ -1,5 +1,5 @@
 -- dsh-901_client_address_logical_deduplication.sql
--- JRN-005 forward closure: one active logical delivery address per client.
+--  forward closure: one active logical delivery address per client.
 -- Existing exact operational duplicates are soft-deleted deterministically while
 -- preserving the default/newest canonical row and retaining historical FK targets.
 

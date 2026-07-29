@@ -270,7 +270,7 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actors
-			(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
+			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
 		VALUES ($1,$2,'',$3,$4,$5,$6::jsonb,false,now())`,
 		actorID, username, operatorContextID, phone, pq.Array(roles), string(permissionsJSON))
 	if err != nil {

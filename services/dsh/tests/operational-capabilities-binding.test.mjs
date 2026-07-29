@@ -164,11 +164,11 @@ describe("operational capability verification hygiene", () => {
   it("uses the generic permanent verifier and removes capability-specific repair workflows", () => {
     assert.equal(exists(verifierPath), true);
     for (const workflow of [
-      "jrn-020-025-sambassam-verify.yml",
-      "jrn-020-025-boundary-diagnostic.yml",
-      "jrn-020-025-wlt-boundary-diagnostic.yml",
-      "jrn-020-025-surface-import-repair.yml",
-      "jrn-020-025-wlt-guard-scope-repair.yml",
+      "025-sambassam-verify.yml",
+      "025-boundary-diagnostic.yml",
+      "025-wlt-boundary-diagnostic.yml",
+      "025-surface-import-repair.yml",
+      "025-wlt-guard-scope-repair.yml",
     ]) {
       assert.equal(exists(`../../../.github/workflows/${workflow}`), false, `${workflow} must remain removed`);
     }

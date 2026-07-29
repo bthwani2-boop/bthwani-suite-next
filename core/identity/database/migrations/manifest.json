@@ -8,84 +8,84 @@
     {
       "ordinal": 1,
       "file": "identity-001_sessions.sql",
-      "sha256": "ee88051d44506a10f684889c04f304a02f6bdc7b4f947ad5df59096134b685db",
+      "sha256": "529188feaa64c4094b507bf4a8a1218d70b10f125935a3a845d4432b032eeb16",
       "historicalPrefix": "001",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 2,
       "file": "identity-002_activation_challenges.sql",
-      "sha256": "0b5bdd503a3327b547f00af71560c8eda7a1ecc7488542e4ceff0c88430145ac",
+      "sha256": "8cbfc449a8bb36ce7c9605c8b00fb9a49f096952b1506fd8779b2acca53494a0",
       "historicalPrefix": "002",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 3,
       "file": "identity-003_login_attempts.sql",
-      "sha256": "2fd33b928ca74c8a79aa9d8685892e92c96ff0832c1340a8bd3116b9c5f5219b",
+      "sha256": "583559997503e556510bc479c594c2db5106105c7ec4124cc7c3d0b160267a48",
       "historicalPrefix": "003",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 4,
       "file": "identity-004_otp_and_deletion_outbox.sql",
-      "sha256": "41b02b53526de0901454068c6987f5a1330c4cb53ecedb8de82037672f930427",
+      "sha256": "9fd0853fc1450fe5997697e13c67bd6f48ba4aa1ca371ec338358f78fff04ee8",
       "historicalPrefix": "004",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 5,
-      "file": "identity-005_jrn_002_governance.sql",
-      "sha256": "0a236fa15151498e3ce4db8f8b90f19ad9b2a309703ff460400b6e9ea519c604",
+      "file": "identity-005_governance.sql",
+      "sha256": "0591cd9fe4eb269cd95da36f027801f7c60c09ea31170a1fe770f42deac2fa1d",
       "historicalPrefix": "005",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 6,
       "file": "identity-006_deletion_outbox_delivery.sql",
-      "sha256": "84b7420c46226105389c9059f4e32c7aae20f2c1e507cfeaf375d2f4ee769ba6",
+      "sha256": "44fc9cca1d44b53e65b5318a2643ce7b37a6396b2a6307232c4000dc1ba9f16f",
       "historicalPrefix": "006",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 7,
-      "file": "identity-007_local_actor_tenant_repair.sql",
-      "sha256": "5299d6daa3004947f93d0bbc8f4adcb341b700271246ccf5566939481e9a137b",
+      "file": "identity-007_local_actor_operator_context_repair.sql",
+      "sha256": "d423194952d81858c26e8887a585bb0466d28c958316a9820af4e75aecbe8133",
       "historicalPrefix": "007",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 8,
       "file": "identity-008_employee_activation_surface.sql",
-      "sha256": "794a34f8fc5b2e073b1ec33e28d0b40beaca5426276cdc279ed83d2a0f1fee4f",
+      "sha256": "0b4e828d593ff2a1e14def1d0853d29348ad40008363c35873de47fed037e396",
       "historicalPrefix": "008",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 9,
       "file": "identity-009_support_sessions.sql",
-      "sha256": "e93177d0d34c2faadb58187abbaf1a5f36911afb69ab253fc78eb488fe82486b",
+      "sha256": "3a4cd4bfb31754f91b6950cb88a0d87126ac34d04c41e65ec6653c0fe090520d",
       "historicalPrefix": "009",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 10,
       "file": "identity-010_employee_operator_role_repair.sql",
-      "sha256": "598cd9df89af686cc2eaf42bb02bb4034d846ba0b0f9040e7b40908a0446fe5d",
+      "sha256": "b92b70825f62953d310351c43606df66210cb7f186175d6007767750d8ae8909",
       "historicalPrefix": "010",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 11,
       "file": "identity-011_employee_dsh_permission_backfill.sql",
-      "sha256": "b3930637a1109bd02e9fd269d261db815e643956095774a2b84a59fdb74c2765",
+      "sha256": "6d9d22945272307a9f0035cdac4be7cd7d8b3042e0fb00176e109adcaea9fc1d",
       "historicalPrefix": "011",
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 12,
       "file": "identity-012_activation_session_causality.sql",
-      "sha256": "bded0a9665b4a82218482bd43170a7a12c6097d6bcfc8b83295651b9aa1b5164",
+      "sha256": "62db708e2fcb5b6c5be51194e2472d45504093ffde2f36fb781b00995cfb07e8",
       "historicalPrefix": "012",
       "state": "HISTORICAL_IMMUTABLE"
     }

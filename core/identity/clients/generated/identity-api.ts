@@ -1158,7 +1158,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Caller or tenant context is forbidden. */
+            /** @description Caller or operator context is forbidden. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1193,7 +1193,7 @@ export interface operations {
                     "application/json": components["schemas"]["ActorAdminView"];
                 };
             };
-            /** @description Missing tenant context or invalid bundle, department, phone, or username. */
+            /** @description Missing operator context or invalid bundle, department, phone, or username. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1207,7 +1207,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Caller or tenant context is forbidden. */
+            /** @description Caller or operator context is forbidden. */
             403: {
                 headers: {
                     [name: string]: unknown;

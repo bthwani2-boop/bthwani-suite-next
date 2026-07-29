@@ -56,6 +56,6 @@ func TestUnifiedPayoutDestinationRouteRemainsRegistered(t *testing.T) {
 	router.ServeHTTP(res, req)
 
 	if res.Code == http.StatusNotFound {
-		t.Fatalf("unified JRN-037 payout destination route must remain registered")
+		t.Fatalf("unified  payout destination route must remain registered")
 	}
 }

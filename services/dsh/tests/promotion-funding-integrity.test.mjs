@@ -5,8 +5,8 @@ import test from "node:test";
 const read = (path) => fs.readFileSync(path, "utf8");
 
 const wltMigration = read("services/wlt/database/migrations/wlt-096_jrn_028_promotion_funding_audit_integrity.sql");
-const integrityProof = read("services/wlt/database/tests/jrn-028-promotion-funding-integrity.sh");
-const concurrencyProof = read("services/wlt/database/tests/jrn-028-promotion-funding-concurrency.sh");
+const integrityProof = read("services/wlt/database/tests/promotion-funding-integrity.sh");
+const concurrencyProof = read("services/wlt/database/tests/promotion-funding-concurrency.sh");
 const wltServer = read("services/wlt/backend/internal/http/server.go");
 const wltJSON = read("services/wlt/backend/internal/promotionfunding/reservation_json.go");
 const serviceAuth = read("services/wlt/backend/internal/shared/serviceauth.go");

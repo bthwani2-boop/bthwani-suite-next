@@ -104,17 +104,21 @@ func enforceOperatorContext(w http.ResponseWriter, r *http.Request, identity aut
 	defaultOperatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
 	identityOperatorContextID := strings.TrimSpace(identity.OperatorContextID)
 
-	if identityOperatorContextID == "" {
-		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "authenticated identity has no trusted tenant context")
+	if defaultOperatorContextID == "" {
+		sendError(w, http.StatusServiceUnavailable, "OPERATOR_CONTEXT_CONFIG_INVALID", "missing runtime operator context configuration")
 		return false
 	}
-	if defaultOperatorContextID != "" && identityOperatorContextID != defaultOperatorContextID {
-		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "identity tenant does not match the active runtime tenant")
+	if identityOperatorContextID == "" {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "authenticated identity has no trusted operator context")
+		return false
+	}
+	if identityOperatorContextID != defaultOperatorContextID {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "identity operator context does not match the active runtime operator context")
 		return false
 	}
 	requestedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 	if requestedOperatorContextID != "" && requestedOperatorContextID != identityOperatorContextID {
-		sendError(w, http.StatusForbidden, "UNTRUSTED_OPERATOR_CONTEXT", "client-supplied tenant context does not match the authenticated identity")
+		sendError(w, http.StatusForbidden, "UNTRUSTED_OPERATOR_CONTEXT", "client-supplied operator context does not match the authenticated identity")
 		return false
 	}
 	return true

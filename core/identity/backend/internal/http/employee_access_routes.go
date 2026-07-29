@@ -63,13 +63,13 @@ func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		if trustedOperatorContextID != "" && trustedOperatorContextID != operatorContextID {
-			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "provisioned employee tenant cannot override the active runtime tenant")
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "provisioned employee tenant cannot override the active runtime operator context")
 			return
 		}
 		trustedOperatorContextID = operatorContextID
 	}
 	if trustedOperatorContextID == "" {
-		sendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted tenant context is required for employee provisioning")
+		sendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted operator context is required for employee provisioning")
 		return
 	}
 	input.OperatorContextID = trustedOperatorContextID

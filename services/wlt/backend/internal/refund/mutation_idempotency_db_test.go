@@ -23,7 +23,7 @@ func TestGovernedRefundRuntimeMutationIdempotencyReplayAndConflict(t *testing.T)
 		_, _ = w.Write([]byte(`{"refund":{"id":"refund-idempotent","status":"approved"}}`))
 	})
 	handler := RequireMutationIdempotency(db, "approve", next)
-	key := "jrn035-mutation-replay-" + time.Now().UTC().Format("20060102150405.000000000")
+	key := "mutation-replay-" + time.Now().UTC().Format("20060102150405.000000000")
 	path := "/wlt/refunds/refund-idempotent/approve"
 
 	first := httptest.NewRecorder()

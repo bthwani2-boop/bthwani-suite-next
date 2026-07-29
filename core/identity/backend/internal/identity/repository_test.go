@@ -388,11 +388,11 @@ func (s *fakeStmt) Query(args []driver.Value) (driver.Rows, error) {
 }
 
 func actorPhoneColumns() []string {
-	return []string{"id", "username", "tenant_id", "phone_e164", "roles", "permissions", "active"}
+	return []string{"id", "username", "operator_context_id", "phone_e164", "roles", "permissions", "active"}
 }
 
 func sessionColumns() []string {
-	return []string{"id", "username", "password_hash", "tenant_id", "phone_e164", "roles", "permissions", "active", "session_id", "expires_at"}
+	return []string{"id", "username", "password_hash", "operator_context_id", "phone_e164", "roles", "permissions", "active", "session_id", "expires_at"}
 }
 
 type fakeResult int64

@@ -7,7 +7,7 @@
 -- the local Identity tenant so operator negative-state lookups remain tenant
 -- isolated rather than relying on legacy-unscoped rows.
 UPDATE wlt_wallets
-SET tenant_id = 'local-dsh'
+SET operator_context_id = 'local-dsh'
 WHERE actor_id IN ('partner-dev-0001', 'partner-dev-0002', 'captain-dev-0001', 'captain-dev-0002', 'field-dev-0001', 'client-dev-0001');
 
 DELETE FROM wlt_wallets
@@ -15,7 +15,7 @@ WHERE id = 'wlt-wallet-client-other-tenant-001';
 
 INSERT INTO wlt_wallets (
   id,
-  tenant_id,
+  operator_context_id,
   actor_id,
   actor_type,
   status,
@@ -36,7 +36,7 @@ VALUES
   ('wlt-wallet-field-local-001',   'local-dsh', 'field-local-001',   'field',   'active', 'YER', 165000, 20000,  5000, 190000, 20000,  5000, '2026-07-22T08:03:00Z', '2026-07-22T08:03:00Z'),
   ('wlt-wallet-client-isolated-context-001', 'isolated-platform-context', 'client-isolated-context-001', 'client', 'active', 'YER', 999999, 0, 0, 999999, 0, 0, '2026-07-22T08:04:00Z', '2026-07-22T08:04:00Z')
 ON CONFLICT (id) DO UPDATE SET
-  tenant_id = EXCLUDED.tenant_id,
+  operator_context_id = EXCLUDED.operator_context_id,
   actor_id = EXCLUDED.actor_id,
   actor_type = EXCLUDED.actor_type,
   status = EXCLUDED.status,
@@ -64,7 +64,7 @@ WHERE source_type = 'runtime_seed'
 
 INSERT INTO wlt_ledger_entries (
   id,
-  tenant_id,
+  operator_context_id,
   entry_type,
   actor_id,
   actor_type,
@@ -87,7 +87,7 @@ VALUES
   ('wled-wallet-field-local-001',   'local-dsh', 'commission',    'field-local-001',   'field',   'runtime_seed', 'representative-wallet-field',   'representative-wallet-field-credit',   'runtime_evidence', 165000, 'YER', 'credit', 165000, 'عمولة الميداني المحلية', 'representative-wallet-seed-field-local-001',   '2026-07-22T08:03:00Z'),
   ('wled-wallet-client-isolated-context-001', 'isolated-platform-context', 'wallet_credit', 'client-isolated-context-001', 'client', 'runtime_seed', 'representative-wallet-isolated-context', 'representative-wallet-isolated-context-credit', 'runtime_evidence', 999999, 'YER', 'credit', 999999, 'قيد سلبي لإثبات منع القراءة عبر سياقات المنصة', 'representative-wallet-seed-client-isolated-context-001', '2026-07-22T08:04:00Z')
 ON CONFLICT (id) DO UPDATE SET
-  tenant_id = EXCLUDED.tenant_id,
+  operator_context_id = EXCLUDED.operator_context_id,
   amount_minor_units = EXCLUDED.amount_minor_units,
   balance_after = EXCLUDED.balance_after,
   description = EXCLUDED.description,

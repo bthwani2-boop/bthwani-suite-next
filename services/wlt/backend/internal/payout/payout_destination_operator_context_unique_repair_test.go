@@ -7,7 +7,7 @@ import (
 )
 
 func TestPayoutDestinationOperatorContextUniqueRepairRemovesGlobalIndex(t *testing.T) {
-	migration, err := os.ReadFile("../../../database/migrations/wlt-113_payout_destination_OperatorContext_unique_repair.sql")
+	migration, err := os.ReadFile("../../../database/migrations/wlt-113_payout_destination_operator_context_unique_repair.sql")
 	if err != nil {
 		t.Fatalf("read payout destination OperatorContext repair migration: %v", err)
 	}

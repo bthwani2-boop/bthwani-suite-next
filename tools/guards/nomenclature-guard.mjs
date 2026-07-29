@@ -77,7 +77,7 @@ for (const file of files) {
     violations.push({
       file,
       line: 0,
-      message: "INTERNAL_JOURNEY_ID_EXPOSED_TO_USER — replace JRN identifier with an objective product label",
+      message: "INTERNAL_JOURNEY_ID_EXPOSED_TO_USER — replace  identifier with an objective product label",
     });
     break;
   }

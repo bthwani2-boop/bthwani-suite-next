@@ -13,8 +13,8 @@ func TestClientAddressMutationOwnershipIsolation(t *testing.T) {
 	ensureIntegrationServiceArea(t, db)
 	ctx := context.Background()
 	suffix := fmt.Sprintf("%08d", time.Now().UnixNano()%100000000)
-	ownerID := "jrn005-owner-" + suffix
-	intruderID := "jrn005-intruder-" + suffix
+	ownerID := "owner-" + suffix
+	intruderID := "intruder-" + suffix
 
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM dsh_client_address_mutation_receipts WHERE client_id IN ($1,$2)`, ownerID, intruderID)

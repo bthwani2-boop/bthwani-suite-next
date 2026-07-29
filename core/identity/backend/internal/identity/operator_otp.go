@@ -9,7 +9,7 @@ import (
 	"github.com/lib/pq"
 )
 
-var ErrTenantMismatch = errors.New("actor tenant does not match active runtime tenant")
+var ErrTenantMismatch = errors.New("actor operator context does not match active runtime operator context")
 
 // otpRoleSurface and otpRolePermissions delegate to the single central
 // activation registry so the public OTP path can never diverge from it —
@@ -78,7 +78,7 @@ func (r *Repository) RequestOtpForTenant(
 		username := role + "-" + phone
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO identity_actors
-				(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
+				(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
 			VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, false, now())`,
 			actorID, username, operatorContextID, phone, pq.Array([]string{role}), string(permissions))
 		if err != nil {
@@ -98,7 +98,7 @@ func (r *Repository) RequestOtpForTenant(
 				SET roles = array_append(roles, $2),
 				    permissions = permissions || $3::jsonb,
 				    updated_at = now()
-				WHERE id = $1 AND tenant_id = $4`,
+				WHERE id = $1 AND operator_context_id = $4`,
 				actor.ID, role, string(permissions), operatorContextID)
 			if err != nil {
 				return IssueActivationResult{}, err

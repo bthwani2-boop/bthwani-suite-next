@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestJRN003WorkforceScopeRoutesAreMounted(t *testing.T) {
+func TestWorkforceScopeRoutesAreMounted(t *testing.T) {
 	mux := http.NewServeMux()
 	RegisterWorkforceScopeRoutes(mux, nil, nil, nil, nil)
 	RegisterWorkforceEmployeeMediaRoute(mux, nil, nil, nil, nil)
@@ -30,7 +30,7 @@ func TestJRN003WorkforceScopeRoutesAreMounted(t *testing.T) {
 	}
 }
 
-func TestJRN003ScopeValuesAreNormalized(t *testing.T) {
+func TestScopeValuesAreNormalized(t *testing.T) {
 	got := normalizedScopeValues([]string{" store-2 ", "store-1", "", "store-2"})
 	want := []string{"store-1", "store-2"}
 	if !reflect.DeepEqual(got, want) {

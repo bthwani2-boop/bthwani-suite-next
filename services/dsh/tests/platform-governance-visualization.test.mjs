@@ -26,7 +26,7 @@ test("platform governance renders the live visualization on the sovereign platfo
   assert.doesNotMatch(visual, /fetch\s*\(/);
 });
 
-test("platform governance binds the visualization to authenticated SaaS tenant context", () => {
+test("platform governance binds the visualization to authenticated SaaS operator context", () => {
   assert.match(identityContract, /ActorIdentity:[\s\S]*operatorContextId: string/);
   assert.match(session, /identity: ActorIdentity/);
   assert.match(visual, /identity\?\.operatorContextId\.trim\(\)/);
@@ -34,7 +34,7 @@ test("platform governance binds the visualization to authenticated SaaS tenant c
   assert.doesNotMatch(visual, /local-dsh/);
   assert.doesNotMatch(visual, /X-Operator-Context-ID/);
   assert.match(platformServer, /enforceSaasOperatorContext/);
-  assert.match(platformServer, /authenticated identity has no trusted tenant context/);
+  assert.match(platformServer, /authenticated identity has no trusted operator context/);
 });
 
 test("platform governance exposes the complete governed lifecycle without bypass actions", () => {

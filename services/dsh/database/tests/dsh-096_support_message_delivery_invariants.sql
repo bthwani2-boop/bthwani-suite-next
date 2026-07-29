@@ -1,4 +1,4 @@
--- JRN-021: support attachments and read receipts must remain durable and scoped.
+-- : support attachments and read receipts must remain durable and scoped.
 DO $$
 BEGIN
   IF to_regclass('public.dsh_support_message_attachments') IS NULL THEN

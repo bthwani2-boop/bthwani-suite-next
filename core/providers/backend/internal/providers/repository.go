@@ -36,7 +36,7 @@ func (r *Repository) IdempotentReplay(ctx context.Context, actorID, operation, k
 	var response []byte
 	err = r.db.QueryRowContext(ctx, `
 		SELECT request_hash, response_body FROM providers_idempotency
-		WHERE tenant_id = $1 AND actor_id = $2 AND operation = $3 AND idempotency_key = $4`,
+		WHERE operator_context_id = $1 AND actor_id = $2 AND operation = $3 AND idempotency_key = $4`,
 		operatorContextID, actorID, operation, key).Scan(&storedHash, &response)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
@@ -59,9 +59,9 @@ func (r *Repository) StoreIdempotentResponse(ctx context.Context, actorID, opera
 		return err
 	}
 	_, err = r.db.ExecContext(ctx, `
-		INSERT INTO providers_idempotency (tenant_id, actor_id, operation, idempotency_key, request_hash, response_body)
+		INSERT INTO providers_idempotency (operator_context_id, actor_id, operation, idempotency_key, request_hash, response_body)
 		VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-		ON CONFLICT (tenant_id, actor_id, operation, idempotency_key) DO NOTHING`,
+		ON CONFLICT (operator_context_id, actor_id, operation, idempotency_key) DO NOTHING`,
 		operatorContextID, actorID, operation, key, requestHash, string(response))
 	return err
 }
@@ -83,7 +83,7 @@ func (r *Repository) RecordAudit(ctx context.Context, actorID, actorRole, target
 	}
 	_, err = r.db.ExecContext(ctx, `
 		INSERT INTO providers_action_audit
-			(tenant_id, actor_id, actor_role, target_id, action, from_state, to_state, reason, correlation_id)
+			(operator_context_id, actor_id, actor_role, target_id, action, from_state, to_state, reason, correlation_id)
 		VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6::jsonb, $7::jsonb, NULLIF($8, ''), NULLIF($9, ''))`,
 		operatorContextID, actorID, actorRole, targetID, action, fromJSON, toJSON, reason, correlationID)
 	return err

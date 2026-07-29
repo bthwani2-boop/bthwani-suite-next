@@ -15,11 +15,6 @@ func authorizedServiceRequest(path string) *http.Request {
 	return request
 }
 
-func configureActiveSaaS(t *testing.T) {
-	t.Helper()
-	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "authorized")
-}
-
 func TestRequireServiceCallerRequiresPromotionFundingOperatorContext(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
 
@@ -30,10 +25,10 @@ func TestRequireServiceCallerRequiresPromotionFundingOperatorContext(t *testing.
 		"TEST_WLT_SERVICE_TOKEN",
 		"dsh",
 	) {
-		t.Fatal("promotion funding request without X-Operator-Context-ID was accepted")
+		t.Fatal("financial request without X-Operator-Context-ID was accepted")
 	}
-	if missing.Code != http.StatusBadRequest {
-		t.Fatalf("missing OperatorContext status=%d, want %d", missing.Code, http.StatusBadRequest)
+	if missing.Code != http.StatusBadRequest || !strings.Contains(missing.Body.String(), "MISSING_operator_context_id") {
+		t.Fatalf("expected MISSING_operator_context_id, got status=%d body=%s", missing.Code, missing.Body.String())
 	}
 
 	presentRequest := authorizedServiceRequest("/wlt/promotion-funding/reservations/pfr_123")
@@ -44,37 +39,8 @@ func TestRequireServiceCallerRequiresPromotionFundingOperatorContext(t *testing.
 	}
 }
 
-func TestRequireServiceCallerRequiresOperatorContextOutsideActiveSaaS(t *testing.T) {
+func TestRequireServiceCallerRequiresOperatorContextForEveryCall(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "blocked")
-
-	missing := httptest.NewRecorder()
-	if RequireServiceCaller(
-		missing,
-		authorizedServiceRequest("/wlt/settlements"),
-		"TEST_WLT_SERVICE_TOKEN",
-		"dsh",
-	) {
-		t.Fatal("financial request without X-Operator-Context-ID was accepted outside active SaaS")
-	}
-	if missing.Code != http.StatusBadRequest || !strings.Contains(missing.Body.String(), "MISSING_operator_context_id") {
-		t.Fatalf("expected MISSING_operator_context_id, got status=%d body=%s", missing.Code, missing.Body.String())
-	}
-
-	presentRequest := authorizedServiceRequest("/wlt/settlements")
-	presentRequest.Header.Set("X-Operator-Context-ID", "OperatorContext-deferred")
-	present := httptest.NewRecorder()
-	if !RequireServiceCaller(present, presentRequest, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatalf("explicit deferred OperatorContext was rejected with status=%d body=%s", present.Code, present.Body.String())
-	}
-	if operatorContextID, ok := OperatorContextIDFromContext(presentRequest.Context()); !ok || operatorContextID != "OperatorContext-deferred" {
-		t.Fatalf("trusted OperatorContext was not propagated, OperatorContext=%q ok=%v", operatorContextID, ok)
-	}
-}
-
-func TestRequireServiceCallerRequiresOperatorContextForEveryActiveSaaSCall(t *testing.T) {
-	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	configureActiveSaaS(t)
 
 	recorder := httptest.NewRecorder()
 	if RequireServiceCaller(
@@ -83,16 +49,25 @@ func TestRequireServiceCallerRequiresOperatorContextForEveryActiveSaaSCall(t *te
 		"TEST_WLT_SERVICE_TOKEN",
 		"dsh",
 	) {
-		t.Fatal("active SaaS service call without OperatorContext was accepted")
+		t.Fatal("service call without OperatorContext was accepted")
 	}
 	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), "MISSING_operator_context_id") {
 		t.Fatalf("expected MISSING_operator_context_id, got status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+
+	presentRequest := authorizedServiceRequest("/wlt/settlements")
+	presentRequest.Header.Set("X-Operator-Context-ID", "OperatorContext-1")
+	present := httptest.NewRecorder()
+	if !RequireServiceCaller(present, presentRequest, "TEST_WLT_SERVICE_TOKEN", "dsh") {
+		t.Fatalf("explicit OperatorContext was rejected with status=%d body=%s", present.Code, present.Body.String())
+	}
+	if operatorContextID, ok := OperatorContextIDFromContext(presentRequest.Context()); !ok || operatorContextID != "OperatorContext-1" {
+		t.Fatalf("trusted OperatorContext was not propagated, OperatorContext=%q ok=%v", operatorContextID, ok)
 	}
 }
 
 func TestRequireServiceCallerAcceptsDistinctAuthenticatedOperatorContexts(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	configureActiveSaaS(t)
 
 	for _, operatorContextID := range []string{"OperatorContext-a", "OperatorContext-b"} {
 		request := authorizedServiceRequest("/wlt/settlements")
@@ -106,7 +81,6 @@ func TestRequireServiceCallerAcceptsDistinctAuthenticatedOperatorContexts(t *tes
 
 func TestRequireServiceCallerDoesNotTrustOperatorContextBeforeServiceAuthentication(t *testing.T) {
 	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	configureActiveSaaS(t)
 	request := authorizedServiceRequest("/wlt/settlements")
 	request.Header.Set("Authorization", "Bearer wrong-token")
 	request.Header.Set("X-Operator-Context-ID", "OperatorContext-a")
@@ -117,21 +91,6 @@ func TestRequireServiceCallerDoesNotTrustOperatorContextBeforeServiceAuthenticat
 	}
 	if recorder.Code != http.StatusForbidden || !strings.Contains(recorder.Body.String(), "SERVICE_TOKEN_INVALID") {
 		t.Fatalf("expected SERVICE_TOKEN_INVALID, got status=%d body=%s", recorder.Code, recorder.Body.String())
-	}
-}
-
-func TestRequireServiceCallerFailsClosedForInvalidActiveSaaSState(t *testing.T) {
-	t.Setenv("TEST_WLT_SERVICE_TOKEN", "test-token")
-	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "blocked")
-	request := authorizedServiceRequest("/wlt/settlements")
-	request.Header.Set("X-Operator-Context-ID", "OperatorContext-a")
-	recorder := httptest.NewRecorder()
-
-	if RequireServiceCaller(recorder, request, "TEST_WLT_SERVICE_TOKEN", "dsh") {
-		t.Fatal("active SaaS call was accepted with blocked commercial state")
-	}
-	if recorder.Code != http.StatusServiceUnavailable || !strings.Contains(recorder.Body.String(), "SAAS_RUNTIME_CONFIG_INVALID") {
-		t.Fatalf("expected SAAS_RUNTIME_CONFIG_INVALID, got status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 }
 

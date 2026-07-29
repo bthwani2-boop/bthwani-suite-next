@@ -4,7 +4,7 @@
     {
       "path": "/dsh/field/partners/{partnerId}/catalog/product-proposals",
       "projectionContracts": ["dsh.catalog-proposal-readback.openapi.yaml", "dsh.catalog.openapi.yaml"],
-      "reason": "Out of VC-120 wave-1 scope (Pickup/Partner-Delivery SLA ownership and jrn-* renames only); catalog-proposal ownership between dsh.catalog-proposal-readback.openapi.yaml and dsh.catalog.openapi.yaml is unreviewed. Deferred to VC-190 (DSH operational truth)."
+      "reason": "Out of VC-120 wave-1 scope (Pickup/Partner-Delivery SLA ownership and * renames only); catalog-proposal ownership between dsh.catalog-proposal-readback.openapi.yaml and dsh.catalog.openapi.yaml is unreviewed. Deferred to VC-190 (DSH operational truth)."
     },
     {
       "path": "/dsh/partner/catalog/product-proposals",

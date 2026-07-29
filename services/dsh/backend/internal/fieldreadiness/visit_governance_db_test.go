@@ -19,7 +19,7 @@ func registerGovernedStoreLocation(t *testing.T, db *sql.DB, storeID, partnerID 
 
 func seedStoreBoundReadinessMedia(t *testing.T, db *sql.DB, partnerID, storeID, agentID string) string {
 	t.Helper()
-	mediaRef := uniqueID("media-jrn024")
+	mediaRef := uniqueID("media-")
 	if _, err := db.ExecContext(context.Background(), `
 		INSERT INTO dsh_media_refs
 			(media_ref, storage_key, owner_actor_id, owner_actor_role, partner_id, store_id, purpose, content_type, original_filename)

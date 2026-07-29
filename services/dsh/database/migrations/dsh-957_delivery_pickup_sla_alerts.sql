@@ -1,6 +1,6 @@
 -- dsh-957: persisted SLA breach alerts for partner_delivery and pickup.
 --
--- Mirrors dsh_order_preparation_alerts' shape (JRN-032): a reconciled,
+-- Mirrors dsh_order_preparation_alerts' shape (): a reconciled,
 -- acknowledgeable alert row per (entity, leg) rather than a raw computed
 -- state, so operators can see and acknowledge a breach even after it
 -- resolves, and so an alert panel does not need to re-derive history from

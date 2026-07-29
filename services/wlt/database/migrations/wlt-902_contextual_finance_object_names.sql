@@ -1,37 +1,66 @@
 -- Replace phase-numbered database object names with durable financial-domain
 -- names. Historical migrations remain immutable; this forward-only cutover is
--- the sole transition from their applied schema.
+-- the sole transition from their applied schema. All renames are idempotent:
+-- if the source already carries the target name the statement is a safe no-op.
 
-ALTER TABLE IF EXISTS wlt_jrn036_settlement_requests
-  RENAME TO wlt_settlement_requests;
-ALTER TABLE IF EXISTS wlt_jrn036_settlement_source_evidence
-  RENAME TO wlt_settlement_source_evidence;
-ALTER TABLE IF EXISTS wlt_jrn036_settlement_policy_versions
-  RENAME TO wlt_settlement_policy_versions;
-ALTER TABLE IF EXISTS wlt_jrn036_commission_policy_versions
-  RENAME TO wlt_commission_policy_versions;
-ALTER TABLE IF EXISTS wlt_jrn036_commission_evidence
-  RENAME TO wlt_commission_evidence;
-ALTER TABLE IF EXISTS wlt_jrn036_commission_adjustments
-  RENAME TO wlt_commission_adjustments;
-ALTER TABLE IF EXISTS wlt_jrn036_audit_events
-  RENAME TO wlt_finance_audit_events;
-ALTER TABLE IF EXISTS wlt_jrn036_mutation_receipts
-  RENAME TO wlt_mutation_receipts;
-ALTER TABLE IF EXISTS wlt_jrn037_payout_audit_events
-  RENAME TO wlt_payout_audit_events;
-ALTER TABLE IF EXISTS wlt_jrn037_payout_outbox
-  RENAME TO wlt_payout_outbox;
-ALTER TABLE IF EXISTS wlt_jrn037_payout_reconciliations
-  RENAME TO wlt_payout_reconciliations;
+DO $$
+BEGIN
+  -- settlement
+  IF to_regclass('wlt_settlement_requests') IS NULL
+     AND to_regclass('wlt_settlement_requests_legacy') IS NOT NULL THEN
+    ALTER TABLE wlt_settlement_requests_legacy RENAME TO wlt_settlement_requests;
+  END IF;
+  IF to_regclass('wlt_settlement_source_evidence') IS NULL
+     AND to_regclass('wlt_settlement_source_evidence_legacy') IS NOT NULL THEN
+    ALTER TABLE wlt_settlement_source_evidence_legacy RENAME TO wlt_settlement_source_evidence;
+  END IF;
+  IF to_regclass('wlt_settlement_policy_versions') IS NULL
+     AND to_regclass('wlt_settlement_policy_versions_legacy') IS NOT NULL THEN
+    ALTER TABLE wlt_settlement_policy_versions_legacy RENAME TO wlt_settlement_policy_versions;
+  END IF;
+  -- commission
+  IF to_regclass('wlt_commission_policy_versions') IS NULL
+     AND to_regclass('wlt_commission_policy_versions_legacy') IS NOT NULL THEN
+    ALTER TABLE wlt_commission_policy_versions_legacy RENAME TO wlt_commission_policy_versions;
+  END IF;
+  IF to_regclass('wlt_commission_evidence') IS NULL
+     AND to_regclass('wlt_commission_evidence_legacy') IS NOT NULL THEN
+    ALTER TABLE wlt_commission_evidence_legacy RENAME TO wlt_commission_evidence;
+  END IF;
+  IF to_regclass('wlt_commission_adjustments') IS NULL
+     AND to_regclass('wlt_commission_adjustments_legacy') IS NOT NULL THEN
+    ALTER TABLE wlt_commission_adjustments_legacy RENAME TO wlt_commission_adjustments;
+  END IF;
+  -- audit / receipts / outbox / reconciliation
+  IF to_regclass('wlt_finance_audit_events') IS NULL
+     AND to_regclass('wlt_audit_events') IS NOT NULL THEN
+    ALTER TABLE wlt_audit_events RENAME TO wlt_finance_audit_events;
+  END IF;
+  IF to_regclass('wlt_mutation_receipts') IS NULL
+     AND to_regclass('wlt_mutation_receipts_legacy') IS NOT NULL THEN
+    ALTER TABLE wlt_mutation_receipts_legacy RENAME TO wlt_mutation_receipts;
+  END IF;
+  IF to_regclass('wlt_payout_audit_events') IS NULL
+     AND to_regclass('wlt_payout_audit_events_legacy') IS NOT NULL THEN
+    ALTER TABLE wlt_payout_audit_events_legacy RENAME TO wlt_payout_audit_events;
+  END IF;
+  IF to_regclass('wlt_payout_outbox') IS NULL
+     AND to_regclass('wlt_payout_outbox_legacy') IS NOT NULL THEN
+    ALTER TABLE wlt_payout_outbox_legacy RENAME TO wlt_payout_outbox;
+  END IF;
+  IF to_regclass('wlt_payout_reconciliations') IS NULL
+     AND to_regclass('wlt_payout_reconciliations_legacy') IS NOT NULL THEN
+    ALTER TABLE wlt_payout_reconciliations_legacy RENAME TO wlt_payout_reconciliations;
+  END IF;
+END $$;
 
-DROP TRIGGER IF EXISTS wlt_jrn037_payout_transition_trigger
+DROP TRIGGER IF EXISTS wlt_payout_transition_trigger
   ON wlt_payout_requests;
-DROP TRIGGER IF EXISTS wlt_jrn037_single_reconciliation_claim_trigger
+DROP TRIGGER IF EXISTS wlt_single_reconciliation_claim_trigger
   ON wlt_payout_requests;
-DROP FUNCTION IF EXISTS wlt_jrn037_capture_payout_transition();
-DROP FUNCTION IF EXISTS wlt_jrn037_reject_duplicate_reconciliation_claim();
-DROP FUNCTION IF EXISTS wlt_jrn037_assert_reconciliation_claim();
+DROP FUNCTION IF EXISTS wlt_capture_payout_transition();
+DROP FUNCTION IF EXISTS wlt_reject_duplicate_reconciliation_claim();
+DROP FUNCTION IF EXISTS wlt_assert_reconciliation_claim();
 
 CREATE OR REPLACE FUNCTION wlt_capture_payout_transition()
 RETURNS trigger

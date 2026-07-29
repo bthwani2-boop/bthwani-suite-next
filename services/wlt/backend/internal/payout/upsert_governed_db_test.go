@@ -88,7 +88,7 @@ func decodeCanonicalPayoutRef(t *testing.T, recorder *httptest.ResponseRecorder)
 
 func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreOperatorContextLocal(t *testing.T) {
 	db := openPayoutRequiredDB(t)
-	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "jrn-037-db-test-encryption-key")
+	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "db-test-encryption-key")
 	actorID := governedPayoutActorID()
 	OperatorContextA := "OperatorContext-payout-a-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	OperatorContextB := "OperatorContext-payout-b-" + strconv.FormatInt(time.Now().UnixNano(), 10)

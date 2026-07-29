@@ -8,7 +8,7 @@ import (
 
 type operatorContextKey struct{}
 
-var ErrOperatorContextRequired = errors.New("trusted tenant context is required")
+var ErrOperatorContextRequired = errors.New("trusted operator context is required")
 
 // WithOperatorContext installs the tenant resolved from the authenticated Identity
 // session. Callers must never populate this value from request headers or body.

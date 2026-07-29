@@ -1,9 +1,9 @@
 -- Repair development actors created by older bootstrap revisions that did not
--- update tenant_id during ON CONFLICT. This migration is forward-only and
+-- update operator_context_id during ON CONFLICT. This migration is forward-only and
 -- preserves all sessions, roles, permissions, and audit history.
 
 UPDATE identity_actors
-SET tenant_id = 'local-dsh',
+SET operator_context_id = 'local-dsh',
     updated_at = now()
 WHERE id = ANY (ARRAY[
   'operator-local-001',
@@ -15,7 +15,7 @@ WHERE id = ANY (ARRAY[
   'platform-applier-local-001',
   'platform-rollout-manager-local-001'
 ]::text[])
-  AND btrim(tenant_id) = '';
+  AND btrim(operator_context_id) = '';
 
 DO $$
 BEGIN
@@ -27,7 +27,7 @@ BEGIN
   ) THEN
     ALTER TABLE identity_actors
       ADD CONSTRAINT identity_actors_tenant_nonblank_chk
-      CHECK (btrim(tenant_id) <> '') NOT VALID;
+      CHECK (btrim(operator_context_id) <> '') NOT VALID;
   END IF;
 END
 $$;

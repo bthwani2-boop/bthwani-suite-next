@@ -38,8 +38,8 @@ func seedOrderTruthCheckout(t *testing.T, db *sql.DB, operatorContextID, clientI
 		INSERT INTO dsh_cart_items
 			(cart_id, product_id, product_name, price_reference, unit_price, currency, quantity)
 		VALUES
-			($1::uuid, $2, 'JRN-011 governed item', '1250.00 YER', 1250.00, 'YER', 2)`,
-		cartID, "jrn011-product-"+suffix,
+			($1::uuid, $2, ' governed item', '1250.00 YER', 1250.00, 'YER', 2)`,
+		cartID, "product-"+suffix,
 	); err != nil {
 		t.Fatalf("seed cart item: %v", err)
 	}
@@ -62,7 +62,7 @@ func seedOrderTruthCheckout(t *testing.T, db *sql.DB, operatorContextID, clientI
 		clientID,
 		cartID,
 		storeID,
-		"wlt-jrn011-"+suffix,
+		"wlt-"+suffix,
 	).Scan(&checkoutID); err != nil {
 		t.Fatalf("seed checkout intent: %v", err)
 	}
@@ -74,17 +74,17 @@ func seedOrderTruthDBFixture(t *testing.T, db *sql.DB) orderTruthDBFixture {
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	fixture := orderTruthDBFixture{
-		OperatorContextID:      "OperatorContext-jrn011-" + suffix,
-		ClientID:      "client-jrn011-" + suffix,
-		OtherClientID: "client-jrn011-other-" + suffix,
-		StoreID:       "store-jrn011-" + suffix,
+		OperatorContextID:      "OperatorContext-" + suffix,
+		ClientID:      "client-" + suffix,
+		OtherClientID: "client-other-" + suffix,
+		StoreID:       "store-" + suffix,
 	}
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores
 			(id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
 		VALUES
-			($1, $1, 'JRN-011 Truth Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
+			($1, $1, ' Truth Store', 'active', 'SAN', 'SAN-1', 'serviceable', true)`,
 		fixture.StoreID,
 	); err != nil {
 		t.Fatalf("seed store: %v", err)
@@ -118,8 +118,8 @@ func seedOrderTruthDBFixture(t *testing.T, db *sql.DB) orderTruthDBFixture {
 func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	fixture := seedOrderTruthDBFixture(t, db)
-	idempotencyKey := "jrn011-create-" + strconv.FormatInt(time.Now().UnixNano(), 10)
-	correlationID := "jrn011-correlation-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	idempotencyKey := "create-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	correlationID := "correlation-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 
 	created, replay, err := CreateOrderTruth(db, CreateOrderTruthInput{
 		CheckoutIntentID: fixture.CheckoutID,

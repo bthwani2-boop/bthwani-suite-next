@@ -158,12 +158,12 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 		}
 		_, err = r.db.ExecContext(ctx, `
 			INSERT INTO identity_actors
-				(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
+				(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, true, now())
 			ON CONFLICT (id) DO UPDATE SET
 				username = EXCLUDED.username,
 				password_hash = EXCLUDED.password_hash,
-				tenant_id = EXCLUDED.tenant_id,
+				operator_context_id = EXCLUDED.operator_context_id,
 				phone_e164 = EXCLUDED.phone_e164,
 				roles = EXCLUDED.roles,
 				permissions = EXCLUDED.permissions,
@@ -458,7 +458,7 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 	var sessionID string
 	var expiresAt time.Time
 	err := r.db.QueryRowContext(ctx, `
-		SELECT a.id, a.username, a.password_hash, a.tenant_id, a.phone_e164, a.roles, a.permissions, a.active,
+		SELECT a.id, a.username, a.password_hash, a.operator_context_id, a.phone_e164, a.roles, a.permissions, a.active,
 		       s.id, s.access_expires_at
 		FROM identity_sessions s
 		JOIN identity_actors a ON a.id = s.actor_id
@@ -574,7 +574,7 @@ func (r *Repository) actorByUsername(ctx context.Context, username string) (Acto
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, password_hash, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
 		FROM identity_actors WHERE username = $1`, username).Scan(
 		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
 		&roles, &permissionsJSON, &actor.Active,
@@ -594,7 +594,7 @@ func actorByIDTx(ctx context.Context, tx *sql.Tx, actorID string) (Actor, error)
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, password_hash, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
 		FROM identity_actors WHERE id = $1`, actorID).Scan(
 		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
 		&roles, &permissionsJSON, &actor.Active,
@@ -746,7 +746,7 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actors
-			(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
+			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
 		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, false, now())`,
 		actorID, username, operatorContextID, phone, pq.Array([]string{role}), string(permissions))
 	if err != nil {
@@ -901,7 +901,7 @@ func actorByIDForUpdateTx(ctx context.Context, tx *sql.Tx, actorID string) (Acto
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, password_hash, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
 		FROM identity_actors WHERE id = $1
 		FOR UPDATE`, actorID).Scan(
 		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
@@ -922,7 +922,7 @@ func actorByPhoneAnyRoleTx(ctx context.Context, tx *sql.Tx, phone string) (Actor
 	var roles pq.StringArray
 	var permissionsJSON []byte
 	err := tx.QueryRowContext(ctx, `
-		SELECT id, username, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
+		SELECT id, username, operator_context_id, COALESCE(phone_e164, ''), roles, permissions, active
 		FROM identity_actors
 		WHERE phone_e164 = $1
 		LIMIT 1

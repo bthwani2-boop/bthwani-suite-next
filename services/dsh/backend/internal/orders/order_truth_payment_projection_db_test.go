@@ -9,7 +9,7 @@ import (
 	"dsh-api/internal/wlt"
 )
 
-func TestJRN011PaymentProjectionDBIntegration(t *testing.T) {
+func TestPaymentProjectionDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	fixture := seedOrderTruthDBFixture(t, db)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -17,8 +17,8 @@ func TestJRN011PaymentProjectionDBIntegration(t *testing.T) {
 		CheckoutIntentID: fixture.CheckoutID,
 		ClientID:         fixture.ClientID,
 		OperatorContextID:         fixture.OperatorContextID,
-		IdempotencyKey:   "jrn011-projection-" + suffix,
-		CorrelationID:    "jrn011-projection-trace-" + suffix,
+		IdempotencyKey:   "projection-" + suffix,
+		CorrelationID:    "projection-trace-" + suffix,
 	})
 	if err != nil || replay {
 		t.Fatalf("create projection fixture order: replay=%v err=%v", replay, err)

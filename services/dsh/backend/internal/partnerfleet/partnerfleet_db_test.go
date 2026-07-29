@@ -15,7 +15,7 @@ import (
 func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
-		t.Skip("DATABASE_URL is required for the JRN-030 PostgreSQL lifecycle proof")
+		t.Skip("DATABASE_URL is required for the  PostgreSQL lifecycle proof")
 	}
 
 	db, err := sql.Open("postgres", databaseURL)
@@ -63,7 +63,7 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 			INSERT INTO dsh_store_team_members
 				(id, store_id, name, role, status, branch_assignment, delivery_assignment, invited_identity)
 			VALUES ($1, $2, $3, 'courier', 'invited', 'main', 'delivery', $4)`,
-			id, store, name, id+"@jrn030.test")
+			id, store, name, id+"@.test")
 		if err != nil {
 			t.Fatalf("insert member %s: %v", id, err)
 		}

@@ -7,7 +7,7 @@ import (
 )
 
 func TestReconciliationOperatorContextGuardDerivesAndRejectsOperatorContextMismatch(t *testing.T) {
-	migration, err := os.ReadFile("../../../database/migrations/wlt-901_reconciliation_OperatorContext_guard.sql")
+	migration, err := os.ReadFile("../../../database/migrations/wlt-901_reconciliation_operator_context_guard.sql")
 	if err != nil {
 		t.Fatalf("read reconciliation OperatorContext guard migration: %v", err)
 	}

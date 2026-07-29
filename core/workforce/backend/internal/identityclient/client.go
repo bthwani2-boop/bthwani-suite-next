@@ -20,7 +20,7 @@ var (
 	ErrActorNotFound     = errors.New("actor not found")
 	ErrRateLimited       = errors.New("activation rate limited")
 	ErrInvalidActor      = errors.New("actor input invalid")
-	ErrTenantForbidden   = errors.New("tenant context forbidden")
+	ErrTenantForbidden   = errors.New("operator context forbidden")
 	ErrUnavailable       = errors.New("identity unavailable")
 )
 

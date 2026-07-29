@@ -22,7 +22,7 @@ func (r *Repository) ValidateEmployeePhoneTenant(ctx context.Context, rawPhone, 
 	}
 	var existingOperatorContextID string
 	err = r.db.QueryRowContext(ctx, `
-		SELECT tenant_id FROM identity_actors WHERE phone_e164=$1 LIMIT 1`, phone).Scan(&existingOperatorContextID)
+		SELECT operator_context_id FROM identity_actors WHERE phone_e164=$1 LIMIT 1`, phone).Scan(&existingOperatorContextID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}

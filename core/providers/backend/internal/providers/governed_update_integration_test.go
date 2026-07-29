@@ -14,8 +14,8 @@ import (
 )
 
 func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *testing.T) {
-	if os.Getenv("JRN039_DATABASE_TEST") != "1" {
-		t.Skip("set JRN039_DATABASE_TEST=1 after applying provider migrations")
+	if os.Getenv("DATABASE_TEST") != "1" {
+		t.Skip("set DATABASE_TEST=1 after applying provider migrations")
 	}
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
@@ -28,13 +28,13 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *te
 	defer db.Close()
 	baseCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	ctx := WithOperatorContext(baseCtx, "tenant-jrn039")
+	ctx := WithOperatorContext(baseCtx, "tenant-")
 
-	const providerID = "jrn039-atomic-provider"
+	const providerID = "atomic-provider"
 	cleanup := func() {
-		_, _ = db.ExecContext(context.Background(), `DROP TRIGGER IF EXISTS jrn039_reject_provider_audit ON providers_action_audit`)
-		_, _ = db.ExecContext(context.Background(), `DROP FUNCTION IF EXISTS jrn039_reject_provider_audit()`)
-		_, _ = db.ExecContext(context.Background(), `DELETE FROM providers_idempotency WHERE actor_id = 'jrn039-test-actor'`)
+		_, _ = db.ExecContext(context.Background(), `DROP TRIGGER IF EXISTS reject_provider_audit ON providers_action_audit`)
+		_, _ = db.ExecContext(context.Background(), `DROP FUNCTION IF EXISTS reject_provider_audit()`)
+		_, _ = db.ExecContext(context.Background(), `DELETE FROM providers_idempotency WHERE actor_id = 'test-actor'`)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM providers_action_audit WHERE target_id = $1`, providerID)
 		_, _ = db.ExecContext(context.Background(), `DELETE FROM external_providers WHERE provider_id = $1`, providerID)
 	}
@@ -43,7 +43,7 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *te
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO external_providers (provider_id, kind, code, active, credentials, parameters)
-		VALUES ($1, 'email', 'jrn039-atomic-email', false, '{"apiKey":"secret-value"}'::jsonb, '{"environment":"test"}'::jsonb)`,
+		VALUES ($1, 'email', 'atomic-email', false, '{"apiKey":"secret-value"}'::jsonb, '{"environment":"test"}'::jsonb)`,
 		providerID,
 	); err != nil {
 		t.Fatalf("insert provider: %v", err)
@@ -53,9 +53,9 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *te
 	service := NewService(repository)
 	active := true
 	input := UpdateProviderInput{Active: &active}
-	operator := Operator{ActorID: "jrn039-test-actor", Role: "operator"}
+	operator := Operator{ActorID: "test-actor", Role: "operator"}
 
-	first, err := service.UpdateProvider(ctx, providerID, input, operator, "jrn039-correlation-1", "jrn039-idempotency-1")
+	first, err := service.UpdateProvider(ctx, providerID, input, operator, "correlation-1", "idempotency-1")
 	if err != nil {
 		t.Fatalf("first governed update: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *te
 		t.Fatalf("governed response leaked credentials: %s", encoded)
 	}
 
-	replay, err := service.UpdateProvider(ctx, providerID, input, operator, "jrn039-correlation-retry", "jrn039-idempotency-1")
+	replay, err := service.UpdateProvider(ctx, providerID, input, operator, "correlation-retry", "idempotency-1")
 	if err != nil {
 		t.Fatalf("idempotent replay: %v", err)
 	}
@@ -79,10 +79,10 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *te
 	}
 
 	var auditCount, idempotencyCount int
-	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM providers_action_audit WHERE tenant_id = 'tenant-jrn039' AND target_id = $1`, providerID).Scan(&auditCount); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM providers_action_audit WHERE operator_context_id = 'tenant-' AND target_id = $1`, providerID).Scan(&auditCount); err != nil {
 		t.Fatalf("count audit rows: %v", err)
 	}
-	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM providers_idempotency WHERE tenant_id = 'tenant-jrn039' AND actor_id = $1 AND operation = 'provider.update'`, operator.ActorID).Scan(&idempotencyCount); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM providers_idempotency WHERE operator_context_id = 'tenant-' AND actor_id = $1 AND operation = 'provider.update'`, operator.ActorID).Scan(&idempotencyCount); err != nil {
 		t.Fatalf("count idempotency rows: %v", err)
 	}
 	if auditCount != 1 || idempotencyCount != 1 {
@@ -90,7 +90,7 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *te
 	}
 
 	otherTenantCtx := WithOperatorContext(baseCtx, "tenant-other")
-	otherTenant, err := service.UpdateProvider(otherTenantCtx, providerID, input, operator, "jrn039-correlation-other", "jrn039-idempotency-1")
+	otherTenant, err := service.UpdateProvider(otherTenantCtx, providerID, input, operator, "correlation-other", "idempotency-1")
 	if err != nil {
 		t.Fatalf("same idempotency key in another tenant was rejected: %v", err)
 	}
@@ -99,28 +99,28 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *te
 	}
 
 	inactive := false
-	_, err = service.UpdateProvider(ctx, providerID, UpdateProviderInput{Active: &inactive}, operator, "jrn039-correlation-conflict", "jrn039-idempotency-1")
+	_, err = service.UpdateProvider(ctx, providerID, UpdateProviderInput{Active: &inactive}, operator, "correlation-conflict", "idempotency-1")
 	if !errors.Is(err, ErrIdempotencyConflict) {
 		t.Fatalf("expected same-tenant idempotency conflict, got %v", err)
 	}
 
 	if _, err := db.ExecContext(ctx, `
-		CREATE FUNCTION jrn039_reject_provider_audit() RETURNS trigger AS $$
+		CREATE FUNCTION reject_provider_audit() RETURNS trigger AS $$
 		BEGIN
-			IF NEW.target_id = 'jrn039-atomic-provider' THEN
+			IF NEW.target_id = 'atomic-provider' THEN
 				RAISE EXCEPTION 'forced audit failure';
 			END IF;
 			RETURN NEW;
 		END;
 		$$ LANGUAGE plpgsql;
-		CREATE TRIGGER jrn039_reject_provider_audit
+		CREATE TRIGGER reject_provider_audit
 		BEFORE INSERT ON providers_action_audit
-		FOR EACH ROW EXECUTE FUNCTION jrn039_reject_provider_audit();
+		FOR EACH ROW EXECUTE FUNCTION reject_provider_audit();
 	`); err != nil {
 		t.Fatalf("install audit failure trigger: %v", err)
 	}
 
-	_, err = service.UpdateProvider(ctx, providerID, UpdateProviderInput{Active: &inactive}, operator, "jrn039-correlation-rollback", "jrn039-idempotency-rollback")
+	_, err = service.UpdateProvider(ctx, providerID, UpdateProviderInput{Active: &inactive}, operator, "correlation-rollback", "idempotency-rollback")
 	if err == nil {
 		t.Fatal("expected forced audit failure")
 	}
@@ -133,7 +133,7 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *te
 	}
 	if err := db.QueryRowContext(ctx, `
 		SELECT count(*) FROM providers_idempotency
-		WHERE tenant_id = 'tenant-jrn039' AND actor_id = $1 AND operation = 'provider.update' AND idempotency_key = 'jrn039-idempotency-rollback'`,
+		WHERE operator_context_id = 'tenant-' AND actor_id = $1 AND operation = 'provider.update' AND idempotency_key = 'idempotency-rollback'`,
 		operator.ActorID,
 	).Scan(&idempotencyCount); err != nil {
 		t.Fatalf("count rollback idempotency rows: %v", err)

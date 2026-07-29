@@ -1,4 +1,4 @@
--- WLT-036: JRN-034 governed payment-operation replay, provider events and
+-- WLT-036:  governed payment-operation replay, provider events and
 -- capture-ledger cross references.
 --
 -- Authorize/capture provider calls are high-risk at-most-once operations. The

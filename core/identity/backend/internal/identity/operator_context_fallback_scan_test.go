@@ -9,7 +9,7 @@ import (
 
 // Guards against reintroducing a silent default-tenant fallback like the one
 // removed from Repository.RequestOtp (VC-005): every actor-provisioning
-// write must derive tenant_id from a trusted, explicit source, never a
+// write must derive operator_context_id from a trusted, explicit source, never a
 // hardcoded literal.
 func TestNoHardcodedLocalDshTenantLiteral(t *testing.T) {
 	files, err := filepath.Glob("*.go")
@@ -25,7 +25,7 @@ func TestNoHardcodedLocalDshTenantLiteral(t *testing.T) {
 			t.Fatalf("read %s: %v", file, err)
 		}
 		if strings.Contains(string(content), "'local-dsh'") {
-			t.Fatalf("%s contains a hardcoded 'local-dsh' tenant literal; tenant_id must come from a trusted source", file)
+			t.Fatalf("%s contains a hardcoded 'local-dsh' tenant literal; operator_context_id must come from a trusted source", file)
 		}
 	}
 }

@@ -45,7 +45,7 @@ func (r *Repository) UpdateProviderGoverned(
 	err = tx.QueryRowContext(ctx, `
 		SELECT request_hash, response_body
 		FROM providers_idempotency
-		WHERE tenant_id = $1 AND actor_id = $2 AND operation = $3 AND idempotency_key = $4`,
+		WHERE operator_context_id = $1 AND actor_id = $2 AND operation = $3 AND idempotency_key = $4`,
 		operatorContextID,
 		governance.ActorID,
 		operation,
@@ -145,7 +145,7 @@ func (r *Repository) UpdateProviderGoverned(
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO providers_idempotency
-			(tenant_id, actor_id, operation, idempotency_key, request_hash, response_body)
+			(operator_context_id, actor_id, operation, idempotency_key, request_hash, response_body)
 		VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
 		operatorContextID,
 		governance.ActorID,
@@ -185,7 +185,7 @@ func insertProviderAuditTx(
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO providers_action_audit
-			(tenant_id, actor_id, actor_role, target_id, action, from_state, to_state, correlation_id)
+			(operator_context_id, actor_id, actor_role, target_id, action, from_state, to_state, correlation_id)
 		VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6::jsonb, $7::jsonb, NULLIF($8, ''))`,
 		operatorContextID,
 		actorID,

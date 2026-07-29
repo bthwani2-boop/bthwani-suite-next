@@ -93,8 +93,8 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreOperatorContextLocal(t *test
 	const amount int64 = 25000
 
 	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE FROM wlt_jrn037_payout_outbox WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
-		_, _ = db.Exec(`DELETE FROM wlt_jrn037_payout_reconciliations WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
+		_, _ = db.Exec(`DELETE FROM wlt_payout_outbox WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
+		_, _ = db.Exec(`DELETE FROM wlt_payout_reconciliations WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
 		_, _ = db.Exec(`DELETE FROM wlt_payout_audit_events WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
 		_, _ = db.Exec(`DELETE FROM wlt_payout_requests WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))
 		_, _ = db.Exec(`DELETE FROM wlt_payout_destination_requests WHERE operator_context_id = ANY($1::text[])`, pqPayoutTextArray(OperatorContexts))

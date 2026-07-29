@@ -8,7 +8,7 @@ describe("partner unified full-stack SaaS closure", () => {
   test("models tenant-scoped legal partner, brand, store, transfer audit and readiness", () => {
     const migration = read("services/dsh/database/migrations/dsh-958_partner_workspace_store_ownership.sql");
     assert.match(migration, /CREATE TABLE IF NOT EXISTS dsh_partner_brands/);
-    assert.match(migration, /tenant_id\s+TEXT\s+NOT NULL/);
+    assert.match(migration, /operator_context_id\s+TEXT\s+NOT NULL/);
     assert.match(migration, /brand_id TEXT REFERENCES dsh_partner_brands/);
     assert.match(migration, /dsh_partner_store_transfer_audit/);
     assert.match(migration, /expected_store_version/);
@@ -39,7 +39,7 @@ describe("partner unified full-stack SaaS closure", () => {
     const tenantHandler = read("services/dsh/backend/internal/partner/tenant_handler.go");
     const transfer = read("services/dsh/backend/internal/partner/store_ownership_closure.go");
 
-    assert.match(tenantList, /tenant_id = \$1/);
+    assert.match(tenantList, /operator_context_id = \$1/);
     assert.match(tenantList, /category = \$/);
     assert.match(tenantList, /query\.Limit = 50/);
     assert.match(tenantHandler, /r\.URL\.Query\(\)\.Get\("category"\)/);
