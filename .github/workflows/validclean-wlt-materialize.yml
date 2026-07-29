@@ -16,6 +16,7 @@ on:
       - "tools/important-scripts/contracts-typecheck.mjs"
       - "tools/validclean-repository-reconstruction/apply-vc004.mjs"
       - "tools/validclean-repository-reconstruction/apply-vc004-contract-dedup.mjs"
+      - "tools/validclean-repository-reconstruction/apply-vc004-common.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/validclean-wlt-materialize.yml"
@@ -62,6 +63,7 @@ jobs:
           set -euo pipefail
           node tools/validclean-repository-reconstruction/apply-vc004.mjs
           node tools/validclean-repository-reconstruction/apply-vc004-contract-dedup.mjs
+          node tools/validclean-repository-reconstruction/apply-vc004-common.mjs
 
       - name: Generate canonical WLT bundle and client
         run: pnpm --dir services/wlt openapi:generate
@@ -83,7 +85,7 @@ jobs:
           git add \
             package.json \
             services/wlt/package.json \
-            services/wlt/contracts/wlt.openapi.yaml \
+            services/wlt/contracts/*.openapi.yaml \
             services/wlt/contracts/generated/wlt.bundle.openapi.yaml \
             services/wlt/clients/generated/wlt-api.ts \
             services/wlt/tests/wlt-api-client.test.mjs \
