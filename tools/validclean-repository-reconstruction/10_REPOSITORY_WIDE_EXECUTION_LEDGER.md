@@ -123,6 +123,56 @@ fresh_schema_failures = 0
 upgrade_schema_failures = 0
 ```
 
+### VC-130b — Migration manifests for the remaining five services
+
+الحالة: `VERIFIED_SAME_SHA`
+
+قبل الشريحة كانت `migration-manifest-drift-gate.mjs` تمر على DSH فقط وتُصدر `SKIP` للخمسة الباقية، أي أن غياب Manifest لم يكن يفشل.
+
+الأعمال:
+
+- توليد `manifest.json` بـ`tools/scripts/generate-migration-manifest.mjs` نفسه (لم تُكتب أداة ثانية) لـ:
+
+```text
+wlt              63 migrations
+identity         12 migrations
+workforce        13 migrations
+providers         3 migrations
+platform-control  7 migrations
+```
+
+- إثبات أن ترتيب التشغيل غير ملتبس: مُقارنة الترتيبين الفعليين المستعملين في المستودع على مجموعات الملفات الست:
+
+```text
+Sort-Object { $_.Name.ToLowerInvariant() }, Name   (tools/scripts/invoke-service-migrations.ps1)
+Sort-Object Name                                    (infra/docker/scripts/runtime.ps1,
+                                                     services/dsh/database/scripts/invoke-dsh-database.ps1)
+```
+
+النتيجة: `firstDivergenceCount = 0` لكل الخدمات الست، فالـManifest صالح لكل مُشغِّل.
+
+- تصفير مسار التهرّب: `SKIP` أُزيلت من الحارس؛ غياب `manifest.json` صار `FAIL` صريحًا مع أمر إعادة التوليد.
+- تسجيل الحارس فعليًا: `guard:migration-manifest-drift` في `package.json` وفي `governance/guards/guard-registry.json`، وخطوة غير مشروطة في `.github/workflows/ci-policy.yml`. حارس لا يشغّله شيء ليس حارسًا.
+
+إصلاحات مصاحبة كانت تُفشل `guard:guard-registry` و`guard:cleanup-policy` قبل هذه الشريحة (سابقة لها، من موجات سابقة):
+
+- `guard:wlt-openapi-bundle` كان سكربتًا غير مسجل ⇒ سُجّل، وحُذف الاسم المرادف غير المستهلك `openapi:lint:wlt`.
+- `.github/workflows/validclean-full-repository-audit.yml` كان خارج `governance/github/workflow-registry.json` ⇒ سُجّل كـ`READ_ONLY_DIAGNOSTIC` مع شرط تقاعده.
+- `14_NOISE_AND_NAMESPACE_ELIMINATION.md` كان يحوي جذر مستودع محلي حرفيًا ⇒ أُزيل.
+
+مُتحقَّق منه بالطفرة (mutation test): إخفاء `core/providers/.../manifest.json` يُنتج `FAIL providers` وخروج `1`؛ وإعادته تُنتج `PASS` وخروج `0`.
+
+الإغلاق:
+
+```text
+migration_manifest_missing = 0
+unregistered_migrations   = 0
+checksum_drift            = 0
+new_prefix_collisions     = 0
+```
+
+ملاحظة صريحة: تصادمات البادئات التاريخية (32 في التدقيق المُثبت، منها `providers-002` مرتين و`dsh-096/097/098` بخمسة ملفات لكل) تبقى كما هي بوصفها `HISTORICAL_IMMUTABLE`؛ الحارس يمنع تصادمًا **جديدًا** بعد ملف `cutover` ولا يعيد تسمية ملف مطبق.
+
 ### VC-140 — OpenAPI ownership metadata
 
 - `x-bthwani-owner` إلزامي لكل مصدر عقد.

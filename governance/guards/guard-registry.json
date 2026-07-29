@@ -65,6 +65,22 @@
       "source_file": "tools/guards/cleanup-policy-gate.mjs"
     },
     {
+      "id": "migration-manifest-drift",
+      "name": "Migration Manifest Drift Gate",
+      "script": "guard:migration-manifest-drift",
+      "exit_level": "fail",
+      "description": "Rejects unregistered, missing, renamed, checksum-drifted, or newly prefix-colliding SQL migrations against each service's committed migrations/manifest.json.",
+      "source_file": "tools/guards/migration-manifest-drift-gate.mjs"
+    },
+    {
+      "id": "wlt-openapi-bundle",
+      "name": "WLT OpenAPI Bundle Gate",
+      "script": "guard:wlt-openapi-bundle",
+      "exit_level": "fail",
+      "description": "Verifies the composed WLT OpenAPI bundle and its generated artifacts against the modular contract sources.",
+      "source_file": "tools/guards/wlt-openapi-bundle-gate.mjs"
+    },
+    {
       "id": "api-binding",
       "name": "API Contract Binding Gate",
       "script": "guard:api-binding",

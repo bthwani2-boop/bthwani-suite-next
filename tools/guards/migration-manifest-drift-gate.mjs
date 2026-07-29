@@ -29,8 +29,13 @@ function checkService(service) {
   const manifestPath = path.join(dir, "manifest.json");
   const failures = [];
 
+  // Every service listed in servicePaths carries a committed manifest as of
+  // VC-130b; a missing one is a regression, never a skip.
   if (!fs.existsSync(manifestPath)) {
-    return { service, skipped: true, reason: "no manifest.json (not yet migrated to VC-130 manifest tracking)" };
+    return {
+      service,
+      failures: [`missing ${relativeDir}/manifest.json — regenerate with: node tools/scripts/generate-migration-manifest.mjs --service ${service}`],
+    };
   }
 
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
@@ -72,7 +77,7 @@ function checkService(service) {
     }
   }
 
-  return { service, skipped: false, failures };
+  return { service, failures };
 }
 
 const targetServices = requestedServices ?? Object.keys(servicePaths);
@@ -84,10 +89,6 @@ for (const service of targetServices) {
     continue;
   }
   const result = checkService(service);
-  if (result.skipped) {
-    console.log(`migration-manifest-drift-gate: SKIP ${service} (${result.reason})`);
-    continue;
-  }
   if (result.failures.length > 0) {
     anyFailure = true;
     console.error(`migration-manifest-drift-gate: FAIL ${service}`);

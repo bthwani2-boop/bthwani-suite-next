@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "service": "providers",
+  "ordering": "explicit",
+  "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
+  "cutover": "providers-002_tenant_execution_context.sql",
+  "migrations": [
+    {
+      "ordinal": 1,
+      "file": "providers-001_initial.sql",
+      "sha256": "e3f12d4f81c828090b9d206c975b3636cb88037e2f3b67bda472727b01c30cee",
+      "historicalPrefix": "001",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 2,
+      "file": "providers-002_jrn_039_secret_safe_health.sql",
+      "sha256": "8b89c6847ce215735a0c507df7390f4d54b43b683a4498673f94f359f4f69d3d",
+      "historicalPrefix": "002",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 3,
+      "file": "providers-002_tenant_execution_context.sql",
+      "sha256": "7128400630522811f153b4d0695f77e4cc73abf4df409e9ae3f3e52ce99a0a2a",
+      "historicalPrefix": "002",
+      "state": "HISTORICAL_IMMUTABLE"
+    }
+  ]
+}

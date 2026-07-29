@@ -96,7 +96,7 @@
     "closureMatrix": "tools/validclean-repository-reconstruction/17_FINAL_CLOSURE_MATRIX.md",
     "lastPackageInputSha": "04e702468282451f5efc8d72bd8b3e4496969d00",
     "headResolutionPolicy": "Resolve refs/heads/validclean externally; the manifest does not self-reference its own commit SHA.",
-    "currentWave": "WAVE_0_1_CONTRACTS_AND_MIGRATIONS_CLOSED",
+    "currentWave": "WAVE_1_5_NEEDS_EVIDENCE_BACKLOG_IN_PROGRESS",
     "slices": {
       "VC-100-full-tracked-file-inventory": "VERIFIED_SAME_SHA",
       "VC-101-package-state-unification": "VERIFIED_SAME_SHA",
@@ -104,6 +104,7 @@
       "VC-110-platform-control-contract-reconstruction": "VERIFIED_SAME_SHA",
       "VC-120-dsh-contract-reconstruction": "VERIFIED_SAME_SHA",
       "VC-130-migration-history-reconstruction": "VERIFIED_SAME_SHA",
+      "VC-130b-migration-manifest-all-services": "VERIFIED_SAME_SHA",
       "VC-140-openapi-ownership-metadata": "VERIFIED_SAME_SHA",
       "VC-150-generated-client-provenance-all-services": "VERIFIED_SAME_SHA",
       "VC-160-identity-trust-closure": "NOT_STARTED",
@@ -175,7 +176,7 @@
     },
     "needsEvidence": [
       "VC-120: 4 DSH cross-contract path-ownership collision pairs (catalog-proposal-readback/catalog, marketing-commercial/partner-commercial-closure, payouts-destinations/representative-finance, delivery-proof-media/partner-delivery) recorded in services/dsh/contracts/dsh.contract-ownership-allowlist.json, deferred to VC-180/VC-190.",
-      "VC-130: identity, workforce, providers, platform-control, wlt migrations still lack a manifest.json; migration-manifest-drift-gate.mjs SKIPs them rather than passing them.",
+      "VC-130: RESOLVED in VC-130b -- all six services now carry a committed migrations/manifest.json, the gate's SKIP escape hatch is gone, and guard:migration-manifest-drift runs unconditionally in ci-policy.yml.",
       "VC-140: possible naming/ownership collision between services/wlt/contracts/wlt.payout-destination.openapi.yaml (singular, not bundle-composed) and wlt.payouts-destinations.openapi.yaml (plural, canonical) discovered but not resolved; deferred to VC-180.",
       "VC-150: identity/workforce/providers/dsh generated clients still lack a delete-regenerate-diff gate equivalent to WLT's and Platform Control's.",
       "Discovered, unrelated to this wave's changes: services/dsh/clients/generated/dsh-api.ts is stale relative to its source bundle (currency-field schema additions never regenerated); confirmed pre-existing via git stash; not fixed here to stay in scope.",

@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "service": "identity",
+  "ordering": "explicit",
+  "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
+  "cutover": "identity-012_activation_session_causality.sql",
+  "migrations": [
+    {
+      "ordinal": 1,
+      "file": "identity-001_sessions.sql",
+      "sha256": "ee88051d44506a10f684889c04f304a02f6bdc7b4f947ad5df59096134b685db",
+      "historicalPrefix": "001",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 2,
+      "file": "identity-002_activation_challenges.sql",
+      "sha256": "0b5bdd503a3327b547f00af71560c8eda7a1ecc7488542e4ceff0c88430145ac",
+      "historicalPrefix": "002",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 3,
+      "file": "identity-003_login_attempts.sql",
+      "sha256": "2fd33b928ca74c8a79aa9d8685892e92c96ff0832c1340a8bd3116b9c5f5219b",
+      "historicalPrefix": "003",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 4,
+      "file": "identity-004_otp_and_deletion_outbox.sql",
+      "sha256": "41b02b53526de0901454068c6987f5a1330c4cb53ecedb8de82037672f930427",
+      "historicalPrefix": "004",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 5,
+      "file": "identity-005_jrn_002_governance.sql",
+      "sha256": "0a236fa15151498e3ce4db8f8b90f19ad9b2a309703ff460400b6e9ea519c604",
+      "historicalPrefix": "005",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 6,
+      "file": "identity-006_deletion_outbox_delivery.sql",
+      "sha256": "84b7420c46226105389c9059f4e32c7aae20f2c1e507cfeaf375d2f4ee769ba6",
+      "historicalPrefix": "006",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 7,
+      "file": "identity-007_local_actor_tenant_repair.sql",
+      "sha256": "5299d6daa3004947f93d0bbc8f4adcb341b700271246ccf5566939481e9a137b",
+      "historicalPrefix": "007",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 8,
+      "file": "identity-008_employee_activation_surface.sql",
+      "sha256": "794a34f8fc5b2e073b1ec33e28d0b40beaca5426276cdc279ed83d2a0f1fee4f",
+      "historicalPrefix": "008",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 9,
+      "file": "identity-009_support_sessions.sql",
+      "sha256": "e93177d0d34c2faadb58187abbaf1a5f36911afb69ab253fc78eb488fe82486b",
+      "historicalPrefix": "009",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 10,
+      "file": "identity-010_employee_operator_role_repair.sql",
+      "sha256": "598cd9df89af686cc2eaf42bb02bb4034d846ba0b0f9040e7b40908a0446fe5d",
+      "historicalPrefix": "010",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 11,
+      "file": "identity-011_employee_dsh_permission_backfill.sql",
+      "sha256": "b3930637a1109bd02e9fd269d261db815e643956095774a2b84a59fdb74c2765",
+      "historicalPrefix": "011",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 12,
+      "file": "identity-012_activation_session_causality.sql",
+      "sha256": "bded0a9665b4a82218482bd43170a7a12c6097d6bcfc8b83295651b9aa1b5164",
+      "historicalPrefix": "012",
+      "state": "HISTORICAL_IMMUTABLE"
+    }
+  ]
+}

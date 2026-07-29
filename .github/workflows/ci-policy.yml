@@ -107,6 +107,9 @@ jobs:
         if: ${{ inputs.governance_policy == 'true' }}
         run: pnpm run guard:cleanup-policy
 
+      - name: Verify migration manifest drift
+        run: pnpm run guard:migration-manifest-drift
+
       - name: Verify portable tracked configuration
         if: ${{ inputs.governance_policy == 'true' }}
         run: node tools/scripts/check-portable-tracked-config.mjs

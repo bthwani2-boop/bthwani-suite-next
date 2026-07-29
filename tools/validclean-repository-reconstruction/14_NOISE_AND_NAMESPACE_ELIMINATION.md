@@ -130,9 +130,11 @@ tools/mobile/templates
 ### كود
 
 ```text
-C:\bthwani-suite-next
+أي جذر مستودع مطلق خاص بجهاز (مثل مسار Windows تحت جذر القرص)
 → repo root discovery / environment variable
 ```
+
+المسار الحرفي لا يُكتب هنا: `cleanup-policy-gate.mjs` يرفض أي جذر مستودع محلي مكتوب داخل الملفات المتتبعة، بما فيها ملفات هذه الحزمة.
 
 ### Runbook
 
