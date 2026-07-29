@@ -18,3 +18,31 @@ func TestProvisionActorRejectsMissingTenantBeforeDatabaseAccess(t *testing.T) {
 		t.Fatalf("missing trusted tenant must be rejected before database access, view=%#v err=%v", view, err)
 	}
 }
+
+func TestProvisionActorRejectsExistingPhoneFromDifferentTenant(t *testing.T) {
+	phone := "+967777123457"
+	repo := newTestRepository(t, nil)
+	fakeDriverInst.setActors(t.Name(), map[string]Actor{
+		phone: {
+			ID:        "field-tenant-a",
+			Username:  "field-a",
+			TenantID:  "tenant-a",
+			PhoneE164: phone,
+			Roles:     []string{"field"},
+			Permissions: []Permission{
+				{Service: "dsh", Surface: "app-field", Action: "store:read", Scope: "assigned"},
+			},
+			Active: false,
+		},
+	})
+
+	view, err := repo.ProvisionActor(context.Background(), ProvisionActorInput{
+		Username:  "field-tenant-b",
+		PhoneE164: phone,
+		Role:      "field",
+		TenantID:  "tenant-b",
+	})
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("cross-tenant phone reuse must be forbidden, view=%#v err=%v", view, err)
+	}
+}
