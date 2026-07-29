@@ -191,7 +191,7 @@ for (const marker of [
   }
 }
 
-const openApiFile = "services/wlt/contracts/jrn-036-settlements-commissions.openapi.yaml";
+const openApiFile = "services/wlt/contracts/wlt.settlements-commissions.openapi.yaml";
 const openApi = read(openApiFile);
 const settlementPathStart = openApi.indexOf("  /wlt/settlements:");
 const settlementPathEnd = openApi.indexOf("\ncomponents:", settlementPathStart);

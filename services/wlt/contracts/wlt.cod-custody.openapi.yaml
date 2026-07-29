@@ -1,5 +1,6 @@
 openapi: 3.1.0
 x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-journey-id: JRN-038
 info:
   title: WLT JRN-038 COD Custody and Reconciliation
   version: 1.0.0

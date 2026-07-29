@@ -18,12 +18,12 @@ x-bthwani-contracts:
   common: ./wlt.common.openapi.yaml
   payments: ./wlt.payments.openapi.yaml
   deliveryCollections: ./wlt.delivery-collections.openapi.yaml
-  refunds: ./jrn-035-refunds.openapi.yaml
-  settlementsCommissions: ./jrn-036-settlements-commissions.openapi.yaml
+  refunds: ./wlt.refunds.openapi.yaml
+  settlementsCommissions: ./wlt.settlements-commissions.openapi.yaml
   settlementOperations: ./wlt.settlement-operations.openapi.yaml
-  payoutsDestinations: ./jrn-037-payouts-destinations.openapi.yaml
+  payoutsDestinations: ./wlt.payouts-destinations.openapi.yaml
   payoutFailureBoundary: ./wlt.payout-failure-boundary.openapi.yaml
-  codCustody: ./jrn-038-cod-custody.openapi.yaml
+  codCustody: ./wlt.cod-custody.openapi.yaml
   codRecords: ./wlt.cod-records.openapi.yaml
   commercial: ./wlt.commercial.openapi.yaml
   commercialSummary: ./wlt.commercial-summary.openapi.yaml

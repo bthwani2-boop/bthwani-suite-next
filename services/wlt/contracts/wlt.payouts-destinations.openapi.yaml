@@ -1,5 +1,6 @@
 openapi: 3.1.0
 x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-journey-id: JRN-037
 info:
   title: WLT JRN-037 Payout Destinations and Outbound Payments
   version: 1.0.0
