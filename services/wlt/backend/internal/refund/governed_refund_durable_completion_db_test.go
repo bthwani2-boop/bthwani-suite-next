@@ -31,8 +31,8 @@ func TestGovernedRefundRuntimeDurableCompletionSurfacesOutcomePersistenceFailure
 			RETURN NEW;
 		END;
 		$$;
-		DROP TRIGGER IF EXISTS trg_jrn035_test_block_refund_outcome ON wlt_refunds;
-		CREATE TRIGGER trg_jrn035_test_block_refund_outcome
+		DROP TRIGGER IF EXISTS trg_test_block_refund_outcome ON wlt_refunds;
+		CREATE TRIGGER trg_test_block_refund_outcome
 		BEFORE UPDATE OF status ON wlt_refunds
 		FOR EACH ROW
 		EXECUTE FUNCTION test_block_refund_outcome();`)
@@ -41,7 +41,7 @@ func TestGovernedRefundRuntimeDurableCompletionSurfacesOutcomePersistenceFailure
 	}
 	defer func() {
 		_, cleanupErr := db.Exec(`
-			DROP TRIGGER IF EXISTS trg_jrn035_test_block_refund_outcome ON wlt_refunds;
+			DROP TRIGGER IF EXISTS trg_test_block_refund_outcome ON wlt_refunds;
 			DROP FUNCTION IF EXISTS test_block_refund_outcome();`)
 		if cleanupErr != nil {
 			t.Errorf("cleanup outcome persistence failure trigger: %v", cleanupErr)

@@ -23,7 +23,7 @@ paths:
       summary: List OperatorContext-scoped refunds
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
         - name: orderId
@@ -49,10 +49,10 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -82,7 +82,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
       responses:
@@ -104,10 +104,10 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -133,10 +133,10 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -166,10 +166,10 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -201,10 +201,10 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationHeader'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -229,7 +229,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextHeader'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
       responses:

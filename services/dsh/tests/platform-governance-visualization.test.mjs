@@ -33,7 +33,7 @@ test("platform governance binds the visualization to authenticated SaaS operator
   assert.match(visual, /hasControlPanelPermission\(identity, "platform:read"\)/);
   assert.doesNotMatch(visual, /local-dsh/);
   assert.doesNotMatch(visual, /X-Operator-Context-ID/);
-  assert.match(platformServer, /enforceSaasOperatorContext/);
+  assert.match(platformServer, /enforceOperatorContext/);
   assert.match(platformServer, /authenticated identity has no trusted operator context/);
 });
 

@@ -27,5 +27,3 @@ modules:
   - ./wlt.commercial-summary.openapi.yaml
   - ./wlt.promotion-funding.openapi.yaml
   - ./wlt.workforce-finance.openapi.yaml
-overlays:
-  - ./wlt.saas-reference-auth.overlay.yaml

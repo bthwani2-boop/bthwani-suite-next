@@ -67,7 +67,7 @@ func TestActivationIssuerBoundaryAcceptsAuthorizedSameOperatorContextIssuerAndRe
 	)
 	response := httptest.NewRecorder()
 
-	saasActivationIssuerBoundary(lookup, next).ServeHTTP(response, request)
+	activationIssuerBoundary(lookup, next).ServeHTTP(response, request)
 
 	if !nextCalled || response.Code != http.StatusCreated {
 		t.Fatalf("expected forwarded request called=%v status=%d body=%s", nextCalled, response.Code, response.Body.String())

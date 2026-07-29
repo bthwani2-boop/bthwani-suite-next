@@ -114,7 +114,7 @@ func TestRequestOtpForTenantRejectsAnotherTenantsPhoneDBIntegration(t *testing.T
 	if err == nil {
 		t.Fatal("a phone bound to one tenant must not be claimable by another")
 	}
-	if !strings.Contains(err.Error(), ErrTenantMismatch.Error()) {
-		t.Fatalf("expected a tenant mismatch, got %v", err)
+	if !strings.Contains(err.Error(), ErrOperatorContextMismatch.Error()) {
+		t.Fatalf("expected tenant mismatch, got %v", err)
 	}
 }

@@ -55,11 +55,9 @@ func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	trustedOperatorContextID := strings.TrimSpace(input.OperatorContextID)
-	if operatorContextID, active, err := activeSaaSTenant(); err != nil {
-		sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
-		return
-	} else if active {
-		if !validateInternalTenantRequest(w, r, operatorContextID) {
+	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
+	if operatorContextID != "" {
+		if !validateInternalOperatorRequest(w, r, operatorContextID) {
 			return
 		}
 		if trustedOperatorContextID != "" && trustedOperatorContextID != operatorContextID {
