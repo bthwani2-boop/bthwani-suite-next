@@ -105,5 +105,37 @@ BEGIN
   IF published_storefront_count <> 6 THEN
     RAISE EXCEPTION 'expected 6 complete local client storefronts, found %', published_storefront_count;
   END IF;
+
+  -- A public assortment is not complete unless the API can derive
+  -- effectiveImage from an approved DAM link and approved asset. This protects
+  -- runtime readback from seed rows that are client_visible but unrenderable.
+  IF EXISTS (
+    SELECT 1
+    FROM dsh_store_assortments assortment
+    JOIN dsh_master_products product
+      ON product.id = assortment.master_product_id
+    WHERE assortment.publication_status = 'client_visible'
+      AND assortment.available = true
+      AND product.approval_status = 'approved'
+      AND product.is_active = true
+      AND NOT EXISTS (
+        SELECT 1
+        FROM dsh_catalog_asset_links link
+        JOIN dsh_catalog_assets asset ON asset.id = link.asset_id
+        WHERE link.status = 'approved'
+          AND asset.status = 'approved'
+          AND (
+            (link.entity_type = 'master_product'
+             AND link.entity_id = product.id
+             AND link.role = 'canonical_product_image')
+            OR
+            (link.entity_type = 'store_assortment'
+             AND link.entity_id = assortment.id
+             AND link.role = 'partner_custom_product_image')
+          )
+      )
+  ) THEN
+    RAISE EXCEPTION 'local seed contains a client-visible product without an approved DAM image';
+  END IF;
 END
 $$;
