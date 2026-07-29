@@ -15,6 +15,7 @@ on:
       - "tools/guards/backend-api-binding-gate.mjs"
       - "tools/important-scripts/contracts-typecheck.mjs"
       - "tools/validclean-repository-reconstruction/apply-vc004.mjs"
+      - "tools/validclean-repository-reconstruction/apply-vc004-contract-dedup.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
       - ".github/workflows/validclean-wlt-materialize.yml"
@@ -57,7 +58,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Apply VC-004 source migration
-        run: node tools/validclean-repository-reconstruction/apply-vc004.mjs
+        run: |
+          set -euo pipefail
+          node tools/validclean-repository-reconstruction/apply-vc004.mjs
+          node tools/validclean-repository-reconstruction/apply-vc004-contract-dedup.mjs
 
       - name: Generate canonical WLT bundle and client
         run: pnpm --dir services/wlt openapi:generate
