@@ -73,6 +73,14 @@
       "source_file": "tools/guards/migration-manifest-drift-gate.mjs"
     },
     {
+      "id": "generated-client-provenance",
+      "name": "Generated Client Provenance Gate",
+      "script": "guard:generated-client-provenance",
+      "exit_level": "fail",
+      "description": "Requires every tracked file under a clients/generated directory to declare its provenance, and proves each openapi-typescript client byte-identical to a fresh run against its committed contract.",
+      "source_file": "tools/guards/generated-client-provenance-gate.mjs"
+    },
+    {
       "id": "wlt-openapi-bundle",
       "name": "WLT OpenAPI Bundle Gate",
       "script": "guard:wlt-openapi-bundle",

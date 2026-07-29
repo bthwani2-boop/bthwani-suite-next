@@ -107,6 +107,7 @@
       "VC-130b-migration-manifest-all-services": "VERIFIED_SAME_SHA",
       "VC-140-openapi-ownership-metadata": "VERIFIED_SAME_SHA",
       "VC-150-generated-client-provenance-all-services": "VERIFIED_SAME_SHA",
+      "VC-150b-generated-client-provenance-generalized": "IMPLEMENTATION_IN_PROGRESS",
       "VC-160-identity-trust-closure": "NOT_STARTED",
       "VC-170-actor-organization-tenant-migration": "NOT_STARTED",
       "VC-180-wlt-financial-invariants": "NOT_STARTED",
@@ -158,7 +159,7 @@
       "node tools/guards/wlt-openapi-bundle-gate.mjs",
       "node tools/guards/dsh-openapi-modular-gate.mjs",
       "node tools/guards/migration-manifest-drift-gate.mjs",
-      "node tools/guards/platform-control-client-provenance-gate.mjs",
+      "node tools/guards/generated-client-provenance-gate.mjs",
       "go build ./... && go vet ./... (core/platform-control/backend, services/dsh/backend)",
       "git status --porcelain empty and HEAD unchanged across the full run"
     ],
@@ -178,7 +179,7 @@
       "VC-120: 4 DSH cross-contract path-ownership collision pairs (catalog-proposal-readback/catalog, marketing-commercial/partner-commercial-closure, payouts-destinations/representative-finance, delivery-proof-media/partner-delivery) recorded in services/dsh/contracts/dsh.contract-ownership-allowlist.json, deferred to VC-180/VC-190.",
       "VC-130: RESOLVED in VC-130b -- all six services now carry a committed migrations/manifest.json, the gate's SKIP escape hatch is gone, and guard:migration-manifest-drift runs unconditionally in ci-policy.yml.",
       "VC-140: possible naming/ownership collision between services/wlt/contracts/wlt.payout-destination.openapi.yaml (singular, not bundle-composed) and wlt.payouts-destinations.openapi.yaml (plural, canonical) discovered but not resolved; deferred to VC-180.",
-      "VC-150: identity/workforce/providers/dsh generated clients still lack a delete-regenerate-diff gate equivalent to WLT's and Platform Control's.",
+      "VC-150: PARTIALLY RESOLVED in VC-150b -- one generalized generated-client-provenance-gate now proves delete-regenerate-diff = 0 for all 8 openapi-typescript clients and rejects unregistered files in any clients/generated directory. providers-api.ts (never actually generated) and dsh-api.ts (stale currency fields) were regenerated. STILL OPEN: manual_generated_clients = 2, not 0 -- services/dsh/clients/generated/dsh-catalog-api.ts (owner VC-190) and core/platform-control/clients/generated/platform-control-saas-runtime.ts (owner VC-220) are hand-authored facades behind AUTO-GENERATED headers.",
       "Discovered, unrelated to this wave's changes: services/dsh/clients/generated/dsh-api.ts is stale relative to its source bundle (currency-field schema additions never regenerated); confirmed pre-existing via git stash; not fixed here to stay in scope.",
       "Database/runtime proofs (fresh/upgrade DB, financial invariants, CI same-SHA) remain BLOCKED_EXTERNAL / NEEDS_EVIDENCE as in the prior session; no Docker/Postgres or CI run available this session.",
       "githubWorkflowRunsVisibleToConnector: 0 -- same-SHA CI evidence unavailable; CLOSED_WITH_EVIDENCE is not used for this wave."

@@ -110,6 +110,9 @@ jobs:
       - name: Verify migration manifest drift
         run: pnpm run guard:migration-manifest-drift
 
+      - name: Verify generated client provenance
+        run: pnpm run guard:generated-client-provenance
+
       - name: Verify portable tracked configuration
         if: ${{ inputs.governance_policy == 'true' }}
         run: node tools/scripts/check-portable-tracked-config.mjs

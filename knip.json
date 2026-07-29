@@ -251,8 +251,8 @@
     },
     "core/identity": {
       "entry": [
-        "clients/index.js",
-        "clients/use-identity-session.js"
+        "clients/index.ts",
+        "clients/use-identity-session.ts"
       ]
     },
     "core/platform-control": {

@@ -220,6 +220,57 @@ unproven_generated_files = 0
 unconsumed_generated_files = 0
 ```
 
+### VC-150b — Generated client provenance for every service
+
+الحالة: `VERIFIED_SAME_SHA` للجزء المُثبت، مع بندين مفتوحين مُعلنين صراحةً (لا يُدّعى `manual_generated_clients = 0`).
+
+الجرد: 11 ملفًا متتبعًا داخل `*/clients/generated/`. نتيجة delete-regenerate-diff الأولى:
+
+```text
+identity-api.ts                       IDENTICAL
+workforce-api.ts                      IDENTICAL
+wlt-api.ts                            IDENTICAL
+platform-control-api.ts               IDENTICAL
+platform-change-sets-api.ts           IDENTICAL
+platform-progressive-rollout-api.ts   IDENTICAL
+providers-api.ts                      STALE  (211 سطرًا مكتوبة يدويًا مقابل 622 من المولّد)
+dsh-api.ts                            STALE  (13 سطر فرق: حقول العملة)
+```
+
+الأعمال:
+
+- إعادة توليد `providers-api.ts` و`dsh-api.ts` من مصدريهما. `providers-api.ts` لم يكن مولّدًا أصلًا رغم ترويسته: كان ملفًا يدويًا بترويسة مخصّصة، و`openapi:generate:providers` موجود لكن ناتجه لم يُلتزم قط. أما `dsh-api.ts` فهو البند المعروف من الموجة 1 (حقول `currency` في `DshCartItem`/`DshOrderItem`/`DshOrder` لم يُعَد توليدها).
+- حارس واحد مُعمَّم يحل محل الحارس الخاص بـPlatform Control: `tools/guards/generated-client-provenance-gate.mjs` + سجل `governance/contracts/generated-client-registry.json`. يفرض أمرين:
+
+```text
+1. لا يتيمَ في الاتجاهين: كل ملف متتبع داخل جذر generated مُسجَّل، وكل مُسجَّل موجود.
+2. delete-regenerate-diff = 0 لكل مدخل OPENAPI_TYPESCRIPT.
+```
+
+- حُذف `tools/guards/platform-control-client-provenance-gate.mjs` بعد أن استوعبه الحارس المُعمَّم (كان يغطي 3 ملفات؛ الجديد يغطي 8 مُثبتة + 2 مُعلنَين).
+- تسجيل: `guard:generated-client-provenance` في `package.json` وفي `governance/guards/guard-registry.json`، وخطوة غير مشروطة في `ci-policy.yml`.
+
+حذف مخرجات بناء ميتة (`DELETE_PROVEN_DEAD`، يحسم البند `BLOCKED` في `path-decisions.ndjson` المملوك لـVC-150):
+
+```text
+core/identity/clients/**/*.{js,js.map,d.ts,d.ts.map}   17 ملفًا
+```
+
+الدليل على موتها: `core/identity/package.json` يشير بـ`main`/`types` إلى `clients/index.ts`، و`core/identity/tsconfig.json` يضبط `noEmit: true`، فلا خطوة بناء تنتجها ولا مستهلك يستوردها. المرجع الوحيد كان `knip.json` الذي كان يشير إلى `clients/index.js` بدل `clients/index.ts` ⇒ صُحّح. واختبار `jrn-002-session-surface.test.mjs` كان يفحص ملفات `.d.ts` بدل مصادر `.ts` ⇒ حُوّل إلى المصادر، وأُضيفت الملفات السبعة عشر إلى قائمة «يجب أن تبقى محذوفة».
+
+مُتحقَّق منه بالطفرة: تعديل بايت واحد في `wlt-api.ts` ⇒ خروج `1` ورسالة stale؛ إضافة ملف غير مُسجَّل في مجلد generated ⇒ خروج `1` ورسالة unregistered؛ الاستعادة ⇒ خروج `0`.
+
+**مفتوح ومُعلن، لا يُدّعى صفرًا:**
+
+```yaml
+manual_generated_clients: 2
+```
+
+| الملف | المالك | السبب |
+| --- | --- | --- |
+| `services/dsh/clients/generated/dsh-catalog-api.ts` | VC-190 | 309 سطرًا يدويًا خلف ترويسة `AUTO-GENERATED`؛ التوليد الحقيقي من العقد نفسه يعطي 1719 سطرًا. و`tools/scripts/generate-dsh-catalog-client.mjs` لا يولّده: يقرأه ويتحقق من بضع سلاسل نصية ثم يعيد كتابته كما هو، و`applyOverlay()` فيه تحمل نسخة مضمّنة من الـoverlay بدل تطبيق `dsh.catalog.overlay.yaml`. انحراف العقد غير مرئي هنا. |
+| `core/platform-control/clients/generated/platform-control-saas-runtime.ts` | VC-220 | 18 سطرًا تُعيد صياغة `PlatformSaasRuntimeStatus` من الـoverlay ومن وسوم JSON في Go كنسخة ثالثة متوازية؛ وترويسته تطلب من البشر «إبقاء الملف متوائمًا»، وهو تعريف الحقيقة الموازية. |
+
 ## المرحلة C — P0/P1: الثقة والماليات والبيانات
 
 ### VC-160 — Identity trust closure

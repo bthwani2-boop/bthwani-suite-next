@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "decision": "EVERY_TRACKED_FILE_UNDER_A_CLIENTS_GENERATED_DIRECTORY_MUST_DECLARE_ITS_PROVENANCE",
+  "owningSlice": "VC-150",
+  "generatedRoots": [
+    "core/identity/clients/generated",
+    "core/platform-control/clients/generated",
+    "core/providers/clients/generated",
+    "core/workforce/clients/generated",
+    "services/dsh/clients/generated",
+    "services/wlt/clients/generated"
+  ],
+  "ignoredFiles": [".gitkeep", "README.md"],
+  "entries": [
+    {
+      "client": "core/identity/clients/generated/identity-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "core/identity/contracts/auth.openapi.yaml",
+      "regenerateScript": "openapi:generate:identity"
+    },
+    {
+      "client": "core/workforce/clients/generated/workforce-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "core/workforce/contracts/workforce.openapi.yaml",
+      "regenerateScript": "openapi:generate:workforce"
+    },
+    {
+      "client": "core/providers/clients/generated/providers-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "core/providers/contracts/providers.openapi.yaml",
+      "regenerateScript": "openapi:generate:providers"
+    },
+    {
+      "client": "core/platform-control/clients/generated/platform-control-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "core/platform-control/contracts/platform-control.openapi.yaml",
+      "regenerateScript": "openapi:generate:platform-control"
+    },
+    {
+      "client": "core/platform-control/clients/generated/platform-change-sets-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "core/platform-control/contracts/platform-change-sets.openapi.yaml",
+      "regenerateScript": "openapi:generate:platform-control-change-sets"
+    },
+    {
+      "client": "core/platform-control/clients/generated/platform-progressive-rollout-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "core/platform-control/contracts/platform-progressive-rollout.openapi.yaml",
+      "regenerateScript": "openapi:generate:platform-control-progressive-rollout"
+    },
+    {
+      "client": "services/dsh/clients/generated/dsh-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
+      "regenerateScript": "openapi:generate:dsh"
+    },
+    {
+      "client": "services/wlt/clients/generated/wlt-api.ts",
+      "mode": "OPENAPI_TYPESCRIPT",
+      "contract": "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
+      "regenerateScript": "openapi:generate:wlt"
+    },
+    {
+      "client": "services/dsh/clients/generated/dsh-catalog-api.ts",
+      "mode": "HAND_AUTHORED_FACADE",
+      "contract": "services/dsh/contracts/dsh.catalog.openapi.yaml",
+      "alignmentTest": "services/dsh/backend/internal/http/catalog_contract_alignment_test.go",
+      "reconstructionOwner": "VC-190",
+      "reason": "309 hand-written lines behind an AUTO-GENERATED header; a real openapi-typescript run against the same contract produces 1719 lines. tools/scripts/generate-dsh-catalog-client.mjs does not generate this file -- it reads it, asserts a few substrings, and writes it back unchanged, and its applyOverlay() carries an inline copy of the overlay instead of applying dsh.catalog.overlay.yaml. Contract drift is therefore invisible here."
+    },
+    {
+      "client": "core/platform-control/clients/generated/platform-control-saas-runtime.ts",
+      "mode": "HAND_AUTHORED_FACADE",
+      "contract": "core/platform-control/contracts/platform-control.saas.overlay.yaml",
+      "alignmentTest": "core/platform-control/backend/internal/http/saas_contract_alignment_test.go",
+      "reconstructionOwner": "VC-220",
+      "reason": "18 hand-written lines restating the overlay's PlatformSaasRuntimeStatus schema and the Go saasRuntimeStatus JSON tags as a third parallel copy. Its own header instructs humans to 'keep this file aligned', which is the definition of parallel truth; the alignment test only greps for substrings."
+    }
+  ]
+}

@@ -88,17 +88,21 @@ test("JRN-002 owns permanent PostgreSQL and HTTP runtime proof", async () => {
 });
 
 test("JRN-002 removes stale declarations, temporary diagnostics, and unbound session artifacts", async () => {
-  const [clientDeclaration, storeDeclaration, hookDeclaration, model] = await Promise.all([
-    read("core/identity/clients/identity-client.d.ts"),
-    read("core/identity/clients/identity-session-store.d.ts"),
-    read("core/identity/clients/use-identity-session.d.ts"),
+  // Asserted against the TypeScript sources, not against emitted .d.ts files:
+  // core/identity/tsconfig.json sets noEmit and the package resolves through
+  // clients/index.ts, so committed declaration output was stale build artifact
+  // with no consumer (removed in VC-150b).
+  const [clientSource, storeSource, hookSource, model] = await Promise.all([
+    read("core/identity/clients/identity-client.ts"),
+    read("core/identity/clients/identity-session-store.ts"),
+    read("core/identity/clients/use-identity-session.ts"),
     read("core/identity/backend/internal/identity/model.go"),
   ]);
 
-  assert.doesNotMatch(storeDeclaration, /devBypassLogin/);
-  assert.match(clientDeclaration, /requestOtp/);
-  assert.match(storeDeclaration, /activateIdentity\(actorType: ActivationActorType/);
-  assert.match(hookDeclaration, /revokeSession/);
+  assert.doesNotMatch(storeSource, /devBypassLogin/);
+  assert.match(clientSource, /requestOtp/);
+  assert.match(storeSource, /activateIdentity\(\s*\n\s*actorType: ActivationActorType/);
+  assert.match(hookSource, /revokeSession/);
   assert.doesNotMatch(model, /SupportSession/);
   assert.doesNotMatch(model, /SessionKind/);
 
@@ -106,9 +110,26 @@ test("JRN-002 removes stale declarations, temporary diagnostics, and unbound ses
     ".github/workflows/tmp-jrn-002-diagnostics.yml",
     "core/identity/backend/internal/identity/support_sessions.go",
     "core/identity/backend/internal/http/support_sessions.go",
+    "core/identity/clients/generated/identity-api.d.ts",
+    "core/identity/clients/generated/identity-api.d.ts.map",
+    "core/identity/clients/generated/identity-api.js",
+    "core/identity/clients/generated/identity-api.js.map",
+    "core/identity/clients/identity-client.d.ts",
     "core/identity/clients/identity-client.d.ts.map",
+    "core/identity/clients/identity-client.js",
+    "core/identity/clients/identity-client.js.map",
+    "core/identity/clients/identity-session-store.d.ts",
     "core/identity/clients/identity-session-store.d.ts.map",
+    "core/identity/clients/identity-session-store.js",
+    "core/identity/clients/identity-session-store.js.map",
+    "core/identity/clients/index.d.ts",
+    "core/identity/clients/index.d.ts.map",
+    "core/identity/clients/index.js",
+    "core/identity/clients/index.js.map",
+    "core/identity/clients/use-identity-session.d.ts",
     "core/identity/clients/use-identity-session.d.ts.map",
+    "core/identity/clients/use-identity-session.js",
+    "core/identity/clients/use-identity-session.js.map",
   ]) {
     assert.equal(existsSync(removedPath), false, `${removedPath} must remain removed`);
   }

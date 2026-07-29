@@ -5366,9 +5366,11 @@ export interface components {
             priceReference: string;
             /**
              * Format: double
-             * @description Snapshotted from the catalog product's unitPrice at add-to-cart time.
+             * @description Snapshotted from the catalog assortment at add-to-cart time.
              */
             unitPrice: number;
+            /** @description Currency snapshotted with unitPrice from the same sovereign store assortment row. */
+            currency: string;
             quantity: number;
             version: number;
             /** Format: date-time */
@@ -5483,6 +5485,8 @@ export interface components {
             quantity: number;
             /** Format: double */
             unitPrice: number;
+            /** @description Immutable currency copied from the governed checkout and order snapshot. */
+            currency: string;
         };
         DshOrder: {
             id: string;
@@ -5504,6 +5508,8 @@ export interface components {
             financialClosureReference?: string | null;
             /** @description Opaque WLT payment reference. DSH never mutates financial truth. */
             wltPaymentRefId: string;
+            /** @description Immutable currency copied from the checkout pricing snapshot. */
+            currency: string;
             items?: components["schemas"]["DshOrderItem"][];
             /** Format: date-time */
             createdAt: string;
