@@ -1,0 +1,55 @@
+name: Validclean Full Repository Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [validclean]
+    paths:
+      - "tools/validclean-repository-reconstruction/audit-full-repository.mjs"
+      - ".github/workflows/validclean-full-repository-audit.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validclean-full-repository-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Audit fbc013923 baseline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout audit tooling
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          path: audit-tools
+          persist-credentials: false
+      - name: Checkout pinned repository baseline
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: fbc0139234e2bdb34a8de77d74a6b91297a754b0
+          path: target
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify immutable target SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git -C target rev-parse HEAD)"
+          expected="fbc0139234e2bdb34a8de77d74a6b91297a754b0"
+          test "$actual" = "$expected"
+          echo "AUDIT_TARGET_SHA=$actual"
+      - name: Run full tracked-file audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          node audit-tools/tools/validclean-repository-reconstruction/audit-full-repository.mjs target audit-output
+      - name: Upload full audit artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: validclean-full-repository-audit-fbc013923
+          path: audit-output
+          if-no-files-found: error
+          retention-days: 7
