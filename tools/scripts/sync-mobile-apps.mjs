@@ -94,6 +94,12 @@ function runNode(args) {
 
 const manifest = readJson("tools/mobile/mobile-apps.manifest.json");
 const easTemplate = readJson("tools/mobile/eas.template.json");
+const toolchain = readJson("shared/config/toolchain-lock.json");
+const expoDoctorVersion = toolchain.locked?.expoDoctor;
+if (!/^\d+\.\d+\.\d+$/.test(expoDoctorVersion ?? "")) {
+  throw new Error("shared/config/toolchain-lock.json must pin locked.expoDoctor");
+}
+const expoDoctorSpecifier = `expo-doctor@${expoDoctorVersion}`;
 const appKeys = Object.keys(manifest.apps);
 
 if (requestedApp && !manifest.apps[requestedApp]) {
@@ -174,7 +180,7 @@ if (lifecycle === "mobile:eas:preflight" || lifecycle === "mobile:eas:preflight:
   const platform = process.env.MOBILE_PREFLIGHT_PLATFORM || "android";
   for (const key of targetAppKeys) {
     const cwd = abs(appDir(key));
-    runPnpm(["dlx", "expo-doctor@latest"], cwd);
+    runPnpm(["dlx", expoDoctorSpecifier], cwd);
     const outputDir = abs(`.tmp/eas-preflight/${key}/${platform}`);
     fs.rmSync(outputDir, { recursive: true, force: true });
     runPnpm(["exec", "expo", "export", "--platform", platform, "--output-dir", outputDir], cwd);

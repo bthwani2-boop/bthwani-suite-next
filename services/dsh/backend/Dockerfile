@@ -12,14 +12,16 @@ COPY services/dsh/backend/ ./services/dsh/backend/
 
 # Build the Go API
 WORKDIR /app/services/dsh/backend
-RUN CGO_ENABLED=0 GOOS=linux go build -o dsh-api cmd/dsh-api/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/dsh-api cmd/dsh-api/main.go
 
-# Runtime stage
-FROM alpine:latest AS runtime
-RUN apk --no-cache add ca-certificates tzdata
+FROM alpine:3.21 AS runtime
+RUN apk --no-cache add ca-certificates tzdata \
+  && addgroup -S app \
+  && adduser -S app -G app
 
 WORKDIR /app
-COPY --from=build /app/services/dsh/backend/dsh-api /app/dsh-api
+COPY --from=build /out/dsh-api /app/dsh-api
+USER app
 
 EXPOSE 8080
-CMD ["/app/dsh-api"]
+ENTRYPOINT ["/app/dsh-api"]

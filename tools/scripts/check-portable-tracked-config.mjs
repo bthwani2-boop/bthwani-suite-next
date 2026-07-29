@@ -1,3 +1,7 @@
+import "./check-refoundation-control-plane.mjs";
+import "./check-refoundation-readiness.mjs";
+import "./check-refoundation-operational-tooling.mjs";
+import "./check-refoundation-foundation.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

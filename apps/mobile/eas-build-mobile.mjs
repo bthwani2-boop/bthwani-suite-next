@@ -14,6 +14,19 @@ const root = process.cwd();
 const manifest = JSON.parse(
   fs.readFileSync(path.join(root, "tools/mobile/mobile-apps.manifest.json"), "utf8"),
 );
+const toolchain = JSON.parse(
+  fs.readFileSync(path.join(root, "shared/config/toolchain-lock.json"), "utf8"),
+);
+const easCliVersion = toolchain.locked?.easCli;
+const expoDoctorVersion = toolchain.locked?.expoDoctor;
+if (!/^\d+\.\d+\.\d+$/.test(easCliVersion ?? "")) {
+  throw new Error("shared/config/toolchain-lock.json must pin locked.easCli");
+}
+if (!/^\d+\.\d+\.\d+$/.test(expoDoctorVersion ?? "")) {
+  throw new Error("shared/config/toolchain-lock.json must pin locked.expoDoctor");
+}
+const easCliSpecifier = `eas-cli@${easCliVersion}`;
+const expoDoctorSpecifier = `expo-doctor@${expoDoctorVersion}`;
 
 function importEnvironmentFile(file) {
   if (!fs.existsSync(file)) return;
@@ -153,7 +166,7 @@ if (!skipPreflight) {
     ], root, appEnvironment);
 
     run("pnpm", ["typecheck"], appDir, appEnvironment);
-    run("pnpm", ["dlx", "expo-doctor@latest"], appDir, appEnvironment);
+    run("pnpm", ["dlx", expoDoctorSpecifier], appDir, appEnvironment);
 
     if (!skipExport) {
       const outputDir = path.join(root, ".tmp", "eas-preflight", key, platform);
@@ -190,7 +203,7 @@ for (const key of targets) {
 
   const args = [
     "dlx",
-    "eas-cli@latest",
+    easCliSpecifier,
     "build",
     "--platform",
     platform,

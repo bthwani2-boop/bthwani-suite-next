@@ -44,6 +44,7 @@ The machine-readable authority registry overrides stale `Status: CANONICAL`, sel
 18. `governance/26_SDLC_TEAM_AND_STAGE_GATES.md`
 19. `governance/product/PRODUCT_TRUTH_POLICY.md`
 20. `governance/28_DIRECT_WORK_BRANCH_EXECUTION_POLICY.md`
+21. `governance/refoundation/FOUNDATION_ONLY_EXECUTION.md`
 
 ## Active machine-readable contracts
 
@@ -53,6 +54,7 @@ The following paths encode enforceable governance and are validated by registere
 - `governance/agents/**` — logical roles, authority, and approval domains;
 - `governance/skills/**` — skill lifecycle, dependencies, authority, and routing;
 - `governance/guards/**` — guard registry, assurance boundaries, and static binding registry;
+- `governance/refoundation/**` — current foundation-only phase, protected engineering identities, permitted change scope, skill routing, guard routing, and exit requirements;
 - `governance/authority/single-owner-mode.schema.json` — validates the active sole-owner approval exception;
 - `governance/product/product-truth.schema.json` — Product Truth schema;
 - `governance/saas/**` — SaaS readiness state, tenant-governance constraints, activation evidence, and commercial activation policy;
@@ -61,6 +63,12 @@ The following paths encode enforceable governance and are validated by registere
 - `tools/guards/guard-manifest.json` — guard sets and execution policy.
 
 A machine-readable contract does not prove that its associated guard, workflow, runtime, or human approval executed.
+
+## Foundation-only refoundation state
+
+`governance/refoundation/FOUNDATION_ONLY_EXECUTION.md` and `governance/refoundation/**` govern the `new` branch refoundation phase. They preserve and permit correction of the existing engineering environment while explicitly forbidding product journey implementation until the repository owner starts the second round and changes the governed phase state.
+
+The phase contract does not claim that Expo, EAS, Docker, Firebase, OpenAPI, CI, devices, or runtime checks passed. Such claims require execution evidence on the exact candidate commit.
 
 ## Sole-owner operating mode
 
@@ -134,4 +142,4 @@ Allowed unresolved decisions include `FIX_REQUIRED`, `BLOCKED_EXTERNAL`, `NEEDS_
 
 ## Acceptance condition
 
-Accepted only when this index matches the authority registry, every active source is classified once, active skills are governed, legacy skills are retired, governance and CI logical authorities remain separated, the sole-owner exception is bounded and machine-validated, machine contracts and guard sets are registered, SaaS state is machine-validated, all decisions map to the canonical vocabulary, assurance boundaries prevent overclaiming, and no applicable Product Truth, governance, CI, SDLC, security, finance, isolation, QA, release, runtime, or production requirement is bypassed.
+Accepted only when this index matches the authority registry, every active source is classified once, active skills are governed, legacy skills are retired, governance and CI logical authorities remain separated, the sole-owner exception is bounded and machine-validated, machine contracts and guard sets are registered, SaaS state is machine-validated, the foundation-only phase remains consistent with its control plane, all decisions map to the canonical vocabulary, assurance boundaries prevent overclaiming, and no applicable Product Truth, governance, CI, SDLC, security, finance, isolation, QA, release, runtime, or production requirement is bypassed.

@@ -16,6 +16,21 @@
 
 export type WltActorType = "client" | "partner" | "captain" | "field" | "system" | "platform";
 export type WltPayoutActorType = "partner" | "captain" | "field";
+export type WltPayoutStatus =
+  | "pending"
+  | "approved"
+  | "provider_pending"
+  | "provider_result_unknown"
+  | "processing"
+  | "completed"
+  | "rejected"
+  | "failed";
+export type WltPayoutReconciliationStatus =
+  | "not_required"
+  | "required"
+  | "inquiry_pending"
+  | "resolved_success"
+  | "resolved_failed";
 export type WltPaymentStatus =
   | "reference_created"
   | "pending_provider"
@@ -70,7 +85,7 @@ export interface paths {
 
   "/wlt/settlements": {
     get: operations["listWltSettlements"];
-    post: operations["createWltSettlement"];
+    post: operations["createWltEvidenceBackedSettlement"];
   };
   "/wlt/settlements/{settlementId}": { get: operations["getWltSettlement"] };
   "/wlt/settlements/{settlementId}/post": { post: operations["postWltSettlement"] };
@@ -147,7 +162,7 @@ export interface operations {
   rejectWltRefund: WltOperation;
   reconcileWltRefund: WltOperation;
 
-  createWltSettlement: WltOperation;
+  createWltEvidenceBackedSettlement: WltOperation;
   getWltSettlement: WltOperation;
   listWltSettlements: WltOperation;
   postWltSettlement: WltOperation;
@@ -204,12 +219,61 @@ export interface components {
     WltRefundResponse: Record<string, unknown>;
     WltSettlement: Record<string, unknown>;
     WltSettlementResponse: Record<string, unknown>;
+    WltSettlementListResponse: {
+      settlements?: readonly components["schemas"]["WltSettlement"][];
+      [key: string]: unknown;
+    };
     WltCommission: Record<string, unknown>;
     WltCommissionResponse: Record<string, unknown>;
     WltCodRecord: Record<string, unknown>;
     WltCodRecordResponse: Record<string, unknown>;
-    WltLedgerEntry: Record<string, unknown>;
-    WltLedgerEntryResponse: Record<string, unknown>;
+    WltPayoutRequest: {
+      id: string;
+      beneficiaryActorId: string;
+      beneficiaryActorType: WltPayoutActorType;
+      payoutDestinationId: string;
+      amountMinorUnits: number;
+      currency: string;
+      status: WltPayoutStatus;
+      reconciliationStatus: WltPayoutReconciliationStatus;
+      requestedAt: string;
+      approvedAt?: string | null;
+      rejectedAt?: string | null;
+      processedAt?: string | null;
+      completedAt?: string | null;
+      failedAt?: string | null;
+      reconciledAt?: string | null;
+      failureReason?: string;
+      providerReference?: string;
+      providerStatus?: string;
+      approvedByOperatorId?: string;
+      processedByOperatorId?: string;
+      completedByOperatorId?: string;
+      reconciledByOperatorId?: string;
+    };
+    WltLedgerEntry: {
+      id: string;
+      entryType: string;
+      actorId: string;
+      actorType: string;
+      sourceType: string;
+      sourceId: string;
+      orderId: string | null;
+      visitId: string | null;
+      storeId: string | null;
+      partnerId: string | null;
+      commissionEventId: string | null;
+      referenceId: string;
+      referenceType: string;
+      amountMinorUnits: number;
+      currency: string;
+      debitCredit: string;
+      balanceAfter: number;
+      description: string;
+      idempotencyKey: string | null;
+      createdAt: string;
+    };
+    WltLedgerEntryResponse: { ledgerEntry: components["schemas"]["WltLedgerEntry"] };
     ErrorEnvelope: WltErrorEnvelope;
   };
 }

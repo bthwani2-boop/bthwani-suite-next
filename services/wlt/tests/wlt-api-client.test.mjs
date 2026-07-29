@@ -30,7 +30,8 @@ describe("generated WLT API client coverage", () => {
   });
 
   test("includes governed settlement and commission lifecycles", () => {
-    assert.match(source, /createWltSettlement/);
+    assert.match(source, /createWltEvidenceBackedSettlement/);
+    assert.doesNotMatch(source, /createWltSettlement/);
     assert.match(source, /postWltSettlement/);
     assert.match(source, /getWltSettlementSummary/);
     assert.match(source, /upsertWltCommissionPolicy/);

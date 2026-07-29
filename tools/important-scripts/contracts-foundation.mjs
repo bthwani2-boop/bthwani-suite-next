@@ -75,6 +75,50 @@ function parseYaml(content) {
   return result;
 }
 
+function parseInlineOrBlockEnum(content, schemaName) {
+  const lines = content.split(/\r?\n/);
+  let schemaIndent = null;
+  let insideSchema = false;
+  let enumIndent = null;
+  const values = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const indent = line.match(/^(\s*)/)?.[1].length ?? 0;
+
+    if (!insideSchema && trimmed === `${schemaName}:`) {
+      insideSchema = true;
+      schemaIndent = indent;
+      continue;
+    }
+
+    if (!insideSchema) continue;
+    if (indent <= schemaIndent && trimmed !== `${schemaName}:`) break;
+
+    const inlineMatch = trimmed.match(/^enum:\s*\[([^\]]*)\]\s*$/);
+    if (inlineMatch) {
+      return inlineMatch[1]
+        .split(",")
+        .map((value) => value.trim().replace(/^['"]|['"]$/g, ""))
+        .filter(Boolean);
+    }
+
+    if (trimmed === "enum:") {
+      enumIndent = indent;
+      continue;
+    }
+
+    if (enumIndent !== null) {
+      if (indent <= enumIndent) break;
+      const itemMatch = trimmed.match(/^-\s+(.+)$/);
+      if (itemMatch) values.push(itemMatch[1].trim().replace(/^['"]|['"]$/g, ""));
+    }
+  }
+
+  return values;
+}
+
 // 2. Validate that auth.openapi.yaml does not exist in root
 const rootAuthPath = path.join(repoRoot, "auth.openapi.yaml");
 if (fs.existsSync(rootAuthPath)) {
@@ -248,99 +292,69 @@ for (const contractFile of contractFiles) {
   }
 }
 
-// 6. Validate that WltPaymentSession statuses in wlt.openapi.yaml match DB migrations
-const wltOpenApiPath = path.join(repoRoot, "services/wlt/contracts/wlt.openapi.yaml");
-const wltMigrationPath = path.join(repoRoot, "services/wlt/database/migrations/wlt-002_payment_capture.sql");
+// 6. Validate the canonical modular WLT payment status contract against DB truth.
+const wltCoreContractRel = "services/wlt/contracts/wlt.openapi.yaml";
+const wltPaymentsContractRel = "services/wlt/contracts/wlt.payments.openapi.yaml";
+const wltMigrationRel = "services/wlt/database/migrations/wlt-002_payment_capture.sql";
+const wltCoreContractPath = path.join(repoRoot, wltCoreContractRel);
+const wltPaymentsContractPath = path.join(repoRoot, wltPaymentsContractRel);
+const wltMigrationPath = path.join(repoRoot, wltMigrationRel);
 
-if (fs.existsSync(wltOpenApiPath) && fs.existsSync(wltMigrationPath)) {
+if (fs.existsSync(wltCoreContractPath)) {
+  const coreContent = fs.readFileSync(wltCoreContractPath, "utf8");
+  const expectedIndex = "payments: ./wlt.payments.openapi.yaml";
+  if (!coreContent.includes(expectedIndex)) {
+    violations.push({
+      file: wltCoreContractRel,
+      message: `WLT core contract must index the canonical payment contract with '${expectedIndex}'`
+    });
+  }
+}
+
+if (fs.existsSync(wltPaymentsContractPath) && fs.existsSync(wltMigrationPath)) {
   try {
     const migrationContent = fs.readFileSync(wltMigrationPath, "utf8");
     const statusChkMatch = migrationContent.match(/CHECK\s*\(\s*status\s+IN\s*\(([^)]+)\)\)/i);
-    if (statusChkMatch) {
+    if (!statusChkMatch) {
+      violations.push({
+        file: wltMigrationRel,
+        message: "Failed to parse CHECK constraint on status from migration file"
+      });
+    } else {
       const dbStatuses = statusChkMatch[1]
         .split(",")
-        .map(s => s.trim().replace(/['"]/g, ""));
-      
-      const openApiContent = fs.readFileSync(wltOpenApiPath, "utf8");
-      const openApiLines = openApiContent.split(/\r?\n/);
-      let insideWltPaymentSession = false;
-      let insideStatus = false;
-      let insideEnum = false;
-      const schemaStatusEnum = [];
-      
-      for (const line of openApiLines) {
-        const indentMatch = line.match(/^(\s*)/);
-        const indent = indentMatch ? indentMatch[1].length : 0;
-        const trimmed = line.trim();
-        
-        if (trimmed.startsWith("WltPaymentSession:")) {
-          insideWltPaymentSession = true;
-          insideStatus = false;
-          insideEnum = false;
-          continue;
-        }
-        
-        if (insideWltPaymentSession) {
-          if (indent <= 4 && trimmed !== "" && !trimmed.startsWith("WltPaymentSession:") && !trimmed.startsWith("properties:") && !trimmed.startsWith("required:")) {
-            insideWltPaymentSession = false;
-            insideStatus = false;
-            insideEnum = false;
-          }
-        }
-        
-        if (insideWltPaymentSession) {
-          if (trimmed.startsWith("status:")) {
-            insideStatus = true;
-            insideEnum = false;
-            continue;
-          }
-          if (insideStatus) {
-            if (indent <= 8 && trimmed !== "" && !trimmed.startsWith("status:") && !trimmed.startsWith("type:") && !trimmed.startsWith("enum:")) {
-              insideStatus = false;
-              insideEnum = false;
-            }
-          }
-          if (insideStatus) {
-            if (trimmed.startsWith("enum:")) {
-              insideEnum = true;
-              continue;
-            }
-            if (insideEnum) {
-              if (trimmed.startsWith("- ")) {
-                schemaStatusEnum.push(trimmed.slice(2).trim());
-              } else if (trimmed !== "") {
-                insideEnum = false;
-              }
-            }
-          }
-        }
+        .map((status) => status.trim().replace(/['"]/g, ""));
+      const paymentContract = fs.readFileSync(wltPaymentsContractPath, "utf8");
+      const paymentStatuses = parseInlineOrBlockEnum(paymentContract, "PaymentStatus");
+      const paymentSessionUsesCanonicalStatus = /PaymentSession:\s*[\s\S]*?status:\s*\{\s*\$ref:\s*['"]?#\/components\/schemas\/PaymentStatus['"]?\s*\}/m.test(paymentContract);
+
+      if (!paymentSessionUsesCanonicalStatus) {
+        violations.push({
+          file: wltPaymentsContractRel,
+          message: "PaymentSession.status must reference the canonical PaymentStatus schema"
+        });
       }
-      
-      if (schemaStatusEnum.length > 0) {
+
+      if (paymentStatuses.length === 0) {
+        violations.push({
+          file: wltPaymentsContractRel,
+          message: "Failed to find PaymentStatus enum in canonical WLT payment contract"
+        });
+      } else {
         for (const dbStatus of dbStatuses) {
-          if (!schemaStatusEnum.includes(dbStatus)) {
+          if (!paymentStatuses.includes(dbStatus)) {
             violations.push({
-              file: "services/wlt/contracts/wlt.openapi.yaml",
-              message: `OpenAPI WltPaymentSession.status enum is missing state '${dbStatus}' defined in DB migration wlt-002_payment_capture.sql`
+              file: wltPaymentsContractRel,
+              message: `OpenAPI PaymentStatus enum is missing state '${dbStatus}' defined in ${path.basename(wltMigrationRel)}`
             });
           }
         }
-      } else {
-        violations.push({
-          file: "services/wlt/contracts/wlt.openapi.yaml",
-          message: "Failed to find WltPaymentSession.status enum in OpenAPI schema"
-        });
       }
-    } else {
-      violations.push({
-        file: "services/wlt/database/migrations/wlt-002_payment_capture.sql",
-        message: "Failed to parse CHECK constraint on status from migration file"
-      });
     }
   } catch (err) {
     violations.push({
-      file: "services/wlt/contracts/wlt.openapi.yaml",
-      message: `Error validating OpenAPI statuses against DB migrations: ${err.message}`
+      file: wltPaymentsContractRel,
+      message: `Error validating canonical payment statuses against DB migrations: ${err.message}`
     });
   }
 }
