@@ -10,7 +10,7 @@ import (
 
 const orderEventBridgeBatchSize = 50
 
-// RunOrderEventBridgeWorker transfers the JRN-011 transactional order event
+// RunOrderEventBridgeWorker transfers the transactional order event
 // outbox into the already-running canonical operational outbox. The order event
 // UUID is reused as the downstream outbox UUID, making a crash between insert
 // and MarkOrderEventPublished safe to replay without duplicate delivery.

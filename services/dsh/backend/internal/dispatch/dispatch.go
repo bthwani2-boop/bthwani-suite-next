@@ -271,7 +271,7 @@ func GetClientTracking(db *sql.DB, orderID, clientID string) (*Assignment, error
 }
 
 // GetPartnerTracking returns the store's reference view of the captain
-// assignment for a bthwani_delivery order it owns. JRN-017 restricts the
+// assignment for a bthwani_delivery order it owns. The client boundary restricts the
 // partner to reference status only — the HTTP layer must not marshal the
 // captain's live coordinates from this read the way it does for the client.
 func GetPartnerTracking(db *sql.DB, orderID, storeID string) (*Assignment, error) {

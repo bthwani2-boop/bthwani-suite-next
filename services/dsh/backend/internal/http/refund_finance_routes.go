@@ -15,5 +15,5 @@ func registerRefundFinanceRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/refunds", s.handleClientOrderRefunds)
 	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/refunds", s.handlePartnerOrderRefunds)
 
-	registerJRN038CodFinanceRoutes(mux, s)
+	registerCodFinanceRoutes(mux, s)
 }

@@ -42,12 +42,12 @@ func TestRuntimePayoutRoutesBindOnlyGovernedLifecycle(t *testing.T) {
 	}
 	text := string(server)
 	for _, required := range []string{
-		"payout.HandleCreatePayoutRequestJRN037(db)",
+		"payout.HandleCreateGovernedPayoutRequest(db)",
 		"payout.HandleApprovePayoutRequestSovereign(db)",
-		"payout.HandleProcessPayoutRequestJRN037(db)",
+		"payout.HandleProcessGovernedPayoutRequest(db)",
 		"payout.HandleCompletePayoutRequestSovereign(db)",
 		"payout.HandleFailPayoutRequestSovereign(db)",
-		"payout.HandleReconcilePayoutRequestJRN037(db)",
+		"payout.HandleReconcileGovernedPayoutRequest(db)",
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("runtime payout route is missing governed handler %s", required)

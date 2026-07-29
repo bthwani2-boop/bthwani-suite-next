@@ -31,7 +31,7 @@ func executeDestinationUpsert(t *testing.T, db *sql.DB, operatorContextID, actor
 	req.SetPathValue("actorId", actorID)
 	req.Header.Set("X-Correlation-ID", correlationID)
 	res := httptest.NewRecorder()
-	HandleUpsertPayoutDestinationJRN037(db)(res, req)
+	HandleUpsertTypedPayoutDestination(db)(res, req)
 	if res.Code != http.StatusCreated {
 		t.Fatalf("destination upsert for %s returned %d: %s", operatorContextID, res.Code, res.Body.String())
 	}
@@ -64,7 +64,7 @@ func executePayoutCreate(t *testing.T, db *sql.DB, operatorContextID, actorID, d
 	req = req.WithContext(shared.WithOperatorContext(req.Context(), operatorContextID))
 	req.Header.Set("X-Correlation-ID", "payout-create-"+operatorContextID)
 	res := httptest.NewRecorder()
-	HandleCreatePayoutRequestJRN037(db)(res, req)
+	HandleCreateGovernedPayoutRequest(db)(res, req)
 	return res
 }
 
@@ -72,7 +72,7 @@ func TestPayoutCreationFailsClosedWithoutTenant(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
 	req := httptest.NewRequest(http.MethodPost, "/wlt/payout-requests", strings.NewReader(`{}`))
 	res := httptest.NewRecorder()
-	HandleCreatePayoutRequestJRN037(nil)(res, req)
+	HandleCreateGovernedPayoutRequest(nil)(res, req)
 	if res.Code != http.StatusBadRequest || !strings.Contains(res.Body.String(), "TENANT_REQUIRED") {
 		t.Fatalf("expected tenant-required rejection, got %d: %s", res.Code, res.Body.String())
 	}

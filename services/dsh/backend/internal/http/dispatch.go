@@ -326,7 +326,7 @@ func (s *protectedStoreServer) handleGetClientTracking(w http.ResponseWriter, r 
 
 // GET /dsh/partner/orders/{orderId}/dispatch-tracking
 //
-// JRN-017 restricts the partner to a reference status read: no captain
+// The client boundary restricts the partner to a reference status read: no captain
 // location, no PoD reference — those stay client/operator/captain-only.
 func (s *protectedStoreServer) handleGetPartnerDispatchTracking(w http.ResponseWriter, r *http.Request) {
 	_, ownedOrder, ok := s.partnerOrder(w, r)

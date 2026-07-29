@@ -34,7 +34,7 @@ type PartnerRequestOptions = {
 };
 
 /**
- * JRN-001 uses the approved manual shared adapter until a runnable generated
+ * Partner onboarding uses the approved manual shared adapter until a runnable generated
  * request facade is available. Screens must never call fetch/axios directly.
  * Mutation identity and optimistic concurrency are translated here once.
  */
@@ -305,7 +305,7 @@ export function fieldUpdatePartnerStore(
   return request(`/dsh/field/partners/${partnerId}/store`, { method: "PATCH", body: input, mutation });
 }
 
-// ── Partner analytics (outside JRN-001 mutation scope) ─────────────────────
+// ── Partner analytics (outside partner-onboarding mutation scope) ──────────
 
 export function fetchPartnerPerformance(period: "today" | "week" | "month" = "today"): Promise<import("./partner.types").DshPartnerPerformanceResponse> {
   return request(`/dsh/partner/analytics/performance?period=${period}`);

@@ -84,14 +84,14 @@ func main() {
 	workforcehttp.RegisterSovereignLeadershipRoutes(baseRouter, service, repo, authClient)
 	workforcehttp.RegisterSovereignLeadershipReferenceRoutes(baseRouter, service, authClient)
 	operationalCoreRouter := workforcehttp.OperationalCoreGateMiddleware(baseRouter, repo, authClient)
-	journeyRouter := workforcehttp.Journey003MutationMiddleware(operationalCoreRouter, repo, authClient)
+	referenceMutationRouter := workforcehttp.ReferenceMutationMiddleware(operationalCoreRouter, repo, authClient)
 
 	workerCtx, cancelWorker := context.WithCancel(context.Background())
 	go availabilityoutbox.RunWorker(workerCtx, db, dsh, 15*time.Second)
 
 	server := &http.Server{
 		Addr:         ":" + port,
-		Handler:      workforcehttp.CorsMiddleware(workforcehttp.ActivationMutationSafetyMiddleware(journeyRouter)),
+		Handler:      workforcehttp.CorsMiddleware(workforcehttp.ActivationMutationSafetyMiddleware(referenceMutationRouter)),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

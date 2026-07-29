@@ -260,7 +260,7 @@ func appendActivationLoyaltyEntry(
 		return err
 	}
 	metadata, _ := json.Marshal(map[string]any{
-		"journeyId":              "JRN-027",
+		"capability":             "subscription-lifecycle",
 		"subscriptionId":         subscriptionID,
 		"subscriptionPurchaseId": purchaseID,
 	})

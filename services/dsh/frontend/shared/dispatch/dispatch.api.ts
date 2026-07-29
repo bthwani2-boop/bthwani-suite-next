@@ -3,7 +3,6 @@ import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshCaptainDispatchCandidate,
   DshCaptainDispatchProfileInput,
-  DshCreateAssignmentInput,
   DshDeliveryException,
   DshDeliveryExceptionResolutionAction,
   DshDeliveryStatus,
@@ -17,15 +16,6 @@ import type {
 } from "./dispatch.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "dispatch");
-
-/** @deprecated JRN-014 operator surfaces must call createGovernedDispatchAssignment. */
-export async function createDispatchAssignment(input: DshCreateAssignmentInput): Promise<DshDispatchAssignment> {
-  const data = await request<{ assignment: DshDispatchAssignment }>("/dsh/operator/dispatch/assignments", {
-    method: "POST",
-    body: input,
-  });
-  return data.assignment;
-}
 
 export async function createGovernedDispatchAssignment(
   input: DshGovernedCreateAssignmentInput,

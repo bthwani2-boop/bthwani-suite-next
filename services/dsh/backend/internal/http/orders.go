@@ -224,7 +224,7 @@ func (s *protectedStoreServer) handleListOperatorOrders(w http.ResponseWriter, r
 
 // POST /dsh/operator/orders/{orderId}/cancel
 // Compatibility alias: all operator cancellation writes execute through the
-// canonical tenant-scoped, idempotent JRN-019 handler.
+// canonical platform-context-scoped, idempotent order handler.
 func (s *protectedStoreServer) handleOperatorCancelOrder(w http.ResponseWriter, r *http.Request) {
 	s.handleOperatorCancelOrderGoverned(w, r)
 }

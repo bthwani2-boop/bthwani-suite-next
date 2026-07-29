@@ -3070,6 +3070,6 @@ x-bthwani-contract-layout: COMPOSED_BUNDLE
 x-bthwani-source-files:
   - core/workforce/contracts/workforce.openapi.yaml
   - core/workforce/contracts/workforce.operational-core.openapi.yaml
-  - core/workforce/contracts/workforce.jrn-003.openapi.yaml
+  - core/workforce/contracts/workforce.reference-mutations.openapi.yaml
   - core/workforce/contracts/workforce.sovereign-leadership.openapi.yaml
-x-bthwani-source-sha256: a421cd18f43e04277f00735e1246a3d84d78674cbcafe9ccc6903cafa991fe4e
+x-bthwani-source-sha256: 5066043cfb89544e05680818fbf085c1489bf223e66d4b4a039d673cb51d3ed8

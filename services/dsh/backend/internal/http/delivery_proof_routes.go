@@ -2,7 +2,7 @@ package http
 
 import "net/http"
 
-// registerDeliveryProofRoutes owns the JRN-018 actor-specific HTTP surface.
+// registerDeliveryProofRoutes owns the actor-specific delivery-proof HTTP surface.
 // It is invoked from the terminal protected-route registrar so these paths are
 // registered exactly once. Analytics routes remain owned by server.go.
 func registerDeliveryProofRoutes(mux *http.ServeMux, s *protectedStoreServer) {

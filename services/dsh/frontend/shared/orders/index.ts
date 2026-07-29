@@ -6,7 +6,7 @@ export * from './order-preparation-alerts.api';
 export * from './order-cancellation.types';
 export * from './order-cancellation.api';
 export * from './use-order-cancellation-controller';
-export * from './use-client-order-journey-controller';
+export * from './use-client-order-controller';
 export * from './use-order-preparation-readback';
 export * from './use-operator-preparation-alerts';
 export * from './OrderPreparationReadbackCard';

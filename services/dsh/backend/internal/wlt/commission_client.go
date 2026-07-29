@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// FinanceWriteCommission calls only JRN-036 commission policy, adjustment and
+// FinanceWriteCommission calls only governed commission policy, adjustment and
 // lifecycle routes. It is intentionally separate from the generic finance
 // proxy so adding one governed action cannot expose arbitrary WLT mutations.
 func (c *Client) FinanceWriteCommission(

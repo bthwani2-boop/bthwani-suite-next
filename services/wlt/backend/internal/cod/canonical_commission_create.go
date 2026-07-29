@@ -63,7 +63,7 @@ func bindCanonicalCommissionFinancialTruth(
 }
 
 // HandleCreateCanonicalCommission is the only runtime entry point for the
-// generic JRN-036 commission route. Caller-supplied amount and currency never
+// generic governed commission route. Caller-supplied amount and currency never
 // become financial authority: order commissions resolve both values from a
 // tenant-local WLT payment session; field visits use their dedicated evidence
 // route and WLT-owned category policy.
