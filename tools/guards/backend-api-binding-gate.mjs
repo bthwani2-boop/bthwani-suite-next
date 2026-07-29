@@ -15,6 +15,22 @@ const routeClassificationFile =
   "services/dsh/contracts/backend-route-classification.json";
 const dshPrimary = "services/dsh/contracts/dsh.openapi.yaml";
 
+// Routes intercepted entirely by a middleware boundary before the router is
+// ever reached — the mux extractor can only see mux.HandleFunc registrations,
+// not a boundary's own path/method comparison, so these can never appear as
+// Go routes even though they are genuinely implemented.
+const boundaryInterceptedRoutes = new Map([
+  [
+    "Identity",
+    new Map([
+      [
+        "POST /auth/otp/request",
+        "intercepted by SaaSOtpBoundary (core/identity/backend/internal/http/saas_otp_boundary.go) before the router",
+      ],
+    ]),
+  ],
+]);
+
 function registeredDshContracts() {
   const source = read(dshRegistryFile);
   const entries = [];
@@ -400,7 +416,7 @@ try {
       validatePathParameters(service, operation);
       validateInternalServiceRoute(service, operation);
       validateWltOperation(service, operation);
-      if (!goRouteSet.has(key)) {
+      if (!goRouteSet.has(key) && !boundaryInterceptedRoutes.get(service.name)?.has(key)) {
         violations.push({
           file: operationFile(service, operation),
           line: operation.line,
