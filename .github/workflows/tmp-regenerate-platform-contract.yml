@@ -25,6 +25,9 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
 
+      - name: Declare the OpenAPI composer YAML dependency
+        run: pnpm add --workspace-root --save-dev --save-exact yaml@2.9.0
+
       - name: Regenerate platform-control contract and client
         run: pnpm run openapi:generate:platform-control
 
@@ -33,6 +36,8 @@ jobs:
         with:
           name: platform-control-generated-${{ github.sha }}
           path: |
+            package.json
+            pnpm-lock.yaml
             core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml
             core/platform-control/clients/generated/platform-control-api.ts
           if-no-files-found: error
