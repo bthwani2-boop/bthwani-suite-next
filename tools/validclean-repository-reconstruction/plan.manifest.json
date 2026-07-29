@@ -99,8 +99,8 @@
     "currentWave": "PACKAGE_REBASELINE_AND_P0_FOUNDATION",
     "slices": {
       "VC-100-full-tracked-file-inventory": "VERIFIED_SAME_SHA",
-      "VC-101-package-state-unification": "IMPLEMENTATION_IN_PROGRESS",
-      "VC-102-path-decision-registry": "DIAGNOSIS_COMPLETE",
+      "VC-101-package-state-unification": "VERIFIED_SAME_SHA",
+      "VC-102-path-decision-registry": "VERIFIED_SAME_SHA",
       "VC-110-platform-control-contract-reconstruction": "DIAGNOSIS_COMPLETE",
       "VC-120-dsh-contract-reconstruction": "DIAGNOSIS_COMPLETE",
       "VC-130-migration-history-reconstruction": "DIAGNOSIS_COMPLETE",
