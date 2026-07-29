@@ -15,7 +15,7 @@
       "payoutRequestId": {
         "matches": ".+"
       },
-      "tenantId": {
+      "operatorContextId": {
         "matches": ".+"
       }
     }

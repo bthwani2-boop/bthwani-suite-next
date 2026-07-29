@@ -586,7 +586,7 @@ function Invoke-WltSmoke {
   if ([string]::IsNullOrWhiteSpace($wltDshServiceToken)) { throw "WLT_DSH_SERVICE_TOKEN is required for WLT smoke" }
 
   $sessionBody = @{
-    tenantId = "tenant-yemen"
+    operatorContextId = "tenant-yemen"
     checkoutIntentId = "checkout-smoke-0001"
     clientId = "client-local-001"
     storeId = "store-test-grocery"
