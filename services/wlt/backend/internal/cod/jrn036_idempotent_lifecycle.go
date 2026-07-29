@@ -23,7 +23,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 	correlationID string,
 	idempotencyKey string,
 ) (*Commission, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 	}
 
 	requestHash := hashCommissionParts(
-		tenantID,
+		operatorContextID,
 		"commission_lifecycle",
 		action,
 		commissionID,
@@ -81,7 +81,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 		return &commission, nil
 	}
 
-	commission, err := getGovernedCommissionForUpdateTx(ctx, tx, tenantID, commissionID)
+	commission, err := getGovernedCommissionForUpdateTx(ctx, tx, operatorContextID, commissionID)
 	if err != nil || commission == nil {
 		return commission, err
 	}
@@ -97,7 +97,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 			UPDATE wlt_commissions
 			SET status='confirmed', confirmed_at=NOW(), updated_at=NOW()
 			WHERE tenant_id=$1 AND id=$2 AND status='pending'
-			RETURNING `+commissionCols, tenantID, commission.ID)
+			RETURNING `+commissionCols, operatorContextID, commission.ID)
 		updated, err = scanCommission(row)
 		auditAction = "commission_confirmed"
 
@@ -105,7 +105,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 		if commission.Status != "confirmed" {
 			return nil, ErrCommissionNotInExpectedState
 		}
-		walletEffect, walletErr := commissionHasWalletEffectTx(ctx, tx, tenantID, commission)
+		walletEffect, walletErr := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
 		if walletErr != nil {
 			return nil, walletErr
 		}
@@ -121,7 +121,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 				  AND actor_id=$4
 				  AND pending_balance_minor_units>=$1`,
 				commission.AmountMinorUnits,
-				tenantID,
+				operatorContextID,
 				commission.BeneficiaryActorType,
 				commission.BeneficiaryActorID,
 			)
@@ -136,7 +136,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 			UPDATE wlt_commissions
 			SET status='settled', settled_at=NOW(), updated_at=NOW()
 			WHERE tenant_id=$1 AND id=$2 AND status='confirmed'
-			RETURNING `+commissionCols, tenantID, commission.ID)
+			RETURNING `+commissionCols, operatorContextID, commission.ID)
 		updated, err = scanCommission(row)
 		auditAction = "commission_settled"
 
@@ -144,7 +144,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 		if commission.Status != "pending" {
 			return nil, ErrCommissionNotInExpectedState
 		}
-		walletEffect, walletErr := commissionHasWalletEffectTx(ctx, tx, tenantID, commission)
+		walletEffect, walletErr := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
 		if walletErr != nil {
 			return nil, walletErr
 		}
@@ -160,7 +160,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 				  AND pending_balance_minor_units>=$1
 				  AND earned_total_minor_units>=$1`,
 				commission.AmountMinorUnits,
-				tenantID,
+				operatorContextID,
 				commission.BeneficiaryActorType,
 				commission.BeneficiaryActorID,
 			)
@@ -203,7 +203,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 			SET status='rejected', rejected_at=NOW(), resolution_note=$3,
 			    updated_at=NOW()
 			WHERE tenant_id=$1 AND id=$2 AND status='pending'
-			RETURNING `+commissionCols, tenantID, commission.ID, reason)
+			RETURNING `+commissionCols, operatorContextID, commission.ID, reason)
 		updated, err = scanCommission(row)
 		auditAction = "commission_rejected"
 
@@ -211,7 +211,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 		if commission.Status != "settled" {
 			return nil, ErrCommissionNotInExpectedState
 		}
-		walletEffect, walletErr := commissionHasWalletEffectTx(ctx, tx, tenantID, commission)
+		walletEffect, walletErr := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
 		if walletErr != nil {
 			return nil, walletErr
 		}
@@ -227,7 +227,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 				  AND available_balance_minor_units>=$1
 				  AND settled_total_minor_units>=$1`,
 				commission.AmountMinorUnits,
-				tenantID,
+				operatorContextID,
 				commission.BeneficiaryActorType,
 				commission.BeneficiaryActorID,
 			)
@@ -270,7 +270,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 			SET status='reversed', reversed_at=NOW(), resolution_note=$3,
 			    updated_at=NOW()
 			WHERE tenant_id=$1 AND id=$2 AND status='settled'
-			RETURNING `+commissionCols, tenantID, commission.ID, reason)
+			RETURNING `+commissionCols, operatorContextID, commission.ID, reason)
 		updated, err = scanCommission(row)
 		auditAction = "commission_reversed"
 	}
@@ -280,7 +280,7 @@ func applyGovernedCommissionLifecycleIdempotent(
 	if err := appendCommissionAudit(
 		ctx,
 		tx,
-		tenantID,
+		operatorContextID,
 		commission.ID,
 		auditAction,
 		operatorID,

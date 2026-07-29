@@ -21,7 +21,7 @@ export const platformControlServiceManifest = {
   rollbackRuntimeReady: true,
   healthAggregationReady: true,
   saasRuntimeProjectionReady: true,
-  tenantContextEnforcementReady: true,
+  operatorContextEnforcementReady: true,
 
   contracts: [
     "contracts/platform-control.openapi.yaml",
@@ -29,14 +29,13 @@ export const platformControlServiceManifest = {
   ],
   generatedClients: [
     "clients/generated/platform-control-api.ts",
-    "clients/generated/platform-control-saas-runtime.ts",
   ],
 
   boundaries: {
     owns: [
       "platform_runtime_snapshot",
       "platform_saas_runtime_status",
-      "platform_trusted_tenant_context",
+      "platform_trusted_operator_context",
       "platform_variable_resolution_contract",
       "platform_feature_flag_contract",
       "platform_change_workflow_contract",

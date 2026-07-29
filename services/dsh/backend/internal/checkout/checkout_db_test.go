@@ -52,13 +52,13 @@ func seedStore(t *testing.T, db *sql.DB) string {
 func TestCancelIntentEnqueuesExpireSessionWhenPaymentSessionExistsDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	storeID := seedStore(t, db)
-	tenantID := uniqueID("checkout-cancel-test-tenant")
+	operatorContextID := uniqueID("checkout-cancel-test-tenant")
 	clientID := uniqueID("checkout-cancel-test-client")
 	paymentSessionID := uniqueID("ps")
 
 	intent, err := CreateIntent(db, CreateIntentInput{
 		ID:            mustNewIntentID(t, db),
-		TenantID:      tenantID,
+		OperatorContextID:      operatorContextID,
 		ClientID:      clientID,
 		CartID:        mustNewCartID(t, db),
 		StoreID:       storeID,
@@ -72,11 +72,11 @@ func TestCancelIntentEnqueuesExpireSessionWhenPaymentSessionExistsDBIntegration(
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_intents WHERE id = $1::uuid`, intent.ID)
 	})
 
-	if _, err := AttachWltPaymentSession(db, intent.ID, tenantID, clientID, paymentSessionID); err != nil {
+	if _, err := AttachWltPaymentSession(db, intent.ID, operatorContextID, clientID, paymentSessionID); err != nil {
 		t.Fatalf("AttachWltPaymentSession failed: %v", err)
 	}
 
-	cancelled, err := CancelIntent(db, intent.ID, tenantID, clientID)
+	cancelled, err := CancelIntent(db, intent.ID, operatorContextID, clientID)
 	if err != nil {
 		t.Fatalf("CancelIntent failed: %v", err)
 	}
@@ -104,12 +104,12 @@ func TestCancelIntentEnqueuesExpireSessionWhenPaymentSessionExistsDBIntegration(
 func TestCancelIntentEnqueuesNothingWithoutPaymentSessionDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	storeID := seedStore(t, db)
-	tenantID := uniqueID("checkout-cancel-test-tenant")
+	operatorContextID := uniqueID("checkout-cancel-test-tenant")
 	clientID := uniqueID("checkout-cancel-test-client")
 
 	intent, err := CreateIntent(db, CreateIntentInput{
 		ID:            mustNewIntentID(t, db),
-		TenantID:      tenantID,
+		OperatorContextID:      operatorContextID,
 		ClientID:      clientID,
 		CartID:        mustNewCartID(t, db),
 		StoreID:       storeID,
@@ -123,7 +123,7 @@ func TestCancelIntentEnqueuesNothingWithoutPaymentSessionDBIntegration(t *testin
 		_, _ = db.Exec(`DELETE FROM dsh_checkout_intents WHERE id = $1::uuid`, intent.ID)
 	})
 
-	cancelled, err := CancelIntent(db, intent.ID, tenantID, clientID)
+	cancelled, err := CancelIntent(db, intent.ID, operatorContextID, clientID)
 	if err != nil {
 		t.Fatalf("CancelIntent failed: %v", err)
 	}

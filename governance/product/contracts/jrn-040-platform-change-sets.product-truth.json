@@ -15,7 +15,7 @@
     "evidenceState": "UNPROVEN",
     "evidenceReferences": [
       "core/platform-control/contracts/platform-change-sets.openapi.yaml",
-      "core/platform-control/clients/generated/platform-change-sets-api.ts"
+      "core/platform-control/clients/generated/platform-control-api.ts"
     ]
   },
   "actors": [

@@ -58,7 +58,7 @@ type PaymentSessionTimeline struct {
 	ReconciliationCases        []PaymentReconciliationView   `json:"reconciliationCases"`
 }
 
-func ReadPaymentSessionTimeline(db *sql.DB, tenantID, sessionID string) (*PaymentSessionTimeline, error) {
+func ReadPaymentSessionTimeline(db *sql.DB, operatorContextID, sessionID string) (*PaymentSessionTimeline, error) {
 	var session PaymentSession
 	var ledgerID, lastEventID, lastProviderStatus string
 	err := db.QueryRow(`
@@ -68,9 +68,9 @@ func ReadPaymentSessionTimeline(db *sql.DB, tenantID, sessionID string) (*Paymen
 		       COALESCE(capture_ledger_transaction_id, ''),
 		       COALESCE(last_provider_event_id, ''), last_provider_status
 		FROM wlt_payment_sessions
-		WHERE id = $1 AND tenant_id = $2`, sessionID, tenantID).Scan(
+		WHERE id = $1 AND tenant_id = $2`, sessionID, operatorContextID).Scan(
 		&session.ID, &session.CheckoutIntentID, &session.SpecialRequestID,
-		&session.TenantID, &session.ClientID, &session.StoreID,
+		&session.OperatorContextID, &session.ClientID, &session.StoreID,
 		&session.PaymentMethod, &session.Status, &session.ProviderReference,
 		&session.AmountMinorUnits, &session.Currency, &session.CapturedAt,
 		&session.CreatedAt, &session.UpdatedAt,
@@ -97,7 +97,7 @@ func ReadPaymentSessionTimeline(db *sql.DB, tenantID, sessionID string) (*Paymen
 		       correlation_id, created_at, updated_at, completed_at
 		FROM wlt_payment_operation_receipts
 		WHERE tenant_id = $1 AND payment_session_id = $2
-		ORDER BY created_at DESC`, tenantID, sessionID)
+		ORDER BY created_at DESC`, operatorContextID, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func ReadPaymentSessionTimeline(db *sql.DB, tenantID, sessionID string) (*Paymen
 		       occurred_at, received_at, processed_at
 		FROM wlt_payment_provider_events
 		WHERE tenant_id = $1 AND payment_session_id = $2
-		ORDER BY received_at DESC`, tenantID, sessionID)
+		ORDER BY received_at DESC`, operatorContextID, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -173,12 +173,12 @@ func ReadPaymentSessionTimeline(db *sql.DB, tenantID, sessionID string) (*Paymen
 
 func HandleGetPaymentSessionTimeline(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-		if tenantID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required")
+		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		if operatorContextID == "" {
+			shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Operator-Context-ID is required")
 			return
 		}
-		timeline, err := ReadPaymentSessionTimeline(db, tenantID, r.PathValue("paymentSessionId"))
+		timeline, err := ReadPaymentSessionTimeline(db, operatorContextID, r.PathValue("paymentSessionId"))
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "PAYMENT_TIMELINE_READ_FAILED", "failed to read payment session timeline")
 			return

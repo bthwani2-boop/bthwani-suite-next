@@ -244,7 +244,7 @@ requireText(journeyGate, "[switch]$Full", "JOURNEY_GATE_EXPLICIT_FULL_SWITCH_MIS
 requireText(journeyGate, "if ($Full)", "JOURNEY_GATE_TARGETED_DEFAULT_MISSING");
 forbidText(journeyGate, "$runFull = $true", "JOURNEY_GATE_MUST_NOT_FORCE_FULL_BY_DEFAULT");
 const packageJson = JSON.parse(read("package.json"));
-const journeyCommand = packageJson.scripts?.["journey:gate"] ?? "";
+const journeyCommand = packageJson.scripts?.["guard:journey"] ?? "";
 if (!journeyCommand) violations.push({ file: "package.json", line: 0, message: "JOURNEY_GATE_SCRIPT_MISSING" });
 if (journeyCommand.includes("-Soft")) violations.push({ file: "package.json", line: 0, message: "JOURNEY_GATE_SOFT_FAILURE_FORBIDDEN" });
 

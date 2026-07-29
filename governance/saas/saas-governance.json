@@ -5,12 +5,12 @@
   "commercialActivationState": "ELIGIBLE_FOR_REVIEW",
   "activationAuthorization": {
     "authorizationPath": "governance/saas/activation-authorization.json",
-    "status": "AUTHORIZED",
-    "targetRef": "smar",
+    "status": "NOT_AUTHORIZED",
+    "targetRef": "validclean",
     "productionDeploymentAuthorized": false
   },
-  "tenantDefinition": "A tenant is the platform operator or organization that owns an isolated operating context; it is not automatically a partner, store, user, city, or service.",
-  "trustedTenantContextRequired": true,
+  "tenantDefinition": "The platform isolation boundary is the trusted operator context. A Partner Organization, Store, User, City, or Service is not an operator context and cannot select or override it.",
+  "trustedOperatorContextRequired": true,
   "clientSuppliedTenantTrusted": false,
   "deferredCommercialFeatures": [
     "automated invoicing",
@@ -27,7 +27,7 @@
   ],
   "activationEvidence": {
     "tenantOwnedEntitiesClassified": "NOT_PROVEN",
-    "tenantContextPropagationVerified": "NOT_PROVEN",
+    "operatorContextPropagationVerified": "NOT_PROVEN",
     "crossTenantNegativeTestsPassed": "NOT_PROVEN",
     "crossTenantDataLeakageZero": "NOT_PROVEN",
     "criticalVulnerabilitiesZero": "NOT_PROVEN",

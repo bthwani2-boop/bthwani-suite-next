@@ -24,7 +24,7 @@ func TestFinanceWriteCommissionRequiresTrustedTenant(t *testing.T) {
 
 func TestFinanceWriteCommissionSendsTrustedTenantAndMutationHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-commission-test" {
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "tenant-commission-test" {
 			t.Fatalf("expected trusted tenant header, got %q", got)
 		}
 		if got := r.Header.Get("X-Service-Caller"); got != "dsh" {
@@ -50,7 +50,7 @@ func TestFinanceWriteCommissionSendsTrustedTenantAndMutationHeaders(t *testing.T
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	ctx := WithTenantContext(context.Background(), "tenant-commission-test")
+	ctx := WithOperatorContext(context.Background(), "tenant-commission-test")
 	status, body, err := client.FinanceWriteCommission(
 		ctx,
 		http.MethodPut,

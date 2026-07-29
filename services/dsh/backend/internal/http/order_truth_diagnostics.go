@@ -12,7 +12,7 @@ func (s *protectedStoreServer) handleGetOrderTruthDiagnostics(w http.ResponseWri
 	if !ok {
 		return
 	}
-	diagnostics, err := orders.LoadOrderTruthDiagnostics(s.db, actor.TenantID)
+	diagnostics, err := orders.LoadOrderTruthDiagnostics(s.db, actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load order truth diagnostics")
 		return

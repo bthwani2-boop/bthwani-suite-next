@@ -1530,7 +1530,7 @@ export interface components {
             specialRequestId?: string | null;
             subscriptionPurchaseId?: string | null;
             commercialProductReference?: string | null;
-            tenantId: string;
+            operatorContextId: string;
             clientId: string;
             storeId: string;
             /** @enum {string} */
@@ -1552,7 +1552,7 @@ export interface components {
             specialRequestId?: string;
             subscriptionPurchaseId?: string;
             commercialProductReference?: string;
-            tenantId: string;
+            operatorContextId: string;
             clientId: string;
             storeId: string;
             /** @enum {string} */
@@ -1575,7 +1575,7 @@ export interface components {
             eventId: string;
             /** @enum {string} */
             type: "payment.authorized" | "payment.captured" | "payment.failed" | "payment.expired";
-            tenantId: string;
+            operatorContextId: string;
             paymentSessionId: string;
             /** @enum {string} */
             status: "authorized" | "captured" | "failed" | "expired";
@@ -1699,7 +1699,7 @@ export interface components {
         RefundStatus: "requested" | "approved" | "processing" | "provider_unknown" | "completed" | "rejected" | "reversed";
         GovernedRefund: {
             id: string;
-            tenantId: string;
+            operatorContextId: string;
             paymentSessionId: string;
             orderId: string;
             clientId: string;
@@ -1730,7 +1730,7 @@ export interface components {
             updatedAt: string;
         };
         CreateRefundRequest: {
-            tenantId: string;
+            operatorContextId: string;
             paymentSessionId: string;
             orderId: string;
             clientId: string;
@@ -1761,7 +1761,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             refundId: string;
-            tenantId: string;
+            operatorContextId: string;
             eventType: string;
             actorId: string;
             /** @enum {string} */
@@ -1928,7 +1928,7 @@ export interface components {
         };
         SettlementListItem: {
             id: string;
-            tenantId?: string;
+            operatorContextId?: string;
             partnerId: string;
             periodStart: string;
             periodEnd: string;
@@ -2165,7 +2165,7 @@ export interface components {
         SubscriptionPaymentSessionCreate: {
             subscriptionPurchaseId: string;
             productReference: string;
-            tenantId: string;
+            operatorContextId: string;
             clientId: string;
             /** @enum {string} */
             paymentMethod?: "official_wallet";
@@ -2196,7 +2196,7 @@ export interface components {
             summary: components["schemas"]["WltCommercialBenefitsSummary"];
         };
         ReservePromotionFundingRequest: {
-            tenantId: string;
+            operatorContextId: string;
             externalReference: string;
             checkoutIntentId: string;
             couponRedemptionId: string;
@@ -2212,21 +2212,21 @@ export interface components {
             currency: string;
         };
         CommitPromotionFundingRequest: {
-            tenantId: string;
+            operatorContextId: string;
             orderId: string;
         };
         ReleasePromotionFundingRequest: {
-            tenantId: string;
+            operatorContextId: string;
             reason: string;
         };
         ReversePromotionFundingRequest: {
-            tenantId: string;
+            operatorContextId: string;
             orderId: string;
             reason: string;
         };
         PromotionFundingReservation: {
             id: string;
-            tenantId: string;
+            operatorContextId: string;
             externalReference: string;
             checkoutIntentId: string;
             couponRedemptionId: string;
@@ -2592,7 +2592,7 @@ export interface components {
         ActorIdPath: string;
         Authorization: string;
         ServiceCaller: "dsh";
-        TenantId: string;
+        OperatorContextId: string;
         CorrelationId: string;
         CorrelationIdOptional: string;
         IdempotencyKey: string;
@@ -2755,7 +2755,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path: {
                 actorType: components["parameters"]["ActorTypePath"];
@@ -2786,7 +2786,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path?: never;
             cookie?: never;
@@ -2813,7 +2813,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path: {
                 caseId: components["parameters"]["CaseId"];
@@ -2842,7 +2842,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
@@ -2876,7 +2876,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
@@ -2917,7 +2917,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path?: never;
             cookie?: never;
@@ -2942,7 +2942,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path: {
                 entryId: string;
@@ -2969,7 +2969,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path?: never;
             cookie?: never;
@@ -2990,7 +2990,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
@@ -3022,7 +3022,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path: {
                 paymentSessionId: components["parameters"]["PaymentSessionId"];
@@ -3049,7 +3049,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
@@ -3080,7 +3080,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
@@ -3111,7 +3111,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
@@ -3141,7 +3141,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path: {
                 paymentSessionId: components["parameters"]["PaymentSessionId"];
@@ -3170,7 +3170,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
@@ -3199,7 +3199,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
@@ -3219,7 +3219,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
@@ -3258,7 +3258,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
@@ -3341,7 +3341,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path?: never;
             cookie?: never;
@@ -3366,7 +3366,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
@@ -3410,7 +3410,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path: {
                 codRecordId: components["parameters"]["CodRecordId"];
@@ -3438,7 +3438,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
@@ -3473,7 +3473,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
@@ -3510,7 +3510,7 @@ export interface operations {
             };
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID"?: components["parameters"]["CorrelationIdOptional"];
             };
@@ -3538,7 +3538,7 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
                 "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
@@ -3582,7 +3582,7 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID"?: components["parameters"]["CorrelationIdOptional"];
             };
@@ -3612,7 +3612,7 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
                 "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
@@ -3648,7 +3648,7 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
                 "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
@@ -3684,7 +3684,7 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
                 "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
@@ -3730,7 +3730,7 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
                 "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
@@ -3767,7 +3767,7 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID"?: components["parameters"]["CorrelationIdOptional"];
             };
@@ -3801,7 +3801,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path?: never;
             cookie?: never;
@@ -4167,7 +4167,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path?: never;
             cookie?: never;
@@ -4192,7 +4192,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path: {
                 settlementId: components["parameters"]["SettlementId"];
@@ -4219,7 +4219,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
@@ -4551,7 +4551,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
@@ -4760,7 +4760,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path?: never;
             cookie?: never;
@@ -4785,7 +4785,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
@@ -4823,7 +4823,7 @@ export interface operations {
             header: {
                 Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantId"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
             };
             path: {
                 codRecordId: string;
@@ -5139,7 +5139,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
                 "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
                 "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
             };
@@ -5164,7 +5164,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
             };
             path: {
                 reservationId: components["parameters"]["ReservationId"];
@@ -5185,7 +5185,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
                 "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
                 "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
             };
@@ -5213,7 +5213,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
                 "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
                 "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
             };
@@ -5241,7 +5241,7 @@ export interface operations {
             query?: never;
             header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Tenant-ID": components["parameters"]["TenantHeader"];
+                "X-Operator-Context-ID": components["parameters"]["TenantHeader"];
                 "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
                 "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
             };

@@ -44,7 +44,7 @@ func uniqueActorID(prefix string) string {
 }
 
 func trustedLedgerTestContext() context.Context {
-	return shared.WithTenantContext(context.Background(), "tenant-ledger-tests")
+	return shared.WithOperatorContext(context.Background(), "tenant-ledger-tests")
 }
 
 func TestPostLedgerTransaction_RejectsUnbalanced(t *testing.T) {

@@ -55,31 +55,31 @@ func (c *Client) FinanceReadWallet(ctx context.Context, actorType, actorID, corr
 	return 0, nil, fmt.Errorf("WLT wallet tenant id is required; use FinanceReadWalletWithTenant")
 }
 
-func (c *Client) FinanceReadWalletWithTenant(ctx context.Context, actorType, actorID, correlationID, tenantID string) (int, []byte, error) {
+func (c *Client) FinanceReadWalletWithTenant(ctx context.Context, actorType, actorID, correlationID, operatorContextID string) (int, []byte, error) {
 	if !c.Configured() { return 0, nil, fmt.Errorf("WLT integration is not configured") }
-	actorType = strings.ToLower(strings.TrimSpace(actorType)); actorID = strings.TrimSpace(actorID); tenantID = strings.TrimSpace(tenantID)
+	actorType = strings.ToLower(strings.TrimSpace(actorType)); actorID = strings.TrimSpace(actorID); operatorContextID = strings.TrimSpace(operatorContextID)
 	if _, ok := financeReadWalletAllowlist[actorType]; !ok { return 0, nil, fmt.Errorf("WLT wallet actor type %q is not allowlisted", actorType) }
 	if actorID == "" || len(actorID) > 200 { return 0, nil, fmt.Errorf("WLT wallet actor id must be non-empty and no longer than 200 characters") }
-	if tenantID == "" { return 0, nil, fmt.Errorf("WLT wallet tenant id is required") }
-	return c.financeReadRequest(ctx, "/wlt/wallets/"+url.PathEscape(actorType)+"/"+url.PathEscape(actorID), nil, correlationID, tenantID)
+	if operatorContextID == "" { return 0, nil, fmt.Errorf("WLT wallet tenant id is required") }
+	return c.financeReadRequest(ctx, "/wlt/wallets/"+url.PathEscape(actorType)+"/"+url.PathEscape(actorID), nil, correlationID, operatorContextID)
 }
 
 func (c *Client) FinanceRead(ctx context.Context, path string, query url.Values, correlationID string) (int, []byte, error) {
 	return c.FinanceReadWithTenant(ctx, path, query, correlationID, "")
 }
 
-func (c *Client) FinanceReadWithTenant(ctx context.Context, path string, query url.Values, correlationID, tenantID string) (int, []byte, error) {
+func (c *Client) FinanceReadWithTenant(ctx context.Context, path string, query url.Values, correlationID, operatorContextID string) (int, []byte, error) {
 	if !c.Configured() { return 0, nil, fmt.Errorf("WLT integration is not configured") }
 	if !financeReadPathAllowed(path) { return 0, nil, fmt.Errorf("WLT finance read path %q is not allowlisted", path) }
-	return c.financeReadRequest(ctx, path, query, correlationID, tenantID)
+	return c.financeReadRequest(ctx, path, query, correlationID, operatorContextID)
 }
 
-func (c *Client) financeReadRequest(ctx context.Context, path string, query url.Values, correlationID, tenantID string) (int, []byte, error) {
+func (c *Client) financeReadRequest(ctx context.Context, path string, query url.Values, correlationID, operatorContextID string) (int, []byte, error) {
 	target := c.baseURL + path; if len(query) > 0 { target += "?" + query.Encode() }
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil); if err != nil { return 0, nil, fmt.Errorf("build WLT finance read request: %w", err) }
 	setServiceHeaders(req, c.serviceToken)
 	if correlationID = strings.TrimSpace(correlationID); correlationID != "" { req.Header.Set("X-Correlation-ID", correlationID) }
-	if tenantID = strings.TrimSpace(tenantID); tenantID != "" { req.Header.Set("X-Tenant-ID", tenantID) }
+	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" { req.Header.Set("X-Operator-Context-ID", operatorContextID) }
 	response, err := c.http.Do(req); if err != nil { return 0, nil, fmt.Errorf("call WLT finance read: %w", err) }
 	defer response.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes)); if err != nil { return 0, nil, fmt.Errorf("read WLT finance read response: %w", err) }
@@ -90,15 +90,15 @@ func (c *Client) FinanceWrite(ctx context.Context, method, path string, body []b
 	return c.FinanceWriteWithTenant(ctx, method, path, body, correlationID, "")
 }
 
-func (c *Client) FinanceWriteWithTenant(ctx context.Context, method, path string, body []byte, correlationID, tenantID string) (int, []byte, error) {
+func (c *Client) FinanceWriteWithTenant(ctx context.Context, method, path string, body []byte, correlationID, operatorContextID string) (int, []byte, error) {
 	if !c.Configured() { return 0, nil, fmt.Errorf("WLT integration is not configured") }
 	if method != http.MethodPost && method != http.MethodPut && method != http.MethodPatch { return 0, nil, fmt.Errorf("WLT finance write method %q is not allowlisted", method) }
 	if !financeWritePathAllowed(path) { return 0, nil, fmt.Errorf("WLT finance write path %q is not allowlisted", path) }
 	correlationID = strings.TrimSpace(correlationID); if correlationID == "" { return 0, nil, fmt.Errorf("WLT finance write correlation id is required") }
 	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(body)); if err != nil { return 0, nil, fmt.Errorf("build WLT finance write request: %w", err) }
 	setServiceHeaders(req, c.serviceToken); req.Header.Set("Content-Type", "application/json")
-	if tenantID = strings.TrimSpace(tenantID); tenantID != "" { req.Header.Set("X-Tenant-ID", tenantID) }
-	if err := setRequiredMutationHeaders(req, correlationID, deterministicMutationKey("finance-proxy", method, path, string(body), tenantID)); err != nil { return 0, nil, fmt.Errorf("prepare WLT finance write request: %w", err) }
+	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" { req.Header.Set("X-Operator-Context-ID", operatorContextID) }
+	if err := setRequiredMutationHeaders(req, correlationID, deterministicMutationKey("finance-proxy", method, path, string(body), operatorContextID)); err != nil { return 0, nil, fmt.Errorf("prepare WLT finance write request: %w", err) }
 	response, err := c.http.Do(req); if err != nil { return 0, nil, fmt.Errorf("call WLT finance write: %w", err) }
 	defer response.Body.Close()
 	responseBody, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes)); if err != nil { return 0, nil, fmt.Errorf("read WLT finance write response: %w", err) }

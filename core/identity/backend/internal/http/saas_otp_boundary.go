@@ -19,7 +19,7 @@ const selfServiceOtpRequestLimit = 32 * 1024
 type tenantOtpRepository interface {
 	RequestOtpForTenant(
 		ctx context.Context,
-		tenantID string,
+		operatorContextID string,
 		input identity.OtpInput,
 	) (identity.IssueActivationResult, error)
 }
@@ -27,7 +27,7 @@ type tenantOtpRepository interface {
 func writeTenantOtpError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, identity.ErrTenantMismatch):
-		sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "phone is already bound to another tenant")
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "phone is already bound to another tenant")
 	case errors.Is(err, identity.ErrActivationRateLimited):
 		sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
 	case errors.Is(err, identity.ErrInvalidActivation):
@@ -60,18 +60,18 @@ func readSelfServiceOtpInput(w http.ResponseWriter, r *http.Request) (identity.O
 }
 
 func trustedOtpTenant() (string, error) {
-	tenantID, active, err := activeSaaSTenant()
+	operatorContextID, active, err := activeSaaSTenant()
 	if err != nil {
 		return "", err
 	}
 	if active {
-		return tenantID, nil
+		return operatorContextID, nil
 	}
-	tenantID = strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID"))
-	if tenantID == "" {
-		return "", errors.New("BTHWANI_DEFAULT_TENANT_ID is required for OTP requests")
+	operatorContextID = strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
+	if operatorContextID == "" {
+		return "", errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required for OTP requests")
 	}
-	return tenantID, nil
+	return operatorContextID, nil
 }
 
 // SaaSOtpBoundary owns the public phone-verification/consumer bootstrap path.
@@ -101,13 +101,13 @@ func SaaSOtpBoundary(repository tenantOtpRepository, next http.Handler) http.Han
 			return
 		}
 
-		tenantID, err := trustedOtpTenant()
+		operatorContextID, err := trustedOtpTenant()
 		if err != nil {
 			sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
 			return
 		}
 
-		result, err := repository.RequestOtpForTenant(r.Context(), tenantID, request)
+		result, err := repository.RequestOtpForTenant(r.Context(), operatorContextID, request)
 		if err != nil {
 			writeTenantOtpError(w, err)
 			return

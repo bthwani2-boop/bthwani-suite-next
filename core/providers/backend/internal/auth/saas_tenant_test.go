@@ -11,29 +11,29 @@ import (
 func TestProvidersAuthAcceptsIdentityTenant(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{
-			Subject: "operator-1", TenantID: "tenant-main", AuthState: "authenticated",
+			Subject: "operator-1", OperatorContextID: "tenant-main", AuthState: "authenticated",
 		})
 	}))
 	defer server.Close()
 
 	identity, err := NewClient(server.URL).Resolve(context.Background(), "Bearer token-1")
-	if err != nil || identity.TenantID != "tenant-main" {
+	if err != nil || identity.OperatorContextID != "tenant-main" {
 		t.Fatalf("identity tenant was rejected identity=%#v err=%v", identity, err)
 	}
 }
 
 func TestProvidersAuthAcceptsSessionTenantInsteadOfProcessDefault(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "tenant-main")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{
-			Subject: "operator-2", TenantID: "tenant-other", AuthState: "authenticated",
+			Subject: "operator-2", OperatorContextID: "tenant-other", AuthState: "authenticated",
 		})
 	}))
 	defer server.Close()
 
 	identity, err := NewClient(server.URL).Resolve(context.Background(), "Bearer token-2")
-	if err != nil || identity.TenantID != "tenant-other" {
+	if err != nil || identity.OperatorContextID != "tenant-other" {
 		t.Fatalf("session tenant must remain authoritative identity=%#v err=%v", identity, err)
 	}
 }
@@ -53,10 +53,10 @@ func TestProvidersAuthRejectsSessionWithoutTenant(t *testing.T) {
 
 func TestProvidersAuthDoesNotDependOnProcessTenantConfiguration(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{
-			Subject: "operator-4", TenantID: "tenant-four", AuthState: "authenticated",
+			Subject: "operator-4", OperatorContextID: "tenant-four", AuthState: "authenticated",
 		})
 	}))
 	defer server.Close()

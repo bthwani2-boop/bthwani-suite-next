@@ -127,7 +127,7 @@ Import-RuntimeEnv
 if ($env:BTHWANI_SAAS_MODE -ne "active") { throw "BTHWANI_SAAS_MODE must be active" }
 if ($env:BTHWANI_COMMERCIAL_ACTIVATION_STATE -ne "authorized") { throw "commercial activation must be authorized" }
 if ($env:BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED -ne "false") { throw "production deployment authorization must remain false" }
-if ([string]::IsNullOrWhiteSpace($env:BTHWANI_DEFAULT_TENANT_ID)) { throw "BTHWANI_DEFAULT_TENANT_ID is required" }
+if ([string]::IsNullOrWhiteSpace($env:BTHWANI_OPERATOR_CONTEXT_ID)) { throw "BTHWANI_OPERATOR_CONTEXT_ID is required" }
 
 Write-Host "=== SaaS runtime proof ==="
 Invoke-RequiredProcess -FilePath "pwsh" -Arguments @(
@@ -176,7 +176,7 @@ $platform = Invoke-JsonRequest -Uri "http://localhost:58088/platform/v1/runtime-
 if ($platform.saas.mode -ne "active") { throw "Platform Control SaaS mode is not active" }
 if ($platform.saas.commercialActivationState -ne "authorized") { throw "Platform Control activation state is not authorized" }
 if ($platform.saas.productionDeploymentAuthorized -ne $false) { throw "Platform Control incorrectly reports production deployment authorization" }
-if ($platform.saas.defaultTenantId -ne $env:BTHWANI_DEFAULT_TENANT_ID) { throw "Platform Control tenant does not match runtime tenant" }
+if ($platform.saas.defaultOperatorContextId -ne $env:BTHWANI_OPERATOR_CONTEXT_ID) { throw "Platform Control tenant does not match runtime tenant" }
 if ($platform.saas.runtimeEnabled -ne $true) { throw "Platform Control reports SaaS runtime disabled" }
 
 $providersHealth = Invoke-JsonRequest -Uri "http://localhost:58087/providers/health"
@@ -185,13 +185,13 @@ if ($providersHealth.status -ne "healthy") { throw "Providers health is not heal
 $wltHeaders = @{
   Authorization = "Bearer $($env:WLT_DSH_SERVICE_TOKEN)"
   "X-Service-Caller" = "dsh"
-  "X-Tenant-ID" = $env:BTHWANI_DEFAULT_TENANT_ID
+  "X-Operator-Context-ID" = $env:BTHWANI_OPERATOR_CONTEXT_ID
   "Idempotency-Key" = "saas-proof-$([guid]::NewGuid())"
   "X-Correlation-ID" = "saas-proof-$([guid]::NewGuid())"
 }
 $checkoutIntentID = [guid]::NewGuid().ToString()
 $paymentSession = Invoke-JsonRequest -Uri "http://localhost:58083/wlt/payment-sessions" -Method "POST" -Headers $wltHeaders -Body @{
-  tenantId = $env:BTHWANI_DEFAULT_TENANT_ID
+  operatorContextId = $env:BTHWANI_OPERATOR_CONTEXT_ID
   checkoutIntentId = $checkoutIntentID
   clientId = "saas-runtime-client"
   storeId = "saas-runtime-store"
@@ -201,7 +201,7 @@ $paymentSession = Invoke-JsonRequest -Uri "http://localhost:58083/wlt/payment-se
   cartSnapshotHash = "saas-runtime-proof"
 }
 if ([string]::IsNullOrWhiteSpace($paymentSession.paymentSession.id)) { throw "WLT SaaS payment session was not created" }
-if ($paymentSession.paymentSession.tenantId -ne $env:BTHWANI_DEFAULT_TENANT_ID) { throw "WLT payment session tenant mismatch" }
+if ($paymentSession.paymentSession.operatorContextId -ne $env:BTHWANI_OPERATOR_CONTEXT_ID) { throw "WLT payment session tenant mismatch" }
 
 $unauthenticatedReference = Invoke-WebRequest \
   -Uri "http://localhost:58083/wlt/references/payment-status?orderId=saas-boundary-proof" \

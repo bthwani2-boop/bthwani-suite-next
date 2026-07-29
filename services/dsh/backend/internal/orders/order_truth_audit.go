@@ -7,7 +7,7 @@ import (
 )
 
 type OrderTruthAuditInput struct {
-	TenantID        string
+	OperatorContextID        string
 	ActorID         string
 	ActorRole       string
 	OrderID         string
@@ -22,7 +22,7 @@ type OrderTruthAuditInput struct {
 // stores only allow-listed operational metadata and never request bodies,
 // address snapshots, tokens, idempotency keys or provider payloads.
 func RecordOrderTruthAudit(db *sql.DB, input OrderTruthAuditInput) error {
-	input.TenantID = strings.TrimSpace(input.TenantID)
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.ActorRole = strings.TrimSpace(input.ActorRole)
 	input.OrderID = strings.TrimSpace(input.OrderID)
@@ -30,7 +30,7 @@ func RecordOrderTruthAudit(db *sql.DB, input OrderTruthAuditInput) error {
 	input.EventType = strings.TrimSpace(input.EventType)
 	input.ResultCode = strings.TrimSpace(input.ResultCode)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
-	if input.TenantID == "" || input.EventType == "" || input.ResultCode == "" { return ErrInvalid }
+	if input.OperatorContextID == "" || input.EventType == "" || input.ResultCode == "" { return ErrInvalid }
 	if input.ActorRole == "" { input.ActorRole = "system" }
 
 	safe := map[string]any{}
@@ -43,7 +43,7 @@ func RecordOrderTruthAudit(db *sql.DB, input OrderTruthAuditInput) error {
 		INSERT INTO dsh_order_truth_audit
 		(tenant_id,actor_id,actor_role,order_id,checkout_intent_id,event_type,result_code,correlation_id,metadata)
 		VALUES ($1,$2,$3,NULLIF($4,'')::uuid,NULLIF($5,'')::uuid,$6,$7,$8,$9::jsonb)`,
-		input.TenantID,
+		input.OperatorContextID,
 		input.ActorID,
 		input.ActorRole,
 		input.OrderID,

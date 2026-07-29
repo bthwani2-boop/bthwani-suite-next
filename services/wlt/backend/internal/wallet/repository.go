@@ -59,10 +59,10 @@ func GetWallet(db *sql.DB, actorType, actorID string) (*Wallet, error) {
 	return w, nil
 }
 
-func GetWalletForTenant(db *sql.DB, tenantID, actorType, actorID string) (*Wallet, error) {
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
-		return nil, fmt.Errorf("tenantId is required")
+func GetWalletForTenant(db *sql.DB, operatorContextID, actorType, actorID string) (*Wallet, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("operatorContextId is required")
 	}
 	const q = `
 		SELECT ` + walletCols + `
@@ -70,7 +70,7 @@ func GetWalletForTenant(db *sql.DB, tenantID, actorType, actorID string) (*Walle
 		WHERE tenant_id = $1 AND actor_type = $2 AND actor_id = $3
 		LIMIT 1`
 
-	row := db.QueryRow(q, tenantID, actorType, actorID)
+	row := db.QueryRow(q, operatorContextID, actorType, actorID)
 	w, err := scanWallet(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -85,7 +85,7 @@ func GetWalletForTenant(db *sql.DB, tenantID, actorType, actorID string) (*Walle
 // authenticated tenant. Currency is authoritative on creation and must remain
 // stable for subsequent calls.
 func EnsureWalletForTenantTx(ctx context.Context, tx *sql.Tx, actorType, actorID, currency string) (*Wallet, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func EnsureWalletForTenantTx(ctx context.Context, tx *sql.Tx, actorType, actorID
 		INSERT INTO wlt_wallets (tenant_id, actor_id, actor_type, status, currency)
 		VALUES ($1, $3, $2, 'active', $4)
 		ON CONFLICT (tenant_id, actor_type, actor_id) DO NOTHING`
-	if _, err := tx.ExecContext(ctx, insertQ, tenantID, actorType, actorID, currency); err != nil {
+	if _, err := tx.ExecContext(ctx, insertQ, operatorContextID, actorType, actorID, currency); err != nil {
 		return nil, fmt.Errorf("ensure tenant wallet: insert: %w", err)
 	}
 
@@ -109,7 +109,7 @@ func EnsureWalletForTenantTx(ctx context.Context, tx *sql.Tx, actorType, actorID
 		FROM wlt_wallets
 		WHERE tenant_id = $1 AND actor_type = $2 AND actor_id = $3
 		FOR UPDATE`
-	row := tx.QueryRowContext(ctx, selectQ, tenantID, actorType, actorID)
+	row := tx.QueryRowContext(ctx, selectQ, operatorContextID, actorType, actorID)
 	w, err := scanWallet(row)
 	if err != nil {
 		return nil, fmt.Errorf("ensure tenant wallet: select: %w", err)

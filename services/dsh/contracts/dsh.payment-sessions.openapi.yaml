@@ -21,7 +21,7 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
         '200':
@@ -43,7 +43,7 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
@@ -70,8 +70,8 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1, maxLength: 200 }
-    TenantId:
-      name: tenantId
+    OperatorContextId:
+      name: operatorContextId
       in: query
       required: true
       schema: { type: string, minLength: 1, maxLength: 120 }
@@ -91,12 +91,12 @@ components:
       enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_collected, failed, expired, provider_result_unknown]
     PaymentSession:
       type: object
-      required: [id, tenantId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]
+      required: [id, operatorContextId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]
       properties:
         id: { type: string }
         checkoutIntentId: { type: [string, 'null'] }
         specialRequestId: { type: [string, 'null'] }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         clientId: { type: string }
         storeId: { type: string }
         paymentMethod: { type: string, enum: [cod, wallet, mixed, official_wallet] }

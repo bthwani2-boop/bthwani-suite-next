@@ -83,9 +83,9 @@ func governedCorrelationID(r *http.Request) (string, error) {
 	return correlationID, nil
 }
 
-func governedPayoutHash(tenantID string, input governedCreatePayoutInput) string {
+func governedPayoutHash(operatorContextID string, input governedCreatePayoutInput) string {
 	sum := sha256.Sum256([]byte(strings.Join([]string{
-		strings.TrimSpace(tenantID),
+		strings.TrimSpace(operatorContextID),
 		input.BeneficiaryActorType,
 		input.BeneficiaryActorID,
 		input.PayoutDestinationID,
@@ -96,7 +96,7 @@ func governedPayoutHash(tenantID string, input governedCreatePayoutInput) string
 }
 
 func appendPayoutAudit(ctx context.Context, tx *sql.Tx, aggregateType, aggregateID, action, actorID, actorType, reason, correlationID string, metadata any) error {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -108,12 +108,12 @@ func appendPayoutAudit(ctx context.Context, tx *sql.Tx, aggregateType, aggregate
 		INSERT INTO wlt_jrn037_payout_audit_events
 			(tenant_id, aggregate_type, aggregate_id, action, actor_id, actor_type, reason, correlation_id, metadata)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)`,
-		tenantID, aggregateType, aggregateID, action, actorID, actorType, reason, correlationID, string(encoded))
+		operatorContextID, aggregateType, aggregateID, action, actorID, actorType, reason, correlationID, string(encoded))
 	return err
 }
 
 func enqueuePayoutEvent(ctx context.Context, tx *sql.Tx, payoutRequestID, eventType, actorID, actorType, correlationID string, payload any) error {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func enqueuePayoutEvent(ctx context.Context, tx *sql.Tx, payoutRequestID, eventT
 			(tenant_id, payout_request_id, event_type, recipient_actor_id, recipient_actor_type, payload, correlation_id)
 		VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7)
 		ON CONFLICT (tenant_id, payout_request_id, event_type) DO NOTHING`,
-		tenantID, payoutRequestID, eventType, actorID, actorType, string(encoded), correlationID)
+		operatorContextID, payoutRequestID, eventType, actorID, actorType, string(encoded), correlationID)
 	return err
 }
 
@@ -156,17 +156,17 @@ const governedDestinationReturning = `id, owner_actor_id, owner_actor_type, sett
 	bank_name, bank_branch, active, updated_at::text`
 
 func requirePayoutTenant(w http.ResponseWriter, r *http.Request) (string, bool) {
-	tenantID, err := shared.RequireTenantContext(r.Context())
+	operatorContextID, err := shared.RequireOperatorContext(r.Context())
 	if err != nil {
 		shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", err.Error())
 		return "", false
 	}
-	return tenantID, true
+	return operatorContextID, true
 }
 
 func HandleUpsertPayoutDestinationJRN037(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := requirePayoutTenant(w, r)
+		operatorContextID, ok := requirePayoutTenant(w, r)
 		if !ok {
 			return
 		}
@@ -221,7 +221,7 @@ func HandleUpsertPayoutDestinationJRN037(db *sql.DB) http.HandlerFunc {
 		if _, err := tx.ExecContext(r.Context(), `
 			UPDATE wlt_payout_destinations
 			SET active=false, updated_at=now()
-			WHERE tenant_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true`, tenantID, actorType, actorID); err != nil {
+			WHERE tenant_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true`, operatorContextID, actorType, actorID); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to retire current payout destination")
 			return
 		}
@@ -239,7 +239,7 @@ func HandleUpsertPayoutDestinationJRN037(db *sql.DB) http.HandlerFunc {
 				pgp_sym_encrypt($7,$8),pgp_sym_encrypt($9,$8),pgp_sym_encrypt($10,$8),
 				$11,$12,$13,$14,$15,$16,true,$17)
 			RETURNING `+governedDestinationReturning,
-			tenantID, actorID, actorType, strings.TrimSpace(input.BeneficiaryName), strings.TrimSpace(input.BankName), strings.TrimSpace(input.BankBranch),
+			operatorContextID, actorID, actorType, strings.TrimSpace(input.BeneficiaryName), strings.TrimSpace(input.BankName), strings.TrimSpace(input.BankBranch),
 			strings.TrimSpace(input.AccountNumber), key, strings.TrimSpace(input.IBAN), strings.TrimSpace(input.PayoutMobileNumber),
 			input.SettlementPreference, input.BankAccountHolderMatchesOwner, strings.TrimSpace(input.BankNotes),
 			maskLast4(input.AccountNumber), maskLast4(input.IBAN), maskLast4(input.PayoutMobileNumber), operatorID)
@@ -264,7 +264,7 @@ func HandleUpsertPayoutDestinationJRN037(db *sql.DB) http.HandlerFunc {
 
 func HandleGetPayoutDestinationJRN037(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := requirePayoutTenant(w, r)
+		operatorContextID, ok := requirePayoutTenant(w, r)
 		if !ok {
 			return
 		}
@@ -276,7 +276,7 @@ func HandleGetPayoutDestinationJRN037(db *sql.DB) http.HandlerFunc {
 		row := db.QueryRowContext(r.Context(), `SELECT `+governedDestinationReturning+`
 			FROM wlt_payout_destinations
 			WHERE tenant_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true
-			ORDER BY created_at DESC LIMIT 1`, tenantID, actorType, actorID)
+			ORDER BY created_at DESC LIMIT 1`, operatorContextID, actorType, actorID)
 		destination, err := scanGovernedDestination(row)
 		if errors.Is(err, sql.ErrNoRows) {
 			shared.SendError(w, http.StatusNotFound, "PAYOUT_DESTINATION_NOT_FOUND", "no active payout destination found")
@@ -292,7 +292,7 @@ func HandleGetPayoutDestinationJRN037(db *sql.DB) http.HandlerFunc {
 
 func HandleDeactivatePayoutDestinationJRN037(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := requirePayoutTenant(w, r)
+		operatorContextID, ok := requirePayoutTenant(w, r)
 		if !ok {
 			return
 		}
@@ -316,7 +316,7 @@ func HandleDeactivatePayoutDestinationJRN037(db *sql.DB) http.HandlerFunc {
 		err = tx.QueryRowContext(r.Context(), `
 			UPDATE wlt_payout_destinations SET active=false,updated_at=now()
 			WHERE tenant_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true
-			RETURNING id`, tenantID, actorType, actorID).Scan(&destinationID)
+			RETURNING id`, operatorContextID, actorType, actorID).Scan(&destinationID)
 		if errors.Is(err, sql.ErrNoRows) {
 			shared.SendError(w, http.StatusNotFound, "PAYOUT_DESTINATION_NOT_FOUND", "no active payout destination found")
 			return
@@ -341,7 +341,7 @@ func HandleDeactivatePayoutDestinationJRN037(db *sql.DB) http.HandlerFunc {
 
 func HandleCreatePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := requirePayoutTenant(w, r)
+		operatorContextID, ok := requirePayoutTenant(w, r)
 		if !ok {
 			return
 		}
@@ -369,7 +369,7 @@ func HandleCreatePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutDestinationId, positive amountMinorUnits, currency and idempotencyKey are required")
 			return
 		}
-		requestHash := governedPayoutHash(tenantID, input)
+		requestHash := governedPayoutHash(operatorContextID, input)
 		tx, err := db.BeginTx(r.Context(), nil)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start payout transaction")
@@ -380,13 +380,13 @@ func HandleCreatePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 		var existingHash sql.NullString
 		var existingID string
 		err = tx.QueryRowContext(r.Context(), `SELECT request_hash,id FROM wlt_payout_requests
-			WHERE tenant_id=$1 AND idempotency_key=$2 LIMIT 1`, tenantID, input.IdempotencyKey).Scan(&existingHash, &existingID)
+			WHERE tenant_id=$1 AND idempotency_key=$2 LIMIT 1`, operatorContextID, input.IdempotencyKey).Scan(&existingHash, &existingID)
 		if err == nil {
 			if !existingHash.Valid || existingHash.String != requestHash {
 				shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was already used with a different payout intent")
 				return
 			}
-			rows, queryErr := tx.QueryContext(r.Context(), "SELECT "+requestCols+" FROM wlt_payout_requests WHERE tenant_id=$1 AND id=$2", tenantID, existingID)
+			rows, queryErr := tx.QueryContext(r.Context(), "SELECT "+requestCols+" FROM wlt_payout_requests WHERE tenant_id=$1 AND id=$2", operatorContextID, existingID)
 			if queryErr != nil || !rows.Next() {
 				if rows != nil { rows.Close() }
 				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read idempotent payout request")
@@ -410,7 +410,7 @@ func HandleCreatePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 		var active bool
 		err = tx.QueryRowContext(r.Context(), `SELECT active FROM wlt_payout_destinations
 			WHERE tenant_id=$1 AND id=$2 AND owner_actor_type=$3 AND owner_actor_id=$4 FOR UPDATE`,
-			tenantID, input.PayoutDestinationID, input.BeneficiaryActorType, input.BeneficiaryActorID).Scan(&active)
+			operatorContextID, input.PayoutDestinationID, input.BeneficiaryActorType, input.BeneficiaryActorID).Scan(&active)
 		if errors.Is(err, sql.ErrNoRows) {
 			shared.SendError(w, http.StatusForbidden, "PAYOUT_DESTINATION_FORBIDDEN", "payout destination is not owned by the beneficiary in the trusted tenant")
 			return
@@ -425,7 +425,7 @@ func HandleCreatePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 		}
 		var available int64
 		err = tx.QueryRowContext(r.Context(), `SELECT available_balance_minor_units FROM wlt_wallets
-			WHERE tenant_id=$1 AND actor_id=$2 AND actor_type=$3 FOR UPDATE`, tenantID, input.BeneficiaryActorID, input.BeneficiaryActorType).Scan(&available)
+			WHERE tenant_id=$1 AND actor_id=$2 AND actor_type=$3 FOR UPDATE`, operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType).Scan(&available)
 		if errors.Is(err, sql.ErrNoRows) {
 			shared.SendError(w, http.StatusBadRequest, "NO_WALLET", "wallet not found")
 			return
@@ -443,7 +443,7 @@ func HandleCreatePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 			    held_balance_minor_units=held_balance_minor_units+$1,
 			    updated_at=now()
 			WHERE tenant_id=$2 AND actor_id=$3 AND actor_type=$4 AND available_balance_minor_units>=$1`,
-			input.AmountMinorUnits, tenantID, input.BeneficiaryActorID, input.BeneficiaryActorType)
+			input.AmountMinorUnits, operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to hold payout funds")
 			return
@@ -457,7 +457,7 @@ func HandleCreatePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 			 idempotency_key,payload_hash,payout_destination_id,request_hash)
 			VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,$8,$7)
 			RETURNING `+requestCols,
-			tenantID, input.BeneficiaryActorID, input.BeneficiaryActorType, input.AmountMinorUnits, input.Currency,
+			operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType, input.AmountMinorUnits, input.Currency,
 			input.IdempotencyKey, requestHash, input.PayoutDestinationID)
 		if err != nil || !rows.Next() {
 			if rows != nil { rows.Close() }
@@ -494,7 +494,7 @@ func HandleCreatePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 
 func HandleReconcilePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := requirePayoutTenant(w, r)
+		operatorContextID, ok := requirePayoutTenant(w, r)
 		if !ok {
 			return
 		}
@@ -542,7 +542,7 @@ func HandleReconcilePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		if _, err := tx.ExecContext(r.Context(), `UPDATE wlt_payout_requests SET reconciliation_status='inquiry_pending'
-			WHERE tenant_id=$1 AND id=$2 AND status IN ('provider_result_unknown','provider_pending')`, tenantID, payoutID); err != nil {
+			WHERE tenant_id=$1 AND id=$2 AND status IN ('provider_result_unknown','provider_pending')`, operatorContextID, payoutID); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to claim payout reconciliation")
 			return
 		}
@@ -559,7 +559,7 @@ func HandleReconcilePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 		query := url.Values{}
 		query.Set("providerReference", providerReference)
 		query.Set("payoutRequestId", req.ID)
-		query.Set("tenantId", tenantID)
+		query.Set("operatorContextId", operatorContextID)
 		var providerErr error
 		inquiry, providerErr = client.InquirePayout(r.Context(), query)
 		if providerErr != nil {
@@ -592,9 +592,9 @@ func HandleReconcilePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 			(tenant_id,payout_request_id,provider_reference,provider_status,provider_response_code,
 			 queried_by_operator_id,request_snapshot,response_snapshot)
 			VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb) RETURNING id`,
-			tenantID, payoutID, strings.TrimSpace(inquiry.ProviderReference), resultStatus,
+			operatorContextID, payoutID, strings.TrimSpace(inquiry.ProviderReference), resultStatus,
 			strings.TrimSpace(inquiry.ResponseCode), input.OperatorID,
-			mustJSON(map[string]any{"payoutRequestId": payoutID, "providerReference": providerReference, "tenantId": tenantID}),
+			mustJSON(map[string]any{"payoutRequestId": payoutID, "providerReference": providerReference, "operatorContextId": operatorContextID}),
 			mustJSON(inquiry)).Scan(&reconciliationID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist payout reconciliation evidence")
@@ -614,7 +614,7 @@ func HandleReconcilePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 				SET held_balance_minor_units=held_balance_minor_units-$1,
 				    paid_total_minor_units=paid_total_minor_units+$1,updated_at=now()
 				WHERE tenant_id=$2 AND actor_id=$3 AND actor_type=$4 AND held_balance_minor_units>=$1`,
-				current.AmountMinorUnits, tenantID, current.BeneficiaryActorID, current.BeneficiaryActorType); err != nil {
+				current.AmountMinorUnits, operatorContextID, current.BeneficiaryActorID, current.BeneficiaryActorType); err != nil {
 				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to finalize reconciled payout wallet")
 				return
 			}
@@ -627,7 +627,7 @@ func HandleReconcilePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 				SET held_balance_minor_units=held_balance_minor_units-$1,
 				    available_balance_minor_units=available_balance_minor_units+$1,updated_at=now()
 				WHERE tenant_id=$2 AND actor_id=$3 AND actor_type=$4 AND held_balance_minor_units>=$1`,
-				current.AmountMinorUnits, tenantID, current.BeneficiaryActorID, current.BeneficiaryActorType); err != nil {
+				current.AmountMinorUnits, operatorContextID, current.BeneficiaryActorID, current.BeneficiaryActorType); err != nil {
 				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to release reconciled payout wallet")
 				return
 			}
@@ -636,14 +636,14 @@ func HandleReconcilePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 			SET status=$3,reconciliation_status=$4,reconciled_at=CASE WHEN $4='resolved' THEN now() ELSE reconciled_at END,
 			    reconciled_by_operator_id=$5,provider_status=$6,provider_reference=COALESCE(NULLIF($7,''),provider_reference),
 			    provider_processed_at=now(),updated_at=now()
-			WHERE tenant_id=$1 AND id=$2`, tenantID, payoutID, finalStatus, reconciliationStatus, input.OperatorID, resultStatus, strings.TrimSpace(inquiry.ProviderReference))
+			WHERE tenant_id=$1 AND id=$2`, operatorContextID, payoutID, finalStatus, reconciliationStatus, input.OperatorID, resultStatus, strings.TrimSpace(inquiry.ProviderReference))
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to update reconciled payout request")
 			return
 		}
 		if reconciliationStatus == "resolved" {
 			if _, err := finalTx.ExecContext(r.Context(), `UPDATE wlt_jrn037_payout_reconciliations
-				SET resolved_at=now() WHERE tenant_id=$1 AND id=$2`, tenantID, reconciliationID); err != nil {
+				SET resolved_at=now() WHERE tenant_id=$1 AND id=$2`, operatorContextID, reconciliationID); err != nil {
 				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to close payout reconciliation")
 				return
 			}
@@ -678,7 +678,7 @@ func HandleReconcilePayoutRequestJRN037(db *sql.DB) http.HandlerFunc {
 
 func HandleListPayoutAuditJRN037(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := requirePayoutTenant(w, r)
+		operatorContextID, ok := requirePayoutTenant(w, r)
 		if !ok {
 			return
 		}
@@ -686,7 +686,7 @@ func HandleListPayoutAuditJRN037(db *sql.DB) http.HandlerFunc {
 		rows, err := db.QueryContext(r.Context(), `SELECT id,action,actor_id,actor_type,reason,correlation_id,metadata,created_at
 			FROM wlt_jrn037_payout_audit_events
 			WHERE tenant_id=$1 AND aggregate_type IN ('payout_request','payout_reconciliation') AND aggregate_id=$2
-			ORDER BY created_at,id`, tenantID, payoutID)
+			ORDER BY created_at,id`, operatorContextID, payoutID)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read payout audit")
 			return

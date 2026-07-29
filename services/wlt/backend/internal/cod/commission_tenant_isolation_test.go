@@ -56,8 +56,8 @@ func TestGovernedCommissionSeparatesIdenticalTenantBusinessIdentities(t *testing
 	idempotencyKey := "commission-shared-" + suffix
 	sourceID := "source-shared-" + suffix
 
-	for index, tenantID := range tenants {
-		ctx := shared.WithTenantContext(context.Background(), tenantID)
+	for index, operatorContextID := range tenants {
+		ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 		amount := int64(100 + index)
 		maximum := amount
 		policy, err := UpsertGovernedCommissionPolicyIdempotent(
@@ -77,14 +77,14 @@ func TestGovernedCommissionSeparatesIdenticalTenantBusinessIdentities(t *testing
 				ChangeReason:            "prove tenant-local commission policy",
 				OperatorID:              "operator-test",
 			},
-			"policy-correlation-"+tenantID,
+			"policy-correlation-"+operatorContextID,
 			"policy-idempotency-shared-"+suffix,
 		)
 		if err != nil {
-			t.Fatalf("upsert %s policy: %v", tenantID, err)
+			t.Fatalf("upsert %s policy: %v", operatorContextID, err)
 		}
 		if policy == nil || policy.FixedAmountMinorUnits != amount {
-			t.Fatalf("tenant %s policy=%+v, want amount %d", tenantID, policy, amount)
+			t.Fatalf("tenant %s policy=%+v, want amount %d", operatorContextID, policy, amount)
 		}
 
 		commission, err := CreateGovernedCommission(
@@ -102,13 +102,13 @@ func TestGovernedCommissionSeparatesIdenticalTenantBusinessIdentities(t *testing
 				Currency:             "YER",
 				IdempotencyKey:       idempotencyKey,
 			},
-			"commission-correlation-"+tenantID,
+			"commission-correlation-"+operatorContextID,
 		)
 		if err != nil {
-			t.Fatalf("create %s commission: %v", tenantID, err)
+			t.Fatalf("create %s commission: %v", operatorContextID, err)
 		}
 		if commission == nil || commission.AmountMinorUnits != amount {
-			t.Fatalf("tenant %s commission=%+v, want amount %d", tenantID, commission, amount)
+			t.Fatalf("tenant %s commission=%+v, want amount %d", operatorContextID, commission, amount)
 		}
 	}
 

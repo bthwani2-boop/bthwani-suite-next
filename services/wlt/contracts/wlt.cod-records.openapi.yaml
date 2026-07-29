@@ -23,7 +23,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
@@ -44,7 +44,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - name: captainId
           in: query
           schema: { type: string }
@@ -67,7 +67,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - name: codRecordId
           in: path
           required: true

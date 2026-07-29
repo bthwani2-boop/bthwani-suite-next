@@ -247,7 +247,7 @@ func (s *protectedStoreServer) handlePartnerDeliveryException(w http.ResponseWri
 	correlationID := partnerDeliveryCorrelationID(r, body.CorrelationID)
 	reported, err := incident.NewService(s.db).Report(r.Context(), incident.ReportInput{
 		OrderID:            orderID,
-		TenantID:           actor.TenantID,
+		OperatorContextID:           actor.OperatorContextID,
 		TargetEntityType:   incident.TargetPartnerDeliveryTask,
 		TargetEntityID:     task.ID,
 		IncidentType:       incident.TypeRaiseException,

@@ -60,7 +60,7 @@ type Order struct {
 type CreateOrderInput struct {
 	CheckoutIntentID string
 	ClientID         string
-	TenantID         string
+	OperatorContextID         string
 }
 
 type CreateOrderItemInput struct {
@@ -72,8 +72,8 @@ type CreateOrderItemInput struct {
 }
 
 func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
-	input.TenantID = strings.TrimSpace(input.TenantID)
-	if input.CheckoutIntentID == "" || input.ClientID == "" || input.TenantID == "" {
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
+	if input.CheckoutIntentID == "" || input.ClientID == "" || input.OperatorContextID == "" {
 		return nil, ErrInvalid
 	}
 
@@ -96,7 +96,7 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 		        OR state = 'payment_confirmed'
 		      )
 		FOR UPDATE`,
-		input.CheckoutIntentID, input.ClientID, input.TenantID,
+		input.CheckoutIntentID, input.ClientID, input.OperatorContextID,
 	).Scan(&cartID, &storeID, &wltPaymentSessionID, &checkoutCurrency)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: checkout intent is not ready for order creation in tenant", ErrConflict)
@@ -151,7 +151,7 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 		VALUES ($3, $1::uuid, $2, (SELECT fulfillment_mode FROM dsh_checkout_intents WHERE id = $1::uuid AND tenant_id=$3), $4, $5, $6)
 		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at`,
-		input.CheckoutIntentID, storeID, input.TenantID, input.ClientID, string(StatusPending), wltPaymentSessionID,
+		input.CheckoutIntentID, storeID, input.OperatorContextID, input.ClientID, string(StatusPending), wltPaymentSessionID,
 	).Scan(
 		&order.ID, &order.CheckoutIntentID, &order.StoreID, &order.FulfillmentMode, &order.ClientID,
 		&order.Status, &order.RejectionReason, &order.WltPaymentRefID, &order.Currency,
@@ -197,7 +197,7 @@ func CreateOrder(db *sql.DB, input CreateOrderInput) (*Order, error) {
 		SET state = 'confirmed', version = version + 1, updated_at = NOW()
 		WHERE id = $1::uuid AND tenant_id=$2 AND client_id = $3
 		  AND state IN ('payment_pending','payment_confirmed')`,
-		input.CheckoutIntentID, input.TenantID, input.ClientID,
+		input.CheckoutIntentID, input.OperatorContextID, input.ClientID,
 	)
 	if err != nil {
 		return nil, err
@@ -240,12 +240,12 @@ func GetOrder(db *sql.DB, orderID string) (*Order, error) {
 	return order, nil
 }
 
-func GetClientOrder(db *sql.DB, orderID, tenantID, clientID string) (*Order, error) {
+func GetClientOrder(db *sql.DB, orderID, operatorContextID, clientID string) (*Order, error) {
 	order, err := scanOrderRow(db.QueryRow(`
 		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
 		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
 		FROM dsh_orders
-		WHERE id = $1::uuid AND tenant_id=$2 AND client_id = $3`, orderID, tenantID, clientID))
+		WHERE id = $1::uuid AND tenant_id=$2 AND client_id = $3`, orderID, operatorContextID, clientID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -260,8 +260,8 @@ func GetClientOrder(db *sql.DB, orderID, tenantID, clientID string) (*Order, err
 	return order, nil
 }
 
-func ListClientOrders(db *sql.DB, tenantID, clientID string, limit int) ([]Order, error) {
-	if strings.TrimSpace(tenantID) == "" || clientID == "" {
+func ListClientOrders(db *sql.DB, operatorContextID, clientID string, limit int) ([]Order, error) {
+	if strings.TrimSpace(operatorContextID) == "" || clientID == "" {
 		return nil, ErrInvalid
 	}
 	if limit <= 0 || limit > 200 {
@@ -273,7 +273,7 @@ func ListClientOrders(db *sql.DB, tenantID, clientID string, limit int) ([]Order
 		FROM dsh_orders
 		WHERE tenant_id=$1 AND client_id = $2
 		ORDER BY created_at DESC
-		LIMIT $3`, tenantID, clientID, limit)
+		LIMIT $3`, operatorContextID, clientID, limit)
 	if err != nil {
 		return nil, err
 	}

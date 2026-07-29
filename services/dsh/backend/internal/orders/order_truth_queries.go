@@ -8,16 +8,16 @@ import (
 	"github.com/google/uuid"
 )
 
-func ListClientOrderTruth(db *sql.DB, tenantID, clientID string, limit int) ([]OrderTruth, error) {
-	return listOrderTruthByScope(db, tenantID, "client", clientID, "", limit)
+func ListClientOrderTruth(db *sql.DB, operatorContextID, clientID string, limit int) ([]OrderTruth, error) {
+	return listOrderTruthByScope(db, operatorContextID, "client", clientID, "", limit)
 }
 
-func ListPartnerOrderTruth(db *sql.DB, tenantID, storeID, status string, limit int) ([]OrderTruth, error) {
-	return listOrderTruthByScope(db, tenantID, "partner", storeID, status, limit)
+func ListPartnerOrderTruth(db *sql.DB, operatorContextID, storeID, status string, limit int) ([]OrderTruth, error) {
+	return listOrderTruthByScope(db, operatorContextID, "partner", storeID, status, limit)
 }
 
-func ListOperatorOrderTruth(db *sql.DB, tenantID, status string, limit int) ([]OrderTruth, error) {
-	return listOrderTruthByScope(db, tenantID, "operator", "", status, limit)
+func ListOperatorOrderTruth(db *sql.DB, operatorContextID, status string, limit int) ([]OrderTruth, error) {
+	return listOrderTruthByScope(db, operatorContextID, "operator", "", status, limit)
 }
 
 func validOrderTruthID(value string) bool {
@@ -25,17 +25,17 @@ func validOrderTruthID(value string) bool {
 	return err == nil
 }
 
-func GetClientScopedOrderTruth(db *sql.DB, orderID, tenantID, clientID string) (*OrderTruth, error) {
+func GetClientScopedOrderTruth(db *sql.DB, orderID, operatorContextID, clientID string) (*OrderTruth, error) {
 	orderID = strings.TrimSpace(orderID)
-	tenantID = strings.TrimSpace(tenantID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	clientID = strings.TrimSpace(clientID)
-	if !validOrderTruthID(orderID) || tenantID == "" || clientID == "" {
+	if !validOrderTruthID(orderID) || operatorContextID == "" || clientID == "" {
 		return nil, ErrInvalid
 	}
 	var scopedID string
 	err := db.QueryRow(`
 		SELECT id::text FROM dsh_orders
-		WHERE id=$1::uuid AND tenant_id=$2 AND client_id=$3`, orderID, tenantID, clientID,
+		WHERE id=$1::uuid AND tenant_id=$2 AND client_id=$3`, orderID, operatorContextID, clientID,
 	).Scan(&scopedID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -43,20 +43,20 @@ func GetClientScopedOrderTruth(db *sql.DB, orderID, tenantID, clientID string) (
 	if err != nil {
 		return nil, err
 	}
-	return getScopedOrderTruth(db, scopedID, tenantID, "client")
+	return getScopedOrderTruth(db, scopedID, operatorContextID, "client")
 }
 
-func GetPartnerScopedOrderTruth(db *sql.DB, orderID, tenantID, storeID string) (*OrderTruth, error) {
+func GetPartnerScopedOrderTruth(db *sql.DB, orderID, operatorContextID, storeID string) (*OrderTruth, error) {
 	orderID = strings.TrimSpace(orderID)
-	tenantID = strings.TrimSpace(tenantID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	storeID = strings.TrimSpace(storeID)
-	if !validOrderTruthID(orderID) || tenantID == "" || storeID == "" {
+	if !validOrderTruthID(orderID) || operatorContextID == "" || storeID == "" {
 		return nil, ErrInvalid
 	}
 	var scopedID string
 	err := db.QueryRow(`
 		SELECT id::text FROM dsh_orders
-		WHERE id=$1::uuid AND tenant_id=$2 AND store_id=$3`, orderID, tenantID, storeID,
+		WHERE id=$1::uuid AND tenant_id=$2 AND store_id=$3`, orderID, operatorContextID, storeID,
 	).Scan(&scopedID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -64,20 +64,20 @@ func GetPartnerScopedOrderTruth(db *sql.DB, orderID, tenantID, storeID string) (
 	if err != nil {
 		return nil, err
 	}
-	return getScopedOrderTruth(db, scopedID, tenantID, "partner")
+	return getScopedOrderTruth(db, scopedID, operatorContextID, "partner")
 }
 
-func GetOperatorScopedOrderTruth(db *sql.DB, orderID, tenantID string) (*OrderTruth, error) {
+func GetOperatorScopedOrderTruth(db *sql.DB, orderID, operatorContextID string) (*OrderTruth, error) {
 	orderID = strings.TrimSpace(orderID)
-	tenantID = strings.TrimSpace(tenantID)
-	if !validOrderTruthID(orderID) || tenantID == "" {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if !validOrderTruthID(orderID) || operatorContextID == "" {
 		return nil, ErrInvalid
 	}
-	return getScopedOrderTruth(db, orderID, tenantID, "operator")
+	return getScopedOrderTruth(db, orderID, operatorContextID, "operator")
 }
 
-func getScopedOrderTruth(db *sql.DB, orderID, tenantID, viewerRole string) (*OrderTruth, error) {
-	truth, err := GetOrderTruth(db, orderID, tenantID, viewerRole)
+func getScopedOrderTruth(db *sql.DB, orderID, operatorContextID, viewerRole string) (*OrderTruth, error) {
+	truth, err := GetOrderTruth(db, orderID, operatorContextID, viewerRole)
 	if err != nil {
 		return nil, err
 	}
@@ -85,11 +85,11 @@ func getScopedOrderTruth(db *sql.DB, orderID, tenantID, viewerRole string) (*Ord
 	return truth, nil
 }
 
-func listOrderTruthByScope(db *sql.DB, tenantID, viewerRole, scopeID, status string, limit int) ([]OrderTruth, error) {
-	tenantID = strings.TrimSpace(tenantID)
+func listOrderTruthByScope(db *sql.DB, operatorContextID, viewerRole, scopeID, status string, limit int) ([]OrderTruth, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	scopeID = strings.TrimSpace(scopeID)
 	status = strings.TrimSpace(status)
-	if tenantID == "" {
+	if operatorContextID == "" {
 		return nil, ErrInvalid
 	}
 	if viewerRole == "client" && scopeID == "" {
@@ -106,18 +106,18 @@ func listOrderTruthByScope(db *sql.DB, tenantID, viewerRole, scopeID, status str
 	var err error
 	switch viewerRole {
 	case "client":
-		rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 AND client_id=$2 ORDER BY created_at DESC LIMIT $3`, tenantID, scopeID, limit)
+		rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 AND client_id=$2 ORDER BY created_at DESC LIMIT $3`, operatorContextID, scopeID, limit)
 	case "partner":
 		if status == "" {
-			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 AND store_id=$2 ORDER BY created_at DESC LIMIT $3`, tenantID, scopeID, limit)
+			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 AND store_id=$2 ORDER BY created_at DESC LIMIT $3`, operatorContextID, scopeID, limit)
 		} else {
-			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 AND store_id=$2 AND status=$3 ORDER BY created_at DESC LIMIT $4`, tenantID, scopeID, status, limit)
+			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 AND store_id=$2 AND status=$3 ORDER BY created_at DESC LIMIT $4`, operatorContextID, scopeID, status, limit)
 		}
 	case "operator":
 		if status == "" {
-			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT $2`, tenantID, limit)
+			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT $2`, operatorContextID, limit)
 		} else {
-			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 AND status=$2 ORDER BY created_at DESC LIMIT $3`, tenantID, status, limit)
+			rows, err = db.Query(`SELECT id::text FROM dsh_orders WHERE tenant_id=$1 AND status=$2 ORDER BY created_at DESC LIMIT $3`, operatorContextID, status, limit)
 		}
 	default:
 		return nil, ErrInvalid
@@ -141,7 +141,7 @@ func listOrderTruthByScope(db *sql.DB, tenantID, viewerRole, scopeID, status str
 
 	result := make([]OrderTruth, 0, len(ids))
 	for _, id := range ids {
-		truth, readErr := getScopedOrderTruth(db, id, tenantID, viewerRole)
+		truth, readErr := getScopedOrderTruth(db, id, operatorContextID, viewerRole)
 		if readErr != nil {
 			return nil, readErr
 		}

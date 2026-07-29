@@ -40,7 +40,7 @@ func getTestDB(t *testing.T) *sql.DB {
 }
 
 func reconciliationTestContext() context.Context {
-	return shared.WithTenantContext(context.Background(), reconciliationTestTenant)
+	return shared.WithOperatorContext(context.Background(), reconciliationTestTenant)
 }
 
 func insertTestCase(t *testing.T, db *sql.DB) string {

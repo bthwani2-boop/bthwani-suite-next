@@ -24,7 +24,7 @@ DSH may create an order only after the Checkout Intent records an eligible WLT p
 
 - Recomputing payment success from an HTTP response or UI state.
 - Storing wallet balance, ledger entries, refund amount or settlement result in `dsh_orders`.
-- Letting a surface submit or override `paymentStatus`, `totalMinorUnits`, `currency`, `clientId`, `storeId`, `tenantId`, `orderNumber` or `correlationId`.
+- Letting a surface submit or override `paymentStatus`, `totalMinorUnits`, `currency`, `clientId`, `storeId`, `operatorContextId`, `orderNumber` or `correlationId`.
 - Publishing an order event outside the transaction that creates or changes the operational order fact.
 
 ## Failure and reconciliation

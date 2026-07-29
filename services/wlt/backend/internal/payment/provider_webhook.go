@@ -23,7 +23,7 @@ const providerWebhookMaxSkew = 5 * time.Minute
 type providerWebhookEnvelope struct {
 	EventID           string `json:"eventId"`
 	Type              string `json:"type"`
-	TenantID          string `json:"tenantId"`
+	OperatorContextID          string `json:"operatorContextId"`
 	PaymentSessionID  string `json:"paymentSessionId"`
 	Status            string `json:"status"`
 	ProviderReference string `json:"providerReference"`
@@ -98,7 +98,7 @@ func HandlePaymentProviderWebhook(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		expectedType := providerEventTypeForStatus(envelope.Status)
-		if envelope.EventID == "" || envelope.TenantID == "" || envelope.PaymentSessionID == "" || expectedType == "" || envelope.Type != expectedType {
+		if envelope.EventID == "" || envelope.OperatorContextID == "" || envelope.PaymentSessionID == "" || expectedType == "" || envelope.Type != expectedType {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_WEBHOOK", "provider webhook identity type status tenant and paymentSessionId must be valid")
 			return
 		}
@@ -114,10 +114,10 @@ func HandlePaymentProviderWebhook(db *sql.DB) http.HandlerFunc {
 			parsed = parsed.UTC()
 			occurredAt = &parsed
 		}
-		providerCtx := shared.WithTenantContext(r.Context(), envelope.TenantID)
+		providerCtx := shared.WithOperatorContext(r.Context(), envelope.OperatorContextID)
 		application, err := ApplyAuthoritativeProviderEvent(providerCtx, db, ProviderEventInput{
 			EventID:           envelope.EventID,
-			TenantID:          envelope.TenantID,
+			OperatorContextID:          envelope.OperatorContextID,
 			PaymentSessionID:  envelope.PaymentSessionID,
 			EventType:         envelope.Type,
 			ProviderStatus:    envelope.Status,

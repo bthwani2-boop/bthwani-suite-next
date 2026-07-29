@@ -256,12 +256,12 @@ func GetCodRecord(db *sql.DB, codRecordID string) (*CodRecord, error) {
 	return c, err
 }
 
-// ListCodRecords requires a tenantID: the tenant_id predicate is mandatory
+// ListCodRecords requires a operatorContextID: the tenant_id predicate is mandatory
 // and is always ANDed onto whichever caller-supplied filter is used, so a
 // caller can never see another tenant's COD records via this query.
-func ListCodRecords(db *sql.DB, tenantID, captainID, partnerID, orderID string) ([]*CodRecord, error) {
-	if tenantID = strings.TrimSpace(tenantID); tenantID == "" {
-		return nil, fmt.Errorf("tenantId is required")
+func ListCodRecords(db *sql.DB, operatorContextID, captainID, partnerID, orderID string) ([]*CodRecord, error) {
+	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID == "" {
+		return nil, fmt.Errorf("operatorContextId is required")
 	}
 	var q string
 	var arg string
@@ -277,7 +277,7 @@ func ListCodRecords(db *sql.DB, tenantID, captainID, partnerID, orderID string) 
 	} else {
 		return nil, fmt.Errorf("captainId, partnerId, or orderId query parameter is required")
 	}
-	rows, err := db.Query(q, tenantID, arg)
+	rows, err := db.Query(q, operatorContextID, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -811,7 +811,7 @@ func HandleGetCodRecord(db *sql.DB) http.HandlerFunc {
 func HandleListCodRecords(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		records, err := ListCodRecords(db, q.Get("tenantId"), q.Get("captainId"), q.Get("partnerId"), q.Get("orderId"))
+		records, err := ListCodRecords(db, q.Get("operatorContextId"), q.Get("captainId"), q.Get("partnerId"), q.Get("orderId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

@@ -207,14 +207,14 @@ func (s *server) provisionActor(w http.ResponseWriter, r *http.Request) {
 		Username  string `json:"username"`
 		PhoneE164 string `json:"phoneE164"`
 		Role      string `json:"role"`
-		TenantID  string `json:"tenantId"`
+		OperatorContextID  string `json:"operatorContextId"`
 	}
 	if !decodeJSON(w, r, &request) {
 		return
 	}
 	view, err := s.repository.ProvisionActor(r.Context(), identity.ProvisionActorInput{
 		Username: request.Username, PhoneE164: request.PhoneE164,
-		Role: request.Role, TenantID: request.TenantID,
+		Role: request.Role, OperatorContextID: request.OperatorContextID,
 	})
 	if err != nil {
 		writeInternalActorError(w, err)

@@ -35,7 +35,7 @@ type Client struct {
 type CreatePaymentSessionInput struct {
 	CheckoutIntentID string `json:"checkoutIntentId,omitempty"`
 	SpecialRequestID string `json:"specialRequestId,omitempty"`
-	TenantID         string `json:"tenantId,omitempty"`
+	OperatorContextID         string `json:"operatorContextId,omitempty"`
 	ClientID         string `json:"clientId"`
 	StoreID          string `json:"storeId"`
 	PaymentMethod    string `json:"paymentMethod"`
@@ -50,7 +50,7 @@ type PaymentSession struct {
 	ID                string `json:"id"`
 	CheckoutIntentID  string `json:"checkoutIntentId"`
 	SpecialRequestID  string `json:"specialRequestId"`
-	TenantID          string `json:"tenantId"`
+	OperatorContextID          string `json:"operatorContextId"`
 	ClientID          string `json:"clientId"`
 	StoreID           string `json:"storeId"`
 	PaymentMethod     string `json:"paymentMethod"`
@@ -82,34 +82,34 @@ func (c *Client) Configured() bool {
 
 func (c *Client) resolveTrustedTenant(ctx context.Context, requested string) (string, error) {
 	requested = strings.TrimSpace(requested)
-	trustedTenantID, hasTrustedTenant := TenantIDFromContext(ctx)
+	trustedOperatorContextID, hasTrustedTenant := OperatorContextIDFromContext(ctx)
 	if !hasTrustedTenant {
 		return "", fmt.Errorf("trusted tenant context is required for every WLT request")
 	}
-	if requested != "" && requested != trustedTenantID {
+	if requested != "" && requested != trustedOperatorContextID {
 		return "", fmt.Errorf("requested tenant does not match trusted request context")
 	}
-	return trustedTenantID, nil
+	return trustedOperatorContextID, nil
 }
 
 func (c *Client) setTrustedTenantHeader(req *http.Request, requested string) (string, error) {
-	tenantID, err := c.resolveTrustedTenant(req.Context(), requested)
+	operatorContextID, err := c.resolveTrustedTenant(req.Context(), requested)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("X-Tenant-ID", tenantID)
-	return tenantID, nil
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	return operatorContextID, nil
 }
 
 func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSessionInput) (*PaymentSession, error) {
 	if !c.Configured() {
 		return nil, fmt.Errorf("WLT payment-session handoff is not configured")
 	}
-	resolvedTenantID, err := c.resolveTrustedTenant(ctx, input.TenantID)
+	resolvedOperatorContextID, err := c.resolveTrustedTenant(ctx, input.OperatorContextID)
 	if err != nil {
 		return nil, fmt.Errorf("resolve WLT payment tenant: %w", err)
 	}
-	input.TenantID = resolvedTenantID
+	input.OperatorContextID = resolvedOperatorContextID
 	body, err := json.Marshal(input)
 	if err != nil {
 		return nil, fmt.Errorf("encode WLT payment session request: %w", err)
@@ -122,7 +122,7 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedTenantHeader(req, resolvedTenantID); err != nil {
+	if _, err := c.setTrustedTenantHeader(req, resolvedOperatorContextID); err != nil {
 		return nil, fmt.Errorf("prepare WLT payment tenant: %w", err)
 	}
 	correlationID := strings.TrimSpace(input.CorrelationID)

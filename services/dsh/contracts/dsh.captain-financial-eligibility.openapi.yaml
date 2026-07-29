@@ -35,7 +35,7 @@ paths:
   /dsh/operator/dispatch/captains/{captainId}/financial-eligibility:
     parameters:
       - $ref: '#/components/parameters/CaptainId'
-      - $ref: '#/components/parameters/TenantIdQuery'
+      - $ref: '#/components/parameters/OperatorContextIdQuery'
     get:
       operationId: getOperatorCaptainFinancialEligibility
       responses:
@@ -56,9 +56,9 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [tenantId]
+              required: [operatorContextId]
               properties:
-                tenantId: { type: string, minLength: 1 }
+                operatorContextId: { type: string, minLength: 1 }
       responses:
         '200': { $ref: '#/components/responses/EligibilityResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
@@ -101,8 +101,8 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1 }
-    TenantIdQuery:
-      name: tenantId
+    OperatorContextIdQuery:
+      name: operatorContextId
       in: query
       required: true
       schema: { type: string, minLength: 1 }
@@ -197,7 +197,7 @@ components:
     CaptainFinancialEligibility:
       type: object
       required:
-        - tenantId
+        - operatorContextId
         - captainId
         - walletId
         - walletStatus
@@ -209,7 +209,7 @@ components:
         - checkedAt
         - expiresAt
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         captainId: { type: string, minLength: 1 }
         walletId: { type: string, minLength: 1 }
         walletStatus: { type: string }

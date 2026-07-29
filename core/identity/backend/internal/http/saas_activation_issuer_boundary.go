@@ -21,7 +21,7 @@ type activationIssuerPermission struct {
 }
 
 type activationActorAccess struct {
-	TenantID   string
+	OperatorContextID   string
 	Active     bool
 	Permissions []activationIssuerPermission
 }
@@ -40,11 +40,11 @@ func (l sqlActorAccessLookup) AccessForActor(ctx context.Context, actorID string
 	err := l.db.QueryRowContext(ctx, `
 		SELECT tenant_id, active, permissions
 		FROM identity_actors
-		WHERE id = $1`, actorID).Scan(&access.TenantID, &access.Active, &permissionsJSON)
+		WHERE id = $1`, actorID).Scan(&access.OperatorContextID, &access.Active, &permissionsJSON)
 	if err != nil {
 		return activationActorAccess{}, err
 	}
-	access.TenantID = strings.TrimSpace(access.TenantID)
+	access.OperatorContextID = strings.TrimSpace(access.OperatorContextID)
 	trimmed := bytes.TrimSpace(permissionsJSON)
 	if len(trimmed) > 0 && string(trimmed) != "null" {
 		if err := json.Unmarshal(trimmed, &access.Permissions); err != nil {
@@ -170,22 +170,22 @@ func saasActivationIssuerBoundary(lookup actorAccessLookup, next http.Handler) h
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "issuing actor is not active")
 			return
 		}
-		if issuerAccess.TenantID == "" || targetAccess.TenantID == "" {
-			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "issuer and target require trusted tenant context")
+		if issuerAccess.OperatorContextID == "" || targetAccess.OperatorContextID == "" {
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "issuer and target require trusted tenant context")
 			return
 		}
-		if issuerAccess.TenantID != targetAccess.TenantID {
-			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "issuing actor and target belong to different tenants")
+		if issuerAccess.OperatorContextID != targetAccess.OperatorContextID {
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "issuing actor and target belong to different tenants")
 			return
 		}
 
-		runtimeTenantID, active, err := activeSaaSTenant()
+		runtimeOperatorContextID, active, err := activeSaaSTenant()
 		if err != nil {
 			sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
 			return
 		}
-		if active && issuerAccess.TenantID != runtimeTenantID {
-			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "issuing actor does not belong to the active runtime tenant")
+		if active && issuerAccess.OperatorContextID != runtimeOperatorContextID {
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "issuing actor does not belong to the active runtime tenant")
 			return
 		}
 

@@ -86,12 +86,12 @@ func (s *protectedStoreServer) handleGetClientSpecialRequestExecution(w http.Res
 	}
 	requestID := r.PathValue("requestId")
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	request, err := svc.GetForClientInTenant(r.Context(), actor.TenantID, requestID, actor.ID)
+	request, err := svc.GetForClientInTenant(r.Context(), actor.OperatorContextID, requestID, actor.ID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
 	}
-	evidence, err := svc.ExecutionEvidenceInTenant(r.Context(), actor.TenantID, requestID)
+	evidence, err := svc.ExecutionEvidenceInTenant(r.Context(), actor.OperatorContextID, requestID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
@@ -110,12 +110,12 @@ func (s *protectedStoreServer) handleGetOperatorSpecialRequestExecution(w http.R
 	}
 	requestID := r.PathValue("requestId")
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
-	request, err := svc.GetForOperatorInTenant(r.Context(), actor.TenantID, requestID)
+	request, err := svc.GetForOperatorInTenant(r.Context(), actor.OperatorContextID, requestID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
 	}
-	evidence, err := svc.ExecutionEvidenceInTenant(r.Context(), actor.TenantID, requestID)
+	evidence, err := svc.ExecutionEvidenceInTenant(r.Context(), actor.OperatorContextID, requestID)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return

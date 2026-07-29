@@ -89,7 +89,7 @@ func scanEntryRow(rows *sql.Rows) (*LedgerEntry, error) {
 // and migration tooling. Runtime financial mutations must use the balanced
 // PostLedgerTransaction kernel; no HTTP route registers this function.
 func AppendLedgerEntryForTenant(ctx context.Context, db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func AppendLedgerEntryForTenant(ctx context.Context, db *sql.DB, input CreateLed
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 		RETURNING ` + ledgerCols
 	row := db.QueryRowContext(ctx, q,
-		tenantID, input.EntryType, input.ActorID, actorType, input.SourceType, input.SourceID, input.OrderID, input.VisitID, input.StoreID, input.PartnerID, input.CommissionEventID,
+		operatorContextID, input.EntryType, input.ActorID, actorType, input.SourceType, input.SourceID, input.OrderID, input.VisitID, input.StoreID, input.PartnerID, input.CommissionEventID,
 		input.ReferenceID, input.ReferenceType,
 		input.AmountMinorUnits, currency, debitCredit,
 		input.BalanceAfter, input.Description, input.IdempotencyKey,
@@ -128,7 +128,7 @@ func AppendLedgerEntry(db *sql.DB, input CreateLedgerEntryInput) (*LedgerEntry, 
 }
 
 func GetLedgerEntryForTenant(ctx context.Context, db *sql.DB, entryID string) (*LedgerEntry, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func GetLedgerEntryForTenant(ctx context.Context, db *sql.DB, entryID string) (*
 		return nil, fmt.Errorf("entryId is required")
 	}
 	const q = `SELECT ` + ledgerCols + ` FROM wlt_ledger_entries WHERE tenant_id = $1 AND id = $2`
-	row := db.QueryRowContext(ctx, q, tenantID, entryID)
+	row := db.QueryRowContext(ctx, q, operatorContextID, entryID)
 	e, err := scanEntry(row)
 	if errorsIsNoRows(err) {
 		return nil, nil
@@ -154,7 +154,7 @@ func errorsIsNoRows(err error) bool {
 }
 
 type ListLedgerEntriesParams struct {
-	TenantID  string
+	OperatorContextID  string
 	ActorID   string
 	ActorType string
 	OrderID   string
@@ -164,9 +164,9 @@ type ListLedgerEntriesParams struct {
 }
 
 func ListLedgerEntries(db *sql.DB, params ListLedgerEntriesParams) ([]*LedgerEntry, error) {
-	tenantID := strings.TrimSpace(params.TenantID)
-	if tenantID == "" {
-		return nil, fmt.Errorf("tenantId is required")
+	operatorContextID := strings.TrimSpace(params.OperatorContextID)
+	if operatorContextID == "" {
+		return nil, fmt.Errorf("operatorContextId is required")
 	}
 	limit := params.Limit
 	if limit <= 0 || limit > 100 {
@@ -174,7 +174,7 @@ func ListLedgerEntries(db *sql.DB, params ListLedgerEntriesParams) ([]*LedgerEnt
 	}
 
 	q := `SELECT ` + ledgerCols + ` FROM wlt_ledger_entries WHERE tenant_id = $1`
-	args := []any{tenantID}
+	args := []any{operatorContextID}
 	idx := 2
 
 	if params.ActorID != "" {
@@ -260,7 +260,7 @@ func HandleGetLedgerEntry(db *sql.DB) http.HandlerFunc {
 
 func HandleListLedgerEntries(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, err := shared.RequireTenantContext(r.Context())
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "TENANT_REQUIRED", err.Error())
 			return
@@ -273,7 +273,7 @@ func HandleListLedgerEntries(db *sql.DB) http.HandlerFunc {
 			}
 		}
 		params := ListLedgerEntriesParams{
-			TenantID:  tenantID,
+			OperatorContextID:  operatorContextID,
 			ActorID:   q.Get("actorId"),
 			ActorType: q.Get("actorType"),
 			OrderID:   q.Get("orderId"),

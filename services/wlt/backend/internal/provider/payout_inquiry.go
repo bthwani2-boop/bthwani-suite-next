@@ -34,9 +34,9 @@ func payoutInquiryMeta(query url.Values) RequestMeta {
 func (c *Client) InquirePayout(ctx context.Context, query url.Values) (PayoutInquiry, error) {
 	providerReference := strings.TrimSpace(query.Get("providerReference"))
 	payoutID := strings.TrimSpace(query.Get("payoutRequestId"))
-	tenantID := strings.TrimSpace(query.Get("tenantId"))
-	if providerReference == "" || payoutID == "" || tenantID == "" {
-		return PayoutInquiry{}, fmt.Errorf("payout inquiry requires providerReference, payoutRequestId, and tenantId")
+	operatorContextID := strings.TrimSpace(query.Get("operatorContextId"))
+	if providerReference == "" || payoutID == "" || operatorContextID == "" {
+		return PayoutInquiry{}, fmt.Errorf("payout inquiry requires providerReference, payoutRequestId, and operatorContextId")
 	}
 
 	path := payoutInquiryPath + "?" + query.Encode()

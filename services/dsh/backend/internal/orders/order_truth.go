@@ -16,7 +16,7 @@ var ErrIdempotencyConflict = errors.New("order idempotency conflict")
 type CreateOrderTruthInput struct {
 	CheckoutIntentID string
 	ClientID         string
-	TenantID         string
+	OperatorContextID         string
 	IdempotencyKey   string
 	CorrelationID    string
 }
@@ -80,10 +80,10 @@ func orderCreateFingerprint(checkoutIntentID string) string {
 func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, bool, error) {
 	input.CheckoutIntentID = strings.TrimSpace(input.CheckoutIntentID)
 	input.ClientID = strings.TrimSpace(input.ClientID)
-	input.TenantID = strings.TrimSpace(input.TenantID)
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
-	if input.CheckoutIntentID == "" || input.ClientID == "" || input.TenantID == "" || len(input.IdempotencyKey) < 16 || len(input.IdempotencyKey) > 200 {
+	if input.CheckoutIntentID == "" || input.ClientID == "" || input.OperatorContextID == "" || len(input.IdempotencyKey) < 16 || len(input.IdempotencyKey) > 200 {
 		return nil, false, ErrInvalid
 	}
 	if input.CorrelationID == "" {
@@ -100,7 +100,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 	}
 	defer tx.Rollback()
 
-	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, input.TenantID+"|"+input.ClientID+"|"+input.IdempotencyKey); err != nil {
+	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, input.OperatorContextID+"|"+input.ClientID+"|"+input.IdempotencyKey); err != nil {
 		return nil, false, err
 	}
 
@@ -110,14 +110,14 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		SELECT request_fingerprint, order_id::text
 		FROM dsh_order_create_idempotency
 		WHERE tenant_id=$1 AND client_id=$2 AND idempotency_key=$3
-		FOR UPDATE`, input.TenantID, input.ClientID, input.IdempotencyKey,
+		FOR UPDATE`, input.OperatorContextID, input.ClientID, input.IdempotencyKey,
 	).Scan(&existingFingerprint, &existingOrderID)
 	if err == nil {
 		if existingFingerprint != fingerprint {
 			return nil, false, ErrIdempotencyConflict
 		}
 		if existingOrderID.Valid && existingOrderID.String != "" {
-			truth, readErr := getOrderTruthTx(tx, existingOrderID.String, input.TenantID, "client")
+			truth, readErr := getOrderTruthTx(tx, existingOrderID.String, input.OperatorContextID, "client")
 			if readErr != nil {
 				return nil, false, readErr
 			}
@@ -143,7 +143,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		SELECT 1
 		FROM dsh_checkout_intents
 		WHERE id=$1::uuid AND tenant_id=$2 AND client_id=$3
-		FOR SHARE`, input.CheckoutIntentID, input.TenantID, input.ClientID,
+		FOR SHARE`, input.CheckoutIntentID, input.OperatorContextID, input.ClientID,
 	).Scan(&ownedCheckout)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, fmt.Errorf("%w: checkout intent is inaccessible", ErrConflict)
@@ -160,11 +160,11 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		SELECT order_id::text
 		FROM dsh_order_create_idempotency
 		WHERE tenant_id=$1 AND client_id=$2 AND checkout_intent_id=$3::uuid
-		FOR UPDATE`, input.TenantID, input.ClientID, input.CheckoutIntentID,
+		FOR UPDATE`, input.OperatorContextID, input.ClientID, input.CheckoutIntentID,
 	).Scan(&checkoutAttemptOrderID)
 	if err == nil {
 		if checkoutAttemptOrderID.Valid && checkoutAttemptOrderID.String != "" {
-			truth, readErr := getOrderTruthTx(tx, checkoutAttemptOrderID.String, input.TenantID, "client")
+			truth, readErr := getOrderTruthTx(tx, checkoutAttemptOrderID.String, input.OperatorContextID, "client")
 			if readErr != nil {
 				return nil, false, readErr
 			}
@@ -186,7 +186,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		INSERT INTO dsh_order_create_idempotency
 		(tenant_id, client_id, idempotency_key, checkout_intent_id, request_fingerprint, correlation_id)
 		VALUES ($1,$2,$3,$4::uuid,$5,$6)`,
-		input.TenantID, input.ClientID, input.IdempotencyKey, input.CheckoutIntentID, fingerprint, input.CorrelationID,
+		input.OperatorContextID, input.ClientID, input.IdempotencyKey, input.CheckoutIntentID, fingerprint, input.CorrelationID,
 	); err != nil {
 		return nil, false, err
 	}
@@ -196,7 +196,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		SELECT cart_id::text, store_id, fulfillment_mode, wlt_payment_session_id, state, payment_method
 		FROM dsh_checkout_intents
 		WHERE id=$1::uuid AND tenant_id=$2 AND client_id=$3 AND wlt_payment_session_id<>''
-		FOR UPDATE`, input.CheckoutIntentID, input.TenantID, input.ClientID,
+		FOR UPDATE`, input.CheckoutIntentID, input.OperatorContextID, input.ClientID,
 	).Scan(&cartID, &storeID, &fulfillmentMode, &wltPaymentRefID, &checkoutState, &paymentMethod)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, fmt.Errorf("%w: checkout intent is inaccessible", ErrConflict)
@@ -215,18 +215,18 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 	err = tx.QueryRow(`
 		SELECT id::text FROM dsh_orders
 		WHERE tenant_id=$1 AND client_id=$2 AND checkout_intent_id=$3::uuid
-		FOR UPDATE`, input.TenantID, input.ClientID, input.CheckoutIntentID,
+		FOR UPDATE`, input.OperatorContextID, input.ClientID, input.CheckoutIntentID,
 	).Scan(&legacyOrderID)
 	if err == nil {
 		if _, bindErr := tx.Exec(`
 			UPDATE dsh_order_create_idempotency
 			SET order_id=$1::uuid, completed_at=NOW()
 			WHERE tenant_id=$2 AND client_id=$3 AND idempotency_key=$4`,
-			legacyOrderID, input.TenantID, input.ClientID, input.IdempotencyKey,
+			legacyOrderID, input.OperatorContextID, input.ClientID, input.IdempotencyKey,
 		); bindErr != nil {
 			return nil, false, bindErr
 		}
-		truth, readErr := getOrderTruthTx(tx, legacyOrderID, input.TenantID, "client")
+		truth, readErr := getOrderTruthTx(tx, legacyOrderID, input.OperatorContextID, "client")
 		if readErr != nil {
 			return nil, false, readErr
 		}
@@ -278,7 +278,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		(tenant_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status, wlt_payment_ref_id, correlation_id)
 		VALUES ($1,$2::uuid,$3,$4,$5,$6,$7,$8)
 		RETURNING id::text`,
-		input.TenantID, input.CheckoutIntentID, storeID, fulfillmentMode, input.ClientID, string(StatusPending), wltPaymentRefID, input.CorrelationID,
+		input.OperatorContextID, input.CheckoutIntentID, storeID, fulfillmentMode, input.ClientID, string(StatusPending), wltPaymentRefID, input.CorrelationID,
 	).Scan(&orderID)
 	if err != nil {
 		return nil, false, err
@@ -311,7 +311,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		INSERT INTO dsh_order_status_events
 		(order_id, tenant_id, actor_role, actor_id, from_status, to_status, note, event_type, correlation_id, causation_id, order_version, metadata)
 		VALUES ($1::uuid,$2,'system','',$3,$4,'order created from eligible checkout','order.created',$5,$6,1,$7::jsonb)
-		RETURNING id::text`, orderID, input.TenantID, "", string(StatusPending), input.CorrelationID, input.CheckoutIntentID, eventMetadata,
+		RETURNING id::text`, orderID, input.OperatorContextID, "", string(StatusPending), input.CorrelationID, input.CheckoutIntentID, eventMetadata,
 	).Scan(&eventID)
 	if err != nil {
 		return nil, false, err
@@ -325,7 +325,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		VALUES ($1,$2::uuid,$3::uuid,'order.created',$4,$5,
 		jsonb_build_object('orderId',$2::text,'checkoutIntentId',$5::text,'correlationId',$4::text,'version',1))
 		ON CONFLICT (tenant_id,event_id) DO NOTHING`,
-		input.TenantID, orderID, eventID, input.CorrelationID, input.CheckoutIntentID,
+		input.OperatorContextID, orderID, eventID, input.CorrelationID, input.CheckoutIntentID,
 	); err != nil {
 		return nil, false, err
 	}
@@ -335,7 +335,7 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		SET state='confirmed', version=version+1, updated_at=NOW()
 		WHERE id=$1::uuid AND tenant_id=$2 AND client_id=$3
 		  AND state IN ('payment_pending','payment_confirmed')`,
-		input.CheckoutIntentID, input.TenantID, input.ClientID,
+		input.CheckoutIntentID, input.OperatorContextID, input.ClientID,
 	)
 	if err != nil {
 		return nil, false, err
@@ -354,12 +354,12 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		UPDATE dsh_order_create_idempotency
 		SET order_id=$1::uuid, completed_at=NOW()
 		WHERE tenant_id=$2 AND client_id=$3 AND idempotency_key=$4`,
-		orderID, input.TenantID, input.ClientID, input.IdempotencyKey,
+		orderID, input.OperatorContextID, input.ClientID, input.IdempotencyKey,
 	); err != nil {
 		return nil, false, err
 	}
 
-	truth, err := getOrderTruthTx(tx, orderID, input.TenantID, "client")
+	truth, err := getOrderTruthTx(tx, orderID, input.OperatorContextID, "client")
 	if err != nil {
 		return nil, false, err
 	}
@@ -369,13 +369,13 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 	return truth, false, nil
 }
 
-func GetOrderTruth(db *sql.DB, orderID, tenantID, viewerRole string) (*OrderTruth, error) {
+func GetOrderTruth(db *sql.DB, orderID, operatorContextID, viewerRole string) (*OrderTruth, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
-	truth, err := getOrderTruthTx(tx, orderID, tenantID, viewerRole)
+	truth, err := getOrderTruthTx(tx, orderID, operatorContextID, viewerRole)
 	if err != nil {
 		return nil, err
 	}
@@ -385,7 +385,7 @@ func GetOrderTruth(db *sql.DB, orderID, tenantID, viewerRole string) (*OrderTrut
 	return truth, nil
 }
 
-func getOrderTruthTx(tx *sql.Tx, orderID, tenantID, viewerRole string) (*OrderTruth, error) {
+func getOrderTruthTx(tx *sql.Tx, orderID, operatorContextID, viewerRole string) (*OrderTruth, error) {
 	var truth OrderTruth
 	var address []byte
 	var paymentUpdated sql.NullTime
@@ -395,7 +395,7 @@ func getOrderTruthTx(tx *sql.Tx, orderID, tenantID, viewerRole string) (*OrderTr
 		       discount_minor_units, total_minor_units, currency, pricing_snapshot_hash,
 		       coupon_code_last4, wlt_payment_ref_id, payment_status_projection,
 		       payment_projection_updated_at, correlation_id, version, created_at, updated_at
-		FROM dsh_orders WHERE id=$1::uuid AND tenant_id=$2`, orderID, tenantID,
+		FROM dsh_orders WHERE id=$1::uuid AND tenant_id=$2`, orderID, operatorContextID,
 	).Scan(&truth.ID, &truth.OrderNumber, &truth.CheckoutIntentID, &truth.StoreID, &truth.ClientID,
 		&truth.FulfillmentMode, &truth.Status, &address, &truth.SubtotalMinorUnits,
 		&truth.DiscountMinorUnits, &truth.TotalMinorUnits, &truth.Currency, &truth.PricingSnapshotHash,
@@ -440,7 +440,7 @@ func getOrderTruthTx(tx *sql.Tx, orderID, tenantID, viewerRole string) (*OrderTr
 		SELECT id::text, event_type, actor_role, from_status, to_status, correlation_id,
 		       causation_id, order_version, metadata, created_at
 		FROM dsh_order_status_events
-		WHERE tenant_id=$1 AND order_id=$2::uuid ORDER BY created_at,id`, tenantID, orderID)
+		WHERE tenant_id=$1 AND order_id=$2::uuid ORDER BY created_at,id`, operatorContextID, orderID)
 	if err != nil {
 		return nil, err
 	}

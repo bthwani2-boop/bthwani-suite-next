@@ -35,7 +35,7 @@ func openDispatchRequiredDB(t *testing.T) *sql.DB {
 func TestCancelledOrderRemovesCaptainTaskAndRejectsStaleAcceptDBIntegration(t *testing.T) {
 	db := openDispatchRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	tenantID := "tenant-dispatch-cancel-" + suffix
+	operatorContextID := "tenant-dispatch-cancel-" + suffix
 	storeID := "dispatch-cancel-store-" + suffix
 	captainID := "dispatch-cancel-captain-" + suffix
 	clientID := uuid.NewString()
@@ -51,7 +51,7 @@ func TestCancelledOrderRemovesCaptainTaskAndRejectsStaleAcceptDBIntegration(t *t
 		INSERT INTO dsh_checkout_intents(tenant_id,client_id,cart_id,store_id,state,fulfillment_mode,payment_method,wlt_payment_session_id,subtotal_minor_units, delivery_fee_minor_units, discount_minor_units, total_minor_units, currency, pricing_snapshot_hash)
 		VALUES($1,$2,gen_random_uuid(),$3,'confirmed','bthwani_delivery','wallet',$4,
 		       1000,0,0,1000,'YER',repeat('c',64))
-		RETURNING id::text`, tenantID, clientID, storeID, "dispatch-cancel-payment-"+suffix).Scan(&checkoutIntentID); err != nil {
+		RETURNING id::text`, operatorContextID, clientID, storeID, "dispatch-cancel-payment-"+suffix).Scan(&checkoutIntentID); err != nil {
 		t.Fatalf("insert checkout intent: %v", err)
 	}
 
@@ -59,7 +59,7 @@ func TestCancelledOrderRemovesCaptainTaskAndRejectsStaleAcceptDBIntegration(t *t
 	if err := db.QueryRow(`
 		INSERT INTO dsh_orders(tenant_id,checkout_intent_id,store_id,fulfillment_mode,client_id,status,wlt_payment_ref_id)
 		VALUES($1,$2::uuid,$3,'bthwani_delivery',$4,'ready_for_pickup',$5)
-		RETURNING id::text`, tenantID, checkoutIntentID, storeID, clientID, "dispatch-cancel-payment-"+suffix).Scan(&orderID); err != nil {
+		RETURNING id::text`, operatorContextID, checkoutIntentID, storeID, clientID, "dispatch-cancel-payment-"+suffix).Scan(&orderID); err != nil {
 		t.Fatalf("insert order: %v", err)
 	}
 

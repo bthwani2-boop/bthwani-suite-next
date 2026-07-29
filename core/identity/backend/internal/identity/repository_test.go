@@ -145,7 +145,7 @@ func TestConsumeActivationRejectsRetiredCodeWithoutChallenge(t *testing.T) {
 		phone: {
 			ID:        "field-actor-1",
 			Username:  "field-actor",
-			TenantID:  "tenant-1",
+			OperatorContextID:  "tenant-1",
 			PhoneE164: phone,
 			Roles:     []string{"field"},
 			Permissions: []Permission{
@@ -170,7 +170,7 @@ func TestActorIdentityDerivesSurfaceAndServiceAccess(t *testing.T) {
 	expiresAt := time.Now().Add(time.Minute)
 	resolved := toIdentity(Actor{
 		ID:       "partner-1",
-		TenantID: "tenant-1",
+		OperatorContextID: "tenant-1",
 		Roles:    []string{"partner"},
 		Permissions: []Permission{
 			{Service: "dsh", Surface: "app-partner", Action: "store:write", Scope: "own"},
@@ -219,7 +219,7 @@ func TestResolveAccessTokenAcceptsRealSessionToken(t *testing.T) {
 			actor: Actor{
 				ID:       "operator-local-001",
 				Username: "operator",
-				TenantID: "local-dsh",
+				OperatorContextID: "local-dsh",
 				Roles:    []string{"operator"},
 				Permissions: []Permission{
 					{Service: "dsh", Surface: "control-panel", Action: "store:read", Scope: "all"},
@@ -345,7 +345,7 @@ func (s *fakeStmt) Query(args []driver.Value) (driver.Rows, error) {
 			values: []driver.Value{
 				actor.ID,
 				actor.Username,
-				actor.TenantID,
+				actor.OperatorContextID,
 				actor.PhoneE164,
 				"{" + strings.Join(actor.Roles, ",") + "}",
 				permissions,
@@ -372,7 +372,7 @@ func (s *fakeStmt) Query(args []driver.Value) (driver.Rows, error) {
 					row.actor.ID,
 					row.actor.Username,
 					row.actor.PasswordHash,
-					row.actor.TenantID,
+					row.actor.OperatorContextID,
 					row.actor.PhoneE164,
 					"{" + strings.Join(row.actor.Roles, ",") + "}",
 					permissions,

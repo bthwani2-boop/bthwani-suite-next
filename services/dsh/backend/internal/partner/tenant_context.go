@@ -6,21 +6,21 @@ import (
 	"strings"
 )
 
-var ErrTenantContextRequired = errors.New("trusted tenant context is required")
+var ErrOperatorContextRequired = errors.New("trusted tenant context is required")
 
-type tenantContextKey struct{}
+type operatorContextKey struct{}
 
-// WithTenantContext attaches the tenant resolved from the authenticated Identity
+// WithOperatorContext attaches the tenant resolved from the authenticated Identity
 // session. Callers must never populate this value from query parameters or
 // client-controlled tenant headers.
-func WithTenantContext(ctx context.Context, tenantID string) context.Context {
-	return context.WithValue(ctx, tenantContextKey{}, strings.TrimSpace(tenantID))
+func WithOperatorContext(ctx context.Context, operatorContextID string) context.Context {
+	return context.WithValue(ctx, operatorContextKey{}, strings.TrimSpace(operatorContextID))
 }
 
-// TenantIDFromContext returns only the trusted tenant value installed by the
+// OperatorContextIDFromContext returns only the trusted tenant value installed by the
 // DSH HTTP authentication boundary.
-func TenantIDFromContext(ctx context.Context) (string, bool) {
-	tenantID, _ := ctx.Value(tenantContextKey{}).(string)
-	tenantID = strings.TrimSpace(tenantID)
-	return tenantID, tenantID != ""
+func OperatorContextIDFromContext(ctx context.Context) (string, bool) {
+	operatorContextID, _ := ctx.Value(operatorContextKey{}).(string)
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	return operatorContextID, operatorContextID != ""
 }

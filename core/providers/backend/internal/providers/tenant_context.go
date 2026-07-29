@@ -6,25 +6,25 @@ import (
 	"strings"
 )
 
-type tenantContextKey struct{}
+type operatorContextKey struct{}
 
-var ErrTenantContextRequired = errors.New("trusted tenant context is required")
+var ErrOperatorContextRequired = errors.New("trusted tenant context is required")
 
-// WithTenantContext installs the tenant resolved from the authenticated Identity
+// WithOperatorContext installs the tenant resolved from the authenticated Identity
 // session. Callers must never populate this value from request headers or body.
-func WithTenantContext(ctx context.Context, tenantID string) context.Context {
-	return context.WithValue(ctx, tenantContextKey{}, strings.TrimSpace(tenantID))
+func WithOperatorContext(ctx context.Context, operatorContextID string) context.Context {
+	return context.WithValue(ctx, operatorContextKey{}, strings.TrimSpace(operatorContextID))
 }
 
-func TenantIDFromContext(ctx context.Context) (string, bool) {
-	tenantID, _ := ctx.Value(tenantContextKey{}).(string)
-	tenantID = strings.TrimSpace(tenantID)
-	return tenantID, tenantID != ""
+func OperatorContextIDFromContext(ctx context.Context) (string, bool) {
+	operatorContextID, _ := ctx.Value(operatorContextKey{}).(string)
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	return operatorContextID, operatorContextID != ""
 }
 
-func RequireTenantContext(ctx context.Context) (string, error) {
-	if tenantID, ok := TenantIDFromContext(ctx); ok {
-		return tenantID, nil
+func RequireOperatorContext(ctx context.Context) (string, error) {
+	if operatorContextID, ok := OperatorContextIDFromContext(ctx); ok {
+		return operatorContextID, nil
 	}
-	return "", ErrTenantContextRequired
+	return "", ErrOperatorContextRequired
 }

@@ -8,13 +8,13 @@ import (
 )
 
 func representativeWalletTestContext() context.Context {
-	return WithTenantContext(context.Background(), "tenant-main")
+	return WithOperatorContext(context.Background(), "tenant-main")
 }
 
 func TestFinanceReadWalletAllowsEveryRepresentativeActorType(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Tenant-ID") != "tenant-main" {
-			t.Fatalf("expected tenant-main, got %q", r.Header.Get("X-Tenant-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != "tenant-main" {
+			t.Fatalf("expected tenant-main, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -44,8 +44,8 @@ func TestFinanceReadWalletNormalizesActorTypeCase(t *testing.T) {
 	var gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
-		if r.Header.Get("X-Tenant-ID") != "tenant-main" {
-			t.Fatalf("expected tenant-main, got %q", r.Header.Get("X-Tenant-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != "tenant-main" {
+			t.Fatalf("expected tenant-main, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		w.WriteHeader(http.StatusOK)
 	}))

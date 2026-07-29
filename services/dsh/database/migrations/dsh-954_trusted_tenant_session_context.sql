@@ -31,7 +31,7 @@ BEGIN
   IF NEW.tenant_id IS NULL OR BTRIM(NEW.tenant_id) = '' THEN
     session_tenant := dsh_trusted_tenant_context();
     IF session_tenant IS NULL THEN
-      RAISE EXCEPTION 'TENANT_CONTEXT_REQUIRED: trusted partner tenant is required';
+      RAISE EXCEPTION 'OPERATOR_CONTEXT_REQUIRED: trusted partner tenant is required';
     END IF;
     NEW.tenant_id := session_tenant;
   END IF;
@@ -59,7 +59,7 @@ BEGIN
     WHERE id = NEW.partner_id;
 
     IF owner_tenant IS NULL OR BTRIM(owner_tenant) = '' THEN
-      RAISE EXCEPTION 'TENANT_CONTEXT_REQUIRED: partner tenant not found';
+      RAISE EXCEPTION 'OPERATOR_CONTEXT_REQUIRED: partner tenant not found';
     END IF;
 
     IF TG_OP = 'UPDATE'
@@ -75,7 +75,7 @@ BEGIN
     IF NEW.tenant_id IS NULL OR BTRIM(NEW.tenant_id) = '' THEN
       session_tenant := dsh_trusted_tenant_context();
       IF session_tenant IS NULL THEN
-        RAISE EXCEPTION 'TENANT_CONTEXT_REQUIRED: trusted store tenant is required';
+        RAISE EXCEPTION 'OPERATOR_CONTEXT_REQUIRED: trusted store tenant is required';
       END IF;
       NEW.tenant_id := session_tenant;
     END IF;

@@ -16,7 +16,7 @@ const paymentProjectionBatchSize = 50
 
 type paymentProjectionWork struct {
 	OrderID       string
-	TenantID      string
+	OperatorContextID      string
 	SessionID     string
 	AttemptCount  int
 }
@@ -115,7 +115,7 @@ func claimPaymentProjectionWork(ctx context.Context, db *sql.DB, limit int) ([]p
 	result := make([]paymentProjectionWork, 0)
 	for rows.Next() {
 		var item paymentProjectionWork
-		if err = rows.Scan(&item.OrderID, &item.TenantID, &item.SessionID, &item.AttemptCount); err != nil {
+		if err = rows.Scan(&item.OrderID, &item.OperatorContextID, &item.SessionID, &item.AttemptCount); err != nil {
 			return nil, err
 		}
 		result = append(result, item)
@@ -147,7 +147,7 @@ func applyPaymentProjection(ctx context.Context, db *sql.DB, item paymentProject
 		SELECT payment_status_projection,status,correlation_id,version,payment_projection_source_updated_at
 		FROM dsh_orders
 		WHERE id=$1::uuid AND tenant_id=$2 AND wlt_payment_ref_id=$3
-		FOR UPDATE`, item.OrderID, item.TenantID, item.SessionID,
+		FOR UPDATE`, item.OrderID, item.OperatorContextID, item.SessionID,
 	).Scan(&currentProjection, &currentOrderStatus, &correlationID, &currentVersion, &currentSourceUpdated)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
@@ -171,7 +171,7 @@ func applyPaymentProjection(ctx context.Context, db *sql.DB, item paymentProject
 			    version=version+1,
 			    updated_at=NOW()
 			WHERE id=$3::uuid AND tenant_id=$4 AND wlt_payment_ref_id=$5
-			RETURNING version`, projection, session.UpdatedAt, item.OrderID, item.TenantID, item.SessionID,
+			RETURNING version`, projection, session.UpdatedAt, item.OrderID, item.OperatorContextID, item.SessionID,
 		).Scan(&newVersion)
 		if err != nil {
 			return err
@@ -184,7 +184,7 @@ func applyPaymentProjection(ctx context.Context, db *sql.DB, item paymentProject
 			VALUES ($1::uuid,$2,'system','wlt',$3,$3,'verified WLT projection changed',
 			        'order.payment_projection_updated',$4,$5,$6,$7::jsonb)`,
 			item.OrderID,
-			item.TenantID,
+			item.OperatorContextID,
 			currentOrderStatus,
 			correlationID,
 			item.SessionID+":"+session.UpdatedAt.UTC().Format(time.RFC3339Nano),
@@ -202,7 +202,7 @@ func applyPaymentProjection(ctx context.Context, db *sql.DB, item paymentProject
 			      WHEN payment_projection_source_updated_at IS NULL OR payment_projection_source_updated_at < $1
 			      THEN $1 ELSE payment_projection_source_updated_at END
 			WHERE id=$2::uuid AND tenant_id=$3 AND wlt_payment_ref_id=$4`,
-			session.UpdatedAt, item.OrderID, item.TenantID, item.SessionID,
+			session.UpdatedAt, item.OrderID, item.OperatorContextID, item.SessionID,
 		)
 		if err != nil {
 			return err
@@ -221,7 +221,7 @@ func applyPaymentProjection(ctx context.Context, db *sql.DB, item paymentProject
 		    last_error='',
 		    updated_at=NOW()
 		WHERE order_id=$4::uuid AND tenant_id=$5 AND wlt_payment_session_id=$6`,
-		int64(nextAttempt/time.Second), session.Status, session.UpdatedAt, item.OrderID, item.TenantID, item.SessionID,
+		int64(nextAttempt/time.Second), session.Status, session.UpdatedAt, item.OrderID, item.OperatorContextID, item.SessionID,
 	)
 	if err != nil {
 		return err
@@ -258,7 +258,7 @@ func markPaymentProjectionFailure(ctx context.Context, db *sql.DB, item paymentP
 		int64(retryAfter/time.Second),
 		failure.Error(),
 		item.OrderID,
-		item.TenantID,
+		item.OperatorContextID,
 		item.SessionID,
 	)
 	return err

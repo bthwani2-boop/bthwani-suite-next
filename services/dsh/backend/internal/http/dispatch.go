@@ -221,7 +221,7 @@ func writeDeliveryExceptionError(w http.ResponseWriter, err error) {
 
 func marshalDeliveryException(item *dispatch.DeliveryException) map[string]any {
 	return map[string]any{
-		"id": item.ID, "tenantId": item.TenantID, "assignmentId": item.AssignmentID,
+		"id": item.ID, "operatorContextId": item.OperatorContextID, "assignmentId": item.AssignmentID,
 		"orderId": item.OrderID, "specialRequestId": item.SpecialRequestID, "captainId": item.CaptainID,
 		"reasonCode": string(item.ReasonCode), "note": item.Note,
 		"deliveryStatusAtReport": string(item.DeliveryStatusAtReport),

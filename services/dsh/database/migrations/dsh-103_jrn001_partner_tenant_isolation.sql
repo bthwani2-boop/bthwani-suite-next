@@ -121,7 +121,7 @@ BEGIN
   WHERE id = NEW.partner_id;
 
   IF owner_tenant IS NULL OR btrim(owner_tenant) = '' THEN
-    RAISE EXCEPTION 'TENANT_CONTEXT_REQUIRED: partner tenant not found';
+    RAISE EXCEPTION 'OPERATOR_CONTEXT_REQUIRED: partner tenant not found';
   END IF;
 
   NEW.tenant_id := owner_tenant;
@@ -141,7 +141,7 @@ BEGIN
   WHERE id = NEW.store_id;
 
   IF owner_tenant IS NULL OR btrim(owner_tenant) = '' THEN
-    RAISE EXCEPTION 'TENANT_CONTEXT_REQUIRED: store tenant not found';
+    RAISE EXCEPTION 'OPERATOR_CONTEXT_REQUIRED: store tenant not found';
   END IF;
 
   NEW.tenant_id := owner_tenant;
@@ -161,11 +161,11 @@ BEGIN
     FROM dsh_partners
     WHERE id = NEW.partner_id;
     IF owner_tenant IS NULL OR btrim(owner_tenant) = '' THEN
-      RAISE EXCEPTION 'TENANT_CONTEXT_REQUIRED: partner tenant not found';
+      RAISE EXCEPTION 'OPERATOR_CONTEXT_REQUIRED: partner tenant not found';
     END IF;
     NEW.tenant_id := owner_tenant;
   ELSIF NEW.tenant_id IS NULL OR btrim(NEW.tenant_id) = '' THEN
-    RAISE EXCEPTION 'TENANT_CONTEXT_REQUIRED: trusted store tenant is required';
+    RAISE EXCEPTION 'OPERATOR_CONTEXT_REQUIRED: trusted store tenant is required';
   END IF;
   RETURN NEW;
 END;

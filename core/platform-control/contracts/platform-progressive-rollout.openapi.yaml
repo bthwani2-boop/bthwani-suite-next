@@ -35,8 +35,8 @@ paths:
             schema: { $ref: "#/components/schemas/CreatePlatformRolloutInput" }
       responses:
         "201": { $ref: "#/components/responses/RolloutResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
-        "422": { $ref: "#/components/responses/PlatformError" }
+        "409": { $ref: "#/components/responses/PlatformRolloutError" }
+        "422": { $ref: "#/components/responses/PlatformRolloutError" }
   /platform/v1/rollouts/{id}:
     get:
       operationId: getPlatformRollout
@@ -44,7 +44,7 @@ paths:
       parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
         "200": { $ref: "#/components/responses/RolloutResponse" }
-        "404": { $ref: "#/components/responses/PlatformError" }
+        "404": { $ref: "#/components/responses/PlatformRolloutError" }
   /platform/v1/rollouts/{id}/recovery:
     get:
       operationId: getPlatformRolloutRecovery
@@ -61,7 +61,7 @@ paths:
                 required: [recovery]
                 properties:
                   recovery: { $ref: "#/components/schemas/PlatformRolloutRecoveryGuide" }
-        "404": { $ref: "#/components/responses/PlatformError" }
+        "404": { $ref: "#/components/responses/PlatformRolloutError" }
   /platform/v1/rollouts/{id}/advance:
     post:
       operationId: advancePlatformRollout
@@ -70,7 +70,7 @@ paths:
       parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
         "200": { $ref: "#/components/responses/RolloutResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
+        "409": { $ref: "#/components/responses/PlatformRolloutError" }
   /platform/v1/rollouts/{id}/pause:
     post:
       operationId: pausePlatformRollout
@@ -79,7 +79,7 @@ paths:
       parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
         "200": { $ref: "#/components/responses/RolloutResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
+        "409": { $ref: "#/components/responses/PlatformRolloutError" }
   /platform/v1/rollouts/{id}/resume:
     post:
       operationId: resumePlatformRollout
@@ -88,7 +88,7 @@ paths:
       parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
         "200": { $ref: "#/components/responses/RolloutResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
+        "409": { $ref: "#/components/responses/PlatformRolloutError" }
   /platform/v1/rollouts/{id}/abort:
     post:
       operationId: abortPlatformRollout
@@ -97,7 +97,7 @@ paths:
       parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
         "200": { $ref: "#/components/responses/RolloutResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
+        "409": { $ref: "#/components/responses/PlatformRolloutError" }
   /platform/v1/rollouts/{id}/rollback:
     post:
       operationId: rollbackPlatformRollout
@@ -106,7 +106,7 @@ paths:
       parameters: [{ $ref: "#/components/parameters/RolloutId" }]
       responses:
         "200": { $ref: "#/components/responses/RolloutResponse" }
-        "409": { $ref: "#/components/responses/PlatformError" }
+        "409": { $ref: "#/components/responses/PlatformRolloutError" }
 components:
   securitySchemes:
     bearerAuth:
@@ -229,7 +229,7 @@ components:
           type: array
           items: { type: string }
         requiredPermission: { const: "platform:rollouts:manage" }
-    PlatformError:
+    PlatformRolloutError:
       type: object
       required: [code, message]
       properties:
@@ -245,10 +245,10 @@ components:
             required: [rollout]
             properties:
               rollout: { $ref: "#/components/schemas/PlatformRollout" }
-    PlatformError:
+    PlatformRolloutError:
       description: Governed platform-control error.
       content:
         application/json:
-          schema: { $ref: "#/components/schemas/PlatformError" }
+          schema: { $ref: "#/components/schemas/PlatformRolloutError" }
 security:
   - bearerAuth: []

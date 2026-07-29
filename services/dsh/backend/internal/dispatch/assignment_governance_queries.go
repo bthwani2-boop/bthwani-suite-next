@@ -12,7 +12,7 @@ import (
 
 type AssignmentGovernance struct {
 	AssignmentID           string     `json:"assignmentId"`
-	TenantID               string     `json:"tenantId"`
+	OperatorContextID               string     `json:"operatorContextId"`
 	ServiceAreaCode        string     `json:"serviceAreaCode"`
 	Priority               int        `json:"priority"`
 	DistanceMeters         *int       `json:"distanceMeters,omitempty"`
@@ -38,7 +38,7 @@ func GetAssignmentGovernance(db *sql.DB, assignmentID string) (*AssignmentGovern
 		       COALESCE(supersedes_assignment_id::text,''), version
 		FROM dsh_assignments WHERE id=$1::uuid`, assignmentID,
 	).Scan(
-		&item.AssignmentID, &item.TenantID, &item.ServiceAreaCode, &item.Priority,
+		&item.AssignmentID, &item.OperatorContextID, &item.ServiceAreaCode, &item.Priority,
 		&item.DistanceMeters, &item.OfferReason, &item.ResponseReason,
 		&item.ExpiredAt, &item.CancelledAt, &item.CancelledBy,
 		&item.SupersedesAssignmentID, &item.Version,
@@ -68,7 +68,7 @@ func ListAssignmentGovernance(db *sql.DB, assignmentIDs []string) (map[string]As
 	for rows.Next() {
 		var item AssignmentGovernance
 		if err = rows.Scan(
-			&item.AssignmentID, &item.TenantID, &item.ServiceAreaCode, &item.Priority,
+			&item.AssignmentID, &item.OperatorContextID, &item.ServiceAreaCode, &item.Priority,
 			&item.DistanceMeters, &item.OfferReason, &item.ResponseReason,
 			&item.ExpiredAt, &item.CancelledAt, &item.CancelledBy,
 			&item.SupersedesAssignmentID, &item.Version,

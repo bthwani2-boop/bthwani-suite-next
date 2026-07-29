@@ -15,7 +15,7 @@ type SubscriptionPaymentSession struct {
 	ID                         string  `json:"id"`
 	SubscriptionPurchaseID     *string `json:"subscriptionPurchaseId,omitempty"`
 	CommercialProductReference *string `json:"commercialProductReference,omitempty"`
-	TenantID                   string  `json:"tenantId"`
+	OperatorContextID                   string  `json:"operatorContextId"`
 	ClientID                   string  `json:"clientId"`
 	StoreID                    string  `json:"storeId"`
 	PaymentMethod              string  `json:"paymentMethod"`
@@ -31,7 +31,7 @@ type SubscriptionPaymentSession struct {
 type CreateSubscriptionPaymentSessionInput struct {
 	SubscriptionPurchaseID string `json:"subscriptionPurchaseId"`
 	ProductReference       string `json:"productReference"`
-	TenantID               string `json:"tenantId"`
+	OperatorContextID               string `json:"operatorContextId"`
 	ClientID               string `json:"clientId"`
 	PaymentMethod          string `json:"paymentMethod"`
 }

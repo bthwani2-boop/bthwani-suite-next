@@ -850,7 +850,7 @@ func TestSpecialRequestsWltPaymentDBIntegration(t *testing.T) {
 		sessionID := "wlt-session-" + testSuffix()
 		quoteAndAttach(t, req, sessionID)
 
-		_, err := ApplyWltPaymentEvent(db, DefaultTenantID, req.ID, "wrong-session-id", "captured")
+		_, err := ApplyWltPaymentEvent(db, DefaultOperatorContextID, req.ID, "wrong-session-id", "captured")
 		if !errors.Is(err, ErrPaymentSessionMismatch) {
 			t.Fatalf("expected ErrPaymentSessionMismatch, got %v", err)
 		}
@@ -861,7 +861,7 @@ func TestSpecialRequestsWltPaymentDBIntegration(t *testing.T) {
 		sessionID := "wlt-session-" + testSuffix()
 		quoteAndAttach(t, req, sessionID)
 
-		updated, err := ApplyWltPaymentEvent(db, DefaultTenantID, req.ID, sessionID, "captured")
+		updated, err := ApplyWltPaymentEvent(db, DefaultOperatorContextID, req.ID, sessionID, "captured")
 		if err != nil {
 			t.Fatalf("ApplyWltPaymentEvent(captured) failed: %v", err)
 		}
@@ -875,7 +875,7 @@ func TestSpecialRequestsWltPaymentDBIntegration(t *testing.T) {
 		sessionID := "wlt-session-" + testSuffix()
 		attached := quoteAndAttach(t, req, sessionID)
 
-		result, err := ApplyWltPaymentEvent(db, DefaultTenantID, req.ID, sessionID, "failed")
+		result, err := ApplyWltPaymentEvent(db, DefaultOperatorContextID, req.ID, sessionID, "failed")
 		if err != nil {
 			t.Fatalf("ApplyWltPaymentEvent(failed) should be a no-op success, got error %v", err)
 		}
@@ -897,7 +897,7 @@ func TestSpecialRequestsWltPaymentDBIntegration(t *testing.T) {
 		sessionID := "wlt-session-" + testSuffix()
 		quoteAndAttach(t, req, sessionID)
 
-		approved, err := ApplyWltPaymentEvent(db, DefaultTenantID, req.ID, sessionID, "captured")
+		approved, err := ApplyWltPaymentEvent(db, DefaultOperatorContextID, req.ID, sessionID, "captured")
 		if err != nil {
 			t.Fatalf("first captured event failed: %v", err)
 		}
@@ -914,7 +914,7 @@ func TestSpecialRequestsWltPaymentDBIntegration(t *testing.T) {
 			t.Fatalf("transition to assigned failed: %v", err)
 		}
 
-		replayed, err := ApplyWltPaymentEvent(db, DefaultTenantID, req.ID, sessionID, "captured")
+		replayed, err := ApplyWltPaymentEvent(db, DefaultOperatorContextID, req.ID, sessionID, "captured")
 		if err != nil {
 			t.Fatalf("replayed captured event should be a no-op success, got error %v", err)
 		}

@@ -6,14 +6,14 @@ func TestValidatePromotionFundingReserveResponse(t *testing.T) {
 	t.Parallel()
 	partnerID := "partner-1"
 	input := ReservePromotionFundingInput{
-		TenantID: "tenant-1", ExternalReference: "dsh:redemption-1",
+		OperatorContextID: "tenant-1", ExternalReference: "dsh:redemption-1",
 		CheckoutIntentID: "checkout-1", CouponRedemptionID: "redemption-1",
 		CouponID: "coupon-1", ClientID: "client-1", PartnerID: partnerID,
 		PlatformFundedMinorUnits: 600, PartnerFundedMinorUnits: 400,
 		TotalDiscountMinorUnits: 1000, Currency: "YER",
 	}
 	matching := &PromotionFundingReservation{
-		ID: "pfr_1", TenantID: input.TenantID, ExternalReference: input.ExternalReference,
+		ID: "pfr_1", OperatorContextID: input.OperatorContextID, ExternalReference: input.ExternalReference,
 		CheckoutIntentID: input.CheckoutIntentID, CouponRedemptionID: input.CouponRedemptionID,
 		CouponID: input.CouponID, ClientID: input.ClientID, PartnerID: &partnerID,
 		PlatformFundedMinorUnits: 600, PartnerFundedMinorUnits: 400,
@@ -24,7 +24,7 @@ func TestValidatePromotionFundingReserveResponse(t *testing.T) {
 	}
 
 	mismatched := *matching
-	mismatched.TenantID = "tenant-2"
+	mismatched.OperatorContextID = "tenant-2"
 	if err := validatePromotionFundingReserveResponse(&mismatched, input); err == nil {
 		t.Fatal("cross-tenant reserve response was accepted")
 	}
@@ -40,9 +40,9 @@ func TestValidatePromotionFundingReserveResponse(t *testing.T) {
 func TestValidatePromotionFundingTransitionResponse(t *testing.T) {
 	t.Parallel()
 	orderID := "order-1"
-	input := PromotionFundingTransitionInput{TenantID: "tenant-1", OrderID: orderID}
+	input := PromotionFundingTransitionInput{OperatorContextID: "tenant-1", OrderID: orderID}
 	matching := &PromotionFundingReservation{
-		ID: "pfr_1", TenantID: "tenant-1", Status: "committed", OrderID: &orderID,
+		ID: "pfr_1", OperatorContextID: "tenant-1", Status: "committed", OrderID: &orderID,
 	}
 	if err := validatePromotionFundingTransitionResponse(matching, "pfr_1", "commit", input); err != nil {
 		t.Fatalf("matching transition response rejected: %v", err)

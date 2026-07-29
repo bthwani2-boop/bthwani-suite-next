@@ -13,12 +13,12 @@ import (
 func AttachWltPaymentSessionIdempotent(
 	db *sql.DB,
 	intentID string,
-	tenantID string,
+	operatorContextID string,
 	clientID string,
 	paymentSessionID string,
 ) (*Intent, error) {
-	tenantID = normalizeTenant(tenantID)
-	if intentID == "" || tenantID == "" || clientID == "" || paymentSessionID == "" {
+	operatorContextID = normalizeTenant(operatorContextID)
+	if intentID == "" || operatorContextID == "" || clientID == "" || paymentSessionID == "" {
 		return nil, ErrInvalid
 	}
 
@@ -48,7 +48,7 @@ func AttachWltPaymentSessionIdempotent(
 		string(StatePaymentPending),
 		paymentSessionID,
 		intentID,
-		tenantID,
+		operatorContextID,
 		clientID,
 	)
 	intent, err := scanIntent(row)

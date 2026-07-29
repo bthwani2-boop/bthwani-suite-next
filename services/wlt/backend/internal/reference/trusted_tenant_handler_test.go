@@ -13,7 +13,7 @@ func TestGenericPaymentSessionRouteRejectsSubscriptionSource(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPost, "/wlt/payment-sessions", strings.NewReader(`{
 		"subscriptionPurchaseId":"subp-1",
 		"commercialProductReference":"sub-basic",
-		"tenantId":"tenant-1",
+		"operatorContextId":"tenant-1",
 		"clientId":"client-1",
 		"storeId":"platform-subscriptions",
 		"paymentMethod":"official_wallet",
@@ -23,7 +23,7 @@ func TestGenericPaymentSessionRouteRejectsSubscriptionSource(t *testing.T) {
 	}`))
 	request.Header.Set("Authorization", "Bearer test-service-token")
 	request.Header.Set("X-Service-Caller", "dsh")
-	request.Header.Set("X-Tenant-ID", "tenant-1")
+	request.Header.Set("X-Operator-Context-ID", "tenant-1")
 	request.Header.Set("Idempotency-Key", "generic-subscription-source")
 	request.Header.Set("X-Correlation-ID", "subp-1")
 	response := httptest.NewRecorder()

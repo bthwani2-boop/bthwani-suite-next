@@ -39,7 +39,7 @@ const (
 
 type SpecialRequest struct {
 	ID                        string
-	TenantID                  string
+	OperatorContextID                  string
 	ClientID                  string
 	RequestType               RequestType
 	Status                    RequestStatus
@@ -88,7 +88,7 @@ type SpecialRequest struct {
 }
 
 type CreateInput struct {
-	TenantID                 string
+	OperatorContextID                 string
 	ClientID                 string
 	RequestType              RequestType
 	IdempotencyKey           string
@@ -146,13 +146,13 @@ type UpdateInput struct {
 type Repository interface {
 	Create(ctx context.Context, input CreateInput) (*SpecialRequest, error)
 	Get(ctx context.Context, id string) (*SpecialRequest, error)
-	GetInTenant(ctx context.Context, tenantID string, id string) (*SpecialRequest, error)
+	GetInTenant(ctx context.Context, operatorContextID string, id string) (*SpecialRequest, error)
 	Update(ctx context.Context, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error)
-	UpdateInTenant(ctx context.Context, tenantID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error)
+	UpdateInTenant(ctx context.Context, operatorContextID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error)
 	ListByClient(ctx context.Context, clientID string, limit, offset int) ([]SpecialRequest, int, error)
-	ListByClientInTenant(ctx context.Context, tenantID string, clientID string, limit, offset int) ([]SpecialRequest, int, error)
+	ListByClientInTenant(ctx context.Context, operatorContextID string, clientID string, limit, offset int) ([]SpecialRequest, int, error)
 	ListForOperator(ctx context.Context, reqType *string, status *string, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error)
-	ListForOperatorInTenant(ctx context.Context, tenantID string, reqType *string, status *string, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error)
+	ListForOperatorInTenant(ctx context.Context, operatorContextID string, reqType *string, status *string, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error)
 }
 
 type PostgresRepository struct {
@@ -198,7 +198,7 @@ func scanSpecialRequest(scan func(...any) error) (*SpecialRequest, error) {
 	var req SpecialRequest
 	err := scan(
 		&req.ID, &req.ClientID, &req.RequestType, &req.Status, &req.Version, &req.WorkflowStage,
-		&req.TenantID,
+		&req.OperatorContextID,
 		&req.CustomerNotes, &req.Currency, &req.EstimatedAmountReference, &req.EstimatedAmountMinorUnits, &req.WltPaymentSessionID, &req.CorrelationID,
 		&req.ProductUrl, &req.Quantity, &req.Size, &req.Color, &req.VariantNotes, &req.DeliveryAddressReference,
 		&req.PickupAddressReference, &req.DropoffAddressReference, &req.PickupLocation, &req.DropoffLocation, &req.ItemType, &req.ScheduleMode, &req.ScheduledAt, &req.HandlingRequirements,
@@ -233,8 +233,8 @@ func (r *PostgresRepository) CreateTx(ctx context.Context, tx *sql.Tx, input Cre
 }
 
 func (r *PostgresRepository) createWith(ctx context.Context, exec queryRower, input CreateInput) (*SpecialRequest, error) {
-	if input.TenantID == "" {
-		input.TenantID = DefaultTenantID
+	if input.OperatorContextID == "" {
+		input.OperatorContextID = DefaultOperatorContextID
 	}
 	id := uuid.New().String()
 	query := `
@@ -252,7 +252,7 @@ func (r *PostgresRepository) createWith(ctx context.Context, exec queryRower, in
 		RETURNING ` + specialRequestColumns
 
 	row := exec.QueryRowContext(ctx, query,
-		id, input.TenantID, input.ClientID, input.RequestType, StatusSubmitted, input.IdempotencyKey, input.workflowStage, input.CorrelationID,
+		id, input.OperatorContextID, input.ClientID, input.RequestType, StatusSubmitted, input.IdempotencyKey, input.workflowStage, input.CorrelationID,
 		input.CustomerNotes, input.ProductUrl, input.Quantity, input.Size, input.Color, input.VariantNotes, input.DeliveryAddressReference,
 		input.PickupAddressReference, input.DropoffAddressReference, nullableJSON(input.PickupLocation), nullableJSON(input.DropoffLocation), input.ItemType, input.ScheduleMode, input.ScheduledAt, input.HandlingRequirements,
 	)
@@ -274,12 +274,12 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (*SpecialReques
 	return req, nil
 }
 
-func (r *PostgresRepository) GetInTenant(ctx context.Context, tenantID string, id string) (*SpecialRequest, error) {
+func (r *PostgresRepository) GetInTenant(ctx context.Context, operatorContextID string, id string) (*SpecialRequest, error) {
 	query := `SELECT ` + specialRequestColumns + `
 		FROM dsh_special_requests
 		WHERE tenant_id = $1 AND id = $2
 	`
-	req, err := scanSpecialRequest(r.db.QueryRowContext(ctx, query, tenantID, id).Scan)
+	req, err := scanSpecialRequest(r.db.QueryRowContext(ctx, query, operatorContextID, id).Scan)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
@@ -293,16 +293,16 @@ func (r *PostgresRepository) Update(ctx context.Context, id string, expectedVers
 	return r.updateWith(ctx, r.db, "", id, expectedVersion, input)
 }
 
-func (r *PostgresRepository) UpdateInTenant(ctx context.Context, tenantID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
-	return r.updateWith(ctx, r.db, tenantID, id, expectedVersion, input)
+func (r *PostgresRepository) UpdateInTenant(ctx context.Context, operatorContextID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
+	return r.updateWith(ctx, r.db, operatorContextID, id, expectedVersion, input)
 }
 
 // UpdateInTenantTx is UpdateInTenant's transactional counterpart.
-func (r *PostgresRepository) UpdateInTenantTx(ctx context.Context, tx *sql.Tx, tenantID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
-	return r.updateWith(ctx, tx, tenantID, id, expectedVersion, input)
+func (r *PostgresRepository) UpdateInTenantTx(ctx context.Context, tx *sql.Tx, operatorContextID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
+	return r.updateWith(ctx, tx, operatorContextID, id, expectedVersion, input)
 }
 
-func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, tenantID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
+func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, operatorContextID string, id string, expectedVersion int, input UpdateInput) (*SpecialRequest, error) {
 	where := "id = $1 AND version = $2"
 	args := []any{
 		id, expectedVersion, input.Status, input.WorkflowStage, input.AssignedOperatorID, input.RejectionReason,
@@ -312,9 +312,9 @@ func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, te
 		input.InboundReference, input.InboundReceivedAt, input.SortingStartedAt, input.SortingCompletedAt,
 		input.FulfillmentPreparedAt, input.ReadyForDeliveryAt, input.CaptainAssignedAt, input.PickedUpAt, input.DeliveredAt,
 	}
-	if tenantID != "" {
+	if operatorContextID != "" {
 		where = "tenant_id = $25 AND id = $1 AND version = $2"
-		args = append(args, tenantID)
+		args = append(args, operatorContextID)
 	}
 	query := `
 		UPDATE dsh_special_requests
@@ -352,9 +352,9 @@ func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, te
 		var currentVersion int
 		versionQuery := `SELECT version FROM dsh_special_requests WHERE id = $1`
 		versionArgs := []any{id}
-		if tenantID != "" {
+		if operatorContextID != "" {
 			versionQuery = `SELECT version FROM dsh_special_requests WHERE tenant_id = $1 AND id = $2`
-			versionArgs = []any{tenantID, id}
+			versionArgs = []any{operatorContextID, id}
 		}
 		verErr := exec.QueryRowContext(ctx, versionQuery, versionArgs...).Scan(&currentVersion)
 		if verErr == sql.ErrNoRows {
@@ -388,14 +388,14 @@ func TransitionDispatchStatus(tx *sql.Tx, id string, allowedFrom []RequestStatus
 	return TransitionDispatchStatusInTenant(tx, "", id, allowedFrom, toStatus)
 }
 
-func TransitionDispatchStatusInTenant(tx *sql.Tx, tenantID string, id string, allowedFrom []RequestStatus, toStatus RequestStatus) error {
+func TransitionDispatchStatusInTenant(tx *sql.Tx, operatorContextID string, id string, allowedFrom []RequestStatus, toStatus RequestStatus) error {
 	var currentStatus RequestStatus
 	var version int
 	query := `SELECT status, version FROM dsh_special_requests WHERE id = $1 FOR UPDATE`
 	args := []any{id}
-	if tenantID != "" {
+	if operatorContextID != "" {
 		query = `SELECT status, version FROM dsh_special_requests WHERE tenant_id = $1 AND id = $2 FOR UPDATE`
-		args = []any{tenantID, id}
+		args = []any{operatorContextID, id}
 	}
 	err := tx.QueryRow(query, args...).Scan(&currentStatus, &version)
 	if err == sql.ErrNoRows {
@@ -426,9 +426,9 @@ func TransitionDispatchStatusInTenant(tx *sql.Tx, tenantID string, id string, al
 		    cancelled_at = CASE WHEN $3 THEN now() ELSE cancelled_at END
 		WHERE id = $4`
 	updateArgs := []any{string(toStatus), setCompletedAt, setCancelledAt, id}
-	if tenantID != "" {
+	if operatorContextID != "" {
 		updateQuery += ` AND tenant_id = $5`
-		updateArgs = append(updateArgs, tenantID)
+		updateArgs = append(updateArgs, operatorContextID)
 	}
 	_, err = tx.Exec(updateQuery, updateArgs...)
 	return err
@@ -484,16 +484,16 @@ func (e *ErrDispatchNotReady) Unwrap() error { return ErrNotReadyForDispatch }
 // together: locking here and re-locking in TransitionDispatchStatusInTenant
 // within the same tx is safe (Postgres row locks are reentrant within a
 // transaction).
-func CheckSheinDispatchReadiness(tx *sql.Tx, tenantID, id string) error {
+func CheckSheinDispatchReadiness(tx *sql.Tx, operatorContextID, id string) error {
 	query := `SELECT request_type, workflow_stage, purchased_at, inbound_received_at,
 		sorting_completed_at, fulfillment_prepared_at, ready_for_delivery_at
 		FROM dsh_special_requests WHERE id = $1 FOR UPDATE`
 	args := []any{id}
-	if tenantID != "" {
+	if operatorContextID != "" {
 		query = `SELECT request_type, workflow_stage, purchased_at, inbound_received_at,
 			sorting_completed_at, fulfillment_prepared_at, ready_for_delivery_at
 			FROM dsh_special_requests WHERE tenant_id = $1 AND id = $2 FOR UPDATE`
-		args = []any{tenantID, id}
+		args = []any{operatorContextID, id}
 	}
 
 	var (
@@ -557,14 +557,14 @@ func CheckSheinDispatchReadiness(tx *sql.Tx, tenantID, id string) error {
 }
 
 func (r *PostgresRepository) ListByClient(ctx context.Context, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
-	return r.ListByClientInTenant(ctx, DefaultTenantID, clientID, limit, offset)
+	return r.ListByClientInTenant(ctx, DefaultOperatorContextID, clientID, limit, offset)
 }
 
-func (r *PostgresRepository) ListByClientInTenant(ctx context.Context, tenantID string, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
+func (r *PostgresRepository) ListByClientInTenant(ctx context.Context, operatorContextID string, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
 	limit = clampLimit(limit)
 
 	var total int
-	err := r.db.QueryRowContext(ctx, "SELECT count(*) FROM dsh_special_requests WHERE tenant_id = $1 AND client_id = $2", tenantID, clientID).Scan(&total)
+	err := r.db.QueryRowContext(ctx, "SELECT count(*) FROM dsh_special_requests WHERE tenant_id = $1 AND client_id = $2", operatorContextID, clientID).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -575,7 +575,7 @@ func (r *PostgresRepository) ListByClientInTenant(ctx context.Context, tenantID 
 		ORDER BY created_at DESC
 		LIMIT $3 OFFSET $4
 	`
-	rows, err := r.db.QueryContext(ctx, query, tenantID, clientID, limit, offset)
+	rows, err := r.db.QueryContext(ctx, query, operatorContextID, clientID, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -596,14 +596,14 @@ func (r *PostgresRepository) ListByClientInTenant(ctx context.Context, tenantID 
 }
 
 func (r *PostgresRepository) ListForOperator(ctx context.Context, reqType *string, status *string, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
-	return r.ListForOperatorInTenant(ctx, DefaultTenantID, reqType, status, workflowStage, limit, offset)
+	return r.ListForOperatorInTenant(ctx, DefaultOperatorContextID, reqType, status, workflowStage, limit, offset)
 }
 
-func (r *PostgresRepository) ListForOperatorInTenant(ctx context.Context, tenantID string, reqType *string, status *string, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
+func (r *PostgresRepository) ListForOperatorInTenant(ctx context.Context, operatorContextID string, reqType *string, status *string, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
 	limit = clampLimit(limit)
 
 	whereClause := "WHERE tenant_id = $1"
-	var args []interface{} = []interface{}{tenantID}
+	var args []interface{} = []interface{}{operatorContextID}
 	argIdx := 2
 	if reqType != nil && *reqType != "" {
 		whereClause += fmt.Sprintf(" AND request_type = $%d", argIdx)

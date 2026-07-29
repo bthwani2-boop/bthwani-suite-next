@@ -261,10 +261,10 @@ components:
     GovernedRefund:
       type: object
       additionalProperties: false
-      required: [id, tenantId, paymentSessionId, orderId, clientId, amountMinorUnits, currency, reason, status, requestedByOperatorId, eligibilityReference, idempotencyKey, providerIdempotencyKey, version, createdAt, updatedAt]
+      required: [id, operatorContextId, paymentSessionId, orderId, clientId, amountMinorUnits, currency, reason, status, requestedByOperatorId, eligibilityReference, idempotencyKey, providerIdempotencyKey, version, createdAt, updatedAt]
       properties:
         id: { type: string }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         paymentSessionId: { type: string }
         orderId: { type: string }
         clientId: { type: string }
@@ -291,9 +291,9 @@ components:
     CreateRefundRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, paymentSessionId, orderId, clientId, amountMinorUnits, reason, eligibilityReference, requestedByOperatorId]
+      required: [operatorContextId, paymentSessionId, orderId, clientId, amountMinorUnits, reason, eligibilityReference, requestedByOperatorId]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         paymentSessionId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
         clientId: { type: string, minLength: 1 }
@@ -336,11 +336,11 @@ components:
     RefundAuditEvent:
       type: object
       additionalProperties: false
-      required: [id, refundId, tenantId, eventType, actorId, actorType, toStatus, createdAt]
+      required: [id, refundId, operatorContextId, eventType, actorId, actorType, toStatus, createdAt]
       properties:
         id: { type: string, format: uuid }
         refundId: { type: string }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         eventType: { type: string }
         actorId: { type: string }
         actorType: { type: string, enum: [operator, service, provider, reconciler, system] }

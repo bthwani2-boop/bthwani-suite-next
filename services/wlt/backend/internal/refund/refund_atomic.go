@@ -26,23 +26,23 @@ func legacyRefundView(item *GovernedRefund) *Refund {
 	}
 }
 
-func refundTenantContextForSession(ctx context.Context, db *sql.DB, paymentSessionID string) (context.Context, string, error) {
-	if tenantID, ok := shared.TenantIDFromContext(ctx); ok {
-		return ctx, tenantID, nil
+func refundOperatorContextForSession(ctx context.Context, db *sql.DB, paymentSessionID string) (context.Context, string, error) {
+	if operatorContextID, ok := shared.OperatorContextIDFromContext(ctx); ok {
+		return ctx, operatorContextID, nil
 	}
-	var tenantID string
+	var operatorContextID string
 	if err := db.QueryRowContext(ctx, `
-		SELECT tenant_id FROM wlt_payment_sessions WHERE id=$1`, paymentSessionID).Scan(&tenantID); err != nil {
+		SELECT tenant_id FROM wlt_payment_sessions WHERE id=$1`, paymentSessionID).Scan(&operatorContextID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ctx, "", fmt.Errorf("payment session not found")
 		}
 		return ctx, "", err
 	}
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
 		return ctx, "", fmt.Errorf("payment session tenant is missing")
 	}
-	return shared.WithTenantContext(ctx, tenantID), tenantID, nil
+	return shared.WithOperatorContext(ctx, operatorContextID), operatorContextID, nil
 }
 
 // CreateRefundAtomicForTenant preserves order-cancellation compatibility while
@@ -57,13 +57,13 @@ func CreateRefundAtomicForTenant(ctx context.Context, db *sql.DB, input CreateRe
 	if input.PaymentSessionID == "" || input.OrderID == "" || input.ClientID == "" || input.Reason == "" {
 		return nil, false, fmt.Errorf("paymentSessionId, orderId, clientId, and reason are required")
 	}
-	trustedCtx, tenantID, err := refundTenantContextForSession(ctx, db, input.PaymentSessionID)
+	trustedCtx, operatorContextID, err := refundOperatorContextForSession(ctx, db, input.PaymentSessionID)
 	if err != nil {
 		return nil, false, err
 	}
 	key := "order-cancellation:" + input.PaymentSessionID + ":" + input.OrderID
 	item, replayed, err := CreateGovernedRefund(trustedCtx, db, GovernedCreateRefundInput{
-		TenantID: tenantID,
+		OperatorContextID: operatorContextID,
 		PaymentSessionID: input.PaymentSessionID,
 		OrderID: input.OrderID,
 		ClientID: input.ClientID,

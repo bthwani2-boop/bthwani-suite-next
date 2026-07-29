@@ -11,7 +11,7 @@ import (
 
 func TestClientPropagatesTrustedTenantToCodHandoff(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-a" {
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "tenant-a" {
 			t.Fatalf("expected trusted tenant header, got %q", got)
 		}
 		w.WriteHeader(http.StatusCreated)
@@ -19,7 +19,7 @@ func TestClientPropagatesTrustedTenantToCodHandoff(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	ctx := WithTenantContext(context.Background(), "tenant-a")
+	ctx := WithOperatorContext(context.Background(), "tenant-a")
 	err := client.NotifyDeliveryCollection(ctx, NotifyDeliveryCollectionInput{
 		OrderID:          "order-1",
 		CollectorType:    "captain",
@@ -34,25 +34,25 @@ func TestClientPropagatesTrustedTenantToCodHandoff(t *testing.T) {
 
 func TestClientPropagatesTenantInPaymentBodyAndHeader(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-b" {
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "tenant-b" {
 			t.Fatalf("expected trusted tenant header, got %q", got)
 		}
 		var input CreatePaymentSessionInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
-		if input.TenantID != "tenant-b" {
-			t.Fatalf("expected tenant-b in payment body, got %q", input.TenantID)
+		if input.OperatorContextID != "tenant-b" {
+			t.Fatalf("expected tenant-b in payment body, got %q", input.OperatorContextID)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"paymentSession": PaymentSession{ID: "ps-1", TenantID: "tenant-b"},
+			"paymentSession": PaymentSession{ID: "ps-1", OperatorContextID: "tenant-b"},
 		})
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	ctx := WithTenantContext(context.Background(), "tenant-b")
+	ctx := WithOperatorContext(context.Background(), "tenant-b")
 	if _, err := client.CreatePaymentSession(ctx, CreatePaymentSessionInput{
 		CheckoutIntentID: "checkout-1",
 		ClientID:         "client-1",
@@ -65,10 +65,10 @@ func TestClientPropagatesTenantInPaymentBodyAndHeader(t *testing.T) {
 
 func TestClientRejectsTenantOverride(t *testing.T) {
 	client := NewClient("https://wlt.internal", "service-token")
-	ctx := WithTenantContext(context.Background(), "tenant-a")
+	ctx := WithOperatorContext(context.Background(), "tenant-a")
 
 	_, err := client.CreatePaymentSession(ctx, CreatePaymentSessionInput{
-		TenantID:         "tenant-b",
+		OperatorContextID:         "tenant-b",
 		CheckoutIntentID: "checkout-1",
 	})
 	if err == nil || !strings.Contains(err.Error(), "does not match trusted request context") {
@@ -80,7 +80,7 @@ func TestClientFailsClosedWithoutTrustedTenantInEveryMode(t *testing.T) {
 	for _, mode := range []string{"", "deferred", "active"} {
 		t.Run(mode, func(t *testing.T) {
 			t.Setenv("BTHWANI_SAAS_MODE", mode)
-			t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "legacy-default")
+			t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "legacy-default")
 			client := NewClient("https://wlt.internal", "service-token")
 			if !client.Configured() {
 				t.Fatal("transport configuration must not depend on a process-wide tenant")
@@ -96,10 +96,10 @@ func TestClientFailsClosedWithoutTrustedTenantInEveryMode(t *testing.T) {
 }
 
 func TestClientIgnoresProcessWideDefaultWhenTrustedTenantExists(t *testing.T) {
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "legacy-default")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "legacy-default")
 	client := NewClient("https://wlt.internal", "service-token")
-	tenantID, err := client.resolveTrustedTenant(WithTenantContext(context.Background(), "tenant-canonical"), "")
-	if err != nil || tenantID != "tenant-canonical" {
-		t.Fatalf("trusted tenant=%q err=%v", tenantID, err)
+	operatorContextID, err := client.resolveTrustedTenant(WithOperatorContext(context.Background(), "tenant-canonical"), "")
+	if err != nil || operatorContextID != "tenant-canonical" {
+		t.Fatalf("trusted tenant=%q err=%v", operatorContextID, err)
 	}
 }

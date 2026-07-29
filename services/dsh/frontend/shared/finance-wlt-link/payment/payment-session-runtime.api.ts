@@ -30,16 +30,16 @@ function classify(error: unknown): PaymentSessionRuntimeError {
   return { state: "error", code: value.code ?? `HTTP_${value.status ?? "ERROR"}`, message: value.message ?? "تعذر تحميل الحقيقة المالية الحاكمة." };
 }
 
-function timelinePath(paymentSessionId: string, tenantId: string): string {
-  return `/dsh/control-panel/finance/payment-sessions/${encodeURIComponent(paymentSessionId)}/timeline?tenantId=${encodeURIComponent(tenantId)}`;
+function timelinePath(paymentSessionId: string, operatorContextId: string): string {
+  return `/dsh/control-panel/finance/payment-sessions/${encodeURIComponent(paymentSessionId)}/timeline?operatorContextId=${encodeURIComponent(operatorContextId)}`;
 }
 
 export async function loadPaymentSessionTimeline(
   paymentSessionId: string,
-  tenantId: string,
+  operatorContextId: string,
 ): Promise<{ readonly ok: true; readonly data: WltPaymentTimelineEnvelope } | { readonly ok: false; readonly error: PaymentSessionRuntimeError }> {
   try {
-    const data = await request<WltPaymentTimelineEnvelope>(timelinePath(paymentSessionId, tenantId));
+    const data = await request<WltPaymentTimelineEnvelope>(timelinePath(paymentSessionId, operatorContextId));
     return { ok: true, data };
   } catch (error) {
     return { ok: false, error: classify(error) };
@@ -48,12 +48,12 @@ export async function loadPaymentSessionTimeline(
 
 export async function refreshPaymentSessionProviderStatus(
   paymentSessionId: string,
-  tenantId: string,
+  operatorContextId: string,
 ): Promise<{ readonly ok: true; readonly data: WltPaymentOperationEnvelope } | { readonly ok: false; readonly error: PaymentSessionRuntimeError }> {
   const correlationId = corrId("payment-status-refresh");
   try {
     const data = await request<WltPaymentOperationEnvelope>(
-      `/dsh/control-panel/finance/payment-sessions/${encodeURIComponent(paymentSessionId)}/refresh-provider-status?tenantId=${encodeURIComponent(tenantId)}`,
+      `/dsh/control-panel/finance/payment-sessions/${encodeURIComponent(paymentSessionId)}/refresh-provider-status?operatorContextId=${encodeURIComponent(operatorContextId)}`,
       {
         method: "POST",
         correlationId,

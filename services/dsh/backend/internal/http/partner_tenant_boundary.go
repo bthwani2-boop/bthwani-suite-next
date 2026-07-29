@@ -27,12 +27,12 @@ func (s *protectedStoreServer) withTrustedPartnerTenant(next http.HandlerFunc) h
 			store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 			return
 		}
-		tenantID := strings.TrimSpace(identity.TenantID)
-		if tenantID == "" {
-			store.SendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is required")
+		operatorContextID := strings.TrimSpace(identity.OperatorContextID)
+		if operatorContextID == "" {
+			store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted tenant context is required")
 			return
 		}
-		ctx := partner.WithTenantContext(r.Context(), tenantID)
+		ctx := partner.WithOperatorContext(r.Context(), operatorContextID)
 		next(w, r.WithContext(ctx))
 	}
 }
@@ -42,18 +42,18 @@ func (s *protectedStoreServer) withTrustedPartnerTenant(next http.HandlerFunc) h
 // Cross-tenant ownership is intentionally indistinguishable from not found.
 func (s *protectedStoreServer) withTenantPartnerResource(next http.HandlerFunc) http.HandlerFunc {
 	return s.withTrustedPartnerTenant(func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := partner.TenantIDFromContext(r.Context())
+		operatorContextID, ok := partner.OperatorContextIDFromContext(r.Context())
 		if !ok {
-			store.SendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is required")
+			store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted tenant context is required")
 			return
 		}
-		err := partner.EnsureTenantPartner(s.db, tenantID, r.PathValue("partnerId"))
+		err := partner.EnsureTenantPartner(s.db, operatorContextID, r.PathValue("partnerId"))
 		if errors.Is(err, partner.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
 			return
 		}
-		if errors.Is(err, partner.ErrTenantContextRequired) {
-			store.SendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", err.Error())
+		if errors.Is(err, partner.ErrOperatorContextRequired) {
+			store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", err.Error())
 			return
 		}
 		if err != nil {

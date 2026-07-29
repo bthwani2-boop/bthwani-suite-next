@@ -24,7 +24,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
@@ -50,7 +50,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
       responses:
         '200':
           description: Payment session.
@@ -70,7 +70,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       responses:
@@ -94,7 +94,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       responses:
@@ -118,7 +118,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       responses:
@@ -139,7 +139,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
       responses:
         '200':
           description: Governed payment timeline.
@@ -163,7 +163,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       responses:
@@ -185,7 +185,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       responses:
@@ -202,7 +202,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
@@ -235,7 +235,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
@@ -313,14 +313,14 @@ components:
       enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_collected, failed, expired, provider_result_unknown]
     PaymentSession:
       type: object
-      required: [id, tenantId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]
+      required: [id, operatorContextId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]
       properties:
         id: { type: string }
         checkoutIntentId: { type: [string, 'null'] }
         specialRequestId: { type: [string, 'null'] }
         subscriptionPurchaseId: { type: [string, 'null'] }
         commercialProductReference: { type: [string, 'null'] }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         clientId: { type: string }
         storeId: { type: string }
         paymentMethod: { type: string, enum: [cod, wallet, mixed, official_wallet] }
@@ -333,13 +333,13 @@ components:
         updatedAt: { type: string, format: date-time }
     CreatePaymentSessionRequest:
       type: object
-      required: [tenantId, clientId, storeId, paymentMethod, amountMinorUnits, currency]
+      required: [operatorContextId, clientId, storeId, paymentMethod, amountMinorUnits, currency]
       properties:
         checkoutIntentId: { type: string }
         specialRequestId: { type: string }
         subscriptionPurchaseId: { type: string }
         commercialProductReference: { type: string }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         clientId: { type: string }
         storeId: { type: string }
         paymentMethod: { type: string, enum: [cod, wallet, mixed, official_wallet] }
@@ -365,12 +365,12 @@ components:
             ledgerTransactionId: { type: string }
     ProviderWebhookRequest:
       type: object
-      required: [eventId, type, tenantId, paymentSessionId, status]
+      required: [eventId, type, operatorContextId, paymentSessionId, status]
       additionalProperties: false
       properties:
         eventId: { type: string, minLength: 1, maxLength: 200 }
         type: { type: string, enum: [payment.authorized, payment.captured, payment.failed, payment.expired] }
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         paymentSessionId: { type: string, minLength: 1 }
         status: { type: string, enum: [authorized, captured, failed, expired] }
         providerReference: { type: string }

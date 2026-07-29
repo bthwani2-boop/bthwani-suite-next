@@ -25,7 +25,7 @@ var (
 
 type GovernedRefund struct {
 	ID                      string  `json:"id"`
-	TenantID                string  `json:"tenantId"`
+	OperatorContextID                string  `json:"operatorContextId"`
 	PaymentSessionID        string  `json:"paymentSessionId"`
 	OrderID                 string  `json:"orderId"`
 	ClientID                string  `json:"clientId"`
@@ -52,7 +52,7 @@ type GovernedRefund struct {
 }
 
 type GovernedCreateRefundInput struct {
-	TenantID             string `json:"tenantId"`
+	OperatorContextID             string `json:"operatorContextId"`
 	PaymentSessionID     string `json:"paymentSessionId"`
 	OrderID              string `json:"orderId"`
 	ClientID             string `json:"clientId"`
@@ -81,7 +81,7 @@ type RefundReconciliationInput struct {
 type RefundAuditEvent struct {
 	ID                string `json:"id"`
 	RefundID          string `json:"refundId"`
-	TenantID          string `json:"tenantId"`
+	OperatorContextID          string `json:"operatorContextId"`
 	EventType         string `json:"eventType"`
 	ActorID           string `json:"actorId"`
 	ActorType         string `json:"actorType"`
@@ -108,7 +108,7 @@ func scanGovernedRefund(row scanner) (*GovernedRefund, error) {
 	var out GovernedRefund
 	var providerAttemptedAt, resolvedAt sql.NullTime
 	if err := row.Scan(
-		&out.ID, &out.TenantID, &out.PaymentSessionID, &out.OrderID, &out.ClientID,
+		&out.ID, &out.OperatorContextID, &out.PaymentSessionID, &out.OrderID, &out.ClientID,
 		&out.AmountMinorUnits, &out.Currency, &out.Reason, &out.Status, &out.RequestedByOperatorID,
 		&out.ApprovedByOperatorID, &out.RejectedByOperatorID, &out.DecisionReason,
 		&out.EligibilityReference, &out.IdempotencyKey, &out.ProviderIdempotencyKey,
@@ -130,7 +130,7 @@ func scanGovernedRefund(row scanner) (*GovernedRefund, error) {
 }
 
 func normalizeCreateInput(input GovernedCreateRefundInput) GovernedCreateRefundInput {
-	input.TenantID = strings.TrimSpace(input.TenantID)
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
 	input.ClientID = strings.TrimSpace(input.ClientID)
@@ -148,7 +148,7 @@ func appendRefundAuditTx(ctx context.Context, tx *sql.Tx, refund *GovernedRefund
 			(refund_id, tenant_id, event_type, actor_id, actor_type, from_status, to_status,
 			 reason, correlation_id, idempotency_key, provider_reference)
 		VALUES ($1,$2,$3,$4,$5,NULLIF($6,''),$7,NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),NULLIF($11,''))`,
-		refund.ID, refund.TenantID, eventType, actorID, actorType, fromStatus, toStatus,
+		refund.ID, refund.OperatorContextID, eventType, actorID, actorType, fromStatus, toStatus,
 		reason, correlationID, idempotencyKey, providerReference,
 	)
 	return err
@@ -172,14 +172,14 @@ func GetGovernedRefund(db *sql.DB, refundID string) (*GovernedRefund, error) {
 	return out, err
 }
 
-func ListGovernedRefunds(db *sql.DB, orderID, clientID, tenantID string) ([]*GovernedRefund, error) {
+func ListGovernedRefunds(db *sql.DB, orderID, clientID, operatorContextID string) ([]*GovernedRefund, error) {
 	orderID = strings.TrimSpace(orderID)
 	clientID = strings.TrimSpace(clientID)
-	tenantID = strings.TrimSpace(tenantID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	query := `SELECT ` + governedRefundCols + ` FROM wlt_refunds WHERE 1=1`
 	args := make([]any, 0, 3)
-	if tenantID != "" {
-		args = append(args, tenantID)
+	if operatorContextID != "" {
+		args = append(args, operatorContextID)
 		query += fmt.Sprintf(" AND tenant_id=$%d", len(args))
 	}
 	if orderID != "" {
@@ -234,10 +234,10 @@ func CreateGovernedRefund(ctx context.Context, db *sql.DB, input GovernedCreateR
 	} else if err != nil {
 		return nil, false, err
 	}
-	if input.TenantID == "" {
-		input.TenantID = sessionTenant
+	if input.OperatorContextID == "" {
+		input.OperatorContextID = sessionTenant
 	}
-	if input.TenantID != sessionTenant || input.ClientID != sessionClient {
+	if input.OperatorContextID != sessionTenant || input.ClientID != sessionClient {
 		return nil, false, ErrRefundReferenceConflict
 	}
 	if sessionStatus != "captured" && sessionStatus != "cod_collected" {
@@ -250,7 +250,7 @@ func CreateGovernedRefund(ctx context.Context, db *sql.DB, input GovernedCreateR
 	existing, existingErr := scanGovernedRefund(tx.QueryRowContext(ctx, `
 		SELECT `+governedRefundCols+` FROM wlt_refunds
 		WHERE tenant_id=$1 AND payment_session_id=$2 AND idempotency_key=$3
-		FOR UPDATE`, input.TenantID, input.PaymentSessionID, input.IdempotencyKey))
+		FOR UPDATE`, input.OperatorContextID, input.PaymentSessionID, input.IdempotencyKey))
 	if existingErr == nil {
 		amountMatches := input.AmountMinorUnits == 0 || input.AmountMinorUnits == existing.AmountMinorUnits
 		if !amountMatches || existing.OrderID != input.OrderID || existing.ClientID != input.ClientID || existing.Reason != input.Reason || existing.EligibilityReference != input.EligibilityReference || existing.RequestedByOperatorID != input.RequestedByOperatorID {
@@ -270,7 +270,7 @@ func CreateGovernedRefund(ctx context.Context, db *sql.DB, input GovernedCreateR
 		SELECT COALESCE(SUM(amount_minor_units),0)
 		FROM wlt_refunds
 		WHERE tenant_id=$1 AND payment_session_id=$2
-		  AND status IN ('requested','approved','processing','provider_unknown','completed')`, input.TenantID, input.PaymentSessionID).Scan(&reserved); err != nil {
+		  AND status IN ('requested','approved','processing','provider_unknown','completed')`, input.OperatorContextID, input.PaymentSessionID).Scan(&reserved); err != nil {
 		return nil, false, err
 	}
 	remaining := sessionAmount - reserved
@@ -281,14 +281,14 @@ func CreateGovernedRefund(ctx context.Context, db *sql.DB, input GovernedCreateR
 	if requestedAmount <= 0 || requestedAmount > remaining {
 		return nil, false, ErrRefundAmountUnavailable
 	}
-	providerKey := "refund:" + input.TenantID + ":" + input.PaymentSessionID + ":" + input.IdempotencyKey
+	providerKey := "refund:" + input.OperatorContextID + ":" + input.PaymentSessionID + ":" + input.IdempotencyKey
 	created, err := scanGovernedRefund(tx.QueryRowContext(ctx, `
 		INSERT INTO wlt_refunds
 			(tenant_id,payment_session_id,order_id,client_id,amount_minor_units,currency,reason,status,
 			 requested_by_operator_id,eligibility_reference,idempotency_key,provider_idempotency_key)
 		VALUES($1,$2,$3,$4,$5,$6,$7,'requested',$8,$9,$10,$11)
 		RETURNING `+governedRefundCols,
-		input.TenantID, input.PaymentSessionID, input.OrderID, input.ClientID, requestedAmount,
+		input.OperatorContextID, input.PaymentSessionID, input.OrderID, input.ClientID, requestedAmount,
 		sessionCurrency, input.Reason, input.RequestedByOperatorID, input.EligibilityReference,
 		input.IdempotencyKey, providerKey,
 	))
@@ -471,7 +471,7 @@ func completedReferenceStatusTx(ctx context.Context, tx *sql.Tx, refund *Governe
 	}
 	if err := tx.QueryRowContext(ctx, `
 		SELECT COALESCE(SUM(amount_minor_units),0) FROM wlt_refunds
-		WHERE tenant_id=$1 AND payment_session_id=$2 AND status='completed'`, refund.TenantID, refund.PaymentSessionID).Scan(&completed); err != nil {
+		WHERE tenant_id=$1 AND payment_session_id=$2 AND status='completed'`, refund.OperatorContextID, refund.PaymentSessionID).Scan(&completed); err != nil {
 		return "", "", err
 	}
 	if completed >= captured {
@@ -543,7 +543,7 @@ func finalizeGovernedRefundSuccess(ctx context.Context, db *sql.DB, refundID, ac
 	if specialRequestID.Valid {
 		specialPtr = &specialRequestID.String
 	}
-	if err := dshoutbox.EnqueueRefund(tx, updated.ID, updated.PaymentSessionID, updated.TenantID, updated.OrderID, updated.Reason, correlationID, checkoutPtr, specialPtr); err != nil {
+	if err := dshoutbox.EnqueueRefund(tx, updated.ID, updated.PaymentSessionID, updated.OperatorContextID, updated.OrderID, updated.Reason, correlationID, checkoutPtr, specialPtr); err != nil {
 		return nil, err
 	}
 	if updated.ReconciliationCaseID != "" {
@@ -655,7 +655,7 @@ func ListGovernedRefundAudit(db *sql.DB, refundID string) ([]RefundAuditEvent, e
 	out := make([]RefundAuditEvent, 0)
 	for rows.Next() {
 		var item RefundAuditEvent
-		if err := rows.Scan(&item.ID, &item.RefundID, &item.TenantID, &item.EventType, &item.ActorID, &item.ActorType, &item.FromStatus, &item.ToStatus, &item.Reason, &item.CorrelationID, &item.IdempotencyKey, &item.ProviderReference, &item.CreatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.RefundID, &item.OperatorContextID, &item.EventType, &item.ActorID, &item.ActorType, &item.FromStatus, &item.ToStatus, &item.Reason, &item.CorrelationID, &item.IdempotencyKey, &item.ProviderReference, &item.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, item)
@@ -705,13 +705,13 @@ func HandleCreateGovernedRefund(db *sql.DB) http.HandlerFunc {
 		}
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
-		trustedTenant := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+		trustedTenant := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 		if trustedTenant != "" {
-			if input.TenantID != "" && strings.TrimSpace(input.TenantID) != trustedTenant {
+			if input.OperatorContextID != "" && strings.TrimSpace(input.OperatorContextID) != trustedTenant {
 				shared.SendError(w, http.StatusForbidden, "TENANT_MISMATCH", "refund tenant does not match trusted DSH tenant")
 				return
 			}
-			input.TenantID = trustedTenant
+			input.OperatorContextID = trustedTenant
 		}
 		created, replayed, err := CreateGovernedRefund(r.Context(), db, input)
 		if err != nil {
@@ -745,7 +745,7 @@ func HandleGetGovernedRefund(db *sql.DB) http.HandlerFunc {
 
 func HandleListGovernedRefunds(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		items, err := ListGovernedRefunds(db, r.URL.Query().Get("orderId"), r.URL.Query().Get("clientId"), r.URL.Query().Get("tenantId"))
+		items, err := ListGovernedRefunds(db, r.URL.Query().Get("orderId"), r.URL.Query().Get("clientId"), r.URL.Query().Get("operatorContextId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

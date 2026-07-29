@@ -54,7 +54,7 @@ test("JRN-024 consumes governed idempotency headers for every replayable write",
 });
 
 test("JRN-024 stores atomic platform-workforce actor scoped replay receipts", () => {
-  assert.doesNotMatch(mutationReceipts, /bthwani\.tenant_id|tenantID/);
+  assert.doesNotMatch(mutationReceipts, /bthwani\.tenant_id|operatorContextID/);
   assert.match(mutationReceipts, /pg_advisory_xact_lock/);
   assert.match(mutationReceipts, /dsh_field_readiness_operation_receipts/);
   assert.match(mutationReceipts, /actorID, string\(operation\), mutation\.IdempotencyKey/);
@@ -154,7 +154,7 @@ test("JRN-024 accepts only governed app-field links and notification actions", (
 });
 
 test("JRN-024 isolates and clears encrypted offline work per workforce actor and installation", () => {
-  assert.doesNotMatch(offlineQueue, /tenantId/);
+  assert.doesNotMatch(offlineQueue, /operatorContextId/);
   assert.match(offlineQueue, /readonly actorId: string/);
   assert.match(offlineQueue, /readonly installationId: string/);
   assert.match(offlineQueue, /configureFieldOfflineQueueStorage/);

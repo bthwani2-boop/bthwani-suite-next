@@ -15,7 +15,7 @@ func (s *protectedStoreServer) handlePartnerFinanceCodRecords(w http.ResponseWri
 		return
 	}
 	query := url.Values{"partnerId": {actor.ID}}
-	s.proxyFinanceRead(w, r, "/wlt/cod-records", query, actor.TenantID)
+	s.proxyFinanceRead(w, r, "/wlt/cod-records", query, actor.OperatorContextID)
 }
 
 func (s *protectedStoreServer) requirePartnerCodRecord(w http.ResponseWriter, r *http.Request, partnerID, recordID string) bool {
@@ -88,7 +88,7 @@ func (s *protectedStoreServer) handleFinanceCodReconciliationCases(w http.Respon
 	if !ok {
 		return
 	}
-	s.proxyFinanceRead(w, r, "/wlt/cod-reconciliation-cases", financeQuery(r, "status"), actor.TenantID)
+	s.proxyFinanceRead(w, r, "/wlt/cod-reconciliation-cases", financeQuery(r, "status"), actor.OperatorContextID)
 }
 
 func (s *protectedStoreServer) handleAssignFinanceCodReconciliationCase(w http.ResponseWriter, r *http.Request) {

@@ -178,7 +178,7 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 	partnerID := "test-partner-1"
 	storeID := "test-store-1"
 	actorID := "test-actor-1"
-	tenantID := "local-dsh"
+	operatorContextID := "local-dsh"
 	mediaRefStr := "test-media-ref-1"
 
 	// Insert test store and partner/scope mapping
@@ -190,7 +190,7 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_partners (id, tenant_id, legal_name_ar, legal_name_en, display_name, legal_identity_type, legal_identity_number, owner_name, primary_phone, email, category)
 		VALUES ($1, $2, 'شريك تجريبي', 'Test Partner', 'Test Partner', 'commercial_register', '12345', 'Owner', '+967770000000', 'test@local.test', 'restaurant')`,
-		partnerID, tenantID); err != nil {
+		partnerID, operatorContextID); err != nil {
 		t.Fatalf("failed to insert test partner: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID) })
@@ -198,7 +198,7 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (id, tenant_id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, partner_id)
 		VALUES ($1, $3, $1, 'Test Store for Media', 'active', 'SAN', 'SAN-1', 'serviceable', true, $2)`,
-		storeID, partnerID, tenantID); err != nil {
+		storeID, partnerID, operatorContextID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID) })
@@ -206,7 +206,7 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_store_actor_scopes (tenant_id, actor_id, actor_role, store_id, scope_type, active)
 		VALUES ($3, $1, 'partner', $2, 'own', true)`,
-		actorID, storeID, tenantID); err != nil {
+		actorID, storeID, operatorContextID); err != nil {
 		t.Fatalf("failed to insert test scope: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_actor_scopes WHERE actor_id = $1`, actorID) })
@@ -221,7 +221,7 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 
 	// 1. Partner in scope should be allowed
 	{
-		actor := store.StoreActor{ID: actorID, Role: "partner", TenantID: tenantID}
+		actor := store.StoreActor{ID: actorID, Role: "partner", OperatorContextID: operatorContextID}
 		allowed, err := s.actorCanAccessMediaReference(ctx, actor, ref)
 		if err != nil {
 			t.Fatalf("partner scope verification failed: %v", err)
@@ -233,7 +233,7 @@ func TestActorCanAccessMediaReferenceDBIntegration(t *testing.T) {
 
 	// 2. Partner outside scope (different partner ID or no scopes) should be forbidden
 	{
-		actor := store.StoreActor{ID: "other-actor-no-scope", Role: "partner", TenantID: tenantID}
+		actor := store.StoreActor{ID: "other-actor-no-scope", Role: "partner", OperatorContextID: operatorContextID}
 		allowed, err := s.actorCanAccessMediaReference(ctx, actor, ref)
 		if err != nil {
 			t.Fatalf("partner out of scope verification failed: %v", err)
@@ -254,11 +254,11 @@ func TestHandleMediaDownloadEndpoint(t *testing.T) {
 		var identity auth.Identity
 		switch authHeader {
 		case "Bearer operator-token":
-			identity = auth.Identity{Subject: "op-1", TenantID: "tenant-a", Roles: []string{"operator"}, AuthState: "authenticated"}
+			identity = auth.Identity{Subject: "op-1", OperatorContextID: "tenant-a", Roles: []string{"operator"}, AuthState: "authenticated"}
 		case "Bearer field-owner-token":
-			identity = auth.Identity{Subject: "field-1", TenantID: "tenant-a", Roles: []string{"field"}, AuthState: "authenticated"}
+			identity = auth.Identity{Subject: "field-1", OperatorContextID: "tenant-a", Roles: []string{"field"}, AuthState: "authenticated"}
 		case "Bearer field-non-owner-token":
-			identity = auth.Identity{Subject: "field-2", TenantID: "tenant-a", Roles: []string{"field"}, AuthState: "authenticated"}
+			identity = auth.Identity{Subject: "field-2", OperatorContextID: "tenant-a", Roles: []string{"field"}, AuthState: "authenticated"}
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
 			_, _ = w.Write([]byte(`{"message":"unauthenticated"}`))
@@ -319,7 +319,7 @@ func TestHandleMediaDownloadEndpointDBIntegration(t *testing.T) {
 		var identity auth.Identity
 		switch authHeader {
 		case "Bearer operator-token":
-			identity = auth.Identity{Subject: "op-1", TenantID: "local-dsh", Roles: []string{"operator"}, AuthState: "authenticated"}
+			identity = auth.Identity{Subject: "op-1", OperatorContextID: "local-dsh", Roles: []string{"operator"}, AuthState: "authenticated"}
 		default:
 			w.WriteHeader(http.StatusUnauthorized)
 			return

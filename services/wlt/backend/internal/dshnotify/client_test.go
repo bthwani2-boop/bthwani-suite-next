@@ -24,8 +24,8 @@ func TestNotifyIncludesTenantForSpecialRequestEvents(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Notify failed: %v", err)
 	}
-	if payload["tenantId"] != "tenant-a" {
-		t.Fatalf("expected tenantId tenant-a, got %q", payload["tenantId"])
+	if payload["operatorContextId"] != "tenant-a" {
+		t.Fatalf("expected operatorContextId tenant-a, got %q", payload["operatorContextId"])
 	}
 	if payload["specialRequestId"] != specialRequestID {
 		t.Fatalf("expected specialRequestId %s, got %q", specialRequestID, payload["specialRequestId"])

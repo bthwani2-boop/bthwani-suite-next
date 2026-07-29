@@ -32,7 +32,7 @@ actions:
           - mode
           - commercialActivationState
           - productionDeploymentAuthorized
-          - defaultTenantId
+          - defaultOperatorContextId
           - runtimeEnabled
         properties:
           mode:
@@ -43,7 +43,7 @@ actions:
             enum: [blocked, eligible, authorized, active]
           productionDeploymentAuthorized:
             type: boolean
-          defaultTenantId:
+          defaultOperatorContextId:
             type: string
           runtimeEnabled:
             type: boolean

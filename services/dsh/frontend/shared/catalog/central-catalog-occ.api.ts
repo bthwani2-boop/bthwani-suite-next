@@ -1,4 +1,4 @@
-import type { components } from "../../../clients/generated/dsh-catalog-api";
+import type { components } from "../../../clients/generated/dsh-api";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import * as catalogApi from "./central-catalog.api";

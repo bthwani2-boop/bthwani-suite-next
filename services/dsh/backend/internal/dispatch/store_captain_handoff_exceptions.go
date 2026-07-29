@@ -279,7 +279,7 @@ func reportStoreCaptainHandoffException(
 	}
 	defer tx.Rollback()
 
-	var orderID, storeID, captainID, assignmentStatus, deliveryStatus, handoffStatus, tenantID string
+	var orderID, storeID, captainID, assignmentStatus, deliveryStatus, handoffStatus, operatorContextID string
 	err = tx.QueryRow(`
 		SELECT o.id::text, o.store_id, o.tenant_id,
 		       a.captain_id, a.status, d.status, h.status
@@ -291,7 +291,7 @@ func reportStoreCaptainHandoffException(
 		FOR UPDATE OF h, a, d, o`, assignmentID).Scan(
 		&orderID,
 		&storeID,
-		&tenantID,
+		&operatorContextID,
 		&captainID,
 		&assignmentStatus,
 		&deliveryStatus,
@@ -316,7 +316,7 @@ func reportStoreCaptainHandoffException(
 		return nil, fmt.Errorf("%w: handoff attempt is not open", ErrConflict)
 	}
 
-	existing, err := getDeliveryExceptionByCorrelationTx(tx, tenantID, input.CorrelationID)
+	existing, err := getDeliveryExceptionByCorrelationTx(tx, operatorContextID, input.CorrelationID)
 	if err == nil {
 		if existing.AssignmentID != assignmentID {
 			return nil, fmt.Errorf("%w: correlationId already belongs to a different exception command", ErrConflict)
@@ -382,7 +382,7 @@ func reportStoreCaptainHandoffException(
 			$10
 		)
 		RETURNING id::text`,
-		tenantID,
+		operatorContextID,
 		assignmentID,
 		orderID,
 		captainID,

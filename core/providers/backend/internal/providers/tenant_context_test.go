@@ -6,24 +6,24 @@ import (
 	"testing"
 )
 
-func TestRequireTenantContextFailsClosed(t *testing.T) {
-	tenantID, err := RequireTenantContext(context.Background())
-	if !errors.Is(err, ErrTenantContextRequired) || tenantID != "" {
-		t.Fatalf("missing tenant returned tenant=%q err=%v", tenantID, err)
+func TestRequireOperatorContextFailsClosed(t *testing.T) {
+	operatorContextID, err := RequireOperatorContext(context.Background())
+	if !errors.Is(err, ErrOperatorContextRequired) || operatorContextID != "" {
+		t.Fatalf("missing tenant returned tenant=%q err=%v", operatorContextID, err)
 	}
 }
 
-func TestRequireTenantContextReturnsAuthenticatedTenant(t *testing.T) {
-	ctx := WithTenantContext(context.Background(), "  tenant-a  ")
-	tenantID, err := RequireTenantContext(ctx)
-	if err != nil || tenantID != "tenant-a" {
-		t.Fatalf("trusted tenant returned tenant=%q err=%v", tenantID, err)
+func TestRequireOperatorContextReturnsAuthenticatedTenant(t *testing.T) {
+	ctx := WithOperatorContext(context.Background(), "  tenant-a  ")
+	operatorContextID, err := RequireOperatorContext(ctx)
+	if err != nil || operatorContextID != "tenant-a" {
+		t.Fatalf("trusted tenant returned tenant=%q err=%v", operatorContextID, err)
 	}
 }
 
 func TestEmptyTenantCannotBecomeContextAuthority(t *testing.T) {
-	ctx := WithTenantContext(context.Background(), "  ")
-	if tenantID, ok := TenantIDFromContext(ctx); ok || tenantID != "" {
-		t.Fatalf("empty tenant became authoritative tenant=%q ok=%v", tenantID, ok)
+	ctx := WithOperatorContext(context.Background(), "  ")
+	if operatorContextID, ok := OperatorContextIDFromContext(ctx); ok || operatorContextID != "" {
+		t.Fatalf("empty tenant became authoritative tenant=%q ok=%v", operatorContextID, ok)
 	}
 }

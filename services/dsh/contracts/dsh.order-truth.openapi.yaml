@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
@@ -335,7 +335,7 @@ components:
       type: object
       additionalProperties: false
       required:
-        - tenantId
+        - operatorContextId
         - generatedAt
         - ordersCreatedLastFiveMinutes
         - ordersCreatedLastHour
@@ -350,7 +350,7 @@ components:
         - health
         - alerts
       properties:
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         generatedAt: { type: string, format: date-time }
         ordersCreatedLastFiveMinutes: { type: integer, format: int64, minimum: 0 }
         ordersCreatedLastHour: { type: integer, format: int64, minimum: 0 }

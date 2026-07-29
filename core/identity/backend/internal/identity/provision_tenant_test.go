@@ -26,7 +26,7 @@ func TestProvisionActorRejectsExistingPhoneFromDifferentTenant(t *testing.T) {
 		phone: {
 			ID:        "field-tenant-a",
 			Username:  "field-a",
-			TenantID:  "tenant-a",
+			OperatorContextID:  "tenant-a",
 			PhoneE164: phone,
 			Roles:     []string{"field"},
 			Permissions: []Permission{
@@ -40,7 +40,7 @@ func TestProvisionActorRejectsExistingPhoneFromDifferentTenant(t *testing.T) {
 		Username:  "field-tenant-b",
 		PhoneE164: phone,
 		Role:      "field",
-		TenantID:  "tenant-b",
+		OperatorContextID:  "tenant-b",
 	})
 	if !errors.Is(err, ErrForbidden) {
 		t.Fatalf("cross-tenant phone reuse must be forbidden, view=%#v err=%v", view, err)

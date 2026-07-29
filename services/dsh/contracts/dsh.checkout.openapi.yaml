@@ -15,7 +15,7 @@ paths:
   /dsh/client/checkout-intents:
     post:
       tags: ["dsh-client"]
-      operationId: createDshClientCheckoutIntent
+      operationId: createDshCheckoutIntent
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -35,7 +35,7 @@ paths:
   /dsh/client/checkout-intents/{intentId}:
     get:
       tags: ["dsh-client"]
-      operationId: getDshClientCheckoutIntent
+      operationId: getDshCheckoutIntent
       security: [{ bearerAuth: [] }]
       parameters: [{$ref: '#/components/parameters/IntentId'}]
       responses:
@@ -44,7 +44,7 @@ paths:
   /dsh/client/checkout-intents/{intentId}/cancel:
     post:
       tags: ["dsh-client"]
-      operationId: cancelDshClientCheckoutIntent
+      operationId: cancelDshCheckoutIntent
       security: [{ bearerAuth: [] }]
       parameters: [{$ref: '#/components/parameters/IntentId'}]
       responses:
@@ -53,7 +53,7 @@ paths:
   /dsh/operator/checkout-intents:
     get:
       tags: ["dsh-operator"]
-      operationId: listDshOperatorCheckoutIntents
+      operationId: listOperatorCheckoutIntents
       security: [{ bearerAuth: [] }]
       parameters:
         - name: state
@@ -74,7 +74,7 @@ paths:
   /dsh/operator/checkout-intents/{intentId}/reconcile:
     post:
       tags: ["dsh-operator"]
-      operationId: reconcileDshOperatorCheckoutIntent
+      operationId: reconcileDshCheckoutIntent
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/IntentId'
@@ -87,7 +87,7 @@ paths:
   /dsh/internal/wlt/payment-session-events:
     post:
       tags: ["dsh-internal"]
-      operationId: applyDshWltPaymentSessionEvent
+      operationId: reportWltPaymentSessionEvent
       security: [{ serviceToken: [] }]
       parameters:
         - name: Authorization
@@ -165,11 +165,11 @@ components:
     WltPaymentSessionEvent:
       type: object
       additionalProperties: false
-      required: [tenantId, checkoutIntentId, paymentSessionId, status]
+      required: [operatorContextId, checkoutIntentId, paymentSessionId, status]
       properties:
         eventId: {type: string, minLength: 8, maxLength: 200}
         correlationId: {type: string, maxLength: 200}
-        tenantId: {type: string, minLength: 1}
+        operatorContextId: {type: string, minLength: 1}
         checkoutIntentId: {type: string, format: uuid}
         paymentSessionId: {type: string, minLength: 1}
         status:
@@ -177,10 +177,10 @@ components:
           enum: [authorized, reference_created, cod_pending, captured, cod_collected, failed, expired]
     CheckoutIntent:
       type: object
-      required: [id, tenantId, clientId, cartId, storeId, fulfillmentMode, state, paymentMethod, wltPaymentSessionId, subtotalMinorUnits, deliveryFeeMinorUnits, discountMinorUnits, totalMinorUnits, currency, pricingSnapshotHash, version, createdAt, updatedAt]
+      required: [id, operatorContextId, clientId, cartId, storeId, fulfillmentMode, state, paymentMethod, wltPaymentSessionId, subtotalMinorUnits, deliveryFeeMinorUnits, discountMinorUnits, totalMinorUnits, currency, pricingSnapshotHash, version, createdAt, updatedAt]
       properties:
         id: {type: string, format: uuid}
-        tenantId: {type: string}
+        operatorContextId: {type: string}
         clientId: {type: string}
         cartId: {type: string, format: uuid}
         storeId: {type: string}

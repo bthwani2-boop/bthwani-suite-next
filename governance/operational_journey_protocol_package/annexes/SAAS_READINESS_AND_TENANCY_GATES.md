@@ -30,8 +30,8 @@ applies_when:
 platform_mode: BTHWANI_NATIVE_PLATFORM
 saas_readiness_mode: SAAS_READY_DEFERRED
 commercial_activation_state: ELIGIBLE_FOR_REVIEW
-activation_authorization_status: AUTHORIZED
-activation_authorization_target_ref: smar
+activation_authorization_status: NOT_AUTHORIZED
+activation_authorization_target_ref: validclean
 production_deployment_authorized: false
 canonical_decision: NEEDS_EVIDENCE
 source_of_truth: governance/saas/saas-governance.json
@@ -39,7 +39,7 @@ source_of_truth: governance/saas/saas-governance.json
 
 Read this as three distinct, non-interchangeable facts — do not collapse them into one claim:
 
-1. **Authorization exists, and its scope now covers doing the work, not only assessing it.** `governance/saas/activation-authorization.json` records `status: AUTHORIZED` for target ref `smar` (dated 2026-07-23), scoped to `ENABLE_SAAS_RUNTIME_MODE`, `REMOVE_COMMERCIAL_ACTIVATION_POLICY_BLOCK`, `EXECUTE_SAAS_ACTIVATION_VERIFICATION`. On 2026-07-24 the user explicitly widened that scope with `EXECUTE_SAAS_IMPLEMENTATION_WORK` and `EXECUTE_SAAS_ACTIVATION_WORK` (see `scopeAmendment` in that file): this is no longer readiness-assessment-only, engineering may actively build tenant isolation and activation-gate capability, not merely evaluate it. This scope widening does **not** by itself change `commercialActivationState`, `saasReadinessMode`, or any `activationEvidence` item below — those still move only when each has same-commit proof.
+1. **The recorded authorization is historical and branch-bound.** `governance/saas/activation-authorization.json` records the explicit 2026-07-23 authorization for target ref `smar`. It is retained as audit history and does not transfer to `validclean`. The effective state in `governance/saas/saas-governance.json` is therefore `NOT_AUTHORIZED` for `validclean`; the current task authorizes implementation of the approved reconstruction but not commercial activation or production deployment.
 2. **Runtime mode is NOT yet flipped.** `governance/saas/saas-governance.json` (commit `4e0ba605`, `fix(governance): separate authorization from SaaS activation state` — the current and newest state on this file) deliberately keeps `saasReadinessMode: SAAS_READY_DEFERRED`. Authorization to proceed is not the same event as declaring the platform SaaS-active. Do not read authorization as if it already means `SAAS_ACTIVE`.
 3. **Commercial state is `ELIGIBLE_FOR_REVIEW`**, not `ACTIVATION_AUTHORIZED` and not `ACTIVE`. That earlier, more advanced-sounding label was walked back by the same commit for exactly this reason: it over-claimed relative to unproven evidence (`activationEvidence` in the JSON lists every gate item as `NOT_PROVEN`).
 
@@ -49,7 +49,7 @@ State values never replace the canonical decision vocabulary. Neither `SAAS_READ
 
 Current rules:
 
-- SaaS work in this repository is authorized as **implementation and activation engineering**, not merely readiness preparation or planning (`activation-authorization.json` §`scopeAmendment`, 2026-07-24). Do not downgrade a SaaS-touching journey to documentation/planning-only when the scope explicitly authorizes writing the actual tenant-isolation and activation code.
+- The current task authorizes the implementation work needed to preserve trusted context and deferred SaaS readiness. It does not transfer the historical `smar` activation authorization to `validclean`.
 - Preserve the unified multi-surface full-stack model.
 - Derive tenant context from trusted identity or server-side delegation.
 - Never trust a client-supplied tenant identifier as authority.
@@ -61,16 +61,16 @@ Current rules:
 - Never output or accept `SAAS_ACTIVE` or the deprecated activation-approval alias as the current platform state — the current, single-source-of-truth state is `SAAS_READY_DEFERRED` / `ELIGIBLE_FOR_REVIEW` as recorded above. Only `governance/saas/saas-governance.json` itself, edited under explicit authorization, can change this.
 - Commercial/production SaaS activation is never implied by completing an unrelated implementation journey; it requires the full `saas_activation_gate` in the ACTIVE section below, evaluated on its own same-commit evidence.
 
-## Tenant Definition
+## Operator Context Definition
 
-A tenant is the platform operator or organization that owns an isolated operating context.
+The trusted operator context is the platform isolation boundary.
 
-A tenant is not automatically the same as a Partner, Store, User, City, or Service.
+An operator context is not a Partner Organization, Store, User, City, or Service.
 
 Expected relationship:
 
 ```text
-Tenant / Platform Operator
+Operator Context / Platform Operator
 one or many Partners
 one or many Stores
 Actors, customers, captains, field users, and operators
@@ -123,7 +123,7 @@ A matrix is planning or evidence structure only. It does not prove runtime isola
 ## Security Rules
 
 - Tenant context must be derived from trusted identity or session context.
-- Client-supplied `tenantId` is never trusted as authority; it may only be a selector validated against trusted authority.
+- Client-supplied `operatorContextId` is never trusted as authority; it may only be a selector validated against trusted authority.
 - Privileged operator cross-tenant access requires delegated tenant context, permission, reason, expiry, audit event, and no self-approval.
 - Global data must be explicitly classified as `GLOBAL`; unexplained null tenant ownership is forbidden.
 - Cache keys, idempotency keys, outbox events, audit events, media references, and financial references must carry or derive the same trusted tenant boundary when tenant-owned.

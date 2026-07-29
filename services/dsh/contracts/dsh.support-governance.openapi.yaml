@@ -70,7 +70,7 @@ paths:
   /dsh/operator/support/tickets:
     get:
       tags: ["dsh-operator"]
-      operationId: listDshOperatorSupportTickets
+      operationId: listDshOperatorTickets
       parameters:
         - name: status
           in: query
@@ -91,7 +91,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
     patch:
       tags: ["dsh-operator"]
-      operationId: updateDshOperatorSupportTicket
+      operationId: updateDshOperatorTicket
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'

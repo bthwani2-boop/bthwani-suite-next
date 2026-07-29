@@ -362,8 +362,8 @@ No new real-service `SERVICE_BLUEPRINT.md` may be created.
 ### Guard commands
 
 ```bash
-pnpm run foundation:gate
-pnpm run journey:gate
+pnpm run guard:foundation
+pnpm run guard:journey
 ```
 
 Both must exit 0 to verify the codebase integrity.

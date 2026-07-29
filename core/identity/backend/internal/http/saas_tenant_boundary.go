@@ -21,7 +21,7 @@ type provisionActorTenantRequest struct {
 	Username  string `json:"username"`
 	PhoneE164 string `json:"phoneE164"`
 	Role      string `json:"role"`
-	TenantID  string `json:"tenantId"`
+	OperatorContextID  string `json:"operatorContextId"`
 }
 
 func activeSaaSTenant() (string, bool, error) {
@@ -33,14 +33,14 @@ func activeSaaSTenant() (string, bool, error) {
 	if activation != "authorized" && activation != "active" {
 		return "", true, errors.New("active SaaS mode requires authorized or active commercial state")
 	}
-	tenantID := strings.TrimSpace(os.Getenv("BTHWANI_DEFAULT_TENANT_ID"))
-	if tenantID == "" {
-		return "", true, errors.New("BTHWANI_DEFAULT_TENANT_ID is required in active SaaS mode")
+	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
+	if operatorContextID == "" {
+		return "", true, errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required in active SaaS mode")
 	}
-	return tenantID, true, nil
+	return operatorContextID, true, nil
 }
 
-func validateInternalTenantRequest(w http.ResponseWriter, r *http.Request, tenantID string) bool {
+func validateInternalTenantRequest(w http.ResponseWriter, r *http.Request, operatorContextID string) bool {
 	if strings.TrimSpace(r.Header.Get("X-Service-Caller")) != "workforce" {
 		sendError(w, http.StatusForbidden, "FORBIDDEN", "X-Service-Caller is not allowed")
 		return false
@@ -55,19 +55,19 @@ func validateInternalTenantRequest(w http.ResponseWriter, r *http.Request, tenan
 		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "service token is required")
 		return false
 	}
-	requestedTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	if requestedTenantID == "" {
-		sendError(w, http.StatusBadRequest, "TENANT_CONTEXT_REQUIRED", "X-Tenant-ID is required for internal actor operations")
+	requestedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+	if requestedOperatorContextID == "" {
+		sendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "X-Operator-Context-ID is required for internal actor operations")
 		return false
 	}
-	if subtle.ConstantTimeCompare([]byte(requestedTenantID), []byte(tenantID)) != 1 {
-		sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "service tenant does not match the active runtime tenant")
+	if subtle.ConstantTimeCompare([]byte(requestedOperatorContextID), []byte(operatorContextID)) != 1 {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "service tenant does not match the active runtime tenant")
 		return false
 	}
 	return true
 }
 
-func rewriteProvisionTenant(w http.ResponseWriter, r *http.Request, db *sql.DB, tenantID string) bool {
+func rewriteProvisionTenant(w http.ResponseWriter, r *http.Request, db *sql.DB, operatorContextID string) bool {
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 32*1024))
 	decoder.DisallowUnknownFields()
 	var input provisionActorTenantRequest
@@ -75,9 +75,9 @@ func rewriteProvisionTenant(w http.ResponseWriter, r *http.Request, db *sql.DB, 
 		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 		return false
 	}
-	requestedTenantID := strings.TrimSpace(input.TenantID)
-	if requestedTenantID != "" && requestedTenantID != tenantID {
-		sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "provisioned actor tenant cannot override the active runtime tenant")
+	requestedOperatorContextID := strings.TrimSpace(input.OperatorContextID)
+	if requestedOperatorContextID != "" && requestedOperatorContextID != operatorContextID {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "provisioned actor tenant cannot override the active runtime tenant")
 		return false
 	}
 	phone, err := identity.NormalizePhoneE164(input.PhoneE164)
@@ -85,21 +85,21 @@ func rewriteProvisionTenant(w http.ResponseWriter, r *http.Request, db *sql.DB, 
 		sendError(w, http.StatusUnprocessableEntity, "INVALID_ACTOR_INPUT", "actor input is invalid")
 		return false
 	}
-	var existingTenantID string
+	var existingOperatorContextID string
 	err = db.QueryRowContext(r.Context(), `
 		SELECT tenant_id
 		FROM identity_actors
 		WHERE phone_e164 = $1
-		LIMIT 1`, phone).Scan(&existingTenantID)
+		LIMIT 1`, phone).Scan(&existingOperatorContextID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
 		return false
 	}
-	if err == nil && strings.TrimSpace(existingTenantID) != tenantID {
+	if err == nil && strings.TrimSpace(existingOperatorContextID) != operatorContextID {
 		sendError(w, http.StatusConflict, "PHONE_BOUND_TO_ANOTHER_TENANT", "phone is already bound to an actor in another tenant")
 		return false
 	}
-	input.TenantID = tenantID
+	input.OperatorContextID = operatorContextID
 	body, err := json.Marshal(input)
 	if err != nil {
 		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
@@ -138,10 +138,10 @@ func actorIDFromInternalPath(path string) string {
 	return actorID
 }
 
-func actorBelongsToTenant(w http.ResponseWriter, r *http.Request, db *sql.DB, actorID, tenantID string) bool {
-	var actorTenantID string
+func actorBelongsToTenant(w http.ResponseWriter, r *http.Request, db *sql.DB, actorID, operatorContextID string) bool {
+	var actorOperatorContextID string
 	err := db.QueryRowContext(r.Context(), `
-		SELECT tenant_id FROM identity_actors WHERE id = $1`, actorID).Scan(&actorTenantID)
+		SELECT tenant_id FROM identity_actors WHERE id = $1`, actorID).Scan(&actorOperatorContextID)
 	if errors.Is(err, sql.ErrNoRows) {
 		sendError(w, http.StatusNotFound, "ACTOR_NOT_FOUND", "actor was not found")
 		return false
@@ -150,14 +150,14 @@ func actorBelongsToTenant(w http.ResponseWriter, r *http.Request, db *sql.DB, ac
 		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
 		return false
 	}
-	if strings.TrimSpace(actorTenantID) != tenantID {
-		sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "actor belongs to another tenant")
+	if strings.TrimSpace(actorOperatorContextID) != operatorContextID {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "actor belongs to another tenant")
 		return false
 	}
 	return true
 }
 
-func handleTenantActorSearch(w http.ResponseWriter, r *http.Request, db *sql.DB, tenantID string) {
+func handleTenantActorSearch(w http.ResponseWriter, r *http.Request, db *sql.DB, operatorContextID string) {
 	queryValues := r.URL.Query()
 	role := strings.TrimSpace(queryValues.Get("role"))
 	q := strings.TrimSpace(queryValues.Get("q"))
@@ -168,7 +168,7 @@ func handleTenantActorSearch(w http.ResponseWriter, r *http.Request, db *sql.DB,
 		}
 	}
 	clauses := []string{"active", "tenant_id = $1"}
-	args := []any{tenantID}
+	args := []any{operatorContextID}
 	if role != "" {
 		args = append(args, role)
 		clauses = append(clauses, fmt.Sprintf("$%d = ANY(roles)", len(args)))
@@ -209,7 +209,7 @@ func handleTenantActorSearch(w http.ResponseWriter, r *http.Request, db *sql.DB,
 
 // SaaSTenantBoundary scopes every Workforce-to-Identity actor administration
 // request to the trusted service tenant. Active SaaS mode additionally pins
-// that tenant to the configured runtime tenant. It never trusts tenantId from
+// that tenant to the configured runtime tenant. It never trusts operatorContextId from
 // the request body and prevents search, read, activation and lifecycle
 // operations from crossing tenant boundaries before the repository executes.
 func SaaSTenantBoundary(db *sql.DB, next http.Handler) http.Handler {
@@ -218,31 +218,31 @@ func SaaSTenantBoundary(db *sql.DB, next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		configuredTenantID, active, err := activeSaaSTenant()
+		configuredOperatorContextID, active, err := activeSaaSTenant()
 		if err != nil {
 			sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
 			return
 		}
-		requestedTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-		expectedTenantID := requestedTenantID
+		requestedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		expectedOperatorContextID := requestedOperatorContextID
 		if active {
-			expectedTenantID = configuredTenantID
+			expectedOperatorContextID = configuredOperatorContextID
 		}
-		if !validateInternalTenantRequest(w, r, expectedTenantID) {
+		if !validateInternalTenantRequest(w, r, expectedOperatorContextID) {
 			return
 		}
-		tenantID := requestedTenantID
+		operatorContextID := requestedOperatorContextID
 		if r.Method == http.MethodPost && r.URL.Path == "/internal/actors/provision" {
-			if !rewriteProvisionTenant(w, r, db, tenantID) {
+			if !rewriteProvisionTenant(w, r, db, operatorContextID) {
 				return
 			}
 		}
 		if r.Method == http.MethodGet && r.URL.Path == "/internal/actors/search" {
-			handleTenantActorSearch(w, r, db, tenantID)
+			handleTenantActorSearch(w, r, db, operatorContextID)
 			return
 		}
 		if actorID := actorIDFromInternalPath(r.URL.Path); actorID != "" {
-			if !actorBelongsToTenant(w, r, db, actorID, tenantID) {
+			if !actorBelongsToTenant(w, r, db, actorID, operatorContextID) {
 				return
 			}
 		}

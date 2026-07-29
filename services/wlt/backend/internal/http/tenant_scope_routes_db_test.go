@@ -46,12 +46,12 @@ func uniqueSuffix() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
-func newTenantScopedRequest(method, path, tenantID string) *httptest.ResponseRecorder {
+func newTenantScopedRequest(method, path, operatorContextID string) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(method, path, nil)
 	req.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	req.Header.Set("X-Service-Caller", "dsh")
-	if tenantID != "" {
-		req.Header.Set("X-Tenant-ID", tenantID)
+	if operatorContextID != "" {
+		req.Header.Set("X-Operator-Context-ID", operatorContextID)
 	}
 	return httptest.NewRecorder()
 }
@@ -101,7 +101,7 @@ func TestSettlementRoutes_TenantScoping(t *testing.T) {
 	reqCrossTenant := httptest.NewRequest("GET", "/wlt/settlements/"+settlementAID, nil)
 	reqCrossTenant.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	reqCrossTenant.Header.Set("X-Service-Caller", "dsh")
-	reqCrossTenant.Header.Set("X-Tenant-ID", tenantB)
+	reqCrossTenant.Header.Set("X-Operator-Context-ID", tenantB)
 	recCrossTenant := httptest.NewRecorder()
 	router.ServeHTTP(recCrossTenant, reqCrossTenant)
 	if recCrossTenant.Code != 404 {
@@ -112,7 +112,7 @@ func TestSettlementRoutes_TenantScoping(t *testing.T) {
 	reqOwnTenant := httptest.NewRequest("GET", "/wlt/settlements/"+settlementAID, nil)
 	reqOwnTenant.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	reqOwnTenant.Header.Set("X-Service-Caller", "dsh")
-	reqOwnTenant.Header.Set("X-Tenant-ID", tenantA)
+	reqOwnTenant.Header.Set("X-Operator-Context-ID", tenantA)
 	recOwnTenant := httptest.NewRecorder()
 	router.ServeHTTP(recOwnTenant, reqOwnTenant)
 	if recOwnTenant.Code != 200 {
@@ -123,7 +123,7 @@ func TestSettlementRoutes_TenantScoping(t *testing.T) {
 	reqList := httptest.NewRequest("GET", "/wlt/settlements", nil)
 	reqList.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	reqList.Header.Set("X-Service-Caller", "dsh")
-	reqList.Header.Set("X-Tenant-ID", tenantA)
+	reqList.Header.Set("X-Operator-Context-ID", tenantA)
 	recList := httptest.NewRecorder()
 	router.ServeHTTP(recList, reqList)
 	if recList.Code != 200 {
@@ -189,7 +189,7 @@ func TestCodRecordRoutes_TenantScoping(t *testing.T) {
 	reqCrossTenant := httptest.NewRequest("GET", "/wlt/cod-records/"+codAID, nil)
 	reqCrossTenant.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	reqCrossTenant.Header.Set("X-Service-Caller", "dsh")
-	reqCrossTenant.Header.Set("X-Tenant-ID", tenantB)
+	reqCrossTenant.Header.Set("X-Operator-Context-ID", tenantB)
 	recCrossTenant := httptest.NewRecorder()
 	router.ServeHTTP(recCrossTenant, reqCrossTenant)
 	if recCrossTenant.Code != 404 {
@@ -199,7 +199,7 @@ func TestCodRecordRoutes_TenantScoping(t *testing.T) {
 	reqOwnTenant := httptest.NewRequest("GET", "/wlt/cod-records/"+codAID, nil)
 	reqOwnTenant.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	reqOwnTenant.Header.Set("X-Service-Caller", "dsh")
-	reqOwnTenant.Header.Set("X-Tenant-ID", tenantA)
+	reqOwnTenant.Header.Set("X-Operator-Context-ID", tenantA)
 	recOwnTenant := httptest.NewRecorder()
 	router.ServeHTTP(recOwnTenant, reqOwnTenant)
 	if recOwnTenant.Code != 200 {
@@ -209,7 +209,7 @@ func TestCodRecordRoutes_TenantScoping(t *testing.T) {
 	reqList := httptest.NewRequest("GET", "/wlt/cod-records?partnerId="+partnerA, nil)
 	reqList.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	reqList.Header.Set("X-Service-Caller", "dsh")
-	reqList.Header.Set("X-Tenant-ID", tenantB)
+	reqList.Header.Set("X-Operator-Context-ID", tenantB)
 	recList := httptest.NewRecorder()
 	router.ServeHTTP(recList, reqList)
 	if recList.Code != 200 {
@@ -261,7 +261,7 @@ func TestCommissionRoutes_TenantScoping(t *testing.T) {
 	reqCrossTenant := httptest.NewRequest("GET", "/wlt/commissions/"+commissionAID, nil)
 	reqCrossTenant.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	reqCrossTenant.Header.Set("X-Service-Caller", "dsh")
-	reqCrossTenant.Header.Set("X-Tenant-ID", tenantB)
+	reqCrossTenant.Header.Set("X-Operator-Context-ID", tenantB)
 	recCrossTenant := httptest.NewRecorder()
 	router.ServeHTTP(recCrossTenant, reqCrossTenant)
 	if recCrossTenant.Code != 404 {
@@ -271,7 +271,7 @@ func TestCommissionRoutes_TenantScoping(t *testing.T) {
 	reqOwnTenant := httptest.NewRequest("GET", "/wlt/commissions/"+commissionAID, nil)
 	reqOwnTenant.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	reqOwnTenant.Header.Set("X-Service-Caller", "dsh")
-	reqOwnTenant.Header.Set("X-Tenant-ID", tenantA)
+	reqOwnTenant.Header.Set("X-Operator-Context-ID", tenantA)
 	recOwnTenant := httptest.NewRecorder()
 	router.ServeHTTP(recOwnTenant, reqOwnTenant)
 	if recOwnTenant.Code != 200 {
@@ -281,7 +281,7 @@ func TestCommissionRoutes_TenantScoping(t *testing.T) {
 	reqList := httptest.NewRequest("GET", "/wlt/commissions", nil)
 	reqList.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	reqList.Header.Set("X-Service-Caller", "dsh")
-	reqList.Header.Set("X-Tenant-ID", tenantA)
+	reqList.Header.Set("X-Operator-Context-ID", tenantA)
 	recList := httptest.NewRecorder()
 	router.ServeHTTP(recList, reqList)
 	if recList.Code != 200 {
@@ -335,7 +335,7 @@ func TestPayoutRequestRoutes_TenantScoping(t *testing.T) {
 	reqCrossTenant := httptest.NewRequest("GET", "/wlt/payout-requests/"+payoutAID, nil)
 	reqCrossTenant.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	reqCrossTenant.Header.Set("X-Service-Caller", "dsh")
-	reqCrossTenant.Header.Set("X-Tenant-ID", tenantB)
+	reqCrossTenant.Header.Set("X-Operator-Context-ID", tenantB)
 	recCrossTenant := httptest.NewRecorder()
 	router.ServeHTTP(recCrossTenant, reqCrossTenant)
 	if recCrossTenant.Code != 404 {
@@ -345,7 +345,7 @@ func TestPayoutRequestRoutes_TenantScoping(t *testing.T) {
 	reqOwnTenant := httptest.NewRequest("GET", "/wlt/payout-requests/"+payoutAID, nil)
 	reqOwnTenant.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	reqOwnTenant.Header.Set("X-Service-Caller", "dsh")
-	reqOwnTenant.Header.Set("X-Tenant-ID", tenantA)
+	reqOwnTenant.Header.Set("X-Operator-Context-ID", tenantA)
 	recOwnTenant := httptest.NewRecorder()
 	router.ServeHTTP(recOwnTenant, reqOwnTenant)
 	if recOwnTenant.Code != 200 {
@@ -355,7 +355,7 @@ func TestPayoutRequestRoutes_TenantScoping(t *testing.T) {
 	reqList := httptest.NewRequest("GET", "/wlt/payout-requests", nil)
 	reqList.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	reqList.Header.Set("X-Service-Caller", "dsh")
-	reqList.Header.Set("X-Tenant-ID", tenantA)
+	reqList.Header.Set("X-Operator-Context-ID", tenantA)
 	recList := httptest.NewRecorder()
 	router.ServeHTTP(recList, reqList)
 	if recList.Code != 200 {

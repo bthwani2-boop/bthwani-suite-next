@@ -10,7 +10,7 @@
     "commercialActivationState",
     "activationAuthorization",
     "tenantDefinition",
-    "trustedTenantContextRequired",
+    "trustedOperatorContextRequired",
     "clientSuppliedTenantTrusted",
     "deferredCommercialFeatures",
     "activationEvidence",
@@ -36,7 +36,7 @@
       }
     },
     "tenantDefinition": { "type": "string", "minLength": 1 },
-    "trustedTenantContextRequired": { "const": true },
+    "trustedOperatorContextRequired": { "const": true },
     "clientSuppliedTenantTrusted": { "const": false },
     "deferredCommercialFeatures": {
       "type": "array",
@@ -49,7 +49,7 @@
       "additionalProperties": false,
       "required": [
         "tenantOwnedEntitiesClassified",
-        "tenantContextPropagationVerified",
+        "operatorContextPropagationVerified",
         "crossTenantNegativeTestsPassed",
         "crossTenantDataLeakageZero",
         "criticalVulnerabilitiesZero",
@@ -65,7 +65,7 @@
       ],
       "properties": {
         "tenantOwnedEntitiesClassified": { "$ref": "#/definitions/evidenceState" },
-        "tenantContextPropagationVerified": { "$ref": "#/definitions/evidenceState" },
+        "operatorContextPropagationVerified": { "$ref": "#/definitions/evidenceState" },
         "crossTenantNegativeTestsPassed": { "$ref": "#/definitions/evidenceState" },
         "crossTenantDataLeakageZero": { "$ref": "#/definitions/evidenceState" },
         "criticalVulnerabilitiesZero": { "$ref": "#/definitions/evidenceState" },
@@ -101,7 +101,7 @@
           "activationEvidence": {
             "properties": {
               "tenantOwnedEntitiesClassified": { "const": "PROVEN" },
-              "tenantContextPropagationVerified": { "const": "PROVEN" },
+              "operatorContextPropagationVerified": { "const": "PROVEN" },
               "crossTenantNegativeTestsPassed": { "const": "PROVEN" },
               "crossTenantDataLeakageZero": { "const": "PROVEN" },
               "criticalVulnerabilitiesZero": { "const": "PROVEN" },
@@ -128,6 +128,48 @@
           "activationAuthorization": {
             "properties": {
               "status": { "const": "AUTHORIZED" },
+              "productionDeploymentAuthorized": { "const": false }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "commercialActivationState": { "const": "ELIGIBLE_FOR_REVIEW" } } },
+      "then": {
+        "properties": {
+          "saasReadinessMode": { "const": "SAAS_READY_DEFERRED" },
+          "canonicalDecision": { "enum": ["NEEDS_EVIDENCE", "FIX_REQUIRED", "BLOCKED_EXTERNAL"] },
+          "activationAuthorization": {
+            "properties": {
+              "productionDeploymentAuthorized": { "const": false }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "saasReadinessMode": { "const": "SAAS_ACTIVE" } } },
+      "then": {
+        "properties": {
+          "commercialActivationState": { "const": "ACTIVE" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "activationAuthorization": {
+            "properties": { "status": { "const": "NOT_AUTHORIZED" } }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "saasReadinessMode": { "enum": ["NOT_APPLICABLE", "SAAS_READY_DEFERRED"] },
+          "commercialActivationState": { "enum": ["BLOCKED_BY_POLICY", "ELIGIBLE_FOR_REVIEW"] },
+          "activationAuthorization": {
+            "properties": {
               "productionDeploymentAuthorized": { "const": false }
             }
           }

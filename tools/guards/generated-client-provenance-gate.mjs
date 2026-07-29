@@ -11,10 +11,8 @@
 //      client must be byte-identical to a fresh openapi-typescript run against
 //      its committed contract.
 //
-// HAND_AUTHORED_FACADE entries are NOT proven generated. They are reported as
-// unproven with their owning slice so the count stays visible instead of being
-// silently folded into a pass. Adding one requires a contract, an alignment
-// test that exists, a reconstruction owner and a reason.
+// Exactly six bounded-context clients are allowed. Hand-authored or
+// module-scoped files under a generated root are always a failure.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -26,13 +24,20 @@ const packageScripts = JSON.parse(fs.readFileSync(path.join(repositoryRoot, "pac
 const registry = JSON.parse(fs.readFileSync(path.join(repositoryRoot, registryRelative), "utf8"));
 
 const failures = [];
-const unproven = [];
+const requiredContexts = new Set(["identity", "workforce", "platform-control", "providers", "dsh", "wlt"]);
+
+if (registry.schemaVersion !== 2) failures.push(`${registryRelative}: schemaVersion must be 2`);
+if (registry.entries.length !== requiredContexts.size) {
+  failures.push(`${registryRelative}: expected exactly ${requiredContexts.size} clients, found ${registry.entries.length}`);
+}
 
 const registered = new Map();
 for (const entry of registry.entries) {
+  if (!requiredContexts.delete(entry.context)) failures.push(`${registryRelative}: unexpected or duplicate context '${entry.context}'`);
   if (registered.has(entry.client)) failures.push(`${registryRelative}: duplicate entry for ${entry.client}`);
   registered.set(entry.client, entry);
 }
+for (const context of requiredContexts) failures.push(`${registryRelative}: missing bounded context '${context}'`);
 
 // 1. Orphan detection in both directions.
 const ignored = new Set(registry.ignoredFiles ?? []);
@@ -69,19 +74,8 @@ for (const [relativeClient, entry] of registered) {
     failures.push(`${relativeClient} is registered but sits outside every declared generated root`);
   }
 
-  if (entry.mode === "HAND_AUTHORED_FACADE") {
-    for (const field of ["alignmentTest", "reconstructionOwner", "reason"]) {
-      if (!entry[field]) failures.push(`${relativeClient}: HAND_AUTHORED_FACADE entry is missing required field '${field}'`);
-    }
-    if (entry.alignmentTest && !fs.existsSync(path.join(repositoryRoot, entry.alignmentTest))) {
-      failures.push(`${relativeClient}: declared alignment test does not exist: ${entry.alignmentTest}`);
-    }
-    unproven.push(`${relativeClient} (owner ${entry.reconstructionOwner})`);
-    continue;
-  }
-
   if (entry.mode !== "OPENAPI_TYPESCRIPT") {
-    failures.push(`${relativeClient}: unknown mode '${entry.mode}'`);
+    failures.push(`${relativeClient}: mode '${entry.mode}' is forbidden; only OPENAPI_TYPESCRIPT is allowed`);
     continue;
   }
 
@@ -125,7 +119,3 @@ if (failures.length > 0) {
 
 const provenCount = [...registered.values()].filter((entry) => entry.mode === "OPENAPI_TYPESCRIPT").length;
 console.log(`generated-client-provenance-gate: OK (${provenCount} clients byte-identical to source)`);
-if (unproven.length > 0) {
-  console.log(`generated-client-provenance-gate: ${unproven.length} hand-authored facade(s) NOT proven generated — reconstruction still owed:`);
-  for (const item of unproven) console.log(`- ${item}`);
-}

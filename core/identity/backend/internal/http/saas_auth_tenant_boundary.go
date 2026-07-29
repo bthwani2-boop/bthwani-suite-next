@@ -82,29 +82,29 @@ func authRequestRequiresBearerTenantCheck(r *http.Request) bool {
 	return r.Method == http.MethodPost && r.URL.Path == "/auth/password/change"
 }
 
-func tenantFromAuthResponse(body []byte) (tenantID, accessToken string) {
+func tenantFromAuthResponse(body []byte) (operatorContextID, accessToken string) {
 	var payload struct {
-		TenantID    string `json:"tenantId"`
+		OperatorContextID    string `json:"operatorContextId"`
 		AccessToken string `json:"accessToken"`
 		Identity    struct {
-			TenantID string `json:"tenantId"`
+			OperatorContextID string `json:"operatorContextId"`
 		} `json:"identity"`
 	}
 	if json.Unmarshal(body, &payload) != nil {
 		return "", ""
 	}
-	tenantID = strings.TrimSpace(payload.Identity.TenantID)
-	if tenantID == "" {
-		tenantID = strings.TrimSpace(payload.TenantID)
+	operatorContextID = strings.TrimSpace(payload.Identity.OperatorContextID)
+	if operatorContextID == "" {
+		operatorContextID = strings.TrimSpace(payload.OperatorContextID)
 	}
-	return tenantID, strings.TrimSpace(payload.AccessToken)
+	return operatorContextID, strings.TrimSpace(payload.AccessToken)
 }
 
 func requireBearerTenant(
 	w http.ResponseWriter,
 	r *http.Request,
 	repository authTenantRepository,
-	tenantID string,
+	operatorContextID string,
 ) bool {
 	token, ok := bearerToken(r)
 	if !ok {
@@ -116,8 +116,8 @@ func requireBearerTenant(
 		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 		return false
 	}
-	if strings.TrimSpace(resolved.TenantID) != tenantID {
-		sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "session belongs to another tenant")
+	if strings.TrimSpace(resolved.OperatorContextID) != operatorContextID {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "session belongs to another tenant")
 		return false
 	}
 	return true
@@ -128,7 +128,7 @@ func requireBearerTenant(
 // cross-tenant sessions are immediately revoked before the response is hidden.
 func SaaSAuthTenantBoundary(repository authTenantRepository, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tenantID, active, err := activeSaaSTenant()
+		operatorContextID, active, err := activeSaaSTenant()
 		if err != nil {
 			sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
 			return
@@ -137,7 +137,7 @@ func SaaSAuthTenantBoundary(repository authTenantRepository, next http.Handler) 
 			next.ServeHTTP(w, r)
 			return
 		}
-		if authRequestRequiresBearerTenantCheck(r) && !requireBearerTenant(w, r, repository, tenantID) {
+		if authRequestRequiresBearerTenantCheck(r) && !requireBearerTenant(w, r, repository, operatorContextID) {
 			return
 		}
 		if !authResponseRequiresTenantCheck(r) {
@@ -155,19 +155,19 @@ func SaaSAuthTenantBoundary(repository authTenantRepository, next http.Handler) 
 			flushBufferedResponse(w, buffered)
 			return
 		}
-		responseTenantID, accessToken := tenantFromAuthResponse(buffered.body.Bytes())
-		if responseTenantID == "" {
+		responseOperatorContextID, accessToken := tenantFromAuthResponse(buffered.body.Bytes())
+		if responseOperatorContextID == "" {
 			if accessToken != "" {
 				_ = repository.Logout(r.Context(), accessToken)
 			}
-			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "identity response has no trusted tenant context")
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "identity response has no trusted tenant context")
 			return
 		}
-		if responseTenantID != tenantID {
+		if responseOperatorContextID != operatorContextID {
 			if accessToken != "" {
 				_ = repository.Logout(r.Context(), accessToken)
 			}
-			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "identity belongs to another tenant")
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "identity belongs to another tenant")
 			return
 		}
 		flushBufferedResponse(w, buffered)

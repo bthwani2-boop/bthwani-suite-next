@@ -22,7 +22,7 @@ Sentry events must not contain:
 
 - access, refresh, activation, service, or provider tokens;
 - cookies or authorization headers;
-- raw `X-Tenant-ID` or client-asserted ownership context;
+- raw `X-Operator-Context-ID` or client-asserted ownership context;
 - phone numbers, email addresses, bank data, payout destinations, identity documents, precise location history, or message bodies;
 - wallet balances, ledger payloads, payment credentials, or unmasked financial references.
 

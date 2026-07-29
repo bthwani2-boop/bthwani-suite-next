@@ -67,8 +67,8 @@ func canonicalRefundMutationBody(raw []byte) []byte {
 	return canonical
 }
 
-func refundMutationRequestHash(operation, tenantID, path string, body []byte) string {
-	digest := sha256.Sum256([]byte(operation + "\n" + tenantID + "\n" + path + "\n" + string(canonicalRefundMutationBody(body))))
+func refundMutationRequestHash(operation, operatorContextID, path string, body []byte) string {
+	digest := sha256.Sum256([]byte(operation + "\n" + operatorContextID + "\n" + path + "\n" + string(canonicalRefundMutationBody(body))))
 	return hex.EncodeToString(digest[:])
 }
 
@@ -94,7 +94,7 @@ func refundMutationEvidence(body []byte) (actorID, reason string) {
 
 func claimRefundMutationReceipt(
 	db *sql.DB,
-	tenantID, operation, path, idempotencyKey, requestHash, actorID, reason, correlationID string,
+	operatorContextID, operation, path, idempotencyKey, requestHash, actorID, reason, correlationID string,
 	body []byte,
 ) (*refundMutationReceipt, bool, error) {
 	tx, err := db.Begin()
@@ -110,7 +110,7 @@ func claimRefundMutationReceipt(
 		VALUES($1,$2,$3,$4,$5,NULLIF($6,''),NULLIF($7,''),NULLIF($8,''),$9)
 		ON CONFLICT DO NOTHING
 		RETURNING id::text,request_hash,status,response_status,response_content_type,response_body`,
-		tenantID, operation, path, idempotencyKey, requestHash, actorID, reason, correlationID, string(canonicalRefundMutationBody(body)),
+		operatorContextID, operation, path, idempotencyKey, requestHash, actorID, reason, correlationID, string(canonicalRefundMutationBody(body)),
 	).Scan(&receipt.ID, &receipt.RequestHash, &receipt.Status, &receipt.ResponseStatus, &receipt.ResponseContentType, &receipt.ResponseBody)
 	if err == nil {
 		if err := tx.Commit(); err != nil {
@@ -126,7 +126,7 @@ func claimRefundMutationReceipt(
 		SELECT id::text,request_hash,status,response_status,response_content_type,response_body
 		FROM wlt_refund_operation_receipts
 		WHERE tenant_id=$1 AND operation=$2 AND request_path=$3 AND idempotency_key=$4
-		FOR UPDATE`, tenantID, operation, path, idempotencyKey,
+		FOR UPDATE`, operatorContextID, operation, path, idempotencyKey,
 	).Scan(&receipt.ID, &receipt.RequestHash, &receipt.Status, &receipt.ResponseStatus, &receipt.ResponseContentType, &receipt.ResponseBody)
 	if err != nil {
 		return nil, false, err
@@ -200,9 +200,9 @@ func copyRefundMutationResponse(w http.ResponseWriter, response *bufferedRefundR
 // reaches the business handler or provider.
 func RequireMutationIdempotency(db *sql.DB, operation string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 		idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-		if tenantID == "" || idempotencyKey == "" {
+		if operatorContextID == "" || idempotencyKey == "" {
 			shared.SendError(w, http.StatusBadRequest, "REFUND_IDEMPOTENCY_REQUIRED", "refund tenant and Idempotency-Key are required")
 			return
 		}
@@ -220,10 +220,10 @@ func RequireMutationIdempotency(db *sql.DB, operation string, next http.HandlerF
 		r.Body = io.NopCloser(bytes.NewReader(body))
 
 		actorID, reason := refundMutationEvidence(body)
-		requestHash := refundMutationRequestHash(operation, tenantID, r.URL.Path, body)
+		requestHash := refundMutationRequestHash(operation, operatorContextID, r.URL.Path, body)
 		receipt, claimed, err := claimRefundMutationReceipt(
 			db,
-			tenantID,
+			operatorContextID,
 			operation,
 			r.URL.Path,
 			idempotencyKey,

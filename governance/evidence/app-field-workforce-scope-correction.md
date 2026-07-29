@@ -43,4 +43,4 @@
 
 ## Correction discovered during verification
 
-The first canonical backend run exposed one obsolete HTTP mapping to the removed `ErrTenantContext` symbol. The mapping was deleted, and the complete canonical workflow was rerun successfully on commit `6e0ac008e79f5916e9280a701c7e63d2e23a8156`.
+The first canonical backend run exposed one obsolete HTTP mapping to the removed `ErrOperatorContext` symbol. The mapping was deleted, and the complete canonical workflow was rerun successfully on commit `6e0ac008e79f5916e9280a701c7e63d2e23a8156`.

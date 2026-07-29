@@ -9,6 +9,7 @@ entry: ./identity.openapi.yaml
 owner: core/identity
 contractState: CONTRACT_ACTIVE
 layout: INDEXED
+bundle: ./generated/identity.bundle.openapi.yaml
 client: ../clients/generated/identity-api.ts
 regenerateScript: pnpm run openapi:generate:identity
 modules:

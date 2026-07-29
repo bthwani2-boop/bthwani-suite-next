@@ -10,10 +10,10 @@ import (
 // PendingClientOrderRatingPrompt returns the newest delivered order that still
 // lacks either the captain rating or the order rating. It lets the client app
 // show the prompt immediately after delivery or on the next authenticated open.
-func PendingClientOrderRatingPrompt(ctx context.Context, db *sql.DB, tenantID, clientActorID string) (ClientOrderPrompt, error) {
-	tenantID = strings.TrimSpace(tenantID)
+func PendingClientOrderRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID, clientActorID string) (ClientOrderPrompt, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	clientActorID = strings.TrimSpace(clientActorID)
-	if tenantID == "" || clientActorID == "" {
+	if operatorContextID == "" || clientActorID == "" {
 		return ClientOrderPrompt{}, ErrInvalid
 	}
 	var orderID string
@@ -36,12 +36,12 @@ func PendingClientOrderRatingPrompt(ctx context.Context, db *sql.DB, tenantID, c
 		    )
 		  )
 		ORDER BY o.updated_at DESC
-		LIMIT 1`, tenantID, clientActorID).Scan(&orderID)
+		LIMIT 1`, operatorContextID, clientActorID).Scan(&orderID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ClientOrderPrompt{Eligible: false, Completed: true, Reason: "no_pending_delivered_order"}, nil
 	}
 	if err != nil {
 		return ClientOrderPrompt{}, err
 	}
-	return ClientOrderRatingPrompt(ctx, db, tenantID, clientActorID, orderID)
+	return ClientOrderRatingPrompt(ctx, db, operatorContextID, clientActorID, orderID)
 }

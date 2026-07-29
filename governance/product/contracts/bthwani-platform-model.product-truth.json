@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 1,
+  "capabilityId": "BTHWANI_PLATFORM_MODEL",
+  "state": "READY_FOR_IMPLEMENTATION",
+  "problem": {
+    "statement": "The repository contains overlapping platform, partner, tenant, operational, and financial descriptions that can route actors and financial access through contradictory ownership models.",
+    "affectedActors": ["operator", "partner", "captain", "field", "customer"],
+    "currentWorkaround": "Individual capabilities infer platform semantics from service-local contracts and runtime configuration.",
+    "frequency": "continuous",
+    "severity": "critical",
+    "evidenceState": "QUALITATIVE",
+    "evidenceReferences": [
+      "https://github.com/bthwani2-boop/bthwani-suite-next/pull/194#issuecomment-5119970807",
+      "contracts/master.openapi.yaml",
+      "governance/saas/saas-governance.json",
+      "governance/02_SERVICES_AND_SURFACES.md"
+    ]
+  },
+  "actors": [
+    {
+      "id": "operator",
+      "role": "Operates the BThwani platform and its governed cross-surface capabilities.",
+      "permittedActions": ["govern platform configuration", "operate commerce and fulfillment", "read operational and authorized financial projections"],
+      "forbiddenActions": ["mutate WLT financial truth through DSH", "treat a partner or store as an operator context"]
+    },
+    {
+      "id": "partner",
+      "role": "Operates partner organizations and stores under an authorized platform context.",
+      "permittedActions": ["manage authorized stores and catalog", "fulfill authorized orders", "read authorized financial projections"],
+      "forbiddenActions": ["select or override platform isolation context", "access another partner organization", "mutate ledger truth"]
+    },
+    {
+      "id": "captain",
+      "role": "Performs BThwani-affiliated or partner-affiliated delivery work.",
+      "permittedActions": ["accept authorized assignments", "perform delivery lifecycle actions", "read authorized earnings projections"],
+      "forbiddenActions": ["change affiliation through a request context", "access another captain assignment", "mutate payout or commission truth"]
+    },
+    {
+      "id": "field",
+      "role": "Performs authorized field onboarding, verification, and readiness work.",
+      "permittedActions": ["create and review authorized field evidence", "read assigned partner readiness"],
+      "forbiddenActions": ["activate financial state", "override operator context", "access unassigned organizations"]
+    },
+    {
+      "id": "customer",
+      "role": "Discovers stores, creates commerce intents, receives fulfillment, and views owned financial references.",
+      "permittedActions": ["discover and order", "track owned fulfillment", "request owned payment or refund workflows through DSH"],
+      "forbiddenActions": ["call WLT application endpoints directly", "supply trusted operator context", "access another customer's references"]
+    }
+  ],
+  "surfaces": [
+    {
+      "id": "app-client",
+      "required": true,
+      "actors": ["customer"],
+      "routesOrScreens": ["commerce", "checkout", "orders", "financial references"],
+      "operationIds": [],
+      "states": ["loading", "success", "empty", "forbidden", "failure"],
+      "actions": ["consume DSH commerce, fulfillment, and financial facade"]
+    },
+    {
+      "id": "app-partner",
+      "required": true,
+      "actors": ["partner"],
+      "routesOrScreens": ["stores", "catalog", "orders", "partner finance visibility"],
+      "operationIds": [],
+      "states": ["loading", "success", "empty", "forbidden", "failure"],
+      "actions": ["operate authorized partner resources through DSH"]
+    },
+    {
+      "id": "app-captain",
+      "required": true,
+      "actors": ["captain"],
+      "routesOrScreens": ["assignments", "delivery", "earnings visibility"],
+      "operationIds": [],
+      "states": ["loading", "success", "empty", "forbidden", "failure"],
+      "actions": ["operate assigned fulfillment and consume DSH financial projections"]
+    },
+    {
+      "id": "app-field",
+      "required": true,
+      "actors": ["field"],
+      "routesOrScreens": ["onboarding", "visits", "readiness"],
+      "operationIds": [],
+      "states": ["loading", "success", "empty", "forbidden", "failure"],
+      "actions": ["operate assigned field workflows"]
+    },
+    {
+      "id": "control-panel",
+      "required": true,
+      "actors": ["operator"],
+      "routesOrScreens": ["/dsh", "platform operations", "finance visibility"],
+      "operationIds": [],
+      "states": ["loading", "success", "empty", "forbidden", "failure"],
+      "actions": ["govern and operate through owner facades"]
+    },
+    {
+      "id": "backend",
+      "required": true,
+      "actors": ["operator", "partner", "captain", "field", "customer"],
+      "routesOrScreens": ["Identity trusted context", "DSH operational facade", "WLT internal financial owner"],
+      "operationIds": [],
+      "states": ["authorized", "forbidden", "unavailable", "conflict"],
+      "actions": ["derive trusted context", "enforce object authorization", "preserve domain ownership"]
+    },
+    {
+      "id": "database",
+      "required": true,
+      "actors": ["operator"],
+      "routesOrScreens": ["service-owned persistence"],
+      "operationIds": [],
+      "states": ["transactional", "isolated", "audited"],
+      "actions": ["persist owner truth within service boundaries"]
+    },
+    {
+      "id": "shared",
+      "required": true,
+      "actors": ["operator", "partner", "captain", "field", "customer"],
+      "routesOrScreens": ["generated clients", "DSH Finance Access Kernel"],
+      "operationIds": [],
+      "states": ["typed", "bound", "fail-closed"],
+      "actions": ["reuse generated owner contracts and shared transports"]
+    }
+  ],
+  "outcome": {
+    "statement": "Every surface uses one actor model, one trusted operator-context model, one operational owner, and one financial-truth owner.",
+    "primaryMetric": "platform_semantic_and_financial_boundary_violations",
+    "guardrailMetrics": ["direct_app_to_wlt_calls", "client_context_overrides", "manual_generated_clients", "contract_drift"],
+    "baselineState": "Overlapping tenant vocabulary, direct WLT consumers, hand-authored generated clients, and context-local composition.",
+    "targetState": "Zero in-scope semantic, trust, financial-access, provenance, and contract-composition violations.",
+    "observationWindow": "Every affected request, generated-contract check, targeted runtime smoke, and same-commit CI run."
+  },
+  "acceptance": {
+    "criteria": [
+      "Partner organizations and stores are never treated as operator contexts.",
+      "All application financial access is routed through DSH and all financial truth remains in WLT.",
+      "Exactly six bounded-context clients are deterministically generated from composed bundles.",
+      "Client-supplied context cannot authorize or override trusted context.",
+      "SaaS remains deferred and no production or commercial activation is implied."
+    ],
+    "failureStates": [
+      "A surface calls WLT directly.",
+      "A client controls trusted operator context.",
+      "DSH calculates or mutates authoritative financial truth.",
+      "A generated client is hand-authored or stale.",
+      "A partner or store is represented as a tenant."
+    ],
+    "requiredChecks": [
+      "product-truth schema validation",
+      "SaaS governance gate",
+      "OpenAPI composition and generated-client provenance",
+      "DSH/WLT financial boundary checks",
+      "trusted-context negative tests",
+      "targeted runtime smoke",
+      "same-commit contextual CI"
+    ],
+    "runtimeEvidenceRequired": true,
+    "visualEvidenceRequired": false
+  },
+  "invariants": {
+    "business": [
+      "BThwani is a unified multi-surface B2B2C commerce, fulfillment, and wallet platform with partner SaaS capabilities.",
+      "DSH owns operational truth and the application-facing financial facade.",
+      "WLT solely owns financial truth and financial mutation.",
+      "Captain affiliation is explicitly BTHWANI or PARTNER.",
+      "Operator context is derived from trusted identity or server-side delegation."
+    ],
+    "negative": [
+      "Partner Organization is not a tenant.",
+      "Store is not a tenant.",
+      "Applications do not call WLT directly.",
+      "DSH does not own ledger, wallet, payment, refund, settlement, payout, commission, or reconciliation truth.",
+      "SaaS readiness does not imply commercial or production activation."
+    ]
+  },
+  "owners": {
+    "productManager": "PRODUCT_MANAGER_AUTHORITY",
+    "productOwner": "PRODUCT_OWNER_ACCEPTANCE_AUTHORITY",
+    "uxJourneyOwner": "UX_JOURNEY_AUTHORITY",
+    "engineeringOwner": "ENGINEERING",
+    "productManagerApproval": "APPROVED",
+    "productOwnerApproval": "APPROVED",
+    "productAcceptanceDecision": "PENDING"
+  },
+  "execution": {
+    "appetite": "Complete the approved repository reconstruction on validclean without merge, deployment, or protected-domain closure.",
+    "fixedConstraints": [
+      "validclean and its resolved immutable SHA are the only repository truth",
+      "WLT is the sole financial-truth owner",
+      "DSH is the sole application-facing financial facade",
+      "trusted operator context is fail-closed",
+      "SaaS commercial activation remains deferred",
+      "same-commit automated checks cannot be waived"
+    ],
+    "variableScope": ["internal module layout", "presentation wording", "non-public storage adapters"],
+    "forbiddenScope": [
+      "merge to abdo or master",
+      "production deployment",
+      "commercial SaaS activation",
+      "self-approved security, isolation, finance, release, production, or final closure",
+      "fake, seed, fixture, or preview truth presented as runtime evidence"
+    ],
+    "forecastRange": "One bounded reconstruction sequence followed by targeted and contextual verification.",
+    "confidence": "high",
+    "unknowns": ["independent protected-domain approvals", "live repository enforcement", "same-commit GitHub CI outcome"]
+  },
+  "platformModel": {
+    "classification": "UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_WALLET_PLATFORM_WITH_PARTNER_SAAS_CAPABILITIES",
+    "actors": ["OPERATOR", "PARTNER", "CAPTAIN", "FIELD", "CUSTOMER"],
+    "captainAffiliations": ["BTHWANI", "PARTNER"],
+    "fulfillmentModes": ["BTHWANI_CAPTAIN", "PARTNER_CAPTAIN", "PARTNER_SELF_FULFILLMENT", "CUSTOMER_PICKUP"],
+    "partnerCommercialModels": ["COMMISSION", "SUBSCRIPTION", "HYBRID", "OPERATOR_MANAGED"],
+    "contextSemantics": {
+      "operatorContext": "PLATFORM_ISOLATION_CONTEXT",
+      "partnerOrganization": "NOT_A_TENANT",
+      "store": "NOT_A_TENANT"
+    },
+    "ownership": {
+      "operationalTruth": "DSH",
+      "financialTruth": "WLT",
+      "applicationFinancialAccess": "DSH_FACADE_ONLY"
+    }
+  }
+}

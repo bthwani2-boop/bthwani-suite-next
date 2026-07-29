@@ -75,19 +75,19 @@ func normalizePartnerCategory(value string) string {
 func UpsertFieldCategoryCommissionPolicy(
 	ctx context.Context,
 	db *sql.DB,
-	tenantID string,
+	operatorContextID string,
 	partnerCategory string,
 	input UpsertFieldCategoryCommissionPolicyInput,
 	correlationID string,
 ) (*FieldCategoryCommissionPolicy, error) {
-	tenantID = strings.TrimSpace(tenantID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	partnerCategory = normalizePartnerCategory(partnerCategory)
 	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
 	input.Status = strings.ToLower(strings.TrimSpace(input.Status))
 	input.ChangeReason = strings.TrimSpace(input.ChangeReason)
 	input.UpdatedByActorID = strings.TrimSpace(input.UpdatedByActorID)
 	correlationID = strings.TrimSpace(correlationID)
-	if tenantID == "" || input.ExpectedVersion < 0 || input.FixedAmountMinorUnits <= 0 || len(input.Currency) != 3 ||
+	if operatorContextID == "" || input.ExpectedVersion < 0 || input.FixedAmountMinorUnits <= 0 || len(input.Currency) != 3 ||
 		(input.Status != "active" && input.Status != "inactive") || len(input.ChangeReason) < 3 ||
 		input.UpdatedByActorID == "" || correlationID == "" {
 		return nil, fmt.Errorf("tenant, valid amount, currency, status, reason, actor and correlationId are required")
@@ -98,13 +98,13 @@ func UpsertFieldCategoryCommissionPolicy(
 		return nil, err
 	}
 	defer tx.Rollback() //nolint:errcheck
-	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "field-category-policy:"+tenantID+":"+partnerCategory); err != nil {
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "field-category-policy:"+operatorContextID+":"+partnerCategory); err != nil {
 		return nil, err
 	}
 	var currentVersion int64
 	err = tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(version),0)
 		FROM wlt_field_commission_category_policy_versions
-		WHERE tenant_id=$1 AND partner_category=$2`, tenantID, partnerCategory).Scan(&currentVersion)
+		WHERE tenant_id=$1 AND partner_category=$2`, operatorContextID, partnerCategory).Scan(&currentVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func UpsertFieldCategoryCommissionPolicy(
 	if input.Status == "active" {
 		if _, err := tx.ExecContext(ctx, `UPDATE wlt_field_commission_category_policy_versions
 			SET status='inactive'
-			WHERE tenant_id=$1 AND partner_category=$2 AND status='active'`, tenantID, partnerCategory); err != nil {
+			WHERE tenant_id=$1 AND partner_category=$2 AND status='active'`, operatorContextID, partnerCategory); err != nil {
 			return nil, err
 		}
 	}
@@ -125,13 +125,13 @@ func UpsertFieldCategoryCommissionPolicy(
 		change_reason,updated_by_actor_id)
 		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
 		RETURNING policy_id,partner_category,version,fixed_amount_minor_units,currency,status,change_reason,updated_by_actor_id`,
-		tenantID, policyID, partnerCategory, version, input.FixedAmountMinorUnits, input.Currency,
+		operatorContextID, policyID, partnerCategory, version, input.FixedAmountMinorUnits, input.Currency,
 		input.Status, input.ChangeReason, input.UpdatedByActorID))
 	if err != nil {
 		return nil, err
 	}
 	metadata, _ := json.Marshal(map[string]any{
-		"tenantId": tenantID,
+		"operatorContextId": operatorContextID,
 		"partnerCategory": partnerCategory,
 		"version": version,
 		"amountMinorUnits": input.FixedAmountMinorUnits,
@@ -141,7 +141,7 @@ func UpsertFieldCategoryCommissionPolicy(
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_jrn036_audit_events(
 		tenant_id,aggregate_type,aggregate_id,action,actor_id,actor_type,reason,correlation_id,metadata)
 		VALUES($1,'commission_policy',$2,'field_category_policy_version_created',$3,'operator',$4,$5,$6::jsonb)`,
-		tenantID, policyID, input.UpdatedByActorID, input.ChangeReason, correlationID, string(metadata)); err != nil {
+		operatorContextID, policyID, input.UpdatedByActorID, input.ChangeReason, correlationID, string(metadata)); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -150,7 +150,7 @@ func UpsertFieldCategoryCommissionPolicy(
 	return policy, nil
 }
 
-func getActiveFieldCategoryPolicyTx(ctx context.Context, tx *sql.Tx, tenantID, category string) (*FieldCategoryCommissionPolicy, error) {
+func getActiveFieldCategoryPolicyTx(ctx context.Context, tx *sql.Tx, operatorContextID, category string) (*FieldCategoryCommissionPolicy, error) {
 	category = normalizePartnerCategory(category)
 	return scanFieldCategoryPolicy(tx.QueryRowContext(ctx, `SELECT
 		policy_id,partner_category,version,fixed_amount_minor_units,currency,status,
@@ -158,7 +158,7 @@ func getActiveFieldCategoryPolicyTx(ctx context.Context, tx *sql.Tx, tenantID, c
 		FROM wlt_field_commission_category_policy_versions
 		WHERE tenant_id=$1 AND partner_category IN ($2,'default') AND status='active'
 		ORDER BY CASE WHEN partner_category=$2 THEN 0 ELSE 1 END, version DESC
-		LIMIT 1`, tenantID, category))
+		LIMIT 1`, operatorContextID, category))
 }
 
 func normalizeFieldCategoryCommissionInput(input *CreateFieldCategoryCommissionInput) error {
@@ -176,11 +176,11 @@ func normalizeFieldCategoryCommissionInput(input *CreateFieldCategoryCommissionI
 	return nil
 }
 
-func getExistingFieldCategoryCommissionTx(ctx context.Context, tx *sql.Tx, tenantID, idempotencyKey string) (*Commission, string, error) {
+func getExistingFieldCategoryCommissionTx(ctx context.Context, tx *sql.Tx, operatorContextID, idempotencyKey string) (*Commission, string, error) {
 	var commissionID, requestHash string
 	err := tx.QueryRowContext(ctx, `SELECT commission_id,request_hash
 		FROM wlt_jrn036_commission_evidence
-		WHERE tenant_id=$1 AND idempotency_key=$2`, tenantID, idempotencyKey).Scan(&commissionID, &requestHash)
+		WHERE tenant_id=$1 AND idempotency_key=$2`, operatorContextID, idempotencyKey).Scan(&commissionID, &requestHash)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, "", nil
 	}
@@ -188,27 +188,27 @@ func getExistingFieldCategoryCommissionTx(ctx context.Context, tx *sql.Tx, tenan
 		return nil, "", err
 	}
 	commission, err := scanCommission(tx.QueryRowContext(ctx, `SELECT `+commissionCols+`
-		FROM wlt_commissions WHERE tenant_id=$1 AND id=$2`, tenantID, commissionID))
+		FROM wlt_commissions WHERE tenant_id=$1 AND id=$2`, operatorContextID, commissionID))
 	return commission, requestHash, err
 }
 
 func CreateFieldCategoryCommission(
 	ctx context.Context,
 	db *sql.DB,
-	tenantID string,
+	operatorContextID string,
 	input CreateFieldCategoryCommissionInput,
 	correlationID string,
 ) (*Commission, error) {
-	tenantID = strings.TrimSpace(tenantID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	correlationID = strings.TrimSpace(correlationID)
-	if tenantID == "" || correlationID == "" {
-		return nil, fmt.Errorf("tenantId and correlationId are required")
+	if operatorContextID == "" || correlationID == "" {
+		return nil, fmt.Errorf("operatorContextId and correlationId are required")
 	}
 	if err := normalizeFieldCategoryCommissionInput(&input); err != nil {
 		return nil, err
 	}
 	requestHash := hashCommissionParts(
-		tenantID, input.BeneficiaryActorID, input.VisitID, input.StoreID,
+		operatorContextID, input.BeneficiaryActorID, input.VisitID, input.StoreID,
 		input.PartnerID, input.PartnerCategory, input.SourceEvidenceHash,
 	)
 
@@ -217,7 +217,7 @@ func CreateFieldCategoryCommission(
 		return nil, err
 	}
 	defer tx.Rollback() //nolint:errcheck
-	existing, storedHash, err := getExistingFieldCategoryCommissionTx(ctx, tx, tenantID, input.IdempotencyKey)
+	existing, storedHash, err := getExistingFieldCategoryCommissionTx(ctx, tx, operatorContextID, input.IdempotencyKey)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func CreateFieldCategoryCommission(
 		}
 		return existing, nil
 	}
-	policy, err := getActiveFieldCategoryPolicyTx(ctx, tx, tenantID, input.PartnerCategory)
+	policy, err := getActiveFieldCategoryPolicyTx(ctx, tx, operatorContextID, input.PartnerCategory)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ func CreateFieldCategoryCommission(
 	var walletStatus, walletCurrency string
 	err = tx.QueryRowContext(ctx, `SELECT status,currency FROM wlt_wallets
 		WHERE tenant_id=$1 AND actor_type='field' AND actor_id=$2 FOR UPDATE`,
-		tenantID, input.BeneficiaryActorID).Scan(&walletStatus, &walletCurrency)
+		operatorContextID, input.BeneficiaryActorID).Scan(&walletStatus, &walletCurrency)
 	if errors.Is(err, sql.ErrNoRows) || walletStatus != "active" || walletCurrency != policy.Currency {
 		return nil, ErrFieldWalletUnavailable
 	}
@@ -256,7 +256,7 @@ func CreateFieldCategoryCommission(
 		VALUES($1,$2,'field','field_visit',$3,$3::uuid,$4,$5,$6,$7,
 		'field_visit_fee',$8,$9,$10)
 		RETURNING `+commissionCols,
-		tenantID, input.BeneficiaryActorID, input.VisitID, input.StoreID,
+		operatorContextID, input.BeneficiaryActorID, input.VisitID, input.StoreID,
 		input.PartnerID, input.PartnerCategory, policy.PolicyID,
 		policy.FixedAmountMinorUnits, policy.Currency, input.IdempotencyKey))
 	if err != nil {
@@ -267,7 +267,7 @@ func CreateFieldCategoryCommission(
 		earned_total_minor_units=earned_total_minor_units+$1,
 		last_ledger_entry_at=now(),updated_at=now()
 		WHERE tenant_id=$2 AND actor_type='field' AND actor_id=$3`,
-		policy.FixedAmountMinorUnits, tenantID, input.BeneficiaryActorID)
+		policy.FixedAmountMinorUnits, operatorContextID, input.BeneficiaryActorID)
 	if err != nil {
 		return nil, err
 	}
@@ -285,12 +285,12 @@ func CreateFieldCategoryCommission(
 		source_evidence_status,gross_basis_minor_units,calculated_amount_minor_units,
 		idempotency_key,request_hash)
 		VALUES($1,$2,$3,$4,$5,$6,'completed',0,$7,$8,$9)`,
-		tenantID, commission.ID, policy.PolicyID, policy.Version, input.VisitID,
+		operatorContextID, commission.ID, policy.PolicyID, policy.Version, input.VisitID,
 		input.SourceEvidenceHash, policy.FixedAmountMinorUnits, input.IdempotencyKey, requestHash); err != nil {
 		return nil, err
 	}
 	metadata, _ := json.Marshal(map[string]any{
-		"tenantId": tenantID,
+		"operatorContextId": operatorContextID,
 		"partnerId": input.PartnerID,
 		"partnerCategory": input.PartnerCategory,
 		"matchedPolicyCategory": policy.PartnerCategory,
@@ -302,7 +302,7 @@ func CreateFieldCategoryCommission(
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_jrn036_audit_events(
 		tenant_id,aggregate_type,aggregate_id,action,actor_id,actor_type,correlation_id,metadata)
 		VALUES($1,'commission',$2,'field_category_commission_calculated',$3,'service',$4,$5::jsonb)`,
-		tenantID, commission.ID, input.BeneficiaryActorID, correlationID, string(metadata)); err != nil {
+		operatorContextID, commission.ID, input.BeneficiaryActorID, correlationID, string(metadata)); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -319,7 +319,7 @@ func HandleUpsertFieldCategoryCommissionPolicy(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		policy, err := UpsertFieldCategoryCommissionPolicy(
-			r.Context(), db, r.Header.Get("X-Tenant-ID"), r.PathValue("partnerCategory"), input, r.Header.Get("X-Correlation-ID"),
+			r.Context(), db, r.Header.Get("X-Operator-Context-ID"), r.PathValue("partnerCategory"), input, r.Header.Get("X-Correlation-ID"),
 		)
 		if errors.Is(err, ErrFieldCategoryPolicyConflict) {
 			shared.SendError(w, http.StatusConflict, "POLICY_VERSION_CONFLICT", err.Error())
@@ -341,7 +341,7 @@ func HandleCreateFieldCategoryCommission(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		commission, err := CreateFieldCategoryCommission(
-			r.Context(), db, r.Header.Get("X-Tenant-ID"), input, r.Header.Get("X-Correlation-ID"),
+			r.Context(), db, r.Header.Get("X-Operator-Context-ID"), input, r.Header.Get("X-Correlation-ID"),
 		)
 		switch {
 		case errors.Is(err, ErrFieldCategoryPolicyMissing):

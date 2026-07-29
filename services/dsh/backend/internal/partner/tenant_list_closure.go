@@ -10,11 +10,11 @@ import (
 // lifecycle-status and category filters.
 func ListPartnersForTenantCategory(
 	db *sql.DB,
-	tenantID string,
+	operatorContextID string,
 	query PartnerListQuery,
 	category string,
 ) ([]PartnerSummary, int, error) {
-	tenantID, err := normalizeTenantID(tenantID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -29,7 +29,7 @@ func ListPartnersForTenantCategory(
 		query.Offset = 0
 	}
 
-	args := []any{tenantID}
+	args := []any{operatorContextID}
 	conditions := []string{"tenant_id = $1"}
 	next := 2
 	if query.ActivationStatus != "" {

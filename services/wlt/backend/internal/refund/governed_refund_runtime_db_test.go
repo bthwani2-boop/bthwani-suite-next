@@ -29,13 +29,13 @@ func (p *governedRuntimeProvider) Post(_ context.Context, path string, _ any, me
 
 func createGovernedRuntimeRefund(t *testing.T, db *sql.DB, sessionID, orderID string, amount int64, suffix string) *GovernedRefund {
 	t.Helper()
-	var tenantID, clientID string
-	if err := db.QueryRow(`SELECT tenant_id, client_id FROM wlt_payment_sessions WHERE id=$1`, sessionID).Scan(&tenantID, &clientID); err != nil {
+	var operatorContextID, clientID string
+	if err := db.QueryRow(`SELECT tenant_id, client_id FROM wlt_payment_sessions WHERE id=$1`, sessionID).Scan(&operatorContextID, &clientID); err != nil {
 		t.Fatalf("read runtime payment session identity: %v", err)
 	}
 	key := fmt.Sprintf("jrn035-runtime-%s-%d", suffix, time.Now().UnixNano())
 	created, replayed, err := CreateGovernedRefund(context.Background(), db, GovernedCreateRefundInput{
-		TenantID:              tenantID,
+		OperatorContextID:              operatorContextID,
 		PaymentSessionID:      sessionID,
 		OrderID:               orderID,
 		ClientID:              clientID,
@@ -278,12 +278,12 @@ func TestGovernedRefundRuntimePartialThenRemainingFullPreventsOverRefund(t *test
 		t.Fatalf("complete remaining refund: %v", err)
 	}
 
-	var tenantID, clientID string
-	if err := db.QueryRow(`SELECT tenant_id,client_id FROM wlt_payment_sessions WHERE id=$1`, sessionID).Scan(&tenantID, &clientID); err != nil {
+	var operatorContextID, clientID string
+	if err := db.QueryRow(`SELECT tenant_id,client_id FROM wlt_payment_sessions WHERE id=$1`, sessionID).Scan(&operatorContextID, &clientID); err != nil {
 		t.Fatalf("read completed session identity: %v", err)
 	}
 	_, _, err := CreateGovernedRefund(context.Background(), db, GovernedCreateRefundInput{
-		TenantID: tenantID, PaymentSessionID: sessionID, OrderID: orderID, ClientID: clientID,
+		OperatorContextID: operatorContextID, PaymentSessionID: sessionID, OrderID: orderID, ClientID: clientID,
 		AmountMinorUnits: 1, Reason: "over refund", EligibilityReference: "runtime-over-refund",
 		RequestedByOperatorID: "maker-over-refund", IdempotencyKey: fmt.Sprintf("over-refund-%d", time.Now().UnixNano()),
 	})

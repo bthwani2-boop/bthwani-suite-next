@@ -17,7 +17,7 @@ func TestListSettlementSummaryGoverned_AggregatesOnePartnerWithoutGroupBy(t *tes
 	defer db.Close()
 
 	suffix := time.Now().UnixNano()
-	tenantID := fmt.Sprintf("tenant-summary-%d", suffix)
+	operatorContextID := fmt.Sprintf("tenant-summary-%d", suffix)
 	partnerID := fmt.Sprintf("partner-summary-%d", suffix)
 	_, err := db.Exec(`
 		INSERT INTO wlt_settlements
@@ -25,16 +25,16 @@ func TestListSettlementSummaryGoverned_AggregatesOnePartnerWithoutGroupBy(t *tes
 		VALUES
 			($1, $2, '2026-01-01', '2026-01-15', 1000, 100, 900, 'YER', 2, 'pending'),
 			($1, $2, '2026-01-16', '2026-01-31', 2500, 250, 2250, 'YER', 3, 'settled')`,
-		tenantID, partnerID,
+		operatorContextID, partnerID,
 	)
 	if err != nil {
 		t.Fatalf("failed to insert settlement summary fixtures: %v", err)
 	}
 	t.Cleanup(func() {
-		_, _ = db.Exec(`DELETE FROM wlt_settlements WHERE tenant_id = $1 AND partner_id = $2`, tenantID, partnerID)
+		_, _ = db.Exec(`DELETE FROM wlt_settlements WHERE tenant_id = $1 AND partner_id = $2`, operatorContextID, partnerID)
 	})
 
-	ctx := shared.WithTenantContext(context.Background(), tenantID)
+	ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 	summary, err := ListSettlementSummaryGoverned(ctx, db, partnerID, "", "")
 	if err != nil {
 		t.Fatalf("summary query failed: %v", err)
@@ -61,9 +61,9 @@ func TestListSettlementSummaryGoverned_ReturnsStableZeroSummary(t *testing.T) {
 	defer db.Close()
 
 	suffix := time.Now().UnixNano()
-	tenantID := fmt.Sprintf("tenant-summary-empty-%d", suffix)
+	operatorContextID := fmt.Sprintf("tenant-summary-empty-%d", suffix)
 	partnerID := fmt.Sprintf("partner-summary-empty-%d", suffix)
-	ctx := shared.WithTenantContext(context.Background(), tenantID)
+	ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 	summary, err := ListSettlementSummaryGoverned(ctx, db, partnerID, "", "")
 	if err != nil {
 		t.Fatalf("empty summary query failed: %v", err)

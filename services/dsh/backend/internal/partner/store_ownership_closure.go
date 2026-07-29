@@ -23,10 +23,10 @@ type GovernedStoreLinkInput struct {
 // store so the new owner must pass readiness, catalog and marketing gates again.
 func LinkPartnerStoreForTenantGoverned(
 	db *sql.DB,
-	tenantID, partnerID, actorID, correlationID string,
+	operatorContextID, partnerID, actorID, correlationID string,
 	input GovernedStoreLinkInput,
 ) ([]PartnerLinkedStore, error) {
-	tenantID, err := normalizeTenantID(tenantID)
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func LinkPartnerStoreForTenantGoverned(
 	if partnerID == "" || input.StoreID == "" || actorID == "" {
 		return nil, ErrInvalid
 	}
-	if err := EnsureTenantPartner(db, tenantID, partnerID); err != nil {
+	if err := EnsureTenantPartner(db, operatorContextID, partnerID); err != nil {
 		return nil, err
 	}
 
@@ -53,7 +53,7 @@ func LinkPartnerStoreForTenantGoverned(
 		SELECT COALESCE(partner_id, ''), version
 		FROM dsh_stores
 		WHERE id = $1 AND tenant_id = $2
-		FOR UPDATE`, input.StoreID, tenantID,
+		FOR UPDATE`, input.StoreID, operatorContextID,
 	).Scan(&currentPartnerID, &currentVersion)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -120,7 +120,7 @@ func LinkPartnerStoreForTenantGoverned(
 		    version = version + 1,
 		    updated_at = NOW()
 		WHERE id = $2 AND tenant_id = $3 AND version = $4`,
-		partnerID, input.StoreID, tenantID, currentVersion,
+		partnerID, input.StoreID, operatorContextID, currentVersion,
 	)
 	if err != nil {
 		return nil, err
@@ -140,7 +140,7 @@ func LinkPartnerStoreForTenantGoverned(
 			actor_id, actor_surface, reason,
 			expected_store_version, resulting_store_version, correlation_id
 		) VALUES ($1,$2,NULLIF($3,''),$4,$5,'control-panel',$6,$7,$8,$9)`,
-		tenantID, input.StoreID, currentPartnerID, partnerID, actorID, input.Reason,
+		operatorContextID, input.StoreID, currentPartnerID, partnerID, actorID, input.Reason,
 		currentVersion, resultingVersion, correlationID,
 	)
 	if err != nil {

@@ -15,7 +15,7 @@ x-bthwani-runtime-dependency: true
 paths:
   /dsh/operator/marketing/coupons:
     get:
-      operationId: listDshCoupons
+      operationId: listDshMarketingCoupons
       tags: [DshMarketing]
       security: [{ bearerAuth: [] }]
       responses:
@@ -31,7 +31,7 @@ paths:
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
     post:
-      operationId: createDshCoupon
+      operationId: createDshMarketingCoupon
       tags: [DshMarketing]
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -61,7 +61,7 @@ paths:
 
   /dsh/operator/marketing/coupons/{couponId}:
     patch:
-      operationId: updateDshCoupon
+      operationId: updateDshMarketingCoupon
       tags: [DshMarketing]
       security: [{ bearerAuth: [] }]
       parameters:

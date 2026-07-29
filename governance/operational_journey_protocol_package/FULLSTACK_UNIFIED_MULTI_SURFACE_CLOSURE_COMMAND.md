@@ -162,8 +162,8 @@ git status --short
 git diff --check
 pnpm install --frozen-lockfile
 
-pnpm run foundation:gate      # إلزامي في كل رحلة بلا استثناء
-pnpm run journey:gate         # إلزامي في كل رحلة تمس surface أو shared أو WLT
+pnpm run guard:foundation      # إلزامي في كل رحلة بلا استثناء
+pnpm run guard:journey         # إلزامي في كل رحلة تمس surface أو shared أو WLT
 ```
 
 وGo backends داخل النطاق فقط:
@@ -173,7 +173,7 @@ Push-Location "services\dsh\backend"; go test ./...; go build ./...; Pop-Locatio
 Push-Location "core\identity\backend"; go test ./...; go build ./...; Pop-Location
 ```
 
-وحسب النطاق الفعلي للمهمة شغّل ما ينطبق من: حراس الحدود والربط (`guard:fullstack-boundary`, `guard:wlt-financial-boundary`, `guard:ui-kit-boundary`, `guard:api-binding`, `guard:backend-api-binding`, `guard:frontend-feature-binding`, `guard:service-manifest-drift`, `guard:no-broken-imports`, `guard:runtime-real-bindings`, `guard:live-cross-journey-integrity`)، حراس الحوكمة (`guard:sdlc`, `guard:governance-all`, `guard:secrets`)، توليد العقود (`openapi:generate`, `contracts:lint`)، بيئة التشغيل (`runtime:*` بما فيها `runtime:smoke` و`journey:gate:runtime` عند الانطباق)، والتشخيص (`diagnostics:*`)، والأداء والأمن (`guard:performance-all`, `security:trivy`, `security:osv`).
+وحسب النطاق الفعلي للمهمة شغّل ما ينطبق من: حراس الحدود والربط (`guard:fullstack-boundary`, `guard:wlt-financial-boundary`, `guard:ui-kit-boundary`, `guard:api-binding`, `guard:backend-api-binding`, `guard:frontend-feature-binding`, `guard:service-manifest-drift`, `guard:no-broken-imports`, `guard:runtime-real-bindings`, `guard:live-cross-journey-integrity`)، حراس الحوكمة (`guard:sdlc`, `guard:governance-all`, `guard:secrets`)، توليد العقود (`openapi:generate`, `contracts:lint`)، بيئة التشغيل (`runtime:*` بما فيها `runtime:smoke` و`guard:journey:runtime` عند الانطباق)، والتشخيص (`diagnostics:*`)، والأداء والأمن (`guard:performance-all`, `security:trivy`, `security:osv`).
 
 **قاعدة Affected-Only:** ابدأ بالفحوصات المتأثرة فقط؛ لا تشغّل full-suite إلا عند تغيّر shared brain أو API/database/migration/runtime، أو فشل affected check، أو منطقة multi-surface عالية الخطورة.
 

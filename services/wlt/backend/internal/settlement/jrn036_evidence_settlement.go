@@ -152,7 +152,7 @@ func scanGovernedSettlementPolicy(row *sql.Row) (*GovernedSettlementPolicy, erro
 }
 
 func getOrAdoptSettlementPolicyTx(ctx context.Context, tx *sql.Tx, partnerID string) (*GovernedSettlementPolicy, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func getOrAdoptSettlementPolicyTx(ctx context.Context, tx *sql.Tx, partnerID str
 		FROM wlt_jrn036_settlement_policy_versions
 		WHERE tenant_id=$1 AND partner_id=$2
 		ORDER BY version DESC LIMIT 1`
-	policy, err := scanGovernedSettlementPolicy(tx.QueryRowContext(ctx, versionQuery, tenantID, partnerID))
+	policy, err := scanGovernedSettlementPolicy(tx.QueryRowContext(ctx, versionQuery, operatorContextID, partnerID))
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func getOrAdoptSettlementPolicyTx(ctx context.Context, tx *sql.Tx, partnerID str
 	var fee int
 	var currency, status, operator string
 	err = tx.QueryRowContext(ctx, `SELECT fee_basis_points,currency,status,updated_by_operator_id
-		FROM wlt_settlement_policies WHERE tenant_id=$1 AND partner_id=$2`, tenantID, partnerID).Scan(&fee, &currency, &status, &operator)
+		FROM wlt_settlement_policies WHERE tenant_id=$1 AND partner_id=$2`, operatorContextID, partnerID).Scan(&fee, &currency, &status, &operator)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrSettlementPolicyMissing
 	}
@@ -181,12 +181,12 @@ func getOrAdoptSettlementPolicyTx(ctx context.Context, tx *sql.Tx, partnerID str
 		(tenant_id,partner_id,version,fee_basis_points,currency,status,cycle_days,minimum_net_minor_units,change_reason,updated_by_operator_id)
 		VALUES ($1,$2,1,$3,$4,$5,7,0,'adopted existing sovereign WLT settlement policy',$6)
 		RETURNING partner_id,version,fee_basis_points,currency,status,cycle_days,minimum_net_minor_units,change_reason,updated_by_operator_id`,
-		tenantID, partnerID, fee, currency, status, operator)
+		operatorContextID, partnerID, fee, currency, status, operator)
 	return scanGovernedSettlementPolicy(row)
 }
 
 func UpsertGovernedSettlementPolicy(ctx context.Context, db *sql.DB, partnerID string, input UpsertGovernedSettlementPolicyInput, correlationID string) (*GovernedSettlementPolicy, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -225,19 +225,19 @@ func UpsertGovernedSettlementPolicy(ctx context.Context, db *sql.DB, partnerID s
 		ON CONFLICT (tenant_id,partner_id) DO UPDATE SET
 		fee_basis_points=EXCLUDED.fee_basis_points,currency=EXCLUDED.currency,status=EXCLUDED.status,
 		updated_by_operator_id=EXCLUDED.updated_by_operator_id,updated_at=NOW()`,
-		tenantID, partnerID, input.FeeBasisPoints, input.Currency, input.Status, input.OperatorID); err != nil {
+		operatorContextID, partnerID, input.FeeBasisPoints, input.Currency, input.Status, input.OperatorID); err != nil {
 		return nil, err
 	}
 	var version int64
 	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(version),0)+1
-		FROM wlt_jrn036_settlement_policy_versions WHERE tenant_id=$1 AND partner_id=$2`, tenantID, partnerID).Scan(&version); err != nil {
+		FROM wlt_jrn036_settlement_policy_versions WHERE tenant_id=$1 AND partner_id=$2`, operatorContextID, partnerID).Scan(&version); err != nil {
 		return nil, err
 	}
 	row := tx.QueryRowContext(ctx, `INSERT INTO wlt_jrn036_settlement_policy_versions
 		(tenant_id,partner_id,version,fee_basis_points,currency,status,cycle_days,minimum_net_minor_units,change_reason,updated_by_operator_id)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 		RETURNING partner_id,version,fee_basis_points,currency,status,cycle_days,minimum_net_minor_units,change_reason,updated_by_operator_id`,
-		tenantID, partnerID, version, input.FeeBasisPoints, input.Currency, input.Status, input.CycleDays, input.MinimumNetMinorUnits, input.ChangeReason, input.OperatorID)
+		operatorContextID, partnerID, version, input.FeeBasisPoints, input.Currency, input.Status, input.CycleDays, input.MinimumNetMinorUnits, input.ChangeReason, input.OperatorID)
 	policy, err := scanGovernedSettlementPolicy(row)
 	if err != nil {
 		return nil, err
@@ -246,7 +246,7 @@ func UpsertGovernedSettlementPolicy(ctx context.Context, db *sql.DB, partnerID s
 		(tenant_id,aggregate_type,aggregate_id,action,actor_id,actor_type,reason,correlation_id,metadata)
 		VALUES ($1,'settlement_policy',$2,'policy_version_created',$3,'operator',$4,$5,
 		jsonb_build_object('version',$6,'feeBasisPoints',$7,'status',$8))`,
-		tenantID, partnerID, input.OperatorID, input.ChangeReason, correlationID, version, input.FeeBasisPoints, input.Status); err != nil {
+		operatorContextID, partnerID, input.OperatorID, input.ChangeReason, correlationID, version, input.FeeBasisPoints, input.Status); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -256,7 +256,7 @@ func UpsertGovernedSettlementPolicy(ctx context.Context, db *sql.DB, partnerID s
 }
 
 func CreateEvidenceBackedSettlement(ctx context.Context, db *sql.DB, input CreateEvidenceSettlementInput, correlationID string) (*Settlement, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +271,7 @@ func CreateEvidenceBackedSettlement(ctx context.Context, db *sql.DB, input Creat
 	if correlationID == "" {
 		return nil, fmt.Errorf("correlationId is required")
 	}
-	hashParts := []string{tenantID, input.PartnerID, input.PeriodStart, input.PeriodEnd, input.OperatorID}
+	hashParts := []string{operatorContextID, input.PartnerID, input.PeriodStart, input.PeriodEnd, input.OperatorID}
 	for _, source := range input.OrderSources {
 		hashParts = append(hashParts, source.OrderID, fmt.Sprint(source.GrossAmountMinorUnits), source.Currency, source.DeliveredAt.UTC().Format(time.RFC3339Nano), source.PricingSnapshotHash, source.CompletionEventID, source.CompletionEvidenceHash, source.CancellationStatus)
 	}
@@ -283,12 +283,12 @@ func CreateEvidenceBackedSettlement(ctx context.Context, db *sql.DB, input Creat
 	defer tx.Rollback() //nolint:errcheck
 	var existingSettlementID, existingHash string
 	err = tx.QueryRowContext(ctx, `SELECT settlement_id,request_hash
-		FROM wlt_jrn036_settlement_requests WHERE tenant_id=$1 AND idempotency_key=$2`, tenantID, input.IdempotencyKey).Scan(&existingSettlementID, &existingHash)
+		FROM wlt_jrn036_settlement_requests WHERE tenant_id=$1 AND idempotency_key=$2`, operatorContextID, input.IdempotencyKey).Scan(&existingSettlementID, &existingHash)
 	if err == nil {
 		if existingHash != requestHash {
 			return nil, ErrSettlementIdempotencyConflict
 		}
-		existing, err := scanSettlement(tx.QueryRowContext(ctx, `SELECT `+settlementCols+` FROM wlt_settlements WHERE tenant_id=$1 AND id=$2`, tenantID, existingSettlementID))
+		existing, err := scanSettlement(tx.QueryRowContext(ctx, `SELECT `+settlementCols+` FROM wlt_settlements WHERE tenant_id=$1 AND id=$2`, operatorContextID, existingSettlementID))
 		if err != nil {
 			return nil, err
 		}
@@ -322,7 +322,7 @@ func CreateEvidenceBackedSettlement(ctx context.Context, db *sql.DB, input Creat
 		var refund int64
 		var refundCount int
 		if err := tx.QueryRowContext(ctx, `SELECT COALESCE(SUM(amount_minor_units),0),COUNT(*)
-			FROM wlt_refunds WHERE tenant_id=$1 AND order_id=$2 AND status='completed'`, tenantID, source.OrderID).Scan(&refund, &refundCount); err != nil {
+			FROM wlt_refunds WHERE tenant_id=$1 AND order_id=$2 AND status='completed'`, operatorContextID, source.OrderID).Scan(&refund, &refundCount); err != nil {
 			return nil, err
 		}
 		if refund > source.GrossAmountMinorUnits {
@@ -357,7 +357,7 @@ func CreateEvidenceBackedSettlement(ctx context.Context, db *sql.DB, input Creat
 	settlement, err := scanSettlement(tx.QueryRowContext(ctx, `INSERT INTO wlt_settlements
 		(tenant_id,partner_id,period_start,period_end,gross_amount,platform_fee,net_amount,currency,order_count)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING `+settlementCols,
-		tenantID, input.PartnerID, input.PeriodStart, input.PeriodEnd, gross, fee, net, policy.Currency, positiveCount))
+		operatorContextID, input.PartnerID, input.PeriodStart, input.PeriodEnd, gross, fee, net, policy.Currency, positiveCount))
 	if err != nil {
 		return nil, err
 	}
@@ -365,27 +365,27 @@ func CreateEvidenceBackedSettlement(ctx context.Context, db *sql.DB, input Creat
 		if item.basis > 0 {
 			if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_settlement_source_orders
 				(tenant_id,order_id,settlement_id,partner_id,gross_amount_minor_units,currency,delivered_at)
-				VALUES ($1,$2,$3,$4,$5,$6,$7)`, tenantID, item.source.OrderID, settlement.ID, input.PartnerID, item.basis, item.source.Currency, item.source.DeliveredAt); err != nil {
+				VALUES ($1,$2,$3,$4,$5,$6,$7)`, operatorContextID, item.source.OrderID, settlement.ID, input.PartnerID, item.basis, item.source.Currency, item.source.DeliveredAt); err != nil {
 				return nil, err
 			}
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_jrn036_settlement_source_evidence
 			(tenant_id,order_id,settlement_id,pricing_snapshot_hash,completion_event_id,completion_evidence_hash,cancellation_status,original_gross_minor_units,completed_refund_minor_units,settlement_basis_minor_units,refund_evidence_count)
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-			tenantID, item.source.OrderID, settlement.ID, item.source.PricingSnapshotHash, item.source.CompletionEventID, item.source.CompletionEvidenceHash, item.source.CancellationStatus, item.source.GrossAmountMinorUnits, item.refund, item.basis, item.refundCount); err != nil {
+			operatorContextID, item.source.OrderID, settlement.ID, item.source.PricingSnapshotHash, item.source.CompletionEventID, item.source.CompletionEvidenceHash, item.source.CancellationStatus, item.source.GrossAmountMinorUnits, item.refund, item.basis, item.refundCount); err != nil {
 			return nil, err
 		}
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_jrn036_settlement_requests
 		(tenant_id,idempotency_key,request_hash,settlement_id,partner_id,policy_version)
-		VALUES ($1,$2,$3,$4,$5,$6)`, tenantID, input.IdempotencyKey, requestHash, settlement.ID, input.PartnerID, policy.Version); err != nil {
+		VALUES ($1,$2,$3,$4,$5,$6)`, operatorContextID, input.IdempotencyKey, requestHash, settlement.ID, input.PartnerID, policy.Version); err != nil {
 		return nil, err
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_jrn036_audit_events
 		(tenant_id,aggregate_type,aggregate_id,action,actor_id,actor_type,correlation_id,metadata)
 		VALUES ($1,'settlement',$2,'settlement_calculated',$3,'operator',$4,
 		jsonb_build_object('policyVersion',$5,'grossMinorUnits',$6,'feeMinorUnits',$7,'netMinorUnits',$8))`,
-		tenantID, settlement.ID, input.OperatorID, correlationID, policy.Version, gross, fee, net); err != nil {
+		operatorContextID, settlement.ID, input.OperatorID, correlationID, policy.Version, gross, fee, net); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -395,13 +395,13 @@ func CreateEvidenceBackedSettlement(ctx context.Context, db *sql.DB, input Creat
 }
 
 func ListSettlementEvidence(ctx context.Context, db *sql.DB, settlementID string) ([]SettlementSourceEvidenceView, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 	rows, err := db.QueryContext(ctx, `SELECT order_id,pricing_snapshot_hash,completion_event_id,completion_evidence_hash,cancellation_status,original_gross_minor_units,completed_refund_minor_units,settlement_basis_minor_units,refund_evidence_count,verified_at::text
 		FROM wlt_jrn036_settlement_source_evidence
-		WHERE tenant_id=$1 AND settlement_id=$2 ORDER BY order_id`, tenantID, strings.TrimSpace(settlementID))
+		WHERE tenant_id=$1 AND settlement_id=$2 ORDER BY order_id`, operatorContextID, strings.TrimSpace(settlementID))
 	if err != nil {
 		return nil, err
 	}

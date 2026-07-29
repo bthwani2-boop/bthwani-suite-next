@@ -35,7 +35,7 @@ func TestResolveSuccess(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(Identity{
 			Subject:   "user-1",
-			TenantID:  "tenant-a",
+			OperatorContextID:  "tenant-a",
 			Roles:     []string{"client"},
 			AuthState: "authenticated",
 		})
@@ -47,8 +47,8 @@ func TestResolveSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if identity.Subject != "user-1" || identity.TenantID != "tenant-a" {
-		t.Fatalf("unexpected identity subject=%q tenant=%q", identity.Subject, identity.TenantID)
+	if identity.Subject != "user-1" || identity.OperatorContextID != "tenant-a" {
+		t.Fatalf("unexpected identity subject=%q tenant=%q", identity.Subject, identity.OperatorContextID)
 	}
 	if !identity.HasRole("client") {
 		t.Fatalf("expected identity to have role client")
@@ -100,7 +100,7 @@ func TestResolveOtherErrorStatus(t *testing.T) {
 func TestResolveRejectsUnauthenticatedState(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(Identity{Subject: "user-1", TenantID: "tenant-a", AuthState: "pending"})
+		_ = json.NewEncoder(w).Encode(Identity{Subject: "user-1", OperatorContextID: "tenant-a", AuthState: "pending"})
 	}))
 	defer server.Close()
 
@@ -114,7 +114,7 @@ func TestResolveRejectsUnauthenticatedState(t *testing.T) {
 func TestResolveRejectsMissingSubject(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(Identity{TenantID: "tenant-a", AuthState: "authenticated"})
+		_ = json.NewEncoder(w).Encode(Identity{OperatorContextID: "tenant-a", AuthState: "authenticated"})
 	}))
 	defer server.Close()
 
@@ -139,17 +139,17 @@ func TestResolveRejectsMissingTenant(t *testing.T) {
 
 func TestResolveAcceptsSessionTenantInsteadOfProcessDefault(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "tenant-main")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{
-			Subject: "user-2", TenantID: "tenant-other", Roles: []string{"client"}, AuthState: "authenticated",
+			Subject: "user-2", OperatorContextID: "tenant-other", Roles: []string{"client"}, AuthState: "authenticated",
 		})
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL)
 	identity, err := client.Resolve(context.Background(), "Bearer tenant-other-token")
-	if err != nil || identity.TenantID != "tenant-other" {
+	if err != nil || identity.OperatorContextID != "tenant-other" {
 		t.Fatalf("expected authenticated session tenant to remain authoritative, identity=%#v err=%v", identity, err)
 	}
 }

@@ -6,6 +6,6 @@ import (
 	"dsh-api/internal/store"
 )
 
-func tenantIDForActor(actor store.StoreActor) string {
-	return strings.TrimSpace(actor.TenantID)
+func operatorContextIDForActor(actor store.StoreActor) string {
+	return strings.TrimSpace(actor.OperatorContextID)
 }

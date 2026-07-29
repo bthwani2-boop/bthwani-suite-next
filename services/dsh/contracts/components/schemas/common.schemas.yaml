@@ -53,7 +53,7 @@ DshDeliveryException:
   additionalProperties: false
   required:
     - id
-    - tenantId
+    - operatorContextId
     - assignmentId
     - captainId
     - reasonCode
@@ -68,7 +68,7 @@ DshDeliveryException:
     - updatedAt
   properties:
     id: { type: string, format: uuid }
-    tenantId: { type: string }
+    operatorContextId: { type: string }
     assignmentId: { type: string, format: uuid }
     orderId: { type: [string, "null"], format: uuid }
     specialRequestId: { type: [string, "null"], format: uuid }

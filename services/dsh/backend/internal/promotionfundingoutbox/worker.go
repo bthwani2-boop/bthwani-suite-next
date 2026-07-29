@@ -61,7 +61,7 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 
 func dispatch(ctx context.Context, client *wlt.Client, event Event) (string, error) {
 	input := wlt.PromotionFundingTransitionInput{
-		TenantID: event.TenantID,
+		OperatorContextID: event.OperatorContextID,
 		OrderID:  event.OrderID,
 		Reason:   event.Reason,
 	}

@@ -54,7 +54,7 @@ func (s *protectedStoreServer) handleGetServiceAreaCapacityForecast(w http.Respo
 		return
 	}
 	forecast, err := dispatch.GetServiceAreaCapacityForecast(
-		r.Context(), s.db, r.URL.Query().Get("tenantId"),
+		r.Context(), s.db, r.URL.Query().Get("operatorContextId"),
 		r.URL.Query().Get("serviceAreaCode"), time.Now().UTC(),
 	)
 	if err != nil {
@@ -88,7 +88,7 @@ func (s *protectedStoreServer) handleGetOperationsHeatmap(w http.ResponseWriter,
 		return
 	}
 	cells, err := dispatch.GetOperationsHeatmap(
-		r.Context(), s.db, r.URL.Query().Get("tenantId"),
+		r.Context(), s.db, r.URL.Query().Get("operatorContextId"),
 		r.URL.Query().Get("serviceAreaCode"), time.Now().UTC(),
 	)
 	if err != nil {
@@ -99,7 +99,7 @@ func (s *protectedStoreServer) handleGetOperationsHeatmap(w http.ResponseWriter,
 }
 
 type availabilityDispatchBody struct {
-	TenantID  string `json:"tenantId"`
+	OperatorContextID  string `json:"operatorContextId"`
 	CaptainID string `json:"captainId"`
 }
 
@@ -118,7 +118,7 @@ func unavailableCaptainForRequest(r *http.Request, db *sql.DB) (bool, string, er
 		if json.Unmarshal(payload, &body) != nil || strings.TrimSpace(body.CaptainID) == "" {
 			return false, "", nil
 		}
-		unavailable, err := dispatch.CaptainUnavailableAt(r.Context(), db, body.TenantID, body.CaptainID, time.Now().UTC())
+		unavailable, err := dispatch.CaptainUnavailableAt(r.Context(), db, body.OperatorContextID, body.CaptainID, time.Now().UTC())
 		return unavailable, body.CaptainID, err
 	}
 	if strings.HasPrefix(path, "/dsh/captain/dispatch/assignments/") && strings.HasSuffix(path, "/accept") {
@@ -127,12 +127,12 @@ func unavailableCaptainForRequest(r *http.Request, db *sql.DB) (bool, string, er
 			return false, "", nil
 		}
 		assignmentID := parts[4]
-		var tenantID, captainID string
-		err := db.QueryRowContext(r.Context(), `SELECT tenant_id,captain_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&tenantID, &captainID)
+		var operatorContextID, captainID string
+		err := db.QueryRowContext(r.Context(), `SELECT tenant_id,captain_id FROM dsh_assignments WHERE id=$1::uuid`, assignmentID).Scan(&operatorContextID, &captainID)
 		if err != nil {
 			return false, "", nil
 		}
-		unavailable, err := dispatch.CaptainUnavailableAt(r.Context(), db, tenantID, captainID, time.Now().UTC())
+		unavailable, err := dispatch.CaptainUnavailableAt(r.Context(), db, operatorContextID, captainID, time.Now().UTC())
 		return unavailable, captainID, err
 	}
 	return false, "", nil
@@ -171,7 +171,7 @@ func OperationsAvailabilityMiddleware(db *sql.DB, next http.Handler) http.Handle
 				Candidates []dispatch.CaptainDispatchCandidate `json:"candidates"`
 			}
 			if json.Unmarshal(recorder.Body.Bytes(), &envelope) == nil {
-				if err := dispatch.ApplyWorkforceAvailability(r.Context(), db, r.URL.Query().Get("tenantId"), time.Now().UTC(), envelope.Candidates); err == nil {
+				if err := dispatch.ApplyWorkforceAvailability(r.Context(), db, r.URL.Query().Get("operatorContextId"), time.Now().UTC(), envelope.Candidates); err == nil {
 					store.SendJSON(w, http.StatusOK, map[string]any{"candidates": envelope.Candidates})
 					return
 				}

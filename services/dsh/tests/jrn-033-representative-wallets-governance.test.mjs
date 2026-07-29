@@ -46,9 +46,9 @@ test("JRN-033 WLT accepts only supported representative wallet actors and requir
   }
   assert.ok(!handler.includes('"operator": {}'), "operator must not own a representative wallet");
   assert.ok(!proxy.includes('"operator": {}'), "operator must not be proxied as a representative wallet owner");
-  assertIncludesAll(handler, ["X-Tenant-ID", "TENANT_REQUIRED", "GetWalletForTenant"], "WLT wallet handler");
+  assertIncludesAll(handler, ["X-Operator-Context-ID", "TENANT_REQUIRED", "GetWalletForTenant"], "WLT wallet handler");
   assertIncludesAll(repository, ["GetWalletForTenant", "WHERE tenant_id = $1 AND actor_type = $2 AND actor_id = $3"], "WLT wallet repository");
-  assertIncludesAll(ledger, ["TenantID", "WHERE tenant_id = $1", "X-Tenant-ID", "TENANT_REQUIRED"], "WLT actor ledger");
+  assertIncludesAll(ledger, ["OperatorContextID", "WHERE tenant_id = $1", "X-Operator-Context-ID", "TENANT_REQUIRED"], "WLT actor ledger");
   assertIncludesAll(proxy, [
     "url.PathEscape(actorType)",
     "url.PathEscape(actorID)",
@@ -69,8 +69,8 @@ test("JRN-033 self-service routes derive actor and tenant identity while operato
     '"actorType": {actorType}',
     "FinanceReadWalletWithTenant",
     "FinanceReadWithTenant",
-    "actor.TenantID",
-    "operator.TenantID",
+    "actor.OperatorContextID",
+    "operator.OperatorContextID",
     'GET /dsh/client/me/finance/wallet',
     'GET /dsh/client/me/finance/ledger-entries',
     'GET /dsh/partner/me/finance/wallet',
@@ -108,7 +108,7 @@ test("JRN-033 tenant migration and local seed bind wallet and ledger truth", () 
   assert.ok(probes.includes('"wlt-038_jrn_033_representative_finance_tenancy.sql"'));
   assertIncludesAll(seed, ["'local-dsh'", "'other-tenant'", "tenant_id", "client-local-001", "partner-local-001", "captain-local-001", "field-local-001", "client-other-tenant-001"], "JRN-033 runtime seed");
   assert.equal(tenancy.parentContract, "services/dsh/contracts/dsh.representative-finance.openapi.yaml");
-  assert.equal(tenancy.tenantBoundary.source, "core.identity.session.tenantId");
+  assert.equal(tenancy.tenantBoundary.source, "core.identity.session.operatorContextId");
   assert.equal(tenancy.tenantBoundary.clientSuppliedTenantAccepted, false);
   assert.equal(tenancy.tenantBoundary.crossTenantWalletBehavior, "NOT_FOUND");
   assert.equal(tenancy.tenantBoundary.crossTenantLedgerBehavior, "EMPTY_COLLECTION");

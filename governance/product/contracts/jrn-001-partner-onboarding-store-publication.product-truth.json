@@ -133,7 +133,7 @@
   "acceptance": {
     "criteria": [
       "The tenant is derived only from the authenticated Identity session; browser headers, query parameters, and request bodies cannot select or override it.",
-      "Requests without trusted tenant context fail with TENANT_CONTEXT_REQUIRED and do not reach partner persistence.",
+      "Requests without trusted tenant context fail with OPERATOR_CONTEXT_REQUIRED and do not reach partner persistence.",
       "Partner lists, details, documents, visits, stores, scopes, transitions, and audit records are read and mutated only inside the authenticated tenant.",
       "Cross-tenant partner and store identifiers are returned as not found without disclosing ownership.",
       "The same legal identity may exist in different tenants but remains unique inside one tenant.",

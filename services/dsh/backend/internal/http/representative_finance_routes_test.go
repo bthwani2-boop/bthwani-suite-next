@@ -23,7 +23,7 @@ func representativeFinanceRouter(
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   actorID,
-			TenantID:  "dsh",
+			OperatorContextID:  "dsh",
 			Roles:     []string{role},
 			AuthState: "authenticated",
 		})
@@ -62,7 +62,7 @@ func TestRepresentativeOwnWalletRoutesResolveAuthenticatedActor(t *testing.T) {
 			router := representativeFinanceRouter(t, tc.actorType, tc.actorID, func(w http.ResponseWriter, r *http.Request) {
 				mu.Lock()
 				gotPath = r.URL.Path
-				gotTenant = r.Header.Get("X-Tenant-ID")
+				gotTenant = r.Header.Get("X-Operator-Context-ID")
 				mu.Unlock()
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(`{"wallet":{"actorId":"` + tc.actorID + `","actorType":"` + tc.actorType + `"}}`))
@@ -97,7 +97,7 @@ func TestRepresentativeOwnLedgerRoutesOverrideActorQuery(t *testing.T) {
 	var gotTenant string
 	router := representativeFinanceRouter(t, "captain", "captain-7", func(w http.ResponseWriter, r *http.Request) {
 		gotQuery = r.URL.RawQuery
-		gotTenant = r.Header.Get("X-Tenant-ID")
+		gotTenant = r.Header.Get("X-Operator-Context-ID")
 		_, _ = w.Write([]byte(`{"ledgerEntries":[]}`))
 	})
 
@@ -132,7 +132,7 @@ func TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback(
 	var gotTenant string
 	router := representativeFinanceRouter(t, "operator", "operator-1", func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
-		gotTenant = r.Header.Get("X-Tenant-ID")
+		gotTenant = r.Header.Get("X-Operator-Context-ID")
 		_, _ = w.Write([]byte(`{"wallet":{"actorId":"client-9","actorType":"client"}}`))
 	})
 
@@ -166,7 +166,7 @@ func TestControlPanelRepresentativeLedgerPinsActorAndNoStore(t *testing.T) {
 	router := representativeFinanceRouter(t, "operator", "operator-1", func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotQuery = r.URL.RawQuery
-		gotTenant = r.Header.Get("X-Tenant-ID")
+		gotTenant = r.Header.Get("X-Operator-Context-ID")
 		_, _ = w.Write([]byte(`{"ledgerEntries":[]}`))
 	})
 

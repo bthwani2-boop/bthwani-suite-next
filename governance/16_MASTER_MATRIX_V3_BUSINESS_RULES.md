@@ -396,8 +396,8 @@ Blocked endpoints (minimum — all at `status = BLOCKED_NEEDS_API_CONTRACT`):
 ## Guard Commands
 
 ```bash
-pnpm run foundation:gate
-pnpm run journey:gate
+pnpm run guard:foundation
+pnpm run guard:journey
 ```
 
 Both must exit 0 to verify the codebase integrity.

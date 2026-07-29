@@ -50,7 +50,7 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
-      operationId: submitPartnerReel
+      operationId: submitReel
       tags: [Reels]
       security: [{ bearerAuth: [] }]
       requestBody:
@@ -75,7 +75,7 @@ paths:
 
   /dsh/operator/reels:
     get:
-      operationId: listOperatorReels
+      operationId: listReels
       tags: [Reels]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -108,7 +108,7 @@ paths:
 
   /dsh/operator/reels/{reelId}/review:
     post:
-      operationId: reviewOperatorReel
+      operationId: reviewReel
       tags: [Reels]
       security: [{ bearerAuth: [] }]
       parameters:
@@ -166,7 +166,7 @@ paths:
 
   /dsh/public/reels:
     get:
-      operationId: listApprovedPublicReels
+      operationId: listPublicReels
       tags: [Reels]
       parameters:
         - name: limit

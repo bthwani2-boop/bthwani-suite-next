@@ -11,7 +11,7 @@ func TestResolveSaasRuntimeStatusDeferredEligible(t *testing.T) {
 		"BTHWANI_SAAS_MODE":                        "deferred",
 		"BTHWANI_COMMERCIAL_ACTIVATION_STATE":      "eligible",
 		"BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED": "false",
-		"BTHWANI_DEFAULT_TENANT_ID":                "local-dsh",
+		"BTHWANI_OPERATOR_CONTEXT_ID":                "local-dsh",
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -29,7 +29,7 @@ func TestResolveSaasRuntimeStatusAuthorized(t *testing.T) {
 		"BTHWANI_SAAS_MODE":                        "active",
 		"BTHWANI_COMMERCIAL_ACTIVATION_STATE":      "authorized",
 		"BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED": "false",
-		"BTHWANI_DEFAULT_TENANT_ID":                "bthwani-platform-local",
+		"BTHWANI_OPERATOR_CONTEXT_ID":                "bthwani-platform-local",
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -47,7 +47,7 @@ func TestResolveSaasRuntimeStatusRejectsActiveEligible(t *testing.T) {
 		"BTHWANI_SAAS_MODE":                        "active",
 		"BTHWANI_COMMERCIAL_ACTIVATION_STATE":      "eligible",
 		"BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED": "false",
-		"BTHWANI_DEFAULT_TENANT_ID":                "local-dsh",
+		"BTHWANI_OPERATOR_CONTEXT_ID":                "local-dsh",
 	}))
 	if err == nil {
 		t.Fatal("expected active runtime without activation authorization to fail")
@@ -70,7 +70,7 @@ func TestResolveSaasRuntimeStatusRejectsProductionClaim(t *testing.T) {
 		"BTHWANI_SAAS_MODE":                        "active",
 		"BTHWANI_COMMERCIAL_ACTIVATION_STATE":      "active",
 		"BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED": "true",
-		"BTHWANI_DEFAULT_TENANT_ID":                "bthwani-platform-local",
+		"BTHWANI_OPERATOR_CONTEXT_ID":                "bthwani-platform-local",
 	}))
 	if err == nil {
 		t.Fatal("expected unauthorized production claim to fail")

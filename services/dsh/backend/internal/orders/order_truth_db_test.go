@@ -12,7 +12,7 @@ import (
 )
 
 type orderTruthDBFixture struct {
-	TenantID        string
+	OperatorContextID        string
 	ClientID        string
 	OtherClientID   string
 	StoreID         string
@@ -20,7 +20,7 @@ type orderTruthDBFixture struct {
 	OtherCheckoutID string
 }
 
-func seedOrderTruthCheckout(t *testing.T, db *sql.DB, tenantID, clientID, storeID, cartState, suffix string) string {
+func seedOrderTruthCheckout(t *testing.T, db *sql.DB, operatorContextID, clientID, storeID, cartState, suffix string) string {
 	t.Helper()
 	ctx := context.Background()
 
@@ -58,7 +58,7 @@ func seedOrderTruthCheckout(t *testing.T, db *sql.DB, tenantID, clientID, storeI
 			250000, 5000, 0, 255000, 'YER', repeat('c', 64)
 		)
 		RETURNING id::text`,
-		tenantID,
+		operatorContextID,
 		clientID,
 		cartID,
 		storeID,
@@ -74,7 +74,7 @@ func seedOrderTruthDBFixture(t *testing.T, db *sql.DB) orderTruthDBFixture {
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	fixture := orderTruthDBFixture{
-		TenantID:      "tenant-jrn011-" + suffix,
+		OperatorContextID:      "tenant-jrn011-" + suffix,
 		ClientID:      "client-jrn011-" + suffix,
 		OtherClientID: "client-jrn011-other-" + suffix,
 		StoreID:       "store-jrn011-" + suffix,
@@ -93,7 +93,7 @@ func seedOrderTruthDBFixture(t *testing.T, db *sql.DB) orderTruthDBFixture {
 	fixture.CheckoutID = seedOrderTruthCheckout(
 		t,
 		db,
-		fixture.TenantID,
+		fixture.OperatorContextID,
 		fixture.ClientID,
 		fixture.StoreID,
 		"active",
@@ -106,7 +106,7 @@ func seedOrderTruthDBFixture(t *testing.T, db *sql.DB) orderTruthDBFixture {
 	fixture.OtherCheckoutID = seedOrderTruthCheckout(
 		t,
 		db,
-		fixture.TenantID,
+		fixture.OperatorContextID,
 		fixture.ClientID,
 		fixture.StoreID,
 		"checked_out",
@@ -124,7 +124,7 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	created, replay, err := CreateOrderTruth(db, CreateOrderTruthInput{
 		CheckoutIntentID: fixture.CheckoutID,
 		ClientID:         fixture.ClientID,
-		TenantID:         fixture.TenantID,
+		OperatorContextID:         fixture.OperatorContextID,
 		IdempotencyKey:   idempotencyKey,
 		CorrelationID:    correlationID,
 	})
@@ -153,7 +153,7 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	replayed, replay, err := CreateOrderTruth(db, CreateOrderTruthInput{
 		CheckoutIntentID: fixture.CheckoutID,
 		ClientID:         fixture.ClientID,
-		TenantID:         fixture.TenantID,
+		OperatorContextID:         fixture.OperatorContextID,
 		IdempotencyKey:   idempotencyKey,
 		CorrelationID:    correlationID,
 	})
@@ -164,7 +164,7 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	_, _, err = CreateOrderTruth(db, CreateOrderTruthInput{
 		CheckoutIntentID: fixture.OtherCheckoutID,
 		ClientID:         fixture.ClientID,
-		TenantID:         fixture.TenantID,
+		OperatorContextID:         fixture.OperatorContextID,
 		IdempotencyKey:   idempotencyKey,
 		CorrelationID:    correlationID + "-other",
 	})
@@ -177,7 +177,7 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 		SELECT COUNT(*)
 		FROM dsh_orders
 		WHERE tenant_id=$1 AND checkout_intent_id=$2::uuid`,
-		fixture.TenantID, fixture.CheckoutID,
+		fixture.OperatorContextID, fixture.CheckoutID,
 	).Scan(&orderCount); err != nil {
 		t.Fatalf("count created orders: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 		WHERE tenant_id=$1 AND order_id=$2::uuid AND event_type='order.created'
 		ORDER BY created_at, id
 		LIMIT 1`,
-		fixture.TenantID, created.ID,
+		fixture.OperatorContextID, created.ID,
 	).Scan(&eventID); err != nil {
 		t.Fatalf("read order.created event: %v", err)
 	}
@@ -200,14 +200,14 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	if err := db.QueryRow(`
 		SELECT COUNT(*) FROM dsh_order_status_events
 		WHERE tenant_id=$1 AND order_id=$2::uuid AND event_type='order.created'`,
-		fixture.TenantID, created.ID,
+		fixture.OperatorContextID, created.ID,
 	).Scan(&eventCount); err != nil {
 		t.Fatalf("count order.created events: %v", err)
 	}
 	if err := db.QueryRow(`
 		SELECT COUNT(*) FROM dsh_order_event_outbox
 		WHERE tenant_id=$1 AND order_id=$2::uuid AND event_type='order.created'`,
-		fixture.TenantID, created.ID,
+		fixture.OperatorContextID, created.ID,
 	).Scan(&outboxCount); err != nil {
 		t.Fatalf("count transactional outbox rows: %v", err)
 	}
@@ -215,7 +215,7 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 		SELECT COUNT(*) FROM dsh_order_create_idempotency
 		WHERE tenant_id=$1 AND client_id=$2 AND idempotency_key=$3
 		  AND order_id=$4::uuid AND completed_at IS NOT NULL`,
-		fixture.TenantID, fixture.ClientID, idempotencyKey, created.ID,
+		fixture.OperatorContextID, fixture.ClientID, idempotencyKey, created.ID,
 	).Scan(&completedAttemptCount); err != nil {
 		t.Fatalf("count completed idempotency attempts: %v", err)
 	}
@@ -243,7 +243,7 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	if _, err := db.Exec(`
 		UPDATE dsh_order_event_outbox
 		SET status='retry', next_attempt_at=NOW(), published_at=NULL, updated_at=NOW()
-		WHERE tenant_id=$1 AND event_id=$2::uuid`, fixture.TenantID, eventID); err != nil {
+		WHERE tenant_id=$1 AND event_id=$2::uuid`, fixture.OperatorContextID, eventID); err != nil {
 		t.Fatalf("reset order event for replay simulation: %v", err)
 	}
 	if err := ProcessOrderEventBridgeOnce(context.Background(), db); err != nil {
@@ -259,14 +259,14 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 		t.Fatalf("bridge replay duplicated canonical event: %d", operationalOutboxCount)
 	}
 
-	if _, err := GetClientScopedOrderTruth(db, created.ID, fixture.TenantID, fixture.OtherClientID); !errors.Is(err, ErrNotFound) {
+	if _, err := GetClientScopedOrderTruth(db, created.ID, fixture.OperatorContextID, fixture.OtherClientID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("cross-client read must be denied as not found, got %v", err)
 	}
-	if _, err := GetPartnerScopedOrderTruth(db, created.ID, fixture.TenantID, "other-store"); !errors.Is(err, ErrNotFound) {
+	if _, err := GetPartnerScopedOrderTruth(db, created.ID, fixture.OperatorContextID, "other-store"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("cross-store read must be denied as not found, got %v", err)
 	}
 
-	partnerTruth, err := GetPartnerScopedOrderTruth(db, created.ID, fixture.TenantID, fixture.StoreID)
+	partnerTruth, err := GetPartnerScopedOrderTruth(db, created.ID, fixture.OperatorContextID, fixture.StoreID)
 	if err != nil {
 		t.Fatalf("partner scoped read: %v", err)
 	}
@@ -279,7 +279,7 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 		}
 	}
 
-	operatorTruth, err := GetOperatorScopedOrderTruth(db, created.ID, fixture.TenantID)
+	operatorTruth, err := GetOperatorScopedOrderTruth(db, created.ID, fixture.OperatorContextID)
 	if err != nil {
 		t.Fatalf("operator scoped read: %v", err)
 	}
@@ -327,10 +327,10 @@ func ExampleCreateOrderTruthInput() {
 	input := CreateOrderTruthInput{
 		CheckoutIntentID: "8ba4e0d1-2f80-42b5-a88a-f8600cf2c4f5",
 		ClientID:         "client-1001",
-		TenantID:         "tenant-yemen",
+		OperatorContextID:         "tenant-yemen",
 		IdempotencyKey:   "order-create-key-1001",
 		CorrelationID:    "order-create-trace-1001",
 	}
-	fmt.Println(input.TenantID, input.ClientID)
+	fmt.Println(input.OperatorContextID, input.ClientID)
 	// Output: tenant-yemen client-1001
 }

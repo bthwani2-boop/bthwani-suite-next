@@ -12,7 +12,7 @@ import (
 
 type PromotionFundingReservation struct {
 	ID                       string  `json:"id"`
-	TenantID                 string  `json:"tenantId"`
+	OperatorContextID                 string  `json:"operatorContextId"`
 	ExternalReference        string  `json:"externalReference"`
 	CheckoutIntentID         string  `json:"checkoutIntentId"`
 	CouponRedemptionID       string  `json:"couponRedemptionId"`
@@ -30,7 +30,7 @@ type PromotionFundingReservation struct {
 }
 
 type ReservePromotionFundingInput struct {
-	TenantID                 string `json:"tenantId"`
+	OperatorContextID                 string `json:"operatorContextId"`
 	ExternalReference        string `json:"externalReference"`
 	CheckoutIntentID         string `json:"checkoutIntentId"`
 	CouponRedemptionID       string `json:"couponRedemptionId"`
@@ -44,7 +44,7 @@ type ReservePromotionFundingInput struct {
 }
 
 type PromotionFundingTransitionInput struct {
-	TenantID string `json:"tenantId"`
+	OperatorContextID string `json:"operatorContextId"`
 	OrderID  string `json:"orderId,omitempty"`
 	Reason   string `json:"reason,omitempty"`
 }
@@ -53,7 +53,7 @@ func (c *Client) promotionFundingRequest(
 	ctx context.Context,
 	method string,
 	path string,
-	tenantID string,
+	operatorContextID string,
 	idempotencyKey string,
 	correlationID string,
 	input any,
@@ -61,8 +61,8 @@ func (c *Client) promotionFundingRequest(
 	if !c.Configured() {
 		return nil, fmt.Errorf("WLT promotion funding is not configured")
 	}
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
 		return nil, fmt.Errorf("WLT promotion funding tenant id is required")
 	}
 	encoded, err := json.Marshal(input)
@@ -77,7 +77,7 @@ func (c *Client) promotionFundingRequest(
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Tenant-ID", tenantID)
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
 		return nil, fmt.Errorf("prepare WLT promotion funding mutation: %w", err)
 	}
@@ -127,7 +127,7 @@ func (c *Client) ReservePromotionFunding(
 		ctx,
 		http.MethodPost,
 		"/wlt/promotion-funding/reservations",
-		input.TenantID,
+		input.OperatorContextID,
 		idempotencyKey,
 		correlationID,
 		input,
@@ -163,7 +163,7 @@ func (c *Client) transitionPromotionFunding(
 		ctx,
 		http.MethodPost,
 		"/wlt/promotion-funding/reservations/"+url.PathEscape(reservationID)+"/"+action,
-		input.TenantID,
+		input.OperatorContextID,
 		idempotencyKey,
 		correlationID,
 		input,

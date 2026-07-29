@@ -8,18 +8,18 @@ import (
 	"dsh-api/internal/store"
 )
 
-func normalizeTenantID(tenantID string) (string, error) {
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
-		return "", ErrTenantContextRequired
+func normalizeOperatorContextID(operatorContextID string) (string, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return "", ErrOperatorContextRequired
 	}
-	return tenantID, nil
+	return operatorContextID, nil
 }
 
 // CreatePartnerForTenant is the only production partner creation path. The
 // tenant is supplied by the authenticated server-side context, never by JSON.
-func CreatePartnerForTenant(db *sql.DB, tenantID string, input CreatePartnerInput) (Partner, error) {
-	tenantID, err := normalizeTenantID(tenantID)
+func CreatePartnerForTenant(db *sql.DB, operatorContextID string, input CreatePartnerInput) (Partner, error) {
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
 	if err != nil {
 		return Partner{}, err
 	}
@@ -61,7 +61,7 @@ func CreatePartnerForTenant(db *sql.DB, tenantID string, input CreatePartnerInpu
 		          beneficiary_name, bank_name, bank_branch, bank_account_number, bank_iban,
 		          payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
 		          version, created_at, updated_at`,
-		tenantID,
+		operatorContextID,
 		input.LegalNameAr, input.LegalNameEn, input.DisplayName,
 		input.LegalIdentityType, input.LegalIdentityNumber,
 		input.OwnerName, input.PrimaryPhone, input.SecondaryPhone, input.Email,
@@ -95,7 +95,7 @@ func CreatePartnerForTenant(db *sql.DB, tenantID string, input CreatePartnerInpu
 	if err != nil {
 		return Partner{}, err
 	}
-	if _, err = tx.Exec(`UPDATE dsh_stores SET tenant_id = $1 WHERE id = $2`, tenantID, sRow.ID); err != nil {
+	if _, err = tx.Exec(`UPDATE dsh_stores SET tenant_id = $1 WHERE id = $2`, operatorContextID, sRow.ID); err != nil {
 		return Partner{}, err
 	}
 
@@ -106,7 +106,7 @@ func CreatePartnerForTenant(db *sql.DB, tenantID string, input CreatePartnerInpu
 			VALUES ($1, $2, 'field', $3, 'assigned', true)
 			ON CONFLICT (actor_id, actor_role, store_id) DO UPDATE
 			SET tenant_id = EXCLUDED.tenant_id, active = true`,
-			tenantID, input.CreatedByActorID, sRow.ID,
+			operatorContextID, input.CreatedByActorID, sRow.ID,
 		)
 		if err != nil {
 			return Partner{}, err
@@ -119,8 +119,8 @@ func CreatePartnerForTenant(db *sql.DB, tenantID string, input CreatePartnerInpu
 	return p, nil
 }
 
-func GetPartnerForTenant(db *sql.DB, tenantID, partnerID string) (Partner, error) {
-	tenantID, err := normalizeTenantID(tenantID)
+func GetPartnerForTenant(db *sql.DB, operatorContextID, partnerID string) (Partner, error) {
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
 	if err != nil {
 		return Partner{}, err
 	}
@@ -137,7 +137,7 @@ func GetPartnerForTenant(db *sql.DB, tenantID, partnerID string) (Partner, error
 		       payout_mobile_number, settlement_preference, bank_account_holder_matches_owner, bank_notes,
 		       version, created_at, updated_at
 		FROM dsh_partners
-		WHERE id = $1 AND tenant_id = $2`, partnerID, tenantID,
+		WHERE id = $1 AND tenant_id = $2`, partnerID, operatorContextID,
 	).Scan(
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
@@ -155,8 +155,8 @@ func GetPartnerForTenant(db *sql.DB, tenantID, partnerID string) (Partner, error
 	return p, err
 }
 
-func ListPartnersForTenant(db *sql.DB, tenantID string, q PartnerListQuery) ([]PartnerSummary, int, error) {
-	tenantID, err := normalizeTenantID(tenantID)
+func ListPartnersForTenant(db *sql.DB, operatorContextID string, q PartnerListQuery) ([]PartnerSummary, int, error) {
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -167,7 +167,7 @@ func ListPartnersForTenant(db *sql.DB, tenantID string, q PartnerListQuery) ([]P
 		q.Limit = 100
 	}
 
-	args := []any{tenantID}
+	args := []any{operatorContextID}
 	conds := []string{"tenant_id = $1"}
 	next := 2
 	if q.ActivationStatus != "" {
@@ -212,18 +212,18 @@ func ListPartnersForTenant(db *sql.DB, tenantID string, q PartnerListQuery) ([]P
 
 // EnsureTenantPartner intentionally maps cross-tenant IDs to ErrNotFound so the
 // boundary does not disclose whether another tenant owns the identifier.
-func EnsureTenantPartner(db *sql.DB, tenantID, partnerID string) error {
-	_, err := GetPartnerForTenant(db, tenantID, partnerID)
+func EnsureTenantPartner(db *sql.DB, operatorContextID, partnerID string) error {
+	_, err := GetPartnerForTenant(db, operatorContextID, partnerID)
 	return err
 }
 
-func EnsureTenantStore(db *sql.DB, tenantID, storeID string) error {
-	tenantID, err := normalizeTenantID(tenantID)
+func EnsureTenantStore(db *sql.DB, operatorContextID, storeID string) error {
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
 	if err != nil {
 		return err
 	}
 	var exists bool
-	if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM dsh_stores WHERE id = $1 AND tenant_id = $2)`, storeID, tenantID).Scan(&exists); err != nil {
+	if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM dsh_stores WHERE id = $1 AND tenant_id = $2)`, storeID, operatorContextID).Scan(&exists); err != nil {
 		return err
 	}
 	if !exists {
@@ -232,8 +232,8 @@ func EnsureTenantStore(db *sql.DB, tenantID, storeID string) error {
 	return nil
 }
 
-func FieldOwnsPartnerForTenant(db *sql.DB, tenantID, partnerID, actorID string) error {
-	p, err := GetPartnerForTenant(db, tenantID, partnerID)
+func FieldOwnsPartnerForTenant(db *sql.DB, operatorContextID, partnerID, actorID string) error {
+	p, err := GetPartnerForTenant(db, operatorContextID, partnerID)
 	if err != nil {
 		return err
 	}
@@ -243,11 +243,11 @@ func FieldOwnsPartnerForTenant(db *sql.DB, tenantID, partnerID, actorID string) 
 	return nil
 }
 
-func LinkPartnerStoreForTenant(db *sql.DB, tenantID, partnerID, storeID, actorID string) ([]PartnerLinkedStore, error) {
-	if err := EnsureTenantPartner(db, tenantID, partnerID); err != nil {
+func LinkPartnerStoreForTenant(db *sql.DB, operatorContextID, partnerID, storeID, actorID string) ([]PartnerLinkedStore, error) {
+	if err := EnsureTenantPartner(db, operatorContextID, partnerID); err != nil {
 		return nil, err
 	}
-	if err := EnsureTenantStore(db, tenantID, storeID); err != nil {
+	if err := EnsureTenantStore(db, operatorContextID, storeID); err != nil {
 		return nil, err
 	}
 	return LinkPartnerStore(db, partnerID, storeID, actorID)

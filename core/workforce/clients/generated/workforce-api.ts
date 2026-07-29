@@ -300,7 +300,8 @@ export interface paths {
         /** @description Any authenticated actor. Operators may pass includeInactive=true. */
         get: operations["listWorkforceCities"];
         put?: never;
-        post?: never;
+        /** Create a governed workforce city reference */
+        post: operations["createWorkforceCity"];
         delete?: never;
         options?: never;
         head?: never;
@@ -353,6 +354,260 @@ export interface paths {
         get: operations["searchWorkforceSupervisors"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/field-agents/{actorId}/operational-core": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        get: operations["getFieldOperationalCore"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchFieldOperationalCore"];
+        trace?: never;
+    };
+    "/workforce/captains/{actorId}/operational-core": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        get: operations["getCaptainOperationalCore"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patchCaptainOperationalCore"];
+        trace?: never;
+    };
+    "/workforce/captains/{actorId}/classification/basic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["promoteCaptainToBasic"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/me/operational-core": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getOwnProviderOperationalCore"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/me/availability-notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOwnAvailabilityNotices"];
+        put?: never;
+        post: operations["createOwnAvailabilityNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/me/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOwnProviderIncidents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/me/incidents/{incidentId}/appeal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incidentId: components["parameters"]["IncidentId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["appealOwnProviderIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/provider-incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listProviderIncidentsForOperator"];
+        put?: never;
+        post: operations["createProviderIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/provider-incidents/{incidentId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incidentId: components["parameters"]["IncidentId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["transitionProviderIncident"];
+        trace?: never;
+    };
+    "/workforce/provider-incidents/{incidentId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incidentId: components["parameters"]["IncidentId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listProviderIncidentTransitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/reference/cities/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update or activate/deactivate a workforce city reference */
+        patch: operations["updateWorkforceCity"];
+        trace?: never;
+    };
+    "/workforce/{collection}/{actorId}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link an opaque DSH media reference to a Workforce profile */
+        post: operations["appendWorkforceProviderDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/sovereign-leadership/reference-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getSovereignLeadershipReferenceData"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/sovereign-leadership": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listSovereignLeadership"];
+        put?: never;
+        post: operations["createSovereignLeader"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/workforce/department-employees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDepartmentEmployees"];
+        put?: never;
+        post: operations["createDepartmentEmployee"];
         delete?: never;
         options?: never;
         head?: never;
@@ -576,6 +831,308 @@ export interface components {
             code: "INVALID_REQUEST" | "UNAUTHENTICATED" | "FORBIDDEN" | "PROFILE_NOT_PROVISIONED" | "PROFILE_INCOMPLETE" | "ENGAGEMENT_SUSPENDED" | "STATUS_NOT_ALLOWED" | "VERSION_CONFLICT" | "DUPLICATE_PHONE" | "DUPLICATE_WORKFORCE_CODE" | "IDEMPOTENCY_CONFLICT" | "IDEMPOTENCY_KEY_REQUIRED" | "INVALID_REFERENCE_CODE" | "REFERENCE_EXISTS" | "REFERENCE_IN_USE" | "ACTOR_NOT_FOUND" | "ACTIVATION_RATE_LIMITED" | "INVALID_ACTOR_INPUT" | "IDENTITY_UNAVAILABLE" | "INVALID_SUPERVISOR" | "WORKFORCE_KIND_CONFLICT" | "WORKFORCE_NOT_READY" | "WORKFORCE_INTERNAL_ERROR";
             message: string;
         };
+        Error: {
+            code: string;
+            message: string;
+        };
+        ActivationReadiness: {
+            ready: boolean;
+            missing: string[];
+        };
+        CaptainActivationCore: {
+            /** @enum {string} */
+            classification: "joker" | "basic";
+            /** Format: int64 */
+            financialGuaranteeMinorUnits: number;
+            financialGuaranteeCurrency: string;
+            /** @enum {string} */
+            financialGuaranteeStatus: "not_funded" | "pending_review" | "funded" | "released" | "forfeited";
+            financialGuaranteeReference?: string;
+            /** @enum {string} */
+            deliveryBagCustodyStatus: "not_issued" | "issued" | "returned" | "lost" | "damaged";
+            deliveryBagCustodyReference?: string;
+            /** @enum {string} */
+            mandatoryPurchasesStatus: "not_required" | "pending_payment" | "paid" | "paid_and_delivered" | "cancelled";
+            mandatoryPurchasesReference?: string;
+            /** @enum {string} */
+            trainingStatus: "pending" | "in_progress" | "passed" | "failed";
+            /** @enum {string} */
+            operationsAccreditationStatus: "pending" | "approved" | "suspended" | "expired";
+            version: number;
+        };
+        ProviderOperationalCore: {
+            actorId: string;
+            /** @enum {string} */
+            workforceKind: "field" | "captain";
+            /** @enum {string} */
+            referralSourceType: "employee" | "captain" | "field" | "partner" | "advertisement" | "social_media" | "public_referral" | "direct" | "other";
+            referralSourceActorId?: string;
+            referralPartnerId?: string;
+            referralChannel?: string;
+            referralNote?: string;
+            guarantorFullName?: string;
+            guarantorRelationship?: string;
+            guarantorPhoneE164?: string;
+            /** Format: date-time */
+            guarantorPhoneVerifiedAt?: string;
+            nationalIdNumber?: string;
+            identityFrontMediaRef?: string;
+            identityBackMediaRef?: string;
+            /** @enum {string} */
+            identityVerificationStatus: "pending" | "under_review" | "approved" | "rejected" | "expired" | "needs_resubmission";
+            identityRejectionReason?: string;
+            contractMediaRef?: string;
+            /** @enum {string} */
+            contractReviewStatus: "pending" | "under_review" | "approved" | "rejected" | "needs_resubmission";
+            contractRejectionReason?: string;
+            /** @enum {string} */
+            onboardingStage: "basic_profile" | "documents_pending" | "documents_review" | "training_pending" | "partnerships_review" | "operations_review" | "activation_ready" | "active";
+            /** Format: date-time */
+            partnershipsApprovedAt?: string;
+            version: number;
+            captain?: components["schemas"]["CaptainActivationCore"];
+        };
+        OperationalCorePatch: {
+            /** @enum {string} */
+            referralSourceType?: "employee" | "captain" | "field" | "partner" | "advertisement" | "social_media" | "public_referral" | "direct" | "other";
+            referralSourceActorId?: string;
+            referralPartnerId?: string;
+            referralChannel?: string;
+            referralNote?: string;
+            guarantorFullName?: string;
+            guarantorRelationship?: string;
+            guarantorPhoneE164?: string;
+            guarantorPhoneVerified?: boolean;
+            nationalIdNumber?: string;
+            identityFrontMediaRef?: string;
+            identityBackMediaRef?: string;
+            /** @enum {string} */
+            identityVerificationStatus?: "pending" | "under_review" | "approved" | "rejected" | "expired" | "needs_resubmission";
+            identityRejectionReason?: string;
+            contractMediaRef?: string;
+            /** @enum {string} */
+            contractReviewStatus?: "pending" | "under_review" | "approved" | "rejected" | "needs_resubmission";
+            contractRejectionReason?: string;
+            /** @enum {string} */
+            onboardingStage?: "basic_profile" | "documents_pending" | "documents_review" | "training_pending" | "partnerships_review" | "operations_review" | "activation_ready" | "active";
+            partnershipsApproved?: boolean;
+            captain?: {
+                /**
+                 * @description Direct promotion is rejected; use the evidence-backed classification command.
+                 * @enum {string}
+                 */
+                classification?: "joker" | "basic";
+                /** Format: int64 */
+                financialGuaranteeMinorUnits?: number;
+                financialGuaranteeCurrency?: string;
+                /** @enum {string} */
+                financialGuaranteeStatus?: "not_funded" | "pending_review" | "funded" | "released" | "forfeited";
+                financialGuaranteeReference?: string;
+                /** @enum {string} */
+                deliveryBagCustodyStatus?: "not_issued" | "issued" | "returned" | "lost" | "damaged";
+                deliveryBagCustodyReference?: string;
+                /** @enum {string} */
+                mandatoryPurchasesStatus?: "not_required" | "pending_payment" | "paid" | "paid_and_delivered" | "cancelled";
+                mandatoryPurchasesReference?: string;
+                /** @enum {string} */
+                trainingStatus?: "pending" | "in_progress" | "passed" | "failed";
+                /** @enum {string} */
+                operationsAccreditationStatus?: "pending" | "approved" | "suspended" | "expired";
+            };
+        };
+        PromoteCaptainInput: {
+            completedDeliveries: number;
+            completionRateBasisPoints: number;
+            /** @constant */
+            severeIncidentFree: true;
+            evidenceMediaRefs: string[];
+            decisionNote: string;
+        };
+        CreateAvailabilityNoticeInput: {
+            /** @enum {string} */
+            noticeType: "planned_unavailability" | "immediate_unavailability" | "short_break" | "emergency" | "temporary_restriction";
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            serviceZoneId?: string;
+            reasonCode: string;
+            note?: string;
+        };
+        AvailabilityNotice: components["schemas"]["CreateAvailabilityNoticeInput"] & {
+            /** Format: uuid */
+            id: string;
+            actorId: string;
+            /** @enum {string} */
+            status: "scheduled" | "active" | "completed" | "cancelled";
+            createdByActorId: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        /** @enum {string} */
+        IncidentStatus: "reported" | "under_review" | "provider_notified" | "appeal_window" | "approved" | "rejected" | "financial_action_posted" | "closed" | "reversed";
+        CreateProviderIncidentInput: {
+            actorId: string;
+            incidentCode: string;
+            sourceType?: string;
+            sourceId?: string;
+            description: string;
+            evidenceMediaRefs?: string[];
+            /** @enum {string} */
+            severity: "minor" | "major" | "critical";
+            policyId?: string;
+            /** Format: int64 */
+            proposedPenaltyMinorUnits?: number;
+            /** @default YER */
+            currency: string;
+        };
+        ProviderIncident: components["schemas"]["CreateProviderIncidentInput"] & {
+            /** Format: uuid */
+            id: string;
+            status: components["schemas"]["IncidentStatus"];
+            wltLedgerReference?: string;
+            appealNote?: string;
+            /** Format: date-time */
+            appealedAt?: string;
+            resolutionNote?: string;
+            reportedByActorId: string;
+            reviewedByActorId?: string;
+            /** Format: date-time */
+            resolvedAt?: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        TransitionProviderIncidentInput: {
+            toStatus: components["schemas"]["IncidentStatus"];
+            resolutionNote?: string;
+            wltLedgerReference?: string;
+        };
+        ProviderIncidentTransition: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            incidentId: string;
+            fromStatus: components["schemas"]["IncidentStatus"];
+            toStatus: components["schemas"]["IncidentStatus"];
+            resolutionNote?: string;
+            wltLedgerReference?: string;
+            changedByActorId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @description Opaque Identity-owned permission-bundle identifier. Workforce stores it only as a reference and must not enumerate or expand it. */
+        PermissionBundleCode: string;
+        /** @enum {string} */
+        LeadershipEmploymentClass: "coordinator" | "department_manager" | "executive" | "project_manager";
+        WorkforceReferenceOption: {
+            code: string;
+            nameAr: string;
+            nameEn: string;
+        };
+        EmployeePermissionBundleDescriptor: {
+            code: components["schemas"]["PermissionBundleCode"];
+            nameAr: string;
+            nameEn: string;
+            allowedEmploymentClasses: string[];
+            defaultDepartmentScope?: string;
+            departmentSelectionAllowed: boolean;
+        };
+        SovereignLeadershipReferenceData: {
+            employmentClasses: components["schemas"]["WorkforceReferenceOption"][];
+            departments: components["schemas"]["WorkforceReferenceOption"][];
+            officeLocations: components["schemas"]["WorkforceReferenceOption"][];
+            permissionBundles: components["schemas"]["EmployeePermissionBundleDescriptor"][];
+        };
+        CreateSovereignLeaderRequest: {
+            fullNameAr: string;
+            fullNameEn?: string;
+            phoneE164: string;
+            department: string;
+            positionTitle: string;
+            jobGrade?: string;
+            employmentClass: components["schemas"]["LeadershipEmploymentClass"];
+            permissionBundle: components["schemas"]["PermissionBundleCode"];
+            officeLocation?: string;
+            supervisorActorId?: string;
+            /** Format: date */
+            engagementStartDate?: string;
+            /** Format: date */
+            assignmentStartsOn?: string;
+            /** Format: date */
+            assignmentEndsOn?: string;
+            /** @enum {string} */
+            guaranteeType?: "none" | "personal" | "financial" | "institutional";
+            /** @enum {string} */
+            guaranteeStatus?: "not_required" | "pending" | "active" | "released" | "forfeited";
+            guaranteeReference?: string;
+            responsibilityScopes?: string[];
+            notes?: string;
+        };
+        CreateDepartmentEmployeeRequest: {
+            fullNameAr: string;
+            fullNameEn?: string;
+            phoneE164: string;
+            department: string;
+            role: string;
+            officeLocation?: string;
+            supervisorActorId?: string;
+            /** Format: date */
+            engagementStartDate?: string;
+        };
+        EmployeeSummary: {
+            actorId: string;
+            fullNameAr: string;
+            fullNameEn?: string;
+            workforceCode: string;
+        } & {
+            [key: string]: unknown;
+        };
+        SovereignLeadershipGovernance: {
+            actorId: string;
+            positionTitle: string;
+            jobGrade: string;
+            employmentClass: components["schemas"]["LeadershipEmploymentClass"];
+            guaranteeType: string;
+            guaranteeStatus: string;
+            guaranteeReference?: string;
+            responsibilityScopes: string[];
+            managedDepartmentCodes: string[];
+            notes?: string;
+            version: number;
+        };
+        SovereignLeadershipAssignment: {
+            actorId: string;
+            permissionBundle: components["schemas"]["PermissionBundleCode"];
+            departmentScope: string;
+            /** Format: date */
+            startsOn: string;
+            /** Format: date */
+            endsOn?: string;
+            /** @enum {string} */
+            assignmentStatus: "active" | "suspended" | "expired" | "ended";
+            version: number;
+        };
+        SovereignLeadershipRecord: {
+            employee: components["schemas"]["EmployeeSummary"];
+            governance: components["schemas"]["SovereignLeadershipGovernance"];
+            assignment: components["schemas"]["SovereignLeadershipAssignment"];
+        };
+        ActivationCodeResult: {
+            activationId: string;
+            code: string;
+            maskedPhone: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        SovereignLeadershipCreationResult: {
+            leadership: components["schemas"]["SovereignLeadershipRecord"];
+            activation: components["schemas"]["ActivationCodeResult"];
+        };
     };
     responses: {
         /** @description Request validation failed. */
@@ -641,6 +1198,49 @@ export interface components {
                 "application/json": components["schemas"]["ApiError"];
             };
         };
+        /** @description Governed error response. */
+        ErrorResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Provider operational core and server activation readiness. */
+        OperationalCoreResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    operationalCore: components["schemas"]["ProviderOperationalCore"];
+                    activationReadiness: components["schemas"]["ActivationReadiness"];
+                };
+            };
+        };
+        /** @description Provider incident. */
+        IncidentResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    incident: components["schemas"]["ProviderIncident"];
+                };
+            };
+        };
+        /** @description Provider incidents. */
+        IncidentListResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    incidents: components["schemas"]["ProviderIncident"][];
+                };
+            };
+        };
     };
     parameters: {
         ActorId: string;
@@ -650,6 +1250,7 @@ export interface components {
         CorrelationId: string;
         /** @description Operators only; ignored for other roles. */
         IncludeInactive: boolean;
+        IncidentId: string;
     };
     requestBodies: never;
     headers: never;
@@ -1555,6 +2156,24 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
         };
     };
+    createWorkforceCity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     listWorkforceShifts: {
         parameters: {
             query?: {
@@ -1671,6 +2290,510 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getFieldOperationalCore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["OperationalCoreResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+        };
+    };
+    patchFieldOperationalCore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationalCorePatch"];
+            };
+        };
+        responses: {
+            200: components["responses"]["OperationalCoreResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    getCaptainOperationalCore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["OperationalCoreResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+        };
+    };
+    patchCaptainOperationalCore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OperationalCorePatch"];
+            };
+        };
+        responses: {
+            200: components["responses"]["OperationalCoreResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    promoteCaptainToBasic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PromoteCaptainInput"];
+            };
+        };
+        responses: {
+            /** @description Captain classification promoted or replayed as already basic. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        operationalCore: components["schemas"]["ProviderOperationalCore"];
+                    };
+                };
+            };
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    getOwnProviderOperationalCore: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["OperationalCoreResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    listOwnAvailabilityNotices: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provider availability notices. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        availabilityNotices: components["schemas"]["AvailabilityNotice"][];
+                    };
+                };
+            };
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    createOwnAvailabilityNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateAvailabilityNoticeInput"];
+            };
+        };
+        responses: {
+            /** @description Availability notice created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        availabilityNotice: components["schemas"]["AvailabilityNotice"];
+                    };
+                };
+            };
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    listOwnProviderIncidents: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["IncidentListResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    appealOwnProviderIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incidentId: components["parameters"]["IncidentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    note: string;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["IncidentResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+        };
+    };
+    listProviderIncidentsForOperator: {
+        parameters: {
+            query: {
+                actorId: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["IncidentListResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    createProviderIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProviderIncidentInput"];
+            };
+        };
+        responses: {
+            201: components["responses"]["IncidentResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    transitionProviderIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incidentId: components["parameters"]["IncidentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionProviderIncidentInput"];
+            };
+        };
+        responses: {
+            200: components["responses"]["IncidentResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    listProviderIncidentTransitions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incidentId: components["parameters"]["IncidentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Append-only incident transition history. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        transitions: components["schemas"]["ProviderIncidentTransition"][];
+                    };
+                };
+            };
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    updateWorkforceCity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    appendWorkforceProviderDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection: "field-agents" | "captains" | "employees";
+                actorId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    expectedVersion: number;
+                    mediaRef: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Linked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getSovereignLeadershipReferenceData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Workforce-owned organisational references combined with the Identity-owned permission-bundle registry. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SovereignLeadershipReferenceData"];
+                };
+            };
+            /** @description leadership read or create authority is required. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listSovereignLeadership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Effective leadership assignments visible to the project manager. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        leadership: components["schemas"]["SovereignLeadershipRecord"][];
+                    };
+                };
+            };
+            /** @description leadership:read/all is required. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createSovereignLeader: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSovereignLeaderRequest"];
+            };
+        };
+        responses: {
+            /** @description Leadership profile, Identity-owned bundle reference and activation challenge created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SovereignLeadershipCreationResult"];
+                };
+            };
+            /** @description Only leadership:create/all may execute this journey. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Idempotency, duplicate phone or optimistic-lock conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Identity rejected the bundle or its employment-class applicability. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDepartmentEmployees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Employees filtered by the caller department scopes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createDepartmentEmployee: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDepartmentEmployeeRequest"];
+            };
+        };
+        responses: {
+            /** @description Department employee and one-time control-panel activation created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description employee:create with matching department scope is required. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
 }

@@ -43,7 +43,7 @@ func getTestDB(t *testing.T) *sql.DB {
 }
 
 func settlementTestContext() context.Context {
-	return shared.WithTenantContext(context.Background(), settlementTestTenant)
+	return shared.WithOperatorContext(context.Background(), settlementTestTenant)
 }
 
 func insertPendingSettlement(

@@ -19,14 +19,14 @@ var ErrPaymentSessionMismatch = errors.New("wlt payment session id does not matc
 // intentionally stays put here until WLT reports a terminal outcome via
 // ApplyWltPaymentEvent.
 func (s *Service) AttachWltPaymentSession(ctx context.Context, id string, expectedVersion int, sessionID string) (*SpecialRequest, error) {
-	return s.AttachWltPaymentSessionInTenant(ctx, DefaultTenantID, id, expectedVersion, sessionID)
+	return s.AttachWltPaymentSessionInTenant(ctx, DefaultOperatorContextID, id, expectedVersion, sessionID)
 }
 
-func (s *Service) AttachWltPaymentSessionInTenant(ctx context.Context, tenantID string, id string, expectedVersion int, sessionID string) (*SpecialRequest, error) {
+func (s *Service) AttachWltPaymentSessionInTenant(ctx context.Context, operatorContextID string, id string, expectedVersion int, sessionID string) (*SpecialRequest, error) {
 	if id == "" || sessionID == "" {
 		return nil, fmt.Errorf("%w: id and sessionID are required", ErrInvalid)
 	}
-	current, err := s.repo.GetInTenant(ctx, tenantID, id)
+	current, err := s.repo.GetInTenant(ctx, operatorContextID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (s *Service) AttachWltPaymentSessionInTenant(ctx context.Context, tenantID 
 	if current.EstimatedAmountMinorUnits == nil || current.Currency == nil {
 		return nil, fmt.Errorf("%w: quote must be set before approval", ErrInvalid)
 	}
-	return s.repo.UpdateInTenant(ctx, tenantID, id, expectedVersion, UpdateInput{WltPaymentSessionID: &sessionID})
+	return s.repo.UpdateInTenant(ctx, operatorContextID, id, expectedVersion, UpdateInput{WltPaymentSessionID: &sessionID})
 }
 
 // ApplyWltPaymentEvent advances a special request in response to a terminal
@@ -56,7 +56,7 @@ func (s *Service) AttachWltPaymentSessionInTenant(ctx context.Context, tenantID 
 // It is idempotent: replays of an event that no longer needs to change
 // anything (already approved, or moved on operationally since) are a no-op
 // success.
-func ApplyWltPaymentEvent(db *sql.DB, tenantID string, id, paymentSessionID, wltStatus string) (*SpecialRequest, error) {
+func ApplyWltPaymentEvent(db *sql.DB, operatorContextID string, id, paymentSessionID, wltStatus string) (*SpecialRequest, error) {
 	if id == "" || paymentSessionID == "" || wltStatus == "" {
 		return nil, fmt.Errorf("%w: id, paymentSessionId and status are required", ErrInvalid)
 	}
@@ -64,7 +64,7 @@ func ApplyWltPaymentEvent(db *sql.DB, tenantID string, id, paymentSessionID, wlt
 	ctx := context.Background()
 	repo := NewPostgresRepository(db)
 
-	current, err := repo.GetInTenant(ctx, tenantID, id)
+	current, err := repo.GetInTenant(ctx, operatorContextID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func ApplyWltPaymentEvent(db *sql.DB, tenantID string, id, paymentSessionID, wlt
 			return current, nil
 		}
 		status := StatusApproved
-		return repo.UpdateInTenant(ctx, tenantID, id, current.Version, UpdateInput{Status: &status})
+		return repo.UpdateInTenant(ctx, operatorContextID, id, current.Version, UpdateInput{Status: &status})
 	case "failed", "expired":
 		// Conservative: do not auto-cancel the special request. The client
 		// or operator can retry approve-quote later.

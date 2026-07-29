@@ -46,7 +46,7 @@ func uniqueID(prefix string) string {
 func seedCheckoutIntentFixture(t *testing.T, db *sql.DB, paymentSessionID string) (storeID, clientID, intentID string) {
 	t.Helper()
 	ctx := context.Background()
-	tenantID := uniqueID("tenant-checkout-finance-outbox")
+	operatorContextID := uniqueID("tenant-checkout-finance-outbox")
 	storeID = uniqueID("checkout-finance-outbox-store")
 	clientID = uniqueID("checkout-finance-outbox-client")
 
@@ -63,7 +63,7 @@ func seedCheckoutIntentFixture(t *testing.T, db *sql.DB, paymentSessionID string
 		VALUES ($1, $2, gen_random_uuid(), $3, 'payment_pending', 'cod', $4,
 		        1000, 0, 0, 1000, 'YER', repeat('e', 64))
 		RETURNING id::text`,
-		tenantID, clientID, storeID, paymentSessionID,
+		operatorContextID, clientID, storeID, paymentSessionID,
 	).Scan(&intentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}

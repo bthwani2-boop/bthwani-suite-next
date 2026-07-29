@@ -24,22 +24,22 @@ func TestRequiredPaymentTenantUsesAuthenticatedActorTenant(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/dsh/control-panel/finance/refunds", nil)
 
-	tenantID, ok := requiredPaymentTenant(recorder, request, "tenant-a")
+	operatorContextID, ok := requiredPaymentTenant(recorder, request, "tenant-a")
 	if !ok {
 		t.Fatalf("expected actor tenant to be accepted, status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
-	if tenantID != "tenant-a" {
-		t.Fatalf("expected tenant-a, got %q", tenantID)
+	if operatorContextID != "tenant-a" {
+		t.Fatalf("expected tenant-a, got %q", operatorContextID)
 	}
 }
 
 func TestRequiredPaymentTenantAcceptsMatchingLegacySelector(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/dsh/control-panel/finance/refunds", nil)
-	request.Header.Set("X-Tenant-ID", "tenant-a")
+	request.Header.Set("X-Operator-Context-ID", "tenant-a")
 
-	tenantID, ok := requiredPaymentTenant(recorder, request, "tenant-a")
-	if !ok || tenantID != "tenant-a" {
+	operatorContextID, ok := requiredPaymentTenant(recorder, request, "tenant-a")
+	if !ok || operatorContextID != "tenant-a" {
 		t.Fatalf("expected matching selector to confirm actor tenant, status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 }
@@ -47,10 +47,10 @@ func TestRequiredPaymentTenantAcceptsMatchingLegacySelector(t *testing.T) {
 func TestRequiredPaymentTenantRejectsMismatchingSelector(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/dsh/control-panel/finance/refunds", nil)
-	request.Header.Set("X-Tenant-ID", "tenant-b")
+	request.Header.Set("X-Operator-Context-ID", "tenant-b")
 
-	if tenantID, ok := requiredPaymentTenant(recorder, request, "tenant-a"); ok || tenantID != "" {
-		t.Fatalf("expected mismatching selector to fail closed, tenant=%q", tenantID)
+	if operatorContextID, ok := requiredPaymentTenant(recorder, request, "tenant-a"); ok || operatorContextID != "" {
+		t.Fatalf("expected mismatching selector to fail closed, tenant=%q", operatorContextID)
 	}
 	if recorder.Code != http.StatusForbidden {
 		t.Fatalf("expected status 403, got %d", recorder.Code)
@@ -64,8 +64,8 @@ func TestRequiredPaymentTenantRejectsMissingActorTenant(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/dsh/control-panel/finance/refunds", nil)
 
-	if tenantID, ok := requiredPaymentTenant(recorder, request, ""); ok || tenantID != "" {
-		t.Fatalf("expected missing actor tenant to fail closed, tenant=%q", tenantID)
+	if operatorContextID, ok := requiredPaymentTenant(recorder, request, ""); ok || operatorContextID != "" {
+		t.Fatalf("expected missing actor tenant to fail closed, tenant=%q", operatorContextID)
 	}
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected status 400, got %d", recorder.Code)

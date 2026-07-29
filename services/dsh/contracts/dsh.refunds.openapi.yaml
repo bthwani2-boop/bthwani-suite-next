@@ -8,7 +8,7 @@ info:
   description: >-
     DSH validates actor, permission, authenticated tenant
     and owned-order scope, then delegates all financial truth to WLT. The actor
-    tenant from Identity is authoritative; an optional X-Tenant-ID selector may
+    tenant from Identity is authoritative; an optional X-Operator-Context-ID selector may
     only confirm that tenant and a mismatch is rejected. Client and partner reads
     intentionally exclude provider and operator evidence. WLT idempotency and
     outcome-persistence failures are propagated without changing status or body.
@@ -20,7 +20,7 @@ paths:
   /dsh/control-panel/finance/refunds:
     get:
       tags: ["dsh-control-panel"]
-      operationId: listDshFinanceRefunds
+      operationId: listDshControlPanelFinanceRefunds
       summary: List refunds for the authenticated tenant and optional order
       parameters:
         - $ref: '#/components/parameters/TenantHeader'
@@ -71,7 +71,7 @@ paths:
   /dsh/control-panel/finance/refunds/{refundId}:
     get:
       tags: ["dsh-control-panel"]
-      operationId: getDshFinanceRefund
+      operationId: getDshControlPanelFinanceRefund
       summary: Read one authenticated-tenant-scoped canonical refund
       parameters:
         - $ref: '#/components/parameters/RefundId'
@@ -270,7 +270,7 @@ components:
       required: true
       schema: { type: string, format: uuid }
     TenantHeader:
-      name: X-Tenant-ID
+      name: X-Operator-Context-ID
       in: header
       required: false
       description: >-

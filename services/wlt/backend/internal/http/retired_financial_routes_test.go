@@ -13,7 +13,7 @@ func trustedFinancialRouteTestRequest(t *testing.T, method, path string) *http.R
 	request := httptest.NewRequest(method, path, strings.NewReader(`{}`))
 	request.Header.Set("Authorization", "Bearer test-service-token")
 	request.Header.Set("X-Service-Caller", "dsh")
-	request.Header.Set("X-Tenant-ID", "tenant-retired-route-test")
+	request.Header.Set("X-Operator-Context-ID", "tenant-retired-route-test")
 	return request
 }
 

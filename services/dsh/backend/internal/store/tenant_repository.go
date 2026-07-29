@@ -8,25 +8,25 @@ import (
 	"strings"
 )
 
-var ErrStoreTenantContextRequired = errors.New("trusted store tenant context is required")
+var ErrStoreOperatorContextRequired = errors.New("trusted store tenant context is required")
 
-func normalizeStoreTenantID(tenantID string) (string, error) {
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
-		return "", ErrStoreTenantContextRequired
+func normalizeStoreOperatorContextID(operatorContextID string) (string, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return "", ErrStoreOperatorContextRequired
 	}
-	return tenantID, nil
+	return operatorContextID, nil
 }
 
 // ListAllStoresForTenant is the operator listing boundary for the partners and
 // stores workspace. It never accepts a tenant selector from the browser.
-func ListAllStoresForTenant(db *sql.DB, tenantID string, q DshStoreListQuery) (DshStoreListResult, error) {
-	tenantID, err := normalizeStoreTenantID(tenantID)
+func ListAllStoresForTenant(db *sql.DB, operatorContextID string, q DshStoreListQuery) (DshStoreListResult, error) {
+	operatorContextID, err := normalizeStoreOperatorContextID(operatorContextID)
 	if err != nil {
 		return DshStoreListResult{}, err
 	}
 	conditions := []string{"tenant_id = $1"}
-	params := []any{tenantID}
+	params := []any{operatorContextID}
 	idx := 2
 	add := func(column string, value any) {
 		conditions = append(conditions, fmt.Sprintf("%s = $%d", column, idx))
@@ -79,14 +79,14 @@ func ListAllStoresForTenant(db *sql.DB, tenantID string, q DshStoreListQuery) (D
 	}, nil
 }
 
-func GetStoreByIDInternalForTenant(ctx context.Context, db *sql.DB, tenantID, storeID string) (*DshStoreRow, error) {
-	tenantID, err := normalizeStoreTenantID(tenantID)
+func GetStoreByIDInternalForTenant(ctx context.Context, db *sql.DB, operatorContextID, storeID string) (*DshStoreRow, error) {
+	operatorContextID, err := normalizeStoreOperatorContextID(operatorContextID)
 	if err != nil {
 		return nil, err
 	}
 	row, err := scanStore(db.QueryRowContext(ctx,
 		"SELECT "+storeColumns+" FROM dsh_stores WHERE id = $1 AND tenant_id = $2",
-		storeID, tenantID,
+		storeID, operatorContextID,
 	))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrScopedStoreNotFound
@@ -97,14 +97,14 @@ func GetStoreByIDInternalForTenant(ctx context.Context, db *sql.DB, tenantID, st
 	return &row, nil
 }
 
-func GetStoreByPartnerIDForTenant(db *sql.DB, tenantID, partnerID string) (*DshStoreRow, error) {
-	tenantID, err := normalizeStoreTenantID(tenantID)
+func GetStoreByPartnerIDForTenant(db *sql.DB, operatorContextID, partnerID string) (*DshStoreRow, error) {
+	operatorContextID, err := normalizeStoreOperatorContextID(operatorContextID)
 	if err != nil {
 		return nil, err
 	}
 	row, err := scanStore(db.QueryRow(
 		"SELECT "+storeColumns+" FROM dsh_stores WHERE partner_id = $1 AND tenant_id = $2 ORDER BY created_at ASC LIMIT 1",
-		partnerID, tenantID,
+		partnerID, operatorContextID,
 	))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil

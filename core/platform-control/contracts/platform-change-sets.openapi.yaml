@@ -135,7 +135,7 @@ components:
       description: Governed validation, conflict or workflow error.
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/PlatformApiError' }
+          schema: { $ref: '#/components/schemas/PlatformChangeSetApiError' }
   schemas:
     PlatformChangeSetStatus:
       type: string
@@ -231,7 +231,7 @@ components:
       required: [reason]
       properties:
         reason: { type: string, minLength: 1, maxLength: 4000 }
-    PlatformApiError:
+    PlatformChangeSetApiError:
       type: object
       required: [code, message]
       properties:

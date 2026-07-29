@@ -39,8 +39,8 @@ func (s *protectedStoreServer) handleOwnRepresentativeWallet(w http.ResponseWrit
 	if !ok {
 		return
 	}
-	trustedContext := wlt.WithTenantContext(r.Context(), actor.TenantID)
-	status, body, err := s.wlt.FinanceReadWalletWithTenant(trustedContext, actorType, actor.ID, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWalletWithTenant(trustedContext, actorType, actor.ID, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -55,8 +55,8 @@ func (s *protectedStoreServer) handleOwnRepresentativeLedger(w http.ResponseWrit
 			query.Set(key, value)
 		}
 	}
-	trustedContext := wlt.WithTenantContext(r.Context(), actor.TenantID)
-	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -66,8 +66,8 @@ func (s *protectedStoreServer) handleOwnRepresentativeCommissions(w http.Respons
 		return
 	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	trustedContext := wlt.WithTenantContext(r.Context(), actor.TenantID)
-	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -77,8 +77,8 @@ func (s *protectedStoreServer) handleOwnRepresentativePayoutRequests(w http.Resp
 		return
 	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	trustedContext := wlt.WithTenantContext(r.Context(), actor.TenantID)
-	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.TenantID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -136,8 +136,8 @@ func (s *protectedStoreServer) handleControlPanelRepresentativeWallet(w http.Res
 	if !ok {
 		return
 	}
-	trustedContext := wlt.WithTenantContext(r.Context(), operator.TenantID)
-	status, body, err := s.wlt.FinanceReadWalletWithTenant(trustedContext, actorType, actorID, r.Header.Get("X-Correlation-ID"), operator.TenantID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), operator.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWalletWithTenant(trustedContext, actorType, actorID, r.Header.Get("X-Correlation-ID"), operator.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 
@@ -156,8 +156,8 @@ func (s *protectedStoreServer) handleControlPanelRepresentativeLedger(w http.Res
 			query.Set(key, value)
 		}
 	}
-	trustedContext := wlt.WithTenantContext(r.Context(), operator.TenantID)
-	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), operator.TenantID)
+	trustedContext := wlt.WithOperatorContext(r.Context(), operator.OperatorContextID)
+	status, body, err := s.wlt.FinanceReadWithTenant(trustedContext, "/wlt/ledger/entries", query, r.Header.Get("X-Correlation-ID"), operator.OperatorContextID)
 	writeRepresentativeFinanceResponse(w, status, body, err)
 }
 

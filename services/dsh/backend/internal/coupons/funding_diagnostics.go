@@ -14,7 +14,7 @@ type FundingLifecycleDiagnostic struct {
 	RedemptionID             string `json:"redemptionId"`
 	CouponID                 string `json:"couponId"`
 	CheckoutIntentID         string `json:"checkoutIntentId"`
-	TenantID                 string `json:"tenantId"`
+	OperatorContextID                 string `json:"operatorContextId"`
 	PartnerID                string `json:"partnerId,omitempty"`
 	PlatformFundedMinorUnits int64  `json:"platformFundedMinorUnits"`
 	PartnerFundedMinorUnits  int64  `json:"partnerFundedMinorUnits"`
@@ -74,7 +74,7 @@ func ListFundingLifecycleDiagnostics(db *sql.DB, limit int) ([]FundingLifecycleD
 			&item.RedemptionID,
 			&item.CouponID,
 			&item.CheckoutIntentID,
-			&item.TenantID,
+			&item.OperatorContextID,
 			&item.PartnerID,
 			&item.PlatformFundedMinorUnits,
 			&item.PartnerFundedMinorUnits,
@@ -107,7 +107,7 @@ func ReconcileFundingLifecycle(item *FundingLifecycleDiagnostic, reservation *wl
 	if item == nil {
 		return
 	}
-	if item.WLTReservationID == "" || item.TenantID == "" {
+	if item.WLTReservationID == "" || item.OperatorContextID == "" {
 		if item.DSHStatus == "pending" || item.DSHStatus == "failed" {
 			item.ReconciliationStatus = "incomplete"
 			item.ReconciliationMessage = "DSH has no attached WLT reservation"
@@ -124,7 +124,7 @@ func ReconcileFundingLifecycle(item *FundingLifecycleDiagnostic, reservation *wl
 	}
 	item.WLTStatus = strings.TrimSpace(reservation.Status)
 	identityMatches := reservation.ID == item.WLTReservationID &&
-		reservation.TenantID == item.TenantID &&
+		reservation.OperatorContextID == item.OperatorContextID &&
 		reservation.CouponRedemptionID == item.RedemptionID &&
 		reservation.CouponID == item.CouponID &&
 		reservation.CheckoutIntentID == item.CheckoutIntentID

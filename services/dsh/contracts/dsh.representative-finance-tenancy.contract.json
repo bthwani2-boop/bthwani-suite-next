@@ -5,7 +5,7 @@
   "parentContract": "services/dsh/contracts/dsh.representative-finance.openapi.yaml",
   "truthOwner": "WLT",
   "tenantBoundary": {
-    "source": "core.identity.session.tenantId",
+    "source": "core.identity.session.operatorContextId",
     "clientSuppliedTenantAccepted": false,
     "description": "The tenant is derived from the authenticated Identity session and forwarded server-to-server by DSH. Browser query, path, and header values cannot select the WLT tenant.",
     "walletLookupKey": ["tenant_id", "actor_type", "actor_id"],
@@ -16,9 +16,9 @@
   "invariants": [
     "Self-service representative finance uses the actor and tenant resolved from the bearer session.",
     "Control-panel representative finance uses the operator tenant resolved from the bearer session.",
-    "DSH forwards X-Tenant-ID only from trusted Identity context.",
-    "WLT rejects representative wallet and ledger reads without X-Tenant-ID.",
-    "No frontend can override actorId, actorType, or tenantId for a self-service financial read.",
+    "DSH forwards X-Operator-Context-ID only from trusted Identity context.",
+    "WLT rejects representative wallet and ledger reads without X-Operator-Context-ID.",
+    "No frontend can override actorId, actorType, or operatorContextId for a self-service financial read.",
     "WLT remains the sole owner of wallet balance and ledger truth."
   ],
   "negativeEvidence": [

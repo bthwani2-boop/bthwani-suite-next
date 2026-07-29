@@ -26,8 +26,8 @@ func HandleRefreshProviderStatus(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
 			return
 		}
-		trustedTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-		if trustedTenantID == "" || trustedTenantID != session.TenantID {
+		trustedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		if trustedOperatorContextID == "" || trustedOperatorContextID != session.OperatorContextID {
 			shared.SendError(w, http.StatusForbidden, "TENANT_MISMATCH", "payment session does not belong to the trusted tenant")
 			return
 		}
@@ -61,11 +61,11 @@ func HandleRefreshProviderStatus(db *sql.DB) http.HandlerFunc {
 		}
 		idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 		eventID := "refresh:" + session.ID + ":" + idempotencyKey
-		payload := fmt.Sprintf("%s\x1f%s\x1f%s\x1f%s", session.TenantID, session.ID, result.Status, result.ProviderReference)
+		payload := fmt.Sprintf("%s\x1f%s\x1f%s\x1f%s", session.OperatorContextID, session.ID, result.Status, result.ProviderReference)
 		hash := sha256.Sum256([]byte(payload))
 		application, err := ApplyAuthoritativeProviderEvent(r.Context(), db, ProviderEventInput{
 			EventID:            eventID,
-			TenantID:           session.TenantID,
+			OperatorContextID:           session.OperatorContextID,
 			PaymentSessionID:   session.ID,
 			EventType:          eventType,
 			ProviderStatus:     result.Status,

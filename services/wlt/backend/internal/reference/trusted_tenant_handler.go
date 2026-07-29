@@ -27,17 +27,17 @@ func HandleCreatePaymentSessionTrustedDsh(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_PAYMENT_SOURCE", "subscription purchases must use /wlt/commercial/payment-sessions")
 			return
 		}
-		payloadTenantID := strings.TrimSpace(input.TenantID)
-		assertedTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-		if payloadTenantID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "tenantId is required for payment-session creation")
+		payloadOperatorContextID := strings.TrimSpace(input.OperatorContextID)
+		assertedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		if payloadOperatorContextID == "" {
+			shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "operatorContextId is required for payment-session creation")
 			return
 		}
-		if assertedTenantID != "" && assertedTenantID != payloadTenantID {
+		if assertedOperatorContextID != "" && assertedOperatorContextID != payloadOperatorContextID {
 			shared.SendError(w, http.StatusForbidden, "TENANT_MISMATCH", ErrTenantMismatch.Error())
 			return
 		}
-		input.TenantID = payloadTenantID
+		input.OperatorContextID = payloadOperatorContextID
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		if input.IdempotencyKey == "" {

@@ -9,7 +9,7 @@ import (
 	"wlt-api/internal/shared"
 )
 
-func insertTenantSettlement(t *testing.T, tenantID, partnerID string, gross, fee, net int64) *Settlement {
+func insertTenantSettlement(t *testing.T, operatorContextID, partnerID string, gross, fee, net int64) *Settlement {
 	t.Helper()
 	db := getTestDB(t)
 	if db == nil {
@@ -21,7 +21,7 @@ func insertTenantSettlement(t *testing.T, tenantID, partnerID string, gross, fee
 			(tenant_id, partner_id, period_start, period_end, gross_amount, platform_fee, net_amount, currency, order_count, status)
 		VALUES ($1, $2, DATE '2026-07-01', DATE '2026-07-31', $3::bigint, $4::bigint, $5::bigint, 'YER', 1, 'pending')
 		RETURNING `+settlementCols,
-		tenantID, partnerID, gross, fee, net,
+		operatorContextID, partnerID, gross, fee, net,
 	)
 	settlement, err := scanSettlement(row)
 	if err != nil {
@@ -43,18 +43,18 @@ func TestSettlementSummaryDoesNotAggregateAnotherTenant(t *testing.T) {
 	tenantA := "tenant-a-" + suffix
 	tenantB := "tenant-b-" + suffix
 
-	for tenantID, gross := range map[string]int64{tenantA: 1000, tenantB: 9000} {
+	for operatorContextID, gross := range map[string]int64{tenantA: 1000, tenantB: 9000} {
 		if _, err := db.Exec(`
 			INSERT INTO wlt_settlements
 				(tenant_id, partner_id, period_start, period_end, gross_amount, platform_fee, net_amount, currency, order_count, status)
 			VALUES ($1, $2, DATE '2026-07-01', DATE '2026-07-31', $3::bigint, 100::bigint, $3::bigint - 100::bigint, 'YER', 1, 'pending')`,
-			tenantID, partnerID, gross,
+			operatorContextID, partnerID, gross,
 		); err != nil {
-			t.Fatalf("insert %s settlement: %v", tenantID, err)
+			t.Fatalf("insert %s settlement: %v", operatorContextID, err)
 		}
 	}
 
-	ctxA := shared.WithTenantContext(context.Background(), tenantA)
+	ctxA := shared.WithOperatorContext(context.Background(), tenantA)
 	summary, err := ListSettlementSummaryGoverned(ctxA, db, partnerID, "2026-07-01", "2026-07-31")
 	if err != nil {
 		t.Fatalf("read tenant A summary: %v", err)
@@ -89,7 +89,7 @@ func TestPostSettlementCannotMutateAnotherTenant(t *testing.T) {
 		t.Fatalf("insert tenant B settlement: %v", err)
 	}
 
-	ctxA := shared.WithTenantContext(context.Background(), tenantA)
+	ctxA := shared.WithOperatorContext(context.Background(), tenantA)
 	posted, err := postSettlement(ctxA, db, settlementB.ID)
 	if err != nil {
 		t.Fatalf("cross-tenant post should be indistinguishable from not found, got %v", err)

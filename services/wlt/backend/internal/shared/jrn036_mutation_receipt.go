@@ -20,7 +20,7 @@ func LoadJrn036MutationReceiptTx(
 	idempotencyKey string,
 	requestHash string,
 ) (json.RawMessage, bool, error) {
-	tenantID, err := RequireTenantContext(ctx)
+	operatorContextID, err := RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, false, err
 	}
@@ -36,7 +36,7 @@ func LoadJrn036MutationReceiptTx(
 	if _, err := tx.ExecContext(
 		ctx,
 		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
-		tenantID+":"+idempotencyKey,
+		operatorContextID+":"+idempotencyKey,
 	); err != nil {
 		return nil, false, err
 	}
@@ -46,7 +46,7 @@ func LoadJrn036MutationReceiptTx(
 	err = tx.QueryRowContext(ctx, `
 		SELECT request_hash, response_json::text
 		FROM wlt_jrn036_mutation_receipts
-		WHERE tenant_id = $1 AND idempotency_key = $2`, tenantID, idempotencyKey).Scan(&storedHash, &responseText)
+		WHERE tenant_id = $1 AND idempotency_key = $2`, operatorContextID, idempotencyKey).Scan(&storedHash, &responseText)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}
@@ -68,7 +68,7 @@ func StoreJrn036MutationReceiptTx(
 	aggregateID string,
 	response any,
 ) error {
-	tenantID, err := RequireTenantContext(ctx)
+	operatorContextID, err := RequireOperatorContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func StoreJrn036MutationReceiptTx(
 		INSERT INTO wlt_jrn036_mutation_receipts
 		(tenant_id, idempotency_key, request_hash, mutation_type, aggregate_id, response_json)
 		VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
-		tenantID,
+		operatorContextID,
 		idempotencyKey,
 		requestHash,
 		mutationType,

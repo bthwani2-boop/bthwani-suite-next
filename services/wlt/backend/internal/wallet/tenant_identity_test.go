@@ -39,23 +39,23 @@ func TestEnsureWalletForTenantTxSeparatesIdenticalActors(t *testing.T) {
 	suffix := fmt.Sprint(time.Now().UnixNano())
 	actorID := "shared-field-" + suffix
 	tenants := []string{"tenant-a-" + suffix, "tenant-b-" + suffix}
-	for _, tenantID := range tenants {
-		ctx := shared.WithTenantContext(context.Background(), tenantID)
+	for _, operatorContextID := range tenants {
+		ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 		tx, err := db.BeginTx(ctx, nil)
 		if err != nil {
-			t.Fatalf("begin %s wallet tx: %v", tenantID, err)
+			t.Fatalf("begin %s wallet tx: %v", operatorContextID, err)
 		}
 		wallet, err := EnsureWalletForTenantTx(ctx, tx, "field", actorID, "YER")
 		if err != nil {
 			tx.Rollback()
-			t.Fatalf("ensure %s wallet: %v", tenantID, err)
+			t.Fatalf("ensure %s wallet: %v", operatorContextID, err)
 		}
 		if wallet.ActorID != actorID || wallet.Currency != "YER" {
 			tx.Rollback()
-			t.Fatalf("unexpected %s wallet: %+v", tenantID, wallet)
+			t.Fatalf("unexpected %s wallet: %+v", operatorContextID, wallet)
 		}
 		if err := tx.Commit(); err != nil {
-			t.Fatalf("commit %s wallet: %v", tenantID, err)
+			t.Fatalf("commit %s wallet: %v", operatorContextID, err)
 		}
 	}
 

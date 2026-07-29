@@ -13,7 +13,7 @@ import (
 // PromotionFundingOutboxInput is used only by the durable DSH outbox worker.
 // The transition is idempotent in WLT and carries the tenant explicitly.
 type PromotionFundingOutboxInput struct {
-	TenantID       string `json:"tenantId"`
+	OperatorContextID       string `json:"operatorContextId"`
 	OrderID        string `json:"orderId,omitempty"`
 	Reason         string `json:"reason,omitempty"`
 	IdempotencyKey string `json:"-"`
@@ -32,10 +32,10 @@ func (c *Client) TransitionPromotionFundingFromOutbox(
 ) (*PromotionFundingOutboxResult, error) {
 	reservationID = strings.TrimSpace(reservationID)
 	transition = strings.TrimSpace(transition)
-	input.TenantID = strings.TrimSpace(input.TenantID)
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
-	if reservationID == "" || input.TenantID == "" || input.IdempotencyKey == "" || input.CorrelationID == "" {
+	if reservationID == "" || input.OperatorContextID == "" || input.IdempotencyKey == "" || input.CorrelationID == "" {
 		return nil, fmt.Errorf("invalid promotion funding outbox request")
 	}
 	if transition != "commit" && transition != "release" && transition != "reverse" {
@@ -61,7 +61,7 @@ func (c *Client) TransitionPromotionFundingFromOutbox(
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Tenant-ID", input.TenantID)
+	req.Header.Set("X-Operator-Context-ID", input.OperatorContextID)
 	if err := setRequiredMutationHeaders(req, input.CorrelationID, input.IdempotencyKey); err != nil {
 		return nil, fmt.Errorf("prepare WLT promotion funding outbox mutation: %w", err)
 	}

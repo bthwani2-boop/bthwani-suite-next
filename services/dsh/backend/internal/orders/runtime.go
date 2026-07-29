@@ -34,8 +34,8 @@ func hydrateOrders(db *sql.DB, list []Order) ([]Order, error) {
 	return list, nil
 }
 
-func ListClientOrdersHydrated(db *sql.DB, tenantID, clientID string, limit int) ([]Order, error) {
-	list, err := ListClientOrders(db, tenantID, clientID, limit)
+func ListClientOrdersHydrated(db *sql.DB, operatorContextID, clientID string, limit int) ([]Order, error) {
+	list, err := ListClientOrders(db, operatorContextID, clientID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func ListClientOrdersHydrated(db *sql.DB, tenantID, clientID string, limit int) 
 
 type CancellationInput struct {
 	OrderID       string
-	TenantID      string
+	OperatorContextID      string
 	ActorID       string
 	ActorRole     string
 	ReasonCode    string
@@ -124,7 +124,7 @@ func cancellableStatuses(role string) []OrderStatus {
 
 func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 	input.OrderID = strings.TrimSpace(input.OrderID)
-	input.TenantID = strings.TrimSpace(input.TenantID)
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.ActorRole = strings.TrimSpace(input.ActorRole)
 	input.ReasonCode = strings.TrimSpace(input.ReasonCode)
@@ -155,7 +155,7 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 	var (
 		checkoutIntentID string
 		clientID         string
-		tenantID         string
+		operatorContextID         string
 		paymentSessionID string
 		current          OrderStatus
 	)
@@ -166,7 +166,7 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 		FOR UPDATE`, input.OrderID).Scan(
 		&checkoutIntentID,
 		&clientID,
-		&tenantID,
+		&operatorContextID,
 		&paymentSessionID,
 		&current,
 	)
@@ -176,7 +176,7 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 	if err != nil {
 		return nil, err
 	}
-	if input.TenantID != "" && input.TenantID != tenantID {
+	if input.OperatorContextID != "" && input.OperatorContextID != operatorContextID {
 		return nil, ErrNotFound
 	}
 
@@ -262,7 +262,7 @@ func CancelOrder(db *sql.DB, input CancellationInput) (*Order, error) {
 			from_status,to_status,financial_closure_status,correlation_id)
 		VALUES($1::uuid,$2,$3,$4,$5,NULLIF($6,''),$7,$8,$9,$10)`,
 		input.OrderID,
-		tenantID,
+		operatorContextID,
 		input.ActorID,
 		input.ActorRole,
 		input.ReasonCode,

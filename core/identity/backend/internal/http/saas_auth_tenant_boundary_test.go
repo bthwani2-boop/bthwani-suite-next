@@ -40,7 +40,7 @@ func TestAuthTenantBoundaryPassesMatchingLoginSession(t *testing.T) {
 		sendJSON(w, http.StatusOK, map[string]any{
 			"accessToken": "access-1",
 			"refreshToken": "refresh-1",
-			"identity": map[string]any{"tenantId": "tenant-main"},
+			"identity": map[string]any{"operatorContextId": "tenant-main"},
 		})
 	})
 	request := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{}`))
@@ -66,7 +66,7 @@ func TestAuthTenantBoundaryRejectsAndRevokesCrossTenantLogin(t *testing.T) {
 		sendJSON(w, http.StatusOK, map[string]any{
 			"accessToken": "cross-token",
 			"refreshToken": "refresh-1",
-			"identity": map[string]any{"tenantId": "tenant-other"},
+			"identity": map[string]any{"operatorContextId": "tenant-other"},
 		})
 	})
 	request := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{}`))
@@ -74,8 +74,8 @@ func TestAuthTenantBoundaryRejectsAndRevokesCrossTenantLogin(t *testing.T) {
 
 	SaaSAuthTenantBoundary(repository, next).ServeHTTP(response, request)
 
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected TENANT_CONTEXT_FORBIDDEN, status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
+		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, status=%d body=%s", response.Code, response.Body.String())
 	}
 	if len(repository.loggedOutTokens) != 1 || repository.loggedOutTokens[0] != "cross-token" {
 		t.Fatalf("expected cross-token revocation, got %#v", repository.loggedOutTokens)
@@ -100,8 +100,8 @@ func TestAuthTenantBoundaryRejectsMissingTenantAndRevokesToken(t *testing.T) {
 
 	SaaSAuthTenantBoundary(repository, next).ServeHTTP(response, request)
 
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_REQUIRED") {
-		t.Fatalf("expected TENANT_CONTEXT_REQUIRED, status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_REQUIRED") {
+		t.Fatalf("expected OPERATOR_CONTEXT_REQUIRED, status=%d body=%s", response.Code, response.Body.String())
 	}
 	if len(repository.loggedOutTokens) != 1 || repository.loggedOutTokens[0] != "tenantless-token" {
 		t.Fatalf("expected tenantless token revocation, got %#v", repository.loggedOutTokens)
@@ -113,7 +113,7 @@ func TestAuthTenantBoundaryRejectsCrossTenantSessionProjection(t *testing.T) {
 	repository := &fakeAuthTenantRepository{}
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		sendJSON(w, http.StatusOK, identity.ActorIdentity{
-			Subject: "actor-1", TenantID: "tenant-other", AuthState: "authenticated",
+			Subject: "actor-1", OperatorContextID: "tenant-other", AuthState: "authenticated",
 		})
 	})
 	request := httptest.NewRequest(http.MethodGet, "/auth/session", nil)
@@ -121,7 +121,7 @@ func TestAuthTenantBoundaryRejectsCrossTenantSessionProjection(t *testing.T) {
 
 	SaaSAuthTenantBoundary(repository, next).ServeHTTP(response, request)
 
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_FORBIDDEN") {
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
 		t.Fatalf("expected session tenant rejection, status=%d body=%s", response.Code, response.Body.String())
 	}
 }
@@ -129,7 +129,7 @@ func TestAuthTenantBoundaryRejectsCrossTenantSessionProjection(t *testing.T) {
 func TestAuthTenantBoundaryPrechecksProtectedBearerRoutes(t *testing.T) {
 	configureIdentityActiveSaaS(t)
 	repository := &fakeAuthTenantRepository{resolvedByToken: map[string]identity.ActorIdentity{
-		"cross-token": {Subject: "actor-1", TenantID: "tenant-other", AuthState: "authenticated"},
+		"cross-token": {Subject: "actor-1", OperatorContextID: "tenant-other", AuthState: "authenticated"},
 	}}
 	nextCalled := false
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -145,8 +145,8 @@ func TestAuthTenantBoundaryPrechecksProtectedBearerRoutes(t *testing.T) {
 	if nextCalled {
 		t.Fatal("cross-tenant protected request reached handler")
 	}
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected TENANT_CONTEXT_FORBIDDEN, status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
+		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 

@@ -29,15 +29,15 @@ type Actor struct {
 	Type string
 }
 
-// resolveLedgerTenantContext keeps request context as the primary tenant
+// resolveLedgerOperatorContext keeps request context as the primary tenant
 // authority. Refund compatibility calls may omit it only because WLT can derive
 // the tenant from its own persisted refund row. A supplied mismatched tenant is
 // always rejected; no local/default tenant is invented.
-func resolveLedgerTenantContext(ctx context.Context, tx *sql.Tx, referenceType, referenceID string) (context.Context, string, error) {
-	trustedTenant, hasTrustedTenant := shared.TenantIDFromContext(ctx)
+func resolveLedgerOperatorContext(ctx context.Context, tx *sql.Tx, referenceType, referenceID string) (context.Context, string, error) {
+	trustedTenant, hasTrustedTenant := shared.OperatorContextIDFromContext(ctx)
 	if referenceType != "refund" {
 		if !hasTrustedTenant {
-			_, err := shared.RequireTenantContext(ctx)
+			_, err := shared.RequireOperatorContext(ctx)
 			return ctx, "", err
 		}
 		return ctx, trustedTenant, nil
@@ -60,7 +60,7 @@ func resolveLedgerTenantContext(ctx context.Context, tx *sql.Tx, referenceType, 
 		}
 		return ctx, trustedTenant, nil
 	}
-	trustedCtx := shared.WithTenantContext(ctx, persistedTenant)
+	trustedCtx := shared.WithOperatorContext(ctx, persistedTenant)
 	return trustedCtx, persistedTenant, nil
 }
 
@@ -75,7 +75,7 @@ func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, ref
 	if referenceType == "" || referenceID == "" {
 		return "", fmt.Errorf("referenceType and referenceId are required")
 	}
-	trustedCtx, tenantID, err := resolveLedgerTenantContext(ctx, tx, referenceType, referenceID)
+	trustedCtx, operatorContextID, err := resolveLedgerOperatorContext(ctx, tx, referenceType, referenceID)
 	if err != nil {
 		return "", err
 	}
@@ -135,21 +135,21 @@ func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, ref
 		WHERE tenant_id = $1 AND transaction_type = $2 AND reference_type = $3 AND reference_id = $4
 		ORDER BY 2 DESC
 		LIMIT 1`,
-		tenantID, transactionType, referenceType, referenceID, createdBy.ID, createdBy.Type,
+		operatorContextID, transactionType, referenceType, referenceID, createdBy.ID, createdBy.Type,
 	).Scan(&transactionID, &inserted)
 	if err != nil {
 		return "", fmt.Errorf("insert or resolve ledger transaction: %w", err)
 	}
 
 	if !inserted {
-		if err := assertExistingTransactionMatches(ctx, tx, tenantID, transactionID, lines); err != nil {
+		if err := assertExistingTransactionMatches(ctx, tx, operatorContextID, transactionID, lines); err != nil {
 			return "", err
 		}
 		return transactionID, nil
 	}
 
 	for _, line := range lines {
-		accountID, err := getOrCreateAccountTx(ctx, tx, tenantID, line.AccountType, line.ActorType, line.ActorID, line.Currency)
+		accountID, err := getOrCreateAccountTx(ctx, tx, operatorContextID, line.AccountType, line.ActorType, line.ActorID, line.Currency)
 		if err != nil {
 			return "", fmt.Errorf("resolve account for %s line: %w", line.AccountType, err)
 		}
@@ -165,7 +165,7 @@ func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, ref
 			SET balance_minor_units = balance_minor_units + $1, updated_at = now()
 			WHERE id = $2 AND tenant_id = $3
 			RETURNING balance_minor_units`,
-			delta, accountID, tenantID,
+			delta, accountID, operatorContextID,
 		).Scan(&runningBalance)
 		if err != nil {
 			return "", fmt.Errorf("update tenant account balance: %w", err)
@@ -175,7 +175,7 @@ func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, ref
 			INSERT INTO wlt_ledger_lines
 				(tenant_id, ledger_transaction_id, account_id, debit_credit, amount_minor_units, currency, running_balance_after)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			tenantID, transactionID, accountID, line.DebitCredit, line.AmountMinorUnits, line.Currency, runningBalance,
+			operatorContextID, transactionID, accountID, line.DebitCredit, line.AmountMinorUnits, line.Currency, runningBalance,
 		)
 		if err != nil {
 			return "", fmt.Errorf("insert tenant ledger line: %w", err)
@@ -185,7 +185,7 @@ func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, ref
 	return transactionID, nil
 }
 
-func assertExistingTransactionMatches(ctx context.Context, tx *sql.Tx, tenantID, transactionID string, expected []LedgerLine) error {
+func assertExistingTransactionMatches(ctx context.Context, tx *sql.Tx, operatorContextID, transactionID string, expected []LedgerLine) error {
 	rows, err := tx.QueryContext(ctx, `
 		SELECT a.account_type,
 		       COALESCE(a.actor_type, ''),
@@ -196,7 +196,7 @@ func assertExistingTransactionMatches(ctx context.Context, tx *sql.Tx, tenantID,
 		FROM wlt_ledger_lines l
 		JOIN wlt_ledger_accounts a ON a.id = l.account_id AND a.tenant_id = l.tenant_id
 		JOIN wlt_ledger_transactions t ON t.id = l.ledger_transaction_id AND t.tenant_id = l.tenant_id
-		WHERE l.tenant_id = $1 AND l.ledger_transaction_id = $2`, tenantID, transactionID)
+		WHERE l.tenant_id = $1 AND l.ledger_transaction_id = $2`, operatorContextID, transactionID)
 	if err != nil {
 		return fmt.Errorf("read existing tenant ledger transaction: %w", err)
 	}
@@ -235,20 +235,20 @@ func ledgerLineKey(line LedgerLine) string {
 	return fmt.Sprintf("%s\x1f%s\x1f%s\x1f%s\x1f%d\x1f%s", line.AccountType, line.ActorType, line.ActorID, line.DebitCredit, line.AmountMinorUnits, line.Currency)
 }
 
-func getOrCreateAccountTx(ctx context.Context, tx *sql.Tx, tenantID, accountType, actorType, actorID, currency string) (string, error) {
+func getOrCreateAccountTx(ctx context.Context, tx *sql.Tx, operatorContextID, accountType, actorType, actorID, currency string) (string, error) {
 	var id string
 	var err error
 	if accountType == "wallet" {
 		err = tx.QueryRowContext(ctx, `
 			SELECT id FROM wlt_ledger_accounts
 			WHERE tenant_id = $1 AND account_type = 'wallet' AND actor_type = $2 AND actor_id = $3 AND currency = $4`,
-			tenantID, actorType, actorID, currency,
+			operatorContextID, actorType, actorID, currency,
 		).Scan(&id)
 	} else {
 		err = tx.QueryRowContext(ctx, `
 			SELECT id FROM wlt_ledger_accounts
 			WHERE tenant_id = $1 AND account_type = $2 AND currency = $3 AND actor_id IS NULL`,
-			tenantID, accountType, currency,
+			operatorContextID, accountType, currency,
 		).Scan(&id)
 	}
 	if err == nil {
@@ -265,7 +265,7 @@ func getOrCreateAccountTx(ctx context.Context, tx *sql.Tx, tenantID, accountType
 			ON CONFLICT (tenant_id, account_type, actor_type, actor_id, currency) WHERE account_type = 'wallet'
 			DO UPDATE SET updated_at = wlt_ledger_accounts.updated_at
 			RETURNING id`,
-			tenantID, actorType, actorID, currency,
+			operatorContextID, actorType, actorID, currency,
 		).Scan(&id)
 	} else {
 		err = tx.QueryRowContext(ctx, `
@@ -274,7 +274,7 @@ func getOrCreateAccountTx(ctx context.Context, tx *sql.Tx, tenantID, accountType
 			ON CONFLICT (tenant_id, account_type, currency) WHERE account_type <> 'wallet'
 			DO UPDATE SET updated_at = wlt_ledger_accounts.updated_at
 			RETURNING id`,
-			tenantID, accountType, currency,
+			operatorContextID, accountType, currency,
 		).Scan(&id)
 	}
 	if err != nil {

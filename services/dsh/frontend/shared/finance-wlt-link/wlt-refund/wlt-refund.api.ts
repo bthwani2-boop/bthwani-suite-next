@@ -15,7 +15,7 @@ const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "wlt-refund");
 
 type WltRefundRaw = {
   readonly id: string;
-  readonly tenantId?: string;
+  readonly operatorContextId?: string;
   readonly paymentSessionId?: string;
   readonly orderId: string;
   readonly clientId?: string;

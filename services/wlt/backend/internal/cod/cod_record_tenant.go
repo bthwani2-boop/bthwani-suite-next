@@ -16,12 +16,12 @@ import (
 func getCodRecordByTenantOrder(
 	ctx context.Context,
 	db *sql.DB,
-	tenantID string,
+	operatorContextID string,
 	orderID string,
 ) (*CodRecord, error) {
 	const query = `SELECT ` + codCols + `
 		FROM wlt_cod_records WHERE tenant_id=$1 AND order_id=$2`
-	record, err := scanCodRecord(db.QueryRowContext(ctx, query, tenantID, orderID))
+	record, err := scanCodRecord(db.QueryRowContext(ctx, query, operatorContextID, orderID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -36,7 +36,7 @@ func CreateCodRecordForTenant(
 	db *sql.DB,
 	input CreateCodRecordInput,
 ) (*CodRecord, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func CreateCodRecordForTenant(
 
 	session, err := reference.GetPaymentSessionByCheckoutIntentForTenant(
 		db,
-		tenantID,
+		operatorContextID,
 		input.CheckoutIntentID,
 	)
 	if err != nil {
@@ -62,7 +62,7 @@ func CreateCodRecordForTenant(
 	if session == nil {
 		return nil, fmt.Errorf("no WLT payment session found for checkoutIntentId %q in trusted tenant", input.CheckoutIntentID)
 	}
-	if session.TenantID != tenantID {
+	if session.OperatorContextID != operatorContextID {
 		return nil, reference.ErrTenantMismatch
 	}
 	if session.PaymentMethod != "cod" {
@@ -72,7 +72,7 @@ func CreateCodRecordForTenant(
 		return nil, fmt.Errorf("checkoutIntentId %q has invalid COD amount or currency", input.CheckoutIntentID)
 	}
 
-	existing, err := getCodRecordByTenantOrder(ctx, db, tenantID, input.OrderID)
+	existing, err := getCodRecordByTenantOrder(ctx, db, operatorContextID, input.OrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func CreateCodRecordForTenant(
 	created, err := scanCodRecord(db.QueryRowContext(
 		ctx,
 		query,
-		tenantID,
+		operatorContextID,
 		input.OrderID,
 		captainID,
 		collectorType,
@@ -107,7 +107,7 @@ func CreateCodRecordForTenant(
 		session.Currency,
 	))
 	if errors.Is(err, sql.ErrNoRows) {
-		existing, getErr := getCodRecordByTenantOrder(ctx, db, tenantID, input.OrderID)
+		existing, getErr := getCodRecordByTenantOrder(ctx, db, operatorContextID, input.OrderID)
 		if getErr != nil {
 			return nil, getErr
 		}

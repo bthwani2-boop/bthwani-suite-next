@@ -37,11 +37,11 @@ func otpRolePermissions(role, surface string) ([]byte, error) {
 // permission can be merged into that actor.
 func (r *Repository) RequestOtpForTenant(
 	ctx context.Context,
-	tenantID string,
+	operatorContextID string,
 	input OtpInput,
 ) (IssueActivationResult, error) {
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
 		return IssueActivationResult{}, ErrTenantMismatch
 	}
 	phone, err := NormalizePhoneE164(input.Phone)
@@ -80,7 +80,7 @@ func (r *Repository) RequestOtpForTenant(
 			INSERT INTO identity_actors
 				(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
 			VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, false, now())`,
-			actorID, username, tenantID, phone, pq.Array([]string{role}), string(permissions))
+			actorID, username, operatorContextID, phone, pq.Array([]string{role}), string(permissions))
 		if err != nil {
 			return IssueActivationResult{}, mapUniqueViolation(err)
 		}
@@ -89,7 +89,7 @@ func (r *Repository) RequestOtpForTenant(
 			return IssueActivationResult{}, err
 		}
 	} else {
-		if strings.TrimSpace(actor.TenantID) != tenantID {
+		if strings.TrimSpace(actor.OperatorContextID) != operatorContextID {
 			return IssueActivationResult{}, ErrTenantMismatch
 		}
 		if !hasRole(actor.Roles, role) {
@@ -99,7 +99,7 @@ func (r *Repository) RequestOtpForTenant(
 				    permissions = permissions || $3::jsonb,
 				    updated_at = now()
 				WHERE id = $1 AND tenant_id = $4`,
-				actor.ID, role, string(permissions), tenantID)
+				actor.ID, role, string(permissions), operatorContextID)
 			if err != nil {
 				return IssueActivationResult{}, err
 			}

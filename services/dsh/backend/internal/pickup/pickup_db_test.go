@@ -44,7 +44,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	t.Helper()
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	tenantID := "tenant-pickup-test-" + suffix
+	operatorContextID := "tenant-pickup-test-" + suffix
 	f := fixture{
 		partnerID: "pk-test-partner-" + suffix,
 		storeID:   "pk-test-store-" + suffix,
@@ -81,7 +81,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'pickup', 'wallet',
 		        1000, 0, 0, 1000, 'YER', repeat('d', 64))
 		RETURNING id::text`,
-		tenantID, f.clientID, cartID, f.storeID,
+		operatorContextID, f.clientID, cartID, f.storeID,
 	).Scan(&checkoutIntentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
@@ -90,7 +90,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status)
 		VALUES ($1, $2::uuid, $3, 'pickup', $4, $5)
 		RETURNING id::text`,
-		tenantID, checkoutIntentID, f.storeID, f.clientID, orderStatus,
+		operatorContextID, checkoutIntentID, f.storeID, f.clientID, orderStatus,
 	).Scan(&f.orderID); err != nil {
 		t.Fatalf("failed to insert test order: %v", err)
 	}

@@ -10,7 +10,7 @@ import (
 	"wlt-api/internal/reference"
 )
 
-func seedCommissionPaymentSession(t *testing.T, tenantID, status string, amount int64, currency string) (string, *sql.DB) {
+func seedCommissionPaymentSession(t *testing.T, operatorContextID, status string, amount int64, currency string) (string, *sql.DB) {
 	t.Helper()
 	db := getTestDB(t)
 	if db == nil {
@@ -20,7 +20,7 @@ func seedCommissionPaymentSession(t *testing.T, tenantID, status string, amount 
 	checkoutIntentID := "commission-checkout-" + suffix
 	session, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
 		CheckoutIntentID: checkoutIntentID,
-		TenantID:         tenantID,
+		OperatorContextID:         operatorContextID,
 		ClientID:         "commission-client-" + suffix,
 		StoreID:          "commission-store-" + suffix,
 		PaymentMethod:    "wallet",
@@ -34,7 +34,7 @@ func seedCommissionPaymentSession(t *testing.T, tenantID, status string, amount 
 		db.Close()
 		t.Fatalf("create WLT payment session: %v", err)
 	}
-	if _, err := db.Exec(`UPDATE wlt_payment_sessions SET status=$2 WHERE tenant_id=$1 AND id=$3`, tenantID, status, session.ID); err != nil {
+	if _, err := db.Exec(`UPDATE wlt_payment_sessions SET status=$2 WHERE tenant_id=$1 AND id=$3`, operatorContextID, status, session.ID); err != nil {
 		db.Close()
 		t.Fatalf("set payment session status: %v", err)
 	}
@@ -42,8 +42,8 @@ func seedCommissionPaymentSession(t *testing.T, tenantID, status string, amount 
 }
 
 func TestCanonicalOrderCommissionOverridesCallerFinancialFields(t *testing.T) {
-	tenantID := "tenant-canonical-commission-" + fmt.Sprint(time.Now().UnixNano())
-	paymentSessionID, db := seedCommissionPaymentSession(t, tenantID, "captured", 987654, "YER")
+	operatorContextID := "tenant-canonical-commission-" + fmt.Sprint(time.Now().UnixNano())
+	paymentSessionID, db := seedCommissionPaymentSession(t, operatorContextID, "captured", 987654, "YER")
 	if db == nil {
 		return
 	}
@@ -56,7 +56,7 @@ func TestCanonicalOrderCommissionOverridesCallerFinancialFields(t *testing.T) {
 		GrossBasisMinorUnits: 1,
 		Currency:             "USD",
 	}
-	if err := bindCanonicalCommissionFinancialTruth(db, tenantID, &input); err != nil {
+	if err := bindCanonicalCommissionFinancialTruth(db, operatorContextID, &input); err != nil {
 		t.Fatalf("bind canonical order commission truth: %v", err)
 	}
 	if input.GrossBasisMinorUnits != 987654 || input.Currency != "YER" {
@@ -85,8 +85,8 @@ func TestCanonicalOrderCommissionRejectsCrossTenantPaymentSession(t *testing.T) 
 }
 
 func TestCanonicalOrderCommissionRejectsUncapturedPaymentSession(t *testing.T) {
-	tenantID := "tenant-uncaptured-" + fmt.Sprint(time.Now().UnixNano())
-	paymentSessionID, db := seedCommissionPaymentSession(t, tenantID, "authorized", 5000, "YER")
+	operatorContextID := "tenant-uncaptured-" + fmt.Sprint(time.Now().UnixNano())
+	paymentSessionID, db := seedCommissionPaymentSession(t, operatorContextID, "authorized", 5000, "YER")
 	if db == nil {
 		return
 	}
@@ -97,7 +97,7 @@ func TestCanonicalOrderCommissionRejectsUncapturedPaymentSession(t *testing.T) {
 		SourceType:           "order",
 		SourceEvidenceID:     paymentSessionID,
 	}
-	if err := bindCanonicalCommissionFinancialTruth(db, tenantID, &input); err == nil {
+	if err := bindCanonicalCommissionFinancialTruth(db, operatorContextID, &input); err == nil {
 		t.Fatal("expected uncaptured payment session to be rejected")
 	}
 }

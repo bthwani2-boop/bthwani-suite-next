@@ -73,8 +73,8 @@ func TestSettlementPolicySamePartnerAndIdempotencyKeyAreTenantLocal(t *testing.T
 		_, _ = db.Exec(`DELETE FROM wlt_settlement_policies WHERE tenant_id IN ($1,$2) AND partner_id=$3`, tenantA, tenantB, partnerID)
 	})
 
-	for index, tenantID := range []string{tenantA, tenantB} {
-		ctx := shared.WithTenantContext(context.Background(), tenantID)
+	for index, operatorContextID := range []string{tenantA, tenantB} {
+		ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 		fee := 100 + index
 		policy, err := UpsertGovernedSettlementPolicyIdempotent(
 			ctx,
@@ -89,14 +89,14 @@ func TestSettlementPolicySamePartnerAndIdempotencyKeyAreTenantLocal(t *testing.T
 				ChangeReason:         "prove tenant-local settlement policy",
 				OperatorID:           "operator-test",
 			},
-			"correlation-"+tenantID,
+			"correlation-"+operatorContextID,
 			idempotencyKey,
 		)
 		if err != nil {
-			t.Fatalf("upsert tenant %s policy: %v", tenantID, err)
+			t.Fatalf("upsert tenant %s policy: %v", operatorContextID, err)
 		}
 		if policy == nil || policy.FeeBasisPoints != fee {
-			t.Fatalf("tenant %s policy=%+v, want fee %d", tenantID, policy, fee)
+			t.Fatalf("tenant %s policy=%+v, want fee %d", operatorContextID, policy, fee)
 		}
 	}
 

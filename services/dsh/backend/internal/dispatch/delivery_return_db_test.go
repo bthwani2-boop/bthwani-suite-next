@@ -12,7 +12,7 @@ import (
 func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 	db := openDispatchRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	tenantID := "tenant-return-" + suffix
+	operatorContextID := "tenant-return-" + suffix
 	storeID := "return-store-" + suffix
 	captainID := "return-captain-" + suffix
 	clientID := uuid.NewString()
@@ -20,11 +20,11 @@ func TestDeliveryExceptionReturnToStoreLifecycleDBIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	var checkoutIntentID string
-	if err := db.QueryRow(`INSERT INTO dsh_checkout_intents(tenant_id,client_id,cart_id,store_id,state,fulfillment_mode,payment_method,wlt_payment_session_id,subtotal_minor_units,delivery_fee_minor_units,discount_minor_units,total_minor_units,currency,pricing_snapshot_hash) VALUES($1,$2,gen_random_uuid(),$3,'confirmed','bthwani_delivery','wallet',$4,1000,0,0,1000,'YER',repeat('c',64)) RETURNING id::text`, tenantID, clientID, storeID, "return-payment-"+suffix).Scan(&checkoutIntentID); err != nil {
+	if err := db.QueryRow(`INSERT INTO dsh_checkout_intents(tenant_id,client_id,cart_id,store_id,state,fulfillment_mode,payment_method,wlt_payment_session_id,subtotal_minor_units,delivery_fee_minor_units,discount_minor_units,total_minor_units,currency,pricing_snapshot_hash) VALUES($1,$2,gen_random_uuid(),$3,'confirmed','bthwani_delivery','wallet',$4,1000,0,0,1000,'YER',repeat('c',64)) RETURNING id::text`, operatorContextID, clientID, storeID, "return-payment-"+suffix).Scan(&checkoutIntentID); err != nil {
 		t.Fatal(err)
 	}
 	var orderID string
-	if err := db.QueryRow(`INSERT INTO dsh_orders(tenant_id,checkout_intent_id,store_id,fulfillment_mode,client_id,status,wlt_payment_ref_id) VALUES($1,$2::uuid,$3,'bthwani_delivery',$4,'picked_up',$5) RETURNING id::text`, tenantID, checkoutIntentID, storeID, clientID, "return-payment-"+suffix).Scan(&orderID); err != nil {
+	if err := db.QueryRow(`INSERT INTO dsh_orders(tenant_id,checkout_intent_id,store_id,fulfillment_mode,client_id,status,wlt_payment_ref_id) VALUES($1,$2::uuid,$3,'bthwani_delivery',$4,'picked_up',$5) RETURNING id::text`, operatorContextID, checkoutIntentID, storeID, clientID, "return-payment-"+suffix).Scan(&orderID); err != nil {
 		t.Fatal(err)
 	}
 	var assignmentID string

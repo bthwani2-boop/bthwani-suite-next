@@ -79,16 +79,16 @@ func writeWltProxyResponse(w http.ResponseWriter, status int, body []byte) {
 	_, _ = w.Write(body)
 }
 
-func (s *protectedStoreServer) writeRefundCommand(w http.ResponseWriter, r *http.Request, path, tenantID, idempotencyKey string, body []byte) {
+func (s *protectedStoreServer) writeRefundCommand(w http.ResponseWriter, r *http.Request, path, operatorContextID, idempotencyKey string, body []byte) {
 	if !s.wlt.Configured() {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
 		return
 	}
 	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
 	if correlationID == "" {
-		correlationID = "refund-" + refundHash(path, tenantID, string(body))[:24]
+		correlationID = "refund-" + refundHash(path, operatorContextID, string(body))[:24]
 	}
-	status, responseBody, err := s.wlt.FinanceRefundWrite(r.Context(), path, body, correlationID, idempotencyKey, tenantID)
+	status, responseBody, err := s.wlt.FinanceRefundWrite(r.Context(), path, body, correlationID, idempotencyKey, operatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT refund command failed")
 		return
@@ -102,7 +102,7 @@ func (s *protectedStoreServer) handleCreateFinanceRefund(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
+	operatorContextID, ok := requiredPaymentTenant(w, r, actor.OperatorContextID)
 	if !ok {
 		return
 	}
@@ -123,13 +123,13 @@ func (s *protectedStoreServer) handleCreateFinanceRefund(w http.ResponseWriter, 
 		return
 	}
 	body, _ := json.Marshal(map[string]any{
-		"tenantId": tenantID, "paymentSessionId": input.PaymentSessionID, "orderId": input.OrderID,
+		"operatorContextId": operatorContextID, "paymentSessionId": input.PaymentSessionID, "orderId": input.OrderID,
 		"clientId": input.ClientID, "amountMinorUnits": input.AmountMinorUnits, "reason": input.Reason,
 		"eligibilityReference": input.EligibilityReference, "requestedByOperatorId": actor.ID,
 	})
-	correlationID, idempotencyKey := refundRequestIdentity(r, tenantID, input.PaymentSessionID, input.OrderID, input.ClientID, fmt.Sprint(input.AmountMinorUnits), input.Reason, input.EligibilityReference, actor.ID)
+	correlationID, idempotencyKey := refundRequestIdentity(r, operatorContextID, input.PaymentSessionID, input.OrderID, input.ClientID, fmt.Sprint(input.AmountMinorUnits), input.Reason, input.EligibilityReference, actor.ID)
 	r.Header.Set("X-Correlation-ID", correlationID)
-	s.writeRefundCommand(w, r, "/wlt/refunds", tenantID, idempotencyKey, body)
+	s.writeRefundCommand(w, r, "/wlt/refunds", operatorContextID, idempotencyKey, body)
 }
 
 func (s *protectedStoreServer) refundDecisionCommand(w http.ResponseWriter, r *http.Request, action string) {
@@ -137,7 +137,7 @@ func (s *protectedStoreServer) refundDecisionCommand(w http.ResponseWriter, r *h
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
+	operatorContextID, ok := requiredPaymentTenant(w, r, actor.OperatorContextID)
 	if !ok {
 		return
 	}
@@ -159,9 +159,9 @@ func (s *protectedStoreServer) refundDecisionCommand(w http.ResponseWriter, r *h
 		return
 	}
 	body, _ := json.Marshal(map[string]string{"operatorId": actor.ID, "reason": input.Reason})
-	correlationID, idempotencyKey := refundRequestIdentity(r, tenantID, refundID, action, actor.ID, input.Reason)
+	correlationID, idempotencyKey := refundRequestIdentity(r, operatorContextID, refundID, action, actor.ID, input.Reason)
 	r.Header.Set("X-Correlation-ID", correlationID)
-	s.writeRefundCommand(w, r, "/wlt/refunds/"+url.PathEscape(refundID)+"/"+action, tenantID, idempotencyKey, body)
+	s.writeRefundCommand(w, r, "/wlt/refunds/"+url.PathEscape(refundID)+"/"+action, operatorContextID, idempotencyKey, body)
 }
 
 func (s *protectedStoreServer) handleApproveFinanceRefund(w http.ResponseWriter, r *http.Request) {
@@ -177,7 +177,7 @@ func (s *protectedStoreServer) handleCompleteFinanceRefund(w http.ResponseWriter
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
+	operatorContextID, ok := requiredPaymentTenant(w, r, actor.OperatorContextID)
 	if !ok {
 		return
 	}
@@ -187,9 +187,9 @@ func (s *protectedStoreServer) handleCompleteFinanceRefund(w http.ResponseWriter
 		return
 	}
 	body, _ := json.Marshal(map[string]string{"operatorId": actor.ID})
-	correlationID, idempotencyKey := refundRequestIdentity(r, tenantID, refundID, "complete", actor.ID)
+	correlationID, idempotencyKey := refundRequestIdentity(r, operatorContextID, refundID, "complete", actor.ID)
 	r.Header.Set("X-Correlation-ID", correlationID)
-	s.writeRefundCommand(w, r, "/wlt/refunds/"+url.PathEscape(refundID)+"/complete", tenantID, idempotencyKey, body)
+	s.writeRefundCommand(w, r, "/wlt/refunds/"+url.PathEscape(refundID)+"/complete", operatorContextID, idempotencyKey, body)
 }
 
 func (s *protectedStoreServer) handleReconcileFinanceRefund(w http.ResponseWriter, r *http.Request) {
@@ -197,7 +197,7 @@ func (s *protectedStoreServer) handleReconcileFinanceRefund(w http.ResponseWrite
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
+	operatorContextID, ok := requiredPaymentTenant(w, r, actor.OperatorContextID)
 	if !ok {
 		return
 	}
@@ -224,9 +224,9 @@ func (s *protectedStoreServer) handleReconcileFinanceRefund(w http.ResponseWrite
 		"operatorId": actor.ID, "resolutionAction": input.ResolutionAction,
 		"evidenceNote": input.EvidenceNote, "providerReference": input.ProviderReference,
 	})
-	correlationID, idempotencyKey := refundRequestIdentity(r, tenantID, refundID, "reconcile", actor.ID, input.ResolutionAction, input.EvidenceNote, input.ProviderReference)
+	correlationID, idempotencyKey := refundRequestIdentity(r, operatorContextID, refundID, "reconcile", actor.ID, input.ResolutionAction, input.EvidenceNote, input.ProviderReference)
 	r.Header.Set("X-Correlation-ID", correlationID)
-	s.writeRefundCommand(w, r, "/wlt/refunds/"+url.PathEscape(refundID)+"/reconcile", tenantID, idempotencyKey, body)
+	s.writeRefundCommand(w, r, "/wlt/refunds/"+url.PathEscape(refundID)+"/reconcile", operatorContextID, idempotencyKey, body)
 }
 
 func (s *protectedStoreServer) handleFinanceRefundAudit(w http.ResponseWriter, r *http.Request) {
@@ -234,7 +234,7 @@ func (s *protectedStoreServer) handleFinanceRefundAudit(w http.ResponseWriter, r
 	if !ok {
 		return
 	}
-	tenantID, ok := requiredPaymentTenant(w, r, actor.TenantID)
+	operatorContextID, ok := requiredPaymentTenant(w, r, actor.OperatorContextID)
 	if !ok {
 		return
 	}
@@ -243,7 +243,7 @@ func (s *protectedStoreServer) handleFinanceRefundAudit(w http.ResponseWriter, r
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "refundId is required")
 		return
 	}
-	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/refunds/"+url.PathEscape(refundID)+"/audit", nil, r.Header.Get("X-Correlation-ID"), tenantID)
+	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/refunds/"+url.PathEscape(refundID)+"/audit", nil, r.Header.Get("X-Correlation-ID"), operatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT refund audit read failed")
 		return
@@ -267,12 +267,12 @@ func privacyRefunds(body []byte) ([]privacyRefund, error) {
 	return out, nil
 }
 
-func (s *protectedStoreServer) proxyPrivacyRefunds(w http.ResponseWriter, r *http.Request, tenantID, orderID, clientID string) {
+func (s *protectedStoreServer) proxyPrivacyRefunds(w http.ResponseWriter, r *http.Request, operatorContextID, orderID, clientID string) {
 	query := url.Values{"orderId": []string{orderID}}
 	if clientID != "" {
 		query.Set("clientId", clientID)
 	}
-	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/refunds", query, r.Header.Get("X-Correlation-ID"), tenantID)
+	status, body, err := s.wlt.FinanceReadWithTenant(r.Context(), "/wlt/refunds", query, r.Header.Get("X-Correlation-ID"), operatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT refund read failed")
 		return
@@ -301,14 +301,14 @@ func (s *protectedStoreServer) handleClientOrderRefunds(w http.ResponseWriter, r
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId is required")
 		return
 	}
-	var tenantID string
+	var operatorContextID string
 	if err := s.db.QueryRowContext(r.Context(), `
 		SELECT tenant_id FROM dsh_orders
-		WHERE id=$1::uuid AND client_id=$2`, orderID, actor.ID).Scan(&tenantID); err != nil {
+		WHERE id=$1::uuid AND client_id=$2`, orderID, actor.ID).Scan(&operatorContextID); err != nil {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found for client")
 		return
 	}
-	s.proxyPrivacyRefunds(w, r, tenantID, orderID, actor.ID)
+	s.proxyPrivacyRefunds(w, r, operatorContextID, orderID, actor.ID)
 }
 
 func (s *protectedStoreServer) handlePartnerOrderRefunds(w http.ResponseWriter, r *http.Request) {
@@ -321,12 +321,12 @@ func (s *protectedStoreServer) handlePartnerOrderRefunds(w http.ResponseWriter, 
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId is required")
 		return
 	}
-	var tenantID string
+	var operatorContextID string
 	if err := s.db.QueryRowContext(r.Context(), `
 		SELECT tenant_id FROM dsh_orders
-		WHERE id=$1::uuid AND store_id=$2`, orderID, storeID).Scan(&tenantID); err != nil {
+		WHERE id=$1::uuid AND store_id=$2`, orderID, storeID).Scan(&operatorContextID); err != nil {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found for partner store")
 		return
 	}
-	s.proxyPrivacyRefunds(w, r, tenantID, orderID, "")
+	s.proxyPrivacyRefunds(w, r, operatorContextID, orderID, "")
 }

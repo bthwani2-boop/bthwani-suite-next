@@ -267,8 +267,8 @@ Runtime evidence is expected under capability-specific DSH evidence folders, inc
 Use these checks before declaring DSH runtime closed after any change:
 
 ```powershell
-pnpm run foundation:gate
-pnpm run journey:gate
+pnpm run guard:foundation
+pnpm run guard:journey
 pnpm run typecheck
 pnpm run build
 ```

@@ -113,8 +113,8 @@ func (s *protectedStoreServer) mediaClient() *media.Client {
 
 func partnerRequestWithActor(r *http.Request, actor store.StoreActor) *http.Request {
 	ctx := r.Context()
-	if strings.TrimSpace(actor.TenantID) != "" {
-		ctx = partner.WithTenantContext(ctx, actor.TenantID)
+	if strings.TrimSpace(actor.OperatorContextID) != "" {
+		ctx = partner.WithOperatorContext(ctx, actor.OperatorContextID)
 	}
 	ctx = context.WithValue(ctx, "actor_id", actor.ID)
 	ctx = context.WithValue(ctx, "actor_phone", actor.PhoneE164)
@@ -313,8 +313,8 @@ func (s *protectedStoreServer) handleOperatorStores(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
-	if strings.TrimSpace(actor.TenantID) == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is required")
+	if strings.TrimSpace(actor.OperatorContextID) == "" {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted tenant context is required")
 		return
 	}
 	listQuery, errMessage := store.ParseListQuery(r.URL.Query())
@@ -322,7 +322,7 @@ func (s *protectedStoreServer) handleOperatorStores(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", errMessage)
 		return
 	}
-	result, err := store.ListAllStoresForTenant(s.db, actor.TenantID, listQuery)
+	result, err := store.ListAllStoresForTenant(s.db, actor.OperatorContextID, listQuery)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not load tenant stores")
 		return
@@ -335,11 +335,11 @@ func (s *protectedStoreServer) handleOperatorStoreDetail(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	if strings.TrimSpace(actor.TenantID) == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is required")
+	if strings.TrimSpace(actor.OperatorContextID) == "" {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted tenant context is required")
 		return
 	}
-	row, err := store.GetStoreByIDInternalForTenant(r.Context(), s.db, actor.TenantID, r.PathValue("storeId"))
+	row, err := store.GetStoreByIDInternalForTenant(r.Context(), s.db, actor.OperatorContextID, r.PathValue("storeId"))
 	if err != nil {
 		s.writeStoreError(w, err)
 		return
@@ -446,11 +446,11 @@ func (s *protectedStoreServer) handleStoreAudit(w http.ResponseWriter, r *http.R
 	if !ok {
 		return
 	}
-	if strings.TrimSpace(actor.TenantID) == "" {
-		store.SendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is required")
+	if strings.TrimSpace(actor.OperatorContextID) == "" {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted tenant context is required")
 		return
 	}
-	if _, err := store.GetStoreByIDInternalForTenant(r.Context(), s.db, actor.TenantID, r.PathValue("storeId")); err != nil {
+	if _, err := store.GetStoreByIDInternalForTenant(r.Context(), s.db, actor.OperatorContextID, r.PathValue("storeId")); err != nil {
 		s.writeStoreError(w, err)
 		return
 	}
@@ -619,7 +619,7 @@ func (s *protectedStoreServer) requireActor(
 	}
 	for _, role := range allowedRoles {
 		if identity.HasRole(role) {
-			return store.StoreActor{ID: identity.Subject, Role: role, TenantID: identity.TenantID, PhoneE164: identity.PhoneE164}, true
+			return store.StoreActor{ID: identity.Subject, Role: role, OperatorContextID: identity.OperatorContextID, PhoneE164: identity.PhoneE164}, true
 		}
 	}
 	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")
@@ -654,12 +654,12 @@ func (s *protectedStoreServer) requirePermission(
 	}
 	for _, role := range fallbackRoles {
 		if identity.HasRole(role) {
-			return store.StoreActor{ID: identity.Subject, Role: role, TenantID: identity.TenantID, PhoneE164: identity.PhoneE164}, true
+			return store.StoreActor{ID: identity.Subject, Role: role, OperatorContextID: identity.OperatorContextID, PhoneE164: identity.PhoneE164}, true
 		}
 	}
 	for _, p := range identity.Permissions {
 		if p.Service == "dsh" && p.Surface == surface && p.Action == action {
-			return store.StoreActor{ID: identity.Subject, Role: "permission:" + action, TenantID: identity.TenantID, PhoneE164: identity.PhoneE164}, true
+			return store.StoreActor{ID: identity.Subject, Role: "permission:" + action, OperatorContextID: identity.OperatorContextID, PhoneE164: identity.PhoneE164}, true
 		}
 	}
 	store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor role cannot perform this action")

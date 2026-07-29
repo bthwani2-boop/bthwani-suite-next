@@ -13,7 +13,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func TestGovernedProviderUpdateIsAtomicAuditedAndTenantIdempotent(t *testing.T) {
+func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *testing.T) {
 	if os.Getenv("JRN039_DATABASE_TEST") != "1" {
 		t.Skip("set JRN039_DATABASE_TEST=1 after applying provider migrations")
 	}
@@ -28,7 +28,7 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndTenantIdempotent(t *testing.T) 
 	defer db.Close()
 	baseCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	ctx := WithTenantContext(baseCtx, "tenant-jrn039")
+	ctx := WithOperatorContext(baseCtx, "tenant-jrn039")
 
 	const providerID = "jrn039-atomic-provider"
 	cleanup := func() {
@@ -89,7 +89,7 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndTenantIdempotent(t *testing.T) 
 		t.Fatalf("expected one tenant-attributed audit and idempotency row, got audit=%d idempotency=%d", auditCount, idempotencyCount)
 	}
 
-	otherTenantCtx := WithTenantContext(baseCtx, "tenant-other")
+	otherTenantCtx := WithOperatorContext(baseCtx, "tenant-other")
 	otherTenant, err := service.UpdateProvider(otherTenantCtx, providerID, input, operator, "jrn039-correlation-other", "jrn039-idempotency-1")
 	if err != nil {
 		t.Fatalf("same idempotency key in another tenant was rejected: %v", err)
@@ -143,10 +143,10 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndTenantIdempotent(t *testing.T) 
 	}
 }
 
-func TestGovernedProviderUpdateRejectsMissingTenantContext(t *testing.T) {
+func TestGovernedProviderUpdateRejectsMissingOperatorContext(t *testing.T) {
 	repository := NewRepository(nil)
 	_, err := repository.UpdateProviderGoverned(context.Background(), "provider-1", UpdateProviderInput{}, GovernedProviderUpdate{})
-	if !errors.Is(err, ErrTenantContextRequired) {
-		t.Fatalf("expected ErrTenantContextRequired before database access, got %v", err)
+	if !errors.Is(err, ErrOperatorContextRequired) {
+		t.Fatalf("expected ErrOperatorContextRequired before database access, got %v", err)
 	}
 }

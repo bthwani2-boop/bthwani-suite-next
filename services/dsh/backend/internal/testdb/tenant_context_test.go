@@ -6,13 +6,13 @@ import (
 	"testing"
 )
 
-func TestConfigureTrustedTenantContextUsesCIFallback(t *testing.T) {
+func TestConfigureTrustedOperatorContextUsesCIFallback(t *testing.T) {
 	t.Setenv("DSH_REQUIRE_DB_TESTS", "true")
 	t.Setenv("CI", "true")
 	t.Setenv("DSH_TEST_TENANT_ID", "")
 	t.Setenv("PGOPTIONS", "")
 
-	ConfigureTrustedTenantContext()
+	ConfigureTrustedOperatorContext()
 
 	if got := os.Getenv("DSH_TEST_TENANT_ID"); got != "ci-dsh" {
 		t.Fatalf("expected CI tenant fallback ci-dsh, got %q", got)
@@ -22,7 +22,7 @@ func TestConfigureTrustedTenantContextUsesCIFallback(t *testing.T) {
 	}
 }
 
-func TestConfigureTrustedTenantContextRejectsConflictingOptions(t *testing.T) {
+func TestConfigureTrustedOperatorContextRejectsConflictingOptions(t *testing.T) {
 	t.Setenv("DSH_REQUIRE_DB_TESTS", "true")
 	t.Setenv("CI", "true")
 	t.Setenv("DSH_TEST_TENANT_ID", "tenant-a")
@@ -34,5 +34,5 @@ func TestConfigureTrustedTenantContextRejectsConflictingOptions(t *testing.T) {
 		}
 	}()
 
-	ConfigureTrustedTenantContext()
+	ConfigureTrustedOperatorContext()
 }

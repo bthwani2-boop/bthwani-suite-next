@@ -42,7 +42,7 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 	body.CheckoutIntentID = strings.TrimSpace(body.CheckoutIntentID)
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	correlationID := safeOrderCreateCorrelation(
-		actor.TenantID,
+		actor.OperatorContextID,
 		actor.ID,
 		body.CheckoutIntentID,
 		idempotencyKey,
@@ -59,7 +59,7 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 	truth, replay, err := orders.CreateOrderTruth(s.db, orders.CreateOrderTruthInput{
 		CheckoutIntentID: body.CheckoutIntentID,
 		ClientID:         actor.ID,
-		TenantID:         actor.TenantID,
+		OperatorContextID:         actor.OperatorContextID,
 		IdempotencyKey:   idempotencyKey,
 		CorrelationID:    correlationID,
 	})
@@ -69,7 +69,7 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 	}
 	if errors.Is(err, orders.ErrIdempotencyConflict) {
 		_ = orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
-			TenantID:         actor.TenantID,
+			OperatorContextID:         actor.OperatorContextID,
 			ActorID:          actor.ID,
 			ActorRole:        "client",
 			CheckoutIntentID: body.CheckoutIntentID,
@@ -83,7 +83,7 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 	}
 	if errors.Is(err, orders.ErrConflict) {
 		_ = orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
-			TenantID:         actor.TenantID,
+			OperatorContextID:         actor.OperatorContextID,
 			ActorID:          actor.ID,
 			ActorRole:        "client",
 			CheckoutIntentID: body.CheckoutIntentID,
@@ -108,7 +108,7 @@ func (s *protectedStoreServer) handleCreateOrderTruth(w http.ResponseWriter, r *
 		w.Header().Set("Idempotent-Replay", "true")
 	}
 	_ = orders.RecordOrderTruthAudit(s.db, orders.OrderTruthAuditInput{
-		TenantID:         actor.TenantID,
+		OperatorContextID:         actor.OperatorContextID,
 		ActorID:          actor.ID,
 		ActorRole:        "client",
 		OrderID:          truth.ID,
@@ -133,7 +133,7 @@ func (s *protectedStoreServer) handleListClientOrderTruth(w http.ResponseWriter,
 	if !ok {
 		return
 	}
-	list, err := orders.ListClientOrderTruth(s.db, actor.TenantID, actor.ID, parseOrderTruthLimit(r))
+	list, err := orders.ListClientOrderTruth(s.db, actor.OperatorContextID, actor.ID, parseOrderTruthLimit(r))
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list governed orders")
 		return
@@ -146,7 +146,7 @@ func (s *protectedStoreServer) handleGetClientOrderTruth(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	truth, err := orders.GetClientScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, actor.ID)
+	truth, err := orders.GetClientScopedOrderTruth(s.db, r.PathValue("orderId"), actor.OperatorContextID, actor.ID)
 	if writeOrderTruthReadFailure(w, err, "failed to read governed order") {
 		return
 	}
@@ -159,7 +159,7 @@ func (s *protectedStoreServer) handleListClientOrderTruthEvents(w http.ResponseW
 	if !ok {
 		return
 	}
-	truth, err := orders.GetClientScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, actor.ID)
+	truth, err := orders.GetClientScopedOrderTruth(s.db, r.PathValue("orderId"), actor.OperatorContextID, actor.ID)
 	if writeOrderTruthReadFailure(w, err, "failed to read order timeline") {
 		return
 	}
@@ -171,7 +171,7 @@ func (s *protectedStoreServer) handleListPartnerOrderTruth(w http.ResponseWriter
 	if !ok {
 		return
 	}
-	list, err := orders.ListPartnerOrderTruth(s.db, actor.TenantID, storeID, strings.TrimSpace(r.URL.Query().Get("status")), parseOrderTruthLimit(r))
+	list, err := orders.ListPartnerOrderTruth(s.db, actor.OperatorContextID, storeID, strings.TrimSpace(r.URL.Query().Get("status")), parseOrderTruthLimit(r))
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list store order truth")
 		return
@@ -184,7 +184,7 @@ func (s *protectedStoreServer) handleGetPartnerOrderTruth(w http.ResponseWriter,
 	if !ok {
 		return
 	}
-	truth, err := orders.GetPartnerScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID, storeID)
+	truth, err := orders.GetPartnerScopedOrderTruth(s.db, r.PathValue("orderId"), actor.OperatorContextID, storeID)
 	if writeOrderTruthReadFailure(w, err, "failed to read store order truth") {
 		return
 	}
@@ -197,7 +197,7 @@ func (s *protectedStoreServer) handleListOperatorOrderTruth(w http.ResponseWrite
 	if !ok {
 		return
 	}
-	list, err := orders.ListOperatorOrderTruth(s.db, actor.TenantID, strings.TrimSpace(r.URL.Query().Get("status")), parseOrderTruthLimit(r))
+	list, err := orders.ListOperatorOrderTruth(s.db, actor.OperatorContextID, strings.TrimSpace(r.URL.Query().Get("status")), parseOrderTruthLimit(r))
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list tenant order truth")
 		return
@@ -210,7 +210,7 @@ func (s *protectedStoreServer) handleGetOperatorOrderTruth(w http.ResponseWriter
 	if !ok {
 		return
 	}
-	truth, err := orders.GetOperatorScopedOrderTruth(s.db, r.PathValue("orderId"), actor.TenantID)
+	truth, err := orders.GetOperatorScopedOrderTruth(s.db, r.PathValue("orderId"), actor.OperatorContextID)
 	if writeOrderTruthReadFailure(w, err, "failed to read tenant order truth") {
 		return
 	}

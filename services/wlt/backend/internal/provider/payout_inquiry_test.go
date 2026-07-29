@@ -22,7 +22,7 @@ func TestPayoutInquiryUsesProviderReadAndPreservesReference(t *testing.T) {
 		if r.Method != http.MethodGet || r.URL.Path != payoutInquiryPath {
 			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
 		}
-		if r.URL.Query().Get("tenantId") != "tenant-1" || r.URL.Query().Get("payoutRequestId") != "payout-1" {
+		if r.URL.Query().Get("operatorContextId") != "tenant-1" || r.URL.Query().Get("payoutRequestId") != "payout-1" {
 			t.Fatalf("unexpected query %s", r.URL.RawQuery)
 		}
 		if strings.TrimSpace(r.Header.Get("X-Correlation-ID")) == "" {
@@ -37,7 +37,7 @@ func TestPayoutInquiryUsesProviderReadAndPreservesReference(t *testing.T) {
 	inquiry, err := client.InquirePayout(context.Background(), url.Values{
 		"providerReference": {"provider-1"},
 		"payoutRequestId":  {"payout-1"},
-		"tenantId":         {"tenant-1"},
+		"operatorContextId":         {"tenant-1"},
 	})
 	if err != nil {
 		t.Fatalf("unexpected inquiry error: %v", err)
@@ -51,7 +51,7 @@ func TestProductionPayoutInquiryFailsClosed(t *testing.T) {
 	_, err := NewProductionPaymentAdapter().InquirePayout(context.Background(), url.Values{
 		"providerReference": {"provider-1"},
 		"payoutRequestId":  {"payout-1"},
-		"tenantId":         {"tenant-1"},
+		"operatorContextId":         {"tenant-1"},
 	})
 	if err == nil || !strings.Contains(err.Error(), ErrProductionProviderUnavailable.Error()) {
 		t.Fatalf("expected production provider block, got %v", err)

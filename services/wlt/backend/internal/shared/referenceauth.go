@@ -12,7 +12,7 @@ import (
 
 type referenceIdentity struct {
 	Subject   string `json:"subject"`
-	TenantID  string `json:"tenantId"`
+	OperatorContextID  string `json:"operatorContextId"`
 	AuthState string `json:"authState"`
 }
 
@@ -27,8 +27,8 @@ func trustedDshReferenceRequest(r *http.Request) (string, bool) {
 	) != 1 {
 		return "", false
 	}
-	tenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	return tenantID, tenantID != ""
+	operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+	return operatorContextID, operatorContextID != ""
 }
 
 func resolveReferenceIdentity(ctx context.Context, authorization string) (referenceIdentity, error) {
@@ -80,9 +80,9 @@ const (
 // requests derive the tenant from Identity; a client-supplied conflicting
 // tenant is rejected. Development and deferred modes never bypass this boundary.
 func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
-	if tenantID, ok := trustedDshReferenceRequest(r); ok {
-		r.Header.Set("X-Tenant-ID", tenantID)
-		*r = *r.WithContext(WithTenantContext(r.Context(), tenantID))
+	if operatorContextID, ok := trustedDshReferenceRequest(r); ok {
+		r.Header.Set("X-Operator-Context-ID", operatorContextID)
+		*r = *r.WithContext(WithOperatorContext(r.Context(), operatorContextID))
 		return true
 	}
 	identity, err := resolveReferenceIdentity(r.Context(), r.Header.Get("Authorization"))
@@ -94,17 +94,17 @@ func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
 		SendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "identity session is required")
 		return false
 	}
-	identityTenantID := strings.TrimSpace(identity.TenantID)
-	if identityTenantID == "" {
-		SendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "identity session has no trusted tenant context")
+	identityOperatorContextID := strings.TrimSpace(identity.OperatorContextID)
+	if identityOperatorContextID == "" {
+		SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "identity session has no trusted tenant context")
 		return false
 	}
-	requestTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	if requestTenantID != "" && requestTenantID != identityTenantID {
-		SendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "client tenant does not match the authenticated identity")
+	requestOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+	if requestOperatorContextID != "" && requestOperatorContextID != identityOperatorContextID {
+		SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "client tenant does not match the authenticated identity")
 		return false
 	}
-	r.Header.Set("X-Tenant-ID", identityTenantID)
-	*r = *r.WithContext(WithTenantContext(r.Context(), identityTenantID))
+	r.Header.Set("X-Operator-Context-ID", identityOperatorContextID)
+	*r = *r.WithContext(WithOperatorContext(r.Context(), identityOperatorContextID))
 	return true
 }

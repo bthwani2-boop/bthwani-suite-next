@@ -371,10 +371,10 @@ components:
     ProviderRating:
       type: object
       additionalProperties: false
-      required: [id, tenantId, raterKind, raterActorId, targetKind, sourceKind, sourceId, score, status, createdAt, updatedAt]
+      required: [id, operatorContextId, raterKind, raterActorId, targetKind, sourceKind, sourceId, score, status, createdAt, updatedAt]
       properties:
         id: { type: string }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         raterKind: { type: string, enum: [partner, client] }
         raterActorId: { type: string }
         targetKind: { type: string, enum: [field, captain, order] }

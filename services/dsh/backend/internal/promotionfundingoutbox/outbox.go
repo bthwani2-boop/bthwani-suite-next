@@ -16,7 +16,7 @@ const (
 type Event struct {
 	ID                 string
 	EventType          string
-	TenantID           string
+	OperatorContextID           string
 	CheckoutIntentID   string
 	CouponRedemptionID string
 	WLTReservationID   string
@@ -29,7 +29,7 @@ type Event struct {
 
 type EnqueueInput struct {
 	EventType          string
-	TenantID           string
+	OperatorContextID           string
 	CheckoutIntentID   string
 	CouponRedemptionID string
 	WLTReservationID   string
@@ -40,7 +40,7 @@ type EnqueueInput struct {
 }
 
 func Enqueue(tx *sql.Tx, input EnqueueInput) error {
-	if tx == nil || strings.TrimSpace(input.EventType) == "" || strings.TrimSpace(input.TenantID) == "" ||
+	if tx == nil || strings.TrimSpace(input.EventType) == "" || strings.TrimSpace(input.OperatorContextID) == "" ||
 		strings.TrimSpace(input.CheckoutIntentID) == "" || strings.TrimSpace(input.CouponRedemptionID) == "" ||
 		strings.TrimSpace(input.WLTReservationID) == "" || strings.TrimSpace(input.IdempotencyKey) == "" ||
 		strings.TrimSpace(input.CorrelationID) == "" {
@@ -68,7 +68,7 @@ func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 		VALUES ($1,$2,$3::uuid,$4::uuid,$5,$6::uuid,$7,$8,$9)
 		ON CONFLICT (idempotency_key) DO NOTHING`,
 		input.EventType,
-		strings.TrimSpace(input.TenantID),
+		strings.TrimSpace(input.OperatorContextID),
 		strings.TrimSpace(input.CheckoutIntentID),
 		strings.TrimSpace(input.CouponRedemptionID),
 		strings.TrimSpace(input.WLTReservationID),
@@ -115,7 +115,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		if err := rows.Scan(
 			&event.ID,
 			&event.EventType,
-			&event.TenantID,
+			&event.OperatorContextID,
 			&event.CheckoutIntentID,
 			&event.CouponRedemptionID,
 			&event.WLTReservationID,

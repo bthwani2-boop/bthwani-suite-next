@@ -13,17 +13,17 @@ func configureActiveSaaS(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
 	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "authorized")
 	t.Setenv("BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED", "false")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "tenant-main")
 }
 
-func TestSaaSTenantContextAcceptsIdentityOwnedTenant(t *testing.T) {
+func TestSaaSOperatorContextAcceptsIdentityOwnedTenant(t *testing.T) {
 	configureActiveSaaS(t)
 	request := httptest.NewRequest("GET", "/platform/v1/runtime-config", nil)
 	response := httptest.NewRecorder()
 
-	ok := enforceSaasTenantContext(response, request, auth.Identity{
+	ok := enforceSaasOperatorContext(response, request, auth.Identity{
 		Subject:  "operator-1",
-		TenantID: "tenant-main",
+		OperatorContextID: "tenant-main",
 	})
 
 	if !ok || response.Code != 200 {
@@ -31,55 +31,55 @@ func TestSaaSTenantContextAcceptsIdentityOwnedTenant(t *testing.T) {
 	}
 }
 
-func TestSaaSTenantContextRejectsMissingIdentityTenant(t *testing.T) {
+func TestSaaSOperatorContextRejectsMissingIdentityTenant(t *testing.T) {
 	configureActiveSaaS(t)
 	request := httptest.NewRequest("GET", "/platform/v1/runtime-config", nil)
 	response := httptest.NewRecorder()
 
-	if enforceSaasTenantContext(response, request, auth.Identity{Subject: "operator-1"}) {
+	if enforceSaasOperatorContext(response, request, auth.Identity{Subject: "operator-1"}) {
 		t.Fatal("expected missing identity tenant to fail closed")
 	}
-	if response.Code != 403 || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_REQUIRED") {
-		t.Fatalf("expected TENANT_CONTEXT_REQUIRED, got status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != 403 || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_REQUIRED") {
+		t.Fatalf("expected OPERATOR_CONTEXT_REQUIRED, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
-func TestSaaSTenantContextRejectsCrossTenantIdentity(t *testing.T) {
+func TestSaaSOperatorContextRejectsCrossOperatorContextIdentity(t *testing.T) {
 	configureActiveSaaS(t)
 	request := httptest.NewRequest("GET", "/platform/v1/runtime-config", nil)
 	response := httptest.NewRecorder()
 
-	if enforceSaasTenantContext(response, request, auth.Identity{Subject: "operator-1", TenantID: "tenant-other"}) {
+	if enforceSaasOperatorContext(response, request, auth.Identity{Subject: "operator-1", OperatorContextID: "tenant-other"}) {
 		t.Fatal("expected cross-tenant identity to fail closed")
 	}
-	if response.Code != 403 || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected TENANT_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != 403 || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
+		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
-func TestSaaSTenantContextRejectsClientTenantOverride(t *testing.T) {
+func TestSaaSOperatorContextRejectsClientTenantOverride(t *testing.T) {
 	configureActiveSaaS(t)
 	request := httptest.NewRequest("GET", "/platform/v1/runtime-config", nil)
-	request.Header.Set("X-Tenant-ID", "tenant-other")
+	request.Header.Set("X-Operator-Context-ID", "tenant-other")
 	response := httptest.NewRecorder()
 
-	if enforceSaasTenantContext(response, request, auth.Identity{Subject: "operator-1", TenantID: "tenant-main"}) {
+	if enforceSaasOperatorContext(response, request, auth.Identity{Subject: "operator-1", OperatorContextID: "tenant-main"}) {
 		t.Fatal("expected client tenant override to fail closed")
 	}
-	if response.Code != 403 || !strings.Contains(response.Body.String(), "UNTRUSTED_TENANT_CONTEXT") {
-		t.Fatalf("expected UNTRUSTED_TENANT_CONTEXT, got status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != 403 || !strings.Contains(response.Body.String(), "UNTRUSTED_OPERATOR_CONTEXT") {
+		t.Fatalf("expected UNTRUSTED_OPERATOR_CONTEXT, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
-func TestDeferredSaaSDoesNotRequireTenantContext(t *testing.T) {
+func TestDeferredSaaSDoesNotRequireOperatorContext(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
 	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "blocked")
 	t.Setenv("BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED", "false")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 	request := httptest.NewRequest("GET", "/platform/v1/runtime-config", nil)
 	response := httptest.NewRecorder()
 
-	if !enforceSaasTenantContext(response, request, auth.Identity{Subject: "operator-1"}) {
+	if !enforceSaasOperatorContext(response, request, auth.Identity{Subject: "operator-1"}) {
 		t.Fatalf("expected deferred SaaS to preserve non-tenant runtime, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }

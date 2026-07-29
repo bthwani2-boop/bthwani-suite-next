@@ -24,7 +24,7 @@ func (s *protectedStoreServer) handleGetClientPartnerDeliveryTask(w http.Respons
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId is required")
 		return
 	}
-	order, err := orders.GetClientOrder(s.db, orderID, actor.TenantID, actor.ID)
+	order, err := orders.GetClientOrder(s.db, orderID, actor.OperatorContextID, actor.ID)
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return

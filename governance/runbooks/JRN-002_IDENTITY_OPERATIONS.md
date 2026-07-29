@@ -20,7 +20,7 @@ Required structured dimensions:
 - `correlationId`
 - `surface`
 - `actorRole` when resolved
-- `tenantId` when resolved
+- `operatorContextId` when resolved
 
 Never record passwords, activation codes, bearer tokens, refresh tokens, hashes, or full request bodies.
 

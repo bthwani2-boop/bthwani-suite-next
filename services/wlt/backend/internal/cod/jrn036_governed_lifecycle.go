@@ -46,7 +46,7 @@ type CommissionDetail struct {
 func commissionHasWalletEffectTx(
 	ctx context.Context,
 	tx *sql.Tx,
-	tenantID string,
+	operatorContextID string,
 	commission *Commission,
 ) (bool, error) {
 	if commission.SourceType == "field_visit" {
@@ -55,14 +55,14 @@ func commissionHasWalletEffectTx(
 	var governed bool
 	err := tx.QueryRowContext(ctx, `SELECT EXISTS (
 		SELECT 1 FROM wlt_jrn036_commission_evidence
-		WHERE tenant_id=$1 AND commission_id=$2)`, tenantID, commission.ID).Scan(&governed)
+		WHERE tenant_id=$1 AND commission_id=$2)`, operatorContextID, commission.ID).Scan(&governed)
 	return governed, err
 }
 
 func appendCommissionAudit(
 	ctx context.Context,
 	tx *sql.Tx,
-	tenantID string,
+	operatorContextID string,
 	commissionID string,
 	action string,
 	operatorID string,
@@ -83,7 +83,7 @@ func appendCommissionAudit(
 		INSERT INTO wlt_jrn036_audit_events
 		(tenant_id,aggregate_type,aggregate_id,action,actor_id,actor_type,reason,correlation_id)
 		VALUES ($1,'commission',$2,$3,$4,$5,$6,$7)`,
-		tenantID, commissionID, action, operatorID, actorType, reason, correlationID)
+		operatorContextID, commissionID, action, operatorID, actorType, reason, correlationID)
 	return err
 }
 
@@ -94,7 +94,7 @@ func ConfirmGovernedCommission(
 	operatorID string,
 	correlationID string,
 ) (*Commission, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func ConfirmGovernedCommission(
 		return nil, err
 	}
 	defer tx.Rollback() //nolint:errcheck
-	commission, err := getGovernedCommissionForUpdateTx(ctx, tx, tenantID, strings.TrimSpace(commissionID))
+	commission, err := getGovernedCommissionForUpdateTx(ctx, tx, operatorContextID, strings.TrimSpace(commissionID))
 	if err != nil || commission == nil {
 		return commission, err
 	}
@@ -113,12 +113,12 @@ func ConfirmGovernedCommission(
 	row := tx.QueryRowContext(ctx, `UPDATE wlt_commissions
 		SET status='confirmed',confirmed_at=NOW(),updated_at=NOW()
 		WHERE tenant_id=$1 AND id=$2 AND status='pending'
-		RETURNING `+commissionCols, tenantID, commission.ID)
+		RETURNING `+commissionCols, operatorContextID, commission.ID)
 	updated, err := scanCommission(row)
 	if err != nil {
 		return nil, err
 	}
-	if err := appendCommissionAudit(ctx, tx, tenantID, commission.ID, "commission_confirmed", operatorID, "", correlationID); err != nil {
+	if err := appendCommissionAudit(ctx, tx, operatorContextID, commission.ID, "commission_confirmed", operatorID, "", correlationID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -134,7 +134,7 @@ func SettleGovernedCommission(
 	operatorID string,
 	correlationID string,
 ) (*Commission, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -143,14 +143,14 @@ func SettleGovernedCommission(
 		return nil, err
 	}
 	defer tx.Rollback() //nolint:errcheck
-	commission, err := getGovernedCommissionForUpdateTx(ctx, tx, tenantID, strings.TrimSpace(commissionID))
+	commission, err := getGovernedCommissionForUpdateTx(ctx, tx, operatorContextID, strings.TrimSpace(commissionID))
 	if err != nil || commission == nil {
 		return commission, err
 	}
 	if commission.Status != "confirmed" {
 		return nil, ErrCommissionNotInExpectedState
 	}
-	walletEffect, err := commissionHasWalletEffectTx(ctx, tx, tenantID, commission)
+	walletEffect, err := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func SettleGovernedCommission(
 			    updated_at=NOW()
 			WHERE tenant_id=$2 AND actor_type=$3 AND actor_id=$4
 			  AND pending_balance_minor_units>=$1`,
-			commission.AmountMinorUnits, tenantID, commission.BeneficiaryActorType, commission.BeneficiaryActorID)
+			commission.AmountMinorUnits, operatorContextID, commission.BeneficiaryActorType, commission.BeneficiaryActorID)
 		if err != nil {
 			return nil, err
 		}
@@ -173,12 +173,12 @@ func SettleGovernedCommission(
 	row := tx.QueryRowContext(ctx, `UPDATE wlt_commissions
 		SET status='settled',settled_at=NOW(),updated_at=NOW()
 		WHERE tenant_id=$1 AND id=$2 AND status='confirmed'
-		RETURNING `+commissionCols, tenantID, commission.ID)
+		RETURNING `+commissionCols, operatorContextID, commission.ID)
 	updated, err := scanCommission(row)
 	if err != nil {
 		return nil, err
 	}
-	if err := appendCommissionAudit(ctx, tx, tenantID, commission.ID, "commission_settled", operatorID, "", correlationID); err != nil {
+	if err := appendCommissionAudit(ctx, tx, operatorContextID, commission.ID, "commission_settled", operatorID, "", correlationID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -195,7 +195,7 @@ func RejectGovernedCommission(
 	reason string,
 	correlationID string,
 ) (*Commission, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -208,14 +208,14 @@ func RejectGovernedCommission(
 		return nil, err
 	}
 	defer tx.Rollback() //nolint:errcheck
-	commission, err := getGovernedCommissionForUpdateTx(ctx, tx, tenantID, strings.TrimSpace(commissionID))
+	commission, err := getGovernedCommissionForUpdateTx(ctx, tx, operatorContextID, strings.TrimSpace(commissionID))
 	if err != nil || commission == nil {
 		return commission, err
 	}
 	if commission.Status != "pending" {
 		return nil, ErrCommissionNotInExpectedState
 	}
-	walletEffect, err := commissionHasWalletEffectTx(ctx, tx, tenantID, commission)
+	walletEffect, err := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +227,7 @@ func RejectGovernedCommission(
 			WHERE tenant_id=$2 AND actor_type=$3 AND actor_id=$4
 			  AND pending_balance_minor_units>=$1
 			  AND earned_total_minor_units>=$1`,
-			commission.AmountMinorUnits, tenantID, commission.BeneficiaryActorType, commission.BeneficiaryActorID)
+			commission.AmountMinorUnits, operatorContextID, commission.BeneficiaryActorType, commission.BeneficiaryActorID)
 		if err != nil {
 			return nil, err
 		}
@@ -245,12 +245,12 @@ func RejectGovernedCommission(
 	row := tx.QueryRowContext(ctx, `UPDATE wlt_commissions
 		SET status='rejected',rejected_at=NOW(),resolution_note=$3,updated_at=NOW()
 		WHERE tenant_id=$1 AND id=$2 AND status='pending'
-		RETURNING `+commissionCols, tenantID, commission.ID, reason)
+		RETURNING `+commissionCols, operatorContextID, commission.ID, reason)
 	updated, err := scanCommission(row)
 	if err != nil {
 		return nil, err
 	}
-	if err := appendCommissionAudit(ctx, tx, tenantID, commission.ID, "commission_rejected", operatorID, reason, correlationID); err != nil {
+	if err := appendCommissionAudit(ctx, tx, operatorContextID, commission.ID, "commission_rejected", operatorID, reason, correlationID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -267,7 +267,7 @@ func ReverseGovernedCommission(
 	reason string,
 	correlationID string,
 ) (*Commission, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -280,14 +280,14 @@ func ReverseGovernedCommission(
 		return nil, err
 	}
 	defer tx.Rollback() //nolint:errcheck
-	commission, err := getGovernedCommissionForUpdateTx(ctx, tx, tenantID, strings.TrimSpace(commissionID))
+	commission, err := getGovernedCommissionForUpdateTx(ctx, tx, operatorContextID, strings.TrimSpace(commissionID))
 	if err != nil || commission == nil {
 		return commission, err
 	}
 	if commission.Status != "settled" {
 		return nil, ErrCommissionNotInExpectedState
 	}
-	walletEffect, err := commissionHasWalletEffectTx(ctx, tx, tenantID, commission)
+	walletEffect, err := commissionHasWalletEffectTx(ctx, tx, operatorContextID, commission)
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +299,7 @@ func ReverseGovernedCommission(
 			WHERE tenant_id=$2 AND actor_type=$3 AND actor_id=$4
 			  AND available_balance_minor_units>=$1
 			  AND settled_total_minor_units>=$1`,
-			commission.AmountMinorUnits, tenantID, commission.BeneficiaryActorType, commission.BeneficiaryActorID)
+			commission.AmountMinorUnits, operatorContextID, commission.BeneficiaryActorType, commission.BeneficiaryActorID)
 		if err != nil {
 			return nil, err
 		}
@@ -317,12 +317,12 @@ func ReverseGovernedCommission(
 	row := tx.QueryRowContext(ctx, `UPDATE wlt_commissions
 		SET status='reversed',reversed_at=NOW(),resolution_note=$3,updated_at=NOW()
 		WHERE tenant_id=$1 AND id=$2 AND status='settled'
-		RETURNING `+commissionCols, tenantID, commission.ID, reason)
+		RETURNING `+commissionCols, operatorContextID, commission.ID, reason)
 	updated, err := scanCommission(row)
 	if err != nil {
 		return nil, err
 	}
-	if err := appendCommissionAudit(ctx, tx, tenantID, commission.ID, "commission_reversed", operatorID, reason, correlationID); err != nil {
+	if err := appendCommissionAudit(ctx, tx, operatorContextID, commission.ID, "commission_reversed", operatorID, reason, correlationID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -336,12 +336,12 @@ func GetGovernedCommissionDetail(
 	db *sql.DB,
 	commissionID string,
 ) (*CommissionDetail, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 	commission, err := scanCommission(db.QueryRowContext(ctx, `SELECT `+commissionCols+`
-		FROM wlt_commissions WHERE tenant_id=$1 AND id=$2`, tenantID, strings.TrimSpace(commissionID)))
+		FROM wlt_commissions WHERE tenant_id=$1 AND id=$2`, operatorContextID, strings.TrimSpace(commissionID)))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -354,7 +354,7 @@ func GetGovernedCommissionDetail(
 		source_evidence_hash,source_evidence_status,gross_basis_minor_units,
 		calculated_amount_minor_units,verified_at::text
 		FROM wlt_jrn036_commission_evidence
-		WHERE tenant_id=$1 AND commission_id=$2`, tenantID, commission.ID).Scan(
+		WHERE tenant_id=$1 AND commission_id=$2`, operatorContextID, commission.ID).Scan(
 		&evidence.PolicyID,
 		&evidence.PolicyVersion,
 		&evidence.SourceEvidenceID,
@@ -371,7 +371,7 @@ func GetGovernedCommissionDetail(
 	}
 	rows, err := db.QueryContext(ctx, `SELECT id,delta_minor_units,reason,operator_id,created_at::text
 		FROM wlt_jrn036_commission_adjustments
-		WHERE tenant_id=$1 AND commission_id=$2 ORDER BY created_at,id`, tenantID, commission.ID)
+		WHERE tenant_id=$1 AND commission_id=$2 ORDER BY created_at,id`, operatorContextID, commission.ID)
 	if err != nil {
 		return nil, err
 	}

@@ -20,7 +20,7 @@ func UpsertGovernedSettlementPolicyIdempotent(
 	correlationID string,
 	idempotencyKey string,
 ) (*GovernedSettlementPolicy, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func UpsertGovernedSettlementPolicyIdempotent(
 	}
 
 	requestHash := hashSettlementParts(
-		tenantID,
+		operatorContextID,
 		"settlement_policy",
 		partnerID,
 		fmt.Sprint(input.FeeBasisPoints),
@@ -104,7 +104,7 @@ func UpsertGovernedSettlementPolicyIdempotent(
 		  status = EXCLUDED.status,
 		  updated_by_operator_id = EXCLUDED.updated_by_operator_id,
 		  updated_at = NOW()`,
-		tenantID,
+		operatorContextID,
 		partnerID,
 		input.FeeBasisPoints,
 		input.Currency,
@@ -118,7 +118,7 @@ func UpsertGovernedSettlementPolicyIdempotent(
 	if err := tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) + 1
 		FROM wlt_jrn036_settlement_policy_versions
-		WHERE tenant_id = $1 AND partner_id = $2`, tenantID, partnerID).Scan(&version); err != nil {
+		WHERE tenant_id = $1 AND partner_id = $2`, operatorContextID, partnerID).Scan(&version); err != nil {
 		return nil, err
 	}
 
@@ -130,7 +130,7 @@ func UpsertGovernedSettlementPolicyIdempotent(
 		RETURNING partner_id, version, fee_basis_points, currency, status,
 		          cycle_days, minimum_net_minor_units, change_reason,
 		          updated_by_operator_id`,
-		tenantID,
+		operatorContextID,
 		partnerID,
 		version,
 		input.FeeBasisPoints,
@@ -156,7 +156,7 @@ func UpsertGovernedSettlementPolicyIdempotent(
 		          'version', $6::bigint,
 		          'feeBasisPoints', $7::integer,
 		          'status', $8::text))`,
-		tenantID,
+		operatorContextID,
 		partnerID,
 		input.OperatorID,
 		input.ChangeReason,

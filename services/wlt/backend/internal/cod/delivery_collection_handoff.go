@@ -30,12 +30,12 @@ func HandleCreateDeliveryCollectionHandoff(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
 		}
-		tenantID, err := shared.RequireTenantContext(r.Context())
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
 		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "TENANT_CONTEXT_REQUIRED", err.Error())
+			shared.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", err.Error())
 			return
 		}
-		session, err := reference.GetPaymentSessionByCheckoutIntentForTenant(db, tenantID, normalized.CheckoutIntentID)
+		session, err := reference.GetPaymentSessionByCheckoutIntentForTenant(db, operatorContextID, normalized.CheckoutIntentID)
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

@@ -27,35 +27,35 @@ var (
 type Client struct {
 	baseURL      string
 	serviceToken string
-	tenantID     string
+	operatorContextID     string
 	http         *http.Client
 }
 
 // NewClient requires an explicit trusted tenant. Runtime callers must resolve
 // the tenant once at composition time; individual Workforce operations cannot
 // silently substitute or override it.
-func NewClient(baseURL, serviceToken, tenantID string) *Client {
+func NewClient(baseURL, serviceToken, operatorContextID string) *Client {
 	return &Client{
 		baseURL:      strings.TrimRight(baseURL, "/"),
 		serviceToken: serviceToken,
-		tenantID:     strings.TrimSpace(tenantID),
+		operatorContextID:     strings.TrimSpace(operatorContextID),
 		http:         &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
 func (c *Client) Configured() bool {
-	return c != nil && c.baseURL != "" && c.serviceToken != "" && c.tenantID != ""
+	return c != nil && c.baseURL != "" && c.serviceToken != "" && c.operatorContextID != ""
 }
 
 func (c *Client) trustedTenant(requested string) (string, error) {
-	if c == nil || c.tenantID == "" {
+	if c == nil || c.operatorContextID == "" {
 		return "", ErrUnavailable
 	}
 	requested = strings.TrimSpace(requested)
-	if requested != "" && requested != c.tenantID {
+	if requested != "" && requested != c.operatorContextID {
 		return "", ErrTenantForbidden
 	}
-	return c.tenantID, nil
+	return c.operatorContextID, nil
 }
 
 type ActorView struct {
@@ -70,7 +70,7 @@ type ProvisionInput struct {
 	Username  string `json:"username"`
 	PhoneE164 string `json:"phoneE164"`
 	Role      string `json:"role"`
-	TenantID  string `json:"tenantId,omitempty"`
+	OperatorContextID  string `json:"operatorContextId,omitempty"`
 }
 
 type ActivationCode struct {
@@ -90,11 +90,11 @@ type ActivationMetadata struct {
 
 func (c *Client) Provision(ctx context.Context, input ProvisionInput) (ActorView, error) {
 	var view ActorView
-	tenantID, err := c.trustedTenant(input.TenantID)
+	operatorContextID, err := c.trustedTenant(input.OperatorContextID)
 	if err != nil {
 		return view, err
 	}
-	input.TenantID = tenantID
+	input.OperatorContextID = operatorContextID
 	err = c.do(ctx, http.MethodPost, "/internal/actors/provision", input, &view, nil)
 	return view, err
 }
@@ -193,7 +193,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 	}
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "workforce")
-	req.Header.Set("X-Tenant-ID", c.tenantID)
+	req.Header.Set("X-Operator-Context-ID", c.operatorContextID)
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
@@ -228,7 +228,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 		return ErrRateLimited
 	case "INVALID_ACTOR_INPUT":
 		return ErrInvalidActor
-	case "TENANT_CONTEXT_REQUIRED", "TENANT_CONTEXT_FORBIDDEN", "PHONE_BOUND_TO_ANOTHER_TENANT":
+	case "OPERATOR_CONTEXT_REQUIRED", "OPERATOR_CONTEXT_FORBIDDEN", "PHONE_BOUND_TO_ANOTHER_TENANT":
 		return ErrTenantForbidden
 	}
 	if response.StatusCode == http.StatusNotFound {

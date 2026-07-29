@@ -32,7 +32,7 @@ x-bthwani-generated-from:
   - services/wlt/contracts/wlt.commercial-summary.openapi.yaml
   - services/wlt/contracts/wlt.promotion-funding.openapi.yaml
   - services/wlt/contracts/wlt.workforce-finance.openapi.yaml
-x-bthwani-source-digest: f21d6eeb787500617ba12d5ad76d5162cf796f3d5981f0e3ccffec61d92a12b0
+x-bthwani-source-digest: bdce0453b371e3c7b3a64d2889036ed5c98642b854197f02ea24d05396a12fb5
 
 paths:
   /wlt/health:
@@ -124,7 +124,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ActorTypePath'
         - $ref: '#/components/parameters/ActorIdPath'
       responses:
@@ -145,7 +145,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - name: status
           in: query
           schema: { type: string, enum: [open, resolved] }
@@ -166,7 +166,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/CaseId'
       responses:
         '200':
@@ -187,7 +187,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/CaseId'
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -212,7 +212,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/CaseId'
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -235,7 +235,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - name: actorId
           in: query
           schema: { type: string }
@@ -271,7 +271,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - name: entryId
           in: path
           required: true
@@ -293,7 +293,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
       responses:
         '200': { description: Tenant-local financial summary }
 
@@ -307,7 +307,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
       requestBody:
@@ -334,7 +334,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
       responses:
         '200':
           description: Payment session.
@@ -355,7 +355,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
@@ -380,7 +380,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
@@ -405,7 +405,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
@@ -427,7 +427,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
       responses:
         '200':
           description: Governed payment timeline.
@@ -452,7 +452,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
@@ -475,7 +475,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
       responses:
@@ -493,7 +493,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
       requestBody:
@@ -527,7 +527,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
       requestBody:
@@ -601,7 +601,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -632,7 +632,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - name: captainId
           in: query
           schema: { type: string }
@@ -659,7 +659,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/CodRecordId'
       responses:
         '200': { description: Delivery collection custody record }
@@ -678,7 +678,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/CodRecordId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
@@ -705,7 +705,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/CodRecordId'
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
@@ -988,7 +988,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - name: partnerId
           in: query
           schema: { type: string }
@@ -1227,7 +1227,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
       responses:
         '200': { description: Tenant-local settlement summary }
         '400': { $ref: '#/components/responses/Error' }
@@ -1242,7 +1242,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/SettlementId'
       responses:
         '200': { description: Tenant-local settlement }
@@ -1260,7 +1260,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/SettlementId'
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -1500,7 +1500,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/PayoutId'
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -1681,7 +1681,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -1702,7 +1702,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - name: captainId
           in: query
           schema: { type: string }
@@ -1726,7 +1726,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
         - name: codRecordId
           in: path
           required: true
@@ -2285,8 +2285,8 @@ components:
       required: true
       schema: { type: string, const: dsh }
 
-    TenantId:
-      name: X-Tenant-ID
+    OperatorContextId:
+      name: X-Operator-Context-ID
       in: header
       required: true
       schema: { type: string, minLength: 1, maxLength: 120 }
@@ -2346,7 +2346,7 @@ components:
       schema: { type: string, minLength: 1 }
 
     TenantHeader:
-      name: X-Tenant-ID
+      name: X-Operator-Context-ID
       in: header
       required: true
       schema: { type: string, minLength: 1 }
@@ -2678,14 +2678,14 @@ components:
 
     PaymentSession:
       type: object
-      required: [id, tenantId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]
+      required: [id, operatorContextId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]
       properties:
         id: { type: string }
         checkoutIntentId: { type: [string, 'null'] }
         specialRequestId: { type: [string, 'null'] }
         subscriptionPurchaseId: { type: [string, 'null'] }
         commercialProductReference: { type: [string, 'null'] }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         clientId: { type: string }
         storeId: { type: string }
         paymentMethod: { type: string, enum: [cod, wallet, mixed, official_wallet] }
@@ -2699,13 +2699,13 @@ components:
 
     CreatePaymentSessionRequest:
       type: object
-      required: [tenantId, clientId, storeId, paymentMethod, amountMinorUnits, currency]
+      required: [operatorContextId, clientId, storeId, paymentMethod, amountMinorUnits, currency]
       properties:
         checkoutIntentId: { type: string }
         specialRequestId: { type: string }
         subscriptionPurchaseId: { type: string }
         commercialProductReference: { type: string }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         clientId: { type: string }
         storeId: { type: string }
         paymentMethod: { type: string, enum: [cod, wallet, mixed, official_wallet] }
@@ -2734,12 +2734,12 @@ components:
 
     ProviderWebhookRequest:
       type: object
-      required: [eventId, type, tenantId, paymentSessionId, status]
+      required: [eventId, type, operatorContextId, paymentSessionId, status]
       additionalProperties: false
       properties:
         eventId: { type: string, minLength: 1, maxLength: 200 }
         type: { type: string, enum: [payment.authorized, payment.captured, payment.failed, payment.expired] }
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         paymentSessionId: { type: string, minLength: 1 }
         status: { type: string, enum: [authorized, captured, failed, expired] }
         providerReference: { type: string }
@@ -2891,10 +2891,10 @@ components:
     GovernedRefund:
       type: object
       additionalProperties: false
-      required: [id, tenantId, paymentSessionId, orderId, clientId, amountMinorUnits, currency, reason, status, requestedByOperatorId, eligibilityReference, idempotencyKey, providerIdempotencyKey, version, createdAt, updatedAt]
+      required: [id, operatorContextId, paymentSessionId, orderId, clientId, amountMinorUnits, currency, reason, status, requestedByOperatorId, eligibilityReference, idempotencyKey, providerIdempotencyKey, version, createdAt, updatedAt]
       properties:
         id: { type: string }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         paymentSessionId: { type: string }
         orderId: { type: string }
         clientId: { type: string }
@@ -2922,9 +2922,9 @@ components:
     CreateRefundRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, paymentSessionId, orderId, clientId, amountMinorUnits, reason, eligibilityReference, requestedByOperatorId]
+      required: [operatorContextId, paymentSessionId, orderId, clientId, amountMinorUnits, reason, eligibilityReference, requestedByOperatorId]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         paymentSessionId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
         clientId: { type: string, minLength: 1 }
@@ -2971,11 +2971,11 @@ components:
     RefundAuditEvent:
       type: object
       additionalProperties: false
-      required: [id, refundId, tenantId, eventType, actorId, actorType, toStatus, createdAt]
+      required: [id, refundId, operatorContextId, eventType, actorId, actorType, toStatus, createdAt]
       properties:
         id: { type: string, format: uuid }
         refundId: { type: string }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         eventType: { type: string }
         actorId: { type: string }
         actorType: { type: string, enum: [operator, service, provider, reconciler, system] }
@@ -3202,7 +3202,7 @@ components:
       required: [id, partnerId, periodStart, periodEnd, grossAmount, platformFee, netAmount, currency, orderCount, status, createdAt, updatedAt]
       properties:
         id: { type: string }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         partnerId: { type: string }
         periodStart: { type: string }
         periodEnd: { type: string }
@@ -3480,11 +3480,11 @@ components:
     SubscriptionPaymentSessionCreate:
       type: object
       additionalProperties: false
-      required: [subscriptionPurchaseId, productReference, tenantId, clientId]
+      required: [subscriptionPurchaseId, productReference, operatorContextId, clientId]
       properties:
         subscriptionPurchaseId: { type: string, minLength: 1 }
         productReference: { type: string, minLength: 1 }
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         clientId: { type: string, minLength: 1 }
         paymentMethod: { type: string, enum: [official_wallet] }
 
@@ -3535,9 +3535,9 @@ components:
     ReservePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, externalReference, checkoutIntentId, couponRedemptionId, couponId, clientId, platformFundedMinorUnits, partnerFundedMinorUnits, totalDiscountMinorUnits, currency]
+      required: [operatorContextId, externalReference, checkoutIntentId, couponRedemptionId, couponId, clientId, platformFundedMinorUnits, partnerFundedMinorUnits, totalDiscountMinorUnits, currency]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         externalReference: { type: string, minLength: 1 }
         checkoutIntentId: { type: string, minLength: 1 }
         couponRedemptionId: { type: string, minLength: 1 }
@@ -3552,35 +3552,35 @@ components:
     CommitPromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, orderId]
+      required: [operatorContextId, orderId]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
 
     ReleasePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, reason]
+      required: [operatorContextId, reason]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
 
     ReversePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, orderId, reason]
+      required: [operatorContextId, orderId, reason]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
 
     PromotionFundingReservation:
       type: object
       additionalProperties: false
-      required: [id, tenantId, externalReference, checkoutIntentId, couponRedemptionId, couponId, clientId, platformFundedMinorUnits, partnerFundedMinorUnits, totalDiscountMinorUnits, currency, status, createdAt, updatedAt]
+      required: [id, operatorContextId, externalReference, checkoutIntentId, couponRedemptionId, couponId, clientId, platformFundedMinorUnits, partnerFundedMinorUnits, totalDiscountMinorUnits, currency, status, createdAt, updatedAt]
       properties:
         id: { type: string, pattern: '^pfr_[a-f0-9]{32}$' }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         externalReference: { type: string }
         checkoutIntentId: { type: string }
         couponRedemptionId: { type: string }

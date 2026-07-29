@@ -6,7 +6,7 @@ func TestValidateReserve(t *testing.T) {
 	t.Parallel()
 
 	valid := normalizeReserve(ReserveInput{
-		TenantID: "tenant-1", ExternalReference: "dsh:redemption-1",
+		OperatorContextID: "tenant-1", ExternalReference: "dsh:redemption-1",
 		CheckoutIntentID: "checkout-1", CouponRedemptionID: "redemption-1",
 		CouponID: "coupon-1", ClientID: "client-1",
 		PlatformFundedMinorUnits: 600, PartnerFundedMinorUnits: 400,
@@ -49,14 +49,14 @@ func TestSameReserveIncludesFinancialIdentity(t *testing.T) {
 	t.Parallel()
 	partner := "partner-1"
 	existing := &Reservation{
-		TenantID: "tenant-1", ExternalReference: "dsh:redemption-1",
+		OperatorContextID: "tenant-1", ExternalReference: "dsh:redemption-1",
 		CheckoutIntentID: "checkout-1", CouponRedemptionID: "redemption-1",
 		CouponID: "coupon-1", ClientID: "client-1", PartnerID: &partner,
 		PlatformFundedMinorUnits: 600, PartnerFundedMinorUnits: 400,
 		TotalDiscountMinorUnits: 1000, Currency: "YER",
 	}
 	input := ReserveInput{
-		TenantID: existing.TenantID, ExternalReference: existing.ExternalReference,
+		OperatorContextID: existing.OperatorContextID, ExternalReference: existing.ExternalReference,
 		CheckoutIntentID: existing.CheckoutIntentID, CouponRedemptionID: existing.CouponRedemptionID,
 		CouponID: existing.CouponID, ClientID: existing.ClientID, PartnerID: partner,
 		PlatformFundedMinorUnits: 600, PartnerFundedMinorUnits: 400,

@@ -96,9 +96,9 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 	if len(input.Password) < 6 {
 		return errors.New("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD must contain at least 6 characters")
 	}
-	tenantID := strings.TrimSpace(input.TenantID)
-	if tenantID == "" {
-		return errors.New("BTHWANI_DEFAULT_TENANT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
+	operatorContextID := strings.TrimSpace(input.OperatorContextID)
+	if operatorContextID == "" {
+		return errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -169,7 +169,7 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 				permissions = EXCLUDED.permissions,
 				active = true,
 				updated_at = now()`,
-			actor.id, actor.username, string(hash), tenantID, actor.phone,
+			actor.id, actor.username, string(hash), operatorContextID, actor.phone,
 			pq.Array([]string{actor.role}), string(permissions))
 		if err != nil {
 			return err
@@ -466,7 +466,7 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 		  AND s.revoked_at IS NULL
 		  AND s.access_expires_at > now()
 		  AND a.active = true`, hash).Scan(
-		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID, &actor.PhoneE164,
+		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
 		&roles, &permissionsJSON, &actor.Active, &sessionID, &expiresAt,
 	)
 	if err != nil {
@@ -576,7 +576,7 @@ func (r *Repository) actorByUsername(ctx context.Context, username string) (Acto
 	err := r.db.QueryRowContext(ctx, `
 		SELECT id, username, password_hash, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
 		FROM identity_actors WHERE username = $1`, username).Scan(
-		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID, &actor.PhoneE164,
+		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
 		&roles, &permissionsJSON, &actor.Active,
 	)
 	if err != nil {
@@ -596,7 +596,7 @@ func actorByIDTx(ctx context.Context, tx *sql.Tx, actorID string) (Actor, error)
 	err := tx.QueryRowContext(ctx, `
 		SELECT id, username, password_hash, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
 		FROM identity_actors WHERE id = $1`, actorID).Scan(
-		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID, &actor.PhoneE164,
+		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
 		&roles, &permissionsJSON, &actor.Active,
 	)
 	if err != nil {
@@ -617,7 +617,7 @@ func toIdentity(actor Actor, sessionID string, expiresAt time.Time) ActorIdentit
 		services[permission.Service] = true
 	}
 	return ActorIdentity{
-		Subject: actor.ID, TenantID: actor.TenantID, PhoneE164: actor.PhoneE164, Roles: actor.Roles,
+		Subject: actor.ID, OperatorContextID: actor.OperatorContextID, PhoneE164: actor.PhoneE164, Roles: actor.Roles,
 		Permissions: actor.Permissions, AuthState: "authenticated",
 		SurfaceAccess: surfaces, ServiceAccess: services,
 		SessionID: sessionID, ExpiresAt: expiresAt,
@@ -686,8 +686,8 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 	if username == "" {
 		return ActorAdminView{}, ErrInvalidActivation
 	}
-	tenantID := strings.TrimSpace(input.TenantID)
-	if tenantID == "" {
+	operatorContextID := strings.TrimSpace(input.OperatorContextID)
+	if operatorContextID == "" {
 		return ActorAdminView{}, ErrInvalidActivation
 	}
 	phone, err := NormalizePhoneE164(input.PhoneE164)
@@ -705,7 +705,7 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return ActorAdminView{}, err
 	}
-	if err == nil && strings.TrimSpace(existing.TenantID) != tenantID {
+	if err == nil && strings.TrimSpace(existing.OperatorContextID) != operatorContextID {
 		return ActorAdminView{}, ErrForbidden
 	}
 	if err == nil {
@@ -748,7 +748,7 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 		INSERT INTO identity_actors
 			(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
 		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, false, now())`,
-		actorID, username, tenantID, phone, pq.Array([]string{role}), string(permissions))
+		actorID, username, operatorContextID, phone, pq.Array([]string{role}), string(permissions))
 	if err != nil {
 		return ActorAdminView{}, mapUniqueViolation(err)
 	}
@@ -904,7 +904,7 @@ func actorByIDForUpdateTx(ctx context.Context, tx *sql.Tx, actorID string) (Acto
 		SELECT id, username, password_hash, tenant_id, COALESCE(phone_e164, ''), roles, permissions, active
 		FROM identity_actors WHERE id = $1
 		FOR UPDATE`, actorID).Scan(
-		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.TenantID, &actor.PhoneE164,
+		&actor.ID, &actor.Username, &actor.PasswordHash, &actor.OperatorContextID, &actor.PhoneE164,
 		&roles, &permissionsJSON, &actor.Active,
 	)
 	if err != nil {
@@ -927,7 +927,7 @@ func actorByPhoneAnyRoleTx(ctx context.Context, tx *sql.Tx, phone string) (Actor
 		WHERE phone_e164 = $1
 		LIMIT 1
 		FOR UPDATE`, phone).Scan(
-		&actor.ID, &actor.Username, &actor.TenantID, &actor.PhoneE164, &roles, &permissionsJSON, &actor.Active,
+		&actor.ID, &actor.Username, &actor.OperatorContextID, &actor.PhoneE164, &roles, &permissionsJSON, &actor.Active,
 	)
 	if err != nil {
 		return Actor{}, err

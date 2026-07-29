@@ -19,7 +19,7 @@ func UpsertGovernedCommissionPolicyIdempotent(
 	correlationID string,
 	idempotencyKey string,
 ) (*GovernedCommissionPolicy, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func UpsertGovernedCommissionPolicyIdempotent(
 		maximum = fmt.Sprint(*input.MaximumAmountMinorUnits)
 	}
 	requestHash := hashCommissionParts(
-		tenantID,
+		operatorContextID,
 		"commission_policy",
 		input.PolicyID,
 		input.CommissionType,
@@ -152,7 +152,7 @@ func UpsertGovernedCommissionPolicyIdempotent(
 			  AND source_type = $3
 			  AND beneficiary_actor_type = $4
 			  AND status = 'active'`,
-			tenantID,
+			operatorContextID,
 			input.CommissionType,
 			input.SourceType,
 			input.BeneficiaryActorType,
@@ -165,7 +165,7 @@ func UpsertGovernedCommissionPolicyIdempotent(
 	if err := tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) + 1
 		FROM wlt_jrn036_commission_policy_versions
-		WHERE tenant_id = $1 AND policy_id = $2`, tenantID, input.PolicyID).Scan(&version); err != nil {
+		WHERE tenant_id = $1 AND policy_id = $2`, operatorContextID, input.PolicyID).Scan(&version); err != nil {
 		return nil, err
 	}
 
@@ -180,7 +180,7 @@ func UpsertGovernedCommissionPolicyIdempotent(
 		          calculation_type, fixed_amount_minor_units, basis_points,
 		          minimum_amount_minor_units, maximum_amount_minor_units,
 		          currency, status, change_reason, updated_by_actor_id`,
-		tenantID,
+		operatorContextID,
 		input.PolicyID,
 		version,
 		input.CommissionType,
@@ -211,7 +211,7 @@ func UpsertGovernedCommissionPolicyIdempotent(
 		 reason, correlation_id, metadata)
 		VALUES ($1, 'commission_policy', $2, 'policy_version_created', $3,
 		        'operator', $4, $5, $6::jsonb)`,
-		tenantID,
+		operatorContextID,
 		input.PolicyID,
 		input.OperatorID,
 		input.ChangeReason,

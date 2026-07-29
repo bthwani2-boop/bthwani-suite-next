@@ -624,7 +624,7 @@ components:
       type: object
       required:
         - subject
-        - tenantId
+        - operatorContextId
         - phoneE164
         - roles
         - permissions
@@ -637,7 +637,7 @@ components:
         subject:
           type: string
           minLength: 1
-        tenantId:
+        operatorContextId:
           type: string
           minLength: 1
         phoneE164:
@@ -700,7 +700,7 @@ components:
         role:
           type: string
           enum: [field, captain]
-        tenantId:
+        operatorContextId:
           type: string
     ActorAdminView:
       type: object

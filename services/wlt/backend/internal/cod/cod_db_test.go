@@ -108,13 +108,13 @@ func TestCreateCodRecordUsesTenantLocalWltSessionAndCollectorIdentity(t *testing
 		return
 	}
 	defer db.Close()
-	tenantID := fmt.Sprintf("tenant-cod-test-%d", time.Now().UnixNano())
-	ctx := shared.WithTenantContext(context.Background(), tenantID)
+	operatorContextID := fmt.Sprintf("tenant-cod-test-%d", time.Now().UnixNano())
+	ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 	checkoutIntentID := fmt.Sprintf("checkout-cod-%d", time.Now().UnixNano())
 	orderID := fmt.Sprintf("order-cod-%d", time.Now().UnixNano())
 	if _, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
 		CheckoutIntentID: checkoutIntentID,
-		TenantID:         tenantID,
+		OperatorContextID:         operatorContextID,
 		ClientID:         "client-cod-test",
 		StoreID:          "store-cod-test",
 		PaymentMethod:    "cod",
@@ -156,12 +156,12 @@ func TestCreateCodRecordRejectsNonCodTenantSession(t *testing.T) {
 		return
 	}
 	defer db.Close()
-	tenantID := fmt.Sprintf("tenant-wallet-test-%d", time.Now().UnixNano())
-	ctx := shared.WithTenantContext(context.Background(), tenantID)
+	operatorContextID := fmt.Sprintf("tenant-wallet-test-%d", time.Now().UnixNano())
+	ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 	checkoutIntentID := fmt.Sprintf("checkout-wallet-%d", time.Now().UnixNano())
 	if _, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
 		CheckoutIntentID: checkoutIntentID,
-		TenantID:         tenantID,
+		OperatorContextID:         operatorContextID,
 		ClientID:         "client-wallet-test",
 		StoreID:          "store-wallet-test",
 		PaymentMethod:    "wallet",

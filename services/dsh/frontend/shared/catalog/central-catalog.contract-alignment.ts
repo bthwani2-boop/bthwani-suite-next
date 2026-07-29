@@ -1,4 +1,4 @@
-import type { components } from "../../../clients/generated/dsh-catalog-api";
+import type { components } from "../../../clients/generated/dsh-api";
 import type {
   CatalogAsset,
   CatalogPlatformPolicy,

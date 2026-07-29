@@ -7,7 +7,7 @@ const boundSubscriptionPaymentRoute = "/wlt/commercial/payment-sessions"
 type BoundSubscriptionPaymentInput struct {
 	SubscriptionPurchaseID string
 	ProductReference       string
-	TenantID               string
+	OperatorContextID               string
 	ClientID               string
 	PaymentMethod          string
 	AmountMinorUnits       int64
@@ -30,7 +30,7 @@ func (c *Client) CreateBoundSubscriptionPaymentSession(
 		CreateSubscriptionPaymentSessionInput{
 			SubscriptionPurchaseID: input.SubscriptionPurchaseID,
 			ProductReference:       input.ProductReference,
-			TenantID:               input.TenantID,
+			OperatorContextID:               input.OperatorContextID,
 			ClientID:               input.ClientID,
 			PaymentMethod:          input.PaymentMethod,
 		},

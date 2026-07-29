@@ -11,18 +11,18 @@ import (
 // boundary. A phone already attached to any actor is rejected before roles or
 // permissions can be mutated. Reassignment of an existing employee requires a
 // separate, audited Identity operation rather than an implicit phone upgrade.
-func (r *Repository) ValidateEmployeePhoneTenant(ctx context.Context, rawPhone, tenantID string) error {
+func (r *Repository) ValidateEmployeePhoneTenant(ctx context.Context, rawPhone, operatorContextID string) error {
 	phone, err := NormalizePhoneE164(rawPhone)
 	if err != nil {
 		return err
 	}
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
 		return ErrInvalidActivation
 	}
-	var existingTenantID string
+	var existingOperatorContextID string
 	err = r.db.QueryRowContext(ctx, `
-		SELECT tenant_id FROM identity_actors WHERE phone_e164=$1 LIMIT 1`, phone).Scan(&existingTenantID)
+		SELECT tenant_id FROM identity_actors WHERE phone_e164=$1 LIMIT 1`, phone).Scan(&existingOperatorContextID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}

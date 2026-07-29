@@ -53,8 +53,8 @@ func nullTimePointer(value sql.NullTime) *time.Time {
 	return &value.Time
 }
 
-func (s *Service) ExecutionEvidenceInTenant(ctx context.Context, tenantID, requestID string) (*ExecutionEvidence, error) {
-	if _, err := s.repo.GetInTenant(ctx, tenantID, requestID); err != nil {
+func (s *Service) ExecutionEvidenceInTenant(ctx context.Context, operatorContextID, requestID string) (*ExecutionEvidence, error) {
+	if _, err := s.repo.GetInTenant(ctx, operatorContextID, requestID); err != nil {
 		return nil, err
 	}
 
@@ -102,7 +102,7 @@ func (s *Service) ExecutionEvidenceInTenant(ctx context.Context, tenantID, reque
 		FROM dsh_delivery_exceptions
 		WHERE tenant_id = $1 AND special_request_id = $2::uuid
 		ORDER BY reported_at DESC
-		LIMIT 1`, tenantID, requestID).Scan(
+		LIMIT 1`, operatorContextID, requestID).Scan(
 		&exception.ID, &exception.ReasonCode, &exception.Note, &exception.Severity,
 		&exception.Status, &exception.ReportedAt, &acknowledgedAt, &resolvedAt,
 		&resolutionAction, &resolutionNote,

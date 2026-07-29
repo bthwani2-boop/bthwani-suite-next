@@ -207,9 +207,9 @@ func (s *protectedStoreServer) loadMediaReference(ctx context.Context, mediaRef 
 }
 
 func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context, actor store.StoreActor, ref mediaReference) (bool, error) {
-	tenantID := strings.TrimSpace(actor.TenantID)
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
 	partnerBelongsToTenant := func() (bool, error) {
-		if ref.PartnerID == "" || tenantID == "" {
+		if ref.PartnerID == "" || operatorContextID == "" {
 			return false, nil
 		}
 		var allowed bool
@@ -217,7 +217,7 @@ func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context,
 			SELECT EXISTS (
 				SELECT 1 FROM dsh_partners
 				WHERE id = $1 AND tenant_id = $2
-			)`, ref.PartnerID, tenantID).Scan(&allowed)
+			)`, ref.PartnerID, operatorContextID).Scan(&allowed)
 		return allowed, err
 	}
 
@@ -244,7 +244,7 @@ func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context,
 		}
 		return partnerBelongsToTenant()
 	case "partner":
-		if ref.PartnerID == "" || tenantID == "" {
+		if ref.PartnerID == "" || operatorContextID == "" {
 			return false, nil
 		}
 		var allowed bool
@@ -260,7 +260,7 @@ func (s *protectedStoreServer) actorCanAccessMediaReference(ctx context.Context,
 				  AND scopes.active = true
 				  AND scopes.tenant_id = $3
 				  AND stores.partner_id = $2
-			)`, actor.ID, ref.PartnerID, tenantID).Scan(&allowed)
+			)`, actor.ID, ref.PartnerID, operatorContextID).Scan(&allowed)
 		return allowed, err
 	default:
 		return false, nil

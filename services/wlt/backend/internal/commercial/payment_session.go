@@ -12,7 +12,7 @@ import (
 type CreateSubscriptionPaymentSessionInput struct {
 	SubscriptionPurchaseID string `json:"subscriptionPurchaseId"`
 	ProductReference       string `json:"productReference"`
-	TenantID               string `json:"tenantId"`
+	OperatorContextID               string `json:"operatorContextId"`
 	ClientID               string `json:"clientId"`
 	PaymentMethod          string `json:"paymentMethod"`
 }
@@ -25,11 +25,11 @@ func CreateSubscriptionPaymentSession(
 ) (*reference.PaymentSession, error) {
 	input.SubscriptionPurchaseID = strings.TrimSpace(input.SubscriptionPurchaseID)
 	input.ProductReference = strings.TrimSpace(input.ProductReference)
-	input.TenantID = strings.TrimSpace(input.TenantID)
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.ClientID = strings.TrimSpace(input.ClientID)
 	input.PaymentMethod = strings.TrimSpace(input.PaymentMethod)
 	if db == nil || input.SubscriptionPurchaseID == "" || input.ProductReference == "" ||
-		input.TenantID == "" || input.ClientID == "" || strings.TrimSpace(idempotencyKey) == "" ||
+		input.OperatorContextID == "" || input.ClientID == "" || strings.TrimSpace(idempotencyKey) == "" ||
 		strings.TrimSpace(correlationID) == "" {
 		return nil, ErrInvalid
 	}
@@ -49,7 +49,7 @@ func CreateSubscriptionPaymentSession(
 	return reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
 		SubscriptionPurchaseID:     input.SubscriptionPurchaseID,
 		CommercialProductReference: input.ProductReference,
-		TenantID:                   input.TenantID,
+		OperatorContextID:                   input.OperatorContextID,
 		ClientID:                   input.ClientID,
 		StoreID:                    "platform-subscriptions",
 		PaymentMethod:              input.PaymentMethod,

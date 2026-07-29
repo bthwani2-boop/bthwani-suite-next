@@ -35,12 +35,12 @@ func reconciliationTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func seedTenantReconciliationCase(t *testing.T, db *sql.DB, tenantID, suffix string) string {
+func seedTenantReconciliationCase(t *testing.T, db *sql.DB, operatorContextID, suffix string) string {
 	t.Helper()
 	checkoutIntentID := "reconciliation-checkout-" + suffix
 	session, err := reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
 		CheckoutIntentID: checkoutIntentID,
-		TenantID:         tenantID,
+		OperatorContextID:         operatorContextID,
 		ClientID:         "client-" + suffix,
 		StoreID:          "store-" + suffix,
 		PaymentMethod:    "wallet",
@@ -51,14 +51,14 @@ func seedTenantReconciliationCase(t *testing.T, db *sql.DB, tenantID, suffix str
 		CorrelationID:    "session-correlation-" + suffix,
 	})
 	if err != nil {
-		t.Fatalf("create payment session for %s: %v", tenantID, err)
+		t.Fatalf("create payment session for %s: %v", operatorContextID, err)
 	}
 	var caseID string
 	if err := db.QueryRow(`INSERT INTO wlt_reconciliation_cases
 		(tenant_id,payment_session_id,operation,trigger_reason,status)
 		VALUES ($1,$2,'capture','provider_result_unknown','open')
-		RETURNING id`, tenantID, session.ID).Scan(&caseID); err != nil {
-		t.Fatalf("create reconciliation case for %s: %v", tenantID, err)
+		RETURNING id`, operatorContextID, session.ID).Scan(&caseID); err != nil {
+		t.Fatalf("create reconciliation case for %s: %v", operatorContextID, err)
 	}
 	return caseID
 }
@@ -79,7 +79,7 @@ func TestPaymentReconciliationIsTenantLocal(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM wlt_payment_sessions WHERE tenant_id IN ($1,$2)`, tenantA, tenantB)
 	})
 
-	ctxA := shared.WithTenantContext(context.Background(), tenantA)
+	ctxA := shared.WithOperatorContext(context.Background(), tenantA)
 	cases, err := ListCasesForTenant(ctxA, db, "open")
 	if err != nil {
 		t.Fatalf("list tenant A cases: %v", err)

@@ -23,7 +23,7 @@ type Permission struct {
 
 type Identity struct {
 	Subject     string       `json:"subject"`
-	TenantID    string       `json:"tenantId"`
+	OperatorContextID    string       `json:"operatorContextId"`
 	PhoneE164   string       `json:"phoneE164"`
 	Roles       []string     `json:"roles"`
 	Permissions []Permission `json:"permissions"`
@@ -72,11 +72,11 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 	if err := json.NewDecoder(resp.Body).Decode(&identity); err != nil {
 		return Identity{}, ErrIdentityUnavailable
 	}
-	if identity.AuthState != "authenticated" || strings.TrimSpace(identity.Subject) == "" || strings.TrimSpace(identity.TenantID) == "" {
+	if identity.AuthState != "authenticated" || strings.TrimSpace(identity.Subject) == "" || strings.TrimSpace(identity.OperatorContextID) == "" {
 		return Identity{}, ErrUnauthenticated
 	}
 	identity.Subject = strings.TrimSpace(identity.Subject)
-	identity.TenantID = strings.TrimSpace(identity.TenantID)
+	identity.OperatorContextID = strings.TrimSpace(identity.OperatorContextID)
 	return identity, nil
 }
 

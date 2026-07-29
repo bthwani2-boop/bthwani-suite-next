@@ -54,26 +54,26 @@ func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request)
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	trustedTenantID := strings.TrimSpace(input.TenantID)
-	if tenantID, active, err := activeSaaSTenant(); err != nil {
+	trustedOperatorContextID := strings.TrimSpace(input.OperatorContextID)
+	if operatorContextID, active, err := activeSaaSTenant(); err != nil {
 		sendError(w, http.StatusServiceUnavailable, "SAAS_RUNTIME_CONFIG_INVALID", err.Error())
 		return
 	} else if active {
-		if !validateInternalTenantRequest(w, r, tenantID) {
+		if !validateInternalTenantRequest(w, r, operatorContextID) {
 			return
 		}
-		if trustedTenantID != "" && trustedTenantID != tenantID {
-			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_FORBIDDEN", "provisioned employee tenant cannot override the active runtime tenant")
+		if trustedOperatorContextID != "" && trustedOperatorContextID != operatorContextID {
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "provisioned employee tenant cannot override the active runtime tenant")
 			return
 		}
-		trustedTenantID = tenantID
+		trustedOperatorContextID = operatorContextID
 	}
-	if trustedTenantID == "" {
-		sendError(w, http.StatusBadRequest, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is required for employee provisioning")
+	if trustedOperatorContextID == "" {
+		sendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted tenant context is required for employee provisioning")
 		return
 	}
-	input.TenantID = trustedTenantID
-	if err := s.repository.ValidateEmployeePhoneTenant(r.Context(), input.PhoneE164, trustedTenantID); err != nil {
+	input.OperatorContextID = trustedOperatorContextID
+	if err := s.repository.ValidateEmployeePhoneTenant(r.Context(), input.PhoneE164, trustedOperatorContextID); err != nil {
 		writeInternalActorError(w, err)
 		return
 	}

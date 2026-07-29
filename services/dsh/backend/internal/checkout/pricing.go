@@ -43,8 +43,8 @@ func validatePricing(pricing PricingSnapshot) error {
 }
 
 func CreatePricedIntentTx(ctx context.Context, tx *sql.Tx, input CreateIntentInput, pricing PricingSnapshot) (*Intent, error) {
-	input.TenantID = strings.TrimSpace(input.TenantID)
-	if input.ID == "" || input.TenantID == "" || input.ClientID == "" || input.CartID == "" || input.StoreID == "" {
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
+	if input.ID == "" || input.OperatorContextID == "" || input.ClientID == "" || input.CartID == "" || input.StoreID == "" {
 		return nil, ErrInvalid
 	}
 	if err := validatePricing(pricing); err != nil {
@@ -67,7 +67,7 @@ func CreatePricedIntentTx(ctx context.Context, tx *sql.Tx, input CreateIntentInp
 		RETURNING id,tenant_id,client_id,cart_id::text,store_id::text,fulfillment_mode,
 			state,payment_method,wlt_payment_session_id,delivery_address,note,
 			version,created_at,updated_at`,
-		input.ID, input.TenantID, input.ClientID, input.CartID, input.StoreID,
+		input.ID, input.OperatorContextID, input.ClientID, input.CartID, input.StoreID,
 		string(input.FulfillmentMode), string(StatePending), string(input.PaymentMethod),
 		input.WltPaymentSessionID, input.DeliveryAddress, input.Note,
 		pricing.SubtotalMinorUnits, pricing.DeliveryFeeMinorUnits, pricing.DiscountMinorUnits,

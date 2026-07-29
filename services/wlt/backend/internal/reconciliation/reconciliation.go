@@ -95,13 +95,13 @@ func scanCaseRow(rows *sql.Rows) (*Case, error) {
 }
 
 func ListCasesForTenant(ctx context.Context, db *sql.DB, status string) ([]*Case, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 	status = strings.TrimSpace(status)
 	query := `SELECT ` + caseCols + ` FROM wlt_reconciliation_cases WHERE tenant_id=$1`
-	args := []any{tenantID}
+	args := []any{operatorContextID}
 	if status != "" {
 		query += ` AND status=$2`
 		args = append(args, status)
@@ -128,7 +128,7 @@ func ListCases(db *sql.DB, status string) ([]*Case, error) {
 }
 
 func GetCaseForTenant(ctx context.Context, db *sql.DB, caseID string) (*Case, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func GetCaseForTenant(ctx context.Context, db *sql.DB, caseID string) (*Case, er
 		return nil, fmt.Errorf("caseId is required")
 	}
 	row := db.QueryRowContext(ctx, `SELECT `+caseCols+`
-		FROM wlt_reconciliation_cases WHERE tenant_id=$1 AND id=$2`, tenantID, caseID)
+		FROM wlt_reconciliation_cases WHERE tenant_id=$1 AND id=$2`, operatorContextID, caseID)
 	c, err := scanCase(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -150,7 +150,7 @@ func GetCase(db *sql.DB, caseID string) (*Case, error) {
 }
 
 func AssignCaseForTenant(ctx context.Context, db *sql.DB, caseID, operatorID string) (*Case, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func AssignCaseForTenant(ctx context.Context, db *sql.DB, caseID, operatorID str
 		UPDATE wlt_reconciliation_cases
 		SET assigned_to_operator_id=$3,assigned_at=NOW(),updated_at=NOW()
 		WHERE tenant_id=$1 AND id=$2 AND status='open'
-		RETURNING `+caseCols, tenantID, caseID, operatorID)
+		RETURNING `+caseCols, operatorContextID, caseID, operatorID)
 	c, err := scanCase(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		existing, getErr := GetCaseForTenant(ctx, db, caseID)
@@ -186,7 +186,7 @@ func AssignCase(db *sql.DB, caseID, operatorID string) (*Case, error) {
 }
 
 func ResolveCaseForTenant(ctx context.Context, db *sql.DB, caseID, operatorID, resolutionAction, resolutionNote string) (*Case, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func ResolveCaseForTenant(ctx context.Context, db *sql.DB, caseID, operatorID, r
 		SET status='resolved',resolved_by_operator_id=$3,resolution_action=$4,
 		    resolution_note=$5,resolution=$4,resolved_at=NOW(),updated_at=NOW()
 		WHERE tenant_id=$1 AND id=$2 AND status='open'
-		RETURNING `+caseCols, tenantID, caseID, operatorID, resolutionAction, resolutionNote)
+		RETURNING `+caseCols, operatorContextID, caseID, operatorID, resolutionAction, resolutionNote)
 	c, err := scanCase(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		existing, getErr := GetCaseForTenant(ctx, db, caseID)

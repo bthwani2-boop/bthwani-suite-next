@@ -20,7 +20,7 @@ func CreateDeliveryCollectionForTenant(
 	db *sql.DB,
 	input CreateDeliveryCollectionInput,
 ) (*DeliveryCollectionRecord, bool, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, false, err
 	}
@@ -28,7 +28,7 @@ func CreateDeliveryCollectionForTenant(
 	if err != nil {
 		return nil, false, err
 	}
-	session, err := reference.GetPaymentSessionByCheckoutIntentForTenant(db, tenantID, input.CheckoutIntentID)
+	session, err := reference.GetPaymentSessionByCheckoutIntentForTenant(db, operatorContextID, input.CheckoutIntentID)
 	if err != nil {
 		return nil, false, err
 	}
@@ -55,7 +55,7 @@ func CreateDeliveryCollectionForTenant(
 		VALUES ($1, $2, NULLIF($3,''), $4, $5, $6, $7, $8)
 		ON CONFLICT (tenant_id, order_id) DO NOTHING
 		RETURNING `+deliveryCollectionCols,
-		tenantID,
+		operatorContextID,
 		input.OrderID,
 		input.CaptainID,
 		input.CollectorType,
@@ -78,7 +78,7 @@ func CreateDeliveryCollectionForTenant(
 		SELECT `+deliveryCollectionCols+`
 		FROM wlt_cod_records
 		WHERE tenant_id = $1 AND order_id = $2
-		FOR UPDATE`, tenantID, input.OrderID))
+		FOR UPDATE`, operatorContextID, input.OrderID))
 	if err != nil {
 		return nil, false, err
 	}
@@ -96,7 +96,7 @@ func CreateDeliveryCollectionForTenant(
 }
 
 func GetDeliveryCollectionForTenant(ctx context.Context, db *sql.DB, recordID string) (*DeliveryCollectionRecord, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func GetDeliveryCollectionForTenant(ctx context.Context, db *sql.DB, recordID st
 	record, err := scanDeliveryCollection(db.QueryRowContext(ctx, `
 		SELECT `+deliveryCollectionCols+`
 		FROM wlt_cod_records
-		WHERE tenant_id = $1 AND id = $2`, tenantID, recordID))
+		WHERE tenant_id = $1 AND id = $2`, operatorContextID, recordID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -122,7 +122,7 @@ func ListDeliveryCollectionsForTenant(
 	captainID,
 	partnerID string,
 ) ([]*DeliveryCollectionRecord, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func ListDeliveryCollectionsForTenant(
 	partnerID = strings.TrimSpace(partnerID)
 
 	query := `SELECT ` + deliveryCollectionCols + ` FROM wlt_cod_records WHERE tenant_id=$1`
-	args := []any{tenantID}
+	args := []any{operatorContextID}
 	switch {
 	case collectorType != "" && collectorID != "":
 		query += ` AND collector_type=$2 AND collector_id=$3 ORDER BY created_at DESC`

@@ -27,9 +27,9 @@ func (r *Repository) BootstrapLocalPlatformActors(ctx context.Context, input Loc
 	if len(input.Password) < 6 {
 		return errors.New("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD must contain at least 6 characters")
 	}
-	tenantID := strings.TrimSpace(input.TenantID)
-	if tenantID == "" {
-		return errors.New("BTHWANI_DEFAULT_TENANT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
+	operatorContextID := strings.TrimSpace(input.OperatorContextID)
+	if operatorContextID == "" {
+		return errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
 	}
 	if err := r.restrictLocalOperatorPlatformPermissions(ctx); err != nil {
 		return err
@@ -106,7 +106,7 @@ ON CONFLICT (id) DO UPDATE SET
 			actor.id,
 			actor.username,
 			string(hash),
-			tenantID,
+			operatorContextID,
 			actor.phone,
 			pq.Array([]string{actor.role}),
 			string(permissions),

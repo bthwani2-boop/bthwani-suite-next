@@ -9,7 +9,7 @@ import (
 )
 
 func trustedPaymentSessionContext() context.Context {
-	return WithTenantContext(context.Background(), "tenant-main")
+	return WithOperatorContext(context.Background(), "tenant-main")
 }
 
 func TestReadPaymentSessionTimelineForwardsGovernedHeaders(t *testing.T) {
@@ -26,8 +26,8 @@ func TestReadPaymentSessionTimelineForwardsGovernedHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected DSH service caller")
 		}
-		if r.Header.Get("X-Tenant-ID") != "tenant-main" {
-			t.Fatalf("expected tenant-main, got %q", r.Header.Get("X-Tenant-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != "tenant-main" {
+			t.Fatalf("expected tenant-main, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		if r.Header.Get("X-Correlation-ID") != "corr-1" {
 			t.Fatalf("expected corr-1, got %q", r.Header.Get("X-Correlation-ID"))
@@ -57,7 +57,7 @@ func TestRefreshPaymentSessionProviderStatusBuildsReplaySafeMutation(t *testing.
 		if r.URL.EscapedPath() != "/wlt/payment-sessions/payment-session-2/refresh-provider-status" {
 			t.Fatalf("unexpected path %q", r.URL.EscapedPath())
 		}
-		if r.Header.Get("X-Tenant-ID") != "tenant-main" {
+		if r.Header.Get("X-Operator-Context-ID") != "tenant-main" {
 			t.Fatalf("expected tenant-main")
 		}
 		if r.Header.Get("X-Correlation-ID") != "payment-session-2" {

@@ -32,7 +32,7 @@ type EmployeeProvisionInput struct {
 	PhoneE164        string `json:"phoneE164"`
 	PermissionBundle string `json:"permissionBundle"`
 	DepartmentScope  string `json:"departmentScope"`
-	TenantID         string `json:"tenantId,omitempty"`
+	OperatorContextID         string `json:"operatorContextId,omitempty"`
 }
 
 func init() {
@@ -239,8 +239,8 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	if err != nil {
 		return ActorAdminView{}, err
 	}
-	tenantID := strings.TrimSpace(input.TenantID)
-	if tenantID == "" {
+	operatorContextID := strings.TrimSpace(input.OperatorContextID)
+	if operatorContextID == "" {
 		return ActorAdminView{}, ErrInvalidActivation
 	}
 
@@ -272,7 +272,7 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 		INSERT INTO identity_actors
 			(id, username, password_hash, tenant_id, phone_e164, roles, permissions, active, updated_at)
 		VALUES ($1,$2,'',$3,$4,$5,$6::jsonb,false,now())`,
-		actorID, username, tenantID, phone, pq.Array(roles), string(permissionsJSON))
+		actorID, username, operatorContextID, phone, pq.Array(roles), string(permissionsJSON))
 	if err != nil {
 		return ActorAdminView{}, mapUniqueViolation(err)
 	}

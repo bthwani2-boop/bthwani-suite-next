@@ -155,9 +155,9 @@ components:
     ReservePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, externalReference, checkoutIntentId, couponRedemptionId, couponId, clientId, platformFundedMinorUnits, partnerFundedMinorUnits, totalDiscountMinorUnits, currency]
+      required: [operatorContextId, externalReference, checkoutIntentId, couponRedemptionId, couponId, clientId, platformFundedMinorUnits, partnerFundedMinorUnits, totalDiscountMinorUnits, currency]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         externalReference: { type: string, minLength: 1 }
         checkoutIntentId: { type: string, minLength: 1 }
         couponRedemptionId: { type: string, minLength: 1 }
@@ -171,32 +171,32 @@ components:
     CommitPromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, orderId]
+      required: [operatorContextId, orderId]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
     ReleasePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, reason]
+      required: [operatorContextId, reason]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
     ReversePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [tenantId, orderId, reason]
+      required: [operatorContextId, orderId, reason]
       properties:
-        tenantId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
     PromotionFundingReservation:
       type: object
       additionalProperties: false
-      required: [id, tenantId, externalReference, checkoutIntentId, couponRedemptionId, couponId, clientId, platformFundedMinorUnits, partnerFundedMinorUnits, totalDiscountMinorUnits, currency, status, createdAt, updatedAt]
+      required: [id, operatorContextId, externalReference, checkoutIntentId, couponRedemptionId, couponId, clientId, platformFundedMinorUnits, partnerFundedMinorUnits, totalDiscountMinorUnits, currency, status, createdAt, updatedAt]
       properties:
         id: { type: string, pattern: '^pfr_[a-f0-9]{32}$' }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         externalReference: { type: string }
         checkoutIntentId: { type: string }
         couponRedemptionId: { type: string }

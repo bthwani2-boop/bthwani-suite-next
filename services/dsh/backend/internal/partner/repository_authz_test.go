@@ -12,7 +12,7 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 	db := openRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 
-	partner1, err := CreatePartnerForTenant(db, partnerTestTenantID, CreatePartnerInput{
+	partner1, err := CreatePartnerForTenant(db, partnerTestOperatorContextID, CreatePartnerInput{
 		LegalNameAr:         "شريك اختبار أ " + suffix,
 		LegalNameEn:         "Partner A " + suffix,
 		DisplayName:         "Partner A " + suffix,
@@ -28,7 +28,7 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	partner2, err := CreatePartnerForTenant(db, partnerTestTenantID, CreatePartnerInput{
+	partner2, err := CreatePartnerForTenant(db, partnerTestOperatorContextID, CreatePartnerInput{
 		LegalNameAr:         "شريك اختبار ب " + suffix,
 		LegalNameEn:         "Partner B " + suffix,
 		DisplayName:         "Partner B " + suffix,
@@ -55,7 +55,7 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 		($1, $6, $1, 'Store A1', 'active', 'SAH', 'SAH-CEN', 'serviceable', $4),
 		($2, $6, $2, 'Store A2', 'active', 'SAH', 'SAH-CEN', 'serviceable', $4),
 		($3, $6, $3, 'Store B1', 'active', 'SAH', 'SAH-CEN', 'serviceable', $5)
-	`, storeA1, storeA2, storeB1, partner1.ID, partner2.ID, partnerTestTenantID)
+	`, storeA1, storeA2, storeB1, partner1.ID, partner2.ID, partnerTestOperatorContextID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func TestPartnerScopeAuthorizationDB(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			scopes, err := ListPartnerScopesForActorForTenant(db, partnerTestTenantID, tc.partnerID, tc.actorID)
+			scopes, err := ListPartnerScopesForActorForTenant(db, partnerTestOperatorContextID, tc.partnerID, tc.actorID)
 			if err != nil {
 				t.Fatalf("ListPartnerScopesForActorForTenant failed: %v", err)
 			}

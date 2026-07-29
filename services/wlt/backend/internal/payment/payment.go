@@ -42,7 +42,7 @@ type PaymentSession struct {
 	ID                string  `json:"id"`
 	CheckoutIntentID  *string `json:"checkoutIntentId"`
 	SpecialRequestID  *string `json:"specialRequestId"`
-	TenantID          string  `json:"tenantId"`
+	OperatorContextID          string  `json:"operatorContextId"`
 	ClientID          string  `json:"clientId"`
 	StoreID           string  `json:"storeId"`
 	PaymentMethod     string  `json:"paymentMethod"`
@@ -77,7 +77,7 @@ func scanSession(row *sql.Row) (*PaymentSession, error) {
 		&s.ID,
 		&s.CheckoutIntentID,
 		&s.SpecialRequestID,
-		&s.TenantID,
+		&s.OperatorContextID,
 		&s.ClientID,
 		&s.StoreID,
 		&s.PaymentMethod,
@@ -351,7 +351,7 @@ func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession, expectedSta
 	if affected, _ := res.RowsAffected(); affected == 0 {
 		return fmt.Errorf("session %s was no longer %s when marking failed", session.ID, expectedStatus)
 	}
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeFailed, session.ID, session.TenantID, session.CheckoutIntentID, session.SpecialRequestID); err != nil {
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeFailed, session.ID, session.OperatorContextID, session.CheckoutIntentID, session.SpecialRequestID); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -426,7 +426,7 @@ func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*
 	if err != nil {
 		return nil, err
 	}
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.TenantID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.OperatorContextID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -539,7 +539,7 @@ func expireSessionTx(tx *sql.Tx, sessionID string) (*PaymentSession, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeExpired, s.ID, s.TenantID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeExpired, s.ID, s.OperatorContextID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
 		return nil, err
 	}
 	return s, nil

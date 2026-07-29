@@ -10,7 +10,7 @@ type saasRuntimeStatus struct {
 	Mode                           string `json:"mode"`
 	CommercialActivationState      string `json:"commercialActivationState"`
 	ProductionDeploymentAuthorized bool   `json:"productionDeploymentAuthorized"`
-	DefaultTenantID                string `json:"defaultTenantId"`
+	DefaultOperatorContextID                string `json:"defaultOperatorContextId"`
 	RuntimeEnabled                 bool   `json:"runtimeEnabled"`
 }
 
@@ -18,7 +18,7 @@ func resolveSaasRuntimeStatus(getenv func(string) string) (saasRuntimeStatus, er
 	mode := strings.ToLower(strings.TrimSpace(getenv("BTHWANI_SAAS_MODE")))
 	activation := strings.ToLower(strings.TrimSpace(getenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE")))
 	productionAuthorized := strings.EqualFold(strings.TrimSpace(getenv("BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED")), "true")
-	defaultTenantID := strings.TrimSpace(getenv("BTHWANI_DEFAULT_TENANT_ID"))
+	defaultOperatorContextID := strings.TrimSpace(getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
 
 	if mode != "active" && mode != "deferred" {
 		return saasRuntimeStatus{}, errors.New("BTHWANI_SAAS_MODE must be active or deferred")
@@ -32,8 +32,8 @@ func resolveSaasRuntimeStatus(getenv func(string) string) (saasRuntimeStatus, er
 	if mode == "active" && activation == "blocked" {
 		return saasRuntimeStatus{}, errors.New("active SaaS runtime cannot remain policy blocked")
 	}
-	if mode == "active" && defaultTenantID == "" {
-		return saasRuntimeStatus{}, errors.New("active SaaS runtime requires BTHWANI_DEFAULT_TENANT_ID")
+	if mode == "active" && defaultOperatorContextID == "" {
+		return saasRuntimeStatus{}, errors.New("active SaaS runtime requires BTHWANI_OPERATOR_CONTEXT_ID")
 	}
 	if activation == "active" && mode != "active" {
 		return saasRuntimeStatus{}, errors.New("commercial active state requires active SaaS runtime")
@@ -52,7 +52,7 @@ func resolveSaasRuntimeStatus(getenv func(string) string) (saasRuntimeStatus, er
 		Mode:                           mode,
 		CommercialActivationState:      activation,
 		ProductionDeploymentAuthorized: productionAuthorized,
-		DefaultTenantID:                defaultTenantID,
+		DefaultOperatorContextID:                defaultOperatorContextID,
 		RuntimeEnabled:                 mode == "active" && (activation == "authorized" || activation == "active"),
 	}, nil
 }

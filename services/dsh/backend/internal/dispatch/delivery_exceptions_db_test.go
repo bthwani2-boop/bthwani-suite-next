@@ -12,7 +12,7 @@ import (
 func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testing.T) {
 	db := openDispatchRequiredDB(t)
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	tenantID := "tenant-delivery-exception-" + suffix
+	operatorContextID := "tenant-delivery-exception-" + suffix
 	partnerID := "delivery-exception-partner-" + suffix
 	storeID := "delivery-exception-store-" + suffix
 	captainID := "delivery-exception-captain-" + suffix
@@ -36,7 +36,7 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 			tenant_id,client_id,cart_id,store_id,state,fulfillment_mode,payment_method,wlt_payment_session_id,
 			subtotal_minor_units,delivery_fee_minor_units,discount_minor_units,total_minor_units,currency,pricing_snapshot_hash
 		) VALUES($1,$2,gen_random_uuid(),$3,'confirmed','bthwani_delivery','wallet',$4,1000,0,0,1000,'YER',repeat('e',64))
-		RETURNING id::text`, tenantID, clientID, storeID, "delivery-exception-payment-"+suffix).Scan(&checkoutIntentID); err != nil {
+		RETURNING id::text`, operatorContextID, clientID, storeID, "delivery-exception-payment-"+suffix).Scan(&checkoutIntentID); err != nil {
 		t.Fatalf("insert checkout intent: %v", err)
 	}
 
@@ -44,7 +44,7 @@ func TestDeliveryExceptionBlocksProgressButAllowsLocationDBIntegration(t *testin
 	if err := db.QueryRow(`
 		INSERT INTO dsh_orders(tenant_id,checkout_intent_id,store_id,fulfillment_mode,client_id,status,wlt_payment_ref_id)
 		VALUES($1,$2::uuid,$3,'bthwani_delivery',$4,'arrived_customer',$5)
-		RETURNING id::text`, tenantID, checkoutIntentID, storeID, clientID, "delivery-exception-payment-"+suffix).Scan(&orderID); err != nil {
+		RETURNING id::text`, operatorContextID, checkoutIntentID, storeID, clientID, "delivery-exception-payment-"+suffix).Scan(&orderID); err != nil {
 		t.Fatalf("insert order: %v", err)
 	}
 

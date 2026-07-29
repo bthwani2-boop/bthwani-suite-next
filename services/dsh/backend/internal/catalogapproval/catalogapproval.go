@@ -19,7 +19,7 @@ var (
 
 type Record struct {
 	ID           string          `json:"id"`
-	TenantID     string          `json:"-"`
+	OperatorContextID     string          `json:"-"`
 	EntityType   string          `json:"entityType"`
 	EntityID     string          `json:"entityId,omitempty"`
 	OwnerActorID string          `json:"-"`
@@ -70,7 +70,7 @@ var allowedTransitions = map[string]map[string]bool{
 }
 
 type CreateInput struct {
-	TenantID     string
+	OperatorContextID     string
 	EntityType   string
 	EntityID     string
 	OwnerActorID string
@@ -81,7 +81,7 @@ type CreateInput struct {
 }
 
 func Create(db *sql.DB, input CreateInput) (Record, error) {
-	if input.TenantID == "" || input.EntityType == "" || input.OwnerActorID == "" || input.Source == "" || input.Stage == "" || input.Title == "" {
+	if input.OperatorContextID == "" || input.EntityType == "" || input.OwnerActorID == "" || input.Source == "" || input.Stage == "" || input.Title == "" {
 		return Record{}, ErrInvalid
 	}
 	metadata := input.Metadata
@@ -98,21 +98,21 @@ func Create(db *sql.DB, input CreateInput) (Record, error) {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, tenant_id, entity_type, COALESCE(entity_id,''), owner_actor_id,
 		          source, stage, title, metadata, submitted_at, updated_at`,
-		uuid.NewString(), input.TenantID, input.EntityType, entityID, input.OwnerActorID,
+		uuid.NewString(), input.OperatorContextID, input.EntityType, entityID, input.OwnerActorID,
 		input.Source, input.Stage, input.Title, metadata,
 	)
 	return scanRecord(row)
 }
 
-func Get(db *sql.DB, tenantID, id string) (Record, error) {
-	if tenantID == "" || id == "" {
+func Get(db *sql.DB, operatorContextID, id string) (Record, error) {
+	if operatorContextID == "" || id == "" {
 		return Record{}, ErrInvalid
 	}
 	rec, err := scanRecord(db.QueryRow(`
 		SELECT id, tenant_id, entity_type, COALESCE(entity_id,''), owner_actor_id,
 		       source, stage, title, metadata, submitted_at, updated_at
 		FROM dsh_catalog_approval_records
-		WHERE tenant_id = $1 AND id = $2`, tenantID, id))
+		WHERE tenant_id = $1 AND id = $2`, operatorContextID, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Record{}, ErrNotFound
 	}
@@ -127,8 +127,8 @@ func Get(db *sql.DB, tenantID, id string) (Record, error) {
 	return rec, nil
 }
 
-func List(db *sql.DB, tenantID, entityType, stage, source string, limit int) ([]Record, error) {
-	if tenantID == "" {
+func List(db *sql.DB, operatorContextID, entityType, stage, source string, limit int) ([]Record, error) {
+	if operatorContextID == "" {
 		return nil, ErrInvalid
 	}
 	if limit <= 0 {
@@ -137,7 +137,7 @@ func List(db *sql.DB, tenantID, entityType, stage, source string, limit int) ([]
 	q := `SELECT id, tenant_id, entity_type, COALESCE(entity_id,''), owner_actor_id,
 	             source, stage, title, metadata, submitted_at, updated_at
 	      FROM dsh_catalog_approval_records WHERE tenant_id = $1`
-	args := []any{tenantID}
+	args := []any{operatorContextID}
 	if entityType != "" {
 		args = append(args, entityType)
 		q += fmt.Sprintf(" AND entity_type = $%d", len(args))
@@ -169,8 +169,8 @@ func List(db *sql.DB, tenantID, entityType, stage, source string, limit int) ([]
 	return list, rows.Err()
 }
 
-func ListPartnerQueue(db *sql.DB, tenantID, ownerActorID string, limit int) ([]PartnerQueueRecord, error) {
-	if tenantID == "" || ownerActorID == "" {
+func ListPartnerQueue(db *sql.DB, operatorContextID, ownerActorID string, limit int) ([]PartnerQueueRecord, error) {
+	if operatorContextID == "" || ownerActorID == "" {
 		return nil, ErrInvalid
 	}
 	if limit <= 0 {
@@ -183,7 +183,7 @@ func ListPartnerQueue(db *sql.DB, tenantID, ownerActorID string, limit int) ([]P
 		  AND owner_actor_id = $2
 		  AND source = 'app-partner'
 		  AND stage IN ('partner-submitted','field-submitted','partner-review','partner-approved','needs-fix','rejected')
-		ORDER BY submitted_at DESC LIMIT $3`, tenantID, ownerActorID, limit)
+		ORDER BY submitted_at DESC LIMIT $3`, operatorContextID, ownerActorID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -202,8 +202,8 @@ func ListPartnerQueue(db *sql.DB, tenantID, ownerActorID string, limit int) ([]P
 	return list, rows.Err()
 }
 
-func Transition(db *sql.DB, tenantID, id, toStage, owner, actionLabel string) (Record, error) {
-	if tenantID == "" || id == "" || toStage == "" || owner == "" || actionLabel == "" {
+func Transition(db *sql.DB, operatorContextID, id, toStage, owner, actionLabel string) (Record, error) {
+	if operatorContextID == "" || id == "" || toStage == "" || owner == "" || actionLabel == "" {
 		return Record{}, ErrInvalid
 	}
 	tx, err := db.Begin()
@@ -215,7 +215,7 @@ func Transition(db *sql.DB, tenantID, id, toStage, owner, actionLabel string) (R
 	var fromStage string
 	if err := tx.QueryRow(`
 		SELECT stage FROM dsh_catalog_approval_records
-		WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, tenantID, id).Scan(&fromStage); err != nil {
+		WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, operatorContextID, id).Scan(&fromStage); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Record{}, ErrNotFound
 		}
@@ -229,7 +229,7 @@ func Transition(db *sql.DB, tenantID, id, toStage, owner, actionLabel string) (R
 		UPDATE dsh_catalog_approval_records SET stage = $3, updated_at = NOW()
 		WHERE tenant_id = $1 AND id = $2
 		RETURNING id, tenant_id, entity_type, COALESCE(entity_id,''), owner_actor_id,
-		          source, stage, title, metadata, submitted_at, updated_at`, tenantID, id, toStage)
+		          source, stage, title, metadata, submitted_at, updated_at`, operatorContextID, id, toStage)
 	rec, err := scanRecord(row)
 	if err != nil {
 		return Record{}, err
@@ -282,7 +282,7 @@ func scanRecord(scanner rowScanner) (Record, error) {
 	var metadata []byte
 	err := scanner.Scan(
 		&rec.ID,
-		&rec.TenantID,
+		&rec.OperatorContextID,
 		&rec.EntityType,
 		&rec.EntityID,
 		&rec.OwnerActorID,

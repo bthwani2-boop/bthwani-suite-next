@@ -26,7 +26,7 @@ func TestSearchActorsDecodesOpenAPIArrayAndSendsServiceIdentity(t *testing.T) {
 		if got := r.Header.Get("X-Service-Caller"); got != "workforce" {
 			t.Fatalf("unexpected service caller %q", got)
 		}
-		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-main" {
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "tenant-main" {
 			t.Fatalf("unexpected tenant %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -49,7 +49,7 @@ func TestSearchActorsDecodesOpenAPIArrayAndSendsServiceIdentity(t *testing.T) {
 
 func TestClientSendsTrustedTenantToEveryIdentityCall(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-main" {
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "tenant-main" {
 			t.Fatalf("expected tenant-main, got %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -65,15 +65,15 @@ func TestClientSendsTrustedTenantToEveryIdentityCall(t *testing.T) {
 
 func TestProvisionUsesTrustedTenantInHeaderAndBody(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("X-Tenant-ID"); got != "tenant-main" {
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "tenant-main" {
 			t.Fatalf("expected tenant-main header, got %q", got)
 		}
 		var input ProvisionInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			t.Fatalf("decode provision body: %v", err)
 		}
-		if input.TenantID != "tenant-main" {
-			t.Fatalf("expected tenant-main body, got %q", input.TenantID)
+		if input.OperatorContextID != "tenant-main" {
+			t.Fatalf("expected tenant-main body, got %q", input.OperatorContextID)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(ActorView{ActorID: "field-1"})
@@ -91,7 +91,7 @@ func TestProvisionUsesTrustedTenantInHeaderAndBody(t *testing.T) {
 func TestProvisionRejectsTenantOverrideBeforeNetwork(t *testing.T) {
 	client := NewClient("https://identity.internal", "service-token", "tenant-main")
 
-	_, err := client.Provision(context.Background(), ProvisionInput{TenantID: "tenant-other"})
+	_, err := client.Provision(context.Background(), ProvisionInput{OperatorContextID: "tenant-other"})
 	if !errors.Is(err, ErrTenantForbidden) {
 		t.Fatalf("expected ErrTenantForbidden, got %v", err)
 	}

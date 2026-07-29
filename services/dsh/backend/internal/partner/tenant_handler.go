@@ -9,13 +9,13 @@ import (
 	"strings"
 )
 
-func requireTenantContext(w http.ResponseWriter, r *http.Request) (string, bool) {
-	tenantID, ok := TenantIDFromContext(r.Context())
+func requireOperatorContext(w http.ResponseWriter, r *http.Request) (string, bool) {
+	operatorContextID, ok := OperatorContextIDFromContext(r.Context())
 	if !ok {
-		sendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", "trusted tenant context is required")
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted tenant context is required")
 		return "", false
 	}
-	return tenantID, true
+	return operatorContextID, true
 }
 
 func parsePartnerListQuery(r *http.Request, actorID string) PartnerListQuery {
@@ -36,8 +36,8 @@ func parsePartnerListQuery(r *http.Request, actorID string) PartnerListQuery {
 
 func writeTenantPartnerCreateResult(w http.ResponseWriter, partner Partner, err error, draft bool) {
 	switch {
-	case errors.Is(err, ErrTenantContextRequired):
-		sendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", err.Error())
+	case errors.Is(err, ErrOperatorContextRequired):
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", err.Error())
 	case errors.Is(err, ErrInvalid):
 		sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 	case errors.Is(err, ErrConflict):
@@ -57,13 +57,13 @@ func writeTenantPartnerCreateResult(w http.ResponseWriter, partner Partner, err 
 // tenant. A tenant selector supplied by the browser is intentionally ignored.
 func HandleTenantListPartners(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := requireTenantContext(w, r)
+		operatorContextID, ok := requireOperatorContext(w, r)
 		if !ok {
 			return
 		}
 		query := parsePartnerListQuery(r, "")
 		category := strings.TrimSpace(r.URL.Query().Get("category"))
-		partners, total, err := ListPartnersForTenantCategory(db, tenantID, query, category)
+		partners, total, err := ListPartnersForTenantCategory(db, operatorContextID, query, category)
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list partners")
 			return
@@ -81,7 +81,7 @@ func HandleTenantListPartners(db *sql.DB) http.HandlerFunc {
 
 func HandleTenantCreatePartner(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := requireTenantContext(w, r)
+		operatorContextID, ok := requireOperatorContext(w, r)
 		if !ok {
 			return
 		}
@@ -93,21 +93,21 @@ func HandleTenantCreatePartner(db *sql.DB) http.HandlerFunc {
 		}
 		input.CreatedByActorID = actorID
 		input.CreatedBySurface = surface
-		partner, err := CreatePartnerForTenant(db, tenantID, input)
+		partner, err := CreatePartnerForTenant(db, operatorContextID, input)
 		writeTenantPartnerCreateResult(w, partner, err, false)
 	}
 }
 
 func HandleTenantListFieldPartnerDrafts(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := requireTenantContext(w, r)
+		operatorContextID, ok := requireOperatorContext(w, r)
 		if !ok {
 			return
 		}
 		actorID, _ := actorFromContext(r)
 		query := parsePartnerListQuery(r, actorID)
 		category := strings.TrimSpace(r.URL.Query().Get("category"))
-		partners, total, err := ListPartnersForTenantCategory(db, tenantID, query, category)
+		partners, total, err := ListPartnersForTenantCategory(db, operatorContextID, query, category)
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list field partner drafts")
 			return
@@ -125,7 +125,7 @@ func HandleTenantListFieldPartnerDrafts(db *sql.DB) http.HandlerFunc {
 
 func HandleTenantFieldCreateDraft(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := requireTenantContext(w, r)
+		operatorContextID, ok := requireOperatorContext(w, r)
 		if !ok {
 			return
 		}
@@ -137,14 +137,14 @@ func HandleTenantFieldCreateDraft(db *sql.DB) http.HandlerFunc {
 		}
 		input.CreatedByActorID = actorID
 		input.CreatedBySurface = "app-field"
-		partner, err := CreatePartnerForTenant(db, tenantID, input)
+		partner, err := CreatePartnerForTenant(db, operatorContextID, input)
 		writeTenantPartnerCreateResult(w, partner, err, true)
 	}
 }
 
 func HandleTenantLinkPartnerStore(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := requireTenantContext(w, r)
+		operatorContextID, ok := requireOperatorContext(w, r)
 		if !ok {
 			return
 		}
@@ -156,7 +156,7 @@ func HandleTenantLinkPartnerStore(db *sql.DB) http.HandlerFunc {
 		}
 		stores, err := LinkPartnerStoreForTenantGoverned(
 			db,
-			tenantID,
+			operatorContextID,
 			partnerIDFromPath(r),
 			actorID,
 			correlationID(r),
@@ -168,8 +168,8 @@ func HandleTenantLinkPartnerStore(db *sql.DB) http.HandlerFunc {
 		case errors.Is(err, ErrNotFound):
 			// Do not reveal whether an identifier exists in another tenant.
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner or store not found")
-		case errors.Is(err, ErrTenantContextRequired):
-			sendError(w, http.StatusForbidden, "TENANT_CONTEXT_REQUIRED", err.Error())
+		case errors.Is(err, ErrOperatorContextRequired):
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", err.Error())
 		case errors.Is(err, ErrStoreOwnershipConflict):
 			sendError(w, http.StatusConflict, "STORE_OWNERSHIP_CONFLICT", "owned store transfer requires a reason and expectedStoreVersion")
 		case errors.Is(err, ErrVersionConflict):

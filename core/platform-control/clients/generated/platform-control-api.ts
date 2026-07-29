@@ -174,6 +174,291 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/platform/v1/change-sets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List governed platform change sets. */
+        get: operations["listPlatformChangeSets"];
+        put?: never;
+        /** Create a governed multi-item draft. */
+        post: operations["createPlatformChangeSet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/change-sets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        /** Read details, validation snapshot, diff, impact and audit actors. */
+        get: operations["getPlatformChangeSet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/change-sets/{id}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Capture target snapshots and reserve targets. */
+        post: operations["validatePlatformChangeSet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/change-sets/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a still-current validated request. */
+        post: operations["submitPlatformChangeSet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/change-sets/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Independently approve a submitted request. */
+        post: operations["approvePlatformChangeSet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/change-sets/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Independently reject a submitted request with a reason. */
+        post: operations["rejectPlatformChangeSet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/change-sets/{id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Atomically apply an approved request when preconditions still match. */
+        post: operations["applyPlatformChangeSet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/change-sets/{id}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore the captured safe baseline with a mandatory reason. */
+        post: operations["rollbackPlatformChangeSet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/rollouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPlatformRollouts"];
+        put?: never;
+        post: operations["createPlatformRollout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/rollouts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPlatformRollout"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/rollouts/{id}/recovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return canonical legal actions and the approved recovery plan for one rollout. */
+        get: operations["getPlatformRolloutRecovery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/rollouts/{id}/advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Advance a running rollout only after its configured health gate succeeds. */
+        post: operations["advancePlatformRollout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/rollouts/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause a running rollout without changing percentage or flag revision. */
+        post: operations["pausePlatformRollout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/rollouts/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume a paused rollout after health evaluation without advancing percentage. */
+        post: operations["resumePlatformRollout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/rollouts/{id}/abort": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Abort a running or paused rollout and restore its captured flag baseline. */
+        post: operations["abortPlatformRollout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/platform/v1/rollouts/{id}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Roll back a completed rollout and restore its captured flag baseline. */
+        post: operations["rollbackPlatformRollout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -193,6 +478,7 @@ export interface components {
             rollbackState: components["schemas"]["PlatformControlState"];
             servicesState: components["schemas"]["PlatformControlState"];
             evidence: string[];
+            saas: components["schemas"]["PlatformSaasRuntimeStatus"];
         };
         PlatformEffectiveRuntimeConfig: {
             revision: string;
@@ -264,6 +550,194 @@ export interface components {
             code: string;
             message: string;
         };
+        /** @enum {string} */
+        PlatformChangeSetStatus: "draft" | "validated" | "submitted" | "approved" | "rejected" | "applied" | "rolled_back" | "failed";
+        /** @enum {string} */
+        PlatformChangeTargetType: "variable" | "feature_flag";
+        PlatformChangeSetItem: {
+            /** Format: uuid */
+            id: string;
+            targetType: components["schemas"]["PlatformChangeTargetType"];
+            targetKey: string;
+            ownerService: string;
+            scopeType: string;
+            scopeId?: string;
+            valueType: string;
+            classification: string;
+            /** Format: int64 */
+            expectedRevision: number;
+            /** @description Full target state captured during validation; absent for a new target. */
+            preconditionSnapshot?: unknown;
+            /** Format: int64 */
+            validatedRevision?: number;
+            /** Format: date-time */
+            itemValidatedAt?: string;
+            /** @description Full safe baseline captured immediately before apply. */
+            beforeValue?: unknown;
+            proposedValue: unknown;
+            /** Format: int64 */
+            appliedRevision?: number;
+        };
+        PlatformChangeSet: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            reason: string;
+            impactAssessment: string;
+            rollbackPlan: string;
+            status: components["schemas"]["PlatformChangeSetStatus"];
+            proposerActorId: string;
+            approverActorId?: string;
+            appliedByActorId?: string;
+            rejectedByActorId?: string;
+            rejectionReason?: string;
+            /** Format: int64 */
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            validatedAt?: string;
+            /** Format: date-time */
+            submittedAt?: string;
+            /** Format: date-time */
+            approvedAt?: string;
+            /** Format: date-time */
+            rejectedAt?: string;
+            /** Format: date-time */
+            appliedAt?: string;
+            /** Format: date-time */
+            rolledBackAt?: string;
+            items: components["schemas"]["PlatformChangeSetItem"][];
+        };
+        CreatePlatformChangeSetItemInput: {
+            targetType: components["schemas"]["PlatformChangeTargetType"];
+            targetKey: string;
+            ownerService: string;
+            /** @default global */
+            scopeType: string;
+            /** @default  */
+            scopeId: string;
+            /** @default json */
+            valueType: string;
+            /** @default internal */
+            classification: string;
+            /** Format: int64 */
+            expectedRevision: number;
+            proposedValue: unknown;
+        };
+        CreatePlatformChangeSetInput: {
+            title: string;
+            reason: string;
+            impactAssessment: string;
+            rollbackPlan: string;
+            items: components["schemas"]["CreatePlatformChangeSetItemInput"][];
+        };
+        ReviewReasonInput: {
+            reason: string;
+        };
+        RollbackPlatformChangeSetInput: {
+            reason: string;
+        };
+        PlatformChangeSetApiError: {
+            /** @enum {string} */
+            code: "PLATFORM_CHANGE_VALIDATION_FAILED" | "PLATFORM_SENSITIVE_VALUE_FORBIDDEN" | "PLATFORM_TARGET_CONFLICT" | "PLATFORM_VALIDATION_SNAPSHOT_REQUIRED" | "PLATFORM_INVALID_TRANSITION" | "PLATFORM_VERSION_CONFLICT" | "PLATFORM_MAKER_CHECKER_VIOLATION" | "PLATFORM_ROLLBACK_REASON_REQUIRED" | "PLATFORM_RECORD_NOT_FOUND" | "PLATFORM_INTERNAL_ERROR";
+            message: string;
+        };
+        /** @enum {string} */
+        RolloutStatus: "running" | "paused" | "completed" | "aborted" | "rolled_back" | "failed";
+        RolloutTargetScope: {
+            audience?: string;
+            audienceIds?: string[];
+            city?: string;
+            regions?: string[];
+            surface?: string;
+            surfaces?: string[];
+        } | unknown | unknown | unknown | unknown | unknown | unknown;
+        RolloutHealthGate: {
+            /** @constant */
+            requiredState: "OPERATIONAL";
+            requiredServices?: string[];
+            maxLatencyMs?: number;
+        };
+        CreatePlatformRolloutInput: {
+            /** Format: uuid */
+            changeSetId: string;
+            featureFlagKey: string;
+            targetScope: components["schemas"]["RolloutTargetScope"];
+            /** @description Strictly increasing percentages whose final item is 100; enforced by the service and database lifecycle. */
+            steps: number[];
+            healthGate: components["schemas"]["RolloutHealthGate"];
+        };
+        PlatformRollout: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            changeSetId: string;
+            featureFlagKey: string;
+            status: components["schemas"]["RolloutStatus"];
+            targetScope: components["schemas"]["RolloutTargetScope"];
+            steps: number[];
+            currentStepIndex: number;
+            currentPercentage: number;
+            healthGate: components["schemas"]["RolloutHealthGate"];
+            baselineEnabled: boolean;
+            baselineTargeting: {
+                [key: string]: unknown;
+            };
+            flagRevision: number;
+            createdByActorId: string;
+            updatedByActorId: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            startedAt?: string;
+            /** Format: date-time */
+            pausedAt?: string;
+            /** Format: date-time */
+            completedAt?: string;
+            /** Format: date-time */
+            abortedAt?: string;
+            /** Format: date-time */
+            rolledBackAt?: string;
+        };
+        PlatformRolloutRecoveryGuide: {
+            /** Format: uuid */
+            rolloutId: string;
+            /** Format: uuid */
+            changeSetId: string;
+            featureFlagKey: string;
+            status: components["schemas"]["RolloutStatus"];
+            healthState: components["schemas"]["PlatformControlState"];
+            currentPercentage: number;
+            canAdvance: boolean;
+            canPause: boolean;
+            canResume: boolean;
+            canAbort: boolean;
+            canRollback: boolean;
+            recommendedAction: string;
+            rollbackPlan: string;
+            recoverySteps: string[];
+            /** @constant */
+            requiredPermission: "platform:rollouts:manage";
+        };
+        PlatformRolloutError: {
+            code: string;
+            message: string;
+        };
+        PlatformSaasRuntimeStatus: {
+            /** @enum {string} */
+            mode: "active" | "deferred";
+            /** @enum {string} */
+            commercialActivationState: "blocked" | "eligible" | "authorized" | "active";
+            productionDeploymentAuthorized: boolean;
+            defaultOperatorContextId: string;
+            runtimeEnabled: boolean;
+        };
     };
     responses: {
         /** @description Process health or readiness state. */
@@ -288,8 +762,51 @@ export interface components {
                 "application/json": components["schemas"]["PlatformApiError"];
             };
         };
+        /** @description Governed change-set readback. */
+        ChangeSetResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    changeSet: components["schemas"]["PlatformChangeSet"];
+                };
+            };
+        };
+        /** @description Governed validation, conflict or workflow error. */
+        ErrorResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["PlatformChangeSetApiError"];
+            };
+        };
+        /** @description Canonical rollout readback. */
+        RolloutResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    rollout: components["schemas"]["PlatformRollout"];
+                };
+            };
+        };
+        /** @description Governed platform-control error. */
+        PlatformRolloutError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["PlatformRolloutError"];
+            };
+        };
     };
-    parameters: never;
+    parameters: {
+        ChangeSetId: string;
+        RolloutId: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -500,6 +1017,316 @@ export interface operations {
                 };
             };
             500: components["responses"]["PlatformError"];
+        };
+    };
+    listPlatformChangeSets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Change-set list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        changeSets: components["schemas"]["PlatformChangeSet"][];
+                    };
+                };
+            };
+        };
+    };
+    createPlatformChangeSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlatformChangeSetInput"];
+            };
+        };
+        responses: {
+            201: components["responses"]["ChangeSetResponse"];
+            422: components["responses"]["ErrorResponse"];
+        };
+    };
+    getPlatformChangeSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ChangeSetResponse"];
+            404: components["responses"]["ErrorResponse"];
+        };
+    };
+    validatePlatformChangeSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ChangeSetResponse"];
+            409: components["responses"]["ErrorResponse"];
+            422: components["responses"]["ErrorResponse"];
+        };
+    };
+    submitPlatformChangeSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ChangeSetResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    approvePlatformChangeSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ChangeSetResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    rejectPlatformChangeSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewReasonInput"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ChangeSetResponse"];
+            409: components["responses"]["ErrorResponse"];
+            422: components["responses"]["ErrorResponse"];
+        };
+    };
+    applyPlatformChangeSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ChangeSetResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    rollbackPlatformChangeSet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["ChangeSetId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RollbackPlatformChangeSetInput"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ChangeSetResponse"];
+            409: components["responses"]["ErrorResponse"];
+            422: components["responses"]["ErrorResponse"];
+        };
+    };
+    listPlatformRollouts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Canonical rollout list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        rollouts: components["schemas"]["PlatformRollout"][];
+                    };
+                };
+            };
+        };
+    };
+    createPlatformRollout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePlatformRolloutInput"];
+            };
+        };
+        responses: {
+            201: components["responses"]["RolloutResponse"];
+            409: components["responses"]["PlatformRolloutError"];
+            422: components["responses"]["PlatformRolloutError"];
+        };
+    };
+    getPlatformRollout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["RolloutId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RolloutResponse"];
+            404: components["responses"]["PlatformRolloutError"];
+        };
+    };
+    getPlatformRolloutRecovery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["RolloutId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recovery guidance derived from persisted rollout and change-set truth. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        recovery: components["schemas"]["PlatformRolloutRecoveryGuide"];
+                    };
+                };
+            };
+            404: components["responses"]["PlatformRolloutError"];
+        };
+    };
+    advancePlatformRollout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["RolloutId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RolloutResponse"];
+            409: components["responses"]["PlatformRolloutError"];
+        };
+    };
+    pausePlatformRollout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["RolloutId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RolloutResponse"];
+            409: components["responses"]["PlatformRolloutError"];
+        };
+    };
+    resumePlatformRollout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["RolloutId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RolloutResponse"];
+            409: components["responses"]["PlatformRolloutError"];
+        };
+    };
+    abortPlatformRollout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["RolloutId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RolloutResponse"];
+            409: components["responses"]["PlatformRolloutError"];
+        };
+    };
+    rollbackPlatformRollout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["RolloutId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RolloutResponse"];
+            409: components["responses"]["PlatformRolloutError"];
         };
     };
 }

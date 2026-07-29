@@ -110,7 +110,7 @@ func main() {
 		deliveryExceptionGovernedRouter,
 	)
 	availabilityGuardedRouter := dshHttp.OperationsAvailabilityMiddleware(db, governedIncidentRouter)
-	tenantGuardedRouter := dshHttp.TrustedTenantContextMiddleware(identityClient, availabilityGuardedRouter)
+	tenantGuardedRouter := dshHttp.TrustedOperatorContextMiddleware(identityClient, availabilityGuardedRouter)
 	handler := dshHttp.CorsMiddleware(authMode, tenantGuardedRouter)
 
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())

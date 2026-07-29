@@ -6,24 +6,24 @@ import (
 	"strings"
 )
 
-type tenantContextKey struct{}
+type operatorContextKey struct{}
 
-func WithTenantContext(ctx context.Context, tenantID string) context.Context {
-	return context.WithValue(ctx, tenantContextKey{}, strings.TrimSpace(tenantID))
+func WithOperatorContext(ctx context.Context, operatorContextID string) context.Context {
+	return context.WithValue(ctx, operatorContextKey{}, strings.TrimSpace(operatorContextID))
 }
 
-func TenantIDFromContext(ctx context.Context) (string, bool) {
-	tenantID, _ := ctx.Value(tenantContextKey{}).(string)
-	tenantID = strings.TrimSpace(tenantID)
-	return tenantID, tenantID != ""
+func OperatorContextIDFromContext(ctx context.Context) (string, bool) {
+	operatorContextID, _ := ctx.Value(operatorContextKey{}).(string)
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	return operatorContextID, operatorContextID != ""
 }
 
-// RequireTenantContext returns the trusted request tenant and fails closed when
+// RequireOperatorContext returns the trusted request tenant and fails closed when
 // no authenticated tenant was propagated. Financial code must never invent a
 // process-wide, local, or legacy tenant ownership fallback.
-func RequireTenantContext(ctx context.Context) (string, error) {
-	if tenantID, ok := TenantIDFromContext(ctx); ok {
-		return tenantID, nil
+func RequireOperatorContext(ctx context.Context) (string, error) {
+	if operatorContextID, ok := OperatorContextIDFromContext(ctx); ok {
+		return operatorContextID, nil
 	}
 	return "", fmt.Errorf("trusted tenant context is required")
 }

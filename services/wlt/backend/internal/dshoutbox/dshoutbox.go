@@ -19,7 +19,7 @@ type Event struct {
 	ID               string
 	EventType        string
 	PaymentSessionID string
-	TenantID         string
+	OperatorContextID         string
 	CheckoutIntentID *string
 	SpecialRequestID *string
 	OrderID          string
@@ -31,7 +31,7 @@ type Event struct {
 
 // Enqueue records a payment-session outcome. Re-enqueuing the same
 // (sessionID,eventType) pair is a no-op.
-func Enqueue(tx *sql.Tx, eventType, sessionID string, tenantID string, checkoutIntentID, specialRequestID *string) error {
+func Enqueue(tx *sql.Tx, eventType, sessionID string, operatorContextID string, checkoutIntentID, specialRequestID *string) error {
 	hasTenantColumn, err := hasOutboxTenantColumn(tx)
 	if err != nil {
 		return fmt.Errorf("inspect dsh outbox tenancy column: %w", err)
@@ -42,7 +42,7 @@ func Enqueue(tx *sql.Tx, eventType, sessionID string, tenantID string, checkoutI
 			INSERT INTO wlt_dsh_outbox_events (event_type, payment_session_id, tenant_id, checkout_intent_id, special_request_id)
 			VALUES ($1, $2, $3, $4, $5)
 			ON CONFLICT (payment_session_id, event_type) WHERE refund_reference IS NULL DO NOTHING`,
-			eventType, sessionID, tenantID, checkoutIntentID, specialRequestID,
+			eventType, sessionID, operatorContextID, checkoutIntentID, specialRequestID,
 		)
 	} else {
 		_, execErr = tx.Exec(`
@@ -62,9 +62,9 @@ func Enqueue(tx *sql.Tx, eventType, sessionID string, tenantID string, checkoutI
 // same transaction as ledger posting and refund completion. The refund
 // reference is the idempotency identity, allowing multiple partial refunds for
 // one payment session without collapsing them into one event.
-func EnqueueRefund(tx *sql.Tx, refundID, sessionID, tenantID, orderID, reason, correlationID string, checkoutIntentID, specialRequestID *string) error {
-	if refundID == "" || sessionID == "" || tenantID == "" || orderID == "" {
-		return fmt.Errorf("refundId, paymentSessionId, tenantId and orderId are required for refund outbox")
+func EnqueueRefund(tx *sql.Tx, refundID, sessionID, operatorContextID, orderID, reason, correlationID string, checkoutIntentID, specialRequestID *string) error {
+	if refundID == "" || sessionID == "" || operatorContextID == "" || orderID == "" {
+		return fmt.Errorf("refundId, paymentSessionId, operatorContextId and orderId are required for refund outbox")
 	}
 	_, err := tx.Exec(`
 		INSERT INTO wlt_dsh_outbox_events
@@ -72,7 +72,7 @@ func EnqueueRefund(tx *sql.Tx, refundID, sessionID, tenantID, orderID, reason, c
 			 order_id,refund_reference,reason,correlation_id)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 		ON CONFLICT (refund_reference,event_type) WHERE refund_reference IS NOT NULL DO NOTHING`,
-		EventTypeRefunded, sessionID, tenantID, checkoutIntentID, specialRequestID,
+		EventTypeRefunded, sessionID, operatorContextID, checkoutIntentID, specialRequestID,
 		orderID, refundID, reason, correlationID,
 	)
 	if err != nil {
@@ -109,7 +109,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	for rows.Next() {
 		var e Event
 		if err := rows.Scan(
-			&e.ID, &e.EventType, &e.PaymentSessionID, &e.TenantID,
+			&e.ID, &e.EventType, &e.PaymentSessionID, &e.OperatorContextID,
 			&e.CheckoutIntentID, &e.SpecialRequestID, &e.OrderID, &e.RefundReference,
 			&e.Reason, &e.CorrelationID, &e.AttemptCount,
 		); err != nil {

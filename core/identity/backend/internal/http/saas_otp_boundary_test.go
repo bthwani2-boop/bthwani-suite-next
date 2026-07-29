@@ -12,7 +12,7 @@ import (
 )
 
 type fakeTenantOtpRepository struct {
-	tenantID string
+	operatorContextID string
 	input    identity.OtpInput
 	result   identity.IssueActivationResult
 	err      error
@@ -21,11 +21,11 @@ type fakeTenantOtpRepository struct {
 
 func (f *fakeTenantOtpRepository) RequestOtpForTenant(
 	_ context.Context,
-	tenantID string,
+	operatorContextID string,
 	input identity.OtpInput,
 ) (identity.IssueActivationResult, error) {
 	f.calls++
-	f.tenantID = tenantID
+	f.operatorContextID = operatorContextID
 	f.input = input
 	return f.result, f.err
 }
@@ -51,8 +51,8 @@ func TestSaaSOtpBoundaryUsesTrustedRuntimeTenantForClient(t *testing.T) {
 	if nextCalled {
 		t.Fatal("active SaaS client OTP request fell through to legacy handler")
 	}
-	if repository.calls != 1 || repository.tenantID != "tenant-main" {
-		t.Fatalf("unexpected repository call count=%d tenant=%q", repository.calls, repository.tenantID)
+	if repository.calls != 1 || repository.operatorContextID != "tenant-main" {
+		t.Fatalf("unexpected repository call count=%d tenant=%q", repository.calls, repository.operatorContextID)
 	}
 	if repository.input.Phone != "+967770000001" || repository.input.ActorType != "client" {
 		t.Fatalf("unexpected OTP input %#v", repository.input)
@@ -98,8 +98,8 @@ func TestSaaSOtpBoundaryRejectsCrossTenantClientPhone(t *testing.T) {
 
 	SaaSOtpBoundary(repository, http.NotFoundHandler()).ServeHTTP(response, request)
 
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected TENANT_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
+		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
@@ -122,7 +122,7 @@ func TestSaaSOtpBoundaryPreservesRateLimitError(t *testing.T) {
 
 func TestSaaSOtpBoundaryUsesExplicitDeferredTenant(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "local-dsh")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "local-dsh")
 	repository := &fakeTenantOtpRepository{
 		result: identity.IssueActivationResult{ActivationID: "activation-local", Code: "123456"},
 	}
@@ -142,8 +142,8 @@ func TestSaaSOtpBoundaryUsesExplicitDeferredTenant(t *testing.T) {
 	if nextCalled {
 		t.Fatal("deferred client OTP request reached the legacy handler")
 	}
-	if repository.calls != 1 || repository.tenantID != "local-dsh" {
-		t.Fatalf("expected explicit deferred tenant, calls=%d tenant=%q", repository.calls, repository.tenantID)
+	if repository.calls != 1 || repository.operatorContextID != "local-dsh" {
+		t.Fatalf("expected explicit deferred tenant, calls=%d tenant=%q", repository.calls, repository.operatorContextID)
 	}
 	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "activation-local") {
 		t.Fatalf("unexpected deferred response status=%d body=%s", response.Code, response.Body.String())
@@ -152,7 +152,7 @@ func TestSaaSOtpBoundaryUsesExplicitDeferredTenant(t *testing.T) {
 
 func TestSaaSOtpBoundaryFailsClosedWithoutDeferredTenant(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 	repository := &fakeTenantOtpRepository{}
 	nextCalled := false
 	handler := SaaSOtpBoundary(repository, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {

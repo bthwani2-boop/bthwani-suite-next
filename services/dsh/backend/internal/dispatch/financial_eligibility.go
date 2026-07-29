@@ -26,7 +26,7 @@ type DispatchBalanceRequirement struct {
 }
 
 type CaptainFinancialEligibilitySnapshot struct {
-	TenantID                         string    `json:"tenantId"`
+	OperatorContextID                         string    `json:"operatorContextId"`
 	CaptainID                        string    `json:"captainId"`
 	WalletID                         string    `json:"walletId"`
 	WalletStatus                     string    `json:"walletStatus"`
@@ -71,19 +71,19 @@ func EvaluateCaptainFinancialEligibility(
 func UpsertCaptainFinancialEligibilitySnapshot(
 	ctx context.Context,
 	db *sql.DB,
-	tenantID string,
+	operatorContextID string,
 	captainID string,
 	requirement DispatchBalanceRequirement,
 	wallet CaptainWalletReadback,
 ) (CaptainFinancialEligibilitySnapshot, error) {
-	tenantID = strings.TrimSpace(tenantID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	captainID = strings.TrimSpace(captainID)
 	wallet.WalletID = strings.TrimSpace(wallet.WalletID)
 	wallet.WalletStatus = strings.TrimSpace(wallet.WalletStatus)
 	wallet.Currency = strings.ToUpper(strings.TrimSpace(wallet.Currency))
 	wallet.SnapshotReference = strings.TrimSpace(wallet.SnapshotReference)
 	requirement.Currency = strings.ToUpper(strings.TrimSpace(requirement.Currency))
-	if tenantID == "" || captainID == "" || wallet.WalletID == "" || wallet.SnapshotReference == "" ||
+	if operatorContextID == "" || captainID == "" || wallet.WalletID == "" || wallet.SnapshotReference == "" ||
 		len(wallet.Currency) != 3 || len(requirement.Currency) != 3 ||
 		requirement.MinimumDispatchBalanceMinorUnits < 0 ||
 		requirement.SnapshotTTLSeconds < 30 || requirement.SnapshotTTLSeconds > 600 {
@@ -108,11 +108,11 @@ func UpsertCaptainFinancialEligibilitySnapshot(
 		RETURNING tenant_id,captain_id,wallet_id,wallet_status,available_balance_minor_units,
 			minimum_dispatch_balance_minor_units,currency,eligible,ineligibility_reason,
 			snapshot_reference,checked_at,expires_at`,
-		tenantID, captainID, wallet.WalletID, wallet.WalletStatus,
+		operatorContextID, captainID, wallet.WalletID, wallet.WalletStatus,
 		wallet.AvailableBalanceMinorUnits, minimum, wallet.Currency, eligible, reason,
 		wallet.SnapshotReference, requirement.SnapshotTTLSeconds,
 	).Scan(
-		&snapshot.TenantID,
+		&snapshot.OperatorContextID,
 		&snapshot.CaptainID,
 		&snapshot.WalletID,
 		&snapshot.WalletStatus,
@@ -131,7 +131,7 @@ func UpsertCaptainFinancialEligibilitySnapshot(
 func GetCaptainFinancialEligibilitySnapshot(
 	ctx context.Context,
 	db *sql.DB,
-	tenantID string,
+	operatorContextID string,
 	captainID string,
 ) (CaptainFinancialEligibilitySnapshot, error) {
 	var snapshot CaptainFinancialEligibilitySnapshot
@@ -141,9 +141,9 @@ func GetCaptainFinancialEligibilitySnapshot(
 			snapshot_reference,checked_at,expires_at
 		FROM dsh_captain_financial_eligibility
 		WHERE tenant_id=$1 AND captain_id=$2`,
-		normalizeTenantID(tenantID), strings.TrimSpace(captainID),
+		normalizeOperatorContextID(operatorContextID), strings.TrimSpace(captainID),
 	).Scan(
-		&snapshot.TenantID,
+		&snapshot.OperatorContextID,
 		&snapshot.CaptainID,
 		&snapshot.WalletID,
 		&snapshot.WalletStatus,

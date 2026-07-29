@@ -14,9 +14,9 @@ import (
 // grant.
 func HandleGetPaymentSessionTrustedDsh(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		trustedTenantID := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-		if trustedTenantID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Tenant-ID is required")
+		trustedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		if trustedOperatorContextID == "" {
+			shared.SendError(w, http.StatusBadRequest, "MISSING_TENANT_ID", "X-Operator-Context-ID is required")
 			return
 		}
 		session, err := GetPaymentSession(db, r.PathValue("paymentSessionId"))
@@ -28,7 +28,7 @@ func HandleGetPaymentSessionTrustedDsh(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
 			return
 		}
-		if session.TenantID != trustedTenantID {
+		if session.OperatorContextID != trustedOperatorContextID {
 			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
 			return
 		}

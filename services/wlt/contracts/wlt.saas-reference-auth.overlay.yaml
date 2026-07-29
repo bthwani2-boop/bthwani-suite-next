@@ -9,7 +9,7 @@ actions:
         - BearerIdentity: []
         - DshServiceBearer: []
           DshServiceCaller: []
-          TenantContext: []
+          OperatorContext: []
       responses:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -43,7 +43,7 @@ actions:
           type: apiKey
           in: header
           name: X-Service-Caller
-        TenantContext:
+        OperatorContext:
           type: apiKey
           in: header
-          name: X-Tenant-ID
+          name: X-Operator-Context-ID

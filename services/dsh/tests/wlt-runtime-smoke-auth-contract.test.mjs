@@ -22,7 +22,7 @@ describe("authenticated WLT runtime smoke", () => {
     assert.match(smoke, /WLT_DSH_SERVICE_TOKEN is required/);
     assert.match(smoke, /Authorization = "Bearer \$serviceToken"/);
     assert.match(smoke, /"X-Service-Caller" = "dsh"/);
-    assert.match(smoke, /"X-Tenant-ID" = \$TenantId/);
+    assert.match(smoke, /"X-Operator-Context-ID" = \$OperatorContextId/);
     assert.match(smoke, /Invoke-WltRead -Path "\/wlt\/references\/payment-status/);
     assert.match(smoke, /Invoke-WltRead -Path "\/wlt\/references\/wallet-status/);
     assert.match(smoke, /Invoke-WltRead -Path "\/wlt\/payment-sessions\/\$\(\[Uri\]::EscapeDataString/);

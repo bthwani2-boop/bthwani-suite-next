@@ -33,7 +33,7 @@ func openRequiredDB(t *testing.T) *sql.DB {
 }
 
 type fixture struct {
-	tenantID  string
+	operatorContextID  string
 	partnerID string
 	storeID   string
 	clientID  string
@@ -47,7 +47,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	f := fixture{
-		tenantID:  "pd-test-tenant-" + suffix,
+		operatorContextID:  "pd-test-tenant-" + suffix,
 		partnerID: "pd-test-partner-" + suffix,
 		storeID:   "pd-test-store-" + suffix,
 		clientID:  "pd-test-client-" + suffix,
@@ -88,7 +88,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'partner_delivery', 'wallet',
 		        1000, 0, 0, 1000, 'YER', repeat('d', 64))
 		RETURNING id::text`,
-		f.tenantID, f.clientID, cartID, f.storeID,
+		f.operatorContextID, f.clientID, cartID, f.storeID,
 	).Scan(&checkoutIntentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
@@ -97,7 +97,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status)
 		VALUES ($1, $2::uuid, $3, 'partner_delivery', $4, $5)
 		RETURNING id::text`,
-		f.tenantID, checkoutIntentID, f.storeID, f.clientID, orderStatus,
+		f.operatorContextID, checkoutIntentID, f.storeID, f.clientID, orderStatus,
 	).Scan(&f.orderID); err != nil {
 		t.Fatalf("failed to insert test order: %v", err)
 	}

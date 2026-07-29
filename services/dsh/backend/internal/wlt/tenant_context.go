@@ -7,21 +7,21 @@ import (
 	"strings"
 )
 
-type tenantContextKey struct{}
+type operatorContextKey struct{}
 
-// WithTenantContext attaches a tenant that was resolved by a trusted server-side
+// WithOperatorContext attaches a tenant that was resolved by a trusted server-side
 // boundary (Identity session, database-owned outbox row, or another authenticated
 // service). Browser headers and request payloads must never populate this value.
-func WithTenantContext(ctx context.Context, tenantID string) context.Context {
-	return context.WithValue(ctx, tenantContextKey{}, strings.TrimSpace(tenantID))
+func WithOperatorContext(ctx context.Context, operatorContextID string) context.Context {
+	return context.WithValue(ctx, operatorContextKey{}, strings.TrimSpace(operatorContextID))
 }
 
-// TenantIDFromContext returns only the trusted tenant installed by a server-side
+// OperatorContextIDFromContext returns only the trusted tenant installed by a server-side
 // boundary. An empty value is intentionally treated as missing context.
-func TenantIDFromContext(ctx context.Context) (string, bool) {
-	tenantID, _ := ctx.Value(tenantContextKey{}).(string)
-	tenantID = strings.TrimSpace(tenantID)
-	return tenantID, tenantID != ""
+func OperatorContextIDFromContext(ctx context.Context) (string, bool) {
+	operatorContextID, _ := ctx.Value(operatorContextKey{}).(string)
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	return operatorContextID, operatorContextID != ""
 }
 
 type tenantRoundTripper struct {
@@ -34,18 +34,18 @@ func (transport tenantRoundTripper) RoundTrip(req *http.Request) (*http.Response
 		base = http.DefaultTransport
 	}
 
-	trustedTenantID, hasTrustedTenant := TenantIDFromContext(req.Context())
+	trustedOperatorContextID, hasTrustedTenant := OperatorContextIDFromContext(req.Context())
 	if !hasTrustedTenant {
 		return nil, fmt.Errorf("trusted tenant context is required for every WLT request")
 	}
-	headerTenantID := strings.TrimSpace(req.Header.Get("X-Tenant-ID"))
-	if headerTenantID != "" && headerTenantID != trustedTenantID {
+	headerOperatorContextID := strings.TrimSpace(req.Header.Get("X-Operator-Context-ID"))
+	if headerOperatorContextID != "" && headerOperatorContextID != trustedOperatorContextID {
 		return nil, fmt.Errorf("WLT tenant header does not match trusted request context")
 	}
-	if headerTenantID != trustedTenantID {
+	if headerOperatorContextID != trustedOperatorContextID {
 		clone := req.Clone(req.Context())
 		clone.Header = req.Header.Clone()
-		clone.Header.Set("X-Tenant-ID", trustedTenantID)
+		clone.Header.Set("X-Operator-Context-ID", trustedOperatorContextID)
 		req = clone
 	}
 	return base.RoundTrip(req)

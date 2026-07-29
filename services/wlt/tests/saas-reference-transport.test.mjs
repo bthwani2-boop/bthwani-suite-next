@@ -31,7 +31,7 @@ test("WLT SaaS reference contract declares Identity or trusted DSH authenticatio
   assert.match(overlay, /BearerIdentity/);
   assert.match(overlay, /DshServiceBearer/);
   assert.match(overlay, /DshServiceCaller/);
-  assert.match(overlay, /TenantContext/);
+  assert.match(overlay, /OperatorContext/);
   assert.match(manifest, /wlt\.saas-reference-auth\.overlay\.yaml/);
   assert.match(manifest, /saasReferenceAuthenticationReady:\s*true/);
 });

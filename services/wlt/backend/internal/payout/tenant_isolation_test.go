@@ -15,7 +15,7 @@ import (
 	"wlt-api/internal/shared"
 )
 
-func executeDestinationUpsert(t *testing.T, db *sql.DB, tenantID, actorID, correlationID string) governedDestinationRef {
+func executeDestinationUpsert(t *testing.T, db *sql.DB, operatorContextID, actorID, correlationID string) governedDestinationRef {
 	t.Helper()
 	body := fmt.Sprintf(`{
 		"beneficiaryName":"Tenant Payout Test",
@@ -26,14 +26,14 @@ func executeDestinationUpsert(t *testing.T, db *sql.DB, tenantID, actorID, corre
 		"operatorId":"operator-test"
 	}`)
 	req := httptest.NewRequest(http.MethodPut, "/wlt/payout-destinations/field/"+actorID, strings.NewReader(body))
-	req = req.WithContext(shared.WithTenantContext(req.Context(), tenantID))
+	req = req.WithContext(shared.WithOperatorContext(req.Context(), operatorContextID))
 	req.SetPathValue("actorType", "field")
 	req.SetPathValue("actorId", actorID)
 	req.Header.Set("X-Correlation-ID", correlationID)
 	res := httptest.NewRecorder()
 	HandleUpsertPayoutDestinationJRN037(db)(res, req)
 	if res.Code != http.StatusCreated {
-		t.Fatalf("destination upsert for %s returned %d: %s", tenantID, res.Code, res.Body.String())
+		t.Fatalf("destination upsert for %s returned %d: %s", operatorContextID, res.Code, res.Body.String())
 	}
 	var response struct {
 		PayoutDestination governedDestinationRef `json:"payoutDestination"`
@@ -47,7 +47,7 @@ func executeDestinationUpsert(t *testing.T, db *sql.DB, tenantID, actorID, corre
 	return response.PayoutDestination
 }
 
-func executePayoutCreate(t *testing.T, db *sql.DB, tenantID, actorID, destinationID, idempotencyKey string, amount int64) *httptest.ResponseRecorder {
+func executePayoutCreate(t *testing.T, db *sql.DB, operatorContextID, actorID, destinationID, idempotencyKey string, amount int64) *httptest.ResponseRecorder {
 	t.Helper()
 	body, err := json.Marshal(map[string]any{
 		"beneficiaryActorId": actorID,
@@ -61,8 +61,8 @@ func executePayoutCreate(t *testing.T, db *sql.DB, tenantID, actorID, destinatio
 		t.Fatal(err)
 	}
 	req := httptest.NewRequest(http.MethodPost, "/wlt/payout-requests", bytes.NewReader(body))
-	req = req.WithContext(shared.WithTenantContext(req.Context(), tenantID))
-	req.Header.Set("X-Correlation-ID", "payout-create-"+tenantID)
+	req = req.WithContext(shared.WithOperatorContext(req.Context(), operatorContextID))
+	req.Header.Set("X-Correlation-ID", "payout-create-"+operatorContextID)
 	res := httptest.NewRecorder()
 	HandleCreatePayoutRequestJRN037(db)(res, req)
 	return res
@@ -105,30 +105,30 @@ func TestPayoutDestinationsRequestsAndWalletHoldsAreTenantLocal(t *testing.T) {
 	})
 
 	destinations := make(map[string]governedDestinationRef, len(tenants))
-	for _, tenantID := range tenants {
+	for _, operatorContextID := range tenants {
 		if _, err := db.Exec(`INSERT INTO wlt_wallets
 			(tenant_id,actor_id,actor_type,status,currency,available_balance_minor_units)
 			VALUES ($1,$2,'field','active','YER',$3)
 			ON CONFLICT (tenant_id,actor_type,actor_id) DO UPDATE SET
 			  status='active',currency='YER',available_balance_minor_units=$3,
-			  held_balance_minor_units=0,updated_at=now()`, tenantID, actorID, initialBalance); err != nil {
-			t.Fatalf("seed %s wallet: %v", tenantID, err)
+			  held_balance_minor_units=0,updated_at=now()`, operatorContextID, actorID, initialBalance); err != nil {
+			t.Fatalf("seed %s wallet: %v", operatorContextID, err)
 		}
-		destinations[tenantID] = executeDestinationUpsert(t, db, tenantID, actorID, "destination-"+tenantID)
-		res := executePayoutCreate(t, db, tenantID, actorID, destinations[tenantID].ID, idempotencyKey, amount)
+		destinations[operatorContextID] = executeDestinationUpsert(t, db, operatorContextID, actorID, "destination-"+operatorContextID)
+		res := executePayoutCreate(t, db, operatorContextID, actorID, destinations[operatorContextID].ID, idempotencyKey, amount)
 		if res.Code != http.StatusCreated {
-			t.Fatalf("payout create for %s returned %d: %s", tenantID, res.Code, res.Body.String())
+			t.Fatalf("payout create for %s returned %d: %s", operatorContextID, res.Code, res.Body.String())
 		}
 	}
 
-	for _, tenantID := range tenants {
+	for _, operatorContextID := range tenants {
 		var available, held int64
 		if err := db.QueryRow(`SELECT available_balance_minor_units,held_balance_minor_units
-			FROM wlt_wallets WHERE tenant_id=$1 AND actor_type='field' AND actor_id=$2`, tenantID, actorID).Scan(&available, &held); err != nil {
+			FROM wlt_wallets WHERE tenant_id=$1 AND actor_type='field' AND actor_id=$2`, operatorContextID, actorID).Scan(&available, &held); err != nil {
 			t.Fatal(err)
 		}
 		if available != initialBalance-amount || held != amount {
-			t.Fatalf("tenant %s wallet available=%d held=%d", tenantID, available, held)
+			t.Fatalf("tenant %s wallet available=%d held=%d", operatorContextID, available, held)
 		}
 	}
 	var requestCount int

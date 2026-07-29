@@ -17,8 +17,8 @@ func newBundleRegistryTestService(t *testing.T) (*Service, func()) {
 			http.NotFound(w, r)
 			return
 		}
-		if r.Header.Get("X-Tenant-ID") != "tenant-test" {
-			t.Fatalf("missing trusted tenant header: %q", r.Header.Get("X-Tenant-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != "tenant-test" {
+			t.Fatalf("missing trusted tenant header: %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{

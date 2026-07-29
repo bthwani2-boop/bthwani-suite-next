@@ -138,7 +138,7 @@ export type DshDispatchBalancePolicyInput = {
 };
 
 export type DshCaptainFinancialEligibility = {
-  readonly tenantId: string;
+  readonly operatorContextId: string;
   readonly captainId: string;
   readonly walletId: string;
   readonly walletStatus: string;

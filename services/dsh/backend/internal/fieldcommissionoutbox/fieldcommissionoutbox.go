@@ -22,7 +22,7 @@ type Event struct {
 	ID                 string
 	EventID            string
 	EventType          string
-	TenantID           string
+	OperatorContextID           string
 	FieldActorID       string
 	VisitID            string
 	StoreID            string
@@ -56,16 +56,16 @@ func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 	if input.IdempotencyKey == "" {
 		input.IdempotencyKey = fmt.Sprintf("field_visit_commission:%s", input.VisitID)
 	}
-	var tenantID, partnerID, partnerCategory string
+	var operatorContextID, partnerID, partnerCategory string
 	err := tx.QueryRow(`
 		SELECT btrim(s.tenant_id), COALESCE(s.partner_id,''), COALESCE(NULLIF(btrim(p.category),''),'default')
 		FROM dsh_stores s
 		LEFT JOIN dsh_partners p ON p.id=s.partner_id AND p.tenant_id=s.tenant_id
-		WHERE s.id=$1`, input.StoreID).Scan(&tenantID, &partnerID, &partnerCategory)
+		WHERE s.id=$1`, input.StoreID).Scan(&operatorContextID, &partnerID, &partnerCategory)
 	if err != nil {
 		return fmt.Errorf("resolve field commission partner evidence: %w", err)
 	}
-	if tenantID == "" {
+	if operatorContextID == "" {
 		return fmt.Errorf("store %s has no trusted tenant for field commission", input.StoreID)
 	}
 	if strings.TrimSpace(partnerID) == "" {
@@ -113,7 +113,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	for rows.Next() {
 		var e Event
 		if err := rows.Scan(
-			&e.ID, &e.EventID, &e.EventType, &e.TenantID, &e.FieldActorID, &e.VisitID,
+			&e.ID, &e.EventID, &e.EventType, &e.OperatorContextID, &e.FieldActorID, &e.VisitID,
 			&e.StoreID, &e.PartnerID, &e.PartnerCategory,
 			&e.CommissionPolicyID, &e.CorrelationID, &e.IdempotencyKey,
 			&e.OccurredAt, &e.AttemptCount,

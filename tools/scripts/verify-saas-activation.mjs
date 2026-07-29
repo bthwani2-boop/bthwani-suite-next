@@ -38,7 +38,7 @@ assert(authorization.productionDeploymentAuthorized === false, "PRODUCTION_DEPLO
 assert(env.get("BTHWANI_SAAS_MODE") === "active", "RUNTIME_SAAS_MODE_NOT_ACTIVE");
 assert(env.get("BTHWANI_COMMERCIAL_ACTIVATION_STATE") === "authorized", "RUNTIME_ACTIVATION_STATE_NOT_AUTHORIZED");
 assert(env.get("BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED") === "false", "RUNTIME_PRODUCTION_DEPLOYMENT_FLAG_INVALID");
-assert(/^[a-z0-9][a-z0-9-]{2,62}$/.test(env.get("BTHWANI_DEFAULT_TENANT_ID") ?? ""), "DEFAULT_TENANT_ID_INVALID");
+assert(/^[a-z0-9][a-z0-9-]{2,62}$/.test(env.get("BTHWANI_OPERATOR_CONTEXT_ID") ?? ""), "DEFAULT_TENANT_ID_INVALID");
 
 const unresolvedEvidence = Object.entries(state.activationEvidence ?? {})
   .filter(([, value]) => value !== "PROVEN")
@@ -50,6 +50,6 @@ process.stdout.write(`${JSON.stringify({
   saasReadinessMode: state.saasReadinessMode,
   commercialActivationState: state.commercialActivationState,
   productionDeploymentAuthorized: false,
-  defaultTenantId: env.get("BTHWANI_DEFAULT_TENANT_ID"),
+  defaultOperatorContextId: env.get("BTHWANI_OPERATOR_CONTEXT_ID"),
   unresolvedEvidence,
 }, null, 2)}\n`);

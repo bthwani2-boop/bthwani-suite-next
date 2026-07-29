@@ -40,7 +40,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID strin
 	t.Helper()
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-	tenantID := "tenant-wlt-outbox-test-" + suffix
+	operatorContextID := "tenant-wlt-outbox-test-" + suffix
 	storeID := "wlt-outbox-test-store-" + suffix
 	clientID := "wlt-outbox-test-client-" + suffix
 
@@ -72,7 +72,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID strin
 		VALUES ($1, $2, $3::uuid, $4, 'payment_pending', 'bthwani_delivery', 'cod', $5,
 		        1000, 0, 0, 1000, 'YER', repeat('f', 64))
 		RETURNING id::text`,
-		tenantID, clientID, cartID, storeID, "wlt-ps-"+suffix,
+		operatorContextID, clientID, cartID, storeID, "wlt-ps-"+suffix,
 	).Scan(&checkoutIntentID); err != nil {
 		t.Fatalf("failed to insert test checkout intent: %v", err)
 	}
@@ -81,7 +81,7 @@ func seedOrderFixture(t *testing.T, db *sql.DB) (orderID, checkoutIntentID strin
 		INSERT INTO dsh_orders (tenant_id, checkout_intent_id, store_id, fulfillment_mode, client_id, status)
 		VALUES ($1, $2::uuid, $3, 'bthwani_delivery', $4, 'pending')
 		RETURNING id::text`,
-		tenantID, checkoutIntentID, storeID, clientID,
+		operatorContextID, checkoutIntentID, storeID, clientID,
 	).Scan(&orderID); err != nil {
 		t.Fatalf("failed to insert test order: %v", err)
 	}

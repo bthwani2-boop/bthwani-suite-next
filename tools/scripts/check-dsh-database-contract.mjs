@@ -141,7 +141,7 @@ for (const packageName of databaseTestPackages) {
   const activatorPath = `services/dsh/backend/internal/${packageName}/tenant_context_test.go`;
   const activator = read(activatorPath);
   requireText(activator, `package ${packageName}`, activatorPath);
-  requireText(activator, "testdb.ConfigureTrustedTenantContext()", activatorPath);
+  requireText(activator, "testdb.ConfigureTrustedOperatorContext()", activatorPath);
 }
 
 for (const suite of ["schema", "seed"]) {

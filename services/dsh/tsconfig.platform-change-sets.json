@@ -24,7 +24,7 @@
     }
   },
   "include": [
-    "../../core/platform-control/clients/generated/platform-change-sets-api.ts",
+    "../../core/platform-control/clients/generated/platform-control-api.ts",
     "frontend/**/*.d.ts",
     "frontend/shared/platform/platform-control.api.ts",
     "frontend/shared/platform/use-platform-change-workflow-controller.tsx",

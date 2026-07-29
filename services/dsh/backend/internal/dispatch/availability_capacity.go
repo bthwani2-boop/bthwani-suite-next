@@ -11,7 +11,7 @@ import (
 )
 
 type ProviderAvailabilityProjectionInput struct {
-	TenantID         string    `json:"tenantId"`
+	OperatorContextID         string    `json:"operatorContextId"`
 	NoticeID         string    `json:"noticeId"`
 	ActorType        string    `json:"actorType"`
 	ActorID          string    `json:"actorId"`
@@ -29,7 +29,7 @@ type ProviderAvailabilityProjection struct {
 }
 
 func normalizeAvailabilityProjection(input *ProviderAvailabilityProjectionInput) error {
-	input.TenantID = normalizeTenantID(input.TenantID)
+	input.OperatorContextID = normalizeOperatorContextID(input.OperatorContextID)
 	input.NoticeID = strings.TrimSpace(input.NoticeID)
 	input.ActorType = strings.ToLower(strings.TrimSpace(input.ActorType))
 	input.ActorID = strings.TrimSpace(input.ActorID)
@@ -68,10 +68,10 @@ func UpsertProviderAvailabilityProjection(ctx context.Context, db *sql.DB, input
 		WHERE dsh_provider_availability_projections.source_updated_at <= EXCLUDED.source_updated_at
 		RETURNING tenant_id,notice_id,actor_type,actor_id,notice_type,starts_at,ends_at,
 		status,reason,source_updated_at,synced_at`,
-		input.TenantID, input.NoticeID, input.ActorType, input.ActorID, input.NoticeType,
+		input.OperatorContextID, input.NoticeID, input.ActorType, input.ActorID, input.NoticeType,
 		input.StartsAt, input.EndsAt, input.Status, input.Reason, input.SourceUpdatedAt,
 	).Scan(
-		&result.TenantID, &result.NoticeID, &result.ActorType, &result.ActorID,
+		&result.OperatorContextID, &result.NoticeID, &result.ActorType, &result.ActorID,
 		&result.NoticeType, &result.StartsAt, &result.EndsAt, &result.Status,
 		&result.Reason, &result.SourceUpdatedAt, &result.SyncedAt,
 	)
@@ -81,8 +81,8 @@ func UpsertProviderAvailabilityProjection(ctx context.Context, db *sql.DB, input
 	return result, err
 }
 
-func CaptainUnavailableAt(ctx context.Context, db *sql.DB, tenantID, captainID string, at time.Time) (bool, error) {
-	tenantID = normalizeTenantID(tenantID)
+func CaptainUnavailableAt(ctx context.Context, db *sql.DB, operatorContextID, captainID string, at time.Time) (bool, error) {
+	operatorContextID = normalizeOperatorContextID(operatorContextID)
 	captainID = strings.TrimSpace(captainID)
 	if captainID == "" {
 		return false, ErrInvalid
@@ -95,11 +95,11 @@ func CaptainUnavailableAt(ctx context.Context, db *sql.DB, tenantID, captainID s
 		SELECT 1 FROM dsh_provider_availability_projections
 		WHERE tenant_id=$1 AND actor_type='captain' AND actor_id=$2 AND status='active'
 		  AND $3 >= starts_at AND $3 < ends_at
-	)`, tenantID, captainID, at).Scan(&unavailable)
+	)`, operatorContextID, captainID, at).Scan(&unavailable)
 	return unavailable, err
 }
 
-func ApplyWorkforceAvailability(ctx context.Context, db *sql.DB, tenantID string, at time.Time, items []CaptainDispatchCandidate) error {
+func ApplyWorkforceAvailability(ctx context.Context, db *sql.DB, operatorContextID string, at time.Time, items []CaptainDispatchCandidate) error {
 	if len(items) == 0 {
 		return nil
 	}
@@ -109,7 +109,7 @@ func ApplyWorkforceAvailability(ctx context.Context, db *sql.DB, tenantID string
 	rows, err := db.QueryContext(ctx, `SELECT DISTINCT actor_id
 		FROM dsh_provider_availability_projections
 		WHERE tenant_id=$1 AND actor_type='captain' AND status='active'
-		  AND $2 >= starts_at AND $2 < ends_at`, normalizeTenantID(tenantID), at)
+		  AND $2 >= starts_at AND $2 < ends_at`, normalizeOperatorContextID(operatorContextID), at)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func ApplyWorkforceAvailability(ctx context.Context, db *sql.DB, tenantID string
 }
 
 type ServiceAreaCapacityPolicy struct {
-	TenantID                        string    `json:"tenantId"`
+	OperatorContextID                        string    `json:"operatorContextId"`
 	ServiceAreaCode                 string    `json:"serviceAreaCode"`
 	MinimumAvailableCaptains        int       `json:"minimumAvailableCaptains"`
 	TargetAvailableCaptains         int       `json:"targetAvailableCaptains"`
@@ -148,7 +148,7 @@ type ServiceAreaCapacityPolicy struct {
 }
 
 type UpsertServiceAreaCapacityPolicyInput struct {
-	TenantID                        string `json:"tenantId"`
+	OperatorContextID                        string `json:"operatorContextId"`
 	ServiceAreaCode                 string `json:"serviceAreaCode"`
 	MinimumAvailableCaptains        int    `json:"minimumAvailableCaptains"`
 	TargetAvailableCaptains         int    `json:"targetAvailableCaptains"`
@@ -160,7 +160,7 @@ type UpsertServiceAreaCapacityPolicyInput struct {
 }
 
 func UpsertServiceAreaCapacityPolicy(ctx context.Context, db *sql.DB, input UpsertServiceAreaCapacityPolicyInput) (ServiceAreaCapacityPolicy, error) {
-	input.TenantID = normalizeTenantID(input.TenantID)
+	input.OperatorContextID = normalizeOperatorContextID(input.OperatorContextID)
 	input.ServiceAreaCode = strings.TrimSpace(input.ServiceAreaCode)
 	input.UpdatedBy = strings.TrimSpace(input.UpdatedBy)
 	if input.MinimumAvailableCaptains < 0 || input.TargetAvailableCaptains < input.MinimumAvailableCaptains ||
@@ -189,12 +189,12 @@ func UpsertServiceAreaCapacityPolicy(ctx context.Context, db *sql.DB, input Upse
 		target_available_captains,demand_buffer_basis_points,
 		mass_absence_threshold_basis_points,forecast_horizon_minutes,
 		updated_by,version,updated_at`,
-		input.TenantID, input.ServiceAreaCode, input.MinimumAvailableCaptains,
+		input.OperatorContextID, input.ServiceAreaCode, input.MinimumAvailableCaptains,
 		input.TargetAvailableCaptains, input.DemandBufferBasisPoints,
 		input.MassAbsenceThresholdBasisPoints, input.ForecastHorizonMinutes,
 		input.UpdatedBy, input.ExpectedVersion,
 	).Scan(
-		&policy.TenantID, &policy.ServiceAreaCode, &policy.MinimumAvailableCaptains,
+		&policy.OperatorContextID, &policy.ServiceAreaCode, &policy.MinimumAvailableCaptains,
 		&policy.TargetAvailableCaptains, &policy.DemandBufferBasisPoints,
 		&policy.MassAbsenceThresholdBasisPoints, &policy.ForecastHorizonMinutes,
 		&policy.UpdatedBy, &policy.Version, &policy.UpdatedAt,
@@ -205,22 +205,22 @@ func UpsertServiceAreaCapacityPolicy(ctx context.Context, db *sql.DB, input Upse
 	return policy, err
 }
 
-func loadCapacityPolicy(ctx context.Context, db *sql.DB, tenantID, serviceAreaCode string) (ServiceAreaCapacityPolicy, error) {
+func loadCapacityPolicy(ctx context.Context, db *sql.DB, operatorContextID, serviceAreaCode string) (ServiceAreaCapacityPolicy, error) {
 	var policy ServiceAreaCapacityPolicy
 	err := db.QueryRowContext(ctx, `SELECT tenant_id,service_area_code,
 		minimum_available_captains,target_available_captains,demand_buffer_basis_points,
 		mass_absence_threshold_basis_points,forecast_horizon_minutes,updated_by,version,updated_at
 		FROM dsh_service_area_capacity_policies WHERE tenant_id=$1 AND service_area_code=$2`,
-		normalizeTenantID(tenantID), strings.TrimSpace(serviceAreaCode),
+		normalizeOperatorContextID(operatorContextID), strings.TrimSpace(serviceAreaCode),
 	).Scan(
-		&policy.TenantID, &policy.ServiceAreaCode, &policy.MinimumAvailableCaptains,
+		&policy.OperatorContextID, &policy.ServiceAreaCode, &policy.MinimumAvailableCaptains,
 		&policy.TargetAvailableCaptains, &policy.DemandBufferBasisPoints,
 		&policy.MassAbsenceThresholdBasisPoints, &policy.ForecastHorizonMinutes,
 		&policy.UpdatedBy, &policy.Version, &policy.UpdatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ServiceAreaCapacityPolicy{
-			TenantID: normalizeTenantID(tenantID), ServiceAreaCode: strings.TrimSpace(serviceAreaCode),
+			OperatorContextID: normalizeOperatorContextID(operatorContextID), ServiceAreaCode: strings.TrimSpace(serviceAreaCode),
 			MinimumAvailableCaptains: 1, TargetAvailableCaptains: 2,
 			DemandBufferBasisPoints: 2000, MassAbsenceThresholdBasisPoints: 4000,
 			ForecastHorizonMinutes: 180, UpdatedBy: "default", Version: 0,
@@ -230,7 +230,7 @@ func loadCapacityPolicy(ctx context.Context, db *sql.DB, tenantID, serviceAreaCo
 }
 
 type ServiceAreaCapacityForecast struct {
-	TenantID                   string                    `json:"tenantId"`
+	OperatorContextID                   string                    `json:"operatorContextId"`
 	ServiceAreaCode            string                    `json:"serviceAreaCode"`
 	AsOf                       time.Time                 `json:"asOf"`
 	HorizonEndsAt              time.Time                 `json:"horizonEndsAt"`
@@ -249,8 +249,8 @@ type ServiceAreaCapacityForecast struct {
 	Policy                     ServiceAreaCapacityPolicy `json:"policy"`
 }
 
-func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, tenantID, serviceAreaCode string, at time.Time) (ServiceAreaCapacityForecast, error) {
-	tenantID = normalizeTenantID(tenantID)
+func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, operatorContextID, serviceAreaCode string, at time.Time) (ServiceAreaCapacityForecast, error) {
+	operatorContextID = normalizeOperatorContextID(operatorContextID)
 	serviceAreaCode = strings.TrimSpace(serviceAreaCode)
 	if serviceAreaCode == "" {
 		return ServiceAreaCapacityForecast{}, ErrInvalid
@@ -258,13 +258,13 @@ func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, tenantID, s
 	if at.IsZero() {
 		at = time.Now().UTC()
 	}
-	policy, err := loadCapacityPolicy(ctx, db, tenantID, serviceAreaCode)
+	policy, err := loadCapacityPolicy(ctx, db, operatorContextID, serviceAreaCode)
 	if err != nil {
 		return ServiceAreaCapacityForecast{}, err
 	}
 	horizon := at.Add(time.Duration(policy.ForecastHorizonMinutes) * time.Minute)
 	forecast := ServiceAreaCapacityForecast{
-		TenantID: tenantID, ServiceAreaCode: serviceAreaCode, AsOf: at,
+		OperatorContextID: operatorContextID, ServiceAreaCode: serviceAreaCode, AsOf: at,
 		HorizonEndsAt: horizon, Policy: policy,
 	}
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(DISTINCT p.captain_id)::int
@@ -272,7 +272,7 @@ func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, tenantID, s
 		JOIN dsh_actor_service_area_scopes scope
 		  ON scope.actor_id=p.captain_id AND scope.actor_role='captain'
 		 AND scope.active=true AND scope.service_area_code=$2
-		WHERE p.tenant_id=$1`, tenantID, serviceAreaCode).Scan(&forecast.TotalScopedCaptains); err != nil {
+		WHERE p.tenant_id=$1`, operatorContextID, serviceAreaCode).Scan(&forecast.TotalScopedCaptains); err != nil {
 		return forecast, err
 	}
 	if err := db.QueryRowContext(ctx, `SELECT COUNT(*)::int FROM (
@@ -297,7 +297,7 @@ func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, tenantID, s
 		  )
 		GROUP BY p.captain_id,p.max_active_assignments
 		HAVING COUNT(assignment.id)<p.max_active_assignments
-	) available`, tenantID, serviceAreaCode, at).Scan(&forecast.CurrentlyAvailableCaptains); err != nil {
+	) available`, operatorContextID, serviceAreaCode, at).Scan(&forecast.CurrentlyAvailableCaptains); err != nil {
 		return forecast, err
 	}
 	if err := db.QueryRowContext(ctx, `SELECT
@@ -308,7 +308,7 @@ func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, tenantID, s
 		  AND EXISTS (SELECT 1 FROM dsh_actor_service_area_scopes scope
 		    WHERE scope.actor_id=absence.actor_id AND scope.actor_role='captain'
 		      AND scope.active=true AND scope.service_area_code=$2)`,
-		tenantID, serviceAreaCode, at, horizon,
+		operatorContextID, serviceAreaCode, at, horizon,
 	).Scan(&forecast.ActiveAbsences, &forecast.PlannedAbsences); err != nil {
 		return forecast, err
 	}
@@ -316,7 +316,7 @@ func GetServiceAreaCapacityForecast(ctx context.Context, db *sql.DB, tenantID, s
 		FROM dsh_orders orders JOIN dsh_stores store ON store.id=orders.store_id
 		WHERE orders.tenant_id=$1 AND store.service_area_code=$2
 		  AND orders.status IN ('store_accepted','preparing','ready_for_pickup','driver_assigned')`,
-		tenantID, serviceAreaCode).Scan(&forecast.OpenDemand); err != nil {
+		operatorContextID, serviceAreaCode).Scan(&forecast.OpenDemand); err != nil {
 		return forecast, err
 	}
 	forecast.ProjectedAvailableCaptains = maxInt(0, forecast.CurrentlyAvailableCaptains-forecast.PlannedAbsences)
@@ -361,8 +361,8 @@ type heatmapAccumulator struct {
 	captains map[string]struct{}
 }
 
-func GetOperationsHeatmap(ctx context.Context, db *sql.DB, tenantID, serviceAreaCode string, now time.Time) ([]OperationsHeatmapCell, error) {
-	tenantID = normalizeTenantID(tenantID)
+func GetOperationsHeatmap(ctx context.Context, db *sql.DB, operatorContextID, serviceAreaCode string, now time.Time) ([]OperationsHeatmapCell, error) {
+	operatorContextID = normalizeOperatorContextID(operatorContextID)
 	serviceAreaCode = strings.TrimSpace(serviceAreaCode)
 	if now.IsZero() {
 		now = time.Now().UTC()
@@ -376,7 +376,7 @@ func GetOperationsHeatmap(ctx context.Context, db *sql.DB, tenantID, serviceArea
 		WHERE assignment.tenant_id=$1 AND assignment.status='accepted'
 		  AND assignment.last_latitude IS NOT NULL AND assignment.last_longitude IS NOT NULL
 		  AND assignment.location_recorded_at IS NOT NULL`
-	args := []any{tenantID}
+	args := []any{operatorContextID}
 	if serviceAreaCode != "" {
 		query += ` AND store.service_area_code=$2`
 		args = append(args, serviceAreaCode)

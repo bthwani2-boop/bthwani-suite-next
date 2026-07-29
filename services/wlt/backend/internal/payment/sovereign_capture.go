@@ -85,7 +85,7 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client
 	if err != nil {
 		return finalizationFailure(fmt.Errorf("finalize captured session: %w", err))
 	}
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.TenantID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.OperatorContextID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
 		return finalizationFailure(fmt.Errorf("enqueue captured DSH projection: %w", err))
 	}
 	if err := tx.Commit(); err != nil {

@@ -41,18 +41,18 @@ func TestPostLedgerTransaction_IsolatesSameReferenceAndActorAcrossTenants(t *tes
 		{AccountType: "platform_revenue", DebitCredit: "credit", AmountMinorUnits: 750, Currency: "YER"},
 	}
 
-	for _, tenantID := range []string{"tenant-a-" + referenceID, "tenant-b-" + referenceID} {
-		ctx := shared.WithTenantContext(context.Background(), tenantID)
+	for _, operatorContextID := range []string{"tenant-a-" + referenceID, "tenant-b-" + referenceID} {
+		ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
 		tx, err := db.BeginTx(ctx, nil)
 		if err != nil {
-			t.Fatalf("begin tenant %s tx: %v", tenantID, err)
+			t.Fatalf("begin tenant %s tx: %v", operatorContextID, err)
 		}
 		if _, err := PostLedgerTransaction(ctx, tx, "same_reference", "test", referenceID, lines, Actor{ID: "system", Type: "system"}); err != nil {
 			tx.Rollback()
-			t.Fatalf("post tenant %s transaction: %v", tenantID, err)
+			t.Fatalf("post tenant %s transaction: %v", operatorContextID, err)
 		}
 		if err := tx.Commit(); err != nil {
-			t.Fatalf("commit tenant %s transaction: %v", tenantID, err)
+			t.Fatalf("commit tenant %s transaction: %v", operatorContextID, err)
 		}
 	}
 
@@ -77,14 +77,14 @@ func TestPostLedgerTransaction_IsolatesSameReferenceAndActorAcrossTenants(t *tes
 	defer rows.Close()
 	walletCount := 0
 	for rows.Next() {
-		var tenantID string
+		var operatorContextID string
 		var balance int64
-		if err := rows.Scan(&tenantID, &balance); err != nil {
+		if err := rows.Scan(&operatorContextID, &balance); err != nil {
 			t.Fatalf("scan tenant wallet: %v", err)
 		}
 		walletCount++
 		if balance != 750 {
-			t.Fatalf("tenant %s wallet balance=%d, want 750", tenantID, balance)
+			t.Fatalf("tenant %s wallet balance=%d, want 750", operatorContextID, balance)
 		}
 	}
 	if err := rows.Err(); err != nil {

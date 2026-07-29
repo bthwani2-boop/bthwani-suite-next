@@ -18,7 +18,7 @@ var ErrSettlementCalculationSourceRequired = errors.New("settlement must be calc
 
 type Settlement struct {
 	ID          string  `json:"id"`
-	TenantID    string  `json:"tenantId,omitempty"`
+	OperatorContextID    string  `json:"operatorContextId,omitempty"`
 	PartnerID   string  `json:"partnerId"`
 	PeriodStart string  `json:"periodStart"`
 	PeriodEnd   string  `json:"periodEnd"`
@@ -67,7 +67,7 @@ func scanSettlement(row *sql.Row) (*Settlement, error) {
 	var s Settlement
 	err := row.Scan(
 		&s.ID,
-		&s.TenantID,
+		&s.OperatorContextID,
 		&s.PartnerID,
 		&s.PeriodStart,
 		&s.PeriodEnd,
@@ -91,7 +91,7 @@ func scanSettlementRow(rows *sql.Rows) (*Settlement, error) {
 	var s Settlement
 	err := rows.Scan(
 		&s.ID,
-		&s.TenantID,
+		&s.OperatorContextID,
 		&s.PartnerID,
 		&s.PeriodStart,
 		&s.PeriodEnd,
@@ -125,12 +125,12 @@ func getSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settl
 	if settlementID == "" {
 		return nil, fmt.Errorf("settlementId is required")
 	}
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 	const q = `SELECT ` + settlementCols + ` FROM wlt_settlements WHERE tenant_id = $1 AND id = $2`
-	s, err := scanSettlement(db.QueryRowContext(ctx, q, tenantID, settlementID))
+	s, err := scanSettlement(db.QueryRowContext(ctx, q, operatorContextID, settlementID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -143,21 +143,21 @@ func GetSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
 	return getSettlement(context.Background(), db, settlementID)
 }
 
-func ListPartnerSettlements(ctx context.Context, db *sql.DB, requestedTenantID, partnerID string) ([]*Settlement, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+func ListPartnerSettlements(ctx context.Context, db *sql.DB, requestedOperatorContextID, partnerID string) ([]*Settlement, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	requestedTenantID = strings.TrimSpace(requestedTenantID)
-	if requestedTenantID != "" && requestedTenantID != tenantID {
+	requestedOperatorContextID = strings.TrimSpace(requestedOperatorContextID)
+	if requestedOperatorContextID != "" && requestedOperatorContextID != operatorContextID {
 		return nil, fmt.Errorf("tenant filter does not match trusted tenant context")
 	}
 	partnerID = strings.TrimSpace(partnerID)
 	var rows *sql.Rows
 	if partnerID == "" {
-		rows, err = db.QueryContext(ctx, `SELECT `+settlementCols+` FROM wlt_settlements WHERE tenant_id = $1 ORDER BY period_start DESC LIMIT 50`, tenantID)
+		rows, err = db.QueryContext(ctx, `SELECT `+settlementCols+` FROM wlt_settlements WHERE tenant_id = $1 ORDER BY period_start DESC LIMIT 50`, operatorContextID)
 	} else {
-		rows, err = db.QueryContext(ctx, `SELECT `+settlementCols+` FROM wlt_settlements WHERE tenant_id = $1 AND partner_id = $2 ORDER BY period_start DESC`, tenantID, partnerID)
+		rows, err = db.QueryContext(ctx, `SELECT `+settlementCols+` FROM wlt_settlements WHERE tenant_id = $1 AND partner_id = $2 ORDER BY period_start DESC`, operatorContextID, partnerID)
 	}
 	if err != nil {
 		return nil, err
@@ -176,7 +176,7 @@ func ListPartnerSettlements(ctx context.Context, db *sql.DB, requestedTenantID, 
 }
 
 func ListSettlementSummary(ctx context.Context, db *sql.DB, partnerID, periodStart, periodEnd string) (*SettlementSummary, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func ListSettlementSummary(ctx context.Context, db *sql.DB, partnerID, periodSta
 		  AND ($3 = '' OR period_start >= $3::date)
 		  AND ($4 = '' OR period_end <= $4::date)`
 	var summary SettlementSummary
-	err = db.QueryRowContext(ctx, q, tenantID, partnerID, periodStart, periodEnd).Scan(
+	err = db.QueryRowContext(ctx, q, operatorContextID, partnerID, periodStart, periodEnd).Scan(
 		&summary.PartnerID,
 		&summary.PeriodStart,
 		&summary.PeriodEnd,
@@ -228,7 +228,7 @@ func postSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Sett
 	if settlementID == "" {
 		return nil, fmt.Errorf("settlementId is required")
 	}
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -243,11 +243,11 @@ func postSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Sett
 		UPDATE wlt_settlements
 		SET status = 'settled', settled_at = NOW(), updated_at = NOW()
 		WHERE tenant_id = $1 AND id = $2 AND status = 'pending'
-		RETURNING `+settlementCols, tenantID, settlementID)
+		RETURNING `+settlementCols, operatorContextID, settlementID)
 	settlement, err := scanSettlement(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		var status string
-		lookupErr := tx.QueryRowContext(ctx, `SELECT status FROM wlt_settlements WHERE tenant_id = $1 AND id = $2`, tenantID, settlementID).Scan(&status)
+		lookupErr := tx.QueryRowContext(ctx, `SELECT status FROM wlt_settlements WHERE tenant_id = $1 AND id = $2`, operatorContextID, settlementID).Scan(&status)
 		if errors.Is(lookupErr, sql.ErrNoRows) {
 			return nil, nil
 		}
@@ -347,7 +347,7 @@ func HandleGetSettlement(db *sql.DB) http.HandlerFunc {
 func HandleListSettlements(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
-		settlements, err := ListPartnerSettlements(r.Context(), db, query.Get("tenantId"), query.Get("partnerId"))
+		settlements, err := ListPartnerSettlements(r.Context(), db, query.Get("operatorContextId"), query.Get("partnerId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

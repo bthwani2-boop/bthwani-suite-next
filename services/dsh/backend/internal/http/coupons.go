@@ -98,14 +98,14 @@ func (s *protectedStoreServer) handleListCoupons(w http.ResponseWriter, r *http.
 	defer cancel()
 	for index := range fundingLifecycle {
 		item := &fundingLifecycle[index]
-		if s.wlt == nil || item.WLTReservationID == "" || item.TenantID == "" {
+		if s.wlt == nil || item.WLTReservationID == "" || item.OperatorContextID == "" {
 			coupons.ReconcileFundingLifecycle(item, nil, errors.New("WLT readback is unavailable"))
 			continue
 		}
 		reservation, readErr := s.wlt.GetPromotionFundingReservation(
 			reconciliationContext,
 			item.WLTReservationID,
-			item.TenantID,
+			item.OperatorContextID,
 		)
 		coupons.ReconcileFundingLifecycle(item, reservation, readErr)
 	}

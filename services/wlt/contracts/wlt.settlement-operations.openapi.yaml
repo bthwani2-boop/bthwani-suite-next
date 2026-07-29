@@ -21,7 +21,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - name: partnerId
           in: query
           schema: { type: string }
@@ -45,7 +45,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
       responses:
         '200': { description: Tenant-local settlement summary }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
@@ -59,7 +59,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/SettlementId'
       responses:
         '200': { description: Tenant-local settlement }
@@ -76,7 +76,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/TenantId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/SettlementId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
@@ -105,7 +105,7 @@ components:
       required: [id, partnerId, periodStart, periodEnd, grossAmount, platformFee, netAmount, currency, orderCount, status, createdAt, updatedAt]
       properties:
         id: { type: string }
-        tenantId: { type: string }
+        operatorContextId: { type: string }
         partnerId: { type: string }
         periodStart: { type: string }
         periodEnd: { type: string }

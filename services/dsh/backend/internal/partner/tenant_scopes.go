@@ -4,8 +4,8 @@ import "database/sql"
 
 // ListPartnerScopesForActorForTenant returns only active team scopes belonging
 // to both the partner and authenticated tenant.
-func ListPartnerScopesForActorForTenant(db *sql.DB, tenantID, partnerID, actorIdentity string) ([]OperationalScope, error) {
-	tenantID, err := normalizeTenantID(tenantID)
+func ListPartnerScopesForActorForTenant(db *sql.DB, operatorContextID, partnerID, actorIdentity string) ([]OperationalScope, error) {
+	operatorContextID, err := normalizeOperatorContextID(operatorContextID)
 	if err != nil {
 		return nil, err
 	}
@@ -15,7 +15,7 @@ func ListPartnerScopesForActorForTenant(db *sql.DB, tenantID, partnerID, actorId
 		INNER JOIN dsh_store_team_members tm
 			ON tm.store_id = s.id AND tm.identity_actor_id = $3 AND tm.status = 'active'
 		WHERE s.partner_id = $1 AND s.tenant_id = $2
-		ORDER BY s.display_name ASC`, partnerID, tenantID, actorIdentity)
+		ORDER BY s.display_name ASC`, partnerID, operatorContextID, actorIdentity)
 	if err != nil {
 		return nil, err
 	}

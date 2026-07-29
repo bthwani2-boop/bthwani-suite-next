@@ -8,7 +8,8 @@ context: core/providers
 entry: ./providers.openapi.yaml
 owner: core/providers
 contractState: CONTRACT_ACTIVE
-layout: SINGLE
+layout: INDEXED
+bundle: ./generated/providers.bundle.openapi.yaml
 client: ../clients/generated/providers-api.ts
 regenerateScript: pnpm run openapi:generate:providers
 modules: []

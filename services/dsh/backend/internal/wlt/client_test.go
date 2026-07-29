@@ -48,8 +48,8 @@ func TestCreatePaymentSessionSuccess(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Tenant-ID") != "tenant-a" {
-			t.Fatalf("expected X-Tenant-ID=tenant-a, got %q", r.Header.Get("X-Tenant-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != "tenant-a" {
+			t.Fatalf("expected X-Operator-Context-ID=tenant-a, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		if r.Header.Get("X-Correlation-ID") != "corr-1" {
 			t.Fatalf("expected X-Correlation-ID=corr-1, got %q", r.Header.Get("X-Correlation-ID"))
@@ -183,8 +183,8 @@ func TestNotifyDeliveryCollectionSendsGovernedCollectorHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Tenant-ID") != "tenant-a" {
-			t.Fatalf("expected X-Tenant-ID=tenant-a, got %q", r.Header.Get("X-Tenant-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != "tenant-a" {
+			t.Fatalf("expected X-Operator-Context-ID=tenant-a, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		var input NotifyDeliveryCollectionInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -231,8 +231,8 @@ func TestFinanceReadWalletWithTenantBuildsPathAndHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Tenant-ID") != "tenant-a" {
-			t.Fatalf("expected X-Tenant-ID=tenant-a, got %q", r.Header.Get("X-Tenant-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != "tenant-a" {
+			t.Fatalf("expected X-Operator-Context-ID=tenant-a, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -342,8 +342,8 @@ func TestDeliverFieldCommissionSendsExactBodyAndHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Tenant-ID") != "tenant-a" {
-			t.Fatalf("expected X-Tenant-ID=tenant-a, got %q", r.Header.Get("X-Tenant-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != "tenant-a" {
+			t.Fatalf("expected X-Operator-Context-ID=tenant-a, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		if r.Header.Get("X-Correlation-ID") != "corr-visit-1" {
 			t.Fatalf("expected X-Correlation-ID=corr-visit-1, got %q", r.Header.Get("X-Correlation-ID"))
@@ -421,8 +421,8 @@ func TestExpireSessionSendsServiceHeadersAndPath(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Tenant-ID") != "tenant-a" {
-			t.Fatalf("expected X-Tenant-ID=tenant-a, got %q", r.Header.Get("X-Tenant-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != "tenant-a" {
+			t.Fatalf("expected X-Operator-Context-ID=tenant-a, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		if r.Header.Get("X-Correlation-ID") != "corr-1" {
 			t.Fatalf("expected X-Correlation-ID=corr-1, got %q", r.Header.Get("X-Correlation-ID"))
@@ -490,8 +490,8 @@ func TestCancelSessionForOrderSendsExactBodyAndHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Tenant-ID") != "tenant-a" {
-			t.Fatalf("expected X-Tenant-ID=tenant-a, got %q", r.Header.Get("X-Tenant-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != "tenant-a" {
+			t.Fatalf("expected X-Operator-Context-ID=tenant-a, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		if r.Header.Get("X-Correlation-ID") != "order-cancellation-order-1" {
 			t.Fatalf("expected X-Correlation-ID=order-cancellation-order-1, got %q", r.Header.Get("X-Correlation-ID"))

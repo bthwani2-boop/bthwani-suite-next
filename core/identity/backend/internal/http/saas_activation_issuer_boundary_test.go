@@ -28,9 +28,9 @@ func (f *fakeActorAccessLookup) AccessForActor(_ context.Context, actorID string
 	return access, nil
 }
 
-func issuerAccess(tenantID, action string) activationActorAccess {
+func issuerAccess(operatorContextID, action string) activationActorAccess {
 	return activationActorAccess{
-		TenantID: tenantID,
+		OperatorContextID: operatorContextID,
 		Active:   true,
 		Permissions: []activationIssuerPermission{
 			{Service: "workforce", Surface: "control-panel", Action: action, Scope: "all"},
@@ -38,8 +38,8 @@ func issuerAccess(tenantID, action string) activationActorAccess {
 	}
 }
 
-func targetAccess(tenantID string) activationActorAccess {
-	return activationActorAccess{TenantID: tenantID, Active: false}
+func targetAccess(operatorContextID string) activationActorAccess {
+	return activationActorAccess{OperatorContextID: operatorContextID, Active: false}
 }
 
 func TestActivationIssuerBoundaryAcceptsAuthorizedSameTenantIssuerAndRestoresBody(t *testing.T) {
@@ -95,8 +95,8 @@ func TestActivationIssuerBoundaryRejectsCrossTenantIssuer(t *testing.T) {
 
 	saasActivationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
 
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected TENANT_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
+		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
@@ -115,7 +115,7 @@ func TestActivationIssuerBoundaryRejectsCrossTenantIssuerOutsideActiveSaaS(t *te
 
 	saasActivationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
 
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_FORBIDDEN") {
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
 		t.Fatalf("expected fail-closed tenant rejection, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }

@@ -11,7 +11,7 @@ func configureIdentityActiveSaaS(t *testing.T) {
 	t.Helper()
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
 	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "authorized")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-main")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "tenant-main")
 	t.Setenv("IDENTITY_WORKFORCE_SERVICE_TOKEN", "service-token")
 }
 
@@ -19,7 +19,7 @@ func configureIdentityDeferredSaaS(t *testing.T) {
 	t.Helper()
 	t.Setenv("BTHWANI_SAAS_MODE", "deferred")
 	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "eligible_for_review")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 	t.Setenv("IDENTITY_WORKFORCE_SERVICE_TOKEN", "service-token")
 }
 
@@ -32,16 +32,16 @@ func internalActorRequest(method, path string) *http.Request {
 
 func TestActiveSaaSTenantConfiguration(t *testing.T) {
 	configureIdentityActiveSaaS(t)
-	tenantID, active, err := activeSaaSTenant()
-	if err != nil || !active || tenantID != "tenant-main" {
-		t.Fatalf("unexpected SaaS tenant state tenant=%q active=%v err=%v", tenantID, active, err)
+	operatorContextID, active, err := activeSaaSTenant()
+	if err != nil || !active || operatorContextID != "tenant-main" {
+		t.Fatalf("unexpected SaaS tenant state tenant=%q active=%v err=%v", operatorContextID, active, err)
 	}
 }
 
 func TestActiveSaaSTenantConfigurationFailsClosedWithoutTenant(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
 	t.Setenv("BTHWANI_COMMERCIAL_ACTIVATION_STATE", "authorized")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 	_, active, err := activeSaaSTenant()
 	if !active || err == nil {
 		t.Fatalf("expected active invalid SaaS configuration, active=%v err=%v", active, err)
@@ -54,24 +54,24 @@ func TestInternalTenantRequestRequiresHeader(t *testing.T) {
 	response := httptest.NewRecorder()
 
 	if validateInternalTenantRequest(response, request, "tenant-main") {
-		t.Fatal("request without X-Tenant-ID was accepted")
+		t.Fatal("request without X-Operator-Context-ID was accepted")
 	}
-	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_REQUIRED") {
-		t.Fatalf("expected TENANT_CONTEXT_REQUIRED, got status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_REQUIRED") {
+		t.Fatalf("expected OPERATOR_CONTEXT_REQUIRED, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
 func TestInternalTenantRequestRejectsCrossTenantHeader(t *testing.T) {
 	configureIdentityActiveSaaS(t)
 	request := internalActorRequest(http.MethodGet, "/internal/actors/search")
-	request.Header.Set("X-Tenant-ID", "tenant-other")
+	request.Header.Set("X-Operator-Context-ID", "tenant-other")
 	response := httptest.NewRecorder()
 
 	if validateInternalTenantRequest(response, request, "tenant-main") {
 		t.Fatal("cross-tenant request was accepted")
 	}
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected TENANT_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
+		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
@@ -79,15 +79,15 @@ func TestProvisionTenantOverrideIsRejectedBeforeDatabaseAccess(t *testing.T) {
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/internal/actors/provision",
-		strings.NewReader(`{"username":"field-1","phoneE164":"+967770000001","role":"field","tenantId":"tenant-other"}`),
+		strings.NewReader(`{"username":"field-1","phoneE164":"+967770000001","role":"field","operatorContextId":"tenant-other"}`),
 	)
 	response := httptest.NewRecorder()
 
 	if rewriteProvisionTenant(response, request, nil, "tenant-main") {
 		t.Fatal("cross-tenant provision request was accepted")
 	}
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected TENANT_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
+		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
@@ -105,8 +105,8 @@ func TestDeferredSaaSTenantBoundaryFailsClosedWithoutTenant(t *testing.T) {
 	if nextCalled {
 		t.Fatal("deferred SaaS request without trusted tenant reached the actor router")
 	}
-	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "TENANT_CONTEXT_REQUIRED") {
-		t.Fatalf("expected TENANT_CONTEXT_REQUIRED, got status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_REQUIRED") {
+		t.Fatalf("expected OPERATOR_CONTEXT_REQUIRED, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
@@ -115,13 +115,13 @@ func TestDeferredSaaSTenantBoundaryAcceptsTrustedServiceTenant(t *testing.T) {
 	nextCalled := false
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		nextCalled = true
-		if tenantID := r.Header.Get("X-Tenant-ID"); tenantID != "tenant-main" {
-			t.Fatalf("unexpected tenant header %q", tenantID)
+		if operatorContextID := r.Header.Get("X-Operator-Context-ID"); operatorContextID != "tenant-main" {
+			t.Fatalf("unexpected tenant header %q", operatorContextID)
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})
 	request := internalActorRequest(http.MethodGet, "/internal/actors")
-	request.Header.Set("X-Tenant-ID", "tenant-main")
+	request.Header.Set("X-Operator-Context-ID", "tenant-main")
 	response := httptest.NewRecorder()
 
 	SaaSTenantBoundary(nil, next).ServeHTTP(response, request)

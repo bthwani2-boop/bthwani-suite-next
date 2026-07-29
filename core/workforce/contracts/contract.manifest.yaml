@@ -9,6 +9,7 @@ entry: ./workforce.openapi.yaml
 owner: core/workforce
 contractState: CONTRACT_ACTIVE
 layout: INDEXED
+bundle: ./generated/workforce.bundle.openapi.yaml
 client: ../clients/generated/workforce-api.ts
 regenerateScript: pnpm run openapi:generate:workforce
 modules:

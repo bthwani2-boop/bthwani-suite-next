@@ -394,7 +394,7 @@ risk_based_test_matrix:
     runtime_smoke_required: true
     guard_required: "guard:matrix:v3"
     priority: "P0"
-    verification_command: "pnpm run foundation:gate"
+    verification_command: "pnpm run guard:foundation"
   - risk: "permission_changed"
     affected_layer: "backend_auth_middleware / shared_brain"
     failure_mode: "unauthorized action execution or privilege escalation"

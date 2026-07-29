@@ -20,7 +20,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
       requestBody:
         required: true
         content:
@@ -37,7 +37,7 @@ paths:
       operationId: getDispatchCapacityForecast
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
       responses:
         '200':
           description: Governed capacity forecast for dispatch operators.
@@ -52,7 +52,7 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/ServiceAreaCode'
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
       requestBody:
         required: true
         content:
@@ -69,7 +69,7 @@ paths:
       operationId: getDispatchHeatmap
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/OperatorContextId'
       responses:
         '200':
           description: Dispatch demand and supply heatmap readback.
@@ -97,8 +97,8 @@ components:
       in: header
       required: true
       schema: { const: workforce }
-    TenantId:
-      name: X-Tenant-ID
+    OperatorContextId:
+      name: X-Operator-Context-ID
       in: header
       required: false
       schema: { type: string }

@@ -58,7 +58,7 @@ describe("JRN-028 promotion funding boundary", () => {
   });
 
   it("uses tenant-bound idempotent outbox handoff", () => {
-    assert.match(lifecycle, /TenantID/);
+    assert.match(lifecycle, /OperatorContextID/);
     assert.match(lifecycle, /dsh-promotion-funding:/);
     assert.match(outbox, /idempotency|Idempotency/);
   });

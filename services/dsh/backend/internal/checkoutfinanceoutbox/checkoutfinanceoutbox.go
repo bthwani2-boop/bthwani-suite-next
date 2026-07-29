@@ -33,7 +33,7 @@ const (
 type Event struct {
 	ID               string
 	EventType        string
-	TenantID         string
+	OperatorContextID         string
 	CheckoutIntentID string
 	PaymentSessionID string
 	OrderID          string
@@ -106,7 +106,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	for rows.Next() {
 		var e Event
 		if err := rows.Scan(
-			&e.ID, &e.EventType, &e.TenantID, &e.CheckoutIntentID, &e.PaymentSessionID,
+			&e.ID, &e.EventType, &e.OperatorContextID, &e.CheckoutIntentID, &e.PaymentSessionID,
 			&e.OrderID, &e.ClientID, &e.Reason, &e.CorrelationID, &e.AttemptCount,
 		); err != nil {
 			rows.Close()

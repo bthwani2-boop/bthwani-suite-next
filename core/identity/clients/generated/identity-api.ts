@@ -352,6 +352,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/internal/employees/permission-bundles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listAdministrativeEmployeePermissionBundles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/internal/employees/provision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["provisionAdministrativeEmployee"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -395,7 +427,7 @@ export interface components {
         };
         ActorIdentity: {
             subject: string;
-            tenantId: string;
+            operatorContextId: string;
             phoneE164: string;
             roles: ("client" | "partner" | "captain" | "field" | "operator" | "system")[];
             permissions: components["schemas"]["Permission"][];
@@ -425,7 +457,7 @@ export interface components {
             phoneE164: string;
             /** @enum {string} */
             role: "field" | "captain";
-            tenantId?: string;
+            operatorContextId?: string;
         };
         ActorAdminView: {
             actorId: string;
@@ -467,6 +499,23 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             expiresAt: string;
+        };
+        /** @enum {string} */
+        EmployeePermissionBundleCode: "staff" | "platform_owner" | "platform_coordinator" | "operations_manager" | "partners_manager" | "finance_manager" | "support_manager" | "hr_manager";
+        EmployeePermissionBundleDescriptor: {
+            code: components["schemas"]["EmployeePermissionBundleCode"];
+            nameAr: string;
+            nameEn: string;
+            allowedEmploymentClasses: string[];
+            defaultDepartmentScope?: string;
+            departmentSelectionAllowed: boolean;
+        };
+        EmployeeProvisionRequest: {
+            username: string;
+            phoneE164: string;
+            permissionBundle?: components["schemas"]["EmployeePermissionBundleCode"];
+            departmentScope: string;
+            operatorContextId: string;
         };
     };
     responses: {
@@ -529,6 +578,8 @@ export interface components {
         ActorId: string;
         Authorization: string;
         ServiceCaller: string;
+        WorkforceServiceCaller: "workforce";
+        OperatorContextId: string;
     };
     requestBodies: never;
     headers: never;
@@ -1074,6 +1125,102 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthenticated"];
+        };
+    };
+    listAdministrativeEmployeePermissionBundles: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["WorkforceServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Canonical Identity-owned administrative permission bundles. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        permissionBundles: components["schemas"]["EmployeePermissionBundleDescriptor"][];
+                    };
+                };
+            };
+            /** @description Invalid Workforce service token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Caller or tenant context is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    provisionAdministrativeEmployee: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["WorkforceServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmployeeProvisionRequest"];
+            };
+        };
+        responses: {
+            /** @description New employee actor created with an Identity-owned permission bundle. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActorAdminView"];
+                };
+            };
+            /** @description Missing tenant context or invalid bundle, department, phone, or username. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid Workforce service token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Caller or tenant context is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Phone or username is already bound to an existing actor. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
 }

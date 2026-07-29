@@ -23,7 +23,7 @@ func fieldFinanceServer(t *testing.T, actorID string, wltHandler http.HandlerFun
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
 			Subject:   actorID,
-			TenantID:  "dsh",
+			OperatorContextID:  "dsh",
 			Roles:     []string{"field"},
 			AuthState: "authenticated",
 		})
@@ -41,7 +41,7 @@ func fieldFinanceServer(t *testing.T, actorID string, wltHandler http.HandlerFun
 
 func requireFieldFinanceTenant(t *testing.T, r *http.Request) {
 	t.Helper()
-	if got := r.Header.Get("X-Tenant-ID"); got != "dsh" {
+	if got := r.Header.Get("X-Operator-Context-ID"); got != "dsh" {
 		t.Fatalf("expected Identity tenant dsh, got %q", got)
 	}
 }

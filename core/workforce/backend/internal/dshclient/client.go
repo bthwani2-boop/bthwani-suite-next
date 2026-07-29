@@ -20,7 +20,7 @@ var (
 type Client struct {
 	baseURL  string
 	token    string
-	tenantID string
+	operatorContextID string
 	http     *http.Client
 }
 
@@ -36,7 +36,7 @@ func NewClient(baseURL string, optional ...string) *Client {
 		client.token = strings.TrimSpace(optional[0])
 	}
 	if len(optional) > 1 {
-		client.tenantID = strings.TrimSpace(optional[1])
+		client.operatorContextID = strings.TrimSpace(optional[1])
 	}
 	return client
 }
@@ -46,7 +46,7 @@ func (c *Client) Configured() bool {
 }
 
 func (c *Client) AvailabilityProjectionConfigured() bool {
-	return c.Configured() && c.token != "" && c.tenantID != ""
+	return c.Configured() && c.token != "" && c.operatorContextID != ""
 }
 
 type Zone struct {
@@ -104,7 +104,7 @@ func (c *Client) ValidateZone(ctx context.Context, zoneID, operatorToken string)
 }
 
 type AvailabilityProjectionInput struct {
-	TenantID        string    `json:"tenantId"`
+	OperatorContextID        string    `json:"operatorContextId"`
 	NoticeID        string    `json:"noticeId"`
 	ActorType       string    `json:"actorType"`
 	ActorID         string    `json:"actorId"`
@@ -120,7 +120,7 @@ func (c *Client) SyncAvailabilityProjection(ctx context.Context, input Availabil
 	if !c.AvailabilityProjectionConfigured() {
 		return ErrUnavailable
 	}
-	input.TenantID = c.tenantID
+	input.OperatorContextID = c.operatorContextID
 	encoded, err := json.Marshal(input)
 	if err != nil {
 		return err

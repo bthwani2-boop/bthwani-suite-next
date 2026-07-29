@@ -13,9 +13,9 @@ import (
 	"wlt-api/internal/shared"
 )
 
-func canonicalDestinationRequestHash(tenantID, actorType, actorID string, input governedDestinationInput) string {
+func canonicalDestinationRequestHash(operatorContextID, actorType, actorID string, input governedDestinationInput) string {
 	canonical := struct {
-		TenantID                      string `json:"tenantId"`
+		OperatorContextID                      string `json:"operatorContextId"`
 		ActorType                     string `json:"actorType"`
 		ActorID                       string `json:"actorId"`
 		BeneficiaryName               string `json:"beneficiaryName"`
@@ -29,7 +29,7 @@ func canonicalDestinationRequestHash(tenantID, actorType, actorID string, input 
 		BankNotes                     string `json:"bankNotes"`
 		OperatorID                    string `json:"operatorId"`
 	}{
-		TenantID: tenantID, ActorType: actorType, ActorID: actorID,
+		OperatorContextID: operatorContextID, ActorType: actorType, ActorID: actorID,
 		BeneficiaryName: strings.TrimSpace(input.BeneficiaryName),
 		BankName: strings.TrimSpace(input.BankName), BankBranch: strings.TrimSpace(input.BankBranch),
 		AccountNumber: strings.TrimSpace(input.AccountNumber), IBAN: strings.TrimSpace(input.IBAN),
@@ -75,9 +75,9 @@ func validateCanonicalDestinationInput(input *governedDestinationInput) error {
 	return nil
 }
 
-func scanCanonicalDestination(tx *sql.Tx, tenantID, destinationID string) (*governedDestinationRef, error) {
+func scanCanonicalDestination(tx *sql.Tx, operatorContextID, destinationID string) (*governedDestinationRef, error) {
 	return scanGovernedDestination(tx.QueryRow(`SELECT `+governedDestinationReturning+`
-		FROM wlt_payout_destinations WHERE tenant_id=$1 AND id=$2`, tenantID, destinationID))
+		FROM wlt_payout_destinations WHERE tenant_id=$1 AND id=$2`, operatorContextID, destinationID))
 }
 
 // HandleUpsertCanonicalPayoutDestination is the runtime write boundary for
@@ -86,7 +86,7 @@ func scanCanonicalDestination(tx *sql.Tx, tenantID, destinationID string) (*gove
 // tenant's encrypted destination.
 func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tenantID, ok := requirePayoutTenant(w, r)
+		operatorContextID, ok := requirePayoutTenant(w, r)
 		if !ok {
 			return
 		}
@@ -121,27 +121,27 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "payout encryption is not configured")
 			return
 		}
-		requestHash := canonicalDestinationRequestHash(tenantID, actorType, actorID, input)
+		requestHash := canonicalDestinationRequestHash(operatorContextID, actorType, actorID, input)
 		tx, err := db.BeginTx(r.Context(), nil)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start destination transaction")
 			return
 		}
 		defer tx.Rollback() //nolint:errcheck
-		if _, err := tx.ExecContext(r.Context(), `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, tenantID+"\x1f"+idempotencyKey); err != nil {
+		if _, err := tx.ExecContext(r.Context(), `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, operatorContextID+"\x1f"+idempotencyKey); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to lock destination request")
 			return
 		}
 
 		var previousHash, previousDestinationID string
 		err = tx.QueryRowContext(r.Context(), `SELECT request_hash,payout_destination_id
-			FROM wlt_payout_destination_requests WHERE tenant_id=$1 AND idempotency_key=$2`, tenantID, idempotencyKey).Scan(&previousHash, &previousDestinationID)
+			FROM wlt_payout_destination_requests WHERE tenant_id=$1 AND idempotency_key=$2`, operatorContextID, idempotencyKey).Scan(&previousHash, &previousDestinationID)
 		if err == nil {
 			if previousHash != requestHash {
 				shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency-Key was already used with different payout destination inputs")
 				return
 			}
-			destination, readErr := scanCanonicalDestination(tx, tenantID, previousDestinationID)
+			destination, readErr := scanCanonicalDestination(tx, operatorContextID, previousDestinationID)
 			if readErr != nil {
 				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "stored payout destination replay target is unavailable")
 				return
@@ -160,7 +160,7 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 
 		if _, err := tx.ExecContext(r.Context(), `UPDATE wlt_payout_destinations
 			SET active=false,updated_at=now()
-			WHERE tenant_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true`, tenantID, actorType, actorID); err != nil {
+			WHERE tenant_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true`, operatorContextID, actorType, actorID); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to retire current payout destination")
 			return
 		}
@@ -177,7 +177,7 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			VALUES($1,$2,$2,$3,$4,$5,$6,pgp_sym_encrypt($7,$8),pgp_sym_encrypt($9,$8),pgp_sym_encrypt($10,$8),
 				$11,$12,$13,$14,$15,$16,true,$17)
 			RETURNING `+governedDestinationReturning,
-			tenantID, actorID, actorType, input.BeneficiaryName, input.BankName, input.BankBranch,
+			operatorContextID, actorID, actorType, input.BeneficiaryName, input.BankName, input.BankBranch,
 			input.AccountNumber, key, input.IBAN, input.PayoutMobileNumber, input.SettlementPreference,
 			input.BankAccountHolderMatchesOwner, input.BankNotes, maskLast4(input.AccountNumber),
 			maskLast4(input.IBAN), maskLast4(input.PayoutMobileNumber), operatorID))
@@ -187,7 +187,7 @@ func HandleUpsertCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 		}
 		if _, err := tx.ExecContext(r.Context(), `INSERT INTO wlt_payout_destination_requests
 			(tenant_id,partner_id,idempotency_key,request_hash,payout_destination_id,correlation_id)
-			VALUES($1,$2,$3,$4,$5,$6)`, tenantID, actorID, idempotencyKey, requestHash, destination.ID, correlationID); err != nil {
+			VALUES($1,$2,$3,$4,$5,$6)`, operatorContextID, actorID, idempotencyKey, requestHash, destination.ID, correlationID); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to bind payout destination request identity")
 			return
 		}

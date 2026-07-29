@@ -71,8 +71,8 @@ Get-ChildItem -Recurse services\dsh\frontend,services\wlt\frontend -Include *.ts
 فحوصات عامة حسب النطاق:
 
 ```powershell
-pnpm run foundation:gate
-pnpm run journey:gate
+pnpm run guard:foundation
+pnpm run guard:journey
 pnpm run typecheck
 pnpm run lint
 pnpm run test
@@ -81,8 +81,8 @@ pnpm run build
 
 الحراس المكوّنة للبوابتين (لا تُشغّل مباشرة — تعمل عبر البوابات):
 
-* `foundation:gate` = ui-kit-boundary + runtime-config + no-broken-imports + cleanup-policy
-* `journey:gate` = fullstack-boundary + wlt-financial-boundary + runtime-config + no-broken-imports
+* `guard:foundation` = ui-kit-boundary + runtime-config + no-broken-imports + cleanup-policy
+* `guard:journey` = fullstack-boundary + wlt-financial-boundary + runtime-config + no-broken-imports
 
 إذا كان الأمر غير موجود في `package.json` أو workspace:
 

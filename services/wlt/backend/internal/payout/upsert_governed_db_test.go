@@ -44,7 +44,7 @@ func governedPayoutActorID() string {
 func executeCanonicalPayoutDestinationRequest(
 	t *testing.T,
 	db *sql.DB,
-	tenantID, actorType, actorID, idempotencyKey, account string,
+	operatorContextID, actorType, actorID, idempotencyKey, account string,
 ) *httptest.ResponseRecorder {
 	t.Helper()
 	payload := governedDestinationInput{
@@ -64,12 +64,12 @@ func executeCanonicalPayoutDestinationRequest(
 	}
 	path := "/wlt/payout-destinations/" + actorType + "/" + actorID
 	req := httptest.NewRequest(http.MethodPut, path, bytes.NewReader(body))
-	req = req.WithContext(shared.WithTenantContext(context.Background(), tenantID))
+	req = req.WithContext(shared.WithOperatorContext(context.Background(), operatorContextID))
 	req.SetPathValue("actorType", actorType)
 	req.SetPathValue("actorId", actorID)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Idempotency-Key", idempotencyKey)
-	req.Header.Set("X-Correlation-ID", "correlation-"+tenantID+"-"+idempotencyKey)
+	req.Header.Set("X-Correlation-ID", "correlation-"+operatorContextID+"-"+idempotencyKey)
 	recorder := httptest.NewRecorder()
 	HandleUpsertCanonicalPayoutDestination(db)(recorder, req)
 	return recorder
@@ -140,14 +140,14 @@ func TestCanonicalPayoutDestinationIdempotencyAndSingleActiveAreTenantLocal(t *t
 		t.Fatal("cross-tenant request reused another tenant's destination")
 	}
 
-	for _, tenantID := range []string{tenantA, tenantB} {
+	for _, operatorContextID := range []string{tenantA, tenantB} {
 		var activeCount int
 		if err := db.QueryRow(`SELECT COUNT(*) FROM wlt_payout_destinations
-			WHERE tenant_id=$1 AND owner_actor_type='partner' AND owner_actor_id=$2 AND active=true`, tenantID, actorID).Scan(&activeCount); err != nil {
+			WHERE tenant_id=$1 AND owner_actor_type='partner' AND owner_actor_id=$2 AND active=true`, operatorContextID, actorID).Scan(&activeCount); err != nil {
 			t.Fatal(err)
 		}
 		if activeCount != 1 {
-			t.Fatalf("tenant %s active destination count=%d, want 1", tenantID, activeCount)
+			t.Fatalf("tenant %s active destination count=%d, want 1", operatorContextID, activeCount)
 		}
 	}
 

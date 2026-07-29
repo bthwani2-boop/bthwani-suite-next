@@ -47,12 +47,12 @@ func ProcessOrderEventBridgeOnce(ctx context.Context, db *sql.DB) error {
 		}
 		if err := publishOrderEventToOperationalOutbox(ctx, db, event); err != nil {
 			retryAfter := time.Duration(1<<uint(minOrderBridgeAttempt(event.AttemptCount, 10))) * time.Second
-			if markErr := MarkOrderEventRetry(db, event.ID, event.TenantID, err.Error(), retryAfter); markErr != nil {
+			if markErr := MarkOrderEventRetry(db, event.ID, event.OperatorContextID, err.Error(), retryAfter); markErr != nil {
 				log.Printf("[order-event-bridge] failed to persist retry for %s: %v", event.ID, markErr)
 			}
 			continue
 		}
-		if err := MarkOrderEventPublished(db, event.ID, event.TenantID); err != nil {
+		if err := MarkOrderEventPublished(db, event.ID, event.OperatorContextID); err != nil {
 			log.Printf("[order-event-bridge] failed to mark %s published: %v", event.ID, err)
 		}
 	}

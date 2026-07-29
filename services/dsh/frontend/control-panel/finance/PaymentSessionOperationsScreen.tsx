@@ -31,7 +31,7 @@ function toBadgeTone(tone: "action" | "success" | "warning" | "danger" | "info")
 }
 
 export function PaymentSessionOperationsScreen() {
-  const [tenantId, setTenantId] = useState("");
+  const [operatorContextId, setOperatorContextId] = useState("");
   const [paymentSessionId, setPaymentSessionId] = useState("");
   const [state, setState] = useState<ScreenState>("idle");
   const [timeline, setTimeline] = useState<WltPaymentSessionTimeline | null>(null);
@@ -42,13 +42,13 @@ export function PaymentSessionOperationsScreen() {
     [timeline],
   );
 
-  const canSubmit = tenantId.trim().length > 0 && paymentSessionId.trim().length > 0 && state !== "loading" && state !== "refreshing";
+  const canSubmit = operatorContextId.trim().length > 0 && paymentSessionId.trim().length > 0 && state !== "loading" && state !== "refreshing";
 
   const readTimeline = async () => {
     if (!canSubmit) return;
     setState("loading");
     setError(null);
-    const result = await loadPaymentSessionTimeline(paymentSessionId.trim(), tenantId.trim());
+    const result = await loadPaymentSessionTimeline(paymentSessionId.trim(), operatorContextId.trim());
     if (!result.ok) {
       setTimeline(null);
       setError(result.error);
@@ -63,7 +63,7 @@ export function PaymentSessionOperationsScreen() {
     if (!canSubmit || !timeline) return;
     setState("refreshing");
     setError(null);
-    const result = await refreshPaymentSessionProviderStatus(paymentSessionId.trim(), tenantId.trim());
+    const result = await refreshPaymentSessionProviderStatus(paymentSessionId.trim(), operatorContextId.trim());
     if (!result.ok) {
       setError(result.error);
       setState(errorState(result.error));
@@ -180,7 +180,7 @@ export function PaymentSessionOperationsScreen() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem" }}>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
                 <Text role="caption">معرف المستأجر</Text>
-                <CpTextInput aria-label="معرف المستأجر" value={tenantId} onChange={setTenantId} placeholder="tenant-main" />
+                <CpTextInput aria-label="معرف المستأجر" value={operatorContextId} onChange={setOperatorContextId} placeholder="tenant-main" />
               </label>
               <label style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
                 <Text role="caption">معرف جلسة الدفع</Text>

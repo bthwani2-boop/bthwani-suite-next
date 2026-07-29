@@ -15,7 +15,7 @@ type FundingProjection struct {
 	CouponID                 string
 	CheckoutIntentID         string
 	ClientActorID            string
-	TenantID                 string
+	OperatorContextID                 string
 	PartnerID                string
 	PlatformFundedMinorUnits int64
 	PartnerFundedMinorUnits  int64
@@ -85,7 +85,7 @@ func PrepareFundingForIntent(ctx context.Context, db *sql.DB, checkoutIntentID s
 		&projection.ClientActorID,
 		&projection.TotalDiscountMinorUnits,
 		&projection.Currency,
-		&projection.TenantID,
+		&projection.OperatorContextID,
 		&projection.Status,
 		&projection.WLTReservationID,
 		&fundingSource,
@@ -160,17 +160,17 @@ func PrepareFundingForIntent(ctx context.Context, db *sql.DB, checkoutIntentID s
 	return &projection, nil
 }
 
-func AttachWLTReservation(ctx context.Context, db *sql.DB, redemptionID, reservationID, tenantID string) error {
+func AttachWLTReservation(ctx context.Context, db *sql.DB, redemptionID, reservationID, operatorContextID string) error {
 	redemptionID = strings.TrimSpace(redemptionID)
 	reservationID = strings.TrimSpace(reservationID)
-	tenantID = strings.TrimSpace(tenantID)
-	if db == nil || redemptionID == "" || reservationID == "" || tenantID == "" {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if db == nil || redemptionID == "" || reservationID == "" || operatorContextID == "" {
 		return ErrInvalid
 	}
 	result, err := db.ExecContext(ctx, `UPDATE dsh_coupon_redemptions
 		SET funding_status='reserved',funding_tenant_id=$3,wlt_funding_reservation_id=$2,
 		    funding_failure_code='',funding_updated_at=NOW(),updated_at=NOW()
-		WHERE id=$1::uuid AND funding_status='pending'`, redemptionID, reservationID, tenantID)
+		WHERE id=$1::uuid AND funding_status='pending'`, redemptionID, reservationID, operatorContextID)
 	if err != nil {
 		return err
 	}
@@ -240,7 +240,7 @@ func FundingByIntent(ctx context.Context, db *sql.DB, checkoutIntentID string) (
 		&projection.CouponID,
 		&projection.CheckoutIntentID,
 		&projection.ClientActorID,
-		&projection.TenantID,
+		&projection.OperatorContextID,
 		&partner,
 		&projection.PlatformFundedMinorUnits,
 		&projection.PartnerFundedMinorUnits,

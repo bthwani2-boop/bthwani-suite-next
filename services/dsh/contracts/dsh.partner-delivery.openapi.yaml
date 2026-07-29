@@ -147,7 +147,7 @@ paths:
 
   /dsh/client/orders/{orderId}/pickup:
     get:
-      operationId: getDshClientPickupState
+      operationId: getDshClientPickupSession
       tags: [DshPickup]
       parameters: [{ $ref: '#/components/parameters/OrderId' }]
       responses:
@@ -205,7 +205,7 @@ paths:
         '422': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/partner/orders/{orderId}/pickup/verify:
     post:
-      operationId: verifyDshPickupCode
+      operationId: verifyDshPickupSession
       tags: [DshPickup]
       parameters: [{ $ref: '#/components/parameters/OrderId' }]
       requestBody:
@@ -286,7 +286,7 @@ paths:
         '404': { $ref: '#/components/responses/ErrorResponse' }
   /dsh/operator/pickups/{orderId}/extend-window:
     post:
-      operationId: overrideDshPickupWindow
+      operationId: extendDshPickupWindow
       tags: [DshPickup]
       parameters: [{ $ref: '#/components/parameters/OrderId' }]
       requestBody:

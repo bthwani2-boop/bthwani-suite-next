@@ -14,7 +14,7 @@ var ErrWltEventReplayConflict = errors.New("wlt payment event replay conflict")
 
 type WltPaymentEventEnvelope struct {
 	EventID          string
-	TenantID         string
+	OperatorContextID         string
 	CheckoutIntentID string
 	PaymentSessionID string
 	Status           string
@@ -23,7 +23,7 @@ type WltPaymentEventEnvelope struct {
 
 func normalizeWltPaymentEventEnvelope(input WltPaymentEventEnvelope) WltPaymentEventEnvelope {
 	input.EventID = strings.TrimSpace(input.EventID)
-	input.TenantID = strings.TrimSpace(input.TenantID)
+	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.CheckoutIntentID = strings.TrimSpace(input.CheckoutIntentID)
 	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
 	input.Status = strings.TrimSpace(input.Status)
@@ -33,7 +33,7 @@ func normalizeWltPaymentEventEnvelope(input WltPaymentEventEnvelope) WltPaymentE
 
 func WltPaymentEventIdentity(input WltPaymentEventEnvelope) (eventKey string, payloadHash string, err error) {
 	input = normalizeWltPaymentEventEnvelope(input)
-	if input.TenantID == "" || input.CheckoutIntentID == "" || input.PaymentSessionID == "" || input.Status == "" {
+	if input.OperatorContextID == "" || input.CheckoutIntentID == "" || input.PaymentSessionID == "" || input.Status == "" {
 		return "", "", ErrInvalid
 	}
 	if _, _, statusErr := paymentEventTargetState(input.Status); statusErr != nil {
@@ -44,7 +44,7 @@ func WltPaymentEventIdentity(input WltPaymentEventEnvelope) (eventKey string, pa
 	}
 
 	canonicalPayload := strings.Join([]string{
-		input.TenantID,
+		input.OperatorContextID,
 		input.CheckoutIntentID,
 		input.PaymentSessionID,
 		input.Status,
@@ -79,7 +79,7 @@ func BeginWltPaymentEventTx(
 		) VALUES ($1,$2,$3::uuid,$4,$5,$6,$7)
 		ON CONFLICT (event_key) DO NOTHING`,
 		eventKey,
-		input.TenantID,
+		input.OperatorContextID,
 		input.CheckoutIntentID,
 		input.PaymentSessionID,
 		input.Status,
@@ -97,14 +97,14 @@ func BeginWltPaymentEventTx(
 		return eventKey, false, nil
 	}
 
-	var existingPayloadHash, existingTenantID, existingIntentID, existingSessionID, existingStatus string
+	var existingPayloadHash, existingOperatorContextID, existingIntentID, existingSessionID, existingStatus string
 	if err := tx.QueryRowContext(ctx, `
 		SELECT payload_hash, tenant_id, checkout_intent_id::text, payment_session_id, wlt_status
 		FROM dsh_checkout_wlt_event_receipts
 		WHERE event_key=$1
 		FOR UPDATE`, eventKey).Scan(
 		&existingPayloadHash,
-		&existingTenantID,
+		&existingOperatorContextID,
 		&existingIntentID,
 		&existingSessionID,
 		&existingStatus,
@@ -112,7 +112,7 @@ func BeginWltPaymentEventTx(
 		return "", false, err
 	}
 	if existingPayloadHash != payloadHash ||
-		existingTenantID != input.TenantID ||
+		existingOperatorContextID != input.OperatorContextID ||
 		existingIntentID != input.CheckoutIntentID ||
 		existingSessionID != input.PaymentSessionID ||
 		existingStatus != input.Status {
@@ -144,7 +144,7 @@ func MarkWltPaymentEventAppliedTx(
 		SET applied_at=COALESCE(applied_at,NOW()), last_received_at=NOW()
 		WHERE event_key=$1 AND tenant_id=$2 AND checkout_intent_id=$3::uuid`,
 		eventKey,
-		input.TenantID,
+		input.OperatorContextID,
 		input.CheckoutIntentID,
 	)
 	if err != nil {
@@ -165,15 +165,15 @@ func MarkWltPaymentEventAppliedTx(
 		WHERE id=$2::uuid AND tenant_id=$3`,
 		input.Status,
 		input.CheckoutIntentID,
-		input.TenantID,
+		input.OperatorContextID,
 	)
 	return err
 }
 
-func GetIntentForServiceTx(ctx context.Context, tx *sql.Tx, tenantID, intentID string) (*Intent, error) {
-	tenantID = normalizeTenant(tenantID)
+func GetIntentForServiceTx(ctx context.Context, tx *sql.Tx, operatorContextID, intentID string) (*Intent, error) {
+	operatorContextID = normalizeTenant(operatorContextID)
 	intentID = strings.TrimSpace(intentID)
-	if tenantID == "" || intentID == "" {
+	if operatorContextID == "" || intentID == "" {
 		return nil, ErrInvalid
 	}
 	intent, err := scanIntent(tx.QueryRowContext(ctx, `
@@ -181,7 +181,7 @@ func GetIntentForServiceTx(ctx context.Context, tx *sql.Tx, tenantID, intentID s
 		       state, payment_method, wlt_payment_session_id,
 		       delivery_address, note, version, created_at, updated_at
 		FROM dsh_checkout_intents
-		WHERE id=$1::uuid AND tenant_id=$2`, intentID, tenantID))
+		WHERE id=$1::uuid AND tenant_id=$2`, intentID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -193,16 +193,16 @@ func GetIntentForServiceTx(ctx context.Context, tx *sql.Tx, tenantID, intentID s
 func ApplyWltPaymentEventTx(
 	ctx context.Context,
 	tx *sql.Tx,
-	tenantID,
+	operatorContextID,
 	intentID,
 	paymentSessionID,
 	wltStatus string,
 ) (*Intent, error) {
-	tenantID = normalizeTenant(tenantID)
+	operatorContextID = normalizeTenant(operatorContextID)
 	intentID = strings.TrimSpace(intentID)
 	paymentSessionID = strings.TrimSpace(paymentSessionID)
 	wltStatus = strings.TrimSpace(wltStatus)
-	if tenantID == "" || intentID == "" || paymentSessionID == "" || wltStatus == "" {
+	if operatorContextID == "" || intentID == "" || paymentSessionID == "" || wltStatus == "" {
 		return nil, ErrInvalid
 	}
 
@@ -216,7 +216,7 @@ func ApplyWltPaymentEventTx(
 		       delivery_address, note, version, created_at, updated_at
 		FROM dsh_checkout_intents
 		WHERE id=$1::uuid AND tenant_id=$2
-		FOR UPDATE`, intentID, tenantID))
+		FOR UPDATE`, intentID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -241,7 +241,7 @@ func ApplyWltPaymentEventTx(
 		RETURNING id, tenant_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
 		          state, payment_method, wlt_payment_session_id,
 		          delivery_address, note, version, created_at, updated_at`,
-		string(targetState), intentID, tenantID, paymentSessionID))
+		string(targetState), intentID, operatorContextID, paymentSessionID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("%w: intent state changed concurrently", ErrConflict)
 	}

@@ -11,7 +11,7 @@ import (
 	"wlt-api/internal/shared"
 )
 
-func seedRefundLedgerReference(t *testing.T, tenantID string) (*sqlTestReference, func()) {
+func seedRefundLedgerReference(t *testing.T, operatorContextID string) (*sqlTestReference, func()) {
 	t.Helper()
 	db := getTestDB(t)
 	if db == nil {
@@ -31,7 +31,7 @@ func seedRefundLedgerReference(t *testing.T, tenantID string) (*sqlTestReference
 		INSERT INTO wlt_payment_sessions
 			(id,tenant_id,checkout_intent_id,client_id,store_id,payment_method,status,amount_minor_units,currency)
 		VALUES($1,$2,$3,$4,'store-refund-ledger','official_wallet','captured',1000,'YER')`,
-		sessionID, tenantID, "checkout-"+suffix, clientID); err != nil {
+		sessionID, operatorContextID, "checkout-"+suffix, clientID); err != nil {
 		_ = tx.Rollback()
 		_ = db.Close()
 		t.Fatalf("seed payment session: %v", err)
@@ -40,12 +40,12 @@ func seedRefundLedgerReference(t *testing.T, tenantID string) (*sqlTestReference
 		INSERT INTO wlt_refunds
 			(id,tenant_id,payment_session_id,order_id,client_id,amount_minor_units,currency,reason,status)
 		VALUES($1,$2,$3,$4,$5,1000,'YER','tenant resolution test','approved')`,
-		refundID, tenantID, sessionID, orderID, clientID); err != nil {
+		refundID, operatorContextID, sessionID, orderID, clientID); err != nil {
 		_ = tx.Rollback()
 		_ = db.Close()
 		t.Fatalf("seed refund: %v", err)
 	}
-	return &sqlTestReference{db: db, tx: tx, refundID: refundID, tenantID: tenantID}, func() {
+	return &sqlTestReference{db: db, tx: tx, refundID: refundID, operatorContextID: operatorContextID}, func() {
 		_ = tx.Rollback()
 		_ = db.Close()
 	}
@@ -55,7 +55,7 @@ type sqlTestReference struct {
 	db       interface{ Close() error }
 	tx       *sql.Tx
 	refundID string
-	tenantID string
+	operatorContextID string
 }
 
 func TestPostLedgerTransactionDerivesRefundTenantFromPersistedTruth(t *testing.T) {
@@ -72,12 +72,12 @@ func TestPostLedgerTransactionDerivesRefundTenantFromPersistedTruth(t *testing.T
 	if err != nil {
 		t.Fatalf("refund ledger tenant derivation failed: %v", err)
 	}
-	var tenantID string
-	if err := fixture.tx.QueryRow(`SELECT tenant_id FROM wlt_ledger_transactions WHERE id=$1`, transactionID).Scan(&tenantID); err != nil {
+	var operatorContextID string
+	if err := fixture.tx.QueryRow(`SELECT tenant_id FROM wlt_ledger_transactions WHERE id=$1`, transactionID).Scan(&operatorContextID); err != nil {
 		t.Fatalf("read refund ledger tenant: %v", err)
 	}
-	if tenantID != fixture.tenantID {
-		t.Fatalf("ledger tenant=%q want %q", tenantID, fixture.tenantID)
+	if operatorContextID != fixture.operatorContextID {
+		t.Fatalf("ledger tenant=%q want %q", operatorContextID, fixture.operatorContextID)
 	}
 }
 
@@ -87,7 +87,7 @@ func TestPostLedgerTransactionRejectsRefundTenantMismatch(t *testing.T) {
 	if fixture == nil {
 		return
 	}
-	ctx := shared.WithTenantContext(context.Background(), "tenant-refund-attacker")
+	ctx := shared.WithOperatorContext(context.Background(), "tenant-refund-attacker")
 	lines := []LedgerLine{
 		{AccountType: "platform_payable", DebitCredit: "debit", AmountMinorUnits: 1000, Currency: "YER"},
 		{AccountType: "provider_clearing", DebitCredit: "credit", AmountMinorUnits: 1000, Currency: "YER"},

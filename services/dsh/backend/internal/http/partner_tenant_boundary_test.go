@@ -26,10 +26,10 @@ func identitySessionServer(t *testing.T, identity auth.Identity) *httptest.Serve
 
 func TestTrustedPartnerTenantComesFromIdentity(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-a")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "tenant-a")
 	identityServer := identitySessionServer(t, auth.Identity{
 		Subject:   "operator-a",
-		TenantID:  "tenant-a",
+		OperatorContextID:  "tenant-a",
 		Roles:     []string{"operator"},
 		AuthState: "authenticated",
 	})
@@ -38,16 +38,16 @@ func TestTrustedPartnerTenantComesFromIdentity(t *testing.T) {
 	called := false
 	handler := protected.withTrustedPartnerTenant(func(w http.ResponseWriter, r *http.Request) {
 		called = true
-		tenantID, ok := partner.TenantIDFromContext(r.Context())
-		if !ok || tenantID != "tenant-a" {
-			t.Fatalf("trusted tenant = %q, ok=%v", tenantID, ok)
+		operatorContextID, ok := partner.OperatorContextIDFromContext(r.Context())
+		if !ok || operatorContextID != "tenant-a" {
+			t.Fatalf("trusted tenant = %q, ok=%v", operatorContextID, ok)
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/dsh/operator/partners?tenantId=spoofed", nil)
+	req := httptest.NewRequest(http.MethodGet, "/dsh/operator/partners?operatorContextId=spoofed", nil)
 	req.Header.Set("Authorization", "Bearer test-session")
-	req.Header.Set("X-Tenant-ID", "spoofed")
+	req.Header.Set("X-Operator-Context-ID", "spoofed")
 	res := httptest.NewRecorder()
 	handler(res, req)
 
@@ -58,7 +58,7 @@ func TestTrustedPartnerTenantComesFromIdentity(t *testing.T) {
 
 func TestTrustedPartnerTenantRejectsIdentityWithoutTenant(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "inactive")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 	identityServer := identitySessionServer(t, auth.Identity{
 		Subject:   "operator-without-tenant",
 		Roles:     []string{"operator"},
@@ -70,7 +70,7 @@ func TestTrustedPartnerTenantRejectsIdentityWithoutTenant(t *testing.T) {
 	handler := protected.withTrustedPartnerTenant(func(http.ResponseWriter, *http.Request) { called = true })
 	req := httptest.NewRequest(http.MethodGet, "/dsh/operator/partners", nil)
 	req.Header.Set("Authorization", "Bearer test-session")
-	req.Header.Set("X-Tenant-ID", "spoofed-tenant")
+	req.Header.Set("X-Operator-Context-ID", "spoofed-tenant")
 	res := httptest.NewRecorder()
 	handler(res, req)
 
@@ -91,10 +91,10 @@ func TestTrustedPartnerTenantRejectsIdentityWithoutTenant(t *testing.T) {
 
 func TestTrustedPartnerTenantUsesIdentityTenantInsteadOfProcessDefault(t *testing.T) {
 	t.Setenv("BTHWANI_SAAS_MODE", "active")
-	t.Setenv("BTHWANI_DEFAULT_TENANT_ID", "tenant-a")
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "tenant-a")
 	identityServer := identitySessionServer(t, auth.Identity{
 		Subject:   "operator-b",
-		TenantID:  "tenant-b",
+		OperatorContextID:  "tenant-b",
 		Roles:     []string{"operator"},
 		AuthState: "authenticated",
 	})
@@ -103,9 +103,9 @@ func TestTrustedPartnerTenantUsesIdentityTenantInsteadOfProcessDefault(t *testin
 	called := false
 	handler := protected.withTrustedPartnerTenant(func(w http.ResponseWriter, r *http.Request) {
 		called = true
-		tenantID, ok := partner.TenantIDFromContext(r.Context())
-		if !ok || tenantID != "tenant-b" {
-			t.Fatalf("trusted tenant = %q, ok=%v", tenantID, ok)
+		operatorContextID, ok := partner.OperatorContextIDFromContext(r.Context())
+		if !ok || operatorContextID != "tenant-b" {
+			t.Fatalf("trusted tenant = %q, ok=%v", operatorContextID, ok)
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})

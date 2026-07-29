@@ -11,12 +11,12 @@ import (
 )
 
 func TestDispatchPreservesPersistedCancellationCorrelation(t *testing.T) {
-	const tenantID = "tenant-a"
+	const operatorContextID = "tenant-a"
 	var gotCorrelation string
-	var gotTenantID string
+	var gotOperatorContextID string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotCorrelation = r.Header.Get("X-Correlation-ID")
-		gotTenantID = r.Header.Get("X-Tenant-ID")
+		gotOperatorContextID = r.Header.Get("X-Operator-Context-ID")
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"action":        "none",
@@ -26,7 +26,7 @@ func TestDispatchPreservesPersistedCancellationCorrelation(t *testing.T) {
 	defer server.Close()
 
 	client := wlt.NewClient(server.URL, "test-service-token")
-	trustedContext := wlt.WithTenantContext(context.Background(), tenantID)
+	trustedContext := wlt.WithOperatorContext(context.Background(), operatorContextID)
 	result, err := dispatch(trustedContext, client, Event{
 		EventType:        EventTypeCancelForOrder,
 		CheckoutIntentID: "checkout-intent-1",
@@ -42,8 +42,8 @@ func TestDispatchPreservesPersistedCancellationCorrelation(t *testing.T) {
 	if gotCorrelation != "cancel-command-19" {
 		t.Fatalf("X-Correlation-ID=%q want cancel-command-19", gotCorrelation)
 	}
-	if gotTenantID != tenantID {
-		t.Fatalf("X-Tenant-ID=%q want %q", gotTenantID, tenantID)
+	if gotOperatorContextID != operatorContextID {
+		t.Fatalf("X-Operator-Context-ID=%q want %q", gotOperatorContextID, operatorContextID)
 	}
 	if result.Action != "none" || result.SessionStatus != "cancelled" {
 		t.Fatalf("unexpected delivery result: %+v", result)

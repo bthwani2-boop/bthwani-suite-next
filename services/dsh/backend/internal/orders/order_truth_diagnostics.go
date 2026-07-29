@@ -8,7 +8,7 @@ import (
 )
 
 type OrderTruthDiagnostics struct {
-	TenantID                       string     `json:"tenantId"`
+	OperatorContextID                       string     `json:"operatorContextId"`
 	GeneratedAt                    time.Time  `json:"generatedAt"`
 	OrdersCreatedLastFiveMinutes   int64      `json:"ordersCreatedLastFiveMinutes"`
 	OrdersCreatedLastHour          int64      `json:"ordersCreatedLastHour"`
@@ -27,14 +27,14 @@ type OrderTruthDiagnostics struct {
 
 // LoadOrderTruthDiagnostics returns tenant-scoped operational facts only. It
 // intentionally excludes client identity, address snapshots and payment data.
-func LoadOrderTruthDiagnostics(db *sql.DB, tenantID string) (*OrderTruthDiagnostics, error) {
-	tenantID = strings.TrimSpace(tenantID)
-	if tenantID == "" {
+func LoadOrderTruthDiagnostics(db *sql.DB, operatorContextID string) (*OrderTruthDiagnostics, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
 		return nil, ErrInvalid
 	}
 
 	result := &OrderTruthDiagnostics{
-		TenantID:    tenantID,
+		OperatorContextID:    operatorContextID,
 		GeneratedAt: time.Now().UTC(),
 		Health:      "healthy",
 		Alerts:      []string{},
@@ -61,7 +61,7 @@ func LoadOrderTruthDiagnostics(db *sql.DB, tenantID string) (*OrderTruthDiagnost
 		    WHERE a.tenant_id=$1 AND a.event_type='order.snapshot_write_blocked'
 		      AND a.created_at >= NOW()-INTERVAL '1 hour')
 		FROM dsh_orders o
-		WHERE o.tenant_id=$1`, tenantID,
+		WHERE o.tenant_id=$1`, operatorContextID,
 	).Scan(
 		&result.OrdersCreatedLastFiveMinutes,
 		&result.OrdersCreatedLastHour,

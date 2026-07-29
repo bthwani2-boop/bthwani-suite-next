@@ -214,9 +214,9 @@ func actorMayRemit(record *CodRecord, actorID, actorType string) bool {
 	return actorType == "partner" && actorID == record.PartnerID
 }
 
-func getCodRecordForUpdate(ctx context.Context, tx *sql.Tx, tenantID, codRecordID string) (*CodRecord, error) {
+func getCodRecordForUpdate(ctx context.Context, tx *sql.Tx, operatorContextID, codRecordID string) (*CodRecord, error) {
 	row := tx.QueryRowContext(ctx, `SELECT `+codCols+`
-		FROM wlt_cod_records WHERE tenant_id=$1 AND id=$2 FOR UPDATE`, tenantID, codRecordID)
+		FROM wlt_cod_records WHERE tenant_id=$1 AND id=$2 FOR UPDATE`, operatorContextID, codRecordID)
 	record, err := scanCodRecord(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -224,10 +224,10 @@ func getCodRecordForUpdate(ctx context.Context, tx *sql.Tx, tenantID, codRecordI
 	return record, err
 }
 
-func getCustodyEvidenceTx(ctx context.Context, tx *sql.Tx, tenantID, codRecordID, eventType string) (*CodCustodyEvidence, error) {
+func getCustodyEvidenceTx(ctx context.Context, tx *sql.Tx, operatorContextID, codRecordID, eventType string) (*CodCustodyEvidence, error) {
 	row := tx.QueryRowContext(ctx, `SELECT `+codCustodyEvidenceCols+`
 		FROM wlt_cod_custody_evidence
-		WHERE tenant_id=$1 AND cod_record_id=$2 AND event_type=$3`, tenantID, codRecordID, eventType)
+		WHERE tenant_id=$1 AND cod_record_id=$2 AND event_type=$3`, operatorContextID, codRecordID, eventType)
 	evidence, err := scanCodCustodyEvidence(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -235,10 +235,10 @@ func getCustodyEvidenceTx(ctx context.Context, tx *sql.Tx, tenantID, codRecordID
 	return evidence, err
 }
 
-func getCodReconciliationCaseTx(ctx context.Context, tx *sql.Tx, tenantID, codRecordID string) (*CodReconciliationCase, error) {
+func getCodReconciliationCaseTx(ctx context.Context, tx *sql.Tx, operatorContextID, codRecordID string) (*CodReconciliationCase, error) {
 	row := tx.QueryRowContext(ctx, `SELECT `+codReconciliationCols+`
 		FROM wlt_cod_reconciliation_cases
-		WHERE tenant_id=$1 AND cod_record_id=$2`, tenantID, codRecordID)
+		WHERE tenant_id=$1 AND cod_record_id=$2`, operatorContextID, codRecordID)
 	result, err := scanCodReconciliationCase(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -258,7 +258,7 @@ func assertEvidenceReplay(evidence *CodCustodyEvidence, actualAmount int64, proo
 }
 
 func MarkCodCollectedSovereign(ctx context.Context, db *sql.DB, codRecordID string, input CollectCodInput) (*CodCustodyMutationResult, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +281,7 @@ func MarkCodCollectedSovereign(ctx context.Context, db *sql.DB, codRecordID stri
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	record, err := getCodRecordForUpdate(ctx, tx, tenantID, codRecordID)
+	record, err := getCodRecordForUpdate(ctx, tx, operatorContextID, codRecordID)
 	if err != nil || record == nil {
 		return nil, err
 	}
@@ -293,7 +293,7 @@ func MarkCodCollectedSovereign(ctx context.Context, db *sql.DB, codRecordID stri
 	}
 
 	if record.Status != "pending_collection" {
-		existing, evidenceErr := getCustodyEvidenceTx(ctx, tx, tenantID, record.ID, "collection")
+		existing, evidenceErr := getCustodyEvidenceTx(ctx, tx, operatorContextID, record.ID, "collection")
 		if evidenceErr != nil {
 			return nil, evidenceErr
 		}
@@ -303,7 +303,7 @@ func MarkCodCollectedSovereign(ctx context.Context, db *sql.DB, codRecordID stri
 		if err := assertEvidenceReplay(existing, input.ActualAmountMinorUnits, proofReference, actorID, actorType, idempotencyKey); err != nil {
 			return nil, err
 		}
-		reconciliationCase, caseErr := getCodReconciliationCaseTx(ctx, tx, tenantID, record.ID)
+		reconciliationCase, caseErr := getCodReconciliationCaseTx(ctx, tx, operatorContextID, record.ID)
 		if caseErr != nil {
 			return nil, caseErr
 		}
@@ -327,7 +327,7 @@ func MarkCodCollectedSovereign(ctx context.Context, db *sql.DB, codRecordID stri
 			 note,correlation_id,idempotency_key,ledger_transaction_id)
 		VALUES ($1,$2,'collection',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
 		RETURNING `+codCustodyEvidenceCols,
-		tenantID, record.ID, record.AmountMinorUnits, input.ActualAmountMinorUnits, difference,
+		operatorContextID, record.ID, record.AmountMinorUnits, input.ActualAmountMinorUnits, difference,
 		record.Currency, proofReference, actorID, actorType, strings.TrimSpace(input.Note),
 		correlationID, idempotencyKey, ledgerTransactionID,
 	))
@@ -339,7 +339,7 @@ func MarkCodCollectedSovereign(ctx context.Context, db *sql.DB, codRecordID stri
 		UPDATE wlt_cod_records
 		SET status='collected',collected_at=NOW(),updated_at=NOW()
 		WHERE tenant_id=$1 AND id=$2 AND status='pending_collection'
-		RETURNING `+codCols, tenantID, record.ID))
+		RETURNING `+codCols, operatorContextID, record.ID))
 	if err != nil {
 		return nil, fmt.Errorf("transition COD record to collected: %w", err)
 	}
@@ -352,7 +352,7 @@ func MarkCodCollectedSovereign(ctx context.Context, db *sql.DB, codRecordID stri
 				 actual_amount_minor_units,difference_minor_units,currency)
 			VALUES ($1,$2,$3,$4,$5,$6,$7)
 			RETURNING `+codReconciliationCols,
-			tenantID, updated.ID, evidence.ID, evidence.ExpectedAmountMinorUnits,
+			operatorContextID, updated.ID, evidence.ID, evidence.ExpectedAmountMinorUnits,
 			evidence.ActualAmountMinorUnits, evidence.DifferenceMinorUnits, evidence.Currency,
 		))
 		if err != nil {
@@ -367,7 +367,7 @@ func MarkCodCollectedSovereign(ctx context.Context, db *sql.DB, codRecordID stri
 }
 
 func MarkCodRemittedSovereign(ctx context.Context, db *sql.DB, codRecordID string, input RemitCodInput) (*CodCustodyMutationResult, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -387,14 +387,14 @@ func MarkCodRemittedSovereign(ctx context.Context, db *sql.DB, codRecordID strin
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	record, err := getCodRecordForUpdate(ctx, tx, tenantID, codRecordID)
+	record, err := getCodRecordForUpdate(ctx, tx, operatorContextID, codRecordID)
 	if err != nil || record == nil {
 		return nil, err
 	}
 	if !actorMayRemit(record, actorID, actorType) {
 		return nil, ErrCodActorMismatch
 	}
-	collectionEvidence, err := getCustodyEvidenceTx(ctx, tx, tenantID, record.ID, "collection")
+	collectionEvidence, err := getCustodyEvidenceTx(ctx, tx, operatorContextID, record.ID, "collection")
 	if err != nil {
 		return nil, err
 	}
@@ -403,7 +403,7 @@ func MarkCodRemittedSovereign(ctx context.Context, db *sql.DB, codRecordID strin
 	}
 
 	if record.Status != "collected" {
-		existing, evidenceErr := getCustodyEvidenceTx(ctx, tx, tenantID, record.ID, "remittance")
+		existing, evidenceErr := getCustodyEvidenceTx(ctx, tx, operatorContextID, record.ID, "remittance")
 		if evidenceErr != nil {
 			return nil, evidenceErr
 		}
@@ -413,7 +413,7 @@ func MarkCodRemittedSovereign(ctx context.Context, db *sql.DB, codRecordID strin
 		if err := assertEvidenceReplay(existing, collectionEvidence.ActualAmountMinorUnits, proofReference, actorID, actorType, idempotencyKey); err != nil {
 			return nil, err
 		}
-		reconciliationCase, caseErr := getCodReconciliationCaseTx(ctx, tx, tenantID, record.ID)
+		reconciliationCase, caseErr := getCodReconciliationCaseTx(ctx, tx, operatorContextID, record.ID)
 		if caseErr != nil {
 			return nil, caseErr
 		}
@@ -436,7 +436,7 @@ func MarkCodRemittedSovereign(ctx context.Context, db *sql.DB, codRecordID strin
 			 note,correlation_id,idempotency_key,ledger_transaction_id)
 		VALUES ($1,$2,'remittance',$3,$3,0,$4,$5,$6,$7,$8,$9,$10,$11)
 		RETURNING `+codCustodyEvidenceCols,
-		tenantID, record.ID, collectionEvidence.ActualAmountMinorUnits, record.Currency,
+		operatorContextID, record.ID, collectionEvidence.ActualAmountMinorUnits, record.Currency,
 		proofReference, actorID, actorType, strings.TrimSpace(input.Note),
 		correlationID, idempotencyKey, ledgerTransactionID,
 	))
@@ -448,11 +448,11 @@ func MarkCodRemittedSovereign(ctx context.Context, db *sql.DB, codRecordID strin
 		UPDATE wlt_cod_records
 		SET status='remitted',remitted_at=NOW(),updated_at=NOW()
 		WHERE tenant_id=$1 AND id=$2 AND status='collected'
-		RETURNING `+codCols, tenantID, record.ID))
+		RETURNING `+codCols, operatorContextID, record.ID))
 	if err != nil {
 		return nil, fmt.Errorf("transition COD record to remitted: %w", err)
 	}
-	reconciliationCase, err := getCodReconciliationCaseTx(ctx, tx, tenantID, record.ID)
+	reconciliationCase, err := getCodReconciliationCaseTx(ctx, tx, operatorContextID, record.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -463,13 +463,13 @@ func MarkCodRemittedSovereign(ctx context.Context, db *sql.DB, codRecordID strin
 }
 
 func ListCodReconciliationCasesForTenant(ctx context.Context, db *sql.DB, status string) ([]*CodReconciliationCase, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 	status = strings.TrimSpace(status)
 	query := `SELECT ` + codReconciliationCols + ` FROM wlt_cod_reconciliation_cases WHERE tenant_id=$1`
-	args := []any{tenantID}
+	args := []any{operatorContextID}
 	if status != "" {
 		switch status {
 		case "open", "investigating", "resolved":
@@ -501,7 +501,7 @@ func ListCodReconciliationCases(db *sql.DB, status string) ([]*CodReconciliation
 }
 
 func AssignCodReconciliationCaseForTenant(ctx context.Context, db *sql.DB, caseID, operatorID, investigationNote string) (*CodReconciliationCase, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -517,7 +517,7 @@ func AssignCodReconciliationCaseForTenant(ctx context.Context, db *sql.DB, caseI
 		    assigned_at=COALESCE(assigned_at,NOW()),investigation_note=$4,
 		    updated_at=NOW()
 		WHERE tenant_id=$1 AND id=$2 AND status IN ('open','investigating')
-		RETURNING `+codReconciliationCols, tenantID, caseID, operatorID, investigationNote)
+		RETURNING `+codReconciliationCols, operatorContextID, caseID, operatorID, investigationNote)
 	result, err := scanCodReconciliationCase(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrCodStateConflict
@@ -530,7 +530,7 @@ func AssignCodReconciliationCase(db *sql.DB, caseID, operatorID, investigationNo
 }
 
 func ResolveCodReconciliationCaseForTenant(ctx context.Context, db *sql.DB, caseID, operatorID, action, note string) (*CodReconciliationCase, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -553,7 +553,7 @@ func ResolveCodReconciliationCaseForTenant(ctx context.Context, db *sql.DB, case
 		    resolved_at=NOW(),updated_at=NOW()
 		WHERE tenant_id=$1 AND id=$2 AND status='investigating'
 		  AND assigned_to_operator_id=$3
-		RETURNING `+codReconciliationCols, tenantID, caseID, operatorID, action, note)
+		RETURNING `+codReconciliationCols, operatorContextID, caseID, operatorID, action, note)
 	result, err := scanCodReconciliationCase(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrCodStateConflict

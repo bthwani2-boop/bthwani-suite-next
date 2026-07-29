@@ -78,7 +78,7 @@ func TestRetiredManualPayoutLifecycleIsNotAValidCompletionProof(t *testing.T) {
 		"provider_status",
 		"MAKER_CHECKER_VIOLATION",
 		"ledger.PostLedgerTransaction",
-		"shared.RequireTenantContext(ctx)",
+		"shared.RequireOperatorContext(ctx)",
 	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("sovereign payout completion is missing %s", required)

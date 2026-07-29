@@ -38,7 +38,7 @@ type ClientOrderPrompt struct {
 
 type Rating struct {
 	ID            string    `json:"id"`
-	TenantID      string    `json:"tenantId"`
+	OperatorContextID      string    `json:"operatorContextId"`
 	RaterKind     string    `json:"raterKind"`
 	RaterActorID  string    `json:"raterActorId"`
 	TargetKind    string    `json:"targetKind"`
@@ -68,10 +68,10 @@ type OrderRatingInput struct {
 	OrderComment   string `json:"orderComment"`
 }
 
-func PartnerFieldRatingPrompt(ctx context.Context, db *sql.DB, tenantID, partnerActorID string) (PartnerFieldPrompt, error) {
-	tenantID = strings.TrimSpace(tenantID)
+func PartnerFieldRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID, partnerActorID string) (PartnerFieldPrompt, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	partnerActorID = strings.TrimSpace(partnerActorID)
-	if tenantID == "" || partnerActorID == "" {
+	if operatorContextID == "" || partnerActorID == "" {
 		return PartnerFieldPrompt{}, ErrInvalid
 	}
 	var prompt PartnerFieldPrompt
@@ -94,7 +94,7 @@ func PartnerFieldRatingPrompt(ctx context.Context, db *sql.DB, tenantID, partner
 		)
 		  AND p.activation_status IN ('partner_active','client_visible')
 		ORDER BY CASE WHEN p.activation_status='client_visible' THEN 0 ELSE 1 END, p.updated_at DESC
-		LIMIT 1`, partnerActorID, tenantID).Scan(
+		LIMIT 1`, partnerActorID, operatorContextID).Scan(
 		&prompt.PartnerID, &prompt.PartnerName, &prompt.ActivationStatus, &prompt.FieldActorID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return PartnerFieldPrompt{Eligible: false, Reason: "partner_not_active"}, nil
@@ -113,17 +113,17 @@ func PartnerFieldRatingPrompt(ctx context.Context, db *sql.DB, tenantID, partner
 		  SELECT 1 FROM dsh_provider_ratings
 		  WHERE tenant_id=$1 AND rater_actor_id=$2 AND source_kind='partner_activation'
 		    AND source_id=$3 AND target_kind='field' AND status='active'
-		)`, tenantID, partnerActorID, prompt.PartnerID).Scan(&prompt.Completed); err != nil {
+		)`, operatorContextID, partnerActorID, prompt.PartnerID).Scan(&prompt.Completed); err != nil {
 		return PartnerFieldPrompt{}, err
 	}
 	return prompt, nil
 }
 
-func SubmitPartnerFieldRating(ctx context.Context, db *sql.DB, tenantID, partnerActorID string, score int, comment, correlationID string) (Rating, error) {
+func SubmitPartnerFieldRating(ctx context.Context, db *sql.DB, operatorContextID, partnerActorID string, score int, comment, correlationID string) (Rating, error) {
 	if score < 1 || score > 5 || len(strings.TrimSpace(comment)) > 1000 {
 		return Rating{}, ErrInvalid
 	}
-	prompt, err := PartnerFieldRatingPrompt(ctx, db, tenantID, partnerActorID)
+	prompt, err := PartnerFieldRatingPrompt(ctx, db, operatorContextID, partnerActorID)
 	if err != nil {
 		return Rating{}, err
 	}
@@ -131,18 +131,18 @@ func SubmitPartnerFieldRating(ctx context.Context, db *sql.DB, tenantID, partner
 		return Rating{}, ErrNotEligible
 	}
 	return upsertRating(ctx, db, ratingInput{
-		TenantID: tenantID, RaterKind: "partner", RaterActorID: partnerActorID,
+		OperatorContextID: operatorContextID, RaterKind: "partner", RaterActorID: partnerActorID,
 		TargetKind: "field", TargetActorID: prompt.FieldActorID,
 		SourceKind: "partner_activation", SourceID: prompt.PartnerID,
 		Score: score, Comment: comment, CorrelationID: correlationID,
 	})
 }
 
-func ClientOrderRatingPrompt(ctx context.Context, db *sql.DB, tenantID, clientActorID, orderID string) (ClientOrderPrompt, error) {
-	tenantID = strings.TrimSpace(tenantID)
+func ClientOrderRatingPrompt(ctx context.Context, db *sql.DB, operatorContextID, clientActorID, orderID string) (ClientOrderPrompt, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
 	clientActorID = strings.TrimSpace(clientActorID)
 	orderID = strings.TrimSpace(orderID)
-	if tenantID == "" || clientActorID == "" || orderID == "" {
+	if operatorContextID == "" || clientActorID == "" || orderID == "" {
 		return ClientOrderPrompt{}, ErrInvalid
 	}
 	var prompt ClientOrderPrompt
@@ -159,7 +159,7 @@ func ClientOrderRatingPrompt(ctx context.Context, db *sql.DB, tenantID, clientAc
 		         ORDER BY COALESCE(a.completed_at,a.accepted_at,a.updated_at) DESC LIMIT 1
 		       ),'')
 		FROM dsh_orders o
-		WHERE o.id=$1::uuid AND o.client_id=$2 AND o.tenant_id=$3`, orderID, clientActorID, tenantID).Scan(
+		WHERE o.id=$1::uuid AND o.client_id=$2 AND o.tenant_id=$3`, orderID, clientActorID, operatorContextID).Scan(
 		&prompt.OrderID, &prompt.OrderNumber, &status, &prompt.CaptainActorID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ClientOrderPrompt{}, ErrNotFound
@@ -179,7 +179,7 @@ func ClientOrderRatingPrompt(ctx context.Context, db *sql.DB, tenantID, clientAc
 	rows, err := db.QueryContext(ctx, `
 		SELECT target_kind FROM dsh_provider_ratings
 		WHERE tenant_id=$1 AND rater_actor_id=$2 AND source_kind='order_delivery'
-		  AND source_id=$3 AND status='active'`, tenantID, clientActorID, orderID)
+		  AND source_id=$3 AND status='active'`, operatorContextID, clientActorID, orderID)
 	if err != nil {
 		return ClientOrderPrompt{}, err
 	}
@@ -195,26 +195,26 @@ func ClientOrderRatingPrompt(ctx context.Context, db *sql.DB, tenantID, clientAc
 	return prompt, nil
 }
 
-func SubmitClientOrderRatings(ctx context.Context, db *sql.DB, tenantID, clientActorID, orderID string, input OrderRatingInput, correlationID string) ([]Rating, error) {
+func SubmitClientOrderRatings(ctx context.Context, db *sql.DB, operatorContextID, clientActorID, orderID string, input OrderRatingInput, correlationID string) ([]Rating, error) {
 	if input.CaptainScore < 1 || input.CaptainScore > 5 || input.OrderScore < 1 || input.OrderScore > 5 ||
 		len(strings.TrimSpace(input.CaptainComment)) > 1000 || len(strings.TrimSpace(input.OrderComment)) > 1000 {
 		return nil, ErrInvalid
 	}
-	prompt, err := ClientOrderRatingPrompt(ctx, db, tenantID, clientActorID, orderID)
+	prompt, err := ClientOrderRatingPrompt(ctx, db, operatorContextID, clientActorID, orderID)
 	if err != nil { return nil, err }
 	if !prompt.Eligible { return nil, ErrNotEligible }
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil { return nil, err }
 	defer tx.Rollback()
 	captain, err := upsertRatingTx(ctx, tx, ratingInput{
-		TenantID: tenantID, RaterKind: "client", RaterActorID: clientActorID,
+		OperatorContextID: operatorContextID, RaterKind: "client", RaterActorID: clientActorID,
 		TargetKind: "captain", TargetActorID: prompt.CaptainActorID,
 		SourceKind: "order_delivery", SourceID: orderID,
 		Score: input.CaptainScore, Comment: input.CaptainComment, CorrelationID: correlationID,
 	})
 	if err != nil { return nil, err }
 	order, err := upsertRatingTx(ctx, tx, ratingInput{
-		TenantID: tenantID, RaterKind: "client", RaterActorID: clientActorID,
+		OperatorContextID: operatorContextID, RaterKind: "client", RaterActorID: clientActorID,
 		TargetKind: "order", TargetActorID: "",
 		SourceKind: "order_delivery", SourceID: orderID,
 		Score: input.OrderScore, Comment: input.OrderComment, CorrelationID: correlationID,
@@ -225,7 +225,7 @@ func SubmitClientOrderRatings(ctx context.Context, db *sql.DB, tenantID, clientA
 }
 
 type ratingInput struct {
-	TenantID, RaterKind, RaterActorID, TargetKind, TargetActorID string
+	OperatorContextID, RaterKind, RaterActorID, TargetKind, TargetActorID string
 	SourceKind, SourceID, Comment, CorrelationID                  string
 	Score                                                        int
 }
@@ -264,31 +264,31 @@ func upsertRatingTx(ctx context.Context, tx *sql.Tx, input ratingInput) (Rating,
 		            score,comment,status,created_at,updated_at
 		)
 		SELECT u.*, NOT EXISTS(SELECT 1 FROM previous) FROM upserted u`,
-		input.TenantID,input.RaterActorID,input.SourceKind,input.SourceID,input.TargetKind,input.RaterKind,
+		input.OperatorContextID,input.RaterActorID,input.SourceKind,input.SourceID,input.TargetKind,input.RaterKind,
 		input.TargetActorID,input.Score,input.Comment).Scan(
-		&rating.ID,&rating.TenantID,&rating.RaterKind,&rating.RaterActorID,&rating.TargetKind,&rating.TargetActorID,
+		&rating.ID,&rating.OperatorContextID,&rating.RaterKind,&rating.RaterActorID,&rating.TargetKind,&rating.TargetActorID,
 		&rating.SourceKind,&rating.SourceID,&rating.Score,&rating.Comment,&rating.Status,&rating.CreatedAt,&rating.UpdatedAt,&created)
 	if err != nil { return Rating{}, err }
 	action := "updated"; if created { action = "created" }
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_provider_rating_events(rating_id,tenant_id,action,actor_id,score,comment,correlation_id)
-		VALUES ($1::uuid,$2,$3,$4,$5,$6,$7)`, rating.ID,rating.TenantID,action,rating.RaterActorID,rating.Score,rating.Comment,strings.TrimSpace(input.CorrelationID)); err != nil {
+		VALUES ($1::uuid,$2,$3,$4,$5,$6,$7)`, rating.ID,rating.OperatorContextID,action,rating.RaterActorID,rating.Score,rating.Comment,strings.TrimSpace(input.CorrelationID)); err != nil {
 		return Rating{}, err
 	}
 	return rating, nil
 }
 
-func Summary(ctx context.Context, db *sql.DB, tenantID, targetKind, targetActorID string) (RatingSummary, error) {
-	if !oneOf(targetKind,"field","captain") || strings.TrimSpace(tenantID)=="" || strings.TrimSpace(targetActorID)=="" {
+func Summary(ctx context.Context, db *sql.DB, operatorContextID, targetKind, targetActorID string) (RatingSummary, error) {
+	if !oneOf(targetKind,"field","captain") || strings.TrimSpace(operatorContextID)=="" || strings.TrimSpace(targetActorID)=="" {
 		return RatingSummary{},ErrInvalid
 	}
 	summary:=RatingSummary{TargetKind:targetKind,TargetActorID:targetActorID,Distribution:map[string]int{"1":0,"2":0,"3":0,"4":0,"5":0}}
 	var last sql.NullTime
 	if err:=db.QueryRowContext(ctx,`
 		SELECT COALESCE(AVG(score),0)::float8,COUNT(*)::int,MAX(updated_at)
-		FROM dsh_provider_ratings WHERE tenant_id=$1 AND target_kind=$2 AND target_actor_id=$3 AND status='active'`,tenantID,targetKind,targetActorID).Scan(&summary.AverageScore,&summary.RatingCount,&last);err!=nil{return RatingSummary{},err}
+		FROM dsh_provider_ratings WHERE tenant_id=$1 AND target_kind=$2 AND target_actor_id=$3 AND status='active'`,operatorContextID,targetKind,targetActorID).Scan(&summary.AverageScore,&summary.RatingCount,&last);err!=nil{return RatingSummary{},err}
 	if last.Valid { summary.LastRatedAt=last.Time.UTC().Format(time.RFC3339) }
-	rows,err:=db.QueryContext(ctx,`SELECT score,COUNT(*)::int FROM dsh_provider_ratings WHERE tenant_id=$1 AND target_kind=$2 AND target_actor_id=$3 AND status='active' GROUP BY score`,tenantID,targetKind,targetActorID)
+	rows,err:=db.QueryContext(ctx,`SELECT score,COUNT(*)::int FROM dsh_provider_ratings WHERE tenant_id=$1 AND target_kind=$2 AND target_actor_id=$3 AND status='active' GROUP BY score`,operatorContextID,targetKind,targetActorID)
 	if err!=nil{return RatingSummary{},err};defer rows.Close()
 	for rows.Next(){var score,count int;if err:=rows.Scan(&score,&count);err!=nil{return RatingSummary{},err};summary.Distribution[fmt.Sprint(score)]=count}
 	return summary,rows.Err()

@@ -14,7 +14,7 @@ import (
 // to the authenticated request tenant. Identical partner identifiers may exist
 // in different tenants without sharing financial totals.
 func ListSettlementSummaryGoverned(ctx context.Context, db *sql.DB, partnerID, periodStart, periodEnd string) (*SettlementSummary, error) {
-	tenantID, err := shared.RequireTenantContext(ctx)
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func ListSettlementSummaryGoverned(ctx context.Context, db *sql.DB, partnerID, p
 		  AND ($4 = '' OR period_end <= $4::date)`
 
 	var summary SettlementSummary
-	if err := db.QueryRowContext(ctx, q, tenantID, partnerID, periodStart, periodEnd).Scan(
+	if err := db.QueryRowContext(ctx, q, operatorContextID, partnerID, periodStart, periodEnd).Scan(
 		&summary.PartnerID,
 		&summary.PeriodStart,
 		&summary.PeriodEnd,

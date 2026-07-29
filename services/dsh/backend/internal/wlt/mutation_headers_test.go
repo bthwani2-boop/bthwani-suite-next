@@ -11,7 +11,7 @@ import (
 )
 
 func trustedMutationTestContext() context.Context {
-	return WithTenantContext(context.Background(), "tenant-a")
+	return WithOperatorContext(context.Background(), "tenant-a")
 }
 
 func requireMutationHeaders(t *testing.T, r *http.Request) {
@@ -22,8 +22,8 @@ func requireMutationHeaders(t *testing.T, r *http.Request) {
 	if strings.TrimSpace(r.Header.Get("Idempotency-Key")) == "" {
 		t.Fatal("missing Idempotency-Key")
 	}
-	if r.Header.Get("X-Tenant-ID") != "tenant-a" {
-		t.Fatalf("unexpected X-Tenant-ID %q", r.Header.Get("X-Tenant-ID"))
+	if r.Header.Get("X-Operator-Context-ID") != "tenant-a" {
+		t.Fatalf("unexpected X-Operator-Context-ID %q", r.Header.Get("X-Operator-Context-ID"))
 	}
 }
 

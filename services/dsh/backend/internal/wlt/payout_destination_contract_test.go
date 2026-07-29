@@ -69,7 +69,7 @@ func TestUpsertPayoutDestinationSendsOperatorIdAndReadsEnvelope(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-test-token")
-	ctx := WithTenantContext(context.Background(), "tenant-test")
+	ctx := WithOperatorContext(context.Background(), "tenant-test")
 	ref, err := client.UpsertPayoutDestination(ctx, "partner-1", PayoutDestinationUpsertInput{
 		BeneficiaryName:      "Owner",
 		SettlementPreference: "bank",
@@ -109,7 +109,7 @@ func TestGetPayoutDestinationRejectsAnotherActorsDestination(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-test-token")
-	ctx := WithTenantContext(context.Background(), "tenant-test")
+	ctx := WithOperatorContext(context.Background(), "tenant-test")
 	if _, err := client.GetPayoutDestination(ctx, "partner-1"); err == nil {
 		t.Fatal("readback accepted a destination owned by a different actor")
 	}

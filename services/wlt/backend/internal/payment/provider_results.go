@@ -17,7 +17,7 @@ var ErrProviderTenantMismatch = errors.New("provider event tenant does not own t
 
 type ProviderEventInput struct {
 	EventID           string
-	TenantID          string
+	OperatorContextID          string
 	PaymentSessionID  string
 	EventType         string
 	ProviderStatus    string
@@ -40,8 +40,8 @@ type ProviderResultApplication struct {
 // persistence, legal state transition, reconciliation resolution, capture
 // ledger posting and DSH outbox projection commit or roll back together.
 func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input ProviderEventInput) (*ProviderResultApplication, error) {
-	if input.EventID == "" || input.TenantID == "" || input.PaymentSessionID == "" || input.PayloadHash == "" {
-		return nil, fmt.Errorf("eventId, tenantId, paymentSessionId and payloadHash are required")
+	if input.EventID == "" || input.OperatorContextID == "" || input.PaymentSessionID == "" || input.PayloadHash == "" {
+		return nil, fmt.Errorf("eventId, operatorContextId, paymentSessionId and payloadHash are required")
 	}
 	if input.SignatureTime.IsZero() {
 		input.SignatureTime = time.Now().UTC()
@@ -59,7 +59,7 @@ func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input Prov
 	if session == nil {
 		return nil, nil
 	}
-	if session.TenantID != input.TenantID {
+	if session.OperatorContextID != input.OperatorContextID {
 		return nil, ErrProviderTenantMismatch
 	}
 
@@ -77,7 +77,7 @@ func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input Prov
 		UNION ALL SELECT false
 		WHERE NOT EXISTS (SELECT 1 FROM inserted)
 		LIMIT 1`,
-		input.EventID, input.TenantID, input.PaymentSessionID, input.EventType,
+		input.EventID, input.OperatorContextID, input.PaymentSessionID, input.EventType,
 		input.ProviderStatus, input.ProviderReference, input.PayloadHash,
 		input.SignatureTime, input.OccurredAt,
 	).Scan(&inserted)
@@ -85,16 +85,16 @@ func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input Prov
 		return nil, err
 	}
 	if !inserted {
-		var existingHash, existingSessionID, existingTenantID string
+		var existingHash, existingSessionID, existingOperatorContextID string
 		err = tx.QueryRowContext(ctx, `
 			SELECT payload_hash, payment_session_id, tenant_id
 			FROM wlt_payment_provider_events
 			WHERE provider_event_id = $1`, input.EventID,
-		).Scan(&existingHash, &existingSessionID, &existingTenantID)
+		).Scan(&existingHash, &existingSessionID, &existingOperatorContextID)
 		if err != nil {
 			return nil, err
 		}
-		if existingHash != input.PayloadHash || existingSessionID != input.PaymentSessionID || existingTenantID != input.TenantID {
+		if existingHash != input.PayloadHash || existingSessionID != input.PaymentSessionID || existingOperatorContextID != input.OperatorContextID {
 			return nil, ErrProviderEventConflict
 		}
 		ledgerTransactionID := ""
@@ -224,7 +224,7 @@ func postCapturedProviderResult(ctx context.Context, tx *sql.Tx, session *Paymen
 		return "", err
 	}
 	*session = *updated
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, session.ID, session.TenantID, session.CheckoutIntentID, session.SpecialRequestID); err != nil {
+	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, session.ID, session.OperatorContextID, session.CheckoutIntentID, session.SpecialRequestID); err != nil {
 		return "", err
 	}
 	return ledgerTransactionID, nil
@@ -252,7 +252,7 @@ func updateAuthoritativeSessionState(ctx context.Context, tx *sql.Tx, session *P
 		eventType = dshoutbox.EventTypeExpired
 	}
 	if eventType != "" {
-		if err := dshoutbox.Enqueue(tx, eventType, updated.ID, updated.TenantID, updated.CheckoutIntentID, updated.SpecialRequestID); err != nil {
+		if err := dshoutbox.Enqueue(tx, eventType, updated.ID, updated.OperatorContextID, updated.CheckoutIntentID, updated.SpecialRequestID); err != nil {
 			return nil, err
 		}
 	}
