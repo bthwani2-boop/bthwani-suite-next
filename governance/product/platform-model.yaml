@@ -1,9 +1,8 @@
-schemaVersion: 1
+schemaVersion: 2
 state: READY_FOR_IMPLEMENTATION
-classification: UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_WALLET_PLATFORM_WITH_B2B_PARTNER_CAPABILITIES_AND_DEFERRED_OPERATOR_SAAS_READINESS
-partnerAccessModel: MANAGED_B2B_PLATFORM_ACCESS
-operatorSaasReadiness: DEFERRED
-operatorSaasTenantCandidate: EXTERNAL_PLATFORM_OPERATOR
+classification: UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_FINANCIAL_PLATFORM_WITH_PARTNER_SAAS_CAPABILITIES
+partnerAccessModel: MANAGED_PARTNER_SAAS_CAPABILITY
+partnerSaasModel: EMBEDDED_PLATFORM_CAPABILITY
 actors:
   - OPERATOR
   - PARTNER
@@ -25,14 +24,13 @@ partnerCommercialModels:
   - OPERATOR_MANAGED
 context:
   isolationBoundary: PLATFORM_CONTEXT
-  partnerOrganization: NOT_A_TENANT
-  store: NOT_A_TENANT
+  operatorContextPurpose: TRUST_AND_DATA_ISOLATION
+  partnerOrganization: BUSINESS_SCOPE_NOT_TENANT
+  store: BUSINESS_SCOPE_NOT_TENANT
 ownership:
   operationalTruth: DSH
   financialTruth: WLT
   applicationFinancialAccess: DSH_FACADE_ONLY
-saas:
-  activation: DEFERRED
 approvals:
   productManager: APPROVED_BY_CURRENT_OWNER_INSTRUCTION
   productOwnerReadiness: APPROVED_BY_CURRENT_OWNER_INSTRUCTION
