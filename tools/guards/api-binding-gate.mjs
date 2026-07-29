@@ -7,13 +7,17 @@
  * Side contracts that are not present in contracts/master.openapi.yaml are not
  * accepted as runtime truth. This prevents contract-only features from making
  * frontend adapters appear bound while no router, repository, or migration exists.
+ *
+ * The master indexes one entry contract per bounded context and never its
+ * internals. Each entry indexes its own modules under `x-bthwani-contracts`, so
+ * reachability is resolved transitively: master -> entry -> module, one level deep.
  */
 
 import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { fail, listCodeFiles, read, repoRoot, toPosix } from "./_guard-utils.mjs";
-import { parseOpenApiContract } from "./_openapi-utils.mjs";
+import { parseIndexedContractModules, parseOpenApiContract } from "./_openapi-utils.mjs";
 
 const guardId = "api-binding-gate";
 const violations = [];
@@ -42,7 +46,26 @@ function loadMasterContractReferences() {
   return references;
 }
 
-const masterReferences = loadMasterContractReferences();
+// Expands each master-indexed entry contract with the modules it indexes itself.
+// One level only: modules are leaves by definition.
+function expandEntryModules(entryReferences) {
+  const expanded = new Set(entryReferences);
+  for (const entry of entryReferences) {
+    for (const module of parseIndexedContractModules(entry)) {
+      if (!module.exists) {
+        violations.push({
+          file: entry,
+          message: `ENTRY_MODULE_REFERENCE_MISSING ${module.file}`,
+        });
+        continue;
+      }
+      expanded.add(module.file);
+    }
+  }
+  return [...expanded];
+}
+
+const masterReferences = expandEntryModules(loadMasterContractReferences());
 const knownPaths = new Set(
   masterReferences.flatMap((relative) => parseOpenApiContract(relative).map((operation) => operation.path)),
 );

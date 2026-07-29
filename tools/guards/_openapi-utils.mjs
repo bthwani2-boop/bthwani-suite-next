@@ -413,3 +413,45 @@ export function parseOpenApiContract(file, visited = new Set()) {
 export function operationKey(operation) {
   return `${operation.method} ${operation.path}`;
 }
+
+/**
+ * Reads a contract's own module index (`x-bthwani-contracts` by default) and
+ * resolves each entry to a repo-relative path.
+ *
+ * A bounded context indexes its internal modules here so that the master
+ * contract never has to name them. Resolution is deliberately shallow: callers
+ * expand a master-indexed entry exactly one level. A module that itself
+ * declares an index is a structural error, not a recursion case.
+ */
+export function parseIndexedContractModules(file, section = "x-bthwani-contracts") {
+  const absolute = path.join(repoRoot, file);
+  if (!fs.existsSync(absolute)) return [];
+
+  const lines = read(file).split(/\r?\n/);
+  const start = lines.findIndex((line) => line.trim() === `${section}:`);
+  if (start === -1) return [];
+
+  const modules = [];
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    if (countIndent(line) === 0) break;
+
+    // Group headers such as `core:` / `services:` carry no value and are skipped;
+    // only leaves that name a contract file are collected.
+    const match = trimmed.match(/^([A-Za-z0-9_.-]+):\s*["']?(\.{1,2}\/[^"'#\s]+\.yaml)["']?\s*(?:#.*)?$/);
+    if (!match) continue;
+
+    const resolved = toPosix(
+      path.relative(repoRoot, path.resolve(repoRoot, path.dirname(file), match[2])),
+    );
+    modules.push({
+      name: match[1],
+      source: match[2],
+      file: resolved,
+      exists: fs.existsSync(path.join(repoRoot, resolved)),
+    });
+  }
+  return modules;
+}

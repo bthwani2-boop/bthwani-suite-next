@@ -117,6 +117,12 @@ node-gates*.log
 !docs/**/*.md
 !infra/**/*.md
 
+# Contract documentation is part of the contract surface, not incidental prose.
+# contracts/README.md and each service's contracts/README.md explain the master
+# index and per-context manifest rules that the guards enforce.
+!contracts/**/*.md
+!**/contracts/**/*.md
+
 # Explicitly track operational journey checklist
 !tools/checklist/operational-journey-factory-checklist.md
 !tools/checklist/**/

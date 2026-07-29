@@ -155,6 +155,13 @@ function findTopLevelSectionEnd(lines, sectionStart) {
   return lines.length;
 }
 
+function stripTopLevelSection(lines, name) {
+  const start = findTopLevelSection(lines, name);
+  if (start === -1) return [...lines];
+  const end = findTopLevelSectionEnd(lines, start);
+  return [...lines.slice(0, start), ...lines.slice(end)];
+}
+
 function parseEntries(lines, start, end, indent, predicate = () => true) {
   const starts = [];
   for (let index = start; index < end; index += 1) {
@@ -693,7 +700,15 @@ function readModuleEntry(moduleFile, key) {
 export function composeDshOpenApi({ write = true } = {}) {
   const rootText = readText(entryContractPath);
   const structure = parseContractStructure(rootText);
-  const output = [...structure.prefix, 'paths:'];
+  // The entry indexes its own modules and overlays for governance resolution.
+  // The bundle is a fully composed, self-contained document; a module index has
+  // no meaning inside it and would point at files the bundle has already inlined.
+  let bundlePrefix = stripTopLevelSection(structure.prefix, 'x-bthwani-contracts');
+  bundlePrefix = stripTopLevelSection(bundlePrefix, 'x-bthwani-overlays');
+  // Stripping the last section also consumes the blank line that separated the
+  // metadata block from `paths:`; restore it so the bundle layout is unchanged.
+  if (bundlePrefix.length > 0 && bundlePrefix.at(-1) !== '') bundlePrefix.push('');
+  const output = [...bundlePrefix, 'paths:'];
 
   for (const rootEntry of structure.pathEntries) {
     const ref = parseReferenceFromBlock(rootEntry.lines);
@@ -856,7 +871,7 @@ export function verifyDshOpenApiModular() {
 
 function writeReadme() {
   const readmePath = path.join(contractsDirectory, 'README.md');
-  const content = `# DSH OpenAPI contract layout\n\n\`dsh.openapi.yaml\` is the sovereign entry contract. It contains metadata and external references only.\n\n- \`paths/*.paths.yaml\`: path items grouped by operational domain.\n- \`components/schemas/*.schemas.yaml\`: schemas grouped by domain.\n- \`components/*.yaml\`: shared parameters, responses, security schemes, and other component maps.\n- \`generated/dsh.bundle.openapi.yaml\`: deterministic monolithic bundle used for client generation and Swagger. Never edit it directly.\n- \`dsh.modular.manifest.json\`: expected path, operation, component, and domain counts.\n- \`dsh.contract-ownership.json\`: cross-contract path ownership audit.\n\n## Commands\n\n\`pnpm --dir services/dsh openapi:compose\` regenerates the bundle.\n\n\`pnpm --dir services/dsh openapi:generate\` regenerates the bundle and TypeScript client.\n\n\`pnpm --dir services/dsh openapi:verify\` validates references, uniqueness, ownership, bundle drift, and regenerates the client.\n\n## Rules\n\n1. Add each endpoint to exactly one path module.\n2. Keep every \`operationId\` globally unique.\n3. Add reusable schemas under the correct domain module and reference them through the root contract.\n4. Do not add root-relative \`#/components/...\` references inside module files; module references must point back to \`dsh.openapi.yaml\`.\n5. Do not edit generated artifacts manually.\n`;
+  const content = `# DSH OpenAPI contract layout\n\n\`dsh.openapi.yaml\` is the sovereign entry contract. It contains metadata and external references only.\n\n- \`paths/*.paths.yaml\`: path items grouped by operational domain.\n- \`components/schemas/*.schemas.yaml\`: schemas grouped by domain.\n- \`components/*.yaml\`: shared parameters, responses, security schemes, and other component maps.\n- \`generated/dsh.bundle.openapi.yaml\`: deterministic monolithic bundle used for client generation and Swagger. Never edit it directly.\n- \`dsh.modular.manifest.json\`: expected path, operation, component, and domain counts.\n- \`dsh.contract-ownership.json\`: cross-contract path ownership audit.\n- \`contract.manifest.yaml\`: bounded-context manifest. Its \`modules\` list must match the entry's \`x-bthwani-contracts\` exactly.\n\n## Commands\n\n\`pnpm --dir services/dsh openapi:compose\` regenerates the bundle.\n\n\`pnpm --dir services/dsh openapi:generate\` regenerates the bundle and TypeScript client.\n\n\`pnpm --dir services/dsh openapi:verify\` validates references, uniqueness, ownership, bundle drift, and regenerates the client.\n\n## Rules\n\n1. Add each endpoint to exactly one path module.\n2. Keep every \`operationId\` globally unique.\n3. Add reusable schemas under the correct domain module and reference them through the root contract.\n4. Do not add root-relative \`#/components/...\` references inside module files; module references must point back to \`dsh.openapi.yaml\`.\n5. Do not edit generated artifacts manually.\n`;
   writeText(readmePath, content);
 }
 

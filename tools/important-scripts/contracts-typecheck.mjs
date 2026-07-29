@@ -8,7 +8,8 @@ import { composeWltOpenApi } from "../scripts/wlt-openapi-bundle-lib.mjs";
 
 const contracts = [
   "contracts/master.openapi.yaml",
-  "core/identity/contracts/auth.openapi.yaml",
+  "core/identity/contracts/identity.openapi.yaml",
+  "core/platform-control/contracts/platform-control.openapi.yaml",
   "core/providers/contracts/providers.openapi.yaml",
   "core/workforce/contracts/workforce.openapi.yaml",
   "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",

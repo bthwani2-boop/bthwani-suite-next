@@ -15,6 +15,53 @@ x-bthwani-client-generation: ENABLED
 x-bthwani-runtime-dependency: true
 x-bthwani-contract-layout: MODULAR
 x-bthwani-bundle: ./generated/dsh.bundle.openapi.yaml
+x-bthwani-contracts:
+  administration: ./dsh.administration.openapi.yaml
+  analyticsExtensions: ./dsh.analytics-extensions.openapi.yaml
+  captainFinancialEligibility: ./dsh.captain-financial-eligibility.openapi.yaml
+  catalog: ./dsh.catalog.openapi.yaml
+  catalogGovernance: ./dsh.catalog-governance.openapi.yaml
+  catalogProposalReadback: ./dsh.catalog-proposal-readback.openapi.yaml
+  checkout: ./dsh.checkout.openapi.yaml
+  clientAddress: ./dsh.client-address.openapi.yaml
+  clientAddressPrivacy: ./dsh.client-address-privacy.openapi.yaml
+  clientMap: ./dsh.client-map.openapi.yaml
+  codCustody: ./dsh.cod-custody.openapi.yaml
+  deliveryExceptions: ./dsh.delivery-exceptions.openapi.yaml
+  deliveryProofCompletion: ./dsh.delivery-proof-completion.openapi.yaml
+  deliveryProofMedia: ./dsh.delivery-proof-media.openapi.yaml
+  dispatchGovernance: ./dsh.dispatch-governance.openapi.yaml
+  homeMarketingEvents: ./dsh.home-marketing-events.openapi.yaml
+  homeMarketingGovernance: ./dsh.home-marketing-governance.openapi.yaml
+  incidentGovernance: ./dsh.incident-governance.openapi.yaml
+  liveTracking: ./dsh.live-tracking.openapi.yaml
+  marketingCommercial: ./dsh.marketing-commercial.openapi.yaml
+  notificationsGovernance: ./dsh.notifications-governance.openapi.yaml
+  operationalPolicy: ./dsh.operational-policy.openapi.yaml
+  orderRescue: ./dsh.order-rescue.openapi.yaml
+  orderTruth: ./dsh.order-truth.openapi.yaml
+  orderWorkboards: ./dsh.order-workboards.openapi.yaml
+  partnerCommercialClosure: ./dsh.partner-commercial-closure.openapi.yaml
+  partnerDelivery: ./dsh.partner-delivery.openapi.yaml
+  partnerFleet: ./dsh.partner-fleet.openapi.yaml
+  partnerOnboarding: ./dsh.partner-onboarding.openapi.yaml
+  partnerSupport: ./dsh.partner-support.openapi.yaml
+  paymentSessions: ./dsh.payment-sessions.openapi.yaml
+  payoutsDestinations: ./dsh.payouts-destinations.openapi.yaml
+  platformPolicies: ./dsh.platform-policies.openapi.yaml
+  reels: ./dsh.reels.openapi.yaml
+  refunds: ./dsh.refunds.openapi.yaml
+  representativeFinance: ./dsh.representative-finance.openapi.yaml
+  runtimeExtensions: ./dsh.runtime-extensions.openapi.yaml
+  settlementsCommissions: ./dsh.settlements-commissions.openapi.yaml
+  storeCaptainHandoff: ./dsh.store-captain-handoff.openapi.yaml
+  supportGovernance: ./dsh.support-governance.openapi.yaml
+  supportMessageDelivery: ./dsh.support-message-delivery.openapi.yaml
+  workforceScopes: ./dsh.workforce-scopes.openapi.yaml
+x-bthwani-overlays:
+  catalog: ./dsh.catalog.overlay.yaml
+  homeDiscovery: ./dsh.home-discovery.overlay.yaml
+  storeOperationalContext: ./dsh.store-operational-context.overlay.yaml
 
 paths:
   /dsh/field/me/finance/wallet:

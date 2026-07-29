@@ -1,0 +1,18 @@
+# Bounded-context contract manifest.
+#
+# Declares what this context asserts about its own contract surface. The
+# master indexes `entry` and nothing below it; `modules` must match the
+# entry's x-bthwani-contracts exactly. Enforced by contracts-foundation.mjs.
+
+context: core/platform-control
+entry: ./platform-control.openapi.yaml
+owner: core/platform-control
+contractState: CONTRACT_ACTIVE
+layout: INDEXED
+client: ../clients/generated/platform-control-api.ts
+regenerateScript: pnpm run openapi:generate:platform-control
+modules:
+  - ./platform-change-sets.openapi.yaml
+  - ./platform-progressive-rollout.openapi.yaml
+overlays:
+  - ./platform-control.saas.overlay.yaml

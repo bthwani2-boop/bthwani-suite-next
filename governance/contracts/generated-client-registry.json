@@ -15,7 +15,7 @@
     {
       "client": "core/identity/clients/generated/identity-api.ts",
       "mode": "OPENAPI_TYPESCRIPT",
-      "contract": "core/identity/contracts/auth.openapi.yaml",
+      "contract": "core/identity/contracts/identity.openapi.yaml",
       "regenerateScript": "openapi:generate:identity"
     },
     {

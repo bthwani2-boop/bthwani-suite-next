@@ -1,0 +1,18 @@
+# Bounded-context contract manifest.
+#
+# Declares what this context asserts about its own contract surface. The
+# master indexes `entry` and nothing below it; `modules` must match the
+# entry's x-bthwani-contracts exactly. Enforced by contracts-foundation.mjs.
+
+context: core/workforce
+entry: ./workforce.openapi.yaml
+owner: core/workforce
+contractState: CONTRACT_ACTIVE
+layout: INDEXED
+client: ../clients/generated/workforce-api.ts
+regenerateScript: pnpm run openapi:generate:workforce
+modules:
+  - ./workforce.operational-core.openapi.yaml
+  - ./workforce.jrn-003.openapi.yaml
+  - ./workforce.sovereign-leadership.openapi.yaml
+overlays: []

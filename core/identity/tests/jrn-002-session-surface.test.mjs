@@ -37,7 +37,7 @@ test("JRN-002 keeps HTTP, CORS, OpenAPI, and Workforce actor search aligned", as
     read("core/identity/backend/internal/http/server.go"),
     read("core/identity/backend/cmd/identity-api/main.go"),
     read("core/identity/backend/internal/http/browser_cors.go"),
-    read("core/identity/contracts/auth.openapi.yaml"),
+    read("core/identity/contracts/identity.openapi.yaml"),
     read("core/workforce/backend/internal/identityclient/client.go"),
   ]);
 

@@ -32,7 +32,7 @@ x-bthwani-generated-from:
   - services/wlt/contracts/wlt.commercial-summary.openapi.yaml
   - services/wlt/contracts/wlt.promotion-funding.openapi.yaml
   - services/wlt/contracts/wlt.workforce-finance.openapi.yaml
-x-bthwani-source-digest: e9f77ceb10f5d42ed5cfa483e5739131b872a9b6276dc2177448834dc5973763
+x-bthwani-source-digest: f21d6eeb787500617ba12d5ad76d5162cf796f3d5981f0e3ccffec61d92a12b0
 
 paths:
   /wlt/health:

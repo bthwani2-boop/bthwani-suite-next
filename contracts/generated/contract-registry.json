@@ -1,0 +1,263 @@
+{
+  "$generated": "DO NOT EDIT. Regenerate with `pnpm run contracts:registry`.",
+  "schemaVersion": 1,
+  "owningSlice": "VC-155",
+  "master": "contracts/master.openapi.yaml",
+  "masterRole": "MASTER_INDEX_ONLY",
+  "sourceDigest": "aa87a65e9ea42cebc1b694a00fde70c35d63f06407feaeda19da6fec1fdd32df",
+  "totals": {
+    "contexts": 6,
+    "modules": 62,
+    "overlays": 5,
+    "reachablePaths": 659
+  },
+  "contexts": [
+    {
+      "context": "core/identity",
+      "group": "core",
+      "name": "identity",
+      "entry": "core/identity/contracts/identity.openapi.yaml",
+      "manifest": "core/identity/contracts/contract.manifest.yaml",
+      "owner": "core/identity",
+      "contractState": "CONTRACT_ACTIVE",
+      "layout": "INDEXED",
+      "bundle": null,
+      "modules": [
+        "core/identity/contracts/employee-access.openapi.yaml"
+      ],
+      "overlays": [],
+      "entryPathCount": 21,
+      "reachablePathCount": 23,
+      "clients": [
+        {
+          "client": "core/identity/clients/generated/identity-api.ts",
+          "mode": "OPENAPI_TYPESCRIPT",
+          "contract": "core/identity/contracts/identity.openapi.yaml",
+          "regenerateScript": "openapi:generate:identity",
+          "reconstructionOwner": null
+        }
+      ]
+    },
+    {
+      "context": "core/platform-control",
+      "group": "core",
+      "name": "platformControl",
+      "entry": "core/platform-control/contracts/platform-control.openapi.yaml",
+      "manifest": "core/platform-control/contracts/contract.manifest.yaml",
+      "owner": "core/platform-control",
+      "contractState": "CONTRACT_ACTIVE",
+      "layout": "INDEXED",
+      "bundle": null,
+      "modules": [
+        "core/platform-control/contracts/platform-change-sets.openapi.yaml",
+        "core/platform-control/contracts/platform-progressive-rollout.openapi.yaml"
+      ],
+      "overlays": [
+        "core/platform-control/contracts/platform-control.saas.overlay.yaml"
+      ],
+      "entryPathCount": 10,
+      "reachablePathCount": 26,
+      "clients": [
+        {
+          "client": "core/platform-control/clients/generated/platform-control-api.ts",
+          "mode": "OPENAPI_TYPESCRIPT",
+          "contract": "core/platform-control/contracts/platform-control.openapi.yaml",
+          "regenerateScript": "openapi:generate:platform-control",
+          "reconstructionOwner": null
+        },
+        {
+          "client": "core/platform-control/clients/generated/platform-change-sets-api.ts",
+          "mode": "OPENAPI_TYPESCRIPT",
+          "contract": "core/platform-control/contracts/platform-change-sets.openapi.yaml",
+          "regenerateScript": "openapi:generate:platform-control-change-sets",
+          "reconstructionOwner": null
+        },
+        {
+          "client": "core/platform-control/clients/generated/platform-progressive-rollout-api.ts",
+          "mode": "OPENAPI_TYPESCRIPT",
+          "contract": "core/platform-control/contracts/platform-progressive-rollout.openapi.yaml",
+          "regenerateScript": "openapi:generate:platform-control-progressive-rollout",
+          "reconstructionOwner": null
+        },
+        {
+          "client": "core/platform-control/clients/generated/platform-control-saas-runtime.ts",
+          "mode": "HAND_AUTHORED_FACADE",
+          "contract": "core/platform-control/contracts/platform-control.saas.overlay.yaml",
+          "regenerateScript": null,
+          "reconstructionOwner": "VC-220"
+        }
+      ]
+    },
+    {
+      "context": "core/providers",
+      "group": "core",
+      "name": "providers",
+      "entry": "core/providers/contracts/providers.openapi.yaml",
+      "manifest": "core/providers/contracts/contract.manifest.yaml",
+      "owner": "core/providers",
+      "contractState": "CONTRACT_ACTIVE",
+      "layout": "SINGLE",
+      "bundle": null,
+      "modules": [],
+      "overlays": [],
+      "entryPathCount": 7,
+      "reachablePathCount": 7,
+      "clients": [
+        {
+          "client": "core/providers/clients/generated/providers-api.ts",
+          "mode": "OPENAPI_TYPESCRIPT",
+          "contract": "core/providers/contracts/providers.openapi.yaml",
+          "regenerateScript": "openapi:generate:providers",
+          "reconstructionOwner": null
+        }
+      ]
+    },
+    {
+      "context": "core/workforce",
+      "group": "core",
+      "name": "workforce",
+      "entry": "core/workforce/contracts/workforce.openapi.yaml",
+      "manifest": "core/workforce/contracts/contract.manifest.yaml",
+      "owner": "core/workforce",
+      "contractState": "CONTRACT_ACTIVE",
+      "layout": "INDEXED",
+      "bundle": null,
+      "modules": [
+        "core/workforce/contracts/workforce.operational-core.openapi.yaml",
+        "core/workforce/contracts/workforce.jrn-003.openapi.yaml",
+        "core/workforce/contracts/workforce.sovereign-leadership.openapi.yaml"
+      ],
+      "overlays": [],
+      "entryPathCount": 21,
+      "reachablePathCount": 36,
+      "clients": [
+        {
+          "client": "core/workforce/clients/generated/workforce-api.ts",
+          "mode": "OPENAPI_TYPESCRIPT",
+          "contract": "core/workforce/contracts/workforce.openapi.yaml",
+          "regenerateScript": "openapi:generate:workforce",
+          "reconstructionOwner": null
+        }
+      ]
+    },
+    {
+      "context": "services/dsh",
+      "group": "services",
+      "name": "dsh",
+      "entry": "services/dsh/contracts/dsh.openapi.yaml",
+      "manifest": "services/dsh/contracts/contract.manifest.yaml",
+      "owner": "services/dsh",
+      "contractState": "CONTRACT_ACTIVE",
+      "layout": "MODULAR",
+      "bundle": "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
+      "modules": [
+        "services/dsh/contracts/dsh.administration.openapi.yaml",
+        "services/dsh/contracts/dsh.analytics-extensions.openapi.yaml",
+        "services/dsh/contracts/dsh.captain-financial-eligibility.openapi.yaml",
+        "services/dsh/contracts/dsh.catalog.openapi.yaml",
+        "services/dsh/contracts/dsh.catalog-governance.openapi.yaml",
+        "services/dsh/contracts/dsh.catalog-proposal-readback.openapi.yaml",
+        "services/dsh/contracts/dsh.checkout.openapi.yaml",
+        "services/dsh/contracts/dsh.client-address.openapi.yaml",
+        "services/dsh/contracts/dsh.client-address-privacy.openapi.yaml",
+        "services/dsh/contracts/dsh.client-map.openapi.yaml",
+        "services/dsh/contracts/dsh.cod-custody.openapi.yaml",
+        "services/dsh/contracts/dsh.delivery-exceptions.openapi.yaml",
+        "services/dsh/contracts/dsh.delivery-proof-completion.openapi.yaml",
+        "services/dsh/contracts/dsh.delivery-proof-media.openapi.yaml",
+        "services/dsh/contracts/dsh.dispatch-governance.openapi.yaml",
+        "services/dsh/contracts/dsh.home-marketing-events.openapi.yaml",
+        "services/dsh/contracts/dsh.home-marketing-governance.openapi.yaml",
+        "services/dsh/contracts/dsh.incident-governance.openapi.yaml",
+        "services/dsh/contracts/dsh.live-tracking.openapi.yaml",
+        "services/dsh/contracts/dsh.marketing-commercial.openapi.yaml",
+        "services/dsh/contracts/dsh.notifications-governance.openapi.yaml",
+        "services/dsh/contracts/dsh.operational-policy.openapi.yaml",
+        "services/dsh/contracts/dsh.order-rescue.openapi.yaml",
+        "services/dsh/contracts/dsh.order-truth.openapi.yaml",
+        "services/dsh/contracts/dsh.order-workboards.openapi.yaml",
+        "services/dsh/contracts/dsh.partner-commercial-closure.openapi.yaml",
+        "services/dsh/contracts/dsh.partner-delivery.openapi.yaml",
+        "services/dsh/contracts/dsh.partner-fleet.openapi.yaml",
+        "services/dsh/contracts/dsh.partner-onboarding.openapi.yaml",
+        "services/dsh/contracts/dsh.partner-support.openapi.yaml",
+        "services/dsh/contracts/dsh.payment-sessions.openapi.yaml",
+        "services/dsh/contracts/dsh.payouts-destinations.openapi.yaml",
+        "services/dsh/contracts/dsh.platform-policies.openapi.yaml",
+        "services/dsh/contracts/dsh.reels.openapi.yaml",
+        "services/dsh/contracts/dsh.refunds.openapi.yaml",
+        "services/dsh/contracts/dsh.representative-finance.openapi.yaml",
+        "services/dsh/contracts/dsh.runtime-extensions.openapi.yaml",
+        "services/dsh/contracts/dsh.settlements-commissions.openapi.yaml",
+        "services/dsh/contracts/dsh.store-captain-handoff.openapi.yaml",
+        "services/dsh/contracts/dsh.support-governance.openapi.yaml",
+        "services/dsh/contracts/dsh.support-message-delivery.openapi.yaml",
+        "services/dsh/contracts/dsh.workforce-scopes.openapi.yaml"
+      ],
+      "overlays": [
+        "services/dsh/contracts/dsh.catalog.overlay.yaml",
+        "services/dsh/contracts/dsh.home-discovery.overlay.yaml",
+        "services/dsh/contracts/dsh.store-operational-context.overlay.yaml"
+      ],
+      "entryPathCount": 276,
+      "reachablePathCount": 479,
+      "clients": [
+        {
+          "client": "services/dsh/clients/generated/dsh-api.ts",
+          "mode": "OPENAPI_TYPESCRIPT",
+          "contract": "services/dsh/contracts/generated/dsh.bundle.openapi.yaml",
+          "regenerateScript": "openapi:generate:dsh",
+          "reconstructionOwner": null
+        },
+        {
+          "client": "services/dsh/clients/generated/dsh-catalog-api.ts",
+          "mode": "HAND_AUTHORED_FACADE",
+          "contract": "services/dsh/contracts/dsh.catalog.openapi.yaml",
+          "regenerateScript": null,
+          "reconstructionOwner": "VC-190"
+        }
+      ]
+    },
+    {
+      "context": "services/wlt",
+      "group": "services",
+      "name": "wlt",
+      "entry": "services/wlt/contracts/wlt.openapi.yaml",
+      "manifest": "services/wlt/contracts/contract.manifest.yaml",
+      "owner": "services/wlt",
+      "contractState": "CONTRACT_ACTIVE",
+      "layout": "INDEXED",
+      "bundle": "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
+      "modules": [
+        "services/wlt/contracts/wlt.common.openapi.yaml",
+        "services/wlt/contracts/wlt.payments.openapi.yaml",
+        "services/wlt/contracts/wlt.delivery-collections.openapi.yaml",
+        "services/wlt/contracts/wlt.refunds.openapi.yaml",
+        "services/wlt/contracts/wlt.settlements-commissions.openapi.yaml",
+        "services/wlt/contracts/wlt.settlement-operations.openapi.yaml",
+        "services/wlt/contracts/wlt.payouts-destinations.openapi.yaml",
+        "services/wlt/contracts/wlt.payout-failure-boundary.openapi.yaml",
+        "services/wlt/contracts/wlt.cod-custody.openapi.yaml",
+        "services/wlt/contracts/wlt.cod-records.openapi.yaml",
+        "services/wlt/contracts/wlt.commercial.openapi.yaml",
+        "services/wlt/contracts/wlt.commercial-summary.openapi.yaml",
+        "services/wlt/contracts/wlt.promotion-funding.openapi.yaml",
+        "services/wlt/contracts/wlt.workforce-finance.openapi.yaml"
+      ],
+      "overlays": [
+        "services/wlt/contracts/wlt.saas-reference-auth.overlay.yaml"
+      ],
+      "entryPathCount": 14,
+      "reachablePathCount": 88,
+      "clients": [
+        {
+          "client": "services/wlt/clients/generated/wlt-api.ts",
+          "mode": "OPENAPI_TYPESCRIPT",
+          "contract": "services/wlt/contracts/generated/wlt.bundle.openapi.yaml",
+          "regenerateScript": "openapi:generate:wlt",
+          "reconstructionOwner": null
+        }
+      ]
+    }
+  ]
+}

@@ -107,6 +107,9 @@ jobs:
         if: ${{ inputs.governance_policy == 'true' }}
         run: pnpm run guard:cleanup-policy
 
+      - name: Verify contract registry drift
+        run: pnpm run guard:contract-registry-drift
+
       - name: Verify migration manifest drift
         run: pnpm run guard:migration-manifest-drift
 

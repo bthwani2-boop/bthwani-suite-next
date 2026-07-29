@@ -109,6 +109,7 @@
       "VC-140b-payout-destination-ownership-collision": "VERIFIED_SAME_SHA",
       "VC-150-generated-client-provenance-all-services": "VERIFIED_SAME_SHA",
       "VC-150b-generated-client-provenance-generalized": "IMPLEMENTATION_IN_PROGRESS",
+      "VC-155-contract-sovereignty-restructure": "IMPLEMENTATION_IN_PROGRESS",
       "VC-160-identity-trust-closure": "NOT_STARTED",
       "VC-170-actor-organization-tenant-migration": "NOT_STARTED",
       "VC-180-wlt-financial-invariants": "NOT_STARTED",

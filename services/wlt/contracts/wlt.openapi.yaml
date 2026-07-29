@@ -29,6 +29,8 @@ x-bthwani-contracts:
   commercialSummary: ./wlt.commercial-summary.openapi.yaml
   promotionFunding: ./wlt.promotion-funding.openapi.yaml
   workforceFinance: ./wlt.workforce-finance.openapi.yaml
+x-bthwani-overlays:
+  saasReferenceAuth: ./wlt.saas-reference-auth.overlay.yaml
 servers:
   - url: http://localhost:58083
 paths:

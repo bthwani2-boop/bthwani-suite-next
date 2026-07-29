@@ -12,8 +12,10 @@ x-bthwani-owner: core/platform-control
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-scope: platform-runtime-control
 x-bthwani-contracts:
-  - platform-change-sets.openapi.yaml
-  - platform-progressive-rollout.openapi.yaml
+  changeSets: ./platform-change-sets.openapi.yaml
+  progressiveRollout: ./platform-progressive-rollout.openapi.yaml
+x-bthwani-overlays:
+  saas: ./platform-control.saas.overlay.yaml
 
 paths:
   /platform/health:

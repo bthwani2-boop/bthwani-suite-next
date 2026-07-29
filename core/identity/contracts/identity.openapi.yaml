@@ -5,6 +5,8 @@ info:
   description: Authentication, rotating sessions, actor identity, roles, permissions, and internal actor provisioning.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/identity
+x-bthwani-contracts:
+  employeeAccess: ./employee-access.openapi.yaml
 servers:
   - url: http://localhost:58082
     description: Local identity runtime

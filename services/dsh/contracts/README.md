@@ -8,6 +8,7 @@
 - `generated/dsh.bundle.openapi.yaml`: deterministic monolithic bundle used for client generation and Swagger. Never edit it directly.
 - `dsh.modular.manifest.json`: expected path, operation, component, and domain counts.
 - `dsh.contract-ownership.json`: cross-contract path ownership audit.
+- `contract.manifest.yaml`: bounded-context manifest. Its `modules` list must match the entry's `x-bthwani-contracts` exactly.
 
 ## Commands
 

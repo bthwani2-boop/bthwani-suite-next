@@ -29,8 +29,10 @@ immutable commit
 
 ## Contract ownership
 
-- `contracts/master.openapi.yaml` is an index only.
-- `core/identity/contracts/auth.openapi.yaml` owns authentication, session, and actor-identity contracts.
+- `contracts/master.openapi.yaml` is an index only. It indexes exactly one canonical entry contract per bounded context and never a context's internal modules.
+- Each entry contract indexes its own modules under `x-bthwani-contracts` and its own overlays under `x-bthwani-overlays`. Resolution is one level deep: a module is a leaf and must not declare its own index.
+- Each bounded context declares a `contracts/contract.manifest.yaml` whose `entry`, `modules`, and `client` must agree with the entry contract and the generated-client registry.
+- `core/identity/contracts/identity.openapi.yaml` owns authentication, session, and actor-identity contracts.
 - `core/providers/contracts/providers.openapi.yaml` owns the declared external-provider control contract; runtime adapters, registry, audit, and mutations remain with their implementation owners.
 - `services/<service>/contracts/<service>.openapi.yaml` owns public service operations.
 
@@ -41,6 +43,8 @@ immutable commit
 - fake actor or object identifiers presented as runtime truth;
 - preview, demo, fixture, or mock success in live paths;
 - generating service clients from the master index;
+- indexing a context's internal modules from the master index;
+- a file that is both a master-indexed entry and another context's module;
 - backend routes without an owner contract;
 - claiming runtime completion from source presence, route AST, or static binding alone.
 

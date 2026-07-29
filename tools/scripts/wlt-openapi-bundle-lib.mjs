@@ -263,6 +263,7 @@ function buildBundlePrefix(entry, sourceFiles, digest) {
   const pathsStart = findTopLevelSection(entry.lines, 'paths');
   let prefix = entry.lines.slice(0, pathsStart);
   prefix = stripTopLevelSection(prefix, 'x-bthwani-contracts');
+  prefix = stripTopLevelSection(prefix, 'x-bthwani-overlays');
   prefix = stripTopLevelSection(prefix, 'x-bthwani-bundle');
   prefix = stripTopLevelSection(prefix, 'x-bthwani-contract-layout');
   prefix = stripTopLevelSection(prefix, 'x-bthwani-generated-from');

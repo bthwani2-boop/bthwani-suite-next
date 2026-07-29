@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fail, listFiles, repoRoot } from "../guards/_guard-utils.mjs";
+import { fail, listFiles, repoRoot, toPosix } from "../guards/_guard-utils.mjs";
+import { parseIndexedContractModules } from "../guards/_openapi-utils.mjs";
 
 const guardId = "contracts-foundation";
 const violations = [];
@@ -120,6 +121,10 @@ if (fs.existsSync(servicesAuthPath)) {
 const masterRelPath = "contracts/master.openapi.yaml";
 const masterFullPath = path.join(repoRoot, masterRelPath);
 
+// Entry contracts the master indexes, repo-relative. Populated in section 5 and
+// consumed by the entry/module sovereignty checks in section 5b.
+const masterEntryFiles = [];
+
 if (!fs.existsSync(masterFullPath)) {
   violations.push({
     file: masterRelPath,
@@ -191,9 +196,139 @@ if (!fs.existsSync(masterFullPath)) {
               file: masterRelPath,
               message: `Referenced contract '${refPath}' does not exist physically`
             });
+            continue;
           }
+          masterEntryFiles.push(toPosix(path.relative(repoRoot, fullRefPath)));
         }
       }
+    }
+  }
+}
+
+// 5b. Entry/module sovereignty.
+//
+// The master indexes one canonical entry contract per bounded context. Each
+// context indexes its own internals under 'x-bthwani-contracts'. A file must be
+// exactly one of the two: an entry the master names, or a module a context owns.
+// Without this, the master silently regrows references into context internals.
+const moduleOwners = new Map();
+
+// Reads the flat scalar keys and the `modules:` / `overlays:` lists of a manifest.
+function parseContractManifest(relPath) {
+  const values = {};
+  const lists = {};
+  let currentList = null;
+
+  for (const line of fs.readFileSync(path.join(repoRoot, relPath), "utf8").split(/\r?\n/)) {
+    if (!line.trim() || line.trim().startsWith("#")) continue;
+
+    const item = line.match(/^\s+-\s+(\S+)\s*$/);
+    if (item && currentList) {
+      lists[currentList].push(item[1]);
+      continue;
+    }
+
+    const kv = line.match(/^([a-zA-Z]+):\s*(.*?)\s*$/);
+    if (!kv) continue;
+    currentList = null;
+    if (kv[2] === "" || kv[2] === "[]") {
+      lists[kv[1]] = [];
+      currentList = kv[1];
+    } else {
+      values[kv[1]] = kv[2];
+    }
+  }
+  return { values, lists };
+}
+
+const clientRegistryRelPath = "governance/contracts/generated-client-registry.json";
+let clientRegistryEntries = [];
+try {
+  clientRegistryEntries = JSON.parse(fs.readFileSync(path.join(repoRoot, clientRegistryRelPath), "utf8")).entries;
+} catch (err) {
+  violations.push({ file: clientRegistryRelPath, message: `Could not read client registry: ${err.message}` });
+}
+
+for (const entryFile of masterEntryFiles) {
+  // Every master-indexed context declares a manifest, and the manifest must agree
+  // with the entry it describes. A manifest nobody checks is decoration.
+  const manifestRelPath = toPosix(path.join(path.dirname(entryFile), "contract.manifest.yaml"));
+  if (!fs.existsSync(path.join(repoRoot, manifestRelPath))) {
+    violations.push({
+      file: manifestRelPath,
+      message: `master-indexed context '${entryFile}' is missing contract.manifest.yaml`
+    });
+  } else {
+    const manifest = parseContractManifest(manifestRelPath);
+    const declaredEntry = manifest.values.entry
+      ? toPosix(path.normalize(path.join(path.dirname(entryFile), manifest.values.entry)))
+      : "";
+    if (declaredEntry !== entryFile) {
+      violations.push({
+        file: manifestRelPath,
+        message: `manifest 'entry' resolves to '${declaredEntry || "(missing)"}' but the master indexes '${entryFile}'`
+      });
+    }
+
+    const declaredModules = new Set(
+      (manifest.lists.modules ?? []).map((value) =>
+        toPosix(path.normalize(path.join(path.dirname(entryFile), value)))),
+    );
+    const indexedModules = new Set(parseIndexedContractModules(entryFile).map((module) => module.file));
+    const missingFromManifest = [...indexedModules].filter((file) => !declaredModules.has(file));
+    const missingFromEntry = [...declaredModules].filter((file) => !indexedModules.has(file));
+    if (missingFromManifest.length > 0 || missingFromEntry.length > 0) {
+      violations.push({
+        file: manifestRelPath,
+        message:
+          `manifest 'modules' does not match the entry's x-bthwani-contracts` +
+          (missingFromManifest.length > 0 ? `; indexed but not declared: ${missingFromManifest.join(", ")}` : "") +
+          (missingFromEntry.length > 0 ? `; declared but not indexed: ${missingFromEntry.join(", ")}` : "")
+      });
+    }
+
+    const declaredClient = manifest.values.client
+      ? toPosix(path.normalize(path.join(path.dirname(entryFile), manifest.values.client)))
+      : "";
+    if (declaredClient && !clientRegistryEntries.some((entry) => entry.client === declaredClient)) {
+      violations.push({
+        file: manifestRelPath,
+        message: `manifest 'client' '${declaredClient}' is not registered in ${clientRegistryRelPath}`
+      });
+    }
+  }
+
+  for (const module of parseIndexedContractModules(entryFile)) {
+    if (!module.exists) {
+      violations.push({
+        file: entryFile,
+        message: `ENTRY_MODULE_REFERENCE_MISSING ${module.file}`
+      });
+      continue;
+    }
+
+    if (masterEntryFiles.includes(module.file)) {
+      violations.push({
+        file: masterRelPath,
+        message: `'${module.file}' is indexed by the master and is also a module of '${entryFile}'; the master must index entry contracts only`
+      });
+    }
+
+    const previousOwner = moduleOwners.get(module.file);
+    if (previousOwner && previousOwner !== entryFile) {
+      violations.push({
+        file: module.file,
+        message: `module is indexed by two entry contracts: '${previousOwner}' and '${entryFile}'`
+      });
+    }
+    moduleOwners.set(module.file, entryFile);
+
+    // Depth is one by definition: a module is a leaf.
+    if (parseIndexedContractModules(module.file).length > 0) {
+      violations.push({
+        file: module.file,
+        message: `module of '${entryFile}' must not declare its own 'x-bthwani-contracts' index`
+      });
     }
   }
 }

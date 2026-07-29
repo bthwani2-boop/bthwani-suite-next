@@ -11,6 +11,10 @@ info:
     persists the phone.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/workforce
+x-bthwani-contracts:
+  operationalCore: ./workforce.operational-core.openapi.yaml
+  jrn003: ./workforce.jrn-003.openapi.yaml
+  sovereignLeadership: ./workforce.sovereign-leadership.openapi.yaml
 servers:
   - url: http://localhost:58086
     description: Local workforce runtime

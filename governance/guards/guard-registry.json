@@ -65,6 +65,14 @@
       "source_file": "tools/guards/cleanup-policy-gate.mjs"
     },
     {
+      "id": "contract-registry-drift",
+      "name": "Contract Registry Drift Gate",
+      "script": "guard:contract-registry-drift",
+      "exit_level": "fail",
+      "description": "Regenerates contracts/generated/contract-registry.json from the master index, each context's entry contract and manifest, and the generated-client registry, and rejects any difference from the committed file.",
+      "source_file": "tools/guards/contract-registry-drift-gate.mjs"
+    },
+    {
       "id": "migration-manifest-drift",
       "name": "Migration Manifest Drift Gate",
       "script": "guard:migration-manifest-drift",

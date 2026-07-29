@@ -345,6 +345,32 @@ manual_generated_clients: 2
 | `services/dsh/clients/generated/dsh-catalog-api.ts` | VC-190 | 309 سطرًا يدويًا خلف ترويسة `AUTO-GENERATED`؛ التوليد الحقيقي من العقد نفسه يعطي 1719 سطرًا. و`tools/scripts/generate-dsh-catalog-client.mjs` لا يولّده: يقرأه ويتحقق من بضع سلاسل نصية ثم يعيد كتابته كما هو، و`applyOverlay()` فيه تحمل نسخة مضمّنة من الـoverlay بدل تطبيق `dsh.catalog.overlay.yaml`. انحراف العقد غير مرئي هنا. |
 | `core/platform-control/clients/generated/platform-control-saas-runtime.ts` | VC-220 | 18 سطرًا تُعيد صياغة `PlatformSaasRuntimeStatus` من الـoverlay ومن وسوم JSON في Go كنسخة ثالثة متوازية؛ وترويسته تطلب من البشر «إبقاء الملف متوائمًا»، وهو تعريف الحقيقة الموازية. |
 
+### VC-155 — سيادة العقود: Master يفهرس عقود الدخول فقط
+
+المشكلة: `contracts/master.openapi.yaml` كان يفهرس 48 مدخلًا — 5 core و42 من داخليات DSH و1 لـWLT — فيتجاوز `dsh.openapi.yaml` إلى `dsh.refunds.openapi.yaml` و`dsh.order-truth.openapi.yaml` وغيرها. WLT وPlatform Control كانا يطبّقان النموذج الصحيح أصلًا: كل سياق يفهرس وحداته تحت `x-bthwani-contracts` ويعرض عقد دخول واحدًا للأعلى. DSH لم يكن كذلك.
+
+الحاجز التقني: `tools/guards/api-binding-gate.mjs` كان يبني `knownPaths` من مسارات كل ملف يذكره الـMaster **مباشرة** بلا نفاذ متعدٍّ. وحدات DSH الـ42 تحمل 321 مسارًا غير موجودة في عقد الدخول ولا في الـbundle، فحذف أسطرها من الـMaster دون تعديل الحارس كان سيحوّل كل مرجع محوّل إليها إلى `UNREGISTERED PATH`.
+
+ما نُفّذ:
+
+- `parseIndexedContractModules()` في `tools/guards/_openapi-utils.mjs`: قارئ مشترك لفهرس وحدات العقد. `api-binding-gate.mjs` صار يوسّع كل عقد دخول بوحداته بعمق **واحد فقط**؛ الوحدة ورقة بالتعريف.
+- `contracts-foundation.mjs`: ثلاث لا-عودات جديدة — لا ملف يكون مدخلًا في الـMaster ووحدةً لسياق آخر في آن؛ لا وحدة يفهرسها عقدا دخول؛ لا وحدة تعلن فهرسها الخاص. وهذه هي التي تمنع الـMaster من إعادة النمو نحو الداخليات صامتًا.
+- DSH: `x-bthwani-contracts` بـ42 وحدة (بينها `dsh.operational-policy` و`dsh.runtime-extensions` اللتان لم تكونا مفهرستين في أي مكان) و`x-bthwani-overlays` بثلاث overlays. المؤلِّف يجرّد القسمين من الـbundle كما يفعل مؤلّف WLT، فالـbundle لم يتغيّر بايتًا واحدًا.
+- Core: `auth.openapi.yaml` → `identity.openapi.yaml` مع تحديث 12 موضع مرجعي حيًّا (بينها تعليق في `protected_store.go`)؛ workforce يفهرس وحداته الثلاث؛ platform-control حُوِّل من صيغة القائمة إلى صيغة الخريطة المتّسقة.
+- `contract.manifest.yaml` لكل سياق من الستة، و`contracts/generated/contract-registry.json` مشتقًا، مع حارس انحراف مسجَّل ومربوط بـ`contracts:lint` وبـ`ci-policy.yml`.
+
+النتيجة:
+
+```text
+master_index_entries: 48 -> 6
+master_indexed_internal_modules: 42 -> 0
+unregistered_paths: 0
+dsh_bundle_diff: 0
+generated_client_diff: 0
+```
+
+ملاحظتان مفتوحتان لم تُدَّعَ تسويتهما: `pnpm run contracts:lint` كان ولا يزال يفشل داخل Spectral بـ`Cannot read properties of null (reading 'enum')` (مالكه VC-190)، و`openapi:generate:dsh-catalog` كان ولا يزال يفشل قبل هذه الجولة وبعدها بالتوقيع نفسه (مالكه VC-190). لم تُتَّخذ أي منهما أساسًا لهذه الشريحة.
+
 ## المرحلة C — P0/P1: الثقة والماليات والبيانات
 
 ### VC-160 — Identity trust closure

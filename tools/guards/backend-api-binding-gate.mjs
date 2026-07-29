@@ -154,7 +154,7 @@ const services = [
   },
   {
     name: "Identity",
-    openapi: "core/identity/contracts/auth.openapi.yaml",
+    openapi: "core/identity/contracts/identity.openapi.yaml",
     additionalOpenapi: [
       "core/identity/contracts/employee-access.openapi.yaml",
     ],

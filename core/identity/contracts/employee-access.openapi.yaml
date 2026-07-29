@@ -12,7 +12,7 @@ info:
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/identity
 x-bthwani-runtime-dependency: true
-x-bthwani-extends: ./auth.openapi.yaml
+x-bthwani-extends: ./identity.openapi.yaml
 servers:
   - url: http://localhost:58082
     description: Local Identity runtime
