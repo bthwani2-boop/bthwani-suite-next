@@ -7,12 +7,18 @@ on:
     paths:
       - "tools/validclean-repository-reconstruction/audit-full-repository.mjs"
       - ".github/workflows/validclean-full-repository-audit.yml"
+  pull_request:
+    branches: [abdo]
+    types: [opened, synchronize, reopened]
+    paths:
+      - "tools/validclean-repository-reconstruction/audit-full-repository.mjs"
+      - ".github/workflows/validclean-full-repository-audit.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: validclean-full-repository-audit
+  group: validclean-full-repository-audit-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
