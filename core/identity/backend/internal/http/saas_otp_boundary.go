@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -34,6 +35,10 @@ func writeTenantOtpError(w http.ResponseWriter, err error) {
 	case errors.Is(err, identity.ErrActivationUnavailable):
 		sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation is not configured")
 	default:
+		// The response body stays generic, but an unmapped failure must not be
+		// silent: the payload-less 500 previously hid a foreign-key violation on
+		// every public OTP request with nothing in the logs to diagnose it.
+		log.Printf("[identity-api] unmapped OTP request failure: %v", err)
 		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
 	}
 }

@@ -110,7 +110,15 @@ func (r *Repository) RequestOtpForTenant(
 		}
 	}
 
-	result, err := r.issueChallengeTx(ctx, tx, actor, role, surface, "system", "", "")
+	// The self-service consumer path has no operator behind it: the actor is
+	// requesting their own phone verification. issued_by_actor_id is NOT NULL
+	// with a foreign key onto identity_actors, so the previous literal "system"
+	// always violated that key and turned every public client OTP request into
+	// an opaque 500. Recording the actor as their own issuer is the accurate
+	// audit statement and keeps the platform-access invariant intact: workforce
+	// and provider codes still go through IssueActivationForActor, which
+	// requires a real issuing operator.
+	result, err := r.issueChallengeTx(ctx, tx, actor, role, surface, actor.ID, "", "")
 	if err != nil {
 		return IssueActivationResult{}, err
 	}
