@@ -1,259 +1,105 @@
-# 04 — موجات التنفيذ المرتبة
+# 04 — موجات التنفيذ الحاكمة
 
-## القاعدة العامة
+## المرجع التنفيذي
 
-لا تنفذ إعادة الهيكلة أفقيًا على المستودع كله دفعة واحدة. كل موجة تتكون من شرائح صغيرة مغلقة:
-
-```text
-تثبيت SHA
-→ جرد النطاق
-→ تحديد المالك والبديل
-→ إصلاح السبب الجذري
-→ ترحيل المستهلكين
-→ حذف البقايا
-→ تحقق متأثر
-→ Runtime عند الحاجة
-→ Commit ذري
-→ إعادة تثبيت SHA
-```
-
-## الموجة 0 — خط أساس غير معدّل
-
-### الهدف
-
-إثبات ما يعمل وما يفشل قبل أي حذف.
-
-### الأعمال
-
-- تثبيت إصدارات Node وpnpm وGo وExpo/EAS والحزم الفعلية.
-- تثبيت أوامر التشغيل الحقيقية والمنافذ.
-- تشغيل فحوص متأثرة أولية للعقود والحوكمة والأمن وRuntime.
-- تسجيل الإخفاقات كBaseline لا كأدلة إغلاق.
-- إثبات أن إعدادات Expo/EAS/Firebase/Maps/Sentry/Docker موجودة ومتصلة بالمشاريع الصحيحة دون كشف أسرار.
-
-### شرط الانتقال
-
-وجود قائمة فشل قابلة لإعادة الإنتاج على SHA ثابت، ومعرفة الأوامر التي تعد واجهة تشغيل حقيقية.
-
-## الموجة 1 — الجرد الشامل وملكية الملفات
-
-### الهدف
-
-قرار لكل ملف ومجلد داخل الدفعة الجاري تعديلها.
-
-### الأعمال
-
-- جرد Git tree كاملًا.
-- كشف الملفات المكررة دلاليًا، لا بالاسم فقط.
-- تحليل imports/exports/routes/manifests/scripts/workflows.
-- تصنيف generated/evidence/tests/docs/migrations.
-- كشف الملفات بلا مستهلك أو مالك أو Validator.
-
-### شرط الانتقال
-
-`UNKNOWN_OWNERSHIP = 0` داخل أول نطاق P0.
-
-## الموجة 2 — أسس الثقة والهوية
-
-### الشرائح
-
-1. حذف مسار `000000` واختبار Repository.
-2. توحيد actor type → surface.
-3. فصل Bootstrap dev عن المسار الحي.
-4. إزالة Tenant fallbacks والإصلاح بعد الكتابة.
-5. توحيد Permission decision ومنع Role fallback.
-6. تثبيت جلسات الأجهزة والتدوير والإبطال والتدقيق.
-
-### البوابات
-
-- لا رمز شامل.
-- لا جلسة دون تحدٍ أو مصادقة صحيحة.
-- لا نطاق قادم من العميل باعتباره موثوقًا.
-- اختبارات سلبية لكل Surface متأثر.
-
-## الموجة 3 — نموذج الجهة والنطاق والمنتج
-
-### الهدف
-
-إزالة الفهم الخاطئ بأن كل شريك Tenant.
-
-### الأعمال
-
-- اعتماد actor/organization/store/operator scopes.
-- تحديد إن كان Tenant حقيقيًا موجودًا الآن أم قدرة مستقبلية فقط.
-- إزالة أو إعادة تسمية tenant fields التي تمثل partner/store خطأً بعد خطة ترحيل آمنة.
-- تثبيت Product Truth للممثلين وأوضاع التنفيذ والعقد التجاري.
-
-### البوابة
-
-لا استخدام دلالي ملتبس لـ`tenant_id`، وكل نطاق له مصدر موثوق واختبارات عزل مناسبة.
-
-## الموجة 4 — حوكمة وعملاء OpenAPI
-
-### الشرائح
-
-1. اختيار `contracts/master.openapi.yaml` وحذف المصدر الجذري الموازي بعد ترحيل المستهلكين.
-2. Identity entry + bundle + client.
-3. Workforce entry + bundle + client.
-4. WLT entry + bundle + client.
-5. DSH entry + bundle + client.
-6. Providers وPlatform Control.
-7. Route/contract/client parity.
-
-### البوابة
-
-كل عدادات OpenAPI في `03_OPENAPI_RECONSTRUCTION_PLAN.md` تساوي صفرًا.
-
-## الموجة 5 — WLT والحدود المالية
-
-### الشرائح
-
-- حذف Registry التقاعد بعد استبداله باختبارات سلوك مباشرة.
-- إزالة القوائم المالية اليدوية من الحراس.
-- تشديد schemas المالية.
-- تثبيت ledger kernel ومنع الكتابة العامة.
-- تثبيت Idempotency وreference وaudit وreadback.
-- فصل العمولة والاشتراك وسياسة التوصيل وتعويض الكابتن.
-- اختبار COD للشريك وبثواني والدفع الإلكتروني والاسترداد والتسوية.
-
-### البوابة
-
-- لا Financial mutation خارج WLT.
-- لا تعديل مباشر للرصيد.
-- القيود متوازنة وقابلة للمصالحة.
-- اختبارات timeout/unknown/duplicate/partial failure ناجحة.
-
-## الموجة 6 — DSH ومصادر الحقيقة التشغيلية
-
-### الشرائح
-
-- المتاجر والشركاء ونشر المتجر.
-- الكتالوج المركزي وAssortment.
-- السلة وقابلية الخدمة.
-- الطلب وState Machine واحدة.
-- التجهيز والإسناد وأوضاع التنفيذ.
-- إثبات التسليم والاستثناءات والدعم.
-- Outbox وقراءة WLT المرجعية.
-
-### البوابة
-
-- لا كتالوج محلي.
-- لا حالة طلب موازية.
-- لا Legacy route قابل للوصول.
-- لا شاشة تعرض نجاحًا دون Readback.
-
-## الموجة 7 — Workforce والهيكل الإداري
-
-### الأعمال
-
-- فصل Actor عن الملف الوظيفي.
-- تثبيت مدير المشروع والقيادات ومديري الأقسام والموظفين كتكليفات وصلاحيات ونطاقات.
-- توحيد ملفات الكابتن والميداني المهنية.
-- ربط التفعيل من Workforce إلى Identity بactor_id.
-- ربط DSH scopes وWLT financial profiles بالمراجع فقط.
-
-### البوابة
-
-رحلة رأسية كاملة:
+التفاصيل والشرائح والحالات في:
 
 ```text
-إنشاء موظف
-→ تعيين صلاحية ونطاق
-→ إصدار كود أول
-→ تفعيل جهاز
-→ دخول
-→ تحميل الملف
-→ إظهار الواجهة المسموحة
-→ منع الوصول غير المصرح
+10_REPOSITORY_WIDE_EXECUTION_LEDGER.md
 ```
 
-## الموجة 8 — العقل المشترك والأسطح
+هذا الملف يحدد ترتيب الاعتماديات فقط ولا يكرر محتوى السجل.
 
-### الأعمال
+## دورة كل شريحة
 
-- منع fetch/Axios وبناء URLs داخل Screens.
-- نقل controllers/adapters/view models إلى مالك مشترك.
-- إزالة Domain enums وpermissions المحلية.
-- ربط app-client/app-partner/app-captain/app-field/control-panel بالعملاء المولدين.
-- إغلاق loading/empty/error/blocked/offline/readback.
+```text
+PIN SHA
+→ INVENTORY
+→ CHOOSE OWNER
+→ BUILD REPLACEMENT
+→ MIGRATE CONSUMERS
+→ DELETE OLD PATHS
+→ VERIFY STATIC/CONTRACT/DB/RUNTIME
+→ RECORD SAME-SHA EVIDENCE
+```
 
-### البوابة
+## الموجة 0 — إعادة تأسيس الحزمة
 
-صفر شاشات يتيمة، وصفر raw calls، وصفر منطق أعمال مكرر بين الأسطح.
+```text
+VC-100 full audit
+VC-101 package state unification
+VC-102 path decision registry
+```
 
-## الموجة 9 — قاعدة البيانات والترحيلات
+لا يبدأ تنظيف واسع قبل إزالة تضارب حالة الحزمة وتثبيت مرجع الجرد.
 
-### الأعمال
+## الموجة 1 — العقود والترحيلات
 
-- جرد migrations وترقيمها وchecksums.
-- منع تعديل Migration مطبقة.
-- فحص IF NOT EXISTS المستخدم لإخفاء drift.
-- قيود وفهارس ونطاقات صحيحة.
-- Backfill بقراءة راجعة ومصالحة.
-- Fresh/old/replay/partial failure/recovery.
+```text
+VC-110 Platform Control contracts
+VC-120 DSH contracts
+VC-130 migration history
+VC-140 OpenAPI metadata
+VC-150 generated clients
+```
 
-### البوابة
+السبب: بقية المنظومة تعتمد على عقود وSchema يمكن الوثوق بها.
 
-قاعدة جديدة وقديمة تعملان، وإعادة التشغيل آمنة، ولا بيانات مجهولة الملكية داخل النطاق المرحّل.
+## الموجة 2 — الثقة والنطاق والماليات
 
-## الموجة 10 — Runtime والبنية التحتية
+```text
+VC-160 Identity trust
+VC-170 actor/organization/tenant semantics
+VC-180 WLT invariants
+VC-190 DSH operational truth
+```
 
-### الأعمال
+لا يُسمح بإعادة هيكلة أسطح واسعة قبل وضوح حدود الثقة ومالك البيانات.
 
-- إصلاح readiness بدل restart wrapper.
-- توحيد واجهة runtime commands.
-- الحفاظ على Docker/Postgres/MinIO/Redis/المحاكيات المطلوبة.
-- حذف المكونات غير المستخدمة بعد إثبات عدم وجود مستهلك.
-- التحقق من clean environment وCI parity.
+## الموجة 3 — Workforce والأسطح
 
-### البوابة
+```text
+VC-200 Workforce/administration
+VC-210 shared frontend brains
+VC-220 all surfaces
+```
 
-تشغيل من بيئة نظيفة دون Seed خفي أو fallback أو إعداد خاص بجهاز واحد.
+كل Capability يغلق رأسيًا، لا شاشة منفردة.
 
-## الموجة 11 — الحوكمة والمهارات والحراس
+## الموجة 4 — Runtime والبنية
 
-### الأعمال
+```text
+VC-230 runtime interface
+VC-240 mobile/EAS/Firebase/Sentry
+VC-250 infrastructure namespaces
+```
 
-- إصلاح سجل السلطة والمفردات والمالك الواحد.
-- تصغير الحوكمة إلى ملفات حاكمة ومقروءة آليًا.
-- دمج النصوص المكررة ثم حذفها.
-- تسجيل Skills الفعلية فقط، وجعل Adapters رقيقة.
-- جعل Guard يقرأ المصدر الحاكم بدل امتلاك قوائم بديلة.
-- حذف Evidence وتقارير الرحلات التاريخية غير المستهلكة.
+الهدف تشغيل نظيف دون إعدادات جهاز مخفية أو readiness كاذب.
 
-### البوابة
+## الموجة 5 — الحوكمة والأدوات والضجيج
 
-كل مرجع في `AGENTS.md` موجود، وكل Registry مطابق للقرص، ولا Status متعارض، والحراس الأساسية تمر على SHA نفسه.
+```text
+VC-260 governance authority
+VC-270 agents/skills/guards
+VC-280 tooling and commands
+VC-290 documentation and paths
+```
 
-## الموجة 12 — تنظيف الأدوات والأوامر والوثائق
+الحذف النهائي للضجيج يأتي بعد ترحيل المستهلكين، لا قبله.
 
-### الأعمال
+## الموجة 6 — الإغلاق
 
-- توحيد aliases.
-- حذف scripts غير المستهلكة.
-- مراجعة knip ونطاقات الاستثناء.
-- حذف روابط مطلقة وتقارير تاريخية.
-- نقل التوثيق التشغيلي الضروري إلى مالكه.
+```text
+VC-300 same-SHA full verification
+VC-310 final deletion sweep
+VC-320 closure declaration
+```
 
-### البوابة
+## قواعد الانتقال
 
-كل أمر عام له غرض مختلف، وكل Script له مستهلك، وكل وثيقة دائمة لها مالك وشرط تقاعد.
-
-## الموجة 13 — التحقق النهائي
-
-### الطبقات
-
-- static.
-- contracts.
-- generated reproducibility.
-- database.
-- security.
-- finance.
-- runtime.
-- multi-surface.
-- CI same-SHA.
-- cleanup residue scan.
-
-### القرار
-
-لا يعلن `CLOSED_WITH_EVIDENCE` إلا إذا كانت بوابات الصفر ناجحة على الالتزام النهائي نفسه. أي مانع خارجي يسجل بدقة ولا يتحول إلى نجاح.
+- P0 داخل الموجة الحالية يمنع الانتقال.
+- `IMPLEMENTED_PENDING_*` ليست إغلاقًا.
+- أي مسار قديم يبقى بعد عمل البديل يمنع إغلاق الشريحة.
+- أي Guard يقرأ قائمة بديلة بدل المصدر الحاكم يمنع الإغلاق.
+- أي DB/Runtime proof على SHA مختلف يرفض.
+- الحالة النهائية الوحيدة: `CLOSED_WITH_EVIDENCE` وفق `17_FINAL_CLOSURE_MATRIX.md`.
