@@ -1,190 +1,136 @@
-# 00 — خط الأساس البعيد والنتائج الأولية
+# 00 — خط الأساس البعيد والحالة الحالية
 
-## 1. تثبيت GitHub
+## 1. تاريخ الفرع
 
 ```yaml
 repository: bthwani2-boop/bthwani-suite-next
 default_branch: master
-source_candidate_abdo: 98ab47dd59e5fc6f615cbe96094ec61fa0c8ffa3
-source_candidate_cleaning: 731133fc0d727510cbc4e3b2896abd7f55fca7a0
-merge_base: 98ab47dd59e5fc6f615cbe96094ec61fa0c8ffa3
-cleaning_ahead_by: 10
-chosen_source: abdo
-created_branch: validclean
-plan_state: PLAN_ONLY_AWAITING_OWNER_APPROVAL
+original_source: abdo@98ab47dd59e5fc6f615cbe96094ec61fa0c8ffa3
+rejected_source: cleaning@731133fc0d727510cbc4e3b2896abd7f55fca7a0
+execution_branch: validclean
+audit_target: fbc0139234e2bdb34a8de77d74a6b91297a754b0
+package_state: REPOSITORY_WIDE_RECONSTRUCTION_AUTHORIZED
 ```
 
-## 2. لماذا لم يُختر cleaning؟
+تم اختيار `abdo` لأن `cleaning` حذف اختبارات أمن وعزل وماليات وRuntime وملفات سلطة ما زالت المراجع الحاكمة تعتمد عليها. نوايا التنظيف الصحيحة تُعاد بعد إثبات بدائل الحماية، ولا تُعتمد حذوفات جماعية غير مثبتة.
 
-`cleaning` ليس مجرد تنظيف محدود. المقارنة البعيدة تثبت حذف مئات الملفات، منها مجموعات واسعة من:
+## 2. ما نُفذ قبل إعادة التأسيس
 
-- اختبارات Identity والمصادقة والتفعيل والجلسات وحدود المستأجر.
-- اختبارات Workforce والجاهزية والتكليفات.
-- اختبارات DSH للكتالوج والسلة والطلب والإسناد والتوصيل والعزل والـOutbox.
-- اختبارات Platform Control وProviders.
-- اختبارات تطبيق العميل ولوحة التحكم وRuntime والأمن.
-- عقود Product Truth وسجلات السلطة والحراس والمهارات وسياسات GitHub.
-- محاكيات مالية وملفات تشغيل وبنية تحتية.
+الدفعة السابقة عالجت نطاقًا محدودًا:
 
-كما أن `AGENTS.md` في `cleaning` ما زال يفرض الرجوع إلى:
+- إزالة رمز التفعيل الشامل `000000`.
+- توحيد خريطة actor type إلى surface.
+- منع Public OTP لأدوار Workforce.
+- إزالة Tenant fallback في ProvisionActor.
+- منع إعادة استخدام Actor عبر Tenant مختلف.
+- حذف Master OpenAPI الجذري الموازي.
+- بناء WLT Bundle/Client حتمي.
+- حذف سجل WLT retirement الموازي.
+- إعادة تسمية بعض عقود WLT من Journey names إلى domain names.
+
+هذه الإنجازات لا تعني إغلاق المستودع؛ كانت دفعة Identity/WLT/OpenAPI محدودة.
+
+## 3. الجرد الشامل المثبت
+
+تم فحص كل الملفات المتتبعة على SHA:
 
 ```text
-governance/authority/authority-precedence.json
-governance/contracts/decision-vocabulary.json
-governance/product/PRODUCT_TRUTH_POLICY.md
-governance/authority/single-owner-mode.json
+fbc0139234e2bdb34a8de77d74a6b91297a754b0
 ```
 
-بينما المقارنة تثبت حذف هذه الملفات من `cleaning`. هذا تناقض سلطة مباشر، ويجعل مسار الحوكمة غير قابل للتنفيذ كما هو مكتوب.
-
-القرار: نستخدم `abdo` كقاعدة خام محفوظة، ونستفيد من نوايا التنظيف الصحيحة في `cleaning` فقط بعد مراجعتها ملفًا ملفًا وإثبات بدائل الحماية.
-
-## 3. نتائج مثبتة مباشرة على abdo
-
-### VC-P0-001 — فهرسان رئيسيان نشطان لـOpenAPI
-
-يوجد ملفان يعلنان الدور نفسه والحالة نفسها:
-
-```text
-/openapi.yaml
-/contracts/master.openapi.yaml
-```
-
-كلاهما يحمل:
+الدليل:
 
 ```yaml
-x-bthwani-contract-state: CONTRACT_ACTIVE
-x-bthwani-contract-role: MASTER_INDEX_ONLY
+workflow_run: 30422464222
+artifact_id: 8712393270
+artifact_digest: 64fd8d9a875a5acc2cb41f2765052d26df871b1b38434f451f0eed2897383895
+total_paths: 3938
 ```
 
-لكنهما مختلفان في الإصدار وقائمة العقود. هذه ازدواجية مصدر حقيقة عقدي مؤكدة.
+النتائج المنقحة:
 
-المعالجة المخططة:
+```yaml
+P0: 56
+P1: 60
+P2: 229
+```
+
+التفاصيل في `08_PINNED_FULL_REPOSITORY_AUDIT.md`.
+
+## 4. P0 المثبت
+
+### 4.1 ملكية OpenAPI مصدرية مكررة
+
+24 operationId موجودة في أكثر من عقد مصدر قابل للتحرير.
+
+#### Platform Control
+
+- Change Sets في عقد الوحدة وعقد الخدمة.
+- Progressive Rollout في عقد Journey وعقد الخدمة.
+
+#### DSH
+
+ثماني عمليات Pickup/Partner Delivery SLA مشتركة بين:
 
 ```text
-contracts/master.openapi.yaml = الفهرس الوحيد
-→ ترحيل المراجع الصحيحة
-→ تحديث كل المستهلكين
-→ حذف /openapi.yaml
-→ حارس يمنع MASTER_INDEX_ONLY ثانٍ
+services/dsh/contracts/dsh.fulfillment-operations.openapi.yaml
+services/dsh/contracts/dsh.partner-delivery.openapi.yaml
 ```
 
-### VC-P0-002 — رمز تفعيل شامل 000000 داخل مالك Identity
+القرار: Entry contract لا ينسخ Modules. Composer وBundle مولد، وoperationId له مالك مصدر واحد.
 
-`core/identity/backend/internal/identity/repository.go` يحتوي داخل `ConsumeActivation` مسارًا خاصًا للرمز `000000` يقوم بتفعيل الممثل وإنشاء جلسة دون استهلاك تحدي تفعيل صالح.
+### 4.2 تاريخ الترحيلات غير محكوم برقم فريد
 
-هذه ليست بيانات اختبار خارجية؛ إنها شعبة حية داخل Repository المالك للمصادقة.
+32 مجموعة تحمل البادئة الرقمية نفسها. Runner الحالي يرتب بالاسم الكامل ويسجل الاسم الكامل وChecksum؛ التنفيذ ممكن، لكن رقم Migration ليس ترتيبًا حاكمًا.
 
-المعالجة المخططة:
+القرار: Manifest تاريخي صريح، تجميد الملفات المطبقة، Cutover إلى أسماء monotonic فريدة، ومنع أي تصادم جديد. راجع `12_DATABASE_MIGRATION_RECONSTRUCTION.md`.
 
-```text
-حذف المسار من Repository
-→ اختبار Repository سلبي مباشر
-→ حظر دلالي لأي رمز شامل أو Master OTP
-→ إبقاء Challenge flow واحد فقط
+## 5. P1 المثبت
+
+```yaml
+absolute_local_paths: 21
+generated_without_provenance: 7
+openapi_owner_missing: 22
+unconsumed_generated_candidates: 9
 ```
 
-### VC-P0-003 — خريطة actor type إلى surface ليست المصدر الوحيد فعليًا
+وتشمل:
 
-`activationSurfaceByActorType` تعلن أنها المصدر الوحيد لكنها تحتوي `field` و`captain` فقط، ثم يضيف `ConsumeActivation` حالتي `client` و`partner` بشروط منفصلة.
+- مسارات جهاز محلي داخل كود ووثائق وحراس.
+- Bridges/Facades مولدة أو مسماة generated بلا provenance واضح.
+- عقود DSH/WLT/Workforce/Platform Control بلا مالك صريح.
+- Identity build outputs لا يظهر لها مستهلك مباشر ويجب فحص package exports قبل القرار.
 
-المعالجة المخططة: خريطة مركزية واحدة تصدر وتستهلك وتختبر جميع الأنواع المسموح بها.
+## 6. P2 المثبت
 
-### VC-P0-004 — Tenant محلي ثابت داخل Bootstrap Identity
-
-`BootstrapLocalActors` يكتب `tenant_id = 'local-dsh'` مباشرة لكل الممثلين المحليين. هذا قد يكون مقبولًا فقط ضمن Bootstrap تطوير معزول وغير قابل للوصول في الإنتاج، لكنه حاليًا يحتاج إثبات فصل صارم بين Dev وRuntime الحقيقي ومنع تحوله إلى fallback.
-
-المعالجة المخططة:
-
-- فصل Bootstrap dev عن Repository التشغيلي أو فرض بوابة بيئة صارمة.
-- منع أي Tenant افتراضي في المسارات الحية.
-- اختبار أن غياب السياق الموثوق يفشل مغلقًا.
-
-### VC-P0-005 — سجل تقاعد WLT يغيّر تفسير الحقيقة التعاقدية
-
-`services/wlt/contracts/retired-runtime-operations.json` يسجل عمليات يقول إنها محذوفة من العقد وRuntime، ومنها `POST /wlt/ledger/entries`.
-
-وجود سجل آلي دائم للعمليات المحذوفة يخلق طبقة حقيقة إضافية إذا كانت الحراس أو المحللات تعتمد عليه لاستنتاج العقد الفعلي.
-
-المعالجة المخططة: اختبار عدم وجود المسارات في العقد وRuntime مباشرة، ثم حذف السجل وأي منطق يطرح محتواه من OpenAPI.
-
-### VC-P0-006 — عميل WLT المسمى Generated مكتوب بصورة عامة ويدوية
-
-`services/wlt/clients/generated/wlt-api.ts` يعلن مصادر العقود يدويًا ويعرّف `paths` و`operations` يدويًا، ثم يستخدم:
-
-```text
-unknown
-Record<string, unknown>
-Partial<WltRequestContext>
+```yaml
+duplicate_script_aliases: 16
+empty_tracked_files: 87
+exact_duplicate_groups: 36
+noise_path_candidates: 19
+unconsumed_tool_candidates: 47
 ```
 
-في نطاق مالي حساس. كما أن أمر التوليد الحالي يمرر `services/wlt/contracts/wlt.openapi.yaml` منفردًا رغم تعدد الوحدات المفهرسة.
+هذه مرشحات قرار لا أوامر حذف آلي.
 
-المعالجة المخططة:
+## 7. فجوات لم تُغلق بعد
 
-```text
-WLT modular entry
-→ deterministic bundle
-→ openapi-typescript من bundle واحد
-→ منع التعديل اليدوي
-→ CI delete/regenerate/diff
-```
+- Platform Control contract composition.
+- DSH contract ownership/naming/composition.
+- Migration Manifest وFresh/Upgrade/Replay proof.
+- Generated client provenance لـIdentity/Workforce/Platform Control/Providers/DSH.
+- Runtime وDB evidence للماليات والعزل.
+- جرد tenant_id الدلالي على كل الخدمات.
+- Shared frontend brain وتصفية WLT-DSH generated UI copies.
+- كل الأسطح من الشاشة إلى قاعدة البيانات.
+- الخدمات والمجلدات الفارغة.
+- الحوكمة والمهارات والحراس والأدوات والتقارير التاريخية.
 
-### VC-P1-001 — تضخم واجهة الأوامر وأسماء مستعارة متكررة
+## 8. حدود الادعاء
 
-`package.json` يحتوي أمثلة متطابقة أو شبه متطابقة:
+الحالة الحالية ليست `CLOSED_WITH_EVIDENCE`. التنفيذ مصرح ومستمر، والمرجع النهائي هو:
 
-```text
-foundation:gate / guard:foundation
-journey:gate / guard:journey
-runtime:* / docker:runtime:* / runtime:full:*
-graphify / graphify:code
-```
+- `10_REPOSITORY_WIDE_EXECUTION_LEDGER.md`
+- `17_FINAL_CLOSURE_MATRIX.md`
 
-لا يعد كل Alias خطأ تلقائيًا، لكنه يحتاج مالكًا ومستهلكًا وفرقًا وظيفيًا. غير ذلك يتحول إلى ضجيج تشغيلي.
-
-### VC-P1-002 — Master OpenAPI يفهرس وحدات الخدمة مباشرة
-
-الفهرس المركزي يسجل عددًا كبيرًا من عقود DSH وWLT الداخلية بدل الاكتفاء بعقد دخول واحد لكل خدمة. هذا يربط Root بتفاصيل الوحدات ويضاعف احتمال الانحراف.
-
-الهدف:
-
-```text
-contracts/master.openapi.yaml
-├── core/identity/contracts/identity.openapi.yaml
-├── core/workforce/contracts/workforce.openapi.yaml
-├── core/platform-control/contracts/platform-control.openapi.yaml
-├── core/providers/contracts/providers.openapi.yaml
-├── services/dsh/contracts/dsh.openapi.yaml
-└── services/wlt/contracts/wlt.openapi.yaml
-```
-
-كل عقد خدمة هو الذي يركب وحداته الداخلية ويولد Bundle واحدًا.
-
-## 4. نتائج عالية الخطورة من المرفقات تحتاج إعادة تحقق على validclean
-
-لا تُعامل البنود التالية كحقائق مغلقة قبل القراءة المباشرة للكود وتشغيل فحوصها:
-
-- مسارات DSH القديمة والجديدة حية معًا وسجل `LEGACY_COMPATIBILITY`.
-- قرار صلاحية يقبل Permission دقيقة أو Role fallback.
-- Runtime يعيد تشغيل مرحلة كاملة لإخفاء خلل PostgreSQL readiness.
-- `tools/test_logins.csv` أو ملفات مشابهة تحمل حسابات أو رموزًا ثابتة.
-- الحارس المالي يكرر قوائم عمليات WLT يدويًا.
-- `knip.json` يستثني مناطق واسعة تمنع اكتشاف الضجيج.
-- عقود مالية تستخدم `additionalProperties: true` حيث يجب أن تكون صارمة.
-- Adapters يدوية متعددة تدعي تمثيل العقود المولدة.
-- Migrations بأسماء أو أرقام رحلات وعمليات Repair بعد كتابة غير صحيحة.
-
-كل بند سيصنف بعد التحقق إلى:
-
-```text
-PROVEN_DEFECT
-VALID_TRANSITION_WITH_EXPIRY
-SAFE_DEV_ONLY
-FALSE_POSITIVE
-NEEDS_MORE_EVIDENCE
-```
-
-## 5. حدود الادعاء الحالي
-
-هذا الملف لا يدعي أنه جرد نهائي لكل ملف في المستودع. هو خط أساس مثبت لبدء الجرد الشامل. التشخيص الكامل لكل ملف ومجلد جزء من الشريحة صفر بعد الموافقة، ويجب أن ينتج سجل قرار لكل مسار مع دليل استهلاك وملكية وحالة تقاعد.
+لا يُعلن الإغلاق حتى تصبح كل عدادات المصفوفة صفرًا على SHA واحد.
