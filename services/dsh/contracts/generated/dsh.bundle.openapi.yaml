@@ -2533,7 +2533,7 @@ paths:
       operationId: getDshPartnerDispatchTracking
       summary: Partner reads reference-only bthwani_delivery captain assignment status.
       description: >-
-        JRN-017: the partner never sees the captain's live location or proof
+        The partner never sees the captain's live location or proof
         of delivery here — only lifecycle status, for orders it owns.
       tags: [DshDispatch]
       security: [{ bearerAuth: [] }]
@@ -6455,7 +6455,7 @@ paths:
       operationId: getDshClientPartnerDeliveryTask
       summary: Return the authenticated client's reference partner_delivery status for the order.
       description: >-
-        Client-facing reference status for JRN-016. Read-only projection of
+        Client-facing partner-delivery reference status. Read-only projection of
         the same partner_delivery task the store courier operates; the client
         never mutates it.
       tags: [DshPartnerDelivery]
@@ -9493,7 +9493,7 @@ components:
       type: object
       required: [id, orderId, captainId, status, createdAt, updatedAt, deliveryStatus]
       description: >-
-        JRN-017 partner-facing reference status only. Never includes the
+        Partner-facing reference status only. Never includes the
         captain's location or proof-of-delivery reference.
       properties:
         id: { type: string }
@@ -11163,7 +11163,7 @@ components:
 
     # ── Administration Schemas ───────────────────────────────────────
 
-    # ── JRN-029 Operational Policy Schemas ────────────────────────────
+    # ── Operational Policy Schemas ────────────────────────────────────
 
     DshAdminRole:
       type: object

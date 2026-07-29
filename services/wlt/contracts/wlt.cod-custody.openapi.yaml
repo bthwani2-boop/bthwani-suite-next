@@ -1,9 +1,9 @@
 openapi: 3.1.0
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
-x-bthwani-journey-id: JRN-038
+x-bthwani-capability: cod-custody-reconciliation
 info:
-  title: WLT JRN-038 COD Custody and Reconciliation
+  title: WLT COD Custody and Reconciliation
   version: 1.0.0
   description: >-
     Canonical additive contract for evidence-backed COD collection, remittance,

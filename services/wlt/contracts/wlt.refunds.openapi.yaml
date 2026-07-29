@@ -1,12 +1,12 @@
 openapi: 3.1.0
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
-x-bthwani-journey-id: JRN-035
+x-bthwani-capability: governed-refunds
 info:
   title: WLT Governed Financial Refunds
   version: 1.3.0
   description: >-
-    Canonical JRN-035 financial refund contract. WLT owns amount, provider,
+    Canonical financial refund contract. WLT owns amount, provider,
     ledger, reconciliation and audit truth. All routes are service-authenticated
     and tenant-scoped by the trusted DSH caller. Every mutation is claimed by a
     durable idempotency receipt before business execution, and provider outcomes

@@ -6,7 +6,7 @@ info:
     Authoritative checkout contract shard. DSH owns checkout operational truth;
     WLT owns payment-session and financial truth.
 x-bthwani-owner: services/dsh
-x-bthwani-journey-id: JRN-010
+x-bthwani-capability: checkout
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-truth-boundary:
   dsh: checkout intent, snapshots, operational projection

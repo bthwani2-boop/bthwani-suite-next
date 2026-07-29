@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "capabilityId": "JRN_040_PLATFORM_CHANGE_SETS",
+  "capabilityId": "PLATFORM_CHANGE_SETS",
   "state": "DISCOVERY",
   "problem": {
     "statement": "Platform configuration changes need one governed maker-checker workflow with explicit validation, conflict detection, audit, apply, and rollback boundaries.",
     "affectedActors": [
       "platform_operator",
       "platform_approver",
-      "tenant_operator"
+      "projection_reader"
     ],
     "currentWorkaround": "Direct or fragmented configuration changes cannot provide one reviewable lifecycle and reliable rollback evidence.",
     "frequency": "occasional",
@@ -53,8 +53,8 @@
       ]
     },
     {
-      "id": "tenant_operator",
-      "role": "Reads only tenant-visible outcomes that are explicitly projected by the platform owner.",
+      "id": "projection_reader",
+      "role": "Reads only explicitly authorized outcomes projected by the platform owner.",
       "permittedActions": [
         "read_authorized_projection"
       ],

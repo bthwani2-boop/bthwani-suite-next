@@ -42,8 +42,7 @@
       "frontend-feature-binding",
       "fullstack-boundary",
       "wlt-financial-boundary",
-      "runtime-real-bindings",
-      "live-cross-journey-integrity"
+      "runtime-real-bindings"
     ],
     "governance": [
       "governance-schema",

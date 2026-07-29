@@ -7,7 +7,7 @@
 // `Sort-Object { $_.Name.ToLowerInvariant() }, Name`, which is .NET's
 // culture-aware string comparison, not ASCII/ordinal order (verified: it
 // disagrees with a plain lowercase JS sort on names like
-// dsh-103_jrn_027_... vs dsh-103_jrn001_...). To guarantee this manifest
+// Historical migrations use several immutable filename conventions. To guarantee this manifest
 // matches the real execution order exactly, the ordering is obtained by
 // shelling out to the same Sort-Object call rather than approximating it.
 import fs from "node:fs";

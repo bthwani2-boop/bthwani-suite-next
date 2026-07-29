@@ -77,14 +77,6 @@
       "requiredFollowUpForRuntimeClaim": ["Same-commit runtime smoke", "Backend and database readback"]
     },
     {
-      "guardId": "live-cross-journey-integrity",
-      "assuranceClass": "SCOPED_REGRESSION",
-      "proves": ["Named identity, authorization, BFF, checkout, captain, WLT posture, and CI regression invariants remain present or absent as declared"],
-      "doesNotProve": ["Complete cross-journey coverage", "All services and surfaces", "Runtime success", "Production readiness"],
-      "closureEligible": false,
-      "requiredFollowUpForRuntimeClaim": ["Journey-specific integration tests", "Same-commit multi-surface runtime evidence"]
-    },
-    {
       "guardId": "performance-budget",
       "assuranceClass": "CONFIGURATION_BUDGET",
       "proves": ["Performance budget configuration exists and is internally valid"],

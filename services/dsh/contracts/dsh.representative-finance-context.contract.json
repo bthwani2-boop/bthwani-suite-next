@@ -1,7 +1,6 @@
 {
   "schemaVersion": 1,
-  "capabilityId": "JRN_033_REPRESENTATIVE_FINANCE_TENANCY",
-  "journeyId": "JRN-033",
+  "capabilityId": "REPRESENTATIVE_FINANCE_CONTEXT",
   "parentContract": "services/dsh/contracts/dsh.representative-finance.openapi.yaml",
   "truthOwner": "WLT",
   "tenantBoundary": {

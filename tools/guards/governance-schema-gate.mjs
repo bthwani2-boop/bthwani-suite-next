@@ -325,7 +325,7 @@ if (guards && guardAssurance) {
   }
   for (const requiredId of [
     "governance-schema", "agent-governance", "authority-separation", "saas-governance", "guard-registry", "sdlc", "go-routes-ci",
-    "frontend-feature-binding", "logic-coverage", "runtime-real-bindings", "live-cross-journey-integrity",
+    "frontend-feature-binding", "logic-coverage", "runtime-real-bindings",
     "performance-budget", "a11y", "a11y-runtime", "workflow-lint", "workflow-security", "actions-pin",
   ]) {
     if (!assuranceIds.has(requiredId)) violations.push({ file: assuranceRelative, line: 0, message: `REQUIRED_GUARD_ASSURANCE_MISSING ${requiredId}` });

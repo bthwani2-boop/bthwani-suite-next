@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: Surface-scoped DSH proxy routes for WLT-owned COD custody and reconciliation truth.
 x-bthwani-owner: services/dsh
-x-bthwani-journey-id: JRN-038
+x-bthwani-capability: cod-custody
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-runtime-dependency: true
 x-bthwani-client-generation: DISABLED

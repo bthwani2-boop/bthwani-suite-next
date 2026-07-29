@@ -119,8 +119,8 @@ test("migration changes are deep without forcing runtime unless another reason e
 });
 
 test("manual journey is targeted standard verification", () => {
-  const result = classifyFiles([], { journey: "43" });
-  assert.equal(result.journey_scope, "JRN-043");
+  const result = classifyFiles([], { journey: "platform-change-sets" });
+  assert.equal(result.journey_scope, "PLATFORM-CHANGE-SETS");
   assert.equal(result.verification_tier, "standard");
 });
 
@@ -141,7 +141,7 @@ test("classification exports every required routing key", () => {
     "frontend", "contracts", "journey", "journey_scope", "node", "node_scope",
     "dsh", "wlt", "identity", "workforce", "platform", "providers", "database",
     "runtime", "runtime_profile", "shared_brain", "heavy", "verification_tier", "diagnostics",
-    "jrn040", "platform_change_sets", "cleanup_changed", "native_changed", "visual_changed",
+    "platform_change_sets", "cleanup_changed", "native_changed", "visual_changed",
     "tenant_isolation_changed", "financial_changed", "migration_changed", "shared_contract_changed",
     "recovery_changed", "observability_changed", "auth_changed", "session_changed", "rbac_changed",
     "privacy_changed", "pii_changed", "secrets_changed", "tenant_context_changed"

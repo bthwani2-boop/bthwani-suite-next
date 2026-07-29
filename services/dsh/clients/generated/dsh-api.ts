@@ -11,7 +11,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return the authenticated field agent's wallet balance. */
         get: operations["getDshFieldMeWallet"];
         put?: never;
         post?: never;
@@ -28,7 +27,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return the authenticated field agent's commissions. */
         get: operations["getDshFieldMeCommissions"];
         put?: never;
         post?: never;
@@ -45,7 +43,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return the authenticated field agent's ledger entries. */
         get: operations["getDshFieldMeLedgerEntries"];
         put?: never;
         post?: never;
@@ -62,10 +59,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return the authenticated field agent's payout requests. */
         get: operations["getDshFieldMePayoutRequests"];
         put?: never;
-        /** Submit a new payout request for the authenticated field agent. */
         post: operations["submitDshFieldMePayoutRequest"];
         delete?: never;
         options?: never;
@@ -167,10 +162,10 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List all home discovery content including inactive items. */
+        /** List marketing home content including publication governance metadata. */
         get: operations["listOperatorHomeDiscoveryContent"];
         put?: never;
-        /** Create a home banner or promotion; categories come from the central catalog. */
+        /** Create banner or promo and record the authenticated marketing publication decision. */
         post: operations["createOperatorHomeDiscoveryContent"];
         delete?: never;
         options?: never;
@@ -191,11 +186,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete a home discovery content item. */
+        /** Delete a banner or promo with an audit event. */
         delete: operations["deleteOperatorHomeDiscoveryContent"];
         options?: never;
         head?: never;
-        /** Update a home discovery content item. */
+        /** Update content and publication decision using optimistic concurrency. */
         patch: operations["updateOperatorHomeDiscoveryContent"];
         trace?: never;
     };
@@ -560,6 +555,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["decideProductProposal"];
         delete?: never;
         options?: never;
@@ -782,7 +778,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["listPartnerOwnedReels"];
         put?: never;
         post: operations["submitReel"];
         delete?: never;
@@ -1007,7 +1003,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["listPartnerProductProposals"];
         put?: never;
         post: operations["createPartnerProductProposal"];
         delete?: never;
@@ -1029,7 +1025,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["patchPartnerProductProposal"];
         trace?: never;
     };
     "/dsh/field/catalog/taxonomy": {
@@ -1120,7 +1116,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["listFieldProductProposals"];
         put?: never;
         post: operations["createFieldProductProposal"];
         delete?: never;
@@ -1142,7 +1138,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        patch: operations["patchFieldProductProposal"];
         trace?: never;
     };
     "/dsh/client/cart": {
@@ -1240,7 +1236,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a checkout intent from an active cart. DSH never executes payment. */
         post: operations["createDshCheckoutIntent"];
         delete?: never;
         options?: never;
@@ -1255,7 +1250,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a checkout intent by ID (client-scoped). */
         get: operations["getDshCheckoutIntent"];
         put?: never;
         post?: never;
@@ -1274,7 +1268,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Cancel a checkout intent. Never triggers refund — financial finalization is WLT-owned. */
         post: operations["cancelDshCheckoutIntent"];
         delete?: never;
         options?: never;
@@ -1289,7 +1282,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List checkout intents for operator monitoring. No financial mutation. */
         get: operations["listOperatorCheckoutIntents"];
         put?: never;
         post?: never;
@@ -1460,10 +1452,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Operator dispatch room with active and historical captain assignments. */
         get: operations["listDshDispatchAssignments"];
         put?: never;
-        /** Operator assigns a ready-for-pickup order to a captain. */
         post: operations["createDshAssignment"];
         delete?: never;
         options?: never;
@@ -1478,7 +1468,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Captain lists only their own dispatch assignments. */
         get: operations["listDshCaptainAssignments"];
         put?: never;
         post?: never;
@@ -1497,7 +1486,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Captain accepts an offered assignment. */
         post: operations["acceptDshAssignment"];
         delete?: never;
         options?: never;
@@ -1514,7 +1502,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Captain declines an offered assignment and returns the order to ready-for-pickup. */
         post: operations["declineDshAssignment"];
         delete?: never;
         options?: never;
@@ -1548,7 +1535,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Captain submits proof of delivery and closes the DSH delivery lifecycle. */
+        /** Upload captain-owned photo proof and complete an arrived delivery. */
         post: operations["submitDshPoD"];
         delete?: never;
         options?: never;
@@ -1565,7 +1552,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Captain pushes a foreground-only location sample for an active assignment (register item 14 + 42 — no live tracking, no background location). Rejected once the assignment is no longer accepted/active. */
+        /** Store the authenticated captain's latest trusted foreground sample only. */
         post: operations["pushDshCaptainLocation"];
         delete?: never;
         options?: never;
@@ -1580,7 +1567,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Client reads order delivery status updates for their own order, including the captain's last known foreground location (if any) while the delivery is active. No location history is kept or exposed. */
+        /** Read assignment state, rounded delivery-window location, freshness, and governed ETA. */
         get: operations["getDshClientOrderTracking"];
         put?: never;
         post?: never;
@@ -1597,10 +1584,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Partner reads reference-only bthwani_delivery captain assignment status.
-         * @description JRN-017: the partner never sees the captain's live location or proof of delivery here — only lifecycle status, for orders it owns.
-         */
+        /** Read delivery state and ETA reference without captain coordinates or mutations. */
         get: operations["getDshPartnerDispatchTracking"];
         put?: never;
         post?: never;
@@ -1651,10 +1635,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Operator reads the governed WLT refunds view through the DSH finance proxy. */
+        /** List refunds for the authenticated tenant and optional order */
         get: operations["listDshControlPanelFinanceRefunds"];
         put?: never;
-        post?: never;
+        /** Request a partial or full remaining refund */
+        post: operations["createDshFinanceRefund"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1702,7 +1687,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Operator reads one governed WLT refund through the DSH finance proxy. */
+        /** Read one authenticated-tenant-scoped canonical refund */
         get: operations["getDshControlPanelFinanceRefund"];
         put?: never;
         post?: never;
@@ -2425,7 +2410,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Operator lists all support tickets with optional status filter. */
         get: operations["listDshOperatorTickets"];
         put?: never;
         post?: never;
@@ -2439,16 +2423,17 @@ export interface paths {
         parameters: {
             query?: never;
             header?: never;
-            path?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
             cookie?: never;
         };
-        get?: never;
+        get: operations["getDshOperatorSupportTicket"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Operator updates ticket status or assignee. */
         patch: operations["updateDshOperatorTicket"];
         trace?: never;
     };
@@ -2614,7 +2599,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** WLT-owned payment-session outcome callback; DSH consumes opaque status references only and advances the checkout intent state machine. Requires the X-Service-Caller: wlt header in addition to Authorization. */
         post: operations["reportWltPaymentSessionEvent"];
         delete?: never;
         options?: never;
@@ -2842,10 +2826,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List service zones. */
         get: operations["listDshZones"];
         put?: never;
-        /** Create a service zone. */
         post: operations["createDshZone"];
         delete?: never;
         options?: never;
@@ -2866,7 +2848,6 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update a service zone. */
         patch: operations["updateDshZone"];
         trace?: never;
     };
@@ -2877,9 +2858,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get SLA rules for a zone. */
         get: operations["getDshSlaRules"];
-        /** Upsert SLA rules for a zone. */
         put: operations["upsertDshSlaRules"];
         post?: never;
         delete?: never;
@@ -2895,9 +2874,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get capacity configuration for a zone. */
         get: operations["getDshCapacityConfig"];
-        /** Upsert capacity configuration for a zone. */
         put: operations["upsertDshCapacityConfig"];
         post?: never;
         delete?: never;
@@ -2911,13 +2888,11 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                zoneId: string;
+                zoneId: components["parameters"]["ZoneId"];
             };
             cookie?: never;
         };
-        /** Read the canonical SLA and capacity profile for a zone. */
         get: operations["getDshOperationalProfile"];
-        /** Upsert assignment, preparation, delivery SLA and capacity pause state. */
         put: operations["upsertDshOperationalProfile"];
         post?: never;
         delete?: never;
@@ -2931,11 +2906,10 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                zoneId: string;
+                zoneId: components["parameters"]["ZoneId"];
             };
             cookie?: never;
         };
-        /** List the three canonical fulfillment-mode policies for a zone. */
         get: operations["listDshOperationalDeliveryModes"];
         put?: never;
         post?: never;
@@ -2950,13 +2924,12 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                zoneId: string;
-                fulfillmentMode: components["schemas"]["DshOperationalPolicyFulfillmentMode"];
+                zoneId: components["parameters"]["ZoneId"];
+                fulfillmentMode: components["schemas"]["DshOperationalPolicyFulfillmentMode2"];
             };
             cookie?: never;
         };
         get?: never;
-        /** Enable or disable one canonical fulfillment mode for a zone. */
         put: operations["upsertDshOperationalDeliveryMode"];
         post?: never;
         delete?: never;
@@ -2974,7 +2947,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Evaluate one fail-closed operational decision across affected surfaces. */
+        /** @description Returns one fail-closed decision for client, partner, captain or operator consumers, including explicit cart, checkout, order and dispatch effects. */
         post: operations["evaluateDshOperationalPolicy"];
         delete?: never;
         options?: never;
@@ -2989,7 +2962,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List append-only operational-policy audit events. */
         get: operations["listDshOperationalPolicyAudit"];
         put?: never;
         post?: never;
@@ -3010,7 +2982,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Restore an audited snapshot as a new version of the same aggregate. */
         post: operations["rollbackDshOperationalPolicy"];
         delete?: never;
         options?: never;
@@ -3025,7 +2996,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get live serviceability state for a zone. */
         get: operations["getDshZoneServiceability"];
         put?: never;
         post?: never;
@@ -3042,9 +3012,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get the store onboarding fee policy (operator edit view). */
         get: operations["getDshStoreOnboardingFeePolicy"];
-        /** Upsert the store onboarding fee policy. DSH owns the policy definition only — never a WLT financial record. */
         put: operations["upsertDshStoreOnboardingFeePolicy"];
         post?: never;
         delete?: never;
@@ -3060,7 +3028,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read-only store onboarding fee reference for app-field/app-partner. Never exposed to app-client. */
         get: operations["getDshStoreOnboardingFeeReference"];
         put?: never;
         post?: never;
@@ -3147,7 +3114,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get partner detail. */
+        /** Read governed partner state for control-panel */
         get: operations["getDshPartner"];
         put?: never;
         post?: never;
@@ -3166,7 +3133,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Transition a partner to a new lifecycle status. */
+        /** Apply one governed partner activation transition */
         post: operations["transitionDshPartner"];
         delete?: never;
         options?: never;
@@ -3236,7 +3203,7 @@ export interface paths {
         /** List stores linked to a partner. */
         get: operations["listDshPartnerStores"];
         put?: never;
-        /** Link an existing store to a partner. */
+        /** Link an unowned store to a partner */
         post: operations["linkDshPartnerStore"];
         delete?: never;
         options?: never;
@@ -3285,7 +3252,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Partner reads their own current activation status. */
+        /** Read the authenticated partner activation state and allowed actions */
         get: operations["getDshPartnerActivationStatus"];
         put?: never;
         post?: never;
@@ -3302,7 +3269,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get own partner readiness status. */
+        /** Read authenticated partner readiness gates */
         get: operations["getDshPartnerSelfReadiness"];
         put?: never;
         post?: never;
@@ -3472,14 +3439,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Field agent gets partner draft details. */
+        /** Read an owned field partner draft */
         get: operations["getFieldPartnerDraft"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Field agent updates partner draft details. */
+        /** Update an owned draft and hand raw payout details to WLT */
         patch: operations["updateFieldPartnerDraft"];
         trace?: never;
     };
@@ -3579,7 +3546,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Field agent records a partner-level onboarding visit. */
+        /** Create an evidence-bearing field visit bound to the first store */
         post: operations["createFieldPartnerVisit"];
         delete?: never;
         options?: never;
@@ -3613,7 +3580,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Field agent submits partner draft for review. */
+        /** Submit an owned draft for independent review */
         post: operations["submitFieldPartnerDraft"];
         delete?: never;
         options?: never;
@@ -3953,7 +3920,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return the authenticated partner's partner_delivery task for the order. */
         get: operations["getDshPartnerDeliveryTask"];
         put?: never;
         post?: never;
@@ -3970,10 +3936,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Return the authenticated client's reference partner_delivery status for the order.
-         * @description Client-facing reference status for JRN-016. Read-only projection of the same partner_delivery task the store courier operates; the client never mutates it.
-         */
         get: operations["getDshClientPartnerDeliveryTask"];
         put?: never;
         post?: never;
@@ -3992,7 +3954,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Assign a store courier to a partner_delivery order */
         post: operations["assignDshPartnerDeliveryTask"];
         delete?: never;
         options?: never;
@@ -4009,7 +3970,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Store courier marks a partner_delivery task picked up */
         post: operations["markDshPartnerDeliveryPickedUp"];
         delete?: never;
         options?: never;
@@ -4026,7 +3986,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Store courier marks a partner_delivery task departed */
         post: operations["departDshPartnerDeliveryTask"];
         delete?: never;
         options?: never;
@@ -4043,7 +4002,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Store courier marks a partner_delivery task arrived */
         post: operations["arriveDshPartnerDeliveryTask"];
         delete?: never;
         options?: never;
@@ -4060,7 +4018,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Store courier submits proof of delivery, completing the partner_delivery task */
+        /** Upload partner-owned photo proof and complete a store-courier delivery. */
         post: operations["submitDshPartnerDeliveryProof"];
         delete?: never;
         options?: never;
@@ -4077,7 +4035,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Operator raises an exception on a partner_delivery task */
         post: operations["raiseDshPartnerDeliveryException"];
         delete?: never;
         options?: never;
@@ -4092,7 +4049,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List partner_delivery tasks for operators */
         get: operations["listDshOperatorPartnerDeliveries"];
         put?: never;
         post?: never;
@@ -4109,7 +4065,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a partner_delivery task by id */
         get: operations["getDshOperatorPartnerDelivery"];
         put?: never;
         post?: never;
@@ -4126,10 +4081,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get a partner_delivery task by orderId, for operator surfaces that only hold the order id
-         * @description Mirrors getDshOperatorPickup's by-orderId lookup. LiveOrders operator screens carry orderId, not the partner_delivery task id; this lets them resolve the task's current version before raising an exception, which is optimistic-concurrency gated on expectedVersion.
-         */
         get: operations["getDshOperatorPartnerDeliveryByOrder"];
         put?: never;
         post?: never;
@@ -4146,10 +4097,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Return the authenticated client's resumable pickup session stage.
-         * @description Serves the deep link carried by the pickup_otp notification action_url. Reads the same durable order/session/audit truth as the partner pickup state endpoint, scoped to the requesting client's own order. Never returns the OTP in plaintext; the code only ever reaches the client through the notification body.
-         */
         get: operations["getDshClientPickupSession"];
         put?: never;
         post?: never;
@@ -4166,10 +4113,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Return the authenticated partner's resumable pickup session stage.
-         * @description Reads the sovereign order, pickup session, and durable pickup audit trail. Returns cancelled explicitly after order cancellation and never represents cancellation as a used or successfully verified pickup.
-         */
         get: operations["getDshPartnerPickupState"];
         put?: never;
         post?: never;
@@ -4188,7 +4131,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Store marks a pickup order ready for pickup */
         post: operations["markDshPickupReady"];
         delete?: never;
         options?: never;
@@ -4205,7 +4147,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Issue a fresh pickup OTP and notify the customer the order is ready */
         post: operations["notifyDshPickupCustomer"];
         delete?: never;
         options?: never;
@@ -4222,7 +4163,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Record that the customer has arrived to collect a pickup order */
         post: operations["markDshPickupCustomerArrived"];
         delete?: never;
         options?: never;
@@ -4239,7 +4179,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Verify a customer-submitted pickup OTP and complete the pickup */
         post: operations["verifyDshPickupSession"];
         delete?: never;
         options?: never;
@@ -4256,7 +4195,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Mark an issued-but-unused pickup session as a no-show */
         post: operations["markDshPickupNoShow"];
         delete?: never;
         options?: never;
@@ -4271,7 +4209,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List pickup sessions for operators */
         get: operations["listDshOperatorPickups"];
         put?: never;
         post?: never;
@@ -4288,7 +4225,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get a pickup session by order id */
         get: operations["getDshOperatorPickup"];
         put?: never;
         post?: never;
@@ -4307,7 +4243,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Manually extend a pickup session's expiry window */
         post: operations["extendDshPickupWindow"];
         delete?: never;
         options?: never;
@@ -4406,17 +4341,14 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                assignmentId: string;
+                assignmentId: components["parameters"]["AssignmentId"];
             };
             cookie?: never;
         };
-        /** Return the captain's active governed delivery exception. */
+        /** Read the captain-visible current exception and operations decision. */
         get: operations["getDshCaptainDeliveryException"];
         put?: never;
-        /**
-         * Report one idempotent delivery exception for an active accepted assignment.
-         * @description Creates an operational overlay without changing the order status or financial truth. Delivery progression and proof are blocked until operations resolves the exception; foreground location pushes remain allowed for safety and response coordination.
-         */
+        /** Report a delivery exception with mandatory operational evidence. */
         post: operations["reportDshCaptainDeliveryException"];
         delete?: never;
         options?: never;
@@ -4431,7 +4363,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List the governed delivery-exception operations queue. */
+        /** List delivery exceptions by governed lifecycle status and severity. */
         get: operations["listDshOperatorDeliveryExceptions"];
         put?: never;
         post?: never;
@@ -4446,13 +4378,13 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                exceptionId: string;
+                exceptionId: components["parameters"]["ExceptionId"];
             };
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Acknowledge an open delivery exception for operations review. */
+        /** Assign operational review responsibility to the authenticated operator. */
         post: operations["acknowledgeDshOperatorDeliveryException"];
         delete?: never;
         options?: never;
@@ -4465,13 +4397,16 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                exceptionId: string;
+                exceptionId: components["parameters"]["ExceptionId"];
             };
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Resolve an exception by allowing the same captain to retry from the preserved stage. */
+        /**
+         * Resolve an acknowledged exception using one governed operational action.
+         * @description The exception must first be acknowledged to record operational responsibility. cancel_order delegates financial consequences through the governed order cancellation handoff; this operation never creates a DSH refund, ledger entry, or balance mutation.
+         */
         post: operations["resolveDshOperatorDeliveryException"];
         delete?: never;
         options?: never;
@@ -4484,16 +4419,13 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                assignmentId: string;
+                assignmentId: components["parameters"]["AssignmentId"];
             };
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /**
-         * Confirm captain arrival at the store with the returned order.
-         * @description Does not complete custody; the owning partner must accept the return.
-         */
+        /** Record captain arrival at the store with returned custody. */
         post: operations["arriveDshCaptainReturnToStore"];
         delete?: never;
         options?: never;
@@ -4506,11 +4438,11 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
-        /** Read the governed return state for an order owned by the partner. */
+        /** Read the partner-visible return custody state for an owned order. */
         get: operations["getDshPartnerReturnToStore"];
         put?: never;
         post?: never;
@@ -4525,13 +4457,13 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         get?: never;
         put?: never;
-        /** Confirm store custody of a returned order after captain arrival. */
+        /** Confirm store receipt of the returned order and close delivery custody. */
         post: operations["acceptDshPartnerReturnToStore"];
         delete?: never;
         options?: never;
@@ -4546,7 +4478,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Return actor-scoped partner orders with server-authoritative executable actions. */
+        /** Return the authenticated partner order workboard and executable actions. */
         get: operations["getDshPartnerOrderWorkboard"];
         put?: never;
         post?: never;
@@ -4741,6 +4673,3552 @@ export interface paths {
          * @description Invalidates the previous OTP, clears the no-show projection, advances the optimistic version, and requires the partner to issue and deliver a fresh OTP before collection. This operation never exposes an OTP to operators.
          */
         post: operations["rescheduleDshPickupWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshAdministrationRoles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/roles/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Creates a pending role-definition request; it never creates a role directly. */
+        post: operations["requestDshAdministrationRoleDefinition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/role-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshAdministrationRoleDefinitionRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/role-requests/{requestId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Creates a role only after an independent checker approves the pending request. */
+        post: operations["reviewDshAdministrationRoleDefinitionRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/staff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshAdministrationStaff"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/staff/{staffId}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Creates a pending maker-checker request for assignment or revocation; it never mutates the approved assignment directly. */
+        post: operations["requestDshStaffRoleChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshRoleAssignmentApprovals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/approvals/{approvalId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Applies assignment or revocation only when checker differs from maker and beneficiary. */
+        post: operations["reviewDshStaffRoleChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/approvals/{approvalId}/rollback-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Appends a pending inverse decision without deleting the source approval or audit history. */
+        post: operations["requestDshAdministrationDecisionRollback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/rollback-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshAdministrationRollbackRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/rollback-requests/{requestId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Applies the inverse action only when checker differs from rollback maker, beneficiary, and original checker. */
+        post: operations["reviewDshAdministrationDecisionRollback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns aggregate operational counts only and never PII, credentials, documents, tokens, or secrets. */
+        get: operations["getDshAdministrationDiagnostics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/partners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read-only projection; activation and blocking remain owned by the partner lifecycle route. */
+        get: operations["listDshAdministrationPartnerActivationProjections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/captains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read-only projection; credential creation and update remain owned by Workforce. */
+        get: operations["listDshAdministrationCaptainCredentialProjections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns append-only audit events with allowlisted, redacted metadata only. */
+        get: operations["listDshAdministrationAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/support-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Lists governed support-session requests without exposing issued bearer tokens. */
+        get: operations["listDshAdministrationSupportSessionRequests"];
+        put?: never;
+        /** @description Creates a pending support-session request; issuance requires an independent checker. */
+        post: operations["createDshAdministrationSupportSessionRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/support-sessions/{requestId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Independently approves or rejects a pending support-session request. */
+        post: operations["reviewDshAdministrationSupportSessionRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/support-sessions/{requestId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Revokes the Identity support session and appends the DSH request lifecycle evidence. */
+        post: operations["revokeDshAdministrationSupportSessionRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/admin/support/snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns a privacy-scoped snapshot only for a valid Identity support session with actor-bound support.read permission. */
+        get: operations["getDshAdministrationSupportSnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/analytics/preparation-sla": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preparation timing and SLA compliance derived from accepted and ready timestamps.
+         * @description Use period or the from/to pair, never both. Date values are inclusive calendar dates; date-time values are exact instants.
+         */
+        get: operations["getDshPreparationSlaAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/analytics/captains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Captain assignment acceptance and completion performance.
+         * @description Use period or the from/to pair, never both. Date values are inclusive calendar dates; date-time values are exact instants.
+         */
+        get: operations["getDshCaptainPerformanceAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/analytics/field": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Field visit completion and escalation performance.
+         * @description Use period or the from/to pair, never both. Date values are inclusive calendar dates; date-time values are exact instants.
+         */
+        get: operations["getDshFieldPerformanceAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/analytics/drill-down/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read-only drill-down from analytics to source order records.
+         * @description Use period or the from/to pair, never both. Date values are inclusive calendar dates; date-time values are exact instants.
+         */
+        get: operations["getDshOrderAnalyticsDrilldown"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/analytics/financial-snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read-only WLT-owned financial summary exposed without DSH recomputation. */
+        get: operations["getDshWltFinancialAnalyticsSnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/analytics/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export the governed operational analytics window as CSV.
+         * @description Uses the same filters and permission as the JSON reads. Use period or the from/to pair, never both.
+         */
+        get: operations["exportDshOperationalAnalyticsCsv"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/analytics/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the governed operations analytics projection. */
+        get: operations["getDshOperationsAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/platform/dispatch-balance-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDispatchBalancePolicy"];
+        put: operations["upsertDispatchBalancePolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/captains/{captainId}/financial-eligibility": {
+        parameters: {
+            query: {
+                operatorContextId: components["parameters"]["OperatorContextIdQuery"];
+            };
+            header?: never;
+            path: {
+                captainId: components["parameters"]["CaptainId"];
+            };
+            cookie?: never;
+        };
+        get: operations["getOperatorCaptainFinancialEligibility"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh": {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                captainId: components["parameters"]["CaptainId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["refreshOperatorCaptainFinancialEligibility"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/dispatch/financial-eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getOwnCaptainFinancialEligibility"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/dispatch/financial-eligibility/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["refreshOwnCaptainFinancialEligibility"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/catalog/attributes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOperatorCatalogAttributes"];
+        put?: never;
+        post: operations["createOperatorCatalogAttribute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/catalog/attributes/{attributeId}/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listOperatorCatalogAttributeOptions"];
+        put?: never;
+        post: operations["createOperatorCatalogAttributeOption"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/catalog/nodes/{nodeId}/attributes/{attributeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nodeId: components["parameters"]["NodeId"];
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["upsertOperatorCatalogNodeAttributeRule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/catalog/master-products/{productId}/attribute-values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listOperatorMasterProductAttributeValues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/catalog/master-products/{productId}/attribute-values/{attributeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["upsertOperatorMasterProductAttributeValue"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/catalog/master-products/{productId}/relationships": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listOperatorMasterProductRelationships"];
+        put: operations["upsertOperatorMasterProductRelationship"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/catalog/master-products/{productId}/relationships/{relationshipId}": {
+        parameters: {
+            query: {
+                expectedVersion: number;
+            };
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+                relationshipId: components["parameters"]["RelationshipId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteOperatorMasterProductRelationship"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/stores/{storeId}/assortment-pauses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listOperatorAssortmentPauses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+                masterProductId: components["parameters"]["MasterProductId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["pauseOperatorStoreAssortment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+                masterProductId: components["parameters"]["MasterProductId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeOperatorStoreAssortment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/catalog/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOperatorCatalogAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/catalog/audit/{auditId}/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auditId: components["parameters"]["AuditId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rollbackOperatorCatalogAudit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/catalog/attributes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPartnerCatalogAttributes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/catalog/attributes/{attributeId}/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listPartnerCatalogAttributeOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/catalog/master-products/{productId}/attribute-values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listPartnerMasterProductAttributeValues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/catalog/master-products/{productId}/relationships": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listPartnerMasterProductRelationships"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/assortment-pauses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listPartnerAssortmentPauses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/assortment/{masterProductId}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+                masterProductId: components["parameters"]["MasterProductId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["pausePartnerStoreAssortment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/assortment/{masterProductId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+                masterProductId: components["parameters"]["MasterProductId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumePartnerStoreAssortment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/catalog/attributes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listFieldCatalogAttributes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/catalog/attributes/{attributeId}/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listFieldCatalogAttributeOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/catalog/master-products/{productId}/attribute-values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listFieldMasterProductAttributeValues"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/catalog/master-products/{productId}/relationships": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listFieldMasterProductRelationships"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/partners/{partnerId}/assortment-pauses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: components["parameters"]["PartnerId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listFieldAssortmentPauses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/partners/{partnerId}/assortment/{masterProductId}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: components["parameters"]["PartnerId"];
+                masterProductId: components["parameters"]["MasterProductId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["pauseFieldStoreAssortment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/partners/{partnerId}/assortment/{masterProductId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: components["parameters"]["PartnerId"];
+                masterProductId: components["parameters"]["MasterProductId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeFieldStoreAssortment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active addresses owned by the authenticated client. */
+        get: operations["listDshClientAddresses"];
+        put?: never;
+        /** Create an address owned by the authenticated client after governed geofence verification. */
+        post: operations["createDshClientAddress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/addresses/{addressId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                addressId: components["parameters"]["AddressId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Soft-delete an owned address exactly once using durable idempotency and optimistic concurrency. */
+        delete: operations["deleteDshClientAddress"];
+        options?: never;
+        head?: never;
+        /** Update an owned address exactly once using durable idempotency, optimistic concurrency and governed geofence verification. */
+        patch: operations["updateDshClientAddress"];
+        trace?: never;
+    };
+    "/dsh/client/addresses/{addressId}/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                addressId: components["parameters"]["AddressId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Make one active address the sole default exactly once using durable idempotency and optimistic concurrency. */
+        post: operations["setDshClientDefaultAddress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/privacy/client-addresses/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshClientAddressPrivacyPolicy"];
+        put: operations["updateDshClientAddressPrivacyPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/privacy/client-addresses/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshClientAddressPrivacyQueueStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/privacy/client-addresses/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshClientAddressPrivacyAuditEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/privacy/client-addresses/anonymize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["anonymizeDshExpiredClientAddresses"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/maps/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Search external places and verify every result against DSH service-area geofences. */
+        post: operations["searchDshClientMapLocations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/maps/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reverse-geocode coordinates and verify them against DSH service-area geofences. */
+        post: operations["reverseDshClientMapLocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/platform/map-provider-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the governed Providers health projection for map providers only. */
+        get: operations["getDshOperatorMapProviderHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/platform/service-areas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List governed DSH service-area geofences with computed coordinate bounds. */
+        get: operations["listDshOperatorServiceAreas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/platform/service-areas/{serviceAreaCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serviceAreaCode: string;
+            };
+            cookie?: never;
+        };
+        /** Read one governed service-area polygon, point count, bounds, state, and version. */
+        get: operations["getDshOperatorServiceArea"];
+        /** Create or version-update a governed simple, non-zero-area, non-self-intersecting DSH geofence. */
+        put: operations["upsertDshOperatorServiceArea"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/cod-reconciliation-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshControlPanelCodReconciliationCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assignDshControlPanelCodReconciliationCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resolveDshControlPanelCodReconciliationCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/me/finance/cod-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshPartnerCodRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/me/finance/cod-records/{recordId}/remit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["remitDshPartnerCodRecord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/orders/{orderId}/delivery-pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue or rotate the authenticated order client's short-lived delivery PIN. */
+        post: operations["issueClientDeliveryPin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/orders/{orderId}/delivery-proof": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the redacted accepted proof summary for the authenticated order client. */
+        get: operations["getClientAcceptedDeliveryProof"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/dispatch/assignments/{assignmentId}/delivery-proof": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the latest proof submitted by the authenticated assignment captain. */
+        get: operations["getCaptainDeliveryProof"];
+        put?: never;
+        /** Submit an idempotent PIN, photo, signature, or composite proof. */
+        post: operations["submitCaptainDeliveryProof"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/delivery-proofs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List proof records for operations review. */
+        get: operations["listOperatorDeliveryProofs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/delivery-proofs/{proofId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read full operational evidence for one proof. */
+        get: operations["getOperatorDeliveryProof"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/delivery-proofs/{proofId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept a pending exceptional proof and complete the order exactly once. */
+        post: operations["acceptOperatorDeliveryProof"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/delivery-proofs/{proofId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a pending proof while leaving the assignment at arrived_customer for retry. */
+        post: operations["rejectOperatorDeliveryProof"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listCaptainDispatchCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/captains/{captainId}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["upsertCaptainDispatchProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/assignments/{assignmentId}/reassign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reassignGovernedDispatchAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/assignments/{assignmentId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelGovernedDispatchAssignment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/assignments/expire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["expireGovernedDispatchAssignments"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDispatchDecisions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/home-discovery/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record one targeted, publishable home banner or promo impression/click. */
+        post: operations["recordDshHomeMarketingEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/home-discovery/{kind}/{itemId}/targeting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: components["parameters"]["HomeContentKind"];
+                itemId: components["parameters"]["HomeContentItemId"];
+            };
+            cookie?: never;
+        };
+        /** Read the governed targeting projection for one home item. */
+        get: operations["getDshOperatorHomeTargeting"];
+        /** Atomically replace all target dimensions for one home item. */
+        put: operations["replaceDshOperatorHomeTargeting"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/support/incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshGovernedIncidents"];
+        put?: never;
+        post: operations["createDshGovernedIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/support/incidents/{incidentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incidentId: components["parameters"]["IncidentId"];
+            };
+            cookie?: never;
+        };
+        get: operations["getDshGovernedIncident"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateDshGovernedIncident"];
+        trace?: never;
+    };
+    "/dsh/operator/support/incidents/{incidentId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incidentId: components["parameters"]["IncidentId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listDshGovernedIncidentEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/operational-incidents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshOperationalIncidents"];
+        put?: never;
+        post: operations["reportDshOperationalIncident"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/operational-incidents/{incidentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshOperationalIncident"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/me/ratings/field/prompt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the authenticated partner's post-activation field rating prompt. */
+        get: operations["getDshPartnerFieldRatingPrompt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/me/ratings/field": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rate the attributed field provider after partner activation. */
+        post: operations["submitDshPartnerFieldRating"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/me/ratings/pending-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the newest delivered order awaiting client ratings. */
+        get: operations["getDshPendingClientOrderRatingPrompt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/orders/{orderId}/rating-prompt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return rating eligibility for an owned delivered order. */
+        get: operations["getDshClientOrderRatingPrompt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/orders/{orderId}/ratings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rate the captain and the order after verified delivery. */
+        post: operations["submitDshClientOrderRatings"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/me/ratings/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the authenticated field provider's partner rating summary. */
+        get: operations["getDshFieldOwnRatingSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/me/ratings/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the authenticated captain's client rating summary. */
+        get: operations["getDshCaptainOwnRatingSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/tracking-alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List active assignment alerts and authorized rounded locations for the operations map. */
+        get: operations["listOperatorDispatchTrackingAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/marketing/coupons": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshMarketingCoupons"];
+        put?: never;
+        post: operations["createDshMarketingCoupon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/marketing/coupons/{couponId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateDshMarketingCoupon"];
+        trace?: never;
+    };
+    "/dsh/operator/marketing/loyalty-tiers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshMarketingLoyaltyTiers"];
+        put?: never;
+        post: operations["createDshMarketingLoyaltyTier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/marketing/loyalty-tiers/{tierId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateDshMarketingLoyaltyTier"];
+        trace?: never;
+    };
+    "/dsh/operator/marketing/subscription-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshMarketingSubscriptionPlans"];
+        put?: never;
+        post: operations["createDshMarketingSubscriptionPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/marketing/subscription-plans/{planId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateDshMarketingSubscriptionPlan"];
+        trace?: never;
+    };
+    "/dsh/client/marketing/subscriptions/purchase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createDshClientSubscriptionPurchase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/marketing/subscriptions/{purchaseId}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["activateDshClientSubscriptionPurchase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/marketing/subscriptions/purchases/{purchaseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshClientSubscriptionPurchase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/marketing/subscriptions/{subscriptionId}/renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["renewDshClientSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/marketing/subscriptions/{subscriptionId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelDshClientSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/benefits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshClientBenefits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/notifications/push-endpoints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Register or refresh the authenticated actor's push endpoint. */
+        put: operations["upsertDshNotificationPushEndpoint"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/notifications/push-endpoints/{deviceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Deactivate an endpoint owned by the authenticated actor. */
+        delete: operations["deactivateDshNotificationPushEndpoint"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/notifications/delivery-attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List operational and push delivery attempts with retry and dead-letter state. */
+        get: operations["listDshNotificationDeliveryAttempts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/support/order-rescue-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshOrderRescueCases"];
+        put?: never;
+        post: operations["createDshOrderRescueCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/support/order-rescue-cases/{caseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["CaseId"];
+            };
+            cookie?: never;
+        };
+        get: operations["getDshOrderRescueCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateDshOrderRescueCase"];
+        trace?: never;
+    };
+    "/dsh/operator/support/order-rescue-cases/{caseId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["CaseId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listDshOrderRescueEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/order-truth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List orders owned by the authenticated client in the current tenant. */
+        get: operations["listClientOrderTruth"];
+        put?: never;
+        /** Create one immutable order from an eligible actor-owned Checkout Intent. */
+        post: operations["createOrderTruthFromCheckout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/order-truth/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one actor-owned order truth. */
+        get: operations["getClientOrderTruth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/order-truth/{orderId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the redacted timeline of an actor-owned order. */
+        get: operations["listClientOrderTruthEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/order-truth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List order truth for the authenticated partner store scope. */
+        get: operations["listPartnerOrderTruth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/order-truth/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one order within the authenticated partner store scope. */
+        get: operations["getPartnerOrderTruth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/order-truth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List tenant order truth for an operator with operations.read. */
+        get: operations["listOperatorOrderTruth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/order-truth/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read redacted tenant-scoped operational diagnostics. */
+        get: operations["getOperatorOrderTruthDiagnostics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/order-truth/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one tenant order for an operator with operations.read. */
+        get: operations["getOperatorOrderTruth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/order-workboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the governed cross-store operator order workboard. */
+        get: operations["getDshOperatorOrderWorkboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/stores/{storeId}/delivery-pricing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOperatorDshStoreDeliveryPricing"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["upsertOperatorDshStoreDeliveryPricing"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/delivery-pricing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPartnerDshStoreDeliveryPricing"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/delivery-pricing/{fulfillmentMode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description The partner may mutate only partner_delivery for its resolved store. */
+        put: operations["upsertPartnerDshStoreDeliveryPricing"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/marketing/loyalty-earning-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshLoyaltyEarningPolicies"];
+        put?: never;
+        post: operations["createDshLoyaltyEarningPolicy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/marketing/loyalty-earning-policies/{policyId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateDshLoyaltyEarningPolicy"];
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/pickup/extend-window": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["extendDshPartnerPickupWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/pickup/reschedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rescheduleDshPartnerPickupWindow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partner-delivery/sla-alerts/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["refreshDshPartnerDeliverySlaAlerts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partner-delivery/sla-alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshPartnerDeliverySlaAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/partner-delivery/sla-alerts/{alertId}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["acknowledgeDshPartnerDeliverySlaAlert"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/pickups/sla-alerts/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["refreshDshPickupSlaAlerts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/pickups/sla-alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshPickupSlaAlerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/pickups/sla-alerts/{alertId}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["acknowledgeDshPickupSlaAlert"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["issueDshPartnerCourierConnectionCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/courier-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshPartnerCourierConnections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["revokeDshPartnerCourierConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/partner-fleet/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["connectDshCaptainToPartnerFleet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/partner-fleet/memberships": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshCaptainPartnerFleetMemberships"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/partner-fleet/memberships/{teamMemberId}/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["disconnectDshCaptainPartnerFleetMembership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/stores/{storeId}/partner-fleet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshOperatorPartnerFleetSnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/support/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshPartnerSupportTickets"];
+        put?: never;
+        post: operations["createDshPartnerSupportTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/support/tickets/{ticketId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        get: operations["getDshPartnerSupportTicket"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/support/tickets/{ticketId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listDshPartnerSupportMessages"];
+        put?: never;
+        post: operations["addDshPartnerSupportMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the WLT-owned payment timeline through authenticated DSH. */
+        get: operations["getDshPaymentSessionTimeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask WLT to query provider status without repeating authorize or capture. */
+        post: operations["refreshDshPaymentSessionProviderStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/me/finance/payout-destination": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshPartnerOwnPayoutDestination"];
+        put: operations["upsertDshPartnerOwnPayoutDestination"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/me/finance/payout-destination/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deactivateDshPartnerOwnPayoutDestination"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/me/finance/payout-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshPartnerOwnPayoutRequests"];
+        put?: never;
+        post: operations["createDshPartnerOwnPayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/me/finance/payout-destination": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshCaptainOwnPayoutDestination"];
+        put: operations["upsertDshCaptainOwnPayoutDestination"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/me/finance/payout-destination/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deactivateDshCaptainOwnPayoutDestination"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/me/finance/payout-destination": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshFieldOwnPayoutDestination"];
+        put: operations["upsertDshFieldOwnPayoutDestination"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/field/me/finance/payout-destination/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deactivateDshFieldOwnPayoutDestination"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/payout-requests/{payoutId}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshControlPanelPayoutAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/payout-requests/{payoutId}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reconcileDshControlPanelPayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/reels/{reelId}/media/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["previewOperatorReelMedia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/refunds/{refundId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a requested refund as an independent operator */
+        post: operations["approveDshFinanceRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/refunds/{refundId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a requested refund as an independent operator */
+        post: operations["rejectDshFinanceRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/refunds/{refundId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute an approved refund through WLT and the provider
+         * @description DSH preserves the WLT status and error body. A 202 is returned only when WLT durably records provider_unknown. A 500 persistence failure is not retry permission and must not cause another provider call.
+         */
+        post: operations["completeDshFinanceRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/refunds/{refundId}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve an unknown provider result with evidence */
+        post: operations["reconcileDshFinanceRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/refunds/{refundId}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read operator, provider and lifecycle audit evidence */
+        get: operations["listDshFinanceRefundAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/orders/{orderId}/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read privacy-safe refund status for the authenticated client's owned order */
+        get: operations["getDshClientOrderRefundStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read privacy-safe refund status for an authenticated partner store order */
+        get: operations["getDshPartnerOrderRefundStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/me/finance/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshClientOwnWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/me/finance/ledger-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshClientOwnLedgerEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/me/finance/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshPartnerOwnWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/me/finance/ledger-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshPartnerOwnLedgerEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/me/finance/commissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshPartnerOwnCommissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/me/finance/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshCaptainOwnWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/me/finance/ledger-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshCaptainOwnLedgerEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/me/finance/commissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshCaptainOwnCommissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/me/finance/payout-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshCaptainOwnPayoutRequests"];
+        put?: never;
+        post: operations["createDshCaptainOwnPayoutRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/wallets/{actorType}/{actorId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Requires finance.read and returns a no-store WLT-owned wallet. */
+        get: operations["getDshRepresentativeWallet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Requires finance.read. Actor scope is taken from the path; actorId and actorType query overrides are ignored by the implementation. */
+        get: operations["listDshRepresentativeLedgerEntries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/internal/workforce/availability-projections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["projectWorkforceAvailabilityIntoDsh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/capacity-forecast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDispatchCapacityForecast"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/capacity-policies/{serviceAreaCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["upsertDispatchCapacityPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/dispatch/heatmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDispatchHeatmap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/settlements/{settlementId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshControlPanelSettlementEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/commission-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["upsertDshControlPanelCommissionPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/commissions/{commissionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getDshControlPanelCommission"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/commissions/{commissionId}/adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["adjustDshControlPanelCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/commissions/{commissionId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirmDshControlPanelCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/commissions/{commissionId}/settle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["settleDshControlPanelCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/commissions/{commissionId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rejectDshControlPanelCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/control-panel/finance/commissions/{commissionId}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reverseDshControlPanelCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/captain-handoff/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm that the owning store released the package to the assigned captain. */
+        post: operations["confirmPartnerStoreCaptainHandoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/partner/orders/{orderId}/captain-handoff/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Report package shortage or mismatch before store confirmation. */
+        post: operations["reportPartnerStoreCaptainHandoffException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/captain/dispatch/assignments/{assignmentId}/handoff-exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Report package shortage or mismatch before captain pickup. */
+        post: operations["reportCaptainStoreCaptainHandoffException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/support/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDshClientSupportTickets"];
+        put?: never;
+        post: operations["createDshClientSupportTicket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/support/tickets/{ticketId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        get: operations["getDshClientSupportTicket"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/client/support/tickets/{ticketId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listDshClientSupportMessages"];
+        put?: never;
+        post: operations["addDshClientSupportMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/support/tickets/{ticketId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listDshOperatorSupportMessages"];
+        put?: never;
+        post: operations["addDshOperatorSupportMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/support/tickets/{ticketId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listDshOperatorSupportEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/support/tickets/{ticketId}/messages/{messageId}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+                messageId: components["parameters"]["MessageId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listDshActorSupportMessageAttachments"];
+        put?: never;
+        /** @description Compatibility operation for linking one already-uploaded governed asset. New clients should send attachments atomically with message creation. */
+        post: operations["attachDshActorSupportMessageAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/support/tickets/{ticketId}/messages/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["markDshActorSupportMessagesRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+                messageId: components["parameters"]["MessageId"];
+            };
+            cookie?: never;
+        };
+        get: operations["listDshOperatorSupportMessageAttachments"];
+        put?: never;
+        /** @description Compatibility operation for linking one already-uploaded governed asset. */
+        post: operations["attachDshOperatorSupportMessageAsset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/support/tickets/{ticketId}/messages/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["markDshOperatorSupportMessagesRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/workforce/scopes/{actorId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getWorkforceActorScopes"];
+        put: operations["replaceWorkforceActorScopes"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dsh/operator/workforce/employees/{actorId}/media/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadWorkforceEmployeeMedia"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5614,7 +9092,7 @@ export interface components {
         DshDispatchAssignmentResponse: {
             assignment: components["schemas"]["DshDispatchAssignment"];
         };
-        /** @description JRN-017 partner-facing reference status only. Never includes the captain's location or proof-of-delivery reference. */
+        /** @description Partner-facing reference status only. Never includes the captain's location or proof-of-delivery reference. */
         DshPartnerDispatchReference: {
             id: string;
             orderId: string;
@@ -7471,6 +10949,2995 @@ export interface components {
             /** Format: date-time */
             newExpiry: string;
         };
+        /** @enum {string} */
+        ApprovalStatus: "pending" | "approved" | "rejected";
+        /** @enum {string} */
+        AdministrationPermission: "administration.read" | "administration.manage" | "administration.approve" | "administration.role.request" | "administration.role.approve" | "administration.staff.request" | "administration.staff.approve" | "administration.audit.read" | "administration.diagnostics.read" | "administration.rollback.request" | "administration.rollback.approve";
+        /** @enum {string} */
+        AdministrationSurface: "control-panel" | "app-client" | "app-partner" | "app-captain" | "app-field" | "webapp" | "website";
+        /** @enum {string} */
+        RoleChangeAction: "staff_role_assignment" | "staff_role_revocation";
+        Role: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: string;
+            permissions: components["schemas"]["AdministrationPermission"][];
+            surfaces: components["schemas"]["AdministrationSurface"][];
+            active: boolean;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        RoleDefinitionRequestInput: {
+            name: string;
+            description: string;
+            permissions: components["schemas"]["AdministrationPermission"][];
+            surfaces: components["schemas"]["AdministrationSurface"][];
+            reason: string;
+        };
+        RoleDefinitionRequest: {
+            /** Format: uuid */
+            id: string;
+            roleName: string;
+            description: string;
+            permissions: components["schemas"]["AdministrationPermission"][];
+            surfaces: components["schemas"]["AdministrationSurface"][];
+            requestedBy: string;
+            reason: string;
+            status: components["schemas"]["ApprovalStatus"];
+            reviewedBy: string;
+            reviewNote: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            reviewedAt?: string | null;
+        };
+        StaffAssignment: {
+            /** Format: uuid */
+            id: string;
+            actorId: string;
+            /** Format: uuid */
+            roleId: string;
+            roleName: string;
+            assignedBy: string;
+            /** Format: date-time */
+            assignedAt: string;
+        };
+        RoleChangeRequestInput: {
+            /** Format: uuid */
+            roleId: string;
+            actionType: components["schemas"]["RoleChangeAction"];
+            reason: string;
+        };
+        ApprovalReviewInput: {
+            /** @enum {string} */
+            decision: "approved" | "rejected";
+            reviewNote: string;
+            expectedVersion: number;
+        };
+        RoleAssignmentApproval: {
+            /** Format: uuid */
+            id: string;
+            actionType: components["schemas"]["RoleChangeAction"];
+            targetActorId: string;
+            /** Format: uuid */
+            roleId: string;
+            roleName: string;
+            requestedBy: string;
+            reason: string;
+            status: components["schemas"]["ApprovalStatus"];
+            reviewedBy: string;
+            reviewNote: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            reviewedAt?: string | null;
+        };
+        RollbackRequest: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            sourceApprovalId: string;
+            sourceActionType: components["schemas"]["RoleChangeAction"];
+            inverseActionType: components["schemas"]["RoleChangeAction"];
+            targetActorId: string;
+            /** Format: uuid */
+            roleId: string;
+            roleName: string;
+            requestedBy: string;
+            reason: string;
+            status: components["schemas"]["ApprovalStatus"];
+            reviewedBy: string;
+            reviewNote: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            reviewedAt?: string | null;
+            sourceApprovedBy: string;
+        };
+        AdministrationDiagnostics: {
+            /** @enum {string} */
+            status: "healthy" | "attention";
+            activeRoleCount: number;
+            approvedAssignmentCount: number;
+            pendingRoleDefinitionCount: number;
+            pendingRoleAssignmentCount: number;
+            pendingRollbackCount: number;
+            recentRestrictedAuditCount: number;
+            /** Format: date-time */
+            generatedAt: string;
+        };
+        AuditEntry: {
+            /** Format: uuid */
+            id: string;
+            actorId: string;
+            action: string;
+            targetId: string;
+            /** @description Redacted allowlisted metadata only; never raw reason, review note, phone, credential, document, token, or secret. */
+            detail: string;
+            /** @enum {string} */
+            sensitivity: "internal" | "restricted";
+            correlationId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        Error: {
+            code: string;
+            message: string;
+        };
+        DispatchBalancePolicy: {
+            enabled: boolean;
+            requirePositiveBalance: boolean;
+            /** Format: int64 */
+            minimumDispatchBalanceMinorUnits: number;
+            /** Format: int64 */
+            minimumCodBalanceMinorUnits: number;
+            currency: string;
+            snapshotTtlSeconds: number;
+            notes: string;
+            updatedBy: string;
+            /** Format: date-time */
+            updatedAt: string;
+            version: number;
+        };
+        DispatchBalancePolicyInput: {
+            enabled: boolean;
+            requirePositiveBalance: boolean;
+            /** Format: int64 */
+            minimumDispatchBalanceMinorUnits: number;
+            /** Format: int64 */
+            minimumCodBalanceMinorUnits: number;
+            currency: string;
+            snapshotTtlSeconds: number;
+            notes: string;
+            expectedVersion: number;
+            reason: string;
+        };
+        CaptainFinancialEligibility: {
+            operatorContextId: string;
+            captainId: string;
+            walletId: string;
+            walletStatus: string;
+            /** Format: int64 */
+            availableBalanceMinorUnits: number;
+            /** Format: int64 */
+            minimumDispatchBalanceMinorUnits: number;
+            currency: string;
+            eligible: boolean;
+            ineligibilityReason?: string;
+            snapshotReference: string;
+            /** Format: date-time */
+            checkedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        PositiveVersion: number;
+        ErrorResponse: {
+            code: string;
+            message: string;
+        };
+        ConflictResponse: {
+            /** @constant */
+            code: "CONFLICT";
+            message: string;
+            entityId: string;
+            expectedVersion?: number | null;
+            currentVersion: number;
+        };
+        VersionedEntity: {
+            id: string;
+            version: components["schemas"]["PositiveVersion"];
+        };
+        Domain: components["schemas"]["VersionedEntity"] & {
+            slug: string;
+            nameAr: string;
+            nameEn: string;
+            icon: string;
+            sortOrder: number;
+            isActive: boolean;
+            isClientVisible: boolean;
+            requiresProductCatalog: boolean;
+            isManualRequest: boolean;
+        };
+        CreateDomainRequest: {
+            slug: string;
+            nameAr: string;
+            nameEn: string;
+            icon: string;
+            sortOrder: number;
+            isActive: boolean;
+            isClientVisible: boolean;
+            requiresProductCatalog: boolean;
+            isManualRequest: boolean;
+        };
+        UpdateDomainRequest: {
+            expectedVersion: components["schemas"]["PositiveVersion"];
+            nameAr?: string;
+            nameEn?: string;
+            icon?: string;
+            sortOrder?: number;
+            isActive?: boolean;
+            isClientVisible?: boolean;
+            requiresProductCatalog?: boolean;
+            isManualRequest?: boolean;
+        };
+        Node: components["schemas"]["VersionedEntity"] & {
+            domainId: string;
+            parentId?: string | null;
+            level: string;
+            slug: string;
+            nameAr: string;
+            nameEn: string;
+            icon?: string;
+            sortOrder: number;
+            isActive: boolean;
+            isClientVisible: boolean;
+            requiresBarcode?: boolean;
+            allowsProductProposal?: boolean;
+            allowsStoreProductCustomImage?: boolean;
+            requiresCatalogReview?: boolean;
+            requiresProductCatalog?: boolean;
+        };
+        CreateNodeRequest: {
+            domainId: string;
+            parentId?: string | null;
+            level: string;
+            slug: string;
+            nameAr: string;
+            nameEn: string;
+            icon: string;
+            sortOrder: number;
+            isActive: boolean;
+            isClientVisible: boolean;
+            requiresBarcode: boolean;
+            allowsProductProposal: boolean;
+            allowsStoreProductCustomImage: boolean;
+            requiresCatalogReview: boolean;
+            requiresProductCatalog: boolean;
+        };
+        UpdateNodeRequest: {
+            expectedVersion: components["schemas"]["PositiveVersion"];
+            nameAr?: string;
+            nameEn?: string;
+            icon?: string;
+            sortOrder?: number;
+            isActive?: boolean;
+            isClientVisible?: boolean;
+            requiresBarcode?: boolean;
+            allowsProductProposal?: boolean;
+            allowsStoreProductCustomImage?: boolean;
+            requiresCatalogReview?: boolean;
+            requiresProductCatalog?: boolean;
+        };
+        MasterProduct: components["schemas"]["VersionedEntity"] & {
+            domainId: string;
+            categoryNodeId?: string | null;
+            canonicalNameAr: string;
+            canonicalNameEn: string;
+            brand: string;
+            barcode?: string | null;
+            gtin?: string | null;
+            sku?: string | null;
+            unit: string;
+            measurementType: string;
+            canonicalImageObjectKey?: string | null;
+            /** @enum {string} */
+            approvalStatus: "draft" | "pending_review" | "approved" | "rejected" | "archived";
+            isActive: boolean;
+        };
+        CreateMasterProductRequest: {
+            domainId: string;
+            categoryNodeId?: string | null;
+            canonicalNameAr: string;
+            canonicalNameEn: string;
+            brand: string;
+            barcode?: string | null;
+            gtin?: string | null;
+            sku?: string | null;
+            unit: string;
+            measurementType: string;
+            canonicalImageObjectKey?: string | null;
+            approvalStatus: string;
+            isActive: boolean;
+        };
+        UpdateMasterProductRequest: {
+            expectedVersion: components["schemas"]["PositiveVersion"];
+            categoryNodeId?: string | null;
+            canonicalNameAr?: string;
+            canonicalNameEn?: string;
+            brand?: string;
+            barcode?: string | null;
+            gtin?: string | null;
+            sku?: string | null;
+            unit?: string;
+            measurementType?: string;
+            approvalStatus?: string;
+            isActive?: boolean;
+        };
+        Proposal: components["schemas"]["VersionedEntity"] & {
+            proposedNameAr: string;
+            proposedNameEn?: string;
+            domainId: string;
+            categoryNodeId?: string | null;
+            brand?: string;
+            barcode?: string | null;
+            imageObjectKey?: string | null;
+            sourceSurface: string;
+            sourceActorId: string;
+            sourceStoreId?: string | null;
+            status: string;
+            reviewNote?: string;
+        };
+        CreateProposalRequest: {
+            proposedNameAr: string;
+            proposedNameEn?: string;
+            domainId: string;
+            categoryNodeId?: string | null;
+            brand?: string;
+            barcode?: string | null;
+            imageObjectKey?: string | null;
+            sourceSurface?: string;
+        };
+        UpdateProposalRequest: {
+            expectedVersion: components["schemas"]["PositiveVersion"];
+            proposedNameAr?: string;
+            proposedNameEn?: string;
+            brand?: string;
+            barcode?: string | null;
+            imageObjectKey?: string | null;
+        };
+        ProposalDecisionRequest: {
+            expectedVersion: components["schemas"]["PositiveVersion"];
+            /** @enum {string} */
+            decision: "under_review" | "adopted" | "rejected" | "needs_fix";
+            reviewNote: string;
+            adoptedMasterProductId?: string | null;
+        };
+        ProposalTransitionRequest: {
+            expectedVersion: components["schemas"]["PositiveVersion"];
+            nextStatus: string;
+            note: string;
+            adoptedMasterProductId?: string | null;
+            createMasterProduct?: boolean;
+        };
+        Policy: components["schemas"]["VersionedEntity"] & {
+            [key: string]: unknown;
+        };
+        UpdatePolicyRequest: {
+            expectedVersion: components["schemas"]["PositiveVersion"];
+            platformCommissionRate?: number;
+            fieldPartnerOnboardingCommissionAmount?: number;
+            fieldPartnerOnboardingCommissionCurrency?: string;
+            storeOnboardingFeeAmount?: number;
+            storeOnboardingFeeCurrency?: string;
+            allowsStoreProductCustomImage?: boolean;
+            allowsProductProposal?: boolean;
+            requiresBarcode?: boolean;
+            requiresCatalogReview?: boolean;
+            requiresMarketingReview?: boolean;
+            requiresProductImage?: boolean;
+            requiresCategoryImage?: boolean;
+            requiresDescription?: boolean;
+            requiresBrand?: boolean;
+            requiresUnit?: boolean;
+            productDataQualityMinimumScore?: number;
+            maxGalleryImages?: number;
+            manualRequestMode?: boolean;
+            isActive?: boolean;
+            /** Format: date-time */
+            effectiveFrom?: string;
+            notes?: string;
+        };
+        Assortment: components["schemas"]["VersionedEntity"] & {
+            storeId: string;
+            masterProductId: string;
+            unitPrice: number;
+            currency: string;
+            available: boolean;
+            /** @enum {string} */
+            stockStatus: "in_stock" | "low_stock" | "out_of_stock";
+            localNote?: string;
+            customImageObjectKey?: string | null;
+            publicationStatus: string;
+        };
+        UpsertAssortmentRequest: {
+            expectedVersion?: components["schemas"]["PositiveVersion"];
+            unitPrice: number;
+            currency: string;
+            available: boolean;
+            /** @enum {string} */
+            stockStatus: "in_stock" | "low_stock" | "out_of_stock";
+            localNote: string;
+            customImageObjectKey: string | null;
+            publicationStatus: string;
+        };
+        Asset: components["schemas"]["VersionedEntity"] & {
+            [key: string]: unknown;
+        };
+        UpdateAssetRequest: {
+            expectedVersion: components["schemas"]["PositiveVersion"];
+            altAr?: string;
+            altEn?: string;
+            dominantColor?: string | null;
+        };
+        ReviewAssetRequest: {
+            expectedVersion: components["schemas"]["PositiveVersion"];
+            /** @enum {string} */
+            decision: "approved" | "rejected";
+            reviewNote?: string;
+        };
+        DomainResponse: {
+            domain: components["schemas"]["Domain"];
+        };
+        DomainListResponse: {
+            domains: components["schemas"]["Domain"][];
+        };
+        NodeResponse: {
+            node: components["schemas"]["Node"];
+        };
+        NodeListResponse: {
+            nodes: components["schemas"]["Node"][];
+        };
+        TaxonomyResponse: {
+            domains: components["schemas"]["Domain"][];
+            nodes: components["schemas"]["Node"][];
+        };
+        MasterProductResponse: {
+            masterProduct: components["schemas"]["MasterProduct"];
+        };
+        MasterProductListResponse: {
+            masterProducts: components["schemas"]["MasterProduct"][];
+            total?: number;
+            limit?: number;
+            offset?: number;
+        };
+        ProposalResponse: {
+            proposal: components["schemas"]["Proposal"];
+        };
+        ProposalListResponse: {
+            proposals: components["schemas"]["Proposal"][];
+            total: number;
+            limit: number;
+            offset: number;
+        };
+        PolicyResponse: {
+            policy: components["schemas"]["Policy"];
+        };
+        PolicyListResponse: {
+            policies: components["schemas"]["Policy"][];
+        };
+        AssortmentResponse: {
+            assortment: components["schemas"]["Assortment"];
+        };
+        AssortmentListResponse: {
+            assortment: components["schemas"]["Assortment"][];
+        };
+        FieldAssortmentListResponse: {
+            storeId: string;
+            assortment: components["schemas"]["Assortment"][];
+        };
+        AssetResponse: {
+            asset: components["schemas"]["Asset"];
+        };
+        AssetListResponse: {
+            assets: components["schemas"]["Asset"][];
+            total: number;
+            limit: number;
+            offset: number;
+        };
+        /** @enum {string} */
+        CheckoutIntentState: "pending" | "wlt_handoff_failed" | "wlt_outcome_unknown" | "payment_pending" | "confirmed" | "cancelled" | "payment_confirmed" | "payment_failed" | "expired";
+        /** @enum {string} */
+        PaymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
+        /** @enum {string} */
+        FulfillmentMode: "bthwani_delivery" | "partner_delivery" | "pickup";
+        CreateCheckoutIntentInput: {
+            /** Format: uuid */
+            cartId: string;
+            storeId: string;
+            fulfillmentMode?: components["schemas"]["FulfillmentMode"];
+            paymentMethod?: components["schemas"]["PaymentMethod"];
+            /** Format: uuid */
+            deliveryAddressId?: string;
+            note?: string;
+            couponCode?: string;
+        };
+        WltPaymentSessionEvent: {
+            eventId?: string;
+            correlationId?: string;
+            operatorContextId: string;
+            /** Format: uuid */
+            checkoutIntentId: string;
+            paymentSessionId: string;
+            /** @enum {string} */
+            status: "authorized" | "reference_created" | "cod_pending" | "captured" | "cod_collected" | "failed" | "expired";
+        };
+        CheckoutIntent: {
+            /** Format: uuid */
+            id: string;
+            operatorContextId: string;
+            clientId: string;
+            /** Format: uuid */
+            cartId: string;
+            storeId: string;
+            fulfillmentMode: components["schemas"]["FulfillmentMode"];
+            state: components["schemas"]["CheckoutIntentState"];
+            paymentMethod: components["schemas"]["PaymentMethod"];
+            wltPaymentSessionId: string;
+            deliveryAddress?: string;
+            note?: string;
+            /** Format: int64 */
+            subtotalMinorUnits: number;
+            /** Format: int64 */
+            deliveryFeeMinorUnits: number;
+            /** Format: int64 */
+            discountMinorUnits: number;
+            /** Format: int64 */
+            totalMinorUnits: number;
+            currency: string;
+            pricingSnapshotHash: string;
+            couponId?: string;
+            couponRedemptionId?: string;
+            couponCodeLast4?: string;
+            version: number;
+            reconciliationRequired?: boolean;
+            /** Format: int64 */
+            reconciliationAgeSeconds?: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshClientAddress: {
+            id: string;
+            label: string;
+            recipientName: string;
+            phoneE164: string;
+            addressLine: string;
+            serviceAreaCode: string;
+            building?: string | null;
+            floor?: string | null;
+            unit?: string | null;
+            deliveryInstructions?: string | null;
+            /** Format: double */
+            latitude?: number | null;
+            /** Format: double */
+            longitude?: number | null;
+            isDefault: boolean;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshCreateClientAddressInput: {
+            label: string;
+            recipientName: string;
+            phoneE164: string;
+            addressLine: string;
+            /** @description Must equal the active DSH service-area code resolved from latitude and longitude. */
+            serviceAreaCode: string;
+            building?: string;
+            floor?: string;
+            unit?: string;
+            deliveryInstructions?: string;
+            /** Format: double */
+            latitude: number;
+            /** Format: double */
+            longitude: number;
+            /** @default false */
+            makeDefault: boolean;
+        };
+        DshUpdateClientAddressInput: components["schemas"]["DshCreateClientAddressInput"] & {
+            expectedVersion: number;
+        };
+        DshError: {
+            code: string;
+            message: string;
+        };
+        DshClientAddressPrivacyPolicy: {
+            enabled: boolean;
+            retentionDays: number;
+            batchLimit: number;
+            version: number;
+            updatedBy: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshClientAddressPrivacyQueueStatus: {
+            policyEnabled: boolean;
+            policyVersion: number;
+            retentionDays: number;
+            batchLimit: number;
+            scheduledCount: number;
+            dueCount: number;
+            anonymizedCount: number;
+            /** Format: date-time */
+            nextPurgeAt?: string | null;
+            /** Format: date-time */
+            checkedAt: string;
+        };
+        DshUpdateClientAddressPrivacyPolicyInput: {
+            enabled: boolean;
+            retentionDays: number;
+            batchLimit: number;
+            expectedVersion: number;
+            reason: string;
+        };
+        DshClientAddressAnonymizationResult: {
+            anonymizedCount: number;
+            /** Format: date-time */
+            completedAt: string;
+        };
+        DshClientAddressPrivacyAuditEvent: {
+            /** Format: uuid */
+            eventId: string;
+            /** @description Operational address identifier; not address content. */
+            addressId: string;
+            clientSubjectHash: string;
+            /** @enum {string} */
+            action: "retention_scheduled" | "anonymized" | "policy_updated";
+            actorId: string;
+            correlationId?: string | null;
+            policyVersion: number;
+            metadata: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DshMapSearchInput: {
+            query: string;
+            /** @default 6 */
+            limit: number;
+            language?: string;
+            countryCodes?: string[];
+        };
+        DshMapReverseInput: {
+            /** Format: double */
+            latitude: number;
+            /** Format: double */
+            longitude: number;
+            language?: string;
+        };
+        DshVerifiedMapLocation: {
+            providerCode: string;
+            providerPlaceId: string;
+            displayName: string;
+            /** Format: double */
+            latitude: number;
+            /** Format: double */
+            longitude: number;
+            countryCode?: string;
+            administrativeArea?: string;
+            locality?: string;
+            postalCode?: string;
+            /** Format: double */
+            confidence?: number;
+            serviceAreaCode?: string;
+            serviceAreaName?: string;
+            serviceAreaVersion?: number;
+            serviceAreaVerified: boolean;
+        };
+        DshMapProviderHealthItem: {
+            /** @enum {string} */
+            kind: "map" | "maps";
+            status: string;
+            /** Format: date-time */
+            checkedAt: string;
+            message?: string;
+        };
+        DshMapProviderHealth: {
+            configured: boolean;
+            /** @enum {string} */
+            status: "healthy" | "degraded" | "unknown" | "not_configured";
+            /** Format: date-time */
+            checkedAt: string;
+            providers: components["schemas"]["DshMapProviderHealthItem"][];
+        };
+        DshPolygonPoint: [
+            number,
+            number
+        ];
+        DshServiceAreaBounds: {
+            /** Format: double */
+            minLongitude: number;
+            /** Format: double */
+            minLatitude: number;
+            /** Format: double */
+            maxLongitude: number;
+            /** Format: double */
+            maxLatitude: number;
+        };
+        DshServiceArea: {
+            serviceAreaCode: string;
+            displayName: string;
+            /** @description Simple polygon with no adjacent duplicate points, no self-intersection, and non-zero signed area. */
+            polygon: components["schemas"]["DshPolygonPoint"][];
+            pointCount: number;
+            bounds: components["schemas"]["DshServiceAreaBounds"];
+            active: boolean;
+            priority: number;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshServiceAreaUpsertInput: {
+            displayName: string;
+            /** @description Must be a simple polygon with no adjacent duplicate points, no self-intersection, and non-zero signed area. */
+            polygon: components["schemas"]["DshPolygonPoint"][];
+            active: boolean;
+            priority: number;
+            /** @description Use zero only when creating a code that does not exist. */
+            expectedVersion: number;
+            reason: string;
+        };
+        /** @enum {string} */
+        DeliveryExceptionReasonCode: "customer_unreachable" | "recipient_refused" | "wrong_address" | "unsafe_location" | "vehicle_breakdown" | "accident" | "damaged_order" | "cash_collection_issue" | "weather_or_road_block" | "proof_unavailable" | "handoff_shortage" | "handoff_mismatch" | "other";
+        /** @enum {string} */
+        DeliveryExceptionStatus: "open" | "acknowledged" | "resolved";
+        /** @enum {string} */
+        DeliveryExceptionSeverity: "medium" | "high" | "critical";
+        /** @enum {string} */
+        DeliveryExceptionResolutionAction: "retry_same_captain" | "reassign_captain" | "return_to_store" | "cancel_order";
+        ReportDeliveryExceptionRequest: {
+            reasonCode: components["schemas"]["DeliveryExceptionReasonCode"];
+            note: string;
+            correlationId: string;
+            /** Format: double */
+            latitude?: number | null;
+            /** Format: double */
+            longitude?: number | null;
+        };
+        AcknowledgeDeliveryExceptionRequest: {
+            expectedVersion: number;
+        };
+        ResolveDeliveryExceptionRequest: {
+            expectedVersion: number;
+            action: components["schemas"]["DeliveryExceptionResolutionAction"];
+            note: string;
+            /** @description Required only when action is reassign_captain. */
+            newCaptainId?: string;
+        };
+        DeliveryException: {
+            /** Format: uuid */
+            id: string;
+            operatorContextId: string;
+            /** Format: uuid */
+            assignmentId: string;
+            /** Format: uuid */
+            orderId: string;
+            captainId: string;
+            reasonCode: components["schemas"]["DeliveryExceptionReasonCode"];
+            note: string;
+            /** @enum {string} */
+            deliveryStatusAtReport: "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer";
+            severity: components["schemas"]["DeliveryExceptionSeverity"];
+            status: components["schemas"]["DeliveryExceptionStatus"];
+            correlationId: string;
+            /** Format: double */
+            reportedLatitude?: number | null;
+            /** Format: double */
+            reportedLongitude?: number | null;
+            /** Format: date-time */
+            reportedAt: string;
+            /** Format: date-time */
+            acknowledgedAt?: string | null;
+            acknowledgedByActorId?: string | null;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            resolvedByActorId?: string | null;
+            resolutionAction?: components["schemas"]["DeliveryExceptionResolutionAction"] | null;
+            resolutionNote?: string | null;
+            /** Format: uuid */
+            replacementAssignmentId?: string | null;
+            replacementCaptainId?: string | null;
+            /** Format: date-time */
+            returnStartedAt?: string | null;
+            /** Format: date-time */
+            returnArrivedAt?: string | null;
+            /** Format: date-time */
+            returnedAt?: string | null;
+            returnAcceptedByActorId?: string | null;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DeliveryExceptionResponse: {
+            exception: components["schemas"]["DeliveryException"];
+        };
+        /**
+         * @description Classifies the multipart image so DSH binds it to the correct governed media purpose.
+         * @enum {string}
+         */
+        DeliveryEvidenceKind: "photo" | "signature";
+        /** @enum {string} */
+        DeliveryProofMethod: "otp_pin" | "photo" | "signature" | "composite";
+        /** @enum {string} */
+        DeliveryProofStatus: "submitted" | "pending_review" | "accepted" | "rejected" | "superseded";
+        DeliveryPinChallenge: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            assignmentId: string;
+            /** Format: date-time */
+            expiresAt: string;
+            maxAttempts: number;
+            version: number;
+        };
+        DeliveryPinResponse: {
+            challenge: components["schemas"]["DeliveryPinChallenge"];
+            pin: string;
+        };
+        SubmitDeliveryProofRequest: {
+            method: components["schemas"]["DeliveryProofMethod"];
+            pin?: string;
+            photoMediaRef?: string | null;
+            signatureMediaRef?: string | null;
+            capturedLatitude?: number | null;
+            capturedLongitude?: number | null;
+            /** Format: date-time */
+            capturedAt?: string | null;
+            idempotencyKey: string;
+        };
+        ReviewDeliveryProofRequest: {
+            expectedVersion: number;
+            reason: string;
+        };
+        DeliveryProof: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            assignmentId: string;
+            /** Format: uuid */
+            orderId: string;
+            captainId: string;
+            method: components["schemas"]["DeliveryProofMethod"];
+            status: components["schemas"]["DeliveryProofStatus"];
+            hasPhoto: boolean;
+            hasSignature: boolean;
+            photoMediaRef?: string | null;
+            signatureMediaRef?: string | null;
+            capturedLatitude?: number | null;
+            capturedLongitude?: number | null;
+            /** Format: date-time */
+            capturedAt: string;
+            /** Format: date-time */
+            submittedAt: string;
+            /** Format: date-time */
+            reviewedAt?: string | null;
+            reviewedByActorId?: string | null;
+            reviewReason?: string | null;
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            /** Format: date-time */
+            rejectedAt?: string | null;
+            version: number;
+        };
+        ClientDeliveryProof: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            method: components["schemas"]["DeliveryProofMethod"];
+            /** @constant */
+            status: "accepted";
+            hasPhoto: boolean;
+            hasSignature: boolean;
+            /** Format: date-time */
+            capturedAt: string;
+            /** Format: date-time */
+            acceptedAt?: string | null;
+        };
+        ErrorEnvelope: {
+            code: string;
+            message: string;
+        } & {
+            [key: string]: unknown;
+        };
+        DispatchAssignmentEnvelope: {
+            assignment: {
+                [key: string]: unknown;
+            };
+        };
+        PartnerDeliveryTaskEnvelope: {
+            task: {
+                [key: string]: unknown;
+            };
+        };
+        /** @enum {string} */
+        AssignmentStatus: "offered" | "accepted" | "declined" | "completed" | "cancelled";
+        /** @enum {string} */
+        DeliveryStatus: "assigned" | "driver_assigned" | "driver_arrived_store" | "picked_up" | "arrived_customer" | "returning_to_store" | "return_arrived_store" | "returned_to_store" | "delivered" | "cancelled";
+        DispatchOfferControls: {
+            /** @default default */
+            operatorContextId: string;
+            captainId: string;
+            serviceAreaCode: string;
+            idempotencyKey: string;
+            /** @default 0 */
+            priority: number;
+            distanceMeters?: number;
+            offerReason?: string;
+            /** @default 90 */
+            responseTimeoutSeconds: number;
+        };
+        GovernedDispatchAssignment: {
+            /** Format: uuid */
+            id: string;
+            orderId?: string;
+            specialRequestId?: string;
+            requestType?: string;
+            captainId: string;
+            assignedBy: string;
+            status: components["schemas"]["AssignmentStatus"];
+            /** Format: date-time */
+            responseDeadlineAt: string;
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            /** Format: date-time */
+            declinedAt?: string | null;
+            /** Format: date-time */
+            completedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            operatorContextId: string;
+            serviceAreaCode: string;
+            priority: number;
+            distanceMeters?: number | null;
+            offerReason?: string;
+            responseReason?: string;
+            /** Format: date-time */
+            expiredAt?: string | null;
+            /** Format: date-time */
+            cancelledAt?: string | null;
+            cancelledBy?: string;
+            /** Format: uuid */
+            supersedesAssignmentId?: string;
+            version: number;
+            delivery: {
+                /** Format: uuid */
+                id: string;
+                /** Format: uuid */
+                assignmentId: string;
+                orderId?: string;
+                specialRequestId?: string;
+                captainId: string;
+                status: components["schemas"]["DeliveryStatus"];
+                podMethod?: string;
+                podReference?: string;
+                note?: string;
+                /** Format: date-time */
+                createdAt: string;
+                /** Format: date-time */
+                updatedAt: string;
+            };
+        };
+        GovernedDispatchAssignmentResponse: {
+            assignment: components["schemas"]["GovernedDispatchAssignment"];
+            /** @default false */
+            replayed: boolean;
+        };
+        CreateGovernedDispatchAssignmentRequest: components["schemas"]["DispatchOfferControls"] & {
+            /** Format: uuid */
+            orderId: string;
+        };
+        ReassignDispatchAssignmentRequest: components["schemas"]["DispatchOfferControls"] & {
+            reason: string;
+        };
+        DeclineDispatchAssignmentRequest: {
+            reasonCode: string;
+            reason: string;
+        };
+        CancelDispatchAssignmentRequest: {
+            reasonCode: string;
+            reason: string;
+        };
+        UpsertCaptainDispatchProfileRequest: {
+            /** @default default */
+            operatorContextId: string;
+            /** @enum {string} */
+            accreditationStatus: "pending" | "approved" | "suspended" | "expired";
+            /** @enum {string} */
+            availabilityStatus: "available" | "busy" | "offline" | "suspended";
+            maxActiveAssignments: number;
+            priorityScore: number;
+            /** @default 0 */
+            expectedVersion: number;
+        };
+        CaptainDispatchCandidate: {
+            operatorContextId: string;
+            captainId: string;
+            serviceAreaCode: string;
+            /** @enum {string} */
+            accreditationStatus: "pending" | "approved" | "suspended" | "expired";
+            /** @enum {string} */
+            availabilityStatus: "available" | "busy" | "offline" | "suspended";
+            maxActiveAssignments: number;
+            activeAssignments: number;
+            remainingCapacity: number;
+            priorityScore: number;
+            eligible: boolean;
+            ineligibilityReason?: string;
+            version: number;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DispatchDecision: {
+            /** Format: uuid */
+            id: string;
+            operatorContextId: string;
+            /** Format: uuid */
+            assignmentId?: string;
+            /** Format: uuid */
+            orderId?: string;
+            captainId?: string;
+            /** @enum {string} */
+            action: "offered" | "accepted" | "declined" | "expired" | "cancelled" | "reassigned" | "eligibility_rejected" | "capacity_rejected";
+            reasonCode?: string;
+            reason?: string;
+            actorId: string;
+            /** @enum {string} */
+            actorRole: "operator" | "captain" | "system";
+            metadata: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        DshHomeMarketingEventInput: {
+            /** @enum {string} */
+            eventType: "impression" | "click";
+            /** @enum {string} */
+            contentKind: "banners" | "promos";
+            contentId: string;
+            viewerRef: string;
+            cityCode?: string;
+            serviceAreaCode?: string;
+            /** @enum {string} */
+            audienceSegment: "guest" | "authenticated";
+        };
+        DshHomeTargeting: {
+            cityCodes: string[];
+            serviceAreaCodes: string[];
+            audienceSegments: ("guest" | "authenticated")[];
+        };
+        DshHomeTargetingResponse: {
+            targeting: components["schemas"]["DshHomeTargeting"];
+        };
+        DshHomeMarketingEventError: {
+            code: string;
+            message: string;
+        };
+        DshHomeMarketingError: {
+            code: string;
+            message: string;
+        };
+        /** @enum {string} */
+        DshHomePublicationStatus: "draft" | "published" | "paused" | "archived";
+        DshGovernedHomeContent: {
+            id: string;
+            /** @enum {string} */
+            kind: "banners" | "promos";
+            title: string;
+            subtitle?: string;
+            badgeLabel?: string;
+            imageUrl?: string;
+            /** @enum {string} */
+            actionType: "store" | "category" | "external" | "none";
+            actionTarget: string;
+            sortOrder: number;
+            isActive: boolean;
+            publicationStatus: components["schemas"]["DshHomePublicationStatus"];
+            /** Format: date-time */
+            publishFrom?: string;
+            /** Format: date-time */
+            publishUntil?: string;
+            createdByActorId: string;
+            approvedByActorId?: string;
+            /** Format: date-time */
+            approvedAt?: string;
+            version: number;
+        };
+        DshGovernedHomeContentWrite: {
+            title: string;
+            subtitle?: string;
+            badgeLabel?: string;
+            imageUrl: string;
+            /** @enum {string} */
+            actionType: "store" | "category" | "external" | "none";
+            actionTarget: string;
+            sortOrder: number;
+            isActive: boolean;
+            publicationStatus?: components["schemas"]["DshHomePublicationStatus"];
+            /** Format: date-time */
+            publishFrom?: string;
+            /** Format: date-time */
+            publishUntil?: string;
+            expectedVersion?: number;
+        };
+        /** @enum {string} */
+        IncidentStatus: "open" | "monitoring" | "resolved";
+        /** @enum {string} */
+        IncidentSeverity: "low" | "medium" | "high" | "critical";
+        /** @enum {string} */
+        IncidentScope: "delivery" | "stores" | "payments" | "platform" | "unknown";
+        CreateIncidentInput: {
+            title: string;
+            description: string;
+            severity: components["schemas"]["IncidentSeverity"];
+            affectedScope?: components["schemas"]["IncidentScope"];
+        };
+        UpdateIncidentInput: {
+            expectedStatus: components["schemas"]["IncidentStatus"];
+            status: components["schemas"]["IncidentStatus"];
+            postmortemUrl?: string;
+        };
+        Incident: {
+            id: string;
+            title: string;
+            description: string;
+            severity: components["schemas"]["IncidentSeverity"];
+            status: components["schemas"]["IncidentStatus"];
+            affectedScope: components["schemas"]["IncidentScope"];
+            raisedBy: string;
+            resolvedBy?: string;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            postmortemUrl: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        IncidentEvent: {
+            id: string;
+            incidentId: string;
+            actorId: string;
+            /** @enum {string} */
+            eventType: "created" | "monitoring_started" | "reopened" | "resolved" | "status_changed";
+            fromStatus?: components["schemas"]["IncidentStatus"] | string;
+            toStatus: components["schemas"]["IncidentStatus"];
+            correlationId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @enum {string} */
+        OperationalIncidentType: "cancel" | "suspend" | "raise_exception";
+        /** @enum {string} */
+        OperationalTargetEntityType: "partner_delivery_task" | "pickup_session" | "order";
+        ReportOperationalIncidentInput: {
+            orderId: string;
+            targetEntityType: components["schemas"]["OperationalTargetEntityType"];
+            targetEntityId: string;
+            incidentType: components["schemas"]["OperationalIncidentType"];
+            reason: string;
+            ticketReference: string;
+            correlationId?: string;
+            expectedVersion: number;
+            evidenceReferences?: string[];
+            reasonCode?: string;
+            reasonNote?: string;
+        };
+        OperationalIncident: {
+            id: string;
+            orderId: string;
+            targetEntityType: components["schemas"]["OperationalTargetEntityType"];
+            targetEntityId: string;
+            incidentType: components["schemas"]["OperationalIncidentType"];
+            status: string;
+            reason: string;
+            ticketReference: string;
+            actorId: string;
+            actorRole: string;
+            beforeState?: {
+                [key: string]: unknown;
+            } | null;
+            afterState?: {
+                [key: string]: unknown;
+            } | null;
+            failureReason?: string | null;
+            partnerNotified?: boolean;
+            /** Format: date-time */
+            partnerNotifiedAt?: string | null;
+            correlationId: string;
+            /** Format: date-time */
+            appliedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        } & {
+            [key: string]: unknown;
+        };
+        RatingScore: number;
+        SingleRatingInput: {
+            score: components["schemas"]["RatingScore"];
+            comment?: string;
+        };
+        OrderRatingsInput: {
+            captainScore: components["schemas"]["RatingScore"];
+            orderScore: components["schemas"]["RatingScore"];
+            captainComment?: string;
+            orderComment?: string;
+        };
+        ProviderRating: {
+            id: string;
+            operatorContextId: string;
+            /** @enum {string} */
+            raterKind: "partner" | "client";
+            raterActorId: string;
+            /** @enum {string} */
+            targetKind: "field" | "captain" | "order";
+            targetActorId?: string;
+            /** @enum {string} */
+            sourceKind: "partner_activation" | "order_delivery";
+            sourceId: string;
+            score: components["schemas"]["RatingScore"];
+            comment?: string;
+            /** @enum {string} */
+            status: "active" | "retracted";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PartnerFieldRatingPrompt: {
+            eligible: boolean;
+            completed: boolean;
+            partnerId?: string;
+            partnerName?: string;
+            fieldActorId?: string;
+            activationStatus?: string;
+            reason?: string;
+        };
+        ClientOrderRatingPrompt: {
+            eligible: boolean;
+            completed: boolean;
+            orderId: string;
+            orderNumber?: string;
+            captainActorId?: string;
+            captainRated: boolean;
+            orderRated: boolean;
+            reason?: string;
+        };
+        ProviderRatingSummary: {
+            /** @enum {string} */
+            targetKind: "field" | "captain";
+            targetActorId: string;
+            averageScore: number;
+            ratingCount: number;
+            distribution: {
+                [key: string]: number;
+            };
+            /** Format: date-time */
+            lastRatedAt?: string;
+        };
+        TrustedLocationInput: {
+            /** Format: double */
+            latitude: number;
+            /** Format: double */
+            longitude: number;
+            /** Format: double */
+            accuracyMeters: number;
+            /** Format: date-time */
+            recordedAt: string;
+        };
+        DeliveryProjection: {
+            status: components["schemas"]["DeliveryStatus"];
+            /** Format: date-time */
+            updatedAt?: string;
+        } & {
+            [key: string]: unknown;
+        };
+        DispatchAssignment: {
+            /** Format: uuid */
+            id: string;
+            orderId: string;
+            captainId: string;
+            /** @enum {string} */
+            status: "offered" | "accepted" | "declined" | "completed" | "cancelled";
+            lastLatitude?: number | null;
+            lastLongitude?: number | null;
+            /** Format: date-time */
+            locationRecordedAt?: string | null;
+            delivery: components["schemas"]["DeliveryProjection"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        } & {
+            [key: string]: unknown;
+        };
+        PartnerDispatchReference: {
+            /** Format: uuid */
+            id: string;
+            orderId: string;
+            status: string;
+            /** Format: date-time */
+            responseDeadlineAt?: string | null;
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            /** Format: date-time */
+            completedAt?: string | null;
+            delivery: components["schemas"]["DeliveryProjection"];
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        TrackingLocation: {
+            /**
+             * Format: double
+             * @description Rounded to privacy-preserving precision.
+             */
+            latitude: number;
+            /**
+             * Format: double
+             * @description Rounded to privacy-preserving precision.
+             */
+            longitude: number;
+            /** Format: date-time */
+            recordedAt: string;
+            /** @enum {string} */
+            freshnessState: "fresh" | "stale" | "lost";
+            ageSeconds: number;
+        };
+        OperatorTrackingLocation: {
+            /** Format: uuid */
+            assignmentId: string;
+            orderId: string;
+            captainId: string;
+            /**
+             * Format: double
+             * @description Rounded authorized operations projection.
+             */
+            latitude: number;
+            /**
+             * Format: double
+             * @description Rounded authorized operations projection.
+             */
+            longitude: number;
+            /** Format: date-time */
+            recordedAt: string;
+            /** @enum {string} */
+            freshnessState: "fresh" | "stale" | "lost";
+            ageSeconds: number;
+        };
+        TrackingEta: {
+            providerCode: string;
+            distanceMeters: number;
+            durationSeconds: number;
+            /** Format: date-time */
+            estimatedArrivalAt: string;
+            /** Format: date-time */
+            computedAt: string;
+        };
+        LiveTrackingProjection: {
+            /** @enum {string} */
+            locationVisibility: "hidden_until_pickup" | "delivery_window_rounded";
+            location: components["schemas"]["TrackingLocation"] | null;
+            eta: components["schemas"]["TrackingEta"] | null;
+            /** @enum {string} */
+            routeState: "not_applicable" | "awaiting_location" | "location_lost" | "destination_unavailable" | "provider_unavailable" | "ready" | "arrived";
+        };
+        DispatchAssignmentResponse: {
+            assignment: components["schemas"]["DispatchAssignment"];
+        };
+        ClientLiveTrackingResponse: {
+            assignment: components["schemas"]["DispatchAssignment"];
+            tracking: components["schemas"]["LiveTrackingProjection"];
+        };
+        PartnerTrackingResponse: {
+            assignment: components["schemas"]["PartnerDispatchReference"];
+            tracking: components["schemas"]["LiveTrackingProjection"];
+        };
+        TrackingAlert: {
+            /** Format: uuid */
+            assignmentId: string;
+            orderId: string;
+            captainId: string;
+            /** @enum {string} */
+            severity: "warning" | "critical";
+            /** @enum {string} */
+            code: "LOCATION_NOT_RECEIVED" | "LOCATION_stale" | "LOCATION_lost";
+            ageSeconds?: number;
+            message: string;
+        };
+        CommercialDefinitionWrite: {
+            [key: string]: unknown;
+        };
+        VersionedCommercialDefinitionWrite: {
+            expectedVersion: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @enum {string} */
+        CouponFundingSource: "platform" | "partner" | "shared";
+        CouponCreateWrite: {
+            nameAr: string;
+            description?: string;
+            code: string;
+            storeId?: string;
+            fundingSource?: components["schemas"]["CouponFundingSource"];
+            platformShareBps?: number;
+            fundingPartnerId?: string;
+            /** @enum {string} */
+            discountType: "percent" | "fixed";
+            discountPercent?: number;
+            /** Format: int64 */
+            fixedDiscountMinorUnits?: number;
+            /** Format: int64 */
+            maxDiscountMinorUnits?: number;
+            /** Format: int64 */
+            minSubtotalMinorUnits?: number;
+            globalUsageLimit?: number;
+            perClientUsageLimit?: number;
+            eligibleFulfillmentModes?: ("bthwani_delivery" | "partner_delivery" | "pickup")[];
+            /** Format: date-time */
+            startsAt?: string;
+            /** Format: date-time */
+            endsAt?: string;
+        };
+        /** @description Update either funding policy alone, or commercial terms/status. Funding fields must not be mixed with other changes. */
+        CouponUpdateWrite: {
+            nameAr?: string;
+            description?: string;
+            storeId?: string;
+            fundingSource?: components["schemas"]["CouponFundingSource"];
+            platformShareBps?: number;
+            fundingPartnerId?: string;
+            /** @enum {string} */
+            discountType?: "percent" | "fixed";
+            discountPercent?: number;
+            /** Format: int64 */
+            fixedDiscountMinorUnits?: number;
+            /** Format: int64 */
+            maxDiscountMinorUnits?: number;
+            /** Format: int64 */
+            minSubtotalMinorUnits?: number;
+            globalUsageLimit?: number;
+            perClientUsageLimit?: number;
+            eligibleFulfillmentModes?: ("bthwani_delivery" | "partner_delivery" | "pickup")[];
+            /** Format: date-time */
+            startsAt?: string;
+            /** Format: date-time */
+            endsAt?: string;
+            /** @enum {string} */
+            status?: "draft" | "active" | "paused" | "archived";
+            expectedVersion: number;
+        };
+        SubscriptionPurchaseWrite: {
+            planId: string;
+            /** @enum {string} */
+            paymentMethod: "wallet" | "mixed" | "official_wallet";
+        };
+        /** @enum {string} */
+        DshNotificationChannel: "in_app" | "push";
+        /** @enum {string} */
+        DshNotificationLocale: "ar" | "en";
+        /** @enum {string} */
+        DshNotificationDeliveryOutcome: "sent" | "retry_scheduled" | "dead_letter";
+        DshNotificationPreferencePolicy: {
+            actorId: string;
+            /** @enum {string} */
+            actorType: "client" | "partner" | "captain" | "field" | "operator";
+            topic: string;
+            enabled: boolean;
+            channels: components["schemas"]["DshNotificationChannel"][];
+            quietHoursStart?: string | null;
+            quietHoursEnd?: string | null;
+            locale: components["schemas"]["DshNotificationLocale"];
+            timezone: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshPlatformNotificationPolicy: {
+            /** Format: uuid */
+            id: string;
+            topic: string;
+            actorTypes: ("client" | "partner" | "captain" | "field" | "operator")[];
+            isEnabled: boolean;
+            description: string;
+            defaultChannels: components["schemas"]["DshNotificationChannel"][];
+            titleAr: string;
+            bodyAr: string;
+            titleEn: string;
+            bodyEn: string;
+            variables: string[];
+            deepLinkPattern: string;
+            updatedBy: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshUpsertNotificationPushEndpointRequest: {
+            /** @constant */
+            provider: "expo";
+            endpointToken: string;
+            deviceId: string;
+            /** @enum {string} */
+            platform: "android" | "ios";
+        };
+        DshNotificationPushEndpoint: {
+            /** Format: uuid */
+            id: string;
+            actorId: string;
+            /** @enum {string} */
+            actorType: "client" | "partner" | "captain" | "field" | "operator";
+            /** @constant */
+            provider: "expo";
+            deviceId: string;
+            /** @enum {string} */
+            platform: "android" | "ios";
+            active: boolean;
+            /** Format: date-time */
+            lastSeenAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshNotificationPushEndpointResponse: {
+            endpoint: components["schemas"]["DshNotificationPushEndpoint"];
+        };
+        DshNotificationDeliveryAttempt: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            eventId: string;
+            eventType: string;
+            entityType: string;
+            entityId: string;
+            attemptNumber: number;
+            outcome: components["schemas"]["DshNotificationDeliveryOutcome"];
+            errorMessage: string;
+            /** Format: date-time */
+            nextRetryAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** @enum {string} */
+            outboxStatus: "pending" | "sent" | "failed";
+            correlationId: string;
+        };
+        DshNotificationPushDeliveryAudit: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            notificationId: string;
+            actorId: string;
+            /** @enum {string} */
+            actorType: "client" | "partner" | "captain" | "field" | "operator";
+            topic: string;
+            /** @enum {string} */
+            status: "pending" | "sent" | "failed";
+            attemptCount: number;
+            /** Format: date-time */
+            nextRetryAt: string;
+            providerMessageId: string;
+            lastError: string;
+            /** Format: date-time */
+            sentAt?: string | null;
+            /** Format: date-time */
+            failedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshNotificationDeliveryAuditSummary: {
+            sent: number;
+            retryScheduled: number;
+            deadLetter: number;
+            pendingOutbox: number;
+            failedOutbox: number;
+            sentPush: number;
+            pendingPush: number;
+            failedPush: number;
+        };
+        DshNotificationDeliveryAuditResponse: {
+            attempts: components["schemas"]["DshNotificationDeliveryAttempt"][];
+            pushDeliveries: components["schemas"]["DshNotificationPushDeliveryAudit"][];
+            summary: components["schemas"]["DshNotificationDeliveryAuditSummary"];
+        };
+        DshNotificationError: {
+            code: string;
+            message: string;
+        };
+        OperationalSla: {
+            configured: boolean;
+            /** Format: uuid */
+            ruleId?: string;
+            category?: string;
+            maxPrepMins?: number;
+            maxAssignmentMins?: number;
+            maxDeliveryMins?: number;
+            version?: number;
+        };
+        OperationalCapacity: {
+            configured: boolean;
+            /** Format: uuid */
+            configId?: string;
+            maxConcurrentOrders?: number;
+            maxCaptainsOnline?: number;
+            throttleThreshold?: number;
+            isPaused: boolean;
+            pauseReason?: string;
+            version?: number;
+        };
+        OperationalProfile: {
+            /** Format: uuid */
+            zoneId: string;
+            sla: components["schemas"]["OperationalSla"];
+            capacity: components["schemas"]["OperationalCapacity"];
+        };
+        OperationalProfileMutation: {
+            slaCategory: string;
+            maxPrepMins: number;
+            maxAssignmentMins: number;
+            maxDeliveryMins: number;
+            expectedSlaVersion: number;
+            maxConcurrentOrders: number;
+            maxCaptainsOnline: number;
+            throttleThreshold: number;
+            isPaused: boolean;
+            pauseReason: string;
+            expectedCapacityVersion: number;
+            reason: string;
+        };
+        DeliveryModePolicy: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            zoneId: string;
+            fulfillmentMode: components["schemas"]["DshOperationalPolicyFulfillmentMode2"];
+            isEnabled: boolean;
+            slaCategory: string;
+            version: number;
+            updatedBy: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        OperationalEvaluationInput: {
+            /** Format: uuid */
+            zoneId: string;
+            serviceAreaCode?: string;
+            fulfillmentMode: components["schemas"]["DshOperationalPolicyFulfillmentMode2"];
+            /** @default default */
+            slaCategory: string;
+            activeOrders: number;
+            captainsOnline: number;
+        };
+        OperationalEffects: {
+            cartAllowed: boolean;
+            checkoutAllowed: boolean;
+            orderCreationAllowed: boolean;
+            dispatchAllowed: boolean;
+            partnerHandoffRequired: boolean;
+            clientPickupRequired: boolean;
+        };
+        OperationalDecision: {
+            /** Format: uuid */
+            zoneId: string;
+            serviceAreaCode: string;
+            fulfillmentMode: components["schemas"]["DshOperationalPolicyFulfillmentMode2"];
+            /** @enum {string} */
+            decision: "serviceable" | "unserviceable" | "policy_incomplete" | "paused" | "mode_disabled" | "capacity_exhausted" | "throttled";
+            serviceable: boolean;
+            reasonCodes: string[];
+            allowedActions: string[];
+            activeStores: number;
+            pressureRatio: number;
+            sla: components["schemas"]["OperationalSla"];
+            capacity: components["schemas"]["OperationalCapacity"];
+            modePolicy?: components["schemas"]["DeliveryModePolicy"];
+            effects: components["schemas"]["OperationalEffects"];
+            policyVersions: {
+                [key: string]: number;
+            };
+            /** Format: date-time */
+            evaluatedAt: string;
+        };
+        PolicyAuditEvent: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            aggregateType: "zone" | "sla_rule" | "capacity_config" | "delivery_mode" | "store_onboarding_fee";
+            aggregateId: string;
+            /** @enum {string} */
+            action: "created" | "updated" | "activated" | "deactivated" | "rolled_back";
+            actorId: string;
+            actorSurface: string;
+            correlationId?: string;
+            reason: string;
+            fromVersion?: number;
+            toVersion: number;
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        RollbackResult: {
+            /** Format: uuid */
+            targetEventId: string;
+            aggregateType: string;
+            aggregateId: string;
+            fromVersion: number;
+            toVersion: number;
+        };
+        /** @enum {string} */
+        DshOperationalPolicyFulfillmentMode2: "bthwani_delivery" | "partner_delivery" | "client_pickup";
+        /** @enum {string} */
+        RescueStatus: "open" | "investigating" | "action_required" | "resolved" | "closed";
+        /** @enum {string} */
+        RescueReason: "item_unavailable" | "customer_not_reachable" | "store_closed_after_order" | "captain_no_show" | "captain_declined" | "pickup_failed" | "handoff_mismatch" | "delivery_failed" | "address_issue" | "payment_failure" | "wlt_visibility";
+        /** @enum {string} */
+        RescueSeverity: "warning" | "danger";
+        /** @enum {string} */
+        RescueOwner: "support" | "operations" | "partner" | "captain" | "wlt_reference_only";
+        /** @enum {string} */
+        RescueNextAction: "replace_item" | "remove_item" | "wait_customer" | "change_delivery_mode" | "reassign_captain" | "convert_to_support_exception" | "create_follow_up_task" | "open_wlt_visibility";
+        CreateRescueCaseInput: {
+            orderId: string;
+            ticketId?: string;
+            reason: components["schemas"]["RescueReason"];
+            severity?: components["schemas"]["RescueSeverity"];
+            summary: string;
+            assignedTo?: string;
+        };
+        UpdateRescueCaseInput: {
+            expectedStatus: components["schemas"]["RescueStatus"];
+            status: components["schemas"]["RescueStatus"];
+            reason: components["schemas"]["RescueReason"];
+            owner: components["schemas"]["RescueOwner"];
+            nextAction: components["schemas"]["RescueNextAction"];
+            operatorNote: string;
+            affectedEntity: string;
+            assignedTo?: string;
+            resolutionNote: string;
+        };
+        RescueCase: {
+            id: string;
+            orderId: string;
+            ticketId: string;
+            status: components["schemas"]["RescueStatus"];
+            reason: components["schemas"]["RescueReason"];
+            severity: components["schemas"]["RescueSeverity"];
+            owner: components["schemas"]["RescueOwner"];
+            nextAction: components["schemas"]["RescueNextAction"];
+            summary: string;
+            operatorNote: string;
+            affectedEntity: string;
+            assignedTo: string;
+            openedBy: string;
+            resolutionNote: string;
+            version: number;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            /** Format: date-time */
+            closedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        RescueEvent: {
+            id: string;
+            rescueCaseId: string;
+            orderId: string;
+            actorId: string;
+            /** @enum {string} */
+            eventType: "created" | "decision_recorded" | "status_changed" | "resolved" | "closed";
+            fromStatus?: components["schemas"]["RescueStatus"] | string;
+            toStatus: components["schemas"]["RescueStatus"];
+            correlationId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CreateOrderRequest: {
+            /** Format: uuid */
+            checkoutIntentId: string;
+        };
+        OrderEnvelope: {
+            order: components["schemas"]["OrderTruth"];
+        };
+        OrderCollectionEnvelope: {
+            orders: components["schemas"]["OrderTruth"][];
+        };
+        OrderEventCollectionEnvelope: {
+            events: components["schemas"]["OrderEvent"][];
+        };
+        OrderTruth: {
+            /** Format: uuid */
+            id: string;
+            orderNumber: string;
+            /** Format: uuid */
+            checkoutIntentId: string;
+            storeId: string;
+            /** @description Present for the client view and omitted from protected partner/operator responses. */
+            clientId?: string;
+            /** @enum {string} */
+            fulfillmentMode: "bthwani_delivery" | "partner_delivery" | "pickup";
+            status: string;
+            /** @enum {string} */
+            currentOwner: "client" | "partner" | "operations" | "captain" | "terminal";
+            allowedActions: string[];
+            /** @description Immutable actor-redacted address snapshot. Partner/operator views may return only {redacted:true}. */
+            deliveryAddressSnapshot: {
+                [key: string]: unknown;
+            };
+            /** Format: int64 */
+            subtotalMinorUnits: number;
+            /** Format: int64 */
+            discountMinorUnits: number;
+            /** Format: int64 */
+            totalMinorUnits: number;
+            currency: string;
+            pricingSnapshotHash: string;
+            couponCodeLast4?: string;
+            /** @description Opaque WLT reference; it does not transfer financial truth ownership to DSH. */
+            wltPaymentRefId: string;
+            paymentStatusProjection: string;
+            /** Format: date-time */
+            paymentProjectionUpdatedAt?: string | null;
+            correlationId: string;
+            version: number;
+            items: components["schemas"]["OrderItemSnapshot"][];
+            statusTimeline: components["schemas"]["OrderEvent"][];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        OrderItemSnapshot: {
+            /** Format: uuid */
+            id: string;
+            productId: string;
+            productName: string;
+            quantity: number;
+            unitPrice: number;
+            /** Format: int64 */
+            lineTotalMinorUnits: number;
+            snapshot: {
+                [key: string]: unknown;
+            };
+        };
+        OrderEvent: {
+            /** Format: uuid */
+            id: string;
+            type: string;
+            fromStatus: string;
+            toStatus: string;
+            actorRole: string;
+            correlationId: string;
+            causationId: string;
+            orderVersion: number;
+            metadata: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        OrderTruthDiagnosticsEnvelope: {
+            diagnostics: components["schemas"]["OrderTruthDiagnostics"];
+        };
+        OrderTruthDiagnostics: {
+            operatorContextId: string;
+            /** Format: date-time */
+            generatedAt: string;
+            /** Format: int64 */
+            ordersCreatedLastFiveMinutes: number;
+            /** Format: int64 */
+            ordersCreatedLastHour: number;
+            /** Format: int64 */
+            incompleteCreateAttempts: number;
+            /** Format: int64 */
+            pendingOutboxEvents: number;
+            /** Format: int64 */
+            retryingOutboxEvents: number;
+            /** Format: int64 */
+            deadLetterOutboxEvents: number;
+            /** Format: date-time */
+            oldestUnpublishedEventAt?: string | null;
+            /** Format: int64 */
+            unknownPaymentProjections: number;
+            /** Format: int64 */
+            stalePaymentProjections: number;
+            /** Format: int64 */
+            idempotencyConflictsLastHour: number;
+            /** Format: int64 */
+            snapshotProtectionFailuresLastHour: number;
+            /** @enum {string} */
+            health: "healthy" | "degraded" | "critical";
+            alerts: string[];
+        };
+        DshDeliveryPricing: {
+            storeId: string;
+            /** @enum {string} */
+            fulfillmentMode: "bthwani_delivery" | "partner_delivery" | "pickup";
+            /** Format: int64 */
+            feeMinorUnits: number;
+            /** @enum {string} */
+            currency: "YER";
+            /** @enum {string} */
+            status: "active" | "paused" | "archived";
+            /** @enum {string} */
+            pricingSource: "control_panel" | "partner_store" | "platform_default" | "migration_legacy";
+            createdByActorId?: string;
+            approvedByActorId?: string;
+            /** Format: date-time */
+            approvedAt?: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshDeliveryPricingMutation: {
+            /** Format: int64 */
+            feeMinorUnits: number;
+            /** @enum {string} */
+            currency: "YER";
+            /** @enum {string} */
+            status: "active" | "paused" | "archived";
+            expectedVersion: number;
+            reason: string;
+        };
+        DshLoyaltyEarningPolicy: {
+            id: string;
+            nameAr: string;
+            /** Format: int64 */
+            pointsNumerator: number;
+            /** Format: int64 */
+            eligibleMinorUnitsDenominator: number;
+            /** Format: int64 */
+            minimumPoints: number;
+            /** Format: int64 */
+            maximumPointsPerOrder: number;
+            /** @enum {string} */
+            status: "draft" | "active" | "paused" | "archived";
+            createdByActorId: string;
+            approvedByActorId?: string;
+            /** Format: date-time */
+            approvedAt?: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshLoyaltyEarningPolicyCreate: {
+            nameAr: string;
+            /** Format: int64 */
+            pointsNumerator: number;
+            /** Format: int64 */
+            eligibleMinorUnitsDenominator: number;
+            /** Format: int64 */
+            minimumPoints: number;
+            /** Format: int64 */
+            maximumPointsPerOrder: number;
+        };
+        DshLoyaltyEarningPolicyUpdate: {
+            nameAr?: string;
+            /** Format: int64 */
+            pointsNumerator?: number;
+            /** Format: int64 */
+            eligibleMinorUnitsDenominator?: number;
+            /** Format: int64 */
+            minimumPoints?: number;
+            /** Format: int64 */
+            maximumPointsPerOrder?: number;
+            /** @enum {string} */
+            status?: "draft" | "active" | "paused" | "archived";
+        } & {
+            expectedVersion: number;
+        };
+        /** @enum {string} */
+        TaskStatus: "unassigned" | "assigned" | "departed" | "arrived" | "proof_pending" | "completed" | "cancelled" | "exception";
+        MutationRequest: {
+            expectedVersion: number;
+            commandId: string;
+            correlationId?: string;
+            reason?: string;
+        };
+        AssignRequest: components["schemas"]["MutationRequest"] & {
+            storeCourierId: string;
+        };
+        ExceptionRequest: components["schemas"]["MutationRequest"] & {
+            reason: string;
+            ticketReference: string;
+            evidenceReferences?: string[];
+        };
+        PickupNotifyRequest: components["schemas"]["MutationRequest"] & {
+            clientId?: string;
+        };
+        PickupVerifyRequest: components["schemas"]["MutationRequest"] & {
+            code: string;
+        };
+        PickupReasonRequest: components["schemas"]["MutationRequest"] & {
+            reason: string;
+        };
+        PickupWindowRequest: components["schemas"]["PickupReasonRequest"] & {
+            /** Format: date-time */
+            newExpiry: string;
+        };
+        AcknowledgeAlertRequest: {
+            expectedVersion: number;
+        };
+        /** @enum {string} */
+        SlaAlertStatus: "open" | "acknowledged" | "resolved";
+        PartnerDeliveryTask: {
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            storeId: string;
+            branchId?: string;
+            storeCourierId?: string;
+            status: components["schemas"]["TaskStatus"];
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        } & {
+            [key: string]: unknown;
+        };
+        PickupSession: {
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            storeId: string;
+            clientId: string;
+            /** Format: date-time */
+            expiresAt: string;
+            status: string;
+            extensionCount?: number;
+            maxExtensions?: number;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        } & {
+            [key: string]: unknown;
+        };
+        SlaAlert: {
+            id: string;
+            taskId?: string | null;
+            sessionId?: string | null;
+            orderId: string;
+            storeId: string;
+            leg: string;
+            status: components["schemas"]["SlaAlertStatus"];
+            /** Format: date-time */
+            detectedAt: string;
+            acknowledgedByActorId?: string | null;
+            /** Format: date-time */
+            acknowledgedAt?: string | null;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            version: number;
+        } & {
+            [key: string]: unknown;
+        };
+        SlaRefreshResult: {
+            opened: number;
+            resolved: number;
+            active: number;
+        };
+        IssueConnectionCodeRequest: {
+            /** @default 24 */
+            expiresInHours: number;
+        };
+        ExpectedVersionRequest: {
+            expectedVersion: number;
+        };
+        ConnectCaptainRequest: {
+            code: string;
+        };
+        DisconnectMembershipRequest: {
+            storeId: string;
+            expectedVersion: number;
+        };
+        /** @enum {string} */
+        ConnectionStatus: "pending" | "redeemed" | "revoked" | "expired";
+        ConnectionCode: {
+            id: string;
+            storeId: string;
+            teamMemberId: string;
+            codeLast4: string;
+            status: components["schemas"]["ConnectionStatus"];
+            expiresAt: string;
+            createdByActorId: string;
+            redeemedByCaptainActorId?: string;
+            redeemedAt?: string;
+            version: number;
+            createdAt: string;
+            updatedAt: string;
+        };
+        IssuedConnectionCode: {
+            connection: components["schemas"]["ConnectionCode"];
+            /** @description Returned once. The server persists only a SHA-256 digest and the last four characters. */
+            code: string;
+        };
+        CaptainFleetMembership: {
+            teamMemberId: string;
+            storeId: string;
+            storeName: string;
+            courierName: string;
+            status: string;
+            branchAssignment: string;
+            deliveryAssignment: string;
+            version: number;
+        };
+        OperatorStoreFleetMember: {
+            teamMemberId: string;
+            storeId: string;
+            courierName: string;
+            status: string;
+            captainActorId?: string;
+            branchAssignment: string;
+            deliveryAssignment: string;
+            version: number;
+        };
+        IssueConnectionCodeResponse: {
+            issued: components["schemas"]["IssuedConnectionCode"];
+        };
+        ConnectionListResponse: {
+            connections: components["schemas"]["ConnectionCode"][];
+        };
+        ConnectionResponse: {
+            connection: components["schemas"]["ConnectionCode"];
+        };
+        MembershipListResponse: {
+            memberships: components["schemas"]["CaptainFleetMembership"][];
+        };
+        MembershipResponse: {
+            membership: components["schemas"]["CaptainFleetMembership"];
+        };
+        OperatorPartnerFleetSnapshot: {
+            storeId: string;
+            connections: components["schemas"]["ConnectionCode"][];
+            members: components["schemas"]["OperatorStoreFleetMember"][];
+        };
+        /** @enum {string} */
+        ActivationStatus: "draft" | "submitted" | "field_visit_scheduled" | "field_visit_completed" | "documents_missing" | "documents_uploaded" | "documents_verified" | "catalog_not_ready" | "catalog_ready" | "delivery_modes_not_ready" | "delivery_modes_ready" | "ops_review" | "ops_approved" | "ops_rejected" | "partner_active" | "partner_deactivated" | "client_visible" | "client_hidden";
+        PartnerState: {
+            id: string;
+            legalNameAr?: string;
+            legalNameEn?: string;
+            displayName: string;
+            ownerName?: string;
+            primaryPhone?: string;
+            category?: string;
+            activationStatus: components["schemas"]["ActivationStatus"];
+            /** @description WLT reference only. */
+            payoutDestinationId?: string;
+            /** @description Masked compatibility value; never raw. */
+            bankAccountNumber?: string;
+            /** @description Masked compatibility value; never raw. */
+            bankIban?: string;
+            /** @description Masked compatibility value; never raw. */
+            payoutMobileNumber?: string;
+            maskedAccountNumber?: string;
+            maskedIban?: string;
+            maskedMobileNumber?: string;
+            version: number;
+            allowedActions: string[];
+            allowedTransitions: components["schemas"]["ActivationStatus"][];
+        };
+        PartnerUpdateRequest: {
+            displayName?: string;
+            ownerName?: string;
+            primaryPhone?: string;
+            secondaryPhone?: string;
+            email?: string;
+            notes?: string;
+            beneficiaryName?: string;
+            bankName?: string;
+            bankBranch?: string;
+            accountNumber?: string;
+            iban?: string;
+            payoutMobileNumber?: string;
+            /** @enum {string} */
+            settlementPreference?: "bank_transfer" | "mobile_wallet" | "manual";
+            bankAccountHolderMatchesOwner?: boolean;
+            bankNotes?: string;
+        };
+        PartnerTransitionRequest: {
+            toStatus: components["schemas"]["ActivationStatus"];
+            reason?: string;
+        };
+        PartnerTransitionResponse: {
+            partner: components["schemas"]["PartnerState"];
+            event: components["schemas"]["ActivationEvent"];
+        };
+        ActivationEvent: {
+            id: string;
+            partnerId: string;
+            fromStatus: components["schemas"]["ActivationStatus"];
+            toStatus: components["schemas"]["ActivationStatus"];
+            actorId: string;
+            actorSurface: string;
+            reason?: string;
+            correlationId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        LinkedStore: {
+            storeId: string;
+            displayName: string;
+            status?: string;
+            isVisible?: boolean;
+            partnerReadiness?: string;
+            publicationEligible?: boolean;
+        };
+        FieldVisitRequest: {
+            storeId?: string;
+            visitNotes?: string;
+            locationLatitude?: number;
+            locationLongitude?: number;
+            evidenceMediaRefs?: string[];
+        } | unknown | unknown | unknown;
+        FieldVisit: {
+            id: string;
+            partnerId: string;
+            storeId: string;
+            fieldActorId: string;
+            visitStatus: string;
+            visitNotes?: string;
+            evidenceMediaRefs?: string[];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        Readiness: {
+            ready: boolean;
+            missingRequirements: string[];
+            currentStatus: components["schemas"]["ActivationStatus"];
+        };
+        CreatePartnerSupportTicketInput: {
+            storeId?: string;
+            orderId?: string;
+            subject: string;
+            description: string;
+            /** @enum {string} */
+            category: "order_issue" | "delivery_issue" | "store_quality" | "payment_reference" | "account_access" | "app_bug" | "other";
+            /**
+             * @default normal
+             * @enum {string}
+             */
+            priority: "low" | "normal" | "high" | "urgent";
+        };
+        PartnerSupportTicket: {
+            id: string;
+            storeId?: string;
+            reporterId: string;
+            /** @constant */
+            reporterRole: "partner";
+            subject: string;
+            description: string;
+            category: string;
+            priority: string;
+            /** @enum {string} */
+            status: "open" | "in_review" | "pending_user" | "resolved" | "closed";
+            assignedTo?: string;
+            orderId?: string;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            /** Format: date-time */
+            closedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PartnerSupportMessage: {
+            id: string;
+            ticketId: string;
+            senderId: string;
+            senderRole: string;
+            body: string;
+            /** @constant */
+            isInternal: false;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @enum {string} */
+        PaymentStatus: "reference_created" | "pending_provider" | "authorization_pending" | "authorized" | "capture_pending" | "captured" | "cod_pending" | "cod_collected" | "failed" | "expired" | "provider_result_unknown";
+        PaymentSession: {
+            id: string;
+            checkoutIntentId?: string | null;
+            specialRequestId?: string | null;
+            operatorContextId: string;
+            clientId: string;
+            storeId: string;
+            /** @enum {string} */
+            paymentMethod: "cod" | "wallet" | "mixed" | "official_wallet";
+            status: components["schemas"]["PaymentStatus"];
+            providerReference: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            /** Format: date-time */
+            capturedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        PaymentTimelineEnvelope: {
+            paymentTimeline: {
+                paymentSession: components["schemas"]["PaymentSession"];
+                captureLedgerTransactionId?: string;
+                lastProviderEventId?: string;
+                lastProviderStatus?: string;
+                operationReceipts: {
+                    [key: string]: unknown;
+                }[];
+                providerEvents: {
+                    [key: string]: unknown;
+                }[];
+                reconciliationCases: {
+                    [key: string]: unknown;
+                }[];
+            };
+        };
+        PaymentOperationEnvelope: {
+            paymentSession: components["schemas"]["PaymentSession"];
+            idempotentReplay?: boolean;
+            ledgerTransactionId?: string;
+        };
+        DshPaymentSessionsErrorEnvelope: {
+            error: {
+                code: string;
+                message: string;
+            };
+        };
+        DshCreateZoneInput: {
+            /** @description Optional stable code used as the DSH service-area identifier. */
+            id?: string;
+            name: string;
+            cityCode: string;
+            description?: string;
+            reason: string;
+        };
+        DshUpdateZoneInput: {
+            name?: string;
+            description?: string;
+            isActive?: boolean;
+            expectedVersion: number;
+            reason: string;
+        };
+        DshUpsertSlaInput: {
+            zoneId: string;
+            category: string;
+            maxPrepMins: number;
+            maxDeliveryMins: number;
+            expectedVersion: number;
+            reason: string;
+        };
+        DshUpsertCapacityInput: {
+            zoneId: string;
+            maxConcurrentOrders: number;
+            maxCaptainsOnline: number;
+            throttleThreshold: number;
+            expectedVersion: number;
+            reason: string;
+        };
+        DshZoneServiceability: {
+            zoneId: string;
+            isActive: boolean;
+            activeStores: number;
+            slaAvailable: boolean;
+        };
+        DshStoreOnboardingFeePolicyInput: {
+            enabled: boolean;
+            amount: number;
+            currency: string;
+            /** @enum {string} */
+            appliesTo: "first_store" | "additional_store" | "all_stores";
+            /** @enum {string} */
+            chargeTiming: "on_approval" | "on_publication" | "on_first_order" | "manual";
+            /** Format: date-time */
+            effectiveFrom?: string | null;
+            notes?: string;
+            expectedVersion: number;
+            reason: string;
+        };
+        DshPlatformPoliciesDshZone: {
+            id: string;
+            name: string;
+            cityCode: string;
+            isActive: boolean;
+            description: string;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshPlatformPoliciesDshSlaRule: {
+            id: string;
+            zoneId: string;
+            category: string;
+            maxPrepMins: number;
+            maxDeliveryMins: number;
+            version: number;
+            updatedBy: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshPlatformPoliciesDshCapacityConfig: {
+            id: string;
+            zoneId: string;
+            maxConcurrentOrders: number;
+            maxCaptainsOnline: number;
+            throttleThreshold: number;
+            version: number;
+            updatedBy: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshPlatformPoliciesDshStoreOnboardingFeePolicy: {
+            enabled: boolean;
+            amount: number;
+            currency: string;
+            /** @enum {string} */
+            appliesTo: "first_store" | "additional_store" | "all_stores";
+            /** @enum {string} */
+            chargeTiming: "on_approval" | "on_publication" | "on_first_order" | "manual";
+            /** @enum {string} */
+            actorCharged: "partner";
+            /** Format: date-time */
+            effectiveFrom?: string | null;
+            notes: string;
+            updatedBy: string;
+            /** Format: date-time */
+            updatedAt: string;
+            version: number;
+            isConfigured: boolean;
+            blockedReason?: string;
+        };
+        /** @enum {string} */
+        DshReelStatus: "pending_review" | "approved" | "rejected" | "archived";
+        /** @enum {string} */
+        DshReelTargetType: "master_product" | "store" | "offer";
+        DshGovernedReel: {
+            id: string;
+            assetId: string;
+            posterAssetId?: string | null;
+            titleAr: string;
+            titleEn: string;
+            subtitleAr: string;
+            subtitleEn: string;
+            highlightAr: string;
+            highlightEn: string;
+            ctaLabelAr: string;
+            ctaLabelEn: string;
+            targetType: components["schemas"]["DshReelTargetType"];
+            targetId: string;
+            status: components["schemas"]["DshReelStatus"];
+            sortOrder: number;
+            submittedBy: string;
+            submittedByRole: string;
+            sourceStoreId?: string | null;
+            reviewedBy?: string | null;
+            reviewNote: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        DshSubmitReelRequest: {
+            assetId: string;
+            posterAssetId?: string;
+            titleAr?: string;
+            titleEn?: string;
+            subtitleAr?: string;
+            subtitleEn?: string;
+            highlightAr?: string;
+            highlightEn?: string;
+            ctaLabelAr?: string;
+            ctaLabelEn?: string;
+            targetType: components["schemas"]["DshReelTargetType"];
+            targetId: string;
+            /** @default 0 */
+            sortOrder: number;
+            sourceStoreId?: string;
+        };
+        DshReviewReelRequest: {
+            /** @enum {string} */
+            decision: "approved" | "rejected" | "archived";
+            reviewNote?: string;
+            posterAssetId?: string;
+            titleAr?: string;
+            titleEn?: string;
+            subtitleAr?: string;
+            subtitleEn?: string;
+            highlightAr?: string;
+            highlightEn?: string;
+            ctaLabelAr?: string;
+            ctaLabelEn?: string;
+            targetType?: components["schemas"]["DshReelTargetType"];
+            targetId?: string;
+            sortOrder?: number;
+        };
+        DshReelsDshPublicReel: {
+            id: string;
+            titleAr: string;
+            titleEn: string;
+            subtitleAr?: string;
+            subtitleEn?: string;
+            highlightAr?: string;
+            highlightEn?: string;
+            ctaLabelAr?: string;
+            ctaLabelEn?: string;
+            videoUrl: string;
+            posterUrl?: string;
+            targetType: components["schemas"]["DshReelTargetType"];
+            targetId: string;
+            sortOrder: number;
+        };
+        /** @enum {string} */
+        RefundStatus: "requested" | "approved" | "processing" | "provider_unknown" | "completed" | "rejected" | "reversed";
+        ControlPanelRefund: {
+            id: string;
+            orderId: string;
+            paymentSessionId: string;
+            clientId: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            reason: string;
+            status: components["schemas"]["RefundStatus"];
+            requestedByOperatorId: string;
+            approvedByOperatorId?: string;
+            rejectedByOperatorId?: string;
+            decisionReason?: string;
+            eligibilityReference: string;
+            providerReference?: string;
+            providerStatus?: string;
+            reconciliationCaseId?: string;
+            /** Format: date-time */
+            resolvedAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        /** @description Does not expose provider references, provider errors or operator identities. */
+        PrivacyRefund: {
+            id: string;
+            orderId: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            status: components["schemas"]["RefundStatus"];
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateDshRefundRequest: {
+            paymentSessionId: string;
+            /** Format: uuid */
+            orderId: string;
+            clientId: string;
+            /**
+             * Format: int64
+             * @description Zero requests the full remaining refundable amount.
+             */
+            amountMinorUnits: number;
+            reason: string;
+            eligibilityReference: string;
+        };
+        DecisionRequest: {
+            reason: string;
+        };
+        ReconcileRequest: {
+            /** @enum {string} */
+            resolutionAction: "confirmed_success" | "confirmed_failed";
+            evidenceNote: string;
+            providerReference?: string;
+        } & unknown;
+        RefundAuditEvent: {
+            /** Format: uuid */
+            id: string;
+            refundId: string;
+            eventType: string;
+            actorId: string;
+            /** @enum {string} */
+            actorType: "operator" | "service" | "provider" | "reconciler" | "system";
+            fromStatus?: string;
+            toStatus: string;
+            reason?: string;
+            correlationId?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ControlPanelRefundEnvelope: {
+            refund: components["schemas"]["ControlPanelRefund"];
+            replayed?: boolean;
+        };
+        ControlPanelRefundListEnvelope: {
+            refunds: components["schemas"]["ControlPanelRefund"][];
+        };
+        PrivacyRefundListEnvelope: {
+            refunds: components["schemas"]["PrivacyRefund"][];
+        };
+        AuditEnvelope: {
+            auditEvents: components["schemas"]["RefundAuditEvent"][];
+        };
+        ProviderUnknownError: components["schemas"]["Error"] & {
+            /** @constant */
+            code?: "PROVIDER_RESULT_UNKNOWN";
+        };
+        OutcomePersistenceError: components["schemas"]["Error"] & {
+            /** @constant */
+            code?: "REFUND_OUTCOME_PERSISTENCE_FAILED";
+        };
+        MutationReceiptError: components["schemas"]["Error"] & {
+            /** @enum {string} */
+            code?: "REFUND_IDEMPOTENCY_STORE_FAILED" | "REFUND_IDEMPOTENCY_RECEIPT_FAILED";
+        };
+        CompletionPersistenceError: components["schemas"]["OutcomePersistenceError"] | components["schemas"]["MutationReceiptError"];
+        RepresentativeWallet: {
+            id: string;
+            actorId: string;
+            /** @enum {string} */
+            actorType: "client" | "partner" | "captain" | "field";
+            /** @enum {string} */
+            status: "active" | "suspended" | "frozen" | "closed";
+            currency: string;
+            /** Format: int64 */
+            availableBalanceMinorUnits: number;
+            /** Format: int64 */
+            pendingBalanceMinorUnits: number;
+            /** Format: int64 */
+            heldBalanceMinorUnits: number;
+            /** Format: int64 */
+            earnedTotalMinorUnits: number;
+            /** Format: int64 */
+            settledTotalMinorUnits: number;
+            /** Format: int64 */
+            paidTotalMinorUnits: number;
+            /** Format: date-time */
+            lastLedgerEntryAt?: string | null;
+            /** Format: date-time */
+            updatedAt?: string | null;
+        };
+        RepresentativeLedgerEntry: {
+            id: string;
+            entryType: string;
+            actorId: string;
+            /** @enum {string} */
+            actorType: "client" | "partner" | "captain" | "field";
+            sourceType?: string;
+            sourceId?: string;
+            referenceId?: string;
+            referenceType?: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            /** @enum {string} */
+            debitCredit: "debit" | "credit";
+            /** Format: int64 */
+            balanceAfter: number;
+            description?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        PayoutRequestInput: {
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            idempotencyKey?: string;
+        };
+        DshRepresentativeFinanceErrorResponse: {
+            code: string;
+            message: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** @enum {string} */
+        StoreCaptainHandoffStatus: "awaiting_partner" | "partner_confirmed" | "completed" | "superseded";
+        StoreCaptainHandoff: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            orderId: string;
+            /** Format: uuid */
+            assignmentId: string;
+            storeId: string;
+            captainId: string;
+            status: components["schemas"]["StoreCaptainHandoffStatus"];
+            /** Format: date-time */
+            partnerConfirmedAt?: string | null;
+            partnerConfirmedByActorId?: string | null;
+            /** Format: date-time */
+            captainConfirmedAt?: string | null;
+            captainConfirmedByActorId?: string | null;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        StoreCaptainHandoffResponse: {
+            handoff: components["schemas"]["StoreCaptainHandoff"];
+        };
+        /** @enum {string} */
+        StoreCaptainHandoffExceptionReason: "handoff_shortage" | "handoff_mismatch";
+        StoreCaptainHandoffExceptionRequest: {
+            reasonCode: components["schemas"]["StoreCaptainHandoffExceptionReason"];
+            note: string;
+            correlationId: string;
+            latitude?: number;
+            longitude?: number;
+        };
+        DshStoreCaptainHandoffDeliveryExceptionResponse: {
+            exception: {
+                [key: string]: unknown;
+            };
+        };
+        /** @enum {string} */
+        TicketStatus: "open" | "in_review" | "pending_user" | "resolved" | "closed";
+        /** @enum {string} */
+        TicketPriority: "low" | "normal" | "high" | "urgent";
+        /** @enum {string} */
+        TicketCategory: "order_issue" | "delivery_issue" | "store_quality" | "payment_reference" | "account_access" | "app_bug" | "other";
+        CreateTicketInput: {
+            storeId?: string;
+            orderId?: string;
+            subject: string;
+            description: string;
+            category: components["schemas"]["TicketCategory"];
+            priority?: components["schemas"]["TicketPriority"];
+        };
+        AddMessageInput: {
+            body: string;
+            /** @default false */
+            isInternal: boolean;
+        };
+        UpdateTicketInput: {
+            expectedStatus?: components["schemas"]["TicketStatus"];
+            status: components["schemas"]["TicketStatus"];
+            assignedTo?: string;
+        };
+        Ticket: {
+            id: string;
+            storeId?: string;
+            reporterId: string;
+            reporterRole: string;
+            subject: string;
+            description: string;
+            category: components["schemas"]["TicketCategory"];
+            priority: components["schemas"]["TicketPriority"];
+            status: components["schemas"]["TicketStatus"];
+            assignedTo?: string;
+            orderId?: string;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            /** Format: date-time */
+            closedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        Message: {
+            id: string;
+            ticketId: string;
+            senderId: string;
+            senderRole: string;
+            body: string;
+            isInternal: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        TicketEvent: {
+            id: string;
+            ticketId: string;
+            reporterId: string;
+            actorId: string;
+            actorRole: string;
+            /** @enum {string} */
+            eventType: "created" | "message_added" | "status_changed" | "escalated" | "closed";
+            correlationId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AttachmentInput: {
+            mediaAssetId: string;
+            fileName: string;
+            mimeType: string;
+            sizeBytes: number;
+            /** @enum {string} */
+            kind: "image" | "audio" | "video" | "document";
+            durationMs?: number | null;
+            thumbnailMediaAssetId?: string;
+            waveformRef?: string;
+            /**
+             * @default ready
+             * @enum {string}
+             */
+            uploadStatus: "uploaded" | "processing" | "ready" | "failed";
+            /** @default false */
+            isInternal: boolean;
+        };
+        WorkforceScopeInput: {
+            /** @enum {string} */
+            actorRole: "field" | "captain";
+            storeIds: string[];
+            serviceAreaCodes: string[];
+        };
+        DshStoreOperationalContext: {
+            addressLine: string;
+            coverageSummary: string;
+            operatingHours: string;
+            deliveryReadiness: string;
+        };
+        DshAnalyticsMetadata: {
+            /** @enum {string} */
+            sourceSystem: "DSH";
+            /** @constant */
+            readOnly: true;
+            /** Format: date-time */
+            generatedAt: string;
+            /** Format: date-time */
+            windowFrom: string;
+            /** Format: date-time */
+            windowTo: string;
+            freshnessSeconds: number;
+            lineage: string[];
+        };
+        DshPreparationSlaAnalyticsResponse: {
+            totalMeasured: number;
+            withinSla: number;
+            breachedSla: number;
+            openPastEstimate: number;
+            /** Format: double */
+            averagePreparationMinutes: number;
+            metadata: components["schemas"]["DshAnalyticsMetadata"];
+        };
+        DshCaptainPerformanceRow: {
+            captainId: string;
+            assignments: number;
+            accepted: number;
+            declined: number;
+            completed: number;
+            /** Format: double */
+            acceptanceRate: number;
+            /** Format: double */
+            completionRate: number;
+            /** Format: double */
+            averageResponseSeconds: number;
+        };
+        DshCaptainPerformanceAnalyticsResponse: {
+            rows: components["schemas"]["DshCaptainPerformanceRow"][];
+            metadata: components["schemas"]["DshAnalyticsMetadata"];
+        };
+        DshFieldPerformanceRow: {
+            fieldAgentId: string;
+            visits: number;
+            completed: number;
+            escalated: number;
+            /** Format: double */
+            completionRate: number;
+            /** Format: double */
+            averageVisitMinutes: number;
+        };
+        DshFieldPerformanceAnalyticsResponse: {
+            rows: components["schemas"]["DshFieldPerformanceRow"][];
+            metadata: components["schemas"]["DshAnalyticsMetadata"];
+        };
+        DshOperationalAnalyticsRecord: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "order";
+            status: string;
+            storeId: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            detailUrl: string;
+        };
+        DshOperationalAnalyticsDrilldownResponse: {
+            records: components["schemas"]["DshOperationalAnalyticsRecord"][];
+            metadata: components["schemas"]["DshAnalyticsMetadata"];
+        };
+        WltAnalyticsAccountBalance: {
+            accountType: string;
+            /** @enum {string} */
+            category: "asset" | "liability" | "revenue" | "expense";
+            /** @enum {string} */
+            normalBalanceSide: "debit" | "credit";
+            currency: string;
+            /** Format: int64 */
+            balanceMinorUnits: number;
+        };
+        WltAnalyticsCurrencySummary: {
+            currency: string;
+            /** Format: int64 */
+            assetsMinorUnits: number;
+            /** Format: int64 */
+            liabilitiesMinorUnits: number;
+            /** Format: int64 */
+            revenueMinorUnits: number;
+            /** Format: int64 */
+            expensesMinorUnits: number;
+            /** Format: int64 */
+            netPositionMinorUnits: number;
+            accounts: components["schemas"]["WltAnalyticsAccountBalance"][];
+        };
+        WltAnalyticsFinancialSummary: {
+            currencies: components["schemas"]["WltAnalyticsCurrencySummary"][];
+            dataCompleteness: string[];
+        };
+        DshWltFinancialAnalyticsSnapshot: {
+            /** @enum {string} */
+            owner: "WLT";
+            /** @constant */
+            readOnly: true;
+            /** @enum {string} */
+            readState: "available" | "unavailable";
+            /** Format: date-time */
+            generatedAt: string;
+            summary: components["schemas"]["WltAnalyticsFinancialSummary"] | null;
+        };
+        DshWltFinancialAnalyticsSnapshotResponse: {
+            financialSnapshot: components["schemas"]["DshWltFinancialAnalyticsSnapshot"];
+        };
+        DshWltFinancialAnalyticsUnavailableResponse: {
+            financialSnapshot: components["schemas"]["DshWltFinancialAnalyticsSnapshot"];
+            error: {
+                /** @enum {string} */
+                code: "WLT_ANALYTICS_UNAVAILABLE";
+                message: string;
+            };
+        };
     };
     responses: {
         /** @description Validation failed. */
@@ -7527,14 +13994,1483 @@ export interface components {
                 "application/json": components["schemas"]["DshErrorResponse"];
             };
         };
+        /** @description Governed error response. */
+        ErrorResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Dispatch balance policy. */
+        PolicyResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    policy: components["schemas"]["DispatchBalancePolicy"];
+                };
+            };
+        };
+        /** @description Short-lived WLT-backed captain eligibility snapshot. */
+        EligibilityResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    financialEligibility: components["schemas"]["CaptainFinancialEligibility"];
+                };
+            };
+        };
+        /** @description Governed state transition rejected */
+        InvalidTransition: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Invalid request */
+        DshCatalogInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Missing or invalid identity */
+        DshCatalogUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Permission or ownership denied */
+        DshCatalogForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Entity not found */
+        DshCatalogNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Version conflict; reload before retrying */
+        DshCatalogConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ConflictResponse"];
+            };
+        };
+        /** @description Canonical DSH checkout projection. */
+        CheckoutIntentResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    intent: components["schemas"]["CheckoutIntent"];
+                };
+            };
+        };
+        /** @description Governed error envelope. */
+        DshCheckoutErrorResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    error?: {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+        /** @description Coordinates are missing, outside active service areas, or do not match serviceAreaCode. */
+        ServiceAreaUnverified: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Invalid request. */
+        DshClientAddressInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Authentication required. */
+        DshClientAddressUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Address not found. */
+        DshClientAddressNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Idempotency-key reuse, duplicate-address, or optimistic-concurrency conflict. */
+        DshClientAddressConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Invalid request */
+        DshClientAddressPrivacyInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Authentication required */
+        DshClientAddressPrivacyUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Permission required */
+        DshClientAddressPrivacyForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Version or idempotency conflict */
+        DshClientAddressPrivacyConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Provider returned a malformed or incomplete result that DSH refused to trust. */
+        MapUncertain: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description All configured governed map providers failed. */
+        MapUnavailable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description No governed map provider is configured. */
+        MapNotConfigured: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Governed map-provider invocation exceeded its timeout. */
+        MapTimeout: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Request validation failed. */
+        DshClientMapInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Authentication is required. */
+        DshClientMapUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Permission is required. */
+        DshClientMapForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Service area was not found. */
+        DshClientMapNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Version or idempotency conflict. */
+        DshClientMapConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Request validation failed. */
+        DshDeliveryExceptionsInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Authentication is required. */
+        DshDeliveryExceptionsUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description The authenticated actor cannot perform this operation. */
+        DshDeliveryExceptionsForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Assignment, exception, order, or return state was not found. */
+        DshDeliveryExceptionsNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Optimistic version or lifecycle state conflict. */
+        DshDeliveryExceptionsConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Invalid delivery proof request. */
+        DshDeliveryProofCompletionInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Authentication required. */
+        DshDeliveryProofCompletionUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Actor is not allowed to access this proof. */
+        DshDeliveryProofCompletionForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Order, assignment, challenge, or proof was not found. */
+        DshDeliveryProofCompletionNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description State, PIN, version, or idempotency conflict. */
+        DshDeliveryProofCompletionConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Uploaded proof exceeds the governed media size limit. */
+        UploadTooLarge: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /** @description Governed media storage is not configured or unavailable. */
+        MediaUnavailable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /** @description Invalid multipart body or unsupported media type. */
+        DshDeliveryProofMediaInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /** @description Authentication is required. */
+        DshDeliveryProofMediaUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /** @description The actor does not own the requested partner order. */
+        DshDeliveryProofMediaForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /** @description Assignment, order, or delivery task was not found. */
+        DshDeliveryProofMediaNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /** @description Actor ownership, command identity, version, or delivery state conflicts with the request. */
+        DshDeliveryProofMediaConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /** @description Delivery has not reached the proof-eligible state. */
+        DshDeliveryProofMediaInvalidTransition: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /** @description Invalid request. */
+        DshDispatchGovernanceInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Authentication required. */
+        DshDispatchGovernanceUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Permission denied. */
+        DshDispatchGovernanceForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Assignment or order not found. */
+        DshDispatchGovernanceNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description State, eligibility, capacity, idempotency, tenant, or version conflict. */
+        DshDispatchGovernanceConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Request payload failed validation. */
+        InvalidEvent: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshHomeMarketingEventError"];
+            };
+        };
+        /** @description Referenced content is absent, inactive, outside schedule, or outside the supplied target context. */
+        ContentNotPublishable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshHomeMarketingEventError"];
+            };
+        };
+        /** @description Authentication is required. */
+        DshHomeMarketingEventsUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshHomeMarketingEventError"];
+            };
+        };
+        /** @description Marketing permission is required. */
+        DshHomeMarketingEventsForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshHomeMarketingEventError"];
+            };
+        };
+        /** @description Home content item was not found. */
+        DshHomeMarketingEventsNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshHomeMarketingEventError"];
+            };
+        };
+        /** @description Request validation failed. */
+        DshHomeMarketingGovernanceInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshHomeMarketingError"];
+            };
+        };
+        /** @description Bearer session is missing, invalid or expired. */
+        DshHomeMarketingGovernanceUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshHomeMarketingError"];
+            };
+        };
+        /** @description Actor does not hold the marketing permission. */
+        DshHomeMarketingGovernanceForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshHomeMarketingError"];
+            };
+        };
+        /** @description Content item was not found. */
+        DshHomeMarketingGovernanceNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshHomeMarketingError"];
+            };
+        };
+        /** @description Optimistic concurrency conflict. */
+        DshHomeMarketingGovernanceConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshHomeMarketingError"];
+            };
+        };
+        /** @description Operational support incident. */
+        Incident: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    incident: components["schemas"]["Incident"];
+                };
+            };
+        };
+        /** @description Operational support incidents. */
+        IncidentList: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    incidents: components["schemas"]["Incident"][];
+                };
+            };
+        };
+        /** @description Sovereign operational intervention record. */
+        OperationalIncident: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    incident: components["schemas"]["OperationalIncident"];
+                };
+            };
+        };
+        /** @description Sovereign operational intervention records. */
+        OperationalIncidentList: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    incidents: components["schemas"]["OperationalIncident"][];
+                };
+            };
+        };
+        /** @description Partner activation rating prompt. */
+        PartnerFieldRatingPrompt: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    prompt: components["schemas"]["PartnerFieldRatingPrompt"];
+                };
+            };
+        };
+        /** @description Delivered-order rating prompt. */
+        ClientOrderRatingPrompt: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    prompt: components["schemas"]["ClientOrderRatingPrompt"];
+                };
+            };
+        };
+        /** @description Governed provider rating. */
+        ProviderRating: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    rating: components["schemas"]["ProviderRating"];
+                };
+            };
+        };
+        /** @description Governed captain and order ratings. */
+        ProviderRatings: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    ratings: components["schemas"]["ProviderRating"][];
+                };
+            };
+        };
+        /** @description Provider rating summary. */
+        ProviderRatingSummary: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    summary: components["schemas"]["ProviderRatingSummary"];
+                };
+            };
+        };
+        /** @description Governed error response. */
+        Error: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    code: string;
+                    message: string;
+                };
+            };
+        };
+        /** @description Sample is stale, future-dated, or insufficiently accurate. */
+        UnacceptableLocation: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Location samples must respect the configured minimum interval. */
+        TooFrequent: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Request payload or timestamp is invalid. */
+        DshLiveTrackingInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Authentication is required. */
+        DshLiveTrackingUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Actor scope or permission does not allow this operation. */
+        DshLiveTrackingForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Assignment or owned order was not found. */
+        DshLiveTrackingNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Location sequence or replay payload conflicts with the stored latest sample. */
+        DshLiveTrackingConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Governed commercial response. */
+        ObjectResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        /** @description Invalid request. */
+        DshNotificationsGovernanceInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshNotificationError"];
+            };
+        };
+        /** @description Authentication is required. */
+        DshNotificationsGovernanceUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshNotificationError"];
+            };
+        };
+        /** @description The actor lacks notification-governance permission. */
+        DshNotificationsGovernanceForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshNotificationError"];
+            };
+        };
+        /** @description Push endpoint not found for the actor. */
+        DshNotificationsGovernanceNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshNotificationError"];
+            };
+        };
+        /** @description Invalid governed policy request. */
+        Invalid: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content?: never;
+        };
+        /** @description Authentication required. */
+        Unauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Governed order rescue case. */
+        RescueCase: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    rescueCase: components["schemas"]["RescueCase"];
+                };
+            };
+        };
+        /** @description Governed order rescue queue. */
+        RescueCaseList: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    rescueCases: components["schemas"]["RescueCase"][];
+                };
+            };
+        };
+        /** @description Actor-scoped order workboard. */
+        WorkboardResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    orders: {
+                        [key: string]: unknown;
+                    }[];
+                    total: number;
+                };
+            };
+        };
+        /** @description Governed error response. */
+        DshOrderWorkboardsErrorResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        /** @description Partner delivery task. */
+        TaskResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    task: components["schemas"]["PartnerDeliveryTask"];
+                };
+            };
+        };
+        /** @description Actor-scoped partner delivery state. */
+        TaskStateResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    task: components["schemas"]["PartnerDeliveryTask"] | null;
+                    stage: string;
+                };
+            };
+        };
+        /** @description Operator partner delivery list. */
+        TaskListResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    tasks: components["schemas"]["PartnerDeliveryTask"][];
+                };
+            };
+        };
+        /** @description Actor-scoped pickup state. */
+        PickupStateResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    session: components["schemas"]["PickupSession"] | null;
+                    stage: string;
+                };
+            };
+        };
+        /** @description Pickup action response. */
+        PickupActionResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    session?: components["schemas"]["PickupSession"];
+                    orderId?: string;
+                    status?: string;
+                } & {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        /** @description Pickup session list. */
+        PickupListResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    sessions: components["schemas"]["PickupSession"][];
+                };
+            };
+        };
+        /** @description SLA refresh result. */
+        SlaRefreshResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    result: components["schemas"]["SlaRefreshResult"];
+                };
+            };
+        };
+        /** @description SLA alert. */
+        SlaAlertResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    alert: components["schemas"]["SlaAlert"];
+                };
+            };
+        };
+        /** @description SLA alerts. */
+        SlaAlertListResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    alerts: components["schemas"]["SlaAlert"][];
+                };
+            };
+        };
+        /** @description Governed request failure. */
+        DshPartnerDeliveryErrorResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorEnvelope"];
+            };
+        };
+        /** @description Store already belongs to another partner. */
+        StoreOwnershipConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Required onboarding evidence or publication gate is incomplete. */
+        ReadinessFailed: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description A positive expected version is required. */
+        VersionRequired: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description The WLT payout owner is unavailable or rejected the handoff. */
+        WltUnavailable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Actor is not authorized for this partner or surface. */
+        DshPartnerOnboardingForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Partner or store was not found. */
+        DshPartnerOnboardingNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Version conflict or idempotency key reuse with another payload. */
+        DshPartnerOnboardingConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Governed DSH error envelope. */
+        DshPaymentSessionsError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshPaymentSessionsErrorEnvelope"];
+            };
+        };
+        /** @description Governed error response. */
+        DshPayoutsDestinationsErrorResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        /** @description Invalid request */
+        DshPlatformPoliciesInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Authentication required */
+        DshPlatformPoliciesUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Permission required */
+        DshPlatformPoliciesForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Record not found */
+        DshPlatformPoliciesNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Version or idempotency conflict */
+        DshPlatformPoliciesConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Invalid request. */
+        BadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Permission or store ownership denied. */
+        DshReelsForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Reel or media not found. */
+        DshReelsNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description Lifecycle or media state conflict. */
+        DshReelsConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshError"];
+            };
+        };
+        /** @description WLT could not claim or complete the mutation replay receipt */
+        MutationReceiptFailure: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["MutationReceiptError"];
+            };
+        };
+        /** @description WLT could not persist the provider outcome or mutation replay evidence; automatic retry is forbidden */
+        CompletionPersistenceFailure: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["CompletionPersistenceError"];
+            };
+        };
+        /** @description Invalid request, missing authenticated tenant or missing reconciliation evidence */
+        DshRefundsBadRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Missing or invalid actor session */
+        DshRefundsUnauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Permission, tenant mismatch, maker-checker or store scope denied */
+        DshRefundsForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Refund or owned order not found */
+        DshRefundsNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Lifecycle, amount, changed-payload or in-progress idempotency conflict */
+        DshRefundsConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description WLT-owned representative wallet. */
+        WalletResponse: {
+            headers: {
+                "Cache-Control"?: string;
+                Pragma?: string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    wallet: components["schemas"]["RepresentativeWallet"];
+                };
+            };
+        };
+        /** @description Actor-scoped ledger references from WLT. */
+        LedgerResponse: {
+            headers: {
+                "Cache-Control"?: string;
+                Pragma?: string;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    ledgerEntries: components["schemas"]["RepresentativeLedgerEntry"][];
+                };
+            };
+        };
+        /** @description Actor-scoped finance references owned by WLT. */
+        ReferenceCollectionResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        /** @description Governed WLT reference item. */
+        ReferenceItemResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        /** @description Authentication or authorization failed. */
+        AuthError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshRepresentativeFinanceErrorResponse"];
+            };
+        };
+        /** @description Invalid actor or request input. */
+        ValidationError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshRepresentativeFinanceErrorResponse"];
+            };
+        };
+        /** @description WLT is not configured or unavailable. */
+        DshRepresentativeFinanceWltUnavailable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["DshRepresentativeFinanceErrorResponse"];
+            };
+        };
+        /** @description Governed error response. */
+        DshSettlementsCommissionsErrorResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        /** @description Invalid request. */
+        DshStoreCaptainHandoffInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Authentication is required. */
+        DshStoreCaptainHandoffUnauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Actor role or store scope is not authorized. */
+        DshStoreCaptainHandoffForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Active handoff truth was not found for the actor scope. */
+        DshStoreCaptainHandoffNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Current lifecycle state or an open exception blocks the command. */
+        DshStoreCaptainHandoffConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorResponse"];
+            };
+        };
+        /** @description Support ticket. */
+        Ticket: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    ticket: components["schemas"]["Ticket"];
+                };
+            };
+        };
+        /** @description Support tickets. */
+        TicketList: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    tickets: components["schemas"]["Ticket"][];
+                };
+            };
+        };
+        /** @description Support message. */
+        Message: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    message: components["schemas"]["Message"];
+                };
+            };
+        };
+        /** @description Support messages. */
+        MessageList: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    messages: components["schemas"]["Message"][];
+                };
+            };
+        };
     };
     parameters: {
         HomeContentKind: "banners" | "promos";
         StoreId: string;
         IdempotencyKey: string;
         CorrelationId: string;
+        ApprovalStatus: components["schemas"]["ApprovalStatus"];
+        RequestId: string;
+        ApprovalId: string;
+        StaffId: string;
+        CaptainId: string;
+        OperatorContextIdQuery: string;
+        DomainId: string;
+        NodeId: string;
+        ProductId: string;
+        MasterProductId: string;
+        ProposalId: string;
+        PolicyId: string;
+        AssetId: string;
+        PartnerId: string;
+        AttributeId: string;
+        RelationshipId: string;
+        AuditId: string;
+        IntentId: string;
+        DshCheckoutIdempotencyKey: string;
+        DshCheckoutCorrelationId: string;
+        AddressId: string;
+        /** @description Positive committed address version required for update-adjacent mutations. */
+        ExpectedVersion: number;
+        DshClientAddressCorrelationId: string;
+        CaseId: string;
+        RecordId: string;
+        AssignmentId: string;
+        ExceptionId: string;
+        OrderId: string;
+        ProofId: string;
+        StandardIdempotencyKey: string;
+        DshDeliveryProofCompletionIdempotencyKey: string;
+        OperatorContextId: string;
+        HomeContentItemId: string;
+        ContentKind: "banners" | "promos";
+        IncidentId: string;
+        DshIncidentGovernanceOrderId: string;
+        DshIncidentGovernanceIdempotencyKey: string;
+        DshIncidentGovernanceCorrelationId: string;
+        ZoneId: string;
+        DshOrderRescueIdempotencyKey: string;
+        DshOrderRescueCorrelationId: string;
+        Status: string;
+        Limit: number;
+        /** @description Durable mutation key scoped by tenant and authenticated client. */
+        DshOrderTruthIdempotencyKey: string;
+        DshOrderTruthCorrelationId: string;
+        StatusFilter: string;
+        FulfillmentMode: "bthwani_delivery" | "partner_delivery" | "pickup";
+        TaskId: string;
+        AlertId: string;
+        Offset: number;
+        DshPartnerOnboardingExpectedVersion: number;
+        /** @description Omission is accepted only where the server derives a deterministic key from the versioned command. */
+        DshPartnerOnboardingIdempotencyKey: string;
+        DshPartnerOnboardingCorrelationId: string;
+        TicketId: string;
+        DshPartnerSupportIdempotencyKey: string;
+        DshPartnerSupportCorrelationId: string;
+        PaymentSessionId: string;
+        DshPaymentSessionsCorrelationId: string;
+        PayoutId: string;
+        ReelId: string;
+        RefundId: string;
+        CorrelationHeader: string;
+        CorrelationHeaderOptional: string;
+        IdempotencyHeader: string;
+        ActorTypePath: "client" | "partner" | "captain" | "field";
+        ActorIdPath: string;
+        Cursor: string;
+        EntryType: string;
+        DshRepresentativeFinanceLimit: number;
+        Authorization: string;
+        ServiceCaller: "workforce";
+        ServiceAreaCode: string;
+        DshRuntimeExtensionsOperatorContextId: string;
+        SettlementId: string;
+        CommissionId: string;
+        DshStoreCaptainHandoffCorrelationId: string;
+        DshSupportGovernanceIdempotencyKey: string;
+        DshSupportGovernanceCorrelationId: string;
+        MessageId: string;
     };
-    requestBodies: never;
+    requestBodies: {
+        MutationRequest: {
+            content: {
+                "application/json": components["schemas"]["MutationRequest"];
+            };
+        };
+        ObjectBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        PayoutRequestBody: {
+            content: {
+                "application/json": components["schemas"]["PayoutRequestInput"];
+            };
+        };
+    };
     headers: never;
     pathItems: never;
 }
@@ -7549,39 +15485,10 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Wallet returned successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        wallet?: {
-                            actorId?: string;
-                            actorType?: string;
-                            status?: string;
-                            currency?: string;
-                            /** Format: int64 */
-                            availableBalanceMinorUnits?: number;
-                            /** Format: int64 */
-                            pendingBalanceMinorUnits?: number;
-                            /** Format: int64 */
-                            heldBalanceMinorUnits?: number;
-                            /** Format: int64 */
-                            earnedTotalMinorUnits?: number;
-                            /** Format: int64 */
-                            settledTotalMinorUnits?: number;
-                            /** Format: int64 */
-                            paidTotalMinorUnits?: number;
-                            /** Format: date-time */
-                            lastLedgerEntryAt?: string | null;
-                            /** Format: date-time */
-                            updatedAt?: string | null;
-                        };
-                    };
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
+            200: components["responses"]["WalletResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
         };
     };
     getDshFieldMeCommissions: {
@@ -7593,54 +15500,29 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Commissions list returned successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        commissions?: {
-                            id?: string;
-                            beneficiaryActorId?: string;
-                            beneficiaryActorType?: string;
-                            sourceType?: string;
-                            sourceId?: string;
-                            visitId?: string | null;
-                            storeId?: string | null;
-                            partnerId?: string | null;
-                            commissionPolicyId?: string | null;
-                            /** Format: int64 */
-                            amountMinorUnits?: number;
-                            currency?: string;
-                            status?: string;
-                            idempotencyKey?: string | null;
-                        }[];
-                    };
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
+            200: components["responses"]["ReferenceCollectionResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
         };
     };
     getDshFieldMeLedgerEntries: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: components["parameters"]["DshRepresentativeFinanceLimit"];
+                cursor?: components["parameters"]["Cursor"];
+                entryType?: components["parameters"]["EntryType"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Ledger entries returned successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>[];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
+            200: components["responses"]["LedgerResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
         };
     };
     getDshFieldMePayoutRequests: {
@@ -7652,77 +15534,28 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Payout requests returned successfully. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        payoutRequests?: {
-                            id?: string;
-                            beneficiaryActorId?: string;
-                            beneficiaryActorType?: string;
-                            /** Format: int64 */
-                            amountMinorUnits?: number;
-                            currency?: string;
-                            status?: string;
-                            /** Format: date-time */
-                            requestedAt?: string;
-                            /** Format: date-time */
-                            completedAt?: string | null;
-                            failureReason?: string | null;
-                        }[];
-                    };
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
+            200: components["responses"]["ReferenceCollectionResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
         };
     };
     submitDshFieldMePayoutRequest: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** Format: int64 */
-                    amountMinorUnits: number;
-                    currency: string;
-                    idempotencyKey: string;
-                };
-            };
-        };
+        requestBody: components["requestBodies"]["PayoutRequestBody"];
         responses: {
-            /** @description Payout request created successfully. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        payoutRequest?: {
-                            id?: string;
-                            beneficiaryActorId?: string;
-                            beneficiaryActorType?: string;
-                            /** Format: int64 */
-                            amountMinorUnits?: number;
-                            currency?: string;
-                            status?: string;
-                            /** Format: date-time */
-                            requestedAt?: string;
-                            /** Format: date-time */
-                            completedAt?: string | null;
-                            failureReason?: string | null;
-                        };
-                    };
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
+            201: components["responses"]["ReferenceItemResponse"];
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
         };
     };
     getDshHealth: {
@@ -7910,39 +15743,39 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                kind: components["parameters"]["HomeContentKind"];
+                kind: components["parameters"]["ContentKind"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Administrative home discovery content. */
+            /** @description Governed home content. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshHomeAdminListResponse"];
+                    "application/json": {
+                        items: components["schemas"]["DshGovernedHomeContent"][];
+                    };
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
+            401: components["responses"]["DshHomeMarketingGovernanceUnauthenticated"];
+            403: components["responses"]["DshHomeMarketingGovernanceForbidden"];
         };
     };
     createOperatorHomeDiscoveryContent: {
         parameters: {
             query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
+            header?: never;
             path: {
-                kind: components["parameters"]["HomeContentKind"];
+                kind: components["parameters"]["ContentKind"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshHomeAdminContentInput"];
+                "application/json": components["schemas"]["DshGovernedHomeContentWrite"];
             };
         };
         responses: {
@@ -7952,22 +15785,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshHomeAdminItemResponse"];
+                    "application/json": components["schemas"]["DshGovernedHomeContent"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
+            400: components["responses"]["DshHomeMarketingGovernanceInvalidRequest"];
+            401: components["responses"]["DshHomeMarketingGovernanceUnauthenticated"];
+            403: components["responses"]["DshHomeMarketingGovernanceForbidden"];
         };
     };
     deleteOperatorHomeDiscoveryContent: {
         parameters: {
             query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
+            header?: never;
             path: {
-                kind: components["parameters"]["HomeContentKind"];
+                kind: components["parameters"]["ContentKind"];
                 itemId: string;
             };
             cookie?: never;
@@ -7981,26 +15812,24 @@ export interface operations {
                 };
                 content?: never;
             };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            401: components["responses"]["DshHomeMarketingGovernanceUnauthenticated"];
+            403: components["responses"]["DshHomeMarketingGovernanceForbidden"];
+            404: components["responses"]["DshHomeMarketingGovernanceNotFound"];
         };
     };
     updateOperatorHomeDiscoveryContent: {
         parameters: {
             query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-            };
+            header?: never;
             path: {
-                kind: components["parameters"]["HomeContentKind"];
+                kind: components["parameters"]["ContentKind"];
                 itemId: string;
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshHomeAdminContentInput"];
+                "application/json": components["schemas"]["DshGovernedHomeContentWrite"];
             };
         };
         responses: {
@@ -8010,13 +15839,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshHomeAdminItemResponse"];
+                    "application/json": components["schemas"]["DshGovernedHomeContent"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            400: components["responses"]["DshHomeMarketingGovernanceInvalidRequest"];
+            401: components["responses"]["DshHomeMarketingGovernanceUnauthenticated"];
+            403: components["responses"]["DshHomeMarketingGovernanceForbidden"];
+            404: components["responses"]["DshHomeMarketingGovernanceNotFound"];
+            409: components["responses"]["DshHomeMarketingGovernanceConflict"];
         };
     };
     getDshStore: {
@@ -8481,13 +16311,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description BUSINESS_DOMAIN (L1) list. */
+            /** @description Domains */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DomainListResponse"];
+                };
             };
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
         };
     };
     createCatalogDomain: {
@@ -8497,15 +16331,25 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDomainRequest"];
+            };
+        };
         responses: {
-            /** @description Domain created. */
+            /** @description Domain created */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DomainResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     updateCatalogDomain: {
@@ -8513,33 +16357,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                domainId: string;
+                domainId: components["parameters"]["DomainId"];
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": {
-                    expectedVersion?: number;
-                    nameAr?: string;
-                    nameEn?: string;
-                    icon?: string;
-                    sortOrder?: number;
-                    isActive?: boolean;
-                    isClientVisible?: boolean;
-                    requiresProductCatalog?: boolean;
-                    isManualRequest?: boolean;
-                };
+                "application/json": components["schemas"]["UpdateDomainRequest"];
             };
         };
         responses: {
-            /** @description Domain updated. */
+            /** @description Domain updated */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["DomainResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     listCatalogNodes: {
@@ -8554,13 +16395,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description BUSINESS_SUBDOMAIN/PRODUCT_MAIN_CLASS/PRODUCT_SUB_CLASS (L2-L4) list. */
+            /** @description Nodes */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["NodeListResponse"];
+                };
             };
+            401: components["responses"]["DshCatalogUnauthenticated"];
         };
     };
     createCatalogNode: {
@@ -8570,15 +16414,25 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateNodeRequest"];
+            };
+        };
         responses: {
-            /** @description Node created. */
+            /** @description Node created */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["NodeResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     updateCatalogNode: {
@@ -8586,31 +16440,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                nodeId: string;
+                nodeId: components["parameters"]["NodeId"];
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": {
-                    expectedVersion?: number;
-                    nameAr?: string;
-                    nameEn?: string;
-                    icon?: string;
-                    sortOrder?: number;
-                    isActive?: boolean;
-                    isClientVisible?: boolean;
-                };
+                "application/json": components["schemas"]["UpdateNodeRequest"];
             };
         };
         responses: {
-            /** @description Node updated. */
+            /** @description Node updated */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["NodeResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     listMasterProductsOperator: {
@@ -8620,12 +16473,6 @@ export interface operations {
                 categoryNodeId?: string;
                 approvalStatus?: string;
                 search?: string;
-                isActive?: boolean;
-                imageStatus?: string;
-                sortBy?: "createdAt" | "updatedAt" | "nameAr" | "price";
-                sortDirection?: "asc" | "desc";
-                createdFrom?: string;
-                createdTo?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -8635,15 +16482,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description MASTER_PRODUCT (L5) list. */
+            /** @description Master products */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshMasterProductListResponse"];
+                    "application/json": components["schemas"]["MasterProductListResponse"];
                 };
             };
+            401: components["responses"]["DshCatalogUnauthenticated"];
         };
     };
     createMasterProduct: {
@@ -8653,15 +16501,25 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateMasterProductRequest"];
+            };
+        };
         responses: {
-            /** @description Master product created. */
+            /** @description Master product created */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MasterProductResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     updateMasterProduct: {
@@ -8669,35 +16527,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                productId: string;
+                productId: components["parameters"]["ProductId"];
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": {
-                    expectedVersion?: number;
-                    canonicalNameAr?: string;
-                    canonicalNameEn?: string;
-                    brand?: string;
-                    unit?: string;
-                    unitPrice?: number;
-                    currency?: string;
-                    /** @enum {string} */
-                    stockStatus?: "in_stock" | "low_stock" | "out_of_stock";
-                    isActive?: boolean;
-                    approvalStatus?: string;
-                };
+                "application/json": components["schemas"]["UpdateMasterProductRequest"];
             };
         };
         responses: {
-            /** @description Master product updated. */
+            /** @description Master product updated */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MasterProductResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     listProductProposals: {
@@ -8714,15 +16567,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Product proposal queue (requests to add to the master catalog). */
+            /** @description Proposals */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshProductProposalListResponse"];
+                    "application/json": components["schemas"]["ProposalListResponse"];
                 };
             };
+            401: components["responses"]["DshCatalogUnauthenticated"];
         };
     };
     decideProductProposal: {
@@ -8730,19 +16584,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                proposalId: string;
+                proposalId: components["parameters"]["ProposalId"];
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposalDecisionRequest"];
+            };
+        };
         responses: {
-            /** @description Proposal moved to under_review/adopted/rejected/needs_fix. */
+            /** @description Proposal decided */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProposalResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     transitionProductProposal: {
@@ -8750,19 +16615,31 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                proposalId: string;
+                proposalId: components["parameters"]["ProposalId"];
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposalTransitionRequest"];
+            };
+        };
         responses: {
-            /** @description Proposal transitioned along the multi-stage review pipeline. */
+            /** @description Proposal transitioned */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProposalResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
+            422: components["responses"]["InvalidTransition"];
         };
     };
     listCatalogPlatformPolicies: {
@@ -8774,13 +16651,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Per-domain/per-node/default commission, fee, and capability policy rows. */
+            /** @description Policies */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PolicyListResponse"];
+                };
             };
+            401: components["responses"]["DshCatalogUnauthenticated"];
         };
     };
     updateCatalogPlatformPolicy: {
@@ -8788,36 +16668,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                policyId: string;
+                policyId: components["parameters"]["PolicyId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": {
-                    expectedVersion?: number;
-                    isActive?: boolean;
-                    requiresMarketingReview?: boolean;
-                    requiresProductImage?: boolean;
-                    requiresCategoryImage?: boolean;
-                    requiresDescription?: boolean;
-                    requiresBrand?: boolean;
-                    requiresUnit?: boolean;
-                    productDataQualityMinimumScore?: number;
-                    maxGalleryImages?: number;
-                    manualRequestMode?: boolean;
-                    allowsStoreProductCustomImage?: boolean;
-                };
+                "application/json": components["schemas"]["UpdatePolicyRequest"];
             };
         };
         responses: {
-            /** @description Policy updated. */
+            /** @description Policy updated */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PolicyResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     patchCatalogPlatformPolicy: {
@@ -8825,36 +16699,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                policyId: string;
+                policyId: components["parameters"]["PolicyId"];
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": {
-                    expectedVersion?: number;
-                    isActive?: boolean;
-                    requiresMarketingReview?: boolean;
-                    requiresProductImage?: boolean;
-                    requiresCategoryImage?: boolean;
-                    requiresDescription?: boolean;
-                    requiresBrand?: boolean;
-                    requiresUnit?: boolean;
-                    productDataQualityMinimumScore?: number;
-                    maxGalleryImages?: number;
-                    manualRequestMode?: boolean;
-                    allowsStoreProductCustomImage?: boolean;
-                };
+                "application/json": components["schemas"]["UpdatePolicyRequest"];
             };
         };
         responses: {
-            /** @description Policy updated. */
+            /** @description Policy updated */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PolicyResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     getCatalogSeedStatus: {
@@ -8888,15 +16756,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description List of DAM assets. */
+            /** @description Assets */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshCatalogAssetListResponse"];
+                    "application/json": components["schemas"]["AssetListResponse"];
                 };
             };
+            401: components["responses"]["DshCatalogUnauthenticated"];
         };
     };
     createAssetUploadIntent: {
@@ -8987,27 +16856,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                assetId: string;
+                assetId: components["parameters"]["AssetId"];
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": {
-                    altAr?: string;
-                    altEn?: string;
-                    dominantColor?: string;
-                };
+                "application/json": components["schemas"]["UpdateAssetRequest"];
             };
         };
         responses: {
-            /** @description Asset alt text / dominant color updated. */
+            /** @description Asset updated */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AssetResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     reviewCatalogAsset: {
@@ -9015,34 +16887,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                assetId: string;
+                assetId: components["parameters"]["AssetId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /**
-                     * @description Valid transitions: uploaded→pending_review (automatic on complete), pending_review→approved|rejected, approved→archived. draft assets may not be approved directly.
-                     * @enum {string}
-                     */
-                    decision: "approved" | "rejected" | "archived";
-                    reviewNote?: string;
-                };
+                "application/json": components["schemas"]["ReviewAssetRequest"];
             };
         };
         responses: {
-            /** @description Asset reviewed by operator. */
+            /** @description Asset reviewed */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        asset?: components["schemas"]["DshCatalogAsset"];
-                    };
+                    "application/json": components["schemas"]["AssetResponse"];
                 };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     linkCatalogAsset: {
@@ -9092,7 +16960,7 @@ export interface operations {
     listReels: {
         parameters: {
             query?: {
-                status?: "pending_review" | "approved" | "rejected" | "archived";
+                status?: components["schemas"]["DshReelStatus"];
                 limit?: number;
                 offset?: number;
             };
@@ -9102,17 +16970,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description List of reels (operator view). */
+            /** @description Permission-gated moderation queue. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        reels?: components["schemas"]["DshReel"][];
+                        reels: components["schemas"]["DshGovernedReel"][];
                     };
                 };
             };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["DshReelsForbidden"];
         };
     };
     reviewReel: {
@@ -9120,35 +16990,61 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                reelId: string;
+                reelId: components["parameters"]["ReelId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /** @enum {string} */
-                    decision: "approved" | "rejected" | "archived";
-                    reviewNote?: string;
-                    /** @enum {string} */
-                    targetType?: "master_product" | "store" | "offer";
-                    targetId?: string;
-                    sortOrder?: number;
-                };
+                "application/json": components["schemas"]["DshReviewReelRequest"];
             };
         };
         responses: {
-            /** @description Reel reviewed. */
+            /** @description Moderation decision and canonical presentation metadata committed. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        reel?: components["schemas"]["DshReel"];
+                        reel: components["schemas"]["DshGovernedReel"];
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["DshReelsForbidden"];
+            404: components["responses"]["DshReelsNotFound"];
+            409: components["responses"]["DshReelsConflict"];
+        };
+    };
+    listPartnerOwnedReels: {
+        parameters: {
+            query: {
+                storeId: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actor- and store-scoped reel submissions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        reels: components["schemas"]["DshGovernedReel"][];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["DshReelsForbidden"];
         };
     };
     submitReel: {
@@ -9160,30 +17056,25 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    assetId: string;
-                    titleAr?: string;
-                    titleEn?: string;
-                    /** @enum {string} */
-                    targetType: "master_product" | "store" | "offer";
-                    targetId: string;
-                    sortOrder?: number;
-                    sourceStoreId?: string;
-                };
+                "application/json": components["schemas"]["DshSubmitReelRequest"];
             };
         };
         responses: {
-            /** @description Reel submitted for review. */
+            /** @description Reel submitted for moderation. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        reel?: components["schemas"]["DshReel"];
+                        reel: components["schemas"]["DshGovernedReel"];
                     };
                 };
             };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["DshReelsForbidden"];
+            409: components["responses"]["DshReelsConflict"];
         };
     };
     listPublicReels: {
@@ -9197,14 +17088,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Approved reels for public home screen carousel. */
+            /** @description Approved reels with approved DAM media only. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        reels?: components["schemas"]["DshPublicReel"][];
+                        reels: components["schemas"]["DshReelsDshPublicReel"][];
                     };
                 };
             };
@@ -9353,13 +17244,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Store's master-product links (price/availability/stock/note/local image). */
+            /** @description Assortment */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AssortmentListResponse"];
+                };
             };
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
         };
     };
     upsertOperatorStoreAssortment: {
@@ -9368,20 +17263,30 @@ export interface operations {
             header?: never;
             path: {
                 storeId: components["parameters"]["StoreId"];
-                masterProductId: string;
+                masterProductId: components["parameters"]["MasterProductId"];
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertAssortmentRequest"];
+            };
+        };
         responses: {
-            /** @description Assortment row created/updated. */
+            /** @description Assortment saved */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AssortmentResponse"];
+                };
             };
-            403: components["responses"]["Forbidden"];
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     getPartnerCatalogTaxonomy: {
@@ -9393,13 +17298,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Read-only domain+node tree for the partner surface (never hardcode categories in app-partner). */
+            /** @description Partner-visible taxonomy */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TaxonomyResponse"];
+                };
             };
+            401: components["responses"]["DshCatalogUnauthenticated"];
         };
     };
     listPartnerMasterProducts: {
@@ -9411,13 +17319,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Searchable master product list for building an assortment. */
+            /** @description Approved active master products */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MasterProductListResponse"];
+                };
             };
+            401: components["responses"]["DshCatalogUnauthenticated"];
         };
     };
     getPartnerStoreAssortment: {
@@ -9431,13 +17342,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The authenticated partner's own store assortment. */
+            /** @description Partner store assortment */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AssortmentListResponse"];
+                };
             };
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
         };
     };
     upsertPartnerStoreAssortment: {
@@ -9446,19 +17361,55 @@ export interface operations {
             header?: never;
             path: {
                 storeId: components["parameters"]["StoreId"];
-                masterProductId: string;
+                masterProductId: components["parameters"]["MasterProductId"];
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertAssortmentRequest"];
+            };
+        };
         responses: {
-            /** @description Assortment row created/updated for the partner's own store. */
+            /** @description Partner assortment saved */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AssortmentResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
+        };
+    };
+    listPartnerProductProposals: {
+        parameters: {
+            query?: {
+                status?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proposals belonging to the authenticated partner store */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };
     };
@@ -9469,15 +17420,24 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProposalRequest"];
+            };
+        };
         responses: {
-            /** @description Product proposal submitted — never a final sellable product. */
+            /** @description Proposal created */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProposalResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
         };
     };
     updatePartnerProductProposal: {
@@ -9500,6 +17460,37 @@ export interface operations {
             };
         };
     };
+    patchPartnerProductProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposalId: components["parameters"]["ProposalId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description Proposal resubmitted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalResponse"];
+                };
+            };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
+        };
+    };
     getFieldCatalogTaxonomy: {
         parameters: {
             query?: never;
@@ -9509,13 +17500,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Read-only domain+node tree for the field surface (never hardcode categories in app-field). */
+            /** @description Field-visible taxonomy */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TaxonomyResponse"];
+                };
             };
+            401: components["responses"]["DshCatalogUnauthenticated"];
         };
     };
     listFieldMasterProducts: {
@@ -9527,13 +17521,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Searchable master product list for the field surface. */
+            /** @description Approved active master products */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MasterProductListResponse"];
+                };
             };
+            401: components["responses"]["DshCatalogUnauthenticated"];
         };
     };
     fieldUpsertStoreAssortment: {
@@ -9541,22 +17538,32 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                partnerId: string;
+                partnerId: components["parameters"]["PartnerId"];
                 storeId: components["parameters"]["StoreId"];
-                masterProductId: string;
+                masterProductId: components["parameters"]["MasterProductId"];
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertAssortmentRequest"];
+            };
+        };
         responses: {
-            /** @description Assortment row created/updated on behalf of a field-onboarded partner's store. */
+            /** @description Field assortment saved */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AssortmentResponse"];
+                };
             };
-            403: components["responses"]["Forbidden"];
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     fieldUpsertStoreAssortmentBatch: {
@@ -9623,25 +17630,32 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                partnerId: string;
+                partnerId: components["parameters"]["PartnerId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Current central assortment for the field-owned partner draft. */
+            /** @description Field-owned partner assortment */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["FieldAssortmentListResponse"];
+                };
             };
-            403: components["responses"]["Forbidden"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
         };
     };
-    createFieldProductProposal: {
+    listFieldProductProposals: {
         parameters: {
-            query?: never;
+            query?: {
+                status?: string;
+                limit?: number;
+                offset?: number;
+            };
             header?: never;
             path: {
                 partnerId: string;
@@ -9650,13 +17664,46 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Product proposal submitted for the field-owned partner store — never a final sellable product. */
+            /** @description Proposals belonging to the field-authorized partner store */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createFieldProductProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: components["parameters"]["PartnerId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description Field proposal created */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ProposalResponse"];
+                };
             };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
         };
     };
     updateFieldProductProposal: {
@@ -9678,6 +17725,38 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    patchFieldProductProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: components["parameters"]["PartnerId"];
+                proposalId: components["parameters"]["ProposalId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description Field proposal resubmitted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalResponse"];
+                };
+            };
+            400: components["responses"]["DshCatalogInvalidRequest"];
+            401: components["responses"]["DshCatalogUnauthenticated"];
+            403: components["responses"]["DshCatalogForbidden"];
+            404: components["responses"]["DshCatalogNotFound"];
+            409: components["responses"]["DshCatalogConflict"];
         };
     };
     getDshClientCart: {
@@ -9830,34 +17909,25 @@ export interface operations {
     createDshCheckoutIntent: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["DshCheckoutIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshCheckoutCorrelationId"];
+            };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshCreateCheckoutIntentRequest"];
+                "application/json": components["schemas"]["CreateCheckoutIntentInput"];
             };
         };
         responses: {
-            /** @description Checkout intent created with opaque WLT payment-session reference. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshCheckoutIntentResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            /** @description WLT payment-session handoff is unavailable. */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            200: components["responses"]["CheckoutIntentResponse"];
+            201: components["responses"]["CheckoutIntentResponse"];
+            202: components["responses"]["CheckoutIntentResponse"];
+            409: components["responses"]["DshCheckoutErrorResponse"];
+            422: components["responses"]["DshCheckoutErrorResponse"];
+            503: components["responses"]["DshCheckoutErrorResponse"];
         };
     };
     getDshCheckoutIntent: {
@@ -9865,23 +17935,14 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                intentId: string;
+                intentId: components["parameters"]["IntentId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Checkout intent. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshCheckoutIntentResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            200: components["responses"]["CheckoutIntentResponse"];
+            404: components["responses"]["DshCheckoutErrorResponse"];
         };
     };
     cancelDshCheckoutIntent: {
@@ -9889,35 +17950,20 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                intentId: string;
+                intentId: components["parameters"]["IntentId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Intent cancelled. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshCheckoutIntentResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            /** @description Intent already closed or not found. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            200: components["responses"]["CheckoutIntentResponse"];
+            409: components["responses"]["DshCheckoutErrorResponse"];
         };
     };
     listOperatorCheckoutIntents: {
         parameters: {
             query?: {
-                state?: "pending" | "wlt_handoff_failed" | "wlt_outcome_unknown" | "payment_pending" | "payment_confirmed" | "payment_failed" | "confirmed" | "cancelled" | "expired";
+                state?: components["schemas"]["CheckoutIntentState"];
             };
             header?: never;
             path?: never;
@@ -9925,16 +17971,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description List of checkout intents. */
+            /** @description Tenant-visible operational checkout projections. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshOperatorCheckoutIntentsResponse"];
+                    "application/json": {
+                        intents: components["schemas"]["CheckoutIntent"][];
+                    };
                 };
             };
-            401: components["responses"]["Unauthenticated"];
         };
     };
     listDshClientOrders: {
@@ -10194,23 +18241,28 @@ export interface operations {
     };
     listDshDispatchAssignments: {
         parameters: {
-            query?: never;
+            query?: {
+                operatorContextId?: components["parameters"]["OperatorContextId"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Dispatch assignments. */
+            /** @description Active and recent assignments visible to the operator. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDispatchAssignmentsResponse"];
+                    "application/json": {
+                        assignments: components["schemas"]["GovernedDispatchAssignment"][];
+                    };
                 };
             };
-            401: components["responses"]["Unauthenticated"];
+            401: components["responses"]["DshDispatchGovernanceUnauthenticated"];
+            403: components["responses"]["DshDispatchGovernanceForbidden"];
         };
     };
     createDshAssignment: {
@@ -10222,44 +18274,59 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshCreateAssignmentRequest"];
+                "application/json": components["schemas"]["CreateGovernedDispatchAssignmentRequest"];
             };
         };
         responses: {
-            /** @description Assignment created. */
+            /** @description Idempotent replay of the original offer. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernedDispatchAssignmentResponse"];
+                };
+            };
+            /** @description New offer created. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                    "application/json": components["schemas"]["GovernedDispatchAssignmentResponse"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            400: components["responses"]["DshDispatchGovernanceInvalidRequest"];
+            401: components["responses"]["DshDispatchGovernanceUnauthenticated"];
+            403: components["responses"]["DshDispatchGovernanceForbidden"];
+            404: components["responses"]["DshDispatchGovernanceNotFound"];
+            409: components["responses"]["DshDispatchGovernanceConflict"];
         };
     };
     listDshCaptainAssignments: {
         parameters: {
-            query?: never;
+            query?: {
+                operatorContextId?: components["parameters"]["OperatorContextId"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Captain assignments. */
+            /** @description Actionable offers and accepted tasks for the authenticated captain. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDispatchAssignmentsResponse"];
+                    "application/json": {
+                        assignments: components["schemas"]["GovernedDispatchAssignment"][];
+                    };
                 };
             };
-            401: components["responses"]["Unauthenticated"];
+            401: components["responses"]["DshDispatchGovernanceUnauthenticated"];
+            403: components["responses"]["DshDispatchGovernanceForbidden"];
         };
     };
     acceptDshAssignment: {
@@ -10267,24 +18334,25 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                assignmentId: string;
+                assignmentId: components["parameters"]["AssignmentId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Assignment accepted. */
+            /** @description Offer accepted. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                    "application/json": components["schemas"]["GovernedDispatchAssignmentResponse"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            401: components["responses"]["DshDispatchGovernanceUnauthenticated"];
+            403: components["responses"]["DshDispatchGovernanceForbidden"];
+            404: components["responses"]["DshDispatchGovernanceNotFound"];
+            409: components["responses"]["DshDispatchGovernanceConflict"];
         };
     };
     declineDshAssignment: {
@@ -10292,28 +18360,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                assignmentId: string;
+                assignmentId: components["parameters"]["AssignmentId"];
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "application/json": components["schemas"]["DshDeclineAssignmentRequest"];
+                "application/json": components["schemas"]["DeclineDispatchAssignmentRequest"];
             };
         };
         responses: {
-            /** @description Assignment declined. */
+            /** @description Offer declined and order returned to readiness. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                    "application/json": components["schemas"]["GovernedDispatchAssignmentResponse"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            400: components["responses"]["DshDispatchGovernanceInvalidRequest"];
+            401: components["responses"]["DshDispatchGovernanceUnauthenticated"];
+            403: components["responses"]["DshDispatchGovernanceForbidden"];
+            404: components["responses"]["DshDispatchGovernanceNotFound"];
+            409: components["responses"]["DshDispatchGovernanceConflict"];
         };
     };
     updateDshDeliveryStatus: {
@@ -10349,7 +18419,9 @@ export interface operations {
     submitDshPoD: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Correlation-ID"?: string;
+            };
             path: {
                 assignmentId: string;
             };
@@ -10357,23 +18429,32 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshSubmitPoDRequest"];
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description JPEG, PNG, or WebP delivery proof within the governed media size limit.
+                     */
+                    file: string;
+                };
             };
         };
         responses: {
-            /** @description Proof of delivery submitted. */
+            /** @description Proof uploaded, registered, and delivery completed. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                    "application/json": components["schemas"]["DispatchAssignmentEnvelope"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            400: components["responses"]["DshDeliveryProofMediaInvalidRequest"];
+            401: components["responses"]["DshDeliveryProofMediaUnauthenticated"];
+            404: components["responses"]["DshDeliveryProofMediaNotFound"];
+            409: components["responses"]["DshDeliveryProofMediaConflict"];
+            413: components["responses"]["UploadTooLarge"];
+            422: components["responses"]["DshDeliveryProofMediaInvalidTransition"];
+            503: components["responses"]["MediaUnavailable"];
         };
     };
     pushDshCaptainLocation: {
@@ -10381,29 +18462,32 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                assignmentId: string;
+                assignmentId: components["parameters"]["AssignmentId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshPushDispatchLocationRequest"];
+                "application/json": components["schemas"]["TrustedLocationInput"];
             };
         };
         responses: {
-            /** @description Location recorded. */
+            /** @description Sample accepted or exact latest-sample replay returned idempotently. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                    "application/json": components["schemas"]["DispatchAssignmentResponse"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            400: components["responses"]["DshLiveTrackingInvalidRequest"];
+            401: components["responses"]["DshLiveTrackingUnauthenticated"];
+            403: components["responses"]["DshLiveTrackingForbidden"];
+            404: components["responses"]["DshLiveTrackingNotFound"];
+            409: components["responses"]["DshLiveTrackingConflict"];
+            422: components["responses"]["UnacceptableLocation"];
+            429: components["responses"]["TooFrequent"];
         };
     };
     getDshClientOrderTracking: {
@@ -10411,23 +18495,24 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Tracking assignment. */
+            /** @description Client-owned order tracking projection returned. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDispatchAssignmentResponse"];
+                    "application/json": components["schemas"]["ClientLiveTrackingResponse"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            401: components["responses"]["DshLiveTrackingUnauthenticated"];
+            403: components["responses"]["DshLiveTrackingForbidden"];
+            404: components["responses"]["DshLiveTrackingNotFound"];
         };
     };
     getDshPartnerDispatchTracking: {
@@ -10435,25 +18520,24 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Reference status (assignment is null before dispatch). */
+            /** @description Partner-owned order reference projection returned with no location coordinates. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartnerDispatchReferenceResponse"];
+                    "application/json": components["schemas"]["PartnerTrackingResponse"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            401: components["responses"]["DshLiveTrackingUnauthenticated"];
+            403: components["responses"]["DshLiveTrackingForbidden"];
+            404: components["responses"]["DshLiveTrackingNotFound"];
         };
     };
     listDshControlPanelFinanceSettlements: {
@@ -10512,27 +18596,70 @@ export interface operations {
         parameters: {
             query?: {
                 orderId?: string;
-                limit?: string;
-                cursor?: string;
             };
-            header?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["CorrelationHeaderOptional"];
+            };
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description WLT refunds view (verbatim passthrough). */
+            /** @description Canonical WLT refund list */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ControlPanelRefundListEnvelope"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
+            400: components["responses"]["DshRefundsBadRequest"];
+            401: components["responses"]["DshRefundsUnauthorized"];
+            403: components["responses"]["DshRefundsForbidden"];
+            502: components["responses"]["WltUnavailable"];
+        };
+    };
+    createDshFinanceRefund: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDshRefundRequest"];
+            };
+        };
+        responses: {
+            /** @description Exact idempotent replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlPanelRefundEnvelope"];
+                };
+            };
+            /** @description Refund request created in WLT */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlPanelRefundEnvelope"];
+                };
+            };
+            400: components["responses"]["DshRefundsBadRequest"];
+            401: components["responses"]["DshRefundsUnauthorized"];
+            403: components["responses"]["DshRefundsForbidden"];
+            409: components["responses"]["DshRefundsConflict"];
+            500: components["responses"]["MutationReceiptFailure"];
+            502: components["responses"]["WltUnavailable"];
         };
     };
     listDshPartnerFinanceSettlements: {
@@ -10587,27 +18714,29 @@ export interface operations {
     getDshControlPanelFinanceRefund: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["CorrelationHeaderOptional"];
+            };
             path: {
-                refundId: string;
+                refundId: components["parameters"]["RefundId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description WLT refund view (verbatim passthrough). */
+            /** @description Canonical WLT refund */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ControlPanelRefundEnvelope"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            400: components["responses"]["DshRefundsBadRequest"];
+            401: components["responses"]["DshRefundsUnauthorized"];
+            403: components["responses"]["DshRefundsForbidden"];
+            404: components["responses"]["DshRefundsNotFound"];
         };
     };
     listDshControlPanelFinanceLedgerEntries: {
@@ -12085,7 +20214,7 @@ export interface operations {
     listDshOperatorTickets: {
         parameters: {
             query?: {
-                status?: "open" | "in_review" | "pending_user" | "resolved" | "closed";
+                status?: components["schemas"]["TicketStatus"];
             };
             header?: never;
             path?: never;
@@ -12093,44 +20222,49 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description List of tickets. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshTicketsResponse"];
-                };
+            200: components["responses"]["TicketList"];
+            403: components["responses"]["Error"];
+        };
+    };
+    getDshOperatorSupportTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
             };
-            401: components["responses"]["Unauthenticated"];
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Ticket"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
         };
     };
     updateDshOperatorTicket: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["DshSupportGovernanceIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshSupportGovernanceCorrelationId"];
+            };
             path: {
-                ticketId: string;
+                ticketId: components["parameters"]["TicketId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshUpdateTicketRequest"];
+                "application/json": components["schemas"]["UpdateTicketInput"];
             };
         };
         responses: {
-            /** @description Ticket updated. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshTicketResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            200: components["responses"]["Ticket"];
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     listDshIncidents: {
@@ -12358,35 +20492,20 @@ export interface operations {
     reconcileDshCheckoutIntent: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["DshCheckoutCorrelationId"];
+            };
             path: {
-                intentId: string;
+                intentId: components["parameters"]["IntentId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description WLT payment-session reference reconciled idempotently. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description WLT outcome remains unknown and requires another retry. */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Reconciliation is not required or state changed. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            200: components["responses"]["CheckoutIntentResponse"];
+            202: components["responses"]["CheckoutIntentResponse"];
+            409: components["responses"]["DshCheckoutErrorResponse"];
+            503: components["responses"]["DshCheckoutErrorResponse"];
         };
     };
     reportWltPaymentSessionEvent: {
@@ -12401,42 +20520,24 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WltPaymentCallbackEnvelope"];
+                "application/json": components["schemas"]["WltPaymentSessionEvent"];
             };
         };
         responses: {
-            /** @description Checkout intent updated from the WLT payment-session outcome. */
+            /** @description Event receipt and atomically updated DSH projection. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshCheckoutIntentResponse"];
+                    "application/json": {
+                        intent: components["schemas"]["CheckoutIntent"];
+                        eventReference: string;
+                        replayed: boolean;
+                    };
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            /** @description Only the WLT service may report payment-session events. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Checkout intent not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description paymentSessionId does not match the checkout intent, or the intent is not awaiting a payment outcome. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            409: components["responses"]["DshCheckoutErrorResponse"];
         };
     };
     listDshNotifications: {
@@ -13018,55 +21119,70 @@ export interface operations {
     };
     listDshZones: {
         parameters: {
-            query?: never;
+            query?: {
+                includeInactive?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Zones list. */
+            /** @description Zones returned. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshZonesListResponse"];
+                    "application/json": {
+                        zones: components["schemas"]["DshPlatformPoliciesDshZone"][];
+                    };
                 };
             };
-            401: components["responses"]["Unauthenticated"];
+            401: components["responses"]["DshPlatformPoliciesUnauthenticated"];
+            403: components["responses"]["DshPlatformPoliciesForbidden"];
         };
     };
     createDshZone: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshCreateZoneRequest"];
+                "application/json": components["schemas"]["DshCreateZoneInput"];
             };
         };
         responses: {
             /** @description Zone created. */
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshZoneResponse"];
+                    "application/json": {
+                        zone: components["schemas"]["DshPlatformPoliciesDshZone"];
+                    };
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
+            400: components["responses"]["DshPlatformPoliciesInvalidRequest"];
+            401: components["responses"]["DshPlatformPoliciesUnauthenticated"];
+            403: components["responses"]["DshPlatformPoliciesForbidden"];
+            409: components["responses"]["DshPlatformPoliciesConflict"];
         };
     };
     updateDshZone: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
             path: {
                 zoneId: string;
             };
@@ -13074,28 +21190,32 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshUpdateZoneRequest"];
+                "application/json": components["schemas"]["DshUpdateZoneInput"];
             };
         };
         responses: {
-            /** @description Zone updated. */
+            /** @description Zone updated or replayed idempotently. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshZoneResponse"];
+                    "application/json": {
+                        zone: components["schemas"]["DshPlatformPoliciesDshZone"];
+                    };
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            400: components["responses"]["DshPlatformPoliciesInvalidRequest"];
+            401: components["responses"]["DshPlatformPoliciesUnauthenticated"];
+            403: components["responses"]["DshPlatformPoliciesForbidden"];
+            404: components["responses"]["DshPlatformPoliciesNotFound"];
+            409: components["responses"]["DshPlatformPoliciesConflict"];
         };
     };
     getDshSlaRules: {
         parameters: {
-            query: {
-                zoneId: string;
+            query?: {
+                zoneId?: string;
             };
             header?: never;
             path?: never;
@@ -13103,43 +21223,52 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description SLA rules. */
+            /** @description SLA rules returned. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshSlaRulesResponse"];
+                    "application/json": {
+                        slaRules: components["schemas"]["DshPlatformPoliciesDshSlaRule"][];
+                    };
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            401: components["responses"]["DshPlatformPoliciesUnauthenticated"];
+            403: components["responses"]["DshPlatformPoliciesForbidden"];
         };
     };
     upsertDshSlaRules: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshUpsertSlaRulesRequest"];
+                "application/json": components["schemas"]["DshUpsertSlaInput"];
             };
         };
         responses: {
-            /** @description SLA rules upserted. */
+            /** @description SLA rule created or version-updated. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshSlaRulesResponse"];
+                    "application/json": {
+                        slaRule: components["schemas"]["DshPlatformPoliciesDshSlaRule"];
+                    };
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
+            400: components["responses"]["DshPlatformPoliciesInvalidRequest"];
+            401: components["responses"]["DshPlatformPoliciesUnauthenticated"];
+            403: components["responses"]["DshPlatformPoliciesForbidden"];
+            409: components["responses"]["DshPlatformPoliciesConflict"];
         };
     };
     getDshCapacityConfig: {
@@ -13153,43 +21282,53 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Capacity config. */
+            /** @description Capacity configuration returned. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshCapacityConfigResponse"];
+                    "application/json": {
+                        capacityConfig: components["schemas"]["DshPlatformPoliciesDshCapacityConfig"];
+                    };
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            401: components["responses"]["DshPlatformPoliciesUnauthenticated"];
+            403: components["responses"]["DshPlatformPoliciesForbidden"];
+            404: components["responses"]["DshPlatformPoliciesNotFound"];
         };
     };
     upsertDshCapacityConfig: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshUpsertCapacityConfigRequest"];
+                "application/json": components["schemas"]["DshUpsertCapacityInput"];
             };
         };
         responses: {
-            /** @description Capacity config upserted. */
+            /** @description Capacity configuration created or version-updated. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshCapacityConfigResponse"];
+                    "application/json": {
+                        capacityConfig: components["schemas"]["DshPlatformPoliciesDshCapacityConfig"];
+                    };
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
+            400: components["responses"]["DshPlatformPoliciesInvalidRequest"];
+            401: components["responses"]["DshPlatformPoliciesUnauthenticated"];
+            403: components["responses"]["DshPlatformPoliciesForbidden"];
+            409: components["responses"]["DshPlatformPoliciesConflict"];
         };
     };
     getDshOperationalProfile: {
@@ -13199,24 +21338,25 @@ export interface operations {
             };
             header?: never;
             path: {
-                zoneId: string;
+                zoneId: components["parameters"]["ZoneId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Canonical operational profile. */
+            /** @description Canonical operational SLA and capacity profile. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshOperationalPolicyProfileResponse"];
+                    "application/json": {
+                        profile: components["schemas"]["OperationalProfile"];
+                    };
                 };
             };
-            401: components["responses"]["Unauthenticated"];
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
         };
     };
     upsertDshOperationalProfile: {
@@ -13227,29 +21367,27 @@ export interface operations {
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
             path: {
-                zoneId: string;
+                zoneId: components["parameters"]["ZoneId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshOperationalPolicyProfileMutation"];
+                "application/json": components["schemas"]["OperationalProfileMutation"];
             };
         };
         responses: {
-            /** @description Versioned operational profile. */
+            /** @description Versioned profile readback. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshOperationalPolicyProfileResponse"];
+                    "application/json": {
+                        profile: components["schemas"]["OperationalProfile"];
+                    };
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
         };
     };
@@ -13258,24 +21396,23 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                zoneId: string;
+                zoneId: components["parameters"]["ZoneId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Zone delivery-mode policies. */
+            /** @description Fulfillment-mode policies for the zone. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshOperationalPolicyDeliveryModesResponse"];
+                    "application/json": {
+                        deliveryModes: components["schemas"]["DeliveryModePolicy"][];
+                    };
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
         };
     };
     upsertDshOperationalDeliveryMode: {
@@ -13286,30 +21423,33 @@ export interface operations {
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
             path: {
-                zoneId: string;
-                fulfillmentMode: components["schemas"]["DshOperationalPolicyFulfillmentMode"];
+                zoneId: components["parameters"]["ZoneId"];
+                fulfillmentMode: components["schemas"]["DshOperationalPolicyFulfillmentMode2"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshOperationalPolicyDeliveryModeMutation"];
+                "application/json": {
+                    isEnabled: boolean;
+                    slaCategory: string;
+                    expectedVersion: number;
+                    reason: string;
+                };
             };
         };
         responses: {
-            /** @description Versioned delivery-mode policy. */
+            /** @description Versioned delivery-mode policy readback. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshOperationalPolicyDeliveryModeResponse"];
+                    "application/json": {
+                        deliveryMode: components["schemas"]["DeliveryModePolicy"];
+                    };
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
         };
     };
@@ -13322,23 +21462,22 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshOperationalPolicyEvaluationInput"];
+                "application/json": components["schemas"]["OperationalEvaluationInput"];
             };
         };
         responses: {
-            /** @description Canonical operational decision and workflow effects. */
+            /** @description Canonical operational decision. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshOperationalPolicyDecisionResponse"];
+                    "application/json": {
+                        decision: components["schemas"]["OperationalDecision"];
+                    };
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            400: components["responses"]["Invalid"];
         };
     };
     listDshOperationalPolicyAudit: {
@@ -13354,17 +21493,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Operational-policy audit timeline. */
+            /** @description Append-only policy audit events. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshOperationalPolicyAuditResponse"];
+                    "application/json": {
+                        events: components["schemas"]["PolicyAuditEvent"][];
+                    };
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
         };
     };
     rollbackDshOperationalPolicy: {
@@ -13381,23 +21520,24 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshOperationalPolicyRollbackRequest"];
+                "application/json": {
+                    expectedCurrentVersion: number;
+                    reason: string;
+                };
             };
         };
         responses: {
-            /** @description Rollback result applied as a new audited version. */
+            /** @description Rollback is applied as a new audited version. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshOperationalPolicyRollbackResponse"];
+                    "application/json": {
+                        rollback: components["schemas"]["RollbackResult"];
+                    };
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
         };
     };
@@ -13412,17 +21552,18 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Zone serviceability state. */
+            /** @description Live zone serviceability projection. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshZoneServiceabilityResponse"];
+                    "application/json": components["schemas"]["DshZoneServiceability"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            401: components["responses"]["DshPlatformPoliciesUnauthenticated"];
+            403: components["responses"]["DshPlatformPoliciesForbidden"];
+            404: components["responses"]["DshPlatformPoliciesNotFound"];
         };
     };
     getDshStoreOnboardingFeePolicy: {
@@ -13434,43 +21575,52 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Store onboarding fee policy. */
+            /** @description Policy returned. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshStoreOnboardingFeePolicyResponse"];
+                    "application/json": {
+                        policy: components["schemas"]["DshPlatformPoliciesDshStoreOnboardingFeePolicy"];
+                    };
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            401: components["responses"]["DshPlatformPoliciesUnauthenticated"];
+            403: components["responses"]["DshPlatformPoliciesForbidden"];
         };
     };
     upsertDshStoreOnboardingFeePolicy: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshUpsertStoreOnboardingFeePolicyRequest"];
+                "application/json": components["schemas"]["DshStoreOnboardingFeePolicyInput"];
             };
         };
         responses: {
-            /** @description Store onboarding fee policy upserted. */
+            /** @description Policy version-updated or replayed idempotently. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshStoreOnboardingFeePolicyResponse"];
+                    "application/json": {
+                        policy: components["schemas"]["DshPlatformPoliciesDshStoreOnboardingFeePolicy"];
+                    };
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
+            400: components["responses"]["DshPlatformPoliciesInvalidRequest"];
+            401: components["responses"]["DshPlatformPoliciesUnauthenticated"];
+            403: components["responses"]["DshPlatformPoliciesForbidden"];
+            409: components["responses"]["DshPlatformPoliciesConflict"];
         };
     };
     getDshStoreOnboardingFeeReference: {
@@ -13482,17 +21632,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Store onboarding fee policy reference. */
+            /** @description Read-only policy reference for field and partner actors. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshStoreOnboardingFeePolicyResponse"];
+                    "application/json": {
+                        policy: components["schemas"]["DshPlatformPoliciesDshStoreOnboardingFeePolicy"];
+                    };
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            401: components["responses"]["DshPlatformPoliciesUnauthenticated"];
+            403: components["responses"]["DshPlatformPoliciesForbidden"];
         };
     };
     listDshAdminRoles: {
@@ -13651,62 +21803,59 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                partnerId: string;
+                partnerId: components["parameters"]["PartnerId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Partner detail. */
+            /** @description Partner state with server-owned allowed actions and masked payout compatibility values. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartner"];
+                    "application/json": components["schemas"]["PartnerState"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["DshPartnerOnboardingForbidden"];
+            404: components["responses"]["DshPartnerOnboardingNotFound"];
         };
     };
     transitionDshPartner: {
         parameters: {
-            query?: never;
-            header?: never;
+            query: {
+                version: components["parameters"]["DshPartnerOnboardingExpectedVersion"];
+            };
+            header?: {
+                /** @description Omission is accepted only where the server derives a deterministic key from the versioned command. */
+                "Idempotency-Key"?: components["parameters"]["DshPartnerOnboardingIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshPartnerOnboardingCorrelationId"];
+            };
             path: {
-                partnerId: string;
+                partnerId: components["parameters"]["PartnerId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshPartnerTransitionRequest"];
+                "application/json": components["schemas"]["PartnerTransitionRequest"];
             };
         };
         responses: {
-            /** @description Partner after transition. */
+            /** @description Applied transition or identical idempotent replay. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartnerTransitionResponse"];
+                    "application/json": components["schemas"]["PartnerTransitionResponse"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            /** @description Invalid state transition. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            409: components["responses"]["DshPartnerOnboardingConflict"];
+            422: components["responses"]["ReadinessFailed"];
+            428: components["responses"]["VersionRequired"];
+            503: components["responses"]["WltUnavailable"];
         };
     };
     getDshPartnerReadiness: {
@@ -13844,28 +21993,31 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                partnerId: string;
+                partnerId: components["parameters"]["PartnerId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshLinkPartnerStoreRequest"];
+                "application/json": {
+                    storeId: string;
+                };
             };
         };
         responses: {
-            /** @description Updated partner stores. */
+            /** @description Store ownership is linked or the existing same ownership is returned. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartnerStoresListResponse"];
+                    "application/json": {
+                        stores: components["schemas"]["LinkedStore"][];
+                        total: number;
+                    };
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            409: components["responses"]["StoreOwnershipConflict"];
         };
     };
     listDshPartnerAuditEvents: {
@@ -13927,17 +22079,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Partner activation status. */
+            /** @description Partner self state. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartnerActivationStatus"];
+                    "application/json": components["schemas"]["PartnerState"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["DshPartnerOnboardingForbidden"];
         };
     };
     getDshPartnerSelfReadiness: {
@@ -13949,16 +22100,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Readiness object. */
+            /** @description Readiness result. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartnerReadiness"];
+                    "application/json": components["schemas"]["Readiness"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["DshPartnerOnboardingForbidden"];
         };
     };
     listDshPartnerStoreTeam: {
@@ -14208,52 +22359,59 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                partnerId: string;
+                partnerId: components["parameters"]["PartnerId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Partner details. */
+            /** @description Owned partner draft and allowed actions. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartner"];
+                    "application/json": components["schemas"]["PartnerState"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["DshPartnerOnboardingForbidden"];
+            404: components["responses"]["DshPartnerOnboardingNotFound"];
         };
     };
     updateFieldPartnerDraft: {
         parameters: {
-            query?: never;
-            header?: never;
+            query: {
+                version: components["parameters"]["DshPartnerOnboardingExpectedVersion"];
+            };
+            header?: {
+                /** @description Omission is accepted only where the server derives a deterministic key from the versioned command. */
+                "Idempotency-Key"?: components["parameters"]["DshPartnerOnboardingIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshPartnerOnboardingCorrelationId"];
+            };
             path: {
-                partnerId: string;
+                partnerId: components["parameters"]["PartnerId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshUpdatePartnerRequest"];
+                "application/json": components["schemas"]["PartnerUpdateRequest"];
             };
         };
         responses: {
-            /** @description Updated partner draft. */
+            /** @description Updated draft; payout fields in the response are masked. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartner"];
+                    "application/json": components["schemas"]["PartnerState"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            409: components["responses"]["DshPartnerOnboardingConflict"];
+            422: components["responses"]["ReadinessFailed"];
+            428: components["responses"]["VersionRequired"];
+            502: components["responses"]["WltUnavailable"];
         };
     };
     getFieldPartnerReadiness: {
@@ -14460,29 +22618,30 @@ export interface operations {
     createFieldPartnerVisit: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["DshPartnerOnboardingCorrelationId"];
+            };
             path: {
-                partnerId: string;
+                partnerId: components["parameters"]["PartnerId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshCreatePartnerFieldVisitRequest"];
+                "application/json": components["schemas"]["FieldVisitRequest"];
             };
         };
         responses: {
-            /** @description Partner field visit recorded. */
+            /** @description Field visit recorded. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartnerFieldVisit"];
+                    "application/json": components["schemas"]["FieldVisit"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
+            422: components["responses"]["ReadinessFailed"];
         };
     };
     listFieldPartnerFieldVisits: {
@@ -14514,9 +22673,13 @@ export interface operations {
     submitFieldPartnerDraft: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Omission is accepted only where the server derives a deterministic key from the versioned command. */
+                "Idempotency-Key"?: components["parameters"]["DshPartnerOnboardingIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshPartnerOnboardingCorrelationId"];
+            };
             path: {
-                partnerId: string;
+                partnerId: components["parameters"]["PartnerId"];
             };
             cookie?: never;
         };
@@ -14528,28 +22691,16 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Partner submitted. */
+            /** @description Submitted state or identical replay. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        partner?: components["schemas"]["DshPartner"];
-                        event?: components["schemas"]["DshPartnerAuditEvent"];
-                    };
+                    "application/json": components["schemas"]["PartnerTransitionResponse"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-            /** @description Invalid transition. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            422: components["responses"]["ReadinessFailed"];
         };
     };
     listDshPartnerActivations: {
@@ -15116,33 +23267,15 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Partner delivery state returned (task is null before assignment). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerDeliveryStateResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description The order does not use partner_delivery fulfillment. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["TaskStateResponse"];
+            401: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     getDshClientPartnerDeliveryTask: {
@@ -15150,32 +23283,17 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Partner delivery state returned (task is null before assignment). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerDeliveryStateResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-            /** @description The order does not use partner_delivery fulfillment. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["TaskStateResponse"];
+            401: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            404: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     assignDshPartnerDeliveryTask: {
@@ -15183,47 +23301,20 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshAssignPartnerDeliveryTaskRequest"];
+                "application/json": components["schemas"]["AssignRequest"];
             };
         };
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Version conflict, or the order already has an active dispatch assignment or partner delivery task (VERSION_CONFLICT, PARTNER_DELIVERY_ALREADY_ASSIGNED). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
-            /** @description Order is not ready for partner delivery assignment, or the store courier is not eligible (PARTNER_DELIVERY_NOT_READY, COURIER_INELIGIBLE). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["TaskResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     markDshPartnerDeliveryPickedUp: {
@@ -15231,47 +23322,16 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshPartnerDeliveryMutationRequest"];
-            };
-        };
+        requestBody: components["requestBodies"]["MutationRequest"];
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Partner delivery task version changed; reload before retrying (VERSION_CONFLICT). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
-            /** @description Task is not in a status that allows this transition (PARTNER_DELIVERY_INVALID_TRANSITION). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["TaskResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     departDshPartnerDeliveryTask: {
@@ -15279,47 +23339,16 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshPartnerDeliveryMutationRequest"];
-            };
-        };
+        requestBody: components["requestBodies"]["MutationRequest"];
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Partner delivery task version changed; reload before retrying (VERSION_CONFLICT). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
-            /** @description Task is not in a status that allows this transition (PARTNER_DELIVERY_INVALID_TRANSITION). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["TaskResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     arriveDshPartnerDeliveryTask: {
@@ -15327,53 +23356,26 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshPartnerDeliveryMutationRequest"];
-            };
-        };
+        requestBody: components["requestBodies"]["MutationRequest"];
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Partner delivery task version changed; reload before retrying (VERSION_CONFLICT). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
-            /** @description Task is not in a status that allows this transition (PARTNER_DELIVERY_INVALID_TRANSITION). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["TaskResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     submitDshPartnerDeliveryProof: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Correlation-ID"?: string;
+                /** @description Stable command identity retained across network retries. */
+                "X-Command-ID"?: string;
+            };
             path: {
                 orderId: string;
             };
@@ -15381,41 +23383,33 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshSubmitPartnerDeliveryProofRequest"];
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description JPEG, PNG, or WebP proof owned by the authenticated partner and order store.
+                     */
+                    file: string;
+                };
             };
         };
         responses: {
-            /** @description OK */
+            /** @description Proof uploaded, registered, and partner delivery completed. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
+                    "application/json": components["schemas"]["PartnerDeliveryTaskEnvelope"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Partner delivery task version changed; reload before retrying (VERSION_CONFLICT). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
-            /** @description Task is not in a status that allows proof submission (PARTNER_DELIVERY_INVALID_TRANSITION). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            400: components["responses"]["DshDeliveryProofMediaInvalidRequest"];
+            401: components["responses"]["DshDeliveryProofMediaUnauthenticated"];
+            403: components["responses"]["DshDeliveryProofMediaForbidden"];
+            404: components["responses"]["DshDeliveryProofMediaNotFound"];
+            409: components["responses"]["DshDeliveryProofMediaConflict"];
+            413: components["responses"]["UploadTooLarge"];
+            422: components["responses"]["DshDeliveryProofMediaInvalidTransition"];
+            503: components["responses"]["MediaUnavailable"];
         };
     };
     raiseDshPartnerDeliveryException: {
@@ -15423,56 +23417,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshRaisePartnerDeliveryExceptionRequest"];
+                "application/json": components["schemas"]["ExceptionRequest"];
             };
         };
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Partner delivery task version changed; reload before retrying (VERSION_CONFLICT). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
-            /** @description Task is not in a status that allows this transition (PARTNER_DELIVERY_INVALID_TRANSITION). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["TaskResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     listDshOperatorPartnerDeliveries: {
         parameters: {
             query?: {
                 storeId?: string;
-                status?: components["schemas"]["DshPartnerDeliveryTaskStatus"];
-                limit?: number;
-                offset?: number;
+                status?: components["schemas"]["TaskStatus"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
             };
             header?: never;
             path?: never;
@@ -15480,17 +23448,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerDeliveryTaskListResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
+            200: components["responses"]["TaskListResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     getDshOperatorPartnerDelivery: {
@@ -15498,24 +23457,15 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                taskId: string;
+                taskId: components["parameters"]["TaskId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            200: components["responses"]["TaskResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            404: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     getDshOperatorPartnerDeliveryByOrder: {
@@ -15523,24 +23473,15 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerDeliveryTaskResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            200: components["responses"]["TaskResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            404: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     getDshClientPickupSession: {
@@ -15548,32 +23489,16 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Resumable pickup state returned. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerPickupStateResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-            /** @description The order does not use pickup fulfillment. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["PickupStateResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            404: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     getDshPartnerPickupState: {
@@ -15581,33 +23506,16 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Resumable pickup state returned. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerPickupStateResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description The order does not use pickup fulfillment. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["PickupStateResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            404: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     markDshPickupReady: {
@@ -15615,38 +23523,16 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshPickupMutationRequest"];
-            };
-        };
+        requestBody: components["requestBodies"]["MutationRequest"];
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPickupMarkReadyResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Order is not a pickup-mode order in a preparing state (PICKUP_INVALID_TRANSITION). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["PickupActionResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     notifyDshPickupCustomer: {
@@ -15654,47 +23540,21 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshIssuePickupOtpRequest"];
+                "application/json": components["schemas"]["PickupNotifyRequest"];
             };
         };
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPickupNotifyResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Pickup session version changed; reload before retrying (VERSION_CONFLICT). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
-            /** @description Order is not a pickup-mode order in the ready-for-pickup state (PICKUP_INVALID_TRANSITION). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["PickupActionResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            503: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     markDshPickupCustomerArrived: {
@@ -15702,38 +23562,16 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DshPickupMutationRequest"];
-            };
-        };
+        requestBody: components["requestBodies"]["MutationRequest"];
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPickupCustomerArrivedResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Order is not a pickup-mode order (PICKUP_INVALID_TRANSITION). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["PickupActionResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     verifyDshPickupSession: {
@@ -15741,47 +23579,20 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshVerifyPickupOtpRequest"];
+                "application/json": components["schemas"]["PickupVerifyRequest"];
             };
         };
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPickupSessionResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Pickup session version changed; reload before retrying (VERSION_CONFLICT). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
-            /** @description Code already used, expired, attempts exceeded, or invalid (PICKUP_CODE_ALREADY_USED, PICKUP_CODE_EXPIRED, PICKUP_CODE_ATTEMPTS_EXCEEDED, PICKUP_CODE_INVALID, PICKUP_INVALID_TRANSITION). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["PickupActionResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     markDshPickupNoShow: {
@@ -15789,55 +23600,29 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshPickupNoShowRequest"];
+                "application/json": components["schemas"]["PickupReasonRequest"];
             };
         };
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPickupSessionResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Pickup session version changed; reload before retrying (VERSION_CONFLICT). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
-            /** @description Pickup session was already used (PICKUP_CODE_ALREADY_USED). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["PickupActionResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     listDshOperatorPickups: {
         parameters: {
             query?: {
                 storeId?: string;
-                limit?: number;
-                offset?: number;
+                status?: string;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
             };
             header?: never;
             path?: never;
@@ -15845,17 +23630,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPickupSessionListResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
+            200: components["responses"]["PickupListResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     getDshOperatorPickup: {
@@ -15863,24 +23639,15 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPickupSessionResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            200: components["responses"]["PickupActionResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            404: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     extendDshPickupWindow: {
@@ -15888,47 +23655,21 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshExtendPickupWindowRequest"];
+                "application/json": components["schemas"]["PickupWindowRequest"];
             };
         };
         responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPickupSessionResponse"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Pickup session version changed; reload before retrying (VERSION_CONFLICT). */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
-            /** @description Pickup session was already used (PICKUP_CODE_ALREADY_USED). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            200: components["responses"]["PickupActionResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
         };
     };
     cancelDshClientOrder: {
@@ -16128,23 +23869,24 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                assignmentId: string;
+                assignmentId: components["parameters"]["AssignmentId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Active delivery exception returned. */
+            /** @description Current exception returned. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                    "application/json": components["schemas"]["DeliveryExceptionResponse"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
+            401: components["responses"]["DshDeliveryExceptionsUnauthenticated"];
+            403: components["responses"]["DshDeliveryExceptionsForbidden"];
+            404: components["responses"]["DshDeliveryExceptionsNotFound"];
         };
     };
     reportDshCaptainDeliveryException: {
@@ -16152,43 +23894,37 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                assignmentId: string;
+                assignmentId: components["parameters"]["AssignmentId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshReportDeliveryExceptionRequest"];
+                "application/json": components["schemas"]["ReportDeliveryExceptionRequest"];
             };
         };
         responses: {
-            /** @description Delivery exception recorded or idempotently replayed. */
+            /** @description Exception recorded and delivery completion blocked pending operations review. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                    "application/json": components["schemas"]["DeliveryExceptionResponse"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-            /** @description Assignment is not active or already has an unresolved exception. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            400: components["responses"]["DshDeliveryExceptionsInvalidRequest"];
+            401: components["responses"]["DshDeliveryExceptionsUnauthenticated"];
+            403: components["responses"]["DshDeliveryExceptionsForbidden"];
+            404: components["responses"]["DshDeliveryExceptionsNotFound"];
+            409: components["responses"]["DshDeliveryExceptionsConflict"];
         };
     };
     listDshOperatorDeliveryExceptions: {
         parameters: {
-            query?: {
-                status?: components["schemas"]["DshDeliveryExceptionStatus"];
+            query: {
+                status: components["schemas"]["DeliveryExceptionStatus"];
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -16196,18 +23932,20 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Delivery-exception queue returned. */
+            /** @description Exceptions returned newest and highest severity first. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDeliveryExceptionListResponse"];
+                    "application/json": {
+                        exceptions: components["schemas"]["DeliveryException"][];
+                    };
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
+            400: components["responses"]["DshDeliveryExceptionsInvalidRequest"];
+            401: components["responses"]["DshDeliveryExceptionsUnauthenticated"];
+            403: components["responses"]["DshDeliveryExceptionsForbidden"];
         };
     };
     acknowledgeDshOperatorDeliveryException: {
@@ -16215,38 +23953,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                exceptionId: string;
+                exceptionId: components["parameters"]["ExceptionId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshAcknowledgeDeliveryExceptionRequest"];
+                "application/json": components["schemas"]["AcknowledgeDeliveryExceptionRequest"];
             };
         };
         responses: {
-            /** @description Exception acknowledged. */
+            /** @description Exception acknowledged and responsibility recorded. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                    "application/json": components["schemas"]["DeliveryExceptionResponse"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Version or lifecycle conflict. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            400: components["responses"]["DshDeliveryExceptionsInvalidRequest"];
+            401: components["responses"]["DshDeliveryExceptionsUnauthenticated"];
+            403: components["responses"]["DshDeliveryExceptionsForbidden"];
+            404: components["responses"]["DshDeliveryExceptionsNotFound"];
+            409: components["responses"]["DshDeliveryExceptionsConflict"];
         };
     };
     resolveDshOperatorDeliveryException: {
@@ -16254,38 +23984,30 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                exceptionId: string;
+                exceptionId: components["parameters"]["ExceptionId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DshResolveDeliveryExceptionRequest"];
+                "application/json": components["schemas"]["ResolveDeliveryExceptionRequest"];
             };
         };
         responses: {
-            /** @description Exception resolved and delivery progression reopened. */
+            /** @description Resolution applied or idempotently replayed. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                    "application/json": components["schemas"]["DeliveryExceptionResponse"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Version conflict or assignment no longer eligible for retry. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            400: components["responses"]["DshDeliveryExceptionsInvalidRequest"];
+            401: components["responses"]["DshDeliveryExceptionsUnauthenticated"];
+            403: components["responses"]["DshDeliveryExceptionsForbidden"];
+            404: components["responses"]["DshDeliveryExceptionsNotFound"];
+            409: components["responses"]["DshDeliveryExceptionsConflict"];
         };
     };
     arriveDshCaptainReturnToStore: {
@@ -16293,32 +24015,25 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                assignmentId: string;
+                assignmentId: components["parameters"]["AssignmentId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Captain arrival recorded; store receipt remains pending. */
+            /** @description Return marked as arrived and awaiting partner receipt. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                    "application/json": components["schemas"]["DeliveryExceptionResponse"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            404: components["responses"]["NotFound"];
-            /** @description Assignment is not in returning_to_store state. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            401: components["responses"]["DshDeliveryExceptionsUnauthenticated"];
+            403: components["responses"]["DshDeliveryExceptionsForbidden"];
+            404: components["responses"]["DshDeliveryExceptionsNotFound"];
+            409: components["responses"]["DshDeliveryExceptionsConflict"];
         };
     };
     getDshPartnerReturnToStore: {
@@ -16326,24 +24041,24 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Return state returned. */
+            /** @description Return custody state returned. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                    "application/json": components["schemas"]["DeliveryExceptionResponse"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            401: components["responses"]["DshDeliveryExceptionsUnauthenticated"];
+            403: components["responses"]["DshDeliveryExceptionsForbidden"];
+            404: components["responses"]["DshDeliveryExceptionsNotFound"];
         };
     };
     acceptDshPartnerReturnToStore: {
@@ -16351,40 +24066,31 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                orderId: string;
+                orderId: components["parameters"]["OrderId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Store receipt confirmed and return completed. */
+            /** @description Store custody confirmed and delivery assignment completed. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DshDeliveryExceptionResponse"];
+                    "application/json": components["schemas"]["DeliveryExceptionResponse"];
                 };
             };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Captain has not arrived or return was already finalized inconsistently. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshErrorResponse"];
-                };
-            };
+            401: components["responses"]["DshDeliveryExceptionsUnauthenticated"];
+            403: components["responses"]["DshDeliveryExceptionsForbidden"];
+            404: components["responses"]["DshDeliveryExceptionsNotFound"];
+            409: components["responses"]["DshDeliveryExceptionsConflict"];
         };
     };
     getDshPartnerOrderWorkboard: {
         parameters: {
             query?: {
-                /** @description Optional exact lifecycle status. Omit to return the complete store workboard. */
-                status?: components["schemas"]["DshOrderStatus"];
+                status?: components["parameters"]["StatusFilter"];
             };
             header?: never;
             path?: never;
@@ -16392,17 +24098,9 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Actor-scoped partner workboard. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DshPartnerOrderWorkboardResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
+            200: components["responses"]["WorkboardResponse"];
+            401: components["responses"]["DshOrderWorkboardsErrorResponse"];
+            403: components["responses"]["DshOrderWorkboardsErrorResponse"];
         };
     };
     getDshOrderPreparation: {
@@ -16792,6 +24490,6169 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DshErrorResponse"];
                 };
+            };
+        };
+    };
+    listDshAdministrationRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Approved surface-scoped administrative roles. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        roles: components["schemas"]["Role"][];
+                    };
+                };
+            };
+        };
+    };
+    requestDshAdministrationRoleDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleDefinitionRequestInput"];
+            };
+        };
+        responses: {
+            /** @description Pending role-definition request created. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        request: components["schemas"]["RoleDefinitionRequest"];
+                    };
+                };
+            };
+            /** @description Role exists or an equivalent request is pending. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDshAdministrationRoleDefinitionRequests: {
+        parameters: {
+            query?: {
+                status?: components["parameters"]["ApprovalStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Role-definition approval queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requests: components["schemas"]["RoleDefinitionRequest"][];
+                    };
+                };
+            };
+        };
+    };
+    reviewDshAdministrationRoleDefinitionRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalReviewInput"];
+            };
+        };
+        responses: {
+            /** @description Role-definition request reviewed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        request: components["schemas"]["RoleDefinitionRequest"];
+                        role?: components["schemas"]["Role"] | null;
+                    };
+                };
+            };
+            /** @description Self-approval is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDshAdministrationStaff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Existing approved staff role assignments. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        staff: components["schemas"]["StaffAssignment"][];
+                    };
+                };
+            };
+        };
+    };
+    requestDshStaffRoleChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                staffId: components["parameters"]["StaffId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleChangeRequestInput"];
+            };
+        };
+        responses: {
+            /** @description Pending role-change approval request created. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        approval: components["schemas"]["RoleAssignmentApproval"];
+                    };
+                };
+            };
+            /** @description Self-change or authorization is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Requested assignment state is no longer valid or an equivalent request is pending. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDshRoleAssignmentApprovals: {
+        parameters: {
+            query?: {
+                status?: components["parameters"]["ApprovalStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Staff role-change approval queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        approvals: components["schemas"]["RoleAssignmentApproval"][];
+                    };
+                };
+            };
+        };
+    };
+    reviewDshStaffRoleChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approvalId: components["parameters"]["ApprovalId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalReviewInput"];
+            };
+        };
+        responses: {
+            /** @description Role-change request reviewed and applied only when approved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        approval: components["schemas"]["RoleAssignmentApproval"];
+                        assignment?: components["schemas"]["StaffAssignment"] | null;
+                    };
+                };
+            };
+            /** @description Self-approval is forbidden. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    requestDshAdministrationDecisionRollback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approvalId: components["parameters"]["ApprovalId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Rollback request accepted for independent review. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        request: components["schemas"]["RollbackRequest"];
+                    };
+                };
+            };
+            /** @description Beneficiary cannot request a self-affecting rollback. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A pending rollback already exists or source state is no longer valid. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDshAdministrationRollbackRequests: {
+        parameters: {
+            query?: {
+                status?: components["parameters"]["ApprovalStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Governed rollback request queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requests: components["schemas"]["RollbackRequest"][];
+                    };
+                };
+            };
+        };
+    };
+    reviewDshAdministrationDecisionRollback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalReviewInput"];
+            };
+        };
+        responses: {
+            /** @description Rollback reviewed and inverse role state applied only when approved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        request: components["schemas"]["RollbackRequest"];
+                        assignment?: components["schemas"]["StaffAssignment"] | null;
+                    };
+                };
+            };
+            /** @description Independent checker rule violated. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Version or role-state conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDshAdministrationDiagnostics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Privacy-safe administration diagnostics. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        diagnostics: components["schemas"]["AdministrationDiagnostics"];
+                    };
+                };
+            };
+        };
+    };
+    listDshAdministrationPartnerActivationProjections: {
+        parameters: {
+            query?: {
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner activation projections. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDshAdministrationCaptainCredentialProjections: {
+        parameters: {
+            query?: {
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Captain credential projections. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDshAdministrationAudit: {
+        parameters: {
+            query?: {
+                actorId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redacted administration audit. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        audit: components["schemas"]["AuditEntry"][];
+                    };
+                };
+            };
+        };
+    };
+    listDshAdministrationSupportSessionRequests: {
+        parameters: {
+            query?: {
+                status?: "pending" | "approved" | "rejected" | "issued" | "revoked" | "expired";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Support-session request queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        requests: {
+                            [key: string]: unknown;
+                        }[];
+                    };
+                };
+            };
+            /** @description Invalid status filter. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administration read permission required. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createDshAdministrationSupportSessionRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    targetActorId: string;
+                    reason: string;
+                    durationMinutes: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Pending support-session request created. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid request. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administration manage permission required. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Equivalent request is active or source state changed. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Identity support-session integration is not configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reviewDshAdministrationSupportSessionRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    decision: "approved" | "rejected";
+                    reviewNote?: string;
+                    expectedVersion: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Request reviewed; an approved response may include the one-time Identity handoff result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid review. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Self-approval or missing approval permission. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Version or lifecycle conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Identity denied the support-session handoff. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    revokeDshAdministrationSupportSessionRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                requestId: components["parameters"]["RequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Support session revoked. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid revocation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administration approval permission required. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Request is no longer revocable. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDshAdministrationSupportSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Identity support-session context and privacy-scoped operational snapshot. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Support bearer session required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Session invalid */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Identity support-session integration is not configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDshPreparationSlaAnalytics: {
+        parameters: {
+            query?: {
+                period?: "today" | "week" | "month";
+                from?: string;
+                to?: string;
+                storeId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Preparation SLA snapshot with lineage and refresh metadata. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshPreparationSlaAnalyticsResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getDshCaptainPerformanceAnalytics: {
+        parameters: {
+            query?: {
+                period?: "today" | "week" | "month";
+                from?: string;
+                to?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Captain performance rows. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshCaptainPerformanceAnalyticsResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getDshFieldPerformanceAnalytics: {
+        parameters: {
+            query?: {
+                period?: "today" | "week" | "month";
+                from?: string;
+                to?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Field performance rows. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshFieldPerformanceAnalyticsResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getDshOrderAnalyticsDrilldown: {
+        parameters: {
+            query?: {
+                period?: "today" | "week" | "month";
+                from?: string;
+                to?: string;
+                storeId?: string;
+                status?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Source operational records with canonical detail URLs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshOperationalAnalyticsDrilldownResponse"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getDshWltFinancialAnalyticsSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Available WLT financial snapshot. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshWltFinancialAnalyticsSnapshotResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description WLT remains the owner, but its read model is unavailable. No zero values are fabricated. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshWltFinancialAnalyticsUnavailableResponse"];
+                };
+            };
+        };
+    };
+    exportDshOperationalAnalyticsCsv: {
+        parameters: {
+            query?: {
+                period?: "today" | "week" | "month";
+                from?: string;
+                to?: string;
+                storeId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV generated from the same governed read models and filters. */
+            200: {
+                headers: {
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getDshOperationsAnalytics: {
+        parameters: {
+            query?: {
+                period?: "today" | "week" | "month";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Operations analytics projection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Invalid analytics period. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Authentication required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Analytics read permission required. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDispatchBalancePolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["PolicyResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    upsertDispatchBalancePolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispatchBalancePolicyInput"];
+            };
+        };
+        responses: {
+            200: components["responses"]["PolicyResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    getOperatorCaptainFinancialEligibility: {
+        parameters: {
+            query: {
+                operatorContextId: components["parameters"]["OperatorContextIdQuery"];
+            };
+            header?: never;
+            path: {
+                captainId: components["parameters"]["CaptainId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["EligibilityResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    refreshOperatorCaptainFinancialEligibility: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                captainId: components["parameters"]["CaptainId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    operatorContextId: string;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["EligibilityResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+            503: components["responses"]["ErrorResponse"];
+        };
+    };
+    getOwnCaptainFinancialEligibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["EligibilityResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    refreshOwnCaptainFinancialEligibility: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            200: components["responses"]["EligibilityResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+            503: components["responses"]["ErrorResponse"];
+        };
+    };
+    listOperatorCatalogAttributes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Governed catalog attributes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createOperatorCatalogAttribute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Attribute created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listOperatorCatalogAttributeOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Attribute options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    createOperatorCatalogAttributeOption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Attribute option created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    upsertOperatorCatalogNodeAttributeRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                nodeId: components["parameters"]["NodeId"];
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Node attribute rule saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listOperatorMasterProductAttributeValues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Master-product attribute values */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    upsertOperatorMasterProductAttributeValue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Master-product attribute value saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listOperatorMasterProductRelationships: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product alternatives */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    upsertOperatorMasterProductRelationship: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Product relationship saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteOperatorMasterProductRelationship: {
+        parameters: {
+            query: {
+                expectedVersion: number;
+            };
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+                relationshipId: components["parameters"]["RelationshipId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product relationship deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listOperatorAssortmentPauses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store assortment pause states */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    pauseOperatorStoreAssortment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+                masterProductId: components["parameters"]["MasterProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Assortment temporarily paused */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    resumeOperatorStoreAssortment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+                masterProductId: components["parameters"]["MasterProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Assortment resumed from temporary pause */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listOperatorCatalogAudit: {
+        parameters: {
+            query?: {
+                entityType?: string;
+                entityId?: string;
+                action?: "INSERT" | "UPDATE" | "DELETE" | "ROLLBACK";
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Append-only catalog audit page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    rollbackOperatorCatalogAudit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auditId: components["parameters"]["AuditId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Guarded rollback completed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Entity version changed after the audited update */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listPartnerCatalogAttributes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published attribute definitions for partner catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listPartnerCatalogAttributeOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published attribute options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listPartnerMasterProductAttributeValues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published product attribute values */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listPartnerMasterProductRelationships: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published product relationships */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listPartnerAssortmentPauses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pause states for the authenticated partner store */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    pausePartnerStoreAssortment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+                masterProductId: components["parameters"]["MasterProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Partner assortment paused */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    resumePartnerStoreAssortment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+                masterProductId: components["parameters"]["MasterProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Partner assortment resumed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listFieldCatalogAttributes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published attribute definitions for field catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listFieldCatalogAttributeOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                attributeId: components["parameters"]["AttributeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published field attribute options */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listFieldMasterProductAttributeValues: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published field product attribute values */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listFieldMasterProductRelationships: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: components["parameters"]["ProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published field product relationships */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listFieldAssortmentPauses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: components["parameters"]["PartnerId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pause states for field-authorized partner store */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    pauseFieldStoreAssortment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: components["parameters"]["PartnerId"];
+                masterProductId: components["parameters"]["MasterProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Field-authorized assortment paused */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    resumeFieldStoreAssortment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: components["parameters"]["PartnerId"];
+                masterProductId: components["parameters"]["MasterProductId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Field-authorized assortment resumed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDshClientAddresses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Address list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        addresses: components["schemas"]["DshClientAddress"][];
+                    };
+                };
+            };
+            401: components["responses"]["DshClientAddressUnauthenticated"];
+        };
+    };
+    createDshClientAddress: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshClientAddressCorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshCreateClientAddressInput"];
+            };
+        };
+        responses: {
+            /** @description Address created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        address: components["schemas"]["DshClientAddress"];
+                    };
+                };
+            };
+            400: components["responses"]["DshClientAddressInvalidRequest"];
+            401: components["responses"]["DshClientAddressUnauthenticated"];
+            409: components["responses"]["DshClientAddressConflict"];
+            422: components["responses"]["ServiceAreaUnverified"];
+        };
+    };
+    deleteDshClientAddress: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Positive committed address version required for update-adjacent mutations. */
+                "If-Match-Version": components["parameters"]["ExpectedVersion"];
+                "X-Correlation-ID"?: components["parameters"]["DshClientAddressCorrelationId"];
+            };
+            path: {
+                addressId: components["parameters"]["AddressId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Address deleted or a matching committed delete replayed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["DshClientAddressInvalidRequest"];
+            401: components["responses"]["DshClientAddressUnauthenticated"];
+            404: components["responses"]["DshClientAddressNotFound"];
+            409: components["responses"]["DshClientAddressConflict"];
+        };
+    };
+    updateDshClientAddress: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshClientAddressCorrelationId"];
+            };
+            path: {
+                addressId: components["parameters"]["AddressId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateClientAddressInput"];
+            };
+        };
+        responses: {
+            /** @description Address updated or a matching committed mutation replayed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        address: components["schemas"]["DshClientAddress"];
+                    };
+                };
+            };
+            400: components["responses"]["DshClientAddressInvalidRequest"];
+            401: components["responses"]["DshClientAddressUnauthenticated"];
+            404: components["responses"]["DshClientAddressNotFound"];
+            409: components["responses"]["DshClientAddressConflict"];
+            422: components["responses"]["ServiceAreaUnverified"];
+        };
+    };
+    setDshClientDefaultAddress: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                /** @description Positive committed address version required for update-adjacent mutations. */
+                "If-Match-Version": components["parameters"]["ExpectedVersion"];
+                "X-Correlation-ID"?: components["parameters"]["DshClientAddressCorrelationId"];
+            };
+            path: {
+                addressId: components["parameters"]["AddressId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default address updated or a matching committed mutation replayed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        address: components["schemas"]["DshClientAddress"];
+                    };
+                };
+            };
+            400: components["responses"]["DshClientAddressInvalidRequest"];
+            401: components["responses"]["DshClientAddressUnauthenticated"];
+            404: components["responses"]["DshClientAddressNotFound"];
+            409: components["responses"]["DshClientAddressConflict"];
+        };
+    };
+    getDshClientAddressPrivacyPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current retention policy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        policy: components["schemas"]["DshClientAddressPrivacyPolicy"];
+                    };
+                };
+            };
+            401: components["responses"]["DshClientAddressPrivacyUnauthenticated"];
+            403: components["responses"]["DshClientAddressPrivacyForbidden"];
+        };
+    };
+    updateDshClientAddressPrivacyPolicy: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpdateClientAddressPrivacyPolicyInput"];
+            };
+        };
+        responses: {
+            /** @description Policy updated or replayed idempotently; deleted non-anonymized addresses are rescheduled by database trigger. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        policy: components["schemas"]["DshClientAddressPrivacyPolicy"];
+                    };
+                };
+            };
+            400: components["responses"]["DshClientAddressPrivacyInvalidRequest"];
+            401: components["responses"]["DshClientAddressPrivacyUnauthenticated"];
+            403: components["responses"]["DshClientAddressPrivacyForbidden"];
+            409: components["responses"]["DshClientAddressPrivacyConflict"];
+        };
+    };
+    getDshClientAddressPrivacyQueueStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current queue counts and next due time without address PII. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status: components["schemas"]["DshClientAddressPrivacyQueueStatus"];
+                    };
+                };
+            };
+            401: components["responses"]["DshClientAddressPrivacyUnauthenticated"];
+            403: components["responses"]["DshClientAddressPrivacyForbidden"];
+        };
+    };
+    listDshClientAddressPrivacyAuditEvents: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PII-safe audit events from the database projection. No raw client or address fields are returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: components["schemas"]["DshClientAddressPrivacyAuditEvent"][];
+                    };
+                };
+            };
+            400: components["responses"]["DshClientAddressPrivacyInvalidRequest"];
+            401: components["responses"]["DshClientAddressPrivacyUnauthenticated"];
+            403: components["responses"]["DshClientAddressPrivacyForbidden"];
+        };
+    };
+    anonymizeDshExpiredClientAddresses: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    limit: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Due deleted addresses anonymized or prior run result replayed, with refreshed queue status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        result: components["schemas"]["DshClientAddressAnonymizationResult"];
+                        status: components["schemas"]["DshClientAddressPrivacyQueueStatus"];
+                    };
+                };
+            };
+            400: components["responses"]["DshClientAddressPrivacyInvalidRequest"];
+            401: components["responses"]["DshClientAddressPrivacyUnauthenticated"];
+            403: components["responses"]["DshClientAddressPrivacyForbidden"];
+            409: components["responses"]["DshClientAddressPrivacyConflict"];
+        };
+    };
+    searchDshClientMapLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshMapSearchInput"];
+            };
+        };
+        responses: {
+            /** @description Normalized and DSH-verified search results. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        locations: components["schemas"]["DshVerifiedMapLocation"][];
+                    };
+                };
+            };
+            400: components["responses"]["DshClientMapInvalidRequest"];
+            401: components["responses"]["DshClientMapUnauthenticated"];
+            422: components["responses"]["MapUncertain"];
+            502: components["responses"]["MapUnavailable"];
+            503: components["responses"]["MapNotConfigured"];
+            504: components["responses"]["MapTimeout"];
+        };
+    };
+    reverseDshClientMapLocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshMapReverseInput"];
+            };
+        };
+        responses: {
+            /** @description Normalized and DSH-verified location. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        location: components["schemas"]["DshVerifiedMapLocation"];
+                    };
+                };
+            };
+            400: components["responses"]["DshClientMapInvalidRequest"];
+            401: components["responses"]["DshClientMapUnauthenticated"];
+            422: components["responses"]["MapUncertain"];
+            502: components["responses"]["MapUnavailable"];
+            503: components["responses"]["MapNotConfigured"];
+            504: components["responses"]["MapTimeout"];
+        };
+    };
+    getDshOperatorMapProviderHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Governed map-provider health snapshot. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        mapProviderHealth: components["schemas"]["DshMapProviderHealth"];
+                    };
+                };
+            };
+            401: components["responses"]["DshClientMapUnauthenticated"];
+            403: components["responses"]["DshClientMapForbidden"];
+            502: components["responses"]["MapUnavailable"];
+            503: components["responses"]["MapNotConfigured"];
+            504: components["responses"]["MapTimeout"];
+        };
+    };
+    listDshOperatorServiceAreas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service areas returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        serviceAreas: components["schemas"]["DshServiceArea"][];
+                    };
+                };
+            };
+            401: components["responses"]["DshClientMapUnauthenticated"];
+            403: components["responses"]["DshClientMapForbidden"];
+        };
+    };
+    getDshOperatorServiceArea: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                serviceAreaCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Service-area detail returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        serviceArea: components["schemas"]["DshServiceArea"];
+                    };
+                };
+            };
+            400: components["responses"]["DshClientMapInvalidRequest"];
+            401: components["responses"]["DshClientMapUnauthenticated"];
+            403: components["responses"]["DshClientMapForbidden"];
+            404: components["responses"]["DshClientMapNotFound"];
+        };
+    };
+    upsertDshOperatorServiceArea: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+                "X-Correlation-ID"?: string;
+            };
+            path: {
+                serviceAreaCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshServiceAreaUpsertInput"];
+            };
+        };
+        responses: {
+            /** @description Service area created, updated, or replayed idempotently. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        serviceArea: components["schemas"]["DshServiceArea"];
+                    };
+                };
+            };
+            400: components["responses"]["DshClientMapInvalidRequest"];
+            401: components["responses"]["DshClientMapUnauthenticated"];
+            403: components["responses"]["DshClientMapForbidden"];
+            409: components["responses"]["DshClientMapConflict"];
+        };
+    };
+    listDshControlPanelCodReconciliationCases: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WLT COD reconciliation cases */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing finance read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description WLT unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    assignDshControlPanelCodReconciliationCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["CaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description COD case assignment readback */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing finance manage permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Assignment conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description WLT unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    resolveDshControlPanelCodReconciliationCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["CaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description COD case resolution readback */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing finance manage permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Resolution conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description WLT unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDshPartnerCodRecords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner-owned COD records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Actor is not a partner */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description WLT unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    remitDshPartnerCodRecord: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                recordId: components["parameters"]["RecordId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner COD remittance readback */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Actor is not the owning partner */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid custody transition */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description WLT unavailable */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    issueClientDeliveryPin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: components["parameters"]["OrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Challenge issued. The clear PIN is returned only in this client-owned response. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryPinResponse"];
+                };
+            };
+            401: components["responses"]["DshDeliveryProofCompletionUnauthenticated"];
+            404: components["responses"]["DshDeliveryProofCompletionNotFound"];
+            409: components["responses"]["DshDeliveryProofCompletionConflict"];
+        };
+    };
+    getClientAcceptedDeliveryProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: components["parameters"]["OrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redacted accepted proof summary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        proof: components["schemas"]["ClientDeliveryProof"];
+                    };
+                };
+            };
+            401: components["responses"]["DshDeliveryProofCompletionUnauthenticated"];
+            404: components["responses"]["DshDeliveryProofCompletionNotFound"];
+        };
+    };
+    getCaptainDeliveryProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: components["parameters"]["AssignmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Latest captain-owned proof. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        proof: components["schemas"]["DeliveryProof"];
+                    };
+                };
+            };
+            401: components["responses"]["DshDeliveryProofCompletionUnauthenticated"];
+            404: components["responses"]["DshDeliveryProofCompletionNotFound"];
+        };
+    };
+    submitCaptainDeliveryProof: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Idempotency-Key"?: components["parameters"]["DshDeliveryProofCompletionIdempotencyKey"];
+                "Idempotency-Key"?: components["parameters"]["StandardIdempotencyKey"];
+            };
+            path: {
+                assignmentId: components["parameters"]["AssignmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubmitDeliveryProofRequest"];
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Governed image containing either the delivery scene or the recipient signature.
+                     */
+                    file: string;
+                    evidenceKind: components["schemas"]["DeliveryEvidenceKind"];
+                    method?: components["schemas"]["DeliveryProofMethod"];
+                    pin?: string;
+                    idempotencyKey: string;
+                    latitude?: number;
+                    longitude?: number;
+                    /** Format: date-time */
+                    capturedAt?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Proof accepted or queued for operator review. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        proof: components["schemas"]["DeliveryProof"];
+                    };
+                };
+            };
+            400: components["responses"]["DshDeliveryProofCompletionInvalidRequest"];
+            401: components["responses"]["DshDeliveryProofCompletionUnauthenticated"];
+            404: components["responses"]["DshDeliveryProofCompletionNotFound"];
+            409: components["responses"]["DshDeliveryProofCompletionConflict"];
+        };
+    };
+    listOperatorDeliveryProofs: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["DeliveryProofStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Proof queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        proofs: components["schemas"]["DeliveryProof"][];
+                    };
+                };
+            };
+            401: components["responses"]["DshDeliveryProofCompletionUnauthenticated"];
+            403: components["responses"]["DshDeliveryProofCompletionForbidden"];
+        };
+    };
+    getOperatorDeliveryProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proofId: components["parameters"]["ProofId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Full proof evidence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        proof: components["schemas"]["DeliveryProof"];
+                    };
+                };
+            };
+            401: components["responses"]["DshDeliveryProofCompletionUnauthenticated"];
+            403: components["responses"]["DshDeliveryProofCompletionForbidden"];
+            404: components["responses"]["DshDeliveryProofCompletionNotFound"];
+        };
+    };
+    acceptOperatorDeliveryProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proofId: components["parameters"]["ProofId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewDeliveryProofRequest"];
+            };
+        };
+        responses: {
+            /** @description Proof accepted and completion committed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        proof: components["schemas"]["DeliveryProof"];
+                    };
+                };
+            };
+            400: components["responses"]["DshDeliveryProofCompletionInvalidRequest"];
+            401: components["responses"]["DshDeliveryProofCompletionUnauthenticated"];
+            403: components["responses"]["DshDeliveryProofCompletionForbidden"];
+            404: components["responses"]["DshDeliveryProofCompletionNotFound"];
+            409: components["responses"]["DshDeliveryProofCompletionConflict"];
+        };
+    };
+    rejectOperatorDeliveryProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proofId: components["parameters"]["ProofId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewDeliveryProofRequest"];
+            };
+        };
+        responses: {
+            /** @description Proof rejected and retry enabled. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        proof: components["schemas"]["DeliveryProof"];
+                    };
+                };
+            };
+            400: components["responses"]["DshDeliveryProofCompletionInvalidRequest"];
+            401: components["responses"]["DshDeliveryProofCompletionUnauthenticated"];
+            403: components["responses"]["DshDeliveryProofCompletionForbidden"];
+            404: components["responses"]["DshDeliveryProofCompletionNotFound"];
+            409: components["responses"]["DshDeliveryProofCompletionConflict"];
+        };
+    };
+    listCaptainDispatchCandidates: {
+        parameters: {
+            query: {
+                operatorContextId?: components["parameters"]["OperatorContextId"];
+                serviceAreaCode: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ranked eligibility and capacity projection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidates: components["schemas"]["CaptainDispatchCandidate"][];
+                    };
+                };
+            };
+            400: components["responses"]["DshDispatchGovernanceInvalidRequest"];
+            401: components["responses"]["DshDispatchGovernanceUnauthenticated"];
+            403: components["responses"]["DshDispatchGovernanceForbidden"];
+        };
+    };
+    upsertCaptainDispatchProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                captainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertCaptainDispatchProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Dispatch profile updated using optimistic concurrency. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        candidate: components["schemas"]["CaptainDispatchCandidate"];
+                    };
+                };
+            };
+            400: components["responses"]["DshDispatchGovernanceInvalidRequest"];
+            401: components["responses"]["DshDispatchGovernanceUnauthenticated"];
+            403: components["responses"]["DshDispatchGovernanceForbidden"];
+            409: components["responses"]["DshDispatchGovernanceConflict"];
+        };
+    };
+    reassignGovernedDispatchAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: components["parameters"]["AssignmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReassignDispatchAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Prior assignment cancelled and replacement offer created atomically. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GovernedDispatchAssignmentResponse"];
+                };
+            };
+            400: components["responses"]["DshDispatchGovernanceInvalidRequest"];
+            401: components["responses"]["DshDispatchGovernanceUnauthenticated"];
+            403: components["responses"]["DshDispatchGovernanceForbidden"];
+            404: components["responses"]["DshDispatchGovernanceNotFound"];
+            409: components["responses"]["DshDispatchGovernanceConflict"];
+        };
+    };
+    cancelGovernedDispatchAssignment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignmentId: components["parameters"]["AssignmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelDispatchAssignmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Assignment cancelled and order returned to readiness. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["DshDispatchGovernanceInvalidRequest"];
+            401: components["responses"]["DshDispatchGovernanceUnauthenticated"];
+            403: components["responses"]["DshDispatchGovernanceForbidden"];
+            404: components["responses"]["DshDispatchGovernanceNotFound"];
+            409: components["responses"]["DshDispatchGovernanceConflict"];
+        };
+    };
+    expireGovernedDispatchAssignments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @default default */
+                    operatorContextId?: string;
+                    /** @default 100 */
+                    limit?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Overdue offers expired. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        expiredCount: number;
+                    };
+                };
+            };
+            401: components["responses"]["DshDispatchGovernanceUnauthenticated"];
+            403: components["responses"]["DshDispatchGovernanceForbidden"];
+        };
+    };
+    listDispatchDecisions: {
+        parameters: {
+            query?: {
+                operatorContextId?: components["parameters"]["OperatorContextId"];
+                assignmentId?: string;
+                orderId?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Immutable dispatch decision history. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        decisions: components["schemas"]["DispatchDecision"][];
+                    };
+                };
+            };
+            400: components["responses"]["DshDispatchGovernanceInvalidRequest"];
+            401: components["responses"]["DshDispatchGovernanceUnauthenticated"];
+            403: components["responses"]["DshDispatchGovernanceForbidden"];
+        };
+    };
+    recordDshHomeMarketingEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshHomeMarketingEventInput"];
+            };
+        };
+        responses: {
+            /** @description Event accepted; duplicate impressions for the same view are ignored. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["InvalidEvent"];
+            404: components["responses"]["ContentNotPublishable"];
+        };
+    };
+    getDshOperatorHomeTargeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: components["parameters"]["HomeContentKind"];
+                itemId: components["parameters"]["HomeContentItemId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Targeting projection returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshHomeTargetingResponse"];
+                };
+            };
+            401: components["responses"]["DshHomeMarketingEventsUnauthenticated"];
+            403: components["responses"]["DshHomeMarketingEventsForbidden"];
+            404: components["responses"]["DshHomeMarketingEventsNotFound"];
+        };
+    };
+    replaceDshOperatorHomeTargeting: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                kind: components["parameters"]["HomeContentKind"];
+                itemId: components["parameters"]["HomeContentItemId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshHomeTargeting"];
+            };
+        };
+        responses: {
+            /** @description Targeting projection replaced and audited. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshHomeTargetingResponse"];
+                };
+            };
+            400: components["responses"]["InvalidEvent"];
+            401: components["responses"]["DshHomeMarketingEventsUnauthenticated"];
+            403: components["responses"]["DshHomeMarketingEventsForbidden"];
+            404: components["responses"]["DshHomeMarketingEventsNotFound"];
+        };
+    };
+    listDshGovernedIncidents: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["IncidentStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["IncidentList"];
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    createDshGovernedIncident: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["DshIncidentGovernanceIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshIncidentGovernanceCorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIncidentInput"];
+            };
+        };
+        responses: {
+            201: components["responses"]["Incident"];
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    getDshGovernedIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incidentId: components["parameters"]["IncidentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Incident"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    updateDshGovernedIncident: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["DshIncidentGovernanceIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshIncidentGovernanceCorrelationId"];
+            };
+            path: {
+                incidentId: components["parameters"]["IncidentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIncidentInput"];
+            };
+        };
+        responses: {
+            200: components["responses"]["Incident"];
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    listDshGovernedIncidentEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incidentId: components["parameters"]["IncidentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Append-only incident audit events. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: components["schemas"]["IncidentEvent"][];
+                    };
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    listDshOperationalIncidents: {
+        parameters: {
+            query?: {
+                orderId?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["OperationalIncidentList"];
+            403: components["responses"]["Error"];
+        };
+    };
+    reportDshOperationalIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportOperationalIncidentInput"];
+            };
+        };
+        responses: {
+            200: components["responses"]["OperationalIncident"];
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+        };
+    };
+    getDshOperationalIncident: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                incidentId: components["parameters"]["IncidentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["OperationalIncident"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    getDshPartnerFieldRatingPrompt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["PartnerFieldRatingPrompt"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    submitDshPartnerFieldRating: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["DshIncidentGovernanceCorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SingleRatingInput"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ProviderRating"];
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    getDshPendingClientOrderRatingPrompt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ClientOrderRatingPrompt"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    getDshClientOrderRatingPrompt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: components["parameters"]["DshIncidentGovernanceOrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ClientOrderRatingPrompt"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    submitDshClientOrderRatings: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["DshIncidentGovernanceCorrelationId"];
+            };
+            path: {
+                orderId: components["parameters"]["DshIncidentGovernanceOrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderRatingsInput"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ProviderRatings"];
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    getDshFieldOwnRatingSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ProviderRatingSummary"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    getDshCaptainOwnRatingSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ProviderRatingSummary"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    listOperatorDispatchTrackingAlerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current tracking alerts and operations-map locations returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        alerts: components["schemas"]["TrackingAlert"][];
+                        total: number;
+                        locations: components["schemas"]["OperatorTrackingLocation"][];
+                        locationsTotal: number;
+                    };
+                };
+            };
+            401: components["responses"]["DshLiveTrackingUnauthenticated"];
+            403: components["responses"]["DshLiveTrackingForbidden"];
+        };
+    };
+    listDshMarketingCoupons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    createDshMarketingCoupon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CouponCreateWrite"];
+            };
+        };
+        responses: {
+            201: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    updateDshMarketingCoupon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                couponId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CouponUpdateWrite"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    listDshMarketingLoyaltyTiers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    createDshMarketingLoyaltyTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommercialDefinitionWrite"];
+            };
+        };
+        responses: {
+            201: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    updateDshMarketingLoyaltyTier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tierId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionedCommercialDefinitionWrite"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    listDshMarketingSubscriptionPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    createDshMarketingSubscriptionPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommercialDefinitionWrite"];
+            };
+        };
+        responses: {
+            201: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    updateDshMarketingSubscriptionPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionedCommercialDefinitionWrite"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    createDshClientSubscriptionPurchase: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+                "X-Correlation-ID": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionPurchaseWrite"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            201: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+            503: components["responses"]["ErrorResponse"];
+        };
+    };
+    activateDshClientSubscriptionPurchase: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": string;
+                "Idempotency-Key": string;
+            };
+            path: {
+                purchaseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+            502: components["responses"]["ErrorResponse"];
+            503: components["responses"]["ErrorResponse"];
+        };
+    };
+    getDshClientSubscriptionPurchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                purchaseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            502: components["responses"]["ErrorResponse"];
+            503: components["responses"]["ErrorResponse"];
+        };
+    };
+    renewDshClientSubscription: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+                "X-Correlation-ID": string;
+            };
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    paymentMethod?: "official_wallet" | "wallet" | "mixed";
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            201: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+            503: components["responses"]["ErrorResponse"];
+        };
+    };
+    cancelDshClientSubscription: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+                "X-Correlation-ID": string;
+            };
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+            503: components["responses"]["ErrorResponse"];
+        };
+    };
+    getDshClientBenefits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            503: components["responses"]["ErrorResponse"];
+        };
+    };
+    upsertDshNotificationPushEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshUpsertNotificationPushEndpointRequest"];
+            };
+        };
+        responses: {
+            /** @description Push endpoint registered or refreshed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshNotificationPushEndpointResponse"];
+                };
+            };
+            400: components["responses"]["DshNotificationsGovernanceInvalidRequest"];
+            401: components["responses"]["DshNotificationsGovernanceUnauthenticated"];
+            403: components["responses"]["DshNotificationsGovernanceForbidden"];
+        };
+    };
+    deactivateDshNotificationPushEndpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Push endpoint deactivated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        deactivated: true;
+                    };
+                };
+            };
+            400: components["responses"]["DshNotificationsGovernanceInvalidRequest"];
+            401: components["responses"]["DshNotificationsGovernanceUnauthenticated"];
+            403: components["responses"]["DshNotificationsGovernanceForbidden"];
+            404: components["responses"]["DshNotificationsGovernanceNotFound"];
+        };
+    };
+    listDshNotificationDeliveryAttempts: {
+        parameters: {
+            query?: {
+                outcome?: components["schemas"]["DshNotificationDeliveryOutcome"];
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delivery attempts and aggregate delivery state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshNotificationDeliveryAuditResponse"];
+                };
+            };
+            400: components["responses"]["DshNotificationsGovernanceInvalidRequest"];
+            401: components["responses"]["DshNotificationsGovernanceUnauthenticated"];
+            403: components["responses"]["DshNotificationsGovernanceForbidden"];
+        };
+    };
+    listDshOrderRescueCases: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["RescueStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RescueCaseList"];
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    createDshOrderRescueCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["DshOrderRescueIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshOrderRescueCorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRescueCaseInput"];
+            };
+        };
+        responses: {
+            201: components["responses"]["RescueCase"];
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    getDshOrderRescueCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["CaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RescueCase"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    updateDshOrderRescueCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["DshOrderRescueIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshOrderRescueCorrelationId"];
+            };
+            path: {
+                caseId: components["parameters"]["CaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRescueCaseInput"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RescueCase"];
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    listDshOrderRescueEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: components["parameters"]["CaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Append-only order rescue audit events. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: components["schemas"]["RescueEvent"][];
+                    };
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    listClientOrderTruth: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actor-owned orders. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderCollectionEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createOrderTruthFromCheckout: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Durable mutation key scoped by tenant and authenticated client. */
+                "Idempotency-Key": components["parameters"]["DshOrderTruthIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshOrderTruthCorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Idempotent replay of the previously created order. */
+            200: {
+                headers: {
+                    "Idempotent-Replay"?: "true";
+                    "X-Correlation-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderEnvelope"];
+                };
+            };
+            /** @description Order created and returned from the committed order truth. */
+            201: {
+                headers: {
+                    "X-Correlation-ID"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderEnvelope"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getClientOrderTruth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: components["parameters"]["OrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actor-owned order truth. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listClientOrderTruthEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: components["parameters"]["OrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redacted actor-owned order timeline. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderEventCollectionEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPartnerOrderTruth: {
+        parameters: {
+            query?: {
+                status?: components["parameters"]["Status"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store-scoped orders with client identity and private address redacted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderCollectionEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPartnerOrderTruth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: components["parameters"]["OrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store-scoped order truth with protected client fields redacted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listOperatorOrderTruth: {
+        parameters: {
+            query?: {
+                status?: components["parameters"]["Status"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant-scoped operational order truth. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderCollectionEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getOperatorOrderTruthDiagnostics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order truth service indicators and alert codes without PII. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderTruthDiagnosticsEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getOperatorOrderTruth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: components["parameters"]["OrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tenant-scoped operational order truth. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderEnvelope"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDshOperatorOrderWorkboard: {
+        parameters: {
+            query?: {
+                status?: components["parameters"]["StatusFilter"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["WorkboardResponse"];
+            401: components["responses"]["DshOrderWorkboardsErrorResponse"];
+            403: components["responses"]["DshOrderWorkboardsErrorResponse"];
+        };
+    };
+    listOperatorDshStoreDeliveryPricing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All governed fulfillment pricing records for the store. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        pricing: components["schemas"]["DshDeliveryPricing"][];
+                    };
+                };
+            };
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    upsertOperatorDshStoreDeliveryPricing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+                fulfillmentMode: components["parameters"]["FulfillmentMode"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshDeliveryPricingMutation"];
+            };
+        };
+        responses: {
+            /** @description Delivery pricing saved with a new version and audit event. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        pricing: components["schemas"]["DshDeliveryPricing"];
+                    };
+                };
+            };
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    listPartnerDshStoreDeliveryPricing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Store pricing visible to the authenticated partner. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        pricing: components["schemas"]["DshDeliveryPricing"][];
+                    };
+                };
+            };
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+        };
+    };
+    upsertPartnerDshStoreDeliveryPricing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+                fulfillmentMode: components["parameters"]["FulfillmentMode"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshDeliveryPricingMutation"];
+            };
+        };
+        responses: {
+            /** @description Partner-delivery pricing saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        pricing: components["schemas"]["DshDeliveryPricing"];
+                    };
+                };
+            };
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    listDshLoyaltyEarningPolicies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Earning policies. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        policies: components["schemas"]["DshLoyaltyEarningPolicy"][];
+                    };
+                };
+            };
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    createDshLoyaltyEarningPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshLoyaltyEarningPolicyCreate"];
+            };
+        };
+        responses: {
+            /** @description Draft policy created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        policy: components["schemas"]["DshLoyaltyEarningPolicy"];
+                    };
+                };
+            };
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    updateDshLoyaltyEarningPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                policyId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DshLoyaltyEarningPolicyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Policy updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        policy: components["schemas"]["DshLoyaltyEarningPolicy"];
+                    };
+                };
+            };
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    extendDshPartnerPickupWindow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: components["parameters"]["OrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PickupWindowRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["PickupActionResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
+        };
+    };
+    rescheduleDshPartnerPickupWindow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: components["parameters"]["OrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PickupWindowRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["PickupActionResponse"];
+            400: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            422: components["responses"]["DshPartnerDeliveryErrorResponse"];
+        };
+    };
+    refreshDshPartnerDeliverySlaAlerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            200: components["responses"]["SlaRefreshResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+        };
+    };
+    listDshPartnerDeliverySlaAlerts: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["SlaAlertStatus"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["SlaAlertListResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+        };
+    };
+    acknowledgeDshPartnerDeliverySlaAlert: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                alertId: components["parameters"]["AlertId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcknowledgeAlertRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["SlaAlertResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            404: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+        };
+    };
+    refreshDshPickupSlaAlerts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            200: components["responses"]["SlaRefreshResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+        };
+    };
+    listDshPickupSlaAlerts: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["SlaAlertStatus"];
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["SlaAlertListResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+        };
+    };
+    acknowledgeDshPickupSlaAlert: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                alertId: components["parameters"]["AlertId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcknowledgeAlertRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["SlaAlertResponse"];
+            403: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            404: components["responses"]["DshPartnerDeliveryErrorResponse"];
+            409: components["responses"]["DshPartnerDeliveryErrorResponse"];
+        };
+    };
+    issueDshPartnerCourierConnectionCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueConnectionCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description One-time plaintext code plus its persisted redacted connection projection. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssueConnectionCodeResponse"];
+                };
+            };
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+            422: components["responses"]["ErrorResponse"];
+        };
+    };
+    listDshPartnerCourierConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authoritative connection lifecycle for the authenticated partner store. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionListResponse"];
+                };
+            };
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+        };
+    };
+    revokeDshPartnerCourierConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExpectedVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description Revoked connection projection. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionResponse"];
+                };
+            };
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    connectDshCaptainToPartnerFleet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectCaptainRequest"];
+            };
+        };
+        responses: {
+            /** @description Activated captain membership. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipResponse"];
+                };
+            };
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+            410: components["responses"]["ErrorResponse"];
+            422: components["responses"]["ErrorResponse"];
+        };
+    };
+    listDshCaptainPartnerFleetMemberships: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description All memberships owned by the authenticated captain across stores. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipListResponse"];
+                };
+            };
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    disconnectDshCaptainPartnerFleetMembership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                teamMemberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DisconnectMembershipRequest"];
+            };
+        };
+        responses: {
+            /** @description Paused membership after authenticated captain disconnect. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipResponse"];
+                };
+            };
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    getDshOperatorPartnerFleetSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                storeId: components["parameters"]["StoreId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redacted operational snapshot. Plaintext codes and code hashes are never returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperatorPartnerFleetSnapshot"];
+                };
+            };
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+        };
+    };
+    listDshPartnerSupportTickets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner-owned support tickets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        tickets: components["schemas"]["PartnerSupportTicket"][];
+                    };
+                };
+            };
+        };
+    };
+    createDshPartnerSupportTicket: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["DshPartnerSupportIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshPartnerSupportCorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePartnerSupportTicketInput"];
+            };
+        };
+        responses: {
+            /** @description Ticket created or replayed from the same idempotency key. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ticket: components["schemas"]["PartnerSupportTicket"];
+                    };
+                };
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    getDshPartnerSupportTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner-owned ticket. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ticket: components["schemas"]["PartnerSupportTicket"];
+                    };
+                };
+            };
+            404: components["responses"]["Error"];
+        };
+    };
+    listDshPartnerSupportMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Non-internal messages visible to the ticket owner. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        messages: components["schemas"]["PartnerSupportMessage"][];
+                    };
+                };
+            };
+            404: components["responses"]["Error"];
+        };
+    };
+    addDshPartnerSupportMessage: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["DshPartnerSupportIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshPartnerSupportCorrelationId"];
+            };
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    body: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Message created or replayed from the same idempotency key. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: components["schemas"]["PartnerSupportMessage"];
+                    };
+                };
+            };
+            400: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    getDshPaymentSessionTimeline: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["DshPaymentSessionsCorrelationId"];
+            };
+            path: {
+                paymentSessionId: components["parameters"]["PaymentSessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payment session timeline from WLT. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentTimelineEnvelope"];
+                };
+            };
+            400: components["responses"]["DshPaymentSessionsError"];
+            401: components["responses"]["DshPaymentSessionsError"];
+            403: components["responses"]["DshPaymentSessionsError"];
+            404: components["responses"]["DshPaymentSessionsError"];
+            502: components["responses"]["DshPaymentSessionsError"];
+            503: components["responses"]["DshPaymentSessionsError"];
+        };
+    };
+    refreshDshPaymentSessionProviderStatus: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshPaymentSessionsCorrelationId"];
+            };
+            path: {
+                paymentSessionId: components["parameters"]["PaymentSessionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authoritative WLT payment state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentOperationEnvelope"];
+                };
+            };
+            400: components["responses"]["DshPaymentSessionsError"];
+            401: components["responses"]["DshPaymentSessionsError"];
+            403: components["responses"]["DshPaymentSessionsError"];
+            409: components["responses"]["DshPaymentSessionsError"];
+            502: components["responses"]["DshPaymentSessionsError"];
+            503: components["responses"]["DshPaymentSessionsError"];
+        };
+    };
+    getDshPartnerOwnPayoutDestination: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            403: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            404: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            502: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+        };
+    };
+    upsertDshPartnerOwnPayoutDestination: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ObjectBody"];
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            401: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            403: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            409: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            502: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+        };
+    };
+    deactivateDshPartnerOwnPayoutDestination: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            403: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            409: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            502: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+        };
+    };
+    listDshPartnerOwnPayoutRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ReferenceCollectionResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    createDshPartnerOwnPayoutRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ObjectBody"];
+        responses: {
+            201: components["responses"]["ObjectResponse"];
+            400: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            401: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            403: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            409: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            502: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+        };
+    };
+    getDshCaptainOwnPayoutDestination: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            403: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            404: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            502: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+        };
+    };
+    upsertDshCaptainOwnPayoutDestination: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ObjectBody"];
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            401: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            403: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            409: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            502: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+        };
+    };
+    deactivateDshCaptainOwnPayoutDestination: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            403: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            409: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            502: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+        };
+    };
+    getDshFieldOwnPayoutDestination: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            403: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            404: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            502: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+        };
+    };
+    upsertDshFieldOwnPayoutDestination: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ObjectBody"];
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            401: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            403: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            409: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            502: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+        };
+    };
+    deactivateDshFieldOwnPayoutDestination: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            403: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            409: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            502: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+        };
+    };
+    listDshControlPanelPayoutAudit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: components["parameters"]["PayoutId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            403: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            404: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            502: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+        };
+    };
+    reconcileDshControlPanelPayoutRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                payoutId: components["parameters"]["PayoutId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            401: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            403: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            409: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+            502: components["responses"]["DshPayoutsDestinationsErrorResponse"];
+        };
+    };
+    previewOperatorReelMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reelId: components["parameters"]["ReelId"];
+                kind: "video" | "poster";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private no-store moderation preview. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "video/mp4": string;
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["DshReelsForbidden"];
+            404: components["responses"]["DshReelsNotFound"];
+        };
+    };
+    approveDshFinanceRefund: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path: {
+                refundId: components["parameters"]["RefundId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Approved refund or exact replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlPanelRefundEnvelope"];
+                };
+            };
+            400: components["responses"]["DshRefundsBadRequest"];
+            403: components["responses"]["DshRefundsForbidden"];
+            404: components["responses"]["DshRefundsNotFound"];
+            409: components["responses"]["DshRefundsConflict"];
+            500: components["responses"]["MutationReceiptFailure"];
+        };
+    };
+    rejectDshFinanceRefund: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path: {
+                refundId: components["parameters"]["RefundId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Rejected refund or exact replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlPanelRefundEnvelope"];
+                };
+            };
+            400: components["responses"]["DshRefundsBadRequest"];
+            403: components["responses"]["DshRefundsForbidden"];
+            404: components["responses"]["DshRefundsNotFound"];
+            409: components["responses"]["DshRefundsConflict"];
+            500: components["responses"]["MutationReceiptFailure"];
+        };
+    };
+    completeDshFinanceRefund: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path: {
+                refundId: components["parameters"]["RefundId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": Record<string, never>;
+            };
+        };
+        responses: {
+            /** @description Provider-confirmed and ledger-posted refund or exact replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlPanelRefundEnvelope"];
+                };
+            };
+            /** @description Provider result unknown; reconciliation is required and retry is forbidden */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderUnknownError"];
+                };
+            };
+            400: components["responses"]["DshRefundsBadRequest"];
+            404: components["responses"]["DshRefundsNotFound"];
+            409: components["responses"]["DshRefundsConflict"];
+            500: components["responses"]["CompletionPersistenceFailure"];
+            502: components["responses"]["WltUnavailable"];
+        };
+    };
+    reconcileDshFinanceRefund: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
+                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+            };
+            path: {
+                refundId: components["parameters"]["RefundId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconcileRequest"];
+            };
+        };
+        responses: {
+            /** @description Reconciled refund or exact replay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlPanelRefundEnvelope"];
+                };
+            };
+            400: components["responses"]["DshRefundsBadRequest"];
+            404: components["responses"]["DshRefundsNotFound"];
+            409: components["responses"]["DshRefundsConflict"];
+            500: components["responses"]["MutationReceiptFailure"];
+        };
+    };
+    listDshFinanceRefundAudit: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["CorrelationHeaderOptional"];
+            };
+            path: {
+                refundId: components["parameters"]["RefundId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Append-only WLT audit events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEnvelope"];
+                };
+            };
+            400: components["responses"]["DshRefundsBadRequest"];
+            404: components["responses"]["DshRefundsNotFound"];
+        };
+    };
+    getDshClientOrderRefundStatus: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["CorrelationHeaderOptional"];
+            };
+            path: {
+                orderId: components["parameters"]["OrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Privacy-safe refund statuses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyRefundListEnvelope"];
+                };
+            };
+            401: components["responses"]["DshRefundsUnauthorized"];
+            404: components["responses"]["DshRefundsNotFound"];
+            502: components["responses"]["WltUnavailable"];
+        };
+    };
+    getDshPartnerOrderRefundStatus: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["CorrelationHeaderOptional"];
+            };
+            path: {
+                orderId: components["parameters"]["OrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Privacy-safe refund statuses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PrivacyRefundListEnvelope"];
+                };
+            };
+            401: components["responses"]["DshRefundsUnauthorized"];
+            403: components["responses"]["DshRefundsForbidden"];
+            404: components["responses"]["DshRefundsNotFound"];
+            502: components["responses"]["WltUnavailable"];
+        };
+    };
+    getDshClientOwnWallet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["WalletResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    listDshClientOwnLedgerEntries: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["DshRepresentativeFinanceLimit"];
+                cursor?: components["parameters"]["Cursor"];
+                entryType?: components["parameters"]["EntryType"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["LedgerResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    getDshPartnerOwnWallet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["WalletResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    listDshPartnerOwnLedgerEntries: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["DshRepresentativeFinanceLimit"];
+                cursor?: components["parameters"]["Cursor"];
+                entryType?: components["parameters"]["EntryType"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["LedgerResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    listDshPartnerOwnCommissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ReferenceCollectionResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    getDshCaptainOwnWallet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["WalletResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    listDshCaptainOwnLedgerEntries: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["DshRepresentativeFinanceLimit"];
+                cursor?: components["parameters"]["Cursor"];
+                entryType?: components["parameters"]["EntryType"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["LedgerResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    listDshCaptainOwnCommissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ReferenceCollectionResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    listDshCaptainOwnPayoutRequests: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ReferenceCollectionResponse"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    createDshCaptainOwnPayoutRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["PayoutRequestBody"];
+        responses: {
+            201: components["responses"]["ReferenceItemResponse"];
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    getDshRepresentativeWallet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorType: components["parameters"]["ActorTypePath"];
+                actorId: components["parameters"]["ActorIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["WalletResponse"];
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    listDshRepresentativeLedgerEntries: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["DshRepresentativeFinanceLimit"];
+                cursor?: components["parameters"]["Cursor"];
+                entryType?: components["parameters"]["EntryType"];
+            };
+            header?: never;
+            path: {
+                actorType: components["parameters"]["ActorTypePath"];
+                actorId: components["parameters"]["ActorIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["LedgerResponse"];
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["AuthError"];
+            403: components["responses"]["AuthError"];
+            502: components["responses"]["DshRepresentativeFinanceWltUnavailable"];
+        };
+    };
+    projectWorkforceAvailabilityIntoDsh: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID"?: components["parameters"]["DshRuntimeExtensionsOperatorContextId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Availability projection accepted idempotently. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getDispatchCapacityForecast: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Operator-Context-ID"?: components["parameters"]["DshRuntimeExtensionsOperatorContextId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Governed capacity forecast for dispatch operators. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    upsertDispatchCapacityPolicy: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Operator-Context-ID"?: components["parameters"]["DshRuntimeExtensionsOperatorContextId"];
+            };
+            path: {
+                serviceAreaCode: components["parameters"]["ServiceAreaCode"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Capacity policy updated under operator authority. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getDispatchHeatmap: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Operator-Context-ID"?: components["parameters"]["DshRuntimeExtensionsOperatorContextId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dispatch demand and supply heatmap readback. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getDshControlPanelSettlementEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                settlementId: components["parameters"]["SettlementId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            403: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            502: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+        };
+    };
+    upsertDshControlPanelCommissionPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ObjectBody"];
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            401: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            403: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            409: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            502: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+        };
+    };
+    getDshControlPanelCommission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                commissionId: components["parameters"]["CommissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            403: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            404: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            502: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+        };
+    };
+    adjustDshControlPanelCommission: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                commissionId: components["parameters"]["CommissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ObjectBody"];
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            401: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            403: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            409: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            502: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+        };
+    };
+    confirmDshControlPanelCommission: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                commissionId: components["parameters"]["CommissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            403: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            409: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            502: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+        };
+    };
+    settleDshControlPanelCommission: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                commissionId: components["parameters"]["CommissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            403: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            409: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            502: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+        };
+    };
+    rejectDshControlPanelCommission: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                commissionId: components["parameters"]["CommissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ObjectBody"];
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            401: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            403: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            409: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            502: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+        };
+    };
+    reverseDshControlPanelCommission: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                commissionId: components["parameters"]["CommissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["ObjectBody"];
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            401: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            403: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            409: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+            502: components["responses"]["DshSettlementsCommissionsErrorResponse"];
+        };
+    };
+    confirmPartnerStoreCaptainHandoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: components["parameters"]["OrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Existing or newly confirmed handoff truth. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreCaptainHandoffResponse"];
+                };
+            };
+            400: components["responses"]["DshStoreCaptainHandoffInvalidRequest"];
+            401: components["responses"]["DshStoreCaptainHandoffUnauthenticated"];
+            403: components["responses"]["DshStoreCaptainHandoffForbidden"];
+            404: components["responses"]["DshStoreCaptainHandoffNotFound"];
+            409: components["responses"]["DshStoreCaptainHandoffConflict"];
+        };
+    };
+    reportPartnerStoreCaptainHandoffException: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["DshStoreCaptainHandoffCorrelationId"];
+            };
+            path: {
+                orderId: components["parameters"]["OrderId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreCaptainHandoffExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Governed operations exception opened or replayed idempotently. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreCaptainHandoffDeliveryExceptionResponse"];
+                };
+            };
+            400: components["responses"]["DshStoreCaptainHandoffInvalidRequest"];
+            401: components["responses"]["DshStoreCaptainHandoffUnauthenticated"];
+            403: components["responses"]["DshStoreCaptainHandoffForbidden"];
+            404: components["responses"]["DshStoreCaptainHandoffNotFound"];
+            409: components["responses"]["DshStoreCaptainHandoffConflict"];
+        };
+    };
+    reportCaptainStoreCaptainHandoffException: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Correlation-ID"?: components["parameters"]["DshStoreCaptainHandoffCorrelationId"];
+            };
+            path: {
+                assignmentId: components["parameters"]["AssignmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreCaptainHandoffExceptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Governed operations exception opened or replayed idempotently. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DshStoreCaptainHandoffDeliveryExceptionResponse"];
+                };
+            };
+            400: components["responses"]["DshStoreCaptainHandoffInvalidRequest"];
+            401: components["responses"]["DshStoreCaptainHandoffUnauthenticated"];
+            403: components["responses"]["DshStoreCaptainHandoffForbidden"];
+            404: components["responses"]["DshStoreCaptainHandoffNotFound"];
+            409: components["responses"]["DshStoreCaptainHandoffConflict"];
+        };
+    };
+    listDshClientSupportTickets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["TicketList"];
+        };
+    };
+    createDshClientSupportTicket: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["DshSupportGovernanceIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshSupportGovernanceCorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTicketInput"];
+            };
+        };
+        responses: {
+            201: components["responses"]["Ticket"];
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    getDshClientSupportTicket: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["Ticket"];
+            404: components["responses"]["Error"];
+        };
+    };
+    listDshClientSupportMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["MessageList"];
+            404: components["responses"]["Error"];
+        };
+    };
+    addDshClientSupportMessage: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["DshSupportGovernanceIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshSupportGovernanceCorrelationId"];
+            };
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddMessageInput"];
+            };
+        };
+        responses: {
+            201: components["responses"]["Message"];
+            400: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    listDshOperatorSupportMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["MessageList"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    addDshOperatorSupportMessage: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": components["parameters"]["DshSupportGovernanceIdempotencyKey"];
+                "X-Correlation-ID"?: components["parameters"]["DshSupportGovernanceCorrelationId"];
+            };
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddMessageInput"];
+            };
+        };
+        responses: {
+            201: components["responses"]["Message"];
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    listDshOperatorSupportEvents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Append-only ticket audit events. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        events: components["schemas"]["TicketEvent"][];
+                    };
+                };
+            };
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    listDshActorSupportMessageAttachments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+                messageId: components["parameters"]["MessageId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Actor-visible message attachments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Actor does not own the ticket */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ticket or message not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    attachDshActorSupportMessageAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+                messageId: components["parameters"]["MessageId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachmentInput"];
+            };
+        };
+        responses: {
+            /** @description Attachment linked to the message */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Actor does not own the ticket */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ticket or message not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    markDshActorSupportMessagesRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Durable actor read receipt */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Actor does not own the ticket */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listDshOperatorSupportMessageAttachments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+                messageId: components["parameters"]["MessageId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Operator-visible message attachments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing support read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    attachDshOperatorSupportMessageAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+                messageId: components["parameters"]["MessageId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachmentInput"];
+            };
+        };
+        responses: {
+            /** @description Operator attachment linked to the message */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing support manage permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    markDshOperatorSupportMessagesRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticketId: components["parameters"]["TicketId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Durable operator read receipt */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing support read permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getWorkforceActorScopes: {
+        parameters: {
+            query: {
+                actorRole: "field" | "captain";
+            };
+            header?: never;
+            path: {
+                actorId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scope snapshot */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    replaceWorkforceActorScopes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkforceScopeInput"];
+            };
+        };
+        responses: {
+            /** @description Scope snapshot */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    uploadWorkforceEmployeeMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Uploaded media reference */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

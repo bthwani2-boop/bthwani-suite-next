@@ -1,6 +1,6 @@
 openapi: 3.1.0
 x-bthwani-owner: services/dsh
-x-bthwani-journey-id: JRN-029
+x-bthwani-capability: operational-policy
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: BThwani DSH Operational Policy API
@@ -19,7 +19,7 @@ paths:
       - $ref: '#/components/parameters/ZoneId'
     get:
       operationId: getDshOperationalProfile
-      tags: [JRN-029]
+      tags: [operational-policy]
       parameters:
         - name: category
           in: query
@@ -38,7 +38,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
     put:
       operationId: upsertDshOperationalProfile
-      tags: [JRN-029]
+      tags: [operational-policy]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
@@ -63,7 +63,7 @@ paths:
       - $ref: '#/components/parameters/ZoneId'
     get:
       operationId: listDshOperationalDeliveryModes
-      tags: [JRN-029]
+      tags: [operational-policy]
       responses:
         '200':
           description: Fulfillment-mode policies for the zone.
@@ -85,7 +85,7 @@ paths:
         schema: { $ref: '#/components/schemas/FulfillmentMode' }
     put:
       operationId: upsertDshOperationalDeliveryMode
-      tags: [JRN-029]
+      tags: [operational-policy]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
@@ -115,7 +115,7 @@ paths:
   /dsh/platform/operational-policy/evaluate:
     post:
       operationId: evaluateDshOperationalPolicy
-      tags: [JRN-029]
+      tags: [operational-policy]
       description: >-
         Returns one fail-closed decision for client, partner, captain or operator
         consumers, including explicit cart, checkout, order and dispatch effects.
@@ -138,7 +138,7 @@ paths:
   /dsh/operator/platform/operational-policy/audit:
     get:
       operationId: listDshOperationalPolicyAudit
-      tags: [JRN-029]
+      tags: [operational-policy]
       parameters:
         - name: aggregateType
           in: query
@@ -169,7 +169,7 @@ paths:
         schema: { type: string, format: uuid }
     post:
       operationId: rollbackDshOperationalPolicy
-      tags: [JRN-029]
+      tags: [operational-policy]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'

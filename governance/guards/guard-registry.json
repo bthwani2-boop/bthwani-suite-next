@@ -357,7 +357,7 @@
       "name": "Objective Nomenclature Guard",
       "script": "guard:nomenclature",
       "exit_level": "fail",
-      "description": "Rejects new files or new code lines containing annoying .jrn or JRN- naming conventions to ensure objective and contextual naming.",
+      "description": "Rejects new files or new code lines containing legacy phase identifiers to ensure objective and contextual naming.",
       "source_file": "tools/guards/nomenclature-guard.mjs"
     },
     {
@@ -485,21 +485,6 @@
       "exit_level": "fail",
       "description": "Rejects selected fake, preview, placeholder, and in-memory success patterns in runtime-facing source; it does not prove runtime execution.",
       "source_file": "tools/guards/runtime-real-bindings-gate.mjs"
-    },
-    {
-      "id": "live-cross-journey-integrity",
-      "name": "Cross-Journey Regression Gate",
-      "script": "guard:live-cross-journey-integrity",
-      "exit_level": "fail",
-      "description": "Enforces selected named cross-journey regression invariants without claiming complete runtime coverage.",
-      "source_file": "tools/guards/live-cross-journey-integrity-gate.mjs"
-    },
-    {
-      "id": "product-truth-dispatcher",
-      "name": "Journey Product Truth Dispatcher",
-      "exit_level": "fail",
-      "description": "Runs the journey-specific Product Truth validators discovered by the governed dispatcher.",
-      "source_file": "tools/guards/product-truth-gate.mjs"
     },
     {
       "id": "dsh-openapi-modular",

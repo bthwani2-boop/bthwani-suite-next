@@ -4,7 +4,7 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: BThwani DSH Partner Onboarding API
   version: 1.0.0
-  description: Governed JRN-001 contract for partner onboarding, first-store ownership, evidence review, state transitions, and partner readback.
+  description: Governed contract for partner onboarding, first-store ownership, evidence review, state transitions, and partner readback.
 servers:
   - url: http://localhost:58080
 security:

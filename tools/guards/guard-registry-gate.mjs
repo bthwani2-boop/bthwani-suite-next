@@ -39,10 +39,6 @@ const aggregateScripts = new Set([
   "guard:journey:full",
 ]);
 
-const canonicalSourceById = new Map([
-  ["jrn-040-platform-change-sets", "tools/guards/platform-change-sets-gate.mjs"],
-]);
-
 function readJson(relativePath) {
   const fullPath = path.join(repoRoot, relativePath);
   if (!fs.existsSync(fullPath)) {
@@ -151,7 +147,7 @@ for (const entry of entries) {
     if (/\|\|\s*true|continue-on-error|catch\s*\(/i.test(scripts[entry.script] ?? "")) violations.push({ file: packageRelative, line: 0, message: `FAIL_GUARD_SCRIPT_SWALLOWS_FAILURE ${entry.script}` });
   }
 
-  const canonicalSource = canonicalSourceById.get(entry.id) ?? entry.source_file;
+  const canonicalSource = entry.source_file;
   if (canonicalSource) {
     if (!fs.existsSync(path.join(repoRoot, canonicalSource))) violations.push({ file: registryRelative, line: 0, message: `MISSING_SOURCE_FILE ${entry.id} -> ${canonicalSource}` });
     if (entry.source_file && entry.source_file !== canonicalSource) warnings.push(`registry source migration pending: ${entry.id} -> ${canonicalSource}`);

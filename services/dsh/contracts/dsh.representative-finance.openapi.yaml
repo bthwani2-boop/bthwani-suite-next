@@ -1,6 +1,6 @@
 openapi: 3.1.0
 x-bthwani-owner: services/dsh
-x-bthwani-journey-id: JRN-033
+x-bthwani-capability: representative-finance
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: BThwani DSH Representative Finance

@@ -22,9 +22,7 @@ if ($Guard) {
   $foundationGuards = @($Guard)
 }
 
-$results = @()
-
-function Run-Step {
+function Invoke-Step {
   param([Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)][scriptblock]$Block)
   Write-Host "[ RUN ] $Name" -ForegroundColor Cyan
   $global:LASTEXITCODE = 0
@@ -32,34 +30,22 @@ function Run-Step {
     & $Block
     if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) { throw "exit $LASTEXITCODE" }
     Write-Host "[ OK  ] $Name" -ForegroundColor Green
-    return $true
   }
   catch {
     Write-Host "[ FAIL] $Name — $_" -ForegroundColor Red
-    return $false
+    throw
   }
 }
 
-$results += [pscustomobject]@{ step = "git-diff-check"; ok = (Run-Step "git-diff-check" { git --no-pager diff --check }) }
+Invoke-Step "git-diff-check" { git --no-pager diff --check }
 
 if ($Full) {
-  $results += [pscustomobject]@{ step = "typecheck"; ok = (Run-Step "typecheck" { pnpm run typecheck }) }
+  Invoke-Step "typecheck" { pnpm run typecheck }
 }
 
 foreach ($guardName in $foundationGuards) {
   $scriptName = "guard:$guardName"
-  $results += [pscustomobject]@{
-    step = $scriptName
-    ok = Run-Step $scriptName { pnpm run $scriptName }
-  }
-}
-
-$failed = @($results | Where-Object { -not $_.ok })
-if ($failed.Count -gt 0) {
-  Write-Host ""
-  Write-Host "RESULT: FIX_REQUIRED scope=static" -ForegroundColor Red
-  Write-Host "Failed steps: $($failed.step -join ', ')" -ForegroundColor Red
-  throw "Foundation gate failed: $($failed.step -join ', ')"
+  Invoke-Step $scriptName { pnpm run $scriptName }
 }
 
 $mode = if ($Full) { "full-explicit" } else { "targeted-default" }

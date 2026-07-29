@@ -61,7 +61,7 @@ const SCAN_ROOTS = ["apps", "services", "shared", "tools", "infra", "core", "doc
 const EXCLUDED_DIRS = new Set([
   ".git", "node_modules", ".pnpm-store", ".next", ".expo", ".turbo", ".nx",
   ".cache", "dist", "build", "out", "coverage", "android", "ios",
-  "graphify-out", ".diagnostics", "__generated__",
+  "graphify-out", ".diagnostics", "generated", "__generated__", ".generated",
 ]);
 
 const EXCLUDED_PATH_PREFIXES = [

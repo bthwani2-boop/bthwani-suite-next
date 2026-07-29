@@ -6,7 +6,7 @@ info:
     Actor-scoped payout destination and operator reconciliation proxy surface.
     WLT remains the financial owner; DSH derives actor identity from the session.
 x-bthwani-owner: services/dsh
-x-bthwani-journey-id: JRN-037
+x-bthwani-capability: payouts-destinations
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true

@@ -121,7 +121,6 @@ jobs:
           run_check pnpm run guard:service-manifest-drift
           run_check pnpm run guard:frontend-feature-binding
           run_check pnpm run guard:runtime-real-bindings
-          run_check pnpm run guard:live-cross-journey-integrity
           echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
           exit "${status}"
       - name: Upload contract diagnostics

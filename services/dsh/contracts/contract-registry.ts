@@ -223,7 +223,7 @@ export const DSH_CONTRACT_REGISTRY = [
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared/finance-wlt-link/jrn036",
+    adapterOwner: "frontend/shared/finance-wlt-link/commissions",
   },
   {
     id: "dsh-payout-destinations",
@@ -231,7 +231,7 @@ export const DSH_CONTRACT_REGISTRY = [
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared/finance-wlt-link/jrn037",
+    adapterOwner: "frontend/shared/finance-wlt-link/payouts",
   },
   {
     id: "dsh-cod-custody",

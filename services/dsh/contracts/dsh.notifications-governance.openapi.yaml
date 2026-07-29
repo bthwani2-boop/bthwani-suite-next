@@ -3,7 +3,7 @@ x-bthwani-owner: services/dsh
 info:
   title: BThwani DSH Notification Governance API
   version: 1.2.1
-  description: Governed JRN-023 notification policy, actor-owned push endpoints and delivery audit.
+  description: Governed notification policy, actor-owned push endpoints and delivery audit.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-runtime-dependency: true
 x-bthwani-generation: DISABLED

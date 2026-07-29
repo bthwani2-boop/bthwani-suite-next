@@ -2,7 +2,7 @@ openapi: 3.1.0
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
-  title: DSH JRN-011 Order Truth API
+  title: DSH Order Truth API
   version: 1.1.0
   description: Canonical order creation and actor-scoped cross-surface reads. Financial execution and authoritative financial state remain in WLT.
 security:
