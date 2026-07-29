@@ -19,3 +19,5 @@ dsh-NNN[_or_legacy_letter]_descriptive_name.sql
 ```
 
 Existing historical names remain valid. New migrations must use the next unallocated numeric sequence and a descriptive snake-case suffix.
+
+`manifest.json` is a generated, committed snapshot of the exact execution order above (file, sha256, historical numeric prefix), regenerated with `node tools/scripts/generate-migration-manifest.mjs --service dsh` and checked for drift with `node tools/guards/migration-manifest-drift-gate.mjs --service dsh`. The numeric prefix has not been a unique ordering key since duplicate prefixes were introduced historically (see `historicalPrefix` collisions in the manifest); the manifest's `ordinal` and file order are the source of truth for "what ran before what," not the number in the filename.
