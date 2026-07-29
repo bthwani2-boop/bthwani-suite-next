@@ -40,12 +40,12 @@ test("platform bootstrap writes and refreshes tenant_id directly", () => {
   assert.doesNotMatch(platformBootstrap, /VALUES \(\$1, \$2, \$3, 'local-dsh'/);
 });
 
-test("database and compose preserve the tenant invariant", () => {
+test("database and compose preserve deferred SaaS readiness and tenant safety", () => {
   // Published migration history remains immutable and still protects upgraded
   // databases that may contain historical local bootstrap rows.
   assert.match(migration, /identity_actors_tenant_nonblank_chk/);
   assert.match(migration, /CHECK \(btrim\(tenant_id\) <> ''\) NOT VALID/);
-  assert.match(compose, /BTHWANI_SAAS_MODE: "\$\{BTHWANI_SAAS_MODE:-active\}"/);
+  assert.match(compose, /BTHWANI_SAAS_MODE: "\$\{BTHWANI_SAAS_MODE:-deferred\}"/);
   assert.match(compose, /BTHWANI_DEFAULT_TENANT_ID: "\$\{BTHWANI_DEFAULT_TENANT_ID:-local-dsh\}"/);
   assert.match(compose, /identity-api:[\s\S]*<<: \*bthwani-saas-environment/);
   assert.match(compose, /dsh-api:[\s\S]*<<: \*bthwani-saas-environment/);
