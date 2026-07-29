@@ -85,7 +85,7 @@ export interface paths {
 
   "/wlt/settlements": {
     get: operations["listWltSettlements"];
-    post: operations["createWltSettlement"];
+    post: operations["createWltEvidenceBackedSettlement"];
   };
   "/wlt/settlements/{settlementId}": { get: operations["getWltSettlement"] };
   "/wlt/settlements/{settlementId}/post": { post: operations["postWltSettlement"] };
@@ -162,7 +162,7 @@ export interface operations {
   rejectWltRefund: WltOperation;
   reconcileWltRefund: WltOperation;
 
-  createWltSettlement: WltOperation;
+  createWltEvidenceBackedSettlement: WltOperation;
   getWltSettlement: WltOperation;
   listWltSettlements: WltOperation;
   postWltSettlement: WltOperation;
