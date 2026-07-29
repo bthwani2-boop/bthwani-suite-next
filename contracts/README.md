@@ -58,15 +58,16 @@ modules:
 `modules` must equal the entry's `x-bthwani-contracts` exactly, and `client` must
 be registered in `governance/contracts/generated-client-registry.json`.
 
-## Generated
+## Derived diagnostics
 
-`generated/contract-registry.json` is the derived report of the whole tree —
-contexts, entries, modules, overlays, bundles, clients, and path counts. Do not
-edit it.
+The contract tree report is generated on demand at
+`.diagnostics/contracts/contract-registry.json`. It is an untracked diagnostic
+projection of the master index, context manifests, modules, overlays, bundles,
+clients, and path counts. It is not an authority source and must not be committed.
 
 ```sh
-pnpm run contracts:registry   # regenerate
-pnpm run contracts:lint       # foundation invariants + registry drift + spectral
+pnpm run contracts:registry   # generate the ignored diagnostic report
+pnpm run contracts:lint       # foundation invariants + diagnostic integrity + spectral
 ```
 
 ## Layout ownership

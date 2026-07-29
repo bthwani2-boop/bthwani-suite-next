@@ -1,14 +1,10 @@
 /**
  * generate-contract-registry.mjs
  *
- * Emits contracts/generated/contract-registry.json: the derived, machine-readable
- * view of the platform contract tree.
- *
- * Truth flows one way. The master indexes one entry contract per bounded context;
- * each entry indexes its own modules and overlays; each context declares a
- * contract.manifest.yaml. This script only reports what those files already say,
- * so a disagreement shows up as registry drift rather than as a silent second
- * opinion. Run `pnpm run contracts:registry` after any contract change.
+ * Builds a derived diagnostic view of the canonical contract tree. The report is
+ * intentionally written outside tracked contract sources by default; committing
+ * it would create a manually synchronized copy of master, manifests, modules,
+ * overlays, bundles, clients, and path counts.
  */
 
 import fs from "node:fs";
@@ -18,8 +14,18 @@ import { read, repoRoot, toPosix } from "../guards/_guard-utils.mjs";
 import { parseIndexedContractModules, parseOpenApiContract } from "../guards/_openapi-utils.mjs";
 
 const masterPath = "contracts/master.openapi.yaml";
-const registryPath = "contracts/generated/contract-registry.json";
 const clientRegistryPath = "governance/contracts/generated-client-registry.json";
+const outputFlagIndex = process.argv.indexOf("--output");
+if (outputFlagIndex >= 0 && !process.argv[outputFlagIndex + 1]) {
+  throw new Error("--output requires a path");
+}
+const configuredOutput = outputFlagIndex >= 0
+  ? process.argv[outputFlagIndex + 1]
+  : process.env.BTHWANI_CONTRACT_REGISTRY_OUTPUT;
+const registryPath = configuredOutput || ".diagnostics/contracts/contract-registry.json";
+const absoluteRegistryPath = path.isAbsolute(registryPath)
+  ? registryPath
+  : path.join(repoRoot, registryPath);
 
 function masterEntries() {
   const lines = read(masterPath).split(/\r?\n/);
@@ -71,16 +77,15 @@ function clientsFor(contractFiles) {
       mode: entry.mode,
       contract: entry.contract,
       regenerateScript: entry.regenerateScript ?? null,
-      reconstructionOwner: entry.reconstructionOwner ?? null,
     }));
 }
 
 const contexts = masterEntries().map((entry) => {
   const modules = parseIndexedContractModules(entry.file).map((module) => module.file);
-  const overlays = parseIndexedContractModules(entry.file, "x-bthwani-overlays").map((m) => m.file);
+  const overlays = parseIndexedContractModules(entry.file, "x-bthwani-overlays").map((module) => module.file);
   const manifest = manifestFor(entry.file);
   const bundle = manifest?.values.bundle
-    ? toPosix(path.join(path.dirname(entry.file), manifest.values.bundle))
+    ? toPosix(path.normalize(path.join(path.dirname(entry.file), manifest.values.bundle)))
     : null;
 
   return {
@@ -95,9 +100,9 @@ const contexts = masterEntries().map((entry) => {
     bundle,
     modules,
     overlays,
-    entryPathCount: new Set(parseOpenApiContract(entry.file).map((o) => o.path)).size,
+    entryPathCount: new Set(parseOpenApiContract(entry.file).map((operation) => operation.path)).size,
     reachablePathCount: new Set(
-      [entry.file, ...modules].flatMap((file) => parseOpenApiContract(file).map((o) => o.path)),
+      [entry.file, ...modules].flatMap((file) => parseOpenApiContract(file).map((operation) => operation.path)),
     ).size,
     clients: clientsFor([entry.file, bundle, ...modules, ...overlays].filter(Boolean)),
   };
@@ -106,32 +111,37 @@ const contexts = masterEntries().map((entry) => {
 const sourceFiles = [
   masterPath,
   clientRegistryPath,
-  ...contexts.flatMap((c) => [c.entry, c.manifest, ...c.modules, ...c.overlays].filter(Boolean)),
+  ...contexts.flatMap((context) => [
+    context.entry,
+    context.manifest,
+    ...context.modules,
+    ...context.overlays,
+  ].filter(Boolean)),
 ].sort();
 
 const digest = crypto.createHash("sha256");
 for (const file of sourceFiles) digest.update(`${file}\n${read(file)}`);
 
 const registry = {
-  $generated: "DO NOT EDIT. Regenerate with `pnpm run contracts:registry`.",
+  $generated: "DERIVED DIAGNOSTIC ONLY. DO NOT COMMIT OR EDIT.",
   schemaVersion: 1,
-  owningSlice: "VC-155",
+  reportRole: "DERIVED_DIAGNOSTIC_ONLY",
   master: masterPath,
   masterRole: "MASTER_INDEX_ONLY",
   sourceDigest: digest.digest("hex"),
   totals: {
     contexts: contexts.length,
-    modules: contexts.reduce((sum, c) => sum + c.modules.length, 0),
-    overlays: contexts.reduce((sum, c) => sum + c.overlays.length, 0),
-    reachablePaths: contexts.reduce((sum, c) => sum + c.reachablePathCount, 0),
+    modules: contexts.reduce((sum, context) => sum + context.modules.length, 0),
+    overlays: contexts.reduce((sum, context) => sum + context.overlays.length, 0),
+    reachablePaths: contexts.reduce((sum, context) => sum + context.reachablePathCount, 0),
   },
   contexts,
 };
 
-fs.mkdirSync(path.join(repoRoot, "contracts/generated"), { recursive: true });
-fs.writeFileSync(path.join(repoRoot, registryPath), `${JSON.stringify(registry, null, 2)}\n`, "utf8");
+fs.mkdirSync(path.dirname(absoluteRegistryPath), { recursive: true });
+fs.writeFileSync(absoluteRegistryPath, `${JSON.stringify(registry, null, 2)}\n`, "utf8");
 
 console.log(
-  `contract-registry: ${registry.totals.contexts} contexts, ${registry.totals.modules} modules, ` +
-    `${registry.totals.reachablePaths} reachable paths -> ${registryPath}`,
+  `contract-registry diagnostic: ${registry.totals.contexts} contexts, ` +
+  `${registry.totals.modules} modules, ${registry.totals.reachablePaths} reachable paths -> ${registryPath}`,
 );
