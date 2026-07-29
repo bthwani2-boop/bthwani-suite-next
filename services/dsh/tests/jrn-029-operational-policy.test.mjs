@@ -149,7 +149,7 @@ test("JRN-029 has a real PostgreSQL lifecycle proof", async () => {
 test("JRN-029 is owned by active standalone OpenAPI projection and modular DSH metadata", async () => {
   const rootContract = await text("services/dsh/contracts/dsh.openapi.yaml");
   const generatedBundle = await text("services/dsh/contracts/generated/dsh.bundle.openapi.yaml");
-  const standaloneContract = await text("services/dsh/contracts/dsh.jrn-029.openapi.yaml");
+  const standaloneContract = await text("services/dsh/contracts/dsh.operational-policy.openapi.yaml");
 
   assert.match(rootContract, /x-bthwani-contract-layout: MODULAR/);
   assert.match(rootContract, /x-bthwani-bundle: \.\/generated\/dsh\.bundle\.openapi\.yaml/);

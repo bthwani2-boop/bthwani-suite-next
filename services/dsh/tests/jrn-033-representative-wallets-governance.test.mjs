@@ -97,7 +97,7 @@ test("JRN-033 tenant migration and local seed bind wallet and ledger truth", () 
   const migration = read("services/wlt/database/migrations/wlt-038_jrn_033_representative_finance_tenancy.sql");
   const probes = read("infra/docker/scripts/wlt-migration-probes.ps1");
   const seed = read("services/wlt/database/seeds/local/wlt-033_representative_wallets.local.sql");
-  const tenancy = JSON.parse(read("services/dsh/contracts/jrn-033-representative-finance-tenancy.contract.json"));
+  const tenancy = JSON.parse(read("services/dsh/contracts/dsh.representative-finance-tenancy.contract.json"));
   assertIncludesAll(migration, [
     "ALTER TABLE wlt_wallets",
     "ALTER TABLE wlt_ledger_entries",
@@ -107,7 +107,7 @@ test("JRN-033 tenant migration and local seed bind wallet and ledger truth", () 
   ], "JRN-033 tenant migration");
   assert.ok(probes.includes('"wlt-038_jrn_033_representative_finance_tenancy.sql"'));
   assertIncludesAll(seed, ["'local-dsh'", "'other-tenant'", "tenant_id", "client-local-001", "partner-local-001", "captain-local-001", "field-local-001", "client-other-tenant-001"], "JRN-033 runtime seed");
-  assert.equal(tenancy.parentContract, "services/dsh/contracts/jrn-033-representative-finance.openapi.yaml");
+  assert.equal(tenancy.parentContract, "services/dsh/contracts/dsh.representative-finance.openapi.yaml");
   assert.equal(tenancy.tenantBoundary.source, "core.identity.session.tenantId");
   assert.equal(tenancy.tenantBoundary.clientSuppliedTenantAccepted, false);
   assert.equal(tenancy.tenantBoundary.crossTenantWalletBehavior, "NOT_FOUND");
@@ -174,8 +174,8 @@ test("JRN-033 control panel lookup loads a permission-scoped wallet and matching
 });
 
 test("JRN-033 focused OpenAPI and tenancy contract declare every wallet and ledger operation", () => {
-  const contract = read("services/dsh/contracts/jrn-033-representative-finance.openapi.yaml");
-  const tenancy = read("services/dsh/contracts/jrn-033-representative-finance-tenancy.contract.json");
+  const contract = read("services/dsh/contracts/dsh.representative-finance.openapi.yaml");
+  const tenancy = read("services/dsh/contracts/dsh.representative-finance-tenancy.contract.json");
   assertIncludesAll(contract, [
     "operationId: getDshClientOwnWallet",
     "operationId: listDshClientOwnLedgerEntries",

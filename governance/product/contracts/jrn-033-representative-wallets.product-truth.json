@@ -11,8 +11,8 @@
     "evidenceState": "QUALITATIVE",
     "evidenceReferences": [
       "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#jrn-033",
-      "services/dsh/contracts/jrn-033-representative-finance.openapi.yaml",
-      "services/dsh/contracts/jrn-033-representative-finance-tenancy.contract.json",
+      "services/dsh/contracts/dsh.representative-finance.openapi.yaml",
+      "services/dsh/contracts/dsh.representative-finance-tenancy.contract.json",
       "services/wlt/database/migrations/wlt-038_jrn_033_representative_finance_tenancy.sql",
       "services/wlt/backend/internal/wallet",
       "services/wlt/backend/internal/ledger/ledger.go",

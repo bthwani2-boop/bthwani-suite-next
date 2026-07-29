@@ -1,7 +1,9 @@
 openapi: 3.0.3
+x-bthwani-owner: services/dsh
+x-bthwani-journey-id: JRN-029
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
-  title: BThwani DSH JRN-029 Operational Policy API
+  title: BThwani DSH Operational Policy API
   version: 1.0.0
   description: >-
     Governed DSH contract for operational zones, assignment/preparation/delivery

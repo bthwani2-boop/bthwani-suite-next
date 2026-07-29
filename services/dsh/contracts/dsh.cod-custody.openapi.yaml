@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
-  title: DSH JRN-038 COD Custody Proxy API
+  title: DSH COD Custody Proxy API
   version: 1.0.0
   description: Surface-scoped DSH proxy routes for WLT-owned COD custody and reconciliation truth.
 x-bthwani-owner: services/dsh
-x-bthwani-journey: JRN-038
+x-bthwani-journey-id: JRN-038
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-runtime-dependency: true
 x-bthwani-client-generation: DISABLED

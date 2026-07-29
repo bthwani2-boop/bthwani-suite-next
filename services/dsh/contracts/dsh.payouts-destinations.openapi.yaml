@@ -1,12 +1,12 @@
 openapi: 3.1.0
 info:
-  title: BThwani DSH JRN-036 Settlements and Commissions Proxy API
+  title: BThwani DSH Payout Destinations API
   version: 1.0.0
   description: >-
-    DSH control-panel proxy surface for WLT-owned settlement evidence and governed
-    commission lifecycle. DSH authenticates the operator and never owns financial truth.
+    Actor-scoped payout destination and operator reconciliation proxy surface.
+    WLT remains the financial owner; DSH derives actor identity from the session.
 x-bthwani-owner: services/dsh
-x-bthwani-journey: JRN-036
+x-bthwani-journey-id: JRN-037
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true
@@ -15,48 +15,20 @@ servers:
 security:
   - bearerAuth: []
 paths:
-  /dsh/control-panel/finance/settlements/{settlementId}/evidence:
+  /dsh/partner/me/finance/payout-destination:
     get:
-      tags: ["dsh-control-panel"]
-      operationId: getDshControlPanelSettlementEvidence
-      parameters:
-        - $ref: '#/components/parameters/SettlementId'
-      responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '502': { $ref: '#/components/responses/ErrorResponse' }
-  /dsh/control-panel/finance/commission-policies:
-    put:
-      tags: ["dsh-control-panel"]
-      operationId: upsertDshControlPanelCommissionPolicy
-      requestBody:
-        $ref: '#/components/requestBodies/ObjectBody'
-      responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
-        '400': { $ref: '#/components/responses/ErrorResponse' }
-        '401': { $ref: '#/components/responses/ErrorResponse' }
-        '403': { $ref: '#/components/responses/ErrorResponse' }
-        '409': { $ref: '#/components/responses/ErrorResponse' }
-        '502': { $ref: '#/components/responses/ErrorResponse' }
-  /dsh/control-panel/finance/commissions/{commissionId}:
-    get:
-      tags: ["dsh-control-panel"]
-      operationId: getDshControlPanelCommission
-      parameters:
-        - $ref: '#/components/parameters/CommissionId'
+      tags: ["dsh-partner"]
+      operationId: getDshPartnerOwnPayoutDestination
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
-  /dsh/control-panel/finance/commissions/{commissionId}/adjust:
-    post:
-      tags: ["dsh-control-panel"]
-      operationId: adjustDshControlPanelCommission
+    put:
+      tags: ["dsh-partner"]
+      operationId: upsertDshPartnerOwnPayoutDestination
       parameters:
-        - $ref: '#/components/parameters/CommissionId'
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         $ref: '#/components/requestBodies/ObjectBody'
@@ -67,12 +39,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
-  /dsh/control-panel/finance/commissions/{commissionId}/confirm:
+  /dsh/partner/me/finance/payout-destination/deactivate:
     post:
-      tags: ["dsh-control-panel"]
-      operationId: confirmDshControlPanelCommission
+      tags: ["dsh-partner"]
+      operationId: deactivateDshPartnerOwnPayoutDestination
       parameters:
-        - $ref: '#/components/parameters/CommissionId'
         - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
@@ -80,25 +51,35 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
-  /dsh/control-panel/finance/commissions/{commissionId}/settle:
+  /dsh/partner/me/finance/payout-requests:
     post:
-      tags: ["dsh-control-panel"]
-      operationId: settleDshControlPanelCommission
+      tags: ["dsh-partner"]
+      operationId: createDshPartnerOwnPayoutRequest
       parameters:
-        - $ref: '#/components/parameters/CommissionId'
         - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        $ref: '#/components/requestBodies/ObjectBody'
       responses:
-        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '201': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
-  /dsh/control-panel/finance/commissions/{commissionId}/reject:
-    post:
-      tags: ["dsh-control-panel"]
-      operationId: rejectDshControlPanelCommission
+  /dsh/captain/me/finance/payout-destination:
+    get:
+      tags: ["dsh-captain"]
+      operationId: getDshCaptainOwnPayoutDestination
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+    put:
+      tags: ["dsh-captain"]
+      operationId: upsertDshCaptainOwnPayoutDestination
       parameters:
-        - $ref: '#/components/parameters/CommissionId'
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         $ref: '#/components/requestBodies/ObjectBody'
@@ -109,15 +90,78 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
-  /dsh/control-panel/finance/commissions/{commissionId}/reverse:
+  /dsh/captain/me/finance/payout-destination/deactivate:
     post:
-      tags: ["dsh-control-panel"]
-      operationId: reverseDshControlPanelCommission
+      tags: ["dsh-captain"]
+      operationId: deactivateDshCaptainOwnPayoutDestination
       parameters:
-        - $ref: '#/components/parameters/CommissionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/field/me/finance/payout-destination:
+    get:
+      tags: ["dsh-field"]
+      operationId: getDshFieldOwnPayoutDestination
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+    put:
+      tags: ["dsh-field"]
+      operationId: upsertDshFieldOwnPayoutDestination
+      parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         $ref: '#/components/requestBodies/ObjectBody'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/field/me/finance/payout-destination/deactivate:
+    post:
+      tags: ["dsh-field"]
+      operationId: deactivateDshFieldOwnPayoutDestination
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/control-panel/finance/payout-requests/{payoutId}/audit:
+    get:
+      tags: ["dsh-control-panel"]
+      operationId: listDshControlPanelPayoutAudit
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+      responses:
+        '200': { $ref: '#/components/responses/ObjectResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '404': { $ref: '#/components/responses/ErrorResponse' }
+        '502': { $ref: '#/components/responses/ErrorResponse' }
+  /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile:
+    post:
+      tags: ["dsh-control-panel"]
+      operationId: reconcileDshControlPanelPayoutRequest
+      parameters:
+        - $ref: '#/components/parameters/PayoutId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
@@ -132,13 +176,8 @@ components:
       scheme: bearer
       bearerFormat: JWT
   parameters:
-    SettlementId:
-      name: settlementId
-      in: path
-      required: true
-      schema: { type: string, minLength: 1 }
-    CommissionId:
-      name: commissionId
+    PayoutId:
+      name: payoutId
       in: path
       required: true
       schema: { type: string, minLength: 1 }
@@ -155,7 +194,7 @@ components:
           schema: { type: object, additionalProperties: true }
   responses:
     ObjectResponse:
-      description: Governed WLT-owned financial response.
+      description: Governed WLT-owned payout response.
       content:
         application/json:
           schema: { type: object, additionalProperties: true }

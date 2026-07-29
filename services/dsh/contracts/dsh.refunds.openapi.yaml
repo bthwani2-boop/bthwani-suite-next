@@ -1,10 +1,12 @@
 openapi: 3.1.0
+x-bthwani-owner: services/dsh
+x-bthwani-journey-id: JRN-035
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: DSH Financial Refund Orchestration
   version: 1.2.1
   description: >-
-    JRN-035 DSH contract. DSH validates actor, permission, authenticated tenant
+    DSH validates actor, permission, authenticated tenant
     and owned-order scope, then delegates all financial truth to WLT. The actor
     tenant from Identity is authoritative; an optional X-Tenant-ID selector may
     only confirm that tenant and a mismatch is rejected. Client and partner reads

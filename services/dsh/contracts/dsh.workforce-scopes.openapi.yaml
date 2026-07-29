@@ -1,7 +1,9 @@
 openapi: 3.1.0
+x-bthwani-owner: services/dsh
+x-bthwani-journey-id: JRN-003
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
-  title: JRN-003 DSH Workforce Scope Contract
+  title: DSH Workforce Scope Contract
   version: 1.0.0
 paths:
   /dsh/operator/workforce/scopes/{actorId}:

@@ -1,10 +1,11 @@
 openapi: 3.1.0
 info:
-  title: DSH JRN-010 Checkout and WLT Handoff
+  title: DSH Checkout and WLT Handoff
   version: 1.0.0
   description: >-
-    Authoritative JRN-010 contract shard. DSH owns checkout operational truth;
+    Authoritative checkout contract shard. DSH owns checkout operational truth;
     WLT owns payment-session and financial truth.
+x-bthwani-owner: services/dsh
 x-bthwani-journey-id: JRN-010
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-truth-boundary:
