@@ -1,65 +1,99 @@
-# حزمة إعادة بناء وتنظيف المستودع — validclean
+# حزمة إعادة بناء المستودع — validclean
 
-> الحالة: `PLAN_ONLY_AWAITING_OWNER_APPROVAL`  
+> الحالة الحاكمة: `REPOSITORY_WIDE_RECONSTRUCTION_AUTHORIZED`  
 > المستودع: `bthwani2-boop/bthwani-suite-next`  
-> فرع الخطة والتنفيذ المستقبلي: `validclean`  
-> الأساس المختار: `abdo@98ab47dd59e5fc6f615cbe96094ec61fa0c8ffa3`  
-> تاريخ التثبيت: `2026-07-29`
+> فرع التنفيذ: `validclean`  
+> مرجع الجرد المثبت: `fbc0139234e2bdb34a8de77d74a6b91297a754b0`  
+> تاريخ إعادة التأسيس: `2026-07-29`
 
 ## الغرض
 
-هذه الحزمة هي خطة إعادة تأسيس محكومة داخل المستودع القائم. لا تهدف إلى هدم البيئة أو إعادة إنشاء Expo أو EAS أو Docker أو Firebase أو الخرائط أو Sentry أو الحزم والأدوات المفيدة. الهدف هو:
+هذه ليست خطة أولية ولم تعد في انتظار الموافقة. التنفيذ مصرح به، لكن المستودع غير مغلق. الغرض هو إعادة بناء المستودع كاملًا وإزالة أسباب الانحراف، لا متابعة أخطاء منفردة أو إضافة ترقيعات فوق بنية غير حاكمة.
 
-1. حماية الأساس التشغيلي المفيد.
-2. إصلاح عيوب الأساس عند ثبوتها.
-3. إزالة مصادر الحقيقة الموازية.
-4. إزالة الترقيعات والبدائل الدائمة والملفات غير المستهلكة.
-5. إعادة ضبط فهم المنتج والمنصة وحدود المجالات.
-6. توحيد OpenAPI والعملاء المولدين والربط بين العقود وRuntime.
-7. إعادة بناء الحوكمة والمهارات والحراس دون تضخم أو سلطات متوازية.
-8. تنفيذ التنظيف لاحقًا على دفعات ذرية قابلة للتراجع والتحقق.
+البرنامج يعالج جذريًا:
 
-## القرار الخاص بفرع الأساس
+1. ملكية الحقيقة وحدود المجالات.
+2. Identity وWorkforce وDSH وWLT وPlatform Control وProviders.
+3. OpenAPI والـBundles والعملاء المولدين.
+4. قواعد البيانات والترحيلات والتاريخ غير القابل للتعديل.
+5. الأسطح والعقل المشترك والربط من الطرف إلى الطرف.
+6. Runtime وDocker وExpo/EAS/Firebase/Sentry دون مسارات خاصة بجهاز واحد.
+7. الحوكمة والمهارات والحراس وGitHub Actions.
+8. حذف الضجيج والـNamespaces الوهمية والأدوات غير المستهلكة.
+9. إغلاق نهائي على SHA واحد فقط.
 
-تم إنشاء `validclean` من `abdo` وليس من `cleaning`.
+## ما ثبت فعليًا
 
-السبب: `cleaning` متقدم بعشرة التزامات، لكنه يحذف نطاقًا واسعًا من اختبارات الأمن والعزل والماليات وقاعدة البيانات وRuntime، ويحذف ملفات سلطة ما زال `AGENTS.md` يحيل إليها. لذلك لا يصلح كأساس آمن دون إثبات بدائل مكافئة. أما `abdo` فيحافظ على المادة الخام والضمانات اللازمة لإجراء تنظيف قائم على الدليل.
+تم جرد كل الملفات المتتبعة عند:
 
-## حدود هذه الجولة
+```text
+fbc0139234e2bdb34a8de77d74a6b91297a754b0
+```
 
-المسموح والمنفذ الآن:
+النتائج المنقحة:
 
-- إنشاء الفرع `validclean`.
-- إنشاء هذه الحزمة التخطيطية تحت `tools/validclean-repository-reconstruction/`.
-- تثبيت التشخيص الأولي وخطة الجرد والتنفيذ والبوابات.
+```yaml
+total_paths: 3938
+P0: 56
+P1: 60
+P2: 229
+canonical_operation_id_collisions: 24
+migration_prefix_collisions: 32
+openapi_owner_missing: 22
+absolute_local_paths: 21
+unconsumed_tool_candidates: 47
+empty_tracked_files: 87
+```
 
-غير المنفذ قبل موافقة المالك:
+التفاصيل والدليل في `08_PINNED_FULL_REPOSITORY_AUDIT.md`.
 
-- لا حذف ملفات.
-- لا نقل مجلدات.
-- لا تعديل OpenAPI أو Runtime أو قاعدة البيانات.
-- لا تعديل الحوكمة أو المهارات أو الحراس.
-- لا توليد عملاء.
-- لا تشغيل Migrations.
-- لا فتح Pull Request.
-- لا دمج إلى `master`.
-- لا نشر أو تغيير Production.
+## حدود التفويض
+
+مصرح داخل `validclean`:
+
+- التشخيص والجرد.
+- تعديل وإعادة هيكلة الكود.
+- إنشاء/نقل/دمج/حذف الملفات والمجلدات بعد إثبات البديل.
+- إعادة بناء العقود والعملاء والحراس.
+- تشغيل CI وDB/Runtime verification.
+- فتح PR مسودة للتشخيص.
+
+غير مصرح تلقائيًا:
+
+- دمج `master`.
+- النشر إلى Production.
+- تعديل أسرار أو بيانات إنتاج.
 
 ## ملفات الحزمة
 
-- `00_REMOTE_BASELINE_AND_FINDINGS.md`: تثبيت الفروع والأدلة والمخاطر المثبتة.
-- `01_REPOSITORY_DIAGNOSIS_MATRIX.md`: مصفوفة الجرد والتشخيص لكل نطاق ومجلد.
-- `02_PRODUCT_AND_OWNERSHIP_MODEL.md`: توصيف المنصة وملكية الحقائق والممثلين.
-- `03_OPENAPI_RECONSTRUCTION_PLAN.md`: خطة توحيد العقود والتوليد وربط Runtime.
-- `04_EXECUTION_WAVES.md`: موجات التنفيذ المرتبة حسب الخطورة والاعتماديات.
-- `05_DELETION_RETENTION_PROTOCOL.md`: بروتوكول الحذف والدمج والحماية.
-- `06_ZERO_TOLERANCE_GATES.md`: بوابات الصفر والتحقق والإغلاق.
-- `07_APPROVAL_CHECKPOINT.md`: حدود الموافقة المطلوبة قبل التنفيذ.
-- `plan.manifest.json`: وصف آلي للحزمة وحالتها.
+### الأساس السابق، بعد تصحيحه
 
-## القاعدة الحاكمة
+- `00_REMOTE_BASELINE_AND_FINDINGS.md`
+- `01_REPOSITORY_DIAGNOSIS_MATRIX.md`
+- `02_PRODUCT_AND_OWNERSHIP_MODEL.md`
+- `03_OPENAPI_RECONSTRUCTION_PLAN.md`
+- `04_EXECUTION_WAVES.md`
+- `05_DELETION_RETENTION_PROTOCOL.md`
+- `06_ZERO_TOLERANCE_GATES.md`
+- `07_APPROVAL_CHECKPOINT.md`
 
-لا يوجد ملف محمي لأنه قديم، ولا ملف محذوف لأنه كثير. لكل عنصر قرار واحد مبني على الدليل:
+### التوسعة الشاملة الحاكمة
+
+- `08_PINNED_FULL_REPOSITORY_AUDIT.md`: جرد 3,938 مسارًا على SHA مثبت.
+- `09_CANONICAL_TARGET_ARCHITECTURE.md`: الهيكل المستهدف ومالكو الحقيقة.
+- `10_REPOSITORY_WIDE_EXECUTION_LEDGER.md`: سجل التنفيذ من VC-100 إلى VC-320.
+- `11_DELETE_MERGE_MOVE_REGISTER.md`: قرارات الحذف والدمج والنقل والاستبدال.
+- `12_DATABASE_MIGRATION_RECONSTRUCTION.md`: Manifest وترتيب الترحيلات دون العبث بالتاريخ المطبق.
+- `13_OPENAPI_AND_GENERATED_CLIENT_RECONSTRUCTION.md`: ملكية العمليات والتوليد والـparity.
+- `14_NOISE_AND_NAMESPACE_ELIMINATION.md`: إزالة الضجيج والخدمات والمجلدات الوهمية.
+- `15_FULLSTACK_SURFACE_AND_RUNTIME_CLOSURE.md`: إغلاق الأسطح والـRuntime رأسيًا.
+- `16_GOVERNANCE_AGENTS_GUARDS_REDUCTION.md`: تقليص السلطة والحراس والمهارات.
+- `17_FINAL_CLOSURE_MATRIX.md`: العدادات التي يجب أن تصبح صفرًا.
+- `plan.manifest.json`: الحالة الآلية الوحيدة للحزمة.
+
+## القواعد الحاكمة
+
+لكل ملف أو مسار قرار واحد:
 
 ```text
 KEEP_ACTIVE
@@ -67,9 +101,42 @@ REPAIR_FOUNDATION
 MERGE_TO_CANONICAL_OWNER
 GENERATE_FROM_CANONICAL_SOURCE
 MOVE_TO_OWNER
+MOVE_TO_BUILD_ARTIFACT
 REPLACE_THEN_DELETE
 DELETE_PROVEN_DEAD
 BLOCKED_PENDING_EVIDENCE
 ```
 
-لا يبدأ التنفيذ إلا بعد موافقة صريحة على الحزمة، وبعدها يبدأ من تثبيت خط أساس قابل للتشغيل، ثم شرائح صغيرة: تغيير → تحقق متأثر → Commit ذري → إعادة تثبيت SHA.
+ممنوع:
+
+- الاحتفاظ بملف لأنه قديم.
+- حذف ملف لأنه مزعج دون فحص المستهلك.
+- كتابة خطأ ثم Repair لاحق.
+- Registry يطرح الحقيقة من عقد آخر.
+- عميل Generated مكتوب يدويًا.
+- عقد دخول ينسخ Modules.
+- Dual-write دائم.
+- CI يكتب source أو يدفع Commit تلقائيًا.
+- ادعاء 100% مع عدادات غير مثبتة.
+
+## طريقة التنفيذ
+
+```text
+تثبيت SHA
+→ جرد النطاق
+→ اختيار المالك
+→ بناء البديل
+→ ترحيل جميع المستهلكين
+→ حذف المسار القديم
+→ فحص Static/Contract/DB/Runtime
+→ Commit ذري
+→ دليل Same-SHA
+```
+
+الحالة النهائية الوحيدة المقبولة:
+
+```text
+CLOSED_WITH_EVIDENCE
+```
+
+ولا تُعلن إلا بعد أن تصبح مصفوفة `17_FINAL_CLOSURE_MATRIX.md` كلها صفرًا.
