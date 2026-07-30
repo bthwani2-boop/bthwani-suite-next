@@ -20,5 +20,8 @@ runtime, or commercial state. Product files define semantics and acceptance;
 OpenAPI and runtime source own routes and operation identifiers.
 
 The canonical platform model is `governance/product/platform-model.yaml`.
-BThwani uses operator context for boundaries. Partner subscriptions are not a boundary or independent platform instance. category that requires an explicit owner instruction and replacement of the
-canonical platform model before implementation.
+BThwani is not a SaaS product and does not define tenants.
+Partner subscriptions are commercial pricing relationships inside the platform;
+they do not create an isolation boundary or an independent platform instance.
+Operator context remains the trusted platform boundary defined by the canonical
+platform model.
