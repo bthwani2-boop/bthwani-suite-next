@@ -22,7 +22,7 @@
     {
       "ordinal": 3,
       "file": "providers-002_operator_execution_context.sql",
-      "sha256": "5895b0e0941679efe2844fb494c1043678b4861bbe7d56227c56cb2176c77008",
+      "sha256": "7128400630522811f153b4d0695f77e4cc73abf4df409e9ae3f3e52ce99a0a2a",
       "historicalPrefix": "002",
       "state": "HISTORICAL_IMMUTABLE"
     }
