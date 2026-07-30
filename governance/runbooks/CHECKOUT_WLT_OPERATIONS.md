@@ -1,8 +1,8 @@
 # — Checkout and WLT Operations Runbook
 
-Status: ACTIVE 
-Owner services: DSH + WLT boundary 
-Required surfaces: app-client, control-panel, DSH backend/PostgreSQL, WLT 
+Status: ACTIVE
+Owner services: DSH + WLT boundary
+Required surfaces: app-client, control-panel, DSH backend/PostgreSQL, WLT
 Financial authority: WLT only
 
 ## Purpose
