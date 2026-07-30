@@ -34,7 +34,13 @@ func TestCatalogGenericConflictIsHTTP409(t *testing.T) {
 func TestUnifiedCatalogRoutesUseConflictSafeHandlers(t *testing.T) {
 	t.Parallel()
 
-	routes := readCatalogContractFixture(t, "catalog_unified_routes.go")
+	// Catalog routes are composed from the unified registrar and the bounded
+	// approval/media registrar. The safety invariant applies to the composed
+	// route graph, not to one physical source file.
+	routes := strings.Join([]string{
+		readCatalogContractFixture(t, "catalog_unified_routes.go"),
+		readCatalogContractFixture(t, "catalog_approval_routes.go"),
+	}, "\n")
 	required := []string{
 		"handleCompleteAssetUploadSafe",
 		"handleDeleteCatalogAssetSafe",
@@ -50,7 +56,7 @@ func TestUnifiedCatalogRoutesUseConflictSafeHandlers(t *testing.T) {
 	}
 	for _, name := range required {
 		if !strings.Contains(routes, name) {
-			t.Fatalf("unified routes must use %s", name)
+			t.Fatalf("composed catalog routes must use %s", name)
 		}
 	}
 	for _, stale := range []string{
@@ -67,7 +73,7 @@ func TestUnifiedCatalogRoutesUseConflictSafeHandlers(t *testing.T) {
 		"s.handleReviewReel)",
 	} {
 		if strings.Contains(routes, stale) {
-			t.Fatalf("unified routes still use conflict-unsafe handler %s", stale)
+			t.Fatalf("composed catalog routes still use conflict-unsafe handler %s", stale)
 		}
 	}
 }
