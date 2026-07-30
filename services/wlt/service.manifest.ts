@@ -15,7 +15,6 @@ export const wltServiceManifest = {
 
   contracts: [
     "contracts/wlt.openapi.yaml",
-    "contracts/wlt.saas-reference-auth.overlay.yaml",
   ],
 
   implementationReadiness: {
@@ -25,7 +24,6 @@ export const wltServiceManifest = {
     frontend: true,
     frontendDshBoundary: true,
     paymentSessionReference: true,
-    saasReferenceAuthentication: true,
     trustedTenantServiceBoundary: true,
     localSimulatorMutations: false,
     stagingProviderLabMutations: false,
@@ -60,7 +58,6 @@ export const wltServiceManifest = {
   referenceRuntimeVerified: false,
   journeyRuntimeVerified: false,
   paymentSessionReferenceReady: true,
-  saasReferenceAuthenticationReady: true,
   trustedTenantServiceBoundaryReady: true,
   localSimulatorMutationsReady: false,
   stagingProviderLabMutationsReady: false,
@@ -84,7 +81,6 @@ export const wltServiceManifest = {
       "reconciliation",
       "finance_reports",
       "audit_references",
-      "saas_financial_reference_authentication",
       "trusted_financial_tenant_context",
     ],
     forbiddenOutsideWlt: [

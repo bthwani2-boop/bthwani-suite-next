@@ -70,10 +70,6 @@ jobs:
         if: ${{ inputs.governance_policy == 'true' }}
         run: pnpm run guard:authority-separation
 
-      - name: Verify SaaS governance
-        if: ${{ inputs.governance_policy == 'true' }}
-        run: pnpm run guard:saas-governance
-
       - name: Verify guard registry
         id: guard_registry
         if: ${{ inputs.governance_policy == 'true' }}

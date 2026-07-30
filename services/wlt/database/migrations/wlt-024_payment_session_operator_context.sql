@@ -1,5 +1,5 @@
 -- wlt-024_payment_session_tenancy.sql
--- Adds SaaS-ready deferred OperatorContext ownership to DSH-sourced payment sessions.
+-- Adds embedded OperatorContext ownership to DSH-sourced payment sessions.
 
 BEGIN;
 

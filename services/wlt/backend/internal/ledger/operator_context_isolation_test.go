@@ -8,7 +8,7 @@ import (
 	"wlt-api/internal/shared"
 )
 
-func TestPostLedgerTransaction_ActiveSaaSRequiresTrustedOperatorContext(t *testing.T) {
+func TestPostLedgerTransaction_RequiresTrustedOperatorContext(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return

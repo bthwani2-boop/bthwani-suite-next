@@ -71,7 +71,7 @@ func TestEnsureWalletForOperatorContextTxSeparatesIdenticalActors(t *testing.T) 
 	}
 }
 
-func TestLegacyEnsureWalletFailsClosedInActiveSaaS(t *testing.T) {
+func TestLegacyEnsureWalletFailsClosed(t *testing.T) {
 	db := walletTestDB(t)
 	defer db.Close()
 	tx, err := db.Begin()

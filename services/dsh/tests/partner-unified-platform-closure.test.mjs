@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
 
-describe("partner unified full-stack SaaS closure", () => {
+describe("partner unified full-stack platform closure", () => {
   test("models tenant-scoped legal partner, brand, store, transfer audit and readiness", () => {
     const migration = read("services/dsh/database/migrations/dsh-958_partner_workspace_store_ownership.sql");
     assert.match(migration, /CREATE TABLE IF NOT EXISTS dsh_partner_brands/);

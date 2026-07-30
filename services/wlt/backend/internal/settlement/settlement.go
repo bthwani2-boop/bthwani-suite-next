@@ -137,7 +137,7 @@ func getSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settl
 	return s, err
 }
 
-// GetSettlement retains deferred-runtime compatibility. Active SaaS callers use
+// GetSettlement retains deferred-runtime compatibility. Embedded callers use
 // the HTTP handler, which provides the authenticated OperatorContext context.
 func GetSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
 	return getSettlement(context.Background(), db, settlementID)
@@ -218,7 +218,7 @@ func ListSettlementSummary(ctx context.Context, db *sql.DB, partnerID, periodSta
 }
 
 // PostSettlement retains deferred-runtime compatibility for package-level tests.
-// Active SaaS mutations enter through postSettlement with authenticated context.
+// Embedded mutations enter through postSettlement with authenticated context.
 func PostSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
 	return postSettlement(context.Background(), db, settlementID)
 }

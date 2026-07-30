@@ -4,7 +4,7 @@
 -- migration carries the same trusted ownership into every  settlement
 -- support table so policy versions, source evidence and retries cannot collide
 -- or leak across OperatorContexts. Historical rows without one provable owner remain
--- explicitly legacy-unscoped and are never selected by active-SaaS code.
+-- explicitly legacy-unscoped and are never selected by embedded code.
 
 BEGIN;
 
