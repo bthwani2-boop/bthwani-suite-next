@@ -1,21 +1,35 @@
-import fs from 'node:fs';
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import {
-  composeDshOpenApi,
-  ownershipReportPath,
-  verifyDshOpenApiModular,
-} from '../scripts/dsh-openapi-modular-lib.mjs';
+  composeContext,
+  repositoryRoot,
+} from "../scripts/openapi-context-composer.mjs";
 
-// Ownership is derived from the sovereign entry and sibling projection
-// contracts. Generate the ignored diagnostic in the current workspace before
-// verification; a committed copy would be a stale parallel source of truth.
-composeDshOpenApi({ write: true });
+const result = await composeContext("dsh", { write: false });
+const committedBundle = fs.readFileSync(
+  path.join(repositoryRoot, result.bundlePath),
+  "utf8",
+);
 
-// composeDshOpenApi writes text artifacts with a final newline, while the
-// verifier compares the ownership JSON's canonical serialization without one.
-// Normalize only this ignored diagnostic so the verifier measures semantic
-// ownership drift rather than a newline written by its own generator.
-const ownership = fs.readFileSync(ownershipReportPath, 'utf8').trimEnd();
-fs.writeFileSync(ownershipReportPath, ownership, 'utf8');
+assert.equal(
+  result.bundle,
+  committedBundle,
+  "DSH generated bundle is stale; run pnpm run openapi:generate:dsh",
+);
+assert.ok(result.pathCount > 0, "DSH composed bundle must expose paths");
+assert.ok(result.operationIds.length > 0, "DSH composed bundle must expose operations");
+assert.equal(
+  new Set(result.operationIds).size,
+  result.operationIds.length,
+  "DSH composed bundle contains duplicate operationIds",
+);
 
-const result = verifyDshOpenApiModular();
-console.log(`DSH OpenAPI modular gate passed: ${JSON.stringify(result)}`);
+console.log(
+  `DSH OpenAPI modular gate passed: ${JSON.stringify({
+    bundlePath: result.bundlePath,
+    pathCount: result.pathCount,
+    operationCount: result.operationIds.length,
+    sourceDigest: result.sourceDigest,
+  })}`,
+);
