@@ -49,7 +49,7 @@
     },
     {
       "ordinal": 7,
-      "file": "identity-007_local_actor_operator_context_repair.sql",
+      "file": "identity-007_local_actor_tenant_repair.sql",
       "sha256": "d423194952d81858c26e8887a585bb0466d28c958316a9820af4e75aecbe8133",
       "historicalPrefix": "007",
       "state": "HISTORICAL_IMMUTABLE"
