@@ -16,4 +16,5 @@ modules:
   - ./workforce.operational-core.openapi.yaml
   - ./workforce.reference-mutations.openapi.yaml
   - ./workforce.sovereign-leadership.openapi.yaml
-overlays: []
+overlays:
+  - ./workforce.sovereign-leadership-requests.overlay.yaml
