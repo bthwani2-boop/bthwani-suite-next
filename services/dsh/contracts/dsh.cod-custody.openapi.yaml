@@ -85,6 +85,38 @@ paths:
       security:
         - bearerAuth: []
 
+  /dsh/partner/me/finance/cod-records/{recordId}/remit:
+    parameters:
+      - $ref: "#/components/parameters/RecordId"
+    post:
+      tags: ["dsh-partner"]
+      operationId: remitDshPartnerCodRecord
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 200 }
+        - name: X-Correlation-ID
+          in: header
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartnerCodRemittanceRequest"
+      responses:
+        "200": { description: WLT-owned COD record remitted with governed evidence }
+        "400": { description: Invalid remittance evidence }
+        "401": { description: Unauthenticated partner }
+        "403": { description: Record does not belong to the partner }
+        "404": { description: COD record not found }
+        "409": { description: COD custody state conflict }
+        "502": { description: WLT unavailable }
+
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -119,3 +151,13 @@ components:
         resolutionNote:
           type: string
           minLength: 1
+    PartnerCodRemittanceRequest:
+      type: object
+      additionalProperties: false
+      required: [proofReference]
+      properties:
+        proofReference:
+          type: string
+          minLength: 3
+        note:
+          type: string
