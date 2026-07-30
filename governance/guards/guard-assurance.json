@@ -23,14 +23,6 @@
  "closureEligible": false
  },
  {
- "guardId": "platform-governance",
- "assuranceClass": "SCHEMA_INTEGRITY",
- "proves": ["The platform governance state validates against its schema", "Readiness states are separated from canonical decisions", "Deferred commercial activation and required evidence boundaries are internally consistent"],
- "doesNotProve": ["Platform-wide operator context isolation", "cross-operator-context runtime tests", "WLT operator context financial isolation", "Commercial platform readiness or activation"],
- "closureEligible": false,
- "requiredFollowUpForRuntimeClaim": ["Same-commit operator context-context propagation evidence", "cross-operator-context negative runtime tests", "Independent isolation-security and financial-control approval"]
- },
- {
  "guardId": "guard-registry",
  "assuranceClass": "POLICY_ALIGNMENT",
  "proves": ["Guards, package scripts, runners, workflows, permissions, immutable action references, and required workflow topology align"],
