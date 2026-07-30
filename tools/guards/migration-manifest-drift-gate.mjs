@@ -2,7 +2,7 @@
 // Fails when a service's committed migrations/manifest.json diverges from
 // the files actually on disk: unregistered files, missing files, checksum
 // drift, duplicate ordinals/filenames, or a new legacy numeric-prefix
-// collision introduced after the manifest's cutover file. Per
+// collision introduced after the manifest's cutover file.
 // Historical migrations are immutable; new migrations extend the manifest.
 import fs from "node:fs";
 import path from "node:path";
@@ -22,6 +22,20 @@ const servicePaths = {
 const args = process.argv.slice(2);
 const serviceIndex = args.indexOf("--service");
 const requestedServices = serviceIndex !== -1 && args[serviceIndex + 1] ? [args[serviceIndex + 1]] : null;
+
+function sha256(content) {
+  return crypto.createHash("sha256").update(content).digest("hex");
+}
+
+// Historical manifests were generated from both Windows and POSIX worktrees.
+// Accept only newline-equivalent digests so the same SQL text is portable while
+// any semantic, whitespace, ordering, or final-newline change still fails.
+function portableSqlDigests(buffer) {
+  const text = buffer.toString("utf8");
+  const lf = text.replace(/\r\n?/g, "\n");
+  const crlf = lf.replace(/\n/g, "\r\n");
+  return new Set([sha256(buffer), sha256(Buffer.from(lf, "utf8")), sha256(Buffer.from(crlf, "utf8"))]);
+}
 
 function checkService(service) {
   const relativeDir = servicePaths[service];
@@ -53,9 +67,10 @@ function checkService(service) {
       failures.push(`manifest file missing on disk: ${entry.file}`);
       continue;
     }
-    const actualSha256 = crypto.createHash("sha256").update(fs.readFileSync(path.join(dir, entry.file))).digest("hex");
-    if (actualSha256 !== entry.sha256) {
-      failures.push(`checksum drift: ${entry.file} recorded=${entry.sha256} actual=${actualSha256}`);
+    const migration = fs.readFileSync(path.join(dir, entry.file));
+    const acceptableDigests = portableSqlDigests(migration);
+    if (!acceptableDigests.has(entry.sha256)) {
+      failures.push(`checksum drift: ${entry.file} recorded=${entry.sha256} actual=${sha256(migration)}`);
     }
   }
 
