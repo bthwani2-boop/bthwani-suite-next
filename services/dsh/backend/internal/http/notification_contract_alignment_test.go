@@ -23,11 +23,28 @@ func readNotificationGovernanceFixture(t *testing.T, relative string) string {
 	return string(content)
 }
 
+func normalizeNotificationGovernanceInlineYAML(value string) string {
+	return strings.NewReplacer(" ", "", "\t", "").Replace(strings.TrimSpace(value))
+}
+
 func requireNotificationGovernanceSnippet(t *testing.T, content, snippet string) {
 	t.Helper()
-	if !strings.Contains(content, snippet) {
-		t.Fatalf("notification governance chain is missing required snippet %q", snippet)
+	if strings.Contains(content, snippet) {
+		return
 	}
+
+	// Flow-style YAML sequences are semantically unchanged by optional spaces
+	// around brackets and commas. Compare one-line declarations after removing
+	// horizontal formatting so the alignment test detects contract drift rather
+	// than formatter preferences.
+	normalizedSnippet := normalizeNotificationGovernanceInlineYAML(snippet)
+	for _, line := range strings.Split(content, "\n") {
+		if normalizeNotificationGovernanceInlineYAML(line) == normalizedSnippet {
+			return
+		}
+	}
+
+	t.Fatalf("notification governance chain is missing required snippet %q", snippet)
 }
 
 func TestNotificationGovernanceContractAndRuntimeAlignment(t *testing.T) {
