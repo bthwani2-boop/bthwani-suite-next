@@ -19,7 +19,7 @@ function classify(error: unknown): PaymentSessionRuntimeError {
     return { state: "forbidden", code: value.code ?? "FORBIDDEN", message: "لا تملك الجلسة الحالية صلاحية قراءة أو إدارة جلسة الدفع." };
   }
   if (value.status === 404) {
-    return { state: "not_found", code: value.code ?? "NOT_FOUND", message: "لم تُعثر جلسة الدفع داخل المستأجر المحدد." };
+    return { state: "not_found", code: value.code ?? "NOT_FOUND", message: "لم تُعثر جلسة الدفع داخل نطاق التشغيل المحدد." };
   }
   if (value.status === 409) {
     return { state: "conflict", code: value.code ?? "CONFLICT", message: value.message ?? "الجلسة في انتقال مالي لا يسمح بتكرار العملية." };
