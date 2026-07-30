@@ -28,6 +28,7 @@ This skill reconciles independently produced evidence and issues the canonical f
 
 - `governance/contracts/decision-vocabulary.json`
 - `governance/policies/release.md`
+- `governance/product/platform-model.yaml`
 - `governance/github/repository-enforcement.json`
 - `governance/guards/guard-assurance.json`
 - applicable Product Truth, SDLC artifact, and change-impact documents;
@@ -44,7 +45,7 @@ Reconcile the exact `applicableEvidenceScopes` declared by impact:
 5. `qa`: independent QA, negative tests, cross-surface consistency, and accessibility acceptance.
 6. `security`: independent security, privacy, authorization, vulnerability, and secret evidence.
 7. `finance`: independent Financial Control approval for WLT financial truth and DSH/WLT handoffs.
-8. `isolation`: independent isolation-security evidence when tenant or isolation impact applies.
+8. `isolation`: independent isolation-security evidence when operator-context, organization, partner, store, actor, or other legally scoped data boundaries are affected.
 9. `governance`: Governance Contract approval for control-plane changes.
 10. `ci`: CI Workflow approval, immutable action checks, syntax/security analysis, and actual same-commit results.
 11. `release`: release readiness, rollback, monitoring, support ownership, and residual-risk decision.
@@ -73,7 +74,8 @@ Every skipped stage must appear in `notApplicableStages` with matching `stageExc
 - Using implemented, code checked, guard passed, or workflow configured as a synonym for closure.
 - Closure with failed gates, missing scopes, stage exclusions without evidence, open blockers, unresolved risk, stale evidence, or self-approval.
 - Closure based on a merge ref, another branch, seed, fixture, mock, declaration, or documentation-only claim.
-- Promoting static/configuration/regression evidence into runtime, finance, isolation, QA, security, release, production, or SaaS proof.
+- Promoting static/configuration/regression evidence into runtime, finance, isolation, QA, security, release, production, or product-category proof.
+- Treating partner subscriptions as proof of tenancy, SaaS, entitlements, or an independent platform instance.
 - Inventing collaborators, teams, approvals, GitHub rules, checks, runtime, or production evidence.
 
 ## Required output
