@@ -68,17 +68,9 @@ for line in [
     "  SettlementPolicyInput,\n",
 ]:
     count = controller.count(line)
-    if count != 1:
-        raise RuntimeError(f"controller cleanup expected one occurrence of {line.strip()}, found {count}")
-    controller = controller.replace(line, "", 1)
-for line in [
-    "  upsertSettlementPolicy,\n",
-    "  createSettlementFromDeliveredOrders,\n",
-]:
-    count = controller.count(line)
-    if count != 1:
-        raise RuntimeError(f"controller export cleanup expected one occurrence of {line.strip()}, found {count}")
-    controller = controller.replace(line, "", 1)
+    if count != 2:
+        raise RuntimeError(f"controller cleanup expected import and export for {line.strip()}, found {count}")
+    controller = controller.replace(line, "")
 CONTROLLER.write_text(controller, encoding="utf-8")
 
 payout_panel = PAYOUT_PANEL.read_text(encoding="utf-8")
