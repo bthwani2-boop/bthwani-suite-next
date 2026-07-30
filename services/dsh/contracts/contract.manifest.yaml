@@ -4,7 +4,6 @@ modules:
   - dsh.administration.openapi.yaml
   - dsh.analytics-extensions.openapi.yaml
   - dsh.captain-financial-eligibility.openapi.yaml
-  - dsh.catalog-detail.openapi.yaml
   - dsh.catalog-governance.openapi.yaml
   - dsh.catalog-proposal-readback.openapi.yaml
   - dsh.catalog.openapi.yaml
@@ -47,3 +46,4 @@ modules:
 
 overlays:
   - dsh.store-operational-context.overlay.yaml
+  - dsh.catalog-detail.overlay.yaml
