@@ -6,6 +6,7 @@ on:
       - '.github/workflows/contract-source-export.yml'
       - 'tools/scripts/repair-workforce-refund-contracts.mjs'
       - 'tools/scripts/repair-cod-catalog-bindings.py'
+      - 'tools/scripts/repair-field-catalog-detail.py'
       - 'core/workforce/contracts/**'
       - 'services/dsh/**'
       - 'services/wlt/contracts/**'
@@ -15,7 +16,7 @@ permissions:
 
 jobs:
   export:
-    name: Verify canonical contract and COD runtime repair
+    name: Verify canonical contract, COD, and field catalog repair
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -37,21 +38,33 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          path = Path('tools/scripts/repair-workforce-refund-contracts.mjs')
-          source = path.read_text(encoding='utf-8')
+          workforce = Path('tools/scripts/repair-workforce-refund-contracts.mjs')
+          source = workforce.read_text(encoding='utf-8')
           old = 'source = source.replace(anchor, block + anchor);'
           new = 'source = source.replace(anchor, () => block + anchor);'
           if old in source:
-              path.write_text(source.replace(old, new, 1), encoding='utf-8')
+              workforce.write_text(source.replace(old, new, 1), encoding='utf-8')
           elif new not in source:
               raise SystemExit('Expected Workforce replacement statement is missing')
+
+          cod = Path('tools/scripts/repair-cod-catalog-bindings.py')
+          source = cod.read_text(encoding='utf-8')
+          old = 'remove_unused_catalog_detail_read()\n'
+          new = 'print("catalog detail read preserved for field-scoped repair")\n'
+          if old in source:
+              cod.write_text(source.replace(old, new, 1), encoding='utf-8')
+          elif new not in source:
+              raise SystemExit('Expected catalog removal call is missing')
           PY
           node tools/scripts/repair-workforce-refund-contracts.mjs
           python tools/scripts/repair-cod-catalog-bindings.py
+          python tools/scripts/repair-field-catalog-detail.py
           gofmt -w \
+            services/dsh/backend/internal/http/catalog_unified_routes.go \
             services/dsh/backend/internal/http/cod_finance_handlers.go \
             services/dsh/backend/internal/http/cod_finance_routes.go \
             services/dsh/backend/internal/http/cod_reconciliation_routes_test.go \
+            services/dsh/backend/internal/http/field_catalog_detail_route_test.go \
             services/dsh/backend/internal/wlt/finance_proxy.go \
             services/dsh/backend/internal/wlt/finance_proxy_test.go
       - name: Regenerate canonical artifacts
@@ -81,15 +94,20 @@ jobs:
             core/workforce/contracts/generated/workforce.bundle.openapi.yaml
             core/workforce/clients/generated/workforce-api.ts
             services/dsh/frontend/shared/catalog/central-catalog.api.ts
+            services/dsh/frontend/app-field/components/DshFieldAssortmentPauseScreen.tsx
+            services/dsh/backend/internal/http/catalog_unified_routes.go
             services/dsh/backend/internal/http/cod_finance_handlers.go
             services/dsh/backend/internal/http/cod_finance_routes.go
             services/dsh/backend/internal/http/cod_reconciliation_routes_test.go
+            services/dsh/backend/internal/http/field_catalog_detail_route_test.go
             services/dsh/backend/internal/wlt/finance_proxy.go
             services/dsh/backend/internal/wlt/finance_proxy_test.go
             services/dsh/contracts/dsh.openapi.yaml
+            services/dsh/contracts/dsh.catalog.openapi.yaml
             services/dsh/contracts/dsh.cod-custody.openapi.yaml
             services/dsh/contracts/contract.manifest.yaml
             services/dsh/contracts/contract-registry.ts
+            services/dsh/contracts/paths/catalog.paths.yaml
             services/dsh/contracts/paths/misc.paths.yaml
             services/dsh/contracts/paths/refunds.paths.yaml
             services/dsh/contracts/components/refunds.components.yaml
