@@ -111,18 +111,14 @@ steps:
   assert.deepEqual(ids(workflow), ["SOURCE_FORMAT_WRITE", "SOURCE_FORMAT_WRITE"]);
 });
 
-test("detects Go rewrites and tracked OpenAPI generation", () => {
+test("allows deterministic OpenAPI artifact generation but rejects Go source rewrites", () => {
   const workflow = `
 steps:
   - run: gofmt -w services/dsh/backend/internal/http/server.go
   - run: pnpm run openapi:generate:dsh
   - run: pnpm --dir services/wlt openapi:compose
 `;
-  assert.deepEqual(ids(workflow), [
-    "GO_SOURCE_FORMAT_WRITE",
-    "SOURCE_GENERATION_COMMAND",
-    "SOURCE_GENERATION_COMMAND",
-  ]);
+  assert.deepEqual(ids(workflow), ["GO_SOURCE_FORMAT_WRITE"]);
 });
 
 test("detects one-off repair scripts and inline source writes", () => {
