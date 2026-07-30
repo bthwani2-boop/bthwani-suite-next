@@ -97,7 +97,7 @@ if (artifact && impact) {
   if (impact.productImpact === "CHANGED") requiredScopes.add("product");
   for (const [impactName, scope] of [
     ["runtime", "runtime"], ["visual", "visual"], ["qa", "qa"], ["security", "security"],
-    ["wltFinance", "finance"], ["OperatorContext", "isolation"], ["governance", "governance"],
+    ["wltFinance", "finance"], ["operatorContext", "isolation"], ["governance", "governance"],
     ["ci", "ci"], ["release", "release"], ["production", "production"],
   ]) if (impact.impacts[impactName] === true) requiredScopes.add(scope);
 
@@ -117,7 +117,7 @@ if (artifact && impact) {
     qa: /QA|QUALITY/,
     security: /SECURITY/,
     finance: /WLT|FINANCE/,
-    isolation: /OperatorContext|ISOLATION/,
+    isolation: /OPERATOR_CONTEXT|ISOLATION/,
     governance: /GOVERNANCE|SDLC/,
     ci: /CI|WORKFLOW/,
     release: /RELEASE/,
@@ -132,7 +132,7 @@ if (artifact && impact) {
   if (impact.productImpact === "CHANGED") for (const stage of ["G1_PRODUCT_MODEL_APPROVED", "G3_READY_FOR_IMPLEMENTATION", "G5_PRODUCT_ACCEPTED"]) mandatoryStages.add(stage);
   if (impact.impacts.visual) mandatoryStages.add("G5_PRODUCT_ACCEPTED");
   if (impact.impacts.qa) mandatoryStages.add("G6_QA_APPROVED");
-  if (impact.impacts.security || impact.impacts.OperatorContext) mandatoryStages.add("G7_SECURITY_APPROVED");
+  if (impact.impacts.security || impact.impacts.operatorContext) mandatoryStages.add("G7_SECURITY_APPROVED");
   if (impact.impacts.release) mandatoryStages.add("G8_RELEASE_APPROVED");
   if (impact.impacts.production) for (const stage of ["G9_DEPLOYED", "G10_PRODUCTION_VERIFIED"]) mandatoryStages.add(stage);
   for (const stage of mandatoryStages) if (notApplicableStages.has(stage)) violations.push({ file: artifactPath, message: `IMPACT_MANDATORY_STAGE_CANNOT_BE_NOT_APPLICABLE ${stage}` });
@@ -158,7 +158,7 @@ if (artifact && impact) {
   if (impact.impacts.wltFinance) requireApproval("financial_control_authority", "G4_IMPLEMENTATION_VERIFIED", "FINANCE_IMPACT");
   if (highRisk) requireApproval("independent_reviewer", "G4_IMPLEMENTATION_VERIFIED", "HIGH_RISK_REVIEW");
   if (impact.impacts.qa) requireApproval("independent_quality_authority", "G6_QA_APPROVED", "QA_IMPACT");
-  if (impact.impacts.security || impact.impacts.OperatorContext) requireApproval("application_security_authority", "G7_SECURITY_APPROVED", "SECURITY_IMPACT");
+  if (impact.impacts.security || impact.impacts.operatorContext) requireApproval("application_security_authority", "G7_SECURITY_APPROVED", "SECURITY_IMPACT");
   if (impact.impacts.release || impact.impacts.production) requireApproval("release_authority", "G8_RELEASE_APPROVED", "RELEASE_IMPACT");
 
   if (passDecision) {
