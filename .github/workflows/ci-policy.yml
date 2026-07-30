@@ -110,7 +110,38 @@ jobs:
         run: pnpm run guard:migration-manifest-drift
 
       - name: Verify generated client provenance
+        id: generated_client_provenance
+        continue-on-error: true
         run: pnpm run guard:generated-client-provenance
+
+      - name: Materialize generated contract diagnostics
+        if: ${{ steps.generated_client_provenance.outcome == 'failure' }}
+        run: pnpm run openapi:generate:all
+
+      - name: Upload generated contract diagnostics
+        if: ${{ steps.generated_client_provenance.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: generated-contract-candidates-${{ github.run_id }}
+          path: |
+            core/identity/contracts/generated/identity.bundle.openapi.yaml
+            core/identity/clients/generated/identity-api.ts
+            core/workforce/contracts/generated/workforce.bundle.openapi.yaml
+            core/workforce/clients/generated/workforce-api.ts
+            core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml
+            core/platform-control/clients/generated/platform-control-api.ts
+            core/providers/contracts/generated/providers.bundle.openapi.yaml
+            core/providers/clients/generated/providers-api.ts
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+            services/dsh/clients/generated/dsh-api.ts
+            services/wlt/contracts/generated/wlt.bundle.openapi.yaml
+            services/wlt/clients/generated/wlt-api.ts
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce generated client provenance result
+        if: ${{ steps.generated_client_provenance.outcome == 'failure' }}
+        run: exit 1
 
       - name: Verify contract scope binding
         run: pnpm run guard:contract-scope-binding
