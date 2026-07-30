@@ -1,0 +1,107 @@
+overlay: 1.0.0
+info:
+  title: Workforce sovereign leadership request schemas
+  version: 1.0.0
+actions:
+  - target: $.components.schemas
+    update:
+      UpdateDepartmentEmployeeRequest:
+        type: object
+        additionalProperties: false
+        required:
+          - expectedVersion
+        properties:
+          expectedVersion:
+            type: integer
+            minimum: 1
+          fullNameAr:
+            type: string
+            minLength: 1
+          fullNameEn:
+            type: string
+          engagementType:
+            type: string
+          engagementStartDate:
+            type: string
+            format: date
+          photoMediaRef:
+            type: string
+          department:
+            type: string
+            pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
+          role:
+            type: string
+            minLength: 1
+          officeLocation:
+            type: string
+          supervisorActorId:
+            type: string
+      DepartmentEmployeeStatusChangeRequest:
+        type: object
+        additionalProperties: false
+        required:
+          - expectedVersion
+          - reason
+        properties:
+          expectedVersion:
+            type: integer
+            minimum: 1
+          reason:
+            type: string
+            minLength: 1
+      UpsertEmployeeGovernanceRequest:
+        type: object
+        additionalProperties: false
+        required:
+          - expectedVersion
+          - positionTitle
+          - employmentClass
+          - guaranteeType
+          - guaranteeStatus
+          - responsibilityScopes
+          - managedDepartmentCodes
+        properties:
+          expectedVersion:
+            type: integer
+            minimum: 0
+          positionTitle:
+            type: string
+            minLength: 1
+          jobGrade:
+            type: string
+          employmentClass:
+            type: string
+            enum:
+              - staff
+              - coordinator
+              - department_manager
+              - executive
+              - project_manager
+          guaranteeType:
+            type: string
+            enum:
+              - none
+              - personal
+              - financial
+              - institutional
+          guaranteeStatus:
+            type: string
+            enum:
+              - not_required
+              - pending
+              - active
+              - released
+              - forfeited
+          guaranteeReference:
+            type: string
+          responsibilityScopes:
+            type: array
+            items:
+              type: string
+          managedDepartmentCodes:
+            type: array
+            items:
+              type: string
+              pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
+          notes:
+            type: string
