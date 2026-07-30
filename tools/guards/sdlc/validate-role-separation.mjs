@@ -71,7 +71,7 @@ if (singleOwner.acknowledgements?.blanketAuthorizationIsNotOutcomeAcceptance !==
 const requiredProtectedDomains = [
   "authentication_authorization_sessions",
   "pii_privacy_secrets_credentials",
-  "OperatorContext_isolation",
+  "operator_context_isolation",
   "security_approval",
   "financial_control",
   "migrations_and_production_data",
