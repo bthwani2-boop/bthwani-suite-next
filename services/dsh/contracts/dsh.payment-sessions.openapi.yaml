@@ -35,6 +35,30 @@ paths:
         '502': { $ref: '#/components/responses/Error' }
         '503': { $ref: '#/components/responses/Error' }
 
+  /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status:
+    post:
+      operationId: refreshDshPaymentSessionProviderStatus
+      summary: Ask WLT to reconcile the current provider status without creating DSH financial truth.
+      tags: [DshFinancePaymentSessions]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PaymentSessionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Refreshed WLT-owned payment session state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentOperationEnvelope' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '502': { $ref: '#/components/responses/Error' }
+        '503': { $ref: '#/components/responses/Error' }
+
 components:
   securitySchemes:
     bearerAuth:
