@@ -31,6 +31,8 @@ jobs:
         run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+      - name: Materialize direct YAML dependency in isolated workspace
+        run: pnpm add --workspace-root --save-dev --save-exact yaml@2.8.1
       - name: Generate DSH contract artifacts without committing
         run: pnpm run openapi:generate:dsh
       - name: Upload sources and generated artifacts
@@ -38,6 +40,8 @@ jobs:
         with:
           name: dsh-contract-export-${{ github.run_id }}
           path: |
+            package.json
+            pnpm-lock.yaml
             services/dsh/contracts/dsh.openapi.yaml
             services/dsh/contracts/dsh.refunds.openapi.yaml
             services/dsh/contracts/paths/misc.paths.yaml
