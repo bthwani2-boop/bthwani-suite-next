@@ -79,6 +79,30 @@ function Invoke-FinancialSimulatorHealthSmoke {
   Write-Host "Financial simulator isolated smoke: PASS"
 }
 
+function Invoke-DshSmokeScript {
+  param(
+    [Parameter(Mandatory = $true)][string]$Name,
+    [Parameter(Mandatory = $true)][string]$ScriptPath,
+    [hashtable]$Parameters = @{}
+  )
+
+  Write-Host "`n=== $Name ==="
+  $global:LASTEXITCODE = 0
+  try {
+    & $ScriptPath @Parameters
+  } catch {
+    Write-Host "DSH smoke slice '$Name' failed: $($_.Exception.Message)"
+    if ($null -ne $_.ErrorDetails -and -not [string]::IsNullOrWhiteSpace([string]$_.ErrorDetails.Message)) {
+      Write-Host "DSH smoke response details: $($_.ErrorDetails.Message)"
+    }
+    Write-Host (($_ | Format-List * -Force | Out-String).TrimEnd())
+    throw
+  }
+  if ($LASTEXITCODE -ne 0) {
+    throw "DSH smoke slice '$Name' failed with exit code $LASTEXITCODE"
+  }
+}
+
 if ($Action -ne "smoke" -or -not $hasDsh) {
   Invoke-RuntimeEngine -EngineAction $Action -EngineProfiles $Profiles -EngineService $Service
   return
@@ -108,25 +132,12 @@ Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles "dsh,media"
 
 $statePath = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-dsh-smoke-$([Guid]::NewGuid().ToString('N')).json"
 try {
-  $global:LASTEXITCODE = 0
-  & $DshCatalogSmoke -StatePath $statePath
-  if ($LASTEXITCODE -ne 0) {
-    throw "DSH catalog smoke failed with exit code $LASTEXITCODE"
-  }
-
-  $global:LASTEXITCODE = 0
-  & $DshPartnerSmoke
-  if ($LASTEXITCODE -ne 0) {
-    throw "DSH partner onboarding smoke failed with exit code $LASTEXITCODE"
-  }
+  Invoke-DshSmokeScript -Name "DSH catalog smoke" -ScriptPath $DshCatalogSmoke -Parameters @{ StatePath = $statePath }
+  Invoke-DshSmokeScript -Name "DSH partner onboarding smoke" -ScriptPath $DshPartnerSmoke
 
   $clientParameters = @{ StatePath = $statePath }
   if ($profileList -contains "wlt") { $clientParameters.WltEnabled = $true }
-  $global:LASTEXITCODE = 0
-  & $DshClientSmoke @clientParameters
-  if ($LASTEXITCODE -ne 0) {
-    throw "DSH client and home smoke failed with exit code $LASTEXITCODE"
-  }
+  Invoke-DshSmokeScript -Name "DSH client and home smoke" -ScriptPath $DshClientSmoke -Parameters $clientParameters
 } finally {
   Remove-Item -LiteralPath $statePath -Force -ErrorAction SilentlyContinue
 }
