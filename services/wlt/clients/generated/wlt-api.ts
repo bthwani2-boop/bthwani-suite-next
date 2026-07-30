@@ -242,6 +242,367 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/wlt/cod-records/{codRecordId}/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["collectCodCustody"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/cod-records/{codRecordId}/remit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["remitCodCustody"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/cod-reconciliation-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listCodReconciliationCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/cod-reconciliation-cases/{caseId}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["assignCodReconciliationCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/cod-reconciliation-cases/{caseId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resolveCodReconciliationCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/cod-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List OperatorContext-local COD records by one governed filter. */
+        get: operations["listWltCodRecords"];
+        put?: never;
+        /** Create or replay OperatorContext-local COD custody from WLT payment truth. */
+        post: operations["createWltCodRecord"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/cod-records/{codRecordId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one OperatorContext-local COD record. */
+        get: operations["getWltCodRecord"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commercial/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return WLT-owned loyalty and subscription aggregate metrics. */
+        get: operations["getWltCommercialBenefitsSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commercial/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createWltCommercialProduct"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commercial/products/{productReference}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getWltCommercialProduct"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateWltCommercialProduct"];
+        trace?: never;
+    };
+    "/wlt/commercial/clients/{clientId}/benefits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getWltClientCommercialBenefits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commercial/payment-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createWltSubscriptionPaymentSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commercial/loyalty-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["appendWltLoyaltyEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commercial/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["activateWltCommercialSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commercial/subscriptions/{subscriptionId}/lifecycle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getWltCommercialSubscriptionLifecycle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commercial/subscriptions/{subscriptionId}/renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["renewWltCommercialSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commercial/subscriptions/{subscriptionId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelWltCommercialSubscription"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commercial/subscriptions/expire-due": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["expireDueWltCommercialSubscriptions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/delivery-collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List OperatorContext-local delivery collection custody records. */
+        get: operations["listWltDeliveryCollections"];
+        put?: never;
+        /** Derive OperatorContext-local collection custody from WLT payment-session truth. */
+        post: operations["createWltDeliveryCollectionHandoff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/delivery-collections/{codRecordId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one OperatorContext-local delivery collection custody record. */
+        get: operations["getWltDeliveryCollection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/delivery-collections/{codRecordId}/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit evidence-backed collection against WLT-owned custody truth. */
+        post: operations["collectWltDeliveryCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/delivery-collections/{codRecordId}/remit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Commit evidence-backed remittance against WLT-owned custody truth. */
+        post: operations["remitWltDeliveryCollection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/wlt/payment-sessions": {
         parameters: {
             query?: never;
@@ -429,42 +790,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/wlt/delivery-collections": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List OperatorContext-local delivery collection custody records. */
-        get: operations["listWltDeliveryCollections"];
-        put?: never;
-        /** Derive OperatorContext-local collection custody from WLT payment-session truth. */
-        post: operations["createWltDeliveryCollectionHandoff"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/delivery-collections/{codRecordId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one OperatorContext-local delivery collection custody record. */
-        get: operations["getWltDeliveryCollection"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/delivery-collections/{codRecordId}/collect": {
+    "/wlt/payout-requests/{payoutId}/fail": {
         parameters: {
             query?: never;
             header?: never;
@@ -473,376 +799,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Commit evidence-backed collection against WLT-owned custody truth. */
-        post: operations["collectWltDeliveryCollection"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/delivery-collections/{codRecordId}/remit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Commit evidence-backed remittance against WLT-owned custody truth. */
-        post: operations["remitWltDeliveryCollection"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/refunds": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List OperatorContext-scoped refunds */
-        get: operations["listWltRefunds"];
-        put?: never;
-        /** Create a partial or full remaining refund request */
-        post: operations["createWltRefund"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/refunds/{refundId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one OperatorContext-scoped refund */
-        get: operations["getWltRefund"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/refunds/{refundId}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Independently approve a requested refund */
-        post: operations["approveWltRefund"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/refunds/{refundId}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Independently reject a requested refund */
-        post: operations["rejectWltRefund"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/refunds/{refundId}/complete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Claim and execute an approved refund through the provider
-         * @description The mutation receipt and approved-to-processing claim are committed before the provider call. An ambiguous provider result returns 202 only after provider_unknown and its reconciliation case are durably persisted.
-         */
-        post: operations["completeWltRefund"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/refunds/{refundId}/reconcile": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Resolve a provider-unknown refund with external evidence */
-        post: operations["reconcileWltRefund"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/refunds/{refundId}/audit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List append-only refund audit evidence */
-        get: operations["listWltRefundAudit"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/settlements": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List OperatorContext-local settlements. */
-        get: operations["listWltSettlements"];
-        put?: never;
-        post: operations["createWltEvidenceBackedSettlement"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/settlements/{settlementId}/evidence": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listWltSettlementEvidence"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/settlement-policies/{partnerId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["upsertWltSettlementPolicy"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commission-policies": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["upsertWltCommissionPolicy"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commissions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listWltGovernedCommissions"];
-        put?: never;
-        post: operations["createWltGovernedCommission"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commissions/{commissionId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getWltGovernedCommission"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commissions/{commissionId}/adjust": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["adjustWltCommission"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commissions/{commissionId}/confirm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["confirmWltCommission"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commissions/{commissionId}/settle": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["settleWltCommission"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commissions/{commissionId}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["rejectWltCommission"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commissions/{commissionId}/reverse": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["reverseWltCommission"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/settlements/summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Return the OperatorContext-local settlement summary computed by WLT. */
-        get: operations["getWltSettlementSummary"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/settlements/{settlementId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one OperatorContext-local settlement. */
-        get: operations["getWltSettlement"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/settlements/{settlementId}/post": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Post a pending OperatorContext-local settlement and its balanced journal atomically. */
-        post: operations["postWltSettlement"];
+        /** Reject manual payout failure and require provider reconciliation. */
+        post: operations["failWltPayoutRequestClosed"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1020,315 +978,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/wlt/payout-requests/{payoutId}/fail": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reject manual payout failure and require provider reconciliation. */
-        post: operations["failWltPayoutRequestClosed"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/cod-records/{codRecordId}/collect": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["collectCodCustody"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/cod-records/{codRecordId}/remit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["remitCodCustody"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/cod-reconciliation-cases": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listCodReconciliationCases"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/cod-reconciliation-cases/{caseId}/assign": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["assignCodReconciliationCase"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/cod-reconciliation-cases/{caseId}/resolve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["resolveCodReconciliationCase"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/cod-records": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List OperatorContext-local COD records by one governed filter. */
-        get: operations["listWltCodRecords"];
-        put?: never;
-        /** Create or replay OperatorContext-local COD custody from WLT payment truth. */
-        post: operations["createWltCodRecord"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/cod-records/{codRecordId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Read one OperatorContext-local COD record. */
-        get: operations["getWltCodRecord"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commercial/products": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["createWltCommercialProduct"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commercial/products/{productReference}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getWltCommercialProduct"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch: operations["updateWltCommercialProduct"];
-        trace?: never;
-    };
-    "/wlt/commercial/clients/{clientId}/benefits": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getWltClientCommercialBenefits"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commercial/payment-sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["createWltSubscriptionPaymentSession"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commercial/loyalty-entries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["appendWltLoyaltyEntry"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commercial/subscriptions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["activateWltCommercialSubscription"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commercial/subscriptions/{subscriptionId}/lifecycle": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["getWltCommercialSubscriptionLifecycle"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commercial/subscriptions/{subscriptionId}/renew": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["renewWltCommercialSubscription"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commercial/subscriptions/{subscriptionId}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["cancelWltCommercialSubscription"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commercial/subscriptions/expire-due": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["expireDueWltCommercialSubscriptions"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/wlt/commercial/summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Return WLT-owned loyalty and subscription aggregate metrics. */
-        get: operations["getWltCommercialBenefitsSummary"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/wlt/promotion-funding/reservations": {
         parameters: {
             query?: never;
@@ -1403,6 +1052,357 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["reverseWltPromotionFunding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List OperatorContext-scoped refunds */
+        get: operations["listWltRefunds"];
+        put?: never;
+        /** Create a partial or full remaining refund request */
+        post: operations["createWltRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/refunds/{refundId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one OperatorContext-scoped refund */
+        get: operations["getWltRefund"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/refunds/{refundId}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Independently approve a requested refund */
+        post: operations["approveWltRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/refunds/{refundId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Independently reject a requested refund */
+        post: operations["rejectWltRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/refunds/{refundId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Claim and execute an approved refund through the provider
+         * @description The mutation receipt and approved-to-processing claim are committed before the provider call. An ambiguous provider result returns 202 only after provider_unknown and its reconciliation case are durably persisted.
+         */
+        post: operations["completeWltRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/refunds/{refundId}/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve a provider-unknown refund with external evidence */
+        post: operations["reconcileWltRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/refunds/{refundId}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List append-only refund audit evidence */
+        get: operations["listWltRefundAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/settlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List OperatorContext-local settlements. */
+        get: operations["listWltSettlements"];
+        put?: never;
+        post: operations["createWltEvidenceBackedSettlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/settlements/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the OperatorContext-local settlement summary computed by WLT. */
+        get: operations["getWltSettlementSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/settlements/{settlementId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one OperatorContext-local settlement. */
+        get: operations["getWltSettlement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/settlements/{settlementId}/post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post a pending OperatorContext-local settlement and its balanced journal atomically. */
+        post: operations["postWltSettlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/settlements/{settlementId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listWltSettlementEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/settlement-policies/{partnerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["upsertWltSettlementPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commission-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["upsertWltCommissionPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listWltGovernedCommissions"];
+        put?: never;
+        post: operations["createWltGovernedCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commissions/{commissionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getWltGovernedCommission"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commissions/{commissionId}/adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["adjustWltCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commissions/{commissionId}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirmWltCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commissions/{commissionId}/settle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["settleWltCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commissions/{commissionId}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rejectWltCommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wlt/commissions/{commissionId}/reverse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reverseWltCommission"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1518,9 +1518,210 @@ export interface components {
             /** @enum {string} */
             status?: "reference_created" | "pending_provider" | "authorization_pending" | "authorized" | "capture_pending" | "captured" | "cod_pending" | "cod_collected" | "failed" | "expired" | "provider_result_unknown";
         };
+        /** @enum {string} */
+        CustodyActorType: "captain" | "store_courier" | "partner_store" | "partner" | "operator";
+        CollectCodInput: {
+            /** Format: int64 */
+            actualAmountMinorUnits: number;
+            proofReference: string;
+            actorId: string;
+            actorType: components["schemas"]["CustodyActorType"];
+            /** @default  */
+            note: string;
+        };
+        RemitCodInput: {
+            proofReference: string;
+            actorId: string;
+            actorType: components["schemas"]["CustodyActorType"];
+            /** @default  */
+            note: string;
+        };
+        CodRecord: {
+            id: string;
+            orderId: string;
+            partnerId: string;
+            captainId?: string;
+            collectorId: string;
+            collectorType: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            /** @enum {string} */
+            status: "pending_collection" | "collected" | "remitted";
+        } & {
+            [key: string]: unknown;
+        };
+        CodCustodyEvidence: {
+            id: string;
+            codRecordId: string;
+            /** @enum {string} */
+            eventType: "collection" | "remittance";
+            /** Format: int64 */
+            expectedAmountMinorUnits: number;
+            /** Format: int64 */
+            actualAmountMinorUnits: number;
+            /** Format: int64 */
+            differenceMinorUnits: number;
+            currency: string;
+            proofReference: string;
+            actorId: string;
+            actorType: string;
+            note: string;
+            correlationId: string;
+            idempotencyKey: string;
+            ledgerTransactionId: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        /** @enum {string} */
+        CodReconciliationStatus: "open" | "investigating" | "resolved";
+        CodReconciliationCase: {
+            id: string;
+            codRecordId: string;
+            custodyEvidenceId: string;
+            /** Format: int64 */
+            expectedAmountMinorUnits: number;
+            /** Format: int64 */
+            actualAmountMinorUnits: number;
+            /** Format: int64 */
+            differenceMinorUnits: number;
+            currency: string;
+            triggerReason: string;
+            status: components["schemas"]["CodReconciliationStatus"];
+            assignedToOperatorId?: string | null;
+            /** Format: date-time */
+            assignedAt?: string | null;
+            investigationNote: string;
+            resolvedByOperatorId?: string | null;
+            resolutionAction?: string | null;
+            resolutionNote: string;
+            /** Format: date-time */
+            resolvedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CodCustodyMutationResult: {
+            codRecord: components["schemas"]["CodRecord"];
+            custodyEvidence: components["schemas"]["CodCustodyEvidence"];
+            reconciliationCase?: components["schemas"]["CodReconciliationCase"] | null;
+            replayed: boolean;
+        };
+        CodReconciliationCaseEnvelope: {
+            codReconciliationCase: components["schemas"]["CodReconciliationCase"];
+        };
+        CreateCodRecordRequest: {
+            orderId: string;
+            captainId?: string;
+            /** @enum {string} */
+            collectorType: "captain" | "store_courier" | "partner_store";
+            collectorId: string;
+            partnerId: string;
+            checkoutIntentId: string;
+        };
+        WltErrorResponse: {
+            code: string;
+            message: string;
+        };
+        WltCommercialBenefitsSummary: {
+            /** Format: int64 */
+            activeProducts: number;
+            /** Format: int64 */
+            activeSubscriptions: number;
+            /** Format: int64 */
+            monthlyRecurringMinorUnits: number;
+            /** Format: int64 */
+            loyaltyAccounts: number;
+            /** Format: int64 */
+            pointsIssuedThisMonth: number;
+        };
+        WltCommercialBenefitsSummaryResponse: {
+            summary: components["schemas"]["WltCommercialBenefitsSummary"];
+        };
+        CommercialProductWrite: {
+            [key: string]: unknown;
+        };
+        LoyaltyEntryWrite: {
+            clientId: string;
+            /** @enum {string} */
+            direction: "earn" | "burn" | "expire" | "reverse";
+            /** Format: int64 */
+            points: number;
+            sourceType: string;
+            sourceId: string;
+            reversalOf?: string;
+            idempotencyKey?: string;
+            correlationId?: string;
+            metadata?: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        SubscriptionPaymentSessionCreate: {
+            subscriptionPurchaseId: string;
+            productReference: string;
+            operatorContextId: string;
+            clientId: string;
+            /** @enum {string} */
+            paymentMethod?: "official_wallet";
+        };
+        SubscriptionActivation: {
+            clientId: string;
+            productReference: string;
+            paymentSessionId: string;
+            subscriptionPurchaseId: string;
+        };
         Error: {
             code: string;
             message: string;
+        };
+        /** @enum {string} */
+        CollectionActorType: "captain" | "store_courier" | "partner_store" | "partner" | "operator";
+        CreateDeliveryCollectionRequest: {
+            orderId: string;
+            /** @enum {string} */
+            collectorType: "captain" | "store_courier" | "partner_store";
+            collectorId: string;
+            captainId?: string;
+            partnerId: string;
+            checkoutIntentId: string;
+        };
+        CollectDeliveryCollectionRequest: {
+            /** Format: int64 */
+            actualAmountMinorUnits: number;
+            proofReference: string;
+            actorId: string;
+            actorType: components["schemas"]["CollectionActorType"];
+            note?: string;
+        };
+        DeliveryCollectionRecord: {
+            id: string;
+            orderId: string;
+            captainId?: string;
+            collectorType: string;
+            collectorId: string;
+            partnerId: string;
+            /** Format: int64 */
+            amountMinorUnits: number;
+            currency: string;
+            status: string;
+            collectedAt?: string | null;
+            remittedAt?: string | null;
+            createdAt: string;
+            updatedAt: string;
+        };
+        DeliveryCollectionHandoffResponse: {
+            codRecord: components["schemas"]["DeliveryCollectionRecord"] | null;
+            applicable: boolean;
+            replayed: boolean;
+        };
+        RemitDeliveryCollectionRequest: {
+            proofReference: string;
+            actorId: string;
+            actorType: components["schemas"]["CollectionActorType"];
+            note?: string;
         };
         /** @enum {string} */
         PaymentStatus: "reference_created" | "pending_provider" | "authorization_pending" | "authorized" | "capture_pending" | "captured" | "cod_pending" | "cod_collected" | "failed" | "expired" | "provider_result_unknown";
@@ -1650,50 +1851,152 @@ export interface components {
             };
         };
         /** @enum {string} */
-        CollectionActorType: "captain" | "store_courier" | "partner_store" | "partner" | "operator";
-        CreateDeliveryCollectionRequest: {
-            orderId: string;
+        PayoutActorType: "partner" | "captain" | "field";
+        /** @enum {string} */
+        PayoutStatus: "pending" | "approved" | "provider_pending" | "provider_result_unknown" | "processing" | "completed" | "rejected" | "failed";
+        /** @enum {string} */
+        ReconciliationStatus: "not_required" | "required" | "inquiry_pending" | "resolved_success" | "resolved_failed";
+        PayoutDestinationInput: {
+            beneficiaryName: string;
+            bankName?: string;
+            bankBranch?: string;
+            accountNumber?: string;
+            iban?: string;
+            payoutMobileNumber?: string;
             /** @enum {string} */
-            collectorType: "captain" | "store_courier" | "partner_store";
-            collectorId: string;
-            captainId?: string;
-            partnerId: string;
-            checkoutIntentId: string;
+            settlementPreference: "bank" | "mobile_money" | "manual";
+            bankAccountHolderMatchesOwner: boolean;
+            bankNotes?: string;
+            operatorId?: string;
         };
-        CollectDeliveryCollectionRequest: {
-            /** Format: int64 */
-            actualAmountMinorUnits: number;
-            proofReference: string;
-            actorId: string;
-            actorType: components["schemas"]["CollectionActorType"];
-            note?: string;
-        };
-        DeliveryCollectionRecord: {
+        PayoutDestination: {
             id: string;
-            orderId: string;
-            captainId?: string;
-            collectorType: string;
-            collectorId: string;
-            partnerId: string;
-            /** Format: int64 */
-            amountMinorUnits: number;
-            currency: string;
-            status: string;
-            collectedAt?: string | null;
-            remittedAt?: string | null;
-            createdAt: string;
+            ownerActorId: string;
+            ownerActorType: components["schemas"]["PayoutActorType"];
+            /** @enum {string} */
+            settlementPreference: "bank" | "mobile_money" | "manual";
+            maskedAccountNumber: string;
+            maskedIban: string;
+            maskedMobileNumber: string;
+            beneficiaryName: string;
+            bankName?: string;
+            bankBranch?: string;
+            active: boolean;
+            /** Format: date-time */
             updatedAt: string;
         };
-        DeliveryCollectionHandoffResponse: {
-            codRecord: components["schemas"]["DeliveryCollectionRecord"] | null;
-            applicable: boolean;
-            replayed: boolean;
+        PayoutDestinationEnvelope: {
+            payoutDestination: components["schemas"]["PayoutDestination"];
         };
-        RemitDeliveryCollectionRequest: {
-            proofReference: string;
+        CreatePayoutRequest: {
+            beneficiaryActorId: string;
+            beneficiaryActorType: components["schemas"]["PayoutActorType"];
+            payoutDestinationId: string;
+            amountMinorUnits: number;
+            currency: string;
+            idempotencyKey: string;
+        };
+        PayoutRequest: {
+            id: string;
+            beneficiaryActorId: string;
+            beneficiaryActorType: components["schemas"]["PayoutActorType"];
+            payoutDestinationId: string;
+            amountMinorUnits: number;
+            currency: string;
+            status: components["schemas"]["PayoutStatus"];
+            reconciliationStatus: components["schemas"]["ReconciliationStatus"];
+            /** Format: date-time */
+            requestedAt: string;
+            /** Format: date-time */
+            approvedAt?: string | null;
+            /** Format: date-time */
+            rejectedAt?: string | null;
+            /** Format: date-time */
+            processedAt?: string | null;
+            /** Format: date-time */
+            completedAt?: string | null;
+            /** Format: date-time */
+            failedAt?: string | null;
+            /** Format: date-time */
+            reconciledAt?: string | null;
+            failureReason?: string;
+            providerReference?: string;
+            providerStatus?: string;
+            approvedByOperatorId?: string;
+            processedByOperatorId?: string;
+            completedByOperatorId?: string;
+            reconciledByOperatorId?: string;
+        };
+        PayoutRequestEnvelope: {
+            payoutRequest: components["schemas"]["PayoutRequest"];
+        };
+        PayoutAuditEvent: {
+            id: string;
+            aggregateType: string;
+            aggregateId: string;
+            action: string;
             actorId: string;
-            actorType: components["schemas"]["CollectionActorType"];
-            note?: string;
+            actorType: string;
+            reason?: string;
+            correlationId: string;
+            metadata: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ReservePromotionFundingRequest: {
+            operatorContextId: string;
+            externalReference: string;
+            checkoutIntentId: string;
+            couponRedemptionId: string;
+            couponId: string;
+            clientId: string;
+            partnerId?: string;
+            /** Format: int64 */
+            platformFundedMinorUnits: number;
+            /** Format: int64 */
+            partnerFundedMinorUnits: number;
+            /** Format: int64 */
+            totalDiscountMinorUnits: number;
+            currency: string;
+        };
+        CommitPromotionFundingRequest: {
+            operatorContextId: string;
+            orderId: string;
+        };
+        ReleasePromotionFundingRequest: {
+            operatorContextId: string;
+            reason: string;
+        };
+        ReversePromotionFundingRequest: {
+            operatorContextId: string;
+            orderId: string;
+            reason: string;
+        };
+        PromotionFundingReservation: {
+            id: string;
+            operatorContextId: string;
+            externalReference: string;
+            checkoutIntentId: string;
+            couponRedemptionId: string;
+            couponId: string;
+            clientId: string;
+            partnerId?: string;
+            /** Format: int64 */
+            platformFundedMinorUnits: number;
+            /** Format: int64 */
+            partnerFundedMinorUnits: number;
+            /** Format: int64 */
+            totalDiscountMinorUnits: number;
+            currency: string;
+            /** @enum {string} */
+            status: "reserved" | "committed" | "released" | "reversed";
+            orderId?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         /** @enum {string} */
         RefundStatus: "requested" | "approved" | "processing" | "provider_unknown" | "completed" | "rejected" | "reversed";
@@ -1798,6 +2101,25 @@ export interface components {
             code?: "REFUND_IDEMPOTENCY_STORE_FAILED" | "REFUND_IDEMPOTENCY_RECEIPT_FAILED";
         };
         CompletionPersistenceError: components["schemas"]["OutcomePersistenceError"] | components["schemas"]["MutationReceiptError"];
+        SettlementListItem: {
+            id: string;
+            operatorContextId?: string;
+            partnerId: string;
+            periodStart: string;
+            periodEnd: string;
+            grossAmount: number;
+            platformFee: number;
+            netAmount: number;
+            currency: string;
+            orderCount: number;
+            status: string;
+            settledAt?: string | null;
+            createdAt: string;
+            updatedAt: string;
+        };
+        SettlementListResponse: {
+            settlements: components["schemas"]["SettlementListItem"][];
+        };
         /** @enum {string} */
         RepresentativeActorType: "partner" | "captain" | "field";
         /** @enum {string} */
@@ -1926,328 +2248,6 @@ export interface components {
                 createdAt: string;
             }[];
         };
-        SettlementListItem: {
-            id: string;
-            operatorContextId?: string;
-            partnerId: string;
-            periodStart: string;
-            periodEnd: string;
-            grossAmount: number;
-            platformFee: number;
-            netAmount: number;
-            currency: string;
-            orderCount: number;
-            status: string;
-            settledAt?: string | null;
-            createdAt: string;
-            updatedAt: string;
-        };
-        SettlementListResponse: {
-            settlements: components["schemas"]["SettlementListItem"][];
-        };
-        /** @enum {string} */
-        PayoutActorType: "partner" | "captain" | "field";
-        /** @enum {string} */
-        PayoutStatus: "pending" | "approved" | "provider_pending" | "provider_result_unknown" | "processing" | "completed" | "rejected" | "failed";
-        /** @enum {string} */
-        ReconciliationStatus: "not_required" | "required" | "inquiry_pending" | "resolved_success" | "resolved_failed";
-        PayoutDestinationInput: {
-            beneficiaryName: string;
-            bankName?: string;
-            bankBranch?: string;
-            accountNumber?: string;
-            iban?: string;
-            payoutMobileNumber?: string;
-            /** @enum {string} */
-            settlementPreference: "bank" | "mobile_money" | "manual";
-            bankAccountHolderMatchesOwner: boolean;
-            bankNotes?: string;
-            operatorId?: string;
-        };
-        PayoutDestination: {
-            id: string;
-            ownerActorId: string;
-            ownerActorType: components["schemas"]["PayoutActorType"];
-            /** @enum {string} */
-            settlementPreference: "bank" | "mobile_money" | "manual";
-            maskedAccountNumber: string;
-            maskedIban: string;
-            maskedMobileNumber: string;
-            beneficiaryName: string;
-            bankName?: string;
-            bankBranch?: string;
-            active: boolean;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        PayoutDestinationEnvelope: {
-            payoutDestination: components["schemas"]["PayoutDestination"];
-        };
-        CreatePayoutRequest: {
-            beneficiaryActorId: string;
-            beneficiaryActorType: components["schemas"]["PayoutActorType"];
-            payoutDestinationId: string;
-            amountMinorUnits: number;
-            currency: string;
-            idempotencyKey: string;
-        };
-        PayoutRequest: {
-            id: string;
-            beneficiaryActorId: string;
-            beneficiaryActorType: components["schemas"]["PayoutActorType"];
-            payoutDestinationId: string;
-            amountMinorUnits: number;
-            currency: string;
-            status: components["schemas"]["PayoutStatus"];
-            reconciliationStatus: components["schemas"]["ReconciliationStatus"];
-            /** Format: date-time */
-            requestedAt: string;
-            /** Format: date-time */
-            approvedAt?: string | null;
-            /** Format: date-time */
-            rejectedAt?: string | null;
-            /** Format: date-time */
-            processedAt?: string | null;
-            /** Format: date-time */
-            completedAt?: string | null;
-            /** Format: date-time */
-            failedAt?: string | null;
-            /** Format: date-time */
-            reconciledAt?: string | null;
-            failureReason?: string;
-            providerReference?: string;
-            providerStatus?: string;
-            approvedByOperatorId?: string;
-            processedByOperatorId?: string;
-            completedByOperatorId?: string;
-            reconciledByOperatorId?: string;
-        };
-        PayoutRequestEnvelope: {
-            payoutRequest: components["schemas"]["PayoutRequest"];
-        };
-        PayoutAuditEvent: {
-            id: string;
-            aggregateType: string;
-            aggregateId: string;
-            action: string;
-            actorId: string;
-            actorType: string;
-            reason?: string;
-            correlationId: string;
-            metadata: {
-                [key: string]: unknown;
-            };
-            /** Format: date-time */
-            createdAt: string;
-        };
-        /** @enum {string} */
-        CustodyActorType: "captain" | "store_courier" | "partner_store" | "partner" | "operator";
-        CollectCodInput: {
-            /** Format: int64 */
-            actualAmountMinorUnits: number;
-            proofReference: string;
-            actorId: string;
-            actorType: components["schemas"]["CustodyActorType"];
-            /** @default  */
-            note: string;
-        };
-        RemitCodInput: {
-            proofReference: string;
-            actorId: string;
-            actorType: components["schemas"]["CustodyActorType"];
-            /** @default  */
-            note: string;
-        };
-        CodRecord: {
-            id: string;
-            orderId: string;
-            partnerId: string;
-            captainId?: string;
-            collectorId: string;
-            collectorType: string;
-            /** Format: int64 */
-            amountMinorUnits: number;
-            currency: string;
-            /** @enum {string} */
-            status: "pending_collection" | "collected" | "remitted";
-        } & {
-            [key: string]: unknown;
-        };
-        CodCustodyEvidence: {
-            id: string;
-            codRecordId: string;
-            /** @enum {string} */
-            eventType: "collection" | "remittance";
-            /** Format: int64 */
-            expectedAmountMinorUnits: number;
-            /** Format: int64 */
-            actualAmountMinorUnits: number;
-            /** Format: int64 */
-            differenceMinorUnits: number;
-            currency: string;
-            proofReference: string;
-            actorId: string;
-            actorType: string;
-            note: string;
-            correlationId: string;
-            idempotencyKey: string;
-            ledgerTransactionId: string;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        /** @enum {string} */
-        CodReconciliationStatus: "open" | "investigating" | "resolved";
-        CodReconciliationCase: {
-            id: string;
-            codRecordId: string;
-            custodyEvidenceId: string;
-            /** Format: int64 */
-            expectedAmountMinorUnits: number;
-            /** Format: int64 */
-            actualAmountMinorUnits: number;
-            /** Format: int64 */
-            differenceMinorUnits: number;
-            currency: string;
-            triggerReason: string;
-            status: components["schemas"]["CodReconciliationStatus"];
-            assignedToOperatorId?: string | null;
-            /** Format: date-time */
-            assignedAt?: string | null;
-            investigationNote: string;
-            resolvedByOperatorId?: string | null;
-            resolutionAction?: string | null;
-            resolutionNote: string;
-            /** Format: date-time */
-            resolvedAt?: string | null;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
-        CodCustodyMutationResult: {
-            codRecord: components["schemas"]["CodRecord"];
-            custodyEvidence: components["schemas"]["CodCustodyEvidence"];
-            reconciliationCase?: components["schemas"]["CodReconciliationCase"] | null;
-            replayed: boolean;
-        };
-        CodReconciliationCaseEnvelope: {
-            codReconciliationCase: components["schemas"]["CodReconciliationCase"];
-        };
-        CreateCodRecordRequest: {
-            orderId: string;
-            captainId?: string;
-            /** @enum {string} */
-            collectorType: "captain" | "store_courier" | "partner_store";
-            collectorId: string;
-            partnerId: string;
-            checkoutIntentId: string;
-        };
-        CommercialProductWrite: {
-            [key: string]: unknown;
-        };
-        LoyaltyEntryWrite: {
-            clientId: string;
-            /** @enum {string} */
-            direction: "earn" | "burn" | "expire" | "reverse";
-            /** Format: int64 */
-            points: number;
-            sourceType: string;
-            sourceId: string;
-            reversalOf?: string;
-            idempotencyKey?: string;
-            correlationId?: string;
-            metadata?: {
-                [key: string]: unknown;
-            };
-        } & {
-            [key: string]: unknown;
-        };
-        SubscriptionPaymentSessionCreate: {
-            subscriptionPurchaseId: string;
-            productReference: string;
-            operatorContextId: string;
-            clientId: string;
-            /** @enum {string} */
-            paymentMethod?: "official_wallet";
-        };
-        SubscriptionActivation: {
-            clientId: string;
-            productReference: string;
-            paymentSessionId: string;
-            subscriptionPurchaseId: string;
-        };
-        WltErrorResponse: {
-            code: string;
-            message: string;
-        };
-        WltCommercialBenefitsSummary: {
-            /** Format: int64 */
-            activeProducts: number;
-            /** Format: int64 */
-            activeSubscriptions: number;
-            /** Format: int64 */
-            monthlyRecurringMinorUnits: number;
-            /** Format: int64 */
-            loyaltyAccounts: number;
-            /** Format: int64 */
-            pointsIssuedThisMonth: number;
-        };
-        WltCommercialBenefitsSummaryResponse: {
-            summary: components["schemas"]["WltCommercialBenefitsSummary"];
-        };
-        ReservePromotionFundingRequest: {
-            operatorContextId: string;
-            externalReference: string;
-            checkoutIntentId: string;
-            couponRedemptionId: string;
-            couponId: string;
-            clientId: string;
-            partnerId?: string;
-            /** Format: int64 */
-            platformFundedMinorUnits: number;
-            /** Format: int64 */
-            partnerFundedMinorUnits: number;
-            /** Format: int64 */
-            totalDiscountMinorUnits: number;
-            currency: string;
-        };
-        CommitPromotionFundingRequest: {
-            operatorContextId: string;
-            orderId: string;
-        };
-        ReleasePromotionFundingRequest: {
-            operatorContextId: string;
-            reason: string;
-        };
-        ReversePromotionFundingRequest: {
-            operatorContextId: string;
-            orderId: string;
-            reason: string;
-        };
-        PromotionFundingReservation: {
-            id: string;
-            operatorContextId: string;
-            externalReference: string;
-            checkoutIntentId: string;
-            couponRedemptionId: string;
-            couponId: string;
-            clientId: string;
-            partnerId?: string;
-            /** Format: int64 */
-            platformFundedMinorUnits: number;
-            /** Format: int64 */
-            partnerFundedMinorUnits: number;
-            /** Format: int64 */
-            totalDiscountMinorUnits: number;
-            currency: string;
-            /** @enum {string} */
-            status: "reserved" | "committed" | "released" | "reversed";
-            orderId?: string;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
     };
     responses: {
         /** @description Canonical WLT reference. */
@@ -2259,6 +2259,89 @@ export interface components {
                 "application/json": {
                     [key: string]: unknown;
                 };
+            };
+        };
+        /** @description Invalid request. */
+        CustodyInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Missing or invalid service authentication. */
+        CustodyUnauthorized: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Actor or mutation gate forbids the operation. */
+        CustodyForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description COD record was not found. */
+        CustodyNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description State, evidence or idempotency conflict. */
+        CustodyConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Service authentication failed. */
+        Unauthenticated: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["WltErrorResponse"];
+            };
+        };
+        /** @description Caller is forbidden. */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["WltErrorResponse"];
+            };
+        };
+        /** @description Governed WLT commercial object. */
+        ObjectResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        /** @description Governed error response. */
+        ErrorResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
             };
         };
         /** @description Governed WLT error response. */
@@ -2311,6 +2394,80 @@ export interface components {
                 [name: string]: unknown;
             };
             content?: never;
+        };
+        /** @description Updated canonical payout state. */
+        PayoutResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["PayoutRequestEnvelope"];
+            };
+        };
+        /** @description Invalid request. */
+        PayoutInvalidRequest: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Actor scope or maker-checker rule failed. */
+        PayoutForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Resource not found. */
+        PayoutNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Invalid transition, inactive destination, balance mismatch, or idempotency conflict. */
+        PayoutConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Provider unavailable, declined, invalid, or still ambiguous. */
+        ProviderError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description Governed promotion-funding reservation. */
+        ReservationResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    reservation: components["schemas"]["PromotionFundingReservation"];
+                };
+            };
+        };
+        /** @description Governed error response. */
+        WltPromotionFundingErrorResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
         };
         /** @description Invalid request or evidence */
         BadRequest: {
@@ -2402,154 +2559,6 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description Updated canonical payout state. */
-        PayoutResponse: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["PayoutRequestEnvelope"];
-            };
-        };
-        /** @description Invalid request. */
-        PayoutInvalidRequest: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Actor scope or maker-checker rule failed. */
-        PayoutForbidden: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Resource not found. */
-        PayoutNotFound: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Invalid transition, inactive destination, balance mismatch, or idempotency conflict. */
-        PayoutConflict: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Provider unavailable, declined, invalid, or still ambiguous. */
-        ProviderError: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Invalid request. */
-        CustodyInvalidRequest: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Missing or invalid service authentication. */
-        CustodyUnauthorized: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Actor or mutation gate forbids the operation. */
-        CustodyForbidden: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description COD record was not found. */
-        CustodyNotFound: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description State, evidence or idempotency conflict. */
-        CustodyConflict: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Governed WLT commercial object. */
-        ObjectResponse: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        /** @description Governed error response. */
-        ErrorResponse: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Service authentication failed. */
-        Unauthenticated: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["WltErrorResponse"];
-            };
-        };
-        /** @description Caller is forbidden. */
-        Forbidden: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["WltErrorResponse"];
-            };
-        };
-        /** @description Governed promotion-funding reservation. */
-        ReservationResponse: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": {
-                    reservation: components["schemas"]["PromotionFundingReservation"];
-                };
-            };
-        };
         /** @description Invalid request. */
         WorkforceFinanceBadRequest: {
             headers: {
@@ -2590,6 +2599,7 @@ export interface components {
         OrderIdQuery: string;
         ActorTypePath: components["schemas"]["ActorType"];
         ActorIdPath: string;
+        ProductReference: string;
         Authorization: string;
         ServiceCaller: "dsh";
         OperatorContextId: string;
@@ -2598,23 +2608,26 @@ export interface components {
         IdempotencyKey: string;
         CaseId: string;
         CodRecordId: string;
-        CorrelationHeader: string;
-        IdempotencyHeader: string;
         PayoutId: string;
         SettlementId: string;
-        OperatorContextHeader: string;
         PaymentSessionId: string;
+        ActorType: components["schemas"]["PayoutActorType"];
+        ActorId: string;
+        ReservationId: string;
         RefundId: string;
         CommissionId: string;
         PartnerId: string;
-        ActorType: components["schemas"]["PayoutActorType"];
-        ActorId: string;
-        ProductReference: string;
-        ReservationId: string;
         PartnerCategory: string;
         PenaltyId: string;
     };
     requestBodies: {
+        OperatorBody: {
+            content: {
+                "application/json": {
+                    operatorId: string;
+                };
+            };
+        };
         LifecycleAction: {
             content: {
                 "application/json": {
@@ -2627,13 +2640,6 @@ export interface components {
                 "application/json": {
                     operatorId: string;
                     reason: string;
-                };
-            };
-        };
-        OperatorBody: {
-            content: {
-                "application/json": {
-                    operatorId: string;
                 };
             };
         };
@@ -2985,6 +2991,732 @@ export interface operations {
             };
         };
     };
+    collectCodCustody: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                codRecordId: components["parameters"]["CodRecordId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectCodInput"];
+            };
+        };
+        responses: {
+            /** @description Collection committed atomically or replayed idempotently. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodCustodyMutationResult"];
+                };
+            };
+            400: components["responses"]["CustodyInvalidRequest"];
+            401: components["responses"]["CustodyUnauthorized"];
+            403: components["responses"]["CustodyForbidden"];
+            404: components["responses"]["CustodyNotFound"];
+            409: components["responses"]["CustodyConflict"];
+        };
+    };
+    remitCodCustody: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                codRecordId: components["parameters"]["CodRecordId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemitCodInput"];
+            };
+        };
+        responses: {
+            /** @description Remittance committed atomically or replayed idempotently. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodCustodyMutationResult"];
+                };
+            };
+            400: components["responses"]["CustodyInvalidRequest"];
+            401: components["responses"]["CustodyUnauthorized"];
+            403: components["responses"]["CustodyForbidden"];
+            404: components["responses"]["CustodyNotFound"];
+            409: components["responses"]["CustodyConflict"];
+        };
+    };
+    listCodReconciliationCases: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["CodReconciliationStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description COD variance cases. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        codReconciliationCases: components["schemas"]["CodReconciliationCase"][];
+                    };
+                };
+            };
+            400: components["responses"]["CustodyInvalidRequest"];
+            401: components["responses"]["CustodyUnauthorized"];
+            403: components["responses"]["CustodyForbidden"];
+        };
+    };
+    assignCodReconciliationCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                caseId: components["parameters"]["CaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    operatorId: string;
+                    /** @default  */
+                    investigationNote?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Case assigned for investigation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodReconciliationCaseEnvelope"];
+                };
+            };
+            400: components["responses"]["CustodyInvalidRequest"];
+            401: components["responses"]["CustodyUnauthorized"];
+            403: components["responses"]["CustodyForbidden"];
+            409: components["responses"]["CustodyConflict"];
+        };
+    };
+    resolveCodReconciliationCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                caseId: components["parameters"]["CaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    operatorId: string;
+                    /** @enum {string} */
+                    resolutionAction: "confirmed_variance" | "cash_adjustment" | "collector_recovery" | "write_off";
+                    resolutionNote: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Assigned case resolved by the assigned operator. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodReconciliationCaseEnvelope"];
+                };
+            };
+            400: components["responses"]["CustodyInvalidRequest"];
+            401: components["responses"]["CustodyUnauthorized"];
+            403: components["responses"]["CustodyForbidden"];
+            409: components["responses"]["CustodyConflict"];
+        };
+    };
+    listWltCodRecords: {
+        parameters: {
+            query?: {
+                captainId?: string;
+                partnerId?: string;
+                orderId?: string;
+            };
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OperatorContext-local COD records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    createWltCodRecord: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCodRecordRequest"];
+            };
+        };
+        responses: {
+            /** @description Exact replay of the existing COD record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description OperatorContext-local COD record created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    getWltCodRecord: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+            };
+            path: {
+                codRecordId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OperatorContext-local COD record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    getWltCommercialBenefitsSummary: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: string;
+                "X-Service-Caller": "dsh";
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Commercial benefits summary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WltCommercialBenefitsSummaryResponse"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createWltCommercialProduct: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommercialProductWrite"];
+            };
+        };
+        responses: {
+            201: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    getWltCommercialProduct: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+            };
+            path: {
+                productReference: components["parameters"]["ProductReference"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+        };
+    };
+    updateWltCommercialProduct: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+            };
+            path: {
+                productReference: components["parameters"]["ProductReference"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommercialProductWrite"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    getWltClientCommercialBenefits: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+            };
+            path: {
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    createWltSubscriptionPaymentSession: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "Idempotency-Key": string;
+                "X-Correlation-ID": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionPaymentSessionCreate"];
+            };
+        };
+        responses: {
+            201: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    appendWltLoyaltyEntry: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoyaltyEntryWrite"];
+            };
+        };
+        responses: {
+            201: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    activateWltCommercialSubscription: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Correlation-ID": string;
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionActivation"];
+            };
+        };
+        responses: {
+            201: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    getWltCommercialSubscriptionLifecycle: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+            };
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+        };
+    };
+    renewWltCommercialSubscription: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "Idempotency-Key": string;
+                "X-Correlation-ID": string;
+            };
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionActivation"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    cancelWltCommercialSubscription: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "Idempotency-Key": string;
+                "X-Correlation-ID": string;
+            };
+            path: {
+                subscriptionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    clientId: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    expireDueWltCommercialSubscriptions: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "Idempotency-Key": string;
+                "X-Correlation-ID": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ObjectResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+        };
+    };
+    listWltDeliveryCollections: {
+        parameters: {
+            query?: {
+                captainId?: string;
+                partnerId?: string;
+                collectorId?: string;
+                collectorType?: string;
+            };
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delivery collection custody records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["CollectionInvalidRequest"];
+            401: components["responses"]["CollectionUnauthorized"];
+            403: components["responses"]["CollectionForbidden"];
+        };
+    };
+    createWltDeliveryCollectionHandoff: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDeliveryCollectionRequest"];
+            };
+        };
+        responses: {
+            /** @description Delivery was prepaid and no COD custody record is applicable, or an existing record was replayed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryCollectionHandoffResponse"];
+                };
+            };
+            /** @description OperatorContext-local COD custody record created from WLT payment truth */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeliveryCollectionHandoffResponse"];
+                };
+            };
+            400: components["responses"]["CollectionInvalidRequest"];
+            401: components["responses"]["CollectionUnauthorized"];
+            403: components["responses"]["CollectionFeatureNotEnabled"];
+            404: components["responses"]["CollectionNotFound"];
+            409: components["responses"]["CollectionConflict"];
+        };
+    };
+    getWltDeliveryCollection: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+            };
+            path: {
+                codRecordId: components["parameters"]["CodRecordId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Delivery collection custody record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["CollectionInvalidRequest"];
+            401: components["responses"]["CollectionUnauthorized"];
+            403: components["responses"]["CollectionForbidden"];
+            404: components["responses"]["CollectionNotFound"];
+        };
+    };
+    collectWltDeliveryCollection: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                codRecordId: components["parameters"]["CodRecordId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectDeliveryCollectionRequest"];
+            };
+        };
+        responses: {
+            /** @description Collection committed atomically or replayed exactly */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["CollectionInvalidRequest"];
+            401: components["responses"]["CollectionUnauthorized"];
+            403: components["responses"]["CollectionFeatureNotEnabled"];
+            404: components["responses"]["CollectionNotFound"];
+            409: components["responses"]["CollectionConflict"];
+        };
+    };
+    remitWltDeliveryCollection: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path: {
+                codRecordId: components["parameters"]["CodRecordId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemitDeliveryCollectionRequest"];
+            };
+        };
+        responses: {
+            /** @description Remittance committed atomically or replayed exactly */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["CollectionInvalidRequest"];
+            401: components["responses"]["CollectionUnauthorized"];
+            403: components["responses"]["CollectionFeatureNotEnabled"];
+            404: components["responses"]["CollectionNotFound"];
+            409: components["responses"]["CollectionConflict"];
+        };
+    };
     createWltPaymentSession: {
         parameters: {
             query?: never;
@@ -3330,37 +4062,7 @@ export interface operations {
             503: components["responses"]["Error"];
         };
     };
-    listWltDeliveryCollections: {
-        parameters: {
-            query?: {
-                captainId?: string;
-                partnerId?: string;
-                collectorId?: string;
-                collectorType?: string;
-            };
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Delivery collection custody records */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["CollectionInvalidRequest"];
-            401: components["responses"]["CollectionUnauthorized"];
-            403: components["responses"]["CollectionForbidden"];
-        };
-    };
-    createWltDeliveryCollectionHandoff: {
+    failWltPayoutRequestClosed: {
         parameters: {
             query?: never;
             header: {
@@ -3370,136 +4072,455 @@ export interface operations {
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
-            path?: never;
+            path: {
+                payoutId: components["parameters"]["PayoutId"];
+            };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateDeliveryCollectionRequest"];
+                "application/json": {
+                    operatorId: string;
+                };
             };
         };
         responses: {
-            /** @description Delivery was prepaid and no COD custody record is applicable, or an existing record was replayed */
+            403: components["responses"]["Error"];
+            /** @description RECONCILIATION_REQUIRED; held funds remain unchanged. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getWltTypedPayoutDestination: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                actorType: components["parameters"]["ActorType"];
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active masked payout destination. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeliveryCollectionHandoffResponse"];
+                    "application/json": components["schemas"]["PayoutDestinationEnvelope"];
                 };
             };
-            /** @description OperatorContext-local COD custody record created from WLT payment truth */
+            404: components["responses"]["PayoutNotFound"];
+        };
+    };
+    upsertWltTypedPayoutDestination: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                actorType: components["parameters"]["ActorType"];
+                actorId: components["parameters"]["ActorId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayoutDestinationInput"];
+            };
+        };
+        responses: {
+            /** @description Destination encrypted and activated; prior destination deactivated. */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeliveryCollectionHandoffResponse"];
+                    "application/json": components["schemas"]["PayoutDestinationEnvelope"];
                 };
             };
-            400: components["responses"]["CollectionInvalidRequest"];
-            401: components["responses"]["CollectionUnauthorized"];
-            403: components["responses"]["CollectionFeatureNotEnabled"];
-            404: components["responses"]["CollectionNotFound"];
-            409: components["responses"]["CollectionConflict"];
+            400: components["responses"]["PayoutInvalidRequest"];
+            403: components["responses"]["PayoutForbidden"];
         };
     };
-    getWltDeliveryCollection: {
+    deactivateWltTypedPayoutDestination: {
         parameters: {
             query?: never;
             header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
-                codRecordId: components["parameters"]["CodRecordId"];
+                actorType: components["parameters"]["ActorType"];
+                actorId: components["parameters"]["ActorId"];
             };
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Delivery collection custody record */
-            200: {
+            /** @description Destination deactivated. */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            400: components["responses"]["CollectionInvalidRequest"];
-            401: components["responses"]["CollectionUnauthorized"];
-            403: components["responses"]["CollectionForbidden"];
-            404: components["responses"]["CollectionNotFound"];
+            404: components["responses"]["PayoutNotFound"];
         };
     };
-    collectWltDeliveryCollection: {
+    listWltPayoutRequests: {
+        parameters: {
+            query?: {
+                beneficiaryActorId?: string;
+                beneficiaryActorType?: components["schemas"]["PayoutActorType"];
+                status?: components["schemas"]["PayoutStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scoped canonical payout requests. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        payoutRequests: components["schemas"]["PayoutRequest"][];
+                        total: number;
+                    };
+                };
+            };
+        };
+    };
+    createWltDestinationBoundPayoutRequest: {
         parameters: {
             query?: never;
             header: {
-                Authorization: components["parameters"]["Authorization"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePayoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Exact idempotent replay. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutRequestEnvelope"];
+                };
+            };
+            /** @description Funds held and destination-bound request created atomically. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutRequestEnvelope"];
+                };
+            };
+            403: components["responses"]["PayoutForbidden"];
+            409: components["responses"]["PayoutConflict"];
+        };
+    };
+    getWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: components["parameters"]["PayoutId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Canonical payout state and provider proof. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutRequestEnvelope"];
+                };
+            };
+            404: components["responses"]["PayoutNotFound"];
+        };
+    };
+    approveWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                payoutId: components["parameters"]["PayoutId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["OperatorBody"];
+        responses: {
+            200: components["responses"]["PayoutResponse"];
+            409: components["responses"]["PayoutConflict"];
+        };
+    };
+    rejectWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                payoutId: components["parameters"]["PayoutId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["OperatorBody"];
+        responses: {
+            200: components["responses"]["PayoutResponse"];
+            409: components["responses"]["PayoutConflict"];
+        };
+    };
+    processWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                payoutId: components["parameters"]["PayoutId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["OperatorBody"];
+        responses: {
+            200: components["responses"]["PayoutResponse"];
+            403: components["responses"]["PayoutForbidden"];
+            409: components["responses"]["PayoutConflict"];
+            502: components["responses"]["ProviderError"];
+        };
+    };
+    completeWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                payoutId: components["parameters"]["PayoutId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["OperatorBody"];
+        responses: {
+            200: components["responses"]["PayoutResponse"];
+            403: components["responses"]["PayoutForbidden"];
+            409: components["responses"]["PayoutConflict"];
+        };
+    };
+    reconcileWltPayoutRequest: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                payoutId: components["parameters"]["PayoutId"];
+            };
+            cookie?: never;
+        };
+        requestBody: components["requestBodies"]["OperatorBody"];
+        responses: {
+            /** @description Inquiry resolved to a provider-proven success or confirmed failure. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutRequestEnvelope"];
+                };
+            };
+            403: components["responses"]["PayoutForbidden"];
+            409: components["responses"]["PayoutConflict"];
+            502: components["responses"]["ProviderError"];
+        };
+    };
+    listWltPayoutAudit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: components["parameters"]["PayoutId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Append-only correlation-linked audit. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        auditEvents: components["schemas"]["PayoutAuditEvent"][];
+                    };
+                };
+            };
+        };
+    };
+    reserveWltPromotionFunding: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReservePromotionFundingRequest"];
+            };
+        };
+        responses: {
+            201: components["responses"]["ReservationResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    getWltPromotionFundingReservation: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+            };
+            path: {
+                reservationId: components["parameters"]["ReservationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ReservationResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+        };
+    };
+    commitWltPromotionFunding: {
+        parameters: {
+            query?: never;
+            header: {
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
             path: {
-                codRecordId: components["parameters"]["CodRecordId"];
+                reservationId: components["parameters"]["ReservationId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CollectDeliveryCollectionRequest"];
+                "application/json": components["schemas"]["CommitPromotionFundingRequest"];
             };
         };
         responses: {
-            /** @description Collection committed atomically or replayed exactly */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["CollectionInvalidRequest"];
-            401: components["responses"]["CollectionUnauthorized"];
-            403: components["responses"]["CollectionFeatureNotEnabled"];
-            404: components["responses"]["CollectionNotFound"];
-            409: components["responses"]["CollectionConflict"];
+            200: components["responses"]["ReservationResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
         };
     };
-    remitWltDeliveryCollection: {
+    releaseWltPromotionFunding: {
         parameters: {
             query?: never;
             header: {
-                Authorization: components["parameters"]["Authorization"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "Idempotency-Key": components["parameters"]["IdempotencyKey"];
                 "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
             path: {
-                codRecordId: components["parameters"]["CodRecordId"];
+                reservationId: components["parameters"]["ReservationId"];
             };
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RemitDeliveryCollectionRequest"];
+                "application/json": components["schemas"]["ReleasePromotionFundingRequest"];
             };
         };
         responses: {
-            /** @description Remittance committed atomically or replayed exactly */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
+            200: components["responses"]["ReservationResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
+        };
+    };
+    reverseWltPromotionFunding: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
             };
-            400: components["responses"]["CollectionInvalidRequest"];
-            401: components["responses"]["CollectionUnauthorized"];
-            403: components["responses"]["CollectionFeatureNotEnabled"];
-            404: components["responses"]["CollectionNotFound"];
-            409: components["responses"]["CollectionConflict"];
+            path: {
+                reservationId: components["parameters"]["ReservationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReversePromotionFundingRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ReservationResponse"];
+            400: components["responses"]["ErrorResponse"];
+            401: components["responses"]["ErrorResponse"];
+            403: components["responses"]["ErrorResponse"];
+            404: components["responses"]["ErrorResponse"];
+            409: components["responses"]["ErrorResponse"];
         };
     };
     listWltRefunds: {
@@ -3510,7 +4531,7 @@ export interface operations {
             };
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID"?: components["parameters"]["CorrelationIdOptional"];
             };
@@ -3538,10 +4559,10 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path?: never;
             cookie?: never;
@@ -3582,7 +4603,7 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID"?: components["parameters"]["CorrelationIdOptional"];
             };
@@ -3612,10 +4633,10 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
                 refundId: components["parameters"]["RefundId"];
@@ -3648,10 +4669,10 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
                 refundId: components["parameters"]["RefundId"];
@@ -3684,10 +4705,10 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
                 refundId: components["parameters"]["RefundId"];
@@ -3730,10 +4751,10 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
             };
             path: {
                 refundId: components["parameters"]["RefundId"];
@@ -3767,7 +4788,7 @@ export interface operations {
             query?: never;
             header: {
                 Authorization: components["parameters"]["Authorization"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
                 "X-Service-Caller": components["parameters"]["ServiceCaller"];
                 "X-Correlation-ID"?: components["parameters"]["CorrelationIdOptional"];
             };
@@ -3857,6 +4878,94 @@ export interface operations {
                 content?: never;
             };
             409: components["responses"]["SettlementConflict"];
+        };
+    };
+    getWltSettlementSummary: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OperatorContext-local settlement summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    getWltSettlement: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+            };
+            path: {
+                settlementId: components["parameters"]["SettlementId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OperatorContext-local settlement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    postWltSettlement: {
+        parameters: {
+            query?: never;
+            header: {
+                Authorization: components["parameters"]["Authorization"];
+                "X-Service-Caller": components["parameters"]["ServiceCaller"];
+                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
+                "X-Correlation-ID": components["parameters"]["CorrelationId"];
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                settlementId: components["parameters"]["SettlementId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    operatorId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Settlement posted or exactly replayed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     listWltSettlementEvidence: {
@@ -4159,1109 +5268,6 @@ export interface operations {
                 content?: never;
             };
             409: components["responses"]["SettlementConflict"];
-        };
-    };
-    getWltSettlementSummary: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OperatorContext-local settlement summary */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["Error"];
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-        };
-    };
-    getWltSettlement: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
-            };
-            path: {
-                settlementId: components["parameters"]["SettlementId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OperatorContext-local settlement */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            404: components["responses"]["Error"];
-        };
-    };
-    postWltSettlement: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                settlementId: components["parameters"]["SettlementId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    operatorId?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Settlement posted or exactly replayed */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            404: components["responses"]["Error"];
-            409: components["responses"]["Error"];
-        };
-    };
-    getWltTypedPayoutDestination: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                actorType: components["parameters"]["ActorType"];
-                actorId: components["parameters"]["ActorId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Active masked payout destination. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PayoutDestinationEnvelope"];
-                };
-            };
-            404: components["responses"]["PayoutNotFound"];
-        };
-    };
-    upsertWltTypedPayoutDestination: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                actorType: components["parameters"]["ActorType"];
-                actorId: components["parameters"]["ActorId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PayoutDestinationInput"];
-            };
-        };
-        responses: {
-            /** @description Destination encrypted and activated; prior destination deactivated. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PayoutDestinationEnvelope"];
-                };
-            };
-            400: components["responses"]["PayoutInvalidRequest"];
-            403: components["responses"]["PayoutForbidden"];
-        };
-    };
-    deactivateWltTypedPayoutDestination: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                actorType: components["parameters"]["ActorType"];
-                actorId: components["parameters"]["ActorId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Destination deactivated. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            404: components["responses"]["PayoutNotFound"];
-        };
-    };
-    listWltPayoutRequests: {
-        parameters: {
-            query?: {
-                beneficiaryActorId?: string;
-                beneficiaryActorType?: components["schemas"]["PayoutActorType"];
-                status?: components["schemas"]["PayoutStatus"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Scoped canonical payout requests. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        payoutRequests: components["schemas"]["PayoutRequest"][];
-                        total: number;
-                    };
-                };
-            };
-        };
-    };
-    createWltDestinationBoundPayoutRequest: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreatePayoutRequest"];
-            };
-        };
-        responses: {
-            /** @description Exact idempotent replay. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PayoutRequestEnvelope"];
-                };
-            };
-            /** @description Funds held and destination-bound request created atomically. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PayoutRequestEnvelope"];
-                };
-            };
-            403: components["responses"]["PayoutForbidden"];
-            409: components["responses"]["PayoutConflict"];
-        };
-    };
-    getWltPayoutRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                payoutId: components["parameters"]["PayoutId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Canonical payout state and provider proof. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PayoutRequestEnvelope"];
-                };
-            };
-            404: components["responses"]["PayoutNotFound"];
-        };
-    };
-    approveWltPayoutRequest: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                payoutId: components["parameters"]["PayoutId"];
-            };
-            cookie?: never;
-        };
-        requestBody: components["requestBodies"]["OperatorBody"];
-        responses: {
-            200: components["responses"]["PayoutResponse"];
-            409: components["responses"]["PayoutConflict"];
-        };
-    };
-    rejectWltPayoutRequest: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                payoutId: components["parameters"]["PayoutId"];
-            };
-            cookie?: never;
-        };
-        requestBody: components["requestBodies"]["OperatorBody"];
-        responses: {
-            200: components["responses"]["PayoutResponse"];
-            409: components["responses"]["PayoutConflict"];
-        };
-    };
-    processWltPayoutRequest: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                payoutId: components["parameters"]["PayoutId"];
-            };
-            cookie?: never;
-        };
-        requestBody: components["requestBodies"]["OperatorBody"];
-        responses: {
-            200: components["responses"]["PayoutResponse"];
-            403: components["responses"]["PayoutForbidden"];
-            409: components["responses"]["PayoutConflict"];
-            502: components["responses"]["ProviderError"];
-        };
-    };
-    completeWltPayoutRequest: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                payoutId: components["parameters"]["PayoutId"];
-            };
-            cookie?: never;
-        };
-        requestBody: components["requestBodies"]["OperatorBody"];
-        responses: {
-            200: components["responses"]["PayoutResponse"];
-            403: components["responses"]["PayoutForbidden"];
-            409: components["responses"]["PayoutConflict"];
-        };
-    };
-    reconcileWltPayoutRequest: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                payoutId: components["parameters"]["PayoutId"];
-            };
-            cookie?: never;
-        };
-        requestBody: components["requestBodies"]["OperatorBody"];
-        responses: {
-            /** @description Inquiry resolved to a provider-proven success or confirmed failure. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PayoutRequestEnvelope"];
-                };
-            };
-            403: components["responses"]["PayoutForbidden"];
-            409: components["responses"]["PayoutConflict"];
-            502: components["responses"]["ProviderError"];
-        };
-    };
-    listWltPayoutAudit: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                payoutId: components["parameters"]["PayoutId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Append-only correlation-linked audit. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        auditEvents: components["schemas"]["PayoutAuditEvent"][];
-                    };
-                };
-            };
-        };
-    };
-    failWltPayoutRequestClosed: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                payoutId: components["parameters"]["PayoutId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    operatorId: string;
-                };
-            };
-        };
-        responses: {
-            403: components["responses"]["Error"];
-            /** @description RECONCILIATION_REQUIRED; held funds remain unchanged. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
-    };
-    collectCodCustody: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                codRecordId: components["parameters"]["CodRecordId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CollectCodInput"];
-            };
-        };
-        responses: {
-            /** @description Collection committed atomically or replayed idempotently. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CodCustodyMutationResult"];
-                };
-            };
-            400: components["responses"]["CustodyInvalidRequest"];
-            401: components["responses"]["CustodyUnauthorized"];
-            403: components["responses"]["CustodyForbidden"];
-            404: components["responses"]["CustodyNotFound"];
-            409: components["responses"]["CustodyConflict"];
-        };
-    };
-    remitCodCustody: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                codRecordId: components["parameters"]["CodRecordId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RemitCodInput"];
-            };
-        };
-        responses: {
-            /** @description Remittance committed atomically or replayed idempotently. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CodCustodyMutationResult"];
-                };
-            };
-            400: components["responses"]["CustodyInvalidRequest"];
-            401: components["responses"]["CustodyUnauthorized"];
-            403: components["responses"]["CustodyForbidden"];
-            404: components["responses"]["CustodyNotFound"];
-            409: components["responses"]["CustodyConflict"];
-        };
-    };
-    listCodReconciliationCases: {
-        parameters: {
-            query?: {
-                status?: components["schemas"]["CodReconciliationStatus"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description COD variance cases. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        codReconciliationCases: components["schemas"]["CodReconciliationCase"][];
-                    };
-                };
-            };
-            400: components["responses"]["CustodyInvalidRequest"];
-            401: components["responses"]["CustodyUnauthorized"];
-            403: components["responses"]["CustodyForbidden"];
-        };
-    };
-    assignCodReconciliationCase: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                caseId: components["parameters"]["CaseId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    operatorId: string;
-                    /** @default  */
-                    investigationNote?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Case assigned for investigation. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CodReconciliationCaseEnvelope"];
-                };
-            };
-            400: components["responses"]["CustodyInvalidRequest"];
-            401: components["responses"]["CustodyUnauthorized"];
-            403: components["responses"]["CustodyForbidden"];
-            409: components["responses"]["CustodyConflict"];
-        };
-    };
-    resolveCodReconciliationCase: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                caseId: components["parameters"]["CaseId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    operatorId: string;
-                    /** @enum {string} */
-                    resolutionAction: "confirmed_variance" | "cash_adjustment" | "collector_recovery" | "write_off";
-                    resolutionNote: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Assigned case resolved by the assigned operator. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CodReconciliationCaseEnvelope"];
-                };
-            };
-            400: components["responses"]["CustodyInvalidRequest"];
-            401: components["responses"]["CustodyUnauthorized"];
-            403: components["responses"]["CustodyForbidden"];
-            409: components["responses"]["CustodyConflict"];
-        };
-    };
-    listWltCodRecords: {
-        parameters: {
-            query?: {
-                captainId?: string;
-                partnerId?: string;
-                orderId?: string;
-            };
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OperatorContext-local COD records */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["Error"];
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-        };
-    };
-    createWltCodRecord: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
-                "X-Correlation-ID": components["parameters"]["CorrelationId"];
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCodRecordRequest"];
-            };
-        };
-        responses: {
-            /** @description Exact replay of the existing COD record */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description OperatorContext-local COD record created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            409: components["responses"]["Error"];
-        };
-    };
-    getWltCodRecord: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextId"];
-            };
-            path: {
-                codRecordId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OperatorContext-local COD record */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Error"];
-            403: components["responses"]["Error"];
-            404: components["responses"]["Error"];
-        };
-    };
-    createWltCommercialProduct: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CommercialProductWrite"];
-            };
-        };
-        responses: {
-            201: components["responses"]["ObjectResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            409: components["responses"]["ErrorResponse"];
-        };
-    };
-    getWltCommercialProduct: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-            };
-            path: {
-                productReference: components["parameters"]["ProductReference"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: components["responses"]["ObjectResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            404: components["responses"]["ErrorResponse"];
-        };
-    };
-    updateWltCommercialProduct: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-            };
-            path: {
-                productReference: components["parameters"]["ProductReference"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CommercialProductWrite"];
-            };
-        };
-        responses: {
-            200: components["responses"]["ObjectResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            404: components["responses"]["ErrorResponse"];
-            409: components["responses"]["ErrorResponse"];
-        };
-    };
-    getWltClientCommercialBenefits: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-            };
-            path: {
-                clientId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: components["responses"]["ObjectResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-        };
-    };
-    createWltSubscriptionPaymentSession: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "Idempotency-Key": string;
-                "X-Correlation-ID": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubscriptionPaymentSessionCreate"];
-            };
-        };
-        responses: {
-            201: components["responses"]["ObjectResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            404: components["responses"]["ErrorResponse"];
-            409: components["responses"]["ErrorResponse"];
-        };
-    };
-    appendWltLoyaltyEntry: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "Idempotency-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoyaltyEntryWrite"];
-            };
-        };
-        responses: {
-            201: components["responses"]["ObjectResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            404: components["responses"]["ErrorResponse"];
-            409: components["responses"]["ErrorResponse"];
-        };
-    };
-    activateWltCommercialSubscription: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Correlation-ID": string;
-                "Idempotency-Key": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubscriptionActivation"];
-            };
-        };
-        responses: {
-            201: components["responses"]["ObjectResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            404: components["responses"]["ErrorResponse"];
-            409: components["responses"]["ErrorResponse"];
-        };
-    };
-    getWltCommercialSubscriptionLifecycle: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-            };
-            path: {
-                subscriptionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: components["responses"]["ObjectResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            404: components["responses"]["ErrorResponse"];
-        };
-    };
-    renewWltCommercialSubscription: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "Idempotency-Key": string;
-                "X-Correlation-ID": string;
-            };
-            path: {
-                subscriptionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubscriptionActivation"];
-            };
-        };
-        responses: {
-            200: components["responses"]["ObjectResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            404: components["responses"]["ErrorResponse"];
-            409: components["responses"]["ErrorResponse"];
-        };
-    };
-    cancelWltCommercialSubscription: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "Idempotency-Key": string;
-                "X-Correlation-ID": string;
-            };
-            path: {
-                subscriptionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    clientId: string;
-                    reason: string;
-                };
-            };
-        };
-        responses: {
-            200: components["responses"]["ObjectResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            404: components["responses"]["ErrorResponse"];
-            409: components["responses"]["ErrorResponse"];
-        };
-    };
-    expireDueWltCommercialSubscriptions: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: components["parameters"]["Authorization"];
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "Idempotency-Key": string;
-                "X-Correlation-ID": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: components["responses"]["ObjectResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-        };
-    };
-    getWltCommercialBenefitsSummary: {
-        parameters: {
-            query?: never;
-            header: {
-                Authorization: string;
-                "X-Service-Caller": "dsh";
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Commercial benefits summary. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WltCommercialBenefitsSummaryResponse"];
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-        };
-    };
-    reserveWltPromotionFunding: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReservePromotionFundingRequest"];
-            };
-        };
-        responses: {
-            201: components["responses"]["ReservationResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            409: components["responses"]["ErrorResponse"];
-        };
-    };
-    getWltPromotionFundingReservation: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
-            };
-            path: {
-                reservationId: components["parameters"]["ReservationId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: components["responses"]["ReservationResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            404: components["responses"]["ErrorResponse"];
-        };
-    };
-    commitWltPromotionFunding: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-            };
-            path: {
-                reservationId: components["parameters"]["ReservationId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CommitPromotionFundingRequest"];
-            };
-        };
-        responses: {
-            200: components["responses"]["ReservationResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            404: components["responses"]["ErrorResponse"];
-            409: components["responses"]["ErrorResponse"];
-        };
-    };
-    releaseWltPromotionFunding: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-            };
-            path: {
-                reservationId: components["parameters"]["ReservationId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReleasePromotionFundingRequest"];
-            };
-        };
-        responses: {
-            200: components["responses"]["ReservationResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            404: components["responses"]["ErrorResponse"];
-            409: components["responses"]["ErrorResponse"];
-        };
-    };
-    reverseWltPromotionFunding: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Service-Caller": components["parameters"]["ServiceCaller"];
-                "X-Operator-Context-ID": components["parameters"]["OperatorContextHeader"];
-                "Idempotency-Key": components["parameters"]["IdempotencyHeader"];
-                "X-Correlation-ID": components["parameters"]["CorrelationHeader"];
-            };
-            path: {
-                reservationId: components["parameters"]["ReservationId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReversePromotionFundingRequest"];
-            };
-        };
-        responses: {
-            200: components["responses"]["ReservationResponse"];
-            400: components["responses"]["ErrorResponse"];
-            401: components["responses"]["ErrorResponse"];
-            403: components["responses"]["ErrorResponse"];
-            404: components["responses"]["ErrorResponse"];
-            409: components["responses"]["ErrorResponse"];
         };
     };
     upsertFieldCommissionCategoryPolicy: {

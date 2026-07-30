@@ -8,21 +8,13 @@ import { parse, stringify } from "yaml";
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 export const repositoryRoot = path.resolve(scriptsDirectory, "../..");
 
-// dsh and wlt are deliberately absent here. Each owns a dedicated bundler
-// (tools/scripts/dsh-openapi-modular-lib.mjs, tools/scripts/wlt-openapi-bundle-lib.mjs)
-// with generation semantics this generic composer does not replicate: DSH's
-// bundle is scoped to its entry contract's own path fragments only (42 of 43
-// satellite contracts are declared STANDALONE_MANUAL_TYPED_ADAPTER in
-// services/dsh/contracts/contract-registry.ts and must not be merged into the
-// generated-client surface). Composing "dsh" or "wlt" through this module
-// would silently produce a bundle inconsistent with the one the dedicated
-// scripts (and CI) maintain. Use `pnpm run openapi:compose:dsh` /
-// `openapi:compose:wlt` instead.
 export const contextManifests = Object.freeze({
   identity: "core/identity/contracts/contract.manifest.yaml",
   workforce: "core/workforce/contracts/contract.manifest.yaml",
   "platform-control": "core/platform-control/contracts/contract.manifest.yaml",
   providers: "core/providers/contracts/contract.manifest.yaml",
+  dsh: "services/dsh/contracts/contract.manifest.yaml",
+  wlt: "services/wlt/contracts/contract.manifest.yaml",
 });
 
 function readText(filePath) {
@@ -255,6 +247,66 @@ function applyOverlay(document, overlay, overlayPath) {
   return output;
 }
 
+function resolveModularFragments(document, rootSourceFile) {
+  const output = clone(document);
+  const docCache = new Map();
+  const resolve = (obj, currentSourceFile) => {
+    if (Array.isArray(obj)) return obj.map((item) => resolve(item, currentSourceFile));
+    if (!obj || typeof obj !== "object") return obj;
+    const res = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (k === "$ref" && typeof v === "string" && !v.startsWith("#") && !isAbsoluteReference(v)) {
+        const hashIndex = v.indexOf("#");
+        if (hashIndex !== -1) {
+          const filePart = v.slice(0, hashIndex);
+          const fragment = v.slice(hashIndex + 2); // skip #/
+          const targetFile = path.resolve(path.dirname(currentSourceFile), filePart);
+          if (fs.existsSync(targetFile)) {
+            let targetDoc = docCache.get(targetFile);
+            if (!targetDoc) {
+              targetDoc = parse(readText(targetFile));
+              docCache.set(targetFile, targetDoc);
+            }
+            const tokens = fragment.split("/");
+            let resolved = targetDoc;
+            for (const token of tokens) {
+              const decoded = token.replace(/~1/g, "/").replace(/~0/g, "~");
+              if (resolved && Object.hasOwn(resolved, decoded)) {
+                resolved = resolved[decoded];
+              } else {
+                resolved = null;
+                break;
+              }
+            }
+            if (resolved) {
+              // Return the resolved object directly, stripping the $ref wrapper
+              return resolve(resolved, targetFile);
+            }
+          }
+        }
+      }
+      res[k] = resolve(v, currentSourceFile);
+    }
+    return res;
+  };
+
+  const isAbsoluteReference = (val) => /^[a-z][a-z0-9+.-]*:/i.test(val) || val.startsWith("//");
+
+  if (output.paths) {
+    for (const [pathKey, pathItem] of Object.entries(output.paths)) {
+       output.paths[pathKey] = resolve(pathItem, rootSourceFile);
+    }
+  }
+  if (output.components) {
+    for (const [section, entries] of Object.entries(output.components)) {
+       for (const [compKey, compItem] of Object.entries(entries)) {
+          output.components[section][compKey] = resolve(compItem, rootSourceFile);
+       }
+    }
+  }
+  return output;
+}
+
 function rewriteExternalRefs(value, sourceFile, bundledSourceFiles, bundleFile) {
   if (Array.isArray(value)) return value.map((item) => rewriteExternalRefs(item, sourceFile, bundledSourceFiles, bundleFile));
   if (!value || typeof value !== "object") return value;
@@ -289,19 +341,34 @@ function mergeDocuments(entryDocument, sourceDocuments, sourceFiles, bundleFile,
     const namespaced = index === 0
       ? sourceDocuments[index]
       : namespaceConflictingComponents(sourceDocuments[index], output.components, sourcePath);
-    const document = rewriteExternalRefs(namespaced, sourcePath, bundledSourceFiles, bundleFile);
-    mergePathMap(output.paths, document.paths, relative(sourcePath), {
-      allowEntryOverride,
-      owners: pathOwners,
-      sourceIndex: index,
-    });
-    for (const [sectionName, entries] of Object.entries(document.components ?? {})) {
-      output.components[sectionName] ??= {};
-      mergeUniqueMap(output.components[sectionName], entries, `components.${sectionName}`, relative(sourcePath), {
+    let document;
+    if (index === 0 && entryDocument["x-bthwani-contract-layout"] === "MODULAR") {
+      document = resolveModularFragments(namespaced, sourcePath);
+      // For MODULAR layout, we do not want to pull in paths from the modules again, 
+      // because the entry document has already explicitly included what it needs via $refs.
+      // So we just clear the module's paths to prevent double inclusion or conflicts.
+      // We also don't want components that aren't explicitly referenced.
+      // But wait! mergeDocuments is used here. If we skip merging paths for index > 0, it behaves perfectly.
+    } else {
+      document = namespaced;
+    }
+    
+    // If MODULAR, we don't merge paths from satellites (index > 0)
+    if (!(entryDocument["x-bthwani-contract-layout"] === "MODULAR" && index > 0)) {
+      document = rewriteExternalRefs(document, sourcePath, bundledSourceFiles, bundleFile);
+      mergePathMap(output.paths, document.paths, relative(sourcePath), {
         allowEntryOverride,
-        owners: componentOwners,
+        owners: pathOwners,
         sourceIndex: index,
       });
+      for (const [sectionName, entries] of Object.entries(document.components ?? {})) {
+        output.components[sectionName] ??= {};
+        mergeUniqueMap(output.components[sectionName], entries, `components.${sectionName}`, relative(sourcePath), {
+          allowEntryOverride,
+          owners: componentOwners,
+          sourceIndex: index,
+        });
+      }
     }
   }
   return output;

@@ -36,18 +36,20 @@ paths:
     get:
       operationId: getWltHealth
       summary: Return WLT liveness state.
-      tags: [WltSystem]
+      tags: [ WltSystem ]
       responses:
         '200':
           description: WLT process is alive.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/HealthResponse' }
+      security:
+        - bearerAuth: []
   /wlt/readiness:
     get:
       operationId: getWltReadiness
       summary: Return WLT dependency readiness.
-      tags: [WltSystem]
+      tags: [ WltSystem ]
       responses:
         '200':
           description: WLT dependencies are ready.
@@ -55,44 +57,53 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/HealthResponse' }
         '503': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /wlt/references/payment-status:
     get:
       operationId: getWltPaymentStatusRef
       summary: Return the OperatorContext-bound payment status reference for an order.
-      tags: [WltReferences]
+      tags: [ WltReferences ]
       parameters:
         - $ref: '#/components/parameters/OrderIdQuery'
       responses:
         '200': { $ref: '#/components/responses/ReferenceResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /wlt/references/settlement-status:
     get:
       operationId: getWltSettlementStatusRef
-      summary: Return the OperatorContext-bound settlement status reference for an order.
-      tags: [WltReferences]
+      summary: Return the OperatorContext-bound settlement status reference for an
+        order.
+      tags: [ WltReferences ]
       parameters:
         - $ref: '#/components/parameters/OrderIdQuery'
       responses:
         '200': { $ref: '#/components/responses/ReferenceResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /wlt/references/refund-status:
     get:
       operationId: getWltRefundStatusRef
       summary: Return the OperatorContext-bound refund status reference for an order.
-      tags: [WltReferences]
+      tags: [ WltReferences ]
       parameters:
         - $ref: '#/components/parameters/OrderIdQuery'
       responses:
         '200': { $ref: '#/components/responses/ReferenceResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /wlt/references/wallet-status:
     get:
       operationId: getWltWalletStatusRef
       summary: Return the OperatorContext-bound wallet status reference for an actor.
-      tags: [WltReferences]
+      tags: [ WltReferences ]
       parameters:
         - name: actorType
           in: query
@@ -106,12 +117,14 @@ paths:
         '200': { $ref: '#/components/responses/ReferenceResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /wlt/wallets/{actorType}/{actorId}:
     get:
       operationId: getWltWallet
       summary: Return the OperatorContext-local operational wallet for an actor.
-      tags: [WltWallets]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltWallets ]
+      security: [ { serviceBearer: [] } ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -130,15 +143,15 @@ paths:
     get:
       operationId: listWltReconciliationCases
       summary: List OperatorContext-local reconciliation cases.
-      tags: [WltReconciliation]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltReconciliation ]
+      security: [ { serviceBearer: [] } ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - name: status
           in: query
-          schema: { type: string, enum: [open, resolved] }
+          schema: { type: string, enum: [ open, resolved ] }
       responses:
         '200':
           description: OperatorContext-local reconciliation cases.
@@ -150,8 +163,8 @@ paths:
     get:
       operationId: getWltReconciliationCase
       summary: Read one OperatorContext-local reconciliation case.
-      tags: [WltReconciliation]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltReconciliation ]
+      security: [ { serviceBearer: [] } ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -168,8 +181,8 @@ paths:
     post:
       operationId: assignWltReconciliationCase
       summary: Assign a OperatorContext-local reconciliation case.
-      tags: [WltReconciliation]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltReconciliation ]
+      security: [ { serviceBearer: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -192,8 +205,8 @@ paths:
     post:
       operationId: resolveWltReconciliationCase
       summary: Resolve a OperatorContext-local reconciliation case.
-      tags: [WltReconciliation]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltReconciliation ]
+      security: [ { serviceBearer: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -216,8 +229,8 @@ paths:
     get:
       operationId: listWltLedgerEntries
       summary: List OperatorContext-local immutable ledger entries.
-      tags: [WltLedger]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltLedger ]
+      security: [ { serviceBearer: [] } ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -251,8 +264,8 @@ paths:
     get:
       operationId: getWltLedgerEntry
       summary: Read one OperatorContext-local immutable ledger entry.
-      tags: [WltLedger]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltLedger ]
+      security: [ { serviceBearer: [] } ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -272,8 +285,8 @@ paths:
     get:
       operationId: getWltLedgerFinancialSummary
       summary: Return account-type-aware OperatorContext-local financial totals.
-      tags: [WltLedger]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltLedger ]
+      security: [ { serviceBearer: [] } ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -281,9 +294,7 @@ paths:
       responses:
         '200': { description: OperatorContext-local financial summary }
 components:
-  securitySchemes:
-    serviceBearer:
-      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
+  securitySchemes: {}
   parameters:
     OrderIdQuery:
       name: orderId
@@ -309,10 +320,10 @@ components:
   schemas:
     ActorType:
       type: string
-      enum: [client, partner, captain, field, system, platform]
+      enum: [ client, partner, captain, field, system, platform ]
     HealthResponse:
       type: object
-      required: [service, status]
+      required: [ service, status ]
       properties:
         service: { type: string, const: wlt }
         status: { type: string }
@@ -321,7 +332,23 @@ components:
       additionalProperties: true
     LedgerEntry:
       type: object
-      required: [id, entryType, actorId, actorType, sourceType, sourceId, referenceId, referenceType, amountMinorUnits, currency, debitCredit, balanceAfter, description, createdAt]
+      required:
+        [
+          id,
+          entryType,
+          actorId,
+          actorType,
+          sourceType,
+          sourceId,
+          referenceId,
+          referenceType,
+          amountMinorUnits,
+          currency,
+          debitCredit,
+          balanceAfter,
+          description,
+          createdAt
+        ]
       properties:
         id: { type: string }
         entryType: { type: string }
@@ -345,7 +372,7 @@ components:
         createdAt: { type: string }
     LedgerEntryListResponse:
       type: object
-      required: [ledgerEntries]
+      required: [ ledgerEntries ]
       properties:
         ledgerEntries:
           type: array
@@ -355,4 +382,17 @@ components:
       properties:
         status:
           type: string
-          enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_collected, failed, expired, provider_result_unknown]
+          enum:
+            [
+              reference_created,
+              pending_provider,
+              authorization_pending,
+              authorized,
+              capture_pending,
+              captured,
+              cod_pending,
+              cod_collected,
+              failed,
+              expired,
+              provider_result_unknown
+            ]

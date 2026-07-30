@@ -24,6 +24,8 @@ paths:
                 $ref: "#/components/schemas/ExternalProviderHealthResponse"
         "500":
           description: Provider registry could not be read.
+      security:
+        - bearerAuth: []
   /providers/readiness:
     get:
       operationId: getExternalProviderReadiness
@@ -44,6 +46,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeReadinessResponse"
+      security:
+        - bearerAuth: []
   /providers:
     get:
       operationId: listProviders
@@ -491,4 +495,4 @@ components:
 x-bthwani-contract-layout: COMPOSED_BUNDLE
 x-bthwani-source-files:
   - core/providers/contracts/providers.openapi.yaml
-x-bthwani-source-sha256: 59ac8445a58c206ce7eea6f6d8739564af6d5ef536a42ae1e545acb433c35564
+x-bthwani-source-sha256: 3605d5c1bf2618afc53e9a78ac8ac2c9e0cbabadf8d9bff9c4ec04821a9479ea

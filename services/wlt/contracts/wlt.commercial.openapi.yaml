@@ -20,8 +20,8 @@ paths:
   /wlt/commercial/products:
     post:
       operationId: createWltCommercialProduct
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -41,8 +41,8 @@ paths:
   /wlt/commercial/products/{productReference}:
     get:
       operationId: getWltCommercialProduct
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -54,8 +54,8 @@ paths:
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
     patch:
       operationId: updateWltCommercialProduct
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -77,8 +77,8 @@ paths:
   /wlt/commercial/clients/{clientId}/benefits:
     get:
       operationId: getWltClientCommercialBenefits
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -94,8 +94,8 @@ paths:
   /wlt/commercial/payment-sessions:
     post:
       operationId: createWltSubscriptionPaymentSession
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -124,8 +124,8 @@ paths:
   /wlt/commercial/loyalty-entries:
     post:
       operationId: appendWltLoyaltyEntry
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -150,8 +150,8 @@ paths:
   /wlt/commercial/subscriptions:
     post:
       operationId: activateWltCommercialSubscription
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -180,8 +180,8 @@ paths:
   /wlt/commercial/subscriptions/{subscriptionId}/lifecycle:
     get:
       operationId: getWltCommercialSubscriptionLifecycle
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -197,8 +197,8 @@ paths:
   /wlt/commercial/subscriptions/{subscriptionId}/renew:
     post:
       operationId: renewWltCommercialSubscription
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -231,8 +231,8 @@ paths:
   /wlt/commercial/subscriptions/{subscriptionId}/cancel:
     post:
       operationId: cancelWltCommercialSubscription
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -257,7 +257,7 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [clientId, reason]
+              required: [ clientId, reason ]
               properties:
                 clientId: { type: string, minLength: 1 }
                 reason: { type: string, minLength: 1 }
@@ -271,8 +271,8 @@ paths:
   /wlt/commercial/subscriptions/expire-due:
     post:
       operationId: expireDueWltCommercialSubscriptions
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -293,8 +293,6 @@ paths:
         '403': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
 components:
   securitySchemes:
-    serviceBearer:
-      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
     bearerAuth: { type: http, scheme: bearer }
   parameters:
     ProductReference:
@@ -321,10 +319,10 @@ components:
     LoyaltyEntryWrite:
       type: object
       additionalProperties: true
-      required: [clientId, direction, points, sourceType, sourceId]
+      required: [ clientId, direction, points, sourceType, sourceId ]
       properties:
         clientId: { type: string, minLength: 1 }
-        direction: { type: string, enum: [earn, burn, expire, reverse] }
+        direction: { type: string, enum: [ earn, burn, expire, reverse ] }
         points: { type: integer, format: int64, minimum: 1 }
         sourceType: { type: string, minLength: 1 }
         sourceId: { type: string, minLength: 1 }
@@ -335,17 +333,17 @@ components:
     SubscriptionPaymentSessionCreate:
       type: object
       additionalProperties: false
-      required: [subscriptionPurchaseId, productReference, operatorContextId, clientId]
+      required: [ subscriptionPurchaseId, productReference, operatorContextId, clientId ]
       properties:
         subscriptionPurchaseId: { type: string, minLength: 1 }
         productReference: { type: string, minLength: 1 }
         operatorContextId: { type: string, minLength: 1 }
         clientId: { type: string, minLength: 1 }
-        paymentMethod: { type: string, enum: [official_wallet] }
+        paymentMethod: { type: string, enum: [ official_wallet ] }
     SubscriptionActivation:
       type: object
       additionalProperties: false
-      required: [clientId, productReference, paymentSessionId, subscriptionPurchaseId]
+      required: [ clientId, productReference, paymentSessionId, subscriptionPurchaseId ]
       properties:
         clientId: { type: string, minLength: 1 }
         productReference: { type: string, minLength: 1 }

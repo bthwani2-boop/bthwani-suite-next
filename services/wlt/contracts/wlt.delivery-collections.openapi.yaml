@@ -5,7 +5,8 @@ info:
   description: >-
     Fulfillment-neutral collection custody routes. WLT owns amount, currency,
     custody state, ledger linkage and reconciliation. DSH supplies only trusted
-    delivery and collector identities through the authenticated OperatorContext boundary.
+    delivery and collector identities through the authenticated OperatorContext
+    boundary.
 x-bthwani-owner: services/wlt
 x-bthwani-capability: delivery-collections
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -16,14 +17,13 @@ x-bthwani-runtime-dependency: true
 x-bthwani-financial-owner: true
 servers:
   - url: http://localhost:58083
-security:
-  - serviceBearer: []
 paths:
   /wlt/delivery-collections:
     post:
       operationId: createWltDeliveryCollectionHandoff
-      summary: Derive OperatorContext-local collection custody from WLT payment-session truth.
-      tags: [WltDeliveryCollections]
+      summary: Derive OperatorContext-local collection custody from WLT
+        payment-session truth.
+      tags: [ WltDeliveryCollections ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -39,12 +39,14 @@ paths:
             schema: { $ref: '#/components/schemas/CreateDeliveryCollectionRequest' }
       responses:
         '200':
-          description: Delivery was prepaid and no COD custody record is applicable, or an existing record was replayed
+          description: Delivery was prepaid and no COD custody record is applicable, or an
+            existing record was replayed
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DeliveryCollectionHandoffResponse' }
         '201':
-          description: OperatorContext-local COD custody record created from WLT payment truth
+          description: OperatorContext-local COD custody record created from WLT payment
+            truth
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DeliveryCollectionHandoffResponse' }
@@ -53,10 +55,12 @@ paths:
         '403': { $ref: '#/components/responses/CollectionFeatureNotEnabled' }
         '404': { $ref: '#/components/responses/CollectionNotFound' }
         '409': { $ref: '#/components/responses/CollectionConflict' }
+      security:
+        - serviceBearer: []
     get:
       operationId: listWltDeliveryCollections
       summary: List OperatorContext-local delivery collection custody records.
-      tags: [WltDeliveryCollections]
+      tags: [ WltDeliveryCollections ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -78,11 +82,13 @@ paths:
         '400': { $ref: '#/components/responses/CollectionInvalidRequest' }
         '401': { $ref: '#/components/responses/CollectionUnauthorized' }
         '403': { $ref: '#/components/responses/CollectionForbidden' }
+      security:
+        - serviceBearer: []
   /wlt/delivery-collections/{codRecordId}:
     get:
       operationId: getWltDeliveryCollection
       summary: Read one OperatorContext-local delivery collection custody record.
-      tags: [WltDeliveryCollections]
+      tags: [ WltDeliveryCollections ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -94,11 +100,13 @@ paths:
         '401': { $ref: '#/components/responses/CollectionUnauthorized' }
         '403': { $ref: '#/components/responses/CollectionForbidden' }
         '404': { $ref: '#/components/responses/CollectionNotFound' }
+      security:
+        - serviceBearer: []
   /wlt/delivery-collections/{codRecordId}/collect:
     post:
       operationId: collectWltDeliveryCollection
       summary: Commit evidence-backed collection against WLT-owned custody truth.
-      tags: [WltDeliveryCollections]
+      tags: [ WltDeliveryCollections ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -120,11 +128,13 @@ paths:
         '403': { $ref: '#/components/responses/CollectionFeatureNotEnabled' }
         '404': { $ref: '#/components/responses/CollectionNotFound' }
         '409': { $ref: '#/components/responses/CollectionConflict' }
+      security:
+        - serviceBearer: []
   /wlt/delivery-collections/{codRecordId}/remit:
     post:
       operationId: remitWltDeliveryCollection
       summary: Commit evidence-backed remittance against WLT-owned custody truth.
-      tags: [WltDeliveryCollections]
+      tags: [ WltDeliveryCollections ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -146,21 +156,21 @@ paths:
         '403': { $ref: '#/components/responses/CollectionFeatureNotEnabled' }
         '404': { $ref: '#/components/responses/CollectionNotFound' }
         '409': { $ref: '#/components/responses/CollectionConflict' }
+      security:
+        - serviceBearer: []
 components:
-  securitySchemes:
-    serviceBearer:
-      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
+  securitySchemes: {}
   schemas:
     CollectionActorType:
       type: string
-      enum: [captain, store_courier, partner_store, partner, operator]
+      enum: [ captain, store_courier, partner_store, partner, operator ]
     CreateDeliveryCollectionRequest:
       type: object
       additionalProperties: false
-      required: [orderId, collectorType, collectorId, partnerId, checkoutIntentId]
+      required: [ orderId, collectorType, collectorId, partnerId, checkoutIntentId ]
       properties:
         orderId: { type: string, minLength: 1 }
-        collectorType: { type: string, enum: [captain, store_courier, partner_store] }
+        collectorType: { type: string, enum: [ captain, store_courier, partner_store ] }
         collectorId: { type: string, minLength: 1 }
         captainId: { type: string }
         partnerId: { type: string, minLength: 1 }
@@ -168,7 +178,7 @@ components:
     CollectDeliveryCollectionRequest:
       type: object
       additionalProperties: false
-      required: [actualAmountMinorUnits, proofReference, actorId, actorType]
+      required: [ actualAmountMinorUnits, proofReference, actorId, actorType ]
       properties:
         actualAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
         proofReference: { type: string, minLength: 3, maxLength: 512 }
@@ -177,7 +187,19 @@ components:
         note: { type: string, maxLength: 4000 }
     DeliveryCollectionRecord:
       type: object
-      required: [id, orderId, collectorType, collectorId, partnerId, amountMinorUnits, currency, status, createdAt, updatedAt]
+      required:
+        [
+          id,
+          orderId,
+          collectorType,
+          collectorId,
+          partnerId,
+          amountMinorUnits,
+          currency,
+          status,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string }
         orderId: { type: string }
@@ -194,17 +216,17 @@ components:
         updatedAt: { type: string }
     DeliveryCollectionHandoffResponse:
       type: object
-      required: [codRecord, applicable, replayed]
+      required: [ codRecord, applicable, replayed ]
       properties:
         codRecord:
-          allOf: [{ $ref: '#/components/schemas/DeliveryCollectionRecord' }]
+          allOf: [ { $ref: '#/components/schemas/DeliveryCollectionRecord' } ]
           nullable: true
         applicable: { type: boolean }
         replayed: { type: boolean }
     RemitDeliveryCollectionRequest:
       type: object
       additionalProperties: false
-      required: [proofReference, actorId, actorType]
+      required: [ proofReference, actorId, actorType ]
       properties:
         proofReference: { type: string, minLength: 3, maxLength: 512 }
         actorId: { type: string, minLength: 1 }

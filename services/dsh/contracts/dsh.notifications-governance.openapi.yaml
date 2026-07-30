@@ -12,14 +12,12 @@ servers:
   - url: http://localhost:58080
 tags:
   - name: DshNotificationGovernance
-security:
-  - bearerAuth: []
 paths:
   /dsh/notifications/push-endpoints:
     put:
       operationId: upsertDshNotificationPushEndpoint
       summary: Register or refresh the authenticated actor's push endpoint.
-      tags: [DshNotificationGovernance]
+      tags: [ DshNotificationGovernance ]
       requestBody:
         required: true
         content:
@@ -36,11 +34,13 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
+      security:
+        - bearerAuth: []
   /dsh/notifications/push-endpoints/{deviceId}:
     delete:
       operationId: deactivateDshNotificationPushEndpoint
       summary: Deactivate an endpoint owned by the authenticated actor.
-      tags: [DshNotificationGovernance]
+      tags: [ DshNotificationGovernance ]
       parameters:
         - name: deviceId
           in: path
@@ -54,18 +54,21 @@ paths:
               schema:
                 type: object
                 additionalProperties: false
-                required: [deactivated]
+                required: [ deactivated ]
                 properties:
                   deactivated: { type: boolean, const: true }
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+      security:
+        - bearerAuth: []
   /dsh/operator/notifications/delivery-attempts:
     get:
       operationId: listDshNotificationDeliveryAttempts
-      summary: List operational and push delivery attempts with retry and dead-letter state.
-      tags: [DshNotificationGovernance]
+      summary: List operational and push delivery attempts with retry and dead-letter
+        state.
+      tags: [ DshNotificationGovernance ]
       parameters:
         - name: outcome
           in: query
@@ -86,6 +89,8 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -116,20 +121,30 @@ components:
   schemas:
     DshNotificationChannel:
       type: string
-      enum: [in_app, push]
+      enum: [ in_app, push ]
     DshNotificationLocale:
       type: string
-      enum: [ar, en]
+      enum: [ ar, en ]
     DshNotificationDeliveryOutcome:
       type: string
-      enum: [sent, retry_scheduled, dead_letter]
+      enum: [ sent, retry_scheduled, dead_letter ]
     DshNotificationPreferencePolicy:
       type: object
       additionalProperties: false
-      required: [actorId, actorType, topic, enabled, channels, locale, timezone, updatedAt]
+      required:
+        [
+          actorId,
+          actorType,
+          topic,
+          enabled,
+          channels,
+          locale,
+          timezone,
+          updatedAt
+        ]
       properties:
         actorId: { type: string, minLength: 1 }
-        actorType: { type: string, enum: [client, partner, captain, field, operator] }
+        actorType: { type: string, enum: [ client, partner, captain, field, operator ] }
         topic: { type: string, minLength: 1 }
         enabled: { type: boolean }
         channels:
@@ -138,10 +153,10 @@ components:
           uniqueItems: true
           items: { $ref: '#/components/schemas/DshNotificationChannel' }
         quietHoursStart:
-          type: [string, 'null']
+          type: [ string, 'null' ]
           pattern: '^(?:[01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$'
         quietHoursEnd:
-          type: [string, 'null']
+          type: [ string, 'null' ]
           pattern: '^(?:[01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$'
         locale: { $ref: '#/components/schemas/DshNotificationLocale' }
         timezone: { type: string, minLength: 1 }
@@ -170,7 +185,7 @@ components:
         actorTypes:
           type: array
           uniqueItems: true
-          items: { type: string, enum: [client, partner, captain, field, operator] }
+          items: { type: string, enum: [ client, partner, captain, field, operator ] }
         isEnabled: { type: boolean }
         description: { type: string }
         defaultChannels:
@@ -192,23 +207,35 @@ components:
     DshUpsertNotificationPushEndpointRequest:
       type: object
       additionalProperties: false
-      required: [provider, endpointToken, deviceId, platform]
+      required: [ provider, endpointToken, deviceId, platform ]
       properties:
         provider: { type: string, const: expo }
         endpointToken: { type: string, minLength: 1, maxLength: 4096 }
         deviceId: { type: string, minLength: 1, maxLength: 256 }
-        platform: { type: string, enum: [android, ios] }
+        platform: { type: string, enum: [ android, ios ] }
     DshNotificationPushEndpoint:
       type: object
       additionalProperties: false
-      required: [id, actorId, actorType, provider, deviceId, platform, active, lastSeenAt, createdAt, updatedAt]
+      required:
+        [
+          id,
+          actorId,
+          actorType,
+          provider,
+          deviceId,
+          platform,
+          active,
+          lastSeenAt,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string, format: uuid }
         actorId: { type: string }
-        actorType: { type: string, enum: [client, partner, captain, field, operator] }
+        actorType: { type: string, enum: [ client, partner, captain, field, operator ] }
         provider: { type: string, const: expo }
         deviceId: { type: string }
-        platform: { type: string, enum: [android, ios] }
+        platform: { type: string, enum: [ android, ios ] }
         active: { type: boolean }
         lastSeenAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
@@ -216,13 +243,26 @@ components:
     DshNotificationPushEndpointResponse:
       type: object
       additionalProperties: false
-      required: [endpoint]
+      required: [ endpoint ]
       properties:
         endpoint: { $ref: '#/components/schemas/DshNotificationPushEndpoint' }
     DshNotificationDeliveryAttempt:
       type: object
       additionalProperties: false
-      required: [id, eventId, eventType, entityType, entityId, attemptNumber, outcome, errorMessage, createdAt, outboxStatus, correlationId]
+      required:
+        [
+          id,
+          eventId,
+          eventType,
+          entityType,
+          entityId,
+          attemptNumber,
+          outcome,
+          errorMessage,
+          createdAt,
+          outboxStatus,
+          correlationId
+        ]
       properties:
         id: { type: string, format: uuid }
         eventId: { type: string, format: uuid }
@@ -232,33 +272,57 @@ components:
         attemptNumber: { type: integer, minimum: 1 }
         outcome: { $ref: '#/components/schemas/DshNotificationDeliveryOutcome' }
         errorMessage: { type: string }
-        nextRetryAt: { type: [string, 'null'], format: date-time }
+        nextRetryAt: { type: [ string, 'null' ], format: date-time }
         createdAt: { type: string, format: date-time }
-        outboxStatus: { type: string, enum: [pending, sent, failed] }
+        outboxStatus: { type: string, enum: [ pending, sent, failed ] }
         correlationId: { type: string }
     DshNotificationPushDeliveryAudit:
       type: object
       additionalProperties: false
-      required: [id, notificationId, actorId, actorType, topic, status, attemptCount, nextRetryAt, providerMessageId, lastError, createdAt, updatedAt]
+      required:
+        [
+          id,
+          notificationId,
+          actorId,
+          actorType,
+          topic,
+          status,
+          attemptCount,
+          nextRetryAt,
+          providerMessageId,
+          lastError,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string, format: uuid }
         notificationId: { type: string, format: uuid }
         actorId: { type: string }
-        actorType: { type: string, enum: [client, partner, captain, field, operator] }
+        actorType: { type: string, enum: [ client, partner, captain, field, operator ] }
         topic: { type: string }
-        status: { type: string, enum: [pending, sent, failed] }
+        status: { type: string, enum: [ pending, sent, failed ] }
         attemptCount: { type: integer, minimum: 0 }
         nextRetryAt: { type: string, format: date-time }
         providerMessageId: { type: string }
         lastError: { type: string }
-        sentAt: { type: [string, 'null'], format: date-time }
-        failedAt: { type: [string, 'null'], format: date-time }
+        sentAt: { type: [ string, 'null' ], format: date-time }
+        failedAt: { type: [ string, 'null' ], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     DshNotificationDeliveryAuditSummary:
       type: object
       additionalProperties: false
-      required: [sent, retryScheduled, deadLetter, pendingOutbox, failedOutbox, sentPush, pendingPush, failedPush]
+      required:
+        [
+          sent,
+          retryScheduled,
+          deadLetter,
+          pendingOutbox,
+          failedOutbox,
+          sentPush,
+          pendingPush,
+          failedPush
+        ]
       properties:
         sent: { type: integer, minimum: 0 }
         retryScheduled: { type: integer, minimum: 0 }
@@ -271,7 +335,7 @@ components:
     DshNotificationDeliveryAuditResponse:
       type: object
       additionalProperties: false
-      required: [attempts, pushDeliveries, summary]
+      required: [ attempts, pushDeliveries, summary ]
       properties:
         attempts:
           type: array
@@ -283,7 +347,7 @@ components:
     DshNotificationError:
       type: object
       additionalProperties: false
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }

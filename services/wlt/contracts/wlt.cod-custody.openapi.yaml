@@ -7,16 +7,14 @@ info:
   version: 1.0.0
   description: >-
     Canonical additive contract for evidence-backed COD collection, remittance,
-    double-entry linkage, variance detection, assignment, investigation and resolution.
+    double-entry linkage, variance detection, assignment, investigation and
+    resolution.
 servers:
   - url: http://localhost:58083
-security:
-  - DshServiceBearer: []
-    DshServiceCaller: []
 paths:
   /wlt/cod-records/{codRecordId}/collect:
     post:
-      tags: ["wlt-cod-records"]
+      tags: [ "wlt-cod-records" ]
       operationId: collectCodCustody
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
@@ -42,9 +40,12 @@ paths:
         '403': { $ref: '#/components/responses/CustodyForbidden' }
         '404': { $ref: '#/components/responses/CustodyNotFound' }
         '409': { $ref: '#/components/responses/CustodyConflict' }
+      security:
+        - DshServiceBearer: []
+          DshServiceCaller: []
   /wlt/cod-records/{codRecordId}/remit:
     post:
-      tags: ["wlt-cod-records"]
+      tags: [ "wlt-cod-records" ]
       operationId: remitCodCustody
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
@@ -70,9 +71,12 @@ paths:
         '403': { $ref: '#/components/responses/CustodyForbidden' }
         '404': { $ref: '#/components/responses/CustodyNotFound' }
         '409': { $ref: '#/components/responses/CustodyConflict' }
+      security:
+        - DshServiceBearer: []
+          DshServiceCaller: []
   /wlt/cod-reconciliation-cases:
     get:
-      tags: ["wlt-cod-reconciliation-cases"]
+      tags: [ "wlt-cod-reconciliation-cases" ]
       operationId: listCodReconciliationCases
       parameters:
         - in: query
@@ -86,7 +90,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [codReconciliationCases]
+                required: [ codReconciliationCases ]
                 properties:
                   codReconciliationCases:
                     type: array
@@ -95,9 +99,12 @@ paths:
         '400': { $ref: '#/components/responses/CustodyInvalidRequest' }
         '401': { $ref: '#/components/responses/CustodyUnauthorized' }
         '403': { $ref: '#/components/responses/CustodyForbidden' }
+      security:
+        - DshServiceBearer: []
+          DshServiceCaller: []
   /wlt/cod-reconciliation-cases/{caseId}/assign:
     post:
-      tags: ["wlt-cod-reconciliation-cases"]
+      tags: [ "wlt-cod-reconciliation-cases" ]
       operationId: assignCodReconciliationCase
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CaseId'
@@ -110,7 +117,7 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [operatorId]
+              required: [ operatorId ]
               properties:
                 operatorId: { type: string, minLength: 1 }
                 investigationNote: { type: string, maxLength: 4000, default: '' }
@@ -125,9 +132,12 @@ paths:
         '401': { $ref: '#/components/responses/CustodyUnauthorized' }
         '403': { $ref: '#/components/responses/CustodyForbidden' }
         '409': { $ref: '#/components/responses/CustodyConflict' }
+      security:
+        - DshServiceBearer: []
+          DshServiceCaller: []
   /wlt/cod-reconciliation-cases/{caseId}/resolve:
     post:
-      tags: ["wlt-cod-reconciliation-cases"]
+      tags: [ "wlt-cod-reconciliation-cases" ]
       operationId: resolveCodReconciliationCase
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CaseId'
@@ -140,12 +150,12 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [operatorId, resolutionAction, resolutionNote]
+              required: [ operatorId, resolutionAction, resolutionNote ]
               properties:
                 operatorId: { type: string, minLength: 1 }
                 resolutionAction:
                   type: string
-                  enum: [confirmed_variance, cash_adjustment, collector_recovery, write_off]
+                  enum: [ confirmed_variance, cash_adjustment, collector_recovery, write_off ]
                 resolutionNote: { type: string, minLength: 1, maxLength: 4000 }
       responses:
         '200':
@@ -158,10 +168,11 @@ paths:
         '401': { $ref: '#/components/responses/CustodyUnauthorized' }
         '403': { $ref: '#/components/responses/CustodyForbidden' }
         '409': { $ref: '#/components/responses/CustodyConflict' }
+      security:
+        - DshServiceBearer: []
+          DshServiceCaller: []
 components:
   securitySchemes:
-    serviceBearer:
-      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
     DshServiceBearer:
       type: http
       scheme: bearer
@@ -172,11 +183,11 @@ components:
   schemas:
     CustodyActorType:
       type: string
-      enum: [captain, store_courier, partner_store, partner, operator]
+      enum: [ captain, store_courier, partner_store, partner, operator ]
     CollectCodInput:
       type: object
       additionalProperties: false
-      required: [actualAmountMinorUnits, proofReference, actorId, actorType]
+      required: [ actualAmountMinorUnits, proofReference, actorId, actorType ]
       properties:
         actualAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
         proofReference: { type: string, minLength: 3, maxLength: 512 }
@@ -186,7 +197,7 @@ components:
     RemitCodInput:
       type: object
       additionalProperties: false
-      required: [proofReference, actorId, actorType]
+      required: [ proofReference, actorId, actorType ]
       properties:
         proofReference: { type: string, minLength: 3, maxLength: 512 }
         actorId: { type: string, minLength: 1 }
@@ -195,7 +206,17 @@ components:
     CodRecord:
       type: object
       additionalProperties: true
-      required: [id, orderId, partnerId, collectorId, collectorType, amountMinorUnits, currency, status]
+      required:
+        [
+          id,
+          orderId,
+          partnerId,
+          collectorId,
+          collectorType,
+          amountMinorUnits,
+          currency,
+          status
+        ]
       properties:
         id: { type: string }
         orderId: { type: string }
@@ -205,15 +226,32 @@ components:
         collectorType: { type: string }
         amountMinorUnits: { type: integer, format: int64 }
         currency: { type: string }
-        status: { type: string, enum: [pending_collection, collected, remitted] }
+        status: { type: string, enum: [ pending_collection, collected, remitted ] }
     CodCustodyEvidence:
       type: object
       additionalProperties: false
-      required: [id, codRecordId, eventType, expectedAmountMinorUnits, actualAmountMinorUnits, differenceMinorUnits, currency, proofReference, actorId, actorType, note, correlationId, idempotencyKey, ledgerTransactionId, createdAt]
+      required:
+        [
+          id,
+          codRecordId,
+          eventType,
+          expectedAmountMinorUnits,
+          actualAmountMinorUnits,
+          differenceMinorUnits,
+          currency,
+          proofReference,
+          actorId,
+          actorType,
+          note,
+          correlationId,
+          idempotencyKey,
+          ledgerTransactionId,
+          createdAt
+        ]
       properties:
         id: { type: string }
         codRecordId: { type: string }
-        eventType: { type: string, enum: [collection, remittance] }
+        eventType: { type: string, enum: [ collection, remittance ] }
         expectedAmountMinorUnits: { type: integer, format: int64, minimum: 0 }
         actualAmountMinorUnits: { type: integer, format: int64, minimum: 0 }
         differenceMinorUnits: { type: integer, format: int64 }
@@ -228,11 +266,26 @@ components:
         createdAt: { type: string, format: date-time }
     CodReconciliationStatus:
       type: string
-      enum: [open, investigating, resolved]
+      enum: [ open, investigating, resolved ]
     CodReconciliationCase:
       type: object
       additionalProperties: false
-      required: [id, codRecordId, custodyEvidenceId, expectedAmountMinorUnits, actualAmountMinorUnits, differenceMinorUnits, currency, triggerReason, status, investigationNote, resolutionNote, createdAt, updatedAt]
+      required:
+        [
+          id,
+          codRecordId,
+          custodyEvidenceId,
+          expectedAmountMinorUnits,
+          actualAmountMinorUnits,
+          differenceMinorUnits,
+          currency,
+          triggerReason,
+          status,
+          investigationNote,
+          resolutionNote,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string }
         codRecordId: { type: string }
@@ -243,19 +296,19 @@ components:
         currency: { type: string }
         triggerReason: { type: string }
         status: { $ref: '#/components/schemas/CodReconciliationStatus' }
-        assignedToOperatorId: { type: [string, 'null'] }
-        assignedAt: { type: [string, 'null'], format: date-time }
+        assignedToOperatorId: { type: [ string, 'null' ] }
+        assignedAt: { type: [ string, 'null' ], format: date-time }
         investigationNote: { type: string }
-        resolvedByOperatorId: { type: [string, 'null'] }
-        resolutionAction: { type: [string, 'null'] }
+        resolvedByOperatorId: { type: [ string, 'null' ] }
+        resolutionAction: { type: [ string, 'null' ] }
         resolutionNote: { type: string }
-        resolvedAt: { type: [string, 'null'], format: date-time }
+        resolvedAt: { type: [ string, 'null' ], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     CodCustodyMutationResult:
       type: object
       additionalProperties: false
-      required: [codRecord, custodyEvidence, replayed]
+      required: [ codRecord, custodyEvidence, replayed ]
       properties:
         codRecord: { $ref: '#/components/schemas/CodRecord' }
         custodyEvidence: { $ref: '#/components/schemas/CodCustodyEvidence' }
@@ -267,7 +320,7 @@ components:
     CodReconciliationCaseEnvelope:
       type: object
       additionalProperties: false
-      required: [codReconciliationCase]
+      required: [ codReconciliationCase ]
       properties:
         codReconciliationCase:
           $ref: '#/components/schemas/CodReconciliationCase'

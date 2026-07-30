@@ -22,6 +22,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeStatus"
+      security:
+        - bearerAuth: []
   /workforce/readiness:
     get:
       tags:
@@ -36,6 +38,8 @@ paths:
                 $ref: "#/components/schemas/RuntimeStatus"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+      security:
+        - bearerAuth: []
   /workforce/field-agents:
     post:
       tags:
@@ -916,6 +920,8 @@ paths:
       responses:
         "201":
           description: Created
+      security:
+        - bearerAuth: []
   /workforce/reference/shifts:
     get:
       tags:
@@ -1054,6 +1060,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "404":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
     patch:
       operationId: patchFieldOperationalCore
       requestBody:
@@ -1071,6 +1079,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "403":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /workforce/captains/{actorId}/operational-core:
     parameters:
       - $ref: "#/components/parameters/ActorId"
@@ -1085,6 +1095,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "404":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
     patch:
       operationId: patchCaptainOperationalCore
       requestBody:
@@ -1102,6 +1114,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "403":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /workforce/captains/{actorId}/classification/basic:
     parameters:
       - $ref: "#/components/parameters/ActorId"
@@ -1133,6 +1147,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "409":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /workforce/me/operational-core:
     get:
       operationId: getOwnProviderOperationalCore
@@ -1143,6 +1159,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "403":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /workforce/me/availability-notices:
     get:
       operationId: listOwnAvailabilityNotices
@@ -1172,6 +1190,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "403":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
     post:
       operationId: createOwnAvailabilityNotice
       requestBody:
@@ -1198,6 +1218,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "403":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /workforce/me/incidents:
     get:
       operationId: listOwnProviderIncidents
@@ -1216,6 +1238,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "403":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /workforce/me/incidents/{incidentId}/appeal:
     parameters:
       - $ref: "#/components/parameters/IncidentId"
@@ -1245,6 +1269,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "404":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /workforce/provider-incidents:
     get:
       operationId: listProviderIncidentsForOperator
@@ -1271,6 +1297,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "403":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
     post:
       operationId: createProviderIncident
       requestBody:
@@ -1290,6 +1318,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "409":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /workforce/provider-incidents/{incidentId}/status:
     parameters:
       - $ref: "#/components/parameters/IncidentId"
@@ -1314,6 +1344,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "409":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /workforce/provider-incidents/{incidentId}/transitions:
     parameters:
       - $ref: "#/components/parameters/IncidentId"
@@ -1337,6 +1369,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "403":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /workforce/reference/cities/{code}:
     patch:
       tags:
@@ -1353,6 +1387,8 @@ paths:
       responses:
         "200":
           description: Updated
+      security:
+        - bearerAuth: []
   /workforce/{collection}/{actorId}/documents:
     post:
       tags:
@@ -1394,6 +1430,8 @@ paths:
       responses:
         "200":
           description: Linked
+      security:
+        - bearerAuth: []
   /workforce/sovereign-leadership/reference-data:
     get:
       operationId: getSovereignLeadershipReferenceData
@@ -1500,6 +1538,194 @@ paths:
           description: Department employee and one-time control-panel activation created.
         "403":
           description: employee:create with matching department scope is required.
+  /workforce/department-employees/{actorId}:
+    parameters:
+      - $ref: "#/components/parameters/ActorId"
+    get:
+      operationId: getDepartmentEmployee
+      tags:
+        - department-employees
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Department employee visible to the caller department scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeSummary"
+        "403":
+          description: employee:read with matching department scope is required.
+        "404":
+          description: Employee not found.
+    patch:
+      operationId: updateDepartmentEmployee
+      tags:
+        - department-employees
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDepartmentEmployeeRequest"
+      responses:
+        "200":
+          description: Updated department employee.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeSummary"
+        "403":
+          description: employee:update with matching department scope is required.
+        "404":
+          description: Employee not found.
+  /workforce/department-employees/{actorId}/suspend:
+    parameters:
+      - $ref: "#/components/parameters/ActorId"
+    post:
+      operationId: suspendDepartmentEmployee
+      tags:
+        - department-employees
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentEmployeeStatusChangeRequest"
+      responses:
+        "200":
+          description: Suspended department employee.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeSummary"
+        "403":
+          description: employee:suspend with matching department scope is required.
+        "409":
+          description: Optimistic-lock conflict.
+  /workforce/department-employees/{actorId}/reactivate:
+    parameters:
+      - $ref: "#/components/parameters/ActorId"
+    post:
+      operationId: reactivateDepartmentEmployee
+      tags:
+        - department-employees
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentEmployeeStatusChangeRequest"
+      responses:
+        "200":
+          description: Reactivated department employee.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeSummary"
+        "403":
+          description: employee:reactivate with matching department scope is required.
+        "409":
+          description: Optimistic-lock conflict.
+  /workforce/department-employees/{actorId}/activation-codes:
+    parameters:
+      - $ref: "#/components/parameters/ActorId"
+    post:
+      operationId: issueDepartmentEmployeeActivation
+      tags:
+        - department-employees
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - expectedVersion
+              properties:
+                expectedVersion:
+                  type: integer
+                  minimum: 1
+      responses:
+        "201":
+          description: One-time control-panel activation code.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivationCodeResult"
+        "403":
+          description: employee.activation:issue with matching department scope is required.
+    delete:
+      operationId: revokeDepartmentEmployeeActivation
+      tags:
+        - department-employees
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Activation revoked.
+        "403":
+          description: employee.activation:issue with matching department scope is required.
+  /workforce/employees/{actorId}/governance:
+    parameters:
+      - $ref: "#/components/parameters/ActorId"
+    get:
+      operationId: getEmployeeGovernance
+      tags:
+        - department-employees
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Employee governance profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - employeeGovernance
+                properties:
+                  employeeGovernance:
+                    $ref: "#/components/schemas/SovereignLeadershipGovernance"
+        "403":
+          description: provider:read is required.
+    put:
+      operationId: putEmployeeGovernance
+      tags:
+        - department-employees
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertEmployeeGovernanceRequest"
+      responses:
+        "200":
+          description: Updated employee governance profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - employeeGovernance
+                properties:
+                  employeeGovernance:
+                    $ref: "#/components/schemas/SovereignLeadershipGovernance"
+        "403":
+          description: provider:update is required.
 components:
   securitySchemes:
     bearerAuth:
@@ -3075,4 +3301,4 @@ x-bthwani-source-files:
   - core/workforce/contracts/workforce.operational-core.openapi.yaml
   - core/workforce/contracts/workforce.reference-mutations.openapi.yaml
   - core/workforce/contracts/workforce.sovereign-leadership.openapi.yaml
-x-bthwani-source-sha256: 65cdaf5ff7a1ac55712cba81c556143244edc60f9e8e66c60479786843fb8763
+x-bthwani-source-sha256: 45ea4a4fff05205dc0e1ea90bd6d1e4a2fb6d99d15a1497cdff159dcdcd47bb2

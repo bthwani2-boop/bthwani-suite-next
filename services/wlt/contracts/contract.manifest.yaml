@@ -1,29 +1,17 @@
-# Bounded-context contract manifest.
-#
-# Declares what this context asserts about its own contract surface. The
-# master indexes `entry` and nothing below it; `modules` must match the
-# entry's x-bthwani-contracts exactly. Enforced by contracts-foundation.mjs.
-
-context: services/wlt
-entry: ./wlt.openapi.yaml
-owner: services/wlt
-contractState: CONTRACT_ACTIVE
-layout: INDEXED
-bundle: ./generated/wlt.bundle.openapi.yaml
-client: ../clients/generated/wlt-api.ts
-regenerateScript: pnpm --dir services/wlt openapi:generate
+bundle: generated/wlt.bundle.openapi.yaml
+entry: wlt.openapi.yaml
 modules:
-  - ./wlt.common.openapi.yaml
-  - ./wlt.payments.openapi.yaml
-  - ./wlt.delivery-collections.openapi.yaml
-  - ./wlt.refunds.openapi.yaml
-  - ./wlt.settlements-commissions.openapi.yaml
-  - ./wlt.settlement-operations.openapi.yaml
-  - ./wlt.payouts-destinations.openapi.yaml
-  - ./wlt.payout-failure-boundary.openapi.yaml
-  - ./wlt.cod-custody.openapi.yaml
-  - ./wlt.cod-records.openapi.yaml
-  - ./wlt.commercial.openapi.yaml
-  - ./wlt.commercial-summary.openapi.yaml
-  - ./wlt.promotion-funding.openapi.yaml
-  - ./wlt.workforce-finance.openapi.yaml
+  - wlt.cod-custody.openapi.yaml
+  - wlt.cod-records.openapi.yaml
+  - wlt.commercial-summary.openapi.yaml
+  - wlt.commercial.openapi.yaml
+  - wlt.common.openapi.yaml
+  - wlt.delivery-collections.openapi.yaml
+  - wlt.payments.openapi.yaml
+  - wlt.payout-failure-boundary.openapi.yaml
+  - wlt.payouts-destinations.openapi.yaml
+  - wlt.promotion-funding.openapi.yaml
+  - wlt.refunds.openapi.yaml
+  - wlt.settlement-operations.openapi.yaml
+  - wlt.settlements-commissions.openapi.yaml
+  - wlt.workforce-finance.openapi.yaml

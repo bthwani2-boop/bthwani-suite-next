@@ -16,8 +16,8 @@ paths:
     get:
       operationId: getWltCommercialBenefitsSummary
       summary: Return WLT-owned loyalty and subscription aggregate metrics.
-      tags: [WltCommercialBenefits]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: Authorization
           in: header
@@ -28,7 +28,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [dsh]
+            enum: [ dsh ]
       responses:
         "200":
           description: Commercial benefits summary.
@@ -40,8 +40,6 @@ paths:
 
 components:
   securitySchemes:
-    serviceBearer:
-      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
     bearerAuth:
       type: http
       scheme: bearer
@@ -62,7 +60,7 @@ components:
     WltErrorResponse:
       type: object
       additionalProperties: false
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }
@@ -86,6 +84,6 @@ components:
     WltCommercialBenefitsSummaryResponse:
       type: object
       additionalProperties: false
-      required: [summary]
+      required: [ summary ]
       properties:
         summary: { $ref: "#/components/schemas/WltCommercialBenefitsSummary" }

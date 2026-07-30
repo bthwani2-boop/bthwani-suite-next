@@ -2,7 +2,8 @@ openapi: 3.1.0
 info:
   title: BThwani WLT Promotion Funding API
   version: 1.0.0
-  description: WLT-owned monetary reservation lifecycle for platform-, partner-, and shared-funded coupon discounts.
+  description: WLT-owned monetary reservation lifecycle for platform-, partner-,
+    and shared-funded coupon discounts.
 x-bthwani-owner: services/wlt
 x-bthwani-parent-contract: services/wlt/contracts/wlt.openapi.yaml
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -14,8 +15,8 @@ paths:
   /wlt/promotion-funding/reservations:
     post:
       operationId: reserveWltPromotionFunding
-      tags: [WltPromotionFunding]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltPromotionFunding ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -37,8 +38,8 @@ paths:
   /wlt/promotion-funding/reservations/{reservationId}:
     get:
       operationId: getWltPromotionFundingReservation
-      tags: [WltPromotionFunding]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltPromotionFunding ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
@@ -52,8 +53,8 @@ paths:
   /wlt/promotion-funding/reservations/{reservationId}/commit:
     post:
       operationId: commitWltPromotionFunding
-      tags: [WltPromotionFunding]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltPromotionFunding ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -77,8 +78,8 @@ paths:
   /wlt/promotion-funding/reservations/{reservationId}/release:
     post:
       operationId: releaseWltPromotionFunding
-      tags: [WltPromotionFunding]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltPromotionFunding ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -102,8 +103,8 @@ paths:
   /wlt/promotion-funding/reservations/{reservationId}/reverse:
     post:
       operationId: reverseWltPromotionFunding
-      tags: [WltPromotionFunding]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltPromotionFunding ]
+      security: [ { bearerAuth: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -126,8 +127,6 @@ paths:
         '409': { $ref: './wlt.common.openapi.yaml#/components/responses/ErrorResponse' }
 components:
   securitySchemes:
-    serviceBearer:
-      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
     bearerAuth: { type: http, scheme: bearer }
   parameters:
     ReservationId:
@@ -143,7 +142,7 @@ components:
           schema:
             type: object
             additionalProperties: false
-            required: [reservation]
+            required: [ reservation ]
             properties:
               reservation: { $ref: '#/components/schemas/PromotionFundingReservation' }
     ErrorResponse:
@@ -155,7 +154,19 @@ components:
     ReservePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [operatorContextId, externalReference, checkoutIntentId, couponRedemptionId, couponId, clientId, platformFundedMinorUnits, partnerFundedMinorUnits, totalDiscountMinorUnits, currency]
+      required:
+        [
+          operatorContextId,
+          externalReference,
+          checkoutIntentId,
+          couponRedemptionId,
+          couponId,
+          clientId,
+          platformFundedMinorUnits,
+          partnerFundedMinorUnits,
+          totalDiscountMinorUnits,
+          currency
+        ]
       properties:
         operatorContextId: { type: string, minLength: 1 }
         externalReference: { type: string, minLength: 1 }
@@ -171,21 +182,21 @@ components:
     CommitPromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [operatorContextId, orderId]
+      required: [ operatorContextId, orderId ]
       properties:
         operatorContextId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
     ReleasePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [operatorContextId, reason]
+      required: [ operatorContextId, reason ]
       properties:
         operatorContextId: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
     ReversePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [operatorContextId, orderId, reason]
+      required: [ operatorContextId, orderId, reason ]
       properties:
         operatorContextId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
@@ -193,7 +204,23 @@ components:
     PromotionFundingReservation:
       type: object
       additionalProperties: false
-      required: [id, operatorContextId, externalReference, checkoutIntentId, couponRedemptionId, couponId, clientId, platformFundedMinorUnits, partnerFundedMinorUnits, totalDiscountMinorUnits, currency, status, createdAt, updatedAt]
+      required:
+        [
+          id,
+          operatorContextId,
+          externalReference,
+          checkoutIntentId,
+          couponRedemptionId,
+          couponId,
+          clientId,
+          platformFundedMinorUnits,
+          partnerFundedMinorUnits,
+          totalDiscountMinorUnits,
+          currency,
+          status,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string, pattern: '^pfr_[a-f0-9]{32}$' }
         operatorContextId: { type: string }
@@ -207,7 +234,7 @@ components:
         partnerFundedMinorUnits: { type: integer, format: int64 }
         totalDiscountMinorUnits: { type: integer, format: int64 }
         currency: { type: string }
-        status: { type: string, enum: [reserved, committed, released, reversed] }
+        status: { type: string, enum: [ reserved, committed, released, reversed ] }
         orderId: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }

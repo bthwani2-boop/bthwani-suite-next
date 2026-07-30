@@ -3,43 +3,45 @@ info:
   title: BThwani DSH Partner Fulfillment API
   version: 1.1.0
   description: >-
-    Governed partner-owned delivery and pickup lifecycles, actor-scoped readback,
-    durable command identity, proof completion, bounded pickup recovery, and
-    persisted operator SLA-alert evidence.
+    Governed partner-owned delivery and pickup lifecycles, actor-scoped
+    readback, durable command identity, proof completion, bounded pickup
+    recovery, and persisted operator SLA-alert evidence.
 x-bthwani-owner: services/dsh
 x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true
-security:
-  - bearerAuth: []
 paths:
   /dsh/partner/orders/{orderId}/partner-delivery:
     get:
       operationId: getDshPartnerDeliveryTask
-      tags: [DshPartnerDelivery]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPartnerDelivery ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       responses:
         '200': { $ref: '#/components/responses/TaskStateResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/client/orders/{orderId}/partner-delivery:
     get:
       operationId: getDshClientPartnerDeliveryTask
-      tags: [DshPartnerDelivery]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPartnerDelivery ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       responses:
         '200': { $ref: '#/components/responses/TaskStateResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/partner-delivery/assign:
     post:
       operationId: assignDshPartnerDeliveryTask
-      tags: [DshPartnerDelivery]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPartnerDelivery ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody:
         required: true
         content:
@@ -50,44 +52,52 @@ paths:
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/partner-delivery/pickup:
     post:
       operationId: markDshPartnerDeliveryPickedUp
-      tags: [DshPartnerDelivery]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPartnerDelivery ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody: { $ref: '#/components/requestBodies/MutationRequest' }
       responses:
         '200': { $ref: '#/components/responses/TaskResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/partner-delivery/depart:
     post:
       operationId: departDshPartnerDeliveryTask
-      tags: [DshPartnerDelivery]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPartnerDelivery ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody: { $ref: '#/components/requestBodies/MutationRequest' }
       responses:
         '200': { $ref: '#/components/responses/TaskResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/partner-delivery/arrive:
     post:
       operationId: arriveDshPartnerDeliveryTask
-      tags: [DshPartnerDelivery]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPartnerDelivery ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody: { $ref: '#/components/requestBodies/MutationRequest' }
       responses:
         '200': { $ref: '#/components/responses/TaskResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/partner-delivery/exception:
     post:
       operationId: raiseDshPartnerDeliveryException
-      tags: [DshPartnerDelivery]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPartnerDelivery ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody:
         required: true
         content:
@@ -99,73 +109,91 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/partner-deliveries:
     get:
       operationId: listDshOperatorPartnerDeliveries
-      tags: [DshPartnerDelivery]
+      tags: [ DshPartnerDelivery ]
       parameters:
         - { name: storeId, in: query, schema: { type: string } }
-        - { name: status, in: query, schema: { $ref: '#/components/schemas/TaskStatus' } }
+        - {
+            name: status,
+            in: query,
+            schema: { $ref: '#/components/schemas/TaskStatus' }
+          }
         - { $ref: '#/components/parameters/Limit' }
         - { $ref: '#/components/parameters/Offset' }
       responses:
         '200': { $ref: '#/components/responses/TaskListResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/partner-deliveries/{taskId}:
     get:
       operationId: getDshOperatorPartnerDelivery
-      tags: [DshPartnerDelivery]
-      parameters: [{ $ref: '#/components/parameters/TaskId' }]
+      tags: [ DshPartnerDelivery ]
+      parameters: [ { $ref: '#/components/parameters/TaskId' } ]
       responses:
         '200': { $ref: '#/components/responses/TaskResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/partner-deliveries/order/{orderId}:
     get:
       operationId: getDshOperatorPartnerDeliveryByOrder
-      tags: [DshPartnerDelivery]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPartnerDelivery ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       responses:
         '200': { $ref: '#/components/responses/TaskResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
 
   /dsh/client/orders/{orderId}/pickup:
     get:
       operationId: getDshClientPickupSession
-      tags: [DshPickup]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPickup ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       responses:
         '200': { $ref: '#/components/responses/PickupStateResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/pickup:
     get:
       operationId: getDshPartnerPickupState
-      tags: [DshPickup]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPickup ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       responses:
         '200': { $ref: '#/components/responses/PickupStateResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/pickup/mark-ready:
     post:
       operationId: markDshPickupReady
-      tags: [DshPickup]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPickup ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody: { $ref: '#/components/requestBodies/MutationRequest' }
       responses:
         '200': { $ref: '#/components/responses/PickupActionResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/pickup/notify:
     post:
       operationId: notifyDshPickupCustomer
-      tags: [DshPickup]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPickup ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody:
         required: true
         content:
@@ -177,22 +205,26 @@ paths:
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
         '503': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/pickup/customer-arrived:
     post:
       operationId: markDshPickupCustomerArrived
-      tags: [DshPickup]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPickup ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody: { $ref: '#/components/requestBodies/MutationRequest' }
       responses:
         '200': { $ref: '#/components/responses/PickupActionResponse' }
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/pickup/verify:
     post:
       operationId: verifyDshPickupSession
-      tags: [DshPickup]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPickup ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody:
         required: true
         content:
@@ -203,11 +235,13 @@ paths:
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/pickup/no-show:
     post:
       operationId: markDshPickupNoShow
-      tags: [DshPickup]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPickup ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody:
         required: true
         content:
@@ -218,11 +252,13 @@ paths:
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/pickup/extend-window:
     post:
       operationId: extendDshPartnerPickupWindow
-      tags: [DshPickup]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPickup ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody:
         required: true
         content:
@@ -233,11 +269,13 @@ paths:
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/pickup/reschedule:
     post:
       operationId: rescheduleDshPartnerPickupWindow
-      tags: [DshPickup]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPickup ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody:
         required: true
         content:
@@ -248,10 +286,12 @@ paths:
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/pickups:
     get:
       operationId: listDshOperatorPickups
-      tags: [DshPickup]
+      tags: [ DshPickup ]
       parameters:
         - { name: storeId, in: query, schema: { type: string } }
         - { name: status, in: query, schema: { type: string } }
@@ -260,20 +300,24 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/PickupListResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/pickups/{orderId}:
     get:
       operationId: getDshOperatorPickup
-      tags: [DshPickup]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPickup ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       responses:
         '200': { $ref: '#/components/responses/PickupActionResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/pickups/{orderId}/extend-window:
     post:
       operationId: extendDshPickupWindow
-      tags: [DshPickup]
-      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      tags: [ DshPickup ]
+      parameters: [ { $ref: '#/components/parameters/OrderId' } ]
       requestBody:
         required: true
         content:
@@ -285,11 +329,13 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '422': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
 
   /dsh/operator/partner-delivery/sla-alerts/refresh:
     post:
       operationId: refreshDshPartnerDeliverySlaAlerts
-      tags: [DshFulfillmentSla]
+      tags: [ DshFulfillmentSla ]
       requestBody:
         required: true
         content:
@@ -298,21 +344,29 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/SlaRefreshResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/partner-delivery/sla-alerts:
     get:
       operationId: listDshPartnerDeliverySlaAlerts
-      tags: [DshFulfillmentSla]
+      tags: [ DshFulfillmentSla ]
       parameters:
-        - { name: status, in: query, schema: { $ref: '#/components/schemas/SlaAlertStatus' } }
+        - {
+            name: status,
+            in: query,
+            schema: { $ref: '#/components/schemas/SlaAlertStatus' }
+          }
         - { $ref: '#/components/parameters/Limit' }
       responses:
         '200': { $ref: '#/components/responses/SlaAlertListResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/partner-delivery/sla-alerts/{alertId}/acknowledge:
     post:
       operationId: acknowledgeDshPartnerDeliverySlaAlert
-      tags: [DshFulfillmentSla]
-      parameters: [{ $ref: '#/components/parameters/AlertId' }]
+      tags: [ DshFulfillmentSla ]
+      parameters: [ { $ref: '#/components/parameters/AlertId' } ]
       requestBody:
         required: true
         content:
@@ -323,10 +377,12 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/pickups/sla-alerts/refresh:
     post:
       operationId: refreshDshPickupSlaAlerts
-      tags: [DshFulfillmentSla]
+      tags: [ DshFulfillmentSla ]
       requestBody:
         required: true
         content:
@@ -335,21 +391,29 @@ paths:
       responses:
         '200': { $ref: '#/components/responses/SlaRefreshResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/pickups/sla-alerts:
     get:
       operationId: listDshPickupSlaAlerts
-      tags: [DshFulfillmentSla]
+      tags: [ DshFulfillmentSla ]
       parameters:
-        - { name: status, in: query, schema: { $ref: '#/components/schemas/SlaAlertStatus' } }
+        - {
+            name: status,
+            in: query,
+            schema: { $ref: '#/components/schemas/SlaAlertStatus' }
+          }
         - { $ref: '#/components/parameters/Limit' }
       responses:
         '200': { $ref: '#/components/responses/SlaAlertListResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/pickups/sla-alerts/{alertId}/acknowledge:
     post:
       operationId: acknowledgeDshPickupSlaAlert
-      tags: [DshFulfillmentSla]
-      parameters: [{ $ref: '#/components/parameters/AlertId' }]
+      tags: [ DshFulfillmentSla ]
+      parameters: [ { $ref: '#/components/parameters/AlertId' } ]
       requestBody:
         required: true
         content:
@@ -360,6 +424,8 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -398,11 +464,21 @@ components:
   schemas:
     TaskStatus:
       type: string
-      enum: [unassigned, assigned, departed, arrived, proof_pending, completed, cancelled, exception]
+      enum:
+        [
+          unassigned,
+          assigned,
+          departed,
+          arrived,
+          proof_pending,
+          completed,
+          cancelled,
+          exception
+        ]
     MutationRequest:
       type: object
       additionalProperties: false
-      required: [expectedVersion, commandId]
+      required: [ expectedVersion, commandId ]
       properties:
         expectedVersion: { type: integer, minimum: 0 }
         commandId: { type: string, minLength: 1, maxLength: 160 }
@@ -412,14 +488,14 @@ components:
       allOf:
         - { $ref: '#/components/schemas/MutationRequest' }
         - type: object
-          required: [storeCourierId]
+          required: [ storeCourierId ]
           properties:
             storeCourierId: { type: string, minLength: 1 }
     ExceptionRequest:
       allOf:
         - { $ref: '#/components/schemas/MutationRequest' }
         - type: object
-          required: [reason, ticketReference]
+          required: [ reason, ticketReference ]
           properties:
             reason: { type: string, minLength: 1 }
             ticketReference: { type: string, minLength: 1 }
@@ -438,36 +514,36 @@ components:
       allOf:
         - { $ref: '#/components/schemas/MutationRequest' }
         - type: object
-          required: [code]
+          required: [ code ]
           properties:
             code: { type: string, minLength: 1, maxLength: 32 }
     PickupReasonRequest:
       allOf:
         - { $ref: '#/components/schemas/MutationRequest' }
         - type: object
-          required: [reason]
+          required: [ reason ]
           properties:
             reason: { type: string, minLength: 1, maxLength: 1000 }
     PickupWindowRequest:
       allOf:
         - { $ref: '#/components/schemas/PickupReasonRequest' }
         - type: object
-          required: [newExpiry]
+          required: [ newExpiry ]
           properties:
             newExpiry: { type: string, format: date-time }
     AcknowledgeAlertRequest:
       type: object
       additionalProperties: false
-      required: [expectedVersion]
+      required: [ expectedVersion ]
       properties:
         expectedVersion: { type: integer, minimum: 0 }
     SlaAlertStatus:
       type: string
-      enum: [open, acknowledged, resolved]
+      enum: [ open, acknowledged, resolved ]
     PartnerDeliveryTask:
       type: object
       additionalProperties: true
-      required: [id, orderId, storeId, status, version, createdAt, updatedAt]
+      required: [ id, orderId, storeId, status, version, createdAt, updatedAt ]
       properties:
         id: { type: string }
         orderId: { type: string, format: uuid }
@@ -481,7 +557,18 @@ components:
     PickupSession:
       type: object
       additionalProperties: true
-      required: [id, orderId, storeId, clientId, expiresAt, status, version, createdAt, updatedAt]
+      required:
+        [
+          id,
+          orderId,
+          storeId,
+          clientId,
+          expiresAt,
+          status,
+          version,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string }
         orderId: { type: string, format: uuid }
@@ -497,24 +584,24 @@ components:
     SlaAlert:
       type: object
       additionalProperties: true
-      required: [id, orderId, storeId, leg, status, detectedAt, version]
+      required: [ id, orderId, storeId, leg, status, detectedAt, version ]
       properties:
         id: { type: string }
-        taskId: { type: [string, 'null'] }
-        sessionId: { type: [string, 'null'] }
+        taskId: { type: [ string, 'null' ] }
+        sessionId: { type: [ string, 'null' ] }
         orderId: { type: string }
         storeId: { type: string }
         leg: { type: string }
         status: { $ref: '#/components/schemas/SlaAlertStatus' }
         detectedAt: { type: string, format: date-time }
-        acknowledgedByActorId: { type: [string, 'null'] }
-        acknowledgedAt: { type: [string, 'null'], format: date-time }
-        resolvedAt: { type: [string, 'null'], format: date-time }
+        acknowledgedByActorId: { type: [ string, 'null' ] }
+        acknowledgedAt: { type: [ string, 'null' ], format: date-time }
+        resolvedAt: { type: [ string, 'null' ], format: date-time }
         version: { type: integer, minimum: 1 }
     SlaRefreshResult:
       type: object
       additionalProperties: false
-      required: [opened, resolved, active]
+      required: [ opened, resolved, active ]
       properties:
         opened: { type: integer, minimum: 0 }
         resolved: { type: integer, minimum: 0 }
@@ -522,7 +609,7 @@ components:
     ErrorEnvelope:
       type: object
       additionalProperties: true
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }
@@ -533,7 +620,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [task]
+            required: [ task ]
             properties:
               task: { $ref: '#/components/schemas/PartnerDeliveryTask' }
     TaskStateResponse:
@@ -542,7 +629,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [task, stage]
+            required: [ task, stage ]
             properties:
               task:
                 oneOf:
@@ -555,7 +642,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [tasks]
+            required: [ tasks ]
             properties:
               tasks:
                 type: array
@@ -566,7 +653,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [session, stage]
+            required: [ session, stage ]
             properties:
               session:
                 oneOf:
@@ -590,7 +677,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [sessions]
+            required: [ sessions ]
             properties:
               sessions:
                 type: array
@@ -601,7 +688,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [result]
+            required: [ result ]
             properties:
               result: { $ref: '#/components/schemas/SlaRefreshResult' }
     SlaAlertResponse:
@@ -610,7 +697,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [alert]
+            required: [ alert ]
             properties:
               alert: { $ref: '#/components/schemas/SlaAlert' }
     SlaAlertListResponse:
@@ -619,7 +706,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [alerts]
+            required: [ alerts ]
             properties:
               alerts:
                 type: array

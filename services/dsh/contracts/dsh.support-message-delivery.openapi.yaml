@@ -2,7 +2,9 @@ openapi: 3.1.0
 info:
   title: DSH Support Message Delivery API
   version: 1.1.0
-  description: Actor-owned support media references, compatibility attachment delivery, and durable read receipts. New messages use the atomic rich-message contract in dsh.openapi.yaml.
+  description: Actor-owned support media references, compatibility attachment
+    delivery, and durable read receipts. New messages use the atomic
+    rich-message contract in dsh.openapi.yaml.
 x-bthwani-owner: services/dsh
 x-bthwani-capability: support-message-delivery
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -11,24 +13,26 @@ x-bthwani-client-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 servers:
   - url: http://localhost:58080
-security:
-  - bearerAuth: []
 paths:
   /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments:
     parameters:
       - $ref: '#/components/parameters/TicketId'
       - $ref: '#/components/parameters/MessageId'
     get:
-      tags: ["dsh-support"]
+      tags: [ "dsh-support" ]
       operationId: listDshActorSupportMessageAttachments
       responses:
         '200': { description: Actor-visible message attachments }
         '403': { description: Actor does not own the ticket }
         '404': { description: Ticket or message not found }
+      security:
+        - bearerAuth: []
     post:
-      tags: ["dsh-support"]
+      tags: [ "dsh-support" ]
       operationId: attachDshActorSupportMessageAsset
-      description: Compatibility operation for linking one already-uploaded governed asset. New clients should send attachments atomically with message creation.
+      description: Compatibility operation for linking one already-uploaded governed
+        asset. New clients should send attachments atomically with message
+        creation.
       requestBody:
         required: true
         content:
@@ -38,27 +42,33 @@ paths:
         '201': { description: Attachment linked to the message }
         '403': { description: Actor does not own the ticket }
         '404': { description: Ticket or message not found }
+      security:
+        - bearerAuth: []
   /dsh/support/tickets/{ticketId}/messages/read:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     post:
-      tags: ["dsh-support"]
+      tags: [ "dsh-support" ]
       operationId: markDshActorSupportMessagesRead
       responses:
         '200': { description: Durable actor read receipt }
         '403': { description: Actor does not own the ticket }
+      security:
+        - bearerAuth: []
   /dsh/operator/support/tickets/{ticketId}/messages/{messageId}/attachments:
     parameters:
       - $ref: '#/components/parameters/TicketId'
       - $ref: '#/components/parameters/MessageId'
     get:
-      tags: ["dsh-operator"]
+      tags: [ "dsh-operator" ]
       operationId: listDshOperatorSupportMessageAttachments
       responses:
         '200': { description: Operator-visible message attachments }
         '403': { description: Missing support read permission }
+      security:
+        - bearerAuth: []
     post:
-      tags: ["dsh-operator"]
+      tags: [ "dsh-operator" ]
       operationId: attachDshOperatorSupportMessageAsset
       description: Compatibility operation for linking one already-uploaded governed asset.
       requestBody:
@@ -69,34 +79,55 @@ paths:
       responses:
         '201': { description: Operator attachment linked to the message }
         '403': { description: Missing support manage permission }
+      security:
+        - bearerAuth: []
   /dsh/operator/support/tickets/{ticketId}/messages/read:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     post:
-      tags: ["dsh-operator"]
+      tags: [ "dsh-operator" ]
       operationId: markDshOperatorSupportMessagesRead
       responses:
         '200': { description: Durable operator read receipt }
         '403': { description: Missing support read permission }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
   parameters:
-    TicketId: { name: ticketId, in: path, required: true, schema: { type: string, minLength: 1 } }
-    MessageId: { name: messageId, in: path, required: true, schema: { type: string, minLength: 1 } }
+    TicketId:
+      {
+        name: ticketId,
+        in: path,
+        required: true,
+        schema: { type: string, minLength: 1 }
+      }
+    MessageId:
+      {
+        name: messageId,
+        in: path,
+        required: true,
+        schema: { type: string, minLength: 1 }
+      }
   schemas:
     AttachmentInput:
       type: object
       additionalProperties: false
-      required: [mediaAssetId, fileName, mimeType, sizeBytes, kind]
+      required: [ mediaAssetId, fileName, mimeType, sizeBytes, kind ]
       properties:
         mediaAssetId: { type: string, minLength: 1, maxLength: 240 }
         fileName: { type: string, minLength: 1, maxLength: 240 }
         mimeType: { type: string, minLength: 1, maxLength: 160 }
         sizeBytes: { type: integer, minimum: 1, maximum: 104857600 }
-        kind: { type: string, enum: [image, audio, video, document] }
-        durationMs: { type: [integer, 'null'], minimum: 0 }
+        kind: { type: string, enum: [ image, audio, video, document ] }
+        durationMs: { type: [ integer, 'null' ], minimum: 0 }
         thumbnailMediaAssetId: { type: string, maxLength: 240 }
         waveformRef: { type: string, maxLength: 2000 }
-        uploadStatus: { type: string, enum: [uploaded, processing, ready, failed], default: ready }
+        uploadStatus:
+          {
+            type: string,
+            enum: [ uploaded, processing, ready, failed ],
+            default: ready
+          }
         isInternal: { type: boolean, default: false }

@@ -4,20 +4,20 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: Workforce Reference Mutations Contract
   version: 1.0.0
-security:
-  - bearerAuth: []
 paths:
   /workforce/reference/cities:
     post:
-      tags: ["workforce-reference"]
+      tags: [ "workforce-reference" ]
       operationId: createWorkforceCity
       summary: Create a governed workforce city reference
       x-bthwani-required-scope: reference:manage
       responses:
         '201': { description: Created }
+      security:
+        - bearerAuth: []
   /workforce/reference/cities/{code}:
     patch:
-      tags: ["workforce-reference"]
+      tags: [ "workforce-reference" ]
       operationId: updateWorkforceCity
       summary: Update or activate/deactivate a workforce city reference
       x-bthwani-required-scope: reference:manage
@@ -28,9 +28,11 @@ paths:
           schema: { type: string }
       responses:
         '200': { description: Updated }
+      security:
+        - bearerAuth: []
   /workforce/{collection}/{actorId}/documents:
     post:
-      tags: ["workforce-collection"]
+      tags: [ "workforce-collection" ]
       operationId: appendWorkforceProviderDocument
       summary: Link an opaque DSH media reference to a Workforce profile
       x-bthwani-required-scope: provider:update
@@ -40,7 +42,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [field-agents, captains, employees]
+            enum: [ field-agents, captains, employees ]
         - in: path
           name: actorId
           required: true
@@ -51,12 +53,14 @@ paths:
           application/json:
             schema:
               type: object
-              required: [expectedVersion, mediaRef]
+              required: [ expectedVersion, mediaRef ]
               properties:
                 expectedVersion: { type: integer, minimum: 1 }
                 mediaRef: { type: string, minLength: 1 }
       responses:
         '200': { description: Linked }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:

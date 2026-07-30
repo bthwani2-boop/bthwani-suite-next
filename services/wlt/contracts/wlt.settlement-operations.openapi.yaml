@@ -2,7 +2,8 @@ openapi: 3.1.0
 info:
   title: BThwani WLT Settlement Operations API
   version: 1.0.0
-  description: OperatorContext-scoped settlement reads, financial summary and governed posting transition.
+  description: OperatorContext-scoped settlement reads, financial summary and
+    governed posting transition.
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: ENABLED
@@ -10,13 +11,11 @@ x-bthwani-runtime-dependency: true
 x-bthwani-financial-owner: true
 servers:
   - url: http://localhost:58083
-security:
-  - serviceBearer: []
 paths:
   /wlt/settlements:
     get:
       operationId: listWltSettlements
-      tags: [WltSettlements]
+      tags: [ WltSettlements ]
       summary: List OperatorContext-local settlements.
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
@@ -37,10 +36,12 @@ paths:
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - serviceBearer: []
   /wlt/settlements/summary:
     get:
       operationId: getWltSettlementSummary
-      tags: [WltSettlements]
+      tags: [ WltSettlements ]
       summary: Return the OperatorContext-local settlement summary computed by WLT.
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
@@ -51,10 +52,12 @@ paths:
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - serviceBearer: []
   /wlt/settlements/{settlementId}:
     get:
       operationId: getWltSettlement
-      tags: [WltSettlements]
+      tags: [ WltSettlements ]
       summary: Read one OperatorContext-local settlement.
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
@@ -66,11 +69,14 @@ paths:
         '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - serviceBearer: []
   /wlt/settlements/{settlementId}/post:
     post:
       operationId: postWltSettlement
-      tags: [WltSettlements]
-      summary: Post a pending OperatorContext-local settlement and its balanced journal atomically.
+      tags: [ WltSettlements ]
+      summary: Post a pending OperatorContext-local settlement and its balanced
+        journal atomically.
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -95,14 +101,28 @@ paths:
         '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - serviceBearer: []
 components:
-  securitySchemes:
-    serviceBearer:
-      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
+  securitySchemes: {}
   schemas:
     SettlementListItem:
       type: object
-      required: [id, partnerId, periodStart, periodEnd, grossAmount, platformFee, netAmount, currency, orderCount, status, createdAt, updatedAt]
+      required:
+        [
+          id,
+          partnerId,
+          periodStart,
+          periodEnd,
+          grossAmount,
+          platformFee,
+          netAmount,
+          currency,
+          orderCount,
+          status,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string }
         operatorContextId: { type: string }
@@ -120,7 +140,7 @@ components:
         updatedAt: { type: string }
     SettlementListResponse:
       type: object
-      required: [settlements]
+      required: [ settlements ]
       properties:
         settlements:
           type: array

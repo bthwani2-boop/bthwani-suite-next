@@ -3,8 +3,9 @@ info:
   title: BThwani DSH Settlements and Commissions Proxy API
   version: 1.0.0
   description: >-
-    DSH control-panel proxy surface for WLT-owned settlement evidence and governed
-    commission lifecycle. DSH authenticates the operator and never owns financial truth.
+    DSH control-panel proxy surface for WLT-owned settlement evidence and
+    governed commission lifecycle. DSH authenticates the operator and never owns
+    financial truth.
 x-bthwani-owner: services/dsh
 x-bthwani-capability: settlements-commissions
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -12,12 +13,10 @@ x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true
 servers:
   - url: http://localhost:58080
-security:
-  - bearerAuth: []
 paths:
   /dsh/control-panel/finance/settlements/{settlementId}/evidence:
     get:
-      tags: ["dsh-control-panel"]
+      tags: [ "dsh-control-panel" ]
       operationId: getDshControlPanelSettlementEvidence
       parameters:
         - $ref: '#/components/parameters/SettlementId'
@@ -26,9 +25,11 @@ paths:
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/commission-policies:
     put:
-      tags: ["dsh-control-panel"]
+      tags: [ "dsh-control-panel" ]
       operationId: upsertDshControlPanelCommissionPolicy
       requestBody:
         $ref: '#/components/requestBodies/ObjectBody'
@@ -39,9 +40,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/commissions/{commissionId}:
     get:
-      tags: ["dsh-control-panel"]
+      tags: [ "dsh-control-panel" ]
       operationId: getDshControlPanelCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -51,9 +54,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/commissions/{commissionId}/adjust:
     post:
-      tags: ["dsh-control-panel"]
+      tags: [ "dsh-control-panel" ]
       operationId: adjustDshControlPanelCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -67,9 +72,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/commissions/{commissionId}/confirm:
     post:
-      tags: ["dsh-control-panel"]
+      tags: [ "dsh-control-panel" ]
       operationId: confirmDshControlPanelCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -80,9 +87,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/commissions/{commissionId}/settle:
     post:
-      tags: ["dsh-control-panel"]
+      tags: [ "dsh-control-panel" ]
       operationId: settleDshControlPanelCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -93,9 +102,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/commissions/{commissionId}/reject:
     post:
-      tags: ["dsh-control-panel"]
+      tags: [ "dsh-control-panel" ]
       operationId: rejectDshControlPanelCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -109,9 +120,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/commissions/{commissionId}/reverse:
     post:
-      tags: ["dsh-control-panel"]
+      tags: [ "dsh-control-panel" ]
       operationId: reverseDshControlPanelCommission
       parameters:
         - $ref: '#/components/parameters/CommissionId'
@@ -125,6 +138,8 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:

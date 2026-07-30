@@ -2,7 +2,8 @@ openapi: 3.1.0
 info:
   title: BThwani Core Identity API
   version: 0.3.0
-  description: Authentication, rotating sessions, actor identity, roles, permissions, and internal actor provisioning.
+  description: Authentication, rotating sessions, actor identity, roles,
+    permissions, and internal actor provisioning.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/identity
 x-bthwani-contracts:
@@ -13,7 +14,7 @@ servers:
 paths:
   /identity/health:
     get:
-      tags: ["identity-health"]
+      tags: [ "identity-health" ]
       operationId: getIdentityHealth
       responses:
         "200":
@@ -22,9 +23,11 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeStatus"
+      security:
+        - bearerAuth: []
   /identity/readiness:
     get:
-      tags: ["identity-readiness"]
+      tags: [ "identity-readiness" ]
       operationId: getIdentityReadiness
       responses:
         "200":
@@ -35,9 +38,11 @@ paths:
                 $ref: "#/components/schemas/RuntimeStatus"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+      security:
+        - bearerAuth: []
   /auth/login:
     post:
-      tags: ["auth-login"]
+      tags: [ "auth-login" ]
       operationId: login
       requestBody:
         required: true
@@ -56,9 +61,11 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+      security:
+        - bearerAuth: []
   /auth/otp/request:
     post:
-      tags: ["auth-otp"]
+      tags: [ "auth-otp" ]
       operationId: requestOtp
       requestBody:
         required: true
@@ -77,9 +84,11 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "429":
           $ref: "#/components/responses/RateLimited"
+      security:
+        - bearerAuth: []
   /auth/activate:
     post:
-      tags: ["auth-activate"]
+      tags: [ "auth-activate" ]
       operationId: activateActor
       requestBody:
         required: true
@@ -100,9 +109,11 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "503":
           $ref: "#/components/responses/ServiceUnavailable"
+      security:
+        - bearerAuth: []
   /auth/logout:
     post:
-      tags: ["auth-logout"]
+      tags: [ "auth-logout" ]
       operationId: logout
       security:
         - bearerAuth: []
@@ -113,7 +124,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
   /auth/refresh:
     post:
-      tags: ["auth-refresh"]
+      tags: [ "auth-refresh" ]
       operationId: refreshSession
       requestBody:
         required: true
@@ -132,9 +143,11 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+      security:
+        - bearerAuth: []
   /auth/session:
     get:
-      tags: ["auth-session"]
+      tags: [ "auth-session" ]
       operationId: getAuthSession
       security:
         - bearerAuth: []
@@ -149,7 +162,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
   /auth/introspect:
     post:
-      tags: ["auth-introspect"]
+      tags: [ "auth-introspect" ]
       operationId: introspectToken
       requestBody:
         required: true
@@ -168,9 +181,11 @@ paths:
           $ref: "#/components/responses/InvalidRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+      security:
+        - bearerAuth: []
   /auth/sessions:
     get:
-      tags: ["auth-sessions"]
+      tags: [ "auth-sessions" ]
       operationId: listSessions
       summary: List all active sessions for the current authenticated actor.
       security:
@@ -188,7 +203,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
   /auth/sessions/{sessionId}:
     delete:
-      tags: ["auth-sessions"]
+      tags: [ "auth-sessions" ]
       operationId: revokeSession
       summary: Revoke a specific session for the current actor.
       security:
@@ -208,7 +223,7 @@ paths:
           $ref: "#/components/responses/NotFound"
   /auth/account:
     delete:
-      tags: ["auth-account"]
+      tags: [ "auth-account" ]
       operationId: deleteAccount
       summary: Anonymize/delete the current actor's account and queue outbox event.
       security:
@@ -220,7 +235,7 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
   /auth/password/change:
     post:
-      tags: ["auth-password"]
+      tags: [ "auth-password" ]
       operationId: changePassword
       summary: Change the current actor's password.
       security:
@@ -231,7 +246,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [password]
+              required: [ password ]
               properties:
                 password:
                   type: string
@@ -246,11 +261,11 @@ paths:
   /internal/actors/provision:
     post:
       operationId: provisionActor
-      tags: [internal]
+      tags: [ internal ]
       description: >-
         Service-to-service only. Creates an inactive actor for a
-        workforce-managed service provider. Idempotent when the phone already belongs
-        to an actor holding the requested role.
+        workforce-managed service provider. Idempotent when the phone already
+        belongs to an actor holding the requested role.
       security:
         - serviceToken: []
       parameters:
@@ -286,7 +301,7 @@ paths:
   /internal/actors/search:
     get:
       operationId: searchInternalActors
-      tags: [internal]
+      tags: [ internal ]
       description: Service-to-service only. Search actors by role and query.
       security:
         - serviceToken: []
@@ -317,7 +332,7 @@ paths:
   /internal/actors/{actorId}:
     get:
       operationId: getInternalActor
-      tags: [internal]
+      tags: [ internal ]
       description: Service-to-service only. Sovereign actor projection including phone.
       security:
         - serviceToken: []
@@ -339,7 +354,7 @@ paths:
   /internal/actors/{actorId}/deactivate:
     post:
       operationId: deactivateActor
-      tags: [internal]
+      tags: [ internal ]
       description: >-
         Service-to-service only. Marks the actor inactive, revokes every live
         session, and revokes pending activation challenges in one transaction.
@@ -359,7 +374,7 @@ paths:
   /internal/actors/{actorId}/reactivate:
     post:
       operationId: reactivateActor
-      tags: [internal]
+      tags: [ internal ]
       description: Service-to-service only. Restores authentication for a suspended actor.
       security:
         - serviceToken: []
@@ -377,7 +392,7 @@ paths:
   /internal/actors/{actorId}/activations:
     post:
       operationId: issueActivationForActor
-      tags: [internal]
+      tags: [ internal ]
       description: >-
         Service-to-service only. Issues a one-time activation code for the
         actor; the phone is resolved sovereignly from the actor record.
@@ -429,8 +444,9 @@ paths:
   /internal/actors/{actorId}/activations/latest:
     get:
       operationId: getLatestActivationForActor
-      tags: [internal]
-      description: Service-to-service only. Retrieves metadata of the latest activation challenge.
+      tags: [ internal ]
+      description: Service-to-service only. Retrieves metadata of the latest
+        activation challenge.
       security:
         - serviceToken: []
       parameters:
@@ -451,8 +467,9 @@ paths:
   /internal/actors/{actorId}/activations/revoke:
     post:
       operationId: revokeActorActivations
-      tags: [internal]
-      description: Service-to-service only. Revokes all pending activation codes for the actor.
+      tags: [ internal ]
+      description: Service-to-service only. Revokes all pending activation codes for
+        the actor.
       security:
         - serviceToken: []
       parameters:
@@ -472,7 +489,8 @@ components:
     serviceToken:
       type: http
       scheme: bearer
-      description: Workforce service token (IDENTITY_WORKFORCE_SERVICE_TOKEN) for internal actor APIs.
+      description: Workforce service token (IDENTITY_WORKFORCE_SERVICE_TOKEN) for
+        internal actor APIs.
   parameters:
     ActorId:
       in: path
@@ -535,7 +553,7 @@ components:
   schemas:
     RuntimeStatus:
       type: object
-      required: [status, service]
+      required: [ status, service ]
       properties:
         status:
           type: string
@@ -544,7 +562,7 @@ components:
     LoginRequest:
       type: object
       additionalProperties: false
-      required: [username, password]
+      required: [ username, password ]
       properties:
         username:
           type: string
@@ -558,7 +576,7 @@ components:
     IssueActivationResponse:
       type: object
       additionalProperties: false
-      required: [activationId, code, maskedPhone, expiresAt]
+      required: [ activationId, code, maskedPhone, expiresAt ]
       properties:
         activationId:
           type: string
@@ -574,11 +592,11 @@ components:
     ActivateRequest:
       type: object
       additionalProperties: false
-      required: [actorType, phone, code]
+      required: [ actorType, phone, code ]
       properties:
         actorType:
           type: string
-          enum: [field, captain, client, partner]
+          enum: [ field, captain, client, partner ]
         phone:
           type: string
           minLength: 8
@@ -592,7 +610,7 @@ components:
     RefreshRequest:
       type: object
       additionalProperties: false
-      required: [refreshToken]
+      required: [ refreshToken ]
       properties:
         refreshToken:
           type: string
@@ -600,14 +618,14 @@ components:
     IntrospectRequest:
       type: object
       additionalProperties: false
-      required: [token]
+      required: [ token ]
       properties:
         token:
           type: string
           minLength: 20
     TokenResponse:
       type: object
-      required: [accessToken, refreshToken, tokenType, expiresIn, identity]
+      required: [ accessToken, refreshToken, tokenType, expiresIn, identity ]
       properties:
         accessToken:
           type: string
@@ -648,7 +666,7 @@ components:
           minItems: 1
           items:
             type: string
-            enum: [client, partner, captain, field, operator, system]
+            enum: [ client, partner, captain, field, operator, system ]
         permissions:
           type: array
           items:
@@ -671,24 +689,34 @@ components:
     Permission:
       type: object
       additionalProperties: false
-      required: [service, surface, action, scope]
+      required: [ service, surface, action, scope ]
       properties:
         service:
           type: string
-          enum: [dsh, wlt, knz, arb, amn, esf, mrf, snd, kwd, core]
+          enum: [ dsh, wlt, knz, arb, amn, esf, mrf, snd, kwd, core ]
         surface:
           type: string
-          enum: [app-client, app-partner, app-captain, app-field, control-panel, webapp, website, system]
+          enum:
+            [
+              app-client,
+              app-partner,
+              app-captain,
+              app-field,
+              control-panel,
+              webapp,
+              website,
+              system
+            ]
         action:
           type: string
           minLength: 1
         scope:
           type: string
-          enum: [own, assigned, store, zone, all, none]
+          enum: [ own, assigned, store, zone, all, none ]
     ProvisionActorRequest:
       type: object
       additionalProperties: false
-      required: [username, phoneE164, role]
+      required: [ username, phoneE164, role ]
       properties:
         username:
           type: string
@@ -699,13 +727,13 @@ components:
           maxLength: 20
         role:
           type: string
-          enum: [field, captain]
+          enum: [ field, captain ]
         operatorContextId:
           type: string
     ActorAdminView:
       type: object
       additionalProperties: false
-      required: [actorId, username, phoneE164, roles, active]
+      required: [ actorId, username, phoneE164, roles, active ]
       properties:
         actorId:
           type: string
@@ -718,27 +746,27 @@ components:
           type: array
           items:
             type: string
-            enum: [client, partner, captain, field, operator, system]
+            enum: [ client, partner, captain, field, operator, system ]
         active:
           type: boolean
     IssueActivationForActorRequest:
       type: object
       additionalProperties: false
-      required: [issuedByActorId, expectedActorType, expectedSurface]
+      required: [ issuedByActorId, expectedActorType, expectedSurface ]
       properties:
         issuedByActorId:
           type: string
           minLength: 1
         expectedActorType:
           type: string
-          enum: [field, captain]
+          enum: [ field, captain ]
         expectedSurface:
           type: string
-          enum: [app-field, app-captain]
+          enum: [ app-field, app-captain ]
     ApiError:
       type: object
       additionalProperties: false
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code:
           type: string
@@ -747,14 +775,14 @@ components:
     ActivationChallengeMetadata:
       type: object
       additionalProperties: false
-      required: [activationId, status, createdAt, expiresAt, maskedPhone]
+      required: [ activationId, status, createdAt, expiresAt, maskedPhone ]
       properties:
         activationId:
           type: string
           minLength: 1
         status:
           type: string
-          enum: [pending, revoked, consumed, expired, locked]
+          enum: [ pending, revoked, consumed, expired, locked ]
         createdAt:
           type: string
           format: date-time
@@ -766,7 +794,7 @@ components:
     OtpRequest:
       type: object
       additionalProperties: false
-      required: [phone, actorType]
+      required: [ phone, actorType ]
       properties:
         phone:
           type: string
@@ -774,11 +802,11 @@ components:
           maxLength: 20
         actorType:
           type: string
-          enum: [field, captain, client, partner]
+          enum: [ field, captain, client, partner ]
     SessionInfo:
       type: object
       additionalProperties: false
-      required: [sessionId, deviceFingerprint, createdAt, expiresAt]
+      required: [ sessionId, deviceFingerprint, createdAt, expiresAt ]
       properties:
         sessionId:
           type: string
@@ -790,4 +818,3 @@ components:
         expiresAt:
           type: string
           format: date-time
-

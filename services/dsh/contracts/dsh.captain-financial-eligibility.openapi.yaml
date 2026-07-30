@@ -3,11 +3,10 @@ x-bthwani-owner: services/dsh
 info:
   title: BThwani DSH Captain Financial Eligibility API
   version: 1.0.1
-  description: OperatorContext-scoped WLT wallet readback and DSH-owned dispatch balance policy. No ledger or balance truth is stored in DSH.
+  description: OperatorContext-scoped WLT wallet readback and DSH-owned dispatch
+    balance policy. No ledger or balance truth is stored in DSH.
 servers:
   - url: /api/dsh
-security:
-  - bearerAuth: []
 paths:
   /dsh/operator/platform/dispatch-balance-policy:
     get:
@@ -16,6 +15,8 @@ paths:
         '200': { $ref: '#/components/responses/PolicyResponse' }
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
     put:
       operationId: upsertDispatchBalancePolicy
       parameters:
@@ -32,6 +33,8 @@ paths:
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/dispatch/captains/{captainId}/financial-eligibility:
     parameters:
       - $ref: '#/components/parameters/CaptainId'
@@ -43,6 +46,8 @@ paths:
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/operator/dispatch/captains/{captainId}/financial-eligibility/refresh:
     parameters:
       - $ref: '#/components/parameters/CaptainId'
@@ -56,7 +61,7 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [operatorContextId]
+              required: [ operatorContextId ]
               properties:
                 operatorContextId: { type: string, minLength: 1 }
       responses:
@@ -66,6 +71,8 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '503': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/captain/dispatch/financial-eligibility:
     get:
       operationId: getOwnCaptainFinancialEligibility
@@ -74,6 +81,8 @@ paths:
         '401': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/captain/dispatch/financial-eligibility/refresh:
     post:
       operationId: refreshOwnCaptainFinancialEligibility
@@ -90,6 +99,8 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '503': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -128,7 +139,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [policy]
+            required: [ policy ]
             properties:
               policy: { $ref: '#/components/schemas/DispatchBalancePolicy' }
     EligibilityResponse:
@@ -137,13 +148,13 @@ components:
         application/json:
           schema:
             type: object
-            required: [financialEligibility]
+            required: [ financialEligibility ]
             properties:
               financialEligibility: { $ref: '#/components/schemas/CaptainFinancialEligibility' }
   schemas:
     Error:
       type: object
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }

@@ -5,7 +5,7 @@
   "main": "frontend/shared/dsh/index.ts",
   "types": "frontend/shared/dsh/index.ts",
   "scripts": {
-    "openapi:compose": "node ../../tools/scripts/compose-wlt-openapi.mjs",
+    "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs wlt",
     "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/wlt.bundle.openapi.yaml -o clients/generated/wlt-api.ts",
     "openapi:verify": "node ../../tools/guards/wlt-openapi-bundle-gate.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",

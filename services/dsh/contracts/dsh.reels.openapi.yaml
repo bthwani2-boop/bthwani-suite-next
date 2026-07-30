@@ -19,8 +19,8 @@ paths:
   /dsh/partner/reels:
     get:
       operationId: listPartnerOwnedReels
-      tags: [Reels]
-      security: [{ bearerAuth: [] }]
+      tags: [ Reels ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: storeId
           in: query
@@ -41,7 +41,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [reels]
+                required: [ reels ]
                 properties:
                   reels:
                     type: array
@@ -51,8 +51,8 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       operationId: submitReel
-      tags: [Reels]
-      security: [{ bearerAuth: [] }]
+      tags: [ Reels ]
+      security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
         content:
@@ -65,7 +65,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [reel]
+                required: [ reel ]
                 properties:
                   reel: { $ref: "#/components/schemas/DshGovernedReel" }
         "400": { $ref: "#/components/responses/BadRequest" }
@@ -76,8 +76,8 @@ paths:
   /dsh/operator/reels:
     get:
       operationId: listReels
-      tags: [Reels]
-      security: [{ bearerAuth: [] }]
+      tags: [ Reels ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - name: status
           in: query
@@ -98,7 +98,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [reels]
+                required: [ reels ]
                 properties:
                   reels:
                     type: array
@@ -109,8 +109,8 @@ paths:
   /dsh/operator/reels/{reelId}/review:
     post:
       operationId: reviewReel
-      tags: [Reels]
-      security: [{ bearerAuth: [] }]
+      tags: [ Reels ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/ReelId"
       requestBody:
@@ -125,7 +125,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [reel]
+                required: [ reel ]
                 properties:
                   reel: { $ref: "#/components/schemas/DshGovernedReel" }
         "400": { $ref: "#/components/responses/BadRequest" }
@@ -137,14 +137,14 @@ paths:
   /dsh/operator/reels/{reelId}/media/{kind}:
     get:
       operationId: previewOperatorReelMedia
-      tags: [Reels]
-      security: [{ bearerAuth: [] }]
+      tags: [ Reels ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: "#/components/parameters/ReelId"
         - name: kind
           in: path
           required: true
-          schema: { type: string, enum: [video, poster] }
+          schema: { type: string, enum: [ video, poster ] }
       responses:
         "200":
           description: Private no-store moderation preview.
@@ -167,7 +167,7 @@ paths:
   /dsh/public/reels:
     get:
       operationId: listPublicReels
-      tags: [Reels]
+      tags: [ Reels ]
       parameters:
         - name: limit
           in: query
@@ -180,11 +180,13 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [reels]
+                required: [ reels ]
                 properties:
                   reels:
                     type: array
                     items: { $ref: "#/components/schemas/DshPublicReel" }
+      security:
+        - bearerAuth: []
 
 components:
   securitySchemes:
@@ -201,10 +203,10 @@ components:
   schemas:
     DshReelStatus:
       type: string
-      enum: [pending_review, approved, rejected, archived]
+      enum: [ pending_review, approved, rejected, archived ]
     DshReelTargetType:
       type: string
-      enum: [master_product, store, offer]
+      enum: [ master_product, store, offer ]
     DshGovernedReel:
       type: object
       required:
@@ -230,7 +232,7 @@ components:
       properties:
         id: { type: string }
         assetId: { type: string }
-        posterAssetId: { type: [string, "null"] }
+        posterAssetId: { type: [ string, "null" ] }
         titleAr: { type: string, maxLength: 160 }
         titleEn: { type: string, maxLength: 160 }
         subtitleAr: { type: string, maxLength: 500 }
@@ -245,14 +247,14 @@ components:
         sortOrder: { type: integer }
         submittedBy: { type: string }
         submittedByRole: { type: string }
-        sourceStoreId: { type: [string, "null"] }
-        reviewedBy: { type: [string, "null"] }
+        sourceStoreId: { type: [ string, "null" ] }
+        reviewedBy: { type: [ string, "null" ] }
         reviewNote: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     DshSubmitReelRequest:
       type: object
-      required: [assetId, targetType, targetId]
+      required: [ assetId, targetType, targetId ]
       properties:
         assetId: { type: string, minLength: 1 }
         posterAssetId: { type: string, minLength: 1 }
@@ -270,9 +272,9 @@ components:
         sourceStoreId: { type: string, minLength: 1 }
     DshReviewReelRequest:
       type: object
-      required: [decision]
+      required: [ decision ]
       properties:
-        decision: { type: string, enum: [approved, rejected, archived] }
+        decision: { type: string, enum: [ approved, rejected, archived ] }
         reviewNote: { type: string }
         posterAssetId: { type: string, minLength: 1 }
         titleAr: { type: string, maxLength: 160 }
@@ -288,7 +290,7 @@ components:
         sortOrder: { type: integer }
     DshPublicReel:
       type: object
-      required: [id, titleAr, titleEn, videoUrl, targetType, targetId, sortOrder]
+      required: [ id, titleAr, titleEn, videoUrl, targetType, targetId, sortOrder ]
       properties:
         id: { type: string }
         titleAr: { type: string }
@@ -306,7 +308,7 @@ components:
         sortOrder: { type: integer }
     DshError:
       type: object
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }

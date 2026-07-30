@@ -5,7 +5,8 @@ info:
   description: >-
     WLT-owned payment session lifecycle. DSH may orchestrate and project these
     states, but it never owns provider or ledger truth. Provider webhook input
-    is authenticated by its own HMAC signature rather than the DSH service token.
+    is authenticated by its own HMAC signature rather than the DSH service
+    token.
 x-bthwani-owner: services/wlt
 x-bthwani-capability: governed-payments
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -18,8 +19,8 @@ paths:
     post:
       operationId: createWltPaymentSession
       summary: Create or replay a OperatorContext-bound payment-session reference.
-      tags: [WltPayments]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -45,8 +46,8 @@ paths:
     get:
       operationId: getWltPaymentSession
       summary: Read one payment session in the trusted OperatorContext.
-      tags: [WltPayments]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -63,8 +64,8 @@ paths:
     post:
       operationId: authorizeWltPaymentSession
       summary: Authorize the immutable session amount with durable replay protection.
-      tags: [WltPayments]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -86,9 +87,10 @@ paths:
   /wlt/payment-sessions/{paymentSessionId}/capture:
     post:
       operationId: captureWltPaymentSession
-      summary: Capture an authorized session and atomically post its double-entry ledger transaction.
-      tags: [WltPayments]
-      security: [{ serviceBearer: [] }]
+      summary: Capture an authorized session and atomically post its double-entry
+        ledger transaction.
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -110,9 +112,10 @@ paths:
   /wlt/payment-sessions/{paymentSessionId}/refresh-provider-status:
     post:
       operationId: refreshWltPaymentSessionProviderStatus
-      summary: Query authoritative provider status without repeating authorize or capture.
-      tags: [WltPayments]
-      security: [{ serviceBearer: [] }]
+      summary: Query authoritative provider status without repeating authorize or
+        capture.
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -133,9 +136,10 @@ paths:
   /wlt/payment-sessions/{paymentSessionId}/timeline:
     get:
       operationId: getWltPaymentSessionTimeline
-      summary: Read session, operation receipts, provider events, reconciliation and ledger cross-reference.
-      tags: [WltPayments]
-      security: [{ serviceBearer: [] }]
+      summary: Read session, operation receipts, provider events, reconciliation and
+        ledger cross-reference.
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
       parameters:
         - $ref: '#/components/parameters/PaymentSessionId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
@@ -147,7 +151,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [paymentTimeline]
+                required: [ paymentTimeline ]
                 properties:
                   paymentTimeline: { $ref: '#/components/schemas/PaymentTimeline' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
@@ -156,8 +160,8 @@ paths:
     post:
       operationId: expireWltPaymentSession
       summary: Expire a legally expirable non-captured payment session.
-      tags: [WltPayments]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -177,9 +181,10 @@ paths:
   /wlt/payment-sessions/{paymentSessionId}/cod-collect:
     post:
       operationId: blockLegacyWltPaymentSessionCodCollect
-      summary: Reject legacy direct COD collection; custody transitions use delivery-collection routes.
-      tags: [WltPayments]
-      security: [{ serviceBearer: [] }]
+      summary: Reject legacy direct COD collection; custody transitions use
+        delivery-collection routes.
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -194,9 +199,10 @@ paths:
   /wlt/payment-sessions/{paymentSessionId}/cancel-for-order:
     post:
       operationId: cancelWltPaymentSessionForOrder
-      summary: Let WLT choose expiry or governed refund according to captured OperatorContext truth.
-      tags: [WltPayments]
-      security: [{ serviceBearer: [] }]
+      summary: Let WLT choose expiry or governed refund according to captured
+        OperatorContext truth.
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -212,7 +218,7 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [orderId, clientId, reason]
+              required: [ orderId, clientId, reason ]
               properties:
                 orderId: { type: string, minLength: 1 }
                 clientId: { type: string, minLength: 1 }
@@ -229,8 +235,8 @@ paths:
     post:
       operationId: cancelWltOrderFinancially
       summary: Apply the OperatorContext-bound expiry-or-refund decision for an order.
-      tags: [WltPayments]
-      security: [{ serviceBearer: [] }]
+      tags: [ WltPayments ]
+      security: [ { serviceBearer: [] } ]
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -245,7 +251,7 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [paymentSessionId, orderId, clientId, reason]
+              required: [ paymentSessionId, orderId, clientId, reason ]
               properties:
                 paymentSessionId: { type: string, minLength: 1 }
                 orderId: { type: string, minLength: 1 }
@@ -265,7 +271,7 @@ paths:
     post:
       operationId: receiveWltPaymentProviderWebhook
       summary: Receive a signed, timestamped and deduplicated provider payment event.
-      tags: [WltProviderWebhooks]
+      tags: [ WltProviderWebhooks ]
       parameters:
         - name: X-WLT-Provider-Timestamp
           in: header
@@ -287,7 +293,7 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [accepted, paymentSession]
+                required: [ accepted, paymentSession ]
                 properties:
                   accepted: { type: boolean, const: true }
                   idempotentReplay: { type: boolean }
@@ -297,10 +303,10 @@ paths:
         '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '503': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
 components:
-  securitySchemes:
-    serviceBearer:
-      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
+  securitySchemes: {}
   parameters:
     PaymentSessionId:
       name: paymentSessionId
@@ -310,30 +316,64 @@ components:
   schemas:
     PaymentStatus:
       type: string
-      enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_collected, failed, expired, provider_result_unknown]
+      enum:
+        [
+          reference_created,
+          pending_provider,
+          authorization_pending,
+          authorized,
+          capture_pending,
+          captured,
+          cod_pending,
+          cod_collected,
+          failed,
+          expired,
+          provider_result_unknown
+        ]
     PaymentSession:
       type: object
-      required: [id, operatorContextId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]
+      required:
+        [
+          id,
+          operatorContextId,
+          clientId,
+          storeId,
+          paymentMethod,
+          status,
+          providerReference,
+          amountMinorUnits,
+          currency,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string }
-        checkoutIntentId: { type: [string, 'null'] }
-        specialRequestId: { type: [string, 'null'] }
-        subscriptionPurchaseId: { type: [string, 'null'] }
-        commercialProductReference: { type: [string, 'null'] }
+        checkoutIntentId: { type: [ string, 'null' ] }
+        specialRequestId: { type: [ string, 'null' ] }
+        subscriptionPurchaseId: { type: [ string, 'null' ] }
+        commercialProductReference: { type: [ string, 'null' ] }
         operatorContextId: { type: string }
         clientId: { type: string }
         storeId: { type: string }
-        paymentMethod: { type: string, enum: [cod, wallet, mixed, official_wallet] }
+        paymentMethod: { type: string, enum: [ cod, wallet, mixed, official_wallet ] }
         status: { $ref: '#/components/schemas/PaymentStatus' }
         providerReference: { type: string }
         amountMinorUnits: { type: integer, format: int64, minimum: 1 }
         currency: { type: string, minLength: 3, maxLength: 3 }
-        capturedAt: { type: [string, 'null'], format: date-time }
+        capturedAt: { type: [ string, 'null' ], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     CreatePaymentSessionRequest:
       type: object
-      required: [operatorContextId, clientId, storeId, paymentMethod, amountMinorUnits, currency]
+      required:
+        [
+          operatorContextId,
+          clientId,
+          storeId,
+          paymentMethod,
+          amountMinorUnits,
+          currency
+        ]
       properties:
         checkoutIntentId: { type: string }
         specialRequestId: { type: string }
@@ -342,17 +382,17 @@ components:
         operatorContextId: { type: string }
         clientId: { type: string }
         storeId: { type: string }
-        paymentMethod: { type: string, enum: [cod, wallet, mixed, official_wallet] }
+        paymentMethod: { type: string, enum: [ cod, wallet, mixed, official_wallet ] }
         amountMinorUnits: { type: integer, format: int64, minimum: 1 }
         currency: { type: string, default: YER }
         cartSnapshotHash: { type: string }
       oneOf:
-        - required: [checkoutIntentId]
-        - required: [specialRequestId]
-        - required: [subscriptionPurchaseId, commercialProductReference]
+        - required: [ checkoutIntentId ]
+        - required: [ specialRequestId ]
+        - required: [ subscriptionPurchaseId, commercialProductReference ]
     PaymentSessionResponse:
       type: object
-      required: [paymentSession]
+      required: [ paymentSession ]
       properties:
         paymentSession: { $ref: '#/components/schemas/PaymentSession' }
     PaymentOperationResponse:
@@ -365,19 +405,23 @@ components:
             ledgerTransactionId: { type: string }
     ProviderWebhookRequest:
       type: object
-      required: [eventId, type, operatorContextId, paymentSessionId, status]
+      required: [ eventId, type, operatorContextId, paymentSessionId, status ]
       additionalProperties: false
       properties:
         eventId: { type: string, minLength: 1, maxLength: 200 }
-        type: { type: string, enum: [payment.authorized, payment.captured, payment.failed, payment.expired] }
+        type:
+          {
+            type: string,
+            enum: [ payment.authorized, payment.captured, payment.failed, payment.expired ]
+          }
         operatorContextId: { type: string, minLength: 1 }
         paymentSessionId: { type: string, minLength: 1 }
-        status: { type: string, enum: [authorized, captured, failed, expired] }
+        status: { type: string, enum: [ authorized, captured, failed, expired ] }
         providerReference: { type: string }
         occurredAt: { type: string, format: date-time }
     PaymentTimeline:
       type: object
-      required: [paymentSession, operationReceipts, providerEvents, reconciliationCases]
+      required: [ paymentSession, operationReceipts, providerEvents, reconciliationCases ]
       properties:
         paymentSession: { $ref: '#/components/schemas/PaymentSession' }
         captureLedgerTransactionId: { type: string }
@@ -394,53 +438,65 @@ components:
           items: { $ref: '#/components/schemas/PaymentReconciliationCase' }
     PaymentOperationReceipt:
       type: object
-      required: [id, operation, state, responseStatus, createdAt, updatedAt]
+      required: [ id, operation, state, responseStatus, createdAt, updatedAt ]
       properties:
         id: { type: string }
-        operation: { type: string, enum: [authorize, capture, provider_status_refresh] }
-        state: { type: string, enum: [in_progress, completed, failed, provider_result_unknown] }
+        operation: { type: string, enum: [ authorize, capture, provider_status_refresh ] }
+        state:
+          {
+            type: string,
+            enum: [ in_progress, completed, failed, provider_result_unknown ]
+          }
         responseStatus: { type: string }
         providerReference: { type: string }
         correlationId: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        completedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [ string, 'null' ], format: date-time }
     PaymentProviderEvent:
       type: object
-      required: [providerEventId, eventType, providerStatus, processingState, signatureTime, receivedAt]
+      required:
+        [
+          providerEventId,
+          eventType,
+          providerStatus,
+          processingState,
+          signatureTime,
+          receivedAt
+        ]
       properties:
         providerEventId: { type: string }
         eventType: { type: string }
         providerStatus: { type: string }
         providerReference: { type: string }
-        processingState: { type: string, enum: [received, applied, ignored, conflict] }
+        processingState: { type: string, enum: [ received, applied, ignored, conflict ] }
         processingResult: { type: string }
         signatureTime: { type: string, format: date-time }
-        occurredAt: { type: [string, 'null'], format: date-time }
+        occurredAt: { type: [ string, 'null' ], format: date-time }
         receivedAt: { type: string, format: date-time }
-        processedAt: { type: [string, 'null'], format: date-time }
+        processedAt: { type: [ string, 'null' ], format: date-time }
     PaymentReconciliationCase:
       type: object
-      required: [id, operation, triggerReason, status, createdAt, updatedAt]
+      required: [ id, operation, triggerReason, status, createdAt, updatedAt ]
       properties:
         id: { type: string }
-        operation: { type: string, enum: [authorize, capture] }
+        operation: { type: string, enum: [ authorize, capture ] }
         triggerReason: { type: string }
-        status: { type: string, enum: [open, resolved] }
-        assignedToOperatorId: { type: [string, 'null'] }
-        resolution: { type: [string, 'null'] }
-        resolutionAction: { type: [string, 'null'] }
-        resolutionNote: { type: [string, 'null'] }
-        resolvedAt: { type: [string, 'null'], format: date-time }
+        status: { type: string, enum: [ open, resolved ] }
+        assignedToOperatorId: { type: [ string, 'null' ] }
+        resolution: { type: [ string, 'null' ] }
+        resolutionAction: { type: [ string, 'null' ] }
+        resolutionNote: { type: [ string, 'null' ] }
+        resolvedAt: { type: [ string, 'null' ], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     ErrorEnvelope:
       type: object
-      required: [error]
+      required: [ error ]
       properties:
         error:
           type: object
-          required: [code, message]
+          required: [ code, message ]
           properties:
             code: { type: string }
             message: { type: string }

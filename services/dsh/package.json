@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "openapi:compose": "node ../../tools/scripts/compose-dsh-openapi.mjs",
+    "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs dsh",
     "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts",
     "openapi:test": "node --test tests/dsh-openapi-modular.test.mjs",
     "openapi:verify": "node ../../tools/guards/dsh-openapi-modular-gate.mjs && pnpm run openapi:generate",

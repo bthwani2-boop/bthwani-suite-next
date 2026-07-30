@@ -15,8 +15,8 @@ paths:
   /wlt/field-commission-category-policies/{partnerCategory}:
     put:
       operationId: upsertFieldCommissionCategoryPolicy
-      tags: [WltWorkforceFinance]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltWorkforceFinance ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/PartnerCategory'
       requestBody:
@@ -32,7 +32,7 @@ paths:
   /wlt/field-commissions:
     post:
       operationId: createFieldCategoryCommission
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
         content:
@@ -47,7 +47,7 @@ paths:
   /wlt/provider-penalties:
     post:
       operationId: createProviderPenalty
-      security: [{ bearerAuth: [] }]
+      security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
         content:
@@ -62,8 +62,8 @@ paths:
   /wlt/provider-penalties/{penaltyId}/reverse:
     post:
       operationId: reverseProviderPenalty
-      tags: [WltWorkforceFinance]
-      security: [{ bearerAuth: [] }]
+      tags: [ WltWorkforceFinance ]
+      security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: '#/components/parameters/PenaltyId'
       requestBody:
@@ -80,8 +80,6 @@ paths:
         '409': { $ref: '#/components/responses/WorkforceFinanceConflict' }
 components:
   securitySchemes:
-    serviceBearer:
-      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
     bearerAuth:
       type: http
       scheme: bearer

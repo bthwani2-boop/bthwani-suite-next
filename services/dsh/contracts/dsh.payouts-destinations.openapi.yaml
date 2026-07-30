@@ -4,7 +4,8 @@ info:
   version: 1.0.0
   description: >-
     Actor-scoped payout destination and operator reconciliation proxy surface.
-    WLT remains the financial owner; DSH derives actor identity from the session.
+    WLT remains the financial owner; DSH derives actor identity from the
+    session.
 x-bthwani-owner: services/dsh
 x-bthwani-capability: payouts-destinations
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -12,12 +13,10 @@ x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true
 servers:
   - url: http://localhost:58080
-security:
-  - bearerAuth: []
 paths:
   /dsh/partner/me/finance/payout-destination:
     get:
-      tags: ["dsh-partner"]
+      tags: [ "dsh-partner" ]
       operationId: getDshPartnerOwnPayoutDestination
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
@@ -25,8 +24,10 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
     put:
-      tags: ["dsh-partner"]
+      tags: [ "dsh-partner" ]
       operationId: upsertDshPartnerOwnPayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -39,9 +40,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/me/finance/payout-destination/deactivate:
     post:
-      tags: ["dsh-partner"]
+      tags: [ "dsh-partner" ]
       operationId: deactivateDshPartnerOwnPayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -51,9 +54,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/partner/me/finance/payout-requests:
     post:
-      tags: ["dsh-partner"]
+      tags: [ "dsh-partner" ]
       operationId: createDshPartnerOwnPayoutRequest
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -66,9 +71,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/captain/me/finance/payout-destination:
     get:
-      tags: ["dsh-captain"]
+      tags: [ "dsh-captain" ]
       operationId: getDshCaptainOwnPayoutDestination
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
@@ -76,8 +83,10 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
     put:
-      tags: ["dsh-captain"]
+      tags: [ "dsh-captain" ]
       operationId: upsertDshCaptainOwnPayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -90,9 +99,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/captain/me/finance/payout-destination/deactivate:
     post:
-      tags: ["dsh-captain"]
+      tags: [ "dsh-captain" ]
       operationId: deactivateDshCaptainOwnPayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -102,9 +113,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/field/me/finance/payout-destination:
     get:
-      tags: ["dsh-field"]
+      tags: [ "dsh-field" ]
       operationId: getDshFieldOwnPayoutDestination
       responses:
         '200': { $ref: '#/components/responses/ObjectResponse' }
@@ -112,8 +125,10 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
     put:
-      tags: ["dsh-field"]
+      tags: [ "dsh-field" ]
       operationId: upsertDshFieldOwnPayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -126,9 +141,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/field/me/finance/payout-destination/deactivate:
     post:
-      tags: ["dsh-field"]
+      tags: [ "dsh-field" ]
       operationId: deactivateDshFieldOwnPayoutDestination
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -138,9 +155,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/payout-requests/{payoutId}/audit:
     get:
-      tags: ["dsh-control-panel"]
+      tags: [ "dsh-control-panel" ]
       operationId: listDshControlPanelPayoutAudit
       parameters:
         - $ref: '#/components/parameters/PayoutId'
@@ -150,9 +169,11 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '404': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile:
     post:
-      tags: ["dsh-control-panel"]
+      tags: [ "dsh-control-panel" ]
       operationId: reconcileDshControlPanelPayoutRequest
       parameters:
         - $ref: '#/components/parameters/PayoutId'
@@ -169,6 +190,8 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
         '502': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:

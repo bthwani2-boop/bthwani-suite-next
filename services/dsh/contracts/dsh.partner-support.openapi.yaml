@@ -10,12 +10,10 @@ x-bthwani-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 servers:
   - url: http://localhost:58080
-security:
-  - bearerAuth: []
 paths:
   /dsh/partner/support/tickets:
     get:
-      tags: ["dsh-partner"]
+      tags: [ "dsh-partner" ]
       operationId: listDshPartnerSupportTickets
       responses:
         '200':
@@ -24,14 +22,16 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [tickets]
+                required: [ tickets ]
                 properties:
                   tickets:
                     type: array
                     items:
                       $ref: '#/components/schemas/PartnerSupportTicket'
+      security:
+        - bearerAuth: []
     post:
-      tags: ["dsh-partner"]
+      tags: [ "dsh-partner" ]
       operationId: createDshPartnerSupportTicket
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -49,17 +49,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [ticket]
+                required: [ ticket ]
                 properties:
                   ticket:
                     $ref: '#/components/schemas/PartnerSupportTicket'
         '400': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /dsh/partner/support/tickets/{ticketId}:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     get:
-      tags: ["dsh-partner"]
+      tags: [ "dsh-partner" ]
       operationId: getDshPartnerSupportTicket
       responses:
         '200':
@@ -68,16 +70,18 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [ticket]
+                required: [ ticket ]
                 properties:
                   ticket:
                     $ref: '#/components/schemas/PartnerSupportTicket'
         '404': { $ref: '#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /dsh/partner/support/tickets/{ticketId}/messages:
     parameters:
       - $ref: '#/components/parameters/TicketId'
     get:
-      tags: ["dsh-partner"]
+      tags: [ "dsh-partner" ]
       operationId: listDshPartnerSupportMessages
       responses:
         '200':
@@ -86,15 +90,17 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [messages]
+                required: [ messages ]
                 properties:
                   messages:
                     type: array
                     items:
                       $ref: '#/components/schemas/PartnerSupportMessage'
         '404': { $ref: '#/components/responses/Error' }
+      security:
+        - bearerAuth: []
     post:
-      tags: ["dsh-partner"]
+      tags: [ "dsh-partner" ]
       operationId: addDshPartnerSupportMessage
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -105,7 +111,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [body]
+              required: [ body ]
               properties:
                 body:
                   type: string
@@ -118,12 +124,14 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [message]
+                required: [ message ]
                 properties:
                   message:
                     $ref: '#/components/schemas/PartnerSupportMessage'
         '400': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -161,14 +169,14 @@ components:
         application/json:
           schema:
             type: object
-            required: [code, message]
+            required: [ code, message ]
             properties:
               code: { type: string }
               message: { type: string }
   schemas:
     CreatePartnerSupportTicketInput:
       type: object
-      required: [subject, description, category]
+      required: [ subject, description, category ]
       properties:
         storeId:
           type: string
@@ -184,14 +192,35 @@ components:
           maxLength: 4000
         category:
           type: string
-          enum: [order_issue, delivery_issue, store_quality, payment_reference, account_access, app_bug, other]
+          enum:
+            [
+              order_issue,
+              delivery_issue,
+              store_quality,
+              payment_reference,
+              account_access,
+              app_bug,
+              other
+            ]
         priority:
           type: string
-          enum: [low, normal, high, urgent]
+          enum: [ low, normal, high, urgent ]
           default: normal
     PartnerSupportTicket:
       type: object
-      required: [id, reporterId, reporterRole, subject, description, category, priority, status, createdAt, updatedAt]
+      required:
+        [
+          id,
+          reporterId,
+          reporterRole,
+          subject,
+          description,
+          category,
+          priority,
+          status,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string }
         storeId: { type: string }
@@ -201,16 +230,16 @@ components:
         description: { type: string }
         category: { type: string }
         priority: { type: string }
-        status: { type: string, enum: [open, in_review, pending_user, resolved, closed] }
+        status: { type: string, enum: [ open, in_review, pending_user, resolved, closed ] }
         assignedTo: { type: string }
         orderId: { type: string }
-        resolvedAt: { type: [string, 'null'], format: date-time }
-        closedAt: { type: [string, 'null'], format: date-time }
+        resolvedAt: { type: [ string, 'null' ], format: date-time }
+        closedAt: { type: [ string, 'null' ], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     PartnerSupportMessage:
       type: object
-      required: [id, ticketId, senderId, senderRole, body, isInternal, createdAt]
+      required: [ id, ticketId, senderId, senderRole, body, isInternal, createdAt ]
       properties:
         id: { type: string }
         ticketId: { type: string }

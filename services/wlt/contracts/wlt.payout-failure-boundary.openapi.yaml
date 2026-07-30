@@ -2,7 +2,8 @@ openapi: 3.1.0
 info:
   title: BThwani WLT Payout Failure Boundary
   version: 1.0.0
-  description: Fail-closed route proving that ambiguous provider payouts cannot be manually failed or release held funds outside reconciliation.
+  description: Fail-closed route proving that ambiguous provider payouts cannot be
+    manually failed or release held funds outside reconciliation.
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: ENABLED
@@ -10,13 +11,11 @@ x-bthwani-runtime-dependency: true
 x-bthwani-financial-owner: true
 servers:
   - url: http://localhost:58083
-security:
-  - serviceBearer: []
 paths:
   /wlt/payout-requests/{payoutId}/fail:
     post:
       operationId: failWltPayoutRequestClosed
-      tags: [WltPayoutRequests]
+      tags: [ WltPayoutRequests ]
       summary: Reject manual payout failure and require provider reconciliation.
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
@@ -34,7 +33,7 @@ paths:
             schema:
               type: object
               additionalProperties: false
-              required: [operatorId]
+              required: [ operatorId ]
               properties:
                 operatorId: { type: string, minLength: 1 }
       responses:
@@ -44,7 +43,7 @@ paths:
           content:
             application/json:
               schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
+      security:
+        - serviceBearer: []
 components:
-  securitySchemes:
-    serviceBearer:
-      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
+  securitySchemes: {}

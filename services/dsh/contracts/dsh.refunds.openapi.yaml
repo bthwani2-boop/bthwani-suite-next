@@ -13,8 +13,6 @@ info:
     propagated without changing status or body.
 servers:
   - url: http://localhost:58080
-security:
-  - bearerAuth: []
 paths:
   /dsh/control-panel/finance/refunds:
     get:
@@ -44,6 +42,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "502":
           $ref: "#/components/responses/WltUnavailable"
+      security:
+        - bearerAuth: []
     post:
       tags:
         - dsh-control-panel
@@ -83,6 +83,8 @@ paths:
           $ref: "#/components/responses/MutationReceiptFailure"
         "502":
           $ref: "#/components/responses/WltUnavailable"
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/refunds/{refundId}:
     get:
       tags:
@@ -107,6 +109,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/refunds/{refundId}/approve:
     post:
       tags:
@@ -140,6 +144,8 @@ paths:
           $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/MutationReceiptFailure"
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/refunds/{refundId}/reject:
     post:
       tags:
@@ -173,6 +179,8 @@ paths:
           $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/MutationReceiptFailure"
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/refunds/{refundId}/complete:
     post:
       tags:
@@ -217,6 +225,8 @@ paths:
           $ref: "#/components/responses/CompletionPersistenceFailure"
         "502":
           $ref: "#/components/responses/WltUnavailable"
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/refunds/{refundId}/reconcile:
     post:
       tags:
@@ -248,6 +258,8 @@ paths:
           $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/MutationReceiptFailure"
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/refunds/{refundId}/audit:
     get:
       tags:
@@ -268,6 +280,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
+      security:
+        - bearerAuth: []
   /dsh/client/orders/{orderId}/refunds:
     get:
       tags:
@@ -291,6 +305,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "502":
           $ref: "#/components/responses/WltUnavailable"
+      security:
+        - bearerAuth: []
   /dsh/partner/orders/{orderId}/refunds:
     get:
       tags:
@@ -315,6 +331,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "502":
           $ref: "#/components/responses/WltUnavailable"
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:

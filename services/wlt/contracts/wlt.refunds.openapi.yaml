@@ -6,19 +6,17 @@ info:
   title: WLT Governed Financial Refunds
   version: 1.3.0
   description: >-
-    Canonical financial refund contract. WLT owns amount, provider,
-    ledger, reconciliation and audit truth. All routes are service-authenticated
-    and OperatorContext-scoped by the trusted DSH caller. Every mutation is claimed by a
-    durable idempotency receipt before business execution, and provider outcomes
-    are not acknowledged unless their state is durably persisted.
+    Canonical financial refund contract. WLT owns amount, provider, ledger,
+    reconciliation and audit truth. All routes are service-authenticated and
+    OperatorContext-scoped by the trusted DSH caller. Every mutation is claimed
+    by a durable idempotency receipt before business execution, and provider
+    outcomes are not acknowledged unless their state is durably persisted.
 servers:
   - url: http://localhost:58083
-security:
-  - bearerAuth: []
 paths:
   /wlt/refunds:
     get:
-      tags: [wlt-refunds]
+      tags: [ wlt-refunds ]
       operationId: listWltRefunds
       summary: List OperatorContext-scoped refunds
       parameters:
@@ -41,8 +39,10 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/RefundUnauthorized' }
         '403': { $ref: '#/components/responses/RefundForbidden' }
+      security:
+        - bearerAuth: []
     post:
-      tags: [wlt-refunds]
+      tags: [ wlt-refunds ]
       operationId: createWltRefund
       summary: Create a partial or full remaining refund request
       x-bthwani-mutation-approved: false
@@ -74,9 +74,11 @@ paths:
         '403': { $ref: '#/components/responses/RefundForbidden' }
         '409': { $ref: '#/components/responses/RefundConflict' }
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
+      security:
+        - bearerAuth: []
   /wlt/refunds/{refundId}:
     get:
-      tags: [wlt-refunds]
+      tags: [ wlt-refunds ]
       operationId: getWltRefund
       summary: Read one OperatorContext-scoped refund
       parameters:
@@ -94,9 +96,11 @@ paths:
         '401': { $ref: '#/components/responses/RefundUnauthorized' }
         '403': { $ref: '#/components/responses/RefundForbidden' }
         '404': { $ref: '#/components/responses/RefundNotFound' }
+      security:
+        - bearerAuth: []
   /wlt/refunds/{refundId}/approve:
     post:
-      tags: [wlt-refunds]
+      tags: [ wlt-refunds ]
       operationId: approveWltRefund
       summary: Independently approve a requested refund
       x-bthwani-mutation-approved: false
@@ -123,9 +127,11 @@ paths:
         '404': { $ref: '#/components/responses/RefundNotFound' }
         '409': { $ref: '#/components/responses/RefundConflict' }
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
+      security:
+        - bearerAuth: []
   /wlt/refunds/{refundId}/reject:
     post:
-      tags: [wlt-refunds]
+      tags: [ wlt-refunds ]
       operationId: rejectWltRefund
       summary: Independently reject a requested refund
       x-bthwani-mutation-approved: false
@@ -152,15 +158,18 @@ paths:
         '404': { $ref: '#/components/responses/RefundNotFound' }
         '409': { $ref: '#/components/responses/RefundConflict' }
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
+      security:
+        - bearerAuth: []
   /wlt/refunds/{refundId}/complete:
     post:
-      tags: [wlt-refunds]
+      tags: [ wlt-refunds ]
       operationId: completeWltRefund
       summary: Claim and execute an approved refund through the provider
       description: >-
-        The mutation receipt and approved-to-processing claim are committed before
-        the provider call. An ambiguous provider result returns 202 only after
-        provider_unknown and its reconciliation case are durably persisted.
+        The mutation receipt and approved-to-processing claim are committed
+        before the provider call. An ambiguous provider result returns 202 only
+        after provider_unknown and its reconciliation case are durably
+        persisted.
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
@@ -177,12 +186,14 @@ paths:
             schema: { $ref: '#/components/schemas/CompleteRequest' }
       responses:
         '200':
-          description: Provider-confirmed, ledger-posted and outbox-enqueued refund or exact replay
+          description: Provider-confirmed, ledger-posted and outbox-enqueued refund or
+            exact replay
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RefundEnvelope' }
         '202':
-          description: Provider result is unknown, durably recorded and requires reconciliation
+          description: Provider result is unknown, durably recorded and requires
+            reconciliation
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ProviderUnknownError' }
@@ -191,9 +202,11 @@ paths:
         '409': { $ref: '#/components/responses/RefundConflict' }
         '500': { $ref: '#/components/responses/CompletionPersistenceFailure' }
         '502': { $ref: '#/components/responses/ProviderFailure' }
+      security:
+        - bearerAuth: []
   /wlt/refunds/{refundId}/reconcile:
     post:
-      tags: [wlt-refunds]
+      tags: [ wlt-refunds ]
       operationId: reconcileWltRefund
       summary: Resolve a provider-unknown refund with external evidence
       x-bthwani-mutation-approved: false
@@ -221,9 +234,11 @@ paths:
         '404': { $ref: '#/components/responses/RefundNotFound' }
         '409': { $ref: '#/components/responses/RefundConflict' }
         '500': { $ref: '#/components/responses/MutationReceiptFailure' }
+      security:
+        - bearerAuth: []
   /wlt/refunds/{refundId}/audit:
     get:
-      tags: [wlt-refunds]
+      tags: [ wlt-refunds ]
       operationId: listWltRefundAudit
       summary: List append-only refund audit evidence
       parameters:
@@ -241,10 +256,10 @@ paths:
         '401': { $ref: '#/components/responses/RefundUnauthorized' }
         '403': { $ref: '#/components/responses/RefundForbidden' }
         '404': { $ref: '#/components/responses/RefundNotFound' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
-    serviceBearer:
-      $ref: './wlt.common.openapi.yaml#/components/securitySchemes/serviceBearer'
     bearerAuth:
       type: http
       scheme: bearer
@@ -257,11 +272,38 @@ components:
   schemas:
     RefundStatus:
       type: string
-      enum: [requested, approved, processing, provider_unknown, completed, rejected, reversed]
+      enum:
+        [
+          requested,
+          approved,
+          processing,
+          provider_unknown,
+          completed,
+          rejected,
+          reversed
+        ]
     GovernedRefund:
       type: object
       additionalProperties: false
-      required: [id, operatorContextId, paymentSessionId, orderId, clientId, amountMinorUnits, currency, reason, status, requestedByOperatorId, eligibilityReference, idempotencyKey, providerIdempotencyKey, version, createdAt, updatedAt]
+      required:
+        [
+          id,
+          operatorContextId,
+          paymentSessionId,
+          orderId,
+          clientId,
+          amountMinorUnits,
+          currency,
+          reason,
+          status,
+          requestedByOperatorId,
+          eligibilityReference,
+          idempotencyKey,
+          providerIdempotencyKey,
+          version,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string }
         operatorContextId: { type: string }
@@ -284,14 +326,24 @@ components:
         providerError: { type: string }
         reconciliationCaseId: { type: string }
         version: { type: integer, minimum: 1 }
-        providerAttemptedAt: { type: [string, 'null'], format: date-time }
-        resolvedAt: { type: [string, 'null'], format: date-time }
+        providerAttemptedAt: { type: [ string, 'null' ], format: date-time }
+        resolvedAt: { type: [ string, 'null' ], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     CreateRefundRequest:
       type: object
       additionalProperties: false
-      required: [operatorContextId, paymentSessionId, orderId, clientId, amountMinorUnits, reason, eligibilityReference, requestedByOperatorId]
+      required:
+        [
+          operatorContextId,
+          paymentSessionId,
+          orderId,
+          clientId,
+          amountMinorUnits,
+          reason,
+          eligibilityReference,
+          requestedByOperatorId
+        ]
       properties:
         operatorContextId: { type: string, minLength: 1 }
         paymentSessionId: { type: string, minLength: 1 }
@@ -308,23 +360,23 @@ components:
     DecisionRequest:
       type: object
       additionalProperties: false
-      required: [operatorId, reason]
+      required: [ operatorId, reason ]
       properties:
         operatorId: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
     CompleteRequest:
       type: object
       additionalProperties: false
-      required: [operatorId]
+      required: [ operatorId ]
       properties:
         operatorId: { type: string, minLength: 1 }
     ReconcileRequest:
       type: object
       additionalProperties: false
-      required: [operatorId, resolutionAction, evidenceNote]
+      required: [ operatorId, resolutionAction, evidenceNote ]
       properties:
         operatorId: { type: string, minLength: 1 }
-        resolutionAction: { type: string, enum: [confirmed_success, confirmed_failed] }
+        resolutionAction: { type: string, enum: [ confirmed_success, confirmed_failed ] }
         evidenceNote: { type: string, minLength: 1 }
         providerReference: { type: string, minLength: 1 }
       allOf:
@@ -332,18 +384,28 @@ components:
             properties:
               resolutionAction: { const: confirmed_success }
           then:
-            required: [providerReference]
+            required: [ providerReference ]
     RefundAuditEvent:
       type: object
       additionalProperties: false
-      required: [id, refundId, operatorContextId, eventType, actorId, actorType, toStatus, createdAt]
+      required:
+        [
+          id,
+          refundId,
+          operatorContextId,
+          eventType,
+          actorId,
+          actorType,
+          toStatus,
+          createdAt
+        ]
       properties:
         id: { type: string, format: uuid }
         refundId: { type: string }
         operatorContextId: { type: string }
         eventType: { type: string }
         actorId: { type: string }
-        actorType: { type: string, enum: [operator, service, provider, reconciler, system] }
+        actorType: { type: string, enum: [ operator, service, provider, reconciler, system ] }
         fromStatus: { type: string }
         toStatus: { type: string }
         reason: { type: string }
@@ -353,20 +415,20 @@ components:
         createdAt: { type: string, format: date-time }
     RefundEnvelope:
       type: object
-      required: [refund]
+      required: [ refund ]
       properties:
         refund: { $ref: '#/components/schemas/GovernedRefund' }
         replayed: { type: boolean }
     RefundListEnvelope:
       type: object
-      required: [refunds]
+      required: [ refunds ]
       properties:
         refunds:
           type: array
           items: { $ref: '#/components/schemas/GovernedRefund' }
     AuditEnvelope:
       type: object
-      required: [auditEvents]
+      required: [ auditEvents ]
       properties:
         auditEvents:
           type: array
@@ -390,7 +452,7 @@ components:
           properties:
             code:
               type: string
-              enum: [REFUND_IDEMPOTENCY_STORE_FAILED, REFUND_IDEMPOTENCY_RECEIPT_FAILED]
+              enum: [ REFUND_IDEMPOTENCY_STORE_FAILED, REFUND_IDEMPOTENCY_RECEIPT_FAILED ]
     CompletionPersistenceError:
       oneOf:
         - $ref: '#/components/schemas/OutcomePersistenceError'
@@ -412,7 +474,8 @@ components:
         application/json:
           schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
     MakerCheckerViolation:
-      description: Request maker attempted to review the same refund, or feature gate denied the transition
+      description: Request maker attempted to review the same refund, or feature gate
+        denied the transition
       content:
         application/json:
           schema: { $ref: './wlt.common.openapi.yaml#/components/schemas/Error' }
@@ -432,7 +495,8 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/MutationReceiptError' }
     CompletionPersistenceFailure:
-      description: Provider outcome or mutation replay evidence could not be persisted; automatic provider retry is forbidden
+      description: Provider outcome or mutation replay evidence could not be
+        persisted; automatic provider retry is forbidden
       content:
         application/json:
           schema: { $ref: '#/components/schemas/CompletionPersistenceError' }

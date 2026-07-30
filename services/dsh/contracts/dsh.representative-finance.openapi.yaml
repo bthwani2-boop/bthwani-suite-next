@@ -11,22 +11,22 @@ info:
     finance.read to explicit operator lookups.
 servers:
   - url: http://localhost:58080
-security:
-  - bearerAuth: []
 paths:
   /dsh/client/me/finance/wallet:
     get:
       operationId: getDshClientOwnWallet
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       responses:
         '200': { $ref: '#/components/responses/WalletResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/client/me/finance/ledger-entries:
     get:
       operationId: listDshClientOwnLedgerEntries
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
@@ -36,19 +36,23 @@ paths:
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/partner/me/finance/wallet:
     get:
       operationId: getDshPartnerOwnWallet
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       responses:
         '200': { $ref: '#/components/responses/WalletResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/partner/me/finance/ledger-entries:
     get:
       operationId: listDshPartnerOwnLedgerEntries
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
@@ -58,37 +62,45 @@ paths:
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/partner/me/finance/commissions:
     get:
       operationId: listDshPartnerOwnCommissions
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       responses:
         '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/partner/me/finance/payout-requests:
     get:
       operationId: listDshPartnerOwnPayoutRequests
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       responses:
         '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/captain/me/finance/wallet:
     get:
       operationId: getDshCaptainOwnWallet
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       responses:
         '200': { $ref: '#/components/responses/WalletResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/captain/me/finance/ledger-entries:
     get:
       operationId: listDshCaptainOwnLedgerEntries
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
@@ -98,27 +110,33 @@ paths:
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/captain/me/finance/commissions:
     get:
       operationId: listDshCaptainOwnCommissions
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       responses:
         '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/captain/me/finance/payout-requests:
     get:
       operationId: listDshCaptainOwnPayoutRequests
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       responses:
         '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
     post:
       operationId: createDshCaptainOwnPayoutRequest
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -129,19 +147,23 @@ paths:
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/field/me/finance/wallet:
     get:
       operationId: getDshFieldMeWallet
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       responses:
         '200': { $ref: '#/components/responses/WalletResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/field/me/finance/ledger-entries:
     get:
       operationId: getDshFieldMeLedgerEntries
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       parameters:
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Cursor'
@@ -151,27 +173,33 @@ paths:
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/field/me/finance/commissions:
     get:
       operationId: getDshFieldMeCommissions
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       responses:
         '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/field/me/finance/payout-requests:
     get:
       operationId: getDshFieldMePayoutRequests
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       responses:
         '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
     post:
       operationId: submitDshFieldMePayoutRequest
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -182,10 +210,12 @@ paths:
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/wallets/{actorType}/{actorId}:
     get:
       operationId: getDshRepresentativeWallet
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       description: Requires finance.read and returns a no-store WLT-owned wallet.
       parameters:
         - $ref: '#/components/parameters/ActorTypePath'
@@ -196,10 +226,12 @@ paths:
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/control-panel/finance/wallets/{actorType}/{actorId}/ledger-entries:
     get:
       operationId: listDshRepresentativeLedgerEntries
-      tags: [representative-finance]
+      tags: [ representative-finance ]
       description: >-
         Requires finance.read. Actor scope is taken from the path; actorId and
         actorType query overrides are ignored by the implementation.
@@ -215,6 +247,8 @@ paths:
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -228,7 +262,7 @@ components:
       required: true
       schema:
         type: string
-        enum: [client, partner, captain, field]
+        enum: [ client, partner, captain, field ]
     ActorIdPath:
       name: actorId
       in: path
@@ -272,7 +306,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [wallet]
+            required: [ wallet ]
             properties:
               wallet: { $ref: '#/components/schemas/RepresentativeWallet' }
     LedgerResponse:
@@ -286,7 +320,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [ledgerEntries]
+            required: [ ledgerEntries ]
             properties:
               ledgerEntries:
                 type: array
@@ -334,8 +368,8 @@ components:
       properties:
         id: { type: string }
         actorId: { type: string }
-        actorType: { type: string, enum: [client, partner, captain, field] }
-        status: { type: string, enum: [active, suspended, frozen, closed] }
+        actorType: { type: string, enum: [ client, partner, captain, field ] }
+        status: { type: string, enum: [ active, suspended, frozen, closed ] }
         currency: { type: string, minLength: 3, maxLength: 3 }
         availableBalanceMinorUnits: { type: integer, format: int64 }
         pendingBalanceMinorUnits: { type: integer, format: int64 }
@@ -347,25 +381,36 @@ components:
         updatedAt: { type: string, format: date-time, nullable: true }
     RepresentativeLedgerEntry:
       type: object
-      required: [id, entryType, actorId, actorType, amountMinorUnits, currency, debitCredit, balanceAfter, createdAt]
+      required:
+        [
+          id,
+          entryType,
+          actorId,
+          actorType,
+          amountMinorUnits,
+          currency,
+          debitCredit,
+          balanceAfter,
+          createdAt
+        ]
       properties:
         id: { type: string }
         entryType: { type: string }
         actorId: { type: string }
-        actorType: { type: string, enum: [client, partner, captain, field] }
+        actorType: { type: string, enum: [ client, partner, captain, field ] }
         sourceType: { type: string }
         sourceId: { type: string }
         referenceId: { type: string }
         referenceType: { type: string }
         amountMinorUnits: { type: integer, format: int64 }
         currency: { type: string, minLength: 3, maxLength: 3 }
-        debitCredit: { type: string, enum: [debit, credit] }
+        debitCredit: { type: string, enum: [ debit, credit ] }
         balanceAfter: { type: integer, format: int64 }
         description: { type: string }
         createdAt: { type: string, format: date-time }
     PayoutRequestInput:
       type: object
-      required: [amountMinorUnits, currency]
+      required: [ amountMinorUnits, currency ]
       properties:
         amountMinorUnits: { type: integer, format: int64, minimum: 1 }
         currency: { type: string, minLength: 3, maxLength: 3 }
@@ -373,7 +418,7 @@ components:
       additionalProperties: false
     ErrorResponse:
       type: object
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }

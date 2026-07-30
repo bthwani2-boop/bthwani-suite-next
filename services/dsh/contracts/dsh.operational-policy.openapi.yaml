@@ -11,15 +11,13 @@ info:
     audit history and rollback. Service-area geofences remain the spatial truth.
 servers:
   - url: http://localhost:58080
-security:
-  - bearerAuth: []
 paths:
   /dsh/operator/platform/operational-profiles/{zoneId}:
     parameters:
       - $ref: '#/components/parameters/ZoneId'
     get:
       operationId: getDshOperationalProfile
-      tags: [operational-policy]
+      tags: [ operational-policy ]
       parameters:
         - name: category
           in: query
@@ -31,14 +29,16 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [profile]
+                required: [ profile ]
                 properties:
                   profile: { $ref: '#/components/schemas/OperationalProfile' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+      security:
+        - bearerAuth: []
     put:
       operationId: upsertDshOperationalProfile
-      tags: [operational-policy]
+      tags: [ operational-policy ]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
@@ -54,16 +54,18 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [profile]
+                required: [ profile ]
                 properties:
                   profile: { $ref: '#/components/schemas/OperationalProfile' }
         '409': { $ref: '#/components/responses/Conflict' }
+      security:
+        - bearerAuth: []
   /dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes:
     parameters:
       - $ref: '#/components/parameters/ZoneId'
     get:
       operationId: listDshOperationalDeliveryModes
-      tags: [operational-policy]
+      tags: [ operational-policy ]
       responses:
         '200':
           description: Fulfillment-mode policies for the zone.
@@ -71,11 +73,13 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [deliveryModes]
+                required: [ deliveryModes ]
                 properties:
                   deliveryModes:
                     type: array
                     items: { $ref: '#/components/schemas/DeliveryModePolicy' }
+      security:
+        - bearerAuth: []
   /dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes/{fulfillmentMode}:
     parameters:
       - $ref: '#/components/parameters/ZoneId'
@@ -85,7 +89,7 @@ paths:
         schema: { $ref: '#/components/schemas/FulfillmentMode' }
     put:
       operationId: upsertDshOperationalDeliveryMode
-      tags: [operational-policy]
+      tags: [ operational-policy ]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
@@ -95,7 +99,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [isEnabled, slaCategory, expectedVersion, reason]
+              required: [ isEnabled, slaCategory, expectedVersion, reason ]
               properties:
                 isEnabled: { type: boolean }
                 slaCategory: { type: string, minLength: 1, maxLength: 120 }
@@ -108,17 +112,20 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [deliveryMode]
+                required: [ deliveryMode ]
                 properties:
                   deliveryMode: { $ref: '#/components/schemas/DeliveryModePolicy' }
         '409': { $ref: '#/components/responses/Conflict' }
+      security:
+        - bearerAuth: []
   /dsh/platform/operational-policy/evaluate:
     post:
       operationId: evaluateDshOperationalPolicy
-      tags: [operational-policy]
+      tags: [ operational-policy ]
       description: >-
-        Returns one fail-closed decision for client, partner, captain or operator
-        consumers, including explicit cart, checkout, order and dispatch effects.
+        Returns one fail-closed decision for client, partner, captain or
+        operator consumers, including explicit cart, checkout, order and
+        dispatch effects.
       requestBody:
         required: true
         content:
@@ -131,14 +138,16 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [decision]
+                required: [ decision ]
                 properties:
                   decision: { $ref: '#/components/schemas/OperationalDecision' }
         '400': { $ref: '#/components/responses/Invalid' }
+      security:
+        - bearerAuth: []
   /dsh/operator/platform/operational-policy/audit:
     get:
       operationId: listDshOperationalPolicyAudit
-      tags: [operational-policy]
+      tags: [ operational-policy ]
       parameters:
         - name: aggregateType
           in: query
@@ -156,11 +165,13 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [events]
+                required: [ events ]
                 properties:
                   events:
                     type: array
                     items: { $ref: '#/components/schemas/PolicyAuditEvent' }
+      security:
+        - bearerAuth: []
   /dsh/operator/platform/operational-policy/audit/{eventId}/rollback:
     parameters:
       - name: eventId
@@ -169,7 +180,7 @@ paths:
         schema: { type: string, format: uuid }
     post:
       operationId: rollbackDshOperationalPolicy
-      tags: [operational-policy]
+      tags: [ operational-policy ]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/CorrelationId'
@@ -179,7 +190,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [expectedCurrentVersion, reason]
+              required: [ expectedCurrentVersion, reason ]
               properties:
                 expectedCurrentVersion: { type: integer, minimum: 1 }
                 reason: { type: string, minLength: 3, maxLength: 500 }
@@ -190,10 +201,12 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [rollback]
+                required: [ rollback ]
                 properties:
                   rollback: { $ref: '#/components/schemas/RollbackResult' }
         '409': { $ref: '#/components/responses/Conflict' }
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -228,10 +241,10 @@ components:
   schemas:
     FulfillmentMode:
       type: string
-      enum: [bthwani_delivery, partner_delivery, client_pickup]
+      enum: [ bthwani_delivery, partner_delivery, client_pickup ]
     OperationalSla:
       type: object
-      required: [configured]
+      required: [ configured ]
       properties:
         configured: { type: boolean }
         ruleId: { type: string, format: uuid }
@@ -242,7 +255,7 @@ components:
         version: { type: integer, minimum: 1 }
     OperationalCapacity:
       type: object
-      required: [configured, isPaused]
+      required: [ configured, isPaused ]
       properties:
         configured: { type: boolean }
         configId: { type: string, format: uuid }
@@ -254,14 +267,28 @@ components:
         version: { type: integer, minimum: 1 }
     OperationalProfile:
       type: object
-      required: [zoneId, sla, capacity]
+      required: [ zoneId, sla, capacity ]
       properties:
         zoneId: { type: string, format: uuid }
         sla: { $ref: '#/components/schemas/OperationalSla' }
         capacity: { $ref: '#/components/schemas/OperationalCapacity' }
     OperationalProfileMutation:
       type: object
-      required: [slaCategory, maxPrepMins, maxAssignmentMins, maxDeliveryMins, expectedSlaVersion, maxConcurrentOrders, maxCaptainsOnline, throttleThreshold, isPaused, pauseReason, expectedCapacityVersion, reason]
+      required:
+        [
+          slaCategory,
+          maxPrepMins,
+          maxAssignmentMins,
+          maxDeliveryMins,
+          expectedSlaVersion,
+          maxConcurrentOrders,
+          maxCaptainsOnline,
+          throttleThreshold,
+          isPaused,
+          pauseReason,
+          expectedCapacityVersion,
+          reason
+        ]
       properties:
         slaCategory: { type: string, minLength: 1, maxLength: 120 }
         maxPrepMins: { type: integer, minimum: 1, maximum: 1440 }
@@ -277,7 +304,18 @@ components:
         reason: { type: string, minLength: 3, maxLength: 500 }
     DeliveryModePolicy:
       type: object
-      required: [id, zoneId, fulfillmentMode, isEnabled, slaCategory, version, updatedBy, createdAt, updatedAt]
+      required:
+        [
+          id,
+          zoneId,
+          fulfillmentMode,
+          isEnabled,
+          slaCategory,
+          version,
+          updatedBy,
+          createdAt,
+          updatedAt
+        ]
       properties:
         id: { type: string, format: uuid }
         zoneId: { type: string, format: uuid }
@@ -290,7 +328,7 @@ components:
         updatedAt: { type: string, format: date-time }
     OperationalEvaluationInput:
       type: object
-      required: [zoneId, fulfillmentMode, activeOrders, captainsOnline]
+      required: [ zoneId, fulfillmentMode, activeOrders, captainsOnline ]
       properties:
         zoneId: { type: string, format: uuid }
         serviceAreaCode: { type: string }
@@ -300,7 +338,15 @@ components:
         captainsOnline: { type: integer, minimum: 0 }
     OperationalEffects:
       type: object
-      required: [cartAllowed, checkoutAllowed, orderCreationAllowed, dispatchAllowed, partnerHandoffRequired, clientPickupRequired]
+      required:
+        [
+          cartAllowed,
+          checkoutAllowed,
+          orderCreationAllowed,
+          dispatchAllowed,
+          partnerHandoffRequired,
+          clientPickupRequired
+        ]
       properties:
         cartAllowed: { type: boolean }
         checkoutAllowed: { type: boolean }
@@ -310,14 +356,39 @@ components:
         clientPickupRequired: { type: boolean }
     OperationalDecision:
       type: object
-      required: [zoneId, serviceAreaCode, fulfillmentMode, decision, serviceable, reasonCodes, allowedActions, activeStores, pressureRatio, sla, capacity, effects, policyVersions, evaluatedAt]
+      required:
+        [
+          zoneId,
+          serviceAreaCode,
+          fulfillmentMode,
+          decision,
+          serviceable,
+          reasonCodes,
+          allowedActions,
+          activeStores,
+          pressureRatio,
+          sla,
+          capacity,
+          effects,
+          policyVersions,
+          evaluatedAt
+        ]
       properties:
         zoneId: { type: string, format: uuid }
         serviceAreaCode: { type: string }
         fulfillmentMode: { $ref: '#/components/schemas/FulfillmentMode' }
         decision:
           type: string
-          enum: [serviceable, unserviceable, policy_incomplete, paused, mode_disabled, capacity_exhausted, throttled]
+          enum:
+            [
+              serviceable,
+              unserviceable,
+              policy_incomplete,
+              paused,
+              mode_disabled,
+              capacity_exhausted,
+              throttled
+            ]
         serviceable: { type: boolean }
         reasonCodes: { type: array, items: { type: string } }
         allowedActions: { type: array, items: { type: string } }
@@ -333,16 +404,28 @@ components:
         evaluatedAt: { type: string, format: date-time }
     PolicyAuditEvent:
       type: object
-      required: [id, aggregateType, aggregateId, action, actorId, actorSurface, reason, toVersion, payload, createdAt]
+      required:
+        [
+          id,
+          aggregateType,
+          aggregateId,
+          action,
+          actorId,
+          actorSurface,
+          reason,
+          toVersion,
+          payload,
+          createdAt
+        ]
       properties:
         id: { type: string, format: uuid }
         aggregateType:
           type: string
-          enum: [zone, sla_rule, capacity_config, delivery_mode, store_onboarding_fee]
+          enum: [ zone, sla_rule, capacity_config, delivery_mode, store_onboarding_fee ]
         aggregateId: { type: string }
         action:
           type: string
-          enum: [created, updated, activated, deactivated, rolled_back]
+          enum: [ created, updated, activated, deactivated, rolled_back ]
         actorId: { type: string }
         actorSurface: { type: string }
         correlationId: { type: string }
@@ -353,7 +436,7 @@ components:
         createdAt: { type: string, format: date-time }
     RollbackResult:
       type: object
-      required: [targetEventId, aggregateType, aggregateId, fromVersion, toVersion]
+      required: [ targetEventId, aggregateType, aggregateId, fromVersion, toVersion ]
       properties:
         targetEventId: { type: string, format: uuid }
         aggregateType: { type: string }

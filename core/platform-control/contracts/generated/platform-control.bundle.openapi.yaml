@@ -7,8 +7,6 @@ info:
 x-bthwani-owner: core/platform-control
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-scope: platform-runtime-control
-security:
-  - bearerAuth: []
 paths:
   /platform/health:
     get:
@@ -48,6 +46,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlatformRuntimeSnapshot"
+      security:
+        - bearerAuth: []
   /platform/v1/runtime-config/effective:
     get:
       operationId: getEffectiveRuntimeConfig
@@ -64,6 +64,8 @@ paths:
                 $ref: "#/components/schemas/PlatformEffectiveRuntimeConfig"
         "500":
           $ref: "#/components/responses/PlatformError"
+      security:
+        - bearerAuth: []
   /platform/v1/variables:
     get:
       operationId: listPlatformVariables
@@ -87,6 +89,8 @@ paths:
                       $ref: "#/components/schemas/PlatformVariable"
         "500":
           $ref: "#/components/responses/PlatformError"
+      security:
+        - bearerAuth: []
   /platform/v1/variables/{key}:
     get:
       operationId: getPlatformVariable
@@ -124,6 +128,8 @@ paths:
                     $ref: "#/components/schemas/PlatformVariable"
         "404":
           $ref: "#/components/responses/PlatformError"
+      security:
+        - bearerAuth: []
   /platform/v1/feature-flags:
     get:
       operationId: listPlatformFeatureFlags
@@ -147,6 +153,8 @@ paths:
                       $ref: "#/components/schemas/PlatformFeatureFlag"
         "500":
           $ref: "#/components/responses/PlatformError"
+      security:
+        - bearerAuth: []
   /platform/v1/services:
     get:
       operationId: listPlatformServices
@@ -168,6 +176,8 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/PlatformServicePosture"
+      security:
+        - bearerAuth: []
   /platform/v1/health:
     get:
       operationId: getPlatformHealth
@@ -182,6 +192,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlatformHealthSnapshot"
+      security:
+        - bearerAuth: []
   /platform/v1/audit-events:
     get:
       operationId: listPlatformAuditEvents
@@ -205,6 +217,8 @@ paths:
                       $ref: "#/components/schemas/PlatformAuditEvent"
         "500":
           $ref: "#/components/responses/PlatformError"
+      security:
+        - bearerAuth: []
   /platform/v1/change-sets:
     get:
       tags:
@@ -226,6 +240,8 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/PlatformChangeSet"
+      security:
+        - bearerAuth: []
     post:
       tags:
         - platform-v1
@@ -243,6 +259,8 @@ paths:
           $ref: "#/components/responses/ChangeSetResponse"
         "422":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /platform/v1/change-sets/{id}:
     parameters:
       - $ref: "#/components/parameters/ChangeSetId"
@@ -257,6 +275,8 @@ paths:
           $ref: "#/components/responses/ChangeSetResponse"
         "404":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /platform/v1/change-sets/{id}/validate:
     parameters:
       - $ref: "#/components/parameters/ChangeSetId"
@@ -273,6 +293,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "422":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /platform/v1/change-sets/{id}/submit:
     parameters:
       - $ref: "#/components/parameters/ChangeSetId"
@@ -287,6 +309,8 @@ paths:
           $ref: "#/components/responses/ChangeSetResponse"
         "409":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /platform/v1/change-sets/{id}/approve:
     parameters:
       - $ref: "#/components/parameters/ChangeSetId"
@@ -301,6 +325,8 @@ paths:
           $ref: "#/components/responses/ChangeSetResponse"
         "409":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /platform/v1/change-sets/{id}/reject:
     parameters:
       - $ref: "#/components/parameters/ChangeSetId"
@@ -323,6 +349,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "422":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /platform/v1/change-sets/{id}/apply:
     parameters:
       - $ref: "#/components/parameters/ChangeSetId"
@@ -337,6 +365,8 @@ paths:
           $ref: "#/components/responses/ChangeSetResponse"
         "409":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /platform/v1/change-sets/{id}/rollback:
     parameters:
       - $ref: "#/components/parameters/ChangeSetId"
@@ -359,6 +389,8 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "422":
           $ref: "#/components/responses/ErrorResponse"
+      security:
+        - bearerAuth: []
   /platform/v1/rollouts:
     get:
       operationId: listPlatformRollouts
@@ -378,6 +410,8 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/PlatformRollout"
+      security:
+        - bearerAuth: []
     post:
       operationId: createPlatformRollout
       tags:
@@ -395,6 +429,8 @@ paths:
           $ref: "#/components/responses/PlatformRolloutError"
         "422":
           $ref: "#/components/responses/PlatformRolloutError"
+      security:
+        - bearerAuth: []
   /platform/v1/rollouts/{id}:
     get:
       operationId: getPlatformRollout
@@ -407,6 +443,8 @@ paths:
           $ref: "#/components/responses/RolloutResponse"
         "404":
           $ref: "#/components/responses/PlatformRolloutError"
+      security:
+        - bearerAuth: []
   /platform/v1/rollouts/{id}/recovery:
     get:
       operationId: getPlatformRolloutRecovery
@@ -429,6 +467,8 @@ paths:
                     $ref: "#/components/schemas/PlatformRolloutRecoveryGuide"
         "404":
           $ref: "#/components/responses/PlatformRolloutError"
+      security:
+        - bearerAuth: []
   /platform/v1/rollouts/{id}/advance:
     post:
       operationId: advancePlatformRollout
@@ -442,6 +482,8 @@ paths:
           $ref: "#/components/responses/RolloutResponse"
         "409":
           $ref: "#/components/responses/PlatformRolloutError"
+      security:
+        - bearerAuth: []
   /platform/v1/rollouts/{id}/pause:
     post:
       operationId: pausePlatformRollout
@@ -455,6 +497,8 @@ paths:
           $ref: "#/components/responses/RolloutResponse"
         "409":
           $ref: "#/components/responses/PlatformRolloutError"
+      security:
+        - bearerAuth: []
   /platform/v1/rollouts/{id}/resume:
     post:
       operationId: resumePlatformRollout
@@ -468,6 +512,8 @@ paths:
           $ref: "#/components/responses/RolloutResponse"
         "409":
           $ref: "#/components/responses/PlatformRolloutError"
+      security:
+        - bearerAuth: []
   /platform/v1/rollouts/{id}/abort:
     post:
       operationId: abortPlatformRollout
@@ -481,6 +527,8 @@ paths:
           $ref: "#/components/responses/RolloutResponse"
         "409":
           $ref: "#/components/responses/PlatformRolloutError"
+      security:
+        - bearerAuth: []
   /platform/v1/rollouts/{id}/rollback:
     post:
       operationId: rollbackPlatformRollout
@@ -494,6 +542,8 @@ paths:
           $ref: "#/components/responses/RolloutResponse"
         "409":
           $ref: "#/components/responses/PlatformRolloutError"
+      security:
+        - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -1289,4 +1339,4 @@ x-bthwani-source-files:
   - core/platform-control/contracts/platform-control.openapi.yaml
   - core/platform-control/contracts/platform-change-sets.openapi.yaml
   - core/platform-control/contracts/platform-progressive-rollout.openapi.yaml
-x-bthwani-source-sha256: ec8b1adbcc7ce0368fc8e11b605583b0e6dcbff0f2c759aff9bdef6d56f321c4
+x-bthwani-source-sha256: c4636adb6c7018bc2a6d24504781a1853e101cd0eff3211e1411d3b6ce1b8be3

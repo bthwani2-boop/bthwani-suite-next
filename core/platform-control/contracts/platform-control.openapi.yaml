@@ -16,15 +16,12 @@ x-bthwani-contracts:
   progressiveRollout: ./platform-progressive-rollout.openapi.yaml
 x-bthwani-overlays: {}
 
-security:
-  - bearerAuth: []
-
 paths:
   /platform/health:
     get:
       operationId: getPlatformControlProcessHealth
       summary: Return process and database liveness.
-      tags: [PlatformRuntime]
+      tags: [ PlatformRuntime ]
       security: []
       responses:
         "200": { $ref: "#/components/responses/PublicHealth" }
@@ -33,7 +30,7 @@ paths:
     get:
       operationId: getPlatformControlReadiness
       summary: Return platform-control readiness.
-      tags: [PlatformRuntime]
+      tags: [ PlatformRuntime ]
       security: []
       responses:
         "200": { $ref: "#/components/responses/PublicHealth" }
@@ -42,7 +39,7 @@ paths:
     get:
       operationId: getPlatformRuntimeConfig
       summary: Return the current platform-control runtime snapshot.
-      tags: [PlatformRuntime]
+      tags: [ PlatformRuntime ]
       x-bthwani-required-scope: platform:read
       responses:
         "200":
@@ -50,11 +47,13 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PlatformRuntimeSnapshot" }
+      security:
+        - bearerAuth: []
   /platform/v1/runtime-config/effective:
     get:
       operationId: getEffectiveRuntimeConfig
       summary: Return effective persisted variables and feature flags.
-      tags: [PlatformRuntime]
+      tags: [ PlatformRuntime ]
       x-bthwani-required-scope: platform:read
       responses:
         "200":
@@ -63,11 +62,13 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/PlatformEffectiveRuntimeConfig" }
         "500": { $ref: "#/components/responses/PlatformError" }
+      security:
+        - bearerAuth: []
   /platform/v1/variables:
     get:
       operationId: listPlatformVariables
       summary: List persisted platform variables.
-      tags: [PlatformVariables]
+      tags: [ PlatformVariables ]
       x-bthwani-required-scope: platform:read
       responses:
         "200":
@@ -76,17 +77,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [variables]
+                required: [ variables ]
                 properties:
                   variables:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformVariable" }
         "500": { $ref: "#/components/responses/PlatformError" }
+      security:
+        - bearerAuth: []
   /platform/v1/variables/{key}:
     get:
       operationId: getPlatformVariable
       summary: Get a scoped platform variable.
-      tags: [PlatformVariables]
+      tags: [ PlatformVariables ]
       x-bthwani-required-scope: platform:read
       parameters:
         - name: key
@@ -106,15 +109,17 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [variable]
+                required: [ variable ]
                 properties:
                   variable: { $ref: "#/components/schemas/PlatformVariable" }
         "404": { $ref: "#/components/responses/PlatformError" }
+      security:
+        - bearerAuth: []
   /platform/v1/feature-flags:
     get:
       operationId: listPlatformFeatureFlags
       summary: List persisted platform feature flags.
-      tags: [PlatformFlags]
+      tags: [ PlatformFlags ]
       x-bthwani-required-scope: platform:read
       responses:
         "200":
@@ -123,17 +128,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [flags]
+                required: [ flags ]
                 properties:
                   flags:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformFeatureFlag" }
         "500": { $ref: "#/components/responses/PlatformError" }
+      security:
+        - bearerAuth: []
   /platform/v1/services:
     get:
       operationId: listPlatformServices
       summary: List live platform service posture.
-      tags: [PlatformServices]
+      tags: [ PlatformServices ]
       x-bthwani-required-scope: platform:read
       responses:
         "200":
@@ -142,16 +149,18 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [services]
+                required: [ services ]
                 properties:
                   services:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformServicePosture" }
+      security:
+        - bearerAuth: []
   /platform/v1/health:
     get:
       operationId: getPlatformHealth
       summary: Return authorized aggregated platform health posture.
-      tags: [PlatformHealth]
+      tags: [ PlatformHealth ]
       x-bthwani-required-scope: platform:health:read
       responses:
         "200":
@@ -159,11 +168,13 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PlatformHealthSnapshot" }
+      security:
+        - bearerAuth: []
   /platform/v1/audit-events:
     get:
       operationId: listPlatformAuditEvents
       summary: List immutable platform audit events.
-      tags: [PlatformAudit]
+      tags: [ PlatformAudit ]
       x-bthwani-required-scope: platform:audit:read
       responses:
         "200":
@@ -172,12 +183,14 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [events]
+                required: [ events ]
                 properties:
                   events:
                     type: array
                     items: { $ref: "#/components/schemas/PlatformAuditEvent" }
         "500": { $ref: "#/components/responses/PlatformError" }
+      security:
+        - bearerAuth: []
 
 components:
   securitySchemes:
@@ -191,7 +204,7 @@ components:
         application/json:
           schema:
             type: object
-            required: [status, service]
+            required: [ status, service ]
             properties:
               status: { type: string }
               service: { type: string }
@@ -204,10 +217,32 @@ components:
   schemas:
     PlatformControlState:
       type: string
-      enum: [FIX_REQUIRED, PARTIALLY_BOUND, UNKNOWN_HEALTH, ROLLBACK_UNAVAILABLE, CONTRACT_REQUIRED, READ_ONLY_BOUND, OPERATIONAL]
+      enum:
+        [
+          FIX_REQUIRED,
+          PARTIALLY_BOUND,
+          UNKNOWN_HEALTH,
+          ROLLBACK_UNAVAILABLE,
+          CONTRACT_REQUIRED,
+          READ_ONLY_BOUND,
+          OPERATIONAL
+        ]
     PlatformRuntimeSnapshot:
       type: object
-      required: [status, revision, generatedAt, variablesState, flagsState, rolloutsState, healthState, auditState, rollbackState, servicesState, evidence]
+      required:
+        [
+          status,
+          revision,
+          generatedAt,
+          variablesState,
+          flagsState,
+          rolloutsState,
+          healthState,
+          auditState,
+          rollbackState,
+          servicesState,
+          evidence
+        ]
       properties:
         status: { $ref: "#/components/schemas/PlatformControlState" }
         revision: { type: string }
@@ -224,7 +259,7 @@ components:
           items: { type: string }
     PlatformEffectiveRuntimeConfig:
       type: object
-      required: [revision, stale, fallbackUsed, evaluationTrace, values]
+      required: [ revision, stale, fallbackUsed, evaluationTrace, values ]
       properties:
         revision: { type: string }
         stale: { type: boolean }
@@ -237,7 +272,16 @@ components:
           additionalProperties: true
     PlatformVariable:
       type: object
-      required: [key, ownerService, valueType, classification, scopeType, revision, status]
+      required:
+        [
+          key,
+          ownerService,
+          valueType,
+          classification,
+          scopeType,
+          revision,
+          status
+        ]
       properties:
         key: { type: string }
         ownerService: { type: string }
@@ -252,7 +296,7 @@ components:
         expiresAt: { type: string, format: date-time }
     PlatformFeatureFlag:
       type: object
-      required: [key, ownerService, status, revision]
+      required: [ key, ownerService, status, revision ]
       properties:
         key: { type: string }
         ownerService: { type: string }
@@ -264,7 +308,7 @@ components:
           additionalProperties: true
     PlatformServicePosture:
       type: object
-      required: [service, state, evidenceSource]
+      required: [ service, state, evidenceSource ]
       properties:
         service: { type: string }
         state: { $ref: "#/components/schemas/PlatformControlState" }
@@ -275,7 +319,7 @@ components:
         message: { type: string }
     PlatformHealthSnapshot:
       type: object
-      required: [state, checkedAt, services]
+      required: [ state, checkedAt, services ]
       properties:
         state: { $ref: "#/components/schemas/PlatformControlState" }
         checkedAt: { type: string, format: date-time }
@@ -284,7 +328,7 @@ components:
           items: { $ref: "#/components/schemas/PlatformServicePosture" }
     PlatformAuditEvent:
       type: object
-      required: [id, action, actorId, createdAt, status]
+      required: [ id, action, actorId, createdAt, status ]
       properties:
         id: { type: string, format: uuid }
         changeSetId: { type: string, format: uuid }
@@ -299,7 +343,7 @@ components:
         correlationId: { type: string }
     PlatformApiError:
       type: object
-      required: [code, message]
+      required: [ code, message ]
       properties:
         code: { type: string }
         message: { type: string }
