@@ -34,28 +34,7 @@ paths:
         '404': { $ref: '#/components/responses/Error' }
         '502': { $ref: '#/components/responses/Error' }
         '503': { $ref: '#/components/responses/Error' }
-  /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/refresh-provider-status:
-    post:
-      operationId: refreshDshPaymentSessionProviderStatus
-      summary: Ask WLT to query provider status without repeating authorize or capture.
-      tags: [DshFinancePaymentSessions]
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/PaymentSessionId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/CorrelationId'
-      responses:
-        '200':
-          description: Authoritative WLT payment state.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/PaymentOperationEnvelope' }
-        '400': { $ref: '#/components/responses/Error' }
-        '401': { $ref: '#/components/responses/Error' }
-        '403': { $ref: '#/components/responses/Error' }
-        '409': { $ref: '#/components/responses/Error' }
-        '502': { $ref: '#/components/responses/Error' }
-        '503': { $ref: '#/components/responses/Error' }
+
 components:
   securitySchemes:
     bearerAuth:

@@ -36,55 +36,7 @@
       "409":
         $ref: "../dsh.openapi.yaml#/components/responses/Conflict"
 
-/dsh/captain/finance/cod-records/{recordId}/collect:
-  post:
-    operationId: POSTDshCaptainFinanceCodRecordsRecordIdCollect
-    summary: Governed finance operation owned by DSH/WLT.
-    tags: [DshCaptainFinance]
-    security: [{ bearerAuth: [] }]
-    parameters:
-      - name: recordId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: false
-      content:
-        application/json:
-          schema: { type: object, additionalProperties: true }
-    responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
-      "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
-/dsh/captain/finance/cod-records/{recordId}/remit:
-  post:
-    operationId: POSTDshCaptainFinanceCodRecordsRecordIdRemit
-    summary: Governed finance operation owned by DSH/WLT.
-    tags: [DshCaptainFinance]
-    security: [{ bearerAuth: [] }]
-    parameters:
-      - name: recordId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: false
-      content:
-        application/json:
-          schema: { type: object, additionalProperties: true }
-    responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
-      "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/captain/finance/commissions:
   get:
@@ -113,24 +65,7 @@
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
-  post:
-    operationId: POSTDshCaptainFinancePayouts
-    summary: Governed finance operation owned by DSH/WLT.
-    tags: [DshCaptainFinance]
-    security: [{ bearerAuth: [] }]
-    requestBody:
-      required: false
-      content:
-        application/json:
-          schema: { type: object, additionalProperties: true }
-    responses:
-      "200": { description: Governed finance response, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
-      "201": { description: Governed finance object created, content: { application/json: { schema: { type: object, additionalProperties: true } } } }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
 
 /dsh/captain/finance/cod-records:
   get:

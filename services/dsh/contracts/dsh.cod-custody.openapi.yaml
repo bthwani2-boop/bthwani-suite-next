@@ -23,32 +23,7 @@ paths:
         '502': { description: WLT unavailable }
       security:
         - bearerAuth: []
-  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign:
-    post:
-      tags: [ "dsh-control-panel" ]
-      operationId: assignDshControlPanelCodReconciliationCase
-      parameters:
-        - $ref: '#/components/parameters/CaseId'
-      responses:
-        '200': { description: COD case assignment readback }
-        '403': { description: Missing finance manage permission }
-        '409': { description: Assignment conflict }
-        '502': { description: WLT unavailable }
-      security:
-        - bearerAuth: []
-  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve:
-    post:
-      tags: [ "dsh-control-panel" ]
-      operationId: resolveDshControlPanelCodReconciliationCase
-      parameters:
-        - $ref: '#/components/parameters/CaseId'
-      responses:
-        '200': { description: COD case resolution readback }
-        '403': { description: Missing finance manage permission }
-        '409': { description: Resolution conflict }
-        '502': { description: WLT unavailable }
-      security:
-        - bearerAuth: []
+
   /dsh/partner/me/finance/cod-records:
     get:
       tags: [ "dsh-partner" ]
@@ -59,19 +34,7 @@ paths:
         '502': { description: WLT unavailable }
       security:
         - bearerAuth: []
-  /dsh/partner/me/finance/cod-records/{recordId}/remit:
-    post:
-      tags: [ "dsh-partner" ]
-      operationId: remitDshPartnerCodRecord
-      parameters:
-        - $ref: '#/components/parameters/RecordId'
-      responses:
-        '200': { description: Partner COD remittance readback }
-        '403': { description: Actor is not the owning partner }
-        '409': { description: Invalid custody transition }
-        '502': { description: WLT unavailable }
-      security:
-        - bearerAuth: []
+
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
