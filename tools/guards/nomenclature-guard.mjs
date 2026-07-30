@@ -12,6 +12,8 @@ const FORBIDDEN_PLATFORM_LABEL = /\b(?:SaaS|multi[-\s]?tenant|tenant)\b/i;
 const USER_VISIBLE_PROP = /\b(?:title|subtitle|label|heading|description|message|placeholder|accessibilityLabel|emptyText|errorText|sectionTitle|tabLabel)\s*[:=]/i;
 const PLATFORM_MODEL = "governance/product/platform-model.yaml";
 const PRODUCT_POLICY = "governance/policies/product.md";
+const SKILL_REGISTRY = "governance/skills/skills-registry.json";
+const OBSOLETE_SAAS_AUTHORITY = /\b(?:conditional SaaS authority|SaaS activation|tenant activation|activating or implementing SaaS)\b/i;
 
 function normalizePath(value) {
   return String(value ?? "").trim().replaceAll("\\", "/").replace(/^\.\//, "");
@@ -103,6 +105,32 @@ function assertCanonicalPlatformModel() {
   }
 }
 
+function assertNoObsoleteSaasAuthorityReferences() {
+  const registryText = readRequired(SKILL_REGISTRY);
+  if (!registryText) return;
+
+  let registry;
+  try {
+    registry = JSON.parse(registryText);
+  } catch (error) {
+    violations.push({ file: SKILL_REGISTRY, line: 0, message: `INVALID_SKILL_REGISTRY ${error.message}` });
+    return;
+  }
+
+  for (const entry of registry.entries ?? []) {
+    if (!["active", "conditional"].includes(entry.status)) continue;
+    const skillPath = `${entry.path}/SKILL.md`;
+    const content = readRequired(skillPath);
+    if (content && OBSOLETE_SAAS_AUTHORITY.test(content)) {
+      violations.push({
+        file: skillPath,
+        line: 0,
+        message: "OBSOLETE_SAAS_AUTHORITY_REFERENCE — active skills must follow the canonical non-SaaS platform model",
+      });
+    }
+  }
+}
+
 function assertCanonicalProductPolicy() {
   const policy = readRequired(PRODUCT_POLICY);
   if (!policy) return;
@@ -116,6 +144,7 @@ function assertCanonicalProductPolicy() {
 
 assertCanonicalPlatformModel();
 assertCanonicalProductPolicy();
+assertNoObsoleteSaasAuthorityReferences();
 
 const baseSha = String(process.env.CI_BASE_SHA ?? "").trim();
 const headSha = String(process.env.CI_HEAD_SHA ?? "HEAD").trim() || "HEAD";
