@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/contract-source-export.yml'
+      - 'core/workforce/contracts/**'
       - 'services/dsh/contracts/**'
       - 'tools/scripts/openapi-context-composer.mjs'
       - 'package.json'
@@ -14,9 +15,9 @@ permissions:
 
 jobs:
   export:
-    name: Consolidate governed DSH refund contract
+    name: Repair Workforce contracts and consolidate DSH refunds
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout immutable PR head
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -31,6 +32,130 @@ jobs:
         run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+      - name: Repair missing Workforce request schemas
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const file = 'core/workforce/contracts/workforce.sovereign-leadership.openapi.yaml';
+          let source = fs.readFileSync(file, 'utf8');
+          const schemaNames = [
+            'UpdateDepartmentEmployeeRequest',
+            'DepartmentEmployeeStatusChangeRequest',
+            'UpsertEmployeeGovernanceRequest',
+          ];
+          if (schemaNames.every((name) => source.includes(`    ${name}:\n`))) {
+            console.log('Workforce request schemas already present');
+            process.exit(0);
+          }
+          const anchor = '    EmployeeSummary:\n';
+          if (!source.includes(anchor)) throw new Error('EmployeeSummary schema anchor is missing');
+          const block = `    UpdateDepartmentEmployeeRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        fullNameAr:
+          type: string
+          minLength: 1
+        fullNameEn:
+          type: string
+        engagementType:
+          type: string
+          const: employee
+        engagementStartDate:
+          type: string
+          format: date
+        photoMediaRef:
+          type: string
+        department:
+          type: string
+          pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
+        role:
+          type: string
+          minLength: 1
+        officeLocation:
+          type: string
+        supervisorActorId:
+          type: string
+    DepartmentEmployeeStatusChangeRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+          minLength: 1
+    UpsertEmployeeGovernanceRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - positionTitle
+        - jobGrade
+        - employmentClass
+        - guaranteeType
+        - guaranteeStatus
+        - responsibilityScopes
+        - managedDepartmentCodes
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 0
+        positionTitle:
+          type: string
+          minLength: 1
+        jobGrade:
+          type: string
+        employmentClass:
+          type: string
+          enum: [staff, coordinator, department_manager, executive, project_manager]
+        guaranteeType:
+          type: string
+          enum: [none, personal, financial, institutional]
+        guaranteeStatus:
+          type: string
+          enum: [not_required, pending, active, released, forfeited]
+        guaranteeReference:
+          type: string
+        responsibilityScopes:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+        managedDepartmentCodes:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            pattern: '^[a-z0-9][a-z0-9_-]{1,63}$'
+        notes:
+          type: string
+      allOf:
+        - if:
+            properties:
+              guaranteeStatus:
+                enum: [active, forfeited]
+          then:
+            required: [guaranteeReference]
+            properties:
+              guaranteeType:
+                not:
+                  const: none
+              guaranteeReference:
+                minLength: 1
+`;
+          source = source.replace(anchor, block + anchor);
+          fs.writeFileSync(file, source);
+          NODE
       - name: Consolidate refund ownership into modular DSH source
         shell: bash
         run: |
@@ -64,10 +189,7 @@ jobs:
           }
 
           const pathHeader = `# BThwani DSH OpenAPI path-items module: governed refunds.\n# Canonical source of truth for the full DSH refund journey.\n# Referenced by ../dsh.openapi.yaml; do not add an openapi root here.\n\n`;
-          fs.writeFileSync(
-            refundPathsPath,
-            pathHeader + stringify(moduleDoc.paths, { lineWidth: 0 }),
-          );
+          fs.writeFileSync(refundPathsPath, pathHeader + stringify(moduleDoc.paths, { lineWidth: 0 }));
 
           const selectedParameters = ['RefundId', 'OrderId', 'CorrelationIdOptional'];
           const selectedResponses = [
@@ -78,13 +200,9 @@ jobs:
             'WltUnavailable',
           ];
           const components = {
-            parameters: Object.fromEntries(
-              selectedParameters.map((name) => [name, moduleDoc.components.parameters[name]]),
-            ),
+            parameters: Object.fromEntries(selectedParameters.map((name) => [name, moduleDoc.components.parameters[name]])),
             schemas: moduleDoc.components.schemas,
-            responses: Object.fromEntries(
-              selectedResponses.map((name) => [name, moduleDoc.components.responses[name]]),
-            ),
+            responses: Object.fromEntries(selectedResponses.map((name) => [name, moduleDoc.components.responses[name]])),
           };
           for (const [section, values] of Object.entries(components)) {
             if (!values || Object.values(values).some((value) => value === undefined)) {
@@ -92,10 +210,7 @@ jobs:
             }
           }
           const componentHeader = `# BThwani DSH OpenAPI components module: governed refunds.\n# Canonical refund-specific parameters, schemas, and responses.\n# Shared bearer, correlation, idempotency, forbidden, not-found, and conflict components remain owned by dsh.openapi.yaml.\n\n`;
-          fs.writeFileSync(
-            refundComponentsPath,
-            componentHeader + stringify(components, { lineWidth: 0 }),
-          );
+          fs.writeFileSync(refundComponentsPath, componentHeader + stringify(components, { lineWidth: 0 }));
 
           let entry = fs.readFileSync(entryPath, 'utf8');
           entry = entry.replace('  refunds: ./dsh.refunds.openapi.yaml\n', '');
@@ -116,17 +231,13 @@ jobs:
           entry = entry.replace(parameterAnchor, parameterAnchor + refundParameters);
 
           const responseAnchor = `    ServiceUnavailable:\n      $ref: "./components/responses.yaml#/ServiceUnavailable"\n`;
-          const refundResponses = selectedResponses.map((name) =>
-            `    ${name}:\n      $ref: "./components/refunds.components.yaml#/responses/${name}"`,
-          ).join('\n') + '\n';
+          const refundResponses = selectedResponses.map((name) => `    ${name}:\n      $ref: "./components/refunds.components.yaml#/responses/${name}"`).join('\n') + '\n';
           if (!entry.includes(responseAnchor)) throw new Error('DSH response anchor missing');
           entry = entry.replace(responseAnchor, responseAnchor + refundResponses);
 
           const schemaNames = Object.keys(moduleDoc.components.schemas);
           const schemaAnchor = '  schemas:\n';
-          const refundSchemas = schemaNames.map((name) =>
-            `    ${name}:\n      $ref: "./components/refunds.components.yaml#/schemas/${name}"`,
-          ).join('\n') + '\n';
+          const refundSchemas = schemaNames.map((name) => `    ${name}:\n      $ref: "./components/refunds.components.yaml#/schemas/${name}"`).join('\n') + '\n';
           if (!entry.includes(schemaAnchor)) throw new Error('DSH schema anchor missing');
           entry = entry.replace(schemaAnchor, schemaAnchor + refundSchemas);
           fs.writeFileSync(entryPath, entry);
@@ -154,18 +265,21 @@ jobs:
           NODE
       - name: Regenerate canonical artifacts
         run: |
+          pnpm run openapi:generate:workforce
           pnpm run openapi:generate:dsh
           pnpm run contracts:registry
-      - name: Verify contract source and generated provenance
+      - name: Verify all contract sources and generated provenance
         run: |
           git diff --check
           pnpm run guard:contract-registry-drift
           pnpm run guard:openapi-bundle-provenance
           pnpm run guard:generated-client-provenance
+          pnpm run guard:contract-scope-binding
           pnpm run guard:api-binding
           pnpm run guard:backend-api-binding
           pnpm --dir services/dsh test
-      - name: Commit atomic refund consolidation
+          (cd core/workforce/backend && go test ./...)
+      - name: Commit atomic contract repair
         shell: bash
         env:
           TARGET_BRANCH: ${{ github.head_ref }}
@@ -173,33 +287,32 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
-          allowed='^(services/dsh/contracts/dsh\.openapi\.yaml|services/dsh/contracts/dsh\.refunds\.openapi\.yaml|services/dsh/contracts/paths/misc\.paths\.yaml|services/dsh/contracts/paths/refunds\.paths\.yaml|services/dsh/contracts/components/refunds\.components\.yaml|services/dsh/contracts/contract\.manifest\.yaml|services/dsh/contracts/contract-registry\.ts|services/dsh/contracts/generated/dsh\.bundle\.openapi\.yaml|services/dsh/clients/generated/dsh-api\.ts|contracts/generated/contract-registry\.json)$'
+          allowed='^(core/workforce/contracts/workforce\.sovereign-leadership\.openapi\.yaml|core/workforce/contracts/generated/workforce\.bundle\.openapi\.yaml|core/workforce/clients/generated/workforce-api\.ts|services/dsh/contracts/dsh\.openapi\.yaml|services/dsh/contracts/dsh\.refunds\.openapi\.yaml|services/dsh/contracts/paths/misc\.paths\.yaml|services/dsh/contracts/paths/refunds\.paths\.yaml|services/dsh/contracts/components/refunds\.components\.yaml|services/dsh/contracts/contract\.manifest\.yaml|services/dsh/contracts/contract-registry\.ts|services/dsh/contracts/generated/dsh\.bundle\.openapi\.yaml|services/dsh/clients/generated/dsh-api\.ts|contracts/generated/contract-registry\.json)$'
           unexpected=$(git status --short | sed -E 's/^.. //' | grep -Ev "${allowed}" || true)
           if [[ -n "${unexpected}" ]]; then
-            echo 'Unexpected files changed during refund consolidation:' >&2
+            echo 'Unexpected files changed during contract repair:' >&2
             printf '%s\n' "${unexpected}" >&2
             exit 1
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
-            services/dsh/contracts/dsh.openapi.yaml \
-            services/dsh/contracts/dsh.refunds.openapi.yaml \
-            services/dsh/contracts/paths/misc.paths.yaml \
-            services/dsh/contracts/paths/refunds.paths.yaml \
-            services/dsh/contracts/components/refunds.components.yaml \
-            services/dsh/contracts/contract.manifest.yaml \
-            services/dsh/contracts/contract-registry.ts \
-            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+          git add -A \
+            core/workforce/contracts/workforce.sovereign-leadership.openapi.yaml \
+            core/workforce/contracts/generated/workforce.bundle.openapi.yaml \
+            core/workforce/clients/generated/workforce-api.ts \
+            services/dsh/contracts \
             services/dsh/clients/generated/dsh-api.ts \
             contracts/generated/contract-registry.json
-          git commit -m 'refactor(contracts): unify DSH refund contract ownership'
+          git commit -m 'refactor(contracts): repair Workforce refs and unify DSH refunds'
           git push origin "HEAD:${TARGET_BRANCH}"
-      - name: Upload consolidated contract evidence
+      - name: Upload contract repair evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: dsh-refund-contract-consolidation-${{ github.run_id }}
+          name: contract-repair-${{ github.run_id }}
           path: |
+            core/workforce/contracts/workforce.sovereign-leadership.openapi.yaml
+            core/workforce/contracts/generated/workforce.bundle.openapi.yaml
+            core/workforce/clients/generated/workforce-api.ts
             services/dsh/contracts/dsh.openapi.yaml
             services/dsh/contracts/paths/refunds.paths.yaml
             services/dsh/contracts/components/refunds.components.yaml
