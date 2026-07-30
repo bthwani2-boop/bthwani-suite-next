@@ -6,15 +6,13 @@ on:
       - '.github/workflows/contract-source-export.yml'
       - 'services/dsh/contracts/**'
       - 'tools/scripts/openapi-context-composer.mjs'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   export:
-    name: Export immutable DSH contract sources
+    name: Sync dependency lock and export DSH contracts
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -23,7 +21,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
       - name: Verify checkout identity
         shell: bash
         env:
@@ -31,8 +29,27 @@ jobs:
         run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Materialize direct YAML dependency in isolated workspace
+      - name: Materialize direct YAML dependency
         run: pnpm add --workspace-root --save-dev --save-exact yaml@2.8.1
+      - name: Commit dependency declaration and lock only
+        shell: bash
+        env:
+          TARGET_BRANCH: ${{ github.head_ref }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+          git diff --quiet -- package.json pnpm-lock.yaml && exit 0
+          git diff --quiet -- . ':!package.json' ':!pnpm-lock.yaml' || {
+            echo 'Unexpected files changed during dependency synchronization' >&2
+            git status --short
+            exit 1
+          }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json pnpm-lock.yaml
+          git commit -m 'fix(deps): declare YAML parser for contract composer'
+          git push origin "HEAD:${TARGET_BRANCH}"
       - name: Generate DSH contract artifacts without committing
         run: pnpm run openapi:generate:dsh
       - name: Upload sources and generated artifacts
