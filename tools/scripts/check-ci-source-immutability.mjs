@@ -53,7 +53,7 @@ const forbiddenPatterns = [
   },
   {
     id: "GO_SOURCE_FORMAT_WRITE",
-    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:gofmt|goimports)\s+.*(?:^|\s)-w(?:\s|$)/i,
+    regex: /^\s*(?:-\s*)?(?:run:\s*)?(?:gofmt|goimports)\b[^\r\n]*\s-w(?:\s|$)/i,
     reason: "verification workflows must not rewrite Go source with gofmt or goimports",
   },
   {
