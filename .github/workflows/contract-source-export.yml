@@ -31,7 +31,19 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Transform contract sources
-        run: node tools/scripts/repair-workforce-refund-contracts.mjs
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('tools/scripts/repair-workforce-refund-contracts.mjs')
+          source = path.read_text(encoding='utf-8')
+          old = 'source = source.replace(anchor, block + anchor);'
+          new = 'source = source.replace(anchor, () => block + anchor);'
+          if old not in source:
+              raise SystemExit('Expected replacement statement is missing')
+          path.write_text(source.replace(old, new, 1), encoding='utf-8')
+          PY
+          node tools/scripts/repair-workforce-refund-contracts.mjs
       - name: Regenerate canonical artifacts
         run: |
           pnpm run openapi:generate:workforce
