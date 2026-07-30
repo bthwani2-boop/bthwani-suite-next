@@ -10,20 +10,20 @@ on:
       - 'pnpm-lock.yaml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   export:
-    name: Export immutable DSH contract sources
+    name: Consolidate governed DSH refund contract
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout immutable PR head
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
       - name: Verify checkout identity
         shell: bash
         env:
@@ -31,19 +31,180 @@ jobs:
         run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Generate DSH contract artifacts without committing
-        run: pnpm run openapi:generate:dsh
-      - name: Upload sources and generated artifacts
+      - name: Consolidate refund ownership into modular DSH source
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { parse, stringify } from 'yaml';
+
+          const root = 'services/dsh/contracts';
+          const entryPath = `${root}/dsh.openapi.yaml`;
+          const modulePath = `${root}/dsh.refunds.openapi.yaml`;
+          const miscPath = `${root}/paths/misc.paths.yaml`;
+          const manifestPath = `${root}/contract.manifest.yaml`;
+          const registryPath = `${root}/contract-registry.ts`;
+          const refundPathsPath = `${root}/paths/refunds.paths.yaml`;
+          const refundComponentsPath = `${root}/components/refunds.components.yaml`;
+
+          const moduleDoc = parse(fs.readFileSync(modulePath, 'utf8'));
+          const requiredPaths = [
+            '/dsh/control-panel/finance/refunds',
+            '/dsh/control-panel/finance/refunds/{refundId}',
+            '/dsh/control-panel/finance/refunds/{refundId}/approve',
+            '/dsh/control-panel/finance/refunds/{refundId}/reject',
+            '/dsh/control-panel/finance/refunds/{refundId}/complete',
+            '/dsh/control-panel/finance/refunds/{refundId}/reconcile',
+            '/dsh/control-panel/finance/refunds/{refundId}/audit',
+            '/dsh/client/orders/{orderId}/refunds',
+            '/dsh/partner/orders/{orderId}/refunds',
+          ];
+          for (const route of requiredPaths) {
+            if (!moduleDoc.paths?.[route]) throw new Error(`Refund module missing ${route}`);
+          }
+
+          const pathHeader = `# BThwani DSH OpenAPI path-items module: governed refunds.\n# Canonical source of truth for the full DSH refund journey.\n# Referenced by ../dsh.openapi.yaml; do not add an openapi root here.\n\n`;
+          fs.writeFileSync(
+            refundPathsPath,
+            pathHeader + stringify(moduleDoc.paths, { lineWidth: 0 }),
+          );
+
+          const selectedParameters = ['RefundId', 'OrderId', 'CorrelationIdOptional'];
+          const selectedResponses = [
+            'BadRequest',
+            'Unauthorized',
+            'MutationReceiptFailure',
+            'CompletionPersistenceFailure',
+            'WltUnavailable',
+          ];
+          const components = {
+            parameters: Object.fromEntries(
+              selectedParameters.map((name) => [name, moduleDoc.components.parameters[name]]),
+            ),
+            schemas: moduleDoc.components.schemas,
+            responses: Object.fromEntries(
+              selectedResponses.map((name) => [name, moduleDoc.components.responses[name]]),
+            ),
+          };
+          for (const [section, values] of Object.entries(components)) {
+            if (!values || Object.values(values).some((value) => value === undefined)) {
+              throw new Error(`Refund components incomplete: ${section}`);
+            }
+          }
+          const componentHeader = `# BThwani DSH OpenAPI components module: governed refunds.\n# Canonical refund-specific parameters, schemas, and responses.\n# Shared bearer, correlation, idempotency, forbidden, not-found, and conflict components remain owned by dsh.openapi.yaml.\n\n`;
+          fs.writeFileSync(
+            refundComponentsPath,
+            componentHeader + stringify(components, { lineWidth: 0 }),
+          );
+
+          let entry = fs.readFileSync(entryPath, 'utf8');
+          entry = entry.replace('  refunds: ./dsh.refunds.openapi.yaml\n', '');
+          const oldRefundList = `  /dsh/control-panel/finance/refunds:\n    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1refunds"\n`;
+          const newRefundRoutes = requiredPaths.map((route) => {
+            const pointer = route.replaceAll('~', '~0').replaceAll('/', '~1');
+            return `  ${route}:\n    $ref: "./paths/refunds.paths.yaml#/${pointer}"`;
+          }).join('\n') + '\n';
+          if (!entry.includes(oldRefundList)) throw new Error('Primary refund-list reference was not found');
+          entry = entry.replace(oldRefundList, newRefundRoutes);
+          const oldRefundDetail = `  /dsh/control-panel/finance/refunds/{refundId}:\n    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1refunds~1{refundId}"\n`;
+          if (!entry.includes(oldRefundDetail)) throw new Error('Parallel refund-detail reference was not found');
+          entry = entry.replace(oldRefundDetail, '');
+
+          const parameterAnchor = `    CorrelationId:\n      $ref: "./components/parameters.yaml#/CorrelationId"\n`;
+          const refundParameters = `    RefundId:\n      $ref: "./components/refunds.components.yaml#/parameters/RefundId"\n    OrderId:\n      $ref: "./components/refunds.components.yaml#/parameters/OrderId"\n    CorrelationIdOptional:\n      $ref: "./components/refunds.components.yaml#/parameters/CorrelationIdOptional"\n`;
+          if (!entry.includes(parameterAnchor)) throw new Error('DSH parameter anchor missing');
+          entry = entry.replace(parameterAnchor, parameterAnchor + refundParameters);
+
+          const responseAnchor = `    ServiceUnavailable:\n      $ref: "./components/responses.yaml#/ServiceUnavailable"\n`;
+          const refundResponses = selectedResponses.map((name) =>
+            `    ${name}:\n      $ref: "./components/refunds.components.yaml#/responses/${name}"`,
+          ).join('\n') + '\n';
+          if (!entry.includes(responseAnchor)) throw new Error('DSH response anchor missing');
+          entry = entry.replace(responseAnchor, responseAnchor + refundResponses);
+
+          const schemaNames = Object.keys(moduleDoc.components.schemas);
+          const schemaAnchor = '  schemas:\n';
+          const refundSchemas = schemaNames.map((name) =>
+            `    ${name}:\n      $ref: "./components/refunds.components.yaml#/schemas/${name}"`,
+          ).join('\n') + '\n';
+          if (!entry.includes(schemaAnchor)) throw new Error('DSH schema anchor missing');
+          entry = entry.replace(schemaAnchor, schemaAnchor + refundSchemas);
+          fs.writeFileSync(entryPath, entry);
+
+          let misc = fs.readFileSync(miscPath, 'utf8');
+          const start = misc.indexOf('/dsh/control-panel/finance/refunds:\n');
+          const end = misc.indexOf('/dsh/control-panel/finance/ledger/entries:\n');
+          if (start < 0 || end <= start) throw new Error('Parallel refund blocks were not found in misc.paths.yaml');
+          misc = misc.slice(0, start) + misc.slice(end);
+          fs.writeFileSync(miscPath, misc);
+
+          let manifest = fs.readFileSync(manifestPath, 'utf8');
+          if (!manifest.includes('  - dsh.refunds.openapi.yaml\n')) throw new Error('Refund module missing from manifest');
+          manifest = manifest.replace('  - dsh.refunds.openapi.yaml\n', '');
+          fs.writeFileSync(manifestPath, manifest);
+
+          let registry = fs.readFileSync(registryPath, 'utf8');
+          registry = registry.replace('    | "dsh-refunds"\n', '');
+          const refundRegistration = /\n  \{\n    id: "dsh-refunds",\n    path: "contracts\/dsh\.refunds\.openapi\.yaml",\n    state: "CONTRACT_ACTIVE",\n    runtimeDependency: true,\n    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",\n    adapterOwner: "frontend\/shared\/finance-wlt-link",\n  \},/;
+          if (!refundRegistration.test(registry)) throw new Error('Refund registry entry missing');
+          registry = registry.replace(refundRegistration, '');
+          fs.writeFileSync(registryPath, registry);
+
+          fs.unlinkSync(modulePath);
+          NODE
+      - name: Regenerate canonical artifacts
+        run: |
+          pnpm run openapi:generate:dsh
+          pnpm run contracts:registry
+      - name: Verify contract source and generated provenance
+        run: |
+          git diff --check
+          pnpm run guard:contract-registry-drift
+          pnpm run guard:openapi-bundle-provenance
+          pnpm run guard:generated-client-provenance
+          pnpm run guard:api-binding
+          pnpm run guard:backend-api-binding
+          pnpm --dir services/dsh test
+      - name: Commit atomic refund consolidation
+        shell: bash
+        env:
+          TARGET_BRANCH: ${{ github.head_ref }}
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+          allowed='^(services/dsh/contracts/dsh\.openapi\.yaml|services/dsh/contracts/dsh\.refunds\.openapi\.yaml|services/dsh/contracts/paths/misc\.paths\.yaml|services/dsh/contracts/paths/refunds\.paths\.yaml|services/dsh/contracts/components/refunds\.components\.yaml|services/dsh/contracts/contract\.manifest\.yaml|services/dsh/contracts/contract-registry\.ts|services/dsh/contracts/generated/dsh\.bundle\.openapi\.yaml|services/dsh/clients/generated/dsh-api\.ts|contracts/generated/contract-registry\.json)$'
+          unexpected=$(git status --short | sed -E 's/^.. //' | grep -Ev "${allowed}" || true)
+          if [[ -n "${unexpected}" ]]; then
+            echo 'Unexpected files changed during refund consolidation:' >&2
+            printf '%s\n' "${unexpected}" >&2
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            services/dsh/contracts/dsh.openapi.yaml \
+            services/dsh/contracts/dsh.refunds.openapi.yaml \
+            services/dsh/contracts/paths/misc.paths.yaml \
+            services/dsh/contracts/paths/refunds.paths.yaml \
+            services/dsh/contracts/components/refunds.components.yaml \
+            services/dsh/contracts/contract.manifest.yaml \
+            services/dsh/contracts/contract-registry.ts \
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
+            services/dsh/clients/generated/dsh-api.ts \
+            contracts/generated/contract-registry.json
+          git commit -m 'refactor(contracts): unify DSH refund contract ownership'
+          git push origin "HEAD:${TARGET_BRANCH}"
+      - name: Upload consolidated contract evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: dsh-contract-export-${{ github.run_id }}
+          name: dsh-refund-contract-consolidation-${{ github.run_id }}
           path: |
             services/dsh/contracts/dsh.openapi.yaml
-            services/dsh/contracts/dsh.refunds.openapi.yaml
-            services/dsh/contracts/paths/misc.paths.yaml
-            services/dsh/contracts/contract.manifest.yaml
-            services/dsh/contracts/contract-registry.ts
+            services/dsh/contracts/paths/refunds.paths.yaml
+            services/dsh/contracts/components/refunds.components.yaml
             services/dsh/contracts/generated/dsh.bundle.openapi.yaml
             services/dsh/clients/generated/dsh-api.ts
+            contracts/generated/contract-registry.json
           if-no-files-found: error
           retention-days: 1
