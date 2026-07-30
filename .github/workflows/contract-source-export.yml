@@ -59,17 +59,8 @@ jobs:
 
           field = Path('tools/scripts/repair-field-catalog-detail.py')
           source = field.read_text(encoding='utf-8')
-          old_block = '''    source = replace_once(
-        source,
-        "`/dsh/operator/catalog/master-products/${encodeURIComponent(productId)}`",
-        "`/dsh/field/catalog/master-products/${encodeURIComponent(productId)}`",
-        "field product detail path",
-    )'''
-          new_block = '''    old_path = "`/dsh/operator/catalog/master-products/${encodeURIComponent(productId)}`"
-    head, separator, tail = source.rpartition(old_path)
-    if not separator:
-        raise RuntimeError("field product detail path is missing")
-    source = head + "`/dsh/field/catalog/master-products/${encodeURIComponent(productId)}`" + tail'''
+          old_block = '    source = replace_once(\n        source,\n        "`/dsh/operator/catalog/master-products/${encodeURIComponent(productId)}`",\n        "`/dsh/field/catalog/master-products/${encodeURIComponent(productId)}`",\n        "field product detail path",\n    )'
+          new_block = '    old_path = "`/dsh/operator/catalog/master-products/${encodeURIComponent(productId)}`"\n    head, separator, tail = source.rpartition(old_path)\n    if not separator:\n        raise RuntimeError("field product detail path is missing")\n    source = head + "`/dsh/field/catalog/master-products/${encodeURIComponent(productId)}`" + tail'
           if old_block in source:
               field.write_text(source.replace(old_block, new_block, 1), encoding='utf-8')
           elif new_block not in source:
