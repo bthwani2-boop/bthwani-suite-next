@@ -335,7 +335,7 @@ components:
     DshNotificationDeliveryAuditResponse:
       type: object
       additionalProperties: false
-      required: [ attempts, pushDeliveries, summary ]
+      required: [attempts, pushDeliveries, summary]
       properties:
         attempts:
           type: array
