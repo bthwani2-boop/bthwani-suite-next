@@ -1,0 +1,12 @@
+id: no-button-without-handler
+language: tsx
+message: "BTHWANI: Button/Pressable with onPress={undefined} or onPress={null} — dead interactive element"
+severity: error
+rule:
+  any:
+    - pattern: <Pressable onPress={undefined} $$$>$$$</Pressable>
+    - pattern: <Pressable onPress={null} $$$>$$$</Pressable>
+    - pattern: <TouchableOpacity onPress={undefined} $$$>$$$</TouchableOpacity>
+    - pattern: <TouchableOpacity onPress={null} $$$>$$$</TouchableOpacity>
+    - pattern: <Button onPress={undefined} $$$>$$$</Button>
+    - pattern: <Button onPress={null} $$$>$$$</Button>

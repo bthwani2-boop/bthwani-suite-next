@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 2,
+  "policy": {
+    "noAllGuardsByDefault": true,
+    "noFullLintByDefault": true,
+    "noZipByDefault": true,
+    "guardsVerifyOnly": true,
+    "ciSourceMutationForbidden": true,
+    "sameCommitEvidenceRequired": true
+  },
+  "guardSets": {
+    "foundation": [
+      "governance-schema",
+      "agent-governance",
+      "authority-separation",
+      "guard-registry",
+      "sdlc",
+      "required-command-integrity",
+      "repo-size",
+      "cleanup-policy",
+      "no-broken-imports",
+      "runtime-config",
+      "ui-kit-boundary",
+      "api-binding",
+      "backend-api-binding"
+    ],
+    "journey": [
+      "governance-schema",
+      "agent-governance",
+      "authority-separation",
+      "guard-registry",
+      "sdlc",
+      "required-command-integrity",
+      "cleanup-policy",
+      "no-broken-imports",
+      "runtime-config",
+      "api-binding",
+      "backend-api-binding",
+      "service-manifest-drift",
+      "frontend-feature-binding",
+      "fullstack-boundary",
+      "wlt-financial-boundary",
+      "runtime-real-bindings"
+    ],
+    "governance": [
+      "governance-schema",
+      "agent-governance",
+      "authority-separation",
+      "guard-registry",
+      "sdlc",
+      "required-command-integrity",
+      "cleanup-policy"
+    ]
+  }
+}

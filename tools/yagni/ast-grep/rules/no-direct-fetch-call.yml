@@ -1,0 +1,6 @@
+id: bthwani-no-direct-fetch-call
+language: TypeScript
+severity: warning
+message: "Direct fetch() call detected. Prefer existing API/client binding and smallest diff."
+rule:
+  pattern: fetch($$$ARGS)

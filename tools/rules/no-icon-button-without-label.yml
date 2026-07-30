@@ -1,0 +1,21 @@
+id: no-icon-button-without-label
+language: tsx
+message: "BTHWANI: Icon-only Pressable/TouchableOpacity must have accessibilityLabel"
+severity: warning
+rule:
+  any:
+    # Pressable with an Icon child but no accessibilityLabel
+    - pattern: |
+        <Pressable $$$>
+          <$ICON />
+        </Pressable>
+      constraints:
+        ICON:
+          regex: "Icon|Svg|svg$"
+    - pattern: |
+        <TouchableOpacity $$$>
+          <$ICON />
+        </TouchableOpacity>
+      constraints:
+        ICON:
+          regex: "Icon|Svg|svg$"

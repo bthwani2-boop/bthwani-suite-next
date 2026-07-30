@@ -1,0 +1,71 @@
+{
+  "$comment": "Canonical local development identity actors. Single source of truth for the local bootstrap password and the usernames every dev/smoke script logs in with. Local only: the Identity bootstrap that creates these actors runs solely when IDENTITY_LOCAL_BOOTSTRAP=true and is refused in production. Consumers: tools/dev/local-actors.mjs, tools/dev/local-actors.ps1. Drift against the Go bootstrap and the runtime env files is enforced by tools/guards/local-dev-actors-gate.mjs.",
+  "passwordEnvVar": "IDENTITY_LOCAL_BOOTSTRAP_PASSWORD",
+  "password": "123456",
+  "OperatorContextId": "local-dsh",
+  "actors": {
+    "operator": {
+      "username": "operator",
+      "actorId": "operator-local-001",
+      "role": "operator",
+      "surface": "control-panel",
+      "scope": "all",
+      "phoneE164": "+967770000000"
+    },
+    "partner": {
+      "username": "bthwani",
+      "actorId": "partner-local-001",
+      "role": "partner",
+      "surface": "app-partner",
+      "scope": "own",
+      "phoneE164": "+967771000001"
+    },
+    "field": {
+      "username": "field",
+      "actorId": "field-local-001",
+      "role": "field",
+      "surface": "app-field",
+      "scope": "assigned",
+      "phoneE164": "+967774182730"
+    },
+    "captain": {
+      "username": "captain",
+      "actorId": "captain-local-001",
+      "role": "captain",
+      "surface": "app-captain",
+      "scope": "assigned",
+      "phoneE164": "+967773000003"
+    },
+    "client": {
+      "username": "client",
+      "actorId": "client-local-001",
+      "role": "client",
+      "surface": "app-client",
+      "scope": "own",
+      "phoneE164": "+967774000004"
+    }
+  },
+  "platformActors": {
+    "platform-approver": {
+      "username": "platform-approver",
+      "actorId": "platform-approver-local-001",
+      "role": "platform-approver",
+      "surface": "control-panel",
+      "phoneE164": "+967770000101"
+    },
+    "platform-applier": {
+      "username": "platform-applier",
+      "actorId": "platform-applier-local-001",
+      "role": "platform-applier",
+      "surface": "control-panel",
+      "phoneE164": "+967770000102"
+    },
+    "platform-rollout-manager": {
+      "username": "platform-rollout-manager",
+      "actorId": "platform-rollout-manager-local-001",
+      "role": "platform-rollout-manager",
+      "surface": "control-panel",
+      "phoneE164": "+967770000103"
+    }
+  }
+}

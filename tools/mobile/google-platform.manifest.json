@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "1.1.0",
+  "projectId": "bthwani-platform",
+  "billingAccountId": "01287E-01F576-ACBB90",
+  "firebase": {
+    "androidApps": [
+      "app-client",
+      "app-partner",
+      "app-captain",
+      "app-field"
+    ],
+    "easEnvironment": "development",
+    "easFileVariable": "GOOGLE_SERVICES_JSON",
+    "fcmV1": {
+      "apiService": "fcm.googleapis.com",
+      "serviceAccountId": "bthwani-fcm-eas",
+      "serviceAccountEmail": "bthwani-fcm-eas@bthwani-platform.iam.gserviceaccount.com",
+      "localKeyPath": "C:\\bthwani-secrets\\firebase\\bthwani-platform-fcm-v1-service-account.json",
+      "iamRole": "roles/firebasecloudmessaging.admin",
+      "easApplications": [
+        "app-client",
+        "app-partner",
+        "app-captain",
+        "app-field"
+      ]
+    }
+  },
+  "maps": {
+    "androidApiService": "maps-android-backend.googleapis.com",
+    "androidApps": [
+      "app-client",
+      "app-partner",
+      "app-captain",
+      "app-field"
+    ],
+    "androidEasVariable": "GOOGLE_MAPS_ANDROID_API_KEY",
+    "controlPanel": {
+      "apiService": "maps-backend.googleapis.com",
+      "environmentVariable": "NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_API_KEY",
+      "developmentReferrers": [
+        "http://localhost:13000/*",
+        "http://127.0.0.1:13000/*"
+      ]
+    }
+  }
+}
