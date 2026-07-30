@@ -142,7 +142,7 @@
  "Loading empty partial forbidden offline error and retry states are represented on required human-facing surfaces.",
  "Correlation and no-store response controls are applied to representative finance reads."
  ],
- "failureStates": ["cross_tenant_read", "cross_actor_read", "unsupported_actor", "hardcoded_actor", "direct_wlt_browser_call", "local_balance_derivation", "route_not_registered", "wallet_mutation_in_dsh", "missing_permission", "missing_tenant", "stale_financial_display"],
+ "failureStates": ["cross_context_read", "cross_actor_read", "unsupported_actor", "hardcoded_actor", "direct_wlt_browser_call", "local_balance_derivation", "route_not_registered", "wallet_mutation_in_dsh", "missing_permission", "missing_context", "stale_financial_display"],
  "requiredChecks": ["product-truth schema validation", "isolation contract validation", "WLT operator context migration probe", "WLT wallet handler tests", "WLT operator context wallet repository tests", "DSH finance proxy operator context propagation tests", "DSH actor operator context route and scoping tests", "OpenAPI contract check", "shared TypeScript typecheck", "multi-surface binding check", "financial boundary guard", "authenticated runtime DSH-to-WLT smoke", "cross-operator-context negative runtime evidence", "WLT unavailable fail-closed evidence", "independent financial control review", "independent product acceptance", "visual evidence"],
  "runtimeEvidenceRequired": true,
  "visualEvidenceRequired": true

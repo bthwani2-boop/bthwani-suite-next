@@ -263,7 +263,7 @@ operational_protocol_workflow_contract:
 
 ## 24) platform/isolation Verification
 
-When `saas_context.mode` is `SAAS_READY_DEFERRED` or `SAAS_ACTIVE`, affected verification must include the operator context matrices from `05_MATRICES_BACKEND_DATABASE_API_SECURITY.md` and the annex gate.
+When `operator_context_boundary.mode` is `COMMERCIAL_READY_DEFERRED` or `COMMERCIAL_ACTIVE`, affected verification must include the operator context matrices from `05_MATRICES_BACKEND_DATABASE_API_SECURITY.md` and the annex gate.
 
 Minimum required proof:
 

@@ -75,7 +75,7 @@ Every skipped stage must appear in `notApplicableStages` with matching `stageExc
 - Closure with failed gates, missing scopes, stage exclusions without evidence, open blockers, unresolved risk, stale evidence, or self-approval.
 - Closure based on a merge ref, another branch, seed, fixture, mock, declaration, or documentation-only claim.
 - Promoting static/configuration/regression evidence into runtime, finance, isolation, QA, security, release, production, or product-category proof.
-- Treating partner subscriptions as proof of tenancy, SaaS, entitlements, or an independent platform instance.
+- Treating partner subscriptions as proof of independent platform instance, entitlements, or an independent platform instance.
 - Inventing collaborators, teams, approvals, GitHub rules, checks, runtime, or production evidence.
 
 ## Required output

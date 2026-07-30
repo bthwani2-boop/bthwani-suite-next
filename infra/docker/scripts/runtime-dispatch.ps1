@@ -89,7 +89,7 @@ Write-Host "=== runtime:smoke modular DSH routing ==="
 # The caller deliberately removes WLT from this phase and executes the governed
 # authenticated WLT smoke afterward. Running runtime.ps1 with only the financial
 # simulator profile would nevertheless invoke the WLT provider path and create a
-# false tenant-context failure. Verify the simulator directly here, and leave the
+# false operator-context failure. Verify the simulator directly here, and leave the
 # WLT-to-provider contract to the dedicated authenticated smoke.
 $financialSimulatorsRequested = $profileList -contains "financial-simulators"
 $nonDshProfiles = @(

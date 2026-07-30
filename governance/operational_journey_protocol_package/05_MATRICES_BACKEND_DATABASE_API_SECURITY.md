@@ -307,12 +307,12 @@ auth_permission_matrix:
 - role policy لا تكون داخل UI surface.
 - UI يعرض الحالة، ولا يملك القرار.
 
-### 17.10.1) tenant_context_propagation_matrix
+### 17.10.1) operator_context_propagation_matrix
 
 إلزامي عند انطباق ملحق platform/isolation.
 
 ```yaml
-tenant_context_propagation_matrix:
+operator_context_propagation_matrix:
  identity_session:
  backend_middleware:
  domain_service:
@@ -326,25 +326,25 @@ tenant_context_propagation_matrix:
  result: PASS | FAIL
 ```
 
-### 17.10.2) tenant_isolation_matrix
+### 17.10.2) operator_context_isolation_matrix
 
 ```yaml
-tenant_isolation_matrix:
+operator_context_isolation_matrix:
  - entity:
- canonical_tenant_owner:
+ canonical_operator_context_owner:
  operator_context_id_column:
  query_enforcement:
  database_enforcement:
- cross_tenant_negative_test:
+ cross_operator_context_negative_test:
  privileged_access_policy:
  audit_event:
  result: PASS | FAIL
 ```
 
-### 17.10.3) tenant_resource_isolation_matrix
+### 17.10.3) operator_context_resource_isolation_matrix
 
 ```yaml
-tenant_resource_isolation_matrix:
+operator_context_resource_isolation_matrix:
  postgres_rows:
  cache_keys:
  object_storage_paths:

@@ -161,7 +161,7 @@
  "actors": ["client", "operator", "captain"],
  "routesOrScreens": ["dsh_special_requests", "dsh_special_request_information_exchanges", "special-request audit events", "dispatch linkage", "dsh_delivery_exceptions"],
  "operationIds": [],
- "states": ["transactional", "tenant_scoped", "versioned", "audited", "idempotent", "source_forked"],
+ "states": ["transactional", "context_scoped", "versioned", "audited", "idempotent", "source_forked"],
  "actions": ["persist request truth", "persist information rounds", "enforce constraints", "record workflow timestamps", "link WLT dispatch proof and exception references"]
  },
  {

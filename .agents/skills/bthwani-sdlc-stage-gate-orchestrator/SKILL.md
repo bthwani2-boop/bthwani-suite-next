@@ -19,7 +19,6 @@ Own formal SDLC stage routing, applicable-gate selection, no-skip validation, an
 
 - A low-risk code-only change requires only targeted verification.
 - The task is analysis-only and does not request a stage decision.
-- The task attempts to introduce tenancy or classify BThwani as SaaS without an explicit owner instruction replacing `governance/product/platform-model.yaml`; return `PROTOCOL_VIOLATION` rather than creating a deferred lifecycle.
 
 ## Authority boundary
 
@@ -45,7 +44,6 @@ This skill owns SDLC routing and stage-state validation only. It does not approv
 - Mutating stage state from a validator.
 - Passing an affected transition without artifact, impact, Product Truth when applicable, and required approvals.
 - Using stale SHA, another branch, merge ref, or documentation-only evidence as current proof.
-- Treating a partner subscription, commission model, operator context, partner, store, or organization as a tenant or as evidence that BThwani is SaaS.
 - Emitting deprecated gate-decision aliases; use scoped `PASS`.
 - Claiming `CLOSED_WITH_EVIDENCE` from `guard:sdlc` alone.
 

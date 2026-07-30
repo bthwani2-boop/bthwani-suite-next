@@ -68,7 +68,7 @@ Separate executor from reviewer in these domains:
 
 ```text
 auth_sessions_rbac
-tenant_isolation
+operator_context_isolation
 pii_secrets_security
 wlt_finance
 migrations_production_data

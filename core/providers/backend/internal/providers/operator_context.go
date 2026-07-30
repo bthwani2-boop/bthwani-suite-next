@@ -10,7 +10,7 @@ type operatorContextKey struct{}
 
 var ErrOperatorContextRequired = errors.New("trusted operator context is required")
 
-// WithOperatorContext installs the tenant resolved from the authenticated Identity
+// WithOperatorContext installs the operator context resolved from the authenticated Identity
 // session. Callers must never populate this value from request headers or body.
 func WithOperatorContext(ctx context.Context, operatorContextID string) context.Context {
 	return context.WithValue(ctx, operatorContextKey{}, strings.TrimSpace(operatorContextID))

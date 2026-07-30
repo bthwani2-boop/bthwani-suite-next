@@ -107,7 +107,7 @@
  "actors": ["wlt_service"],
  "routesOrScreens": ["wlt settlement requests", "settlement evidence", "commission policy versions", "commission evidence", "commission adjustments", "financial audit"],
  "operationIds": [],
- "states": ["versioned", "immutable", "idempotent", "balanced", "auditable", "tenant_scoped"],
+ "states": ["versioned", "immutable", "idempotent", "balanced", "auditable", "context_scoped"],
  "actions": ["enforce uniqueness", "retain evidence", "retain reasoned adjustment", "prevent negative amount", "retain policy version"]
  },
  {

@@ -75,7 +75,7 @@ single_owner_human_identity_exception:
   protected_domains_remain_independent_or_unclosed:
     - authentication_authorization_sessions
     - pii_privacy_secrets_credentials
-    - tenant_isolation
+    - operator_context_isolation
     - security_approval
     - financial_control
     - migrations_and_production_data

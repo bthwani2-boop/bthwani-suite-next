@@ -21,7 +21,7 @@ For repository tasks:
 - never substitute the default branch, another branch, stale evidence, or a prior PR;
 - use Product Truth before implementing user-visible, role-sensitive, cross-surface, commercial, or workflow changes;
 - route governance contracts and CI workflow policy through separate owner skills and separate approvals;
-- treat SaaS readiness and commercial activation values as states, not canonical decisions;
+- treat commercial platform activation values as states, not canonical decisions;
 - use only active or conditional governed skills required by the task;
 - map decisions through `governance/contracts/decision-vocabulary.json`.
 
@@ -34,6 +34,6 @@ Graphify is a conditional tool, not an agent. Use it only when ownership, routin
 | Instant | isolated wording or one-line safe fix | direct scoped execution |
 | Focused | one module or owner boundary | one owner skill |
 | Standard | cross-layer or multi-file work | workspace authority plus required owner skills |
-| Escalated | product, finance, security, tenant isolation, governance, CI, SaaS activation, migration, release, production, or closure | formal authority, evidence routing, and independent review as applicable |
+| Escalated | product, finance, security, operator context isolation, governance, CI, commercial platform activation, migration, release, production, or closure | formal authority, evidence routing, and independent review as applicable |
 
 Use the smallest sufficient action. Do not overclaim `static`, `product`, `runtime`, `visual`, `qa`, `security`, `finance`, `isolation`, `governance`, `ci`, `release`, `production`, or final closure evidence. A pass in one scope never upgrades another scope.

@@ -20,9 +20,5 @@ runtime, or commercial state. Product files define semantics and acceptance;
 OpenAPI and runtime source own routes and operation identifiers.
 
 The canonical platform model is `governance/product/platform-model.yaml`.
-BThwani is not a SaaS product and does not define tenants. Partner subscriptions
-are commercial pricing relationships inside the platform; they do not create a
-tenant boundary, SaaS lifecycle, entitlement plane, white-label deployment, or
-independent platform instance. Introducing tenancy or SaaS would be a new product
-category that requires an explicit owner instruction and replacement of the
+BThwani uses operator context for boundaries. Partner subscriptions are not a boundary or independent platform instance. category that requires an explicit owner instruction and replacement of the
 canonical platform model before implementation.

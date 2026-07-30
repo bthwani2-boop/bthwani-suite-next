@@ -24,7 +24,7 @@ type Client struct {
 	http     *http.Client
 }
 
-// NewClient accepts the service token and tenant as optional arguments to keep
+// NewClient accepts the service token and operator context as optional arguments to keep
 // compatibility with existing zone-validation tests while enabling the
 // authenticated Workforce -> DSH availability projection channel.
 func NewClient(baseURL string, optional ...string) *Client {

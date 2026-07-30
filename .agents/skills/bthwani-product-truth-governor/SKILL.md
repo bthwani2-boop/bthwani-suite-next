@@ -22,7 +22,6 @@ Prevent technically valid implementation of the wrong product, wrong actor permi
 
 - The change is a behavior-preserving internal refactor with explicit `product_impact: NONE`.
 - The task is a typo, formatting-only documentation edit, or mechanical generated-client refresh with no public contract change.
-- The task attempts to introduce tenancy or classify BThwani as SaaS without an explicit owner instruction replacing the canonical platform model; return `PROTOCOL_VIOLATION` instead of routing to a nonexistent conditional authority.
 
 ## Read before
 
@@ -67,8 +66,6 @@ Prevent technically valid implementation of the wrong product, wrong actor permi
 - Treating seed, fixture, fallback, preview, or in-memory data as active runtime or commercial evidence.
 - Claiming revenue, payment, partner subscription, commission, or active commercial behavior without the authoritative backend and WLT evidence.
 - Combining product-manager and product-owner approval under the same execution result.
-- Treating a partner subscription as a tenant boundary, SaaS lifecycle, entitlement plane, or independent platform instance.
-- Introducing tenancy or SaaS terminology into active product behavior without replacing the canonical platform model through explicit owner authority.
 
 ## Required output
 

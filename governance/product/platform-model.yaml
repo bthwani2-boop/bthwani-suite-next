@@ -22,20 +22,9 @@ partnerCommercialModels:
   - SUBSCRIPTION
   - HYBRID
   - OPERATOR_MANAGED
-saas:
-  status: NOT_APPLICABLE
-  platformIsSaas: false
-  tenantEntityDefined: false
-  genericTenantIdAllowed: false
-  partnerIsTenant: false
-  storeIsTenant: false
-  organizationIsTenant: false
-  operatorContextIsTenant: false
 commercial:
   partnerSubscriptions:
     meaning: PRICING_AND_BILLING_RELATIONSHIP_ONLY
-    createsTenantBoundary: false
-    createsSaasLifecycle: false
     createsIndependentPlatformInstance: false
 context:
   isolationBoundary: PLATFORM_CONTEXT

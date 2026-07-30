@@ -79,31 +79,31 @@ entity_boundary:
 وسّع `topic_definition` بهذه الحقول عندما تنطبق شروط ملحق platform/isolation:
 
 ```yaml
-saas_context:
- mode: NOT_APPLICABLE | SAAS_READY_DEFERRED | SAAS_ACTIVE
- tenant_entity_defined: true | false
- tenant_context_source:
- tenant_selection_authority:
- tenant_owned_entities:
+operator_context_boundary:
+ mode: NOT_APPLICABLE | COMMERCIAL_READY_DEFERRED | COMMERCIAL_ACTIVE
+ operator_context_entity_defined: true | false
+ operator_context_source:
+ operator_context_selection_authority:
+ operator_context_owned_entities:
  global_entities:
- tenant_isolation_model:
- cross_tenant_access_policy:
- privileged_cross_tenant_workflow:
- tenant_data_classification:
- tenant_data_residency:
- tenant_export_required: true | false
- tenant_deletion_required: true | false
- tenant_backup_restore_required: true | false
- tenant_observability_required: true | false
- tenant_quota_required: true | false
+ operator_context_isolation_model:
+ cross_operator_context_access_policy:
+ privileged_cross_operator_context_workflow:
+ operator_context_data_classification:
+ operator_context_data_residency:
+ operator_context_export_required: true | false
+ operator_context_deletion_required: true | false
+ operator_context_backup_restore_required: true | false
+ operator_context_observability_required: true | false
+ operator_context_quota_required: true | false
  entitlement_impact: NONE | READ_ONLY | REQUIRED
  subscription_impact: NONE | READ_ONLY | REQUIRED
  metering_impact: NONE | READ_ONLY | REQUIRED
  billing_impact: NONE | READ_ONLY | REQUIRED
- saas_activation_gate_required: true | false
+ commercial_activation_gate_required: true | false
 ```
 
-إذا كانت الرحلة تمس بيانات مملوكة لمستأجر أو عملية عابرة للمستأجرين ولم تملأ `saas_context` فالنتيجة `FIX_REQUIRED`.
+إذا كانت الرحلة تمس بيانات مملوكة لسياق التشغيل أو عملية عابرة للسياقات ولم تملأ `operator_context_boundary` فالنتيجة `FIX_REQUIRED`.
 
 ### 11.1) Entity Boundary Gate — Partner vs Store
 

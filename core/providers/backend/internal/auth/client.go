@@ -44,8 +44,8 @@ func NewClient(baseURL string) *Client {
 }
 
 // Resolve accepts only authenticated Identity assertions with an explicit
-// tenant. Identity owns tenant membership; process-wide defaults cannot select
-// or reject a valid tenant-scoped provider session.
+// operator context. Identity owns operator context membership; process-wide defaults cannot select
+// or reject a valid context-scoped provider session.
 func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, error) {
 	if c.baseURL == "" {
 		return Identity{}, ErrIdentityUnavailable

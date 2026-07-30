@@ -17,8 +17,8 @@ func newBundleRegistryTestService(t *testing.T) (*Service, func()) {
 			http.NotFound(w, r)
 			return
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "tenant-test" {
-			t.Fatalf("missing trusted tenant header: %q", r.Header.Get("X-Operator-Context-ID"))
+		if r.Header.Get("X-Operator-Context-ID") != "context-test" {
+			t.Fatalf("missing trusted operator context header: %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -42,7 +42,7 @@ func newBundleRegistryTestService(t *testing.T) (*Service, func()) {
 			},
 		})
 	}))
-	service := &Service{identity: identityclient.NewClient(server.URL, "test-token", "tenant-test")}
+	service := &Service{identity: identityclient.NewClient(server.URL, "test-token", "context-test")}
 	return service, server.Close
 }
 

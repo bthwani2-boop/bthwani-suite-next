@@ -59,7 +59,7 @@ const semanticMarkers = new Map([
     "independent_reviewer_owns_g4_implementation_verification", "reviewer_must_differ_from_author_executor_and_coordinator",
     "governance_change_requires_governance_contract_authority", "ci_change_requires_ci_workflow_authority",
     "wlt_finance_change_requires_financial_control_authority", "operator_context_or_isolation_change_requires_isolation_security_approval",
-    "residual_risk_requires_risk_acceptance_authority", "partner_saas_commercialization_activation_requires_explicit_product_security_finance_isolation_release_and_production_evidence",
+    "residual_risk_requires_risk_acceptance_authority", "partner_commercialization_activation_requires_explicit_product_security_finance_isolation_release_and_production_evidence",
   ]],
   ["roles-and-authority.yaml", [
     "version: 3", "sdlc_program_authority:", "product_manager_authority:", "product_owner_acceptance_authority:",

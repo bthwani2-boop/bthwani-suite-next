@@ -84,7 +84,7 @@ Historical source files and traces may be used to discover intent, but they are 
 
 ## platform capabilities boundary
 
-platform capabilities is an embedded BThwani capability set governed by `annexes/PARTNER_SAAS_CAPABILITY_AND_ISOLATION_GATES.md`. Partner organizations and stores are business authorization scopes, not platform-isolation operator contexts. Applicable journeys must preserve trusted operator context, object authorization, and DSH/WLT ownership boundaries.
+platform capabilities is an embedded BThwani capability set governed by `annexes/PARTNER_CAPABILITY_AND_ISOLATION_GATES.md`. Partner organizations and stores are business authorization scopes, not platform-isolation operator contexts. Applicable journeys must preserve trusted operator context, object authorization, and DSH/WLT ownership boundaries.
 
 ## Verification rule
 

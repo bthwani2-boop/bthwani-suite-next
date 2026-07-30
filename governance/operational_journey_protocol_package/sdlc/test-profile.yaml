@@ -18,17 +18,17 @@ checks_by_impact:
     - secure_design
     - security_verification
     - threat_model_when_applicable
-    - tenant_isolation_negative_tests_when_applicable
+    - operator_context_isolation_negative_tests_when_applicable
     - independent_retest_for_critical_or_high
   release:
     - release_profile
     - rollback_procedure
     - monitoring_owner
     - unresolved_blocker_review
-  tenant_or_saas:
-    - saas_context
-    - tenant_context_propagation_matrix
-    - tenant_isolation_matrix
-    - tenant_resource_isolation_matrix
-    - wlt_tenant_financial_isolation_when_applicable
+  operator_context:
+    - operator_context_boundary
+    - operator_context_propagation_matrix
+    - operator_context_isolation_matrix
+    - operator_context_resource_isolation_matrix
+    - wlt_operator_context_financial_isolation_when_applicable
 stop_on_blocking_failure: true

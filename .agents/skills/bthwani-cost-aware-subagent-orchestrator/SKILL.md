@@ -48,7 +48,7 @@ This skill orchestrates only. It does not replace Product Truth, architecture, Q
 - Engineering executors own implementation and developer verification only.
 - Independent QA, application security, release, and risk-acceptance authorities retain their formal decisions.
 - Agent review never fabricates a missing human, regulatory, QA, security, release, or production approval.
-- SaaS implementation is outside this skill unless explicitly authorized in a separate task.
+- commercial platform implementation is outside this skill unless explicitly authorized in a separate task.
 
 ## Supervisor contract
 
@@ -217,7 +217,7 @@ An executor cannot finally approve its own high-risk work.
 - Adding agent-framework runtime dependencies without explicit need and approval.
 - Committing generated diagnostics, execution logs, or evidence packs.
 - Claiming runtime, visual, QA, security, release, production, or closure evidence not actually produced.
-- Activating SaaS from this skill.
+- Activating platform commercialization from this skill.
 
 ## Required output
 

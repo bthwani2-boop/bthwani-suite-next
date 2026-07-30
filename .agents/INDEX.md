@@ -14,7 +14,7 @@ Route repository work to the smallest sufficient set of active or conditional go
 | Instant | isolated wording, explanation, or one-line safe fix | no owner skill unless repository truth is claimed |
 | Focused | one module or one owner boundary | workspace authority plus one applicable owner skill |
 | Standard | multi-file or cross-layer work | workspace authority, task router, applicable owner skills, targeted evidence |
-| Escalated | product, finance, security, tenant isolation, governance, CI, SaaS activation, migration, release, or formal closure | formal authorities, SDLC routing, independent evidence |
+| Escalated | product, finance, security, operator context isolation, governance, CI, commercial platform activation, migration, release, or formal closure | formal authorities, SDLC routing, independent evidence |
 
 LeanCTX, Graphify, and Nx are optional tools. They are never mandatory first steps and never own approval.
 
@@ -25,7 +25,7 @@ LeanCTX, Graphify, and Nx are optional tools. They are never mandatory first ste
 - Evidence-scope selection → `bthwani-evidence-gate-router`.
 - Agent, skill, adapter, registry, or routing changes → `bthwani-agent-skill-integrity`.
 - Guard selection or command resolution → `bthwani-guard-command-router`.
-- Governance contracts, authority, agents, skills, guards, SaaS governance, or SDLC control-plane changes → `bthwani-governance-contract-guardian`.
+- Governance contracts, authority, agents, skills, guards, platform commercialization governance, or SDLC control-plane changes → `bthwani-governance-contract-guardian`.
 - GitHub Actions workflows, local actions, workflow permissions, immutable pins, or CI aggregation changes → `bthwani-ci-workflow-guardian`.
 - Protected G4 implementation verification → `bthwani-independent-implementation-reviewer`.
 - User-visible, role-sensitive, cross-surface, commercial, or workflow changes → `bthwani-product-truth-governor`.
@@ -35,7 +35,7 @@ LeanCTX, Graphify, and Nx are optional tools. They are never mandatory first ste
 - DSH/WLT financial truth or handoff → `bthwani-dsh-wlt-finance-boundary`.
 - Runtime configuration or provider posture → `bthwani-platform-runtime-config`.
 - Docker, data-plane, persistence, or live behavior evidence → `bthwani-docker-journey-runtime`.
-- Auth, authorization, sessions, secrets, PII, privacy, tenant isolation, CORS, or sensitive configuration → `bthwani-security-secrets-privacy`.
+- Auth, authorization, sessions, secrets, PII, privacy, operator context isolation, CORS, or sensitive configuration → `bthwani-security-secrets-privacy`.
 - Formal G0–G10 lifecycle control → `bthwani-sdlc-stage-gate-orchestrator`.
 - Final multi-scope closure → `bthwani-final-journey-closure-judge`.
 - Two or more independent bounded work units with real subagent capability → `bthwani-cost-aware-subagent-orchestrator`.

@@ -26,8 +26,8 @@ func TestSearchActorsDecodesOpenAPIArrayAndSendsServiceIdentity(t *testing.T) {
 		if got := r.Header.Get("X-Service-Caller"); got != "workforce" {
 			t.Fatalf("unexpected service caller %q", got)
 		}
-		if got := r.Header.Get("X-Operator-Context-ID"); got != "tenant-main" {
-			t.Fatalf("unexpected tenant %q", got)
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "context-main" {
+			t.Fatalf("unexpected operator context %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]ActorView{{
@@ -37,7 +37,7 @@ func TestSearchActorsDecodesOpenAPIArrayAndSendsServiceIdentity(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token", "tenant-main")
+	client := NewClient(server.URL, "service-token", "context-main")
 	actors, err := client.SearchActors(context.Background(), "field", "ali")
 	if err != nil {
 		t.Fatalf("SearchActors returned error: %v", err)
@@ -47,40 +47,40 @@ func TestSearchActorsDecodesOpenAPIArrayAndSendsServiceIdentity(t *testing.T) {
 	}
 }
 
-func TestClientSendsTrustedTenantToEveryIdentityCall(t *testing.T) {
+func TestClientSendsTrustedContextToEveryIdentityCall(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("X-Operator-Context-ID"); got != "tenant-main" {
-			t.Fatalf("expected tenant-main, got %q", got)
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "context-main" {
+			t.Fatalf("expected context-main, got %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]ActorView{})
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token", "tenant-main")
+	client := NewClient(server.URL, "service-token", "context-main")
 	if _, err := client.SearchActors(context.Background(), "field", ""); err != nil {
 		t.Fatalf("SearchActors returned error: %v", err)
 	}
 }
 
-func TestProvisionUsesTrustedTenantInHeaderAndBody(t *testing.T) {
+func TestProvisionUsesTrustedContextInHeaderAndBody(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("X-Operator-Context-ID"); got != "tenant-main" {
-			t.Fatalf("expected tenant-main header, got %q", got)
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "context-main" {
+			t.Fatalf("expected context-main header, got %q", got)
 		}
 		var input ProvisionInput
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			t.Fatalf("decode provision body: %v", err)
 		}
-		if input.OperatorContextID != "tenant-main" {
-			t.Fatalf("expected tenant-main body, got %q", input.OperatorContextID)
+		if input.OperatorContextID != "context-main" {
+			t.Fatalf("expected context-main body, got %q", input.OperatorContextID)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(ActorView{ActorID: "field-1"})
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token", "tenant-main")
+	client := NewClient(server.URL, "service-token", "context-main")
 	if _, err := client.Provision(context.Background(), ProvisionInput{
 		Username: "field-1", PhoneE164: "+967770000001", Role: "field",
 	}); err != nil {
@@ -97,9 +97,9 @@ func TestProvisionRejectsOperatorContextOverrideBeforeNetwork(t *testing.T) {
 	}
 }
 
-func TestClientFailsClosedWithoutRuntimeTenant(t *testing.T) {
+func TestClientFailsClosedWithoutRuntimeContext(t *testing.T) {
 	client := NewClient("https://identity.internal", "service-token", "")
 	if client.Configured() {
-		t.Fatal("expected identity client without tenant to be unconfigured")
+		t.Fatal("expected identity client without operator context to be unconfigured")
 	}
 }

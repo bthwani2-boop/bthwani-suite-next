@@ -54,7 +54,7 @@ func main() {
 	}
 	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
 	if operatorContextID == "" {
-		log.Fatal("[workforce-api] BTHWANI_OPERATOR_CONTEXT_ID is required; silent tenant fallback is forbidden")
+		log.Fatal("[workforce-api] BTHWANI_OPERATOR_CONTEXT_ID is required; silent operator context fallback is forbidden")
 	}
 
 

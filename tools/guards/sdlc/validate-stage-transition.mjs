@@ -54,7 +54,7 @@ for (const marker of [
   "wlt_finance_change_requires_financial_control_authority",
   "operator_context_or_isolation_change_requires_isolation_security_approval",
   "residual_risk_requires_risk_acceptance_authority",
-  "partner_saas_commercialization_activation_requires_explicit_product_security_finance_isolation_release_and_production_evidence",
+  "partner_commercialization_activation_requires_explicit_product_security_finance_isolation_release_and_production_evidence",
   "static_product_runtime_visual_qa_security_finance_isolation_governance_ci_release_and_production_scopes_remain_independent",
 ]) if (!lifecycle.includes(marker)) violations.push({ file: lifecycleRelative, message: `MISSING_LIFECYCLE_RULE ${marker}` });
 

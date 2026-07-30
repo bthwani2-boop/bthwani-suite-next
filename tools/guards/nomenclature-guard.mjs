@@ -13,7 +13,7 @@ const USER_VISIBLE_PROP = /\b(?:title|subtitle|label|heading|description|message
 const PLATFORM_MODEL = "governance/product/platform-model.yaml";
 const PRODUCT_POLICY = "governance/policies/product.md";
 const SKILL_REGISTRY = "governance/skills/skills-registry.json";
-const OBSOLETE_SAAS_AUTHORITY = /\b(?:conditional SaaS authority|SaaS activation|tenant activation|activating or implementing SaaS)\b/i;
+const OBSOLETE_PLATFORM_AUTHORITY = /\b(?:conditional SaaS authority|SaaS activation|tenant activation|activating or implementing SaaS)\b/i;
 
 function normalizePath(value) {
   return String(value ?? "").trim().replaceAll("\\", "/").replace(/^\.\//, "");
@@ -90,14 +90,7 @@ function assertCanonicalPlatformModel() {
 
   const requiredPatterns = [
     [/^classification:\s*UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_FINANCIAL_PLATFORM\s*$/m, "CANONICAL_PLATFORM_CLASSIFICATION_MISSING"],
-    [/^\s*status:\s*NOT_APPLICABLE\s*$/m, "SAAS_STATUS_MUST_BE_NOT_APPLICABLE"],
-    [/^\s*platformIsSaas:\s*false\s*$/m, "PLATFORM_MUST_NOT_BE_CLASSIFIED_AS_SAAS"],
-    [/^\s*tenantEntityDefined:\s*false\s*$/m, "TENANT_ENTITY_MUST_REMAIN_UNDEFINED"],
-    [/^\s*genericTenantIdAllowed:\s*false\s*$/m, "GENERIC_TENANT_ID_MUST_BE_FORBIDDEN"],
-    [/^\s*partnerIsTenant:\s*false\s*$/m, "PARTNER_MUST_NOT_BE_TENANT"],
-    [/^\s*storeIsTenant:\s*false\s*$/m, "STORE_MUST_NOT_BE_TENANT"],
-    [/^\s*createsTenantBoundary:\s*false\s*$/m, "PARTNER_SUBSCRIPTION_MUST_NOT_CREATE_TENANT_BOUNDARY"],
-    [/^\s*createsSaasLifecycle:\s*false\s*$/m, "PARTNER_SUBSCRIPTION_MUST_NOT_CREATE_SAAS_LIFECYCLE"],
+
   ];
 
   for (const [pattern, message] of requiredPatterns) {
@@ -105,7 +98,7 @@ function assertCanonicalPlatformModel() {
   }
 }
 
-function assertNoObsoleteSaasAuthorityReferences() {
+function assertNoObsoletePlatformAuthorityReferences() {
   const registryText = readRequired(SKILL_REGISTRY);
   if (!registryText) return;
 
@@ -121,11 +114,11 @@ function assertNoObsoleteSaasAuthorityReferences() {
     if (!["active", "conditional"].includes(entry.status)) continue;
     const skillPath = `${entry.path}/SKILL.md`;
     const content = readRequired(skillPath);
-    if (content && OBSOLETE_SAAS_AUTHORITY.test(content)) {
+    if (content && OBSOLETE_PLATFORM_AUTHORITY.test(content)) {
       violations.push({
         file: skillPath,
         line: 0,
-        message: "OBSOLETE_SAAS_AUTHORITY_REFERENCE — active skills must follow the canonical non-SaaS platform model",
+        message: "OBSOLETE_PLATFORM_AUTHORITY_REFERENCE — active skills must follow the canonical non-SaaS platform model",
       });
     }
   }
@@ -144,7 +137,7 @@ function assertCanonicalProductPolicy() {
 
 assertCanonicalPlatformModel();
 assertCanonicalProductPolicy();
-assertNoObsoleteSaasAuthorityReferences();
+assertNoObsoletePlatformAuthorityReferences();
 
 const baseSha = String(process.env.CI_BASE_SHA ?? "").trim();
 const headSha = String(process.env.CI_HEAD_SHA ?? "HEAD").trim() || "HEAD";

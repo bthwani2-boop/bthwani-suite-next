@@ -12,7 +12,7 @@
  "evidenceReferences": [
  "governance/27_FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md#",
  "services/dsh/database/migrations/dsh-015_partner_lifecycle.sql",
- "services/dsh/database/migrations/dsh-103_jrn001_partner_tenant_isolation.sql",
+ "services/dsh/database/migrations/dsh-103_jrn001_partner_context_isolation.sql",
  "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx",
  "services/wlt/database/migrations/wlt-010_payout_destinations.sql"
  ]

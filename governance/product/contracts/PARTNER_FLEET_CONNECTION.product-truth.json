@@ -114,7 +114,7 @@
  "outcome": {
  "statement": "Partner, captain, and operator surfaces observe one versioned DSH fleet truth while code material remains secret and every lifecycle mutation is scoped, audited, notified, and recoverable.",
  "primaryMetric": "authoritative_fleet_bindings_with_readback",
- "guardrailMetrics": ["cross_tenant_fleet_access", "plaintext_code_persisted", "expired_code_redeemed", "stale_version_overwrite", "duplicate_same_store_membership", "unbound_operator_mutation"],
+ "guardrailMetrics": ["cross_context_fleet_access", "plaintext_code_persisted", "expired_code_redeemed", "stale_version_overwrite", "duplicate_same_store_membership", "unbound_operator_mutation"],
  "baselineState": "Partner and captain flows existed but operator readback, partner-visible connection state, and several lifecycle integrity controls were incomplete at the current head.",
  "targetState": "All required surfaces use the same DSH state; all lifecycle transitions are scoped, versioned, audited, and notified; typed contracts and PostgreSQL proof run on one commit.",
  "observationWindow": "Every change, runtime smoke, pull-request review, and release review."

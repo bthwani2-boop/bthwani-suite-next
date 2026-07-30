@@ -153,26 +153,26 @@ required_ci_acceptance:
 ## platform/isolation Acceptance Gate
 
 ```yaml
-saas_tenancy_acceptance_gate:
- tenant_owned_entities_classified: true
- tenant_context_propagation_verified: true
- cross_tenant_negative_tests_passed: true
- cross_tenant_data_leakage: 0
- privileged_cross_tenant_access_audited: true | NOT_APPLICABLE
- tenant_export_delete_backup_restore_defined: true | NOT_APPLICABLE
- per_tenant_observability_defined: true | NOT_APPLICABLE
+operator_context_acceptance_gate:
+ operator_context_owned_entities_classified: true
+ operator_context_propagation_verified: true
+ cross_operator_context_negative_tests_passed: true
+ cross_operator_context_data_leakage: 0
+ privileged_cross_operator_context_access_audited: true | NOT_APPLICABLE
+ operator_context_export_delete_backup_restore_defined: true | NOT_APPLICABLE
+ per_operator_context_observability_defined: true | NOT_APPLICABLE
  quotas_or_noisy_neighbor_policy_defined: true | NOT_APPLICABLE
- wlt_tenant_financial_isolation_verified: true | NOT_APPLICABLE
- commercial_saas_activation: BLOCKED_BY_POLICY | APPROVED
+ wlt_operator_context_financial_isolation_verified: true | NOT_APPLICABLE
+ commercial_platform_activation: BLOCKED_BY_POLICY | APPROVED
 ```
 
 Allowed platform decisions:
 
 ```text
-SAAS_ACTIVATION_APPROVED
-SAAS_READY_DEFERRED
+COMMERCIAL_ACTIVATION_APPROVED
+COMMERCIAL_READY_DEFERRED
 FIX_REQUIRED
 HARD_BLOCKED_EXTERNAL_ONLY
 ```
 
-platform activation is forbidden unless the decision is explicitly `SAAS_ACTIVATION_APPROVED`.
+platform activation is forbidden unless the decision is explicitly `COMMERCIAL_ACTIVATION_APPROVED`.

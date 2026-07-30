@@ -2,7 +2,7 @@ import Constants from "expo-constants";
 import * as Sentry from "@sentry/react-native";
 import { resolveSentryRuntimeConfig } from "../config/sentry-config";
 
-const FORBIDDEN_KEY = /(authorization|cookie|token|secret|password|phone|email|tenant|iban|account|card|wallet|ledger|message|document|latitude|longitude)/i;
+const FORBIDDEN_KEY = /(authorization|cookie|token|secret|password|phone|email|operator_context|iban|account|card|wallet|ledger|message|document|latitude|longitude)/i;
 
 function scrubRecord(value: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   if (!value) return undefined;
@@ -26,7 +26,7 @@ function sanitizeUrl(value: string | undefined): string | undefined {
 }
 
 /**
- * Technical crash reporting only. Identity, tenant, financial and message truth
+ * Technical crash reporting only. Identity, operator context, financial and message truth
  * remain in their sovereign services and are deliberately filtered here.
  */
 export function initSentry(): boolean {

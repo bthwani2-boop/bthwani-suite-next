@@ -41,7 +41,7 @@
       "authentication",
       "authorization",
       "secrets",
-      "tenant_isolation",
+      "operator_context_isolation",
       "finance",
       "database_migrations",
       "ci",

@@ -16,7 +16,7 @@ type GovernedProviderUpdate struct {
 }
 
 // UpdateProviderGoverned commits the platform-global provider mutation, its
-// tenant-attributed secret-safe audit record, and the tenant-scoped idempotent
+// context-attributed secret-safe audit record, and the context-scoped idempotent
 // response in one PostgreSQL transaction.
 func (r *Repository) UpdateProviderGoverned(
 	ctx context.Context,

@@ -33,7 +33,7 @@ PIN REF
 7. `static`, `product`, `runtime`, `visual`, `qa`, `security`, `finance`, `isolation`, `governance`, `ci`, `release`, and `production` claims require their own evidence whenever applicable.
 8. High-risk work cannot be finally self-approved by its executor; governance and CI approvals must also remain separate when both apply.
 9. Generated outputs, caches, diagnostics, logs, screenshots, and evidence packs remain untracked unless an active canonical policy explicitly requires a durable artifact.
-10. Every result maps through `governance/contracts/decision-vocabulary.json`; SaaS readiness and activation values are states, not decisions.
+10. Every result maps through `governance/contracts/decision-vocabulary.json`; commercial platform activation values are states, not decisions.
 
 ## Tool selection
 
@@ -56,7 +56,7 @@ LeanCTX is optional. Use it when active and genuinely smaller or clearer than na
 | Focused | one module or one owner boundary | targeted inspection and one relevant check |
 | Pattern | repeated narrow change | one idempotent script or batch edit plus targeted guard |
 | Cross-layer | product, API, backend, data, surface | owner contracts, ordered implementation, targeted cross-layer checks |
-| High risk | finance, auth, privacy, tenant isolation, governance, CI, SaaS activation, migration, release | formal stage routing and independent approvals |
+| High risk | finance, auth, privacy, operator context isolation, governance, CI, commercial platform activation, migration, release | formal stage routing and independent approvals |
 
 User phrases such as “deep”, “100%”, or “everything” increase the expected accuracy, not the repository scan radius by themselves. Scope expands only when dependency, ownership, risk, or acceptance evidence proves that expansion is required.
 
@@ -83,7 +83,7 @@ User phrases such as “deep”, “100%”, or “everything” increase the ex
 
 No persistent logs are required by default. Console exit status, concise summaries, the immutable commit SHA, and existing CI check results are sufficient for normal repository work.
 
-Durable evidence is required only when a formal SDLC stage, release, production verification, regulatory requirement, SaaS activation, or explicit user request requires it. Durable evidence must be minimal, structured, current, tied to one commit, and excluded from source-control when policy says it is transient.
+Durable evidence is required only when a formal SDLC stage, release, production verification, regulatory requirement, commercial platform activation, or explicit user request requires it. Durable evidence must be minimal, structured, current, tied to one commit, and excluded from source-control when policy says it is transient.
 
 A pass in one scope never upgrades another scope. `CLOSED_WITH_EVIDENCE` requires all applicable scopes, required approvals, evidence-backed stage exclusions, no open blocker, and proven GitHub enforcement for protected high-risk closure.
 
@@ -104,11 +104,11 @@ A pass in one scope never upgrades another scope. `CLOSED_WITH_EVIDENCE` require
 - Blanket “fix all workspace occurrences” outside the task’s verified ownership boundary.
 - Self-modifying GitHub Actions.
 - CI commits, direct pushes, or branch rewriting.
-- Treating seed, fixture, preview, local-memory, fallback, or client-supplied tenant data as runtime, isolation, financial, or commercial proof.
+- Treating seed, fixture, preview, local-memory, fallback, or client-supplied context data as runtime, isolation, financial, or commercial proof.
 - Claiming `CLOSED_WITH_EVIDENCE` from code-only, schema-only, configuration-only, or documentation-only checks.
 - Committing `.diagnostics/**`, `tools/registry/runs/**`, build outputs, caches, or temporary evidence.
 - Mixing unrelated dependency upgrades with implementation or governance changes.
 
 ## Acceptance condition
 
-Accepted only when execution is branch-pinned, scope-bounded, product-aware, authority-separated, verification-only in CI, aligned with complete evidence scopes, fail-closed for SaaS and tenant claims, free of mandatory tool contradictions, and capable of producing one canonical scoped decision without tracked diagnostic noise.
+Accepted only when execution is branch-pinned, scope-bounded, product-aware, authority-separated, verification-only in CI, aligned with complete evidence scopes, fail-closed for context isolation claims, free of mandatory tool contradictions, and capable of producing one canonical scoped decision without tracked diagnostic noise.

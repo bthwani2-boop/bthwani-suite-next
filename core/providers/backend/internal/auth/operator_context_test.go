@@ -8,36 +8,36 @@ import (
 	"testing"
 )
 
-func TestProvidersAuthAcceptsIdentityTenant(t *testing.T) {
+func TestProvidersAuthAcceptsIdentityOperatorContext(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{
-			Subject: "operator-1", OperatorContextID: "tenant-main", AuthState: "authenticated",
+			Subject: "operator-1", OperatorContextID: "context-main", AuthState: "authenticated",
 		})
 	}))
 	defer server.Close()
 
 	identity, err := NewClient(server.URL).Resolve(context.Background(), "Bearer token-1")
-	if err != nil || identity.OperatorContextID != "tenant-main" {
-		t.Fatalf("identity tenant was rejected identity=%#v err=%v", identity, err)
+	if err != nil || identity.OperatorContextID != "context-main" {
+		t.Fatalf("identity operator context was rejected identity=%#v err=%v", identity, err)
 	}
 }
 
-func TestProvidersAuthAcceptsSessionTenantInsteadOfProcessDefault(t *testing.T) {
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "tenant-main")
+func TestProvidersAuthAcceptsSessionOperatorContextInsteadOfProcessDefault(t *testing.T) {
+	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "context-main")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{
-			Subject: "operator-2", OperatorContextID: "tenant-other", AuthState: "authenticated",
+			Subject: "operator-2", OperatorContextID: "context-other", AuthState: "authenticated",
 		})
 	}))
 	defer server.Close()
 
 	identity, err := NewClient(server.URL).Resolve(context.Background(), "Bearer token-2")
-	if err != nil || identity.OperatorContextID != "tenant-other" {
-		t.Fatalf("session tenant must remain authoritative identity=%#v err=%v", identity, err)
+	if err != nil || identity.OperatorContextID != "context-other" {
+		t.Fatalf("session operator context must remain authoritative identity=%#v err=%v", identity, err)
 	}
 }
 
-func TestProvidersAuthRejectsSessionWithoutTenant(t *testing.T) {
+func TestProvidersAuthRejectsSessionWithoutOperatorContext(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{
 			Subject: "operator-3", AuthState: "authenticated",
@@ -50,16 +50,16 @@ func TestProvidersAuthRejectsSessionWithoutTenant(t *testing.T) {
 	}
 }
 
-func TestProvidersAuthDoesNotDependOnProcessTenantConfiguration(t *testing.T) {
+func TestProvidersAuthDoesNotDependOnProcessOperatorContextConfiguration(t *testing.T) {
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{
-			Subject: "operator-4", OperatorContextID: "tenant-four", AuthState: "authenticated",
+			Subject: "operator-4", OperatorContextID: "context-four", AuthState: "authenticated",
 		})
 	}))
 	defer server.Close()
 
 	if _, err := NewClient(server.URL).Resolve(context.Background(), "Bearer token-4"); err != nil {
-		t.Fatalf("valid tenant session depends on process tenant configuration: %v", err)
+		t.Fatalf("valid operator context session depends on process operator context configuration: %v", err)
 	}
 }

@@ -28,7 +28,7 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *te
 	defer db.Close()
 	baseCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	ctx := WithOperatorContext(baseCtx, "tenant-")
+	ctx := WithOperatorContext(baseCtx, "context-")
 
 	const providerID = "atomic-provider"
 	cleanup := func() {
@@ -79,29 +79,29 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *te
 	}
 
 	var auditCount, idempotencyCount int
-	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM providers_action_audit WHERE operator_context_id = 'tenant-' AND target_id = $1`, providerID).Scan(&auditCount); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM providers_action_audit WHERE operator_context_id = 'context-' AND target_id = $1`, providerID).Scan(&auditCount); err != nil {
 		t.Fatalf("count audit rows: %v", err)
 	}
-	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM providers_idempotency WHERE operator_context_id = 'tenant-' AND actor_id = $1 AND operation = 'provider.update'`, operator.ActorID).Scan(&idempotencyCount); err != nil {
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM providers_idempotency WHERE operator_context_id = 'context-' AND actor_id = $1 AND operation = 'provider.update'`, operator.ActorID).Scan(&idempotencyCount); err != nil {
 		t.Fatalf("count idempotency rows: %v", err)
 	}
 	if auditCount != 1 || idempotencyCount != 1 {
-		t.Fatalf("expected one tenant-attributed audit and idempotency row, got audit=%d idempotency=%d", auditCount, idempotencyCount)
+		t.Fatalf("expected one context-attributed audit and idempotency row, got audit=%d idempotency=%d", auditCount, idempotencyCount)
 	}
 
-	otherTenantCtx := WithOperatorContext(baseCtx, "tenant-other")
-	otherTenant, err := service.UpdateProvider(otherTenantCtx, providerID, input, operator, "correlation-other", "idempotency-1")
+	otherContextCtx := WithOperatorContext(baseCtx, "context-other")
+	otherContext, err := service.UpdateProvider(otherContextCtx, providerID, input, operator, "correlation-other", "idempotency-1")
 	if err != nil {
-		t.Fatalf("same idempotency key in another tenant was rejected: %v", err)
+		t.Fatalf("same idempotency key in another operator context was rejected: %v", err)
 	}
-	if otherTenant.UpdatedAt.Before(first.UpdatedAt) {
-		t.Fatalf("other tenant returned invalid provider state: first=%s other=%s", first.UpdatedAt, otherTenant.UpdatedAt)
+	if otherContext.UpdatedAt.Before(first.UpdatedAt) {
+		t.Fatalf("other operator context returned invalid provider state: first=%s other=%s", first.UpdatedAt, otherContext.UpdatedAt)
 	}
 
 	inactive := false
 	_, err = service.UpdateProvider(ctx, providerID, UpdateProviderInput{Active: &inactive}, operator, "correlation-conflict", "idempotency-1")
 	if !errors.Is(err, ErrIdempotencyConflict) {
-		t.Fatalf("expected same-tenant idempotency conflict, got %v", err)
+		t.Fatalf("expected same-operator-context idempotency conflict, got %v", err)
 	}
 
 	if _, err := db.ExecContext(ctx, `
@@ -133,7 +133,7 @@ func TestGovernedProviderUpdateIsAtomicAuditedAndOperatorContextIdempotent(t *te
 	}
 	if err := db.QueryRowContext(ctx, `
 		SELECT count(*) FROM providers_idempotency
-		WHERE operator_context_id = 'tenant-' AND actor_id = $1 AND operation = 'provider.update' AND idempotency_key = 'idempotency-rollback'`,
+		WHERE operator_context_id = 'context-' AND actor_id = $1 AND operation = 'provider.update' AND idempotency_key = 'idempotency-rollback'`,
 		operator.ActorID,
 	).Scan(&idempotencyCount); err != nil {
 		t.Fatalf("count rollback idempotency rows: %v", err)

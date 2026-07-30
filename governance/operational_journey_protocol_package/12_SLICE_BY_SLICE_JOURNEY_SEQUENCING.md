@@ -53,7 +53,7 @@ FS-10 Validation and error surfaces
 FS-11 Notifications and feedback
 FS-12 Cross-surface readback and refresh
 FS-13 DSH/WLT financial boundary (read-only refs in DSH, mutation only in WLT)
-FS-14 operator context/platform context propagation where `saas_context.mode != NOT_APPLICABLE`
+FS-14 operator context/platform context propagation where `operator_context_boundary.mode != NOT_APPLICABLE`
 FS-15 Empty/loading/offline/blocked/forbidden/conflict states
 FS-16 Audit trail and event/outbox
 FS-17 Negative and edge-case scenarios

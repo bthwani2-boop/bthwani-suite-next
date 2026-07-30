@@ -1,4 +1,4 @@
--- Providers-002: preserve the tenant of the authenticated operator for audit
+-- Providers-002: preserve the operator context of the authenticated operator for audit
 -- and idempotency while keeping external_providers a platform-global registry.
 -- Historical rows cannot be attributed reliably and are marked explicitly;
 -- this value is never a runtime operator context fallback or write authority.
@@ -19,15 +19,15 @@ BEGIN
     SELECT 1
     FROM pg_constraint
     WHERE conrelid = 'providers_action_audit'::regclass
-      AND conname = 'providers_action_audit_tenant_nonblank_chk'
+      AND conname = 'providers_action_audit_context_nonblank_chk'
   ) THEN
     ALTER TABLE providers_action_audit
-      ADD CONSTRAINT providers_action_audit_tenant_nonblank_chk
+      ADD CONSTRAINT providers_action_audit_context_nonblank_chk
       CHECK (btrim(operator_context_id) <> '');
   END IF;
 END $$;
 
-CREATE INDEX IF NOT EXISTS providers_action_audit_tenant_created_idx
+CREATE INDEX IF NOT EXISTS providers_action_audit_context_created_idx
   ON providers_action_audit(operator_context_id, created_at DESC);
 
 ALTER TABLE providers_idempotency
@@ -71,10 +71,10 @@ BEGIN
     SELECT 1
     FROM pg_constraint
     WHERE conrelid = 'providers_idempotency'::regclass
-      AND conname = 'providers_idempotency_tenant_nonblank_chk'
+      AND conname = 'providers_idempotency_context_nonblank_chk'
   ) THEN
     ALTER TABLE providers_idempotency
-      ADD CONSTRAINT providers_idempotency_tenant_nonblank_chk
+      ADD CONSTRAINT providers_idempotency_context_nonblank_chk
       CHECK (btrim(operator_context_id) <> '');
   END IF;
 END $$;

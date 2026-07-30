@@ -93,7 +93,7 @@ func TestRequestOtpForOperatorContextIssuesChallengeForNewConsumerDBIntegration(
 	}
 }
 
-func TestRequestOtpForOperatorContextRejectsAnotherTenantsPhoneDBIntegration(t *testing.T) {
+func TestRequestOtpForOperatorContextRejectsAnotherOperatorContextPhoneDBIntegration(t *testing.T) {
 	db := openIdentityTestDB(t)
 	const phone = "+967700000902"
 	cleanupTestPhone(t, db, phone)
@@ -104,17 +104,17 @@ func TestRequestOtpForOperatorContextRejectsAnotherTenantsPhoneDBIntegration(t *
 		ActorType: "client",
 		Phone:     phone,
 	}); err != nil {
-		t.Fatalf("seed the first tenant's consumer: %v", err)
+		t.Fatalf("seed the first operator context's consumer: %v", err)
 	}
 
-	_, err := repository.RequestOtpForOperatorContext(context.Background(), "other-tenant", OtpInput{
+	_, err := repository.RequestOtpForOperatorContext(context.Background(), "other-context", OtpInput{
 		ActorType: "client",
 		Phone:     phone,
 	})
 	if err == nil {
-		t.Fatal("a phone bound to one tenant must not be claimable by another")
+		t.Fatal("a phone bound to one operator context must not be claimable by another")
 	}
 	if !strings.Contains(err.Error(), ErrOperatorContextMismatch.Error()) {
-		t.Fatalf("expected tenant mismatch, got %v", err)
+		t.Fatalf("expected operator context mismatch, got %v", err)
 	}
 }
