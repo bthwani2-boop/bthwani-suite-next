@@ -23,8 +23,11 @@ function Get-ForwardedArgumentValue {
 }
 
 function Invoke-RuntimePhaseChild {
-  & pwsh -NoProfile -ExecutionPolicy Bypass -File $script:Target @script:ForwardedArgs
-  return [int]$LASTEXITCODE
+  $invokeArgs = @($script:ForwardedArgs)
+  $global:LASTEXITCODE = 0
+  & pwsh -NoProfile -ExecutionPolicy Bypass -File $script:Target @invokeArgs 2>&1 | Out-Host
+  $childExitCode = $LASTEXITCODE
+  return [int]$childExitCode
 }
 
 function Repair-IdentityRuntimeOwnership {
