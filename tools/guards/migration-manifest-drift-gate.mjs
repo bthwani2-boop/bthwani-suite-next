@@ -3,7 +3,9 @@
 // the files actually on disk: unregistered files, missing files, checksum
 // drift, duplicate ordinals/filenames, or a new legacy numeric-prefix
 // collision introduced after the manifest's cutover file.
-// Historical migrations are immutable; new migrations extend the manifest.
+// Historical migrations are immutable by default. A pre-release correction is
+// accepted only when governance/contracts/migration-amendments.json records the
+// exact replacement digest and the absence of production approval evidence.
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -36,6 +38,34 @@ function portableSqlDigests(buffer) {
   const crlf = lf.replace(/\n/g, "\r\n");
   return new Set([sha256(buffer), sha256(Buffer.from(lf, "utf8")), sha256(Buffer.from(crlf, "utf8"))]);
 }
+
+function loadAmendments() {
+  const amendmentsPath = path.join(repositoryRoot, "governance/contracts/migration-amendments.json");
+  if (!fs.existsSync(amendmentsPath)) return new Map();
+
+  const document = JSON.parse(fs.readFileSync(amendmentsPath, "utf8"));
+  const amendments = new Map();
+  for (const amendment of document.amendments ?? []) {
+    if (!amendment?.service || !amendment?.migrationId || !amendment?.replacementSha256) continue;
+    const key = `${amendment.service}:${amendment.migrationId}`;
+    if (amendments.has(key)) {
+      throw new Error(`duplicate migration amendment: ${key}`);
+    }
+    if (amendment.classification !== "PRE_RELEASE_UNAPPLIED_CORRECTION") {
+      throw new Error(`unsupported migration amendment classification for ${key}`);
+    }
+    if (amendment.evidence?.productionApprovalEvidence !== false) {
+      throw new Error(`migration amendment ${key} must explicitly prove productionApprovalEvidence=false`);
+    }
+    if (!/^[a-f0-9]{64}$/.test(amendment.replacementSha256)) {
+      throw new Error(`migration amendment ${key} has invalid replacementSha256`);
+    }
+    amendments.set(key, amendment);
+  }
+  return amendments;
+}
+
+const amendments = loadAmendments();
 
 function checkService(service) {
   const relativeDir = servicePaths[service];
@@ -70,7 +100,13 @@ function checkService(service) {
     const migration = fs.readFileSync(path.join(dir, entry.file));
     const acceptableDigests = portableSqlDigests(migration);
     if (!acceptableDigests.has(entry.sha256)) {
-      failures.push(`checksum drift: ${entry.file} recorded=${entry.sha256} actual=${sha256(migration)}`);
+      const amendment = amendments.get(`${service}:${entry.file}`);
+      if (!amendment || !acceptableDigests.has(amendment.replacementSha256)) {
+        const amendmentDigest = amendment?.replacementSha256 ?? "<none>";
+        failures.push(
+          `checksum drift: ${entry.file} recorded=${entry.sha256} amendment=${amendmentDigest} actual=${sha256(migration)}`,
+        );
+      }
     }
   }
 
