@@ -46,6 +46,49 @@ func (s *protectedStoreServer) requirePartnerCodRecord(w http.ResponseWriter, r 
 	return true
 }
 
+func (s *protectedStoreServer) handlePartnerRemitCodRecord(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "partner")
+	if !ok {
+		return
+	}
+	recordID := strings.TrimSpace(r.PathValue("recordId"))
+	if recordID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "recordId is required")
+		return
+	}
+	var input captainCodRemitBody
+	if !decodeActorFinanceJSON(w, r, &input) {
+		return
+	}
+	input.ProofReference = strings.TrimSpace(input.ProofReference)
+	input.Note = strings.TrimSpace(input.Note)
+	if len(input.ProofReference) < 3 {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "proofReference is required")
+		return
+	}
+	if !s.requirePartnerCodRecord(w, r, actor.ID, recordID) {
+		return
+	}
+	payload, err := json.Marshal(map[string]any{
+		"proofReference": input.ProofReference,
+		"note":           input.Note,
+		"actorId":        actor.ID,
+		"actorType":      "partner",
+	})
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode COD remittance evidence")
+		return
+	}
+	status, body, err := s.wlt.FinanceWriteCodRecord(
+		r.Context(),
+		recordID,
+		"remit",
+		payload,
+		r.Header.Get("X-Correlation-ID"),
+	)
+	writeWltActorFinanceResponse(w, status, body, err)
+}
+
 func (s *protectedStoreServer) handleFinanceCodReconciliationCases(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionRead, "operator")
 	if !ok {
