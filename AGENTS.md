@@ -1,216 +1,124 @@
 # BThwani Agents
 
-## Prime directive
+## Authority
 
-Default execution mode is `CODE_BASED_LEAN`: use the smallest sufficient context, smallest safe change, and smallest relevant verification that can prove the requested claim.
+`AGENTS.md` is the default repository instruction entry point. Resolve conflicts through:
 
-Accuracy does not mean scanning everything. Scope expands only when product impact, ownership, dependency, risk, or acceptance evidence proves that expansion is required.
+1. `governance/authority/authority-precedence.json`
+2. active canonical governance and machine-readable contracts
+3. the smallest applicable governed skill
+4. thin tool adapters
 
-## Authority order
+Decision vocabulary: `governance/contracts/decision-vocabulary.json`.
+Skill registry: `governance/skills/skills-registry.json`.
+Agent registry: `governance/agents/agent-registry.json`.
 
-Resolve every conflict through:
+## Default execution model
 
-```text
-governance/authority/authority-precedence.json
-```
+Use `CODE_BASED_LEAN`:
 
-The repository decision vocabulary is:
+- inspect the smallest complete surface that can reveal the root cause;
+- make the smallest safe change that closes the requested scope;
+- verify only the affected behavior and actual risk;
+- expand scope only when ownership, dependencies, product impact, or safety evidence requires it.
 
-```text
-governance/contracts/decision-vocabulary.json
-```
-
-Product-visible, role-sensitive, cross-surface, commercial, or workflow changes are governed by:
-
-```text
-governance/policies/product.md
-```
-
-The repository-owner approval model is encoded in:
-
-```text
-governance/authority/single-owner-mode.json
-```
-
-Adapters, skills, protocol templates, matrices, diagnostics, historical phase files, and generated artifacts may not override those sources.
+Words such as "deep", "complete", or "100%" increase accuracy requirements. They do not authorize an automatic full-repository scan.
 
 ## Repository truth
 
-Use direct files from the explicitly resolved repository ref.
+For local work, use the active local branch unless the user names another target.
 
-For GitHub or remote tasks:
+For GitHub or remote work:
 
-- pin the exact remote repository;
-- pin the exact user-named remote branch;
-- resolve its current commit SHA;
-- read, write, and verify that branch only;
-- re-resolve the branch after writes and before the final decision;
-- never substitute the default branch, another branch, local files, memory, stale diagnostics, or a prior PR.
+- resolve the exact repository and user-named branch;
+- pin its current commit SHA before claims or writes;
+- use that ref only, never the default branch as a substitute;
+- re-resolve before each write batch and after the final push;
+- stop and reconcile safely if the target branch moves;
+- never force-push, reset, or overwrite newer work merely to simplify execution.
 
-Use `bthwani-current-workspace-authority` whenever a repository claim or write is involved.
+Use `bthwani-current-workspace-authority` only when repository or ref truth is involved.
 
-## Product before implementation
-
-Before implementing a new or materially changed user-visible or operational capability:
-
-1. state the problem and evidence state;
-2. identify actors and role boundaries;
-3. enumerate required and explicitly excluded surfaces;
-4. define states, actions, forbidden actions, and negative invariants;
-5. define outcome and acceptance criteria;
-6. obtain product-manager approval of the model;
-7. obtain product-owner approval of functional readiness.
-
-Engineering may challenge assumptions and contribute to discovery, but it cannot self-approve product acceptance for its own implementation.
-
-## Sole-owner operating mode
-
-This repository is operated by the single owner recorded in `governance/authority/single-owner-mode.json`. The owner may satisfy multiple eligible human approval roles, including product, architecture, governance, CI, implementation review, and QA, when the current task approval and exact scope are recorded in GitHub and all required same-commit automated checks pass.
-
-This is an explicit human-identity exception, not a merger of logical authorities or owner skills. An execution agent may not impersonate the owner, issue owner approval, convert blanket authorization into acceptance of an unseen outcome, waive failed checks, or bypass repository protection.
-
-Authentication, authorization, sessions, PII, privacy, secrets, credentials, operator-context and partner-scope isolation, security approval, WLT and finance, migrations and production data, critical or high vulnerability acceptance, residual risk, release, deployment, production verification, and final closure remain protected. Missing independent or external evidence for a protected domain keeps that scope unclosed.
-
-## Default execution rules
+## Scope rules
 
 Agents must:
 
-- inspect only relevant files, contracts, imports, routes, manifests, and owner policies;
-- reuse existing code and guards before adding abstractions, files, scripts, or dependencies;
-- define explicit allowed and forbidden paths;
-- serialize writes that share files, contracts, generated clients, migrations, or dependent outputs;
+- identify the owner of truth, allowed paths, forbidden paths, consumers, contracts, data, and tests actually affected;
+- reuse existing code, scripts, and focused guards before adding files or dependencies;
+- keep generated diagnostics, logs, screenshots, evidence packs, and temporary task state untracked by default;
 - run verification after the final relevant write;
-- report only the evidence scope actually proven;
-- stop or re-pin when the remote branch moves unexpectedly.
+- report only what current evidence proves.
 
 Agents must not:
 
-- create evidence packs, command logs, screenshot sets, closure reports, or generated diagnostics by default;
-- run full Graphify, full Nx graph, full test, full build, or full guard suites without a proven need;
-- use CI to mutate source, commit, push, merge, or rewrite branches;
-- treat seed, fixture, preview, fallback, or in-memory data as runtime, revenue, subscriber, isolation, or commercial proof;
-- claim final closure from static checks alone;
-- use `git add -A` or `git add .`;
-- archive retired material by default when Git history already preserves it.
+- read every skill, governance file, journey, or registry by default;
+- run full Graphify, full Nx graph, full typecheck, full build, full test, full guard suites, or integrated runtime without proven need;
+- create scripts or reports merely to satisfy process wording;
+- treat fixtures, seeds, previews, fallbacks, or in-memory data as production or commercial proof;
+- let CI mutate, commit, push, merge, or rewrite source;
+- archive removed material when Git history already preserves it.
 
-## Task router
+## Task modes
 
-Choose one primary mode and add only the owner skills required by the actual risk.
+Choose one primary mode. Add only the owner skill required by real risk.
 
-| Mode | Use when | Default verification |
-| --- | --- | --- |
-| `TEXT_ONLY` | wording or documentation with no behavioral claim | diff check |
-| `CODE_ONLY` | bounded static code change | one targeted check |
-| `PRODUCT_MODEL` | actor, problem, surface, role, outcome, or acceptance changes | Product Truth gate |
-| `UI_CODE` | route, screen, state, controller, or component changes | targeted type or binding check |
-| `UI_VISUAL` | visual parity or screenshots explicitly required | code check plus visual evidence |
-| `API_CONTRACT` | OpenAPI, route, generated client, or consumer binding | contract and binding checks |
-| `RUNTIME` | startup, Docker, ports, environment, provider, or runtime behavior | targeted runtime smoke |
-| `DSH_WLT` | money, payment, ledger, settlement, payout, commission, checkout, or financial handoff | paired boundary checks and independent financial review |
-| `SECURITY_PRIVACY` | auth, RBAC, sessions, secrets, PII, isolation, or sensitive configuration | targeted security verification |
-| `AGENT_SYSTEM` | AGENTS, `.agents`, governance registries, skills, guards, gates, or Actions | governance and workflow gates |
-| `DEPENDENCY_CI` | package, lockfile, workflow, CI, release, or toolchain changes | targeted CI and policy checks |
-| `REFACTOR_CLEANUP` | move, merge, delete, deduplicate, or retire code | impact proof and affected checks |
-
-If mixed, route by the highest actual risk, not by the strongest wording in the request.
+| Mode | Default verification |
+| --- | --- |
+| `TEXT_ONLY` | direct review and diff check |
+| `CODE_ONLY` | one targeted type, lint, test, or guard check |
+| `PRODUCT_MODEL` | product problem, actors, states, surfaces, exclusions, and acceptance |
+| `UI_CODE` | affected route, state, controller, or package check |
+| `UI_VISUAL` | code check; visual proof only when explicitly required |
+| `API_CONTRACT` | affected contract, route, generated client, and consumer binding |
+| `RUNTIME` | targeted startup or smoke proof |
+| `DSH_WLT` | paired financial-boundary checks and independent financial evidence |
+| `SECURITY_PRIVACY` | targeted auth, isolation, secrets, or privacy verification |
+| `AGENT_SYSTEM` | affected agent, registry, governance, or workflow guards |
+| `DEPENDENCY_CI` | affected lockfile, package, workflow, or policy checks |
+| `REFACTOR_CLEANUP` | reference impact proof plus affected checks |
 
 ## Tool ladder
 
-Use the smallest sufficient tool:
+Use tools in this order:
 
-1. Direct scoped repository inspection.
-2. Existing focused search, package script, or guard.
-3. Small idempotent script for a repeated narrow pattern.
-4. LeanCTX only when active and more efficient than native tools.
-5. Graphify only when ownership, routing, dependency, duplication, or dead-code relationships are unclear.
-6. Nx affected only when workspace impact needs calculation.
-7. Runtime commands only when runtime behavior is changed or claimed.
+1. direct scoped file inspection;
+2. focused search or an existing package command;
+3. one registered targeted guard;
+4. a small idempotent helper for a proven repeated pattern;
+5. Nx affected when workspace impact must be computed;
+6. Graphify only when ownership, dependency, duplication, or dead-code relationships remain unclear;
+7. runtime tooling only when runtime behavior changes or is claimed.
 
-Graphify is a tool, not an agent. LeanCTX is optional, not a mandatory first step.
+LeanCTX and Graphify are optional tools, not mandatory first steps and not authorities.
 
-## Agent and skill model
+## Authorities and protected work
 
-- `MASTER_ADVISORY_SUPERVISOR` coordinates broad work, remains read/plan/verify only, and does not replace formal authorities.
-- `SDLC_PROGRAM_AUTHORITY` owns stage state, transition legality, and evidence-backed exclusions.
-- `PRODUCT_MANAGER_AUTHORITY` owns the problem, outcome, scope, exclusions, and product-model approval.
-- `PRODUCT_OWNER_ACCEPTANCE_AUTHORITY` owns functional readiness and product acceptance and remains logically distinct from the product manager; the recorded sole owner may fulfill both eligible human roles under the active sole-owner contract.
-- `UX_JOURNEY_AUTHORITY` owns journey clarity and accessibility intent when human-facing flows change.
-- `ARCHITECTURE_AUTHORITY` owns boundaries, contracts, data flow, and dependency direction.
-- `GOVERNANCE_CONTRACT_AUTHORITY` and `CI_WORKFLOW_AUTHORITY` remain separate logical approving authorities with separate owner skills; the recorded sole owner may fulfill both eligible human approval roles under the active sole-owner contract.
-- `FINANCIAL_CONTROL_AUTHORITY` owns independent WLT financial truth and handoff approval.
-- `INDEPENDENT_QUALITY_AUTHORITY`, `APPLICATION_SECURITY_AUTHORITY`, and `RELEASE_AUTHORITY` own their formal approvals.
-- `RISK_ACCEPTANCE_AUTHORITY` alone may accept documented residual risk and cannot be the change author.
-- Engineering implements and performs developer verification; the independent reviewer owns G4 implementation verification.
-- An executor, coordinator, adapter, or tool may not finally approve its own protected work.
+The logical authorities remain separate:
 
-Use `governance/agents/agent-registry.json` and `governance/skills/skills-registry.json` as machine-readable role and skill contracts.
+- `SDLC_PROGRAM_AUTHORITY` owns formal stage state;
+- product management and product acceptance own product model and readiness;
+- `GOVERNANCE_CONTRACT_AUTHORITY` owns governance-contract approval;
+- `CI_WORKFLOW_AUTHORITY` owns CI-workflow approval;
+- the independent reviewer owns protected implementation review;
+- `FINANCIAL_CONTROL_AUTHORITY` owns finance approval;
+- security, QA, release, and production authorities own their evidence domains;
+- `RISK_ACCEPTANCE_AUTHORITY` alone may accept documented residual risk.
 
-## Adaptive task context and remediation
+The repository's sole owner may fulfill eligible human roles under `governance/authority/single-owner-mode.json`, but an execution agent cannot impersonate the owner, approve unseen work, waive failures, or self-grant protected approval.
 
-Product and journey registries, historical closure files, capability graphs, gap ledgers, and generated inventories are discovery inputs only. They are provisional and never override current code, contracts, database behavior, runtime behavior, or same-commit evidence.
-
-Before a repair, diagnose the relevant real implementation across the layers that can affect the claim. Expand to structural, product, contract, database, runtime, security, test-quality, or cross-surface analysis only when the observed impact or risk requires it.
-
-Each task requires a logical execution context containing the pinned repository, source branch, base SHA, target branch, allowed paths, forbidden paths, expected outputs, risk profile, and verification profile. This context is ephemeral by default and may live in `.diagnostics/**`, a pull-request body, a check summary, or an Actions artifact. It is committed only when it represents a durable contract with an identified long-term consumer.
-
-Task state, hypotheses, work-unit allocation, repeated attempts, raw logs, generated evidence, and iteration records are not permanent repository sources of truth. Keep them outside the final Git tree by default. A known gap must appear in the current diagnostic or review output, but it does not require a permanent `GAP-*` file.
-
-The engineering loop is:
-
-```text
-DIAGNOSE
-→ PLAN
-→ EXECUTE
-→ OBSERVE
-→ EVALUATE
-→ CORRECT
-→ VERIFY
-→ CLEAN
-→ RECONCILE
-→ HANDOFF
-```
-
-Rules:
-
-- never execute before the root cause and intended behavior are sufficiently identified;
-- never expand allowed paths in place without re-evaluating scope and risk;
-- never change or remove a test merely to make CI pass;
-- never repeat an unchanged hypothesis, patch, or failed command and call the retry progress;
-- after three materially similar unsuccessful attempts, re-diagnose, split the task, or return `LOOP_NOT_CONVERGING`;
-- diagnosis, execution, and final approval remain logically separate;
-- final verification runs after the last write on a clean checkout of the exact candidate SHA;
-- use Git history as the default archive for removed or superseded material;
-- child task branches may merge only to their originating work branch;
-- merging a work branch to `master` remains an explicit human decision.
+Formal routing and independent evidence are required for authentication, authorization, sessions, PII, secrets, isolation, finance, migrations, production data, critical vulnerabilities, governance, CI, release, deployment, and final closure.
 
 ## Evidence and decisions
 
-Every result must map through the canonical vocabulary.
+Use targeted evidence proportional to the claim. Static success does not prove runtime, visual, security, finance, isolation, release, or production behavior.
 
-Typical scoped aliases:
+Canonical outcomes include `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EXTERNAL`, `READY_FOR_REVIEW`, and `PROTOCOL_VIOLATION`.
 
-- `CODE_CHECK_PASS` → `PASS` with static evidence.
-- `RUNTIME_SMOKE_PASS` → `PASS` with runtime evidence.
-- `UI_VISUAL_PASS` → `PASS` with visual evidence.
-- `READY_FOR_PR` is deprecated; use `READY_FOR_REVIEW`.
+`CLOSED_WITH_EVIDENCE` requires every applicable same-commit scope: `static`, `product`, `runtime`, `visual`, `qa`, `security`, `finance`, `isolation`, `governance`, `ci`, `release`, and `production`, plus all applicable approvals and no unresolved blocker.
 
-Use `FIX_REQUIRED` when in-scope acceptance fails, `NEEDS_EVIDENCE` when the implementation claim lacks current evidence, `BLOCKED_EXTERNAL` for truly external blockers, and `PROTOCOL_VIOLATION` for authority, scope, safety, or evidence breaches.
+## Final response
 
-`CLOSED_WITH_EVIDENCE` requires every applicable same-commit evidence scope: `static`, `product`, `runtime`, `visual`, `qa`, `security`, `finance`, `isolation`, `governance`, `ci`, `release`, and `production`. It also requires every approval required after applying the sole-owner contract, evidence-backed stage exclusion, no open blocker, and proven GitHub enforcement for protected high-risk closure. Sole-owner authorization never supplies protected security, finance, isolation, release, production, residual-risk, or final-closure evidence. Closure cannot be issued by an implementation skill or inferred from documentation, configuration, schemas, guard names, or prior workflow runs.
-
-## High-risk escalation
-
-Formal SDLC routing and independent review are required for:
-
-- authentication, authorization, RBAC, and sessions;
-- PII, secrets, privacy, operator context, and cross-scope access;
-- payments, WLT, ledger, settlement, payout, reconciliation, and commission;
-- migrations and production data;
-- governance contracts, CI workflows, infrastructure, release, rollback, and signing;
-- critical or high vulnerabilities;
-- final release or production closure.
-
-## Final response contract
+Report:
 
 ```text
 repository_mode:
@@ -224,6 +132,6 @@ decision:
 remaining_risks:
 ```
 
-Do not overclaim. State blocked or unproven dimensions explicitly.
+Do not overclaim.
 
 <!-- Mappings for agent-governance-gate: Command Safety Policy , Smart Execution Model -->
