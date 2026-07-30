@@ -263,7 +263,214 @@
             schema: { type: object, additionalProperties: true }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
+/dsh/control-panel/finance/payout-requests/{payoutId}/approve:
+  post:
+    operationId: approveDshControlPanelPayoutRequest
+    summary: Operator approves a governed WLT payout request via the DSH finance proxy.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: payoutId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [idempotencyKey]
+            properties:
+              idempotencyKey: { type: string, minLength: 1 }
+    responses:
+      "200": { description: Payout request approved (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
+/dsh/control-panel/finance/payout-requests/{payoutId}/reject:
+  post:
+    operationId: rejectDshControlPanelPayoutRequest
+    summary: Operator rejects a governed WLT payout request via the DSH finance proxy.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: payoutId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [idempotencyKey, reason]
+            properties:
+              idempotencyKey: { type: string, minLength: 1 }
+              reason: { type: string, minLength: 1 }
+    responses:
+      "200": { description: Payout request rejected (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/control-panel/finance/payout-requests/{payoutId}/process:
+  post:
+    operationId: processDshControlPanelPayoutRequest
+    summary: Operator moves a payout request to processing state via the DSH finance proxy.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: payoutId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [idempotencyKey]
+            properties:
+              idempotencyKey: { type: string, minLength: 1 }
+    responses:
+      "200": { description: Payout request processing started (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/control-panel/finance/payout-requests/{payoutId}/complete:
+  post:
+    operationId: completeDshControlPanelPayoutRequest
+    summary: Operator marks a payout request complete via the DSH finance proxy.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: payoutId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [idempotencyKey]
+            properties:
+              idempotencyKey: { type: string, minLength: 1 }
+    responses:
+      "200": { description: Payout request completed (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/control-panel/finance/payout-requests/{payoutId}/fail:
+  post:
+    operationId: failDshControlPanelPayoutRequest
+    summary: Operator records a payout failure via the DSH finance proxy.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: payoutId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [idempotencyKey, failureReason]
+            properties:
+              idempotencyKey: { type: string, minLength: 1 }
+              failureReason: { type: string, minLength: 1 }
+    responses:
+      "200": { description: Payout request failed state recorded (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/control-panel/finance/settlements/from-delivered-orders:
+  post:
+    operationId: triggerDshControlPanelFinanceSettlementsFromDeliveredOrders
+    summary: Operator triggers governed WLT settlement calculation from delivered orders via the DSH finance proxy.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [idempotencyKey]
+            properties:
+              idempotencyKey: { type: string, minLength: 1 }
+              partnerId: { type: string }
+    responses:
+      "200": { description: Settlement triggered (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/control-panel/finance/settlement-policies/{partnerId}:
+  get:
+    operationId: getDshControlPanelFinanceSettlementPolicy
+    summary: Operator reads the governed WLT settlement policy for a partner via the DSH finance proxy.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200": { description: Settlement policy view (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  put:
+    operationId: upsertDshControlPanelFinanceSettlementPolicy
+    summary: Operator creates or updates the governed WLT settlement policy for a partner via the DSH finance proxy.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: partnerId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [idempotencyKey]
+            properties:
+              idempotencyKey: { type: string, minLength: 1 }
+              settlementCycleDays: { type: integer, minimum: 1 }
+              minimumSettlementAmountMinorUnits: { type: integer, minimum: 0 }
+              currency: { type: string }
+    responses:
+      "200": { description: Settlement policy upserted (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/control-panel/finance/reconciliation-cases:
   get:
@@ -306,7 +513,64 @@
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
+/dsh/control-panel/finance/reconciliation-cases/{caseId}/assign:
+  post:
+    operationId: assignDshControlPanelFinanceReconciliationCase
+    summary: Operator assigns a governed WLT reconciliation case to themselves or a designee via the DSH finance proxy.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [idempotencyKey]
+            properties:
+              idempotencyKey: { type: string, minLength: 1 }
+              assigneeId: { type: string }
+    responses:
+      "200": { description: Reconciliation case assigned (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
+/dsh/control-panel/finance/reconciliation-cases/{caseId}/resolve:
+  post:
+    operationId: resolveDshControlPanelFinanceReconciliationCase
+    summary: Operator resolves a governed WLT reconciliation case via the DSH finance proxy.
+    tags: [DshFinanceProxy]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: caseId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [idempotencyKey, resolution]
+            properties:
+              idempotencyKey: { type: string, minLength: 1 }
+              resolution: { type: string, minLength: 1 }
+              notes: { type: string }
+    responses:
+      "200": { description: Reconciliation case resolved (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/notifications:
   get:

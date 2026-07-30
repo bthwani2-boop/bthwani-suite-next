@@ -249,6 +249,36 @@
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
+/dsh/field/finance/payout-destinations/{destinationId}:
+  get:
+    operationId: getDshFieldFinancePayoutDestination
+    summary: Read a single governed WLT payout destination owned by the authenticated field actor.
+    tags: [DshFieldFinance]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: destinationId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200": { description: Payout destination view (verbatim passthrough), content: { application/json: { schema: { type: object, additionalProperties: true } } } }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+  delete:
+    operationId: deleteDshFieldFinancePayoutDestination
+    summary: Remove a governed WLT payout destination owned by the authenticated field actor.
+    tags: [DshFieldFinance]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - name: destinationId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "204": { description: Destination removed. }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
 
 
 

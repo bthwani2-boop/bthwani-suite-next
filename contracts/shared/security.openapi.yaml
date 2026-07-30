@@ -5,6 +5,10 @@ info:
   contact:
     name: Platform Engineering
     email: platform@bthwani.com
+x-bthwani-owner: contracts/shared
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-runtime-dependency: false
 
 components:
   securitySchemes:

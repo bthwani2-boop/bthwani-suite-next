@@ -12156,8 +12156,8 @@ paths:
                     type: string
   /dsh/control-panel/finance/payout-requests/{payoutId}/approve:
     post:
-      operationId: approveDshControlPanelFinancePayoutRequest
-      summary: Operator approves a governed WLT payout request through the DSH finance proxy.
+      operationId: approveDshControlPanelPayoutRequest
+      summary: Operator approves a governed WLT payout request via the DSH finance proxy.
       tags:
         - DshFinanceProxy
       security:
@@ -12168,14 +12168,41 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - idempotencyKey
+              properties:
+                idempotencyKey:
+                  type: string
+                  minLength: 1
       responses:
         "200":
-          description: WLT payout request approval result (verbatim passthrough).
+          description: Payout request approved (verbatim passthrough)
           content:
             application/json:
               schema:
                 type: object
                 additionalProperties: true
+        "400":
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
         "401":
           description: Bearer session is missing, invalid, or expired.
           content:
@@ -12192,6 +12219,20 @@ paths:
                     type: string
         "404":
           description: Scoped store context was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+        "409":
+          description: Version or idempotency conflict.
           content:
             application/json:
               schema:
@@ -12206,8 +12247,8 @@ paths:
                     type: string
   /dsh/control-panel/finance/payout-requests/{payoutId}/reject:
     post:
-      operationId: rejectDshControlPanelFinancePayoutRequest
-      summary: Operator rejects a governed WLT payout request through the DSH finance proxy.
+      operationId: rejectDshControlPanelPayoutRequest
+      summary: Operator rejects a governed WLT payout request via the DSH finance proxy.
       tags:
         - DshFinanceProxy
       security:
@@ -12218,14 +12259,45 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - idempotencyKey
+                - reason
+              properties:
+                idempotencyKey:
+                  type: string
+                  minLength: 1
+                reason:
+                  type: string
+                  minLength: 1
       responses:
         "200":
-          description: WLT payout request rejection result (verbatim passthrough).
+          description: Payout request rejected (verbatim passthrough)
           content:
             application/json:
               schema:
                 type: object
                 additionalProperties: true
+        "400":
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
         "401":
           description: Bearer session is missing, invalid, or expired.
           content:
@@ -12254,30 +12326,8 @@ paths:
                     type: string
                   message:
                     type: string
-  /dsh/control-panel/finance/payout-requests/{payoutId}/process:
-    post:
-      operationId: processDshControlPanelFinancePayoutRequest
-      summary: Operator sends an approved governed payout request to the configured WLT financial provider.
-      tags:
-        - DshFinanceProxy
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: payoutId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: WLT provider processing result with persisted provider proof (verbatim passthrough).
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        "401":
-          description: Bearer session is missing, invalid, or expired.
+        "409":
+          description: Version or idempotency conflict.
           content:
             application/json:
               schema:
@@ -12290,8 +12340,57 @@ paths:
                     type: string
                   message:
                     type: string
-        "403":
-          description: Actor role cannot perform this function.
+  /dsh/control-panel/finance/payout-requests/{payoutId}/process:
+    post:
+      operationId: processDshControlPanelPayoutRequest
+      summary: Operator moves a payout request to processing state via the DSH finance proxy.
+      tags:
+        - DshFinanceProxy
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: payoutId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - idempotencyKey
+              properties:
+                idempotencyKey:
+                  type: string
+                  minLength: 1
+      responses:
+        "200":
+          description: Payout request processing started (verbatim passthrough)
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+        "401":
+          description: Bearer session is missing, invalid, or expired.
           content:
             application/json:
               schema:
@@ -12334,8 +12433,8 @@ paths:
                     type: string
   /dsh/control-panel/finance/payout-requests/{payoutId}/complete:
     post:
-      operationId: completeDshControlPanelFinancePayoutRequest
-      summary: A checker distinct from approver and processor completes a provider-proven payout and posts its WLT journal.
+      operationId: completeDshControlPanelPayoutRequest
+      summary: Operator marks a payout request complete via the DSH finance proxy.
       tags:
         - DshFinanceProxy
       security:
@@ -12346,16 +12445,29 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - idempotencyKey
+              properties:
+                idempotencyKey:
+                  type: string
+                  minLength: 1
       responses:
         "200":
-          description: WLT payout completion and ledger result (verbatim passthrough).
+          description: Payout request completed (verbatim passthrough)
           content:
             application/json:
               schema:
                 type: object
                 additionalProperties: true
-        "401":
-          description: Bearer session is missing, invalid, or expired.
+        "400":
+          description: Validation failed.
           content:
             application/json:
               schema:
@@ -12368,8 +12480,8 @@ paths:
                     type: string
                   message:
                     type: string
-        "403":
-          description: Actor role cannot perform this function.
+        "401":
+          description: Bearer session is missing, invalid, or expired.
           content:
             application/json:
               schema:
@@ -12412,8 +12524,8 @@ paths:
                     type: string
   /dsh/control-panel/finance/payout-requests/{payoutId}/fail:
     post:
-      operationId: failDshControlPanelFinancePayoutRequest
-      summary: Route an unresolved provider payout to WLT reconciliation; it never invents a failed financial outcome.
+      operationId: failDshControlPanelPayoutRequest
+      summary: Operator records a payout failure via the DSH finance proxy.
       tags:
         - DshFinanceProxy
       security:
@@ -12424,9 +12536,33 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - idempotencyKey
+                - failureReason
+              properties:
+                idempotencyKey:
+                  type: string
+                  minLength: 1
+                failureReason:
+                  type: string
+                  minLength: 1
       responses:
-        "401":
-          description: Bearer session is missing, invalid, or expired.
+        "200":
+          description: Payout request failed state recorded (verbatim passthrough)
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          description: Validation failed.
           content:
             application/json:
               schema:
@@ -12439,8 +12575,8 @@ paths:
                     type: string
                   message:
                     type: string
-        "403":
-          description: Actor role cannot perform this function.
+        "401":
+          description: Bearer session is missing, invalid, or expired.
           content:
             application/json:
               schema:
@@ -12483,8 +12619,8 @@ paths:
                     type: string
   /dsh/control-panel/finance/settlements/from-delivered-orders:
     post:
-      operationId: createDshGovernedSettlementFromDeliveredOrders
-      summary: Derive eligible delivered-order sources in DSH and ask WLT to calculate the settlement.
+      operationId: triggerDshControlPanelFinanceSettlementsFromDeliveredOrders
+      summary: Operator triggers governed WLT settlement calculation from delivered orders via the DSH finance proxy.
       tags:
         - DshFinanceProxy
       security:
@@ -12497,25 +12633,16 @@ paths:
               type: object
               additionalProperties: false
               required:
-                - partnerId
-                - periodStart
-                - periodEnd
+                - idempotencyKey
               properties:
-                partnerId:
+                idempotencyKey:
                   type: string
                   minLength: 1
-                periodStart:
+                partnerId:
                   type: string
-                  format: date
-                periodEnd:
-                  type: string
-                  format: date
-                currency:
-                  type: string
-                  default: YER
       responses:
-        "201":
-          description: Governed WLT settlement created from DSH-owned delivered-order sources.
+        "200":
+          description: Settlement triggered (verbatim passthrough)
           content:
             application/json:
               schema:
@@ -12537,20 +12664,6 @@ paths:
                     type: string
         "401":
           description: Bearer session is missing, invalid, or expired.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "403":
-          description: Actor role cannot perform this function.
           content:
             application/json:
               schema:
@@ -12578,9 +12691,58 @@ paths:
                   message:
                     type: string
   /dsh/control-panel/finance/settlement-policies/{partnerId}:
+    get:
+      operationId: getDshControlPanelFinanceSettlementPolicy
+      summary: Operator reads the governed WLT settlement policy for a partner via the DSH finance proxy.
+      tags:
+        - DshFinanceProxy
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: partnerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Settlement policy view (verbatim passthrough)
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401":
+          description: Bearer session is missing, invalid, or expired.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+        "404":
+          description: Scoped store context was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
     put:
-      operationId: upsertDshSettlementPolicy
-      summary: Upsert the WLT-owned partner settlement fee policy.
+      operationId: upsertDshControlPanelFinanceSettlementPolicy
+      summary: Operator creates or updates the governed WLT settlement policy for a partner via the DSH finance proxy.
       tags:
         - DshFinanceProxy
       security:
@@ -12599,24 +12761,22 @@ paths:
               type: object
               additionalProperties: false
               required:
-                - feeBasisPoints
+                - idempotencyKey
               properties:
-                feeBasisPoints:
+                idempotencyKey:
+                  type: string
+                  minLength: 1
+                settlementCycleDays:
+                  type: integer
+                  minimum: 1
+                minimumSettlementAmountMinorUnits:
                   type: integer
                   minimum: 0
-                  maximum: 10000
                 currency:
                   type: string
-                  default: YER
-                status:
-                  type: string
-                  enum:
-                    - active
-                    - inactive
-                  default: active
       responses:
         "200":
-          description: Settlement policy persisted by WLT.
+          description: Settlement policy upserted (verbatim passthrough)
           content:
             application/json:
               schema:
@@ -12650,8 +12810,8 @@ paths:
                     type: string
                   message:
                     type: string
-        "403":
-          description: Actor role cannot perform this function.
+        "409":
+          description: Version or idempotency conflict.
           content:
             application/json:
               schema:
@@ -12666,10 +12826,10 @@ paths:
                     type: string
   /dsh/captain/finance/cod-records/{recordId}/collect:
     post:
-      operationId: POSTDshCaptainFinanceCodRecordsRecordIdCollect
-      summary: Governed finance operation owned by DSH/WLT.
+      operationId: collectDshCaptainCodRecord
+      summary: Captain records cash-on-delivery collection against a governed WLT COD liability record.
       tags:
-        - DshCaptainFinance
+        - DshFinanceProxy
       security:
         - bearerAuth: []
       parameters:
@@ -12679,22 +12839,21 @@ paths:
           schema:
             type: string
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
               type: object
-              additionalProperties: true
+              additionalProperties: false
+              required:
+                - idempotencyKey
+              properties:
+                idempotencyKey:
+                  type: string
+                  minLength: 1
       responses:
         "200":
-          description: Governed finance response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        "201":
-          description: Governed finance object created
+          description: COD collection recorded (verbatim passthrough)
           content:
             application/json:
               schema:
@@ -12716,20 +12875,6 @@ paths:
                     type: string
         "401":
           description: Bearer session is missing, invalid, or expired.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "403":
-          description: Actor role cannot perform this function.
           content:
             application/json:
               schema:
@@ -12772,10 +12917,10 @@ paths:
                     type: string
   /dsh/captain/finance/cod-records/{recordId}/remit:
     post:
-      operationId: POSTDshCaptainFinanceCodRecordsRecordIdRemit
-      summary: Governed finance operation owned by DSH/WLT.
+      operationId: remitDshCaptainCodRecord
+      summary: Captain records remittance of collected COD cash against a governed WLT COD liability record.
       tags:
-        - DshCaptainFinance
+        - DshFinanceProxy
       security:
         - bearerAuth: []
       parameters:
@@ -12785,22 +12930,21 @@ paths:
           schema:
             type: string
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
               type: object
-              additionalProperties: true
+              additionalProperties: false
+              required:
+                - idempotencyKey
+              properties:
+                idempotencyKey:
+                  type: string
+                  minLength: 1
       responses:
         "200":
-          description: Governed finance response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        "201":
-          description: Governed finance object created
+          description: COD remittance recorded (verbatim passthrough)
           content:
             application/json:
               schema:
@@ -12822,20 +12966,6 @@ paths:
                     type: string
         "401":
           description: Bearer session is missing, invalid, or expired.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "403":
-          description: Actor role cannot perform this function.
           content:
             application/json:
               schema:
@@ -12973,105 +13103,6 @@ paths:
       responses:
         "200":
           description: Governed finance response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        "400":
-          description: Validation failed.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "401":
-          description: Bearer session is missing, invalid, or expired.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "403":
-          description: Actor role cannot perform this function.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "404":
-          description: Scoped store context was not found.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "409":
-          description: Version or idempotency conflict.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-    post:
-      operationId: POSTDshCaptainFinancePayouts
-      summary: Governed finance operation owned by DSH/WLT.
-      tags:
-        - DshCaptainFinance
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
-      responses:
-        "200":
-          description: Governed finance response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        "201":
-          description: Governed finance object created
           content:
             application/json:
               schema:
@@ -13391,119 +13422,6 @@ paths:
                     type: string
                   message:
                     type: string
-        "409":
-          description: Version or idempotency conflict.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-    post:
-      operationId: POSTDshFieldFinancePayouts
-      summary: Governed finance operation owned by DSH/WLT.
-      tags:
-        - DshFieldFinance
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
-      responses:
-        "200":
-          description: Governed finance response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        "201":
-          description: Governed finance object created
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        "400":
-          description: Validation failed.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "401":
-          description: Bearer session is missing, invalid, or expired.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "403":
-          description: Actor role cannot perform this function.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "404":
-          description: Scoped store context was not found.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "409":
-          description: Version or idempotency conflict.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
   /dsh/field/finance/payout-destinations:
     get:
       operationId: GETDshFieldFinancePayoutDestinations
@@ -13576,123 +13494,10 @@ paths:
                     type: string
                   message:
                     type: string
-        "409":
-          description: Version or idempotency conflict.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-    post:
-      operationId: POSTDshFieldFinancePayoutDestinations
-      summary: Governed finance operation owned by DSH/WLT.
-      tags:
-        - DshFieldFinance
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
-      responses:
-        "200":
-          description: Governed finance response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        "201":
-          description: Governed finance object created
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
-        "400":
-          description: Validation failed.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "401":
-          description: Bearer session is missing, invalid, or expired.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "403":
-          description: Actor role cannot perform this function.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "404":
-          description: Scoped store context was not found.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "409":
-          description: Version or idempotency conflict.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
   /dsh/field/finance/payout-destinations/{destinationId}:
-    patch:
-      operationId: PATCHDshFieldFinancePayoutDestinationsDestinationId
-      summary: Governed finance operation owned by DSH/WLT.
+    get:
+      operationId: getDshFieldFinancePayoutDestination
+      summary: Read a single governed WLT payout destination owned by the authenticated field actor.
       tags:
         - DshFieldFinance
       security:
@@ -13703,35 +13508,14 @@ paths:
           required: true
           schema:
             type: string
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: true
       responses:
         "200":
-          description: Governed finance response
+          description: Payout destination view (verbatim passthrough)
           content:
             application/json:
               schema:
                 type: object
                 additionalProperties: true
-        "400":
-          description: Validation failed.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
         "401":
           description: Bearer session is missing, invalid, or expired.
           content:
@@ -13746,36 +13530,8 @@ paths:
                     type: string
                   message:
                     type: string
-        "403":
-          description: Actor role cannot perform this function.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
         "404":
           description: Scoped store context was not found.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "409":
-          description: Version or idempotency conflict.
           content:
             application/json:
               schema:
@@ -13789,8 +13545,8 @@ paths:
                   message:
                     type: string
     delete:
-      operationId: DELETEDshFieldFinancePayoutDestinationsDestinationId
-      summary: Governed finance operation owned by DSH/WLT.
+      operationId: deleteDshFieldFinancePayoutDestination
+      summary: Remove a governed WLT payout destination owned by the authenticated field actor.
       tags:
         - DshFieldFinance
       security:
@@ -13802,29 +13558,8 @@ paths:
           schema:
             type: string
       responses:
-        "200":
-          description: Governed finance response
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: true
         "204":
-          description: Governed finance object deleted
-        "400":
-          description: Validation failed.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
+          description: Destination removed.
         "401":
           description: Bearer session is missing, invalid, or expired.
           content:
@@ -13839,36 +13574,8 @@ paths:
                     type: string
                   message:
                     type: string
-        "403":
-          description: Actor role cannot perform this function.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
         "404":
           description: Scoped store context was not found.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - code
-                  - message
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-        "409":
-          description: Version or idempotency conflict.
           content:
             application/json:
               schema:
@@ -13973,7 +13680,7 @@ paths:
   /dsh/control-panel/finance/reconciliation-cases/{caseId}/assign:
     post:
       operationId: assignDshControlPanelFinanceReconciliationCase
-      summary: Operator assigns a reconciliation case to himself/another operator.
+      summary: Operator assigns a governed WLT reconciliation case to themselves or a designee via the DSH finance proxy.
       tags:
         - DshFinanceProxy
       security:
@@ -13984,14 +13691,43 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - idempotencyKey
+              properties:
+                idempotencyKey:
+                  type: string
+                  minLength: 1
+                assigneeId:
+                  type: string
       responses:
         "200":
-          description: WLT reconciliation case assignment result (verbatim passthrough).
+          description: Reconciliation case assigned (verbatim passthrough)
           content:
             application/json:
               schema:
                 type: object
                 additionalProperties: true
+        "400":
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
         "401":
           description: Bearer session is missing, invalid, or expired.
           content:
@@ -14020,10 +13756,24 @@ paths:
                     type: string
                   message:
                     type: string
+        "409":
+          description: Version or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
   /dsh/control-panel/finance/reconciliation-cases/{caseId}/resolve:
     post:
       operationId: resolveDshControlPanelFinanceReconciliationCase
-      summary: Operator resolves a reconciliation case.
+      summary: Operator resolves a governed WLT reconciliation case via the DSH finance proxy.
       tags:
         - DshFinanceProxy
       security:
@@ -14040,22 +13790,22 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required:
-                - resolutionAction
-                - resolutionNote
+                - idempotencyKey
+                - resolution
               properties:
-                resolutionAction:
+                idempotencyKey:
                   type: string
-                  enum:
-                    - confirmed_success
-                    - confirmed_failed
-                    - manual_adjustment
-                    - ignored
-                resolutionNote:
+                  minLength: 1
+                resolution:
+                  type: string
+                  minLength: 1
+                notes:
                   type: string
       responses:
         "200":
-          description: WLT reconciliation case resolution result (verbatim passthrough).
+          description: Reconciliation case resolved (verbatim passthrough)
           content:
             application/json:
               schema:
@@ -59408,29 +59158,29 @@ components:
             newExpiry:
               type: string
               format: date-time
+    DshStoreOperationalContext:
+      type: object
+      additionalProperties: false
+      required:
+        - addressLine
+        - coverageSummary
+        - operatingHours
+        - deliveryReadiness
+      properties:
+        addressLine:
+          type: string
+          minLength: 1
+        coverageSummary:
+          type: string
+          minLength: 1
+        operatingHours:
+          type: string
+          minLength: 1
+        deliveryReadiness:
+          type: string
+          minLength: 1
 x-bthwani-source-files:
   - services/dsh/contracts/dsh.openapi.yaml
-  - services/dsh/contracts/components/parameters.yaml
-  - services/dsh/contracts/components/responses.yaml
-  - services/dsh/contracts/components/schemas/analytics.schemas.yaml
-  - services/dsh/contracts/components/schemas/captain.schemas.yaml
-  - services/dsh/contracts/components/schemas/cart-serviceability.schemas.yaml
-  - services/dsh/contracts/components/schemas/catalog.schemas.yaml
-  - services/dsh/contracts/components/schemas/checkout.schemas.yaml
-  - services/dsh/contracts/components/schemas/common.schemas.yaml
-  - services/dsh/contracts/components/schemas/discovery.schemas.yaml
-  - services/dsh/contracts/components/schemas/dispatch.schemas.yaml
-  - services/dsh/contracts/components/schemas/field.schemas.yaml
-  - services/dsh/contracts/components/schemas/finance-reference.schemas.yaml
-  - services/dsh/contracts/components/schemas/marketing-commercial.schemas.yaml
-  - services/dsh/contracts/components/schemas/orders.schemas.yaml
-  - services/dsh/contracts/components/schemas/partner.schemas.yaml
-  - services/dsh/contracts/components/schemas/platform-policies.schemas.yaml
-  - services/dsh/contracts/components/schemas/preparation-handoff.schemas.yaml
-  - services/dsh/contracts/components/schemas/store.schemas.yaml
-  - services/dsh/contracts/components/schemas/support.schemas.yaml
-  - services/dsh/contracts/components/schemas/system.schemas.yaml
-  - services/dsh/contracts/components/securitySchemes.yaml
   - services/dsh/contracts/dsh.administration.openapi.yaml
   - services/dsh/contracts/dsh.analytics-extensions.openapi.yaml
   - services/dsh/contracts/dsh.captain-financial-eligibility.openapi.yaml
@@ -59470,27 +59220,8 @@ x-bthwani-source-files:
   - services/dsh/contracts/dsh.runtime-extensions.openapi.yaml
   - services/dsh/contracts/dsh.settlements-commissions.openapi.yaml
   - services/dsh/contracts/dsh.store-captain-handoff.openapi.yaml
-  - services/dsh/contracts/dsh.store-operational-context.overlay.yaml
   - services/dsh/contracts/dsh.support-governance.openapi.yaml
   - services/dsh/contracts/dsh.support-message-delivery.openapi.yaml
   - services/dsh/contracts/dsh.workforce-scopes.openapi.yaml
-  - services/dsh/contracts/paths/analytics.paths.yaml
-  - services/dsh/contracts/paths/captain.paths.yaml
-  - services/dsh/contracts/paths/cart-serviceability.paths.yaml
-  - services/dsh/contracts/paths/catalog.paths.yaml
-  - services/dsh/contracts/paths/checkout.paths.yaml
-  - services/dsh/contracts/paths/discovery.paths.yaml
-  - services/dsh/contracts/paths/dispatch.paths.yaml
-  - services/dsh/contracts/paths/field.paths.yaml
-  - services/dsh/contracts/paths/home-discovery.paths.yaml
-  - services/dsh/contracts/paths/marketing-commercial.paths.yaml
-  - services/dsh/contracts/paths/misc.paths.yaml
-  - services/dsh/contracts/paths/operator.paths.yaml
-  - services/dsh/contracts/paths/orders.paths.yaml
-  - services/dsh/contracts/paths/partner.paths.yaml
-  - services/dsh/contracts/paths/platform-policies.paths.yaml
-  - services/dsh/contracts/paths/preparation-handoff.paths.yaml
-  - services/dsh/contracts/paths/support.paths.yaml
-  - services/dsh/contracts/paths/system.paths.yaml
-  - services/dsh/contracts/paths/workforce.paths.yaml
-x-bthwani-source-sha256: ff26f677d22d895d3654ddd99d52497c46ff7ba7224cbae30682bc7b0db2d888
+  - services/dsh/contracts/dsh.store-operational-context.overlay.yaml
+x-bthwani-source-sha256: 6782c53e055c46c50823f10359c1909df9622b5c746b592f0b924da6ff2ef7cd

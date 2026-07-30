@@ -32,6 +32,7 @@ paths:
   /wlt/field-commissions:
     post:
       operationId: createFieldCategoryCommission
+      tags: [ WltWorkforceFinance ]
       security: [ { bearerAuth: [] } ]
       requestBody:
         required: true
@@ -47,6 +48,7 @@ paths:
   /wlt/provider-penalties:
     post:
       operationId: createProviderPenalty
+      tags: [ WltWorkforceFinance ]
       security: [ { bearerAuth: [] } ]
       requestBody:
         required: true

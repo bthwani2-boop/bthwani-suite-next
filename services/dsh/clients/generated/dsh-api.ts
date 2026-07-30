@@ -1806,8 +1806,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Operator approves a governed WLT payout request through the DSH finance proxy. */
-        post: operations["approveDshControlPanelFinancePayoutRequest"];
+        /** Operator approves a governed WLT payout request via the DSH finance proxy. */
+        post: operations["approveDshControlPanelPayoutRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1823,8 +1823,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Operator rejects a governed WLT payout request through the DSH finance proxy. */
-        post: operations["rejectDshControlPanelFinancePayoutRequest"];
+        /** Operator rejects a governed WLT payout request via the DSH finance proxy. */
+        post: operations["rejectDshControlPanelPayoutRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1840,8 +1840,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Operator sends an approved governed payout request to the configured WLT financial provider. */
-        post: operations["processDshControlPanelFinancePayoutRequest"];
+        /** Operator moves a payout request to processing state via the DSH finance proxy. */
+        post: operations["processDshControlPanelPayoutRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1857,8 +1857,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** A checker distinct from approver and processor completes a provider-proven payout and posts its WLT journal. */
-        post: operations["completeDshControlPanelFinancePayoutRequest"];
+        /** Operator marks a payout request complete via the DSH finance proxy. */
+        post: operations["completeDshControlPanelPayoutRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1874,8 +1874,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Route an unresolved provider payout to WLT reconciliation; it never invents a failed financial outcome. */
-        post: operations["failDshControlPanelFinancePayoutRequest"];
+        /** Operator records a payout failure via the DSH finance proxy. */
+        post: operations["failDshControlPanelPayoutRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1891,8 +1891,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Derive eligible delivered-order sources in DSH and ask WLT to calculate the settlement. */
-        post: operations["createDshGovernedSettlementFromDeliveredOrders"];
+        /** Operator triggers governed WLT settlement calculation from delivered orders via the DSH finance proxy. */
+        post: operations["triggerDshControlPanelFinanceSettlementsFromDeliveredOrders"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1906,9 +1906,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        /** Upsert the WLT-owned partner settlement fee policy. */
-        put: operations["upsertDshSettlementPolicy"];
+        /** Operator reads the governed WLT settlement policy for a partner via the DSH finance proxy. */
+        get: operations["getDshControlPanelFinanceSettlementPolicy"];
+        /** Operator creates or updates the governed WLT settlement policy for a partner via the DSH finance proxy. */
+        put: operations["upsertDshControlPanelFinanceSettlementPolicy"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1925,8 +1926,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Governed finance operation owned by DSH/WLT. */
-        post: operations["POSTDshCaptainFinanceCodRecordsRecordIdCollect"];
+        /** Captain records cash-on-delivery collection against a governed WLT COD liability record. */
+        post: operations["collectDshCaptainCodRecord"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1942,8 +1943,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Governed finance operation owned by DSH/WLT. */
-        post: operations["POSTDshCaptainFinanceCodRecordsRecordIdRemit"];
+        /** Captain records remittance of collected COD cash against a governed WLT COD liability record. */
+        post: operations["remitDshCaptainCodRecord"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1977,8 +1978,7 @@ export interface paths {
         /** Governed finance operation owned by DSH/WLT. */
         get: operations["GETDshCaptainFinancePayouts"];
         put?: never;
-        /** Governed finance operation owned by DSH/WLT. */
-        post: operations["POSTDshCaptainFinancePayouts"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2029,8 +2029,7 @@ export interface paths {
         /** Governed finance operation owned by DSH/WLT. */
         get: operations["GETDshFieldFinancePayouts"];
         put?: never;
-        /** Governed finance operation owned by DSH/WLT. */
-        post: operations["POSTDshFieldFinancePayouts"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2047,8 +2046,7 @@ export interface paths {
         /** Governed finance operation owned by DSH/WLT. */
         get: operations["GETDshFieldFinancePayoutDestinations"];
         put?: never;
-        /** Governed finance operation owned by DSH/WLT. */
-        post: operations["POSTDshFieldFinancePayoutDestinations"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2062,15 +2060,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Read a single governed WLT payout destination owned by the authenticated field actor. */
+        get: operations["getDshFieldFinancePayoutDestination"];
         put?: never;
         post?: never;
-        /** Governed finance operation owned by DSH/WLT. */
-        delete: operations["DELETEDshFieldFinancePayoutDestinationsDestinationId"];
+        /** Remove a governed WLT payout destination owned by the authenticated field actor. */
+        delete: operations["deleteDshFieldFinancePayoutDestination"];
         options?: never;
         head?: never;
-        /** Governed finance operation owned by DSH/WLT. */
-        patch: operations["PATCHDshFieldFinancePayoutDestinationsDestinationId"];
+        patch?: never;
         trace?: never;
     };
     "/dsh/control-panel/finance/reconciliation-cases": {
@@ -2116,7 +2114,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Operator assigns a reconciliation case to himself/another operator. */
+        /** Operator assigns a governed WLT reconciliation case to themselves or a designee via the DSH finance proxy. */
         post: operations["assignDshControlPanelFinanceReconciliationCase"];
         delete?: never;
         options?: never;
@@ -2133,7 +2131,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Operator resolves a reconciliation case. */
+        /** Operator resolves a governed WLT reconciliation case via the DSH finance proxy. */
         post: operations["resolveDshControlPanelFinanceReconciliationCase"];
         delete?: never;
         options?: never;
@@ -10583,6 +10581,12 @@ export interface components {
             /** Format: date-time */
             newExpiry: string;
         };
+        DshStoreOperationalContext: {
+            addressLine: string;
+            coverageSummary: string;
+            operatingHours: string;
+            deliveryReadiness: string;
+        };
     };
     responses: {
         /** @description Validation failed. */
@@ -17799,330 +17803,25 @@ export interface operations {
             };
         };
     };
-    approveDshControlPanelFinancePayoutRequest: {
+    approveDshControlPanelPayoutRequest: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 payoutId: string;
             };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description WLT payout request approval result (verbatim passthrough). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Bearer session is missing, invalid, or expired. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Scoped store context was not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-        };
-    };
-    rejectDshControlPanelFinancePayoutRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                payoutId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description WLT payout request rejection result (verbatim passthrough). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Bearer session is missing, invalid, or expired. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Scoped store context was not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-        };
-    };
-    processDshControlPanelFinancePayoutRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                payoutId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description WLT provider processing result with persisted provider proof (verbatim passthrough). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Bearer session is missing, invalid, or expired. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Actor role cannot perform this function. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Scoped store context was not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Version or idempotency conflict. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-        };
-    };
-    completeDshControlPanelFinancePayoutRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                payoutId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description WLT payout completion and ledger result (verbatim passthrough). */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Bearer session is missing, invalid, or expired. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Actor role cannot perform this function. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Scoped store context was not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Version or idempotency conflict. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-        };
-    };
-    failDshControlPanelFinancePayoutRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                payoutId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Bearer session is missing, invalid, or expired. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Actor role cannot perform this function. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Scoped store context was not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Version or idempotency conflict. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-        };
-    };
-    createDshGovernedSettlementFromDeliveredOrders: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
                 "application/json": {
-                    partnerId: string;
-                    /** Format: date */
-                    periodStart: string;
-                    /** Format: date */
-                    periodEnd: string;
-                    /** @default YER */
-                    currency?: string;
+                    idempotencyKey: string;
                 };
             };
         };
         responses: {
-            /** @description Governed WLT settlement created from DSH-owned delivered-order sources. */
-            201: {
+            /** @description Payout request approved (verbatim passthrough) */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18156,8 +17855,8 @@ export interface operations {
                     };
                 };
             };
-            /** @description Actor role cannot perform this function. */
-            403: {
+            /** @description Scoped store context was not found. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18182,7 +17881,434 @@ export interface operations {
             };
         };
     };
-    upsertDshSettlementPolicy: {
+    rejectDshControlPanelPayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    idempotencyKey: string;
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Payout request rejected (verbatim passthrough) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation failed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Bearer session is missing, invalid, or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Scoped store context was not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version or idempotency conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    processDshControlPanelPayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    idempotencyKey: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Payout request processing started (verbatim passthrough) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation failed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Bearer session is missing, invalid, or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Scoped store context was not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version or idempotency conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    completeDshControlPanelPayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    idempotencyKey: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Payout request completed (verbatim passthrough) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation failed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Bearer session is missing, invalid, or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Scoped store context was not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version or idempotency conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    failDshControlPanelPayoutRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payoutId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    idempotencyKey: string;
+                    failureReason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Payout request failed state recorded (verbatim passthrough) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation failed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Bearer session is missing, invalid, or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Scoped store context was not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version or idempotency conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    triggerDshControlPanelFinanceSettlementsFromDeliveredOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    idempotencyKey: string;
+                    partnerId?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Settlement triggered (verbatim passthrough) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation failed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Bearer session is missing, invalid, or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Version or idempotency conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    getDshControlPanelFinanceSettlementPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                partnerId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settlement policy view (verbatim passthrough) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bearer session is missing, invalid, or expired. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+            /** @description Scoped store context was not found. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
+        };
+    };
+    upsertDshControlPanelFinanceSettlementPolicy: {
         parameters: {
             query?: never;
             header?: never;
@@ -18194,19 +18320,15 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    feeBasisPoints: number;
-                    /** @default YER */
+                    idempotencyKey: string;
+                    settlementCycleDays?: number;
+                    minimumSettlementAmountMinorUnits?: number;
                     currency?: string;
-                    /**
-                     * @default active
-                     * @enum {string}
-                     */
-                    status?: "active" | "inactive";
                 };
             };
         };
         responses: {
-            /** @description Settlement policy persisted by WLT. */
+            /** @description Settlement policy upserted (verbatim passthrough) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -18241,8 +18363,8 @@ export interface operations {
                     };
                 };
             };
-            /** @description Actor role cannot perform this function. */
-            403: {
+            /** @description Version or idempotency conflict. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18255,7 +18377,7 @@ export interface operations {
             };
         };
     };
-    POSTDshCaptainFinanceCodRecordsRecordIdCollect: {
+    collectDshCaptainCodRecord: {
         parameters: {
             query?: never;
             header?: never;
@@ -18264,27 +18386,16 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
                 "application/json": {
-                    [key: string]: unknown;
+                    idempotencyKey: string;
                 };
             };
         };
         responses: {
-            /** @description Governed finance response */
+            /** @description COD collection recorded (verbatim passthrough) */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Governed finance object created */
-            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18308,18 +18419,6 @@ export interface operations {
             };
             /** @description Bearer session is missing, invalid, or expired. */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Actor role cannot perform this function. */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18356,7 +18455,7 @@ export interface operations {
             };
         };
     };
-    POSTDshCaptainFinanceCodRecordsRecordIdRemit: {
+    remitDshCaptainCodRecord: {
         parameters: {
             query?: never;
             header?: never;
@@ -18365,27 +18464,16 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
                 "application/json": {
-                    [key: string]: unknown;
+                    idempotencyKey: string;
                 };
             };
         };
         responses: {
-            /** @description Governed finance response */
+            /** @description COD remittance recorded (verbatim passthrough) */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Governed finance object created */
-            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18409,18 +18497,6 @@ export interface operations {
             };
             /** @description Bearer session is missing, invalid, or expired. */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Actor role cannot perform this function. */
-            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18550,105 +18626,6 @@ export interface operations {
         responses: {
             /** @description Governed finance response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation failed. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Bearer session is missing, invalid, or expired. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Actor role cannot perform this function. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Scoped store context was not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Version or idempotency conflict. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-        };
-    };
-    POSTDshCaptainFinancePayouts: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Governed finance response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Governed finance object created */
-            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18952,117 +18929,6 @@ export interface operations {
                     };
                 };
             };
-            /** @description Version or idempotency conflict. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-        };
-    };
-    POSTDshFieldFinancePayouts: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Governed finance response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Governed finance object created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation failed. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Bearer session is missing, invalid, or expired. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Actor role cannot perform this function. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Scoped store context was not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Version or idempotency conflict. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
         };
     };
     GETDshFieldFinancePayoutDestinations: {
@@ -19133,120 +18999,9 @@ export interface operations {
                     };
                 };
             };
-            /** @description Version or idempotency conflict. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
         };
     };
-    POSTDshFieldFinancePayoutDestinations: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
-        responses: {
-            /** @description Governed finance response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Governed finance object created */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation failed. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Bearer session is missing, invalid, or expired. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Actor role cannot perform this function. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Scoped store context was not found. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Version or idempotency conflict. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-        };
-    };
-    DELETEDshFieldFinancePayoutDestinationsDestinationId: {
+    getDshFieldFinancePayoutDestination: {
         parameters: {
             query?: never;
             header?: never;
@@ -19257,7 +19012,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Governed finance response */
+            /** @description Payout destination view (verbatim passthrough) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -19265,25 +19020,6 @@ export interface operations {
                 content: {
                     "application/json": {
                         [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Governed finance object deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation failed. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
                     };
                 };
             };
@@ -19299,32 +19035,8 @@ export interface operations {
                     };
                 };
             };
-            /** @description Actor role cannot perform this function. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
             /** @description Scoped store context was not found. */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Version or idempotency conflict. */
-            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19337,7 +19049,7 @@ export interface operations {
             };
         };
     };
-    PATCHDshFieldFinancePayoutDestinationsDestinationId: {
+    deleteDshFieldFinancePayoutDestination: {
         parameters: {
             query?: never;
             header?: never;
@@ -19346,36 +19058,14 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Governed finance response */
-            200: {
+            /** @description Destination removed. */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation failed. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
+                content?: never;
             };
             /** @description Bearer session is missing, invalid, or expired. */
             401: {
@@ -19389,32 +19079,8 @@ export interface operations {
                     };
                 };
             };
-            /** @description Actor role cannot perform this function. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
             /** @description Scoped store context was not found. */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        code: string;
-                        message: string;
-                    };
-                };
-            };
-            /** @description Version or idempotency conflict. */
-            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19520,9 +19186,16 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    idempotencyKey: string;
+                    assigneeId?: string;
+                };
+            };
+        };
         responses: {
-            /** @description WLT reconciliation case assignment result (verbatim passthrough). */
+            /** @description Reconciliation case assigned (verbatim passthrough) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -19530,6 +19203,18 @@ export interface operations {
                 content: {
                     "application/json": {
                         [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation failed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
                     };
                 };
             };
@@ -19557,6 +19242,18 @@ export interface operations {
                     };
                 };
             };
+            /** @description Version or idempotency conflict. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                    };
+                };
+            };
         };
     };
     resolveDshControlPanelFinanceReconciliationCase: {
@@ -19571,14 +19268,14 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    resolutionAction: "confirmed_success" | "confirmed_failed" | "manual_adjustment" | "ignored";
-                    resolutionNote: string;
+                    idempotencyKey: string;
+                    resolution: string;
+                    notes?: string;
                 };
             };
         };
         responses: {
-            /** @description WLT reconciliation case resolution result (verbatim passthrough). */
+            /** @description Reconciliation case resolved (verbatim passthrough) */
             200: {
                 headers: {
                     [name: string]: unknown;

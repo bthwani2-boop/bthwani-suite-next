@@ -71,13 +71,7 @@ components:
       required: true
       schema: { type: string, minLength: 1 }
   schemas:
-    Error:
-      type: object
-      additionalProperties: false
-      required: [code, message]
-      properties:
-        code: { type: string }
-        message: { type: string }
+    Error: { $ref: '../../../contracts/shared/common.openapi.yaml#/components/schemas/Error' }
   responses:
     Error:
       description: Governed WLT error response.

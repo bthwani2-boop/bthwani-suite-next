@@ -1673,6 +1673,7 @@ export interface components {
             paymentSessionId: string;
             subscriptionPurchaseId: string;
         };
+        /** @description The wire shape every Go `sendError(w, status, code, message)` helper already emits across all six backends. Domain-specific error schemas (DshError, WltError, ...) should $ref this instead of redeclaring it. */
         Error: {
             code: string;
             message: string;

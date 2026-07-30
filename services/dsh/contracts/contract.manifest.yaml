@@ -1,27 +1,6 @@
 bundle: generated/dsh.bundle.openapi.yaml
 entry: dsh.openapi.yaml
 modules:
-  - components/parameters.yaml
-  - components/responses.yaml
-  - components/schemas/analytics.schemas.yaml
-  - components/schemas/captain.schemas.yaml
-  - components/schemas/cart-serviceability.schemas.yaml
-  - components/schemas/catalog.schemas.yaml
-  - components/schemas/checkout.schemas.yaml
-  - components/schemas/common.schemas.yaml
-  - components/schemas/discovery.schemas.yaml
-  - components/schemas/dispatch.schemas.yaml
-  - components/schemas/field.schemas.yaml
-  - components/schemas/finance-reference.schemas.yaml
-  - components/schemas/marketing-commercial.schemas.yaml
-  - components/schemas/orders.schemas.yaml
-  - components/schemas/partner.schemas.yaml
-  - components/schemas/platform-policies.schemas.yaml
-  - components/schemas/preparation-handoff.schemas.yaml
-  - components/schemas/store.schemas.yaml
-  - components/schemas/support.schemas.yaml
-  - components/schemas/system.schemas.yaml
-  - components/securitySchemes.yaml
   - dsh.administration.openapi.yaml
   - dsh.analytics-extensions.openapi.yaml
   - dsh.captain-financial-eligibility.openapi.yaml
@@ -61,26 +40,9 @@ modules:
   - dsh.runtime-extensions.openapi.yaml
   - dsh.settlements-commissions.openapi.yaml
   - dsh.store-captain-handoff.openapi.yaml
-  - dsh.store-operational-context.overlay.yaml
   - dsh.support-governance.openapi.yaml
   - dsh.support-message-delivery.openapi.yaml
   - dsh.workforce-scopes.openapi.yaml
-  - paths/analytics.paths.yaml
-  - paths/captain.paths.yaml
-  - paths/cart-serviceability.paths.yaml
-  - paths/catalog.paths.yaml
-  - paths/checkout.paths.yaml
-  - paths/discovery.paths.yaml
-  - paths/dispatch.paths.yaml
-  - paths/field.paths.yaml
-  - paths/home-discovery.paths.yaml
-  - paths/marketing-commercial.paths.yaml
-  - paths/misc.paths.yaml
-  - paths/operator.paths.yaml
-  - paths/orders.paths.yaml
-  - paths/partner.paths.yaml
-  - paths/platform-policies.paths.yaml
-  - paths/preparation-handoff.paths.yaml
-  - paths/support.paths.yaml
-  - paths/system.paths.yaml
-  - paths/workforce.paths.yaml
+
+overlays:
+  - dsh.store-operational-context.overlay.yaml
