@@ -9,6 +9,7 @@ on:
       - 'tools/scripts/repair-field-catalog-detail.py'
       - 'tools/scripts/consolidate-dsh-cod-contract.py'
       - 'tools/scripts/repair-payment-remit-bindings.py'
+      - 'tools/scripts/normalize-refund-fragment-refs.py'
       - 'core/workforce/contracts/**'
       - 'services/dsh/**'
       - 'services/wlt/contracts/**'
@@ -69,6 +70,7 @@ jobs:
               raise SystemExit('Expected field path replacement block is missing')
           PY
           node tools/scripts/repair-workforce-refund-contracts.mjs
+          python tools/scripts/normalize-refund-fragment-refs.py
           python tools/scripts/repair-cod-catalog-bindings.py
           python tools/scripts/consolidate-dsh-cod-contract.py
           python tools/scripts/repair-field-catalog-detail.py
