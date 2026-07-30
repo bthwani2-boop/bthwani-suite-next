@@ -53,3 +53,86 @@ func (s *protectedStoreServer) handleFinanceCodReconciliationCases(w http.Respon
 	}
 	s.proxyFinanceRead(w, r, "/wlt/cod-reconciliation-cases", financeQuery(r, "status"), actor.OperatorContextID)
 }
+
+func (s *protectedStoreServer) handleAssignFinanceCodReconciliationCase(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	if !ok {
+		return
+	}
+	caseID := strings.TrimSpace(r.PathValue("caseId"))
+	if caseID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "caseId is required")
+		return
+	}
+	var input struct {
+		InvestigationNote string `json:"investigationNote"`
+	}
+	if !decodeActorFinanceJSON(w, r, &input) {
+		return
+	}
+	input.InvestigationNote = strings.TrimSpace(input.InvestigationNote)
+	if input.InvestigationNote == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "investigationNote is required")
+		return
+	}
+	payload, err := json.Marshal(map[string]string{
+		"operatorId":        actor.ID,
+		"investigationNote": input.InvestigationNote,
+	})
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode reconciliation assignment")
+		return
+	}
+	status, body, err := s.wlt.FinanceWriteWithOperatorContext(
+		r.Context(),
+		http.MethodPost,
+		"/wlt/cod-reconciliation-cases/"+url.PathEscape(caseID)+"/assign",
+		payload,
+		r.Header.Get("X-Correlation-ID"),
+		actor.OperatorContextID,
+	)
+	writeWltActorFinanceResponse(w, status, body, err)
+}
+
+func (s *protectedStoreServer) handleResolveFinanceCodReconciliationCase(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requirePermission(w, r, "control-panel", FinancePermissionManage, "operator")
+	if !ok {
+		return
+	}
+	caseID := strings.TrimSpace(r.PathValue("caseId"))
+	if caseID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "caseId is required")
+		return
+	}
+	var input struct {
+		ResolutionAction string `json:"resolutionAction"`
+		ResolutionNote   string `json:"resolutionNote"`
+	}
+	if !decodeActorFinanceJSON(w, r, &input) {
+		return
+	}
+	input.ResolutionAction = strings.TrimSpace(input.ResolutionAction)
+	input.ResolutionNote = strings.TrimSpace(input.ResolutionNote)
+	if input.ResolutionAction == "" || input.ResolutionNote == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "resolutionAction and resolutionNote are required")
+		return
+	}
+	payload, err := json.Marshal(map[string]string{
+		"operatorId":       actor.ID,
+		"resolutionAction": input.ResolutionAction,
+		"resolutionNote":   input.ResolutionNote,
+	})
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode reconciliation resolution")
+		return
+	}
+	status, body, err := s.wlt.FinanceWriteWithOperatorContext(
+		r.Context(),
+		http.MethodPost,
+		"/wlt/cod-reconciliation-cases/"+url.PathEscape(caseID)+"/resolve",
+		payload,
+		r.Header.Get("X-Correlation-ID"),
+		actor.OperatorContextID,
+	)
+	writeWltActorFinanceResponse(w, status, body, err)
+}
