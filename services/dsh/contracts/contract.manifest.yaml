@@ -46,4 +46,3 @@ modules:
 
 overlays:
   - dsh.store-operational-context.overlay.yaml
-  - dsh.catalog-detail.overlay.yaml
