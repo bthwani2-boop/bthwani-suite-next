@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 API = ROOT / "services/dsh/frontend/shared/finance-wlt-link/finance/finance-hub-runtime.api.ts"
 CONTROLLER = ROOT / "services/dsh/frontend/shared/finance-wlt-link/finance/finance.controller.ts"
 PANEL = ROOT / "services/dsh/frontend/control-panel/finance/GovernedSettlementPanel.tsx"
+PAYOUT_PANEL = ROOT / "services/dsh/frontend/control-panel/finance/PayoutRequestsPanel.tsx"
 FRONTEND = ROOT / "services/dsh/frontend"
 
 symbols = [
@@ -31,12 +32,12 @@ if active:
 
 panel_consumers: list[str] = []
 for path in FRONTEND.rglob("*"):
-    if path == PANEL or path.suffix not in {".ts", ".tsx", ".js", ".jsx", ".mjs"}:
+    if path in {PANEL, PAYOUT_PANEL} or path.suffix not in {".ts", ".tsx", ".js", ".jsx", ".mjs"}:
         continue
     if "GovernedSettlementPanel" in path.read_text(encoding="utf-8"):
         panel_consumers.append(str(path.relative_to(ROOT)))
 if panel_consumers:
-    raise RuntimeError(f"orphan settlement panel is still imported: {panel_consumers}")
+    raise RuntimeError(f"orphan settlement panel has unexpected consumers: {panel_consumers}")
 
 source = API.read_text(encoding="utf-8")
 type_pattern = re.compile(
@@ -79,6 +80,17 @@ for line in [
         raise RuntimeError(f"controller export cleanup expected one occurrence of {line.strip()}, found {count}")
     controller = controller.replace(line, "", 1)
 CONTROLLER.write_text(controller, encoding="utf-8")
+
+payout_panel = PAYOUT_PANEL.read_text(encoding="utf-8")
+for fragment in [
+    'import { GovernedSettlementPanel } from "./GovernedSettlementPanel";\n',
+    '      <GovernedSettlementPanel reload={reload} />\n',
+]:
+    count = payout_panel.count(fragment)
+    if count != 1:
+        raise RuntimeError(f"payout panel cleanup expected one occurrence of {fragment.strip()}, found {count}")
+    payout_panel = payout_panel.replace(fragment, "", 1)
+PAYOUT_PANEL.write_text(payout_panel, encoding="utf-8")
 
 if not PANEL.exists():
     raise RuntimeError("orphan GovernedSettlementPanel is already missing")
