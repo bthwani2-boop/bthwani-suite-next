@@ -199,13 +199,6 @@
       "retirementState": "DEPRECATED_SUPPORTED"
     },
     {
-      "route": "PUT /dsh/operator/catalog/stores/{storeId}/images/{role}",
-      "classification": "LEGACY_COMPATIBILITY",
-      "canonicalRoute": "PUT /dsh/stores/{storeId}/images/{role}",
-      "owner": "central-catalog",
-      "retirementState": "DEPRECATED_SUPPORTED"
-    },
-    {
       "route": "PUT /dsh/partner/catalog/assortment/{masterProductId}",
       "classification": "LEGACY_COMPATIBILITY",
       "canonicalRoute": "PUT /dsh/partner/stores/{storeId}/assortment/{masterProductId}",
