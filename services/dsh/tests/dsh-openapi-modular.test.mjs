@@ -92,6 +92,12 @@ paths:
       responses:
         "200":
           $ref: "https://contracts.example.test/common.yaml#/components/responses/Ok"
+  /protocol-relative-remote:
+    get:
+      operationId: getProtocolRelativeRemote
+      responses:
+        "200":
+          $ref: "//contracts.example.test/common.yaml#/components/responses/Ok"
 components:
   responses:
     Ok:

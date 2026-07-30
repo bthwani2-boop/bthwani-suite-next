@@ -12,8 +12,8 @@ function escapeJsonPointerToken(value) {
 function isLocalExternalReference(value) {
   if (typeof value !== "string" || value.startsWith("#")) return false;
   if (WINDOWS_ABSOLUTE_PATH_PATTERN.test(value)) return true;
-  if (value.startsWith("/") || value.startsWith("\\")) return true;
   if (value.startsWith("//")) return false;
+  if (value.startsWith("/") || value.startsWith("\\")) return true;
   return !URI_SCHEME_PATTERN.test(value);
 }
 
