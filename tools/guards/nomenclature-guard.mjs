@@ -134,10 +134,10 @@ function assertNoObsoleteSaasAuthorityReferences() {
 function assertCanonicalProductPolicy() {
   const policy = readRequired(PRODUCT_POLICY);
   if (!policy) return;
-  if (!/BThwani is not a SaaS product and does not define tenants\./.test(policy)) {
+  if (!/BThwani\s+is\s+not\s+a\s+SaaS\s+product\s+and\s+does\s+not\s+define\s+tenants\./.test(policy)) {
     violations.push({ file: PRODUCT_POLICY, line: 0, message: "NON_SAAS_PRODUCT_POLICY_DECLARATION_MISSING" });
   }
-  if (!/Partner subscriptions are commercial pricing relationships inside the platform/.test(policy)) {
+  if (!/Partner\s+subscriptions\s+are\s+commercial\s+pricing\s+relationships\s+inside\s+the\s+platform/.test(policy)) {
     violations.push({ file: PRODUCT_POLICY, line: 0, message: "PARTNER_SUBSCRIPTION_BOUNDARY_DECLARATION_MISSING" });
   }
 }
