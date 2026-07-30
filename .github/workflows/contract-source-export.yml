@@ -10,6 +10,7 @@ on:
       - 'tools/scripts/consolidate-dsh-cod-contract.py'
       - 'tools/scripts/repair-payment-remit-bindings.py'
       - 'tools/scripts/normalize-refund-fragment-refs.py'
+      - 'tools/scripts/repair-final-backend-bindings.py'
       - 'core/workforce/contracts/**'
       - 'services/dsh/**'
       - 'services/wlt/contracts/**'
@@ -75,14 +76,17 @@ jobs:
           python tools/scripts/consolidate-dsh-cod-contract.py
           python tools/scripts/repair-field-catalog-detail.py
           python tools/scripts/repair-payment-remit-bindings.py
+          python tools/scripts/repair-final-backend-bindings.py
           gofmt -w \
             services/dsh/backend/internal/http/server.go \
             services/dsh/backend/internal/http/catalog_unified_routes.go \
             services/dsh/backend/internal/http/cod_finance_handlers.go \
             services/dsh/backend/internal/http/cod_finance_routes.go \
+            services/dsh/backend/internal/http/payout_routes.go \
             services/dsh/backend/internal/http/cod_reconciliation_routes_test.go \
             services/dsh/backend/internal/http/field_catalog_detail_route_test.go \
             services/dsh/backend/internal/http/payment_partner_cod_routes_test.go \
+            services/dsh/backend/internal/http/final_finance_routes_test.go \
             services/dsh/backend/internal/wlt/finance_proxy.go \
             services/dsh/backend/internal/wlt/finance_proxy_test.go
       - name: Regenerate canonical artifacts
@@ -117,9 +121,11 @@ jobs:
             services/dsh/backend/internal/http/catalog_unified_routes.go
             services/dsh/backend/internal/http/cod_finance_handlers.go
             services/dsh/backend/internal/http/cod_finance_routes.go
+            services/dsh/backend/internal/http/payout_routes.go
             services/dsh/backend/internal/http/cod_reconciliation_routes_test.go
             services/dsh/backend/internal/http/field_catalog_detail_route_test.go
             services/dsh/backend/internal/http/payment_partner_cod_routes_test.go
+            services/dsh/backend/internal/http/final_finance_routes_test.go
             services/dsh/backend/internal/wlt/finance_proxy.go
             services/dsh/backend/internal/wlt/finance_proxy_test.go
             services/dsh/contracts/dsh.openapi.yaml
@@ -128,7 +134,9 @@ jobs:
             services/dsh/contracts/contract.manifest.yaml
             services/dsh/contracts/contract-registry.ts
             services/dsh/contracts/paths/catalog.paths.yaml
+            services/dsh/contracts/paths/captain.paths.yaml
             services/dsh/contracts/paths/cod-custody.paths.yaml
+            services/dsh/contracts/paths/field.paths.yaml
             services/dsh/contracts/paths/misc.paths.yaml
             services/dsh/contracts/paths/refunds.paths.yaml
             services/dsh/contracts/components/cod-custody.parameters.yaml
