@@ -100,7 +100,7 @@ func TestActivationIssuerBoundaryRejectsCrossOperatorContextIssuer(t *testing.T)
 	}
 }
 
-func TestActivationIssuerBoundaryRejectsCrossOperatorContextIssuerOutsideActiveSaaS(t *testing.T) {
+func TestActivationIssuerBoundaryRejectsCrossOperatorContextIssuerOutsideActivepartner_platform(t *testing.T) {
 	lookup := &fakeActorAccessLookup{accessByActor: map[string]activationActorAccess{
 		"operator-2": issuerAccess("OperatorContext-other", "provider.activation:issue"),
 		"field-1":    targetAccess("OperatorContext-main"),

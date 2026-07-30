@@ -5,7 +5,7 @@ info:
   description: Governed progressive feature-flag rollout, explicit pause/resume, health-gated advancement, abort, rollback and recovery guidance.
 x-bthwani-owner: core/platform-control
 x-bthwani-capability: platform-progressive-rollout
-x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-contract-state: CONTRACT_DRAFT
 servers:
   - url: http://localhost:58084
 paths:

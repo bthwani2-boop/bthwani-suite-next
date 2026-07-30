@@ -61,7 +61,7 @@ func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		if trustedOperatorContextID != "" && trustedOperatorContextID != operatorContextID {
-			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "provisioned employee tenant cannot override the active runtime operator context")
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "provisioned employee operator context cannot override the active runtime operator context")
 			return
 		}
 		trustedOperatorContextID = operatorContextID
@@ -71,7 +71,7 @@ func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	input.OperatorContextID = trustedOperatorContextID
-	if err := s.repository.ValidateEmployeePhoneTenant(r.Context(), input.PhoneE164, trustedOperatorContextID); err != nil {
+	if err := s.repository.ValidateEmployeePhoneOperatorContext(r.Context(), input.PhoneE164, trustedOperatorContextID); err != nil {
 		writeInternalActorError(w, err)
 		return
 	}

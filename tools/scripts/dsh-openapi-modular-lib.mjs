@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,35 +7,114 @@ export const repositoryRoot = path.resolve(__dirname, '../..');
 export const contractsDirectory = path.join(repositoryRoot, 'services/dsh/contracts');
 export const entryContractPath = path.join(contractsDirectory, 'dsh.openapi.yaml');
 export const generatedBundlePath = path.join(contractsDirectory, 'generated/dsh.bundle.openapi.yaml');
-export const generatedClientPath = path.join(repositoryRoot, 'services/dsh/clients/generated/dsh-api.ts');
+export const ownershipReportPath = path.join(contractsDirectory, 'dsh.contract-ownership.json');
+export const ownershipCollisionAllowlistPath = path.join(contractsDirectory, 'dsh.contract-ownership-allowlist.json');
 
-function readText(filePath) {
-  return fs.readFileSync(filePath, 'utf8').replace(/\r\n/g, '\n');
+const PATH_DOMAINS = [
+  'system',
+  'discovery',
+  'home-discovery',
+  'catalog',
+  'cart-serviceability',
+  'checkout',
+  'orders',
+  'preparation-handoff',
+  'dispatch',
+  'captain',
+  'partner',
+  'field',
+  'workforce',
+  'support',
+  'analytics',
+  'marketing-commercial',
+  'platform-policies',
+  'client-address-map',
+  'operator',
+  'misc',
+];
+
+const SCHEMA_DOMAINS = [
+  'common',
+  'system',
+  'store',
+  'discovery',
+  'catalog',
+  'cart-serviceability',
+  'checkout',
+  'orders',
+  'preparation-handoff',
+  'dispatch',
+  'captain',
+  'partner',
+  'field',
+  'workforce',
+  'finance-reference',
+  'support',
+  'analytics',
+  'marketing-commercial',
+  'platform-policies',
+  'client-address-map',
+];
+
+function toPosix(value) {
+  return value.split(path.sep).join('/');
 }
 
-function writeText(filePath, content) {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, content.endsWith('\n') ? content : `${content}\n`, 'utf8');
+function ensureRelative(value) {
+  if (value.startsWith('.')) return value;
+  return `./${value}`;
 }
 
-function topLevelKey(line) {
-  if (!line || /^\s/.test(line) || /^\s*#/.test(line)) return null;
-  const match = line.match(/^([A-Za-z0-9_.-]+):(?:\s.*)?$/);
-  return match?.[1] ?? null;
+function splitRef(value) {
+  const hashIndex = value.indexOf('#');
+  if (hashIndex === -1) return { filePart: value, fragment: '' };
+  return {
+    filePart: value.slice(0, hashIndex),
+    fragment: value.slice(hashIndex),
+  };
 }
 
-function findTopLevelSection(lines, name, startAt = 0) {
-  for (let index = startAt; index < lines.length; index += 1) {
-    if (topLevelKey(lines[index]) === name) return index;
+function isAbsoluteReference(value) {
+  return /^[a-z][a-z0-9+.-]*:/i.test(value) || value.startsWith('//');
+}
+
+function rewriteReferenceValue(value, fromFile, toFile, rootFile) {
+  if (isAbsoluteReference(value)) return value;
+  const { filePart, fragment } = splitRef(value);
+  const originalTarget = filePart
+    ? path.resolve(path.dirname(fromFile), filePart)
+    : rootFile;
+  let relative = toPosix(path.relative(path.dirname(toFile), originalTarget));
+  relative = ensureRelative(relative || path.basename(originalTarget));
+  return `${relative}${fragment}`;
+}
+
+function rewriteReferenceValueForBundle(value, moduleFile, rootFile) {
+  if (isAbsoluteReference(value)) return value;
+  const { filePart, fragment } = splitRef(value);
+  const target = filePart
+    ? path.resolve(path.dirname(moduleFile), filePart)
+    : moduleFile;
+  if (path.resolve(target) === path.resolve(rootFile)) {
+    return fragment || '#';
   }
-  return -1;
+  let relative = toPosix(path.relative(path.dirname(rootFile), target));
+  relative = ensureRelative(relative || path.basename(target));
+  return `${relative}${fragment}`;
 }
 
-function findTopLevelSectionEnd(lines, start) {
-  for (let index = start + 1; index < lines.length; index += 1) {
-    if (topLevelKey(lines[index])) return index;
-  }
-  return lines.length;
+function rewriteRefs(text, transform) {
+  return text
+    .split('\n')
+    .map((line) => line.replace(
+      /(\$ref:\s*)(["']?)([^"'\s,}\]]+)\2/g,
+      (_match, prefix, quote, value) => {
+        const nextValue = transform(value);
+        const resolvedQuote = quote || '"';
+        return `${prefix}${resolvedQuote}${nextValue}${resolvedQuote}`;
+      },
+    ))
+    .join('\n');
 }
 
 function decodeYamlKey(raw) {
@@ -52,25 +130,28 @@ function parseKeyAtIndent(line, indent) {
   if (!line.startsWith(prefix) || line.startsWith(`${prefix} `)) return null;
   const body = line.slice(indent);
   const match = body.match(/^("[^"]+"|'[^']+'|[^:#][^:]*):\s*(?:#.*)?$/);
-  return match ? decodeYamlKey(match[1]) : null;
+  if (!match) return null;
+  return decodeYamlKey(match[1]);
 }
 
-function parseEntries(lines, start, end, indent, predicate = () => true) {
-  const starts = [];
-  for (let index = start; index < end; index += 1) {
-    const key = parseKeyAtIndent(lines[index], indent);
-    if (key !== null && predicate(key)) starts.push({ key, index });
+function topLevelKey(line) {
+  if (!line || /^\s/.test(line) || /^#/.test(line)) return null;
+  const match = line.match(/^([A-Za-z0-9_.-]+):(?:\s.*)?$/);
+  return match ? match[1] : null;
+}
+
+function findTopLevelSection(lines, name, startAt = 0) {
+  for (let index = startAt; index < lines.length; index += 1) {
+    if (lines[index] === `${name}:`) return index;
   }
-  return starts.map((entry, position) => ({
-    key: entry.key,
-    lines: lines.slice(entry.index, starts[position + 1]?.index ?? end),
-  }));
+  return -1;
 }
 
-function trimTrailingBlankLines(lines) {
-  const result = [...lines];
-  while (result.length > 0 && result.at(-1).trim() === '') result.pop();
-  return result;
+function findTopLevelSectionEnd(lines, sectionStart) {
+  for (let index = sectionStart + 1; index < lines.length; index += 1) {
+    if (topLevelKey(lines[index])) return index;
+  }
+  return lines.length;
 }
 
 function stripTopLevelSection(lines, name) {
@@ -80,289 +161,748 @@ function stripTopLevelSection(lines, name) {
   return [...lines.slice(0, start), ...lines.slice(end)];
 }
 
-function parseContract(filePath) {
-  const lines = readText(filePath).split('\n');
-  const pathsStart = findTopLevelSection(lines, 'paths');
-  if (pathsStart === -1) throw new Error(`${relative(filePath)} is missing top-level paths.`);
-  const pathsEnd = findTopLevelSectionEnd(lines, pathsStart);
-  const componentsStart = findTopLevelSection(lines, 'components', pathsStart + 1);
-  const componentsEnd = componentsStart === -1 ? -1 : findTopLevelSectionEnd(lines, componentsStart);
-  const pathEntries = parseEntries(lines, pathsStart + 1, pathsEnd, 2, (key) => key.startsWith('/'));
-  const componentSections = componentsStart === -1
-    ? []
-    : parseEntries(lines, componentsStart + 1, componentsEnd, 2).map((section) => ({
-      name: section.key,
-      entries: parseEntries(section.lines, 1, section.lines.length, 4),
-    }));
-  const documentEnd = componentsStart === -1 ? pathsEnd : componentsEnd;
-  return { filePath, lines, pathEntries, componentSections, suffix: lines.slice(documentEnd) };
-}
-
-function relative(filePath) {
-  return path.relative(repositoryRoot, filePath).split(path.sep).join('/');
-}
-
-function parseIndexedContracts(entryText) {
-  const lines = entryText.split('\n');
-  const start = findTopLevelSection(lines, 'x-bthwani-contracts');
-  if (start === -1) throw new Error('services/dsh/contracts/dsh.openapi.yaml is missing x-bthwani-contracts.');
-  const end = findTopLevelSectionEnd(lines, start);
-  const indexed = [];
-  for (let index = start + 1; index < end; index += 1) {
-    const match = lines[index].match(/^  ([A-Za-z0-9_.-]+):\s*["']?([^"'#]+)["']?\s*(?:#.*)?$/);
-    if (!match) continue;
-    const source = match[2].trim();
-    if (!source.startsWith('./') || !source.endsWith('.openapi.yaml')) {
-      throw new Error(`x-bthwani-contracts.${match[1]} must reference a local .openapi.yaml file.`);
-    }
-    indexed.push({ name: match[1], source });
+function parseEntries(lines, start, end, indent, predicate = () => true) {
+  const starts = [];
+  for (let index = start; index < end; index += 1) {
+    const key = parseKeyAtIndent(lines[index], indent);
+    if (key !== null && predicate(key)) starts.push({ index, key });
   }
-  if (indexed.length === 0) throw new Error('x-bthwani-contracts does not index any dsh modules.');
-  const duplicateNames = indexed.filter((item, index) => indexed.findIndex((other) => other.name === item.name) !== index);
-  const duplicateSources = indexed.filter((item, index) => indexed.findIndex((other) => other.source === item.source) !== index);
-  if (duplicateNames.length > 0) throw new Error(`Duplicate dsh module names: ${[...new Set(duplicateNames.map((item) => item.name))].join(', ')}`);
-  if (duplicateSources.length > 0) throw new Error(`Duplicate dsh module sources: ${[...new Set(duplicateSources.map((item) => item.source))].join(', ')}`);
-  return indexed;
+  return starts.map((current, position) => {
+    const next = starts[position + 1]?.index ?? end;
+    return {
+      key: current.key,
+      lines: lines.slice(current.index, next),
+      start: current.index,
+      end: next,
+    };
+  });
 }
 
-function rewriteCommonReference(line) {
-  return line.replace(
-    /(\$ref:\s*["']?)\.\/dsh\.common\.openapi\.yaml#(\/components\/[^"'\s,}\]]+)(["']?)/g,
-    (_, prefix, pointer, suffix) => `${prefix}#${pointer}${suffix}`,
-  );
+function stripIndent(lines, amount) {
+  const prefix = ' '.repeat(amount);
+  return lines.map((line) => {
+    if (!line) return '';
+    if (!line.startsWith(prefix)) {
+      throw new Error(`Cannot strip ${amount} spaces from line: ${line}`);
+    }
+    return line.slice(amount);
+  });
 }
 
-function prepareContractForBundle(contract) {
-  const mapEntry = (entry) => ({ ...entry, lines: entry.lines.map(rewriteCommonReference) });
-  const componentSections = contract.componentSections.map((section) => ({
-    ...section,
-    entries: section.entries
-      .filter((entry) => !(
-        section.name === 'securitySchemes'
-        && entry.lines.some((line) => line.includes(
-          `./dsh.common.openapi.yaml#/components/securitySchemes/${entry.key}`,
-        ))
-      ))
-      .map(mapEntry),
+function addIndent(lines, amount) {
+  const prefix = ' '.repeat(amount);
+  return lines.map((line) => (line ? `${prefix}${line}` : ''));
+}
+
+function trimTrailingBlankLines(lines) {
+  const copy = [...lines];
+  while (copy.length > 0 && copy[copy.length - 1].trim() === '') copy.pop();
+  return copy;
+}
+
+function extractOperationIds(lines) {
+  const operationIds = [];
+  for (const line of lines) {
+    const match = line.match(/^\s*operationId:\s*([A-Za-z0-9_.-]+)\s*(?:#.*)?$/);
+    if (match) operationIds.push(match[1]);
+  }
+  return operationIds;
+}
+
+function extractTags(lines) {
+  const tags = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const inline = lines[index].match(/^\s*tags:\s*\[([^\]]+)\]/);
+    if (inline) {
+      tags.push(...inline[1].split(',').map((value) => value.trim().replace(/^['"]|['"]$/g, '')));
+      continue;
+    }
+    if (/^\s*tags:\s*$/.test(lines[index])) {
+      const baseIndent = lines[index].match(/^\s*/)?.[0].length ?? 0;
+      for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+        const indent = lines[cursor].match(/^\s*/)?.[0].length ?? 0;
+        const tag = lines[cursor].match(/^\s*-\s*([^#]+?)\s*(?:#.*)?$/);
+        if (!tag || indent <= baseIndent) break;
+        tags.push(tag[1].trim().replace(/^['"]|['"]$/g, ''));
+      }
+    }
+  }
+  return tags;
+}
+
+function includesAny(haystack, needles) {
+  return needles.some((needle) => haystack.includes(needle));
+}
+
+export function classifyPath(pathKey, lines) {
+  const tags = extractTags(lines).join(' ');
+  const haystack = `${pathKey} ${tags}`.toLowerCase();
+
+  if (includesAny(haystack, ['preparation', 'handoff', 'workboard'])) return 'preparation-handoff';
+  if (includesAny(haystack, ['home-discovery', 'homediscovery'])) return 'home-discovery';
+  if (includesAny(haystack, ['/health', '/readiness', 'dshsystem'])) return 'system';
+  if (includesAny(haystack, ['catalog', 'product', 'category', 'menu', 'modifier'])) return 'catalog';
+  if (includesAny(haystack, ['cart', 'serviceability'])) return 'cart-serviceability';
+  if (includesAny(haystack, ['checkout'])) return 'checkout';
+  if (includesAny(haystack, ['dispatch', 'tracking', 'route-plan', 'routeplan'])) return 'dispatch';
+  if (includesAny(haystack, ['/captain', 'dshcaptain'])) return 'captain';
+  if (includesAny(haystack, ['/field', 'dshfield'])) return 'field';
+  if (includesAny(haystack, ['workforce'])) return 'workforce';
+  if (includesAny(haystack, ['support', 'ticket', 'case-management'])) return 'support';
+  if (includesAny(haystack, ['analytics', 'metric', 'reporting'])) return 'analytics';
+  if (includesAny(haystack, ['marketing', 'commercial', 'promotion', 'campaign'])) return 'marketing-commercial';
+  if (includesAny(haystack, ['platform-polic', '/policies', 'policy'])) return 'platform-policies';
+  if (includesAny(haystack, ['client-address', '/addresses', '/map', 'geocode'])) return 'client-address-map';
+  if (includesAny(haystack, ['/partner', 'dshpartner', 'onboarding', 'publication'])) return 'partner';
+  if (includesAny(haystack, ['/orders', '/order/', 'dshorders', 'fulfillment'])) return 'orders';
+  if (includesAny(haystack, ['/operator', 'operator-only'])) return 'operator';
+  if (includesAny(haystack, ['discovery', '/stores'])) return 'discovery';
+  return 'misc';
+}
+
+export function classifySchema(name, lines) {
+  const haystack = `${name} ${lines.join(' ')}`.toLowerCase();
+  const normalizedName = name.toLowerCase();
+
+  if (includesAny(normalizedName, ['preparation', 'handoff', 'workboard'])) return 'preparation-handoff';
+  if (includesAny(normalizedName, ['health', 'readiness'])) return 'system';
+  if (includesAny(normalizedName, ['homediscovery', 'discovery'])) return 'discovery';
+  if (includesAny(normalizedName, ['catalog', 'product', 'category', 'menu', 'modifier'])) return 'catalog';
+  if (includesAny(normalizedName, ['cart', 'serviceability'])) return 'cart-serviceability';
+  if (includesAny(normalizedName, ['checkout', 'quote'])) return 'checkout';
+  if (includesAny(normalizedName, ['wlt', 'wallet', 'commission', 'ledger', 'payout', 'money', 'financial'])) return 'finance-reference';
+  if (includesAny(normalizedName, ['dispatch', 'tracking', 'route'])) return 'dispatch';
+  if (normalizedName.includes('captain')) return 'captain';
+  if (normalizedName.includes('field')) return 'field';
+  if (normalizedName.includes('workforce')) return 'workforce';
+  if (includesAny(normalizedName, ['support', 'ticket', 'case'])) return 'support';
+  if (includesAny(normalizedName, ['analytics', 'metric', 'report'])) return 'analytics';
+  if (includesAny(normalizedName, ['marketing', 'commercial', 'promotion', 'campaign'])) return 'marketing-commercial';
+  if (includesAny(normalizedName, ['policy', 'policies'])) return 'platform-policies';
+  if (includesAny(normalizedName, ['address', 'geocode', 'map'])) return 'client-address-map';
+  if (normalizedName.includes('partner')) return 'partner';
+  if (includesAny(normalizedName, ['order', 'fulfillment', 'pickup'])) return 'orders';
+  if (normalizedName.includes('store')) return 'store';
+  if (includesAny(haystack, ['error response', 'correlationid', 'pagination'])) return 'common';
+  return 'common';
+}
+
+function encodeJsonPointerToken(value) {
+  return value.replace(/~/g, '~0').replace(/\//g, '~1');
+}
+
+function parseReferenceFromBlock(lines) {
+  for (const line of lines) {
+    const match = line.match(/^\s*\$ref:\s*["']?([^"'\s]+)["']?\s*(?:#.*)?$/);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+function resolveReferenceFile(refValue, fromFile) {
+  const { filePart } = splitRef(refValue);
+  if (!filePart || isAbsoluteReference(filePart)) return null;
+  return path.resolve(path.dirname(fromFile), filePart);
+}
+
+function extractFragmentKey(refValue) {
+  const { fragment } = splitRef(refValue);
+  if (!fragment.startsWith('#/')) return null;
+  return fragment
+    .slice(2)
+    .split('/')
+    .map((token) => token.replace(/~1/g, '/').replace(/~0/g, '~'))
+    .at(-1);
+}
+
+function readText(filePath) {
+  return fs.readFileSync(filePath, 'utf8').replace(/\r\n/g, '\n');
+}
+
+function writeText(filePath, content) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, content.endsWith('\n') ? content : `${content}\n`, 'utf8');
+}
+
+export function parseContractStructure(text) {
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  const pathsIndex = findTopLevelSection(lines, 'paths');
+  if (pathsIndex === -1) throw new Error('DSH contract is missing top-level paths section.');
+  const pathsEnd = findTopLevelSectionEnd(lines, pathsIndex);
+  const componentsIndex = findTopLevelSection(lines, 'components', pathsIndex + 1);
+  if (componentsIndex === -1) throw new Error('DSH contract is missing top-level components section.');
+  if (componentsIndex !== pathsEnd) {
+    throw new Error('DSH contract must keep components as the next top-level section after paths.');
+  }
+  const componentsEnd = findTopLevelSectionEnd(lines, componentsIndex);
+  const pathEntries = parseEntries(lines, pathsIndex + 1, componentsIndex, 2, (key) => key.startsWith('/'));
+  const componentSectionEntries = parseEntries(lines, componentsIndex + 1, componentsEnd, 2);
+  const componentSections = componentSectionEntries.map((section) => ({
+    name: section.key,
+    entries: parseEntries(lines, section.start + 1, section.end, 4),
   }));
-  const prepared = {
-    ...contract,
-    lines: contract.lines.map(rewriteCommonReference),
-    pathEntries: contract.pathEntries.map(mapEntry),
+  return {
+    lines,
+    prefix: lines.slice(0, pathsIndex),
+    suffix: lines.slice(componentsEnd),
+    pathEntries,
     componentSections,
-    suffix: contract.suffix.map(rewriteCommonReference),
   };
-  const outputLines = [
-    ...prepared.pathEntries.flatMap((entry) => entry.lines),
-    ...prepared.componentSections.flatMap((section) => section.entries.flatMap((entry) => entry.lines)),
-    ...prepared.suffix,
-  ];
-  for (const [lineIndex, line] of outputLines.entries()) {
-    for (const match of line.matchAll(/\$ref:\s*["']?([^"'\s,}\]]+)/g)) {
-      const value = match[1];
-      if (!value.startsWith('#/')) {
-        throw new Error(`${relative(contract.filePath)}:${lineIndex + 1} uses unsupported external $ref ${value}.`);
-      }
-    }
+}
+
+function parseGovernedFragment(fragmentFile) {
+  if (!fs.existsSync(fragmentFile)) return { paths: [], schemas: [], pickupSessionProperties: [] };
+  const lines = readText(fragmentFile).split('\n');
+  const pathMarker = lines.indexOf('# @paths');
+  const schemaMarker = lines.indexOf('# @schemas');
+  const pickupPropertiesMarker = lines.indexOf('# @pickup-session-properties');
+  if (pathMarker === -1 || schemaMarker === -1 || schemaMarker <= pathMarker) {
+    throw new Error(`${fragmentFile} must contain # @paths and # @schemas markers.`);
   }
-  return prepared;
-}
-
-function canonicalBlock(lines) {
-  return trimTrailingBlankLines(lines)
-    .map((line) => line.replace(/\s+#.*$/, '').trimEnd())
-    .filter((line) => line.trim() !== '')
-    .join('\n');
-}
-
-const HTTP_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'trace']);
-
-function mergePathEntries(contracts) {
-  const merged = new Map();
-  for (const contract of contracts) {
-    for (const pathEntry of contract.pathEntries) {
-      let target = merged.get(pathEntry.key);
-      if (!target) {
-        target = {
-          key: pathEntry.key,
-          firstLine: pathEntry.lines[0],
-          children: [],
-          owners: new Map(),
-        };
-        merged.set(pathEntry.key, target);
-      }
-
-      const children = parseEntries(pathEntry.lines, 1, pathEntry.lines.length, 4);
-      if (children.length === 0) {
-        throw new Error(`dsh path ${pathEntry.key} in ${relative(contract.filePath)} has no path-item fields.`);
-      }
-      for (const child of children) {
-        const previous = target.owners.get(child.key);
-        if (previous) {
-          const currentCanonical = canonicalBlock(child.lines);
-          const sameDefinition = currentCanonical === previous.canonical;
-          if (HTTP_METHODS.has(child.key)) {
-            throw new Error(
-              `dsh operation ${child.key.toUpperCase()} ${pathEntry.key} is owned by both ${relative(previous.filePath)} and ${relative(contract.filePath)}.`,
-            );
-          }
-          if (!sameDefinition) {
-            throw new Error(
-              `dsh path field ${pathEntry.key}.${child.key} is defined differently by ${relative(previous.filePath)} and ${relative(contract.filePath)}.`,
-            );
-          }
-          continue;
-        }
-        target.owners.set(child.key, {
-          filePath: contract.filePath,
-          canonical: canonicalBlock(child.lines),
-        });
-        target.children.push(child.lines);
-      }
-    }
+  if (pickupPropertiesMarker !== -1 && (pickupPropertiesMarker <= pathMarker || pickupPropertiesMarker >= schemaMarker)) {
+    throw new Error(`${fragmentFile} has an invalid # @pickup-session-properties marker.`);
   }
-  return [...merged.values()].map((entry) => ({
-    key: entry.key,
-    lines: [entry.firstLine, ...entry.children.flat()],
-  }));
+  const pathsEnd = pickupPropertiesMarker === -1 ? schemaMarker : pickupPropertiesMarker;
+  return {
+    paths: parseEntries(lines, pathMarker + 1, pathsEnd, 2, (key) => key.startsWith('/')),
+    pickupSessionProperties: pickupPropertiesMarker === -1
+      ? []
+      : trimTrailingBlankLines(lines.slice(pickupPropertiesMarker + 1, schemaMarker)),
+    schemas: parseEntries(lines, schemaMarker + 1, lines.length, 4),
+  };
 }
 
-function mergeUniqueEntries(contracts, selector, label, { allowIdentical = true } = {}) {
-  const owners = new Map();
-  const output = [];
-  for (const contract of contracts) {
-    for (const entry of selector(contract)) {
-      const existing = owners.get(entry.key);
-      if (!existing) {
-        owners.set(entry.key, { contract, canonical: canonicalBlock(entry.lines) });
-        output.push({ ...entry, owner: contract.filePath });
-        continue;
-      }
-      const canonical = canonicalBlock(entry.lines);
-      if (!allowIdentical || canonical !== existing.canonical) {
-        const qualifier = canonical === existing.canonical ? 'is owned more than once by' : 'is defined differently by';
-        throw new Error(`${label} ${entry.key} ${qualifier} ${relative(existing.contract.filePath)} and ${relative(contract.filePath)}.`);
-      }
-    }
+function assertUnique(values, label) {
+  const seen = new Set();
+  const duplicates = new Set();
+  for (const value of values) {
+    if (seen.has(value)) duplicates.add(value);
+    seen.add(value);
   }
-  return output;
-}
-
-function buildSourceDigest(sourceFiles) {
-  const hash = crypto.createHash('sha256');
-  for (const filePath of sourceFiles) {
-    hash.update(relative(filePath));
-    hash.update('\0');
-    hash.update(readText(filePath));
-    hash.update('\0');
+  if (duplicates.size > 0) {
+    throw new Error(`${label} contains duplicates: ${[...duplicates].sort().join(', ')}`);
   }
-  return hash.digest('hex');
 }
 
-function buildBundlePrefix(entry, sourceFiles, digest) {
-  const pathsStart = findTopLevelSection(entry.lines, 'paths');
-  let prefix = entry.lines.slice(0, pathsStart);
-  prefix = stripTopLevelSection(prefix, 'x-bthwani-contracts');
-  prefix = stripTopLevelSection(prefix, 'x-bthwani-overlays');
-  prefix = stripTopLevelSection(prefix, 'x-bthwani-bundle');
-  prefix = stripTopLevelSection(prefix, 'x-bthwani-contract-layout');
-  prefix = stripTopLevelSection(prefix, 'x-bthwani-generated-from');
-  prefix = stripTopLevelSection(prefix, 'x-bthwani-source-digest');
-  prefix = trimTrailingBlankLines(prefix);
-  prefix.push(
-    'x-bthwani-contract-layout: BUNDLED_GENERATED',
-    'x-bthwani-generated-from:',
-    ...sourceFiles.map((filePath) => `  - ${relative(filePath)}`),
-    `x-bthwani-source-digest: ${digest}`,
+function moduleHeader(kind, domain) {
+  return [
+    `# BThwani DSH OpenAPI ${kind} module: ${domain}.`,
+    '# Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.',
     '',
+  ];
+}
+
+function writePathModules(pathEntries) {
+  const grouped = new Map(PATH_DOMAINS.map((domain) => [domain, []]));
+  for (const entry of pathEntries) {
+    const domain = classifyPath(entry.key, entry.lines);
+    grouped.get(domain).push(entry);
+  }
+  const index = new Map();
+  for (const [domain, entries] of grouped) {
+    if (entries.length === 0) continue;
+    const moduleFile = path.join(contractsDirectory, 'paths', `${domain}.paths.yaml`);
+    const body = [...moduleHeader('path-items', domain)];
+    for (const entry of entries) {
+      const stripped = stripIndent(trimTrailingBlankLines(entry.lines), 2).join('\n');
+      const rewritten = rewriteRefs(stripped, (value) => rewriteReferenceValue(value, entryContractPath, moduleFile, entryContractPath));
+      body.push(...rewritten.split('\n'), '');
+      index.set(entry.key, {
+        domain,
+        moduleFile,
+        ref: `./paths/${domain}.paths.yaml#/${encodeJsonPointerToken(entry.key)}`,
+      });
+    }
+    writeText(moduleFile, trimTrailingBlankLines(body).join('\n'));
+  }
+  return { grouped, index };
+}
+
+function writeComponentModules(componentSections) {
+  const sectionIndex = new Map();
+  for (const section of componentSections) {
+    if (section.name === 'schemas') {
+      const grouped = new Map(SCHEMA_DOMAINS.map((domain) => [domain, []]));
+      for (const entry of section.entries) {
+        const domain = classifySchema(entry.key, entry.lines);
+        grouped.get(domain).push(entry);
+      }
+      const itemIndex = new Map();
+      for (const [domain, entries] of grouped) {
+        if (entries.length === 0) continue;
+        const moduleFile = path.join(contractsDirectory, 'components/schemas', `${domain}.schemas.yaml`);
+        const body = [...moduleHeader('schemas', domain)];
+        for (const entry of entries) {
+          const stripped = stripIndent(trimTrailingBlankLines(entry.lines), 4).join('\n');
+          const rewritten = rewriteRefs(stripped, (value) => rewriteReferenceValue(value, entryContractPath, moduleFile, entryContractPath));
+          body.push(...rewritten.split('\n'), '');
+          itemIndex.set(entry.key, {
+            moduleFile,
+            ref: `./components/schemas/${domain}.schemas.yaml#/${encodeJsonPointerToken(entry.key)}`,
+          });
+        }
+        writeText(moduleFile, trimTrailingBlankLines(body).join('\n'));
+      }
+      sectionIndex.set(section.name, itemIndex);
+      continue;
+    }
+
+    const moduleFile = path.join(contractsDirectory, 'components', `${section.name}.yaml`);
+    const body = [...moduleHeader(`components/${section.name}`, section.name)];
+    const itemIndex = new Map();
+    for (const entry of section.entries) {
+      const stripped = stripIndent(trimTrailingBlankLines(entry.lines), 4).join('\n');
+      const rewritten = rewriteRefs(stripped, (value) => rewriteReferenceValue(value, entryContractPath, moduleFile, entryContractPath));
+      body.push(...rewritten.split('\n'), '');
+      itemIndex.set(entry.key, {
+        moduleFile,
+        ref: `./components/${section.name}.yaml#/${encodeJsonPointerToken(entry.key)}`,
+      });
+    }
+    writeText(moduleFile, trimTrailingBlankLines(body).join('\n'));
+    sectionIndex.set(section.name, itemIndex);
+  }
+  return sectionIndex;
+}
+
+function ensureModularMetadata(prefix) {
+  const result = [...prefix];
+  const additions = [];
+  if (!result.some((line) => line.startsWith('x-bthwani-contract-layout:'))) {
+    additions.push('x-bthwani-contract-layout: MODULAR');
+  }
+  if (!result.some((line) => line.startsWith('x-bthwani-bundle:'))) {
+    additions.push('x-bthwani-bundle: ./generated/dsh.bundle.openapi.yaml');
+  }
+  if (additions.length === 0) return result;
+  while (result.length > 0 && result[result.length - 1] === '') result.pop();
+  result.push(...additions, '');
+  return result;
+}
+
+function buildRootContract(prefix, suffix, pathEntries, pathIndex, componentSections, componentIndex) {
+  const output = [...ensureModularMetadata(prefix), 'paths:'];
+  for (const entry of pathEntries) {
+    const target = pathIndex.get(entry.key);
+    if (!target) throw new Error(`No path module target for ${entry.key}`);
+    output.push(`  ${entry.key}:`, `    $ref: "${target.ref}"`);
+  }
+  output.push('', 'components:');
+  for (const section of componentSections) {
+    output.push(`  ${section.name}:`);
+    const items = componentIndex.get(section.name);
+    for (const entry of section.entries) {
+      const target = items?.get(entry.key);
+      if (!target) throw new Error(`No component module target for ${section.name}.${entry.key}`);
+      output.push(`    ${entry.key}:`, `      $ref: "${target.ref}"`);
+    }
+  }
+  if (suffix.length > 0) output.push('', ...suffix);
+  return `${trimTrailingBlankLines(output).join('\n')}\n`;
+}
+
+function mergeGovernedFragments(structure) {
+  const fragmentFiles = [
+    path.join(contractsDirectory, 'fragments/order-preparation-handoff.fragment.yaml'),
+    path.join(contractsDirectory, 'fragments/pickup-recovery.fragment.yaml'),
+  ].filter((filePath) => fs.existsSync(filePath));
+  if (fragmentFiles.length === 0) return { ...structure, fragmentFiles: [] };
+
+  const existingPaths = new Set(structure.pathEntries.map((entry) => entry.key));
+  const schemasSection = structure.componentSections.find((section) => section.name === 'schemas');
+  if (!schemasSection) throw new Error('DSH contract must contain components.schemas.');
+  const existingSchemas = new Set(schemasSection.entries.map((entry) => entry.key));
+  const addedPaths = [];
+  const addedSchemas = [];
+  const pickupSessionProperties = [];
+
+  for (const fragmentFile of fragmentFiles) {
+    const fragment = parseGovernedFragment(fragmentFile);
+    for (const entry of fragment.paths) {
+      if (existingPaths.has(entry.key)) throw new Error(`${fragmentFile} duplicates path ${entry.key}`);
+      existingPaths.add(entry.key);
+      addedPaths.push(entry);
+    }
+    for (const entry of fragment.schemas) {
+      if (existingSchemas.has(entry.key)) throw new Error(`${fragmentFile} duplicates schema ${entry.key}`);
+      existingSchemas.add(entry.key);
+      addedSchemas.push(entry);
+    }
+    pickupSessionProperties.push(...fragment.pickupSessionProperties);
+  }
+
+  let mergedSchemas = [...schemasSection.entries, ...addedSchemas];
+  if (pickupSessionProperties.length > 0) {
+    mergedSchemas = mergedSchemas.map((entry) => {
+      if (entry.key !== 'DshPickupSession') return entry;
+      if (entry.lines.some((line) => line.includes('customerNotifiedAt:'))) {
+        throw new Error('DshPickupSession already contains pickup recovery properties.');
+      }
+      const anchorIndex = entry.lines.findIndex((line) => line.trim() === 'version: { type: integer }');
+      if (anchorIndex === -1) throw new Error('DshPickupSession is missing its version property anchor.');
+      return {
+        ...entry,
+        lines: [
+          ...entry.lines.slice(0, anchorIndex),
+          ...pickupSessionProperties,
+          ...entry.lines.slice(anchorIndex),
+        ],
+      };
+    });
+  }
+
+  return {
+    ...structure,
+    pathEntries: [...structure.pathEntries, ...addedPaths],
+    componentSections: structure.componentSections.map((section) =>
+      section.name === 'schemas' ? { ...section, entries: mergedSchemas } : section,
+    ),
+    fragmentFiles,
+  };
+}
+
+function readPackageJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function writePackageJson(filePath, value) {
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+function patchPackageScripts() {
+  const servicePackagePath = path.join(repositoryRoot, 'services/dsh/package.json');
+  const servicePackage = readPackageJson(servicePackagePath);
+  servicePackage.scripts ??= {};
+  servicePackage.scripts['openapi:compose'] = 'node ../../tools/scripts/compose-dsh-openapi.mjs';
+  servicePackage.scripts['openapi:generate'] = 'pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts';
+  servicePackage.scripts['openapi:verify'] = 'node ../../tools/guards/dsh-openapi-modular-gate.mjs && pnpm run openapi:generate';
+  writePackageJson(servicePackagePath, servicePackage);
+
+  const rootPackagePath = path.join(repositoryRoot, 'package.json');
+  const rootPackage = readPackageJson(rootPackagePath);
+  rootPackage.scripts ??= {};
+  rootPackage.scripts['openapi:lint:dsh'] = 'node tools/guards/dsh-openapi-modular-gate.mjs';
+  rootPackage.scripts['openapi:verify:dsh'] = 'pnpm --dir services/dsh openapi:verify';
+  writePackageJson(rootPackagePath, rootPackage);
+}
+
+function buildManifest(pathEntries, componentSections) {
+  const operationIds = pathEntries.flatMap((entry) => extractOperationIds(entry.lines));
+  const components = Object.fromEntries(componentSections.map((section) => [section.name, section.entries.length]));
+  const pathDomains = {};
+  for (const entry of pathEntries) {
+    const domain = classifyPath(entry.key, entry.lines);
+    pathDomains[domain] = (pathDomains[domain] ?? 0) + 1;
+  }
+  const schemaDomains = {};
+  const schemas = componentSections.find((section) => section.name === 'schemas')?.entries ?? [];
+  for (const entry of schemas) {
+    const domain = classifySchema(entry.key, entry.lines);
+    schemaDomains[domain] = (schemaDomains[domain] ?? 0) + 1;
+  }
+  return {
+    formatVersion: 1,
+    entryContract: 'services/dsh/contracts/dsh.openapi.yaml',
+    generatedBundle: 'services/dsh/contracts/generated/dsh.bundle.openapi.yaml',
+    pathCount: pathEntries.length,
+    operationIdCount: operationIds.length,
+    componentCounts: components,
+    pathDomains,
+    schemaDomains,
+  };
+}
+
+export function collectSiblingContractOwnership(currentPathKeys) {
+  const report = {
+    formatVersion: 2,
+    sovereignContract: 'services/dsh/contracts/dsh.openapi.yaml',
+    governedProjectionPaths: [],
+    orphanProjectionPaths: [],
+    projectionCollisions: [],
+    siblingContracts: {},
+  };
+  const current = new Set(currentPathKeys);
+  const projectionOwners = new Map();
+
+  for (const name of fs.readdirSync(contractsDirectory).sort()) {
+    if (!name.endsWith('.openapi.yaml') || name === 'dsh.openapi.yaml') continue;
+    const filePath = path.join(contractsDirectory, name);
+    if (!fs.statSync(filePath).isFile()) continue;
+    const text = readText(filePath);
+    const owner = text.match(/^x-bthwani-owner:\s*(.+)$/m)?.[1]?.trim() ?? 'services/dsh';
+    const parentContract = text.match(/^x-bthwani-parent-contract:\s*(.+)$/m)?.[1]?.trim() ?? null;
+    const contractRole = text.match(/^x-bthwani-contract-role:\s*(.+)$/m)?.[1]?.trim() ?? 'governed-projection';
+    let structure;
+    try {
+      structure = parseContractStructure(text);
+    } catch {
+      const lines = text.split('\n');
+      const pathsIndex = findTopLevelSection(lines, 'paths');
+      if (pathsIndex === -1) continue;
+      const end = findTopLevelSectionEnd(lines, pathsIndex);
+      structure = {
+        pathEntries: parseEntries(lines, pathsIndex + 1, end, 2, (key) => key.startsWith('/')),
+      };
+    }
+    const paths = structure.pathEntries.map((entry) => entry.key);
+    report.siblingContracts[name] = {
+      pathCount: paths.length,
+      owner,
+      parentContract,
+      contractRole,
+    };
+    for (const pathKey of paths) {
+      const owners = projectionOwners.get(pathKey) ?? [];
+      owners.push(name);
+      projectionOwners.set(pathKey, owners);
+      if (current.has(pathKey)) {
+        report.governedProjectionPaths.push({
+          path: pathKey,
+          projectionContract: name,
+        });
+      } else {
+        report.orphanProjectionPaths.push({
+          path: pathKey,
+          projectionContract: name,
+        });
+      }
+    }
+  }
+
+  for (const [pathKey, contracts] of projectionOwners) {
+    if (contracts.length > 1) {
+      report.projectionCollisions.push({
+        path: pathKey,
+        projectionContracts: contracts.sort(),
+      });
+    }
+  }
+
+  report.governedProjectionPaths.sort(
+    (a, b) => a.path.localeCompare(b.path) || a.projectionContract.localeCompare(b.projectionContract),
   );
-  return prefix;
+  report.orphanProjectionPaths.sort(
+    (a, b) => a.path.localeCompare(b.path) || a.projectionContract.localeCompare(b.projectionContract),
+  );
+  report.projectionCollisions.sort((a, b) => a.path.localeCompare(b.path));
+  return report;
+}
+
+function readModuleEntry(moduleFile, key) {
+  const lines = readText(moduleFile).split('\n');
+  const entries = parseEntries(lines, 0, lines.length, 0);
+  const entry = entries.find((candidate) => candidate.key === key);
+  if (!entry) throw new Error(`Reference target ${key} was not found in ${toPosix(path.relative(repositoryRoot, moduleFile))}`);
+  return entry.lines;
 }
 
 export function composeDshOpenApi({ write = true } = {}) {
-  const entryText = readText(entryContractPath);
-  const indexed = parseIndexedContracts(entryText);
-  const moduleFiles = indexed.map(({ source }) => path.resolve(contractsDirectory, source));
-  for (const moduleFile of moduleFiles) {
-    if (!fs.existsSync(moduleFile)) throw new Error(`Indexed dsh module is missing: ${relative(moduleFile)}`);
-  }
-  const sourceFiles = [entryContractPath, ...moduleFiles];
-  const contracts = sourceFiles.map(parseContract).map(prepareContractForBundle);
+  const rootText = readText(entryContractPath);
+  const structure = parseContractStructure(rootText);
+  // The entry indexes its own modules and overlays for governance resolution.
+  // The bundle is a fully composed, self-contained document; a module index has
+  // no meaning inside it and would point at files the bundle has already inlined.
+  let bundlePrefix = stripTopLevelSection(structure.prefix, 'x-bthwani-contracts');
+  bundlePrefix = stripTopLevelSection(bundlePrefix, 'x-bthwani-overlays');
+  // Stripping the last section also consumes the blank line that separated the
+  // metadata block from `paths:`; restore it so the bundle layout is unchanged.
+  if (bundlePrefix.length > 0 && bundlePrefix.at(-1) !== '') bundlePrefix.push('');
+  const output = [...bundlePrefix, 'paths:'];
 
-  const operationOwners = new Map();
-  for (const contract of contracts) {
-    for (const entry of contract.pathEntries) {
-      for (const line of entry.lines) {
-        const match = line.match(/^\s*operationId:\s*([A-Za-z0-9_.-]+)\s*(?:#.*)?$/);
-        if (!match) continue;
-        const existing = operationOwners.get(match[1]);
-        if (existing) {
-          throw new Error(`operationId ${match[1]} is duplicated by ${relative(existing)} and ${relative(contract.filePath)}.`);
-        }
-        operationOwners.set(match[1], contract.filePath);
-      }
-    }
+  for (const rootEntry of structure.pathEntries) {
+    const ref = parseReferenceFromBlock(rootEntry.lines);
+    if (!ref) throw new Error(`Root path ${rootEntry.key} must contain one external $ref.`);
+    const moduleFile = resolveReferenceFile(ref, entryContractPath);
+    const fragmentKey = extractFragmentKey(ref);
+    if (!moduleFile || !fragmentKey) throw new Error(`Unsupported path reference ${ref}`);
+    const moduleLines = readModuleEntry(moduleFile, fragmentKey);
+    const restored = rewriteRefs(moduleLines.join('\n'), (value) => rewriteReferenceValueForBundle(value, moduleFile, entryContractPath));
+    output.push(...addIndent(trimTrailingBlankLines(restored.split('\n')), 2), '');
   }
-  const paths = mergePathEntries(contracts);
 
-  const sectionNames = [];
-  for (const contract of contracts) {
-    for (const section of contract.componentSections) {
-      if (!sectionNames.includes(section.name)) sectionNames.push(section.name);
-    }
-  }
-  const componentSections = sectionNames.map((name) => ({
-    name,
-    entries: mergeUniqueEntries(
-      contracts,
-      (contract) => contract.componentSections.find((section) => section.name === name)?.entries ?? [],
-      `dsh component ${name}`,
-    ),
-  }));
-
-  const digest = buildSourceDigest(sourceFiles);
-  const output = [
-    '# AUTO-GENERATED by tools/scripts/compose-dsh-openapi.mjs. DO NOT EDIT.',
-    ...buildBundlePrefix(contracts[0], sourceFiles, digest),
-    'paths:',
-  ];
-  for (const entry of paths) output.push(...trimTrailingBlankLines(entry.lines), '');
   output.push('components:');
-  for (const section of componentSections) {
+  for (const section of structure.componentSections) {
     output.push(`  ${section.name}:`);
-    for (const entry of section.entries) output.push(...trimTrailingBlankLines(entry.lines), '');
+    for (const rootEntry of section.entries) {
+      const ref = parseReferenceFromBlock(rootEntry.lines);
+      if (!ref) throw new Error(`Root component ${section.name}.${rootEntry.key} must contain one external $ref.`);
+      const moduleFile = resolveReferenceFile(ref, entryContractPath);
+      const fragmentKey = extractFragmentKey(ref);
+      if (!moduleFile || !fragmentKey) throw new Error(`Unsupported component reference ${ref}`);
+      const moduleLines = readModuleEntry(moduleFile, fragmentKey);
+      const restored = rewriteRefs(moduleLines.join('\n'), (value) => rewriteReferenceValueForBundle(value, moduleFile, entryContractPath));
+      output.push(...addIndent(trimTrailingBlankLines(restored.split('\n')), 4), '');
+    }
   }
-  if (contracts[0].suffix.length > 0) output.push('', ...contracts[0].suffix);
-  const bundle = `${trimTrailingBlankLines(output).join('\n')}\n`;
-  if (write) writeText(generatedBundlePath, bundle);
+  if (structure.suffix.length > 0) output.push(...structure.suffix);
+  const bundled = `${trimTrailingBlankLines(output).join('\n')}\n`;
+  if (write) {
+    writeText(generatedBundlePath, bundled);
+    writeText(
+      ownershipReportPath,
+      JSON.stringify(collectSiblingContractOwnership(structure.pathEntries.map((entry) => entry.key)), null, 2),
+    );
+  }
+  return bundled;
+}
+
+function verifyReferenceTargets(structure) {
+  const errors = [];
+  const inspect = (label, rootEntry) => {
+    const ref = parseReferenceFromBlock(rootEntry.lines);
+    if (!ref) {
+      errors.push(`${label} does not contain an external $ref.`);
+      return;
+    }
+    const moduleFile = resolveReferenceFile(ref, entryContractPath);
+    const fragmentKey = extractFragmentKey(ref);
+    if (!moduleFile || !fragmentKey) {
+      errors.push(`${label} uses unsupported reference ${ref}.`);
+      return;
+    }
+    if (!fs.existsSync(moduleFile)) {
+      errors.push(`${label} references missing file ${toPosix(path.relative(repositoryRoot, moduleFile))}.`);
+      return;
+    }
+    try {
+      const moduleLines = readModuleEntry(moduleFile, fragmentKey);
+      const illegalInternalRefs = moduleLines.filter((line) => /\$ref:\s*["']?#\//.test(line));
+      if (illegalInternalRefs.length > 0) {
+        errors.push(`${label} module contains root-relative internal references that would resolve against the wrong document.`);
+      }
+    } catch (error) {
+      errors.push(error.message);
+    }
+  };
+
+  for (const entry of structure.pathEntries) inspect(`paths.${entry.key}`, entry);
+  for (const section of structure.componentSections) {
+    for (const entry of section.entries) inspect(`components.${section.name}.${entry.key}`, entry);
+  }
+  return errors;
+}
+
+export function verifyDshOpenApiModular() {
+  const failures = [];
+  if (!fs.existsSync(entryContractPath)) failures.push('Missing DSH OpenAPI entry contract.');
+  if (failures.length > 0) throw new Error(failures.join('\n'));
+
+  const rootText = readText(entryContractPath);
+  if (!rootText.includes('x-bthwani-contract-layout: MODULAR')) {
+    failures.push('DSH entry contract is not marked with MODULAR layout metadata.');
+  }
+  const rootLineCount = rootText.split('\n').length;
+  if (rootLineCount > 4000) failures.push(`DSH entry contract is still too large (${rootLineCount} lines).`);
+
+  const structure = parseContractStructure(rootText);
+  failures.push(...verifyReferenceTargets(structure));
+  assertUnique(structure.pathEntries.map((entry) => entry.key), 'Root DSH paths');
+  for (const section of structure.componentSections) {
+    assertUnique(section.entries.map((entry) => entry.key), `Root components.${section.name}`);
+  }
+
+  let bundle;
+  try {
+    bundle = composeDshOpenApi({ write: false });
+  } catch (error) {
+    failures.push(`Bundle composition failed: ${error.message}`);
+  }
+
+  if (bundle) {
+    const bundleStructure = parseContractStructure(bundle);
+    const operationIds = bundleStructure.pathEntries.flatMap((entry) => extractOperationIds(entry.lines));
+    try {
+      assertUnique(operationIds, 'DSH operationId list');
+    } catch (error) {
+      failures.push(error.message);
+    }
+    if (fs.existsSync(generatedBundlePath)) {
+      const existing = readText(generatedBundlePath);
+      if (existing !== bundle) failures.push('Generated DSH bundle is stale; run pnpm --dir services/dsh openapi:compose.');
+    }
+  }
+
+  const freshOwnership = collectSiblingContractOwnership(structure.pathEntries.map((entry) => entry.key));
+  if (fs.existsSync(ownershipReportPath)) {
+    const committedOwnership = readText(ownershipReportPath);
+    if (committedOwnership !== JSON.stringify(freshOwnership, null, 2)) {
+      failures.push('DSH contract ownership report is stale; regenerate services/dsh/contracts/dsh.contract-ownership.json.');
+    }
+  } else {
+    failures.push('Missing DSH contract ownership report.');
+  }
+
+  const allowedCollisionKeys = new Set();
+  if (fs.existsSync(ownershipCollisionAllowlistPath)) {
+    const allowlist = JSON.parse(readText(ownershipCollisionAllowlistPath));
+    for (const entry of allowlist.entries ?? []) {
+      if (!entry.path || !entry.reason || !Array.isArray(entry.projectionContracts)) {
+        failures.push(`DSH contract ownership allowlist entry is missing path, reason, or projectionContracts: ${JSON.stringify(entry)}`);
+        continue;
+      }
+      allowedCollisionKeys.add(`${entry.path}::${entry.projectionContracts.slice().sort().join(',')}`);
+    }
+  }
+  const unallowedCollisions = freshOwnership.projectionCollisions.filter(
+    (collision) => !allowedCollisionKeys.has(`${collision.path}::${collision.projectionContracts.slice().sort().join(',')}`),
+  );
+  if (unallowedCollisions.length > 0) {
+    failures.push(`DSH contract ownership has unreviewed path collisions: ${unallowedCollisions.map((item) => `${item.path} (${item.projectionContracts.join(', ')})`).join('; ')}`);
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`DSH OpenAPI modular gate failed:\n- ${failures.join('\n- ')}`);
+  }
   return {
-    bundle,
-    sourceFiles: sourceFiles.map(relative),
-    sourceDigest: digest,
-    pathCount: paths.length,
-    operationIds: [...operationOwners.keys()].sort(),
-    componentCounts: Object.fromEntries(componentSections.map((section) => [section.name, section.entries.length])),
+    pathCount: structure.pathEntries.length,
+    componentSectionCount: structure.componentSections.length,
+    rootLineCount,
   };
 }
 
-export function verifydshGeneratedArtifacts() {
-  const expected = composeDshOpenApi({ write: false });
-  const violations = [];
-  if (!fs.existsSync(generatedBundlePath)) {
-    violations.push(`Missing generated dsh bundle: ${relative(generatedBundlePath)}`);
-  } else if (readText(generatedBundlePath) !== expected.bundle) {
-    violations.push('Generated dsh bundle is stale. Run pnpm --dir services/dsh openapi:compose.');
+function writeReadme() {
+  const readmePath = path.join(contractsDirectory, 'README.md');
+  const content = `# DSH OpenAPI contract layout\n\n\`dsh.openapi.yaml\` is the sovereign entry contract. It contains metadata and external references only.\n\n- \`paths/*.paths.yaml\`: path items grouped by operational domain.\n- \`components/schemas/*.schemas.yaml\`: schemas grouped by domain.\n- \`components/*.yaml\`: shared parameters, responses, security schemes, and other component maps.\n- \`generated/dsh.bundle.openapi.yaml\`: deterministic monolithic bundle used for client generation and Swagger. Never edit it directly.\n- \`dsh.modular.manifest.json\`: expected path, operation, component, and domain counts.\n- \`dsh.contract-ownership.json\`: cross-contract path ownership audit.\n- \`contract.manifest.yaml\`: bounded-context manifest. Its \`modules\` list must match the entry's \`x-bthwani-contracts\` exactly.\n\n## Commands\n\n\`pnpm --dir services/dsh openapi:compose\` regenerates the bundle.\n\n\`pnpm --dir services/dsh openapi:generate\` regenerates the bundle and TypeScript client.\n\n\`pnpm --dir services/dsh openapi:verify\` validates references, uniqueness, ownership, bundle drift, and regenerates the client.\n\n## Rules\n\n1. Add each endpoint to exactly one path module.\n2. Keep every \`operationId\` globally unique.\n3. Add reusable schemas under the correct domain module and reference them through the root contract.\n4. Do not add root-relative \`#/components/...\` references inside module files; module references must point back to \`dsh.openapi.yaml\`.\n5. Do not edit generated artifacts manually.\n`;
+  writeText(readmePath, content);
+}
+
+export function migrateDshOpenApi() {
+  const originalText = readText(entryContractPath);
+  patchPackageScripts();
+  writeReadme();
+
+  if (originalText.includes('x-bthwani-contract-layout: MODULAR')) {
+    const bundle = composeDshOpenApi({ write: true });
+    const structure = parseContractStructure(bundle);
+    writeText(ownershipReportPath, JSON.stringify(collectSiblingContractOwnership(structure.pathEntries.map((entry) => entry.key)), null, 2));
+    return verifyDshOpenApiModular();
   }
-  if (!fs.existsSync(generatedClientPath)) {
-    violations.push(`Missing generated dsh client: ${relative(generatedClientPath)}`);
-  } else {
-    const client = readText(generatedClientPath);
-    if (!client.includes('This file was auto-generated by openapi-typescript.')) {
-      violations.push('dsh client is not an openapi-typescript artifact. Manual generated clients are forbidden.');
-    }
-    for (const operationId of expected.operationIds) {
-      if (!client.includes(operationId)) violations.push(`Generated dsh client is missing operationId ${operationId}.`);
-    }
+
+  let structure = parseContractStructure(originalText);
+  structure = mergeGovernedFragments(structure);
+
+  const pathKeys = structure.pathEntries.map((entry) => entry.key);
+  assertUnique(pathKeys, 'DSH paths');
+  const operationIds = structure.pathEntries.flatMap((entry) => extractOperationIds(entry.lines));
+  assertUnique(operationIds, 'DSH operationIds');
+  for (const section of structure.componentSections) {
+    assertUnique(section.entries.map((entry) => entry.key), `DSH components.${section.name}`);
   }
-  return { ...expected, violations };
+
+  const { index: pathIndex } = writePathModules(structure.pathEntries);
+  const componentIndex = writeComponentModules(structure.componentSections);
+  const root = buildRootContract(
+    structure.prefix,
+    structure.suffix,
+    structure.pathEntries,
+    pathIndex,
+    structure.componentSections,
+    componentIndex,
+  );
+  writeText(entryContractPath, root);
+  writeText(ownershipReportPath, JSON.stringify(collectSiblingContractOwnership(pathKeys), null, 2));
+  composeDshOpenApi({ write: true });
+
+  for (const fragmentFile of structure.fragmentFiles ?? []) fs.rmSync(fragmentFile, { force: true });
+  return verifyDshOpenApiModular();
 }

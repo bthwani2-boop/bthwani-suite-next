@@ -4,14 +4,14 @@
 -- local-only, deterministic and idempotent.
 
 -- Preserve the frozen/suspended reference actors from the foundation seed in
--- the local Identity tenant so operator negative-state lookups remain tenant
+-- the local Identity OperatorContext so operator negative-state lookups remain OperatorContext
 -- isolated rather than relying on legacy-unscoped rows.
 UPDATE wlt_wallets
 SET operator_context_id = 'local-dsh'
 WHERE actor_id IN ('partner-dev-0001', 'partner-dev-0002', 'captain-dev-0001', 'captain-dev-0002', 'field-dev-0001', 'client-dev-0001');
 
 DELETE FROM wlt_wallets
-WHERE id = 'wlt-wallet-client-other-tenant-001';
+WHERE id = 'wlt-wallet-client-other-OperatorContext-001';
 
 INSERT INTO wlt_wallets (
   id,
@@ -58,7 +58,7 @@ WHERE source_type = 'runtime_seed'
     'partner-local-001',
     'captain-local-001',
     'field-local-001',
-    'client-other-tenant-001',
+    'client-other-OperatorContext-001',
     'client-isolated-context-001'
   );
 

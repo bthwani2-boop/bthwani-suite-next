@@ -88,12 +88,12 @@ func TestProvisionUsesTrustedTenantInHeaderAndBody(t *testing.T) {
 	}
 }
 
-func TestProvisionRejectsTenantOverrideBeforeNetwork(t *testing.T) {
-	client := NewClient("https://identity.internal", "service-token", "tenant-main")
+func TestProvisionRejectsOperatorContextOverrideBeforeNetwork(t *testing.T) {
+	client := NewClient("https://identity.internal", "service-token", "operator-context-main")
 
-	_, err := client.Provision(context.Background(), ProvisionInput{OperatorContextID: "tenant-other"})
-	if !errors.Is(err, ErrTenantForbidden) {
-		t.Fatalf("expected ErrTenantForbidden, got %v", err)
+	_, err := client.Provision(context.Background(), ProvisionInput{OperatorContextID: "operator-context-other"})
+	if !errors.Is(err, ErrOperatorContextForbidden) {
+		t.Fatalf("expected ErrOperatorContextForbidden, got %v", err)
 	}
 }
 

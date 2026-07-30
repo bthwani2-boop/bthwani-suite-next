@@ -38,7 +38,7 @@ const cases = [
     assert.match(lifecycleHTTP, /releaseCouponFunding/);
     assert.match(lifecycleHTTP, /reverseCouponFunding/);
   }],
-  ["Promotion Funding transition, monetary, tenant, idempotency, and concurrency integrity", () => {
+  ["Promotion Funding transition, monetary, OperatorContext, idempotency, and concurrency integrity", () => {
     assert.match(wltMigration, /DEFERRABLE INITIALLY DEFERRED/);
     assert.match(wltMigration, /same-transaction append-only event/);
     assert.match(wltMigration, /transaction_id = txid_current\(\)/);

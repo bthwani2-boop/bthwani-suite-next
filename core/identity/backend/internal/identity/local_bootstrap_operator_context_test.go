@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestLocalBootstrapRequiresExplicitTenantBeforeDatabaseAccess(t *testing.T) {
+func TestLocalBootstrapRequiresExplicitOperatorContextBeforeDatabaseAccess(t *testing.T) {
 	input := LocalBootstrap{
 		Enabled:  true,
 		Password: "local-password",
@@ -14,19 +14,19 @@ func TestLocalBootstrapRequiresExplicitTenantBeforeDatabaseAccess(t *testing.T) 
 	t.Run("base actors", func(t *testing.T) {
 		repo := &Repository{}
 		if err := repo.BootstrapLocalActors(context.Background(), input); err == nil {
-			t.Fatal("local actor bootstrap must reject a missing tenant before database access")
+			t.Fatal("local actor bootstrap must reject a missing OperatorContext before database access")
 		}
 	})
 
 	t.Run("platform actors", func(t *testing.T) {
 		repo := &Repository{}
 		if err := repo.BootstrapLocalPlatformActors(context.Background(), input); err == nil {
-			t.Fatal("platform actor bootstrap must reject a missing tenant before database access")
+			t.Fatal("platform actor bootstrap must reject a missing OperatorContext before database access")
 		}
 	})
 }
 
-func TestDisabledLocalBootstrapDoesNotRequireTenant(t *testing.T) {
+func TestDisabledLocalBootstrapDoesNotRequireOperatorContext(t *testing.T) {
 	repo := &Repository{}
 	input := LocalBootstrap{Enabled: false}
 

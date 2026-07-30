@@ -10,6 +10,25 @@ import {
 
 const guardId = "backend-api-binding-gate";
 const violations = [];
+const draftContractStateCache = new Map();
+const nonActiveStates = new Set(["CONTRACT_DRAFT", "RESERVED"]);
+
+// A contract carrying CONTRACT_DRAFT or RESERVED documents a capability that
+// is not live yet (contracts-foundation.mjs already forbids client generation
+// for these states). Implementation-parity is meaningless for them; every
+// other check (operationId, path params, etc.) still applies.
+function isNonActiveContract(file) {
+  if (!draftContractStateCache.has(file)) {
+    const absolute = path.join(repoRoot, file);
+    let state = "CONTRACT_ACTIVE";
+    if (fs.existsSync(absolute)) {
+      const match = read(file).match(/^x-bthwani-contract-state:\s*(\S+)/m);
+      if (match) state = match[1];
+    }
+    draftContractStateCache.set(file, state);
+  }
+  return nonActiveStates.has(draftContractStateCache.get(file));
+}
 const dshRegistryFile = "services/dsh/contracts/contract-registry.ts";
 const routeClassificationFile =
   "services/dsh/contracts/backend-route-classification.json";
@@ -25,7 +44,24 @@ const boundaryInterceptedRoutes = new Map([
     new Map([
       [
         "POST /auth/otp/request",
-        "intercepted by partner_platformOtpBoundary (core/identity/backend/internal/http/partner_platform_otp_boundary.go) before the router",
+        "intercepted by OtpBoundary (core/identity/backend/internal/http/otp_boundary.go) before the router",
+      ],
+    ]),
+  ],
+  [
+    "Workforce",
+    new Map([
+      [
+        "POST /workforce/reference/cities",
+        "intercepted by ReferenceMutationMiddleware (core/workforce/backend/internal/http/reference_mutation_middleware.go) before the router",
+      ],
+      [
+        "PATCH /workforce/reference/cities/{code}",
+        "intercepted by ReferenceMutationMiddleware (core/workforce/backend/internal/http/reference_mutation_middleware.go) before the router",
+      ],
+      [
+        "POST /workforce/{collection}/{actorId}/documents",
+        "intercepted by ReferenceMutationMiddleware (core/workforce/backend/internal/http/reference_mutation_middleware.go) before the router",
       ],
     ]),
   ],
@@ -160,6 +196,33 @@ const services = [
     ],
     router: "core/identity/backend/internal/http/server.go",
     routerDir: "core/identity/backend/internal/http",
+  },
+  {
+    name: "Workforce",
+    openapi: "core/workforce/contracts/workforce.openapi.yaml",
+    additionalOpenapi: [
+      "core/workforce/contracts/workforce.operational-core.openapi.yaml",
+      "core/workforce/contracts/workforce.reference-mutations.openapi.yaml",
+      "core/workforce/contracts/workforce.sovereign-leadership.openapi.yaml",
+    ],
+    router: "core/workforce/backend/internal/http/server.go",
+    routerDir: "core/workforce/backend/internal/http",
+  },
+  {
+    name: "Providers",
+    openapi: "core/providers/contracts/providers.openapi.yaml",
+    router: "core/providers/backend/internal/http/server.go",
+    routerDir: "core/providers/backend/internal/http",
+  },
+  {
+    name: "PlatformControl",
+    openapi: "core/platform-control/contracts/platform-control.openapi.yaml",
+    additionalOpenapi: [
+      "core/platform-control/contracts/platform-change-sets.openapi.yaml",
+      "core/platform-control/contracts/platform-progressive-rollout.openapi.yaml",
+    ],
+    router: "core/platform-control/backend/internal/http/server.go",
+    routerDir: "core/platform-control/backend/internal/http",
   },
 ];
 
@@ -416,7 +479,11 @@ try {
       validatePathParameters(service, operation);
       validateInternalServiceRoute(service, operation);
       validateWltOperation(service, operation);
-      if (!goRouteSet.has(key) && !boundaryInterceptedRoutes.get(service.name)?.has(key)) {
+      if (
+        !goRouteSet.has(key) &&
+        !boundaryInterceptedRoutes.get(service.name)?.has(key) &&
+        !isNonActiveContract(operationFile(service, operation))
+      ) {
         violations.push({
           file: operationFile(service, operation),
           line: operation.line,

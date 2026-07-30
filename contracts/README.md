@@ -73,6 +73,13 @@ pnpm run contracts:lint       # foundation invariants + diagnostic integrity + s
 ## Layout ownership
 
 The master owns no shared components. Reusable headers, error envelopes, security
-schemes, and primitives currently live inside each context; extracting them to a
-repo-level `shared/` is deliberately deferred to its own slice, since it means
-rewiring `$ref`s across all six contexts and regenerating every client.
+schemes, and primitives currently live inside each context.
+
+`contracts/shared/common.openapi.yaml` holds the canonical proposed shape for
+these (`Error`, `Money`, `PageInfo`, the trust headers) matching what the Go
+backends already emit on the wire. It is not yet referenced by any context —
+none of the three bundlers currently resolve a `$ref` outside their own
+context directory, and wiring it in means extending all three, replacing every
+local re-declaration it supersedes, and regenerating all six clients. That
+remains its own slice; see `contracts/shared/common.openapi.yaml`'s own
+description for the exact remaining steps.

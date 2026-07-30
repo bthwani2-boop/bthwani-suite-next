@@ -8,13 +8,21 @@ import { parse, stringify } from "yaml";
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 export const repositoryRoot = path.resolve(scriptsDirectory, "../..");
 
+// dsh and wlt are deliberately absent here. Each owns a dedicated bundler
+// (tools/scripts/dsh-openapi-modular-lib.mjs, tools/scripts/wlt-openapi-bundle-lib.mjs)
+// with generation semantics this generic composer does not replicate: DSH's
+// bundle is scoped to its entry contract's own path fragments only (42 of 43
+// satellite contracts are declared STANDALONE_MANUAL_TYPED_ADAPTER in
+// services/dsh/contracts/contract-registry.ts and must not be merged into the
+// generated-client surface). Composing "dsh" or "wlt" through this module
+// would silently produce a bundle inconsistent with the one the dedicated
+// scripts (and CI) maintain. Use `pnpm run openapi:compose:dsh` /
+// `openapi:compose:wlt` instead.
 export const contextManifests = Object.freeze({
   identity: "core/identity/contracts/contract.manifest.yaml",
   workforce: "core/workforce/contracts/contract.manifest.yaml",
   "platform-control": "core/platform-control/contracts/contract.manifest.yaml",
   providers: "core/providers/contracts/contract.manifest.yaml",
-  dsh: "services/dsh/contracts/contract.manifest.yaml",
-  wlt: "services/wlt/contracts/contract.manifest.yaml",
 });
 
 function readText(filePath) {
@@ -267,11 +275,6 @@ function rewriteExternalRefs(value, sourceFile, bundledSourceFiles, bundleFile) 
   return output;
 }
 
-async function readDshBaseDocument() {
-  const { composeDshOpenApi } = await import("./dsh-openapi-modular-lib.mjs");
-  return parse(composeDshOpenApi({ write: false }));
-}
-
 function mergeDocuments(entryDocument, sourceDocuments, sourceFiles, bundleFile, { allowEntryOverride = false } = {}) {
   const output = clone(entryDocument);
   delete output["x-bthwani-contracts"];
@@ -322,22 +325,9 @@ export async function composeContext(contextName, { write = true } = {}) {
     if (!fs.existsSync(filePath)) throw new Error(`Missing OpenAPI source ${relative(filePath)}.`);
   }
 
-  let document;
-  if (contextName === "dsh") {
-    const baseDocument = await readDshBaseDocument();
-    const moduleDocuments = moduleFiles.map((filePath) => parse(readText(filePath)));
-    document = mergeDocuments(
-      baseDocument,
-      [baseDocument, ...moduleDocuments],
-      sourceFiles,
-      bundleFile,
-      { allowEntryOverride: true },
-    );
-  } else {
-    const documents = sourceFiles.map((filePath) => parse(readText(filePath)));
-    documents.forEach((item, index) => assertObject(item, relative(sourceFiles[index])));
-    document = mergeDocuments(documents[0], documents, sourceFiles, bundleFile);
-  }
+  const documents = sourceFiles.map((filePath) => parse(readText(filePath)));
+  documents.forEach((item, index) => assertObject(item, relative(sourceFiles[index])));
+  let document = mergeDocuments(documents[0], documents, sourceFiles, bundleFile);
   for (const overlayFile of overlayFiles) {
     document = applyOverlay(document, parse(readText(overlayFile)), relative(overlayFile));
   }

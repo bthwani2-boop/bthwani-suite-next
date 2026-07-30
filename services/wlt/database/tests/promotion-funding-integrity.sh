@@ -167,7 +167,7 @@ if "${PSQL[@]}" -c "INSERT INTO wlt_promotion_funding_reservations (operator_con
   fail "partner-funded reservation without partner identity was accepted"
 fi
 
-# Tenant-scoped idempotency keys cannot be replayed with a different financial identity.
+# OperatorContext-scoped idempotency keys cannot be replayed with a different financial identity.
 "${PSQL[@]}" -c "INSERT INTO wlt_promotion_funding_reservations (operator_context_id,external_reference,checkout_intent_id,coupon_redemption_id,coupon_id,client_id,platform_funded_minor_units,partner_funded_minor_units,total_discount_minor_units,currency,status,idempotency_key,correlation_id) VALUES ('proof','proof:idempotency-a','checkout-idempotency-a','redemption-idempotency-a','coupon-proof','client-proof',1000,0,1000,'YER','reserved','proof-shared-idempotency','proof-correlation-idempotency-a')"
 if "${PSQL[@]}" -c "INSERT INTO wlt_promotion_funding_reservations (operator_context_id,external_reference,checkout_intent_id,coupon_redemption_id,coupon_id,client_id,platform_funded_minor_units,partner_funded_minor_units,total_discount_minor_units,currency,status,idempotency_key,correlation_id) VALUES ('proof','proof:idempotency-b','checkout-idempotency-b','redemption-idempotency-b','coupon-proof','client-proof',900,0,900,'YER','reserved','proof-shared-idempotency','proof-correlation-idempotency-b')"; then
   fail "conflicting idempotency replay was accepted"

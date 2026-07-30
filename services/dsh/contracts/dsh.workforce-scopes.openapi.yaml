@@ -5,11 +5,14 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: DSH Workforce Scope Contract
   version: 1.0.0
+security:
+  - bearerAuth: []
 paths:
   /dsh/operator/workforce/scopes/{actorId}:
     get:
       tags: ["dsh-operator"]
       operationId: getWorkforceActorScopes
+      x-bthwani-required-scope: workforce.scopes.read
       parameters:
         - in: path
           name: actorId
@@ -24,6 +27,7 @@ paths:
     put:
       tags: ["dsh-operator"]
       operationId: replaceWorkforceActorScopes
+      x-bthwani-required-scope: workforce.scopes.manage
       parameters:
         - in: path
           name: actorId
@@ -41,6 +45,7 @@ paths:
     post:
       tags: ["dsh-operator"]
       operationId: uploadWorkforceEmployeeMedia
+      x-bthwani-required-scope: provider.documents:upload
       parameters:
         - in: path
           name: actorId
@@ -58,6 +63,10 @@ paths:
       responses:
         '201': { description: Uploaded media reference }
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
   schemas:
     WorkforceScopeInput:
       type: object

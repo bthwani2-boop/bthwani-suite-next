@@ -12,11 +12,11 @@ services/dsh/database/scripts/invoke-dsh-database.ps1
 
 The runner supports Docker-backed local development and direct `DATABASE_URL` execution in isolated CI. It provides atomic migrations, immutable SHA-256 migration history, audited local seeds, and standalone SQL contract tests.
 
-## OperatorContext context
+## Operator context
 
-Root DSH records must receive OperatorContext ownership explicitly or from the trusted PostgreSQL session setting `bthwani.OperatorContext_id`. The backend or worker connection owns this setting; it is not accepted from an untrusted client and is not installed as a column or database default by migrations.
+Root DSH records must receive operator context ownership explicitly or from the trusted PostgreSQL session setting `bthwani.operator_context_id`. The backend or worker connection owns this setting; it is not accepted from an untrusted client and is not installed as a column or database default by migrations.
 
-Child records derive OperatorContext ownership from their owning partner or store. OperatorContext ownership is immutable after persistence, and a missing explicit, parent-derived, or trusted session OperatorContext fails closed.
+Child records derive operator context ownership from their owning partner or store. Operator context ownership is immutable after persistence, and a missing explicit, parent-derived, or trusted session operator context fails closed.
 
 ## Directory ownership
 

@@ -4,12 +4,15 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: Workforce Reference Mutations Contract
   version: 1.0.0
+security:
+  - bearerAuth: []
 paths:
   /workforce/reference/cities:
     post:
       tags: ["workforce-reference"]
       operationId: createWorkforceCity
       summary: Create a governed workforce city reference
+      x-bthwani-required-scope: reference:manage
       responses:
         '201': { description: Created }
   /workforce/reference/cities/{code}:
@@ -17,6 +20,7 @@ paths:
       tags: ["workforce-reference"]
       operationId: updateWorkforceCity
       summary: Update or activate/deactivate a workforce city reference
+      x-bthwani-required-scope: reference:manage
       parameters:
         - in: path
           name: code
@@ -29,6 +33,7 @@ paths:
       tags: ["workforce-collection"]
       operationId: appendWorkforceProviderDocument
       summary: Link an opaque DSH media reference to a Workforce profile
+      x-bthwani-required-scope: provider:update
       parameters:
         - in: path
           name: collection
@@ -52,3 +57,8 @@ paths:
                 mediaRef: { type: string, minLength: 1 }
       responses:
         '200': { description: Linked }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

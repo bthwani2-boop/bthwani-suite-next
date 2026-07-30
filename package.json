@@ -59,6 +59,8 @@
     "guard:contract-registry-drift": "node tools/guards/contract-registry-drift-gate.mjs",
     "guard:migration-manifest-drift": "node tools/guards/migration-manifest-drift-gate.mjs",
     "guard:generated-client-provenance": "node tools/guards/generated-client-provenance-gate.mjs",
+    "guard:contract-scope-binding": "node tools/guards/contract-scope-binding-gate.mjs",
+    "guard:openapi-bundle-provenance": "node tools/guards/openapi-bundle-provenance-gate.mjs",
     "runtime:wlt:up": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action up -Profiles wlt",
     "runtime:wlt:down": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles wlt",
     "runtime:wlt:status": "pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action status -Profiles wlt",

@@ -22,11 +22,11 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1
     FROM pg_constraint
-    WHERE conname = 'identity_actors_tenant_nonblank_chk'
+    WHERE conname = 'identity_actors_OperatorContext_nonblank_chk'
       AND conrelid = 'identity_actors'::regclass
   ) THEN
     ALTER TABLE identity_actors
-      ADD CONSTRAINT identity_actors_tenant_nonblank_chk
+      ADD CONSTRAINT identity_actors_OperatorContext_nonblank_chk
       CHECK (btrim(operator_context_id) <> '') NOT VALID;
   END IF;
 END
