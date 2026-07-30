@@ -1,0 +1,49 @@
+name: Temporary Contract Source Export
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/contract-source-export.yml'
+      - 'services/dsh/contracts/**'
+      - 'tools/scripts/openapi-context-composer.mjs'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    name: Export immutable DSH contract sources
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout immutable PR head
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify checkout identity
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Generate DSH contract artifacts without committing
+        run: pnpm run openapi:generate:dsh
+      - name: Upload sources and generated artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dsh-contract-export-${{ github.run_id }}
+          path: |
+            services/dsh/contracts/dsh.openapi.yaml
+            services/dsh/contracts/dsh.refunds.openapi.yaml
+            services/dsh/contracts/paths/misc.paths.yaml
+            services/dsh/contracts/contract.manifest.yaml
+            services/dsh/contracts/contract-registry.ts
+            services/dsh/contracts/generated/dsh.bundle.openapi.yaml
+            services/dsh/clients/generated/dsh-api.ts
+          if-no-files-found: error
+          retention-days: 1
