@@ -129,12 +129,15 @@ function parseComponentParameters(lines) {
     const parameter = { name: "", in: "", required: false, ref: "" };
     const applyField = (value) => {
       const field = String(value ?? "").trim();
-      const nameMatch = field.match(/^name:\s*(.+?)\s*$/);
+      const nameMatch = field.match(/^name:\s*([^},\s]+)/);
       if (nameMatch) parameter.name = String(parseScalar(nameMatch[1]));
-      const inMatch = field.match(/^in:\s*(.+?)\s*$/);
+      const inMatch = field.match(/^in:\s*([^},\s]+)/);
       if (inMatch) parameter.in = String(parseScalar(inMatch[1]));
       const requiredMatch = field.match(/^required:\s*(.+?)\s*$/);
       if (requiredMatch) parameter.required = parseScalar(requiredMatch[1]) === true;
+    };
+    const applyRefField = (value) => {
+      const field = String(value ?? "").trim();
       const refMatch = field.match(/^\$ref:\s*["']?([^"']+)["']?\s*$/);
       if (refMatch) parameter.ref = refMatch[1];
     };
@@ -142,6 +145,7 @@ function parseComponentParameters(lines) {
     if (entryMatch[2]) {
       for (const match of entryMatch[2].matchAll(/(?:^|,)\s*(name|in|required|\$ref):\s*([^,}]+)/g)) {
         applyField(`${match[1]}: ${match[2]}`);
+        applyRefField(`${match[1]}: ${match[2]}`);
       }
     } else {
       for (let j = i + 1; j < lines.length; j += 1) {
@@ -150,6 +154,9 @@ function parseComponentParameters(lines) {
         if (!blockTrimmed || blockTrimmed.startsWith("#")) continue;
         if (countIndent(blockLine) <= entryIndent) break;
         applyField(blockTrimmed);
+        if (countIndent(blockLine) === entryIndent + 2) {
+          applyRefField(blockTrimmed);
+        }
       }
     }
     parameters.set(entryMatch[1], parameter);
