@@ -12,6 +12,7 @@ on:
       - 'tools/scripts/normalize-refund-fragment-refs.py'
       - 'tools/scripts/remove-unowned-settlement-ui.py'
       - 'tools/scripts/repair-final-backend-bindings.py'
+      - 'tools/scripts/repair-reconciliation-bindings.py'
       - 'core/workforce/contracts/**'
       - 'services/dsh/**'
       - 'services/wlt/contracts/**'
@@ -79,16 +80,19 @@ jobs:
           python tools/scripts/repair-payment-remit-bindings.py
           python tools/scripts/remove-unowned-settlement-ui.py
           python tools/scripts/repair-final-backend-bindings.py
+          python tools/scripts/repair-reconciliation-bindings.py
           gofmt -w \
             services/dsh/backend/internal/http/server.go \
             services/dsh/backend/internal/http/catalog_unified_routes.go \
             services/dsh/backend/internal/http/cod_finance_handlers.go \
             services/dsh/backend/internal/http/cod_finance_routes.go \
             services/dsh/backend/internal/http/payout_routes.go \
+            services/dsh/backend/internal/http/reconciliation_finance_routes.go \
             services/dsh/backend/internal/http/cod_reconciliation_routes_test.go \
             services/dsh/backend/internal/http/field_catalog_detail_route_test.go \
             services/dsh/backend/internal/http/payment_partner_cod_routes_test.go \
             services/dsh/backend/internal/http/final_finance_routes_test.go \
+            services/dsh/backend/internal/http/reconciliation_finance_routes_test.go \
             services/dsh/backend/internal/wlt/finance_proxy.go \
             services/dsh/backend/internal/wlt/finance_proxy_test.go
       - name: Regenerate canonical artifacts
@@ -119,16 +123,21 @@ jobs:
             core/workforce/clients/generated/workforce-api.ts
             services/dsh/frontend/shared/catalog/central-catalog.api.ts
             services/dsh/frontend/shared/finance-wlt-link/finance/finance-hub-runtime.api.ts
+            services/dsh/frontend/shared/finance-wlt-link/finance/finance.controller.ts
+            services/dsh/frontend/control-panel/finance/PayoutRequestsPanel.tsx
+            services/dsh/frontend/control-panel/finance/GovernedSettlementPanel.tsx
             services/dsh/frontend/app-field/components/DshFieldAssortmentPauseScreen.tsx
             services/dsh/backend/internal/http/server.go
             services/dsh/backend/internal/http/catalog_unified_routes.go
             services/dsh/backend/internal/http/cod_finance_handlers.go
             services/dsh/backend/internal/http/cod_finance_routes.go
             services/dsh/backend/internal/http/payout_routes.go
+            services/dsh/backend/internal/http/reconciliation_finance_routes.go
             services/dsh/backend/internal/http/cod_reconciliation_routes_test.go
             services/dsh/backend/internal/http/field_catalog_detail_route_test.go
             services/dsh/backend/internal/http/payment_partner_cod_routes_test.go
             services/dsh/backend/internal/http/final_finance_routes_test.go
+            services/dsh/backend/internal/http/reconciliation_finance_routes_test.go
             services/dsh/backend/internal/wlt/finance_proxy.go
             services/dsh/backend/internal/wlt/finance_proxy_test.go
             services/dsh/contracts/dsh.openapi.yaml
