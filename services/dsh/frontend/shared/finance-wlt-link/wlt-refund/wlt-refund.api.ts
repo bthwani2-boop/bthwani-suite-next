@@ -44,6 +44,10 @@ type RefundMutationEnvelope = Partial<RefundEnvelope> & {
 type RefundListEnvelope = { readonly refunds: readonly WltRefundRaw[] };
 type RefundAuditEnvelope = { readonly auditEvents: readonly DshWltRefundAuditEvent[] };
 
+function invalidRefundResponse(message: string): never {
+  throw { code: "INVALID_REFUND_RESPONSE", message };
+}
+
 function normalizeStatus(status: string): DshWltRefundStatus {
   switch (status) {
     case "requested":
@@ -55,7 +59,7 @@ function normalizeStatus(status: string): DshWltRefundStatus {
     case "reversed":
       return status;
     default:
-      return "requested";
+      return invalidRefundResponse(`أعاد الخادم حالة استرداد غير معروفة: ${status || "empty"}.`);
   }
 }
 
@@ -88,9 +92,28 @@ function mapStatusLabel(status: DshWltRefundStatus): string {
 }
 
 function toView(raw: WltRefundRaw): DshWltRefundView {
-  if (!raw || typeof raw.id !== "string" || typeof raw.status !== "string") {
-    throw { code: "INVALID_REFUND_RESPONSE", message: "أعاد الخادم استجابة استرداد غير مكتملة." };
+  if (!raw || typeof raw !== "object") {
+    return invalidRefundResponse("أعاد الخادم استجابة استرداد غير صالحة.");
   }
+  if (typeof raw.id !== "string" || !raw.id.trim()) {
+    return invalidRefundResponse("استجابة الاسترداد لا تحتوي معرّفًا صالحًا.");
+  }
+  if (typeof raw.orderId !== "string" || !raw.orderId.trim()) {
+    return invalidRefundResponse("استجابة الاسترداد لا تحتوي معرّف طلب صالحًا.");
+  }
+  if (!Number.isSafeInteger(raw.amountMinorUnits) || raw.amountMinorUnits < 0) {
+    return invalidRefundResponse("استجابة الاسترداد تحتوي مبلغًا غير صالح.");
+  }
+  if (typeof raw.currency !== "string" || !raw.currency.trim()) {
+    return invalidRefundResponse("استجابة الاسترداد لا تحتوي عملة صالحة.");
+  }
+  if (typeof raw.status !== "string") {
+    return invalidRefundResponse("استجابة الاسترداد لا تحتوي حالة صالحة.");
+  }
+  if (raw.resolvedAt !== null && typeof raw.resolvedAt !== "string") {
+    return invalidRefundResponse("استجابة الاسترداد تحتوي وقت حسم غير صالح.");
+  }
+
   const status = normalizeStatus(raw.status);
   return {
     id: raw.id,
@@ -116,6 +139,13 @@ function toView(raw: WltRefundRaw): DshWltRefundView {
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
+}
+
+function toRefundList(body: RefundListEnvelope): readonly DshWltRefundView[] {
+  if (!body || !Array.isArray(body.refunds)) {
+    return invalidRefundResponse("أعاد الخادم قائمة استردادات غير صالحة.");
+  }
+  return body.refunds.map(toView);
 }
 
 function classifyFailure(error: unknown): { kind: DshWltRefundFailureKind; message: string } {
@@ -149,13 +179,16 @@ export async function fetchDshWltRefundView(refundId: string): Promise<DshWltRef
 export async function fetchDshWltRefundsByOrderView(orderId: string): Promise<DshWltRefundResult<readonly DshWltRefundView[]>> {
   return asResult(async () => {
     const body = await request<RefundListEnvelope>(`/dsh/control-panel/finance/refunds?orderId=${encodeURIComponent(orderId)}`);
-    return body.refunds.map(toView);
+    return toRefundList(body);
   });
 }
 
 export async function fetchDshWltRefundAudit(refundId: string): Promise<DshWltRefundResult<readonly DshWltRefundAuditEvent[]>> {
   return asResult(async () => {
     const body = await request<RefundAuditEnvelope>(`/dsh/control-panel/finance/refunds/${encodeURIComponent(refundId)}/audit`);
+    if (!body || !Array.isArray(body.auditEvents)) {
+      return invalidRefundResponse("أعاد الخادم سجل تدقيق استرداد غير صالح.");
+    }
     return body.auditEvents;
   });
 }
@@ -241,13 +274,13 @@ export async function reconcileDshWltRefund(
 export async function fetchClientOrderRefunds(orderId: string): Promise<DshWltRefundResult<readonly DshWltRefundView[]>> {
   return asResult(async () => {
     const body = await request<RefundListEnvelope>(`/dsh/client/orders/${encodeURIComponent(orderId)}/refunds`);
-    return body.refunds.map(toView);
+    return toRefundList(body);
   });
 }
 
 export async function fetchPartnerOrderRefunds(orderId: string): Promise<DshWltRefundResult<readonly DshWltRefundView[]>> {
   return asResult(async () => {
     const body = await request<RefundListEnvelope>(`/dsh/partner/orders/${encodeURIComponent(orderId)}/refunds`);
-    return body.refunds.map(toView);
+    return toRefundList(body);
   });
 }
