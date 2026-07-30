@@ -7,6 +7,7 @@ on:
       - 'tools/scripts/repair-workforce-refund-contracts.mjs'
       - 'core/workforce/contracts/**'
       - 'services/dsh/contracts/**'
+      - 'services/wlt/contracts/**'
 
 permissions:
   contents: read
@@ -48,6 +49,7 @@ jobs:
         run: |
           pnpm run openapi:generate:workforce
           pnpm run openapi:generate:dsh
+          pnpm run openapi:generate:wlt
           pnpm run contracts:registry
       - name: Verify contract repair
         run: |
@@ -76,6 +78,7 @@ jobs:
             services/dsh/contracts/components/refunds.components.yaml
             services/dsh/contracts/generated/dsh.bundle.openapi.yaml
             services/dsh/clients/generated/dsh-api.ts
+            services/wlt/clients/generated/wlt-api.ts
             contracts/generated/contract-registry.json
           if-no-files-found: error
           retention-days: 1
