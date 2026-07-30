@@ -19,6 +19,7 @@ var financeReadAllowlist = map[string]struct{}{
 	"/wlt/ledger/entries":           {},
 	"/wlt/ledger/financial-summary": {},
 	"/wlt/cod-records":              {},
+	"/wlt/cod-reconciliation-cases": {},
 	"/wlt/commissions":              {},
 	"/wlt/references/wallet-status": {},
 	"/wlt/payout-requests":          {},
@@ -108,9 +109,10 @@ func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, pa
 func financeWritePathAllowed(path string) bool {
 	if path == "/wlt/payout-requests" || path == "/wlt/refunds" { return true }
 	for prefix, actions := range map[string]map[string]struct{}{
-		"/wlt/payout-requests/": {"approve": {}, "reject": {}, "process": {}, "complete": {}, "fail": {}, "reconcile": {}},
-		"/wlt/reconciliation-cases/": {"assign": {}, "resolve": {}},
-		"/wlt/refunds/": {"approve": {}, "reject": {}, "complete": {}, "reconcile": {}},
+		"/wlt/payout-requests/":          {"approve": {}, "reject": {}, "process": {}, "complete": {}, "fail": {}, "reconcile": {}},
+		"/wlt/reconciliation-cases/":     {"assign": {}, "resolve": {}},
+		"/wlt/cod-reconciliation-cases/": {"assign": {}, "resolve": {}},
+		"/wlt/refunds/":                  {"approve": {}, "reject": {}, "complete": {}, "reconcile": {}},
 	} {
 		rest, ok := strings.CutPrefix(path, prefix); if !ok { continue }
 		parts := strings.Split(rest, "/"); if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" { return false }
