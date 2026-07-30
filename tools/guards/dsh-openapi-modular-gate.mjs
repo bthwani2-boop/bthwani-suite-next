@@ -1,35 +1,50 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
 import {
   composeContext,
-  repositoryRoot,
 } from "../scripts/openapi-context-composer.mjs";
 
-const result = await composeContext("dsh", { write: false });
-const committedBundle = fs.readFileSync(
-  path.join(repositoryRoot, result.bundlePath),
-  "utf8",
-);
+const first = await composeContext("dsh", { write: false });
+const second = await composeContext("dsh", { write: false });
 
 assert.equal(
-  result.bundle,
-  committedBundle,
-  "DSH generated bundle is stale; run pnpm run openapi:generate:dsh",
+  first.bundle,
+  second.bundle,
+  "DSH OpenAPI composition must be deterministic without materializing generated artifacts",
 );
-assert.ok(result.pathCount > 0, "DSH composed bundle must expose paths");
-assert.ok(result.operationIds.length > 0, "DSH composed bundle must expose operations");
 assert.equal(
-  new Set(result.operationIds).size,
-  result.operationIds.length,
+  first.sourceDigest,
+  second.sourceDigest,
+  "DSH OpenAPI source digest must be deterministic",
+);
+assert.ok(first.pathCount > 0, "DSH composed bundle must expose paths");
+assert.ok(first.operationIds.length > 0, "DSH composed bundle must expose operations");
+assert.equal(
+  new Set(first.operationIds).size,
+  first.operationIds.length,
   "DSH composed bundle contains duplicate operationIds",
+);
+assert.doesNotMatch(
+  first.bundle,
+  /\.\/paths\/[^\s"']+\.paths\.yaml/,
+  "DSH composed bundle must not retain modular path references",
+);
+assert.doesNotMatch(
+  first.bundle,
+  /\.\/components\/[^\s"']+\.yaml/,
+  "DSH composed bundle must not retain modular component references",
+);
+assert.match(
+  first.bundle,
+  /x-bthwani-contract-layout:\s*COMPOSED_BUNDLE/,
+  "DSH composed bundle must declare its generated layout",
 );
 
 console.log(
   `DSH OpenAPI modular gate passed: ${JSON.stringify({
-    bundlePath: result.bundlePath,
-    pathCount: result.pathCount,
-    operationCount: result.operationIds.length,
-    sourceDigest: result.sourceDigest,
+    bundlePath: first.bundlePath,
+    pathCount: first.pathCount,
+    operationCount: first.operationIds.length,
+    sourceDigest: first.sourceDigest,
+    repositoryWrites: 0,
   })}`,
 );

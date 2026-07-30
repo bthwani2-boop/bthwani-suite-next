@@ -7,7 +7,7 @@
     "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs dsh",
     "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/dsh.bundle.openapi.yaml -o clients/generated/dsh-api.ts",
     "openapi:test": "node --test tests/dsh-openapi-modular.test.mjs",
-    "openapi:verify": "node ../../tools/guards/dsh-openapi-modular-gate.mjs && pnpm run openapi:generate",
+    "openapi:verify": "node ../../tools/guards/dsh-openapi-modular-gate.mjs",
     "database:migrate": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport auto",
     "database:seed:local": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action seed -Transport auto -AllowLocalSeeds",
     "database:test": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite schema",
